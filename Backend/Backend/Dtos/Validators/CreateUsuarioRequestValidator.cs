@@ -1,0 +1,15 @@
+using Backend.Dtos.Requests;
+using FluentValidation;
+
+namespace Backend.Dtos.Validators;
+
+public class CreateUsuarioRequestValidator : AbstractValidator<CreateUsuarioRequest>
+{
+    public CreateUsuarioRequestValidator()
+    {
+        RuleFor(x => x.Nombre).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(100);
+        RuleFor(x => x.Password).NotEmpty().MinimumLength(6).MaximumLength(100);
+        RuleFor(x => x.Role).IsInEnum();
+    }
+}
