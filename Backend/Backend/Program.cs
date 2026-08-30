@@ -32,7 +32,7 @@ builder.Services.AddSwaggerGen(options =>
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
-        { new OpenApiSecuritySchemeReference("Bearer"), Array.Empty<string>() }
+        { new OpenApiSecuritySchemeReference("Bearer"), new List<string>() }
     });
 });
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
