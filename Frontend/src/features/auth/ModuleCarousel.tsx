@@ -113,8 +113,9 @@ export function ModuleCarousel() {
       </div>
 
       <p className="max-w-lg text-sm leading-relaxed text-ink-soft">
-        Cinco sistemas, una sola base de datos. El pedido nace en ERP, el almacén lo prepara,
-        transporte lo lleva, DMS confirma qué pasó en el cliente y todo vuelve a inventario y caja.
+        Cinco módulos, una sola base de datos. El pedido se factura, inventario descuenta el stock,
+        transporte lo lleva, DMS confirma qué pasó en el cliente y RR. HH. mantiene al equipo detrás
+        de todo.
       </p>
     </section>
   )
@@ -130,11 +131,11 @@ function ModuleIcon({ module }: { module: string }) {
     strokeWidth: 1.8,
   }
   switch (module) {
-    case 'WMS':
+    case 'INV':
       return (
         <svg {...common}>
-          <path d="M3 10.5 12 4l9 6.5V20H3z" />
-          <path d="M9 20v-6h6v6" />
+          <path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z" />
+          <path d="m3 7.5 9 4.5 9-4.5M12 12v9" />
         </svg>
       )
     case 'TMS':
@@ -148,8 +149,9 @@ function ModuleIcon({ module }: { module: string }) {
     case 'DMS':
       return (
         <svg {...common}>
-          <path d="M12 3 20 7v10l-8 4-8-4V7z" />
-          <path d="M4 7l8 4 8-4M12 11v10" />
+          <path d="M4 9V20h16V9" />
+          <path d="M3 9 4.8 4h14.4L21 9a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0Z" />
+          <path d="M10 20v-5h4v5" />
         </svg>
       )
     case 'RRHH':
@@ -160,12 +162,11 @@ function ModuleIcon({ module }: { module: string }) {
         </svg>
       )
     default:
+      // Facturación
       return (
         <svg {...common}>
-          <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
-          <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
-          <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
-          <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+          <path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z" />
+          <path d="M9.5 8h5M9.5 12h5" />
         </svg>
       )
   }
