@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Alert, Button, Card, Checkbox, Input, Logo } from '../../components/ui'
+import { ApiError } from '../../lib/apiClient'
+import { saveSession } from '../../lib/authStorage'
+import { login } from './authApi'
 import { ModuleCarousel } from './ModuleCarousel'
 
 const DEMO = { email: 'admin@distribuidora.com', password: 'distribuidora' }
@@ -30,11 +33,16 @@ export function LoginPage() {
 
     setLoading(true)
     try {
-      // TODO: reemplazar por la llamada real al endpoint de autenticación.
-      await new Promise((resolve) => setTimeout(resolve, 700))
-      console.info('login', { email, remember })
-    } catch {
-      setFormError('No pudimos validar tus credenciales. Inténtalo nuevamente.')
+      const data = await login({ email: email.trim(), password })
+      saveSession(data.token, data.usuario, remember)
+      // TODO: navegar al panel cuando exista el router.
+      window.location.assign('/')
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setFormError(error.errors.length ? error.errors.join(' ') : error.message)
+      } else {
+        setFormError('No pudimos validar tus credenciales. Inténtalo nuevamente.')
+      }
     } finally {
       setLoading(false)
     }
