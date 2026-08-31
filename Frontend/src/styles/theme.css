@@ -5,6 +5,7 @@
    Importado una sola vez en main.tsx.
    ========================================================= */
 @import 'tailwindcss';
+@import './systems.css';
 
 @theme {
   /* --- Color de marca (blue-600) --- */
