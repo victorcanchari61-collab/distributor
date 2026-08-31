@@ -45,7 +45,7 @@ export function ModuleCarousel() {
             onClick={() => go(i)}
             style={{ '--accent': m.accent } as CSSProperties}
             className={cn(
-              'inline-flex h-10 w-full min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-2 text-xs font-semibold xl:gap-2 xl:text-sm',
+              'inline-flex h-10 w-full min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-2 text-xs font-semibold',
               'transition-all duration-200 focus-visible:ring-4 focus-visible:ring-brand-ring focus-visible:outline-none',
               i === index
                 ? 'border-(--accent) bg-white text-(--accent) shadow-sm'
