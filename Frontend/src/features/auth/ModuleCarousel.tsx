@@ -32,10 +32,10 @@ export function ModuleCarousel() {
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
-      className="flex w-full max-w-xl flex-col gap-6"
+      className="flex w-full max-w-2xl flex-col gap-6"
     >
       {/* Pestanas de módulos */}
-      <div role="tablist" className="flex flex-wrap justify-center gap-2 lg:justify-start">
+      <div role="tablist" className="grid grid-cols-3 gap-2 sm:grid-cols-5">
         {MODULES.map((m, i) => (
           <button
             key={m.key}
@@ -45,15 +45,17 @@ export function ModuleCarousel() {
             onClick={() => go(i)}
             style={{ '--accent': m.accent } as CSSProperties}
             className={cn(
-              'inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold',
+              'inline-flex h-10 w-full min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-2 text-xs font-semibold xl:gap-2 xl:text-sm',
               'transition-all duration-200 focus-visible:ring-4 focus-visible:ring-brand-ring focus-visible:outline-none',
               i === index
                 ? 'border-(--accent) bg-white text-(--accent) shadow-sm'
                 : 'border-line bg-white/60 text-ink-muted hover:border-line-strong hover:text-ink',
             )}
           >
-            <ModuleIcon module={m.key} />
-            <span>{m.label}</span>
+            <span className="shrink-0 text-(--accent)" aria-hidden="true">
+              <ModuleIcon module={m.key} />
+            </span>
+            <span className="truncate">{m.label}</span>
           </button>
         ))}
       </div>
