@@ -16,6 +16,7 @@ import {
   IdCard,
   Landmark,
   LayoutGrid,
+  MapPin,
   MapPinned,
   Package,
   PackageCheck,
@@ -56,6 +57,8 @@ export interface NavItem {
   badge?: string
   /** Marca las vistas que todavia no existen. */
   pending?: boolean
+  /** No se pinta en el sider (queda reservada para mas adelante). */
+  hidden?: boolean
 }
 
 export interface NavGroup {
@@ -172,10 +175,12 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: Settings,
     items: [
       { id: 'config.usuarios', label: 'Usuarios', icon: UserCog },
-      { id: 'config.accesos', label: 'Roles y accesos', icon: ShieldCheck, pending: true },
-      { id: 'config.empresa', label: 'Empresa y sucursales', icon: Building2, pending: true },
-      { id: 'config.series', label: 'Series de comprobantes', icon: Hash, pending: true },
-      { id: 'config.parametros', label: 'Parámetros', icon: Sliders, pending: true },
+      { id: 'config.accesos', label: 'Roles y accesos', icon: ShieldCheck },
+      { id: 'config.empresa', label: 'Empresa', icon: Building2 },
+      { id: 'config.sucursales', label: 'Sucursales', icon: MapPin },
+      // Reservados: se muestran cuando el cliente decida usar facturacion.
+      { id: 'config.series', label: 'Series de comprobantes', icon: Hash, pending: true, hidden: true },
+      { id: 'config.parametros', label: 'Parámetros', icon: Sliders, pending: true, hidden: true },
     ],
   },
 ]

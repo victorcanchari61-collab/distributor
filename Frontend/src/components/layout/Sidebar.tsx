@@ -171,7 +171,9 @@ function NavGroupBlock({
       >
         <div className="overflow-hidden">
           <div className="mt-1 ml-4 space-y-0.5 border-l border-line pl-2">
-            {group.items.map((item) => (
+            {group.items
+              .filter((item) => !item.hidden)
+              .map((item) => (
               <NavButton
                 key={item.id}
                 icon={<item.icon size={16} />}
@@ -182,8 +184,8 @@ function NavGroupBlock({
                 collapsed={false}
                 onClick={() => onSelect(item.id)}
                 small
-              />
-            ))}
+                />
+              ))}
           </div>
         </div>
       </div>
