@@ -62,10 +62,13 @@ export function ModuleCarousel() {
 
       {/* Contenido del módulo activo */}
       <div key={active.key} className="ui-fade-up flex flex-col gap-4">
-        <h2 className="text-2xl leading-tight font-bold tracking-tight text-ink sm:text-3xl lg:text-4xl">
+        {/* Alturas minimas reservadas para que el carrusel no salte al cambiar de modulo */}
+        <h2 className="flex min-h-[5.5rem] items-start text-2xl leading-tight font-bold tracking-tight text-ink sm:text-3xl lg:text-4xl">
           {active.title}
         </h2>
-        <p className="max-w-lg text-base text-ink-muted sm:text-lg">{active.description}</p>
+        <p className="min-h-[4.5rem] max-w-lg text-base text-ink-muted sm:text-lg">
+          {active.description}
+        </p>
 
         <div
           style={{ '--accent': active.accent } as CSSProperties}

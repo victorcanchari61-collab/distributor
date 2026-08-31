@@ -139,7 +139,7 @@ export function LoginPage() {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 opacity-60 [background-image:linear-gradient(to_right,var(--color-line)_1px,transparent_1px),linear-gradient(to_bottom,var(--color-line)_1px,transparent_1px)] [background-size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]"
         />
-        <div className="relative">
+        <div className="relative w-full max-w-2xl">
           <ModuleCarousel />
         </div>
       </aside>
