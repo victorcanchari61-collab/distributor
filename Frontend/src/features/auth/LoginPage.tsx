@@ -6,7 +6,7 @@ import { saveSession } from '../../lib/authStorage'
 import { login } from './authApi'
 import { ModuleCarousel } from './ModuleCarousel'
 
-const DEMO = { email: 'admin@distribuidora.com', password: 'distribuidora' }
+const DEMO = { email: 'admin@distributor.com', password: '123456' }
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -89,7 +89,7 @@ export function LoginPage() {
                 label="Correo electrónico"
                 type="email"
                 autoComplete="email"
-                placeholder="admin@distribuidora.com"
+                placeholder="admin@distributor.com"
                 value={email}
                 error={errors.email}
                 onChange={(e) => setEmail(e.target.value)}
