@@ -3,9 +3,9 @@ using FluentValidation;
 
 namespace Backend.Dtos.Validators;
 
-public class CreateClienteRequestValidator : AbstractValidator<CreateClienteRequest>
+public class UpdateClienteRequestValidator : AbstractValidator<UpdateClienteRequest>
 {
-    public CreateClienteRequestValidator()
+    public UpdateClienteRequestValidator()
     {
         Include(new ClienteValidator());
     }

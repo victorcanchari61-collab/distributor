@@ -3,9 +3,9 @@ using FluentValidation;
 
 namespace Backend.Dtos.Validators;
 
-public class CreateProveedorRequestValidator : AbstractValidator<CreateProveedorRequest>
+public class UpdateProveedorRequestValidator : AbstractValidator<UpdateProveedorRequest>
 {
-    public CreateProveedorRequestValidator()
+    public UpdateProveedorRequestValidator()
     {
         Include(new ProveedorValidator());
     }

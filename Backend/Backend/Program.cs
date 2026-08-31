@@ -30,7 +30,7 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Ingrese el token JWT"
     });
 
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
     {
         { new OpenApiSecuritySchemeReference("Bearer"), new List<string>() }
     });
