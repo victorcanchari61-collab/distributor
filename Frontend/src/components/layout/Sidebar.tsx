@@ -177,6 +177,7 @@ function NavGroupBlock({
                 icon={<item.icon size={16} />}
                 label={item.label}
                 badge={item.badge}
+                pending={item.pending}
                 active={active === item.id}
                 collapsed={false}
                 onClick={() => onSelect(item.id)}
@@ -194,6 +195,7 @@ function NavButton({
   icon,
   label,
   badge,
+  pending = false,
   active,
   collapsed,
   onClick,
@@ -202,6 +204,7 @@ function NavButton({
   icon: React.ReactNode
   label: string
   badge?: string
+  pending?: boolean
   active: boolean
   collapsed: boolean
   onClick: () => void
@@ -211,7 +214,7 @@ function NavButton({
     <button
       type="button"
       onClick={onClick}
-      title={collapsed ? label : undefined}
+      title={collapsed ? label : pending ? `${label} — vista pendiente` : undefined}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'group relative flex w-full cursor-pointer items-center gap-2.5 rounded-lg transition-colors',
@@ -231,6 +234,14 @@ function NavButton({
         <span className="shrink-0 rounded-full bg-[rgb(var(--sys-rgb)/0.12)] px-1.5 py-0.5 text-[10px] font-bold text-[rgb(var(--sys-ink-rgb))]">
           {badge}
         </span>
+      )}
+      {/* punto tenue: la vista todavia no existe */}
+      {!collapsed && !badge && pending && (
+        <span
+          aria-hidden="true"
+          className="size-1.5 shrink-0 rounded-full bg-line-strong"
+          title="Pendiente"
+        />
       )}
     </button>
   )

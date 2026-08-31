@@ -26,6 +26,22 @@
   --sys-on: #ffffff;
 }
 
+/* Maestros — navy de la marca Titanic D */
+[data-sys='maestros'] {
+  --sys-rgb: 20 73 127;
+  --sys-dark-rgb: 14 53 96;
+  --sys-ink-rgb: 17 62 108;
+  --sys-on: #ffffff;
+}
+
+/* Compras — violeta */
+[data-sys='compras'] {
+  --sys-rgb: 124 58 237;
+  --sys-dark-rgb: 91 33 182;
+  --sys-ink-rgb: 109 40 217;
+  --sys-on: #ffffff;
+}
+
 /* Facturación — azul (mismo acento del carrusel del login) */
 [data-sys='fact'] {
   --sys-rgb: 37 99 235;
