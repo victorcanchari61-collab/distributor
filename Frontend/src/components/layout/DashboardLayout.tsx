@@ -32,7 +32,7 @@ export function DashboardLayout({
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const { sys, group, item } = resolveNav(active)
+  const { sys } = resolveNav(active)
 
   return (
     <div data-sys={sys} className="min-h-screen bg-surface-alt">
@@ -55,8 +55,6 @@ export function DashboardLayout({
         )}
       >
         <Topbar
-          title={item?.label ?? 'Distribuidora'}
-          breadcrumb={group?.label}
           userName={userName}
           userEmail={userEmail}
           onOpenMenu={() => setMobileOpen(true)}

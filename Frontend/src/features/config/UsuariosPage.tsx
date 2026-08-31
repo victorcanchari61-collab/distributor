@@ -6,6 +6,7 @@ import {
   Button,
   Input,
   Modal,
+  PageHeader,
   PageSection,
   StatCard,
   SysDataTable,
@@ -144,6 +145,17 @@ export function UsuariosPage() {
 
   return (
     <div className="space-y-5">
+      <PageHeader
+        icon={<UserCog size={20} />}
+        title="Usuarios del sistema"
+        description="Quién entra a la plataforma y con qué rol."
+        actions={
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nuevo usuario
+          </Button>
+        }
+      />
+
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Usuarios registrados"
@@ -158,16 +170,7 @@ export function UsuariosPage() {
         <StatCard label="Administradores" value={String(admins)} hint="con acceso total" />
       </section>
 
-      <PageSection
-        title="Usuarios del sistema"
-        description="Quién entra a la plataforma y con qué rol."
-        icon={<UserCog size={18} />}
-        actions={
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo usuario
-          </Button>
-        }
-      >
+      <PageSection>
         <SysDataTable
           columns={columns}
           rows={usuarios}

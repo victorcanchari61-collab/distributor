@@ -6,6 +6,7 @@ import {
   Button,
   Input,
   Modal,
+  PageHeader,
   PageSection,
   StatCard,
   SysDataTable,
@@ -123,6 +124,17 @@ export function RolesPage() {
 
   return (
     <div className="space-y-5">
+      <PageHeader
+        icon={<IdCard size={20} />}
+        title="Roles"
+        description="Define los perfiles de trabajo. Lo que cada rol puede tocar se configura en Accesos."
+        actions={
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nuevo rol
+          </Button>
+        }
+      />
+
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Roles definidos" value={String(filas.length)} icon={<IdCard size={18} />} />
         <StatCard
@@ -133,16 +145,7 @@ export function RolesPage() {
         <StatCard label="Módulos del sistema" value={String(NAV_GROUPS.length)} />
       </section>
 
-      <PageSection
-        title="Roles"
-        description="Define los perfiles de trabajo. Lo que cada rol puede tocar se configura en Accesos."
-        icon={<IdCard size={18} />}
-        actions={
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo rol
-          </Button>
-        }
-      >
+      <PageSection>
         <SysDataTable
           columns={columns}
           rows={filas}

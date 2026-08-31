@@ -2,8 +2,6 @@ import { Bell, LogOut, Menu, Search } from 'lucide-react'
 import { cn } from '../ui'
 
 export interface TopbarProps {
-  title: string
-  breadcrumb?: string
   userName: string
   userEmail: string
   onOpenMenu: () => void
@@ -11,8 +9,6 @@ export interface TopbarProps {
 }
 
 export function Topbar({
-  title,
-  breadcrumb,
   userName,
   userEmail,
   onOpenMenu,
@@ -29,14 +25,8 @@ export function Topbar({
         <Menu size={20} />
       </button>
 
-      <div className="min-w-0 flex-1">
-        {breadcrumb && (
-          <p className="truncate text-[11px] font-semibold tracking-wider text-[rgb(var(--sys-ink-rgb))] uppercase">
-            {breadcrumb}
-          </p>
-        )}
-        <h1 className="truncate text-lg leading-tight font-bold text-ink">{title}</h1>
-      </div>
+      {/* El titulo de la vista vive en la propia pagina (PageHeader), no aqui. */}
+      <div className="flex-1" />
 
       <div className="relative hidden md:block">
         <Search

@@ -6,6 +6,7 @@ import {
   Button,
   Input,
   Modal,
+  PageHeader,
   PageSection,
   SysDataTable,
 } from '../../components/ui'
@@ -132,6 +133,17 @@ export function EmpresaPage() {
 
   return (
     <div className="space-y-5">
+      <PageHeader
+        icon={<Building2 size={20} />}
+        title="Empresas"
+        description="Puedes registrar varias, pero solo una opera el sistema a la vez."
+        actions={
+          <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
+            Nueva empresa
+          </Button>
+        }
+      />
+
       {error && <Alert>{error}</Alert>}
 
       {activa && (
@@ -148,16 +160,7 @@ export function EmpresaPage() {
         </div>
       )}
 
-      <PageSection
-        title="Empresas"
-        description="Puedes registrar varias, pero solo una opera el sistema a la vez."
-        icon={<Building2 size={18} />}
-        actions={
-          <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
-            Nueva empresa
-          </Button>
-        }
-      >
+      <PageSection>
         <SysDataTable
           columns={columns}
           rows={empresas}

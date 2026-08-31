@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { ComponentType, ReactNode } from 'react'
 import {
   ArrowDown,
@@ -207,6 +208,10 @@ export function SysDataTable<T>({
   const [search, setSearch] = useState('')
   const [columnSearch, setColumnSearch] = useState<Record<string, string>>({})
   const [openSearch, setOpenSearch] = useState<string | null>(null)
+  // Celda desde la que se abrio el buscador de columna: el popover se pinta en
+  // un portal anclado a ella, porque la cabecera lleva overflow-hidden y ahi
+  // dentro quedaria recortado.
+  const [anchorSearch, setAnchorSearch] = useState<HTMLElement | null>(null)
   const [filters, setFilters] = useState<DataTableFilter[]>([])
   const [panel, setPanel] = useState<'columns' | 'filters' | null>(null)
   const [dragging, setDragging] = useState<string | null>(null)
@@ -584,7 +589,11 @@ export function SysDataTable<T>({
                         {col.searchable !== false && (
                           <button
                             type="button"
-                            onClick={() => setOpenSearch((k) => (k === col.key ? null : col.key))}
+                            onClick={(e) => {
+                              const th = e.currentTarget.closest('th') as HTMLElement | null
+                              setAnchorSearch(th)
+                              setOpenSearch((k) => (k === col.key ? null : col.key))
+                            }}
                             aria-label={`Buscar en ${col.label}`}
                             className={cn(
                               'rounded p-0.5 text-[var(--sys-on)] transition-opacity hover:opacity-100',
@@ -613,15 +622,6 @@ export function SysDataTable<T>({
                         )}
                       />
 
-                      {/* ventana flotante: no empuja la cabecera */}
-                      {openSearch === col.key && (
-                        <ColumnSearchPopover
-                          column={col}
-                          value={columnSearch[col.key] ?? ''}
-                          onChange={(v) => setColumnSearch((prev) => ({ ...prev, [col.key]: v }))}
-                          onClose={() => setOpenSearch(null)}
-                        />
-                      )}
                     </th>
                   )
                 })}
@@ -753,6 +753,17 @@ export function SysDataTable<T>({
         )}
       </div>
 
+      {/* buscador de columna: fuera del arbol de la tabla para que nada lo recorte */}
+      {openSearch && byKey[openSearch] && (
+        <ColumnSearchPopover
+          column={byKey[openSearch]}
+          anchor={anchorSearch}
+          value={columnSearch[openSearch] ?? ''}
+          onChange={(v) => setColumnSearch((prev) => ({ ...prev, [openSearch]: v }))}
+          onClose={() => setOpenSearch(null)}
+        />
+      )}
+
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[12px] text-zinc-500">
         <div className="flex items-center gap-3">
           <span>
@@ -882,11 +893,14 @@ function PageButton({
 
 function ColumnSearchPopover<T>({
   column,
+  anchor,
   value,
   onChange,
   onClose,
 }: {
   column: DataTableColumn<T>
+  /** Celda de cabecera bajo la que se coloca la ventana. */
+  anchor: HTMLElement | null
   value: string
   onChange: (value: string) => void
   onClose: () => void
@@ -894,19 +908,45 @@ function ColumnSearchPopover<T>({
   const ref = useDismiss(onClose)
   const inputRef = useRef<HTMLInputElement>(null)
   const [shown, setShown] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 
+  // Se pinta con position:fixed en coordenadas de pantalla, calculadas desde la
+  // celda. Asi flota sobre la tabla en vez de quedar recortado por la cabecera,
+  // que necesita overflow-hidden para sincronizar su scroll con las filas.
   useEffect(() => {
-    inputRef.current?.focus()
-    // Un frame de retraso para que la transicion tenga desde donde animar.
-    const id = requestAnimationFrame(() => setShown(true))
-    return () => cancelAnimationFrame(id)
-  }, [])
+    if (!anchor) return
 
-  return (
+    const colocar = () => {
+      const r = anchor.getBoundingClientRect()
+      const ancho = Math.min(224, window.innerWidth - 32)
+      setPos({
+        top: r.bottom + 4,
+        // Si la columna esta pegada al borde derecho, se alinea hacia dentro.
+        left: Math.min(Math.max(8, r.left), window.innerWidth - ancho - 8),
+      })
+    }
+
+    colocar()
+    inputRef.current?.focus()
+    const id = requestAnimationFrame(() => setShown(true))
+
+    window.addEventListener('resize', colocar)
+    window.addEventListener('scroll', colocar, true)
+    return () => {
+      cancelAnimationFrame(id)
+      window.removeEventListener('resize', colocar)
+      window.removeEventListener('scroll', colocar, true)
+    }
+  }, [anchor])
+
+  if (!pos) return null
+
+  return createPortal(
     <div
       ref={ref}
+      style={{ top: pos.top, left: pos.left }}
       className={cn(
-        'absolute top-full left-0 z-40 mt-1 w-[min(14rem,calc(100vw-2rem))] origin-top rounded-lg bg-white p-2 shadow-xl shadow-zinc-900/20 ring-1 ring-zinc-200 transition-all duration-150',
+        'fixed z-50 w-[min(14rem,calc(100vw-2rem))] origin-top rounded-lg bg-white p-2 shadow-xl shadow-zinc-900/20 ring-1 ring-zinc-200 transition-all duration-150',
         shown ? 'translate-y-0 scale-100 opacity-100' : '-translate-y-1 scale-95 opacity-0',
       )}
     >
@@ -934,7 +974,8 @@ function ColumnSearchPopover<T>({
           </button>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
