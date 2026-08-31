@@ -4,11 +4,17 @@ import { Alert, Button, Card, Checkbox, Input, Logo } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { saveSession } from '../../lib/authStorage'
 import { login } from './authApi'
+import type { UsuarioResponse } from './authApi'
 import { ModuleCarousel } from './ModuleCarousel'
 
 const DEMO = { email: 'admin@distributor.com', password: '123456' }
 
-export function LoginPage() {
+export interface LoginPageProps {
+  /** Se dispara cuando la autenticacion fue correcta. */
+  onSuccess?: (usuario: UsuarioResponse) => void
+}
+
+export function LoginPage({ onSuccess }: LoginPageProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
@@ -35,8 +41,7 @@ export function LoginPage() {
     try {
       const data = await login({ email: email.trim(), password })
       saveSession(data.token, data.usuario, remember)
-      // TODO: navegar al panel cuando exista el router.
-      window.location.assign('/')
+      onSuccess?.(data.usuario)
     } catch (error) {
       if (error instanceof ApiError) {
         setFormError(error.errors.length ? error.errors.join(' ') : error.message)
