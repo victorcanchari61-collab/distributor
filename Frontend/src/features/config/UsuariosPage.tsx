@@ -1,8 +1,19 @@
 import { useState } from 'react'
 import { Pencil, Plus, ShieldOff, UserCog } from 'lucide-react'
-import { Badge, Button, PageSection, StatCard, SysDataTable } from '../../components/ui'
+import {
+  Alert,
+  Badge,
+  Button,
+  Input,
+  Modal,
+  PageSection,
+  StatCard,
+  SysDataTable,
+} from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
-import { ROLES, type Rol } from './roles'
+import { ApiError } from '../../lib/apiClient'
+import { register } from '../auth/authApi'
+import { ROLES, ROLES_LIST, type Rol } from './roles'
 
 export interface Usuario {
   id: number
@@ -22,11 +33,94 @@ const USUARIOS: Usuario[] = [
   { id: 5, nombre: 'Rosa Díaz', email: 'rdiaz@distributor.com', role: 3, activo: false, ultimoAcceso: '2026-07-12 11:20' },
 ]
 
+const VACIO = { nombre: '', email: '', password: '', role: 2 as Rol }
+
 export function UsuariosPage() {
-  const [usuarios] = useState(USUARIOS)
+  const [usuarios, setUsuarios] = useState(USUARIOS)
+
+  const [abierto, setAbierto] = useState(false)
+  const [editando, setEditando] = useState<Usuario | null>(null)
+  const [form, setForm] = useState(VACIO)
+  const [guardando, setGuardando] = useState(false)
+  const [errorForm, setErrorForm] = useState('')
 
   const activos = usuarios.filter((u) => u.activo).length
   const admins = usuarios.filter((u) => u.role === 1).length
+
+  const abrirNuevo = () => {
+    setEditando(null)
+    setForm(VACIO)
+    setErrorForm('')
+    setAbierto(true)
+  }
+
+  const abrirEdicion = (usuario: Usuario) => {
+    setEditando(usuario)
+    setForm({ nombre: usuario.nombre, email: usuario.email, password: '', role: usuario.role })
+    setErrorForm('')
+    setAbierto(true)
+  }
+
+  const guardar = async () => {
+    setErrorForm('')
+
+    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre del usuario.')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setErrorForm('El correo no es válido.')
+    if (!editando && form.password.length < 6) {
+      return setErrorForm('La contraseña debe tener al menos 6 caracteres.')
+    }
+
+    // Editar todavia no tiene endpoint: se ajusta solo en pantalla.
+    if (editando) {
+      setUsuarios((prev) =>
+        prev.map((u) =>
+          u.id === editando.id
+            ? { ...u, nombre: form.nombre.trim(), email: form.email.trim(), role: form.role }
+            : u,
+        ),
+      )
+      setAbierto(false)
+      return
+    }
+
+    setGuardando(true)
+    try {
+      const creado = await register({
+        nombre: form.nombre.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        role: form.role,
+      })
+
+      setUsuarios((prev) => [
+        ...prev,
+        {
+          id: creado.id,
+          nombre: creado.nombre,
+          email: creado.email,
+          role: creado.role as Rol,
+          activo: creado.activo,
+          ultimoAcceso: '—',
+        },
+      ])
+      setAbierto(false)
+    } catch (e) {
+      setErrorForm(
+        e instanceof ApiError
+          ? e.errors.length
+            ? e.errors.join(' ')
+            : e.message
+          : 'No pudimos crear el usuario.',
+      )
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const alternarEstado = (usuario: Usuario) =>
+    setUsuarios((prev) =>
+      prev.map((u) => (u.id === usuario.id ? { ...u, activo: !u.activo } : u)),
+    )
 
   const columns: DataTableColumn<Usuario>[] = [
     { key: 'nombre', label: 'Nombre' },
@@ -51,17 +145,25 @@ export function UsuariosPage() {
   return (
     <div className="space-y-5">
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Usuarios registrados" value={String(usuarios.length)} icon={<UserCog size={18} />} />
-        <StatCard label="Activos" value={String(activos)} hint={`${usuarios.length - activos} deshabilitados`} />
+        <StatCard
+          label="Usuarios registrados"
+          value={String(usuarios.length)}
+          icon={<UserCog size={18} />}
+        />
+        <StatCard
+          label="Activos"
+          value={String(activos)}
+          hint={`${usuarios.length - activos} deshabilitados`}
+        />
         <StatCard label="Administradores" value={String(admins)} hint="con acceso total" />
       </section>
 
       <PageSection
         title="Usuarios del sistema"
-        description="Quién entra a la plataforma, con qué rol y en qué sucursal."
+        description="Quién entra a la plataforma y con qué rol."
         icon={<UserCog size={18} />}
         actions={
-          <Button size="sm" iconRight={<Plus size={15} />}>
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
             Nuevo usuario
           </Button>
         }
@@ -74,26 +176,110 @@ export function UsuariosPage() {
           empty="Todavía no hay usuarios registrados."
           actions={(row) => (
             <>
-              <RowAction label={`Editar ${row.nombre}`}>
+              <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
                 <Pencil size={15} />
               </RowAction>
-              <RowAction label={`Deshabilitar ${row.nombre}`}>
+              <RowAction
+                label={`${row.activo ? 'Deshabilitar' : 'Habilitar'} ${row.nombre}`}
+                onClick={() => alternarEstado(row)}
+              >
                 <ShieldOff size={15} />
               </RowAction>
             </>
           )}
         />
       </PageSection>
+
+      <Modal
+        open={abierto}
+        title={editando ? `Editar ${editando.nombre}` : 'Nuevo usuario'}
+        description={
+          editando
+            ? 'La contraseña se cambia desde el propio usuario.'
+            : 'Se crea con acceso inmediato a la plataforma.'
+        }
+        onClose={() => setAbierto(false)}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
+              Cancelar
+            </Button>
+            <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+              {editando ? 'Guardar cambios' : 'Crear usuario'}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          {errorForm && <Alert>{errorForm}</Alert>}
+
+          <Input
+            label="Nombre"
+            placeholder="Ej. Lucía Torres"
+            value={form.nombre}
+            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+          />
+
+          <Input
+            label="Correo electrónico"
+            type="email"
+            autoComplete="off"
+            placeholder="usuario@distributor.com"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+
+          {!editando && (
+            <Input
+              label="Contraseña"
+              type="password"
+              revealable
+              autoComplete="new-password"
+              placeholder="Mínimo 6 caracteres"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+          )}
+
+          <label className="block">
+            <span className="ui-label mb-2">Rol</span>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: Number(e.target.value) as Rol })}
+              className="min-h-control w-full cursor-pointer rounded-field border border-line bg-surface px-3 text-sm text-ink outline-none transition-colors focus:border-brand focus:ring-4 focus:ring-brand-ring"
+            >
+              {ROLES_LIST.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1.5 block text-xs text-ink-soft">
+              {ROLES[form.role].description}
+            </span>
+          </label>
+        </div>
+      </Modal>
     </div>
   )
 }
 
-function RowAction({ label, children }: { label: string; children: React.ReactNode }) {
+function RowAction({
+  label,
+  onClick,
+  children,
+}: {
+  label: string
+  onClick: () => void
+  children: React.ReactNode
+}) {
   return (
     <button
       type="button"
       title={label}
       aria-label={label}
+      onClick={onClick}
       className="cursor-pointer rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-[rgb(var(--sys-rgb)/0.12)] hover:text-[rgb(var(--sys-ink-rgb))]"
     >
       {children}
