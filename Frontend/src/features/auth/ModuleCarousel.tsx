@@ -1,0 +1,172 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
+import { cn } from '../../components/ui'
+import { MODULES } from './modules'
+
+const INTERVAL = 6000
+
+export function ModuleCarousel() {
+  const [index, setIndex] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const timer = useRef<number | null>(null)
+
+  const go = useCallback((next: number) => {
+    setIndex(((next % MODULES.length) + MODULES.length) % MODULES.length)
+  }, [])
+
+  useEffect(() => {
+    if (paused) return
+    timer.current = window.setTimeout(() => go(index + 1), INTERVAL)
+    return () => {
+      if (timer.current) window.clearTimeout(timer.current)
+    }
+  }, [index, paused, go])
+
+  const active = MODULES[index]
+
+  return (
+    <section
+      aria-roledescription="carrusel"
+      aria-label="Módulos de la suite"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+      className="flex w-full max-w-xl flex-col gap-6"
+    >
+      {/* Pestanas de módulos */}
+      <div role="tablist" className="flex flex-wrap justify-center gap-2 lg:justify-start">
+        {MODULES.map((m, i) => (
+          <button
+            key={m.key}
+            type="button"
+            role="tab"
+            aria-selected={i === index}
+            onClick={() => go(i)}
+            style={{ '--accent': m.accent } as CSSProperties}
+            className={cn(
+              'inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold',
+              'transition-all duration-200 focus-visible:ring-4 focus-visible:ring-brand-ring focus-visible:outline-none',
+              i === index
+                ? 'border-(--accent) bg-white text-(--accent) shadow-sm'
+                : 'border-line bg-white/60 text-ink-muted hover:border-line-strong hover:text-ink',
+            )}
+          >
+            <ModuleIcon module={m.key} />
+            <span>{m.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Contenido del módulo activo */}
+      <div key={active.key} className="ui-fade-up flex flex-col gap-4">
+        <h2 className="text-2xl leading-tight font-bold tracking-tight text-ink sm:text-3xl lg:text-4xl">
+          {active.title}
+        </h2>
+        <p className="max-w-lg text-base text-ink-muted sm:text-lg">{active.description}</p>
+
+        <div
+          style={{ '--accent': active.accent } as CSSProperties}
+          className="ui-surface mt-2 overflow-hidden bg-white/80 shadow-panel backdrop-blur-sm"
+        >
+          <ul className="divide-y divide-line">
+            {active.rows.map((row) => (
+              <li key={row.title} className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                <span
+                  aria-hidden="true"
+                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-alt text-(--accent)"
+                >
+                  <ModuleIcon module={active.key} />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <strong className="truncate text-sm font-semibold text-ink">{row.title}</strong>
+                  <small className="truncate text-xs text-ink-muted">{row.subtitle}</small>
+                </span>
+                <span className="shrink-0 text-xs font-semibold text-(--accent)">{row.status}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="flex items-center gap-2 border-t border-line bg-surface-alt/70 px-4 py-3 text-xs font-medium text-ink-muted sm:px-5">
+            <span className="inline-block size-2 rounded-full bg-(--accent)" aria-hidden="true" />
+            {active.footer}
+          </p>
+        </div>
+      </div>
+
+      {/* Indicadores */}
+      <div className="flex items-center gap-2">
+        {MODULES.map((m, i) => (
+          <button
+            key={m.key}
+            type="button"
+            aria-label={`Ir al módulo ${m.label}`}
+            aria-current={i === index}
+            onClick={() => go(i)}
+            style={{ '--accent': m.accent } as CSSProperties}
+            className={cn(
+              'h-1.5 cursor-pointer rounded-full transition-all duration-300',
+              'focus-visible:ring-4 focus-visible:ring-brand-ring focus-visible:outline-none',
+              i === index ? 'w-10 bg-(--accent)' : 'w-5 bg-line-strong hover:bg-ink-soft',
+            )}
+          />
+        ))}
+      </div>
+
+      <p className="max-w-lg text-sm leading-relaxed text-ink-soft">
+        Cinco sistemas, una sola base de datos. El pedido nace en ERP, el almacén lo prepara,
+        transporte lo lleva, DMS confirma qué pasó en el cliente y todo vuelve a inventario y caja.
+      </p>
+    </section>
+  )
+}
+
+function ModuleIcon({ module }: { module: string }) {
+  const common = {
+    width: 16,
+    height: 16,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.8,
+  }
+  switch (module) {
+    case 'WMS':
+      return (
+        <svg {...common}>
+          <path d="M3 10.5 12 4l9 6.5V20H3z" />
+          <path d="M9 20v-6h6v6" />
+        </svg>
+      )
+    case 'TMS':
+      return (
+        <svg {...common}>
+          <path d="M2 7h11v9H2zM13 10h4l3 3v3h-7z" />
+          <circle cx="6.5" cy="18" r="1.8" />
+          <circle cx="16.5" cy="18" r="1.8" />
+        </svg>
+      )
+    case 'DMS':
+      return (
+        <svg {...common}>
+          <path d="M12 3 20 7v10l-8 4-8-4V7z" />
+          <path d="M4 7l8 4 8-4M12 11v10" />
+        </svg>
+      )
+    case 'RRHH':
+      return (
+        <svg {...common}>
+          <rect x="3" y="7" width="18" height="13" rx="2" />
+          <path d="M9 7V5h6v2M3 12h18" />
+        </svg>
+      )
+    default:
+      return (
+        <svg {...common}>
+          <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+          <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+          <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+          <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+        </svg>
+      )
+  }
+}
