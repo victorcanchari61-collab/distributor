@@ -7,7 +7,6 @@ import {
   Input,
   Modal,
   PageHeader,
-  PageSection,
   StatCard,
   SysDataTable,
 } from '../../components/ui'
@@ -145,7 +144,7 @@ export function RolesPage() {
         <StatCard label="Módulos del sistema" value={String(NAV_GROUPS.length)} />
       </section>
 
-      <PageSection>
+      <div>
         <SysDataTable
           columns={columns}
           rows={filas}
@@ -171,7 +170,7 @@ export function RolesPage() {
           no se pueden eliminar. Los que crees aquí viven solo en pantalla hasta que ese enum pase a
           ser tabla.
         </p>
-      </PageSection>
+      </div>
 
       <Modal
         open={abierto}

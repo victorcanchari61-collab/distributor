@@ -7,7 +7,6 @@ import {
   Input,
   Modal,
   PageHeader,
-  PageSection,
   StatCard,
   SysDataTable,
 } from '../../components/ui'
@@ -170,7 +169,7 @@ export function UsuariosPage() {
         <StatCard label="Administradores" value={String(admins)} hint="con acceso total" />
       </section>
 
-      <PageSection>
+      <div>
         <SysDataTable
           columns={columns}
           rows={usuarios}
@@ -191,7 +190,7 @@ export function UsuariosPage() {
             </>
           )}
         />
-      </PageSection>
+      </div>
 
       <Modal
         open={abierto}

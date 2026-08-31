@@ -7,7 +7,6 @@ import {
   Input,
   Modal,
   PageHeader,
-  PageSection,
   SysDataTable,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
@@ -160,7 +159,7 @@ export function EmpresaPage() {
         </div>
       )}
 
-      <PageSection>
+      <div>
         <SysDataTable
           columns={columns}
           rows={empresas}
@@ -192,7 +191,7 @@ export function EmpresaPage() {
         <p className="mt-3 text-xs text-ink-soft">
           La empresa activa no se puede eliminar ni desactivar: para cambiarla, activa otra.
         </p>
-      </PageSection>
+      </div>
 
       <Modal
         open={abierto}
