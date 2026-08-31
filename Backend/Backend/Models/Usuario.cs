@@ -1,5 +1,3 @@
-using Backend.Models.Enums;
-
 namespace Backend.Models;
 
 public class Usuario
@@ -8,7 +6,11 @@ public class Usuario
     public string Nombre { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
-    public Role Role { get; set; }
+
+    /// <summary>Rol asignado. Antes era un enum; ahora vive en la tabla Roles.</summary>
+    public int RolId { get; set; }
+    public Rol? Rol { get; set; }
+
     public bool Activo { get; set; } = true;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }

@@ -4,7 +4,9 @@ export interface UsuarioResponse {
   id: number
   nombre: string
   email: string
-  role: number
+  rolId: number
+  /** Nombre del rol, ya resuelto por el backend. */
+  rol: string
   activo: boolean
   fechaCreacion: string
 }
@@ -28,8 +30,8 @@ export interface CreateUsuarioRequest {
   nombre: string
   email: string
   password: string
-  /** 1 Administrador, 2 Vendedor, 3 Almacenero (enum Role del backend). */
-  role: number
+  /** Id de la tabla Roles. */
+  rolId: number
 }
 
 /** POST /api/auth/register */

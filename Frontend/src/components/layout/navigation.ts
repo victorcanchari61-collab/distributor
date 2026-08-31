@@ -193,3 +193,16 @@ export function resolveNav(itemId: string): { sys: SysKey; group?: NavGroup; ite
 
 /** Primera vista del menu: la que se abre al entrar. */
 export const NAV_DEFAULT = NAV_GROUPS[0].items[0].id
+
+/**
+ * Ruta de una entrada del menu. El id ya tiene la forma modulo.vista, asi que
+ * 'config.usuarios' se convierte en '/config/usuarios' sin declarar nada mas.
+ */
+export function navPath(itemId: string) {
+  return `/${itemId.split('.').join('/')}`
+}
+
+/** Id del menu a partir de la ruta del navegador. */
+export function navIdFromPath(pathname: string) {
+  return pathname.replace(/^\/+|\/+$/g, '').split('/').join('.')
+}

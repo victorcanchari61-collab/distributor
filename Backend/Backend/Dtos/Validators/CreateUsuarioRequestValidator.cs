@@ -10,6 +10,6 @@ public class CreateUsuarioRequestValidator : AbstractValidator<CreateUsuarioRequ
         RuleFor(x => x.Nombre).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(100);
         RuleFor(x => x.Password).NotEmpty().MinimumLength(6).MaximumLength(100);
-        RuleFor(x => x.Role).IsInEnum();
+        RuleFor(x => x.RolId).GreaterThan(0).WithMessage("Selecciona un rol");
     }
 }

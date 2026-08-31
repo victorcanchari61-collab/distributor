@@ -5,7 +5,6 @@ using Backend.Dtos.Requests;
 using Backend.Dtos.Responses;
 using Backend.Exceptions;
 using Backend.Models;
-using Backend.Models.Enums;
 using Backend.Repository.Interfaces;
 using Backend.Service.Interfaces;
 using FluentValidation;
@@ -68,15 +67,24 @@ public class UsuarioService : IUsuarioService
             throw new ConflictException("Ya existe un usuario con ese email");
         }
 
+        var rol = await _repository.GetRolAsync(request.RolId)
+            ?? throw new BadRequestException("El rol indicado no existe");
+
+        if (!rol.Activo)
+        {
+            throw new BadRequestException("El rol indicado está desactivado");
+        }
+
         var usuario = new Usuario
         {
             Nombre = request.Nombre,
             Email = request.Email,
-            Role = request.Role
+            RolId = rol.Id
         };
         usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.Password);
 
         await _repository.AddAsync(usuario);
+        usuario.Rol = rol;
         return MapToResponse(usuario);
     }
 
@@ -91,7 +99,9 @@ public class UsuarioService : IUsuarioService
             new Claim(JwtRegisteredClaimNames.Email, usuario.Email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(ClaimTypes.Name, usuario.Nombre),
-            new Claim(ClaimTypes.Role, usuario.Role.ToString())
+            // El claim lleva el NOMBRE del rol: asi [Authorize(Roles = "Administrador")]
+            // sigue funcionando ahora que los roles viven en tabla.
+            new Claim(ClaimTypes.Role, usuario.Rol?.Nombre ?? string.Empty)
         };
 
         var token = new JwtSecurityToken(
@@ -111,7 +121,8 @@ public class UsuarioService : IUsuarioService
             Id = usuario.Id,
             Nombre = usuario.Nombre,
             Email = usuario.Email,
-            Role = usuario.Role,
+            RolId = usuario.RolId,
+            Rol = usuario.Rol?.Nombre ?? string.Empty,
             Activo = usuario.Activo,
             FechaCreacion = usuario.FechaCreacion
         };

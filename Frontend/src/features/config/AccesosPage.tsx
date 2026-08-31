@@ -1,74 +1,166 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RotateCcw, Save, ShieldCheck } from 'lucide-react'
-import { Badge, Button, cn, PageHeader, PageSection } from '../../components/ui'
+import { Alert, Badge, Button, cn, PageHeader, PageSection } from '../../components/ui'
 import { NAV_GROUPS } from '../../components/layout'
-import { ACCESOS_INICIALES, PERMISOS, ROLES, ROLES_LIST } from './roles'
-import type { MatrizAccesos, Permiso, Rol } from './roles'
+import { ApiError } from '../../lib/apiClient'
+import { rolApi } from './rolApi'
+import type { RolPermisoResponse, RolResponse } from './rolApi'
 
-/**
- * Matriz de permisos: que puede hacer cada rol en cada modulo.
- * Los roles se definen en la vista Roles; aqui solo se conceden accesos.
- */
+type Permiso = 'ver' | 'crear' | 'editar' | 'eliminar'
+
+const PERMISOS: { id: Permiso; label: string }[] = [
+  { id: 'ver', label: 'Ver' },
+  { id: 'crear', label: 'Crear' },
+  { id: 'editar', label: 'Editar' },
+  { id: 'eliminar', label: 'Eliminar' },
+]
+
+/** Matriz en pantalla: modulo -> permisos concedidos. */
+type Matriz = Record<string, Record<Permiso, boolean>>
+
+const VACIA = (): Matriz =>
+  Object.fromEntries(
+    NAV_GROUPS.map((g) => [g.id, { ver: false, crear: false, editar: false, eliminar: false }]),
+  )
+
+/** Lo que devuelve el backend, completado con los modulos que no tienen fila. */
+function aMatriz(permisos: RolPermisoResponse[]): Matriz {
+  const matriz = VACIA()
+  for (const p of permisos) {
+    if (matriz[p.modulo]) {
+      matriz[p.modulo] = { ver: p.ver, crear: p.crear, editar: p.editar, eliminar: p.eliminar }
+    }
+  }
+  return matriz
+}
+
 export function AccesosPage() {
-  const [rol, setRol] = useState<Rol>(1)
-  const [accesos, setAccesos] = useState<MatrizAccesos>(ACCESOS_INICIALES)
+  const [roles, setRoles] = useState<RolResponse[]>([])
+  const [rolId, setRolId] = useState<number | null>(null)
+  const [matriz, setMatriz] = useState<Matriz>(VACIA)
   const [sucio, setSucio] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+  const [ok, setOk] = useState('')
 
-  const actual = accesos[rol]
+  const cargar = useCallback(async () => {
+    setError('')
+    try {
+      const lista = await rolApi.getAll()
+      setRoles(lista)
+      setRolId((actual) => actual ?? lista[0]?.id ?? null)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los roles.')
+    }
+  }, [])
+
+  useEffect(() => {
+    void cargar()
+  }, [cargar])
+
+  const rol = useMemo(() => roles.find((r) => r.id === rolId) ?? null, [roles, rolId])
+
+  // Al cambiar de rol se recarga su matriz y se descartan cambios sin guardar.
+  useEffect(() => {
+    setMatriz(rol ? aMatriz(rol.permisos) : VACIA())
+    setSucio(false)
+    setOk('')
+  }, [rol])
 
   const toggle = (modulo: string, permiso: Permiso) => {
     setSucio(true)
-    setAccesos((prev) => {
-      const concedidos = prev[rol][modulo] ?? []
-      const tiene = concedidos.includes(permiso)
+    setOk('')
+    setMatriz((prev) => {
+      const fila = { ...prev[modulo] }
 
-      // Quitar "ver" apaga todo el modulo; conceder cualquier otro permiso lo enciende.
-      let siguiente: Permiso[]
       if (permiso === 'ver') {
-        siguiente = tiene ? [] : ['ver']
-      } else {
-        siguiente = tiene
-          ? concedidos.filter((p) => p !== permiso)
-          : [...new Set<Permiso>([...concedidos, 'ver', permiso])]
+        // Quitar Ver retira el modulo entero.
+        return {
+          ...prev,
+          [modulo]: fila.ver
+            ? { ver: false, crear: false, editar: false, eliminar: false }
+            : { ...fila, ver: true },
+        }
       }
 
-      return { ...prev, [rol]: { ...prev[rol], [modulo]: siguiente } }
+      fila[permiso] = !fila[permiso]
+      // Cualquier otro permiso implica Ver.
+      if (fila[permiso]) fila.ver = true
+      return { ...prev, [modulo]: fila }
     })
   }
 
   const marcarTodo = (modulo: string, todo: boolean) => {
     setSucio(true)
-    setAccesos((prev) => ({
+    setOk('')
+    setMatriz((prev) => ({
       ...prev,
-      [rol]: { ...prev[rol], [modulo]: todo ? PERMISOS.map((p) => p.id) : [] },
+      [modulo]: { ver: todo, crear: todo, editar: todo, eliminar: todo },
     }))
   }
 
   const restablecer = () => {
-    setAccesos(ACCESOS_INICIALES)
+    setMatriz(rol ? aMatriz(rol.permisos) : VACIA())
     setSucio(false)
+    setOk('')
   }
 
-  const modulosActivos = NAV_GROUPS.filter((g) => (actual[g.id] ?? []).length > 0).length
+  const guardar = async () => {
+    if (!rol) return
+    setGuardando(true)
+    setError('')
+    try {
+      await rolApi.updatePermisos(
+        rol.id,
+        NAV_GROUPS.map((g) => ({ modulo: g.id, ...matriz[g.id] })),
+      )
+      await cargar()
+      setSucio(false)
+      setOk('Accesos guardados.')
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos guardar los accesos.')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const modulosActivos = NAV_GROUPS.filter((g) => matriz[g.id]?.ver).length
 
   return (
     <div className="space-y-5">
       <PageHeader
         icon={<ShieldCheck size={20} />}
-        title={`Accesos de ${ROLES[rol].label}`}
-        description={`${modulosActivos} de ${NAV_GROUPS.length} módulos habilitados. ${ROLES[rol].description}`}
+        title={rol ? `Accesos de ${rol.nombre}` : 'Accesos'}
+        description={
+          rol
+            ? `${modulosActivos} de ${NAV_GROUPS.length} módulos habilitados. ${rol.descripcion ?? ''}`
+            : 'Elige un rol para configurar qué puede hacer en cada módulo.'
+        }
         actions={
           <>
             <Button variant="secondary" size="sm" disabled={!sucio} onClick={restablecer}>
               <RotateCcw size={15} />
               Restablecer
             </Button>
-            <Button size="sm" disabled={!sucio} iconRight={<Save size={15} />}>
+            <Button
+              size="sm"
+              disabled={!sucio}
+              loading={guardando}
+              onClick={() => void guardar()}
+              iconRight={<Save size={15} />}
+            >
               Guardar
             </Button>
           </>
         }
       />
+
+      {error && <Alert>{error}</Alert>}
+      {ok && (
+        <p className="rounded-field border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          {ok}
+        </p>
+      )}
 
       <PageSection>
         {/* Selector de rol */}
@@ -77,21 +169,21 @@ export function AccesosPage() {
           aria-label="Rol a configurar"
           className="mb-4 inline-flex flex-wrap gap-1 rounded-full bg-surface-alt p-1"
         >
-          {ROLES_LIST.map((r) => (
+          {roles.map((r) => (
             <button
               key={r.id}
               type="button"
               role="tab"
-              aria-selected={rol === r.id}
-              onClick={() => setRol(r.id)}
+              aria-selected={rolId === r.id}
+              onClick={() => setRolId(r.id)}
               className={cn(
                 'cursor-pointer rounded-full px-4 py-1.5 text-sm font-semibold transition-colors',
-                rol === r.id
+                rolId === r.id
                   ? 'bg-white text-[rgb(var(--sys-ink-rgb))] shadow-sm'
                   : 'text-ink-muted hover:text-ink',
               )}
             >
-              {r.label}
+              {r.nombre}
             </button>
           ))}
         </div>
@@ -118,8 +210,13 @@ export function AccesosPage() {
             </thead>
             <tbody>
               {NAV_GROUPS.map((group) => {
-                const concedidos = actual[group.id] ?? []
-                const completo = concedidos.length === PERMISOS.length
+                const fila = matriz[group.id] ?? {
+                  ver: false,
+                  crear: false,
+                  editar: false,
+                  eliminar: false,
+                }
+                const completo = PERMISOS.every((p) => fila[p.id])
                 const GroupIcon = group.icon
                 return (
                   <tr
@@ -131,14 +228,14 @@ export function AccesosPage() {
                       <span className="flex items-center gap-2">
                         <GroupIcon size={16} className="text-[rgb(var(--sys-rgb))]" />
                         <span className="font-medium text-ink">{group.label}</span>
-                        {concedidos.length === 0 && <Badge>sin acceso</Badge>}
+                        {!fila.ver && <Badge>sin acceso</Badge>}
                       </span>
                     </td>
                     {PERMISOS.map((p) => (
                       <td key={p.id} className="px-2 py-2.5 text-center">
                         <input
                           type="checkbox"
-                          checked={concedidos.includes(p.id)}
+                          checked={fila[p.id]}
                           onChange={() => toggle(group.id, p.id)}
                           aria-label={`${p.label} en ${group.label}`}
                           className="size-4 cursor-pointer rounded border-line-strong accent-[rgb(var(--sys-rgb))]"

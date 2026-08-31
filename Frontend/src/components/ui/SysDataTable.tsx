@@ -227,6 +227,18 @@ export function SysDataTable<T>({
     [columns],
   )
 
+  // El orden se guarda en estado para poder arrastrar las cabeceras, pero
+  // entonces hay que sincronizarlo cuando la vista agrega o quita columnas:
+  // sin esto, una columna nueva nunca llegaria a pintarse.
+  useEffect(() => {
+    setOrder((prev) => {
+      const vigentes = prev.filter((k) => k in byKey)
+      const nuevas = columns.map((c) => c.key).filter((k) => !vigentes.includes(k))
+      if (nuevas.length === 0 && vigentes.length === prev.length) return prev
+      return [...vigentes, ...nuevas]
+    })
+  }, [columns, byKey])
+
   // Columnas en el orden elegido y sin las ocultas.
   const visible = useMemo(
     () => order.map((k) => byKey[k]).filter((c) => c && !hidden.includes(c.key)),

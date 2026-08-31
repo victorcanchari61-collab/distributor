@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { IdCard, Pencil, Plus, Trash2, Users } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { IdCard, Pencil, Plus, ShieldCheck, ShieldOff, Trash2, Users } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -12,111 +12,138 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { NAV_GROUPS } from '../../components/layout'
-import { ACCESOS_INICIALES, ROLES_LIST } from './roles'
-import type { Rol } from './roles'
-
-interface RolFila {
-  id: number
-  label: string
-  description: string
-  usuarios: number
-  modulos: number
-  /** Los tres del enum del backend no se pueden eliminar. */
-  delSistema: boolean
-}
-
-/** Cuantos usuarios tiene cada rol. Sale del listado de usuarios de muestra. */
-const USUARIOS_POR_ROL: Record<Rol, number> = { 1: 1, 2: 2, 3: 2 }
-
-const FILAS_INICIALES: RolFila[] = ROLES_LIST.map((r) => ({
-  id: r.id,
-  label: r.label,
-  description: r.description,
-  usuarios: USUARIOS_POR_ROL[r.id],
-  modulos: NAV_GROUPS.filter((g) => (ACCESOS_INICIALES[r.id][g.id] ?? []).length > 0).length,
-  delSistema: true,
-}))
+import { ApiError } from '../../lib/apiClient'
+import { rolApi } from './rolApi'
+import type { RolResponse } from './rolApi'
 
 export function RolesPage() {
-  const [filas, setFilas] = useState<RolFila[]>(FILAS_INICIALES)
+  const [roles, setRoles] = useState<RolResponse[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
 
   const [abierto, setAbierto] = useState(false)
-  const [editando, setEditando] = useState<RolFila | null>(null)
-  const [form, setForm] = useState({ label: '', description: '' })
+  const [editando, setEditando] = useState<RolResponse | null>(null)
+  const [form, setForm] = useState({ nombre: '', descripcion: '' })
+  const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
+
+  const cargar = useCallback(async () => {
+    setCargando(true)
+    setError('')
+    try {
+      setRoles(await rolApi.getAll())
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los roles.')
+    } finally {
+      setCargando(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void cargar()
+  }, [cargar])
 
   const abrirNuevo = () => {
     setEditando(null)
-    setForm({ label: '', description: '' })
+    setForm({ nombre: '', descripcion: '' })
     setErrorForm('')
     setAbierto(true)
   }
 
-  const abrirEdicion = (fila: RolFila) => {
-    setEditando(fila)
-    setForm({ label: fila.label, description: fila.description })
+  const abrirEdicion = (rol: RolResponse) => {
+    setEditando(rol)
+    setForm({ nombre: rol.nombre, descripcion: rol.descripcion ?? '' })
     setErrorForm('')
     setAbierto(true)
   }
 
-  const guardar = () => {
-    const label = form.label.trim()
-    if (!label) {
-      setErrorForm('Ponle un nombre al rol.')
-      return
-    }
-    if (filas.some((f) => f.label.toLowerCase() === label.toLowerCase() && f.id !== editando?.id)) {
-      setErrorForm('Ya existe un rol con ese nombre.')
-      return
-    }
+  const guardar = async () => {
+    setErrorForm('')
+    if (!form.nombre.trim()) return setErrorForm('Ponle un nombre al rol.')
 
-    if (editando) {
-      setFilas((prev) =>
-        prev.map((f) =>
-          f.id === editando.id ? { ...f, label, description: form.description.trim() } : f,
-        ),
+    setGuardando(true)
+    try {
+      if (editando) {
+        await rolApi.update(editando.id, {
+          nombre: form.nombre.trim(),
+          descripcion: form.descripcion.trim(),
+          activo: editando.activo,
+        })
+      } else {
+        await rolApi.create({ nombre: form.nombre.trim(), descripcion: form.descripcion.trim() })
+      }
+      setAbierto(false)
+      await cargar()
+    } catch (e) {
+      setErrorForm(
+        e instanceof ApiError
+          ? e.errors.length
+            ? e.errors.join(' ')
+            : e.message
+          : 'No pudimos guardar el rol.',
       )
-    } else {
-      setFilas((prev) => [
-        ...prev,
-        {
-          id: Math.max(0, ...prev.map((f) => f.id)) + 1,
-          label,
-          description: form.description.trim(),
-          usuarios: 0,
-          modulos: 0,
-          delSistema: false,
-        },
-      ])
+    } finally {
+      setGuardando(false)
     }
-
-    setAbierto(false)
   }
 
-  const eliminar = (fila: RolFila) => setFilas((prev) => prev.filter((f) => f.id !== fila.id))
+  const alternarEstado = async (rol: RolResponse) => {
+    setError('')
+    try {
+      await rolApi.update(rol.id, {
+        nombre: rol.nombre,
+        descripcion: rol.descripcion,
+        activo: !rol.activo,
+      })
+      await cargar()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado del rol.')
+    }
+  }
 
-  const columns: DataTableColumn<RolFila>[] = [
+  const eliminar = async (rol: RolResponse) => {
+    setError('')
+    try {
+      await rolApi.remove(rol.id)
+      await cargar()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el rol.')
+    }
+  }
+
+  /** Modulos a los que el rol tiene acceso. */
+  const modulosDe = (rol: RolResponse) => rol.permisos.filter((p) => p.ver).length
+
+  const columns: DataTableColumn<RolResponse>[] = [
     {
-      key: 'label',
+      key: 'nombre',
       label: 'Rol',
       render: (row) => (
         <span className="flex items-center gap-2">
-          <span className="font-semibold text-ink">{row.label}</span>
+          <span className="font-semibold text-ink">{row.nombre}</span>
           {row.delSistema && <Badge>del sistema</Badge>}
         </span>
       ),
     },
-    { key: 'description', label: 'Qué puede hacer' },
+    { key: 'descripcion', label: 'Qué puede hacer' },
     { key: 'usuarios', label: 'Usuarios', align: 'right', value: (row) => row.usuarios },
     {
       key: 'modulos',
       label: 'Módulos',
       align: 'right',
-      value: (row) => row.modulos,
+      value: (row) => modulosDe(row),
       render: (row) => (
         <Badge tone="sys">
-          {row.modulos} de {NAV_GROUPS.length}
+          {modulosDe(row)} de {NAV_GROUPS.length}
         </Badge>
+      ),
+    },
+    {
+      key: 'activo',
+      label: 'Estado',
+      value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
+      render: (row) => (
+        <Badge tone={row.activo ? 'success' : 'neutral'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>
       ),
     },
   ]
@@ -131,45 +158,58 @@ export function RolesPage() {
           Nuevo rol
         </Button>
       }
+      alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Roles definidos" value={String(filas.length)} icon={<IdCard size={18} />} />
+          <StatCard
+            label="Roles definidos"
+            value={String(roles.length)}
+            hint={`${roles.filter((r) => r.activo).length} activos`}
+            icon={<IdCard size={18} />}
+          />
           <StatCard
             label="Usuarios asignados"
-            value={String(filas.reduce((total, f) => total + f.usuarios, 0))}
+            value={String(roles.reduce((total, r) => total + r.usuarios, 0))}
             icon={<Users size={18} />}
           />
           <StatCard label="Módulos del sistema" value={String(NAV_GROUPS.length)} />
         </>
       }
       columns={columns}
-      rows={filas}
+      rows={roles}
       cardIcon={IdCard}
       searchPlaceholder="Buscar rol..."
-      empty="Todavía no hay roles definidos."
+      empty={cargando ? 'Cargando roles...' : 'Todavía no hay roles definidos.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Editar ${row.label}`} onClick={() => abrirEdicion(row)}>
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
             <Pencil size={15} />
           </RowAction>
           {!row.delSistema && (
-            <RowAction label={`Eliminar ${row.label}`} tone="danger" onClick={() => eliminar(row)}>
-              <Trash2 size={15} />
-            </RowAction>
+            <>
+              <RowAction
+                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+                tone={row.activo ? 'warning' : 'success'}
+                onClick={() => void alternarEstado(row)}
+              >
+                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+              </RowAction>
+              <RowAction
+                label={`Eliminar ${row.nombre}`}
+                tone="danger"
+                onClick={() => void eliminar(row)}
+              >
+                <Trash2 size={15} />
+              </RowAction>
+            </>
           )}
         </>
       )}
-      note={
-        <>
-          Los tres roles marcados <b>del sistema</b> vienen del enum <code>Role</code> del backend y
-          no se pueden eliminar. Los que crees aquí viven solo en pantalla hasta que ese enum pase a
-          ser tabla.
-        </>
-      }
+      note="Los roles del sistema no se pueden eliminar ni desactivar, y un rol con usuarios asignados tampoco se elimina."
     >
       <Modal
         open={abierto}
-        title={editando ? `Editar ${editando.label}` : 'Nuevo rol'}
+        title={editando ? `Editar ${editando.nombre}` : 'Nuevo rol'}
         description="El nombre y la descripción ayudan a saber para quién es este perfil."
         onClose={() => setAbierto(false)}
         size="sm"
@@ -178,7 +218,7 @@ export function RolesPage() {
             <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
               Cancelar
             </Button>
-            <Button size="sm" onClick={guardar}>
+            <Button size="sm" loading={guardando} onClick={() => void guardar()}>
               {editando ? 'Guardar cambios' : 'Crear rol'}
             </Button>
           </>
@@ -190,8 +230,8 @@ export function RolesPage() {
           <Input
             label="Nombre del rol"
             placeholder="Ej. Supervisor de almacén"
-            value={form.label}
-            onChange={(e) => setForm({ ...form, label: e.target.value })}
+            value={form.nombre}
+            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
           />
 
           <label className="block">
@@ -199,8 +239,8 @@ export function RolesPage() {
             <textarea
               rows={3}
               placeholder="Describe en una línea el alcance de este perfil."
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              value={form.descripcion}
+              onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
               className="w-full rounded-field border border-line bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors placeholder:text-ink-soft focus:border-brand focus:ring-4 focus:ring-brand-ring"
             />
           </label>
@@ -213,4 +253,3 @@ export function RolesPage() {
     </ListPage>
   )
 }
-
