@@ -179,6 +179,7 @@ export function UsuariosPage() {
           </RowAction>
           <RowAction
             label={`${row.activo ? 'Deshabilitar' : 'Habilitar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
             onClick={() => alternarEstado(row)}
           >
             <ShieldOff size={15} />

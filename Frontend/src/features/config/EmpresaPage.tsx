@@ -162,7 +162,11 @@ export function EmpresaPage() {
       rowActions={(row) => (
         <>
           {!row.activa && (
-            <RowAction label={`Activar ${row.nombreComercial}`} onClick={() => void activar(row)}>
+            <RowAction
+              label={`Activar ${row.nombreComercial}`}
+              tone="success"
+              onClick={() => void activar(row)}
+            >
               <Circle size={15} />
             </RowAction>
           )}
