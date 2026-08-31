@@ -16,7 +16,6 @@ import {
   IdCard,
   Landmark,
   LayoutGrid,
-  MapPin,
   MapPinned,
   Package,
   PackageCheck,
@@ -175,9 +174,9 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: Settings,
     items: [
       { id: 'config.usuarios', label: 'Usuarios', icon: UserCog },
-      { id: 'config.accesos', label: 'Roles y accesos', icon: ShieldCheck },
+      { id: 'config.roles', label: 'Roles', icon: IdCard },
+      { id: 'config.accesos', label: 'Accesos', icon: ShieldCheck },
       { id: 'config.empresa', label: 'Empresa', icon: Building2 },
-      { id: 'config.sucursales', label: 'Sucursales', icon: MapPin },
       // Reservados: se muestran cuando el cliente decida usar facturacion.
       { id: 'config.series', label: 'Series de comprobantes', icon: Hash, pending: true, hidden: true },
       { id: 'config.parametros', label: 'Parámetros', icon: Sliders, pending: true, hidden: true },

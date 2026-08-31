@@ -1,7 +1,7 @@
 export { UsuariosPage } from './UsuariosPage'
 export { AccesosPage } from './AccesosPage'
 export { EmpresaPage } from './EmpresaPage'
-export { SucursalesPage } from './SucursalesPage'
+export { RolesPage } from './RolesPage'
 export { empresaApi } from './empresaApi'
 export type { EmpresaRequest, EmpresaResponse } from './empresaApi'
 export { ROLES, ROLES_LIST, PERMISOS, ACCESOS_INICIALES } from './roles'

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { DashboardLayout, NAV_DEFAULT, resolveNav } from './components/layout'
 import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
-import { AccesosPage, EmpresaPage, SucursalesPage, UsuariosPage } from './features/config'
+import { AccesosPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
 
@@ -10,8 +10,8 @@ import { clearSession, getUsuario } from './lib/authStorage'
 const VIEWS: Record<string, () => React.ReactElement> = {
   'config.usuarios': UsuariosPage,
   'config.accesos': AccesosPage,
+  'config.roles': RolesPage,
   'config.empresa': EmpresaPage,
-  'config.sucursales': SucursalesPage,
 }
 
 function App() {

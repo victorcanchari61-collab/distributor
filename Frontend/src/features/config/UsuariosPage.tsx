@@ -10,17 +10,16 @@ export interface Usuario {
   email: string
   role: Rol
   activo: boolean
-  sucursal: string
   ultimoAcceso: string
 }
 
 /** Datos de muestra: la API todavia no expone el listado de usuarios. */
 const USUARIOS: Usuario[] = [
-  { id: 1, nombre: 'Admin', email: 'admin@distributor.com', role: 1, activo: true, sucursal: 'Central', ultimoAcceso: '2026-08-31 09:14' },
-  { id: 2, nombre: 'Lucía Torres', email: 'ltorres@distributor.com', role: 3, activo: true, sucursal: 'Almacén Callao', ultimoAcceso: '2026-08-31 07:58' },
-  { id: 3, nombre: 'Pedro Ramos', email: 'pramos@distributor.com', role: 2, activo: true, sucursal: 'Central', ultimoAcceso: '2026-08-30 18:02' },
-  { id: 4, nombre: 'Carlos Mendoza', email: 'cmendoza@distributor.com', role: 2, activo: true, sucursal: 'Lima Norte', ultimoAcceso: '2026-08-30 16:41' },
-  { id: 5, nombre: 'Rosa Díaz', email: 'rdiaz@distributor.com', role: 3, activo: false, sucursal: 'Almacén Central', ultimoAcceso: '2026-07-12 11:20' },
+  { id: 1, nombre: 'Admin', email: 'admin@distributor.com', role: 1, activo: true, ultimoAcceso: '2026-08-31 09:14' },
+  { id: 2, nombre: 'Lucía Torres', email: 'ltorres@distributor.com', role: 3, activo: true, ultimoAcceso: '2026-08-31 07:58' },
+  { id: 3, nombre: 'Pedro Ramos', email: 'pramos@distributor.com', role: 2, activo: true, ultimoAcceso: '2026-08-30 18:02' },
+  { id: 4, nombre: 'Carlos Mendoza', email: 'cmendoza@distributor.com', role: 2, activo: true, ultimoAcceso: '2026-08-30 16:41' },
+  { id: 5, nombre: 'Rosa Díaz', email: 'rdiaz@distributor.com', role: 3, activo: false, ultimoAcceso: '2026-07-12 11:20' },
 ]
 
 export function UsuariosPage() {
@@ -38,7 +37,6 @@ export function UsuariosPage() {
       value: (row) => ROLES[row.role].label,
       render: (row) => <Badge tone="sys">{ROLES[row.role].label}</Badge>,
     },
-    { key: 'sucursal', label: 'Sucursal' },
     { key: 'ultimoAcceso', label: 'Último acceso' },
     {
       key: 'activo',
