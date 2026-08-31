@@ -5,9 +5,9 @@ import {
   Badge,
   Button,
   Input,
+  ListPage,
   Modal,
-  PageHeader,
-  SysDataTable,
+  RowAction,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -131,68 +131,57 @@ export function EmpresaPage() {
   ]
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        icon={<Building2 size={20} />}
-        title="Empresas"
-        description="Puedes registrar varias, pero solo una opera el sistema a la vez."
-        actions={
-          <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
-            Nueva empresa
-          </Button>
-        }
-      />
-
-      {error && <Alert>{error}</Alert>}
-
-      {activa && (
-        <div className="flex flex-wrap items-center gap-3 rounded-panel border border-[rgb(var(--sys-rgb)/0.3)] bg-[rgb(var(--sys-rgb)/0.06)] p-4">
-          <CheckCircle2 size={20} className="shrink-0 text-[rgb(var(--sys-ink-rgb))]" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink">
-              Operando como {activa.nombreComercial}
-            </p>
-            <p className="truncate text-xs text-ink-muted">
-              {activa.razonSocial} · RUC {activa.ruc}
-            </p>
+    <ListPage
+      icon={<Building2 size={20} />}
+      title="Empresas"
+      description="Puedes registrar varias, pero solo una opera el sistema a la vez."
+      actions={
+        <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
+          Nueva empresa
+        </Button>
+      }
+      alert={error ? <Alert>{error}</Alert> : undefined}
+      banner={
+        activa ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-panel border border-[rgb(var(--sys-rgb)/0.3)] bg-[rgb(var(--sys-rgb)/0.06)] p-4">
+            <CheckCircle2 size={20} className="shrink-0 text-[rgb(var(--sys-ink-rgb))]" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-ink">Operando como {activa.nombreComercial}</p>
+              <p className="truncate text-xs text-ink-muted">
+                {activa.razonSocial} · RUC {activa.ruc}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-
-      <div>
-        <SysDataTable
-          columns={columns}
-          rows={empresas}
-          cardIcon={Building2}
-          searchPlaceholder="Buscar por razón social o RUC..."
-          empty={cargando ? 'Cargando empresas...' : 'Todavía no hay empresas registradas.'}
-          actions={(row) => (
-            <>
-              {!row.activa && (
-                <RowAction label={`Activar ${row.nombreComercial}`} onClick={() => void activar(row)}>
-                  <Circle size={15} />
-                </RowAction>
-              )}
-              <RowAction label={`Editar ${row.nombreComercial}`} onClick={() => abrirEdicion(row)}>
-                <Pencil size={15} />
-              </RowAction>
-              {!row.activa && (
-                <RowAction
-                  label={`Eliminar ${row.nombreComercial}`}
-                  onClick={() => void eliminar(row)}
-                >
-                  <Trash2 size={15} />
-                </RowAction>
-              )}
-            </>
+        ) : undefined
+      }
+      columns={columns}
+      rows={empresas}
+      cardIcon={Building2}
+      searchPlaceholder="Buscar por razón social o RUC..."
+      empty={cargando ? 'Cargando empresas...' : 'Todavía no hay empresas registradas.'}
+      rowActions={(row) => (
+        <>
+          {!row.activa && (
+            <RowAction label={`Activar ${row.nombreComercial}`} onClick={() => void activar(row)}>
+              <Circle size={15} />
+            </RowAction>
           )}
-        />
-
-        <p className="mt-3 text-xs text-ink-soft">
-          La empresa activa no se puede eliminar ni desactivar: para cambiarla, activa otra.
-        </p>
-      </div>
-
+          <RowAction label={`Editar ${row.nombreComercial}`} onClick={() => abrirEdicion(row)}>
+            <Pencil size={15} />
+          </RowAction>
+          {!row.activa && (
+            <RowAction
+              label={`Eliminar ${row.nombreComercial}`}
+              tone="danger"
+              onClick={() => void eliminar(row)}
+            >
+              <Trash2 size={15} />
+            </RowAction>
+          )}
+        </>
+      )}
+      note="La empresa activa no se puede eliminar ni desactivar: para cambiarla, activa otra."
+    >
       <Modal
         open={abierto}
         title={editando ? 'Editar empresa' : 'Nueva empresa'}
@@ -266,28 +255,7 @@ export function EmpresaPage() {
           )}
         </div>
       </Modal>
-    </div>
+    </ListPage>
   )
 }
 
-function RowAction({
-  label,
-  onClick,
-  children,
-}: {
-  label: string
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      onClick={onClick}
-      className="cursor-pointer rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-[rgb(var(--sys-rgb)/0.12)] hover:text-[rgb(var(--sys-ink-rgb))]"
-    >
-      {children}
-    </button>
-  )
-}

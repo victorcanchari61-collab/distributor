@@ -5,10 +5,10 @@ import {
   Badge,
   Button,
   Input,
+  ListPage,
   Modal,
-  PageHeader,
+  RowAction,
   StatCard,
-  SysDataTable,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { NAV_GROUPS } from '../../components/layout'
@@ -122,56 +122,51 @@ export function RolesPage() {
   ]
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        icon={<IdCard size={20} />}
-        title="Roles"
-        description="Define los perfiles de trabajo. Lo que cada rol puede tocar se configura en Accesos."
-        actions={
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo rol
-          </Button>
-        }
-      />
-
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Roles definidos" value={String(filas.length)} icon={<IdCard size={18} />} />
-        <StatCard
-          label="Usuarios asignados"
-          value={String(filas.reduce((total, f) => total + f.usuarios, 0))}
-          icon={<Users size={18} />}
-        />
-        <StatCard label="Módulos del sistema" value={String(NAV_GROUPS.length)} />
-      </section>
-
-      <div>
-        <SysDataTable
-          columns={columns}
-          rows={filas}
-          cardIcon={IdCard}
-          searchPlaceholder="Buscar rol..."
-          empty="Todavía no hay roles definidos."
-          actions={(row) => (
-            <>
-              <RowAction label={`Editar ${row.label}`} onClick={() => abrirEdicion(row)}>
-                <Pencil size={15} />
-              </RowAction>
-              {!row.delSistema && (
-                <RowAction label={`Eliminar ${row.label}`} onClick={() => eliminar(row)}>
-                  <Trash2 size={15} />
-                </RowAction>
-              )}
-            </>
+    <ListPage
+      icon={<IdCard size={20} />}
+      title="Roles"
+      description="Define los perfiles de trabajo. Lo que cada rol puede tocar se configura en Accesos."
+      actions={
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+          Nuevo rol
+        </Button>
+      }
+      stats={
+        <>
+          <StatCard label="Roles definidos" value={String(filas.length)} icon={<IdCard size={18} />} />
+          <StatCard
+            label="Usuarios asignados"
+            value={String(filas.reduce((total, f) => total + f.usuarios, 0))}
+            icon={<Users size={18} />}
+          />
+          <StatCard label="Módulos del sistema" value={String(NAV_GROUPS.length)} />
+        </>
+      }
+      columns={columns}
+      rows={filas}
+      cardIcon={IdCard}
+      searchPlaceholder="Buscar rol..."
+      empty="Todavía no hay roles definidos."
+      rowActions={(row) => (
+        <>
+          <RowAction label={`Editar ${row.label}`} onClick={() => abrirEdicion(row)}>
+            <Pencil size={15} />
+          </RowAction>
+          {!row.delSistema && (
+            <RowAction label={`Eliminar ${row.label}`} tone="danger" onClick={() => eliminar(row)}>
+              <Trash2 size={15} />
+            </RowAction>
           )}
-        />
-
-        <p className="mt-3 text-xs text-ink-soft">
+        </>
+      )}
+      note={
+        <>
           Los tres roles marcados <b>del sistema</b> vienen del enum <code>Role</code> del backend y
           no se pueden eliminar. Los que crees aquí viven solo en pantalla hasta que ese enum pase a
           ser tabla.
-        </p>
-      </div>
-
+        </>
+      }
+    >
       <Modal
         open={abierto}
         title={editando ? `Editar ${editando.label}` : 'Nuevo rol'}
@@ -215,28 +210,7 @@ export function RolesPage() {
           </p>
         </div>
       </Modal>
-    </div>
+    </ListPage>
   )
 }
 
-function RowAction({
-  label,
-  onClick,
-  children,
-}: {
-  label: string
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      onClick={onClick}
-      className="cursor-pointer rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-[rgb(var(--sys-rgb)/0.12)] hover:text-[rgb(var(--sys-ink-rgb))]"
-    >
-      {children}
-    </button>
-  )
-}
