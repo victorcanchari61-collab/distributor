@@ -60,11 +60,7 @@ export function Sidebar({
             collapsed ? 'justify-center' : 'justify-between',
           )}
         >
-          {collapsed ? (
-            <Logo size="sm" showText={false} />
-          ) : (
-            <Logo size="sm" text="DISTRIBUIDORA" />
-          )}
+          {collapsed ? <Logo variant="mark" size={30} /> : <Logo variant="wordmark" size={26} tagline />}
 
           <button
             type="button"

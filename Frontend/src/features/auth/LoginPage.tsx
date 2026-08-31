@@ -69,7 +69,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
         />
 
         <header className="relative flex items-center gap-3">
-          <Logo showText={false} />
+          <Logo variant="mark" size={34} />
           <span className="text-xs font-semibold tracking-[0.22em] text-ink-soft uppercase">
             Suite operativa
           </span>
@@ -77,11 +77,11 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
 
         <div className="relative flex flex-1 items-center justify-center py-10">
           <Card className="w-full max-w-md">
-            <div className="mb-6 text-center">
+            <div className="mb-6 flex flex-col items-center text-center">
               <p className="text-xs font-semibold tracking-[0.22em] text-ink-soft uppercase">
                 Bienvenido a
               </p>
-              <Logo className="mt-2 justify-center" />
+              <Logo variant="emblem" size={82} tagline className="mt-3" />
               <p className="mt-3 text-sm text-ink-muted">
                 Inicia sesión para gestionar ventas, almacén, despacho y RR. HH. desde un solo lugar.
               </p>
