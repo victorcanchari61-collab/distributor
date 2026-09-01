@@ -241,7 +241,7 @@ export function RolesPage() {
               placeholder="Describe en una línea el alcance de este perfil."
               value={form.descripcion}
               onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-              className="w-full rounded-field border border-line bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors placeholder:text-ink-soft focus:border-brand focus:ring-4 focus:ring-brand-ring"
+              className="w-full rounded-field border border-line bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors placeholder:text-ink-soft focus:border-ink-soft"
             />
           </label>
 

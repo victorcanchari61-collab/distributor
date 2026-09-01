@@ -48,6 +48,7 @@
 
   /* --- Medidas compartidas --- */
   --spacing-control: 3rem; /* 48px: alto de inputs y botones */
+  --height-control: 3rem;
 }
 
 @layer base {

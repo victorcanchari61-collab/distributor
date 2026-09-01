@@ -6,8 +6,13 @@ export interface EmpresaResponse {
   nombreComercial: string
   ruc: string
   direccion: string | null
+  departamento: string | null
+  provincia: string | null
+  distrito: string | null
   telefono: string | null
   email: string | null
+  sitioWeb: string | null
+  representanteLegal: string | null
   activa: boolean
   fechaCreacion: string
 }
@@ -17,8 +22,14 @@ export interface EmpresaRequest {
   nombreComercial: string
   ruc: string
   direccion?: string | null
+  departamento?: string | null
+  provincia?: string | null
+  distrito?: string | null
   telefono?: string | null
   email?: string | null
+  /** Se puede escribir sin http: el backend le pone https al guardar. */
+  sitioWeb?: string | null
+  representanteLegal?: string | null
   activa: boolean
 }
 

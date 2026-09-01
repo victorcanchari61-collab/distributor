@@ -4,6 +4,7 @@ export interface UsuarioResponse {
   id: number
   nombre: string
   email: string
+  dni: string | null
   rolId: number
   /** Nombre del rol, ya resuelto por el backend. */
   rol: string
@@ -30,6 +31,7 @@ export interface CreateUsuarioRequest {
   nombre: string
   email: string
   password: string
+  dni?: string | null
   /** Id de la tabla Roles. */
   rolId: number
 }

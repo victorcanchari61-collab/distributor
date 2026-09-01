@@ -4,6 +4,7 @@ import {
   Alert,
   Badge,
   Button,
+  DocumentoInput,
   Input,
   ListPage,
   Modal,
@@ -12,6 +13,7 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { consultaApi } from '../../lib/consultaApi'
 import { register } from '../auth/authApi'
 import { rolApi } from './rolApi'
 import type { RolResponse } from './rolApi'
@@ -20,6 +22,7 @@ export interface Usuario {
   id: number
   nombre: string
   email: string
+  dni: string | null
   rolId: number
   rol: string
   activo: boolean
@@ -28,14 +31,14 @@ export interface Usuario {
 
 /** Datos de muestra: la API todavia no expone el listado de usuarios. */
 const USUARIOS: Usuario[] = [
-  { id: 1, nombre: 'Admin', email: 'admin@distributor.com', rolId: 1, rol: 'Administrador', activo: true, ultimoAcceso: '2026-08-31 09:14' },
-  { id: 2, nombre: 'Lucía Torres', email: 'ltorres@distributor.com', rolId: 3, rol: 'Almacenero', activo: true, ultimoAcceso: '2026-08-31 07:58' },
-  { id: 3, nombre: 'Pedro Ramos', email: 'pramos@distributor.com', rolId: 2, rol: 'Vendedor', activo: true, ultimoAcceso: '2026-08-30 18:02' },
-  { id: 4, nombre: 'Carlos Mendoza', email: 'cmendoza@distributor.com', rolId: 2, rol: 'Vendedor', activo: true, ultimoAcceso: '2026-08-30 16:41' },
-  { id: 5, nombre: 'Rosa Díaz', email: 'rdiaz@distributor.com', rolId: 3, rol: 'Almacenero', activo: false, ultimoAcceso: '2026-07-12 11:20' },
+  { id: 1, nombre: 'Admin', email: 'admin@distributor.com', dni: null, rolId: 1, rol: 'Administrador', activo: true, ultimoAcceso: '2026-08-31 09:14' },
+  { id: 2, nombre: 'Lucía Torres', email: 'ltorres@distributor.com', dni: '45871203', rolId: 3, rol: 'Almacenero', activo: true, ultimoAcceso: '2026-08-31 07:58' },
+  { id: 3, nombre: 'Pedro Ramos', email: 'pramos@distributor.com', dni: '41203877', rolId: 2, rol: 'Vendedor', activo: true, ultimoAcceso: '2026-08-30 18:02' },
+  { id: 4, nombre: 'Carlos Mendoza', email: 'cmendoza@distributor.com', dni: '09887412', rolId: 2, rol: 'Vendedor', activo: true, ultimoAcceso: '2026-08-30 16:41' },
+  { id: 5, nombre: 'Rosa Díaz', email: 'rdiaz@distributor.com', dni: null, rolId: 3, rol: 'Almacenero', activo: false, ultimoAcceso: '2026-07-12 11:20' },
 ]
 
-const VACIO = { nombre: '', email: '', password: '', rolId: 0 }
+const VACIO = { nombre: '', email: '', password: '', dni: '', rolId: 0 }
 
 export function UsuariosPage() {
   const [usuarios, setUsuarios] = useState(USUARIOS)
@@ -47,6 +50,7 @@ export function UsuariosPage() {
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
   const [error, setError] = useState('')
+  const [consultando, setConsultando] = useState(false)
 
   // Los roles del selector salen de la tabla Roles, no de una lista fija.
   const cargarRoles = useCallback(async () => {
@@ -73,9 +77,35 @@ export function UsuariosPage() {
 
   const abrirEdicion = (usuario: Usuario) => {
     setEditando(usuario)
-    setForm({ nombre: usuario.nombre, email: usuario.email, password: '', rolId: usuario.rolId })
+    setForm({
+      nombre: usuario.nombre,
+      email: usuario.email,
+      password: '',
+      dni: usuario.dni ?? '',
+      rolId: usuario.rolId,
+    })
     setErrorForm('')
     setAbierto(true)
+  }
+
+  /** Trae de RENIEC el nombre de la persona y llena el campo Nombre. */
+  const consultarDni = async (dni: string) => {
+    setConsultando(true)
+    setErrorForm('')
+    try {
+      const datos = await consultaApi.dni(dni)
+      setForm((prev) => ({
+        ...prev,
+        dni: datos.dni,
+        nombre: `${datos.apellidoPaterno} ${datos.apellidoMaterno} ${datos.nombres}`
+          .replace(/\s+/g, ' ')
+          .trim(),
+      }))
+    } catch (e) {
+      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos consultar el DNI.')
+    } finally {
+      setConsultando(false)
+    }
   }
 
   const guardar = async () => {
@@ -98,6 +128,7 @@ export function UsuariosPage() {
                 ...u,
                 nombre: form.nombre.trim(),
                 email: form.email.trim(),
+                dni: form.dni || null,
                 rolId: form.rolId,
                 rol: rol?.nombre ?? u.rol,
               }
@@ -114,6 +145,7 @@ export function UsuariosPage() {
         nombre: form.nombre.trim(),
         email: form.email.trim(),
         password: form.password,
+        dni: form.dni || null,
         rolId: form.rolId,
       })
 
@@ -123,6 +155,7 @@ export function UsuariosPage() {
           id: creado.id,
           nombre: creado.nombre,
           email: creado.email,
+          dni: creado.dni,
           rolId: creado.rolId,
           rol: creado.rol,
           activo: creado.activo,
@@ -150,6 +183,11 @@ export function UsuariosPage() {
   const columns: DataTableColumn<Usuario>[] = [
     { key: 'nombre', label: 'Nombre' },
     { key: 'email', label: 'Correo' },
+    {
+      key: 'dni',
+      label: 'DNI',
+      render: (row) => row.dni ?? <span className="text-ink-soft">—</span>,
+    },
     {
       key: 'rol',
       label: 'Rol',
@@ -238,6 +276,17 @@ export function UsuariosPage() {
         <div className="flex flex-col gap-4">
           {errorForm && <Alert>{errorForm}</Alert>}
 
+          <DocumentoInput
+            tipo="dni"
+            label="DNI"
+            placeholder="45871203"
+            value={form.dni}
+            onChange={(dni) => setForm({ ...form, dni })}
+            onBuscar={consultarDni}
+            buscando={consultando}
+            hint={<span className="ui-hint">opcional</span>}
+          />
+
           <Input
             label="Nombre"
             placeholder="Ej. Lucía Torres"
@@ -271,7 +320,7 @@ export function UsuariosPage() {
             <select
               value={form.rolId}
               onChange={(e) => setForm({ ...form, rolId: Number(e.target.value) })}
-              className="min-h-control w-full cursor-pointer rounded-field border border-line bg-surface px-3 text-sm text-ink outline-none transition-colors focus:border-brand focus:ring-4 focus:ring-brand-ring"
+              className="min-h-control w-full cursor-pointer rounded-field border border-line bg-surface px-3 text-sm text-ink outline-none transition-colors focus:border-ink-soft"
             >
               <option value={0}>Selecciona un rol</option>
               {roles.map((r) => (

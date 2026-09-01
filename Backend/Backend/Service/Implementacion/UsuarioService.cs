@@ -79,6 +79,7 @@ public class UsuarioService : IUsuarioService
         {
             Nombre = request.Nombre,
             Email = request.Email,
+            Dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni,
             RolId = rol.Id
         };
         usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.Password);
@@ -121,6 +122,7 @@ public class UsuarioService : IUsuarioService
             Id = usuario.Id,
             Nombre = usuario.Nombre,
             Email = usuario.Email,
+            Dni = usuario.Dni,
             RolId = usuario.RolId,
             Rol = usuario.Rol?.Nombre ?? string.Empty,
             Activo = usuario.Activo,

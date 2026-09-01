@@ -4,6 +4,7 @@ import {
   Alert,
   Badge,
   Button,
+  DocumentoInput,
   Input,
   ListPage,
   Modal,
@@ -11,6 +12,7 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { consultaApi } from '../../lib/consultaApi'
 import { empresaApi } from './empresaApi'
 import type { EmpresaRequest, EmpresaResponse } from './empresaApi'
 
@@ -19,8 +21,13 @@ const VACIA: EmpresaRequest = {
   nombreComercial: '',
   ruc: '',
   direccion: '',
+  departamento: '',
+  provincia: '',
+  distrito: '',
   telefono: '',
   email: '',
+  sitioWeb: '',
+  representanteLegal: '',
   activa: false,
 }
 
@@ -34,6 +41,8 @@ export function EmpresaPage() {
   const [form, setForm] = useState<EmpresaRequest>(VACIA)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
+  const [consultando, setConsultando] = useState(false)
+  const [avisoSunat, setAvisoSunat] = useState('')
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -55,7 +64,37 @@ export function EmpresaPage() {
     setEditando(null)
     setForm({ ...VACIA, activa: empresas.length === 0 })
     setErrorForm('')
+    setAvisoSunat('')
     setAbierto(true)
+  }
+
+  /** Trae de SUNAT los datos de la empresa y llena el formulario. */
+  const consultarRuc = async (ruc: string) => {
+    setConsultando(true)
+    setErrorForm('')
+    setAvisoSunat('')
+    try {
+      const datos = await consultaApi.ruc(ruc)
+      setForm((prev) => ({
+        ...prev,
+        ruc: datos.ruc,
+        razonSocial: datos.razonSocial,
+        // SUNAT suele no traer nombre comercial: se deja la razon social.
+        nombreComercial: datos.nombreComercial || prev.nombreComercial || datos.razonSocial,
+        direccion: datos.direccion ?? prev.direccion,
+        departamento: datos.departamento ?? prev.departamento,
+        provincia: datos.provincia ?? prev.provincia,
+        distrito: datos.distrito ?? prev.distrito,
+      }))
+
+      // Un contribuyente de baja o no habido se puede registrar, pero conviene avisarlo.
+      const partes = [datos.estado, datos.condicion].filter(Boolean)
+      setAvisoSunat(partes.length ? `SUNAT: ${partes.join(' · ')}` : '')
+    } catch (e) {
+      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos consultar el RUC.')
+    } finally {
+      setConsultando(false)
+    }
   }
 
   const abrirEdicion = (empresa: EmpresaResponse) => {
@@ -65,11 +104,17 @@ export function EmpresaPage() {
       nombreComercial: empresa.nombreComercial,
       ruc: empresa.ruc,
       direccion: empresa.direccion ?? '',
+      departamento: empresa.departamento ?? '',
+      provincia: empresa.provincia ?? '',
+      distrito: empresa.distrito ?? '',
       telefono: empresa.telefono ?? '',
       email: empresa.email ?? '',
+      sitioWeb: empresa.sitioWeb ?? '',
+      representanteLegal: empresa.representanteLegal ?? '',
       activa: empresa.activa,
     })
     setErrorForm('')
+    setAvisoSunat('')
     setAbierto(true)
   }
 
@@ -121,6 +166,24 @@ export function EmpresaPage() {
     { key: 'nombreComercial', label: 'Nombre comercial' },
     { key: 'ruc', label: 'RUC' },
     { key: 'telefono', label: 'Teléfono' },
+    {
+      key: 'sitioWeb',
+      label: 'Sitio web',
+      render: (row) =>
+        row.sitioWeb ? (
+          <a
+            href={row.sitioWeb}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-blue-600 hover:underline"
+          >
+            {row.sitioWeb.replace(/^https?:\/\//, '')}
+          </a>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
     {
       key: 'activa',
       label: 'Estado',
@@ -209,6 +272,12 @@ export function EmpresaPage() {
             </div>
           )}
 
+          {avisoSunat && (
+            <p className="rounded-field border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 sm:col-span-2">
+              {avisoSunat}
+            </p>
+          )}
+
           <Input
             label="Razón social"
             className="sm:col-span-2"
@@ -220,18 +289,40 @@ export function EmpresaPage() {
             value={form.nombreComercial}
             onChange={(e) => setForm({ ...form, nombreComercial: e.target.value })}
           />
-          <Input
+          <DocumentoInput
+            tipo="ruc"
             label="RUC"
-            inputMode="numeric"
-            maxLength={11}
+            placeholder="20512345678"
             value={form.ruc}
-            onChange={(e) => setForm({ ...form, ruc: e.target.value.replace(/\D/g, '') })}
+            onChange={(ruc) => setForm({ ...form, ruc })}
+            onBuscar={consultarRuc}
+            buscando={consultando}
           />
           <Input
             label="Dirección fiscal"
             className="sm:col-span-2"
             value={form.direccion ?? ''}
             onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+          />
+          <Input
+            label="Departamento"
+            value={form.departamento ?? ''}
+            onChange={(e) => setForm({ ...form, departamento: e.target.value })}
+          />
+          <Input
+            label="Provincia"
+            value={form.provincia ?? ''}
+            onChange={(e) => setForm({ ...form, provincia: e.target.value })}
+          />
+          <Input
+            label="Distrito"
+            value={form.distrito ?? ''}
+            onChange={(e) => setForm({ ...form, distrito: e.target.value })}
+          />
+          <Input
+            label="Representante legal"
+            value={form.representanteLegal ?? ''}
+            onChange={(e) => setForm({ ...form, representanteLegal: e.target.value })}
           />
           <Input
             label="Teléfono"
@@ -243,6 +334,12 @@ export function EmpresaPage() {
             type="email"
             value={form.email ?? ''}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+          <Input
+            label="Sitio web"
+            placeholder="titanicd.pe"
+            value={form.sitioWeb ?? ''}
+            onChange={(e) => setForm({ ...form, sitioWeb: e.target.value })}
           />
 
           {/* Desactivar desde aqui no se permite: el backend obliga a activar otra. */}

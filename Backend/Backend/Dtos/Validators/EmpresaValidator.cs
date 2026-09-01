@@ -13,5 +13,16 @@ public class EmpresaValidator : AbstractValidator<EmpresaRequestBase>
         RuleFor(x => x.Direccion).MaximumLength(250);
         RuleFor(x => x.Telefono).MaximumLength(20);
         RuleFor(x => x.Email).EmailAddress().When(x => !string.IsNullOrEmpty(x.Email)).MaximumLength(100);
+        RuleFor(x => x.Departamento).MaximumLength(60);
+        RuleFor(x => x.Provincia).MaximumLength(60);
+        RuleFor(x => x.Distrito).MaximumLength(60);
+        RuleFor(x => x.RepresentanteLegal).MaximumLength(150);
+
+        // Se acepta con o sin http: al guardar se normaliza en el servicio.
+        RuleFor(x => x.SitioWeb)
+            .MaximumLength(150)
+            .Matches(@"^(https?://)?([\w-]+\.)+[\w-]{2,}(/[^\s]*)?$")
+            .When(x => !string.IsNullOrWhiteSpace(x.SitioWeb))
+            .WithMessage("El sitio web no tiene un formato válido");
     }
 }

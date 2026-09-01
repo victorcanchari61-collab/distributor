@@ -71,8 +71,13 @@ public class EmpresaService : IEmpresaService
             NombreComercial = request.NombreComercial,
             Ruc = request.Ruc,
             Direccion = request.Direccion,
+            Departamento = request.Departamento,
+            Provincia = request.Provincia,
+            Distrito = request.Distrito,
             Telefono = request.Telefono,
             Email = request.Email,
+            SitioWeb = NormalizarWeb(request.SitioWeb),
+            RepresentanteLegal = request.RepresentanteLegal,
             Activa = false
         };
 
@@ -109,8 +114,13 @@ public class EmpresaService : IEmpresaService
         empresa.NombreComercial = request.NombreComercial;
         empresa.Ruc = request.Ruc;
         empresa.Direccion = request.Direccion;
+        empresa.Departamento = request.Departamento;
+        empresa.Provincia = request.Provincia;
+        empresa.Distrito = request.Distrito;
         empresa.Telefono = request.Telefono;
         empresa.Email = request.Email;
+        empresa.SitioWeb = NormalizarWeb(request.SitioWeb);
+        empresa.RepresentanteLegal = request.RepresentanteLegal;
 
         await _repository.UpdateAsync(empresa);
 
@@ -149,6 +159,22 @@ public class EmpresaService : IEmpresaService
         await _repository.DeleteAsync(empresa);
     }
 
+    /// <summary>
+    /// Guarda el sitio web siempre con esquema, para que el enlace funcione al
+    /// pincharlo. Si el usuario escribe "titanicd.pe" se guarda como
+    /// "https://titanicd.pe".
+    /// </summary>
+    private static string? NormalizarWeb(string? web)
+    {
+        if (string.IsNullOrWhiteSpace(web)) return null;
+
+        var limpio = web.Trim();
+        return limpio.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+               limpio.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            ? limpio
+            : $"https://{limpio}";
+    }
+
     private async Task<Empresa> GetOrThrowAsync(int id)
     {
         return await _repository.GetByIdAsync(id)
@@ -164,8 +190,13 @@ public class EmpresaService : IEmpresaService
             NombreComercial = empresa.NombreComercial,
             Ruc = empresa.Ruc,
             Direccion = empresa.Direccion,
+            Departamento = empresa.Departamento,
+            Provincia = empresa.Provincia,
+            Distrito = empresa.Distrito,
             Telefono = empresa.Telefono,
             Email = empresa.Email,
+            SitioWeb = empresa.SitioWeb,
+            RepresentanteLegal = empresa.RepresentanteLegal,
             Activa = empresa.Activa,
             FechaCreacion = empresa.FechaCreacion
         };

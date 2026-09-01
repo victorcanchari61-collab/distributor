@@ -81,6 +81,7 @@ public class AppDbContext : DbContext
             entity.Property(u => u.Nombre).HasMaxLength(100).IsRequired();
             entity.Property(u => u.Email).HasMaxLength(100).IsRequired();
             entity.Property(u => u.PasswordHash).HasMaxLength(256).IsRequired();
+            entity.Property(u => u.Dni).HasMaxLength(8);
 
             // Restrict: no se borra un rol que tenga usuarios detras.
             entity.HasOne(u => u.Rol)
@@ -97,8 +98,13 @@ public class AppDbContext : DbContext
             entity.Property(e => e.NombreComercial).HasMaxLength(150).IsRequired();
             entity.Property(e => e.Ruc).HasMaxLength(11).IsRequired();
             entity.Property(e => e.Direccion).HasMaxLength(250);
+            entity.Property(e => e.Departamento).HasMaxLength(60);
+            entity.Property(e => e.Provincia).HasMaxLength(60);
+            entity.Property(e => e.Distrito).HasMaxLength(60);
             entity.Property(e => e.Telefono).HasMaxLength(20);
             entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.SitioWeb).HasMaxLength(150);
+            entity.Property(e => e.RepresentanteLegal).HasMaxLength(150);
 
             // Solo una empresa puede estar activa, garantizado en base de datos.
             // MySQL no tiene indices parciales, asi que se usa una columna

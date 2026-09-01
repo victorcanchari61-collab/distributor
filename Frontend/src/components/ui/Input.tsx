@@ -41,11 +41,15 @@ export function Input({
         </div>
       )}
 
+      {/*
+        Foco sobrio: solo se oscurece el borde. Sin anillo de color ni
+        transicion, que llamaban la atencion mas que el propio dato. La altura
+        no cambia porque el borde mantiene su grosor de 1px.
+      */}
       <div
         className={cn(
-          'flex min-h-control items-center gap-2 rounded-field border bg-surface px-3',
-          'transition-colors duration-150',
-          'focus-within:border-brand focus-within:ring-4 focus-within:ring-brand-ring',
+          'flex h-control items-center gap-2 rounded-field border bg-surface px-3',
+          'focus-within:border-ink-soft',
           error ? 'border-red-600' : 'border-line',
         )}
       >

@@ -62,6 +62,10 @@ builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IEmpresaService, EmpresaService>();
 builder.Services.AddScoped<IRolService, RolService>();
 
+// Consulta de RUC y DNI: se llama al proveedor desde el backend para no
+// exponer el token en el navegador.
+builder.Services.AddHttpClient<IConsultaService, ConsultaService>();
+
 builder.Services.AddScoped<IPasswordHasher<Backend.Models.Usuario>, PasswordHasher<Backend.Models.Usuario>>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

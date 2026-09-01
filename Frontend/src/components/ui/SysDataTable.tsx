@@ -414,7 +414,7 @@ export function SysDataTable<T>({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={searchPlaceholder}
-            className="w-full rounded-lg border border-zinc-200 bg-white py-2 pr-8 pl-9 text-sm text-zinc-900 transition outline-none placeholder:text-zinc-400 focus:border-[rgb(var(--sys-rgb)/0.6)] focus:ring-2 focus:ring-[rgb(var(--sys-rgb)/0.15)]"
+            className="w-full rounded-lg border border-zinc-200 bg-white py-2 pr-8 pl-9 text-sm text-zinc-900 transition outline-none placeholder:text-zinc-400 focus:border-zinc-400"
           />
           {search && (
             <button
@@ -973,7 +973,7 @@ function ColumnSearchPopover<T>({
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && onClose()}
           placeholder={`Buscar ${column.label.toLowerCase()}`}
-          className="w-full rounded-md border border-zinc-200 py-1.5 pr-6 pl-7 text-[12px] font-normal tracking-normal normal-case text-zinc-900 outline-none focus:border-[rgb(var(--sys-rgb)/0.6)] focus:ring-2 focus:ring-[rgb(var(--sys-rgb)/0.15)]"
+          className="w-full rounded-md border border-zinc-200 py-1.5 pr-6 pl-7 text-[12px] font-normal tracking-normal normal-case text-zinc-900 outline-none focus:border-zinc-400"
         />
         {value && (
           <button
@@ -1152,7 +1152,7 @@ function FiltersButton<T>({
           <select
             value={draft.column}
             onChange={(e) => setDraft((d) => ({ ...d, column: e.target.value }))}
-            className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-[rgb(var(--sys-rgb)/0.6)] focus:ring-2 focus:ring-[rgb(var(--sys-rgb)/0.15)]"
+            className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
           >
             {filterable.map((c) => (
               <option key={c.key} value={c.key}>
@@ -1164,7 +1164,7 @@ function FiltersButton<T>({
           <select
             value={draft.operator}
             onChange={(e) => setDraft((d) => ({ ...d, operator: e.target.value as OperatorId }))}
-            className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-[rgb(var(--sys-rgb)/0.6)] focus:ring-2 focus:ring-[rgb(var(--sys-rgb)/0.15)]"
+            className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
           >
             {OPERATORS.map((o) => (
               <option key={o.id} value={o.id}>
@@ -1178,7 +1178,7 @@ function FiltersButton<T>({
             onChange={(e) => setDraft((d) => ({ ...d, value: e.target.value }))}
             onKeyDown={(e) => e.key === 'Enter' && add()}
             placeholder="Valor"
-            className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-[rgb(var(--sys-rgb)/0.6)] focus:ring-2 focus:ring-[rgb(var(--sys-rgb)/0.15)]"
+            className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
           />
 
           <button

@@ -39,7 +39,7 @@ export function Topbar({
           className={cn(
             'w-64 rounded-lg border border-line bg-surface-alt py-2 pr-3 pl-9 text-sm outline-none',
             'transition-colors placeholder:text-ink-soft',
-            'focus:border-[rgb(var(--sys-rgb)/0.6)] focus:bg-white focus:ring-2 focus:ring-[rgb(var(--sys-rgb)/0.15)]',
+            'focus:border-line-strong focus:bg-white',
           )}
         />
       </div>
