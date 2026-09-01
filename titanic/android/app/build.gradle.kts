@@ -6,7 +6,10 @@ plugins {
 
 android {
     namespace = "com.example.titanic"
-    compileSdk = flutter.compileSdkVersion
+    // Fijo en 36: es el maximo que soporta el Android Gradle Plugin 9.0.1 que
+    // trae este proyecto. Dejarlo en flutter.compileSdkVersion hacia que un
+    // plugin pidiera 37 y el build fallara.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

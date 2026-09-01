@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- La app consume el API del sistema. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="titanic"
         android:name="${applicationName}"
