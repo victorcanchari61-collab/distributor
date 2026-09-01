@@ -3,6 +3,7 @@ import {
   Banknote,
   Boxes,
   Building2,
+  Calculator,
   CalendarCheck,
   CalendarDays,
   ClipboardCheck,
@@ -12,6 +13,7 @@ import {
   FileMinus,
   FileText,
   Gauge,
+  HandCoins,
   Hash,
   IdCard,
   Landmark,
@@ -43,6 +45,7 @@ export type SysKey =
   | 'maestros'
   | 'compras'
   | 'inv'
+  | 'finanzas'
   | 'fact'
   | 'tms'
   | 'dms'
@@ -100,7 +103,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'compras.ordenes', label: 'Órdenes de compra', icon: ClipboardList, pending: true },
       { id: 'compras.recepciones', label: 'Recepciones', icon: PackageCheck, pending: true },
-      { id: 'compras.pagar', label: 'Cuentas por pagar', icon: CreditCard, pending: true },
     ],
   },
   {
@@ -125,8 +127,18 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'fact.pedidos', label: 'Pedidos', icon: ClipboardList, pending: true },
       { id: 'fact.comprobantes', label: 'Comprobantes', icon: FileText, pending: true },
       { id: 'fact.notas', label: 'Notas de crédito y débito', icon: FileMinus, pending: true },
-      { id: 'fact.cobrar', label: 'Cuentas por cobrar', icon: Wallet, pending: true },
-      { id: 'fact.caja', label: 'Caja', icon: Landmark, pending: true },
+    ],
+  },
+  {
+    id: 'finanzas',
+    label: 'Finanzas',
+    sys: 'finanzas',
+    icon: Landmark,
+    items: [
+      { id: 'finanzas.cobrar', label: 'Cuentas por cobrar', icon: Wallet, pending: true },
+      { id: 'finanzas.pagar', label: 'Cuentas por pagar', icon: CreditCard, pending: true },
+      { id: 'finanzas.miscobros', label: 'Mis cobros', icon: HandCoins, pending: true },
+      { id: 'finanzas.arqueo', label: 'Arqueo diario', icon: Calculator, pending: true },
     ],
   },
   {

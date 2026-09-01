@@ -58,6 +58,14 @@
   --sys-on: #ffffff;
 }
 
+/* Finanzas — teal */
+[data-sys='finanzas'] {
+  --sys-rgb: 13 148 136;
+  --sys-dark-rgb: 15 76 76;
+  --sys-ink-rgb: 15 118 110;
+  --sys-on: #ffffff;
+}
+
 /* TMS — cian */
 [data-sys='tms'] {
   --sys-rgb: 8 145 178;
