@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, EyeOff, X } from 'lucide-react'
 import { cn, Logo } from '../ui'
 import { NAV_GROUPS } from './navigation'
 import type { NavGroup } from './navigation'
@@ -14,6 +14,9 @@ export interface SidebarProps {
   /** Abierto como panel deslizante (movil). */
   mobileOpen: boolean
   onCloseMobile: () => void
+  /** Oculto por completo: la vista gana todo el ancho. */
+  oculto: boolean
+  onOcultar: () => void
 }
 
 export function Sidebar({
@@ -23,6 +26,8 @@ export function Sidebar({
   onToggleCollapsed,
   mobileOpen,
   onCloseMobile,
+  oculto,
+  onOcultar,
 }: SidebarProps) {
   // Empieza abierto el grupo que contiene la vista activa.
   const [open, setOpen] = useState<string[]>(() => {
@@ -63,7 +68,9 @@ export function Sidebar({
           'transition-[width,transform] duration-200',
           collapsed ? 'w-[72px]' : 'w-64',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
-          'lg:translate-x-0',
+          // Oculto se sale de pantalla deslizandose; el topbar deja un boton
+          // para traerlo de vuelta.
+          oculto ? 'lg:-translate-x-full' : 'lg:translate-x-0',
         )}
       >
         {/* cabecera */}
@@ -100,20 +107,39 @@ export function Sidebar({
           ))}
         </nav>
 
-        {/* pie: colapsar */}
-        <div className="shrink-0 border-t border-line p-2">
+        {/* pie: contraer y ocultar */}
+        <div
+          className={cn(
+            'hidden shrink-0 gap-1 border-t border-line p-2 lg:flex',
+            collapsed && 'flex-col',
+          )}
+        >
           <button
             type="button"
             onClick={onToggleCollapsed}
             aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'}
+            title={collapsed ? 'Expandir' : 'Contraer'}
             className={cn(
-              'hidden w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm',
-              'text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink lg:flex',
+              'flex flex-1 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm',
+              'text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink',
               collapsed && 'justify-center px-0',
             )}
           >
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
             {!collapsed && <span>Contraer</span>}
+          </button>
+
+          <button
+            type="button"
+            onClick={onOcultar}
+            aria-label="Ocultar menú"
+            title="Ocultar menú"
+            className={cn(
+              'flex cursor-pointer items-center justify-center rounded-lg px-3 py-2',
+              'text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink',
+            )}
+          >
+            <EyeOff size={18} />
           </button>
         </div>
       </aside>

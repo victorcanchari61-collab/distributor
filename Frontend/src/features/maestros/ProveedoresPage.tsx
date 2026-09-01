@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Building2, Pencil, Plus, ShieldCheck, ShieldOff, Trash2, Upload } from 'lucide-react'
+import {
+  Building2,
+  FileCheck2,
+  Pencil,
+  Plus,
+  ShieldCheck,
+  ShieldOff,
+  Tags,
+  Trash2,
+  Upload,
+} from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -245,9 +255,16 @@ export function ProveedoresPage() {
           <StatCard
             label="Con RUC"
             value={String(conRuc)}
+            icon={<FileCheck2 size={18} />}
+            tono="success"
             hint={`${proveedores.length - conRuc} con DNI o código`}
           />
-          <StatCard label="Rubros" value={String(rubros)} />
+          <StatCard
+            label="Rubros"
+            value={String(rubros)}
+            icon={<Tags size={18} />}
+            tono="neutral"
+          />
         </>
       }
       columns={columns}

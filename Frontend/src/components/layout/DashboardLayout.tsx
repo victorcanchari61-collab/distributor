@@ -31,6 +31,7 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [oculto, setOculto] = useState(false)
 
   const { sys } = resolveNav(active)
 
@@ -46,15 +47,19 @@ export function DashboardLayout({
         onToggleCollapsed={() => setCollapsed((c) => !c)}
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
+        oculto={oculto}
+        onOcultar={() => setOculto(true)}
       />
 
       <div
         className={cn(
           'flex min-h-screen flex-col transition-[padding] duration-200',
-          collapsed ? 'lg:pl-[72px]' : 'lg:pl-64',
+          oculto ? 'lg:pl-0' : collapsed ? 'lg:pl-[72px]' : 'lg:pl-64',
         )}
       >
         <Topbar
+          siderOculto={oculto}
+          onMostrarSider={() => setOculto(false)}
           userName={userName}
           userEmail={userEmail}
           onOpenMenu={() => setMobileOpen(true)}

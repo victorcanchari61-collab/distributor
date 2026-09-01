@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { IdCard, Pencil, Plus, ShieldCheck, ShieldOff, Trash2, Users } from 'lucide-react'
+import { IdCard, LayoutGrid, Pencil, Plus, ShieldCheck, ShieldOff, Trash2, Users } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -172,7 +172,12 @@ export function RolesPage() {
             value={String(roles.reduce((total, r) => total + r.usuarios, 0))}
             icon={<Users size={18} />}
           />
-          <StatCard label="Módulos del sistema" value={String(NAV_GROUPS.length)} />
+          <StatCard
+            label="Módulos del sistema"
+            value={String(NAV_GROUPS.length)}
+            icon={<LayoutGrid size={18} />}
+            tono="neutral"
+          />
         </>
       }
       columns={columns}

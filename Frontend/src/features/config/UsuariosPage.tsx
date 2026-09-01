@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Plus, ShieldCheck, ShieldOff, UserCog } from 'lucide-react'
+import { Pencil, Plus, ShieldCheck, ShieldOff, UserCheck, UserCog, UserPlus } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -227,9 +227,17 @@ export function UsuariosPage() {
           <StatCard
             label="Activos"
             value={String(activos)}
+            icon={<UserCheck size={18} />}
+            tono="success"
             hint={`${usuarios.length - activos} deshabilitados`}
           />
-          <StatCard label="Administradores" value={String(admins)} hint="con acceso total" />
+          <StatCard
+            label="Administradores"
+            value={String(admins)}
+            icon={<UserPlus size={18} />}
+            tono="warning"
+            hint="con acceso total"
+          />
         </>
       }
       columns={columns}

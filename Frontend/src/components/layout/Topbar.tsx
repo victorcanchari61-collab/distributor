@@ -1,7 +1,10 @@
-import { Bell, LogOut, Menu, Search } from 'lucide-react'
+import { Bell, LogOut, Menu, PanelLeftOpen, Search } from 'lucide-react'
 import { cn } from '../ui'
 
 export interface TopbarProps {
+  /** El sider esta oculto: se muestra el boton para traerlo de vuelta. */
+  siderOculto: boolean
+  onMostrarSider: () => void
   userName: string
   userEmail: string
   onOpenMenu: () => void
@@ -9,6 +12,8 @@ export interface TopbarProps {
 }
 
 export function Topbar({
+  siderOculto,
+  onMostrarSider,
   userName,
   userEmail,
   onOpenMenu,
@@ -24,6 +29,19 @@ export function Topbar({
       >
         <Menu size={20} />
       </button>
+
+      {/* Solo aparece con el sider oculto: es la unica forma de recuperarlo. */}
+      {siderOculto && (
+        <button
+          type="button"
+          onClick={onMostrarSider}
+          aria-label="Mostrar menú"
+          title="Mostrar menú"
+          className="hidden cursor-pointer rounded-lg p-2 text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink lg:block"
+        >
+          <PanelLeftOpen size={20} />
+        </button>
+      )}
 
       {/* El titulo de la vista vive en la propia pagina (PageHeader), no aqui. */}
       <div className="flex-1" />

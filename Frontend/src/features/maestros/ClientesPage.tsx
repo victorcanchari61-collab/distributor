@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Contact, Pencil, Plus, ShieldCheck, ShieldOff, Trash2, Upload } from 'lucide-react'
+import {
+  Contact,
+  MapPin,
+  Pencil,
+  Plus,
+  Route,
+  ShieldCheck,
+  ShieldOff,
+  Trash2,
+  Upload,
+} from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -249,9 +259,16 @@ export function ClientesPage() {
           <StatCard
             label="Con ruta asignada"
             value={String(conRuta)}
+            icon={<Route size={18} />}
+            tono="success"
             hint={`${clientes.length - conRuta} sin ruta`}
           />
-          <StatCard label="Mercados" value={String(mercados)} />
+          <StatCard
+            label="Mercados"
+            value={String(mercados)}
+            icon={<MapPin size={18} />}
+            tono="neutral"
+          />
         </>
       }
       columns={columns}
