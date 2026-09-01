@@ -21,6 +21,13 @@ public class Empresa
     public string? Email { get; set; }
     public string? SitioWeb { get; set; }
     public string? RepresentanteLegal { get; set; }
+    /// <summary>La empresa con la que opera el sistema. Solo una a la vez.</summary>
     public bool Activa { get; set; }
+
+    /// <summary>
+    /// Empresa disponible para usarse. Una empresa deshabilitada conserva su
+    /// historial pero no se puede activar; asi se retira sin eliminarla.
+    /// </summary>
+    public bool Habilitada { get; set; } = true;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }

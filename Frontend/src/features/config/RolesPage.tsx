@@ -185,27 +185,34 @@ export function RolesPage() {
           <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
             <Pencil size={15} />
           </RowAction>
-          {!row.delSistema && (
-            <>
-              <RowAction
-                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-                tone={row.activo ? 'warning' : 'success'}
-                onClick={() => void alternarEstado(row)}
-              >
-                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-              </RowAction>
-              <RowAction
-                label={`Eliminar ${row.nombre}`}
-                tone="danger"
-                onClick={() => void eliminar(row)}
-              >
-                <Trash2 size={15} />
-              </RowAction>
-            </>
-          )}
+
+          {/* Administrador no se toca: sin el activo nadie configura el sistema. */}
+          <RowAction
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            disabled={row.protegido}
+            disabledReason="Administrador no se puede desactivar"
+            onClick={() => void alternarEstado(row)}
+          >
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
+
+          <RowAction
+            label={`Eliminar ${row.nombre}`}
+            tone="danger"
+            disabled={row.delSistema || row.usuarios > 0}
+            disabledReason={
+              row.delSistema
+                ? 'Es un rol del sistema: no se elimina'
+                : `Tiene ${row.usuarios} usuario(s): cámbialos de rol primero`
+            }
+            onClick={() => void eliminar(row)}
+          >
+            <Trash2 size={15} />
+          </RowAction>
         </>
       )}
-      note="Los roles del sistema no se pueden eliminar ni desactivar, y un rol con usuarios asignados tampoco se elimina."
+      note="Un rol desactivado no deja entrar a sus usuarios. Administrador no se puede desactivar, los roles del sistema no se eliminan y un rol con usuarios asignados tampoco."
     >
       <Modal
         open={abierto}

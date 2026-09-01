@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Building2, CheckCircle2, Circle, Pencil, Plus, Trash2 } from 'lucide-react'
+import {
+  Building2,
+  CheckCircle2,
+  Circle,
+  Pencil,
+  Plus,
+  ShieldCheck,
+  ShieldOff,
+  Trash2,
+} from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -149,6 +158,18 @@ export function EmpresaPage() {
     }
   }
 
+  const cambiarHabilitacion = async (empresa: EmpresaResponse) => {
+    setError('')
+    try {
+      await (empresa.habilitada
+        ? empresaApi.deshabilitar(empresa.id)
+        : empresaApi.habilitar(empresa.id))
+      await cargar()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado de la empresa.')
+    }
+  }
+
   const eliminar = async (empresa: EmpresaResponse) => {
     setError('')
     try {
@@ -187,9 +208,15 @@ export function EmpresaPage() {
     {
       key: 'activa',
       label: 'Estado',
-      value: (row) => (row.activa ? 'Activa' : 'Inactiva'),
+      value: (row) => (row.activa ? 'Activa' : row.habilitada ? 'Disponible' : 'Deshabilitada'),
       render: (row) =>
-        row.activa ? <Badge tone="success">Activa</Badge> : <Badge>Inactiva</Badge>,
+        row.activa ? (
+          <Badge tone="success">Activa</Badge>
+        ) : row.habilitada ? (
+          <Badge tone="sys">Disponible</Badge>
+        ) : (
+          <Badge>Deshabilitada</Badge>
+        ),
     },
   ]
 
@@ -228,26 +255,41 @@ export function EmpresaPage() {
             <RowAction
               label={`Activar ${row.nombreComercial}`}
               tone="success"
+              disabled={!row.habilitada}
+              disabledReason="Está deshabilitada: habilítala antes de activarla"
               onClick={() => void activar(row)}
             >
               <Circle size={15} />
             </RowAction>
           )}
+
           <RowAction label={`Editar ${row.nombreComercial}`} onClick={() => abrirEdicion(row)}>
             <Pencil size={15} />
           </RowAction>
-          {!row.activa && (
-            <RowAction
-              label={`Eliminar ${row.nombreComercial}`}
-              tone="danger"
-              onClick={() => void eliminar(row)}
-            >
-              <Trash2 size={15} />
-            </RowAction>
-          )}
+
+          {/* La empresa activa no se deshabilita: primero se activa otra. */}
+          <RowAction
+            label={`${row.habilitada ? 'Deshabilitar' : 'Habilitar'} ${row.nombreComercial}`}
+            tone={row.habilitada ? 'warning' : 'success'}
+            disabled={row.activa}
+            disabledReason="Es la empresa activa: activa otra antes de deshabilitarla"
+            onClick={() => void cambiarHabilitacion(row)}
+          >
+            {row.habilitada ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
+
+          <RowAction
+            label={`Eliminar ${row.nombreComercial}`}
+            tone="danger"
+            disabled={row.activa}
+            disabledReason="Es la empresa activa: no se puede eliminar"
+            onClick={() => void eliminar(row)}
+          >
+            <Trash2 size={15} />
+          </RowAction>
         </>
       )}
-      note="La empresa activa no se puede eliminar ni desactivar: para cambiarla, activa otra."
+      note="Activa es la empresa con la que opera el sistema; deshabilitada se retira sin borrarla y no se puede activar. La empresa activa no se elimina ni se deshabilita: primero activa otra."
     >
       <Modal
         open={abierto}

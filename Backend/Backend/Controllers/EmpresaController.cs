@@ -59,6 +59,22 @@ public class EmpresaController : ControllerBase
         return Ok(await _empresaService.ActivarAsync(id));
     }
 
+    /// <summary>Retira una empresa sin eliminarla.</summary>
+    [HttpPatch("{id:int}/deshabilitar")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> Deshabilitar(int id)
+    {
+        return Ok(await _empresaService.CambiarHabilitacionAsync(id, false));
+    }
+
+    /// <summary>Vuelve a poner disponible una empresa retirada.</summary>
+    [HttpPatch("{id:int}/habilitar")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> Habilitar(int id)
+    {
+        return Ok(await _empresaService.CambiarHabilitacionAsync(id, true));
+    }
+
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Administrador")]
     public async Task<IActionResult> Delete(int id)

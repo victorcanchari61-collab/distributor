@@ -105,6 +105,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Email).HasMaxLength(100);
             entity.Property(e => e.SitioWeb).HasMaxLength(150);
             entity.Property(e => e.RepresentanteLegal).HasMaxLength(150);
+            entity.Property(e => e.Habilitada).HasDefaultValue(true);
 
             // Solo una empresa puede estar activa, garantizado en base de datos.
             // MySQL no tiene indices parciales, asi que se usa una columna

@@ -51,6 +51,12 @@ public class UsuarioService : IUsuarioService
             throw new UnauthorizedException("El usuario está desactivado");
         }
 
+        // Desactivar un rol tiene que significar algo: sus usuarios no entran.
+        if (usuario.Rol is not null && !usuario.Rol.Activo)
+        {
+            throw new UnauthorizedException("El rol de este usuario está desactivado");
+        }
+
         return new LoginResponse
         {
             Token = GenerateToken(usuario),

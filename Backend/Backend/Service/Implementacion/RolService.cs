@@ -13,12 +13,17 @@ namespace Backend.Service.Implementacion;
 ///
 ///   - El nombre no se repite.
 ///   - Los roles del sistema (Administrador, Vendedor, Almacenero) no se
-///     eliminan ni se desactivan: el resto de la autorizacion depende de ellos.
+///     eliminan, pero SI se pueden desactivar, salvo Administrador.
+///   - Administrador esta protegido: sin el activo nadie podria volver a
+///     configurar el sistema.
 ///   - Un rol con usuarios asignados no se elimina; primero hay que moverlos.
 ///   - Guardar permisos reemplaza la matriz completa del rol.
 /// </summary>
 public class RolService : IRolService
 {
+    /// <summary>Id sembrado del rol Administrador.</summary>
+    private const int RolAdministradorId = 1;
+
     private readonly IRolRepository _repository;
     private readonly IValidator<CreateRolRequest> _createValidator;
     private readonly IValidator<UpdateRolRequest> _updateValidator;
@@ -76,9 +81,10 @@ public class RolService : IRolService
             throw new ConflictException("Ya existe un rol con ese nombre");
         }
 
-        if (rol.DelSistema && !request.Activo)
+        if (EsProtegido(rol) && !request.Activo)
         {
-            throw new BadRequestException("Los roles del sistema no se pueden desactivar");
+            throw new BadRequestException(
+                "El rol Administrador no se puede desactivar: sin él nadie podría configurar el sistema");
         }
 
         rol.Nombre = request.Nombre;
@@ -134,6 +140,8 @@ public class RolService : IRolService
         await _repository.DeleteAsync(rol);
     }
 
+    private static bool EsProtegido(Rol rol) => rol.Id == RolAdministradorId;
+
     private async Task<Rol> GetOrThrowAsync(int id)
     {
         return await _repository.GetConPermisosAsync(id)
@@ -149,6 +157,7 @@ public class RolService : IRolService
             Descripcion = rol.Descripcion,
             Activo = rol.Activo,
             DelSistema = rol.DelSistema,
+            Protegido = EsProtegido(rol),
             FechaCreacion = rol.FechaCreacion,
             Usuarios = usuarios ?? rol.Usuarios.Count,
             Permisos = rol.Permisos.Select(p => new RolPermisoResponse

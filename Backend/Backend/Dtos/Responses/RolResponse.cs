@@ -7,6 +7,12 @@ public class RolResponse
     public string? Descripcion { get; set; }
     public bool Activo { get; set; }
     public bool DelSistema { get; set; }
+
+    /// <summary>
+    /// Rol que no se puede desactivar ni eliminar: sin Administrador activo
+    /// nadie podria volver a configurar el sistema.
+    /// </summary>
+    public bool Protegido { get; set; }
     public DateTime FechaCreacion { get; set; }
 
     /// <summary>Cuantos usuarios tienen este rol.</summary>

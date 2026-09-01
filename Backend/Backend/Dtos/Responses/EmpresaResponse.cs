@@ -15,5 +15,6 @@ public class EmpresaResponse
     public string? SitioWeb { get; set; }
     public string? RepresentanteLegal { get; set; }
     public bool Activa { get; set; }
+    public bool Habilitada { get; set; }
     public DateTime FechaCreacion { get; set; }
 }

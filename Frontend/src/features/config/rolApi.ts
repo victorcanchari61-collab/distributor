@@ -16,6 +16,8 @@ export interface RolResponse {
   activo: boolean
   /** Roles base (Administrador, Vendedor, Almacenero): no se eliminan. */
   delSistema: boolean
+  /** Administrador: tampoco se desactiva. */
+  protegido: boolean
   fechaCreacion: string
   usuarios: number
   permisos: RolPermisoResponse[]

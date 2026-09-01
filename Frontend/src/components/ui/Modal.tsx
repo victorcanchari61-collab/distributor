@@ -53,14 +53,22 @@ export function Modal({
             <h2 className="text-base font-bold text-ink">{title}</h2>
             {description && <p className="mt-0.5 text-sm text-ink-muted">{description}</p>}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="cursor-pointer rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink"
-          >
-            <X size={18} />
-          </button>
+
+          {/*
+            La X solo aparece cuando NO hay pie: si el pie ya trae "Cancelar",
+            dos formas de cerrar lo mismo en la misma ventana sobran. Escape y
+            el clic fuera siguen cerrando en ambos casos.
+          */}
+          {!footer && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Cerrar"
+              className="cursor-pointer rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>

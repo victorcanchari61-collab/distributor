@@ -13,7 +13,10 @@ export interface EmpresaResponse {
   email: string | null
   sitioWeb: string | null
   representanteLegal: string | null
+  /** La empresa con la que opera el sistema. Solo una a la vez. */
   activa: boolean
+  /** Disponible para usarse. Una deshabilitada no se puede activar. */
+  habilitada: boolean
   fechaCreacion: string
 }
 
@@ -48,6 +51,12 @@ export const empresaApi = {
 
   /** PATCH /api/empresa/{id}/activar — activa una y desactiva la anterior. */
   activar: (id: number) => api.patch<EmpresaResponse>(`/empresa/${id}/activar`),
+
+  /** PATCH /api/empresa/{id}/deshabilitar — la retira sin eliminarla. */
+  deshabilitar: (id: number) => api.patch<EmpresaResponse>(`/empresa/${id}/deshabilitar`),
+
+  /** PATCH /api/empresa/{id}/habilitar */
+  habilitar: (id: number) => api.patch<EmpresaResponse>(`/empresa/${id}/habilitar`),
 
   /** DELETE /api/empresa/{id} */
   remove: (id: number) => api.del<void>(`/empresa/${id}`),

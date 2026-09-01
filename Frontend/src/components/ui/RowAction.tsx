@@ -20,6 +20,13 @@ export interface RowActionProps {
   label: string
   onClick?: () => void
   tone?: RowActionTone
+  disabled?: boolean
+  /**
+   * Motivo por el que la accion no esta disponible. Se muestra al pasar el
+   * mouse: un boton que desaparece no explica nada, uno apagado con su razon
+   * si.
+   */
+  disabledReason?: string
   children: ReactNode
   className?: string
 }
@@ -30,14 +37,27 @@ export interface RowActionProps {
  * Los colores son FIJOS por significado y no siguen el acento del modulo: asi
  * el usuario reconoce "eliminar" por su rojo en cualquier pantalla del sistema.
  */
-export function RowAction({ label, onClick, tone = 'edit', children, className }: RowActionProps) {
+export function RowAction({
+  label,
+  onClick,
+  tone = 'edit',
+  disabled = false,
+  disabledReason,
+  children,
+  className,
+}: RowActionProps) {
   return (
     <button
       type="button"
-      title={label}
+      title={disabled ? (disabledReason ?? label) : label}
       aria-label={label}
+      disabled={disabled}
       onClick={onClick}
-      className={cn('cursor-pointer rounded-md p-1.5 transition-colors', TONES[tone], className)}
+      className={cn(
+        'rounded-md p-1.5 transition-colors',
+        disabled ? 'cursor-not-allowed text-slate-300' : cn('cursor-pointer', TONES[tone]),
+        className,
+      )}
     >
       {children}
     </button>

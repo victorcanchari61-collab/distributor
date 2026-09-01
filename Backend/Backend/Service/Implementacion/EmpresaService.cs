@@ -16,6 +16,9 @@ namespace Backend.Service.Implementacion;
 ///   - Activar una desactiva a la anterior, en una sola transaccion.
 ///   - No se puede desactivar la activa directamente: hay que activar otra.
 ///   - No se puede eliminar la empresa activa.
+///   - Habilitada es otra cosa que Activa: una empresa deshabilitada se retira
+///     de circulacion sin borrarla, y no se puede activar hasta rehabilitarla.
+///   - La empresa activa no se puede deshabilitar.
 /// </summary>
 public class EmpresaService : IEmpresaService
 {
@@ -78,7 +81,8 @@ public class EmpresaService : IEmpresaService
             Email = request.Email,
             SitioWeb = NormalizarWeb(request.SitioWeb),
             RepresentanteLegal = request.RepresentanteLegal,
-            Activa = false
+            Activa = false,
+            Habilitada = true
         };
 
         await _repository.AddAsync(empresa);
@@ -137,10 +141,36 @@ public class EmpresaService : IEmpresaService
     {
         var empresa = await GetOrThrowAsync(id);
 
+        if (!empresa.Habilitada)
+        {
+            throw new BadRequestException(
+                "La empresa está deshabilitada. Habilítala antes de activarla");
+        }
+
         if (!empresa.Activa)
         {
             await _repository.SetActivaAsync(empresa.Id);
             empresa.Activa = true;
+        }
+
+        return MapToResponse(empresa);
+    }
+
+    public async Task<EmpresaResponse> CambiarHabilitacionAsync(int id, bool habilitada)
+    {
+        var empresa = await GetOrThrowAsync(id);
+
+        // Deshabilitar la que opera dejaria al sistema sin empresa.
+        if (empresa.Activa && !habilitada)
+        {
+            throw new BadRequestException(
+                "No se puede deshabilitar la empresa activa. Activa otra empresa primero");
+        }
+
+        if (empresa.Habilitada != habilitada)
+        {
+            empresa.Habilitada = habilitada;
+            await _repository.UpdateAsync(empresa);
         }
 
         return MapToResponse(empresa);
@@ -198,6 +228,7 @@ public class EmpresaService : IEmpresaService
             SitioWeb = empresa.SitioWeb,
             RepresentanteLegal = empresa.RepresentanteLegal,
             Activa = empresa.Activa,
+            Habilitada = empresa.Habilitada,
             FechaCreacion = empresa.FechaCreacion
         };
     }
