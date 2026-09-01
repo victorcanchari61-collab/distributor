@@ -81,8 +81,12 @@ export function DocumentoInput({
               onChange={(e) => {
                 const siguiente = e.target.value as TipoDocumento
                 onTipoChange?.(siguiente)
-                // Recortar si el nuevo tipo admite menos digitos.
-                onChange(value.slice(0, REGLAS[siguiente].max))
+
+                // Solo se avisa del recorte si el numero de verdad cambia: si
+                // se llamara siempre, quien use el componente con setState no
+                // funcional pisaria el tipo recien elegido.
+                const recortado = value.slice(0, REGLAS[siguiente].max)
+                if (recortado !== value) onChange(recortado)
               }}
               className={cn(
                 'w-24 cursor-pointer rounded-field border border-line bg-surface px-2 text-sm text-ink outline-none focus:border-ink-soft',

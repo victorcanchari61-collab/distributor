@@ -303,9 +303,9 @@ export function ClientesPage() {
           <DocumentoInput
             className="sm:col-span-2"
             tipo={(form.tipoDoc as TipoDocumento) ?? 'DNI'}
-            onTipoChange={(tipoDoc) => setForm({ ...form, tipoDoc })}
+            onTipoChange={(tipoDoc) => setForm((prev) => ({ ...prev, tipoDoc }))}
             value={form.documento}
-            onChange={(documento) => setForm({ ...form, documento })}
+            onChange={(documento) => setForm((prev) => ({ ...prev, documento }))}
             onBuscar={consultarDocumento}
             buscando={consultando}
           />
