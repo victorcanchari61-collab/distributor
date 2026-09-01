@@ -197,8 +197,11 @@ export function ProveedoresPage() {
       },
     })
 
-  const conRuc = proveedores.filter((p) => p.tipoDoc === 'RUC').length
-  const rubros = new Set(proveedores.map((p) => p.rubro).filter(Boolean)).size
+  // El listado trae activos e inactivos: los contadores tienen que separarlos.
+  const activos = proveedores.filter((p) => p.activo)
+  const desactivados = proveedores.length - activos.length
+  const conRuc = activos.filter((p) => p.tipoDoc === 'RUC').length
+  const rubros = new Set(activos.map((p) => p.rubro).filter(Boolean)).size
 
   const columns: DataTableColumn<ProveedorResponse>[] = [
     {
@@ -249,15 +252,22 @@ export function ProveedoresPage() {
         <>
           <StatCard
             label="Proveedores activos"
-            value={String(proveedores.length)}
+            value={String(activos.length)}
             icon={<Building2 size={18} />}
+          />
+          <StatCard
+            label="Desactivados"
+            value={String(desactivados)}
+            icon={<ShieldOff size={18} />}
+            tono={desactivados > 0 ? 'warning' : 'neutral'}
+            hint={desactivados > 0 ? 'no aparecen en nuevas operaciones' : 'ninguno'}
           />
           <StatCard
             label="Con RUC"
             value={String(conRuc)}
             icon={<FileCheck2 size={18} />}
             tono="success"
-            hint={`${proveedores.length - conRuc} con DNI o código`}
+            hint={`${activos.length - conRuc} con DNI o código`}
           />
           <StatCard
             label="Rubros"

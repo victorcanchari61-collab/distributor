@@ -53,6 +53,9 @@ export function StatCard({
       className={cn(
         'group relative flex items-start gap-3 overflow-hidden rounded-panel border border-line bg-white p-4',
         'transition-shadow duration-200 hover:shadow-md',
+        // En la fila desplazable de movil cada tarjeta conserva un ancho
+        // legible; en la grilla de escritorio se reparte el espacio.
+        'w-[62%] shrink-0 snap-start sm:w-auto sm:shrink',
         className,
       )}
     >

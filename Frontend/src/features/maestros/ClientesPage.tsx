@@ -196,8 +196,11 @@ export function ClientesPage() {
       },
     })
 
-  const conRuta = clientes.filter((c) => c.ruta).length
-  const mercados = new Set(clientes.map((c) => c.mercado).filter(Boolean)).size
+  // El listado trae activos e inactivos: los contadores tienen que separarlos.
+  const activos = clientes.filter((c) => c.activo)
+  const desactivados = clientes.length - activos.length
+  const conRuta = activos.filter((c) => c.ruta).length
+  const mercados = new Set(activos.map((c) => c.mercado).filter(Boolean)).size
 
   const columns: DataTableColumn<ClienteResponse>[] = [
     {
@@ -253,15 +256,22 @@ export function ClientesPage() {
         <>
           <StatCard
             label="Clientes activos"
-            value={String(clientes.length)}
+            value={String(activos.length)}
             icon={<Contact size={18} />}
+          />
+          <StatCard
+            label="Desactivados"
+            value={String(desactivados)}
+            icon={<ShieldOff size={18} />}
+            tono={desactivados > 0 ? 'warning' : 'neutral'}
+            hint={desactivados > 0 ? 'no aparecen en nuevas operaciones' : 'ninguno'}
           />
           <StatCard
             label="Con ruta asignada"
             value={String(conRuta)}
             icon={<Route size={18} />}
             tono="success"
-            hint={`${clientes.length - conRuta} sin ruta`}
+            hint={`${activos.length - conRuta} sin ruta`}
           />
           <StatCard
             label="Mercados"
