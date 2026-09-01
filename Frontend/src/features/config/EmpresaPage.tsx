@@ -331,8 +331,10 @@ export function EmpresaPage() {
             value={form.nombreComercial}
             onChange={(e) => setForm({ ...form, nombreComercial: e.target.value })}
           />
+          {/* Una empresa emisora siempre tiene RUC: el tipo no se elige. */}
           <DocumentoInput
-            tipo="ruc"
+            tipo="RUC"
+            tipoFijo
             label="RUC"
             placeholder="20512345678"
             value={form.ruc}

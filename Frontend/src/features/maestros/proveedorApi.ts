@@ -22,6 +22,8 @@ export interface ProveedorResponse {
 
 export interface ProveedorRequest {
   documento: string
+  /** DNI, RUC o CODIGO. Si va vacío el backend lo deduce del largo. */
+  tipoDoc?: string
   nombre: string
   nombreComercial?: string | null
   direccion?: string | null

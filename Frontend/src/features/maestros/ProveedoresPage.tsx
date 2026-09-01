@@ -13,7 +13,7 @@ import {
   StatCard,
   useConfirmacion,
 } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { DataTableColumn, TipoDocumento } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { valorDe } from '../../lib/excel'
@@ -22,6 +22,7 @@ import type { ProveedorRequest, ProveedorResponse } from './proveedorApi'
 
 const VACIO: ProveedorRequest = {
   documento: '',
+  tipoDoc: 'DNI',
   nombre: '',
   nombreComercial: '',
   direccion: '',
@@ -74,6 +75,7 @@ export function ProveedoresPage() {
     setEditando(proveedor)
     setForm({
       documento: proveedor.documento,
+      tipoDoc: proveedor.tipoDoc,
       nombre: proveedor.nombre,
       nombreComercial: proveedor.nombreComercial ?? '',
       direccion: proveedor.direccion ?? '',
@@ -88,11 +90,11 @@ export function ProveedoresPage() {
     setAbierto(true)
   }
 
-  const consultarDocumento = async (documento: string) => {
+  const consultarDocumento = async (documento: string, tipo: TipoDocumento) => {
     setConsultando(true)
     setErrorForm('')
     try {
-      if (documento.length === 11) {
+      if (tipo === 'RUC') {
         const datos = await consultaApi.ruc(documento)
         setForm((prev) => ({
           ...prev,
@@ -102,7 +104,7 @@ export function ProveedoresPage() {
           departamento: datos.departamento ?? prev.departamento,
           distrito: datos.distrito ?? prev.distrito,
         }))
-      } else if (documento.length === 8) {
+      } else if (tipo === 'DNI') {
         const datos = await consultaApi.dni(documento)
         setForm((prev) => ({
           ...prev,
@@ -110,8 +112,6 @@ export function ProveedoresPage() {
             .replace(/\s+/g, ' ')
             .trim(),
         }))
-      } else {
-        setErrorForm('Solo se puede consultar en línea un RUC (11 dígitos) o un DNI (8).')
       }
     } catch (e) {
       setErrorForm(e instanceof ApiError ? e.message : 'No pudimos consultar el documento.')
@@ -297,9 +297,9 @@ export function ProveedoresPage() {
           )}
 
           <DocumentoInput
-            tipo="ruc"
-            label="Documento"
-            placeholder="RUC, DNI o código"
+            className="sm:col-span-2"
+            tipo={(form.tipoDoc as TipoDocumento) ?? 'RUC'}
+            onTipoChange={(tipoDoc) => setForm({ ...form, tipoDoc })}
             value={form.documento}
             onChange={(documento) => setForm({ ...form, documento })}
             onBuscar={consultarDocumento}

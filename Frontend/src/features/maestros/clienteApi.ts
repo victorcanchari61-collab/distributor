@@ -20,6 +20,8 @@ export interface ClienteResponse {
 
 export interface ClienteRequest {
   documento: string
+  /** DNI, RUC o CODIGO. Si va vacío el backend lo deduce del largo. */
+  tipoDoc?: string
   nombre: string
   direccion?: string | null
   distrito?: string | null

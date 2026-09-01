@@ -4,62 +4,110 @@ import { cn } from './cn'
 import { FIELD_HEIGHT, Input } from './Input'
 import type { FieldSize, InputProps } from './Input'
 
-export interface DocumentoInputProps
-  extends Omit<InputProps, 'onChange' | 'value' | 'type'> {
-  /** RUC son 11 digitos y DNI 8. */
-  tipo: 'ruc' | 'dni'
+/** Tipos de documento que maneja el sistema. */
+export type TipoDocumento = 'DNI' | 'RUC' | 'CODIGO'
+
+/**
+ * Reglas de cada tipo: cuantos digitos lleva y si se puede consultar en linea.
+ * El codigo interno del negocio no existe en RENIEC ni SUNAT, asi que no se
+ * consulta y admite cualquier largo razonable.
+ */
+const REGLAS: Record<
+  TipoDocumento,
+  { label: string; min: number; max: number; consultable: boolean }
+> = {
+  DNI: { label: 'DNI', min: 8, max: 8, consultable: true },
+  RUC: { label: 'RUC', min: 11, max: 11, consultable: true },
+  CODIGO: { label: 'Código', min: 3, max: 15, consultable: false },
+}
+
+export interface DocumentoInputProps extends Omit<
+  InputProps,
+  'onChange' | 'value' | 'type' | 'size'
+> {
+  tipo: TipoDocumento
+  onTipoChange?: (tipo: TipoDocumento) => void
+  /**
+   * Oculta el selector: hay casos donde el tipo no se elige, como el RUC de la
+   * empresa emisora o el DNI de un usuario.
+   */
+  tipoFijo?: boolean
   value: string
   onChange: (value: string) => void
-  /** Se llama al pulsar Buscar o Enter con el numero completo. */
-  onBuscar: (numero: string) => Promise<void> | void
+  /** Se llama al pulsar Buscar o Enter, con el numero completo. */
+  onBuscar?: (numero: string, tipo: TipoDocumento) => Promise<void> | void
   buscando?: boolean
   size?: FieldSize
 }
 
-const LARGO = { ruc: 11, dni: 8 }
-
 /**
- * Campo de documento con boton de consulta en linea.
+ * Documento con su tipo.
  *
- * Solo acepta digitos, corta al largo del tipo y habilita "Buscar" cuando el
- * numero esta completo. Se usa igual para el RUC de una empresa y el DNI de un
- * usuario, asi que la logica de tecleo vive aqui y no en cada formulario.
+ * El selector va pegado al campo porque el tipo cambia las reglas: un DNI son
+ * 8 digitos, un RUC 11 y un codigo interno entre 3 y 15. Antes el campo estaba
+ * fijo en 11 y escribir un DNI decia "faltan 3 digitos".
  */
 export function DocumentoInput({
   tipo,
+  onTipoChange,
+  tipoFijo = false,
   value,
   onChange,
   onBuscar,
   buscando = false,
   size = 'md',
-  label,
+  label = 'Documento',
   className,
   ...rest
 }: DocumentoInputProps) {
-  const largo = LARGO[tipo]
-  const completo = value.length === largo
+  const regla = REGLAS[tipo]
+  const completo = value.length >= regla.min && value.length <= regla.max
   const [tocado, setTocado] = useState(false)
 
   const buscar = () => {
-    if (!completo || buscando) return
-    void onBuscar(value)
+    if (!completo || buscando || !regla.consultable || !onBuscar) return
+    void onBuscar(value, tipo)
   }
 
   return (
     <div className={cn('w-full min-w-0', className)}>
       <div className="flex min-w-0 items-end gap-2">
+        {/* Tipo */}
+        {!tipoFijo && (
+          <label className="block shrink-0">
+            <span className="ui-label mb-1.5">Tipo</span>
+            <select
+              value={tipo}
+              onChange={(e) => {
+                const siguiente = e.target.value as TipoDocumento
+                onTipoChange?.(siguiente)
+                // Recortar si el nuevo tipo admite menos digitos.
+                onChange(value.slice(0, REGLAS[siguiente].max))
+              }}
+              className={cn(
+                'w-24 cursor-pointer rounded-field border border-line bg-surface px-2 text-sm text-ink outline-none focus:border-ink-soft',
+                FIELD_HEIGHT[size],
+              )}
+            >
+              {(Object.keys(REGLAS) as TipoDocumento[]).map((t) => (
+                <option key={t} value={t}>
+                  {REGLAS[t].label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <Input
-          // flex-1 + min-w-0: el campo cede ancho para que el boton siempre
-          // quepa, incluso dentro de una columna estrecha del formulario.
           className="min-w-0 flex-1"
           size={size}
-          label={label ?? tipo.toUpperCase()}
+          label={label}
           inputMode="numeric"
-          maxLength={largo}
+          maxLength={regla.max}
           value={value}
           onChange={(e) => {
             setTocado(true)
-            onChange(e.target.value.replace(/\D/g, '').slice(0, largo))
+            onChange(e.target.value.replace(/\D/g, '').slice(0, regla.max))
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -70,33 +118,40 @@ export function DocumentoInput({
           {...rest}
         />
 
-        <button
-          type="button"
-          onClick={buscar}
-          disabled={!completo || buscando}
-          title={completo ? 'Consultar en línea' : `Ingresa los ${largo} dígitos`}
-          aria-label="Consultar en línea"
-          className={cn(
-            'inline-flex w-10 shrink-0 cursor-pointer items-center justify-center rounded-field',
-            FIELD_HEIGHT[size],
-            'bg-brand text-on-brand transition-colors hover:not-disabled:bg-brand-hover',
-            'disabled:cursor-not-allowed disabled:opacity-50',
-          )}
-        >
-          {buscando ? (
-            <span
-              aria-hidden="true"
-              className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent"
-            />
-          ) : (
-            <Search size={16} />
-          )}
-        </button>
+        {/* Consulta en linea: solo tiene sentido con DNI o RUC */}
+        {regla.consultable && onBuscar && (
+          <button
+            type="button"
+            onClick={buscar}
+            disabled={!completo || buscando}
+            title={
+              completo ? `Consultar ${regla.label} en línea` : `Ingresa los ${regla.min} dígitos`
+            }
+            aria-label="Consultar en línea"
+            className={cn(
+              'inline-flex w-10 shrink-0 cursor-pointer items-center justify-center rounded-field',
+              FIELD_HEIGHT[size],
+              'bg-brand text-on-brand transition-colors hover:not-disabled:bg-brand-hover',
+              'disabled:cursor-not-allowed disabled:opacity-50',
+            )}
+          >
+            {buscando ? (
+              <span
+                aria-hidden="true"
+                className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+              />
+            ) : (
+              <Search size={16} />
+            )}
+          </button>
+        )}
       </div>
 
       {tocado && value.length > 0 && !completo && (
         <p className="mt-1.5 text-xs text-ink-soft">
-          Faltan {largo - value.length} dígito{largo - value.length === 1 ? '' : 's'}.
+          {regla.min === regla.max
+            ? `Un ${regla.label} tiene ${regla.min} dígitos.`
+            : `Entre ${regla.min} y ${regla.max} dígitos.`}
         </p>
       )}
     </div>

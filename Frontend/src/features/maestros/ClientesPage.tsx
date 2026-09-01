@@ -13,7 +13,7 @@ import {
   StatCard,
   useConfirmacion,
 } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { DataTableColumn, TipoDocumento } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { valorDe } from '../../lib/excel'
@@ -22,6 +22,7 @@ import type { ClienteRequest, ClienteResponse } from './clienteApi'
 
 const VACIO: ClienteRequest = {
   documento: '',
+  tipoDoc: 'DNI',
   nombre: '',
   direccion: '',
   distrito: '',
@@ -75,6 +76,7 @@ export function ClientesPage() {
     setEditando(cliente)
     setForm({
       documento: cliente.documento,
+      tipoDoc: cliente.tipoDoc,
       nombre: cliente.nombre,
       direccion: cliente.direccion ?? '',
       distrito: cliente.distrito ?? '',
@@ -89,11 +91,11 @@ export function ClientesPage() {
   }
 
   /** Con 8 u 11 dígitos se puede traer el nombre de RENIEC o SUNAT. */
-  const consultarDocumento = async (documento: string) => {
+  const consultarDocumento = async (documento: string, tipo: TipoDocumento) => {
     setConsultando(true)
     setErrorForm('')
     try {
-      if (documento.length === 11) {
+      if (tipo === 'RUC') {
         const datos = await consultaApi.ruc(documento)
         setForm((prev) => ({
           ...prev,
@@ -101,7 +103,7 @@ export function ClientesPage() {
           direccion: datos.direccion ?? prev.direccion,
           distrito: datos.distrito ?? prev.distrito,
         }))
-      } else if (documento.length === 8) {
+      } else if (tipo === 'DNI') {
         const datos = await consultaApi.dni(documento)
         setForm((prev) => ({
           ...prev,
@@ -109,8 +111,6 @@ export function ClientesPage() {
             .replace(/\s+/g, ' ')
             .trim(),
         }))
-      } else {
-        setErrorForm('Solo se puede consultar en línea un DNI (8 dígitos) o un RUC (11).')
       }
     } catch (e) {
       setErrorForm(e instanceof ApiError ? e.message : 'No pudimos consultar el documento.')
@@ -301,9 +301,9 @@ export function ClientesPage() {
           )}
 
           <DocumentoInput
-            tipo="ruc"
-            label="Documento"
-            placeholder="DNI, RUC o código"
+            className="sm:col-span-2"
+            tipo={(form.tipoDoc as TipoDocumento) ?? 'DNI'}
+            onTipoChange={(tipoDoc) => setForm({ ...form, tipoDoc })}
             value={form.documento}
             onChange={(documento) => setForm({ ...form, documento })}
             onBuscar={consultarDocumento}

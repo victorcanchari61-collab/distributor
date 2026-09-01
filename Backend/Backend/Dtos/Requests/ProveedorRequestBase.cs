@@ -4,6 +4,12 @@ public abstract class ProveedorRequestBase
 {
     public string Documento { get; set; } = string.Empty;
 
+    /// <summary>
+    /// DNI, RUC o CODIGO. Si viene vacio (por ejemplo en una importacion) se
+    /// deduce del largo del numero.
+    /// </summary>
+    public string? TipoDoc { get; set; }
+
     /// <summary>Razon social.</summary>
     public string Nombre { get; set; } = string.Empty;
     public string? NombreComercial { get; set; }

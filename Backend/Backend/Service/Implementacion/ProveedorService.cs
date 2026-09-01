@@ -197,7 +197,11 @@ public partial class ProveedorService : IProveedorService
     private static void Aplicar(Proveedor proveedor, ProveedorRequestBase request)
     {
         proveedor.Documento = request.Documento.Trim();
-        proveedor.TipoDoc = TipoDocumento.Deducir(proveedor.Documento);
+        // Si el usuario eligio el tipo se respeta; si no (importacion), se deduce
+        // del largo. Asi un codigo interno de 8 digitos no termina como DNI.
+        proveedor.TipoDoc = string.IsNullOrWhiteSpace(request.TipoDoc)
+            ? TipoDocumento.Deducir(proveedor.Documento)
+            : request.TipoDoc.Trim().ToUpperInvariant();
         proveedor.Nombre = request.Nombre.Trim();
         proveedor.NombreComercial = Limpiar(request.NombreComercial);
         proveedor.Direccion = Limpiar(request.Direccion);

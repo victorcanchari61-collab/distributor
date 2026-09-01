@@ -276,8 +276,10 @@ export function UsuariosPage() {
         <div className="flex flex-col gap-4">
           {errorForm && <Alert>{errorForm}</Alert>}
 
+          {/* Un usuario es una persona: siempre DNI. */}
           <DocumentoInput
-            tipo="dni"
+            tipo="DNI"
+            tipoFijo
             label="DNI"
             placeholder="45871203"
             value={form.dni}

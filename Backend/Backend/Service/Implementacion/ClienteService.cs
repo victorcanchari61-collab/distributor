@@ -192,7 +192,11 @@ public class ClienteService : IClienteService
     private static void Aplicar(Cliente cliente, ClienteRequestBase request)
     {
         cliente.Documento = request.Documento.Trim();
-        cliente.TipoDoc = TipoDocumento.Deducir(cliente.Documento);
+        // Si el usuario eligio el tipo se respeta; si no (importacion), se deduce
+        // del largo. Asi un codigo interno de 8 digitos no termina como DNI.
+        cliente.TipoDoc = string.IsNullOrWhiteSpace(request.TipoDoc)
+            ? TipoDocumento.Deducir(cliente.Documento)
+            : request.TipoDoc.Trim().ToUpperInvariant();
         cliente.Nombre = request.Nombre.Trim();
         cliente.Direccion = Limpiar(request.Direccion);
         cliente.Distrito = Limpiar(request.Distrito);
