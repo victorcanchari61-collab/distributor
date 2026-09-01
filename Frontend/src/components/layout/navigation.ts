@@ -27,6 +27,7 @@ import {
   Ruler,
   Settings,
   ShieldCheck,
+  ShoppingBag,
   ShoppingCart,
   Sliders,
   Store,
@@ -100,8 +101,12 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Compras',
     sys: 'compras',
     icon: ShoppingCart,
+    // El flujo manda el orden: se emite una orden al proveedor, cuando este
+    // la confirma se convierte en compra, y al llegar la mercaderia se
+    // registra la recepcion.
     items: [
       { id: 'compras.ordenes', label: 'Órdenes de compra', icon: ClipboardList, pending: true },
+      { id: 'compras.compras', label: 'Mis compras', icon: ShoppingBag, pending: true },
       { id: 'compras.recepciones', label: 'Recepciones', icon: PackageCheck, pending: true },
     ],
   },
