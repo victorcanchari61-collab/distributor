@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { cn } from './cn'
-import { Input } from './Input'
-import type { InputProps } from './Input'
+import { FIELD_HEIGHT, Input } from './Input'
+import type { FieldSize, InputProps } from './Input'
 
-export interface DocumentoInputProps extends Omit<InputProps, 'onChange' | 'value' | 'type'> {
+export interface DocumentoInputProps
+  extends Omit<InputProps, 'onChange' | 'value' | 'type'> {
   /** RUC son 11 digitos y DNI 8. */
   tipo: 'ruc' | 'dni'
   value: string
@@ -12,6 +13,7 @@ export interface DocumentoInputProps extends Omit<InputProps, 'onChange' | 'valu
   /** Se llama al pulsar Buscar o Enter con el numero completo. */
   onBuscar: (numero: string) => Promise<void> | void
   buscando?: boolean
+  size?: FieldSize
 }
 
 const LARGO = { ruc: 11, dni: 8 }
@@ -29,6 +31,7 @@ export function DocumentoInput({
   onChange,
   onBuscar,
   buscando = false,
+  size = 'md',
   label,
   className,
   ...rest
@@ -49,6 +52,7 @@ export function DocumentoInput({
           // flex-1 + min-w-0: el campo cede ancho para que el boton siempre
           // quepa, incluso dentro de una columna estrecha del formulario.
           className="min-w-0 flex-1"
+          size={size}
           label={label ?? tipo.toUpperCase()}
           inputMode="numeric"
           maxLength={largo}
@@ -73,7 +77,8 @@ export function DocumentoInput({
           title={completo ? 'Consultar en línea' : `Ingresa los ${largo} dígitos`}
           aria-label="Consultar en línea"
           className={cn(
-            'inline-flex h-control w-11 shrink-0 cursor-pointer items-center justify-center rounded-field',
+            'inline-flex w-10 shrink-0 cursor-pointer items-center justify-center rounded-field',
+            FIELD_HEIGHT[size],
             'bg-brand text-on-brand transition-colors hover:not-disabled:bg-brand-hover',
             'disabled:cursor-not-allowed disabled:opacity-50',
           )}

@@ -284,7 +284,7 @@ export function UsuariosPage() {
             onChange={(dni) => setForm({ ...form, dni })}
             onBuscar={consultarDni}
             buscando={consultando}
-            hint={<span className="ui-hint">opcional</span>}
+            optional
           />
 
           <Input
@@ -316,11 +316,11 @@ export function UsuariosPage() {
           )}
 
           <label className="block">
-            <span className="ui-label mb-2">Rol</span>
+            <span className="ui-label mb-1.5">Rol</span>
             <select
               value={form.rolId}
               onChange={(e) => setForm({ ...form, rolId: Number(e.target.value) })}
-              className="min-h-control w-full cursor-pointer rounded-field border border-line bg-surface px-3 text-sm text-ink outline-none transition-colors focus:border-ink-soft"
+              className="h-[var(--height-field-md)] w-full cursor-pointer rounded-field border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-ink-soft"
             >
               <option value={0}>Selecciona un rol</option>
               {roles.map((r) => (

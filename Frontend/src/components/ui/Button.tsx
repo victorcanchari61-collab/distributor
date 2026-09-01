@@ -19,10 +19,11 @@ const VARIANTS: Record<Variant, string> = {
   ghost: 'bg-transparent text-brand hover:not-disabled:bg-brand-soft',
 }
 
+// Mismas alturas que los campos, para que un boton junto a un input calce.
 const SIZES: Record<Size, string> = {
-  sm: 'min-h-9 px-3 text-sm',
-  md: 'min-h-control px-6 text-base',
-  lg: 'min-h-13 px-7 text-lg',
+  sm: 'h-[var(--height-field-sm)] px-3 text-sm',
+  md: 'h-[var(--height-field-md)] px-5 text-sm',
+  lg: 'h-[var(--height-field-lg)] px-7 text-base',
 }
 
 export function Button({

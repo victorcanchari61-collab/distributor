@@ -235,13 +235,13 @@ export function RolesPage() {
           />
 
           <label className="block">
-            <span className="ui-label mb-2">Qué puede hacer</span>
+            <span className="ui-label mb-1.5">Qué puede hacer</span>
             <textarea
               rows={3}
               placeholder="Describe en una línea el alcance de este perfil."
               value={form.descripcion}
               onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-              className="w-full rounded-field border border-line bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors placeholder:text-ink-soft focus:border-ink-soft"
+              className="w-full rounded-field border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-soft focus:border-ink-soft"
             />
           </label>
 

@@ -91,6 +91,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
               {formError && <Alert>{formError}</Alert>}
 
               <Input
+                size="lg"
                 label="Correo electrónico"
                 type="email"
                 autoComplete="email"
@@ -102,6 +103,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
               />
 
               <Input
+                size="lg"
                 label="Contraseña"
                 type="password"
                 autoComplete="current-password"
@@ -127,7 +129,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
                 onChange={(e) => setRemember(e.target.checked)}
               />
 
-              <Button type="submit" block loading={loading} iconRight={<ArrowIcon />}>
+              <Button type="submit" block size="lg" loading={loading} iconRight={<ArrowIcon />}>
                 Ingresar al panel
               </Button>
             </form>

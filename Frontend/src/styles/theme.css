@@ -46,9 +46,15 @@
   --radius-panel: 20px;
   --shadow-panel: 0 18px 45px -18px rgb(15 23 42 / 0.25);
 
-  /* --- Medidas compartidas --- */
-  --spacing-control: 3rem; /* 48px: alto de inputs y botones */
-  --height-control: 3rem;
+  /* --- Alturas de los campos y botones ---
+     Aqui se decide que tan altos son TODOS los controles del sistema.
+     sm  36px  tablas, barras de herramientas
+     md  40px  formularios (por defecto)
+     lg  48px  login y pantallas de una sola accion            */
+  --spacing-control: 2.5rem;
+  --height-field-sm: 2.25rem;
+  --height-field-md: 2.5rem;
+  --height-field-lg: 3rem;
 }
 
 @layer base {
