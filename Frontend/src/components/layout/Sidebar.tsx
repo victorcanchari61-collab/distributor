@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { cn, Logo } from '../ui'
 import { NAV_GROUPS } from './navigation'
@@ -29,8 +30,20 @@ export function Sidebar({
     return group ? [group.id] : []
   })
 
+  // Al cambiar de contraido a expandido (o al reves) se cierra lo que hubiera
+  // abierto: un panel flotante no tiene sentido con el sider ya desplegado.
+  useEffect(() => {
+    setOpen([])
+  }, [collapsed])
+
   const toggleGroup = (id: string) =>
-    setOpen((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]))
+    setOpen((prev) => {
+      if (prev.includes(id)) return prev.filter((g) => g !== id)
+
+      // Expandido pueden quedar varios grupos abiertos a la vez; contraido no,
+      // porque los paneles flotantes se montarian uno sobre otro.
+      return collapsed ? [id] : [...prev, id]
+    })
 
   return (
     <>
@@ -126,7 +139,11 @@ function NavGroupBlock({
   const hasActive = group.items.some((i) => i.id === active)
   const GroupIcon = group.icon
 
-  // Colapsado: solo el icono del grupo, que lleva a su primera vista.
+  // Boton desde el que se abre el panel flotante cuando el sider esta contraido.
+  const [ancla, setAncla] = useState<HTMLElement | null>(null)
+
+  // Colapsado: el icono abre un panel flotante con los submodulos, en vez de
+  // saltar a ciegas a la primera vista del grupo.
   if (collapsed) {
     return (
       <div data-sys={group.sys}>
@@ -135,8 +152,24 @@ function NavGroupBlock({
           label={group.label}
           active={hasActive}
           collapsed
-          onClick={() => onSelect(group.items[0].id)}
+          onClick={(e) => {
+            setAncla(e.currentTarget)
+            onToggle()
+          }}
         />
+
+        {open && ancla && (
+          <SubmenuFlotante
+            group={group}
+            ancla={ancla}
+            active={active}
+            onSelect={(id) => {
+              onSelect(id)
+              onToggle()
+            }}
+            onCerrar={onToggle}
+          />
+        )}
       </div>
     )
   }
@@ -209,7 +242,7 @@ function NavButton({
   pending?: boolean
   active: boolean
   collapsed: boolean
-  onClick: () => void
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void
   small?: boolean
 }) {
   return (
@@ -246,5 +279,116 @@ function NavButton({
         />
       )}
     </button>
+  )
+}
+
+/**
+ * Submodulos de un grupo cuando el sider esta contraido.
+ *
+ * Se pinta en un portal con position:fixed anclado al icono, porque dentro del
+ * sider quedaria recortado por su ancho de 72px. Entra con una animacion corta
+ * desde la izquierda, para que se lea como que sale del propio icono.
+ */
+function SubmenuFlotante({
+  group,
+  ancla,
+  active,
+  onSelect,
+  onCerrar,
+}: {
+  group: NavGroup
+  ancla: HTMLElement
+  active: string
+  onSelect: (id: string) => void
+  onCerrar: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+
+  useEffect(() => {
+    const colocar = () => {
+      const r = ancla.getBoundingClientRect()
+      const alto = 52 + group.items.length * 34
+
+      // Se ancla al borde del sider, no al del icono: si no, el panel se monta
+      // sobre la propia barra porque el boton esta centrado dentro de ella.
+      const barra = ancla.closest('aside')?.getBoundingClientRect()
+
+      setPos({
+        // Si el grupo esta al final del sider, el panel sube para no cortarse.
+        top: Math.min(r.top, Math.max(8, window.innerHeight - alto - 8)),
+        left: (barra?.right ?? r.right) + 8,
+      })
+    }
+
+    colocar()
+    const id = requestAnimationFrame(() => setVisible(true))
+
+    const fuera = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node) && !ancla.contains(e.target as Node)) onCerrar()
+    }
+    const escape = (e: KeyboardEvent) => e.key === 'Escape' && onCerrar()
+
+    document.addEventListener('mousedown', fuera)
+    document.addEventListener('keydown', escape)
+    window.addEventListener('resize', colocar)
+    window.addEventListener('scroll', colocar, true)
+
+    return () => {
+      cancelAnimationFrame(id)
+      document.removeEventListener('mousedown', fuera)
+      document.removeEventListener('keydown', escape)
+      window.removeEventListener('resize', colocar)
+      window.removeEventListener('scroll', colocar, true)
+    }
+  }, [ancla, group.items.length, onCerrar])
+
+  if (!pos) return null
+
+  return createPortal(
+    <div
+      ref={ref}
+      data-sys={group.sys}
+      style={{ top: pos.top, left: pos.left }}
+      className={cn(
+        'fixed z-50 w-56 origin-left rounded-panel border border-line bg-white p-1.5 shadow-panel',
+        'transition-all duration-150',
+        visible ? 'translate-x-0 scale-100 opacity-100' : '-translate-x-2 scale-95 opacity-0',
+      )}
+    >
+      <p className="px-2.5 pt-1 pb-2 text-[11px] font-semibold tracking-wider text-[rgb(var(--sys-ink-rgb))] uppercase">
+        {group.label}
+      </p>
+
+      {group.items
+        .filter((item) => !item.hidden)
+        .map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onSelect(item.id)}
+            className={cn(
+              'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px]',
+              'transition-colors',
+              active === item.id
+                ? 'bg-[rgb(var(--sys-rgb)/0.1)] font-semibold text-[rgb(var(--sys-ink-rgb))]'
+                : 'text-ink-muted hover:bg-surface-alt hover:text-ink',
+            )}
+          >
+            <item.icon size={15} className="shrink-0" />
+            <span className="flex-1 truncate text-left">{item.label}</span>
+            {item.badge && (
+              <span className="rounded-full bg-[rgb(var(--sys-rgb)/0.12)] px-1.5 py-0.5 text-[10px] font-bold text-[rgb(var(--sys-ink-rgb))]">
+                {item.badge}
+              </span>
+            )}
+            {!item.badge && item.pending && (
+              <span aria-hidden="true" className="size-1.5 rounded-full bg-line-strong" />
+            )}
+          </button>
+        ))}
+    </div>,
+    document.body,
   )
 }
