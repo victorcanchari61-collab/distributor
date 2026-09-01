@@ -549,7 +549,7 @@ export function SysDataTable<T>({
                       }}
                       onDrop={() => handleDrop(col.key)}
                       className={cn(
-                        'group relative px-3 py-1.5 whitespace-nowrap',
+                        'group relative overflow-hidden px-3 py-1.5',
                         // sin transicion mientras se arrastra el borde: debe seguir al cursor
                         resizingKey === col.key
                           ? 'select-none'
@@ -564,17 +564,23 @@ export function SysDataTable<T>({
 
                       <div
                         className={cn(
-                          'flex items-center gap-1',
+                          'flex min-w-0 items-center gap-1',
                           col.align === 'right' && 'justify-end',
                         )}
                       >
+                        {/*
+                          Los controles se esconden cuando la columna es angosta
+                          y vuelven al pasar el mouse: antes se desbordaban sobre
+                          la columna vecina. Los que estan en uso (orden activo o
+                          busqueda escrita) se quedan siempre visibles.
+                        */}
                         <GripVertical
                           size={13}
-                          className="cursor-grab text-[var(--sys-on)] opacity-40 transition-opacity hover:opacity-100 active:cursor-grabbing"
+                          className="hidden shrink-0 cursor-grab text-[var(--sys-on)] opacity-40 transition-opacity group-hover:inline-block hover:opacity-100 active:cursor-grabbing"
                           aria-hidden="true"
                         />
 
-                        <span className="text-[11px] font-semibold tracking-wider uppercase">
+                        <span className="min-w-0 truncate text-[11px] font-semibold tracking-wider uppercase">
                           {col.label}
                         </span>
 
@@ -584,8 +590,8 @@ export function SysDataTable<T>({
                             onClick={() => toggleSort(col.key)}
                             aria-label={`Ordenar por ${col.label}`}
                             className={cn(
-                              'rounded p-0.5 text-[var(--sys-on)] transition-opacity hover:opacity-100',
-                              isSorted ? 'opacity-100' : 'opacity-50',
+                              'shrink-0 rounded p-0.5 text-[var(--sys-on)] transition-opacity hover:opacity-100',
+                              isSorted ? 'opacity-100' : 'hidden opacity-50 group-hover:block',
                             )}
                           >
                             {isSorted && sort.dir === 'asc' ? (
@@ -608,8 +614,10 @@ export function SysDataTable<T>({
                             }}
                             aria-label={`Buscar en ${col.label}`}
                             className={cn(
-                              'rounded p-0.5 text-[var(--sys-on)] transition-opacity hover:opacity-100',
-                              columnSearch[col.key]?.trim() ? 'opacity-100' : 'opacity-50',
+                              'shrink-0 rounded p-0.5 text-[var(--sys-on)] transition-opacity hover:opacity-100',
+                              columnSearch[col.key]?.trim()
+                                ? 'opacity-100'
+                                : 'hidden opacity-50 group-hover:block',
                             )}
                           >
                             <Search size={13} />
