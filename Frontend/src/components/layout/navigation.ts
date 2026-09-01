@@ -22,6 +22,7 @@ import {
   Package,
   PackageCheck,
   PackagePlus,
+  Receipt,
   ReceiptText,
   Route,
   Ruler,
@@ -128,10 +129,20 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Facturación',
     sys: 'fact',
     icon: ReceiptText,
+    // Por ahora no se factura: se trabaja con pedido y nota de venta. Los
+    // comprobantes electronicos quedan reservados, junto a Series y Parametros
+    // en Configuracion, para cuando el cliente decida facturar.
     items: [
       { id: 'fact.pedidos', label: 'Pedidos', icon: ClipboardList, pending: true },
-      { id: 'fact.comprobantes', label: 'Comprobantes', icon: FileText, pending: true },
-      { id: 'fact.notas', label: 'Notas de crédito y débito', icon: FileMinus, pending: true },
+      { id: 'fact.notaventa', label: 'Notas de venta', icon: FileText, pending: true },
+      { id: 'fact.comprobantes', label: 'Comprobantes', icon: Receipt, pending: true, hidden: true },
+      {
+        id: 'fact.notas',
+        label: 'Notas de crédito y débito',
+        icon: FileMinus,
+        pending: true,
+        hidden: true,
+      },
     ],
   },
   {
