@@ -200,7 +200,7 @@ export function ClientesPage() {
   const activos = clientes.filter((c) => c.activo)
   const desactivados = clientes.length - activos.length
   const conRuta = activos.filter((c) => c.ruta).length
-  const mercados = new Set(activos.map((c) => c.mercado).filter(Boolean)).size
+  const rutas = new Set(activos.map((c) => c.ruta).filter(Boolean)).size
 
   const columns: DataTableColumn<ClienteResponse>[] = [
     {
@@ -274,10 +274,11 @@ export function ClientesPage() {
             hint={`${activos.length - conRuta} sin ruta`}
           />
           <StatCard
-            label="Mercados"
-            value={String(mercados)}
+            label="Rutas"
+            value={String(rutas)}
             icon={<MapPin size={18} />}
             tono="neutral"
+            hint="rutas de reparto distintas"
           />
         </>
       }
