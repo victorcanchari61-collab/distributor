@@ -44,6 +44,14 @@ public class ProveedorController : ControllerBase
         return Ok(await _proveedorService.UpdateAsync(id, request));
     }
 
+    /// <summary>Alta masiva desde archivo. Informa que paso con cada fila.</summary>
+    [HttpPost("importar")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> Importar([FromBody] ImportarProveedoresRequest request)
+    {
+        return Ok(await _proveedorService.ImportarAsync(request));
+    }
+
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Administrador")]
     public async Task<IActionResult> Delete(int id)

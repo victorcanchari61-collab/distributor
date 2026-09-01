@@ -1,0 +1,6 @@
+export { ClientesPage } from './ClientesPage'
+export { ProveedoresPage } from './ProveedoresPage'
+export { clienteApi } from './clienteApi'
+export type { ClienteRequest, ClienteResponse } from './clienteApi'
+export { proveedorApi } from './proveedorApi'
+export type { ProveedorRequest, ProveedorResponse } from './proveedorApi'

@@ -4,6 +4,6 @@ namespace Backend.Repository.Interfaces;
 
 public interface IClienteRepository : IRepository<Cliente>
 {
-    Task<Cliente?> GetByRucAsync(string ruc);
-    Task<bool> ExistsByRucAsync(string ruc, int? excludeId = null);
+    Task<Cliente?> GetByDocumentoAsync(string documento);
+    Task<bool> ExistsByDocumentoAsync(string documento, int? excludeId = null);
 }

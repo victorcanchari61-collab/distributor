@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Backend.Dtos.Requests;
 using Backend.Dtos.Responses;
 using Backend.Exceptions;
@@ -8,7 +9,7 @@ using FluentValidation;
 
 namespace Backend.Service.Implementacion;
 
-public class ProveedorService : IProveedorService
+public partial class ProveedorService : IProveedorService
 {
     private readonly IProveedorRepository _repository;
     private readonly IValidator<CreateProveedorRequest> _createValidator;
@@ -26,32 +27,27 @@ public class ProveedorService : IProveedorService
     public async Task<IEnumerable<ProveedorResponse>> GetAllAsync()
     {
         var proveedores = await _repository.GetAllAsync();
-        return proveedores.Where(p => p.Activo).Select(MapToResponse);
+        return proveedores.Where(p => p.Activo)
+            .OrderBy(p => p.Nombre)
+            .Select(MapToResponse);
     }
 
     public async Task<ProveedorResponse> GetByIdAsync(int id)
     {
-        var proveedor = await GetActiveOrThrowAsync(id);
-        return MapToResponse(proveedor);
+        return MapToResponse(await GetActiveOrThrowAsync(id));
     }
 
     public async Task<ProveedorResponse> CreateAsync(CreateProveedorRequest request)
     {
         await _createValidator.ValidateAndThrowAsync(request);
 
-        if (await _repository.ExistsByRucAsync(request.Ruc))
+        if (await _repository.ExistsByDocumentoAsync(request.Documento))
         {
-            throw new ConflictException("Ya existe un proveedor con ese RUC");
+            throw new ConflictException("Ya existe un proveedor con ese documento");
         }
 
-        var proveedor = new Proveedor
-        {
-            Nombre = request.Nombre,
-            Ruc = request.Ruc,
-            Direccion = request.Direccion,
-            Telefono = request.Telefono,
-            Email = request.Email
-        };
+        var proveedor = new Proveedor();
+        Aplicar(proveedor, request);
 
         await _repository.AddAsync(proveedor);
         return MapToResponse(proveedor);
@@ -63,16 +59,12 @@ public class ProveedorService : IProveedorService
 
         var proveedor = await GetActiveOrThrowAsync(id);
 
-        if (await _repository.ExistsByRucAsync(request.Ruc, id))
+        if (await _repository.ExistsByDocumentoAsync(request.Documento, id))
         {
-            throw new ConflictException("Ya existe un proveedor con ese RUC");
+            throw new ConflictException("Ya existe un proveedor con ese documento");
         }
 
-        proveedor.Nombre = request.Nombre;
-        proveedor.Ruc = request.Ruc;
-        proveedor.Direccion = request.Direccion;
-        proveedor.Telefono = request.Telefono;
-        proveedor.Email = request.Email;
+        Aplicar(proveedor, request);
         proveedor.Activo = request.Activo;
 
         await _repository.UpdateAsync(proveedor);
@@ -85,6 +77,143 @@ public class ProveedorService : IProveedorService
         proveedor.Activo = false;
         await _repository.UpdateAsync(proveedor);
     }
+
+    /// <summary>Alta masiva desde archivo, fila por fila. Ver ClienteService.</summary>
+    public async Task<ImportarResponse> ImportarAsync(ImportarProveedoresRequest request)
+    {
+        var resultado = new ImportarResponse();
+        var vistos = new HashSet<string>();
+
+        for (var i = 0; i < request.Filas.Count; i++)
+        {
+            var fila = request.Filas[i];
+            var numero = i + 1;
+            var documento = fila.Documento?.Trim() ?? string.Empty;
+
+            try
+            {
+                // Limpiar ANTES de validar: el archivo trae el rubro en la
+                // columna de correo y celdas con el texto "NULL". Si se valida
+                // primero, esas filas se rechazan por un correo que en
+                // realidad no era un correo.
+                NormalizarFila(fila);
+                await _createValidator.ValidateAndThrowAsync(fila);
+
+                if (!vistos.Add(documento))
+                {
+                    resultado.Omitidos++;
+                    resultado.Errores.Add(new ImportarFilaError
+                    {
+                        Fila = numero,
+                        Documento = documento,
+                        Motivo = "El documento se repite dentro del archivo"
+                    });
+                    continue;
+                }
+
+                var existente = await _repository.GetByDocumentoAsync(documento);
+
+                if (existente is not null)
+                {
+                    if (!request.ActualizarExistentes)
+                    {
+                        resultado.Omitidos++;
+                        resultado.Errores.Add(new ImportarFilaError
+                        {
+                            Fila = numero,
+                            Documento = documento,
+                            Motivo = "Ya existe un proveedor con ese documento"
+                        });
+                        continue;
+                    }
+
+                    Aplicar(existente, fila);
+                    existente.Activo = true;
+                    await _repository.UpdateAsync(existente);
+                    resultado.Actualizados++;
+                    continue;
+                }
+
+                var proveedor = new Proveedor();
+                Aplicar(proveedor, fila);
+                await _repository.AddAsync(proveedor);
+                resultado.Creados++;
+            }
+            catch (ValidationException ex)
+            {
+                resultado.Omitidos++;
+                resultado.Errores.Add(new ImportarFilaError
+                {
+                    Fila = numero,
+                    Documento = documento,
+                    Motivo = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage))
+                });
+            }
+        }
+
+        return resultado;
+    }
+
+    /// <summary>
+    /// Deja la fila del archivo lista para validar: recorta espacios, descarta
+    /// los "NULL" y saca de Email lo que no sea un correo, moviendolo a Rubro.
+    /// </summary>
+    private static void NormalizarFila(ProveedorRequestBase fila)
+    {
+        fila.Documento = fila.Documento?.Trim() ?? string.Empty;
+        fila.Nombre = fila.Nombre?.Trim() ?? string.Empty;
+        fila.NombreComercial = Limpiar(fila.NombreComercial);
+        fila.Direccion = Limpiar(fila.Direccion);
+        fila.Departamento = Limpiar(fila.Departamento);
+        fila.Distrito = Limpiar(fila.Distrito);
+        fila.Telefono = Limpiar(fila.Telefono);
+        fila.Telefono2 = Limpiar(fila.Telefono2);
+        fila.Rubro = Limpiar(fila.Rubro);
+
+        var email = Limpiar(fila.Email);
+        if (email is not null && !EsCorreo().IsMatch(email))
+        {
+            fila.Rubro ??= email;
+            email = null;
+        }
+
+        fila.Email = email;
+    }
+
+    private static void Aplicar(Proveedor proveedor, ProveedorRequestBase request)
+    {
+        proveedor.Documento = request.Documento.Trim();
+        proveedor.TipoDoc = TipoDocumento.Deducir(proveedor.Documento);
+        proveedor.Nombre = request.Nombre.Trim();
+        proveedor.NombreComercial = Limpiar(request.NombreComercial);
+        proveedor.Direccion = Limpiar(request.Direccion);
+        proveedor.Departamento = Limpiar(request.Departamento);
+        proveedor.Distrito = Limpiar(request.Distrito);
+        proveedor.Telefono = Limpiar(request.Telefono);
+        proveedor.Telefono2 = Limpiar(request.Telefono2);
+        proveedor.Rubro = Limpiar(request.Rubro);
+
+        // Lo que no es un correo ya se movio a Rubro en NormalizarFila; aqui
+        // se repite la guarda para las altas hechas a mano desde la pantalla.
+        var email = Limpiar(request.Email);
+        if (email is not null && !EsCorreo().IsMatch(email))
+        {
+            proveedor.Rubro ??= email;
+            email = null;
+        }
+
+        proveedor.Email = email;
+    }
+
+    private static string? Limpiar(string? texto)
+    {
+        var limpio = texto?.Trim();
+        if (string.IsNullOrEmpty(limpio)) return null;
+        return limpio.Equals("NULL", StringComparison.OrdinalIgnoreCase) ? null : limpio;
+    }
+
+    [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
+    private static partial Regex EsCorreo();
 
     private async Task<Proveedor> GetActiveOrThrowAsync(int id)
     {
@@ -102,11 +231,17 @@ public class ProveedorService : IProveedorService
         return new ProveedorResponse
         {
             Id = proveedor.Id,
+            Documento = proveedor.Documento,
+            TipoDoc = proveedor.TipoDoc,
             Nombre = proveedor.Nombre,
-            Ruc = proveedor.Ruc,
+            NombreComercial = proveedor.NombreComercial,
             Direccion = proveedor.Direccion,
+            Departamento = proveedor.Departamento,
+            Distrito = proveedor.Distrito,
             Telefono = proveedor.Telefono,
+            Telefono2 = proveedor.Telefono2,
             Email = proveedor.Email,
+            Rubro = proveedor.Rubro,
             Activo = proveedor.Activo,
             FechaCreacion = proveedor.FechaCreacion
         };

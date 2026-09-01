@@ -11,13 +11,13 @@ public class ProveedorRepository : Repository<Proveedor>, IProveedorRepository
     {
     }
 
-    public async Task<Proveedor?> GetByRucAsync(string ruc)
+    public async Task<Proveedor?> GetByDocumentoAsync(string documento)
     {
-        return await DbSet.FirstOrDefaultAsync(p => p.Ruc == ruc);
+        return await DbSet.FirstOrDefaultAsync(p => p.Documento == documento);
     }
 
-    public async Task<bool> ExistsByRucAsync(string ruc, int? excludeId = null)
+    public async Task<bool> ExistsByDocumentoAsync(string documento, int? excludeId = null)
     {
-        return await DbSet.AnyAsync(p => p.Ruc == ruc && p.Id != excludeId);
+        return await DbSet.AnyAsync(p => p.Documento == documento && p.Id != excludeId);
     }
 }

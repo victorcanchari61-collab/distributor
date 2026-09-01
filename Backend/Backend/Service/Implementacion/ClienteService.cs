@@ -26,32 +26,27 @@ public class ClienteService : IClienteService
     public async Task<IEnumerable<ClienteResponse>> GetAllAsync()
     {
         var clientes = await _repository.GetAllAsync();
-        return clientes.Where(c => c.Activo).Select(MapToResponse);
+        return clientes.Where(c => c.Activo)
+            .OrderBy(c => c.Nombre)
+            .Select(MapToResponse);
     }
 
     public async Task<ClienteResponse> GetByIdAsync(int id)
     {
-        var cliente = await GetActiveOrThrowAsync(id);
-        return MapToResponse(cliente);
+        return MapToResponse(await GetActiveOrThrowAsync(id));
     }
 
     public async Task<ClienteResponse> CreateAsync(CreateClienteRequest request)
     {
         await _createValidator.ValidateAndThrowAsync(request);
 
-        if (await _repository.ExistsByRucAsync(request.Ruc))
+        if (await _repository.ExistsByDocumentoAsync(request.Documento))
         {
-            throw new ConflictException("Ya existe un cliente con ese RUC");
+            throw new ConflictException("Ya existe un cliente con ese documento");
         }
 
-        var cliente = new Cliente
-        {
-            Nombre = request.Nombre,
-            Ruc = request.Ruc,
-            Direccion = request.Direccion,
-            Telefono = request.Telefono,
-            Email = request.Email
-        };
+        var cliente = new Cliente();
+        Aplicar(cliente, request);
 
         await _repository.AddAsync(cliente);
         return MapToResponse(cliente);
@@ -63,16 +58,12 @@ public class ClienteService : IClienteService
 
         var cliente = await GetActiveOrThrowAsync(id);
 
-        if (await _repository.ExistsByRucAsync(request.Ruc, id))
+        if (await _repository.ExistsByDocumentoAsync(request.Documento, id))
         {
-            throw new ConflictException("Ya existe un cliente con ese RUC");
+            throw new ConflictException("Ya existe un cliente con ese documento");
         }
 
-        cliente.Nombre = request.Nombre;
-        cliente.Ruc = request.Ruc;
-        cliente.Direccion = request.Direccion;
-        cliente.Telefono = request.Telefono;
-        cliente.Email = request.Email;
+        Aplicar(cliente, request);
         cliente.Activo = request.Activo;
 
         await _repository.UpdateAsync(cliente);
@@ -84,6 +75,144 @@ public class ClienteService : IClienteService
         var cliente = await GetActiveOrThrowAsync(id);
         cliente.Activo = false;
         await _repository.UpdateAsync(cliente);
+    }
+
+    /// <summary>
+    /// Alta masiva desde archivo.
+    ///
+    /// Cada fila va por su cuenta: una mala no tumba a las buenas, y el
+    /// resultado dice el numero de fila para que el usuario sepa cual corregir
+    /// en su Excel.
+    /// </summary>
+    public async Task<ImportarResponse> ImportarAsync(ImportarClientesRequest request)
+    {
+        var resultado = new ImportarResponse();
+
+        // Documentos repetidos DENTRO del propio archivo: sin esto, la segunda
+        // fila repetida se guardaria como si nada, porque la primera aun no
+        // estaba en base cuando se valido.
+        var vistos = new HashSet<string>();
+
+        for (var i = 0; i < request.Filas.Count; i++)
+        {
+            var fila = request.Filas[i];
+            var numero = i + 1;
+            var documento = fila.Documento?.Trim() ?? string.Empty;
+
+            try
+            {
+                // Limpiar antes de validar: el archivo trae espacios de sobra
+                // y celdas con el texto "NULL", que de otro modo se toman como
+                // un correo invalido y tumban la fila.
+                NormalizarFila(fila);
+                await _createValidator.ValidateAndThrowAsync(fila);
+
+                if (!vistos.Add(documento))
+                {
+                    resultado.Omitidos++;
+                    resultado.Errores.Add(new ImportarFilaError
+                    {
+                        Fila = numero,
+                        Documento = documento,
+                        Motivo = "El documento se repite dentro del archivo"
+                    });
+                    continue;
+                }
+
+                var existente = await _repository.GetByDocumentoAsync(documento);
+
+                if (existente is not null)
+                {
+                    if (!request.ActualizarExistentes)
+                    {
+                        resultado.Omitidos++;
+                        resultado.Errores.Add(new ImportarFilaError
+                        {
+                            Fila = numero,
+                            Documento = documento,
+                            Motivo = "Ya existe un cliente con ese documento"
+                        });
+                        continue;
+                    }
+
+                    Aplicar(existente, fila);
+                    existente.Activo = true;
+                    await _repository.UpdateAsync(existente);
+                    resultado.Actualizados++;
+                    continue;
+                }
+
+                var cliente = new Cliente();
+                Aplicar(cliente, fila);
+                await _repository.AddAsync(cliente);
+                resultado.Creados++;
+            }
+            catch (ValidationException ex)
+            {
+                resultado.Omitidos++;
+                resultado.Errores.Add(new ImportarFilaError
+                {
+                    Fila = numero,
+                    Documento = documento,
+                    Motivo = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage))
+                });
+            }
+        }
+
+        return resultado;
+    }
+
+    /// <summary>Deja la fila del archivo lista para validar.</summary>
+    private static void NormalizarFila(ClienteRequestBase fila)
+    {
+        fila.Documento = fila.Documento?.Trim() ?? string.Empty;
+        fila.Nombre = fila.Nombre?.Trim() ?? string.Empty;
+        fila.Direccion = Limpiar(fila.Direccion);
+        fila.Distrito = Limpiar(fila.Distrito);
+        fila.Telefono = Limpiar(fila.Telefono);
+        fila.Email = Limpiar(fila.Email);
+        fila.DiaVisita = Limpiar(fila.DiaVisita);
+        fila.Ruta = Limpiar(fila.Ruta);
+        fila.Mercado = Limpiar(fila.Mercado);
+    }
+
+    private static void Aplicar(Cliente cliente, ClienteRequestBase request)
+    {
+        cliente.Documento = request.Documento.Trim();
+        cliente.TipoDoc = TipoDocumento.Deducir(cliente.Documento);
+        cliente.Nombre = request.Nombre.Trim();
+        cliente.Direccion = Limpiar(request.Direccion);
+        cliente.Distrito = Limpiar(request.Distrito);
+        cliente.Telefono = Limpiar(request.Telefono);
+        cliente.Email = Limpiar(request.Email);
+        cliente.DiaVisita = NormalizarDia(request.DiaVisita);
+        cliente.Ruta = Limpiar(request.Ruta);
+        cliente.Mercado = Limpiar(request.Mercado);
+    }
+
+    /// <summary>Texto util o null: recorta y descarta vacios y el literal "NULL".</summary>
+    private static string? Limpiar(string? texto)
+    {
+        var limpio = texto?.Trim();
+        if (string.IsNullOrEmpty(limpio)) return null;
+        return limpio.Equals("NULL", StringComparison.OrdinalIgnoreCase) ? null : limpio;
+    }
+
+    /// <summary>
+    /// El dia de visita viene como MARTES, Martes o MIÉRCOLES segun quien lo
+    /// escribio. Se guarda siempre en mayusculas y sin tilde, para poder
+    /// agrupar por dia sin sorpresas.
+    /// </summary>
+    private static string? NormalizarDia(string? dia)
+    {
+        var limpio = Limpiar(dia);
+        if (limpio is null) return null;
+
+        var mayus = limpio.ToUpperInvariant()
+            .Replace('Á', 'A').Replace('É', 'E').Replace('Í', 'I')
+            .Replace('Ó', 'O').Replace('Ú', 'U');
+
+        return mayus;
     }
 
     private async Task<Cliente> GetActiveOrThrowAsync(int id)
@@ -102,11 +231,16 @@ public class ClienteService : IClienteService
         return new ClienteResponse
         {
             Id = cliente.Id,
+            Documento = cliente.Documento,
+            TipoDoc = cliente.TipoDoc,
             Nombre = cliente.Nombre,
-            Ruc = cliente.Ruc,
             Direccion = cliente.Direccion,
+            Distrito = cliente.Distrito,
             Telefono = cliente.Telefono,
             Email = cliente.Email,
+            DiaVisita = cliente.DiaVisita,
+            Ruta = cliente.Ruta,
+            Mercado = cliente.Mercado,
             Activo = cliente.Activo,
             FechaCreacion = cliente.FechaCreacion
         };

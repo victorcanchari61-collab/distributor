@@ -44,6 +44,14 @@ public class ClienteController : ControllerBase
         return Ok(await _clienteService.UpdateAsync(id, request));
     }
 
+    /// <summary>Alta masiva desde archivo. Informa que paso con cada fila.</summary>
+    [HttpPost("importar")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> Importar([FromBody] ImportarClientesRequest request)
+    {
+        return Ok(await _clienteService.ImportarAsync(request));
+    }
+
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Administrador")]
     public async Task<IActionResult> Delete(int id)

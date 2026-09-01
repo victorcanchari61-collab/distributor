@@ -120,23 +120,34 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Cliente>(entity =>
         {
             entity.ToTable("Clientes");
-            entity.HasIndex(c => c.Ruc).IsUnique();
+            entity.HasIndex(c => c.Documento).IsUnique();
+            entity.Property(c => c.Documento).HasMaxLength(15).IsRequired();
+            entity.Property(c => c.TipoDoc).HasMaxLength(10).IsRequired();
             entity.Property(c => c.Nombre).HasMaxLength(150).IsRequired();
-            entity.Property(c => c.Ruc).HasMaxLength(11).IsRequired();
             entity.Property(c => c.Direccion).HasMaxLength(250);
-            entity.Property(c => c.Telefono).HasMaxLength(20);
+            entity.Property(c => c.Distrito).HasMaxLength(80);
+            entity.Property(c => c.Telefono).HasMaxLength(40);
             entity.Property(c => c.Email).HasMaxLength(100);
+            entity.Property(c => c.DiaVisita).HasMaxLength(20);
+            entity.Property(c => c.Ruta).HasMaxLength(20);
+            entity.Property(c => c.Mercado).HasMaxLength(80);
         });
 
         modelBuilder.Entity<Proveedor>(entity =>
         {
             entity.ToTable("Proveedores");
-            entity.HasIndex(p => p.Ruc).IsUnique();
-            entity.Property(p => p.Nombre).HasMaxLength(150).IsRequired();
-            entity.Property(p => p.Ruc).HasMaxLength(11).IsRequired();
+            entity.HasIndex(p => p.Documento).IsUnique();
+            entity.Property(p => p.Documento).HasMaxLength(15).IsRequired();
+            entity.Property(p => p.TipoDoc).HasMaxLength(10).IsRequired();
+            entity.Property(p => p.Nombre).HasMaxLength(200).IsRequired();
+            entity.Property(p => p.NombreComercial).HasMaxLength(150);
             entity.Property(p => p.Direccion).HasMaxLength(250);
-            entity.Property(p => p.Telefono).HasMaxLength(20);
+            entity.Property(p => p.Departamento).HasMaxLength(80);
+            entity.Property(p => p.Distrito).HasMaxLength(80);
+            entity.Property(p => p.Telefono).HasMaxLength(40);
+            entity.Property(p => p.Telefono2).HasMaxLength(40);
             entity.Property(p => p.Email).HasMaxLength(100);
+            entity.Property(p => p.Rubro).HasMaxLength(120);
         });
     }
 }

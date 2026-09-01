@@ -10,4 +10,7 @@ public interface IClienteService
     Task<ClienteResponse> CreateAsync(CreateClienteRequest request);
     Task<ClienteResponse> UpdateAsync(int id, UpdateClienteRequest request);
     Task DeleteAsync(int id);
+
+    /// <summary>Alta masiva desde archivo. Devuelve el detalle fila por fila.</summary>
+    Task<ImportarResponse> ImportarAsync(ImportarClientesRequest request);
 }

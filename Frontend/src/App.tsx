@@ -4,11 +4,14 @@ import { DashboardLayout, NAV_DEFAULT, navIdFromPath, navPath, resolveNav } from
 import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
+import { ClientesPage, ProveedoresPage } from './features/maestros'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
 
 /** Vistas ya construidas, por id del menu. El resto cae en PendingPage. */
 const VIEWS: Record<string, () => React.ReactElement> = {
+  'maestros.clientes': ClientesPage,
+  'maestros.proveedores': ProveedoresPage,
   'config.usuarios': UsuariosPage,
   'config.accesos': AccesosPage,
   'config.roles': RolesPage,

@@ -10,4 +10,7 @@ public interface IProveedorService
     Task<ProveedorResponse> CreateAsync(CreateProveedorRequest request);
     Task<ProveedorResponse> UpdateAsync(int id, UpdateProveedorRequest request);
     Task DeleteAsync(int id);
+
+    /// <summary>Alta masiva desde archivo. Devuelve el detalle fila por fila.</summary>
+    Task<ImportarResponse> ImportarAsync(ImportarProveedoresRequest request);
 }
