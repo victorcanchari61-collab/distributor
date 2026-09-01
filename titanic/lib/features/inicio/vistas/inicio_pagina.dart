@@ -39,13 +39,18 @@ class InicioPagina extends ConsumerWidget {
 
           // Accesos directos: el menu lateral sirve para navegar, pero al abrir
           // la app conviene ver de una lo que se usa a diario.
-          GridView.count(
-            crossAxisCount: 2,
+          // Alto fijo y no proporcion: con childAspectRatio el alto dependia
+          // del ancho de la pantalla y en algunos telefonos el contenido no
+          // entraba por unos pocos pixeles.
+          GridView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: Dimen.espacio3,
-            crossAxisSpacing: Dimen.espacio3,
-            childAspectRatio: 1.5,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: Dimen.espacio3,
+              crossAxisSpacing: Dimen.espacio3,
+              mainAxisExtent: 132,
+            ),
             children: [
               for (final grupo in menuGrupos)
                 _TarjetaModulo(
@@ -61,7 +66,11 @@ class InicioPagina extends ConsumerWidget {
 }
 
 class _Bienvenida extends StatelessWidget {
-  const _Bienvenida({required this.nombre, required this.rol, required this.inicial});
+  const _Bienvenida({
+    required this.nombre,
+    required this.rol,
+    required this.inicial,
+  });
 
   final String nombre;
   final String rol;
@@ -98,12 +107,18 @@ class _Bienvenida extends StatelessWidget {
                   Text(
                     nombre,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   if (rol.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: Colores.marcaSuave,
                         borderRadius: BorderRadius.circular(999),
@@ -164,11 +179,17 @@ class _TarjetaModulo extends StatelessWidget {
               children: [
                 Text(
                   grupo.titulo,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 Text(
                   '${grupo.items.length} vistas',
-                  style: const TextStyle(fontSize: 11, color: Colores.tintaSuave),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colores.tintaSuave,
+                  ),
                 ),
               ],
             ),

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
+import '../../features/auth/estado/auth_controlador.dart';
 import 'app_drawer.dart';
 
 /// Armazon de las pantallas internas: barra superior, menu lateral y contenido.
 ///
 /// Toda pantalla dentro de la sesion se monta aqui, asi el menu y la barra se
 /// definen una sola vez y no se repiten en cada vista.
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({
     super.key,
     required this.titulo,
@@ -32,7 +34,9 @@ class AppShell extends StatelessWidget {
   final List<Widget>? acciones;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final usuario = ref.watch(authProvider).usuario;
+
     return Scaffold(
       drawer: AppDrawer(rutaActual: rutaActual),
       appBar: AppBar(
@@ -56,7 +60,30 @@ class AppShell extends StatelessWidget {
             ),
           ],
         ),
-        actions: [...?acciones, const SizedBox(width: Dimen.espacio2)],
+        actions: [
+          ...?acciones,
+          // Quien esta conectado va aqui, no en el menu: se ve siempre, sin
+          // tener que abrir el drawer.
+          if (usuario != null)
+            Padding(
+              padding: const EdgeInsets.only(right: Dimen.espacio3),
+              child: Tooltip(
+                message: '${usuario.nombre}\n${usuario.rol}',
+                child: CircleAvatar(
+                  radius: 15,
+                  backgroundColor: Colores.marca,
+                  child: Text(
+                    usuario.inicial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1),

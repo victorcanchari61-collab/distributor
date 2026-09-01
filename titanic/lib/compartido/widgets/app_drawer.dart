@@ -26,7 +26,8 @@ class AppDrawer extends ConsumerStatefulWidget {
 class _AppDrawerState extends ConsumerState<AppDrawer> {
   /// Modulo desplegado. Solo uno a la vez: con todos abiertos habria que
   /// desplazar mucho para llegar al final.
-  late String? _abierto = resolverRuta(widget.rutaActual).grupo?.id ?? menuGrupos.first.id;
+  late String? _abierto =
+      resolverRuta(widget.rutaActual).grupo?.id ?? menuGrupos.first.id;
 
   void _ir(MenuItem item) {
     Navigator.of(context).pop();
@@ -35,19 +36,15 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    final usuario = ref.watch(authProvider).usuario;
-
     return Drawer(
       backgroundColor: Colores.superficie,
       child: SafeArea(
         child: Column(
           children: [
-            _Cabecera(
-              nombre: usuario?.nombre ?? '',
-              email: usuario?.email ?? '',
-              rol: usuario?.rol ?? '',
-              inicial: usuario?.inicial ?? '?',
-            ),
+            // Solo la marca, como el sider del panel web. Quien esta conectado
+            // se ve en la barra superior, no aqui: repetirlo en el menu ocupa
+            // el espacio que necesitan los modulos.
+            const _Cabecera(),
             const Divider(height: 1),
 
             Expanded(
@@ -66,7 +63,10 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                       }
                     },
                   ),
-                  const Divider(indent: Dimen.espacio4, endIndent: Dimen.espacio4),
+                  const Divider(
+                    indent: Dimen.espacio4,
+                    endIndent: Dimen.espacio4,
+                  ),
 
                   for (final grupo in menuGrupos)
                     _Grupo(
@@ -102,83 +102,34 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
 }
 
 class _Cabecera extends StatelessWidget {
-  const _Cabecera({
-    required this.nombre,
-    required this.email,
-    required this.rol,
-    required this.inicial,
-  });
-
-  final String nombre;
-  final String email;
-  final String rol;
-  final String inicial;
+  const _Cabecera();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(Dimen.espacio4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return const Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: Dimen.espacio4,
+        vertical: Dimen.espacio4,
+      ),
+      child: Row(
         children: [
-          Row(
+          AppLogo(variante: LogoVariante.marca, tam: 30),
+          SizedBox(width: Dimen.espacio2),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const AppLogo(variante: LogoVariante.marca, tam: 30),
-              const SizedBox(width: Dimen.espacio2),
-              const Text(
+              Text(
                 'Titanic D',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
               ),
-            ],
-          ),
-          const SizedBox(height: Dimen.espacio4),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: Colores.marca,
-                child: Text(
-                  inicial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: Dimen.espacio3),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      nombre,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                    ),
-                    Text(
-                      email,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-                    ),
-                    if (rol.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colores.marcaSuave,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          rol,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: Colores.marcaHover,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+              Text(
+                'DISTRIBUIDORA DE ABARROTES',
+                style: TextStyle(
+                  fontSize: 7,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.1,
+                  color: Colores.bronce,
                 ),
               ),
             ],
@@ -300,7 +251,11 @@ class _Vista extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(item.icono, size: 18, color: activo ? color : Colores.tintaSuave),
+            Icon(
+              item.icono,
+              size: 18,
+              color: activo ? color : Colores.tintaSuave,
+            ),
             const SizedBox(width: Dimen.espacio3),
             Expanded(
               child: Text(
