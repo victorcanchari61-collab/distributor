@@ -20,4 +20,10 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
     {
         return await DbSet.AnyAsync(c => c.Documento == documento && c.Id != excludeId);
     }
+
+    public async Task DeleteAsync(Cliente entidad)
+    {
+        DbSet.Remove(entidad);
+        await Context.SaveChangesAsync();
+    }
 }

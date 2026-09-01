@@ -39,6 +39,13 @@ export const clienteApi = {
   create: (body: ClienteRequest) => api.post<ClienteResponse>('/cliente', body),
   update: (id: number, body: UpdateClienteRequest) =>
     api.put<ClienteResponse>(`/cliente/${id}`, body),
+  /** PATCH /api/cliente/{id}/activar */
+  activar: (id: number) => api.patch<ClienteResponse>(`/cliente/${id}/activar`),
+
+  /** PATCH /api/cliente/{id}/desactivar — deja de usarse pero conserva su historial. */
+  desactivar: (id: number) => api.patch<ClienteResponse>(`/cliente/${id}/desactivar`),
+
+  /** DELETE /api/cliente/{id} — borrado definitivo. */
   remove: (id: number) => api.del<void>(`/cliente/${id}`),
 
   /** POST /api/cliente/importar — alta masiva desde archivo. */

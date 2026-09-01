@@ -42,6 +42,13 @@ export const proveedorApi = {
   create: (body: ProveedorRequest) => api.post<ProveedorResponse>('/proveedor', body),
   update: (id: number, body: UpdateProveedorRequest) =>
     api.put<ProveedorResponse>(`/proveedor/${id}`, body),
+  /** PATCH /api/proveedor/{id}/activar */
+  activar: (id: number) => api.patch<ProveedorResponse>(`/proveedor/${id}/activar`),
+
+  /** PATCH /api/proveedor/{id}/desactivar — deja de usarse pero conserva su historial. */
+  desactivar: (id: number) => api.patch<ProveedorResponse>(`/proveedor/${id}/desactivar`),
+
+  /** DELETE /api/proveedor/{id} — borrado definitivo. */
   remove: (id: number) => api.del<void>(`/proveedor/${id}`),
 
   /** POST /api/proveedor/importar */

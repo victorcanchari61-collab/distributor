@@ -52,6 +52,22 @@ public class ClienteController : ControllerBase
         return Ok(await _clienteService.ImportarAsync(request));
     }
 
+    /// <summary>Activa el registro.</summary>
+    [HttpPatch("{id:int}/activar")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> Activar(int id)
+    {
+        return Ok(await _clienteService.CambiarEstadoAsync(id, true));
+    }
+
+    /// <summary>Desactiva sin borrar: deja de usarse pero conserva su historial.</summary>
+    [HttpPatch("{id:int}/desactivar")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> Desactivar(int id)
+    {
+        return Ok(await _clienteService.CambiarEstadoAsync(id, false));
+    }
+
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Administrador")]
     public async Task<IActionResult> Delete(int id)

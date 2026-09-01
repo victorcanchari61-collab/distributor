@@ -20,4 +20,10 @@ public class ProveedorRepository : Repository<Proveedor>, IProveedorRepository
     {
         return await DbSet.AnyAsync(p => p.Documento == documento && p.Id != excludeId);
     }
+
+    public async Task DeleteAsync(Proveedor entidad)
+    {
+        DbSet.Remove(entidad);
+        await Context.SaveChangesAsync();
+    }
 }

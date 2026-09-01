@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Building2, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { Building2, Pencil, Plus, ShieldCheck, ShieldOff, Trash2, Upload } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -11,6 +11,7 @@ import {
   Modal,
   RowAction,
   StatCard,
+  useConfirmacion,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -44,6 +45,7 @@ export function ProveedoresPage() {
   const [guardando, setGuardando] = useState(false)
   const [consultando, setConsultando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
+  const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -144,15 +146,46 @@ export function ProveedoresPage() {
     }
   }
 
-  const eliminar = async (proveedor: ProveedorResponse) => {
-    setError('')
-    try {
-      await proveedorApi.remove(proveedor.id)
-      await cargar()
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el proveedor.')
-    }
-  }
+  const eliminar = (proveedor: ProveedorResponse) =>
+    confirmar({
+      titulo: `Eliminar ${proveedor.nombre}`,
+      mensaje: (
+        <>
+          Se borra definitivamente y no se puede deshacer. Si solo quieres dejar de usarlo,
+          desactívalo en vez de eliminarlo.
+        </>
+      ),
+      confirmar: 'Eliminar',
+      tono: 'danger',
+      accion: async () => {
+        setError('')
+        try {
+          await proveedorApi.remove(proveedor.id)
+          await cargar()
+        } catch (e) {
+          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el proveedor.')
+        }
+      },
+    })
+
+  const cambiarEstado = (proveedor: ProveedorResponse) =>
+    confirmar({
+      titulo: `${proveedor.activo ? 'Desactivar' : 'Activar'} ${proveedor.nombre}`,
+      mensaje: proveedor.activo
+        ? 'Deja de aparecer para nuevas operaciones, pero conserva su historial y puedes volver a activarlo.'
+        : 'Vuelve a estar disponible para usarse.',
+      confirmar: proveedor.activo ? 'Desactivar' : 'Activar',
+      tono: proveedor.activo ? 'warning' : 'pregunta',
+      accion: async () => {
+        setError('')
+        try {
+          await (proveedor.activo ? proveedorApi.desactivar(proveedor.id) : proveedorApi.activar(proveedor.id))
+          await cargar()
+        } catch (e) {
+          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+        }
+      },
+    })
 
   const conRuc = proveedores.filter((p) => p.tipoDoc === 'RUC').length
   const rubros = new Set(proveedores.map((p) => p.rubro).filter(Boolean)).size
@@ -174,6 +207,15 @@ export function ProveedoresPage() {
     { key: 'direccion', label: 'Dirección' },
     { key: 'telefono', label: 'Teléfono' },
     { key: 'distrito', label: 'Distrito' },
+
+    {
+      key: 'activo',
+      label: 'Estado',
+      value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
+      render: (row) => (
+        <Badge tone={row.activo ? 'success' : 'neutral'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>
+      ),
+    },
   ]
 
   return (
@@ -219,10 +261,13 @@ export function ProveedoresPage() {
             <Pencil size={15} />
           </RowAction>
           <RowAction
-            label={`Eliminar ${row.nombre}`}
-            tone="danger"
-            onClick={() => void eliminar(row)}
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            onClick={() => cambiarEstado(row)}
           >
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
+          <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
             <Trash2 size={15} />
           </RowAction>
         </>
@@ -355,6 +400,8 @@ export function ProveedoresPage() {
         onImportar={proveedorApi.importar}
         onListo={() => void cargar()}
       />
+
+      {dialogo}
     </ListPage>
   )
 }

@@ -27,14 +27,17 @@ public partial class ProveedorService : IProveedorService
     public async Task<IEnumerable<ProveedorResponse>> GetAllAsync()
     {
         var proveedores = await _repository.GetAllAsync();
-        return proveedores.Where(p => p.Activo)
-            .OrderBy(p => p.Nombre)
+
+        // Se devuelven tambien los inactivos: si no, un registro desactivado
+        // desaparece de la pantalla y ya no hay forma de reactivarlo.
+        return proveedores.OrderByDescending(p => p.Activo)
+            .ThenBy(p => p.Nombre)
             .Select(MapToResponse);
     }
 
     public async Task<ProveedorResponse> GetByIdAsync(int id)
     {
-        return MapToResponse(await GetActiveOrThrowAsync(id));
+        return MapToResponse(await GetOrThrowAsync(id));
     }
 
     public async Task<ProveedorResponse> CreateAsync(CreateProveedorRequest request)
@@ -57,7 +60,7 @@ public partial class ProveedorService : IProveedorService
     {
         await _updateValidator.ValidateAndThrowAsync(request);
 
-        var proveedor = await GetActiveOrThrowAsync(id);
+        var proveedor = await GetOrThrowAsync(id);
 
         if (await _repository.ExistsByDocumentoAsync(request.Documento, id))
         {
@@ -71,11 +74,22 @@ public partial class ProveedorService : IProveedorService
         return MapToResponse(proveedor);
     }
 
+    public async Task<ProveedorResponse> CambiarEstadoAsync(int id, bool activo)
+    {
+        var proveedor = await GetOrThrowAsync(id);
+
+        if (proveedor.Activo != activo)
+        {
+            proveedor.Activo = activo;
+            await _repository.UpdateAsync(proveedor);
+        }
+
+        return MapToResponse(proveedor);
+    }
+
     public async Task DeleteAsync(int id)
     {
-        var proveedor = await GetActiveOrThrowAsync(id);
-        proveedor.Activo = false;
-        await _repository.UpdateAsync(proveedor);
+        await _repository.DeleteAsync(await GetOrThrowAsync(id));
     }
 
     /// <summary>Alta masiva desde archivo, fila por fila. Ver ClienteService.</summary>
@@ -215,15 +229,10 @@ public partial class ProveedorService : IProveedorService
     [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
     private static partial Regex EsCorreo();
 
-    private async Task<Proveedor> GetActiveOrThrowAsync(int id)
+    private async Task<Proveedor> GetOrThrowAsync(int id)
     {
-        var proveedor = await _repository.GetByIdAsync(id);
-        if (proveedor is null || !proveedor.Activo)
-        {
-            throw new NotFoundException("Proveedor no encontrado");
-        }
-
-        return proveedor;
+        return await _repository.GetByIdAsync(id)
+            ?? throw new NotFoundException("Proveedor no encontrado");
     }
 
     private static ProveedorResponse MapToResponse(Proveedor proveedor)

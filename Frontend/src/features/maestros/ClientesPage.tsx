@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Contact, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { Contact, Pencil, Plus, ShieldCheck, ShieldOff, Trash2, Upload } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -11,6 +11,7 @@ import {
   Modal,
   RowAction,
   StatCard,
+  useConfirmacion,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -45,6 +46,7 @@ export function ClientesPage() {
   const [guardando, setGuardando] = useState(false)
   const [consultando, setConsultando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
+  const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -143,15 +145,46 @@ export function ClientesPage() {
     }
   }
 
-  const eliminar = async (cliente: ClienteResponse) => {
-    setError('')
-    try {
-      await clienteApi.remove(cliente.id)
-      await cargar()
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el cliente.')
-    }
-  }
+  const eliminar = (cliente: ClienteResponse) =>
+    confirmar({
+      titulo: `Eliminar ${cliente.nombre}`,
+      mensaje: (
+        <>
+          Se borra definitivamente y no se puede deshacer. Si solo quieres dejar de usarlo,
+          desactívalo en vez de eliminarlo.
+        </>
+      ),
+      confirmar: 'Eliminar',
+      tono: 'danger',
+      accion: async () => {
+        setError('')
+        try {
+          await clienteApi.remove(cliente.id)
+          await cargar()
+        } catch (e) {
+          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el cliente.')
+        }
+      },
+    })
+
+  const cambiarEstado = (cliente: ClienteResponse) =>
+    confirmar({
+      titulo: `${cliente.activo ? 'Desactivar' : 'Activar'} ${cliente.nombre}`,
+      mensaje: cliente.activo
+        ? 'Deja de aparecer para nuevas operaciones, pero conserva su historial y puedes volver a activarlo.'
+        : 'Vuelve a estar disponible para usarse.',
+      confirmar: cliente.activo ? 'Desactivar' : 'Activar',
+      tono: cliente.activo ? 'warning' : 'pregunta',
+      accion: async () => {
+        setError('')
+        try {
+          await (cliente.activo ? clienteApi.desactivar(cliente.id) : clienteApi.activar(cliente.id))
+          await cargar()
+        } catch (e) {
+          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+        }
+      },
+    })
 
   const conRuta = clientes.filter((c) => c.ruta).length
   const mercados = new Set(clientes.map((c) => c.mercado).filter(Boolean)).size
@@ -178,6 +211,15 @@ export function ClientesPage() {
     },
     { key: 'ruta', label: 'Ruta', align: 'right' },
     { key: 'mercado', label: 'Mercado', align: 'right' },
+
+    {
+      key: 'activo',
+      label: 'Estado',
+      value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
+      render: (row) => (
+        <Badge tone={row.activo ? 'success' : 'neutral'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>
+      ),
+    },
   ]
 
   return (
@@ -223,10 +265,13 @@ export function ClientesPage() {
             <Pencil size={15} />
           </RowAction>
           <RowAction
-            label={`Eliminar ${row.nombre}`}
-            tone="danger"
-            onClick={() => void eliminar(row)}
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            onClick={() => cambiarEstado(row)}
           >
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
+          <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
             <Trash2 size={15} />
           </RowAction>
         </>
@@ -355,6 +400,8 @@ export function ClientesPage() {
         onImportar={clienteApi.importar}
         onListo={() => void cargar()}
       />
+
+      {dialogo}
     </ListPage>
   )
 }

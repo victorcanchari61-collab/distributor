@@ -26,14 +26,16 @@ public class ClienteService : IClienteService
     public async Task<IEnumerable<ClienteResponse>> GetAllAsync()
     {
         var clientes = await _repository.GetAllAsync();
-        return clientes.Where(c => c.Activo)
-            .OrderBy(c => c.Nombre)
+        // Se devuelven tambien los inactivos: si no, un registro desactivado
+        // desaparece de la pantalla y ya no hay forma de reactivarlo.
+        return clientes.OrderByDescending(c => c.Activo)
+            .ThenBy(c => c.Nombre)
             .Select(MapToResponse);
     }
 
     public async Task<ClienteResponse> GetByIdAsync(int id)
     {
-        return MapToResponse(await GetActiveOrThrowAsync(id));
+        return MapToResponse(await GetOrThrowAsync(id));
     }
 
     public async Task<ClienteResponse> CreateAsync(CreateClienteRequest request)
@@ -56,7 +58,7 @@ public class ClienteService : IClienteService
     {
         await _updateValidator.ValidateAndThrowAsync(request);
 
-        var cliente = await GetActiveOrThrowAsync(id);
+        var cliente = await GetOrThrowAsync(id);
 
         if (await _repository.ExistsByDocumentoAsync(request.Documento, id))
         {
@@ -70,11 +72,22 @@ public class ClienteService : IClienteService
         return MapToResponse(cliente);
     }
 
+    public async Task<ClienteResponse> CambiarEstadoAsync(int id, bool activo)
+    {
+        var cliente = await GetOrThrowAsync(id);
+
+        if (cliente.Activo != activo)
+        {
+            cliente.Activo = activo;
+            await _repository.UpdateAsync(cliente);
+        }
+
+        return MapToResponse(cliente);
+    }
+
     public async Task DeleteAsync(int id)
     {
-        var cliente = await GetActiveOrThrowAsync(id);
-        cliente.Activo = false;
-        await _repository.UpdateAsync(cliente);
+        await _repository.DeleteAsync(await GetOrThrowAsync(id));
     }
 
     /// <summary>
@@ -215,15 +228,10 @@ public class ClienteService : IClienteService
         return mayus;
     }
 
-    private async Task<Cliente> GetActiveOrThrowAsync(int id)
+    private async Task<Cliente> GetOrThrowAsync(int id)
     {
-        var cliente = await _repository.GetByIdAsync(id);
-        if (cliente is null || !cliente.Activo)
-        {
-            throw new NotFoundException("Cliente no encontrado");
-        }
-
-        return cliente;
+        return await _repository.GetByIdAsync(id)
+            ?? throw new NotFoundException("Cliente no encontrado");
     }
 
     private static ClienteResponse MapToResponse(Cliente cliente)
