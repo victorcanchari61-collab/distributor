@@ -23,6 +23,9 @@ public class ProductoResponse
     public int? ContenidoUnidadId { get; set; }
     public string? ContenidoUnidad { get; set; }
 
+    /// <summary>Costo habitual por unidad base.</summary>
+    public decimal? CostoReferencia { get; set; }
+
     public bool ControlaStock { get; set; }
     public decimal StockMinimo { get; set; }
     public bool Activo { get; set; }

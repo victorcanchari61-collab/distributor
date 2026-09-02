@@ -114,7 +114,8 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'inv.almacenes', label: 'Almacenes', icon: Warehouse, pending: true },
       { id: 'inv.stock', label: 'Stock por almacén', icon: PackageSearch, pending: true },
-      { id: 'inv.movimientos', label: 'Movimientos', icon: PackagePlus, pending: true },
+      { id: 'inv.kardex', label: 'Kardex', icon: PackagePlus, pending: true },
+      { id: 'inv.ajustes', label: 'Ajustes de inventario', icon: ClipboardCheck, pending: true },
       { id: 'inv.transferencias', label: 'Transferencias', icon: Truck, pending: true },
       { id: 'inv.lotes', label: 'Lotes y vencimientos', icon: CalendarDays, pending: true },
       { id: 'inv.conteos', label: 'Conteos cíclicos', icon: ClipboardCheck, pending: true },

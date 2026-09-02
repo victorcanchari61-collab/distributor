@@ -217,6 +217,7 @@ public class AppDbContext : DbContext
             entity.Property(p => p.Descripcion).HasMaxLength(500);
             entity.Property(p => p.Contenido).HasPrecision(18, 4);
             entity.Property(p => p.StockMinimo).HasPrecision(18, 4);
+            entity.Property(p => p.CostoReferencia).HasPrecision(18, 4);
 
             // Restrict: borrar una categoria o una unidad no puede llevarse
             // productos por delante. El servicio ya avisa antes.

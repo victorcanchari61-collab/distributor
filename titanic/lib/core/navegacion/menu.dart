@@ -113,9 +113,14 @@ const menuGrupos = <MenuGrupo>[
         icono: Icons.inventory_outlined,
       ),
       MenuItem(
-        id: 'inv.movimientos',
-        titulo: 'Movimientos',
-        icono: Icons.add_box_outlined,
+        id: 'inv.kardex',
+        titulo: 'Kardex',
+        icono: Icons.move_to_inbox_outlined,
+      ),
+      MenuItem(
+        id: 'inv.ajustes',
+        titulo: 'Ajustes de inventario',
+        icono: Icons.fact_check_outlined,
       ),
       MenuItem(
         id: 'inv.transferencias',

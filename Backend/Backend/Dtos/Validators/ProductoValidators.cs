@@ -31,6 +31,10 @@ public class ProductoValidator<T> : AbstractValidator<T> where T : ProductoReque
         RuleFor(x => x.StockMinimo)
             .GreaterThanOrEqualTo(0).WithMessage("El stock mínimo no puede ser negativo");
 
+        RuleFor(x => x.CostoReferencia)
+            .GreaterThanOrEqualTo(0).When(x => x.CostoReferencia.HasValue)
+            .WithMessage("El costo no puede ser negativo");
+
         RuleFor(x => x.Contenido)
             .GreaterThan(0).When(x => x.Contenido.HasValue)
             .WithMessage("El contenido debe ser mayor que cero");

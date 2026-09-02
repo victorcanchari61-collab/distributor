@@ -29,6 +29,7 @@ import {
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { CatalogoSimple } from './CatalogoSimple'
+import { CostoReferenciaInput } from './CostoReferenciaInput'
 import { PresentacionesEditor } from './PresentacionesEditor'
 import type { FilaPresentacion } from './PresentacionesEditor'
 import { categoriaApi, marcaApi, productoApi, unidadApi } from './productoApi'
@@ -48,6 +49,7 @@ const VACIO = {
   unidadBaseId: 0,
   contenido: '',
   contenidoUnidadId: 0,
+  costoReferencia: '',
   stockMinimo: '',
 }
 
@@ -78,6 +80,9 @@ export function ProductosPage() {
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
   const [pestanaForm, setPestanaForm] = useState<PestanaForm>('datos')
+
+  // En que presentacion se escribe el costo de referencia: el saco, la caja.
+  const [presentacionCosto, setPresentacionCosto] = useState(0)
 
   // Alta rapida desde el formulario: que catalogo se esta creando.
   const [crearRapido, setCrearRapido] = useState<CatalogoRapido>(null)
@@ -121,6 +126,7 @@ export function ProductosPage() {
     setEditando(null)
     setForm({ ...VACIO, unidadBaseId: unidadesActivas[0]?.id ?? 0 })
     setPresentaciones([])
+    setPresentacionCosto(0)
     setErrorForm('')
     setPestanaForm('datos')
     setAbierto(true)
@@ -137,8 +143,16 @@ export function ProductosPage() {
       unidadBaseId: producto.unidadBaseId,
       contenido: producto.contenido ? String(producto.contenido) : '',
       contenidoUnidadId: producto.contenidoUnidadId ?? 0,
+      costoReferencia: producto.costoReferencia ? String(producto.costoReferencia) : '',
       stockMinimo: producto.stockMinimo ? String(producto.stockMinimo) : '',
     })
+
+    // Se escribe en la presentación con la que se compra habitualmente.
+    const compra =
+      producto.presentaciones.find((p) => p.predeterminadaCompra) ??
+      producto.presentaciones.find((p) => p.esCompra) ??
+      producto.presentaciones[0]
+    setPresentacionCosto(compra?.id ?? 0)
     // La base no se edita aquí: la maneja el backend.
     setPresentaciones(
       producto.presentaciones
@@ -184,6 +198,7 @@ export function ProductosPage() {
       unidadBaseId: form.unidadBaseId,
       contenido: form.contenido ? Number(form.contenido) : null,
       contenidoUnidadId: form.contenido ? form.contenidoUnidadId || null : null,
+      costoReferencia: form.costoReferencia ? Number(form.costoReferencia) : null,
       controlaStock: true,
       stockMinimo: Number(form.stockMinimo || 0),
     }
@@ -357,6 +372,20 @@ export function ProductosPage() {
           `${row.contenido} ${row.contenidoUnidad ?? ''}`
         ) : (
           <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
+      key: 'costoReferencia',
+      label: 'Costo ref.',
+      align: 'right',
+      render: (row) =>
+        row.costoReferencia == null ? (
+          <span className="text-ink-soft">—</span>
+        ) : (
+          <span>
+            S/ {row.costoReferencia}
+            <span className="ml-1 text-xs text-ink-soft">× {row.unidadBase}</span>
+          </span>
         ),
     },
     {
@@ -658,6 +687,20 @@ export function ProductosPage() {
                   }
                   value={form.stockMinimo}
                   onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
+                />
+
+                <hr className="border-line" />
+
+                {/* Se escribe como lo cobra el proveedor y se guarda por unidad
+                    base, igual que los precios de venta. */}
+                <CostoReferenciaInput
+                  valor={form.costoReferencia}
+                  onChange={(v) => setForm({ ...form, costoReferencia: v })}
+                  presentacionId={presentacionCosto}
+                  onPresentacion={setPresentacionCosto}
+                  presentaciones={editando?.presentaciones ?? []}
+                  unidadBase={unidadBase || 'unidad base'}
+                  disabled={guardando}
                 />
               </div>
             ) : (

@@ -68,6 +68,8 @@ export interface ProductoResponse {
   contenido: number | null
   contenidoUnidadId: number | null
   contenidoUnidad: string | null
+  /** Lo que suele costar una unidad base. Referencia, no el costo del stock. */
+  costoReferencia: number | null
   controlaStock: boolean
   stockMinimo: number
   activo: boolean
@@ -96,6 +98,7 @@ export interface ProductoRequest {
   unidadBaseId: number
   contenido?: number | null
   contenidoUnidadId?: number | null
+  costoReferencia?: number | null
   controlaStock: boolean
   stockMinimo: number
 }

@@ -42,6 +42,18 @@ public class Producto
     public int? ContenidoUnidadId { get; set; }
     public UnidadMedida? ContenidoUnidad { get; set; }
 
+    /// <summary>
+    /// Lo que SUELE costar una unidad base, para tenerlo a mano al cotizar y
+    /// al recibir mercaderia.
+    ///
+    /// Es una referencia tuya, NO el costo del inventario: ese lo fija cada
+    /// entrada, porque el proveedor sube y baja el precio y pueden convivir
+    /// varios costos del mismo producto. Sirve como valor sugerido cuando una
+    /// entrada pide costo, y para ver el margen de una lista de precios sin
+    /// tener stock todavia.
+    /// </summary>
+    public decimal? CostoReferencia { get; set; }
+
     /// <summary>Servicios y similares no descuentan stock.</summary>
     public bool ControlaStock { get; set; } = true;
 
