@@ -13,3 +13,5 @@ export type {
   MarcaResponse,
   UnidadResponse,
 } from './productoApi'
+export { inventarioApi, almacenApi } from './inventarioApi'
+export type { StockProductoResponse, CapaCostoResponse } from './inventarioApi'

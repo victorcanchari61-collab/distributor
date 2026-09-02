@@ -22,6 +22,8 @@ public class AppDbContext : DbContext
     public DbSet<ProductoPresentacion> Presentaciones => Set<ProductoPresentacion>();
     public DbSet<ListaPrecio> ListasPrecio => Set<ListaPrecio>();
     public DbSet<PrecioProducto> Precios => Set<PrecioProducto>();
+    public DbSet<Almacen> Almacenes => Set<Almacen>();
+    public DbSet<CapaCosto> CapasCosto => Set<CapaCosto>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -293,6 +295,51 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(p => p.PresentacionId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Almacen>(entity =>
+        {
+            entity.ToTable("Almacenes");
+            entity.HasIndex(a => a.Codigo).IsUnique();
+            entity.Property(a => a.Codigo).HasMaxLength(15).IsRequired();
+            entity.Property(a => a.Nombre).HasMaxLength(80).IsRequired();
+            entity.Property(a => a.Direccion).HasMaxLength(250);
+
+            // Almacen principal sembrado: quien tiene un solo deposito nunca
+            // elige almacen, y el stock ya queda preparado para varios.
+            entity.HasData(new Almacen
+            {
+                Id = 1,
+                Codigo = "PRIN",
+                Nombre = "Almacén principal",
+                EsPrincipal = true,
+                Activo = true,
+                FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            });
+        });
+
+        modelBuilder.Entity<CapaCosto>(entity =>
+        {
+            entity.ToTable("CapasCosto");
+            entity.Property(c => c.CantidadInicial).HasPrecision(18, 4);
+            entity.Property(c => c.CantidadDisponible).HasPrecision(18, 4);
+            entity.Property(c => c.CostoUnitario).HasPrecision(18, 4);
+            entity.Property(c => c.Origen).HasMaxLength(20).IsRequired();
+            entity.Property(c => c.Referencia).HasMaxLength(60);
+
+            // Las salidas siempre buscan lo mismo: capas con mercaderia de un
+            // producto en un almacen, ordenadas por fecha.
+            entity.HasIndex(c => new { c.ProductoId, c.AlmacenId, c.Fecha });
+
+            entity.HasOne(c => c.Producto)
+                .WithMany()
+                .HasForeignKey(c => c.ProductoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(c => c.Almacen)
+                .WithMany()
+                .HasForeignKey(c => c.AlmacenId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 

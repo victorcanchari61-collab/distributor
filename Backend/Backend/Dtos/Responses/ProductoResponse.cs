@@ -28,6 +28,19 @@ public class ProductoResponse
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 
+    /// <summary>Lo que queda en almacén, en unidad base.</summary>
+    public decimal Stock { get; set; }
+
+    /// <summary>Cuánto vale ese stock: suma de cantidad × costo de cada capa.</summary>
+    public decimal Valorizado { get; set; }
+
+    /// <summary>
+    /// Costo más barato y más caro entre las capas con mercadería. Iguales
+    /// significa un solo costo; distintos, que conviven dos compras.
+    /// </summary>
+    public decimal? CostoMin { get; set; }
+    public decimal? CostoMax { get; set; }
+
     public List<PresentacionResponse> Presentaciones { get; set; } = [];
 }
 
