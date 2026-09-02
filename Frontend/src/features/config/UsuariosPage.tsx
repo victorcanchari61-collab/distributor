@@ -14,6 +14,7 @@ import {
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
+import { useRealtime } from '../../lib/realtime'
 import { rolApi } from './rolApi'
 import type { RolResponse } from './rolApi'
 import { usuarioApi } from './usuarioApi'
@@ -63,6 +64,9 @@ export function UsuariosPage() {
     void cargarRoles()
     void cargarUsuarios()
   }, [cargarRoles, cargarUsuarios])
+
+  useRealtime('roles', cargarRoles)
+  useRealtime('usuarios', cargarUsuarios)
 
   const activos = usuarios.filter((u) => u.activo).length
   const admins = usuarios.filter((u) => u.rol === 'Administrador').length
