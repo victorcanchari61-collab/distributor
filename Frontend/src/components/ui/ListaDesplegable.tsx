@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, Search, X } from 'lucide-react'
 import { cn } from './cn'
 
 export interface ItemLista {
@@ -35,8 +35,18 @@ export interface ListaDesplegableProps {
 
   deshabilitado?: boolean
   error?: boolean
+
+  /**
+   * Buscador dentro del panel. Por defecto aparece solo cuando hay muchas
+   * opciones: con cinco estorba, con veintisiete es la unica forma de llegar.
+   */
+  buscable?: boolean
+
   className?: string
 }
+
+/** Desde cuantas opciones el buscador aparece solo. */
+const MINIMO_BUSCADOR = 8
 
 /**
  * Lista corta dentro de una celda.
@@ -59,17 +69,36 @@ export function ListaDesplegable({
   seleccionado,
   deshabilitado,
   error,
+  buscable,
   className,
 }: ListaDesplegableProps) {
   const [abierto, setAbierto] = useState(false)
   const [visible, setVisible] = useState(false)
+  const [filtro, setFiltro] = useState('')
   const [pos, setPos] = useState<{ top: number; left: number; ancho: number } | null>(null)
   const botonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const buscadorRef = useRef<HTMLInputElement>(null)
+
+  const conBuscador = buscable ?? items.length >= MINIMO_BUSCADOR
+
+  // Busca en el nombre y tambien en el dato de la derecha, que suele ser el
+  // codigo: escribir "KG" tiene que encontrar "Kilogramo".
+  const texto = filtro.trim().toLowerCase()
+  const visibles = texto
+    ? items.filter((i) =>
+        `${i.label} ${i.nota ?? ''} ${typeof i.detalle === 'string' ? i.detalle : ''}`
+          .toLowerCase()
+          .includes(texto),
+      )
+    : items
 
   useEffect(() => {
     if (!abierto) {
       setVisible(false)
+      // El filtro no sobrevive al cierre: al volver a abrir se ve la lista
+      // completa, que es lo que uno espera.
+      setFiltro('')
       return
     }
 
@@ -84,7 +113,8 @@ export function ListaDesplegable({
       // Alto real del panel: la lista no pasa de max-h-[16rem] y el titulo
       // ocupa 33px. Estimarlo de mas hacia que se abriera hacia arriba sin
       // necesidad, tapando lo que hay encima del campo.
-      const alto = Math.min(items.length * 40 + 8, 256) + (titulo ? 33 : 0)
+      const alto =
+        Math.min(items.length * 40 + 8, 256) + (titulo ? 33 : 0) + (conBuscador ? 45 : 0)
 
       // Si no cabe debajo, se abre hacia arriba.
       const cabeAbajo = r.bottom + alto < window.innerHeight
@@ -118,7 +148,20 @@ export function ListaDesplegable({
       document.removeEventListener('mousedown', fuera)
       document.removeEventListener('keydown', escape)
     }
-  }, [abierto, items.length, variante, titulo])
+  }, [abierto, items.length, variante, titulo, conBuscador])
+
+  /*
+    El cursor entra en el buscador al abrir: se abre y se escribe, sin un clic
+    mas. Va en su propio efecto y no junto al calculo de posicion, porque el
+    input todavia no existe cuando aquel corre: el panel se pinta recien cuando
+    `pos` deja de ser null.
+  */
+  useEffect(() => {
+    if (abierto && pos) buscadorRef.current?.focus()
+    // Solo al abrir: pos cambia tambien al hacer scroll y no hay que robar el
+    // foco cada vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abierto, pos !== null])
 
   return (
     <>
@@ -180,11 +223,52 @@ export function ListaDesplegable({
               </p>
             )}
 
+            {conBuscador && items.length > 0 && (
+              <div className="relative border-b border-line p-2">
+                <Search
+                  size={14}
+                  className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ink-soft"
+                />
+                <input
+                  ref={buscadorRef}
+                  value={filtro}
+                  onChange={(e) => setFiltro(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Enter elige lo unico que quedo: buscar y confirmar sin
+                    // levantar la mano del teclado.
+                    if (e.key === 'Enter' && visibles.length === 1) {
+                      visibles[0].onClick?.()
+                      setAbierto(false)
+                    }
+                  }}
+                  placeholder="Buscar..."
+                  className="w-full rounded-field border border-line py-1.5 pr-7 pl-7 text-[13px] text-ink outline-none focus:border-ink-soft"
+                />
+                {filtro && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFiltro('')
+                      buscadorRef.current?.focus()
+                    }}
+                    aria-label="Limpiar búsqueda"
+                    className="absolute top-1/2 right-4 -translate-y-1/2 rounded p-0.5 text-ink-soft transition-colors hover:text-ink"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            )}
+
             {items.length === 0 ? (
               <p className="px-3 py-4 text-center text-xs text-ink-soft">{vacio}</p>
+            ) : visibles.length === 0 ? (
+              <p className="px-3 py-4 text-center text-xs text-ink-soft">
+                Nada coincide con «{filtro}»
+              </p>
             ) : (
               <ul className="max-h-[16rem] overflow-y-auto py-1">
-                {items.map((item) => (
+                {visibles.map((item) => (
                   <li key={item.id}>
                     <div
                       role={item.onClick ? 'option' : undefined}
