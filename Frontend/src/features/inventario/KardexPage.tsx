@@ -5,6 +5,7 @@ import type { DataTableColumn, TabItem } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { almacenApi, kardexApi } from './inventarioApi'
 import type { AlmacenResponse, KardexResponse } from './inventarioApi'
+import { useRealtime } from '../../lib/realtime'
 
 /**
  * El kardex: todo lo que entró y salió, con el saldo que dejó cada línea.
@@ -44,6 +45,8 @@ export function KardexPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime('kardex', cargar)
 
   const entradas = kardex.filter((k) => k.tipo === 'ENTRADA')
   const salidas = kardex.filter((k) => k.tipo === 'SALIDA')

@@ -29,6 +29,7 @@ import { consultaApi } from '../../lib/consultaApi'
 import { valorDe } from '../../lib/excel'
 import { proveedorApi } from './proveedorApi'
 import type { ProveedorRequest, ProveedorResponse } from './proveedorApi'
+import { useRealtime } from '../../lib/realtime'
 
 const VACIO: ProveedorRequest = {
   documento: '',
@@ -73,6 +74,8 @@ export function ProveedoresPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime('proveedores', cargar)
 
   const abrirNuevo = () => {
     setEditando(null)

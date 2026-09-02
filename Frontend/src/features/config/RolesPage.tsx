@@ -15,6 +15,7 @@ import { NAV_GROUPS } from '../../components/layout'
 import { ApiError } from '../../lib/apiClient'
 import { rolApi } from './rolApi'
 import type { RolResponse } from './rolApi'
+import { useRealtime } from '../../lib/realtime'
 
 export function RolesPage() {
   const [roles, setRoles] = useState<RolResponse[]>([])
@@ -42,6 +43,8 @@ export function RolesPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime('roles', cargar)
 
   const abrirNuevo = () => {
     setEditando(null)

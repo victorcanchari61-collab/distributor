@@ -17,6 +17,7 @@ import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
 import { almacenApi, prestamoApi } from './inventarioApi'
 import type { AlmacenResponse, PrestamoResponse, TipoPrestamo } from './inventarioApi'
+import { useRealtime } from '../../lib/realtime'
 
 interface FilaPrestamo {
   productoId: number
@@ -81,6 +82,8 @@ export function PrestamosPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime('prestamos', cargar)
 
   const activos = almacenes.filter((a) => a.activo)
 

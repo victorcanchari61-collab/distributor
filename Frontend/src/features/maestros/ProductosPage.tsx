@@ -39,6 +39,7 @@ import type {
   ProductoResponse,
   UnidadResponse,
 } from './productoApi'
+import { useRealtime } from '../../lib/realtime'
 
 const VACIO = {
   codigo: '',
@@ -116,6 +117,8 @@ export function ProductosPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime(['productos', 'categorias', 'marcas', 'unidades'], cargar)
 
   const unidadesActivas = useMemo(() => unidades.filter((u) => u.activo), [unidades])
   const activos = productos.filter((p) => p.activo)

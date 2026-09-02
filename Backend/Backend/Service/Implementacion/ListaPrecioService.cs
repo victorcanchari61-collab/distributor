@@ -26,19 +26,22 @@ public class ListaPrecioService : IListaPrecioService
     private readonly IValidator<CreateListaPrecioRequest> _createValidator;
     private readonly IValidator<UpdateListaPrecioRequest> _updateValidator;
     private readonly IValidator<GuardarPreciosRequest> _preciosValidator;
+    private readonly INotificador _notificador;
 
     public ListaPrecioService(
         IListaPrecioRepository repository,
         IProductoRepository productos,
         IValidator<CreateListaPrecioRequest> createValidator,
         IValidator<UpdateListaPrecioRequest> updateValidator,
-        IValidator<GuardarPreciosRequest> preciosValidator)
+        IValidator<GuardarPreciosRequest> preciosValidator,
+        INotificador notificador)
     {
         _repository = repository;
         _productos = productos;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _preciosValidator = preciosValidator;
+        _notificador = notificador;
     }
 
     public async Task<IEnumerable<ListaPrecioResponse>> GetAllAsync()
@@ -89,7 +92,9 @@ public class ListaPrecioService : IListaPrecioService
             await _repository.MarcarPredeterminadaAsync(lista.Id);
         }
 
-        return MapLista(lista, 0);
+        var creada = MapLista(lista, 0);
+        await _notificador.AvisarAsync("listasprecio", "creado", creada);
+        return creada;
     }
 
     public async Task<ListaPrecioResponse> UpdateAsync(int id, UpdateListaPrecioRequest request)
@@ -115,7 +120,9 @@ public class ListaPrecioService : IListaPrecioService
         lista.Activo = request.Activo;
 
         await _repository.UpdateAsync(lista);
-        return MapLista(lista, await _repository.ContarPreciosAsync(id));
+        var response = MapLista(lista, await _repository.ContarPreciosAsync(id));
+        await _notificador.AvisarAsync("listasprecio", "actualizado", response);
+        return response;
     }
 
     public async Task<ListaPrecioResponse> MarcarPredeterminadaAsync(int id)
@@ -130,7 +137,9 @@ public class ListaPrecioService : IListaPrecioService
         await _repository.MarcarPredeterminadaAsync(id);
 
         lista.EsPredeterminada = true;
-        return MapLista(lista, await _repository.ContarPreciosAsync(id));
+        var response = MapLista(lista, await _repository.ContarPreciosAsync(id));
+        await _notificador.AvisarAsync("listasprecio", "predeterminada", response);
+        return response;
     }
 
     public async Task DeleteAsync(int id)
@@ -151,6 +160,7 @@ public class ListaPrecioService : IListaPrecioService
         }
 
         await _repository.DeleteAsync(lista);
+        await _notificador.AvisarAsync("listasprecio", "eliminado", new { id });
     }
 
     // ---------------------------------------------------------------- Precios
@@ -207,7 +217,9 @@ public class ListaPrecioService : IListaPrecioService
             }
         }
 
-        return await GetPreciosAsync(listaId);
+        var precios = await GetPreciosAsync(listaId);
+        await _notificador.AvisarAsync("listasprecio", "precios", new { listaId });
+        return precios;
     }
 
     public async Task EliminarPrecioAsync(int precioId)
@@ -216,6 +228,7 @@ public class ListaPrecioService : IListaPrecioService
             ?? throw new NotFoundException($"No existe el precio {precioId}");
 
         await _repository.DeletePrecioAsync(precio);
+        await _notificador.AvisarAsync("listasprecio", "precios", new { listaId = precio.ListaPrecioId });
     }
 
     public async Task<PrecioResponse?> ResolverPrecioAsync(

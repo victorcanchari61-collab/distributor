@@ -38,6 +38,7 @@ public class InventarioService : IInventarioService
     private readonly IValidator<CrearTransferenciaRequest> _transferenciaValidator;
     private readonly IValidator<CrearPrestamoRequest> _prestamoValidator;
     private readonly IValidator<DevolverPrestamoRequest> _devolucionValidator;
+    private readonly INotificador _notificador;
 
     public InventarioService(
         IInventarioRepository repository,
@@ -49,7 +50,8 @@ public class InventarioService : IInventarioService
         IValidator<CrearAjusteRequest> ajusteValidator,
         IValidator<CrearTransferenciaRequest> transferenciaValidator,
         IValidator<CrearPrestamoRequest> prestamoValidator,
-        IValidator<DevolverPrestamoRequest> devolucionValidator)
+        IValidator<DevolverPrestamoRequest> devolucionValidator,
+        INotificador notificador)
     {
         _repository = repository;
         _productos = productos;
@@ -61,6 +63,7 @@ public class InventarioService : IInventarioService
         _transferenciaValidator = transferenciaValidator;
         _prestamoValidator = prestamoValidator;
         _devolucionValidator = devolucionValidator;
+        _notificador = notificador;
     }
 
     // ------------------------------------------------------------- Almacenes
@@ -109,7 +112,9 @@ public class InventarioService : IInventarioService
         };
 
         await _repository.AddAlmacenAsync(almacen);
-        return MapAlmacen(almacen, []);
+        var response = MapAlmacen(almacen, []);
+        await _notificador.AvisarAsync("almacenes", "creado", response);
+        return response;
     }
 
     public async Task<AlmacenResponse> UpdateAlmacenAsync(int id, UpdateAlmacenRequest request)
@@ -135,7 +140,9 @@ public class InventarioService : IInventarioService
         almacen.Activo = request.Activo;
 
         await _repository.UpdateAlmacenAsync(almacen);
-        return MapAlmacen(almacen, await _repository.GetCapasDisponiblesAsync(0, id));
+        var response = MapAlmacen(almacen, await _repository.GetCapasDisponiblesAsync(0, id));
+        await _notificador.AvisarAsync("almacenes", "actualizado", response);
+        return response;
     }
 
     public async Task DeleteAlmacenAsync(int id)
@@ -155,6 +162,7 @@ public class InventarioService : IInventarioService
         }
 
         await _repository.DeleteAlmacenAsync(almacen);
+        await _notificador.AvisarAsync("almacenes", "eliminado", new { id });
     }
 
     // ---------------------------------------------------------------- Motivos
@@ -194,7 +202,9 @@ public class InventarioService : IInventarioService
         };
 
         await _repository.AddMotivoAsync(motivo);
-        return MapMotivo(motivo, 0);
+        var response = MapMotivo(motivo, 0);
+        await _notificador.AvisarAsync("motivos", "creado", response);
+        return response;
     }
 
     public async Task<MotivoResponse> UpdateMotivoAsync(int id, UpdateMotivoRequest request)
@@ -231,7 +241,9 @@ public class InventarioService : IInventarioService
         motivo.Activo = request.Activo;
 
         await _repository.UpdateMotivoAsync(motivo);
-        return MapMotivo(motivo, movimientos);
+        var response = MapMotivo(motivo, movimientos);
+        await _notificador.AvisarAsync("motivos", "actualizado", response);
+        return response;
     }
 
     public async Task DeleteMotivoAsync(int id)
@@ -251,6 +263,7 @@ public class InventarioService : IInventarioService
         }
 
         await _repository.DeleteMotivoAsync(motivo);
+        await _notificador.AvisarAsync("motivos", "eliminado", new { id });
     }
 
     // ------------------------------------------------------------------ Stock
@@ -519,7 +532,11 @@ public class InventarioService : IInventarioService
 
         await transaccion.CommitAsync();
 
-        return await GetDocumentoAsync(documento.Id);
+        var creado = await GetDocumentoAsync(documento.Id);
+        await _notificador.AvisarAsync("ajustes", "creado", creado);
+        await _notificador.AvisarAsync("stock", "cambio", new { almacenId = almacen.Id });
+        await _notificador.AvisarAsync("kardex", "cambio", new { almacenId = almacen.Id });
+        return creado;
     }
 
     // ----------------------------------------------------------- Transferencias
@@ -632,7 +649,11 @@ public class InventarioService : IInventarioService
 
         await transaccion.CommitAsync();
 
-        return await GetDocumentoAsync(documento.Id);
+        var creada = await GetDocumentoAsync(documento.Id);
+        await _notificador.AvisarAsync("transferencias", "creado", creada);
+        await _notificador.AvisarAsync("stock", "cambio", new { origen = origen.Id, destino = destino.Id });
+        await _notificador.AvisarAsync("kardex", "cambio", new { origen = origen.Id, destino = destino.Id });
+        return creada;
     }
 
     public async Task<DocumentoInventarioResponse> AnularAsync(int documentoId, int? usuarioId)
@@ -742,7 +763,12 @@ public class InventarioService : IInventarioService
 
         await transaccion.CommitAsync();
 
-        return await GetDocumentoAsync(anulacion.Id);
+        var response = await GetDocumentoAsync(anulacion.Id);
+        var modulo = original.Tipo == TipoDocumentoInventario.Transferencia ? "transferencias" : "ajustes";
+        await _notificador.AvisarAsync(modulo, "anulado", response);
+        await _notificador.AvisarAsync("stock", "cambio", new { documentoId = original.Id });
+        await _notificador.AvisarAsync("kardex", "cambio", new { documentoId = original.Id });
+        return response;
     }
 
     // ------------------------------------------------------------ Auxiliares
@@ -1029,7 +1055,11 @@ public class InventarioService : IInventarioService
 
         await transaccion.CommitAsync();
 
-        return await GetPrestamoAsync(prestamo.Id);
+        var creado = await GetPrestamoAsync(prestamo.Id);
+        await _notificador.AvisarAsync("prestamos", "creado", creado);
+        await _notificador.AvisarAsync("stock", "cambio", new { almacenId = almacen.Id });
+        await _notificador.AvisarAsync("kardex", "cambio", new { almacenId = almacen.Id });
+        return creado;
     }
 
     public async Task<PrestamoResponse> DevolverPrestamoAsync(
@@ -1174,7 +1204,11 @@ public class InventarioService : IInventarioService
 
         await transaccion.CommitAsync();
 
-        return await GetPrestamoAsync(prestamo.Id);
+        var response = await GetPrestamoAsync(prestamo.Id);
+        await _notificador.AvisarAsync("prestamos", "devolucion", response);
+        await _notificador.AvisarAsync("stock", "cambio", new { prestamoId = prestamo.Id });
+        await _notificador.AvisarAsync("kardex", "cambio", new { prestamoId = prestamo.Id });
+        return response;
     }
 
     private async Task<Prestamo> GetPrestamoOrThrowAsync(int id) =>

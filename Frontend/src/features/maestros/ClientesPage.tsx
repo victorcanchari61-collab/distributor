@@ -27,6 +27,7 @@ import type { DataTableColumn, TipoDocumento } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { valorDe } from '../../lib/excel'
+import { useRealtime } from '../../lib/realtime'
 import { clienteApi } from './clienteApi'
 import type { ClienteRequest, ClienteResponse } from './clienteApi'
 
@@ -74,6 +75,8 @@ export function ClientesPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime('clientes', cargar)
 
   const abrirNuevo = () => {
     setEditando(null)

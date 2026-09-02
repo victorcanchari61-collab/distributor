@@ -30,19 +30,22 @@ public class ProductoService : IProductoService
     private readonly IValidator<CreateProductoRequest> _createValidator;
     private readonly IValidator<UpdateProductoRequest> _updateValidator;
     private readonly IValidator<PresentacionRequest> _presentacionValidator;
+    private readonly INotificador _notificador;
 
     public ProductoService(
         IProductoRepository repository,
         ICatalogoRepository catalogo,
         IValidator<CreateProductoRequest> createValidator,
         IValidator<UpdateProductoRequest> updateValidator,
-        IValidator<PresentacionRequest> presentacionValidator)
+        IValidator<PresentacionRequest> presentacionValidator,
+        INotificador notificador)
     {
         _repository = repository;
         _catalogo = catalogo;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _presentacionValidator = presentacionValidator;
+        _notificador = notificador;
     }
 
     public async Task<IEnumerable<ProductoResponse>> GetAllAsync()
@@ -126,7 +129,9 @@ public class ProductoService : IProductoService
         AjustarPredeterminadas(producto, request.Presentaciones);
 
         await _repository.AddAsync(producto);
-        return MapToResponse(await GetOrThrowAsync(producto.Id));
+        var response = MapToResponse(await GetOrThrowAsync(producto.Id));
+        await _notificador.AvisarAsync("productos", "creado", response);
+        return response;
     }
 
     public async Task<ProductoResponse> UpdateAsync(int id, UpdateProductoRequest request)
@@ -164,7 +169,9 @@ public class ProductoService : IProductoService
         producto.Activo = request.Activo;
 
         await _repository.UpdateAsync(producto);
-        return MapToResponse(await GetOrThrowAsync(id));
+        var response = MapToResponse(await GetOrThrowAsync(id));
+        await _notificador.AvisarAsync("productos", "actualizado", response);
+        return response;
     }
 
     public async Task<ProductoResponse> CambiarEstadoAsync(int id, bool activo)
@@ -173,7 +180,9 @@ public class ProductoService : IProductoService
         producto.Activo = activo;
 
         await _repository.UpdateAsync(producto);
-        return MapToResponse(producto);
+        var response = MapToResponse(producto);
+        await _notificador.AvisarAsync("productos", "estado", response);
+        return response;
     }
 
     public async Task DeleteAsync(int id)
@@ -190,6 +199,7 @@ public class ProductoService : IProductoService
         }
 
         await _repository.DeleteAsync(producto);
+        await _notificador.AvisarAsync("productos", "eliminado", new { id });
     }
 
     // -------------------------------------------------------- Presentaciones
@@ -231,8 +241,10 @@ public class ProductoService : IProductoService
         await _repository.AddPresentacionAsync(presentacion);
         await AplicarPredeterminadasAsync(presentacion);
 
-        return MapPresentacion(
+        var response = MapPresentacion(
             await _repository.GetPresentacionAsync(presentacion.Id) ?? presentacion);
+        await _notificador.AvisarAsync("productos", "presentacion", response);
+        return response;
     }
 
     public async Task<PresentacionResponse> ActualizarPresentacionAsync(
@@ -270,7 +282,9 @@ public class ProductoService : IProductoService
         await _repository.UpdatePresentacionAsync(presentacion);
         await AplicarPredeterminadasAsync(presentacion);
 
-        return MapPresentacion(presentacion);
+        var response = MapPresentacion(presentacion);
+        await _notificador.AvisarAsync("productos", "presentacion", response);
+        return response;
     }
 
     public async Task EliminarPresentacionAsync(int id)
@@ -292,6 +306,7 @@ public class ProductoService : IProductoService
         }
 
         await _repository.DeletePresentacionAsync(presentacion);
+        await _notificador.AvisarAsync("productos", "presentacion", new { id });
     }
 
     public async Task<decimal> AUnidadBaseAsync(int presentacionId, decimal cantidad)

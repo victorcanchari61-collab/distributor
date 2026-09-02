@@ -1,5 +1,6 @@
 using System.Text;
 using Backend.Data;
+using Backend.Hubs;
 using Backend.Middlewares;
 using Backend.Repository.Implementacion;
 using Backend.Repository.Interfaces;
@@ -76,6 +77,10 @@ builder.Services.AddHttpClient<IConsultaService, ConsultaService>();
 
 builder.Services.AddScoped<IPasswordHasher<Backend.Models.Usuario>, PasswordHasher<Backend.Models.Usuario>>();
 
+// Tiempo real: un cambio en una PC se ve solo en las demas, sin recargar.
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificador, NotificadorHub>();
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -89,6 +94,25 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
+
+        // El navegador no puede mandar el header Authorization al abrir un
+        // WebSocket: el cliente de SignalR manda el token por query string en
+        // su lugar. Sin esto, el Hub rechazaria toda conexion con 401.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Query["access_token"];
+                var esHub = context.HttpContext.Request.Path.StartsWithSegments("/hubs");
+
+                if (!string.IsNullOrEmpty(token) && esHub)
+                {
+                    context.Token = token;
+                }
+
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -111,5 +135,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<CambiosHub>("/hubs/cambios");
 
 app.Run();

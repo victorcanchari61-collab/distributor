@@ -25,14 +25,17 @@ public class EmpresaService : IEmpresaService
     private readonly IEmpresaRepository _repository;
     private readonly IValidator<CreateEmpresaRequest> _createValidator;
     private readonly IValidator<UpdateEmpresaRequest> _updateValidator;
+    private readonly INotificador _notificador;
 
     public EmpresaService(IEmpresaRepository repository,
         IValidator<CreateEmpresaRequest> createValidator,
-        IValidator<UpdateEmpresaRequest> updateValidator)
+        IValidator<UpdateEmpresaRequest> updateValidator,
+        INotificador notificador)
     {
         _repository = repository;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
+        _notificador = notificador;
     }
 
     public async Task<IEnumerable<EmpresaResponse>> GetAllAsync()
@@ -93,7 +96,9 @@ public class EmpresaService : IEmpresaService
             empresa.Activa = true;
         }
 
-        return MapToResponse(empresa);
+        var creada = MapToResponse(empresa);
+        await _notificador.AvisarAsync("empresas", "creado", creada);
+        return creada;
     }
 
     public async Task<EmpresaResponse> UpdateAsync(int id, UpdateEmpresaRequest request)
@@ -134,7 +139,9 @@ public class EmpresaService : IEmpresaService
             empresa.Activa = true;
         }
 
-        return MapToResponse(empresa);
+        var actualizada = MapToResponse(empresa);
+        await _notificador.AvisarAsync("empresas", "actualizado", actualizada);
+        return actualizada;
     }
 
     public async Task<EmpresaResponse> ActivarAsync(int id)
@@ -151,6 +158,10 @@ public class EmpresaService : IEmpresaService
         {
             await _repository.SetActivaAsync(empresa.Id);
             empresa.Activa = true;
+            // Activar una empresa desactiva a la anterior: el frontend recarga
+            // toda la lista con este mismo aviso, asi que no hace falta un
+            // segundo evento para la empresa que quedo desactivada.
+            await _notificador.AvisarAsync("empresas", "activado", MapToResponse(empresa));
         }
 
         return MapToResponse(empresa);
@@ -171,6 +182,7 @@ public class EmpresaService : IEmpresaService
         {
             empresa.Habilitada = habilitada;
             await _repository.UpdateAsync(empresa);
+            await _notificador.AvisarAsync("empresas", "estado", MapToResponse(empresa));
         }
 
         return MapToResponse(empresa);
@@ -187,6 +199,7 @@ public class EmpresaService : IEmpresaService
         }
 
         await _repository.DeleteAsync(empresa);
+        await _notificador.AvisarAsync("empresas", "eliminado", new { id });
     }
 
     /// <summary>

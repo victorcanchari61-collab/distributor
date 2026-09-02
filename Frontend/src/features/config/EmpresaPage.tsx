@@ -24,6 +24,7 @@ import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { empresaApi } from './empresaApi'
 import type { EmpresaRequest, EmpresaResponse } from './empresaApi'
+import { useRealtime } from '../../lib/realtime'
 
 const VACIA: EmpresaRequest = {
   razonSocial: '',
@@ -68,6 +69,8 @@ export function EmpresaPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime('empresas', cargar)
 
   const abrirNueva = () => {
     setEditando(null)

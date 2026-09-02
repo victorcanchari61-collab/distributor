@@ -27,14 +27,17 @@ public class RolService : IRolService
     private readonly IRolRepository _repository;
     private readonly IValidator<CreateRolRequest> _createValidator;
     private readonly IValidator<UpdateRolRequest> _updateValidator;
+    private readonly INotificador _notificador;
 
     public RolService(IRolRepository repository,
         IValidator<CreateRolRequest> createValidator,
-        IValidator<UpdateRolRequest> updateValidator)
+        IValidator<UpdateRolRequest> updateValidator,
+        INotificador notificador)
     {
         _repository = repository;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
+        _notificador = notificador;
     }
 
     public async Task<IEnumerable<RolResponse>> GetAllAsync()
@@ -67,7 +70,9 @@ public class RolService : IRolService
         };
 
         await _repository.AddAsync(rol);
-        return MapToResponse(rol);
+        var response = MapToResponse(rol);
+        await _notificador.AvisarAsync("roles", "creado", response);
+        return response;
     }
 
     public async Task<RolResponse> UpdateAsync(int id, UpdateRolRequest request)
@@ -92,7 +97,9 @@ public class RolService : IRolService
         rol.Activo = request.Activo;
 
         await _repository.UpdateAsync(rol);
-        return MapToResponse(rol, await _repository.ContarUsuariosAsync(id));
+        var response = MapToResponse(rol, await _repository.ContarUsuariosAsync(id));
+        await _notificador.AvisarAsync("roles", "actualizado", response);
+        return response;
     }
 
     public async Task<RolResponse> UpdatePermisosAsync(int id, UpdatePermisosRequest request)
@@ -118,7 +125,9 @@ public class RolService : IRolService
         await _repository.ReemplazarPermisosAsync(id, permisos);
 
         var actualizado = await _repository.GetConPermisosAsync(id);
-        return MapToResponse(actualizado!, await _repository.ContarUsuariosAsync(id));
+        var response = MapToResponse(actualizado!, await _repository.ContarUsuariosAsync(id));
+        await _notificador.AvisarAsync("roles", "permisos", response);
+        return response;
     }
 
     public async Task DeleteAsync(int id)
@@ -138,6 +147,7 @@ public class RolService : IRolService
         }
 
         await _repository.DeleteAsync(rol);
+        await _notificador.AvisarAsync("roles", "eliminado", new { id });
     }
 
     private static bool EsProtegido(Rol rol) => rol.Id == RolAdministradorId;

@@ -21,13 +21,15 @@ public class UsuarioService : IUsuarioService
     private readonly IValidator<LoginRequest> _loginValidator;
     private readonly IValidator<CreateUsuarioRequest> _createValidator;
     private readonly IValidator<UpdateUsuarioRequest> _updateValidator;
+    private readonly INotificador _notificador;
 
     public UsuarioService(IUsuarioRepository repository,
         IConfiguration configuration,
         IPasswordHasher<Usuario> passwordHasher,
         IValidator<LoginRequest> loginValidator,
         IValidator<CreateUsuarioRequest> createValidator,
-        IValidator<UpdateUsuarioRequest> updateValidator)
+        IValidator<UpdateUsuarioRequest> updateValidator,
+        INotificador notificador)
     {
         _repository = repository;
         _configuration = configuration;
@@ -35,6 +37,7 @@ public class UsuarioService : IUsuarioService
         _loginValidator = loginValidator;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
+        _notificador = notificador;
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
@@ -95,7 +98,9 @@ public class UsuarioService : IUsuarioService
 
         await _repository.AddAsync(usuario);
         usuario.Rol = rol;
-        return MapToResponse(usuario);
+        var response = MapToResponse(usuario);
+        await _notificador.AvisarAsync("usuarios", "creado", response);
+        return response;
     }
 
     public async Task<IEnumerable<UsuarioResponse>> GetAllAsync()
@@ -148,7 +153,9 @@ public class UsuarioService : IUsuarioService
 
         await _repository.UpdateAsync(usuario);
         usuario.Rol = rol;
-        return MapToResponse(usuario);
+        var response = MapToResponse(usuario);
+        await _notificador.AvisarAsync("usuarios", "actualizado", response);
+        return response;
     }
 
     private string GenerateToken(Usuario usuario)

@@ -24,6 +24,7 @@ import type {
   MotivoResponse,
 } from './inventarioApi'
 import { MotivosTabla } from './MotivosTabla'
+import { useRealtime } from '../../lib/realtime'
 
 type Pestana = 'ajustes' | 'motivos'
 
@@ -96,6 +97,8 @@ export function AjustesPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime(['ajustes', 'motivos'], cargar)
 
   const abrirNuevo = () => {
     setCabecera({

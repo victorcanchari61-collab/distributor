@@ -19,6 +19,7 @@ import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse, PrecioResponse } from './listaPrecioApi'
+import { useRealtime } from '../../lib/realtime'
 
 export function ListasPreciosPage() {
   const [listas, setListas] = useState<ListaPrecioResponse[]>([])
@@ -64,6 +65,8 @@ export function ListasPreciosPage() {
     void cargar()
   }, [cargar])
 
+  useRealtime('listasprecio', cargar)
+
   const cargarPrecios = useCallback(async (listaId: number) => {
     try {
       setPrecios(await listaPrecioApi.getPrecios(listaId))
@@ -75,6 +78,10 @@ export function ListasPreciosPage() {
   useEffect(() => {
     if (listaActiva) void cargarPrecios(listaActiva)
   }, [listaActiva, cargarPrecios])
+
+  useRealtime('listasprecio', () => {
+    if (listaActiva) void cargarPrecios(listaActiva)
+  })
 
   const lista = listas.find((l) => l.id === listaActiva) ?? null
   const producto = productos.find((p) => p.id === precioForm.productoId)

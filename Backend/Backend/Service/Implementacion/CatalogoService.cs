@@ -28,6 +28,7 @@ public class CatalogoService : ICatalogoService
     private readonly IValidator<UpdateMarcaRequest> _updateMarca;
     private readonly IValidator<CreateUnidadMedidaRequest> _createUnidad;
     private readonly IValidator<UpdateUnidadMedidaRequest> _updateUnidad;
+    private readonly INotificador _notificador;
 
     public CatalogoService(
         ICatalogoRepository repository,
@@ -36,7 +37,8 @@ public class CatalogoService : ICatalogoService
         IValidator<CreateMarcaRequest> createMarca,
         IValidator<UpdateMarcaRequest> updateMarca,
         IValidator<CreateUnidadMedidaRequest> createUnidad,
-        IValidator<UpdateUnidadMedidaRequest> updateUnidad)
+        IValidator<UpdateUnidadMedidaRequest> updateUnidad,
+        INotificador notificador)
     {
         _repository = repository;
         _createCategoria = createCategoria;
@@ -45,6 +47,7 @@ public class CatalogoService : ICatalogoService
         _updateMarca = updateMarca;
         _createUnidad = createUnidad;
         _updateUnidad = updateUnidad;
+        _notificador = notificador;
     }
 
     // ------------------------------------------------------------ Categorias
@@ -88,7 +91,9 @@ public class CatalogoService : ICatalogoService
         };
 
         await _repository.AddCategoriaAsync(categoria);
-        return MapCategoria(categoria, 0);
+        var response = MapCategoria(categoria, 0);
+        await _notificador.AvisarAsync("categorias", "creado", response);
+        return response;
     }
 
     public async Task<CategoriaResponse> UpdateCategoriaAsync(int id, UpdateCategoriaRequest request)
@@ -108,7 +113,9 @@ public class CatalogoService : ICatalogoService
         categoria.Activo = request.Activo;
 
         await _repository.UpdateCategoriaAsync(categoria);
-        return MapCategoria(categoria, await _repository.ContarProductosPorCategoriaAsync(id));
+        var response = MapCategoria(categoria, await _repository.ContarProductosPorCategoriaAsync(id));
+        await _notificador.AvisarAsync("categorias", "actualizado", response);
+        return response;
     }
 
     public async Task DeleteCategoriaAsync(int id)
@@ -123,6 +130,7 @@ public class CatalogoService : ICatalogoService
         }
 
         await _repository.DeleteCategoriaAsync(categoria);
+        await _notificador.AvisarAsync("categorias", "eliminado", new { id });
     }
 
     // ---------------------------------------------------------------- Marcas
@@ -161,7 +169,9 @@ public class CatalogoService : ICatalogoService
         var marca = new Marca { Nombre = nombre, Activo = true };
 
         await _repository.AddMarcaAsync(marca);
-        return MapMarca(marca, 0);
+        var response = MapMarca(marca, 0);
+        await _notificador.AvisarAsync("marcas", "creado", response);
+        return response;
     }
 
     public async Task<MarcaResponse> UpdateMarcaAsync(int id, UpdateMarcaRequest request)
@@ -180,7 +190,9 @@ public class CatalogoService : ICatalogoService
         marca.Activo = request.Activo;
 
         await _repository.UpdateMarcaAsync(marca);
-        return MapMarca(marca, await _repository.ContarProductosPorMarcaAsync(id));
+        var response = MapMarca(marca, await _repository.ContarProductosPorMarcaAsync(id));
+        await _notificador.AvisarAsync("marcas", "actualizado", response);
+        return response;
     }
 
     public async Task DeleteMarcaAsync(int id)
@@ -195,6 +207,7 @@ public class CatalogoService : ICatalogoService
         }
 
         await _repository.DeleteMarcaAsync(marca);
+        await _notificador.AvisarAsync("marcas", "eliminado", new { id });
     }
 
     // -------------------------------------------------------------- Unidades
@@ -244,7 +257,9 @@ public class CatalogoService : ICatalogoService
         };
 
         await _repository.AddUnidadAsync(unidad);
-        return MapUnidad(unidad, 0);
+        var response = MapUnidad(unidad, 0);
+        await _notificador.AvisarAsync("unidades", "creado", response);
+        return response;
     }
 
     public async Task<UnidadMedidaResponse> UpdateUnidadAsync(
@@ -267,7 +282,9 @@ public class CatalogoService : ICatalogoService
         unidad.Activo = request.Activo;
 
         await _repository.UpdateUnidadAsync(unidad);
-        return MapUnidad(unidad, await _repository.ContarUsosUnidadAsync(id));
+        var response = MapUnidad(unidad, await _repository.ContarUsosUnidadAsync(id));
+        await _notificador.AvisarAsync("unidades", "actualizado", response);
+        return response;
     }
 
     public async Task DeleteUnidadAsync(int id)
@@ -288,6 +305,7 @@ public class CatalogoService : ICatalogoService
         }
 
         await _repository.DeleteUnidadAsync(unidad);
+        await _notificador.AvisarAsync("unidades", "eliminado", new { id });
     }
 
     // ------------------------------------------------------------- Auxiliares

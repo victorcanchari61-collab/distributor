@@ -13,14 +13,17 @@ public class ClienteService : IClienteService
     private readonly IClienteRepository _repository;
     private readonly IValidator<CreateClienteRequest> _createValidator;
     private readonly IValidator<UpdateClienteRequest> _updateValidator;
+    private readonly INotificador _notificador;
 
     public ClienteService(IClienteRepository repository,
         IValidator<CreateClienteRequest> createValidator,
-        IValidator<UpdateClienteRequest> updateValidator)
+        IValidator<UpdateClienteRequest> updateValidator,
+        INotificador notificador)
     {
         _repository = repository;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
+        _notificador = notificador;
     }
 
     public async Task<IEnumerable<ClienteResponse>> GetAllAsync()
@@ -51,7 +54,9 @@ public class ClienteService : IClienteService
         Aplicar(cliente, request);
 
         await _repository.AddAsync(cliente);
-        return MapToResponse(cliente);
+        var response = MapToResponse(cliente);
+        await _notificador.AvisarAsync("clientes", "creado", response);
+        return response;
     }
 
     public async Task<ClienteResponse> UpdateAsync(int id, UpdateClienteRequest request)
@@ -69,7 +74,9 @@ public class ClienteService : IClienteService
         cliente.Activo = request.Activo;
 
         await _repository.UpdateAsync(cliente);
-        return MapToResponse(cliente);
+        var response = MapToResponse(cliente);
+        await _notificador.AvisarAsync("clientes", "actualizado", response);
+        return response;
     }
 
     public async Task<ClienteResponse> CambiarEstadoAsync(int id, bool activo)
@@ -80,6 +87,7 @@ public class ClienteService : IClienteService
         {
             cliente.Activo = activo;
             await _repository.UpdateAsync(cliente);
+            await _notificador.AvisarAsync("clientes", "estado", MapToResponse(cliente));
         }
 
         return MapToResponse(cliente);
@@ -87,7 +95,9 @@ public class ClienteService : IClienteService
 
     public async Task DeleteAsync(int id)
     {
-        await _repository.DeleteAsync(await GetOrThrowAsync(id));
+        var cliente = await GetOrThrowAsync(id);
+        await _repository.DeleteAsync(cliente);
+        await _notificador.AvisarAsync("clientes", "eliminado", new { id });
     }
 
     /// <summary>
@@ -170,6 +180,14 @@ public class ClienteService : IClienteService
                     Motivo = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage))
                 });
             }
+        }
+
+        // Un aviso, no uno por fila: una importacion mueve cientos de
+        // registros de golpe, y el frontend solo necesita saber "recarga la
+        // lista", no cual de las 500 filas cambio.
+        if (resultado.Creados > 0 || resultado.Actualizados > 0)
+        {
+            await _notificador.AvisarAsync("clientes", "importado", resultado);
         }
 
         return resultado;

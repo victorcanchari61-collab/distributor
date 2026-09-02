@@ -15,6 +15,7 @@ import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { almacenApi } from './inventarioApi'
 import type { AlmacenResponse } from './inventarioApi'
+import { useRealtime } from '../../lib/realtime'
 
 const VACIO = { codigo: '', nombre: '', direccion: '' }
 
@@ -46,6 +47,8 @@ export function AlmacenesPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime('almacenes', cargar)
 
   const abrirNuevo = () => {
     setEditando(null)

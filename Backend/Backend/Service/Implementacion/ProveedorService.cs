@@ -14,14 +14,17 @@ public partial class ProveedorService : IProveedorService
     private readonly IProveedorRepository _repository;
     private readonly IValidator<CreateProveedorRequest> _createValidator;
     private readonly IValidator<UpdateProveedorRequest> _updateValidator;
+    private readonly INotificador _notificador;
 
     public ProveedorService(IProveedorRepository repository,
         IValidator<CreateProveedorRequest> createValidator,
-        IValidator<UpdateProveedorRequest> updateValidator)
+        IValidator<UpdateProveedorRequest> updateValidator,
+        INotificador notificador)
     {
         _repository = repository;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
+        _notificador = notificador;
     }
 
     public async Task<IEnumerable<ProveedorResponse>> GetAllAsync()
@@ -53,7 +56,9 @@ public partial class ProveedorService : IProveedorService
         Aplicar(proveedor, request);
 
         await _repository.AddAsync(proveedor);
-        return MapToResponse(proveedor);
+        var response = MapToResponse(proveedor);
+        await _notificador.AvisarAsync("proveedores", "creado", response);
+        return response;
     }
 
     public async Task<ProveedorResponse> UpdateAsync(int id, UpdateProveedorRequest request)
@@ -71,7 +76,9 @@ public partial class ProveedorService : IProveedorService
         proveedor.Activo = request.Activo;
 
         await _repository.UpdateAsync(proveedor);
-        return MapToResponse(proveedor);
+        var response = MapToResponse(proveedor);
+        await _notificador.AvisarAsync("proveedores", "actualizado", response);
+        return response;
     }
 
     public async Task<ProveedorResponse> CambiarEstadoAsync(int id, bool activo)
@@ -82,6 +89,7 @@ public partial class ProveedorService : IProveedorService
         {
             proveedor.Activo = activo;
             await _repository.UpdateAsync(proveedor);
+            await _notificador.AvisarAsync("proveedores", "estado", MapToResponse(proveedor));
         }
 
         return MapToResponse(proveedor);
@@ -89,7 +97,9 @@ public partial class ProveedorService : IProveedorService
 
     public async Task DeleteAsync(int id)
     {
-        await _repository.DeleteAsync(await GetOrThrowAsync(id));
+        var proveedor = await GetOrThrowAsync(id);
+        await _repository.DeleteAsync(proveedor);
+        await _notificador.AvisarAsync("proveedores", "eliminado", new { id });
     }
 
     /// <summary>Alta masiva desde archivo, fila por fila. Ver ClienteService.</summary>
@@ -163,6 +173,11 @@ public partial class ProveedorService : IProveedorService
                     Motivo = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage))
                 });
             }
+        }
+
+        if (resultado.Creados > 0 || resultado.Actualizados > 0)
+        {
+            await _notificador.AvisarAsync("proveedores", "importado", resultado);
         }
 
         return resultado;

@@ -18,6 +18,7 @@ import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
 import { almacenApi, transferenciaApi } from './inventarioApi'
 import type { AlmacenResponse, DocumentoInventarioResponse } from './inventarioApi'
+import { useRealtime } from '../../lib/realtime'
 
 interface FilaTransferencia {
   productoId: number
@@ -80,6 +81,8 @@ export function TransferenciasPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime('transferencias', cargar)
 
   const activos = almacenes.filter((a) => a.activo)
 

@@ -5,6 +5,7 @@ import { NAV_GROUPS } from '../../components/layout'
 import { ApiError } from '../../lib/apiClient'
 import { rolApi } from './rolApi'
 import type { RolPermisoResponse, RolResponse } from './rolApi'
+import { useRealtime } from '../../lib/realtime'
 
 type Permiso = 'ver' | 'crear' | 'editar' | 'eliminar'
 
@@ -57,6 +58,8 @@ export function AccesosPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime('roles', cargar)
 
   const rol = useMemo(() => roles.find((r) => r.id === rolId) ?? null, [roles, rolId])
 

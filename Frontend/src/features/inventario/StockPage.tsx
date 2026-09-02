@@ -5,6 +5,7 @@ import type { DataTableColumn, TabItem } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { almacenApi, stockApi } from './inventarioApi'
 import type { AlmacenResponse, StockResponse } from './inventarioApi'
+import { useRealtime } from '../../lib/realtime'
 
 /**
  * Cuánto hay y a qué costo, por almacén.
@@ -43,6 +44,8 @@ export function StockPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRealtime('stock', cargar)
 
   const conStock = stock.filter((s) => s.stock > 0)
   const bajoMinimo = stock.filter((s) => s.bajoMinimo)
