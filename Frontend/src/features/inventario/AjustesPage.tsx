@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ClipboardCheck, Plus, Trash2, Undo2 } from 'lucide-react'
+import { ClipboardCheck, ListChecks, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -10,6 +10,7 @@ import {
   Modal,
   RowAction,
   StatCard,
+  Tabs,
   useConfirmacion,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
@@ -22,6 +23,9 @@ import type {
   DocumentoInventarioResponse,
   MotivoResponse,
 } from './inventarioApi'
+import { MotivosTabla } from './MotivosTabla'
+
+type Pestana = 'ajustes' | 'motivos'
 
 interface FilaAjuste {
   productoId: number
@@ -41,6 +45,7 @@ const FILA_VACIA: FilaAjuste = { productoId: 0, presentacionId: 0, cantidad: '',
  * operación que lo explica.
  */
 export function AjustesPage() {
+  const [pestana, setPestana] = useState<Pestana>('ajustes')
   const [documentos, setDocumentos] = useState<DocumentoInventarioResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [motivos, setMotivos] = useState<MotivoResponse[]>([])
@@ -191,8 +196,37 @@ export function AjustesPage() {
     },
   ]
 
+  const cabeceraPestanas = (
+    <Tabs
+      className="mb-5"
+      active={pestana}
+      onChange={(id) => setPestana(id as Pestana)}
+      items={[
+        { id: 'ajustes', label: 'Ajustes', icon: <ClipboardCheck size={15} />, badge: documentos.length },
+        {
+          id: 'motivos',
+          label: 'Motivos',
+          icon: <ListChecks size={15} />,
+          // Solo los manuales: los del sistema no se listan en esta pestaña.
+          badge: motivos.filter((m) => !m.delSistema).length,
+        },
+      ]}
+    />
+  )
+
+  if (pestana === 'motivos') {
+    return (
+      <>
+        {cabeceraPestanas}
+        <MotivosTabla motivos={motivos} onRecargar={cargar} />
+      </>
+    )
+  }
+
   return (
-    <ListPage
+    <>
+      {cabeceraPestanas}
+      <ListPage
       icon={<ClipboardCheck size={20} />}
       title="Ajustes de inventario"
       description="Carga inicial, mermas, sobrantes y faltantes. Ventas y compras generan su propio movimiento."
@@ -434,6 +468,7 @@ export function AjustesPage() {
       </Modal>
 
       {dialogo}
-    </ListPage>
+      </ListPage>
+    </>
   )
 }

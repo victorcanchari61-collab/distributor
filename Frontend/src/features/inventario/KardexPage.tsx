@@ -66,15 +66,26 @@ export function KardexPage() {
     },
     { key: 'documento', label: 'Documento', render: (row) => <Badge>{row.documento}</Badge> },
     {
+      key: 'tipo',
+      label: 'Tipo',
+      render: (row) =>
+        row.tipo === 'ENTRADA' ? (
+          <Badge tone="success">
+            <ArrowDownCircle size={13} className="mr-1 inline" />
+            Ingreso
+          </Badge>
+        ) : (
+          <Badge tone="warning">
+            <ArrowUpCircle size={13} className="mr-1 inline" />
+            Salida
+          </Badge>
+        ),
+    },
+    {
       key: 'motivo',
       label: 'Motivo',
       render: (row) => (
         <span className="flex items-center gap-1.5">
-          {row.tipo === 'ENTRADA' ? (
-            <ArrowDownCircle size={14} className="text-emerald-600" />
-          ) : (
-            <ArrowUpCircle size={14} className="text-amber-600" />
-          )}
           {row.motivo}
           {row.anulado && <Badge tone="danger">Anulado</Badge>}
         </span>
