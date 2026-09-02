@@ -4,7 +4,8 @@ import { DashboardLayout, NAV_DEFAULT, navIdFromPath, navPath, resolveNav } from
 import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
-import { ClientesPage, ProveedoresPage } from './features/maestros'
+import { ListasPreciosPage } from './features/facturacion'
+import { ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
 
@@ -12,6 +13,8 @@ import { clearSession, getUsuario } from './lib/authStorage'
 const VIEWS: Record<string, () => React.ReactElement> = {
   'maestros.clientes': ClientesPage,
   'maestros.proveedores': ProveedoresPage,
+  'maestros.productos': ProductosPage,
+  'fact.precios': ListasPreciosPage,
   'config.usuarios': UsuariosPage,
   'config.accesos': AccesosPage,
   'config.roles': RolesPage,

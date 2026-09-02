@@ -15,10 +15,19 @@ public class AppDbContext : DbContext
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<RolPermiso> RolPermisos => Set<RolPermiso>();
+    public DbSet<Categoria> Categorias => Set<Categoria>();
+    public DbSet<Marca> Marcas => Set<Marca>();
+    public DbSet<UnidadMedida> UnidadesMedida => Set<UnidadMedida>();
+    public DbSet<Producto> Productos => Set<Producto>();
+    public DbSet<ProductoPresentacion> Presentaciones => Set<ProductoPresentacion>();
+    public DbSet<ListaPrecio> ListasPrecio => Set<ListaPrecio>();
+    public DbSet<PrecioProducto> Precios => Set<PrecioProducto>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        ConfigurarCatalogo(modelBuilder);
 
         modelBuilder.Entity<Rol>(entity =>
         {
@@ -150,4 +159,154 @@ public class AppDbContext : DbContext
             entity.Property(p => p.Rubro).HasMaxLength(120);
         });
     }
+
+    /// <summary>
+    /// Productos y lo que cuelga de ellos.
+    ///
+    /// Los decimales van con 18,4: cuatro decimales alcanzan para vender 2.5
+    /// kilos y para que el precio por unidad base del saco (195 / 50 = 3.9)
+    /// no se redondee de mas.
+    /// </summary>
+    private static void ConfigurarCatalogo(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Categoria>(entity =>
+        {
+            entity.ToTable("Categorias");
+            entity.HasIndex(c => c.Nombre).IsUnique();
+            entity.Property(c => c.Nombre).HasMaxLength(80).IsRequired();
+            entity.Property(c => c.Descripcion).HasMaxLength(250);
+        });
+
+        modelBuilder.Entity<Marca>(entity =>
+        {
+            entity.ToTable("Marcas");
+            entity.HasIndex(m => m.Nombre).IsUnique();
+            entity.Property(m => m.Nombre).HasMaxLength(80).IsRequired();
+        });
+
+        modelBuilder.Entity<UnidadMedida>(entity =>
+        {
+            entity.ToTable("UnidadesMedida");
+            entity.HasIndex(u => u.Codigo).IsUnique();
+            entity.Property(u => u.Codigo).HasMaxLength(10).IsRequired();
+            entity.Property(u => u.Nombre).HasMaxLength(60).IsRequired();
+            entity.Property(u => u.Tipo).HasMaxLength(10).IsRequired();
+
+            // Unidades base del negocio. Vienen sembradas porque sin ellas no
+            // se puede dar de alta ningun producto.
+            var creacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            entity.HasData(
+                Sembrar(1, "UND", "Unidad", TipoUnidad.Conteo, false, creacion),
+                Sembrar(2, "KG", "Kilogramo", TipoUnidad.Peso, true, creacion),
+                Sembrar(3, "G", "Gramo", TipoUnidad.Peso, true, creacion),
+                Sembrar(4, "LT", "Litro", TipoUnidad.Volumen, true, creacion),
+                Sembrar(5, "ML", "Mililitro", TipoUnidad.Volumen, false, creacion),
+                Sembrar(6, "SAC", "Saco", TipoUnidad.Conteo, false, creacion),
+                Sembrar(7, "CJA", "Caja", TipoUnidad.Conteo, false, creacion),
+                Sembrar(8, "BOL", "Bolsa", TipoUnidad.Conteo, false, creacion),
+                Sembrar(9, "PAQ", "Paquete", TipoUnidad.Conteo, false, creacion),
+                Sembrar(10, "DOC", "Docena", TipoUnidad.Conteo, false, creacion));
+        });
+
+        modelBuilder.Entity<Producto>(entity =>
+        {
+            entity.ToTable("Productos");
+            entity.HasIndex(p => p.Codigo).IsUnique();
+            entity.Property(p => p.Codigo).HasMaxLength(30).IsRequired();
+            entity.Property(p => p.Nombre).HasMaxLength(150).IsRequired();
+            entity.Property(p => p.Descripcion).HasMaxLength(500);
+            entity.Property(p => p.Contenido).HasPrecision(18, 4);
+            entity.Property(p => p.StockMinimo).HasPrecision(18, 4);
+
+            // Restrict: borrar una categoria o una unidad no puede llevarse
+            // productos por delante. El servicio ya avisa antes.
+            entity.HasOne(p => p.Categoria)
+                .WithMany()
+                .HasForeignKey(p => p.CategoriaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(p => p.Marca)
+                .WithMany()
+                .HasForeignKey(p => p.MarcaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(p => p.UnidadBase)
+                .WithMany()
+                .HasForeignKey(p => p.UnidadBaseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(p => p.ContenidoUnidad)
+                .WithMany()
+                .HasForeignKey(p => p.ContenidoUnidadId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ProductoPresentacion>(entity =>
+        {
+            entity.ToTable("ProductoPresentaciones");
+            entity.Property(p => p.Nombre).HasMaxLength(80).IsRequired();
+            entity.Property(p => p.Factor).HasPrecision(18, 4);
+            entity.Property(p => p.CodigoBarras).HasMaxLength(40);
+
+            // Un producto no repite factor: dos presentaciones de 50 kg serian
+            // la misma cosa escrita dos veces.
+            entity.HasIndex(p => new { p.ProductoId, p.Factor }).IsUnique();
+
+            // Cascade: las presentaciones no tienen vida propia fuera de su
+            // producto.
+            entity.HasOne(p => p.Producto)
+                .WithMany(pr => pr.Presentaciones)
+                .HasForeignKey(p => p.ProductoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.Unidad)
+                .WithMany()
+                .HasForeignKey(p => p.UnidadId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ListaPrecio>(entity =>
+        {
+            entity.ToTable("ListasPrecio");
+            entity.HasIndex(l => l.Nombre).IsUnique();
+            entity.Property(l => l.Nombre).HasMaxLength(80).IsRequired();
+            entity.Property(l => l.Descripcion).HasMaxLength(250);
+        });
+
+        modelBuilder.Entity<PrecioProducto>(entity =>
+        {
+            entity.ToTable("Precios");
+            entity.Property(p => p.Precio).HasPrecision(18, 4);
+            entity.Property(p => p.CantidadMinima).HasPrecision(18, 4);
+
+            // Una presentacion tiene un solo precio por escalon dentro de una
+            // lista.
+            entity.HasIndex(p => new { p.ListaPrecioId, p.PresentacionId, p.CantidadMinima })
+                .IsUnique();
+
+            entity.HasOne(p => p.ListaPrecio)
+                .WithMany(l => l.Precios)
+                .HasForeignKey(p => p.ListaPrecioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.Presentacion)
+                .WithMany()
+                .HasForeignKey(p => p.PresentacionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
+
+    private static UnidadMedida Sembrar(
+        int id, string codigo, string nombre, string tipo, bool fraccionable, DateTime creacion) =>
+        new()
+        {
+            Id = id,
+            Codigo = codigo,
+            Nombre = nombre,
+            Tipo = tipo,
+            Fraccionable = fraccionable,
+            Activo = true,
+            DelSistema = true,
+            FechaCreacion = creacion
+        };
 }

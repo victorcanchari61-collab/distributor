@@ -89,7 +89,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'maestros.clientes', label: 'Clientes', icon: Contact },
       { id: 'maestros.proveedores', label: 'Proveedores', icon: Building2 },
-      { id: 'maestros.productos', label: 'Productos', icon: Package, pending: true },
+      { id: 'maestros.productos', label: 'Productos', icon: Package },
     ],
   },
   {
@@ -131,7 +131,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'fact.pedidos', label: 'Pedidos', icon: ClipboardList, pending: true },
       { id: 'fact.notaventa', label: 'Notas de venta', icon: FileText, pending: true },
-      { id: 'fact.precios', label: 'Listas de precios', icon: Banknote, pending: true },
+      { id: 'fact.precios', label: 'Listas de precios', icon: Banknote },
       { id: 'fact.comprobantes', label: 'Comprobantes', icon: Receipt, pending: true, hidden: true },
       {
         id: 'fact.notas',
