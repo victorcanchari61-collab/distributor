@@ -25,7 +25,11 @@ class AppBuscador extends StatelessWidget {
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
         hintText: pista,
-        prefixIcon: const Icon(Icons.search, size: 20, color: Colores.tintaTenue),
+        prefixIcon: const Icon(
+          Icons.search,
+          size: 20,
+          color: Colores.tintaTenue,
+        ),
         suffixIcon: valor.isEmpty
             ? null
             : IconButton(
@@ -35,7 +39,10 @@ class AppBuscador extends StatelessWidget {
                 tooltip: 'Limpiar',
               ),
         constraints: const BoxConstraints(minHeight: Dimen.campoMd),
-        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: Dimen.espacio3),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 0,
+          horizontal: Dimen.espacio3,
+        ),
       ),
     );
   }

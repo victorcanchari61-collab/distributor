@@ -40,32 +40,32 @@ class Cliente {
           .toLowerCase();
 
   factory Cliente.desdeJson(Map<String, dynamic> json) => Cliente(
-        id: json['id'] as int,
-        documento: json['documento'] as String? ?? '',
-        tipoDoc: json['tipoDoc'] as String? ?? '',
-        nombre: json['nombre'] as String? ?? '',
-        direccion: json['direccion'] as String?,
-        distrito: json['distrito'] as String?,
-        telefono: json['telefono'] as String?,
-        email: json['email'] as String?,
-        diaVisita: json['diaVisita'] as String?,
-        ruta: json['ruta'] as String?,
-        mercado: json['mercado'] as String?,
-        activo: json['activo'] as bool? ?? true,
-      );
+    id: json['id'] as int,
+    documento: json['documento'] as String? ?? '',
+    tipoDoc: json['tipoDoc'] as String? ?? '',
+    nombre: json['nombre'] as String? ?? '',
+    direccion: json['direccion'] as String?,
+    distrito: json['distrito'] as String?,
+    telefono: json['telefono'] as String?,
+    email: json['email'] as String?,
+    diaVisita: json['diaVisita'] as String?,
+    ruta: json['ruta'] as String?,
+    mercado: json['mercado'] as String?,
+    activo: json['activo'] as bool? ?? true,
+  );
 
   Map<String, dynamic> aJson() => {
-        'documento': documento,
-        'tipoDoc': tipoDoc,
-        'nombre': nombre,
-        'direccion': direccion,
-        'distrito': distrito,
-        'telefono': telefono,
-        'email': email,
-        'diaVisita': diaVisita,
-        'ruta': ruta,
-        'mercado': mercado,
-      };
+    'documento': documento,
+    'tipoDoc': tipoDoc,
+    'nombre': nombre,
+    'direccion': direccion,
+    'distrito': distrito,
+    'telefono': telefono,
+    'email': email,
+    'diaVisita': diaVisita,
+    'ruta': ruta,
+    'mercado': mercado,
+  };
 
   Cliente copiar({
     String? documento,
@@ -79,19 +79,18 @@ class Cliente {
     String? ruta,
     String? mercado,
     bool? activo,
-  }) =>
-      Cliente(
-        id: id,
-        documento: documento ?? this.documento,
-        tipoDoc: tipoDoc ?? this.tipoDoc,
-        nombre: nombre ?? this.nombre,
-        direccion: direccion ?? this.direccion,
-        distrito: distrito ?? this.distrito,
-        telefono: telefono ?? this.telefono,
-        email: email ?? this.email,
-        diaVisita: diaVisita ?? this.diaVisita,
-        ruta: ruta ?? this.ruta,
-        mercado: mercado ?? this.mercado,
-        activo: activo ?? this.activo,
-      );
+  }) => Cliente(
+    id: id,
+    documento: documento ?? this.documento,
+    tipoDoc: tipoDoc ?? this.tipoDoc,
+    nombre: nombre ?? this.nombre,
+    direccion: direccion ?? this.direccion,
+    distrito: distrito ?? this.distrito,
+    telefono: telefono ?? this.telefono,
+    email: email ?? this.email,
+    diaVisita: diaVisita ?? this.diaVisita,
+    ruta: ruta ?? this.ruta,
+    mercado: mercado ?? this.mercado,
+    activo: activo ?? this.activo,
+  );
 }

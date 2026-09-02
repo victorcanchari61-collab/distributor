@@ -72,7 +72,11 @@ class Tema {
           borderRadius: BorderRadius.circular(Dimen.radioPanel),
         ),
       ),
-      dividerTheme: const DividerThemeData(color: Colores.linea, thickness: 1, space: 1),
+      dividerTheme: const DividerThemeData(
+        color: Colores.linea,
+        thickness: 1,
+        space: 1,
+      ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colores.tinta,
@@ -87,7 +91,11 @@ class Tema {
   static TextTheme _texto(TextTheme base) => base
       .apply(bodyColor: Colores.tinta, displayColor: Colores.tinta)
       .copyWith(
-        headlineSmall: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, height: 1.2),
+        headlineSmall: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+          height: 1.2,
+        ),
         titleMedium: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         bodyMedium: const TextStyle(fontSize: 14, color: Colores.tinta),
         bodySmall: const TextStyle(fontSize: 13, color: Colores.tintaSuave),
@@ -98,9 +106,9 @@ class Tema {
   /// panel web, donde el anillo llamaba mas la atencion que el propio dato.
   static InputDecorationTheme _campos() {
     OutlineInputBorder borde(Color color) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Dimen.radioCampo),
-          borderSide: BorderSide(color: color),
-        );
+      borderRadius: BorderRadius.circular(Dimen.radioCampo),
+      borderSide: BorderSide(color: color),
+    );
 
     return InputDecorationTheme(
       filled: true,

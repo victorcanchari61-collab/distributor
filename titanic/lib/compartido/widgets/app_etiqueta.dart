@@ -6,7 +6,12 @@ enum EtiquetaTono { neutral, modulo, exito, aviso, peligro }
 
 /// Etiqueta corta: tipo de documento, estado, dia de visita.
 class AppEtiqueta extends StatelessWidget {
-  const AppEtiqueta(this.texto, {super.key, this.tono = EtiquetaTono.neutral, this.color});
+  const AppEtiqueta(
+    this.texto, {
+    super.key,
+    this.tono = EtiquetaTono.neutral,
+    this.color,
+  });
 
   final String texto;
   final EtiquetaTono tono;
@@ -32,7 +37,11 @@ class AppEtiqueta extends StatelessWidget {
       ),
       child: Text(
         texto,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: base),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: base,
+        ),
       ),
     );
   }

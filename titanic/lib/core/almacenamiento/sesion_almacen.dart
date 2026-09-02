@@ -15,7 +15,10 @@ class SesionAlmacen {
   static const _claveToken = 'titanic.token';
   static const _claveUsuario = 'titanic.usuario';
 
-  Future<void> guardar({required String token, required Map<String, dynamic> usuario}) async {
+  Future<void> guardar({
+    required String token,
+    required Map<String, dynamic> usuario,
+  }) async {
     await _almacen.write(key: _claveToken, value: token);
     await _almacen.write(key: _claveUsuario, value: jsonEncode(usuario));
   }

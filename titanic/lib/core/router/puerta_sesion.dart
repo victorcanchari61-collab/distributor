@@ -33,7 +33,7 @@ class _Cargando extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Scaffold(
-        backgroundColor: Colores.superficie,
-        body: Center(child: CircularProgressIndicator(color: Colores.marca)),
-      );
+    backgroundColor: Colores.superficie,
+    body: Center(child: CircularProgressIndicator(color: Colores.marca)),
+  );
 }

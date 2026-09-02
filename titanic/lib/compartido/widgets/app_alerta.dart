@@ -16,23 +16,23 @@ class AppAlerta extends StatelessWidget {
   Widget build(BuildContext context) {
     final (fondo, borde, color, icono) = switch (tono) {
       AlertaTono.error => (
-          Colores.peligroSuave,
-          Colores.peligro,
-          Colores.peligro,
-          Icons.error_outline,
-        ),
+        Colores.peligroSuave,
+        Colores.peligro,
+        Colores.peligro,
+        Icons.error_outline,
+      ),
       AlertaTono.exito => (
-          Colores.exitoSuave,
-          Colores.exito,
-          Colores.exito,
-          Icons.check_circle_outline,
-        ),
+        Colores.exitoSuave,
+        Colores.exito,
+        Colores.exito,
+        Icons.check_circle_outline,
+      ),
       AlertaTono.aviso => (
-          const Color(0xFFFFFBEB),
-          Colores.advertencia,
-          Colores.advertencia,
-          Icons.info_outline,
-        ),
+        const Color(0xFFFFFBEB),
+        Colores.advertencia,
+        Colores.advertencia,
+        Icons.info_outline,
+      ),
     };
 
     return Container(

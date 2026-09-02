@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_buscador.dart';
+import '../../../compartido/widgets/app_confirmacion.dart';
+import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_detalle_hoja.dart';
+import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_shell.dart';
 import '../../../compartido/widgets/app_vacio.dart';
@@ -85,7 +89,8 @@ class ClientesPagina extends ConsumerWidget {
                         itemBuilder: (context, i) => _TarjetaCliente(
                           cliente: visibles[i],
                           color: grupo?.color ?? Colores.marca,
-                          onTap: () => _abrirFormulario(context, visibles[i]),
+                          onEditar: () =>
+                              _abrirFormulario(context, visibles[i]),
                           onEstado: () =>
                               _cambiarEstado(context, ref, visibles[i]),
                         ),
@@ -109,6 +114,19 @@ class ClientesPagina extends ConsumerWidget {
     WidgetRef ref,
     Cliente cliente,
   ) async {
+    // Igual que en el panel web: desactivar nunca ocurre de un toque, primero
+    // se avisa que pasa con el registro.
+    final ok = await confirmarAccion(
+      context,
+      titulo: '${cliente.activo ? 'Desactivar' : 'Activar'} ${cliente.nombre}',
+      mensaje: cliente.activo
+          ? 'Deja de aparecer para nuevas operaciones, pero conserva su historial y puedes volver a activarlo.'
+          : 'Vuelve a estar disponible para usarse.',
+      textoConfirmar: cliente.activo ? 'Desactivar' : 'Activar',
+      tono: cliente.activo ? ConfirmTono.aviso : ConfirmTono.pregunta,
+    );
+    if (!ok || !context.mounted) return;
+
     final mensajero = ScaffoldMessenger.of(context);
 
     try {
@@ -202,96 +220,106 @@ class _TarjetaCliente extends StatelessWidget {
   const _TarjetaCliente({
     required this.cliente,
     required this.color,
-    required this.onTap,
+    required this.onEditar,
     required this.onEstado,
   });
 
   final Cliente cliente;
   final Color color;
-  final VoidCallback onTap;
+  final VoidCallback onEditar;
   final VoidCallback onEstado;
+
+  /// Los mismos datos que muestra la tabla del panel web, en el mismo orden.
+  /// Los marcados `enTarjeta: false` solo salen en la ficha de detalle: en el
+  /// listado estorban y hacen que entren menos registros en pantalla.
+  List<CampoDetalle> get _campos => [
+    CampoDetalle('Nombre', cliente.nombre),
+    CampoDetalle('Direccion', cliente.direccion),
+    CampoDetalle('Distrito', cliente.distrito, enTarjeta: false),
+    CampoDetalle('Telefono', cliente.telefono, enTarjeta: false),
+    CampoDetalle(
+      'Dia visita',
+      cliente.diaVisita,
+      widget: cliente.diaVisita == null
+          ? null
+          : AppEtiqueta(
+              cliente.diaVisita!,
+              tono: EtiquetaTono.modulo,
+              color: color,
+            ),
+    ),
+    CampoDetalle('Ruta', cliente.ruta, enTarjeta: false),
+    CampoDetalle('Mercado', cliente.mercado, enTarjeta: false),
+    CampoDetalle(
+      'Estado',
+      cliente.activo ? 'Activo' : 'Inactivo',
+      widget: AppEtiqueta(
+        cliente.activo ? 'Activo' : 'Inactivo',
+        tono: cliente.activo ? EtiquetaTono.exito : EtiquetaTono.aviso,
+      ),
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(Dimen.radioPanel),
-      child: Container(
-        padding: const EdgeInsets.all(Dimen.espacio3),
-        decoration: BoxDecoration(
-          color: Colores.superficie,
-          border: Border.all(color: Colores.linea),
-          borderRadius: BorderRadius.circular(Dimen.radioPanel),
+    return AppTarjetaRegistro(
+      icono: Icons.storefront_outlined,
+      color: color,
+      titulo: cliente.documento,
+      insignia: AppEtiqueta(cliente.tipoDoc),
+      campos: _campos,
+      onTap: () => _abrirDetalle(context),
+      acciones: [
+        IconButton(
+          onPressed: onEditar,
+          tooltip: 'Editar',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.edit_outlined, size: 18, color: Colores.marca),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(Dimen.radioCampo),
-              ),
-              child: Icon(Icons.storefront_outlined, size: 19, color: color),
-            ),
-            const SizedBox(width: Dimen.espacio3),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    cliente.nombre,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    cliente.direccion ?? 'Sin dirección',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colores.tintaSuave,
-                    ),
-                  ),
-                  const SizedBox(height: Dimen.espacio2),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      AppEtiqueta('${cliente.tipoDoc} ${cliente.documento}'),
-                      if (cliente.diaVisita != null)
-                        AppEtiqueta(
-                          cliente.diaVisita!,
-                          tono: EtiquetaTono.modulo,
-                          color: color,
-                        ),
-                      if (cliente.ruta != null)
-                        AppEtiqueta('Ruta ${cliente.ruta}'),
-                      if (!cliente.activo)
-                        const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: onEstado,
-              tooltip: cliente.activo ? 'Desactivar' : 'Activar',
-              icon: Icon(
-                cliente.activo ? Icons.block : Icons.check_circle_outline,
-                size: 19,
-                color: cliente.activo ? Colores.advertencia : Colores.exito,
-              ),
-            ),
-          ],
+        IconButton(
+          onPressed: onEstado,
+          tooltip: cliente.activo ? 'Desactivar' : 'Activar',
+          visualDensity: VisualDensity.compact,
+          icon: Icon(
+            cliente.activo ? Icons.block : Icons.check_circle_outline,
+            size: 18,
+            color: cliente.activo ? Colores.advertencia : Colores.exito,
+          ),
         ),
-      ),
+      ],
+    );
+  }
+
+  Future<void> _abrirDetalle(BuildContext context) {
+    return mostrarDetalle(
+      context,
+      icono: Icons.storefront_outlined,
+      color: color,
+      titulo: cliente.nombre,
+      subtitulo: '${cliente.tipoDoc} ${cliente.documento}',
+      insignia: cliente.activo
+          ? null
+          : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
+      campos: _campos,
+      acciones: [
+        AppBoton(
+          texto: cliente.activo ? 'Desactivar' : 'Activar',
+          variante: BotonVariante.secundario,
+          expandido: true,
+          onPressed: () {
+            Navigator.of(context).pop();
+            onEstado();
+          },
+        ),
+        AppBoton(
+          texto: 'Editar',
+          expandido: true,
+          onPressed: () {
+            Navigator.of(context).pop();
+            onEditar();
+          },
+        ),
+      ],
     );
   }
 }

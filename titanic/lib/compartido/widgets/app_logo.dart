@@ -126,7 +126,11 @@ class _EmblemaPainter extends CustomPainter {
       lienzo.translate(x * escala, y * escala);
       lienzo.rotate(giro);
       lienzo.drawOval(
-        Rect.fromCenter(center: Offset.zero, width: 12 * escala, height: 18 * escala),
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: 12 * escala,
+          height: 18 * escala,
+        ),
         grano,
       );
       lienzo.restore();

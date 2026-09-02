@@ -37,35 +37,36 @@ class Proveedor {
   final bool activo;
 
   String get buscable =>
-      '$documento $nombre ${nombreComercial ?? ''} ${rubro ?? ''} ${distrito ?? ''}'.toLowerCase();
+      '$documento $nombre ${nombreComercial ?? ''} ${rubro ?? ''} ${distrito ?? ''}'
+          .toLowerCase();
 
   factory Proveedor.desdeJson(Map<String, dynamic> json) => Proveedor(
-        id: json['id'] as int,
-        documento: json['documento'] as String? ?? '',
-        tipoDoc: json['tipoDoc'] as String? ?? '',
-        nombre: json['nombre'] as String? ?? '',
-        nombreComercial: json['nombreComercial'] as String?,
-        direccion: json['direccion'] as String?,
-        departamento: json['departamento'] as String?,
-        distrito: json['distrito'] as String?,
-        telefono: json['telefono'] as String?,
-        telefono2: json['telefono2'] as String?,
-        email: json['email'] as String?,
-        rubro: json['rubro'] as String?,
-        activo: json['activo'] as bool? ?? true,
-      );
+    id: json['id'] as int,
+    documento: json['documento'] as String? ?? '',
+    tipoDoc: json['tipoDoc'] as String? ?? '',
+    nombre: json['nombre'] as String? ?? '',
+    nombreComercial: json['nombreComercial'] as String?,
+    direccion: json['direccion'] as String?,
+    departamento: json['departamento'] as String?,
+    distrito: json['distrito'] as String?,
+    telefono: json['telefono'] as String?,
+    telefono2: json['telefono2'] as String?,
+    email: json['email'] as String?,
+    rubro: json['rubro'] as String?,
+    activo: json['activo'] as bool? ?? true,
+  );
 
   Map<String, dynamic> aJson() => {
-        'documento': documento,
-        'tipoDoc': tipoDoc,
-        'nombre': nombre,
-        'nombreComercial': nombreComercial,
-        'direccion': direccion,
-        'departamento': departamento,
-        'distrito': distrito,
-        'telefono': telefono,
-        'telefono2': telefono2,
-        'email': email,
-        'rubro': rubro,
-      };
+    'documento': documento,
+    'tipoDoc': tipoDoc,
+    'nombre': nombre,
+    'nombreComercial': nombreComercial,
+    'direccion': direccion,
+    'departamento': departamento,
+    'distrito': distrito,
+    'telefono': telefono,
+    'telefono2': telefono2,
+    'email': email,
+    'rubro': rubro,
+  };
 }

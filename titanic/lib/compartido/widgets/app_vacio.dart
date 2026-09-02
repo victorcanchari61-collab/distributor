@@ -38,10 +38,17 @@ class AppVacio extends StatelessWidget {
               Text(
                 detalle!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: Colores.tintaSuave, height: 1.4),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colores.tintaSuave,
+                  height: 1.4,
+                ),
               ),
             ],
-            if (accion != null) ...[const SizedBox(height: Dimen.espacio4), accion!],
+            if (accion != null) ...[
+              const SizedBox(height: Dimen.espacio4),
+              accion!,
+            ],
           ],
         ),
       ),

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_buscador.dart';
+import '../../../compartido/widgets/app_confirmacion.dart';
+import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_detalle_hoja.dart';
+import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_shell.dart';
 import '../../../compartido/widgets/app_vacio.dart';
@@ -134,7 +138,8 @@ class ProveedoresPagina extends ConsumerWidget {
                         itemBuilder: (context, i) => _TarjetaProveedor(
                           proveedor: visibles[i],
                           color: color,
-                          onTap: () => _abrirFormulario(context, visibles[i]),
+                          onEditar: () =>
+                              _abrirFormulario(context, visibles[i]),
                           onEstado: () =>
                               _cambiarEstado(context, ref, visibles[i]),
                         ),
@@ -160,6 +165,20 @@ class ProveedoresPagina extends ConsumerWidget {
     WidgetRef ref,
     Proveedor proveedor,
   ) async {
+    // Igual que en el panel web: desactivar nunca ocurre de un toque, primero
+    // se avisa que pasa con el registro.
+    final ok = await confirmarAccion(
+      context,
+      titulo:
+          '${proveedor.activo ? 'Desactivar' : 'Activar'} ${proveedor.nombre}',
+      mensaje: proveedor.activo
+          ? 'Deja de aparecer para nuevas operaciones, pero conserva su historial y puedes volver a activarlo.'
+          : 'Vuelve a estar disponible para usarse.',
+      textoConfirmar: proveedor.activo ? 'Desactivar' : 'Activar',
+      tono: proveedor.activo ? ConfirmTono.aviso : ConfirmTono.pregunta,
+    );
+    if (!ok || !context.mounted) return;
+
     final mensajero = ScaffoldMessenger.of(context);
 
     try {
@@ -183,110 +202,111 @@ class _TarjetaProveedor extends StatelessWidget {
   const _TarjetaProveedor({
     required this.proveedor,
     required this.color,
-    required this.onTap,
+    required this.onEditar,
     required this.onEstado,
   });
 
   final Proveedor proveedor;
   final Color color;
-  final VoidCallback onTap;
+  final VoidCallback onEditar;
   final VoidCallback onEstado;
+
+  /// Mismo criterio que en clientes: en la tarjeta solo lo que sirve para
+  /// reconocer al proveedor; el resto vive en la ficha de detalle.
+  List<CampoDetalle> get _campos => [
+    CampoDetalle('Razon social', proveedor.nombre),
+    CampoDetalle(
+      'Nombre comercial',
+      proveedor.nombreComercial,
+      enTarjeta: false,
+    ),
+    CampoDetalle(
+      'Rubro',
+      proveedor.rubro,
+      widget: proveedor.rubro == null
+          ? null
+          : AppEtiqueta(
+              proveedor.rubro!,
+              tono: EtiquetaTono.modulo,
+              color: color,
+            ),
+    ),
+    CampoDetalle('Direccion', proveedor.direccion, enTarjeta: false),
+    CampoDetalle('Distrito', proveedor.distrito, enTarjeta: false),
+    CampoDetalle('Telefono', proveedor.telefono),
+    CampoDetalle('Correo', proveedor.email, enTarjeta: false),
+    CampoDetalle(
+      'Estado',
+      proveedor.activo ? 'Activo' : 'Inactivo',
+      widget: AppEtiqueta(
+        proveedor.activo ? 'Activo' : 'Inactivo',
+        tono: proveedor.activo ? EtiquetaTono.exito : EtiquetaTono.aviso,
+      ),
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(Dimen.radioPanel),
-      child: Container(
-        padding: const EdgeInsets.all(Dimen.espacio3),
-        decoration: BoxDecoration(
-          color: Colores.superficie,
-          border: Border.all(color: Colores.linea),
-          borderRadius: BorderRadius.circular(Dimen.radioPanel),
+    return AppTarjetaRegistro(
+      icono: Icons.business_outlined,
+      color: color,
+      titulo: proveedor.documento,
+      insignia: AppEtiqueta(proveedor.tipoDoc),
+      campos: _campos,
+      onTap: () => _abrirDetalle(context),
+      acciones: [
+        IconButton(
+          onPressed: onEditar,
+          tooltip: 'Editar',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.edit_outlined, size: 18, color: Colores.marca),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(Dimen.radioCampo),
-              ),
-              child: Icon(Icons.business_outlined, size: 19, color: color),
-            ),
-            const SizedBox(width: Dimen.espacio3),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    proveedor.nombreComercial?.isNotEmpty == true
-                        ? proveedor.nombreComercial!
-                        : proveedor.nombre,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (proveedor.nombreComercial?.isNotEmpty == true) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      proveedor.nombre,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Colores.tintaSuave,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 3),
-                  Text(
-                    proveedor.telefono ?? proveedor.direccion ?? 'Sin contacto',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colores.tintaSuave,
-                    ),
-                  ),
-                  const SizedBox(height: Dimen.espacio2),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      AppEtiqueta(
-                        '${proveedor.tipoDoc} ${proveedor.documento}',
-                      ),
-                      if (proveedor.rubro != null)
-                        AppEtiqueta(
-                          proveedor.rubro!,
-                          tono: EtiquetaTono.modulo,
-                          color: color,
-                        ),
-                      if (!proveedor.activo)
-                        const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: onEstado,
-              tooltip: proveedor.activo ? 'Desactivar' : 'Activar',
-              icon: Icon(
-                proveedor.activo ? Icons.block : Icons.check_circle_outline,
-                size: 19,
-                color: proveedor.activo ? Colores.advertencia : Colores.exito,
-              ),
-            ),
-          ],
+        IconButton(
+          onPressed: onEstado,
+          tooltip: proveedor.activo ? 'Desactivar' : 'Activar',
+          visualDensity: VisualDensity.compact,
+          icon: Icon(
+            proveedor.activo ? Icons.block : Icons.check_circle_outline,
+            size: 18,
+            color: proveedor.activo ? Colores.advertencia : Colores.exito,
+          ),
         ),
-      ),
+      ],
+    );
+  }
+
+  Future<void> _abrirDetalle(BuildContext context) {
+    return mostrarDetalle(
+      context,
+      icono: Icons.business_outlined,
+      color: color,
+      titulo: proveedor.nombreComercial?.isNotEmpty == true
+          ? proveedor.nombreComercial!
+          : proveedor.nombre,
+      subtitulo: '${proveedor.tipoDoc} ${proveedor.documento}',
+      insignia: proveedor.activo
+          ? null
+          : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
+      campos: _campos,
+      acciones: [
+        AppBoton(
+          texto: proveedor.activo ? 'Desactivar' : 'Activar',
+          variante: BotonVariante.secundario,
+          expandido: true,
+          onPressed: () {
+            Navigator.of(context).pop();
+            onEstado();
+          },
+        ),
+        AppBoton(
+          texto: 'Editar',
+          expandido: true,
+          onPressed: () {
+            Navigator.of(context).pop();
+            onEditar();
+          },
+        ),
+      ],
     );
   }
 }

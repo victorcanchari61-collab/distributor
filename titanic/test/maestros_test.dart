@@ -75,6 +75,17 @@ class _ApiFalso extends MaestrosApi {
     ].map(Cliente.desdeJson).toList();
   }
 
+  /// Ids a los que se les cambio el estado, para comprobar la confirmacion.
+  final cambiados = <int>[];
+
+  @override
+  Future<Cliente> cambiarEstadoCliente(int id, {required bool activo}) async {
+    cambiados.add(id);
+    return Cliente.desdeJson(
+      _cliente(id: id, documento: '45871203', nombre: 'ANA LEANDRO', activo: activo),
+    );
+  }
+
   @override
   Future<List<Proveedor>> proveedores() async {
     if (falla) throw const ApiExcepcion('sin conexión');
@@ -195,6 +206,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Un DNI tiene 8 dígitos.'), findsOneWidget);
+  });
+
+  testWidgets('desactivar pide confirmacion y respeta el cancelar', (tester) async {
+    final api = await _montarClientes(tester);
+
+    // El icono de desactivar de la primera tarjeta.
+    await tester.tap(find.byIcon(Icons.block).first);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Desactivar ANA LEANDRO'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+
+    // Se cancelo: el API no se toco.
+    expect(api.cambiados, isEmpty);
+
+    await tester.tap(find.byIcon(Icons.block).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Desactivar'));
+    await tester.pumpAndSettle();
+
+    expect(api.cambiados, [1]);
   });
 
   testWidgets('la pantalla de proveedores se arma sin errores', (tester) async {

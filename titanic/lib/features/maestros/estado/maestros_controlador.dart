@@ -27,7 +27,9 @@ class ClientesControlador extends AsyncNotifier<List<Cliente>> {
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(maestrosApiProvider).clientes());
+    state = await AsyncValue.guard(
+      () => ref.read(maestrosApiProvider).clientes(),
+    );
   }
 
   Future<void> guardar({int? id, required Map<String, dynamic> cuerpo}) async {
@@ -41,16 +43,17 @@ class ClientesControlador extends AsyncNotifier<List<Cliente>> {
   }
 
   Future<void> cambiarEstado(Cliente cliente) async {
-    await ref.read(maestrosApiProvider).cambiarEstadoCliente(
-          cliente.id,
-          activo: !cliente.activo,
-        );
+    await ref
+        .read(maestrosApiProvider)
+        .cambiarEstadoCliente(cliente.id, activo: !cliente.activo);
     await recargar();
   }
 }
 
 final clientesProvider =
-    AsyncNotifierProvider<ClientesControlador, List<Cliente>>(ClientesControlador.new);
+    AsyncNotifierProvider<ClientesControlador, List<Cliente>>(
+      ClientesControlador.new,
+    );
 
 /// Clientes que quedan tras aplicar buscador y filtro de estado.
 final clientesFiltradosProvider = Provider.autoDispose<List<Cliente>>((ref) {
@@ -67,11 +70,14 @@ final clientesFiltradosProvider = Provider.autoDispose<List<Cliente>>((ref) {
 /// Listado de proveedores.
 class ProveedoresControlador extends AsyncNotifier<List<Proveedor>> {
   @override
-  Future<List<Proveedor>> build() => ref.watch(maestrosApiProvider).proveedores();
+  Future<List<Proveedor>> build() =>
+      ref.watch(maestrosApiProvider).proveedores();
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(maestrosApiProvider).proveedores());
+    state = await AsyncValue.guard(
+      () => ref.read(maestrosApiProvider).proveedores(),
+    );
   }
 
   Future<void> guardar({int? id, required Map<String, dynamic> cuerpo}) async {
@@ -85,19 +91,23 @@ class ProveedoresControlador extends AsyncNotifier<List<Proveedor>> {
   }
 
   Future<void> cambiarEstado(Proveedor proveedor) async {
-    await ref.read(maestrosApiProvider).cambiarEstadoProveedor(
-          proveedor.id,
-          activo: !proveedor.activo,
-        );
+    await ref
+        .read(maestrosApiProvider)
+        .cambiarEstadoProveedor(proveedor.id, activo: !proveedor.activo);
     await recargar();
   }
 }
 
 final proveedoresProvider =
-    AsyncNotifierProvider<ProveedoresControlador, List<Proveedor>>(ProveedoresControlador.new);
+    AsyncNotifierProvider<ProveedoresControlador, List<Proveedor>>(
+      ProveedoresControlador.new,
+    );
 
-final proveedoresFiltradosProvider = Provider.autoDispose<List<Proveedor>>((ref) {
-  final todos = ref.watch(proveedoresProvider).valueOrNull ?? const <Proveedor>[];
+final proveedoresFiltradosProvider = Provider.autoDispose<List<Proveedor>>((
+  ref,
+) {
+  final todos =
+      ref.watch(proveedoresProvider).valueOrNull ?? const <Proveedor>[];
   final texto = ref.watch(busquedaProveedoresProvider).trim().toLowerCase();
   final inactivos = ref.watch(verInactivosProvider);
 

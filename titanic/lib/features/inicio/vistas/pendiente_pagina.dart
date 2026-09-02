@@ -5,7 +5,12 @@ import '../../../core/tema/dimensiones.dart';
 
 /// Marcador para las vistas del menu que todavia no se construyen.
 class PendientePagina extends StatelessWidget {
-  const PendientePagina({super.key, required this.titulo, this.modulo, this.color});
+  const PendientePagina({
+    super.key,
+    required this.titulo,
+    this.modulo,
+    this.color,
+  });
 
   final String titulo;
   final String? modulo;
@@ -40,7 +45,11 @@ class PendientePagina extends StatelessWidget {
             Text(
               '${modulo == null ? '' : 'Módulo $modulo. '}Esta pantalla todavía no está construida.',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: Colores.tintaSuave, height: 1.4),
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colores.tintaSuave,
+                height: 1.4,
+              ),
             ),
           ],
         ),
