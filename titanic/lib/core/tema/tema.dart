@@ -122,6 +122,19 @@ class Tema {
       errorBorder: borde(Colores.peligro),
       focusedErrorBorder: borde(Colores.peligro),
       hintStyle: const TextStyle(color: Colores.tintaTenue, fontSize: 14),
+      // La etiqueta vive SIEMPRE en la muesca del borde, tanto con el campo
+      // vacio como lleno: asi no salta al escribir y no gasta una linea arriba.
+      floatingLabelBehavior: FloatingLabelBehavior.always,
+      labelStyle: const TextStyle(
+        color: Colores.tintaSuave,
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+      ),
+      floatingLabelStyle: const TextStyle(
+        color: Colores.tintaSuave,
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+      ),
       errorStyle: const TextStyle(color: Colores.peligro, fontSize: 12),
     );
   }

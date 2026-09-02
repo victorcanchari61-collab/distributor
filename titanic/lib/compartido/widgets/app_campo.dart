@@ -4,10 +4,11 @@ import 'package:flutter/services.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 
-/// Campo de texto del sistema: etiqueta arriba, campo debajo.
+/// Campo de texto del sistema.
 ///
-/// La etiqueta va fuera del recuadro (no flotante) para que se lea igual que en
-/// el panel web y no baile al escribir.
+/// La etiqueta va encajada en la muesca del borde y se queda ahi siempre, este
+/// el campo vacio o lleno: no baila al escribir y el formulario ocupa menos
+/// alto que con la etiqueta puesta encima.
 class AppCampo extends StatefulWidget {
   const AppCampo({
     super.key,
@@ -56,79 +57,64 @@ class _AppCampoState extends State<AppCampo> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // La etiqueta cede espacio y se recorta: junto a una ayuda larga como
-        // "¿Olvidaste tu contraseña?" no cabian las dos en pantallas angostas.
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Flexible(
-              child: Text.rich(
-                overflow: TextOverflow.ellipsis,
-                TextSpan(
-                  text: widget.etiqueta,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colores.tinta,
-                  ),
-                  children: [
-                    if (widget.opcional)
-                      const TextSpan(
-                        text: '  (opcional)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w400,
-                          color: Colores.tintaTenue,
-                        ),
-                      ),
-                  ],
+    final campo = TextField(
+      controller: widget.controlador,
+      obscureText: _oculto,
+      enabled: widget.habilitado,
+      keyboardType: widget.tipoTeclado,
+      inputFormatters: widget.formateadores,
+      maxLength: widget.maxLargo,
+      textInputAction: widget.accionTeclado,
+      onSubmitted: (_) => widget.alEnviar?.call(),
+      style: const TextStyle(fontSize: 15, color: Colores.tinta),
+      decoration: InputDecoration(
+        // "(opcional)" viaja dentro de la etiqueta: en la muesca se lee como
+        // una sola frase y no necesita un hueco aparte.
+        label: Text.rich(
+          TextSpan(
+            text: widget.etiqueta,
+            children: [
+              if (widget.opcional)
+                const TextSpan(
+                  text: ' (opcional)',
+                  style: TextStyle(color: Colores.tintaTenue),
                 ),
-              ),
-            ),
-            if (widget.ayuda != null) ...[
-              const SizedBox(width: Dimen.espacio2),
-              Flexible(child: widget.ayuda!),
             ],
-          ],
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: widget.controlador,
-          obscureText: _oculto,
-          enabled: widget.habilitado,
-          keyboardType: widget.tipoTeclado,
-          inputFormatters: widget.formateadores,
-          maxLength: widget.maxLargo,
-          textInputAction: widget.accionTeclado,
-          onSubmitted: (_) => widget.alEnviar?.call(),
-          style: const TextStyle(fontSize: 15, color: Colores.tinta),
-          decoration: InputDecoration(
-            hintText: widget.pista,
-            errorText: widget.error,
-            counterText: '',
-            prefixIcon: widget.icono == null
-                ? null
-                : Icon(widget.icono, size: 19, color: Colores.tintaTenue),
-            suffixIcon: widget.esPassword
-                ? IconButton(
-                    onPressed: () => setState(() => _oculto = !_oculto),
-                    icon: Icon(
-                      _oculto
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      size: 20,
-                      color: Colores.tintaTenue,
-                    ),
-                    tooltip: _oculto
-                        ? 'Mostrar contraseña'
-                        : 'Ocultar contraseña',
-                  )
-                : null,
-            constraints: const BoxConstraints(minHeight: Dimen.campoLg),
           ),
         ),
+        hintText: widget.pista,
+        errorText: widget.error,
+        counterText: '',
+        prefixIcon: widget.icono == null
+            ? null
+            : Icon(widget.icono, size: 19, color: Colores.tintaTenue),
+        suffixIcon: widget.esPassword
+            ? IconButton(
+                onPressed: () => setState(() => _oculto = !_oculto),
+                icon: Icon(
+                  _oculto
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 20,
+                  color: Colores.tintaTenue,
+                ),
+                tooltip: _oculto ? 'Mostrar contraseña' : 'Ocultar contraseña',
+              )
+            : null,
+        constraints: const BoxConstraints(minHeight: Dimen.campoLg),
+      ),
+    );
+
+    if (widget.ayuda == null) return campo;
+
+    // La ayuda ("¿Olvidaste tu contraseña?") ya no cabe junto a la etiqueta:
+    // ahora va bajo el campo, alineada a la derecha.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        campo,
+        const SizedBox(height: Dimen.espacio1),
+        Align(alignment: Alignment.centerRight, child: widget.ayuda!),
       ],
     );
   }

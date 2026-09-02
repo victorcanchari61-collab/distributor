@@ -6,7 +6,6 @@ import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/cliente.dart';
 import '../estado/maestros_controlador.dart';
@@ -179,45 +178,33 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
             children: [
               SizedBox(
                 width: 132,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Tipo',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colores.tinta,
-                      ),
+                child: DropdownButtonFormField<String>(
+                  initialValue: _tipoDoc,
+                  // isExpanded: sin esto el texto no cede espacio y el
+                  // desplegable se desborda por unos pixeles.
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Tipo',
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: Dimen.espacio3,
+                      vertical: Dimen.espacio3,
                     ),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      initialValue: _tipoDoc,
-                      // isExpanded: sin esto el texto no cede espacio y el
-                      // desplegable se desborda por unos pixeles.
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: Dimen.espacio2,
-                        ),
+                  ),
+                  items: [
+                    for (final t in _tipos)
+                      DropdownMenuItem(
+                        value: t,
+                        child: Text(t == 'CODIGO' ? 'Código' : t),
                       ),
-                      items: [
-                        for (final t in _tipos)
-                          DropdownMenuItem(
-                            value: t,
-                            child: Text(t == 'CODIGO' ? 'Código' : t),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() {
-                        _tipoDoc = v ?? 'DNI';
-                        // Se recorta si el nuevo tipo admite menos digitos.
-                        final max = _largo.max;
-                        if (_documento.text.length > max) {
-                          _documento.text = _documento.text.substring(0, max);
-                        }
-                      }),
-                    ),
                   ],
+                  onChanged: (v) => setState(() {
+                    _tipoDoc = v ?? 'DNI';
+                    // Se recorta si el nuevo tipo admite menos digitos.
+                    final max = _largo.max;
+                    if (_documento.text.length > max) {
+                      _documento.text = _documento.text.substring(0, max);
+                    }
+                  }),
                 ),
               ),
               const SizedBox(width: Dimen.espacio3),
@@ -270,17 +257,9 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
           ),
           const SizedBox(height: Dimen.espacio4),
 
-          const Text(
-            'Día de visita',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colores.tinta,
-            ),
-          ),
-          const SizedBox(height: 6),
           DropdownButtonFormField<String?>(
             initialValue: _diaVisita,
+            decoration: const InputDecoration(labelText: 'Día de visita'),
             items: [
               const DropdownMenuItem(value: null, child: Text('Sin definir')),
               for (final d in _dias) DropdownMenuItem(value: d, child: Text(d)),
