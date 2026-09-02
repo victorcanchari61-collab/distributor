@@ -43,40 +43,78 @@ class MenuGrupo {
 
 /// Modulos de la app.
 ///
-/// Es el espejo de `navigation.ts` del panel web, con dos diferencias pensadas
-/// para el telefono:
+/// Espejo de `Frontend/src/components/layout/navigation.ts`: mismos modulos, en
+/// el mismo orden y con los mismos nombres, para que quien usa el panel web
+/// encuentre lo mismo en el telefono. Las unicas ausentes son las vistas
+/// marcadas como ocultas alla (series de comprobantes y parametros).
 ///
-///   - No se listan las vistas que solo tienen sentido en escritorio (importar
-///     archivos, matrices de permisos).
-///   - El orden pone primero lo que un vendedor usa en la calle.
+/// Si el menu del web cambia, este archivo se actualiza detras.
+///
+/// Todas las vistas estan marcadas como pendientes: en la app aun no hay
+/// ninguna pantalla construida, ni siquiera las que si existen en el web.
 const menuGrupos = <MenuGrupo>[
-  MenuGrupo(
-    id: 'dms',
-    titulo: 'Mi ruta',
-    icono: Icons.storefront_outlined,
-    items: [
-      MenuItem(id: 'dms.visitas', titulo: 'Visitas', icono: Icons.pin_drop_outlined),
-      MenuItem(id: 'dms.cobranzas', titulo: 'Cobranzas', icono: Icons.payments_outlined),
-      MenuItem(id: 'dms.devoluciones', titulo: 'Devoluciones', icono: Icons.undo),
-    ],
-  ),
-  MenuGrupo(
-    id: 'fact',
-    titulo: 'Ventas',
-    icono: Icons.receipt_long_outlined,
-    items: [
-      MenuItem(id: 'fact.pedidos', titulo: 'Pedidos', icono: Icons.list_alt_outlined),
-      MenuItem(id: 'fact.notaventa', titulo: 'Notas de venta', icono: Icons.description_outlined),
-    ],
-  ),
   MenuGrupo(
     id: 'maestros',
     titulo: 'Maestros',
     icono: Icons.grid_view_outlined,
     items: [
-      MenuItem(id: 'maestros.clientes', titulo: 'Clientes', icono: Icons.contacts_outlined),
-      MenuItem(id: 'maestros.proveedores', titulo: 'Proveedores', icono: Icons.business_outlined),
-      MenuItem(id: 'maestros.productos', titulo: 'Productos', icono: Icons.inventory_2_outlined),
+      MenuItem(
+        id: 'maestros.clientes',
+        titulo: 'Clientes',
+        icono: Icons.contacts_outlined,
+      ),
+      MenuItem(
+        id: 'maestros.proveedores',
+        titulo: 'Proveedores',
+        icono: Icons.business_outlined,
+      ),
+      MenuItem(
+        id: 'maestros.productos',
+        titulo: 'Productos',
+        icono: Icons.inventory_2_outlined,
+      ),
+      MenuItem(
+        id: 'maestros.categorias',
+        titulo: 'Categorías y marcas',
+        icono: Icons.sell_outlined,
+      ),
+      MenuItem(
+        id: 'maestros.almacenes',
+        titulo: 'Almacenes',
+        icono: Icons.warehouse_outlined,
+      ),
+      MenuItem(
+        id: 'maestros.unidades',
+        titulo: 'Unidades de medida',
+        icono: Icons.straighten_outlined,
+      ),
+      MenuItem(
+        id: 'maestros.precios',
+        titulo: 'Listas de precios',
+        icono: Icons.payments_outlined,
+      ),
+    ],
+  ),
+  MenuGrupo(
+    id: 'compras',
+    titulo: 'Compras',
+    icono: Icons.shopping_cart_outlined,
+    items: [
+      MenuItem(
+        id: 'compras.ordenes',
+        titulo: 'Órdenes de compra',
+        icono: Icons.list_alt_outlined,
+      ),
+      MenuItem(
+        id: 'compras.compras',
+        titulo: 'Mis compras',
+        icono: Icons.shopping_bag_outlined,
+      ),
+      MenuItem(
+        id: 'compras.recepciones',
+        titulo: 'Recepciones',
+        icono: Icons.check_box_outlined,
+      ),
     ],
   ),
   MenuGrupo(
@@ -84,8 +122,48 @@ const menuGrupos = <MenuGrupo>[
     titulo: 'Inventario',
     icono: Icons.inventory_outlined,
     items: [
-      MenuItem(id: 'inv.stock', titulo: 'Stock por almacén', icono: Icons.warehouse_outlined),
-      MenuItem(id: 'inv.movimientos', titulo: 'Movimientos', icono: Icons.swap_horiz),
+      MenuItem(
+        id: 'inv.stock',
+        titulo: 'Stock por almacén',
+        icono: Icons.warehouse_outlined,
+      ),
+      MenuItem(
+        id: 'inv.movimientos',
+        titulo: 'Movimientos',
+        icono: Icons.add_box_outlined,
+      ),
+      MenuItem(
+        id: 'inv.transferencias',
+        titulo: 'Transferencias',
+        icono: Icons.local_shipping_outlined,
+      ),
+      MenuItem(
+        id: 'inv.conteos',
+        titulo: 'Conteos cíclicos',
+        icono: Icons.fact_check_outlined,
+      ),
+      MenuItem(
+        id: 'inv.lotes',
+        titulo: 'Lotes y vencimientos',
+        icono: Icons.event_outlined,
+      ),
+    ],
+  ),
+  MenuGrupo(
+    id: 'fact',
+    titulo: 'Facturación',
+    icono: Icons.receipt_long_outlined,
+    items: [
+      MenuItem(
+        id: 'fact.pedidos',
+        titulo: 'Pedidos',
+        icono: Icons.list_alt_outlined,
+      ),
+      MenuItem(
+        id: 'fact.notaventa',
+        titulo: 'Notas de venta',
+        icono: Icons.description_outlined,
+      ),
     ],
   ),
   MenuGrupo(
@@ -93,8 +171,26 @@ const menuGrupos = <MenuGrupo>[
     titulo: 'Finanzas',
     icono: Icons.account_balance_outlined,
     items: [
-      MenuItem(id: 'finanzas.miscobros', titulo: 'Mis cobros', icono: Icons.savings_outlined),
-      MenuItem(id: 'finanzas.arqueo', titulo: 'Arqueo diario', icono: Icons.calculate_outlined),
+      MenuItem(
+        id: 'finanzas.cobrar',
+        titulo: 'Cuentas por cobrar',
+        icono: Icons.account_balance_wallet_outlined,
+      ),
+      MenuItem(
+        id: 'finanzas.pagar',
+        titulo: 'Cuentas por pagar',
+        icono: Icons.credit_card_outlined,
+      ),
+      MenuItem(
+        id: 'finanzas.miscobros',
+        titulo: 'Mis cobros',
+        icono: Icons.savings_outlined,
+      ),
+      MenuItem(
+        id: 'finanzas.arqueo',
+        titulo: 'Arqueo diario',
+        icono: Icons.calculate_outlined,
+      ),
     ],
   ),
   MenuGrupo(
@@ -103,7 +199,112 @@ const menuGrupos = <MenuGrupo>[
     icono: Icons.local_shipping_outlined,
     items: [
       MenuItem(id: 'tms.rutas', titulo: 'Rutas', icono: Icons.route_outlined),
-      MenuItem(id: 'tms.tracking', titulo: 'Tracking', icono: Icons.my_location_outlined),
+      MenuItem(
+        id: 'tms.flota',
+        titulo: 'Flota',
+        icono: Icons.local_shipping_outlined,
+      ),
+      MenuItem(
+        id: 'tms.conductores',
+        titulo: 'Conductores',
+        icono: Icons.badge_outlined,
+      ),
+      MenuItem(
+        id: 'tms.tracking',
+        titulo: 'Tracking',
+        icono: Icons.my_location_outlined,
+      ),
+      MenuItem(
+        id: 'tms.liquidacion',
+        titulo: 'Liquidación de reparto',
+        icono: Icons.payments_outlined,
+      ),
+    ],
+  ),
+  MenuGrupo(
+    id: 'dms',
+    titulo: 'DMS',
+    icono: Icons.storefront_outlined,
+    items: [
+      MenuItem(
+        id: 'dms.visitas',
+        titulo: 'Visitas',
+        icono: Icons.storefront_outlined,
+      ),
+      MenuItem(
+        id: 'dms.cobranzas',
+        titulo: 'Cobranzas',
+        icono: Icons.account_balance_wallet_outlined,
+      ),
+      MenuItem(
+        id: 'dms.devoluciones',
+        titulo: 'Devoluciones',
+        icono: Icons.undo,
+      ),
+      MenuItem(
+        id: 'dms.evidencias',
+        titulo: 'Evidencias',
+        icono: Icons.fact_check_outlined,
+      ),
+    ],
+  ),
+  MenuGrupo(
+    id: 'rrhh',
+    titulo: 'RR. HH.',
+    icono: Icons.people_outline,
+    items: [
+      MenuItem(
+        id: 'rrhh.empleados',
+        titulo: 'Empleados',
+        icono: Icons.people_outline,
+      ),
+      MenuItem(
+        id: 'rrhh.asistencia',
+        titulo: 'Asistencia',
+        icono: Icons.event_available_outlined,
+      ),
+      MenuItem(
+        id: 'rrhh.vacaciones',
+        titulo: 'Vacaciones',
+        icono: Icons.event_outlined,
+      ),
+      MenuItem(
+        id: 'rrhh.nomina',
+        titulo: 'Nómina',
+        icono: Icons.payments_outlined,
+      ),
+      MenuItem(
+        id: 'rrhh.desempeno',
+        titulo: 'Desempeño',
+        icono: Icons.speed_outlined,
+      ),
+    ],
+  ),
+  MenuGrupo(
+    id: 'config',
+    titulo: 'Configuración',
+    icono: Icons.settings_outlined,
+    items: [
+      MenuItem(
+        id: 'config.usuarios',
+        titulo: 'Usuarios',
+        icono: Icons.manage_accounts_outlined,
+      ),
+      MenuItem(
+        id: 'config.roles',
+        titulo: 'Roles',
+        icono: Icons.badge_outlined,
+      ),
+      MenuItem(
+        id: 'config.accesos',
+        titulo: 'Accesos',
+        icono: Icons.verified_user_outlined,
+      ),
+      MenuItem(
+        id: 'config.empresa',
+        titulo: 'Empresa',
+        icono: Icons.business_outlined,
+      ),
     ],
   ),
 ];

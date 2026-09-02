@@ -78,19 +78,19 @@ void main() {
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
 
-    // "Mi ruta" viene desplegado: es el primero y el que mas se usa.
-    expect(find.text('Visitas'), findsOneWidget);
+    // El primer modulo viene desplegado.
+    expect(find.text('Clientes'), findsOneWidget);
 
     // El titulo del modulo esta dos veces en pantalla (tarjeta del inicio y
     // menu), asi que se busca dentro del propio menu.
     final enMenu = find.descendant(
       of: find.byType(Drawer),
-      matching: find.text('Ventas'),
+      matching: find.text('Finanzas'),
     );
 
     await tester.tap(enMenu);
     await tester.pumpAndSettle();
 
-    expect(find.text('Pedidos'), findsOneWidget);
+    expect(find.text('Arqueo diario'), findsOneWidget);
   });
 }
