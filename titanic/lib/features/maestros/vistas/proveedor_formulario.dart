@@ -5,12 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/proveedor.dart';
 import '../estado/maestros_controlador.dart';
-
-const _tipos = ['RUC', 'DNI', 'CODIGO'];
 
 /// Alta y edicion de un proveedor.
 class ProveedorFormulario extends ConsumerStatefulWidget {
@@ -171,26 +170,16 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
             children: [
               SizedBox(
                 width: 132,
-                child: DropdownButtonFormField<String>(
-                  initialValue: _tipoDoc,
-                  // isExpanded: sin esto el texto no cede espacio y el
-                  // desplegable se desborda por unos pixeles.
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Tipo',
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: Dimen.espacio3,
-                      vertical: Dimen.espacio3,
-                    ),
-                  ),
-                  items: [
-                    for (final t in _tipos)
-                      DropdownMenuItem(
-                        value: t,
-                        child: Text(t == 'CODIGO' ? 'Código' : t),
-                      ),
+                child: AppSelector<String>(
+                  valor: _tipoDoc,
+                  etiqueta: 'Tipo',
+                  habilitado: !_guardando,
+                  opciones: const [
+                    Opcion('RUC', 'RUC', icono: Icons.apartment_outlined),
+                    Opcion('DNI', 'DNI', icono: Icons.badge_outlined),
+                    Opcion('CODIGO', 'Código', icono: Icons.tag),
                   ],
-                  onChanged: (v) => setState(() {
+                  onCambio: (v) => setState(() {
                     _tipoDoc = v ?? 'RUC';
                     // Se recorta si el nuevo tipo admite menos digitos.
                     final max = _largo.max;
@@ -205,6 +194,7 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
                 child: AppCampo(
                   controlador: _documento,
                   etiqueta: 'Documento',
+                  icono: Icons.badge_outlined,
                   tipoTeclado: TextInputType.number,
                   formateadores: [FilteringTextInputFormatter.digitsOnly],
                   maxLargo: _largo.max,
@@ -219,6 +209,7 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
           AppCampo(
             controlador: _nombre,
             etiqueta: 'Razón social',
+            icono: Icons.apartment_outlined,
             error: _errorNombre,
             habilitado: !_guardando,
           ),
@@ -227,6 +218,7 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
           AppCampo(
             controlador: _comercial,
             etiqueta: 'Nombre comercial',
+            icono: Icons.storefront_outlined,
             opcional: true,
             habilitado: !_guardando,
           ),
@@ -235,6 +227,7 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
           AppCampo(
             controlador: _rubro,
             etiqueta: 'Rubro',
+            icono: Icons.category_outlined,
             pista: 'Ej. Fideos y harinas',
             opcional: true,
             habilitado: !_guardando,
@@ -244,6 +237,7 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
           AppCampo(
             controlador: _direccion,
             etiqueta: 'Dirección',
+            icono: Icons.place_outlined,
             opcional: true,
             habilitado: !_guardando,
           ),
@@ -255,6 +249,7 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
                 child: AppCampo(
                   controlador: _distrito,
                   etiqueta: 'Distrito',
+                  icono: Icons.map_outlined,
                   opcional: true,
                   habilitado: !_guardando,
                 ),
@@ -264,6 +259,7 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
                 child: AppCampo(
                   controlador: _telefono,
                   etiqueta: 'Teléfono',
+                  icono: Icons.phone_outlined,
                   opcional: true,
                   tipoTeclado: TextInputType.phone,
                   habilitado: !_guardando,

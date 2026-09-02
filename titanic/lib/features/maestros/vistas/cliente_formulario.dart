@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/cliente.dart';
@@ -19,7 +20,6 @@ const _dias = [
   'SABADO',
   'DOMINGO',
 ];
-const _tipos = ['DNI', 'RUC', 'CODIGO'];
 
 /// Alta y edicion de un cliente.
 class ClienteFormulario extends ConsumerStatefulWidget {
@@ -178,26 +178,16 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
             children: [
               SizedBox(
                 width: 132,
-                child: DropdownButtonFormField<String>(
-                  initialValue: _tipoDoc,
-                  // isExpanded: sin esto el texto no cede espacio y el
-                  // desplegable se desborda por unos pixeles.
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Tipo',
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: Dimen.espacio3,
-                      vertical: Dimen.espacio3,
-                    ),
-                  ),
-                  items: [
-                    for (final t in _tipos)
-                      DropdownMenuItem(
-                        value: t,
-                        child: Text(t == 'CODIGO' ? 'Código' : t),
-                      ),
+                child: AppSelector<String>(
+                  valor: _tipoDoc,
+                  etiqueta: 'Tipo',
+                  habilitado: !_guardando,
+                  opciones: const [
+                    Opcion('DNI', 'DNI', icono: Icons.badge_outlined),
+                    Opcion('RUC', 'RUC', icono: Icons.apartment_outlined),
+                    Opcion('CODIGO', 'Código', icono: Icons.tag),
                   ],
-                  onChanged: (v) => setState(() {
+                  onCambio: (v) => setState(() {
                     _tipoDoc = v ?? 'DNI';
                     // Se recorta si el nuevo tipo admite menos digitos.
                     final max = _largo.max;
@@ -212,6 +202,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
                 child: AppCampo(
                   controlador: _documento,
                   etiqueta: 'Documento',
+                  icono: Icons.badge_outlined,
                   tipoTeclado: TextInputType.number,
                   formateadores: [FilteringTextInputFormatter.digitsOnly],
                   maxLargo: _largo.max,
@@ -226,6 +217,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
           AppCampo(
             controlador: _nombre,
             etiqueta: 'Nombre',
+            icono: Icons.person_outline,
             pista: 'Nombre del cliente o del puesto',
             error: _errorNombre,
             habilitado: !_guardando,
@@ -235,6 +227,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
           AppCampo(
             controlador: _direccion,
             etiqueta: 'Dirección',
+            icono: Icons.place_outlined,
             opcional: true,
             habilitado: !_guardando,
           ),
@@ -243,6 +236,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
           AppCampo(
             controlador: _distrito,
             etiqueta: 'Distrito',
+            icono: Icons.map_outlined,
             opcional: true,
             habilitado: !_guardando,
           ),
@@ -251,22 +245,23 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
           AppCampo(
             controlador: _telefono,
             etiqueta: 'Teléfono',
+            icono: Icons.phone_outlined,
             opcional: true,
             tipoTeclado: TextInputType.phone,
             habilitado: !_guardando,
           ),
           const SizedBox(height: Dimen.espacio4),
 
-          DropdownButtonFormField<String?>(
-            initialValue: _diaVisita,
-            decoration: const InputDecoration(labelText: 'Día de visita'),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('Sin definir')),
-              for (final d in _dias) DropdownMenuItem(value: d, child: Text(d)),
+          AppSelector<String?>(
+            valor: _diaVisita,
+            etiqueta: 'Día de visita',
+            icono: Icons.event_outlined,
+            habilitado: !_guardando,
+            opciones: [
+              const Opcion<String?>(null, 'Sin definir'),
+              for (final d in _dias) Opcion(d, d),
             ],
-            onChanged: _guardando
-                ? null
-                : (v) => setState(() => _diaVisita = v),
+            onCambio: (v) => setState(() => _diaVisita = v),
           ),
           const SizedBox(height: Dimen.espacio4),
 
@@ -276,6 +271,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
                 child: AppCampo(
                   controlador: _ruta,
                   etiqueta: 'Ruta',
+                  icono: Icons.route_outlined,
                   opcional: true,
                   habilitado: !_guardando,
                 ),
@@ -285,6 +281,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
                 child: AppCampo(
                   controlador: _mercado,
                   etiqueta: 'Mercado',
+                  icono: Icons.storefront_outlined,
                   opcional: true,
                   habilitado: !_guardando,
                 ),
