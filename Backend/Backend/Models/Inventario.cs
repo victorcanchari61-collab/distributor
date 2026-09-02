@@ -1,0 +1,265 @@
+namespace Backend.Models;
+
+/// <summary>
+/// Donde se guarda la mercaderia. El sistema arranca con uno principal: quien
+/// tenga un solo deposito nunca lo elige, y quien abra otro no tiene que
+/// rehacer nada porque el stock ya se lleva por almacen.
+/// </summary>
+public class Almacen
+{
+    public int Id { get; set; }
+    public string Codigo { get; set; } = string.Empty;
+    public string Nombre { get; set; } = string.Empty;
+    public string? Direccion { get; set; }
+
+    /// <summary>El que se usa cuando no se indica otro.</summary>
+    public bool EsPrincipal { get; set; }
+
+    public bool Activo { get; set; } = true;
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Si el motivo suma o resta stock.</summary>
+public static class TipoMovimiento
+{
+    public const string Entrada = "ENTRADA";
+    public const string Salida = "SALIDA";
+
+    public static readonly string[] Todos = [Entrada, Salida];
+}
+
+/// <summary>Ids sembrados de los motivos del sistema.</summary>
+public static class Motivos
+{
+    public const int CargaInicial = 1;
+    public const int Compra = 2;
+    public const int Venta = 3;
+    public const int VentaAnulada = 4;
+    public const int CompraAnulada = 5;
+    public const int DevolucionProveedor = 6;
+    public const int TransferenciaSalida = 7;
+    public const int TransferenciaIngreso = 8;
+    public const int SobranteConteo = 9;
+    public const int FaltanteConteo = 10;
+    public const int Merma = 11;
+    public const int Rotura = 12;
+    public const int Vencimiento = 13;
+}
+
+/// <summary>
+/// Por que se movio el stock.
+///
+/// Hay dos clases y la diferencia es quien crea el movimiento:
+///
+///   - Del sistema: los crea un documento (una venta, una compra, una
+///     anulacion). NO se ofrecen al hacer un ajuste a mano: si alguien pudiera
+///     elegir "Venta" sin que exista la venta, el inventario quedaria
+///     descuadrado y sin explicacion. Tampoco se editan ni se eliminan, porque
+///     hay movimientos historicos apuntando a ellos.
+///
+///   - Manuales: los unicos elegibles en un ajuste. El usuario puede crear los
+///     suyos (prestamo a otra bodega, consumo interno) diciendo si suman o
+///     restan.
+/// </summary>
+public class MotivoMovimiento
+{
+    public int Id { get; set; }
+    public string Codigo { get; set; } = string.Empty;
+    public string Nombre { get; set; } = string.Empty;
+
+    /// <summary>ENTRADA o SALIDA. Ver <see cref="TipoMovimiento"/>.</summary>
+    public string Tipo { get; set; } = TipoMovimiento.Entrada;
+
+    /// <summary>Lo crea un documento; no se elige a mano, ni se borra.</summary>
+    public bool DelSistema { get; set; }
+
+    /// <summary>
+    /// Si hay que declarar cuanto costo. Las entradas lo piden; las salidas
+    /// NO, porque el costo ya venia con la mercaderia que sale.
+    /// </summary>
+    public bool PideCosto { get; set; }
+
+    public bool Activo { get; set; } = true;
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Estado de un documento de inventario.</summary>
+public static class EstadoDocumento
+{
+    public const string Confirmado = "CONFIRMADO";
+    public const string Anulado = "ANULADO";
+}
+
+/// <summary>Que clase de documento movio el stock.</summary>
+public static class TipoDocumentoInventario
+{
+    public const string Ajuste = "AJUSTE";
+    public const string Anulacion = "ANULACION";
+}
+
+/// <summary>
+/// El papel que respalda un movimiento: numero, fecha, almacen, motivo y quien
+/// lo hizo.
+///
+/// Un documento confirmado NO se edita: se anula con otro documento que crea
+/// los movimientos espejo. Editarlo dejaria el stock de hoy sin explicacion en
+/// el historial.
+/// </summary>
+public class DocumentoInventario
+{
+    public int Id { get; set; }
+
+    /// <summary>Correlativo visible: AJ-000001.</summary>
+    public string Numero { get; set; } = string.Empty;
+
+    /// <summary>AJUSTE o ANULACION.</summary>
+    public string Tipo { get; set; } = TipoDocumentoInventario.Ajuste;
+
+    public int AlmacenId { get; set; }
+    public Almacen? Almacen { get; set; }
+
+    public int MotivoId { get; set; }
+    public MotivoMovimiento? Motivo { get; set; }
+
+    public DateTime Fecha { get; set; } = DateTime.UtcNow;
+    public string Estado { get; set; } = EstadoDocumento.Confirmado;
+    public string? Observacion { get; set; }
+
+    /// <summary>Quien lo registro.</summary>
+    public int? UsuarioId { get; set; }
+    public Usuario? Usuario { get; set; }
+
+    /// <summary>Si este documento anula a otro, cual.</summary>
+    public int? DocumentoAnuladoId { get; set; }
+    public DocumentoInventario? DocumentoAnulado { get; set; }
+
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+    public List<MovimientoInventario> Movimientos { get; set; } = [];
+}
+
+/// <summary>
+/// Una linea de stock que se movio. Es el kardex.
+///
+/// La cantidad se guarda SIEMPRE en unidad base, pero tambien se conserva en
+/// que presentacion se hizo la operacion, para que el papel siga diciendo
+/// "2 sacos" aunque el stock hable en kilos.
+/// </summary>
+public class MovimientoInventario
+{
+    public int Id { get; set; }
+
+    public int DocumentoId { get; set; }
+    public DocumentoInventario? Documento { get; set; }
+
+    public int ProductoId { get; set; }
+    public Producto? Producto { get; set; }
+
+    public int AlmacenId { get; set; }
+    public Almacen? Almacen { get; set; }
+
+    public int MotivoId { get; set; }
+    public MotivoMovimiento? Motivo { get; set; }
+
+    /// <summary>ENTRADA o SALIDA, copiado del motivo al momento del movimiento.</summary>
+    public string Tipo { get; set; } = TipoMovimiento.Entrada;
+
+    /// <summary>En que presentacion se hizo: el saco, la caja.</summary>
+    public int? PresentacionId { get; set; }
+    public ProductoPresentacion? Presentacion { get; set; }
+
+    /// <summary>Cuantas presentaciones, tal como se escribio.</summary>
+    public decimal CantidadPresentacion { get; set; }
+
+    /// <summary>La misma cantidad convertida a unidad base. Siempre positiva.</summary>
+    public decimal Cantidad { get; set; }
+
+    /// <summary>Costo por unidad base: declarado si entra, heredado si sale.</summary>
+    public decimal CostoUnitario { get; set; }
+
+    /// <summary>Cantidad x costo.</summary>
+    public decimal CostoTotal { get; set; }
+
+    public DateTime Fecha { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Movimiento que este revierte, cuando es una anulacion.</summary>
+    public int? MovimientoOrigenId { get; set; }
+
+    public List<ConsumoCapa> Consumos { get; set; } = [];
+}
+
+/// <summary>De donde salio la mercaderia de una capa.</summary>
+public static class OrigenCapa
+{
+    public const string CargaInicial = "CARGA_INICIAL";
+    public const string Compra = "COMPRA";
+    public const string Ajuste = "AJUSTE";
+    public const string Devolucion = "DEVOLUCION";
+}
+
+/// <summary>
+/// Una entrada de mercaderia con SU costo.
+///
+/// El costo no es un dato del producto: es un dato de cada entrada. Si el saco
+/// costo 170 en setiembre y 180 en octubre, y todavia queda del primero, los
+/// dos costos conviven.
+///
+///   Capa 1   50 kg   quedan 50   S/ 3.40 el kg
+///   Capa 2   50 kg   quedan 50   S/ 3.60 el kg
+///
+/// Vender 60 kg consume los 50 de la capa 1 y 10 de la capa 2: costo 206. Se
+/// gasta primero la mas antigua (PEPS), que es como sale del almacen.
+/// </summary>
+public class CapaCosto
+{
+    public int Id { get; set; }
+
+    public int ProductoId { get; set; }
+    public Producto? Producto { get; set; }
+
+    public int AlmacenId { get; set; }
+    public Almacen? Almacen { get; set; }
+
+    /// <summary>Movimiento de entrada que la creo.</summary>
+    public int MovimientoId { get; set; }
+    public MovimientoInventario? Movimiento { get; set; }
+
+    /// <summary>Cuanto entro, en unidad base.</summary>
+    public decimal CantidadInicial { get; set; }
+
+    /// <summary>Cuanto queda. Cero = capa agotada.</summary>
+    public decimal CantidadDisponible { get; set; }
+
+    /// <summary>Costo por unidad base, flete incluido.</summary>
+    public decimal CostoUnitario { get; set; }
+
+    public string Origen { get; set; } = OrigenCapa.Compra;
+
+    /// <summary>Ordena el consumo: primero se gasta la mas antigua.</summary>
+    public DateTime Fecha { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Que capa alimento que salida, y cuanto.
+///
+/// Es la tabla que casi siempre falta y la que hace que anular funcione: sin
+/// ella no se sabe a que costo devolver la mercaderia. Si vendiste con costo
+/// 3.40 y hoy el stock esta a 3.60, la anulacion tiene que reponer a 3.40; si
+/// repone a 3.60 se inventa utilidad de la nada.
+/// </summary>
+public class ConsumoCapa
+{
+    public int Id { get; set; }
+
+    public int MovimientoId { get; set; }
+    public MovimientoInventario? Movimiento { get; set; }
+
+    public int CapaId { get; set; }
+    public CapaCosto? Capa { get; set; }
+
+    /// <summary>Cuanto se tomo de esa capa, en unidad base.</summary>
+    public decimal Cantidad { get; set; }
+
+    /// <summary>Costo de la capa en ese momento.</summary>
+    public decimal CostoUnitario { get; set; }
+}

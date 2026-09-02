@@ -1,0 +1,198 @@
+import { api } from '../../lib/apiClient'
+
+// --- Almacenes ---
+
+export interface AlmacenResponse {
+  id: number
+  codigo: string
+  nombre: string
+  direccion: string | null
+  esPrincipal: boolean
+  activo: boolean
+  productos: number
+  valorizado: number
+}
+
+export interface AlmacenRequest {
+  codigo: string
+  nombre: string
+  direccion?: string | null
+}
+
+export const almacenApi = {
+  getAll: () => api.get<AlmacenResponse[]>('/almacen'),
+  create: (body: AlmacenRequest) => api.post<AlmacenResponse>('/almacen', body),
+  update: (id: number, body: AlmacenRequest & { activo: boolean }) =>
+    api.put<AlmacenResponse>(`/almacen/${id}`, body),
+  remove: (id: number) => api.del<void>(`/almacen/${id}`),
+}
+
+// --- Motivos ---
+
+export type TipoMovimiento = 'ENTRADA' | 'SALIDA'
+
+export interface MotivoResponse {
+  id: number
+  codigo: string
+  nombre: string
+  tipo: TipoMovimiento
+  /** Lo genera un documento del sistema: no se ofrece en un ajuste. */
+  delSistema: boolean
+  /** Si al usarlo hay que declarar el costo. */
+  pideCosto: boolean
+  activo: boolean
+  movimientos: number
+}
+
+export interface MotivoRequest {
+  codigo: string
+  nombre: string
+  tipo: TipoMovimiento
+}
+
+export const motivoApi = {
+  getAll: () => api.get<MotivoResponse[]>('/motivo'),
+  create: (body: MotivoRequest) => api.post<MotivoResponse>('/motivo', body),
+  update: (id: number, body: MotivoRequest & { activo: boolean }) =>
+    api.put<MotivoResponse>(`/motivo/${id}`, body),
+  remove: (id: number) => api.del<void>(`/motivo/${id}`),
+}
+
+// --- Stock ---
+
+export interface StockResponse {
+  productoId: number
+  codigo: string
+  producto: string
+  categoria: string | null
+  marca: string | null
+  unidadBase: string
+  almacenId: number
+  almacen: string
+  stock: number
+  stockMinimo: number
+  bajoMinimo: boolean
+  costoActual: number | null
+  costoUltimo: number | null
+  valorizado: number
+  capas: CapaResponse[]
+}
+
+export interface CapaResponse {
+  id: number
+  cantidadInicial: number
+  cantidadDisponible: number
+  costoUnitario: number
+  valor: number
+  origen: string
+  fecha: string
+}
+
+export const stockApi = {
+  getAll: (almacenId?: number) =>
+    api.get<StockResponse[]>(`/inventario/stock${almacenId ? `?almacenId=${almacenId}` : ''}`),
+  getProducto: (productoId: number, almacenId?: number) =>
+    api.get<StockResponse>(
+      `/inventario/stock/${productoId}${almacenId ? `?almacenId=${almacenId}` : ''}`,
+    ),
+}
+
+// --- Kardex ---
+
+export interface KardexResponse {
+  id: number
+  fecha: string
+  documento: string
+  motivo: string
+  tipo: TipoMovimiento
+  productoId: number
+  producto: string
+  unidadBase: string
+  almacen: string
+  presentacion: string | null
+  cantidadPresentacion: number
+  cantidad: number
+  costoUnitario: number
+  costoTotal: number
+  saldo: number
+  anulado: boolean
+}
+
+export const kardexApi = {
+  getAll: (filtros: {
+    productoId?: number
+    almacenId?: number
+    desde?: string
+    hasta?: string
+  }) => {
+    const q = new URLSearchParams()
+    if (filtros.productoId) q.set('productoId', String(filtros.productoId))
+    if (filtros.almacenId) q.set('almacenId', String(filtros.almacenId))
+    if (filtros.desde) q.set('desde', filtros.desde)
+    if (filtros.hasta) q.set('hasta', filtros.hasta)
+    const qs = q.toString()
+    return api.get<KardexResponse[]>(`/inventario/kardex${qs ? `?${qs}` : ''}`)
+  },
+}
+
+// --- Ajustes ---
+
+export interface LineaAjusteRequest {
+  productoId: number
+  presentacionId?: number | null
+  cantidad: number
+  /** Solo en motivos de entrada: lo que costó una presentación completa. */
+  costoPresentacion?: number | null
+}
+
+export interface CrearAjusteRequest {
+  almacenId: number
+  motivoId: number
+  fecha?: string | null
+  observacion?: string | null
+  flete: number
+  detalle: LineaAjusteRequest[]
+}
+
+export interface LineaDocumentoResponse {
+  id: number
+  productoId: number
+  codigo: string
+  producto: string
+  unidadBase: string
+  presentacionId: number | null
+  presentacion: string | null
+  cantidadPresentacion: number
+  cantidad: number
+  costoUnitario: number
+  costoTotal: number
+}
+
+export interface DocumentoInventarioResponse {
+  id: number
+  numero: string
+  tipo: string
+  fecha: string
+  almacenId: number
+  almacen: string
+  motivoId: number
+  motivo: string
+  motivoTipo: TipoMovimiento
+  estado: 'CONFIRMADO' | 'ANULADO'
+  observacion: string | null
+  usuario: string | null
+  anuladoPor: string | null
+  total: number
+  lineas: number
+  detalle: LineaDocumentoResponse[]
+}
+
+export const ajusteApi = {
+  getAll: () => api.get<DocumentoInventarioResponse[]>('/inventario/ajustes'),
+  getById: (id: number) => api.get<DocumentoInventarioResponse>(`/inventario/ajustes/${id}`),
+  create: (body: CrearAjusteRequest) =>
+    api.post<DocumentoInventarioResponse>('/inventario/ajustes', body),
+  /** PATCH /api/inventario/ajustes/{id}/anular — crea el documento espejo, no borra. */
+  anular: (id: number) =>
+    api.patch<DocumentoInventarioResponse>(`/inventario/ajustes/${id}/anular`),
+}

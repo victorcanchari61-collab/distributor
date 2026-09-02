@@ -22,12 +22,19 @@ public class AppDbContext : DbContext
     public DbSet<ProductoPresentacion> Presentaciones => Set<ProductoPresentacion>();
     public DbSet<ListaPrecio> ListasPrecio => Set<ListaPrecio>();
     public DbSet<PrecioProducto> Precios => Set<PrecioProducto>();
+    public DbSet<Almacen> Almacenes => Set<Almacen>();
+    public DbSet<MotivoMovimiento> MotivosMovimiento => Set<MotivoMovimiento>();
+    public DbSet<DocumentoInventario> DocumentosInventario => Set<DocumentoInventario>();
+    public DbSet<MovimientoInventario> Movimientos => Set<MovimientoInventario>();
+    public DbSet<CapaCosto> CapasCosto => Set<CapaCosto>();
+    public DbSet<ConsumoCapa> Consumos => Set<ConsumoCapa>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         ConfigurarCatalogo(modelBuilder);
+        ConfigurarInventario(modelBuilder);
 
         modelBuilder.Entity<Rol>(entity =>
         {
@@ -309,5 +316,154 @@ public class AppDbContext : DbContext
             Activo = true,
             DelSistema = true,
             FechaCreacion = creacion
+        };
+
+    /// <summary>
+    /// Inventario: almacenes, motivos, documentos, movimientos y capas.
+    ///
+    /// Los motivos del sistema van sembrados con ids fijos: los usa cada
+    /// documento que mueve stock, asi que no se crean ni se borran desde la
+    /// pantalla.
+    /// </summary>
+    private static void ConfigurarInventario(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Almacen>(entity =>
+        {
+            entity.ToTable("Almacenes");
+            entity.HasIndex(a => a.Codigo).IsUnique();
+            entity.Property(a => a.Codigo).HasMaxLength(15).IsRequired();
+            entity.Property(a => a.Nombre).HasMaxLength(80).IsRequired();
+            entity.Property(a => a.Direccion).HasMaxLength(250);
+
+            entity.HasData(new Almacen
+            {
+                Id = 1,
+                Codigo = "PRIN",
+                Nombre = "Almacén principal",
+                EsPrincipal = true,
+                Activo = true,
+                FechaCreacion = Semilla
+            });
+        });
+
+        modelBuilder.Entity<MotivoMovimiento>(entity =>
+        {
+            entity.ToTable("MotivosMovimiento");
+            entity.HasIndex(m => m.Codigo).IsUnique();
+            entity.Property(m => m.Codigo).HasMaxLength(20).IsRequired();
+            entity.Property(m => m.Nombre).HasMaxLength(80).IsRequired();
+            entity.Property(m => m.Tipo).HasMaxLength(10).IsRequired();
+
+            entity.HasData(
+                // Manuales: los unicos elegibles en un ajuste.
+                Motivo(Motivos.CargaInicial, "CARGA_INICIAL", "Carga inicial", TipoMovimiento.Entrada, sistema: false),
+                Motivo(Motivos.SobranteConteo, "SOBRANTE", "Sobrante de conteo", TipoMovimiento.Entrada, sistema: false),
+                Motivo(Motivos.FaltanteConteo, "FALTANTE", "Faltante de conteo", TipoMovimiento.Salida, sistema: false),
+                Motivo(Motivos.Merma, "MERMA", "Merma", TipoMovimiento.Salida, sistema: false),
+                Motivo(Motivos.Rotura, "ROTURA", "Rotura", TipoMovimiento.Salida, sistema: false),
+                Motivo(Motivos.Vencimiento, "VENCIMIENTO", "Vencimiento", TipoMovimiento.Salida, sistema: false),
+
+                // Del sistema: los crea un documento, no se eligen a mano.
+                Motivo(Motivos.Compra, "COMPRA", "Recepción de compra", TipoMovimiento.Entrada, sistema: true),
+                Motivo(Motivos.CompraAnulada, "COMPRA_ANULADA", "Compra anulada", TipoMovimiento.Salida, sistema: true),
+                Motivo(Motivos.Venta, "VENTA", "Venta", TipoMovimiento.Salida, sistema: true),
+                Motivo(Motivos.VentaAnulada, "VENTA_ANULADA", "Venta anulada", TipoMovimiento.Entrada, sistema: true),
+                Motivo(Motivos.DevolucionProveedor, "DEV_PROVEEDOR", "Devolución a proveedor", TipoMovimiento.Salida, sistema: true),
+                Motivo(Motivos.TransferenciaSalida, "TRANSF_SALIDA", "Transferencia — salida", TipoMovimiento.Salida, sistema: true),
+                Motivo(Motivos.TransferenciaIngreso, "TRANSF_INGRESO", "Transferencia — ingreso", TipoMovimiento.Entrada, sistema: true));
+        });
+
+        modelBuilder.Entity<DocumentoInventario>(entity =>
+        {
+            entity.ToTable("DocumentosInventario");
+            entity.HasIndex(d => d.Numero).IsUnique();
+            entity.Property(d => d.Numero).HasMaxLength(20).IsRequired();
+            entity.Property(d => d.Tipo).HasMaxLength(15).IsRequired();
+            entity.Property(d => d.Estado).HasMaxLength(15).IsRequired();
+            entity.Property(d => d.Observacion).HasMaxLength(250);
+
+            entity.HasOne(d => d.Almacen).WithMany()
+                .HasForeignKey(d => d.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Motivo).WithMany()
+                .HasForeignKey(d => d.MotivoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Usuario).WithMany()
+                .HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(d => d.DocumentoAnulado).WithMany()
+                .HasForeignKey(d => d.DocumentoAnuladoId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MovimientoInventario>(entity =>
+        {
+            entity.ToTable("MovimientosInventario");
+            entity.Property(m => m.Tipo).HasMaxLength(10).IsRequired();
+            entity.Property(m => m.CantidadPresentacion).HasPrecision(18, 4);
+            entity.Property(m => m.Cantidad).HasPrecision(18, 4);
+            entity.Property(m => m.CostoUnitario).HasPrecision(18, 4);
+            entity.Property(m => m.CostoTotal).HasPrecision(18, 4);
+
+            // El kardex siempre pregunta lo mismo: que paso con este producto
+            // en este almacen, ordenado por fecha.
+            entity.HasIndex(m => new { m.ProductoId, m.AlmacenId, m.Fecha });
+
+            entity.HasOne(m => m.Documento).WithMany(d => d.Movimientos)
+                .HasForeignKey(m => m.DocumentoId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(m => m.Producto).WithMany()
+                .HasForeignKey(m => m.ProductoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(m => m.Almacen).WithMany()
+                .HasForeignKey(m => m.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(m => m.Motivo).WithMany()
+                .HasForeignKey(m => m.MotivoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(m => m.Presentacion).WithMany()
+                .HasForeignKey(m => m.PresentacionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CapaCosto>(entity =>
+        {
+            entity.ToTable("CapasCosto");
+            entity.Property(c => c.CantidadInicial).HasPrecision(18, 4);
+            entity.Property(c => c.CantidadDisponible).HasPrecision(18, 4);
+            entity.Property(c => c.CostoUnitario).HasPrecision(18, 4);
+            entity.Property(c => c.Origen).HasMaxLength(20).IsRequired();
+
+            // Las salidas buscan capas con mercaderia de un producto en un
+            // almacen, por fecha.
+            entity.HasIndex(c => new { c.ProductoId, c.AlmacenId, c.Fecha });
+
+            entity.HasOne(c => c.Producto).WithMany()
+                .HasForeignKey(c => c.ProductoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.Almacen).WithMany()
+                .HasForeignKey(c => c.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.Movimiento).WithMany()
+                .HasForeignKey(c => c.MovimientoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ConsumoCapa>(entity =>
+        {
+            entity.ToTable("ConsumosCapa");
+            entity.Property(c => c.Cantidad).HasPrecision(18, 4);
+            entity.Property(c => c.CostoUnitario).HasPrecision(18, 4);
+
+            entity.HasOne(c => c.Movimiento).WithMany(m => m.Consumos)
+                .HasForeignKey(c => c.MovimientoId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(c => c.Capa).WithMany()
+                .HasForeignKey(c => c.CapaId).OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static readonly DateTime Semilla = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    private static MotivoMovimiento Motivo(
+        int id, string codigo, string nombre, string tipo, bool sistema) =>
+        new()
+        {
+            Id = id,
+            Codigo = codigo,
+            Nombre = nombre,
+            Tipo = tipo,
+            DelSistema = sistema,
+            // Lo que entra declara costo; lo que sale lo hereda del stock.
+            PideCosto = tipo == TipoMovimiento.Entrada,
+            Activo = true,
+            FechaCreacion = Semilla
         };
 }
