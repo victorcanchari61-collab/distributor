@@ -8,7 +8,8 @@ import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../core/navegacion/menu.dart';
-import '../../../compartido/widgets/filtro_inactivos.dart';
+import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/cliente.dart';
@@ -23,7 +24,11 @@ class ClientesPagina extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final inactivos = ref.watch(verInactivosProvider);
+    final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
+    final todos = ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[];
+    final activos = todos.where((c) => c.activo).toList();
+    final rutas = ref.watch(rutasProvider);
+    final puestos = ref.watch(filtrosClientesActivosProvider);
 
     return AppListaPagina<Cliente>(
       titulo: 'Clientes',
@@ -38,17 +43,116 @@ class ClientesPagina extends ConsumerWidget {
       iconoVacio: Icons.contacts_outlined,
       singular: 'cliente',
       plural: 'clientes',
-      tituloVacio: inactivos ? 'No hay clientes desactivados' : null,
-      filtro: FiltroInactivos(
-        activo: inactivos,
-        onCambio: (v) => ref.read(verInactivosProvider.notifier).state = v,
+      detalleVacio: puestos > 0
+          ? 'Ninguno coincide con los filtros puestos.'
+          : null,
+      indicadores: [
+        AppTarjetaDato(
+          etiqueta: 'Clientes activos',
+          valor: '${activos.length}',
+          icono: Icons.contacts_outlined,
+          color: color,
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Desactivados',
+          valor: '${todos.length - activos.length}',
+          icono: Icons.block,
+          tono: todos.length == activos.length
+              ? DatoTono.neutral
+              : DatoTono.aviso,
+          nota: 'no salen en ventas',
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Con ruta',
+          valor: '${activos.where((c) => c.ruta != null).length}',
+          icono: Icons.route_outlined,
+          tono: DatoTono.exito,
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Rutas',
+          valor: '${rutas.length}',
+          icono: Icons.map_outlined,
+          tono: DatoTono.neutral,
+          nota: 'de reparto',
+        ),
+      ],
+      filtro: BotonFiltros(
+        activos: puestos,
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref, color),
       ),
       fila: (context, cliente) => _TarjetaCliente(
         cliente: cliente,
-        color: resolverRuta(ruta).grupo?.color ?? Colores.marca,
+        color: color,
         onEditar: () => _abrirFormulario(context, cliente),
         onEstado: () => _cambiarEstado(context, ref, cliente),
       ),
+    );
+  }
+
+  /// Filtros de la vista. Cada grupo se pinta dentro de un Consumer para que
+  /// la pastilla elegida se marque al instante sin cerrar el modal.
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref, Color color) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosClientesActivosProvider),
+      onLimpiar: () {
+        ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
+        ref.read(diaVisitaFiltroProvider.notifier).state = null;
+        ref.read(rutaFiltroProvider.notifier).state = null;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
+            titulo: 'Estado',
+            color: color,
+            valor: ref.watch(estadoFiltroProvider),
+            opciones: const [
+              OpcionFiltro(FiltroEstado.activos, 'Activos'),
+              OpcionFiltro(FiltroEstado.inactivos, 'Desactivados'),
+              OpcionFiltro(FiltroEstado.todos, 'Todos'),
+            ],
+            onCambio: (v) => ref.read(estadoFiltroProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Dia de visita',
+            color: color,
+            valor: ref.watch(diaVisitaFiltroProvider),
+            opciones: const [
+              OpcionFiltro(null, 'Todos'),
+              OpcionFiltro('LUNES', 'Lunes'),
+              OpcionFiltro('MARTES', 'Martes'),
+              OpcionFiltro('MIERCOLES', 'Miercoles'),
+              OpcionFiltro('JUEVES', 'Jueves'),
+              OpcionFiltro('VIERNES', 'Viernes'),
+              OpcionFiltro('SABADO', 'Sabado'),
+              OpcionFiltro('DOMINGO', 'Domingo'),
+            ],
+            onCambio: (v) =>
+                ref.read(diaVisitaFiltroProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            // Las rutas salen de los datos, no de una lista fija.
+            final rutas = ref.watch(rutasProvider);
+            if (rutas.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Ruta',
+              color: color,
+              valor: ref.watch(rutaFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final r in rutas) OpcionFiltro(r, r),
+              ],
+              onCambio: (v) => ref.read(rutaFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+      ],
     );
   }
 

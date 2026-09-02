@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:titanic/compartido/widgets/app_filtros.dart';
 import 'package:titanic/core/almacenamiento/sesion_almacen.dart';
 import 'package:titanic/core/red/cliente_api.dart';
 import 'package:titanic/core/red/excepciones.dart';
@@ -147,14 +148,48 @@ void main() {
     expect(find.text('2 clientes'), findsOneWidget);
   });
 
-  testWidgets('el interruptor muestra solo los desactivados', (tester) async {
+  testWidgets('el filtro de estado muestra solo los desactivados', (
+    tester,
+  ) async {
     await _montarClientes(tester);
 
-    await tester.tap(find.byType(Switch));
+    await tester.tap(find.byTooltip('Filtros'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Desactivados').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ver resultados'));
     await tester.pumpAndSettle();
 
     expect(find.text('PEDRO RETIRADO'), findsOneWidget);
     expect(find.text('ANA LEANDRO'), findsNothing);
+  });
+
+  testWidgets('el icono de filtros lleva la cuenta de los puestos', (
+    tester,
+  ) async {
+    await _montarClientes(tester);
+
+    // El globo va dentro del icono: los indicadores tambien muestran numeros.
+    Finder globo(String n) => find.descendant(
+      of: find.byType(BotonFiltros),
+      matching: find.text(n),
+    );
+
+    // Sin filtros no hay globo.
+    expect(globo('1'), findsNothing);
+
+    await tester.tap(find.byTooltip('Filtros'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Martes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver resultados'));
+    await tester.pumpAndSettle();
+
+    expect(globo('1'), findsOneWidget);
+    expect(find.text('ANA LEANDRO'), findsOneWidget);
+    expect(find.text('D-SOFIA CAYO'), findsNothing);
   });
 
   testWidgets('el buscador filtra por nombre y por documento', (tester) async {
@@ -212,7 +247,7 @@ void main() {
     final api = await _montarClientes(tester);
 
     // El icono de desactivar de la primera tarjeta.
-    await tester.tap(find.byIcon(Icons.block).first);
+    await tester.tap(find.byTooltip('Desactivar').first);
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Desactivar ANA LEANDRO'), findsOneWidget);
@@ -223,7 +258,7 @@ void main() {
     // Se cancelo: el API no se toco.
     expect(api.cambiados, isEmpty);
 
-    await tester.tap(find.byIcon(Icons.block).first);
+    await tester.tap(find.byTooltip('Desactivar').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Desactivar'));
     await tester.pumpAndSettle();

@@ -7,6 +7,7 @@ import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import 'app_buscador.dart';
 import 'app_shell.dart';
+import 'app_tarjeta_dato.dart';
 import 'app_vacio.dart';
 
 /// Vista de listado del modulo.
@@ -33,6 +34,7 @@ class AppListaPagina<T> extends StatelessWidget {
     this.onNuevo,
     this.textoNuevo = 'Nuevo',
     this.filtro,
+    this.indicadores,
     this.tituloVacio,
     this.detalleVacio,
   });
@@ -58,9 +60,13 @@ class AppListaPagina<T> extends StatelessWidget {
   final VoidCallback? onNuevo;
   final String textoNuevo;
 
-  /// Controles propios de la pantalla junto al contador, como el interruptor
-  /// de desactivados.
+  /// Controles propios de la pantalla junto al contador, normalmente el icono
+  /// de filtros.
   final Widget? filtro;
+
+  /// Tarjetas de indicadores sobre el buscador. Van en una fila que se
+  /// desliza: apiladas empujaban la lista fuera de la pantalla.
+  final List<Widget>? indicadores;
 
   final IconData iconoVacio;
   final String singular;
@@ -89,6 +95,10 @@ class AppListaPagina<T> extends StatelessWidget {
             ),
       child: Column(
         children: [
+          if (indicadores != null && indicadores!.isNotEmpty) ...[
+            const SizedBox(height: Dimen.espacio3),
+            AppFilaDatos(tarjetas: indicadores!),
+          ],
           Padding(
             padding: const EdgeInsets.all(Dimen.espacio4),
             child: Column(

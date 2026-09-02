@@ -8,7 +8,8 @@ import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../core/navegacion/menu.dart';
-import '../../../compartido/widgets/filtro_inactivos.dart';
+import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/proveedor.dart';
@@ -23,7 +24,12 @@ class ProveedoresPagina extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final inactivos = ref.watch(verInactivosProvider);
+    final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
+    final todos =
+        ref.watch(proveedoresProvider).valueOrNull ?? const <Proveedor>[];
+    final activos = todos.where((p) => p.activo).toList();
+    final rubros = ref.watch(rubrosProvider);
+    final puestos = ref.watch(filtrosProveedoresActivosProvider);
 
     return AppListaPagina<Proveedor>(
       titulo: 'Proveedores',
@@ -32,23 +38,99 @@ class ProveedoresPagina extends ConsumerWidget {
       visibles: ref.watch(proveedoresFiltradosProvider),
       busqueda: ref.watch(busquedaProveedoresProvider),
       onBuscar: (t) => ref.read(busquedaProveedoresProvider.notifier).state = t,
-      pistaBusqueda: 'Buscar por razón social, documento o rubro',
+      pistaBusqueda: 'Buscar por razon social, documento o rubro',
       onRecargar: () => ref.read(proveedoresProvider.notifier).recargar(),
       onNuevo: () => _abrirFormulario(context, null),
       iconoVacio: Icons.business_outlined,
       singular: 'proveedor',
       plural: 'proveedores',
-      tituloVacio: inactivos ? 'No hay proveedores desactivados' : null,
-      filtro: FiltroInactivos(
-        activo: inactivos,
-        onCambio: (v) => ref.read(verInactivosProvider.notifier).state = v,
+      detalleVacio: puestos > 0
+          ? 'Ninguno coincide con los filtros puestos.'
+          : null,
+      indicadores: [
+        AppTarjetaDato(
+          etiqueta: 'Proveedores activos',
+          valor: '${activos.length}',
+          icono: Icons.business_outlined,
+          color: color,
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Desactivados',
+          valor: '${todos.length - activos.length}',
+          icono: Icons.block,
+          tono: todos.length == activos.length
+              ? DatoTono.neutral
+              : DatoTono.aviso,
+          nota: 'no salen en compras',
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Con rubro',
+          valor: '${activos.where((p) => p.rubro != null).length}',
+          icono: Icons.category_outlined,
+          tono: DatoTono.exito,
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Rubros',
+          valor: '${rubros.length}',
+          icono: Icons.sell_outlined,
+          tono: DatoTono.neutral,
+          nota: 'distintos',
+        ),
+      ],
+      filtro: BotonFiltros(
+        activos: puestos,
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref, color),
       ),
       fila: (context, proveedor) => _TarjetaProveedor(
         proveedor: proveedor,
-        color: resolverRuta(ruta).grupo?.color ?? Colores.marca,
+        color: color,
         onEditar: () => _abrirFormulario(context, proveedor),
         onEstado: () => _cambiarEstado(context, ref, proveedor),
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref, Color color) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosProveedoresActivosProvider),
+      onLimpiar: () {
+        ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
+        ref.read(rubroFiltroProvider.notifier).state = null;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
+            titulo: 'Estado',
+            color: color,
+            valor: ref.watch(estadoFiltroProvider),
+            opciones: const [
+              OpcionFiltro(FiltroEstado.activos, 'Activos'),
+              OpcionFiltro(FiltroEstado.inactivos, 'Desactivados'),
+              OpcionFiltro(FiltroEstado.todos, 'Todos'),
+            ],
+            onCambio: (v) => ref.read(estadoFiltroProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final rubros = ref.watch(rubrosProvider);
+            if (rubros.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Rubro',
+              color: color,
+              valor: ref.watch(rubroFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final r in rubros) OpcionFiltro(r, r),
+              ],
+              onCambio: (v) => ref.read(rubroFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+      ],
     );
   }
 

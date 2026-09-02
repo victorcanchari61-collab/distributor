@@ -13,8 +13,45 @@ final maestrosApiProvider = Provider(
 final busquedaClientesProvider = StateProvider.autoDispose((ref) => '');
 final busquedaProveedoresProvider = StateProvider.autoDispose((ref) => '');
 
-/// Muestra solo los desactivados cuando esta en true.
-final verInactivosProvider = StateProvider.autoDispose((ref) => false);
+/// Estado por el que se filtra un listado.
+enum FiltroEstado { activos, inactivos, todos }
+
+/// Filtro de estado. Por defecto solo los activos: es lo que se usa a diario.
+final estadoFiltroProvider = StateProvider.autoDispose(
+  (ref) => FiltroEstado.activos,
+);
+
+/// Filtros propios de clientes. Null es "todos".
+final diaVisitaFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final rutaFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+
+/// Filtro propio de proveedores.
+final rubroFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+
+/// Cuantos filtros hay puestos, para el globo del icono de filtros.
+final filtrosClientesActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
+  if (ref.watch(diaVisitaFiltroProvider) != null) n++;
+  if (ref.watch(rutaFiltroProvider) != null) n++;
+  return n;
+});
+
+final filtrosProveedoresActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
+  if (ref.watch(rubroFiltroProvider) != null) n++;
+  return n;
+});
+
+/// Comprueba un registro contra el filtro de estado.
+bool _pasaEstado(bool activo, FiltroEstado filtro) => switch (filtro) {
+  FiltroEstado.activos => activo,
+  FiltroEstado.inactivos => !activo,
+  FiltroEstado.todos => true,
+};
 
 /// Listado de clientes.
 ///
@@ -59,12 +96,35 @@ final clientesProvider =
 final clientesFiltradosProvider = Provider.autoDispose<List<Cliente>>((ref) {
   final todos = ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[];
   final texto = ref.watch(busquedaClientesProvider).trim().toLowerCase();
-  final inactivos = ref.watch(verInactivosProvider);
+  final estado = ref.watch(estadoFiltroProvider);
+  final dia = ref.watch(diaVisitaFiltroProvider);
+  final ruta = ref.watch(rutaFiltroProvider);
 
   return todos
-      .where((c) => c.activo != inactivos)
+      .where((c) => _pasaEstado(c.activo, estado))
+      .where((c) => dia == null || c.diaVisita == dia)
+      .where((c) => ruta == null || c.ruta == ruta)
       .where((c) => texto.isEmpty || c.buscable.contains(texto))
       .toList();
+});
+
+/// Rutas que existen en los datos, para armar el filtro sin listas fijas.
+final rutasProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[];
+  final rutas = todos
+      .map((c) => c.ruta)
+      .whereType<String>()
+      .where((r) => r.trim().isNotEmpty)
+      .toSet()
+      .toList();
+  // Numericas cuando se puede: "2" antes que "10".
+  rutas.sort((a, b) {
+    final na = int.tryParse(a);
+    final nb = int.tryParse(b);
+    if (na != null && nb != null) return na.compareTo(nb);
+    return a.compareTo(b);
+  });
+  return rutas;
 });
 
 /// Listado de proveedores.
@@ -109,10 +169,27 @@ final proveedoresFiltradosProvider = Provider.autoDispose<List<Proveedor>>((
   final todos =
       ref.watch(proveedoresProvider).valueOrNull ?? const <Proveedor>[];
   final texto = ref.watch(busquedaProveedoresProvider).trim().toLowerCase();
-  final inactivos = ref.watch(verInactivosProvider);
+  final estado = ref.watch(estadoFiltroProvider);
+  final rubro = ref.watch(rubroFiltroProvider);
 
   return todos
-      .where((p) => p.activo != inactivos)
+      .where((p) => _pasaEstado(p.activo, estado))
+      .where((p) => rubro == null || p.rubro == rubro)
       .where((p) => texto.isEmpty || p.buscable.contains(texto))
       .toList();
+});
+
+/// Rubros que existen en los datos.
+final rubrosProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos =
+      ref.watch(proveedoresProvider).valueOrNull ?? const <Proveedor>[];
+  final rubros =
+      todos
+          .map((p) => p.rubro)
+          .whereType<String>()
+          .where((r) => r.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return rubros;
 });
