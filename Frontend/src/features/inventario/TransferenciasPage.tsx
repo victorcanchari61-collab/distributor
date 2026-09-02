@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, Plus, Trash2, Truck, Undo2 } from 'lucide-react'
+import { ArrowRight, Plus, Truck, Undo2 } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -10,9 +10,10 @@ import {
   Modal,
   RowAction,
   StatCard,
+  TablaEditable,
   useConfirmacion,
 } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { ColumnaEditable, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
@@ -137,6 +138,66 @@ export function TransferenciasPage() {
       setGuardando(false)
     }
   }
+
+  const columnasFilas: ColumnaEditable<FilaTransferencia>[] = [
+    {
+      key: 'producto',
+      label: 'Producto',
+      render: (fila, i) => (
+        <Desplegable
+          value={fila.productoId}
+          onChange={(v) => actualizarFila(i, { productoId: Number(v), presentacionId: 0 })}
+          options={productos.map((p) => ({ value: p.id, label: p.nombre, detalle: p.codigo }))}
+        />
+      ),
+    },
+    {
+      key: 'presentacion',
+      label: 'Presentación',
+      className: 'w-36',
+      render: (fila, i) => {
+        const producto = productos.find((p) => p.id === fila.productoId)
+        const presentaciones = producto?.presentaciones.filter((p) => p.activo) ?? []
+
+        return (
+          <Desplegable
+            value={fila.presentacionId}
+            onChange={(v) => actualizarFila(i, { presentacionId: Number(v) })}
+            placeholder={producto?.unidadBase ?? 'Elegir'}
+            disabled={!producto}
+            options={
+              producto
+                ? [
+                    { value: 0, label: producto.unidadBase, nota: 'unidad base' },
+                    ...presentaciones
+                      .filter((p) => !p.esBase)
+                      .map((p) => ({
+                        value: p.id,
+                        label: p.nombre,
+                        detalle: `${p.factor} ${producto.unidadBase}`,
+                      })),
+                  ]
+                : []
+            }
+          />
+        )
+      },
+    },
+    {
+      key: 'cantidad',
+      label: 'Cantidad',
+      align: 'right',
+      className: 'w-28',
+      render: (fila, i) => (
+        <Input
+          type="number"
+          step="0.0001"
+          value={fila.cantidad}
+          onChange={(e) => actualizarFila(i, { cantidad: e.target.value })}
+        />
+      ),
+    },
+  ]
 
   const anular = (doc: DocumentoInventarioResponse) =>
     confirmar({
@@ -314,69 +375,15 @@ export function TransferenciasPage() {
             </Button>
           </div>
 
-          <ul className="flex flex-col gap-3">
-            {filas.map((fila, i) => {
+          <TablaEditable
+            columnas={columnasFilas}
+            filas={filas}
+            onQuitar={(i) => setFilas((f) => f.filter((_, idx) => idx !== i))}
+            quitarLabel={(fila) => {
               const producto = productos.find((p) => p.id === fila.productoId)
-              const presentaciones = producto?.presentaciones.filter((p) => p.activo) ?? []
-
-              return (
-                <li key={i} className="rounded-field border border-line p-3">
-                  <div className="grid gap-2 sm:grid-cols-[1fr_8rem]">
-                    <Desplegable
-                      label="Producto"
-                      value={fila.productoId}
-                      onChange={(v) =>
-                        actualizarFila(i, { productoId: Number(v), presentacionId: 0 })
-                      }
-                      options={productos.map((p) => ({
-                        value: p.id,
-                        label: p.nombre,
-                        detalle: p.codigo,
-                      }))}
-                    />
-                    <div className="flex items-end gap-1">
-                      <Input
-                        label="Cantidad"
-                        type="number"
-                        step="0.0001"
-                        value={fila.cantidad}
-                        onChange={(e) => actualizarFila(i, { cantidad: e.target.value })}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setFilas((f) => f.filter((_, idx) => idx !== i))}
-                        aria-label="Quitar línea"
-                        className="mb-0.5 inline-flex size-9 items-center justify-center rounded-field text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {producto && (
-                    <div className="mt-2">
-                      <Desplegable
-                        label="En"
-                        value={fila.presentacionId}
-                        onChange={(v) => actualizarFila(i, { presentacionId: Number(v) })}
-                        placeholder={producto.unidadBase}
-                        options={[
-                          { value: 0, label: producto.unidadBase, nota: 'unidad base' },
-                          ...presentaciones
-                            .filter((p) => !p.esBase)
-                            .map((p) => ({
-                              value: p.id,
-                              label: p.nombre,
-                              detalle: `${p.factor} ${producto.unidadBase}`,
-                            })),
-                        ]}
-                      />
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+              return `Quitar ${producto?.nombre ?? 'línea'}`
+            }}
+          />
         </div>
       </Modal>
 

@@ -36,14 +36,21 @@ export function Modal({
   if (!open) return null
 
   /*
-    Se monta sobre document.body y no donde se declara.
+    Se monta en #modal-root y no donde se declara.
 
     Como hijo de la vista heredaba lo que el contenedor dijera de sus hijos: en
     ListPage, que separa sus bloques con space-y-5, el fondo oscuro recibia un
     margen superior y quedaba 20px mas corto que la pantalla, dejando una franja
     blanca abajo. Fuera del flujo, inset-0 siempre es la ventana completa, y de
     paso ningun overflow ni z-index de la vista puede recortarlo.
+
+    #modal-root vive DENTRO del data-sys del modulo abierto (lo pone
+    DashboardLayout): portar a document.body directo sacaria al modal de esa
+    rama y el encabezado saldria siempre azul, sin importar el modulo. Cuando
+    no existe (pantalla de login, sin DashboardLayout) cae a document.body.
   */
+  const destino = document.getElementById('modal-root') ?? document.body
+
   return createPortal(
     <div
       role="dialog"
@@ -54,14 +61,14 @@ export function Modal({
     >
       <div
         className={cn(
-          'flex max-h-[92vh] w-full flex-col rounded-t-panel bg-white shadow-panel sm:rounded-panel',
+          'flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-panel bg-white shadow-panel sm:rounded-panel',
           SIZES[size],
         )}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
+        <div className="flex items-start justify-between gap-3 bg-[rgb(var(--sys-rgb))] px-5 py-4">
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-ink">{title}</h2>
-            {description && <p className="mt-0.5 text-sm text-ink-muted">{description}</p>}
+            <h2 className="text-base font-bold text-white">{title}</h2>
+            {description && <p className="mt-0.5 text-sm text-white/80">{description}</p>}
           </div>
 
           {/*
@@ -74,7 +81,7 @@ export function Modal({
               type="button"
               onClick={onClose}
               aria-label="Cerrar"
-              className="cursor-pointer rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink"
+              className="cursor-pointer rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/15 hover:text-white"
             >
               <X size={18} />
             </button>
@@ -90,6 +97,6 @@ export function Modal({
         )}
       </div>
     </div>,
-    document.body,
+    destino,
   )
 }

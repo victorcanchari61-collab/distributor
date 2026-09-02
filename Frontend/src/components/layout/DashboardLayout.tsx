@@ -68,6 +68,16 @@ export function DashboardLayout({
 
         <main className="flex-1 p-4 sm:p-6">{children}</main>
       </div>
+
+      {/*
+        Ancla para los modales: Modal se pinta con createPortal (ver su
+        comentario) para no heredar el space-y de ListPage, pero si el
+        destino fuera document.body quedaria fuera de este data-sys y
+        saldria siempre en azul, sin importar el modulo abierto. Aqui
+        adentro hereda el color correcto sin que Modal necesite saber cual
+        es.
+      */}
+      <div id="modal-root" />
     </div>
   )
 }

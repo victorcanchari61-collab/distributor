@@ -13,10 +13,14 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANTS: Record<Variant, string> = {
+  // Color del modulo abierto (--sys-rgb, definido por DashboardLayout): el
+  // boton principal de Clientes sale navy, el de Ajustes verde, etc. Fuera de
+  // un modulo (login) cae al azul de marca, que es el valor por defecto de
+  // --sys-rgb en :root.
   primary:
-    'bg-brand text-on-brand shadow-sm hover:not-disabled:bg-brand-hover active:not-disabled:bg-brand-active',
+    'bg-[rgb(var(--sys-rgb))] text-[var(--sys-on)] shadow-sm hover:not-disabled:bg-[rgb(var(--sys-dark-rgb))] active:not-disabled:bg-[rgb(var(--sys-dark-rgb))]',
   secondary: 'bg-surface text-ink border border-line hover:not-disabled:bg-surface-alt',
-  ghost: 'bg-transparent text-brand hover:not-disabled:bg-brand-soft',
+  ghost: 'bg-transparent text-[rgb(var(--sys-ink-rgb))] hover:not-disabled:bg-[rgb(var(--sys-rgb)/0.08)]',
 }
 
 // Mismas alturas que los campos, para que un boton junto a un input calce.
@@ -45,7 +49,7 @@ export function Button({
       className={cn(
         'inline-flex cursor-pointer items-center justify-center gap-2 rounded-field font-semibold',
         'transition-colors duration-150',
-        'focus-visible:ring-4 focus-visible:ring-brand-ring focus-visible:outline-none',
+        'focus-visible:ring-4 focus-visible:ring-[rgb(var(--sys-rgb)/0.25)] focus-visible:outline-none',
         'disabled:cursor-not-allowed disabled:opacity-60',
         variant === 'ghost' ? 'px-2 py-1 text-sm' : SIZES[size],
         VARIANTS[variant],
