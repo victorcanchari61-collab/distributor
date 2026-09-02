@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from './cn'
 
@@ -34,7 +35,16 @@ export function Modal({
 
   if (!open) return null
 
-  return (
+  /*
+    Se monta sobre document.body y no donde se declara.
+
+    Como hijo de la vista heredaba lo que el contenedor dijera de sus hijos: en
+    ListPage, que separa sus bloques con space-y-5, el fondo oscuro recibia un
+    margen superior y quedaba 20px mas corto que la pantalla, dejando una franja
+    blanca abajo. Fuera del flujo, inset-0 siempre es la ventana completa, y de
+    paso ningun overflow ni z-index de la vista puede recortarlo.
+  */
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -79,6 +89,7 @@ export function Modal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

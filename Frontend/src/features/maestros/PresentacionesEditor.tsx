@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react'
-import { Badge, Button, Input, Select, cn } from '../../components/ui'
+import { Badge, Button, Desplegable, Input, cn } from '../../components/ui'
 import type { PresentacionRequest, UnidadResponse } from './productoApi'
 
 export interface FilaPresentacion extends PresentacionRequest {
@@ -94,19 +94,17 @@ export function PresentacionesEditor({
                     disabled={disabled}
                   />
 
-                  <Select
+                  <Desplegable
                     label="Unidad"
-                    size="sm"
                     value={fila.unidadId}
-                    onChange={(e) => actualizar(i, { unidadId: Number(e.target.value) })}
+                    onChange={(v) => actualizar(i, { unidadId: Number(v) })}
                     disabled={disabled}
-                  >
-                    {activas.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.codigo}
-                      </option>
-                    ))}
-                  </Select>
+                    options={activas.map((u) => ({
+                      value: u.id,
+                      label: u.codigo,
+                      nota: u.nombre,
+                    }))}
+                  />
 
                   <Input
                     label="Factor"

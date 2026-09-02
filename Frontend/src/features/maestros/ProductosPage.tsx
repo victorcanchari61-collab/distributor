@@ -16,12 +16,12 @@ import {
   Badge,
   BotonMas,
   Button,
+  Desplegable,
   Input,
   ListaDesplegable,
   ListPage,
   Modal,
   RowAction,
-  Select,
   StatCard,
   Tabs,
   useConfirmacion,
@@ -55,7 +55,10 @@ type Pestana = 'productos' | 'categorias' | 'marcas' | 'unidades'
 type PestanaForm = 'datos' | 'presentaciones'
 
 /** Que catalogo se esta creando sin salir del formulario. */
-type CatalogoRapido = 'categoria' | 'marca' | 'unidad' | null
+type CatalogoRapido = 'categoria' | 'marca' | 'unidad' | 'unidadContenido' | null
+
+/** Las dos altas de unidad piden los mismos campos; cambia dónde queda elegida. */
+const esUnidad = (c: CatalogoRapido) => c === 'unidad' || c === 'unidadContenido'
 
 export function ProductosPage() {
   const [pestana, setPestana] = useState<Pestana>('productos')
@@ -250,7 +253,7 @@ export function ProductosPage() {
    */
   const crearRapidoGuardar = async () => {
     if (!formRapido.nombre.trim()) return setErrorRapido('Ingresa el nombre.')
-    if (crearRapido === 'unidad' && !formRapido.codigo.trim()) {
+    if (esUnidad(crearRapido) && !formRapido.codigo.trim()) {
       return setErrorRapido('Ingresa el código de la unidad.')
     }
 
@@ -270,7 +273,13 @@ export function ProductosPage() {
           tipo: formRapido.tipo as UnidadResponse['tipo'],
           fraccionable: formRapido.tipo !== 'CONTEO',
         })
-        setForm((f) => ({ ...f, unidadBaseId: creada.id }))
+
+        // Queda elegida en el campo desde el que se abrió el +.
+        setForm((f) =>
+          crearRapido === 'unidadContenido'
+            ? { ...f, contenidoUnidadId: creada.id }
+            : { ...f, unidadBaseId: creada.id },
+        )
       }
 
       await cargar()
@@ -554,44 +563,38 @@ export function ProductosPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   {/* El + crea la categoria sin salir del formulario: si no
                       existe, no hay que perder lo escrito para ir a crearla. */}
-                  <Select
+                  <Desplegable
                     label="Categoría"
                     optional
                     hint={
                       <BotonMas label="Nueva categoría" onClick={() => setCrearRapido('categoria')} />
                     }
                     value={form.categoriaId}
-                    onChange={(e) => setForm({ ...form, categoriaId: Number(e.target.value) })}
-                  >
-                    <option value={0}>Sin categoría</option>
-                    {categorias
-                      .filter((c) => c.activo)
-                      .map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nombre}
-                        </option>
-                      ))}
-                  </Select>
+                    onChange={(v) => setForm({ ...form, categoriaId: Number(v) })}
+                    options={[
+                      { value: 0, label: 'Sin categoría' },
+                      ...categorias
+                        .filter((c) => c.activo)
+                        .map((c) => ({ value: c.id, label: c.nombre })),
+                    ]}
+                  />
 
-                  <Select
+                  <Desplegable
                     label="Marca"
                     optional
                     hint={<BotonMas label="Nueva marca" onClick={() => setCrearRapido('marca')} />}
                     value={form.marcaId}
-                    onChange={(e) => setForm({ ...form, marcaId: Number(e.target.value) })}
-                  >
-                    <option value={0}>Sin marca</option>
-                    {marcas
-                      .filter((m) => m.activo)
-                      .map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.nombre}
-                        </option>
-                      ))}
-                  </Select>
+                    onChange={(v) => setForm({ ...form, marcaId: Number(v) })}
+                    options={[
+                      { value: 0, label: 'Sin marca' },
+                      ...marcas
+                        .filter((m) => m.activo)
+                        .map((m) => ({ value: m.id, label: m.nombre })),
+                    ]}
+                  />
                 </div>
 
-                <Select
+                <Desplegable
                   label="Unidad base"
                   value={form.unidadBaseId}
                   disabled={Boolean(editando)}
@@ -602,14 +605,13 @@ export function ProductosPage() {
                       <BotonMas label="Nueva unidad" onClick={() => setCrearRapido('unidad')} />
                     )
                   }
-                  onChange={(e) => setForm({ ...form, unidadBaseId: Number(e.target.value) })}
-                >
-                  {unidadesActivas.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.codigo} — {u.nombre}
-                    </option>
-                  ))}
-                </Select>
+                  onChange={(v) => setForm({ ...form, unidadBaseId: Number(v) })}
+                  options={unidadesActivas.map((u) => ({
+                    value: u.id,
+                    label: u.nombre,
+                    detalle: u.codigo,
+                  }))}
+                />
 
                 {/* Contenido del envase: informativo, para comparar precio por litro. */}
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -622,22 +624,28 @@ export function ProductosPage() {
                     value={form.contenido}
                     onChange={(e) => setForm({ ...form, contenido: e.target.value })}
                   />
-                  <Select
-                    label="Unidad del contenido"
+                  <Desplegable
+                    label="Unidad"
                     optional
+                    hint={
+                      <BotonMas
+                        label="Nueva unidad"
+                        onClick={() => setCrearRapido('unidadContenido')}
+                      />
+                    }
                     value={form.contenidoUnidadId}
                     disabled={!form.contenido}
-                    onChange={(e) =>
-                      setForm({ ...form, contenidoUnidadId: Number(e.target.value) })
-                    }
-                  >
-                    <option value={0}>—</option>
-                    {unidadesActivas.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.codigo}
-                      </option>
-                    ))}
-                  </Select>
+                    placeholder="—"
+                    onChange={(v) => setForm({ ...form, contenidoUnidadId: Number(v) })}
+                    options={[
+                      { value: 0, label: '—' },
+                      ...unidadesActivas.map((u) => ({
+                        value: u.id,
+                        label: u.nombre,
+                        detalle: u.codigo,
+                      })),
+                    ]}
+                  />
                 </div>
 
                 <Input
@@ -701,7 +709,7 @@ export function ProductosPage() {
           <div className="flex flex-col gap-4">
             {errorRapido && <Alert>{errorRapido}</Alert>}
 
-            {crearRapido === 'unidad' && (
+            {esUnidad(crearRapido) && (
               <Input
                 label="Código"
                 placeholder="SAC"
@@ -725,18 +733,17 @@ export function ProductosPage() {
               onChange={(e) => setFormRapido({ ...formRapido, nombre: e.target.value })}
             />
 
-            {crearRapido === 'unidad' && (
-              <Select
+            {esUnidad(crearRapido) && (
+              <Desplegable
                 label="Tipo"
                 value={formRapido.tipo}
-                onChange={(e) =>
-                  setFormRapido({ ...formRapido, tipo: e.target.value as UnidadResponse['tipo'] })
-                }
-              >
-                <option value="CONTEO">Conteo — se cuenta (saco, caja)</option>
-                <option value="PESO">Peso — se pesa (kilo, gramo)</option>
-                <option value="VOLUMEN">Volumen — se mide (litro)</option>
-              </Select>
+                onChange={(v) => setFormRapido({ ...formRapido, tipo: String(v) })}
+                options={[
+                  { value: 'CONTEO', label: 'Conteo', nota: 'se cuenta: saco, caja' },
+                  { value: 'PESO', label: 'Peso', nota: 'se pesa: kilo, gramo' },
+                  { value: 'VOLUMEN', label: 'Volumen', nota: 'se mide: litro' },
+                ]}
+              />
             )}
           </div>
         </Modal>
@@ -912,15 +919,16 @@ function UnidadesTabla({
             />
           </div>
 
-          <Select
+          <Desplegable
             label="Tipo"
             value={form.tipo}
-            onChange={(e) => setForm({ ...form, tipo: e.target.value as UnidadResponse['tipo'] })}
-          >
-            <option value="CONTEO">Conteo — se cuenta (unidad, saco, caja)</option>
-            <option value="PESO">Peso — se pesa (kilo, gramo)</option>
-            <option value="VOLUMEN">Volumen — se mide (litro, mililitro)</option>
-          </Select>
+            onChange={(v) => setForm({ ...form, tipo: v as UnidadResponse['tipo'] })}
+            options={[
+              { value: 'CONTEO', label: 'Conteo', nota: 'se cuenta: unidad, saco, caja' },
+              { value: 'PESO', label: 'Peso', nota: 'se pesa: kilo, gramo' },
+              { value: 'VOLUMEN', label: 'Volumen', nota: 'se mide: litro, mililitro' },
+            ]}
+          />
 
           <label className="flex items-center gap-2 text-sm text-ink-muted">
             <input
