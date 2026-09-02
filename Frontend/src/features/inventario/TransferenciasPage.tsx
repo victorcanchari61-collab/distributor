@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ClipboardCheck, ListChecks, Plus, Trash2, Undo2 } from 'lucide-react'
+import { ArrowRight, Plus, Trash2, Truck, Undo2 } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -10,45 +10,35 @@ import {
   Modal,
   RowAction,
   StatCard,
-  Tabs,
   useConfirmacion,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
-import { almacenApi, ajusteApi, motivoApi } from './inventarioApi'
-import type {
-  AlmacenResponse,
-  DocumentoInventarioResponse,
-  MotivoResponse,
-} from './inventarioApi'
-import { MotivosTabla } from './MotivosTabla'
+import { almacenApi, transferenciaApi } from './inventarioApi'
+import type { AlmacenResponse, DocumentoInventarioResponse } from './inventarioApi'
 
-type Pestana = 'ajustes' | 'motivos'
-
-interface FilaAjuste {
+interface FilaTransferencia {
   productoId: number
   presentacionId: number
   cantidad: string
-  costo: string
 }
 
-const FILA_VACIA: FilaAjuste = { productoId: 0, presentacionId: 0, cantidad: '', costo: '' }
+const FILA_VACIA: FilaTransferencia = { productoId: 0, presentacionId: 0, cantidad: '' }
 
 /**
- * Ajustes de inventario: el documento formal que mueve stock a mano.
+ * Transferencias entre dos almacenes propios.
  *
- * Solo ofrece motivos manuales (carga inicial, merma, sobrante...). Los del
- * sistema — venta, compra, sus anulaciones — los crea su propio documento, no
- * se eligen aquí: si se pudiera, el stock cambiaría sin que exista la
- * operación que lo explica.
+ * A diferencia de un ajuste, no se declara costo: la mercadería se lleva el
+ * mismo costo con el que estaba en origen. Por dentro, cada línea sale de
+ * origen (heredando el costo de las capas que consume) y crea en destino una
+ * capa nueva por cada costo distinto que tocó, así que el costo nunca se
+ * promedia ni se inventa.
  */
-export function AjustesPage() {
-  const [pestana, setPestana] = useState<Pestana>('ajustes')
+export function TransferenciasPage() {
   const [documentos, setDocumentos] = useState<DocumentoInventarioResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
-  const [motivos, setMotivos] = useState<MotivoResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
 
   const [cargando, setCargando] = useState(true)
@@ -60,34 +50,28 @@ export function AjustesPage() {
   const [errorForm, setErrorForm] = useState('')
 
   const [cabecera, setCabecera] = useState({
-    almacenId: 0,
-    motivoId: 0,
+    almacenOrigenId: 0,
+    almacenDestinoId: 0,
     observacion: '',
-    flete: '',
   })
-  const [filas, setFilas] = useState<FilaAjuste[]>([{ ...FILA_VACIA }])
+  const [filas, setFilas] = useState<FilaTransferencia[]>([{ ...FILA_VACIA }])
 
   const { confirmar, dialogo } = useConfirmacion()
-
-  const motivosManuales = motivos.filter((m) => !m.delSistema && m.activo)
-  const motivo = motivos.find((m) => m.id === cabecera.motivoId)
 
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [docs, alms, mots, prods] = await Promise.all([
-        ajusteApi.getAll(),
+      const [docs, alms, prods] = await Promise.all([
+        transferenciaApi.getAll(),
         almacenApi.getAll(),
-        motivoApi.getAll(),
         productoApi.getAll(),
       ])
       setDocumentos(docs)
       setAlmacenes(alms)
-      setMotivos(mots)
       setProductos(prods.filter((p) => p.activo && p.controlaStock))
       setError('')
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los ajustes.')
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar las transferencias.')
     } finally {
       setCargando(false)
     }
@@ -97,24 +81,28 @@ export function AjustesPage() {
     void cargar()
   }, [cargar])
 
+  const activos = almacenes.filter((a) => a.activo)
+
   const abrirNuevo = () => {
     setCabecera({
-      almacenId: almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0,
-      motivoId: motivosManuales[0]?.id ?? 0,
+      almacenOrigenId: activos.find((a) => a.esPrincipal)?.id ?? activos[0]?.id ?? 0,
+      almacenDestinoId: 0,
       observacion: '',
-      flete: '',
     })
     setFilas([{ ...FILA_VACIA }])
     setErrorForm('')
     setAbierto(true)
   }
 
-  const actualizarFila = (i: number, cambio: Partial<FilaAjuste>) =>
+  const actualizarFila = (i: number, cambio: Partial<FilaTransferencia>) =>
     setFilas((prev) => prev.map((f, idx) => (idx === i ? { ...f, ...cambio } : f)))
 
   const guardar = async () => {
-    if (!cabecera.almacenId) return setErrorForm('Elige el almacén.')
-    if (!cabecera.motivoId) return setErrorForm('Elige el motivo.')
+    if (!cabecera.almacenOrigenId) return setErrorForm('Elige el almacén de origen.')
+    if (!cabecera.almacenDestinoId) return setErrorForm('Elige el almacén de destino.')
+    if (cabecera.almacenOrigenId === cabecera.almacenDestinoId) {
+      return setErrorForm('El origen y el destino no pueden ser el mismo almacén.')
+    }
 
     const validas = filas.filter((f) => f.productoId && f.cantidad)
     if (validas.length === 0) return setErrorForm('Agrega al menos un producto.')
@@ -122,16 +110,14 @@ export function AjustesPage() {
     setGuardando(true)
     setErrorForm('')
     try {
-      await ajusteApi.create({
-        almacenId: cabecera.almacenId,
-        motivoId: cabecera.motivoId,
+      await transferenciaApi.create({
+        almacenOrigenId: cabecera.almacenOrigenId,
+        almacenDestinoId: cabecera.almacenDestinoId,
         observacion: cabecera.observacion.trim() || null,
-        flete: Number(cabecera.flete || 0),
         detalle: validas.map((f) => ({
           productoId: f.productoId,
           presentacionId: f.presentacionId || null,
           cantidad: Number(f.cantidad),
-          costoPresentacion: motivo?.pideCosto ? Number(f.costo || 0) : null,
         })),
       })
       setAbierto(false)
@@ -142,7 +128,7 @@ export function AjustesPage() {
           ? e.errors.length
             ? e.errors.join(' ')
             : e.message
-          : 'No pudimos registrar el ajuste.',
+          : 'No pudimos registrar la transferencia.',
       )
     } finally {
       setGuardando(false)
@@ -153,104 +139,88 @@ export function AjustesPage() {
     confirmar({
       titulo: `Anular ${doc.numero}`,
       mensaje:
-        'Se crea un documento que revierte el movimiento; el original queda en el historial marcado como anulado. No se puede deshacer.',
+        'Devuelve la mercadería a origen y la retira de destino. Si ya se vendió algo de lo que llegó, no se podrá anular esa parte.',
       confirmar: 'Anular',
       tono: 'danger',
       accion: async () => {
         setError('')
         try {
-          await ajusteApi.anular(doc.id)
+          await transferenciaApi.anular(doc.id)
           await cargar()
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos anular el documento.')
+          setError(e instanceof ApiError ? e.message : 'No pudimos anular la transferencia.')
         }
       },
     })
 
   const columns: DataTableColumn<DocumentoInventarioResponse>[] = [
     { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
-    { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
-    { key: 'almacen', label: 'Almacén' },
     {
-      key: 'motivo',
-      label: 'Motivo',
+      key: 'fecha',
+      label: 'Fecha',
+      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+    },
+    {
+      key: 'almacen',
+      label: 'De → A',
       render: (row) => (
-        <Badge tone={row.motivoTipo === 'ENTRADA' ? 'success' : 'warning'}>{row.motivo}</Badge>
+        <span className="flex items-center gap-1.5">
+          {row.almacen}
+          <ArrowRight size={13} className="text-ink-soft" />
+          {row.almacenDestino}
+        </span>
       ),
     },
     { key: 'lineas', label: 'Productos', align: 'right' },
-    {
-      key: 'total',
-      label: 'Total',
-      align: 'right',
-      render: (row) => `S/ ${row.total.toFixed(2)}`,
-    },
+    { key: 'total', label: 'Valor', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
     {
       key: 'estado',
       label: 'Estado',
       render: (row) => (
         <Badge tone={row.estado === 'ANULADO' ? 'neutral' : 'success'}>
-          {row.estado === 'ANULADO' ? `Anulado${row.anuladoPor ? ` (${row.anuladoPor})` : ''}` : 'Confirmado'}
+          {row.estado === 'ANULADO' ? `Anulada${row.anuladoPor ? ` (${row.anuladoPor})` : ''}` : 'Confirmada'}
         </Badge>
       ),
     },
   ]
 
-  const cabeceraPestanas = (
-    <Tabs
-      className="mb-5"
-      active={pestana}
-      onChange={(id) => setPestana(id as Pestana)}
-      items={[
-        { id: 'ajustes', label: 'Ajustes', icon: <ClipboardCheck size={15} />, badge: documentos.length },
-        {
-          id: 'motivos',
-          label: 'Motivos',
-          icon: <ListChecks size={15} />,
-          // Solo los manuales: los del sistema no se listan en esta pestaña.
-          badge: motivos.filter((m) => !m.delSistema).length,
-        },
-      ]}
-    />
-  )
-
-  if (pestana === 'motivos') {
-    return (
-      <>
-        {cabeceraPestanas}
-        <MotivosTabla motivos={motivos} onRecargar={cargar} />
-      </>
-    )
-  }
-
   return (
-    <>
-      {cabeceraPestanas}
-      <ListPage
-      icon={<ClipboardCheck size={20} />}
-      title="Ajustes de inventario"
-      description="Carga inicial, mermas, sobrantes y faltantes. Ventas y compras generan su propio movimiento."
+    <ListPage
+      icon={<Truck size={20} />}
+      title="Transferencias"
+      description="Mueve mercadería entre tus almacenes. El costo viaja con ella: no se vuelve a declarar."
       actions={
-        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-          Nuevo ajuste
+        <Button
+          size="sm"
+          onClick={abrirNuevo}
+          disabled={activos.length < 2}
+          iconRight={<Plus size={15} />}
+        >
+          Nueva transferencia
         </Button>
       }
-      alert={error ? <Alert>{error}</Alert> : undefined}
+      alert={
+        error ? (
+          <Alert>{error}</Alert>
+        ) : activos.length < 2 ? (
+          <Alert>Necesitas al menos dos almacenes activos para transferir.</Alert>
+        ) : undefined
+      }
       stats={
         <>
           <StatCard
-            label="Documentos"
+            label="Transferencias"
             value={String(documentos.length)}
-            icon={<ClipboardCheck size={18} />}
+            icon={<Truck size={18} />}
           />
           <StatCard
-            label="Confirmados"
+            label="Confirmadas"
             value={String(documentos.filter((d) => d.estado === 'CONFIRMADO').length)}
-            icon={<ClipboardCheck size={18} />}
+            icon={<Truck size={18} />}
             tono="success"
           />
           <StatCard
-            label="Anulados"
+            label="Anuladas"
             value={String(documentos.filter((d) => d.estado === 'ANULADO').length)}
             icon={<Undo2 size={18} />}
             tono="neutral"
@@ -259,21 +229,20 @@ export function AjustesPage() {
       }
       columns={columns}
       rows={documentos}
-      cardIcon={ClipboardCheck}
-      searchPlaceholder="Buscar por número, almacén, motivo..."
-      empty={cargando ? 'Cargando ajustes...' : 'Todavía no hay ajustes registrados.'}
+      cardIcon={Truck}
+      searchPlaceholder="Buscar por número, almacén..."
+      empty={cargando ? 'Cargando transferencias...' : 'Todavía no hay transferencias registradas.'}
       rowActions={(row) => (
         <>
           <RowAction
             label={`Ver ${row.numero}`}
             onClick={() => {
-              // El listado no trae el detalle: se pide completo al abrir, para
-              // no cargar las líneas de 300 documentos que nadie va a mirar.
+              // El listado no trae el detalle completo: se pide al abrir.
               setDetalleAbierto(row)
-              void ajusteApi.getById(row.id).then(setDetalleAbierto)
+              void transferenciaApi.getById(row.id).then(setDetalleAbierto)
             }}
           >
-            <ClipboardCheck size={15} />
+            <Truck size={15} />
           </RowAction>
           {row.estado === 'CONFIRMADO' && (
             <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anular(row)}>
@@ -283,11 +252,11 @@ export function AjustesPage() {
         </>
       )}
     >
-      {/* Nuevo ajuste */}
+      {/* Nueva transferencia */}
       <Modal
         open={abierto}
-        title="Nuevo ajuste de inventario"
-        description="Registra qué cambió y por qué. Confirmado, no se edita: se anula con otro documento."
+        title="Nueva transferencia"
+        description="Confirmada, no se edita: se anula con otro documento."
         onClose={() => setAbierto(false)}
         footer={
           <>
@@ -295,7 +264,7 @@ export function AjustesPage() {
               Cancelar
             </Button>
             <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-              Registrar ajuste
+              Registrar transferencia
             </Button>
           </>
         }
@@ -305,44 +274,28 @@ export function AjustesPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Desplegable
-              label="Almacén"
-              value={cabecera.almacenId}
-              onChange={(v) => setCabecera({ ...cabecera, almacenId: Number(v) })}
-              options={almacenes
-                .filter((a) => a.activo)
-                .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
+              label="Origen"
+              value={cabecera.almacenOrigenId}
+              onChange={(v) => setCabecera({ ...cabecera, almacenOrigenId: Number(v) })}
+              options={activos.map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
             />
             <Desplegable
-              label="Motivo"
-              value={cabecera.motivoId}
-              onChange={(v) => setCabecera({ ...cabecera, motivoId: Number(v) })}
-              options={motivosManuales.map((m) => ({
-                value: m.id,
-                label: m.nombre,
-                nota: m.tipo === 'ENTRADA' ? 'suma stock' : 'resta stock',
-              }))}
+              label="Destino"
+              value={cabecera.almacenDestinoId}
+              onChange={(v) => setCabecera({ ...cabecera, almacenDestinoId: Number(v) })}
+              options={activos
+                .filter((a) => a.id !== cabecera.almacenOrigenId)
+                .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
             />
           </div>
 
           <Input
             label="Observación"
             optional
-            placeholder="Motivo del ajuste, referencia..."
+            placeholder="Motivo, guía de remisión..."
             value={cabecera.observacion}
             onChange={(e) => setCabecera({ ...cabecera, observacion: e.target.value })}
           />
-
-          {motivo?.pideCosto && (
-            <Input
-              label="Flete"
-              optional
-              type="number"
-              step="0.01"
-              hint={<span className="text-xs text-ink-soft">de toda la entrada, se reparte</span>}
-              value={cabecera.flete}
-              onChange={(e) => setCabecera({ ...cabecera, flete: e.target.value })}
-            />
-          )}
 
           <hr className="border-line" />
 
@@ -361,7 +314,7 @@ export function AjustesPage() {
           <ul className="flex flex-col gap-3">
             {filas.map((fila, i) => {
               const producto = productos.find((p) => p.id === fila.productoId)
-              const compras = producto?.presentaciones.filter((p) => p.activo) ?? []
+              const presentaciones = producto?.presentaciones.filter((p) => p.activo) ?? []
 
               return (
                 <li key={i} className="rounded-field border border-line p-3">
@@ -398,7 +351,7 @@ export function AjustesPage() {
                   </div>
 
                   {producto && (
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <div className="mt-2">
                       <Desplegable
                         label="En"
                         value={fila.presentacionId}
@@ -406,7 +359,7 @@ export function AjustesPage() {
                         placeholder={producto.unidadBase}
                         options={[
                           { value: 0, label: producto.unidadBase, nota: 'unidad base' },
-                          ...compras
+                          ...presentaciones
                             .filter((p) => !p.esBase)
                             .map((p) => ({
                               value: p.id,
@@ -415,26 +368,6 @@ export function AjustesPage() {
                             })),
                         ]}
                       />
-                      {motivo?.pideCosto && (
-                        <Input
-                          label={`Costo por ${
-                            compras.find((p) => p.id === fila.presentacionId)?.nombre
-                              ?? producto.unidadBase
-                          }`}
-                          type="number"
-                          step="0.01"
-                          placeholder={
-                            producto.costoReferencia
-                              ? String(
-                                  producto.costoReferencia *
-                                    (compras.find((p) => p.id === fila.presentacionId)?.factor ?? 1),
-                                )
-                              : '0.00'
-                          }
-                          value={fila.costo}
-                          onChange={(e) => actualizarFila(i, { costo: e.target.value })}
-                        />
-                      )}
                     </div>
                   )}
                 </li>
@@ -447,8 +380,12 @@ export function AjustesPage() {
       {/* Ver detalle */}
       <Modal
         open={detalleAbierto !== null}
-        title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.motivo}` : ''}
-        description={detalleAbierto?.observacion ?? undefined}
+        title={detalleAbierto?.numero ?? ''}
+        description={
+          detalleAbierto
+            ? `${detalleAbierto.almacen} → ${detalleAbierto.almacenDestino}`
+            : undefined
+        }
         onClose={() => setDetalleAbierto(null)}
       >
         {detalleAbierto && (
@@ -459,16 +396,18 @@ export function AjustesPage() {
                 className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2"
               >
                 <span>
-                  <span className="font-medium text-ink">{l.producto}</span>
+                  <Badge tone={l.tipo === 'ENTRADA' ? 'success' : 'warning'}>
+                    {l.tipo === 'ENTRADA' ? 'Entra' : 'Sale'}
+                  </Badge>
+                  <span className="ml-2 font-medium text-ink">{l.producto}</span>
                   <span className="ml-2 text-xs text-ink-soft">
+                    {l.almacen} ·{' '}
                     {l.presentacion
                       ? `${l.cantidadPresentacion} ${l.presentacion}`
                       : `${l.cantidad} ${l.unidadBase}`}
                   </span>
                 </span>
-                <span className="text-sm">
-                  S/ {l.costoUnitario} × {l.unidadBase} = S/ {l.costoTotal.toFixed(2)}
-                </span>
+                <span className="text-sm">S/ {l.costoTotal.toFixed(2)}</span>
               </li>
             ))}
           </ul>
@@ -476,7 +415,6 @@ export function AjustesPage() {
       </Modal>
 
       {dialogo}
-      </ListPage>
-    </>
+    </ListPage>
   )
 }

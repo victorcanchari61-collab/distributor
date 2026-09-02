@@ -44,6 +44,10 @@ public static class Motivos
     public const int Merma = 11;
     public const int Rotura = 12;
     public const int Vencimiento = 13;
+    public const int PrestamoDado = 14;
+    public const int DevolucionPrestamoDado = 15;
+    public const int PrestamoRecibido = 16;
+    public const int DevolucionPrestamoRecibido = 17;
 }
 
 /// <summary>
@@ -95,6 +99,15 @@ public static class TipoDocumentoInventario
 {
     public const string Ajuste = "AJUSTE";
     public const string Anulacion = "ANULACION";
+
+    /// <summary>Mueve stock de un almacén propio a otro. AlmacenId es el origen.</summary>
+    public const string Transferencia = "TRANSFERENCIA";
+
+    /// <summary>Sale o entra mercadería de un tercero, fuera de mis almacenes.</summary>
+    public const string Prestamo = "PRESTAMO";
+
+    /// <summary>Devuelve, total o parcial, lo que se prestó o lo que prestaron.</summary>
+    public const string DevolucionPrestamo = "DEVOLUCION_PRESTAMO";
 }
 
 /// <summary>
@@ -115,9 +128,15 @@ public class DocumentoInventario
     /// <summary>AJUSTE o ANULACION.</summary>
     public string Tipo { get; set; } = TipoDocumentoInventario.Ajuste;
 
+    /// <summary>En una transferencia, el almacén de origen. En todo lo demás, el único.</summary>
     public int AlmacenId { get; set; }
     public Almacen? Almacen { get; set; }
 
+    /// <summary>Solo en transferencias: el almacén que recibe.</summary>
+    public int? AlmacenDestinoId { get; set; }
+    public Almacen? AlmacenDestino { get; set; }
+
+    /// <summary>Motivo "de cabecera", informativo: cada línea guarda el suyo.</summary>
     public int MotivoId { get; set; }
     public MotivoMovimiento? Motivo { get; set; }
 
@@ -195,6 +214,10 @@ public static class OrigenCapa
     public const string Compra = "COMPRA";
     public const string Ajuste = "AJUSTE";
     public const string Devolucion = "DEVOLUCION";
+    public const string Transferencia = "TRANSFERENCIA";
+
+    /// <summary>Mercadería de un tercero, prestada a la empresa.</summary>
+    public const string Prestamo = "PRESTAMO";
 }
 
 /// <summary>
@@ -262,4 +285,94 @@ public class ConsumoCapa
 
     /// <summary>Costo de la capa en ese momento.</summary>
     public decimal CostoUnitario { get; set; }
+}
+
+/// <summary>Quién presta a quién.</summary>
+public static class TipoPrestamo
+{
+    /// <summary>Sale mercadería propia hacia un tercero.</summary>
+    public const string Dado = "DADO";
+
+    /// <summary>Entra mercadería de un tercero.</summary>
+    public const string Recibido = "RECIBIDO";
+
+    public static readonly string[] Todos = [Dado, Recibido];
+}
+
+public static class EstadoPrestamo
+{
+    public const string Pendiente = "PENDIENTE";
+    public const string Devuelto = "DEVUELTO";
+}
+
+/// <summary>
+/// Mercadería que sale o entra desde fuera de la empresa, sin ser compra ni
+/// venta: se presta y se espera de vuelta.
+///
+/// Se distingue de una transferencia en que la contraparte NO es un almacén
+/// propio: es un tercero (otro negocio, un conocido), y por eso el prestamo
+/// lleva quien es esa contraparte y si ya devolvio o le devolvieron.
+///
+/// Por dentro usa el mismo motor que todo lo demas: cada linea crea un
+/// MovimientoInventario con su motivo (PrestamoDado/PrestamoRecibido), y la
+/// devolucion consume o repone esas mismas capas — nunca stock generico —
+/// para no mezclar mercaderia prestada con la comprada.
+/// </summary>
+public class Prestamo
+{
+    public int Id { get; set; }
+
+    /// <summary>Correlativo visible: PR-000001.</summary>
+    public string Numero { get; set; } = string.Empty;
+
+    /// <summary>DADO o RECIBIDO. Ver <see cref="TipoPrestamo"/>.</summary>
+    public string Tipo { get; set; } = TipoPrestamo.Dado;
+
+    /// <summary>A quien se le presta, o quien presta. Texto libre.</summary>
+    public string Contraparte { get; set; } = string.Empty;
+
+    public int AlmacenId { get; set; }
+    public Almacen? Almacen { get; set; }
+
+    public DateTime Fecha { get; set; } = DateTime.UtcNow;
+
+    /// <summary>PENDIENTE mientras falte devolver algo; DEVUELTO cuando ya no queda nada.</summary>
+    public string Estado { get; set; } = EstadoPrestamo.Pendiente;
+
+    public string? Observacion { get; set; }
+
+    public int? UsuarioId { get; set; }
+    public Usuario? Usuario { get; set; }
+
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+    public List<PrestamoDetalle> Detalle { get; set; } = [];
+}
+
+/// <summary>Un producto dentro del préstamo, con cuánto ya se devolvió.</summary>
+public class PrestamoDetalle
+{
+    public int Id { get; set; }
+
+    public int PrestamoId { get; set; }
+    public Prestamo? Prestamo { get; set; }
+
+    public int ProductoId { get; set; }
+    public Producto? Producto { get; set; }
+
+    public int? PresentacionId { get; set; }
+    public ProductoPresentacion? Presentacion { get; set; }
+
+    /// <summary>Cómo se escribió: "2 Saco 50 kg".</summary>
+    public decimal CantidadPresentacion { get; set; }
+
+    /// <summary>En unidad base. Lo que salió o entró originalmente.</summary>
+    public decimal Cantidad { get; set; }
+
+    /// <summary>Cuánto de esta línea ya se devolvió, en unidad base.</summary>
+    public decimal CantidadDevuelta { get; set; }
+
+    /// <summary>Movimiento que registró el préstamo: de ahí sale el costo al devolver.</summary>
+    public int MovimientoId { get; set; }
+    public MovimientoInventario? Movimiento { get; set; }
 }

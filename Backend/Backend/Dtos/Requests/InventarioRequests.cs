@@ -62,3 +62,63 @@ public class CrearAjusteRequest
 
     public List<LineaAjusteRequest> Detalle { get; set; } = [];
 }
+
+/// <summary>Una línea de una transferencia. Sin costo: se hereda del que sale.</summary>
+public class LineaTransferenciaRequest
+{
+    public int ProductoId { get; set; }
+    public int? PresentacionId { get; set; }
+    public decimal Cantidad { get; set; }
+}
+
+/// <summary>Transferencia entre dos almacenes propios. El costo viaja con la mercadería.</summary>
+public class CrearTransferenciaRequest
+{
+    public int AlmacenOrigenId { get; set; }
+    public int AlmacenDestinoId { get; set; }
+    public DateTime? Fecha { get; set; }
+    public string? Observacion { get; set; }
+    public List<LineaTransferenciaRequest> Detalle { get; set; } = [];
+}
+
+/// <summary>Una línea de un préstamo.</summary>
+public class LineaPrestamoRequest
+{
+    public int ProductoId { get; set; }
+    public int? PresentacionId { get; set; }
+    public decimal Cantidad { get; set; }
+
+    /// <summary>
+    /// Solo para préstamos RECIBIDOS: lo que vale una presentación completa,
+    /// si no quieres usar el costo de referencia del producto.
+    /// </summary>
+    public decimal? CostoPresentacion { get; set; }
+}
+
+/// <summary>
+/// Mercadería que sale o entra desde fuera de la empresa: se presta y se
+/// espera de vuelta.
+/// </summary>
+public class CrearPrestamoRequest
+{
+    /// <summary>DADO o RECIBIDO.</summary>
+    public string Tipo { get; set; } = string.Empty;
+
+    public string Contraparte { get; set; } = string.Empty;
+    public int AlmacenId { get; set; }
+    public DateTime? Fecha { get; set; }
+    public string? Observacion { get; set; }
+    public List<LineaPrestamoRequest> Detalle { get; set; } = [];
+}
+
+/// <summary>Cuánto se devuelve de una línea del préstamo, en unidad base.</summary>
+public class LineaDevolucionPrestamoRequest
+{
+    public int PrestamoDetalleId { get; set; }
+    public decimal Cantidad { get; set; }
+}
+
+public class DevolverPrestamoRequest
+{
+    public List<LineaDevolucionPrestamoRequest> Detalle { get; set; } = [];
+}

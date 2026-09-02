@@ -5,7 +5,14 @@ import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
 import { ListasPreciosPage } from './features/facturacion'
-import { AlmacenesPage, AjustesPage, KardexPage, StockPage } from './features/inventario'
+import {
+  AlmacenesPage,
+  AjustesPage,
+  KardexPage,
+  StockPage,
+  TransferenciasPage,
+  PrestamosPage,
+} from './features/inventario'
 import { ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
@@ -20,6 +27,8 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'inv.stock': StockPage,
   'inv.kardex': KardexPage,
   'inv.ajustes': AjustesPage,
+  'inv.transferencias': TransferenciasPage,
+  'inv.prestamos': PrestamosPage,
   'config.usuarios': UsuariosPage,
   'config.accesos': AccesosPage,
   'config.roles': RolesPage,

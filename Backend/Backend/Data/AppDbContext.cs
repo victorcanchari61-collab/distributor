@@ -28,6 +28,8 @@ public class AppDbContext : DbContext
     public DbSet<MovimientoInventario> Movimientos => Set<MovimientoInventario>();
     public DbSet<CapaCosto> CapasCosto => Set<CapaCosto>();
     public DbSet<ConsumoCapa> Consumos => Set<ConsumoCapa>();
+    public DbSet<Prestamo> Prestamos => Set<Prestamo>();
+    public DbSet<PrestamoDetalle> PrestamoDetalles => Set<PrestamoDetalle>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -350,7 +352,7 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("MotivosMovimiento");
             entity.HasIndex(m => m.Codigo).IsUnique();
-            entity.Property(m => m.Codigo).HasMaxLength(20).IsRequired();
+            entity.Property(m => m.Codigo).HasMaxLength(25).IsRequired();
             entity.Property(m => m.Nombre).HasMaxLength(80).IsRequired();
             entity.Property(m => m.Tipo).HasMaxLength(10).IsRequired();
 
@@ -362,6 +364,13 @@ public class AppDbContext : DbContext
                 Motivo(Motivos.Merma, "MERMA", "Merma", TipoMovimiento.Salida, sistema: false),
                 Motivo(Motivos.Rotura, "ROTURA", "Rotura", TipoMovimiento.Salida, sistema: false),
                 Motivo(Motivos.Vencimiento, "VENCIMIENTO", "Vencimiento", TipoMovimiento.Salida, sistema: false),
+
+                // Prestamos: los genera la pantalla de Prestamos, no un ajuste
+                // a mano, porque llevan contraparte y estado de devolucion.
+                Motivo(Motivos.PrestamoDado, "PRESTAMO_DADO", "Préstamo dado", TipoMovimiento.Salida, sistema: true),
+                Motivo(Motivos.DevolucionPrestamoDado, "DEV_PRESTAMO_DADO", "Devolución de préstamo dado", TipoMovimiento.Entrada, sistema: true),
+                Motivo(Motivos.PrestamoRecibido, "PRESTAMO_RECIBIDO", "Préstamo recibido", TipoMovimiento.Entrada, sistema: true),
+                Motivo(Motivos.DevolucionPrestamoRecibido, "DEV_PRESTAMO_RECIBIDO", "Devolución de préstamo recibido", TipoMovimiento.Salida, sistema: true),
 
                 // Del sistema: los crea un documento, no se eligen a mano.
                 Motivo(Motivos.Compra, "COMPRA", "Recepción de compra", TipoMovimiento.Entrada, sistema: true),
@@ -378,12 +387,14 @@ public class AppDbContext : DbContext
             entity.ToTable("DocumentosInventario");
             entity.HasIndex(d => d.Numero).IsUnique();
             entity.Property(d => d.Numero).HasMaxLength(20).IsRequired();
-            entity.Property(d => d.Tipo).HasMaxLength(15).IsRequired();
+            entity.Property(d => d.Tipo).HasMaxLength(25).IsRequired();
             entity.Property(d => d.Estado).HasMaxLength(15).IsRequired();
             entity.Property(d => d.Observacion).HasMaxLength(250);
 
             entity.HasOne(d => d.Almacen).WithMany()
                 .HasForeignKey(d => d.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.AlmacenDestino).WithMany()
+                .HasForeignKey(d => d.AlmacenDestinoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(d => d.Motivo).WithMany()
                 .HasForeignKey(d => d.MotivoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(d => d.Usuario).WithMany()
@@ -447,6 +458,39 @@ public class AppDbContext : DbContext
                 .HasForeignKey(c => c.MovimientoId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(c => c.Capa).WithMany()
                 .HasForeignKey(c => c.CapaId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Prestamo>(entity =>
+        {
+            entity.ToTable("Prestamos");
+            entity.HasIndex(p => p.Numero).IsUnique();
+            entity.Property(p => p.Numero).HasMaxLength(20).IsRequired();
+            entity.Property(p => p.Tipo).HasMaxLength(10).IsRequired();
+            entity.Property(p => p.Contraparte).HasMaxLength(150).IsRequired();
+            entity.Property(p => p.Estado).HasMaxLength(15).IsRequired();
+            entity.Property(p => p.Observacion).HasMaxLength(250);
+
+            entity.HasOne(p => p.Almacen).WithMany()
+                .HasForeignKey(p => p.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.Usuario).WithMany()
+                .HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PrestamoDetalle>(entity =>
+        {
+            entity.ToTable("PrestamoDetalle");
+            entity.Property(d => d.CantidadPresentacion).HasPrecision(18, 4);
+            entity.Property(d => d.Cantidad).HasPrecision(18, 4);
+            entity.Property(d => d.CantidadDevuelta).HasPrecision(18, 4);
+
+            entity.HasOne(d => d.Prestamo).WithMany(p => p.Detalle)
+                .HasForeignKey(d => d.PrestamoId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(d => d.Producto).WithMany()
+                .HasForeignKey(d => d.ProductoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Presentacion).WithMany()
+                .HasForeignKey(d => d.PresentacionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Movimiento).WithMany()
+                .HasForeignKey(d => d.MovimientoId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 

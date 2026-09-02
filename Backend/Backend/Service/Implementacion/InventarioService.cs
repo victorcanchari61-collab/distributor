@@ -35,6 +35,9 @@ public class InventarioService : IInventarioService
     private readonly IValidator<CreateMotivoRequest> _createMotivo;
     private readonly IValidator<UpdateMotivoRequest> _updateMotivo;
     private readonly IValidator<CrearAjusteRequest> _ajusteValidator;
+    private readonly IValidator<CrearTransferenciaRequest> _transferenciaValidator;
+    private readonly IValidator<CrearPrestamoRequest> _prestamoValidator;
+    private readonly IValidator<DevolverPrestamoRequest> _devolucionValidator;
 
     public InventarioService(
         IInventarioRepository repository,
@@ -43,7 +46,10 @@ public class InventarioService : IInventarioService
         IValidator<UpdateAlmacenRequest> updateAlmacen,
         IValidator<CreateMotivoRequest> createMotivo,
         IValidator<UpdateMotivoRequest> updateMotivo,
-        IValidator<CrearAjusteRequest> ajusteValidator)
+        IValidator<CrearAjusteRequest> ajusteValidator,
+        IValidator<CrearTransferenciaRequest> transferenciaValidator,
+        IValidator<CrearPrestamoRequest> prestamoValidator,
+        IValidator<DevolverPrestamoRequest> devolucionValidator)
     {
         _repository = repository;
         _productos = productos;
@@ -52,6 +58,9 @@ public class InventarioService : IInventarioService
         _createMotivo = createMotivo;
         _updateMotivo = updateMotivo;
         _ajusteValidator = ajusteValidator;
+        _transferenciaValidator = transferenciaValidator;
+        _prestamoValidator = prestamoValidator;
+        _devolucionValidator = devolucionValidator;
     }
 
     // ------------------------------------------------------------- Almacenes
@@ -357,9 +366,10 @@ public class InventarioService : IInventarioService
 
     // ---------------------------------------------------------------- Ajustes
 
-    public async Task<IEnumerable<DocumentoInventarioResponse>> GetDocumentosAsync()
+    public async Task<IEnumerable<DocumentoInventarioResponse>> GetDocumentosAsync(
+        string? familia = null)
     {
-        var documentos = (await _repository.GetDocumentosAsync()).ToList();
+        var documentos = (await _repository.GetDocumentosAsync(familia)).ToList();
         var respuesta = new List<DocumentoInventarioResponse>();
 
         foreach (var d in documentos)
@@ -512,6 +522,119 @@ public class InventarioService : IInventarioService
         return await GetDocumentoAsync(documento.Id);
     }
 
+    // ----------------------------------------------------------- Transferencias
+
+    public async Task<DocumentoInventarioResponse> CrearTransferenciaAsync(
+        CrearTransferenciaRequest request, int? usuarioId)
+    {
+        await _transferenciaValidator.ValidateAndThrowAsync(request);
+
+        var origen = await GetAlmacenOrThrowAsync(request.AlmacenOrigenId);
+        var destino = await GetAlmacenOrThrowAsync(request.AlmacenDestinoId);
+
+        if (!origen.Activo) throw new BadRequestException("El almacén de origen está desactivado");
+        if (!destino.Activo) throw new BadRequestException("El almacén de destino está desactivado");
+
+        var motivoSalida = await GetMotivoOrThrowAsync(Motivos.TransferenciaSalida);
+        var motivoIngreso = await GetMotivoOrThrowAsync(Motivos.TransferenciaIngreso);
+        var fecha = request.Fecha ?? DateTime.UtcNow;
+
+        var documento = new DocumentoInventario
+        {
+            Numero = await _repository.SiguienteNumeroAsync(TipoDocumentoInventario.Transferencia),
+            Tipo = TipoDocumentoInventario.Transferencia,
+            AlmacenId = origen.Id,
+            AlmacenDestinoId = destino.Id,
+            MotivoId = motivoSalida.Id,
+            Fecha = fecha,
+            Estado = EstadoDocumento.Confirmado,
+            Observacion = Limpiar(request.Observacion),
+            UsuarioId = usuarioId
+        };
+
+        await using var transaccion = await _repository.IniciarTransaccionAsync();
+
+        await _repository.AddDocumentoAsync(documento);
+        await _repository.GuardarAsync();
+
+        foreach (var linea in request.Detalle)
+        {
+            var producto = await _productos.GetConDetalleAsync(linea.ProductoId)
+                ?? throw new BadRequestException($"No existe el producto {linea.ProductoId}");
+
+            if (!producto.ControlaStock)
+            {
+                throw new BadRequestException(
+                    $"'{producto.Nombre}' no controla stock: no se puede transferir.");
+            }
+
+            var (factor, presentacion) = await ResolverFactorAsync(linea.PresentacionId, producto);
+            var cantidad = linea.Cantidad * factor;
+
+            var salida = new MovimientoInventario
+            {
+                DocumentoId = documento.Id,
+                ProductoId = producto.Id,
+                AlmacenId = origen.Id,
+                MotivoId = motivoSalida.Id,
+                Tipo = TipoMovimiento.Salida,
+                PresentacionId = presentacion?.Id,
+                CantidadPresentacion = linea.Cantidad,
+                Cantidad = cantidad,
+                Fecha = fecha
+            };
+
+            await _repository.AddDocumentoMovimientoAsync(salida);
+            await _repository.GuardarAsync();
+
+            // El costo NO se declara: es el mismo con el que la mercaderia
+            // estaba en origen. ConsumirAsync ya deja registrado de que capas
+            // salio, en ConsumoCapa.
+            await ConsumirAsync(salida, producto, origen.Id, cantidad);
+
+            var entrada = new MovimientoInventario
+            {
+                DocumentoId = documento.Id,
+                ProductoId = producto.Id,
+                AlmacenId = destino.Id,
+                MotivoId = motivoIngreso.Id,
+                Tipo = TipoMovimiento.Entrada,
+                PresentacionId = presentacion?.Id,
+                CantidadPresentacion = linea.Cantidad,
+                Cantidad = cantidad,
+                CostoUnitario = salida.CostoUnitario,
+                CostoTotal = salida.CostoTotal,
+                Fecha = fecha
+            };
+
+            await _repository.AddDocumentoMovimientoAsync(entrada);
+            await _repository.GuardarAsync();
+
+            // Una capa nueva en destino por cada capa que se toco en origen:
+            // preserva el costo exacto de cada una, en vez de promediarlas.
+            foreach (var consumo in await _repository.GetConsumosAsync(salida.Id))
+            {
+                await _repository.AddCapaAsync(new CapaCosto
+                {
+                    ProductoId = producto.Id,
+                    AlmacenId = destino.Id,
+                    MovimientoId = entrada.Id,
+                    CantidadInicial = consumo.Cantidad,
+                    CantidadDisponible = consumo.Cantidad,
+                    CostoUnitario = consumo.CostoUnitario,
+                    Origen = OrigenCapa.Transferencia,
+                    Fecha = fecha
+                });
+            }
+
+            await _repository.GuardarAsync();
+        }
+
+        await transaccion.CommitAsync();
+
+        return await GetDocumentoAsync(documento.Id);
+    }
+
     public async Task<DocumentoInventarioResponse> AnularAsync(int documentoId, int? usuarioId)
     {
         var original = await _repository.GetDocumentoAsync(documentoId)
@@ -527,8 +650,6 @@ public class InventarioService : IInventarioService
             throw new BadRequestException("Una anulación no se anula. Registra un ajuste nuevo.");
         }
 
-        var eraEntrada = original.Motivo?.Tipo == TipoMovimiento.Entrada;
-
         await using var transaccion = await _repository.IniciarTransaccionAsync();
 
         var anulacion = new DocumentoInventario
@@ -536,6 +657,7 @@ public class InventarioService : IInventarioService
             Numero = await _repository.SiguienteNumeroAsync(TipoDocumentoInventario.Anulacion),
             Tipo = TipoDocumentoInventario.Anulacion,
             AlmacenId = original.AlmacenId,
+            AlmacenDestinoId = original.AlmacenDestinoId,
             MotivoId = original.MotivoId,
             Fecha = DateTime.UtcNow,
             Estado = EstadoDocumento.Confirmado,
@@ -549,6 +671,12 @@ public class InventarioService : IInventarioService
 
         foreach (var m in original.Movimientos)
         {
+            // Por movimiento, no por documento: una transferencia trae en el
+            // MISMO documento una salida (origen) y una entrada (destino), con
+            // motivos distintos. Decidirlo a nivel de documento invertiria mal
+            // la mitad de las lineas.
+            var eraEntrada = m.Tipo == TipoMovimiento.Entrada;
+
             var espejo = new MovimientoInventario
             {
                 DocumentoId = anulacion.Id,
@@ -571,20 +699,27 @@ public class InventarioService : IInventarioService
 
             if (eraEntrada)
             {
-                // Se retira la capa que creo. Si ya se vendio algo de ella, no
-                // hay nada que retirar sin descuadrar el costo de esas ventas.
-                var capa = await _repository.GetCapaDeMovimientoAsync(m.Id)
-                    ?? throw new BadRequestException(
-                        "No se encontró la mercadería de este documento.");
+                // Se retiran las capas que creo (una transferencia puede crear
+                // varias, una por cada costo de origen). Si ya se uso algo de
+                // cualquiera de ellas, no hay nada que retirar sin descuadrar
+                // el costo de lo que ya salio.
+                var capas = await _repository.GetCapasDeMovimientoAsync(m.Id);
+                if (capas.Count == 0)
+                {
+                    throw new BadRequestException("No se encontró la mercadería de este documento.");
+                }
 
-                if (capa.CantidadDisponible < capa.CantidadInicial)
+                if (capas.Any(c => c.CantidadDisponible < c.CantidadInicial))
                 {
                     throw new BadRequestException(
                         "No se puede anular: ya se vendió o se usó parte de esta mercadería. "
                         + "Registra un ajuste de salida por la diferencia.");
                 }
 
-                capa.CantidadDisponible = 0;
+                foreach (var capa in capas)
+                {
+                    capa.CantidadDisponible = 0;
+                }
             }
             else
             {
@@ -730,6 +865,8 @@ public class InventarioService : IInventarioService
         Fecha = d.Fecha,
         AlmacenId = d.AlmacenId,
         Almacen = d.Almacen?.Nombre ?? string.Empty,
+        AlmacenDestinoId = d.AlmacenDestinoId,
+        AlmacenDestino = d.AlmacenDestino?.Nombre,
         MotivoId = d.MotivoId,
         Motivo = d.Motivo?.Nombre ?? string.Empty,
         MotivoTipo = d.Motivo?.Tipo ?? string.Empty,
@@ -752,8 +889,326 @@ public class InventarioService : IInventarioService
                 CantidadPresentacion = m.CantidadPresentacion,
                 Cantidad = m.Cantidad,
                 CostoUnitario = m.CostoUnitario,
-                CostoTotal = m.CostoTotal
+                CostoTotal = m.CostoTotal,
+                Tipo = m.Tipo,
+                AlmacenId = m.AlmacenId,
+                Almacen = m.Almacen?.Nombre ?? string.Empty
             }).ToList()
             : []
+    };
+
+    // ------------------------------------------------------------- Prestamos
+
+    public async Task<IEnumerable<PrestamoResponse>> GetPrestamosAsync()
+    {
+        var prestamos = await _repository.GetPrestamosAsync();
+        return prestamos.Select(MapPrestamo);
+    }
+
+    public async Task<PrestamoResponse> GetPrestamoAsync(int id) =>
+        MapPrestamo(await GetPrestamoOrThrowAsync(id));
+
+    public async Task<PrestamoResponse> CrearPrestamoAsync(
+        CrearPrestamoRequest request, int? usuarioId)
+    {
+        await _prestamoValidator.ValidateAndThrowAsync(request);
+
+        var almacen = await GetAlmacenOrThrowAsync(request.AlmacenId);
+        if (!almacen.Activo) throw new BadRequestException("El almacén está desactivado");
+
+        var esDado = request.Tipo == TipoPrestamo.Dado;
+        var motivo = await GetMotivoOrThrowAsync(
+            esDado ? Motivos.PrestamoDado : Motivos.PrestamoRecibido);
+        var fecha = request.Fecha ?? DateTime.UtcNow;
+
+        var documento = new DocumentoInventario
+        {
+            Numero = await _repository.SiguienteNumeroAsync(TipoDocumentoInventario.Prestamo),
+            Tipo = TipoDocumentoInventario.Prestamo,
+            AlmacenId = almacen.Id,
+            MotivoId = motivo.Id,
+            Fecha = fecha,
+            Estado = EstadoDocumento.Confirmado,
+            Observacion = Limpiar(request.Observacion),
+            UsuarioId = usuarioId
+        };
+
+        var prestamo = new Prestamo
+        {
+            Numero = documento.Numero,
+            Tipo = request.Tipo,
+            Contraparte = request.Contraparte.Trim(),
+            AlmacenId = almacen.Id,
+            Fecha = fecha,
+            Estado = EstadoPrestamo.Pendiente,
+            Observacion = Limpiar(request.Observacion),
+            UsuarioId = usuarioId
+        };
+
+        await using var transaccion = await _repository.IniciarTransaccionAsync();
+
+        await _repository.AddDocumentoAsync(documento);
+        await _repository.AddPrestamoAsync(prestamo);
+        await _repository.GuardarAsync();
+
+        foreach (var linea in request.Detalle)
+        {
+            var producto = await _productos.GetConDetalleAsync(linea.ProductoId)
+                ?? throw new BadRequestException($"No existe el producto {linea.ProductoId}");
+
+            if (!producto.ControlaStock)
+            {
+                throw new BadRequestException($"'{producto.Nombre}' no controla stock.");
+            }
+
+            var (factor, presentacion) = await ResolverFactorAsync(linea.PresentacionId, producto);
+            var cantidad = linea.Cantidad * factor;
+
+            var movimiento = new MovimientoInventario
+            {
+                DocumentoId = documento.Id,
+                ProductoId = producto.Id,
+                AlmacenId = almacen.Id,
+                MotivoId = motivo.Id,
+                Tipo = motivo.Tipo,
+                PresentacionId = presentacion?.Id,
+                CantidadPresentacion = linea.Cantidad,
+                Cantidad = cantidad,
+                Fecha = fecha
+            };
+
+            if (esDado)
+            {
+                // Sale como cualquier salida: hereda el costo de las capas que
+                // consume, y queda registrado de cuales para poder devolver.
+                await _repository.AddDocumentoMovimientoAsync(movimiento);
+                await _repository.GuardarAsync();
+                await ConsumirAsync(movimiento, producto, almacen.Id, cantidad);
+            }
+            else
+            {
+                // No es compra: no hay factura. Se valoriza al costo de
+                // referencia del producto, o al que se indique, solo para que
+                // el stock no quede en cero soles mientras esta prestado.
+                var costoPresentacion = linea.CostoPresentacion
+                    ?? (producto.CostoReferencia ?? 0) * factor;
+                var costoTotal = costoPresentacion * linea.Cantidad;
+
+                movimiento.CostoUnitario = cantidad == 0 ? 0 : Math.Round(costoTotal / cantidad, 4);
+                movimiento.CostoTotal = Math.Round(costoTotal, 4);
+
+                await _repository.AddDocumentoMovimientoAsync(movimiento);
+                await _repository.GuardarAsync();
+
+                await _repository.AddCapaAsync(new CapaCosto
+                {
+                    ProductoId = producto.Id,
+                    AlmacenId = almacen.Id,
+                    MovimientoId = movimiento.Id,
+                    CantidadInicial = cantidad,
+                    CantidadDisponible = cantidad,
+                    CostoUnitario = movimiento.CostoUnitario,
+                    Origen = OrigenCapa.Prestamo,
+                    Fecha = fecha
+                });
+                await _repository.GuardarAsync();
+            }
+
+            await _repository.AddPrestamoDetalleAsync(new PrestamoDetalle
+            {
+                PrestamoId = prestamo.Id,
+                ProductoId = producto.Id,
+                PresentacionId = presentacion?.Id,
+                CantidadPresentacion = linea.Cantidad,
+                Cantidad = cantidad,
+                CantidadDevuelta = 0,
+                MovimientoId = movimiento.Id
+            });
+            await _repository.GuardarAsync();
+        }
+
+        await transaccion.CommitAsync();
+
+        return await GetPrestamoAsync(prestamo.Id);
+    }
+
+    public async Task<PrestamoResponse> DevolverPrestamoAsync(
+        int prestamoId, DevolverPrestamoRequest request, int? usuarioId)
+    {
+        await _devolucionValidator.ValidateAndThrowAsync(request);
+
+        var prestamo = await GetPrestamoOrThrowAsync(prestamoId);
+
+        if (prestamo.Estado == EstadoPrestamo.Devuelto)
+        {
+            throw new BadRequestException("Este préstamo ya se devolvió por completo.");
+        }
+
+        var esDado = prestamo.Tipo == TipoPrestamo.Dado;
+        var motivo = await GetMotivoOrThrowAsync(
+            esDado ? Motivos.DevolucionPrestamoDado : Motivos.DevolucionPrestamoRecibido);
+
+        var documento = new DocumentoInventario
+        {
+            Numero = await _repository.SiguienteNumeroAsync(TipoDocumentoInventario.DevolucionPrestamo),
+            Tipo = TipoDocumentoInventario.DevolucionPrestamo,
+            AlmacenId = prestamo.AlmacenId,
+            MotivoId = motivo.Id,
+            Fecha = DateTime.UtcNow,
+            Estado = EstadoDocumento.Confirmado,
+            Observacion = $"Devolución de {prestamo.Numero}",
+            UsuarioId = usuarioId
+        };
+
+        await using var transaccion = await _repository.IniciarTransaccionAsync();
+
+        await _repository.AddDocumentoAsync(documento);
+        await _repository.GuardarAsync();
+
+        foreach (var linea in request.Detalle)
+        {
+            var detalle = prestamo.Detalle.FirstOrDefault(d => d.Id == linea.PrestamoDetalleId)
+                ?? throw new BadRequestException(
+                    $"La línea {linea.PrestamoDetalleId} no pertenece a este préstamo.");
+
+            var pendiente = detalle.Cantidad - detalle.CantidadDevuelta;
+            if (linea.Cantidad > pendiente)
+            {
+                throw new BadRequestException(
+                    $"'{detalle.Producto?.Nombre}': quedan {pendiente} {detalle.Producto?.UnidadBase?.Codigo} "
+                    + "por devolver, no se puede devolver más que eso.");
+            }
+
+            var movimiento = new MovimientoInventario
+            {
+                DocumentoId = documento.Id,
+                ProductoId = detalle.ProductoId,
+                AlmacenId = prestamo.AlmacenId,
+                MotivoId = motivo.Id,
+                Tipo = motivo.Tipo,
+                PresentacionId = detalle.PresentacionId,
+                // La presentacion no se recalcula: la devolucion se registra
+                // en unidad base, que es lo unico que no cambia de signo.
+                CantidadPresentacion = linea.Cantidad,
+                Cantidad = linea.Cantidad,
+                Fecha = documento.Fecha
+            };
+
+            await _repository.AddDocumentoMovimientoAsync(movimiento);
+            await _repository.GuardarAsync();
+
+            if (esDado)
+            {
+                // Vuelve a las MISMAS capas de las que salio en su momento, al
+                // costo que tenian entonces, hasta cubrir lo que se devuelve.
+                var restante = linea.Cantidad;
+                decimal costoTotal = 0;
+
+                foreach (var consumo in await _repository.GetConsumosAsync(detalle.MovimientoId))
+                {
+                    if (restante <= 0) break;
+
+                    var capa = await _repository.GetCapaAsync(consumo.CapaId);
+                    if (capa is null) continue;
+
+                    var tomado = Math.Min(consumo.Cantidad, restante);
+                    capa.CantidadDisponible += tomado;
+                    restante -= tomado;
+                    costoTotal += tomado * consumo.CostoUnitario;
+                }
+
+                movimiento.CostoTotal = Math.Round(costoTotal, 4);
+                movimiento.CostoUnitario = linea.Cantidad == 0
+                    ? 0
+                    : Math.Round(costoTotal / linea.Cantidad, 4);
+            }
+            else
+            {
+                // Sale de la capa que ESTE prestamo creo al entrar, no del
+                // stock en general: no hay que devolver mercaderia comprada.
+                var capas = await _repository.GetCapasDeMovimientoAsync(detalle.MovimientoId);
+                var disponible = capas.Sum(c => c.CantidadDisponible);
+
+                if (disponible < linea.Cantidad)
+                {
+                    throw new BadRequestException(
+                        $"'{detalle.Producto?.Nombre}': ya se usó o se vendió parte de este préstamo, "
+                        + $"solo quedan {disponible} {detalle.Producto?.UnidadBase?.Codigo} para devolver.");
+                }
+
+                var restante = linea.Cantidad;
+                decimal costoTotal = 0;
+
+                foreach (var capa in capas)
+                {
+                    if (restante <= 0) break;
+
+                    var tomado = Math.Min(capa.CantidadDisponible, restante);
+                    capa.CantidadDisponible -= tomado;
+                    restante -= tomado;
+                    costoTotal += tomado * capa.CostoUnitario;
+
+                    await _repository.AddConsumoAsync(new ConsumoCapa
+                    {
+                        MovimientoId = movimiento.Id,
+                        CapaId = capa.Id,
+                        Cantidad = tomado,
+                        CostoUnitario = capa.CostoUnitario
+                    });
+                }
+
+                movimiento.CostoTotal = Math.Round(costoTotal, 4);
+                movimiento.CostoUnitario = linea.Cantidad == 0
+                    ? 0
+                    : Math.Round(costoTotal / linea.Cantidad, 4);
+            }
+
+            detalle.CantidadDevuelta += linea.Cantidad;
+            await _repository.GuardarAsync();
+        }
+
+        prestamo.Estado = prestamo.Detalle.All(d => d.CantidadDevuelta >= d.Cantidad)
+            ? EstadoPrestamo.Devuelto
+            : EstadoPrestamo.Pendiente;
+        await _repository.UpdatePrestamoAsync(prestamo);
+
+        await transaccion.CommitAsync();
+
+        return await GetPrestamoAsync(prestamo.Id);
+    }
+
+    private async Task<Prestamo> GetPrestamoOrThrowAsync(int id) =>
+        await _repository.GetPrestamoAsync(id)
+        ?? throw new NotFoundException($"No existe el préstamo {id}");
+
+    private static PrestamoResponse MapPrestamo(Prestamo p) => new()
+    {
+        Id = p.Id,
+        Numero = p.Numero,
+        Tipo = p.Tipo,
+        Contraparte = p.Contraparte,
+        AlmacenId = p.AlmacenId,
+        Almacen = p.Almacen?.Nombre ?? string.Empty,
+        Fecha = p.Fecha,
+        Estado = p.Estado,
+        Observacion = p.Observacion,
+        Usuario = p.Usuario?.Nombre,
+        Total = Math.Round(p.Detalle.Sum(d => d.Movimiento?.CostoTotal ?? 0), 2),
+        Detalle = p.Detalle.Select(d => new PrestamoDetalleResponse
+        {
+            Id = d.Id,
+            ProductoId = d.ProductoId,
+            Codigo = d.Producto?.Codigo ?? string.Empty,
+            Producto = d.Producto?.Nombre ?? string.Empty,
+            UnidadBase = d.Producto?.UnidadBase?.Codigo ?? string.Empty,
+            PresentacionId = d.PresentacionId,
+            Presentacion = d.Presentacion?.Nombre,
+            CantidadPresentacion = d.CantidadPresentacion,
+            Cantidad = d.Cantidad,
+            CantidadDevuelta = d.CantidadDevuelta,
+            CantidadPendiente = d.Cantidad - d.CantidadDevuelta,
+            CostoUnitario = d.Movimiento?.CostoUnitario ?? 0,
+            CostoTotal = d.Movimiento?.CostoTotal ?? 0
+        }).ToList()
     };
 }

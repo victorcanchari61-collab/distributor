@@ -166,6 +166,10 @@ export interface LineaDocumentoResponse {
   cantidad: number
   costoUnitario: number
   costoTotal: number
+  /** ENTRADA o SALIDA: en una transferencia hay líneas de los dos tipos. */
+  tipo: TipoMovimiento
+  almacenId: number
+  almacen: string
 }
 
 export interface DocumentoInventarioResponse {
@@ -175,6 +179,9 @@ export interface DocumentoInventarioResponse {
   fecha: string
   almacenId: number
   almacen: string
+  /** Solo en transferencias: el almacén que recibe. */
+  almacenDestinoId: number | null
+  almacenDestino: string | null
   motivoId: number
   motivo: string
   motivoTipo: TipoMovimiento
@@ -195,4 +202,99 @@ export const ajusteApi = {
   /** PATCH /api/inventario/ajustes/{id}/anular — crea el documento espejo, no borra. */
   anular: (id: number) =>
     api.patch<DocumentoInventarioResponse>(`/inventario/ajustes/${id}/anular`),
+}
+
+// --- Transferencias ---
+
+export interface LineaTransferenciaRequest {
+  productoId: number
+  presentacionId?: number | null
+  cantidad: number
+}
+
+export interface CrearTransferenciaRequest {
+  almacenOrigenId: number
+  almacenDestinoId: number
+  fecha?: string | null
+  observacion?: string | null
+  detalle: LineaTransferenciaRequest[]
+}
+
+export const transferenciaApi = {
+  getAll: () => api.get<DocumentoInventarioResponse[]>('/inventario/transferencias'),
+  getById: (id: number) => api.get<DocumentoInventarioResponse>(`/inventario/transferencias/${id}`),
+  create: (body: CrearTransferenciaRequest) =>
+    api.post<DocumentoInventarioResponse>('/inventario/transferencias', body),
+  /** Usa el mismo endpoint de anulación que los ajustes: es el mismo concepto. */
+  anular: (id: number) =>
+    api.patch<DocumentoInventarioResponse>(`/inventario/ajustes/${id}/anular`),
+}
+
+// --- Prestamos ---
+
+export type TipoPrestamo = 'DADO' | 'RECIBIDO'
+export type EstadoPrestamo = 'PENDIENTE' | 'DEVUELTO'
+
+export interface LineaPrestamoRequest {
+  productoId: number
+  presentacionId?: number | null
+  cantidad: number
+  /** Solo para RECIBIDO: si no, se usa el costo de referencia del producto. */
+  costoPresentacion?: number | null
+}
+
+export interface CrearPrestamoRequest {
+  tipo: TipoPrestamo
+  contraparte: string
+  almacenId: number
+  fecha?: string | null
+  observacion?: string | null
+  detalle: LineaPrestamoRequest[]
+}
+
+export interface PrestamoDetalleResponse {
+  id: number
+  productoId: number
+  codigo: string
+  producto: string
+  unidadBase: string
+  presentacionId: number | null
+  presentacion: string | null
+  cantidadPresentacion: number
+  cantidad: number
+  cantidadDevuelta: number
+  cantidadPendiente: number
+  costoUnitario: number
+  costoTotal: number
+}
+
+export interface PrestamoResponse {
+  id: number
+  numero: string
+  tipo: TipoPrestamo
+  contraparte: string
+  almacenId: number
+  almacen: string
+  fecha: string
+  estado: EstadoPrestamo
+  observacion: string | null
+  usuario: string | null
+  total: number
+  detalle: PrestamoDetalleResponse[]
+}
+
+export interface LineaDevolucionPrestamoRequest {
+  prestamoDetalleId: number
+  /** En unidad base. */
+  cantidad: number
+}
+
+export const prestamoApi = {
+  getAll: () => api.get<PrestamoResponse[]>('/inventario/prestamos'),
+  getById: (id: number) => api.get<PrestamoResponse>(`/inventario/prestamos/${id}`),
+  create: (body: CrearPrestamoRequest) =>
+    api.post<PrestamoResponse>('/inventario/prestamos', body),
+  /** Devolución total o parcial: una o varias líneas a la vez. */
+  devolver: (id: number, detalle: LineaDevolucionPrestamoRequest[]) =>
+    api.post<PrestamoResponse>(`/inventario/prestamos/${id}/devolucion`, { detalle }),
 }

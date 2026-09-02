@@ -46,7 +46,12 @@ public interface IInventarioRepository
     Task<List<CapaCosto>> GetCapasDisponiblesAsync(int productoId, int? almacenId = null);
     Task<CapaCosto?> GetCapaAsync(int id);
     Task<CapaCosto?> GetUltimaCapaAsync(int productoId, int? almacenId = null);
-    Task<CapaCosto?> GetCapaDeMovimientoAsync(int movimientoId);
+    /// <summary>
+    /// Las capas que creo un movimiento de entrada. Normalmente una, pero una
+    /// transferencia crea una por cada capa de origen que toco, para no
+    /// promediar costos distintos en una sola.
+    /// </summary>
+    Task<List<CapaCosto>> GetCapasDeMovimientoAsync(int movimientoId);
     Task AddCapaAsync(CapaCosto capa);
 
     /// <summary>Stock y costos de varios productos, para pintar listados.</summary>
@@ -58,7 +63,14 @@ public interface IInventarioRepository
     Task<string> SiguienteNumeroAsync(string tipo);
     Task AddDocumentoAsync(DocumentoInventario documento);
     Task<DocumentoInventario?> GetDocumentoAsync(int id);
-    Task<IEnumerable<DocumentoInventario>> GetDocumentosAsync();
+
+    /// <summary>
+    /// Documentos, opcionalmente de una sola familia: el propio tipo, o una
+    /// anulacion que anulo un documento de esa familia. Sin esto, transferencias
+    /// y prestamos apareceria mezclados en la lista de Ajustes.
+    /// </summary>
+    Task<IEnumerable<DocumentoInventario>> GetDocumentosAsync(string? familia = null);
+
     Task UpdateDocumentoAsync(DocumentoInventario documento);
     Task<string?> GetNumeroAnulacionAsync(int documentoId);
 
@@ -71,4 +83,13 @@ public interface IInventarioRepository
 
     Task<List<ConsumoCapa>> GetConsumosAsync(int movimientoId);
     Task AddConsumoAsync(ConsumoCapa consumo);
+
+    // --- Prestamos ---
+
+    Task AddPrestamoAsync(Prestamo prestamo);
+    Task<Prestamo?> GetPrestamoAsync(int id);
+    Task<IEnumerable<Prestamo>> GetPrestamosAsync();
+    Task UpdatePrestamoAsync(Prestamo prestamo);
+    Task AddPrestamoDetalleAsync(PrestamoDetalle detalle);
+    Task<PrestamoDetalle?> GetPrestamoDetalleAsync(int id);
 }

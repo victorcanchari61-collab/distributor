@@ -31,7 +31,10 @@ public interface IInventarioService
         int? productoId, int? almacenId, DateTime? desde, DateTime? hasta);
 
     // --- Ajustes ---
-    Task<IEnumerable<DocumentoInventarioResponse>> GetDocumentosAsync();
+
+    /// <summary>Documentos de una familia (AJUSTE, TRANSFERENCIA...) y sus anulaciones.</summary>
+    Task<IEnumerable<DocumentoInventarioResponse>> GetDocumentosAsync(string? familia = null);
+
     Task<DocumentoInventarioResponse> GetDocumentoAsync(int id);
 
     /// <summary>Registra el ajuste y mueve el stock. Todo o nada.</summary>
@@ -39,4 +42,29 @@ public interface IInventarioService
 
     /// <summary>Crea el documento espejo que deshace otro.</summary>
     Task<DocumentoInventarioResponse> AnularAsync(int documentoId, int? usuarioId);
+
+    // --- Transferencias ---
+
+    /// <summary>
+    /// Mueve mercadería de un almacén propio a otro. El costo viaja con ella:
+    /// no se vuelve a declarar, es el mismo con el que estaba en origen.
+    /// </summary>
+    Task<DocumentoInventarioResponse> CrearTransferenciaAsync(
+        CrearTransferenciaRequest request, int? usuarioId);
+
+    // --- Prestamos ---
+
+    Task<IEnumerable<PrestamoResponse>> GetPrestamosAsync();
+    Task<PrestamoResponse> GetPrestamoAsync(int id);
+
+    /// <summary>Registra el préstamo y mueve el stock: sale o entra, según el tipo.</summary>
+    Task<PrestamoResponse> CrearPrestamoAsync(CrearPrestamoRequest request, int? usuarioId);
+
+    /// <summary>
+    /// Devuelve, total o parcialmente. Si es lo que presté, vuelve a mis
+    /// capas al costo con que salió; si es lo que me prestaron, sale de la
+    /// capa que esa mercadería creó al entrar.
+    /// </summary>
+    Task<PrestamoResponse> DevolverPrestamoAsync(
+        int prestamoId, DevolverPrestamoRequest request, int? usuarioId);
 }

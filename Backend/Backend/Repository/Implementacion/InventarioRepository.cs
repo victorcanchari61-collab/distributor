@@ -141,8 +141,8 @@ public class InventarioRepository : IInventarioRepository
             .ThenByDescending(c => c.Id)
             .FirstOrDefaultAsync();
 
-    public async Task<CapaCosto?> GetCapaDeMovimientoAsync(int movimientoId) =>
-        await _context.CapasCosto.FirstOrDefaultAsync(c => c.MovimientoId == movimientoId);
+    public async Task<List<CapaCosto>> GetCapasDeMovimientoAsync(int movimientoId) =>
+        await _context.CapasCosto.Where(c => c.MovimientoId == movimientoId).ToListAsync();
 
     public async Task AddCapaAsync(CapaCosto capa) => await _context.CapasCosto.AddAsync(capa);
 
@@ -175,7 +175,14 @@ public class InventarioRepository : IInventarioRepository
 
     public async Task<string> SiguienteNumeroAsync(string tipo)
     {
-        var prefijo = tipo == TipoDocumentoInventario.Anulacion ? "AN" : "AJ";
+        var prefijo = tipo switch
+        {
+            TipoDocumentoInventario.Anulacion => "AN",
+            TipoDocumentoInventario.Transferencia => "TR",
+            TipoDocumentoInventario.Prestamo => "PR",
+            TipoDocumentoInventario.DevolucionPrestamo => "DP",
+            _ => "AJ"
+        };
 
         var ultimo = await _context.DocumentosInventario
             .Where(d => d.Tipo == tipo)
@@ -198,18 +205,28 @@ public class InventarioRepository : IInventarioRepository
     private IQueryable<DocumentoInventario> DocumentosConDetalle() =>
         _context.DocumentosInventario
             .Include(d => d.Almacen)
+            .Include(d => d.AlmacenDestino)
             .Include(d => d.Motivo)
             .Include(d => d.Usuario)
             .Include(d => d.Movimientos)
             .ThenInclude(m => m.Producto)
             .Include(d => d.Movimientos)
-            .ThenInclude(m => m.Presentacion);
+            .ThenInclude(m => m.Presentacion)
+            .Include(d => d.Movimientos)
+            .ThenInclude(m => m.Almacen);
 
     public async Task<DocumentoInventario?> GetDocumentoAsync(int id) =>
         await DocumentosConDetalle().FirstOrDefaultAsync(d => d.Id == id);
 
-    public async Task<IEnumerable<DocumentoInventario>> GetDocumentosAsync() =>
+    public async Task<IEnumerable<DocumentoInventario>> GetDocumentosAsync(string? familia = null) =>
         await DocumentosConDetalle()
+            // Sin familia, todo. Con familia, el propio tipo o la anulacion
+            // de un documento de esa familia: sin el segundo termino, anular
+            // una transferencia la haria desaparecer de su propia pantalla.
+            .Where(d => familia == null
+                        || d.Tipo == familia
+                        || (d.Tipo == TipoDocumentoInventario.Anulacion
+                            && d.DocumentoAnulado!.Tipo == familia))
             .OrderByDescending(d => d.Fecha)
             .ThenByDescending(d => d.Id)
             .Take(300)
@@ -260,4 +277,46 @@ public class InventarioRepository : IInventarioRepository
 
     public async Task AddConsumoAsync(ConsumoCapa consumo) =>
         await _context.Consumos.AddAsync(consumo);
+
+    // -------------------------------------------------------------- Prestamos
+
+    public async Task AddPrestamoAsync(Prestamo prestamo) =>
+        await _context.Prestamos.AddAsync(prestamo);
+
+    private IQueryable<Prestamo> PrestamosConDetalle() =>
+        _context.Prestamos
+            .Include(p => p.Almacen)
+            .Include(p => p.Usuario)
+            .Include(p => p.Detalle)
+            .ThenInclude(d => d.Producto)
+            .ThenInclude(pr => pr!.UnidadBase)
+            .Include(p => p.Detalle)
+            .ThenInclude(d => d.Presentacion)
+            .Include(p => p.Detalle)
+            .ThenInclude(d => d.Movimiento);
+
+    public async Task<Prestamo?> GetPrestamoAsync(int id) =>
+        await PrestamosConDetalle().FirstOrDefaultAsync(p => p.Id == id);
+
+    public async Task<IEnumerable<Prestamo>> GetPrestamosAsync() =>
+        await PrestamosConDetalle()
+            .OrderByDescending(p => p.Fecha)
+            .ThenByDescending(p => p.Id)
+            .Take(300)
+            .ToListAsync();
+
+    public async Task UpdatePrestamoAsync(Prestamo prestamo)
+    {
+        _context.Prestamos.Update(prestamo);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task AddPrestamoDetalleAsync(PrestamoDetalle detalle) =>
+        await _context.PrestamoDetalles.AddAsync(detalle);
+
+    public async Task<PrestamoDetalle?> GetPrestamoDetalleAsync(int id) =>
+        await _context.PrestamoDetalles
+            .Include(d => d.Prestamo)
+            .Include(d => d.Movimiento)
+            .FirstOrDefaultAsync(d => d.Id == id);
 }

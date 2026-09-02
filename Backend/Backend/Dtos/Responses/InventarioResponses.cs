@@ -117,6 +117,10 @@ public class DocumentoInventarioResponse
     public int AlmacenId { get; set; }
     public string Almacen { get; set; } = string.Empty;
 
+    /// <summary>Solo en transferencias: el almacén que recibe.</summary>
+    public int? AlmacenDestinoId { get; set; }
+    public string? AlmacenDestino { get; set; }
+
     public int MotivoId { get; set; }
     public string Motivo { get; set; } = string.Empty;
     public string MotivoTipo { get; set; } = string.Empty;
@@ -147,6 +151,58 @@ public class LineaDocumentoResponse
     public decimal CantidadPresentacion { get; set; }
 
     public decimal Cantidad { get; set; }
+    public decimal CostoUnitario { get; set; }
+    public decimal CostoTotal { get; set; }
+
+    /// <summary>ENTRADA o SALIDA: en una transferencia hay líneas de los dos tipos.</summary>
+    public string Tipo { get; set; } = string.Empty;
+    public int AlmacenId { get; set; }
+    public string Almacen { get; set; } = string.Empty;
+}
+
+public class PrestamoResponse
+{
+    public int Id { get; set; }
+    public string Numero { get; set; } = string.Empty;
+
+    /// <summary>DADO o RECIBIDO.</summary>
+    public string Tipo { get; set; } = string.Empty;
+
+    public string Contraparte { get; set; } = string.Empty;
+    public int AlmacenId { get; set; }
+    public string Almacen { get; set; } = string.Empty;
+    public DateTime Fecha { get; set; }
+
+    /// <summary>PENDIENTE o DEVUELTO.</summary>
+    public string Estado { get; set; } = string.Empty;
+
+    public string? Observacion { get; set; }
+    public string? Usuario { get; set; }
+
+    /// <summary>Cuánto vale, al costo con que se registró.</summary>
+    public decimal Total { get; set; }
+
+    public List<PrestamoDetalleResponse> Detalle { get; set; } = [];
+}
+
+public class PrestamoDetalleResponse
+{
+    public int Id { get; set; }
+    public int ProductoId { get; set; }
+    public string Codigo { get; set; } = string.Empty;
+    public string Producto { get; set; } = string.Empty;
+    public string UnidadBase { get; set; } = string.Empty;
+
+    public int? PresentacionId { get; set; }
+    public string? Presentacion { get; set; }
+    public decimal CantidadPresentacion { get; set; }
+
+    public decimal Cantidad { get; set; }
+    public decimal CantidadDevuelta { get; set; }
+
+    /// <summary>Cantidad − CantidadDevuelta, en unidad base.</summary>
+    public decimal CantidadPendiente { get; set; }
+
     public decimal CostoUnitario { get; set; }
     public decimal CostoTotal { get; set; }
 }
