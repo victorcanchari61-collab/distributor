@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import 'app_boton.dart';
+import 'app_selector.dart';
 
 /// Una opcion dentro de un grupo de filtros.
 class OpcionFiltro<T> {
@@ -12,10 +13,11 @@ class OpcionFiltro<T> {
   final String texto;
 }
 
-/// Grupo de filtros de una sola eleccion, pintado como pastillas.
+/// Grupo de filtros de una sola eleccion.
 ///
-/// Las pastillas se ven todas a la vez: en el celular es mas rapido que abrir
-/// un desplegable por cada filtro.
+/// Se pinta como select y no como pastillas: un rubro o una ruta pueden ser
+/// decenas de opciones, y en pastillas el modal se volvia una pared de texto
+/// por la que habia que hacer scroll.
 class GrupoFiltro<T> extends StatelessWidget {
   const GrupoFiltro({
     super.key,
@@ -23,84 +25,25 @@ class GrupoFiltro<T> extends StatelessWidget {
     required this.valor,
     required this.opciones,
     required this.onCambio,
-    required this.color,
+    this.icono,
   });
 
   final String titulo;
   final T valor;
   final List<OpcionFiltro<T>> opciones;
   final ValueChanged<T> onCambio;
-  final Color color;
+  final IconData? icono;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          titulo,
-          style: const TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: Colores.tintaSuave,
-          ),
-        ),
-        const SizedBox(height: Dimen.espacio2),
-        Wrap(
-          spacing: Dimen.espacio2,
-          runSpacing: Dimen.espacio2,
-          children: [
-            for (final o in opciones)
-              _Pastilla(
-                texto: o.texto,
-                elegida: o.valor == valor,
-                color: color,
-                onTap: () => onCambio(o.valor),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _Pastilla extends StatelessWidget {
-  const _Pastilla({
-    required this.texto,
-    required this.elegida,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String texto;
-  final bool elegida;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Dimen.espacio3,
-          vertical: Dimen.espacio2,
-        ),
-        decoration: BoxDecoration(
-          color: elegida ? color.withValues(alpha: 0.12) : Colores.superficie,
-          border: Border.all(color: elegida ? color : Colores.linea),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          texto,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: elegida ? FontWeight.w700 : FontWeight.w400,
-            color: elegida ? color : Colores.tinta,
-          ),
-        ),
-      ),
+    return AppSelector<T>(
+      valor: valor,
+      etiqueta: titulo,
+      icono: icono,
+      opciones: [for (final o in opciones) Opcion(o.valor, o.texto)],
+      onCambio: (v) {
+        if (v is T) onCambio(v);
+      },
     );
   }
 }
@@ -243,7 +186,7 @@ Future<void> mostrarFiltros(
               Dimen.espacio4,
               Dimen.espacio4 + MediaQuery.of(context).padding.bottom,
             ),
-            // La lista se filtra en vivo al tocar cada pastilla: este boton
+            // La lista se filtra en vivo al elegir en cada select: este boton
             // solo cierra, pero hace falta para saber que se termino.
             child: AppBoton(
               texto: 'Ver resultados',

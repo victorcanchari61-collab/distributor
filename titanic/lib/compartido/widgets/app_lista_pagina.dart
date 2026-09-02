@@ -101,34 +101,16 @@ class AppListaPagina<T> extends StatelessWidget {
           ],
           Padding(
             padding: const EdgeInsets.all(Dimen.espacio4),
-            child: Column(
+            child: Row(
               children: [
-                AppBuscador(
-                  valor: busqueda,
-                  onCambio: onBuscar,
-                  pista: pistaBusqueda ?? 'Buscar',
+                Expanded(
+                  child: AppBuscador(
+                    valor: busqueda,
+                    onCambio: onBuscar,
+                    pista: pistaBusqueda ?? 'Buscar',
+                  ),
                 ),
-                const SizedBox(height: Dimen.espacio3),
-                Row(
-                  children: [
-                    // Flexible: el conteo cede espacio antes que empujar los
-                    // filtros fuera de la fila.
-                    Flexible(
-                      child: Text(
-                        '${visibles.length} '
-                        '${visibles.length == 1 ? singular : plural}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: Colores.tintaSuave,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    ?filtro,
-                  ],
-                ),
+                ?filtro,
               ],
             ),
           ),

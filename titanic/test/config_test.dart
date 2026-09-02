@@ -125,7 +125,6 @@ void main() {
 
     expect(find.text('Ana Torres'), findsOneWidget);
     expect(find.text('Administrador'), findsWidgets);
-    expect(find.text('2 usuarios'), findsOneWidget);
   });
 
   testWidgets('desactivar un usuario pide confirmacion', (tester) async {
@@ -165,7 +164,6 @@ void main() {
 
     expect(find.text('Vendedor'), findsOneWidget);
     expect(find.text('Protegido'), findsOneWidget);
-    expect(find.text('2 roles'), findsOneWidget);
   });
 
   testWidgets('el rol protegido avisa en vez de desactivarse', (tester) async {

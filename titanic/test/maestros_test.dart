@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:titanic/compartido/widgets/app_filtros.dart';
+import 'package:titanic/compartido/widgets/app_selector.dart';
 import 'package:titanic/core/almacenamiento/sesion_almacen.dart';
 import 'package:titanic/core/red/cliente_api.dart';
 import 'package:titanic/core/red/excepciones.dart';
@@ -10,8 +11,9 @@ import 'package:titanic/core/tema/tema.dart';
 import 'package:titanic/features/auth/estado/auth_controlador.dart';
 import 'package:titanic/features/maestros/datos/cliente.dart';
 import 'package:titanic/features/maestros/datos/maestros_api.dart';
-import 'package:titanic/features/maestros/datos/proveedor.dart';
 import 'package:titanic/features/maestros/estado/maestros_controlador.dart';
+import 'package:titanic/features/maestros/datos/proveedor.dart';
+
 import 'package:titanic/features/maestros/vistas/clientes_pagina.dart';
 import 'package:titanic/features/maestros/vistas/proveedores_pagina.dart';
 
@@ -145,7 +147,6 @@ void main() {
 
     // El desactivado no sale en la lista normal.
     expect(find.text('PEDRO RETIRADO'), findsNothing);
-    expect(find.text('2 clientes'), findsOneWidget);
   });
 
   testWidgets('el filtro de estado muestra solo los desactivados', (
@@ -156,6 +157,9 @@ void main() {
     await tester.tap(find.byTooltip('Filtros'));
     await tester.pumpAndSettle();
 
+    // El filtro es un select: se abre y se elige la opcion del menu.
+    await tester.tap(find.byType(AppSelector<FiltroEstado>));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Desactivados').last);
     await tester.pumpAndSettle();
 
@@ -182,7 +186,9 @@ void main() {
 
     await tester.tap(find.byTooltip('Filtros'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Martes'));
+    await tester.tap(find.byType(AppSelector<String?>).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Martes').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ver resultados'));
     await tester.pumpAndSettle();

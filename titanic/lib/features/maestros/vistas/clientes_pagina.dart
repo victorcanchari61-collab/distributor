@@ -105,7 +105,6 @@ class ClientesPagina extends ConsumerWidget {
         Consumer(
           builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
             titulo: 'Estado',
-            color: color,
             valor: ref.watch(estadoFiltroProvider),
             opciones: const [
               OpcionFiltro(FiltroEstado.activos, 'Activos'),
@@ -118,7 +117,6 @@ class ClientesPagina extends ConsumerWidget {
         Consumer(
           builder: (context, ref, _) => GrupoFiltro<String?>(
             titulo: 'Dia de visita',
-            color: color,
             valor: ref.watch(diaVisitaFiltroProvider),
             opciones: const [
               OpcionFiltro(null, 'Todos'),
@@ -142,7 +140,6 @@ class ClientesPagina extends ConsumerWidget {
 
             return GrupoFiltro<String?>(
               titulo: 'Ruta',
-              color: color,
               valor: ref.watch(rutaFiltroProvider),
               opciones: [
                 const OpcionFiltro(null, 'Todas'),

@@ -103,7 +103,6 @@ class ProveedoresPagina extends ConsumerWidget {
         Consumer(
           builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
             titulo: 'Estado',
-            color: color,
             valor: ref.watch(estadoFiltroProvider),
             opciones: const [
               OpcionFiltro(FiltroEstado.activos, 'Activos'),
@@ -120,7 +119,6 @@ class ProveedoresPagina extends ConsumerWidget {
 
             return GrupoFiltro<String?>(
               titulo: 'Rubro',
-              color: color,
               valor: ref.watch(rubroFiltroProvider),
               opciones: [
                 const OpcionFiltro(null, 'Todos'),
