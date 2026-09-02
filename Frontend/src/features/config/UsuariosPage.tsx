@@ -14,34 +14,19 @@ import {
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
-import { register } from '../auth/authApi'
 import { rolApi } from './rolApi'
 import type { RolResponse } from './rolApi'
+import { usuarioApi } from './usuarioApi'
+import type { UsuarioResponse } from './usuarioApi'
 
-export interface Usuario {
-  id: number
-  nombre: string
-  email: string
-  dni: string | null
-  rolId: number
-  rol: string
-  activo: boolean
-  ultimoAcceso: string
-}
-
-/** Datos de muestra: la API todavia no expone el listado de usuarios. */
-const USUARIOS: Usuario[] = [
-  { id: 1, nombre: 'Admin', email: 'admin@distributor.com', dni: null, rolId: 1, rol: 'Administrador', activo: true, ultimoAcceso: '2026-08-31 09:14' },
-  { id: 2, nombre: 'Lucía Torres', email: 'ltorres@distributor.com', dni: '45871203', rolId: 3, rol: 'Almacenero', activo: true, ultimoAcceso: '2026-08-31 07:58' },
-  { id: 3, nombre: 'Pedro Ramos', email: 'pramos@distributor.com', dni: '41203877', rolId: 2, rol: 'Vendedor', activo: true, ultimoAcceso: '2026-08-30 18:02' },
-  { id: 4, nombre: 'Carlos Mendoza', email: 'cmendoza@distributor.com', dni: '09887412', rolId: 2, rol: 'Vendedor', activo: true, ultimoAcceso: '2026-08-30 16:41' },
-  { id: 5, nombre: 'Rosa Díaz', email: 'rdiaz@distributor.com', dni: null, rolId: 3, rol: 'Almacenero', activo: false, ultimoAcceso: '2026-07-12 11:20' },
-]
+/** Un usuario, tal como lo devuelve el API. */
+export type Usuario = UsuarioResponse
 
 const VACIO = { nombre: '', email: '', password: '', dni: '', rolId: 0 }
 
 export function UsuariosPage() {
-  const [usuarios, setUsuarios] = useState(USUARIOS)
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [cargando, setCargando] = useState(true)
   const [roles, setRoles] = useState<RolResponse[]>([])
 
   const [abierto, setAbierto] = useState(false)
@@ -61,9 +46,23 @@ export function UsuariosPage() {
     }
   }, [])
 
+  // El listado sale de la tabla Usuarios: antes eran datos de muestra porque
+  // el API no lo exponia, y lo que se veia aqui no coincidia con la base.
+  const cargarUsuarios = useCallback(async () => {
+    setCargando(true)
+    try {
+      setUsuarios(await usuarioApi.getAll())
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los usuarios.')
+    } finally {
+      setCargando(false)
+    }
+  }, [])
+
   useEffect(() => {
     void cargarRoles()
-  }, [cargarRoles])
+    void cargarUsuarios()
+  }, [cargarRoles, cargarUsuarios])
 
   const activos = usuarios.filter((u) => u.activo).length
   const admins = usuarios.filter((u) => u.rol === 'Administrador').length
@@ -118,51 +117,30 @@ export function UsuariosPage() {
       return setErrorForm('La contraseña debe tener al menos 6 caracteres.')
     }
 
-    // Editar todavia no tiene endpoint: se ajusta solo en pantalla.
-    if (editando) {
-      const rol = roles.find((r) => r.id === form.rolId)
-      setUsuarios((prev) =>
-        prev.map((u) =>
-          u.id === editando.id
-            ? {
-                ...u,
-                nombre: form.nombre.trim(),
-                email: form.email.trim(),
-                dni: form.dni || null,
-                rolId: form.rolId,
-                rol: rol?.nombre ?? u.rol,
-              }
-            : u,
-        ),
-      )
-      setAbierto(false)
-      return
-    }
-
     setGuardando(true)
     try {
-      const creado = await register({
-        nombre: form.nombre.trim(),
-        email: form.email.trim(),
-        password: form.password,
-        dni: form.dni || null,
-        rolId: form.rolId,
-      })
+      if (editando) {
+        await usuarioApi.update(editando.id, {
+          nombre: form.nombre.trim(),
+          email: form.email.trim(),
+          dni: form.dni || null,
+          rolId: form.rolId,
+          activo: editando.activo,
+          // Vacio: el backend deja la contraseña que ya tenia.
+          password: form.password || null,
+        })
+      } else {
+        await usuarioApi.create({
+          nombre: form.nombre.trim(),
+          email: form.email.trim(),
+          password: form.password,
+          dni: form.dni || null,
+          rolId: form.rolId,
+        })
+      }
 
-      setUsuarios((prev) => [
-        ...prev,
-        {
-          id: creado.id,
-          nombre: creado.nombre,
-          email: creado.email,
-          dni: creado.dni,
-          rolId: creado.rolId,
-          rol: creado.rol,
-          activo: creado.activo,
-          ultimoAcceso: '—',
-        },
-      ])
       setAbierto(false)
+      await cargarUsuarios()
       await cargarRoles()
     } catch (e) {
       setErrorForm(
@@ -170,15 +148,30 @@ export function UsuariosPage() {
           ? e.errors.length
             ? e.errors.join(' ')
             : e.message
-          : 'No pudimos crear el usuario.',
+          : editando
+            ? 'No pudimos guardar los cambios.'
+            : 'No pudimos crear el usuario.',
       )
     } finally {
       setGuardando(false)
     }
   }
 
-  const alternarEstado = (usuario: Usuario) =>
-    setUsuarios((prev) => prev.map((u) => (u.id === usuario.id ? { ...u, activo: !u.activo } : u)))
+  const alternarEstado = async (usuario: Usuario) => {
+    setError('')
+    try {
+      await usuarioApi.update(usuario.id, {
+        nombre: usuario.nombre,
+        email: usuario.email,
+        dni: usuario.dni,
+        rolId: usuario.rolId,
+        activo: !usuario.activo,
+      })
+      await cargarUsuarios()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+    }
+  }
 
   const columns: DataTableColumn<Usuario>[] = [
     { key: 'nombre', label: 'Nombre' },
@@ -193,7 +186,6 @@ export function UsuariosPage() {
       label: 'Rol',
       render: (row) => <Badge tone="sys">{row.rol}</Badge>,
     },
-    { key: 'ultimoAcceso', label: 'Último acceso' },
     {
       key: 'activo',
       label: 'Estado',
@@ -244,7 +236,7 @@ export function UsuariosPage() {
       rows={usuarios}
       cardIcon={UserCog}
       searchPlaceholder="Buscar por nombre, correo o rol..."
-      empty="Todavía no hay usuarios registrados."
+      empty={cargando ? 'Cargando usuarios...' : 'Todavía no hay usuarios registrados.'}
       rowActions={(row) => (
         <>
           <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
@@ -253,7 +245,7 @@ export function UsuariosPage() {
           <RowAction
             label={`${row.activo ? 'Deshabilitar' : 'Habilitar'} ${row.nombre}`}
             tone={row.activo ? 'warning' : 'success'}
-            onClick={() => alternarEstado(row)}
+            onClick={() => void alternarEstado(row)}
           >
             {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
           </RowAction>
@@ -265,7 +257,7 @@ export function UsuariosPage() {
         title={editando ? `Editar ${editando.nombre}` : 'Nuevo usuario'}
         description={
           editando
-            ? 'La contraseña se cambia desde el propio usuario.'
+            ? 'Deja la contraseña vacía para no cambiarla.'
             : 'Se crea con acceso inmediato a la plataforma.'
         }
         onClose={() => setAbierto(false)}
@@ -313,17 +305,18 @@ export function UsuariosPage() {
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
 
-          {!editando && (
-            <Input
-              label="Contraseña"
-              type="password"
-              revealable
-              autoComplete="new-password"
-              placeholder="Mínimo 6 caracteres"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-            />
-          )}
+          {/* Al editar se puede dejar vacia: cambiar el nombre de alguien no
+              deberia obligar a reescribir su clave. */}
+          <Input
+            label={editando ? 'Nueva contraseña' : 'Contraseña'}
+            type="password"
+            revealable
+            optional={!!editando}
+            autoComplete="new-password"
+            placeholder={editando ? 'Dejar vacío para no cambiarla' : 'Mínimo 6 caracteres'}
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+          />
 
           <label className="block">
             <span className="ui-label mb-1.5">Rol</span>
