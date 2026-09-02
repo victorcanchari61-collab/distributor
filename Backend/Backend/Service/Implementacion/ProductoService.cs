@@ -27,7 +27,6 @@ public class ProductoService : IProductoService
 {
     private readonly IProductoRepository _repository;
     private readonly ICatalogoRepository _catalogo;
-    private readonly IInventarioRepository _inventario;
     private readonly IValidator<CreateProductoRequest> _createValidator;
     private readonly IValidator<UpdateProductoRequest> _updateValidator;
     private readonly IValidator<PresentacionRequest> _presentacionValidator;
@@ -35,14 +34,12 @@ public class ProductoService : IProductoService
     public ProductoService(
         IProductoRepository repository,
         ICatalogoRepository catalogo,
-        IInventarioRepository inventario,
         IValidator<CreateProductoRequest> createValidator,
         IValidator<UpdateProductoRequest> updateValidator,
         IValidator<PresentacionRequest> presentacionValidator)
     {
         _repository = repository;
         _catalogo = catalogo;
-        _inventario = inventario;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _presentacionValidator = presentacionValidator;
@@ -50,21 +47,12 @@ public class ProductoService : IProductoService
 
     public async Task<IEnumerable<ProductoResponse>> GetAllAsync()
     {
-        var productos = (await _repository.GetAllConDetalleAsync()).ToList();
-
-        // Stock y costos en UNA consulta para toda la lista, en vez de una por
-        // producto: son dos mil registros en el peor caso.
-        var resumen = await _inventario.GetResumenAsync(productos.Select(p => p.Id));
-
-        return productos.Select(p => MapToResponse(p, resumen.GetValueOrDefault(p.Id)));
+        var productos = await _repository.GetAllConDetalleAsync();
+        return productos.Select(MapToResponse);
     }
 
-    public async Task<ProductoResponse> GetByIdAsync(int id)
-    {
-        var producto = await GetOrThrowAsync(id);
-        var resumen = await _inventario.GetResumenAsync([id]);
-        return MapToResponse(producto, resumen.GetValueOrDefault(id));
-    }
+    public async Task<ProductoResponse> GetByIdAsync(int id) =>
+        MapToResponse(await GetOrThrowAsync(id));
 
     public async Task<ProductoResponse> CreateAsync(CreateProductoRequest request)
     {
@@ -408,7 +396,7 @@ public class ProductoService : IProductoService
     private static string? Limpiar(string? texto) =>
         string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
 
-    private static ProductoResponse MapToResponse(Producto p, ResumenStock? stock = null) => new()
+    private static ProductoResponse MapToResponse(Producto p) => new()
     {
         Id = p.Id,
         Codigo = p.Codigo,
@@ -427,10 +415,6 @@ public class ProductoService : IProductoService
         StockMinimo = p.StockMinimo,
         Activo = p.Activo,
         FechaCreacion = p.FechaCreacion,
-        Stock = stock?.Stock ?? 0,
-        Valorizado = stock?.Valorizado ?? 0,
-        CostoMin = stock?.CostoMin,
-        CostoMax = stock?.CostoMax,
         Presentaciones = p.Presentaciones
             .OrderBy(pr => pr.Factor)
             .Select(MapPresentacion)

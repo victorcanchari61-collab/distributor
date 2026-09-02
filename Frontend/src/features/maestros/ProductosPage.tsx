@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Boxes,
-  Layers,
   Package,
   PackageCheck,
   Pencil,
@@ -31,7 +30,6 @@ import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { CatalogoSimple } from './CatalogoSimple'
 import { PresentacionesEditor } from './PresentacionesEditor'
-import { StockYCosto } from './StockYCosto'
 import type { FilaPresentacion } from './PresentacionesEditor'
 import { categoriaApi, marcaApi, productoApi, unidadApi } from './productoApi'
 import type {
@@ -54,7 +52,7 @@ const VACIO = {
 }
 
 type Pestana = 'productos' | 'categorias' | 'marcas' | 'unidades'
-type PestanaForm = 'datos' | 'presentaciones' | 'stock'
+type PestanaForm = 'datos' | 'presentaciones'
 
 /** Que catalogo se esta creando sin salir del formulario. */
 type CatalogoRapido = 'categoria' | 'marca' | 'unidad' | 'unidadContenido' | null
@@ -384,33 +382,6 @@ export function ProductosPage() {
       ),
     },
     {
-      key: 'stock',
-      label: 'Stock',
-      align: 'right',
-      render: (row) => (
-        <span className={row.stock <= row.stockMinimo ? 'font-semibold text-amber-600' : ''}>
-          {row.stock} {row.unidadBase}
-        </span>
-      ),
-    },
-    {
-      key: 'costoMin',
-      label: 'Costo',
-      align: 'right',
-      value: (row) => String(row.costoMin ?? ''),
-      // Un rango cuando conviven dos compras a distinto precio: es lo que
-      // avisa que todavía queda stock barato.
-      render: (row) =>
-        row.costoMin == null ? (
-          <span className="text-ink-soft">—</span>
-        ) : (
-          <span>
-            S/ {row.costoMin}
-            {row.costoMax !== row.costoMin && ` – ${row.costoMax}`}
-          </span>
-        ),
-    },
-    {
       key: 'activo',
       label: 'Estado',
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
@@ -506,11 +477,11 @@ export function ProductosPage() {
               hint="formas de comprar y vender"
             />
             <StatCard
-              label="Valor del inventario"
-              value={`S/ ${productos.reduce((n, p) => n + p.valorizado, 0).toFixed(2)}`}
-              icon={<Layers size={18} />}
+              label="Categorías"
+              value={String(categorias.length)}
+              icon={<Boxes size={18} />}
               tono="neutral"
-              hint="al costo de compra"
+              hint={`${marcas.length} marcas`}
             />
           </>
         }
@@ -569,17 +540,10 @@ export function ProductosPage() {
                   icon: <Boxes size={14} />,
                   badge: presentaciones.length + 1,
                 },
-                // Solo al editar: el stock se registra contra un producto que
-                // ya existe.
-                ...(editando
-                  ? [{ id: 'stock', label: 'Stock y costo', icon: <Layers size={14} /> }]
-                  : []),
               ]}
             />
 
-            {pestanaForm === 'stock' && editando ? (
-              <StockYCosto producto={editando} onCambio={cargar} />
-            ) : pestanaForm === 'datos' ? (
+            {pestanaForm === 'datos' ? (
               <div className="flex flex-col gap-4">
                 <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
                   <Input

@@ -72,15 +72,6 @@ export interface ProductoResponse {
   stockMinimo: number
   activo: boolean
   fechaCreacion: string
-
-  /** Lo que queda en almacén, en unidad base. */
-  stock: number
-  /** Cuánto vale ese stock, al costo de compra. */
-  valorizado: number
-  /** Costo más barato y más caro entre las capas con mercadería. */
-  costoMin: number | null
-  costoMax: number | null
-
   presentaciones: PresentacionResponse[]
 }
 
