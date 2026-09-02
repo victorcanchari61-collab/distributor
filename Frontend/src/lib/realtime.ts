@@ -58,7 +58,9 @@ export function suscribirCambios(modulos: string | string[], onCambio: (evento: 
   }
 
   escuchas.add(escucha)
-  return () => escuchas.delete(escucha)
+  return () => {
+    escuchas.delete(escucha)
+  }
 }
 
 /**
