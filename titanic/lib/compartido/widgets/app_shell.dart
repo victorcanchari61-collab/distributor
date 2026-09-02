@@ -19,6 +19,7 @@ class AppShell extends ConsumerWidget {
     this.subtitulo,
     this.acentado,
     this.acciones,
+    this.accionFlotante,
   });
 
   final String titulo;
@@ -32,6 +33,9 @@ class AppShell extends ConsumerWidget {
   final String rutaActual;
   final Widget child;
   final List<Widget>? acciones;
+
+  /// Boton flotante de la pantalla, normalmente el de crear.
+  final Widget? accionFlotante;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -90,6 +94,7 @@ class AppShell extends ConsumerWidget {
         ),
       ),
       body: child,
+      floatingActionButton: accionFlotante,
     );
   }
 }

@@ -50,8 +50,8 @@ class MenuGrupo {
 ///
 /// Si el menu del web cambia, este archivo se actualiza detras.
 ///
-/// Todas las vistas estan marcadas como pendientes: en la app aun no hay
-/// ninguna pantalla construida, ni siquiera las que si existen en el web.
+/// `pendiente` marca las vistas que aun no tienen pantalla en la app: en el
+/// menu salen con un punto gris.
 const menuGrupos = <MenuGrupo>[
   MenuGrupo(
     id: 'maestros',

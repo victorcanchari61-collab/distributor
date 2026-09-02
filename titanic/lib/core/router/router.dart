@@ -6,6 +6,8 @@ import '../../compartido/widgets/app_shell.dart';
 import '../../features/auth/estado/auth_controlador.dart';
 import '../../features/inicio/vistas/inicio_pagina.dart';
 import '../../features/inicio/vistas/pendiente_pagina.dart';
+import '../../features/maestros/vistas/clientes_pagina.dart';
+import '../../features/maestros/vistas/proveedores_pagina.dart';
 import '../navegacion/menu.dart';
 import 'puerta_sesion.dart';
 
@@ -45,22 +47,35 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Una ruta por cada vista del menu, generadas de la misma fuente que lo
       // pinta: el menu y la navegacion nunca se desincronizan.
+      // Pantallas ya construidas.
+      GoRoute(
+        path: ClientesPagina.ruta,
+        builder: (context, estado) => const ClientesPagina(),
+      ),
+      GoRoute(
+        path: ProveedoresPagina.ruta,
+        builder: (context, estado) => const ProveedoresPagina(),
+      ),
+
       for (final grupo in menuGrupos)
         for (final item in grupo.items)
-          GoRoute(
-            path: item.ruta,
-            builder: (context, estado) => AppShell(
-              titulo: item.titulo,
-              subtitulo: grupo.titulo,
-              acentado: grupo.color,
-              rutaActual: item.ruta,
-              child: PendientePagina(
+          // Las que ya tienen pantalla propia se declaran arriba.
+          if (item.ruta != ClientesPagina.ruta &&
+              item.ruta != ProveedoresPagina.ruta)
+            GoRoute(
+              path: item.ruta,
+              builder: (context, estado) => AppShell(
                 titulo: item.titulo,
-                modulo: grupo.titulo,
-                color: grupo.color,
+                subtitulo: grupo.titulo,
+                acentado: grupo.color,
+                rutaActual: item.ruta,
+                child: PendientePagina(
+                  titulo: item.titulo,
+                  modulo: grupo.titulo,
+                  color: grupo.color,
+                ),
               ),
             ),
-          ),
     ],
   );
 });
