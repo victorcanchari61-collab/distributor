@@ -73,26 +73,6 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Productos',
         icono: Icons.inventory_2_outlined,
       ),
-      MenuItem(
-        id: 'maestros.categorias',
-        titulo: 'Categorías y marcas',
-        icono: Icons.sell_outlined,
-      ),
-      MenuItem(
-        id: 'maestros.almacenes',
-        titulo: 'Almacenes',
-        icono: Icons.warehouse_outlined,
-      ),
-      MenuItem(
-        id: 'maestros.unidades',
-        titulo: 'Unidades de medida',
-        icono: Icons.straighten_outlined,
-      ),
-      MenuItem(
-        id: 'maestros.precios',
-        titulo: 'Listas de precios',
-        icono: Icons.payments_outlined,
-      ),
     ],
   ),
   MenuGrupo(
@@ -123,9 +103,14 @@ const menuGrupos = <MenuGrupo>[
     icono: Icons.inventory_outlined,
     items: [
       MenuItem(
+        id: 'inv.almacenes',
+        titulo: 'Almacenes',
+        icono: Icons.warehouse_outlined,
+      ),
+      MenuItem(
         id: 'inv.stock',
         titulo: 'Stock por almacén',
-        icono: Icons.warehouse_outlined,
+        icono: Icons.inventory_outlined,
       ),
       MenuItem(
         id: 'inv.movimientos',
@@ -138,14 +123,14 @@ const menuGrupos = <MenuGrupo>[
         icono: Icons.local_shipping_outlined,
       ),
       MenuItem(
-        id: 'inv.conteos',
-        titulo: 'Conteos cíclicos',
-        icono: Icons.fact_check_outlined,
-      ),
-      MenuItem(
         id: 'inv.lotes',
         titulo: 'Lotes y vencimientos',
         icono: Icons.event_outlined,
+      ),
+      MenuItem(
+        id: 'inv.conteos',
+        titulo: 'Conteos cíclicos',
+        icono: Icons.fact_check_outlined,
       ),
     ],
   ),
@@ -163,6 +148,11 @@ const menuGrupos = <MenuGrupo>[
         id: 'fact.notaventa',
         titulo: 'Notas de venta',
         icono: Icons.description_outlined,
+      ),
+      MenuItem(
+        id: 'fact.precios',
+        titulo: 'Listas de precios',
+        icono: Icons.payments_outlined,
       ),
     ],
   ),
