@@ -181,6 +181,7 @@ public class InventarioRepository : IInventarioRepository
             TipoDocumentoInventario.Transferencia => "TR",
             TipoDocumentoInventario.Prestamo => "PR",
             TipoDocumentoInventario.DevolucionPrestamo => "DP",
+            TipoDocumentoInventario.Recepcion => "RC",
             _ => "AJ"
         };
 
@@ -208,6 +209,7 @@ public class InventarioRepository : IInventarioRepository
             .Include(d => d.AlmacenDestino)
             .Include(d => d.Motivo)
             .Include(d => d.Usuario)
+            .Include(d => d.Compra)
             .Include(d => d.Movimientos)
             .ThenInclude(m => m.Producto)
             .Include(d => d.Movimientos)

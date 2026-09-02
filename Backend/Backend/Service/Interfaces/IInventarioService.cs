@@ -67,4 +67,14 @@ public interface IInventarioService
     /// </summary>
     Task<PrestamoResponse> DevolverPrestamoAsync(
         int prestamoId, DevolverPrestamoRequest request, int? usuarioId);
+
+    // --- Recepciones ---
+
+    /// <summary>
+    /// Registra que llegó mercadería de una Compra, total o parcialmente, y la
+    /// mete al stock con motivo del sistema "Compra": crea una capa de costo
+    /// por línea, al costo pactado en la compra.
+    /// </summary>
+    Task<DocumentoInventarioResponse> CrearRecepcionAsync(
+        CrearRecepcionRequest request, int? usuarioId);
 }

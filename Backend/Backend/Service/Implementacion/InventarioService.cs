@@ -38,6 +38,8 @@ public class InventarioService : IInventarioService
     private readonly IValidator<CrearTransferenciaRequest> _transferenciaValidator;
     private readonly IValidator<CrearPrestamoRequest> _prestamoValidator;
     private readonly IValidator<DevolverPrestamoRequest> _devolucionValidator;
+    private readonly IValidator<CrearRecepcionRequest> _recepcionValidator;
+    private readonly IComprasRepository _compras;
     private readonly INotificador _notificador;
 
     public InventarioService(
@@ -51,6 +53,8 @@ public class InventarioService : IInventarioService
         IValidator<CrearTransferenciaRequest> transferenciaValidator,
         IValidator<CrearPrestamoRequest> prestamoValidator,
         IValidator<DevolverPrestamoRequest> devolucionValidator,
+        IValidator<CrearRecepcionRequest> recepcionValidator,
+        IComprasRepository compras,
         INotificador notificador)
     {
         _repository = repository;
@@ -63,6 +67,8 @@ public class InventarioService : IInventarioService
         _transferenciaValidator = transferenciaValidator;
         _prestamoValidator = prestamoValidator;
         _devolucionValidator = devolucionValidator;
+        _recepcionValidator = recepcionValidator;
+        _compras = compras;
         _notificador = notificador;
     }
 
@@ -698,12 +704,19 @@ public class InventarioService : IInventarioService
             // la mitad de las lineas.
             var eraEntrada = m.Tipo == TipoMovimiento.Entrada;
 
+            // Una recepción anulada se tipifica distinto (COMPRA_ANULADA en vez
+            // de COMPRA): son movimientos de sentido contrario y conviene poder
+            // distinguirlos en el kardex, igual que ya estaba sembrado el motivo.
+            var motivoEspejoId = m.CompraDetalleId is not null
+                ? Motivos.CompraAnulada
+                : m.MotivoId;
+
             var espejo = new MovimientoInventario
             {
                 DocumentoId = anulacion.Id,
                 ProductoId = m.ProductoId,
                 AlmacenId = m.AlmacenId,
-                MotivoId = m.MotivoId,
+                MotivoId = motivoEspejoId,
                 // Signo invertido: lo que entro sale y lo que salio entra.
                 Tipo = eraEntrada ? TipoMovimiento.Salida : TipoMovimiento.Entrada,
                 PresentacionId = m.PresentacionId,
@@ -741,6 +754,24 @@ public class InventarioService : IInventarioService
                 {
                     capa.CantidadDisponible = 0;
                 }
+
+                // Era una recepción: la línea de la compra vuelve a quedar
+                // pendiente por lo que se está devolviendo, y la compra baja
+                // de estado si ya no queda nada recibido.
+                if (m.CompraDetalleId is int compraDetalleId)
+                {
+                    var detalle = await _compras.GetCompraDetalleConCompraAsync(compraDetalleId);
+                    if (detalle?.Compra is not null)
+                    {
+                        detalle.CantidadRecibida -= m.Cantidad;
+                        detalle.Compra.Estado = detalle.Compra.Detalle.All(d => d.CantidadRecibida <= 0)
+                            ? EstadoCompra.Pendiente
+                            : detalle.Compra.Detalle.All(d => d.CantidadRecibida >= d.Cantidad)
+                                ? EstadoCompra.RecibidaTotal
+                                : EstadoCompra.RecibidaParcial;
+                        await _compras.GuardarAsync();
+                    }
+                }
             }
             else
             {
@@ -764,11 +795,131 @@ public class InventarioService : IInventarioService
         await transaccion.CommitAsync();
 
         var response = await GetDocumentoAsync(anulacion.Id);
-        var modulo = original.Tipo == TipoDocumentoInventario.Transferencia ? "transferencias" : "ajustes";
+        var modulo = original.Tipo switch
+        {
+            TipoDocumentoInventario.Transferencia => "transferencias",
+            TipoDocumentoInventario.Recepcion => "recepciones",
+            _ => "ajustes"
+        };
         await _notificador.AvisarAsync(modulo, "anulado", response);
+        if (original.Tipo == TipoDocumentoInventario.Recepcion)
+        {
+            await _notificador.AvisarAsync("compras", "actualizado", new { compraId = original.CompraId });
+        }
         await _notificador.AvisarAsync("stock", "cambio", new { documentoId = original.Id });
         await _notificador.AvisarAsync("kardex", "cambio", new { documentoId = original.Id });
         return response;
+    }
+
+    // ---------------------------------------------------------- Recepciones
+
+    public async Task<DocumentoInventarioResponse> CrearRecepcionAsync(
+        CrearRecepcionRequest request, int? usuarioId)
+    {
+        await _recepcionValidator.ValidateAndThrowAsync(request);
+
+        var almacen = await GetAlmacenOrThrowAsync(request.AlmacenId);
+        if (!almacen.Activo) throw new BadRequestException("El almacén está desactivado");
+
+        var compra = await _compras.GetCompraAsync(request.CompraId)
+            ?? throw new NotFoundException($"No existe la compra {request.CompraId}");
+
+        if (compra.Estado == EstadoCompra.Anulada)
+        {
+            throw new BadRequestException("Esta compra está anulada.");
+        }
+
+        if (compra.Estado == EstadoCompra.RecibidaTotal)
+        {
+            throw new BadRequestException("Esta compra ya se recibió por completo.");
+        }
+
+        var motivo = await GetMotivoOrThrowAsync(Motivos.Compra);
+        var fecha = request.Fecha ?? DateTime.UtcNow;
+
+        var documento = new DocumentoInventario
+        {
+            Numero = await _repository.SiguienteNumeroAsync(TipoDocumentoInventario.Recepcion),
+            Tipo = TipoDocumentoInventario.Recepcion,
+            AlmacenId = almacen.Id,
+            MotivoId = motivo.Id,
+            CompraId = compra.Id,
+            Fecha = fecha,
+            Estado = EstadoDocumento.Confirmado,
+            Observacion = Limpiar(request.Observacion),
+            UsuarioId = usuarioId
+        };
+
+        await using var transaccion = await _repository.IniciarTransaccionAsync();
+
+        await _repository.AddDocumentoAsync(documento);
+        await _repository.GuardarAsync();
+
+        foreach (var linea in request.Detalle)
+        {
+            var detalle = compra.Detalle.FirstOrDefault(d => d.Id == linea.CompraDetalleId)
+                ?? throw new BadRequestException(
+                    $"La línea {linea.CompraDetalleId} no pertenece a esta compra.");
+
+            var pendiente = detalle.Cantidad - detalle.CantidadRecibida;
+            if (linea.Cantidad > pendiente)
+            {
+                throw new BadRequestException(
+                    $"'{detalle.Producto?.Nombre}': quedan {pendiente} {detalle.Producto?.UnidadBase?.Codigo} "
+                    + "por recibir, no se puede recibir más que eso.");
+            }
+
+            var movimiento = new MovimientoInventario
+            {
+                DocumentoId = documento.Id,
+                ProductoId = detalle.ProductoId,
+                AlmacenId = almacen.Id,
+                MotivoId = motivo.Id,
+                Tipo = motivo.Tipo,
+                PresentacionId = detalle.PresentacionId,
+                // Igual que en una devolución de préstamo: se registra en
+                // unidad base, que es lo único que no cambia si llega solo
+                // una parte de lo pactado en la línea.
+                CantidadPresentacion = linea.Cantidad,
+                Cantidad = linea.Cantidad,
+                CostoUnitario = detalle.CostoUnitario,
+                CostoTotal = Math.Round(linea.Cantidad * detalle.CostoUnitario, 4),
+                Fecha = fecha,
+                CompraDetalleId = detalle.Id
+            };
+
+            await _repository.AddDocumentoMovimientoAsync(movimiento);
+            await _repository.GuardarAsync();
+
+            await _repository.AddCapaAsync(new CapaCosto
+            {
+                ProductoId = detalle.ProductoId,
+                AlmacenId = almacen.Id,
+                MovimientoId = movimiento.Id,
+                CantidadInicial = linea.Cantidad,
+                CantidadDisponible = linea.Cantidad,
+                CostoUnitario = detalle.CostoUnitario,
+                Origen = OrigenCapa.Compra,
+                Fecha = fecha
+            });
+            await _repository.GuardarAsync();
+
+            detalle.CantidadRecibida += linea.Cantidad;
+        }
+
+        compra.Estado = compra.Detalle.All(d => d.CantidadRecibida >= d.Cantidad)
+            ? EstadoCompra.RecibidaTotal
+            : EstadoCompra.RecibidaParcial;
+        await _compras.UpdateCompraAsync(compra);
+
+        await transaccion.CommitAsync();
+
+        var creada = await GetDocumentoAsync(documento.Id);
+        await _notificador.AvisarAsync("recepciones", "creado", creada);
+        await _notificador.AvisarAsync("compras", "actualizado", new { compraId = compra.Id });
+        await _notificador.AvisarAsync("stock", "cambio", new { almacenId = almacen.Id });
+        await _notificador.AvisarAsync("kardex", "cambio", new { almacenId = almacen.Id });
+        return creada;
     }
 
     // ------------------------------------------------------------ Auxiliares
@@ -893,6 +1044,8 @@ public class InventarioService : IInventarioService
         Almacen = d.Almacen?.Nombre ?? string.Empty,
         AlmacenDestinoId = d.AlmacenDestinoId,
         AlmacenDestino = d.AlmacenDestino?.Nombre,
+        CompraId = d.CompraId,
+        Compra = d.Compra?.Numero,
         MotivoId = d.MotivoId,
         Motivo = d.Motivo?.Nombre ?? string.Empty,
         MotivoTipo = d.Motivo?.Tipo ?? string.Empty,

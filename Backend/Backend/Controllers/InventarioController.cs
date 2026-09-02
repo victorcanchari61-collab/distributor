@@ -176,4 +176,23 @@ public class InventarioController : ControllerBase
     public async Task<IActionResult> DevolverPrestamo(
         int id, [FromBody] DevolverPrestamoRequest request) =>
         Ok(await _inventario.DevolverPrestamoAsync(id, request, UsuarioId));
+
+    // --- Recepciones ---
+
+    [HttpGet("recepciones")]
+    public async Task<IActionResult> Recepciones() =>
+        Ok(await _inventario.GetDocumentosAsync(TipoDocumentoInventario.Recepcion));
+
+    [HttpGet("recepciones/{id:int}")]
+    public async Task<IActionResult> Recepcion(int id) => Ok(await _inventario.GetDocumentoAsync(id));
+
+    /// <summary>Registra que llegó mercadería de una compra, total o parcialmente.</summary>
+    [HttpPost("recepciones")]
+    public async Task<IActionResult> CrearRecepcion([FromBody] CrearRecepcionRequest request) =>
+        Ok(await _inventario.CrearRecepcionAsync(request, UsuarioId));
+
+    /// <summary>Reutiliza el mismo endpoint genérico que Ajustes/Transferencias.</summary>
+    [HttpPatch("recepciones/{id:int}/anular")]
+    public async Task<IActionResult> AnularRecepcion(int id) =>
+        Ok(await _inventario.AnularAsync(id, UsuarioId));
 }

@@ -121,6 +121,10 @@ public class DocumentoInventarioResponse
     public int? AlmacenDestinoId { get; set; }
     public string? AlmacenDestino { get; set; }
 
+    /// <summary>Solo en recepciones: la compra que se está descargando.</summary>
+    public int? CompraId { get; set; }
+    public string? Compra { get; set; }
+
     public int MotivoId { get; set; }
     public string Motivo { get; set; } = string.Empty;
     public string MotivoTipo { get; set; } = string.Empty;

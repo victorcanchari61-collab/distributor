@@ -108,6 +108,9 @@ public static class TipoDocumentoInventario
 
     /// <summary>Devuelve, total o parcial, lo que se prestó o lo que prestaron.</summary>
     public const string DevolucionPrestamo = "DEVOLUCION_PRESTAMO";
+
+    /// <summary>Mercadería que llega contra una Compra. AlmacenId es donde entra.</summary>
+    public const string Recepcion = "RECEPCION";
 }
 
 /// <summary>
@@ -151,6 +154,10 @@ public class DocumentoInventario
     /// <summary>Si este documento anula a otro, cual.</summary>
     public int? DocumentoAnuladoId { get; set; }
     public DocumentoInventario? DocumentoAnulado { get; set; }
+
+    /// <summary>Solo en una recepción: la compra que se está descargando.</summary>
+    public int? CompraId { get; set; }
+    public Compra? Compra { get; set; }
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
@@ -203,6 +210,14 @@ public class MovimientoInventario
 
     /// <summary>Movimiento que este revierte, cuando es una anulacion.</summary>
     public int? MovimientoOrigenId { get; set; }
+
+    /// <summary>
+    /// Solo en una recepción: la línea de la compra que este movimiento
+    /// recibió. Al anular, es lo que permite descontar CantidadRecibida de
+    /// la línea correcta sin tener que adivinar cuál era.
+    /// </summary>
+    public int? CompraDetalleId { get; set; }
+    public CompraDetalle? CompraDetalle { get; set; }
 
     public List<ConsumoCapa> Consumos { get; set; } = [];
 }
