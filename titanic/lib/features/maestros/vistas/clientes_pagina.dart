@@ -113,9 +113,9 @@ class _TarjetaCliente extends StatelessWidget {
   /// listado estorban y hacen que entren menos registros en pantalla.
   List<CampoDetalle> get _campos => [
     CampoDetalle('Nombre', cliente.nombre),
-    CampoDetalle('Direccion', cliente.direccion),
+    CampoDetalle('Dirección', cliente.direccion),
     CampoDetalle('Distrito', cliente.distrito, enTarjeta: false),
-    CampoDetalle('Telefono', cliente.telefono, enTarjeta: false),
+    CampoDetalle('Teléfono', cliente.telefono, enTarjeta: false),
     CampoDetalle(
       'Dia visita',
       cliente.diaVisita,
