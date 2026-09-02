@@ -287,11 +287,13 @@ const menuGrupos = <MenuGrupo>[
     items: [
       MenuItem(
         id: 'config.usuarios',
+        pendiente: false,
         titulo: 'Usuarios',
         icono: Icons.manage_accounts_outlined,
       ),
       MenuItem(
         id: 'config.roles',
+        pendiente: false,
         titulo: 'Roles',
         icono: Icons.badge_outlined,
       ),
@@ -302,6 +304,7 @@ const menuGrupos = <MenuGrupo>[
       ),
       MenuItem(
         id: 'config.empresa',
+        pendiente: false,
         titulo: 'Empresa',
         icono: Icons.business_outlined,
       ),

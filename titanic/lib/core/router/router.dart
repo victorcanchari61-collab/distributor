@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../compartido/widgets/app_shell.dart';
 import '../../features/auth/estado/auth_controlador.dart';
+import '../../features/config/vistas/empresas_pagina.dart';
+import '../../features/config/vistas/roles_pagina.dart';
+import '../../features/config/vistas/usuarios_pagina.dart';
 import '../../features/inicio/vistas/inicio_pagina.dart';
 import '../../features/inicio/vistas/pendiente_pagina.dart';
 import '../../features/maestros/vistas/clientes_pagina.dart';
@@ -55,6 +58,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: ProveedoresPagina.ruta,
         builder: (context, estado) => const ProveedoresPagina(),
+      ),
+      GoRoute(
+        path: UsuariosPagina.ruta,
+        builder: (context, estado) => const UsuariosPagina(),
+      ),
+      GoRoute(
+        path: RolesPagina.ruta,
+        builder: (context, estado) => const RolesPagina(),
+      ),
+      GoRoute(
+        path: EmpresasPagina.ruta,
+        builder: (context, estado) => const EmpresasPagina(),
       ),
 
       for (final grupo in menuGrupos)

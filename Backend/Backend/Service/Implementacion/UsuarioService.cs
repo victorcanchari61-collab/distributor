@@ -20,18 +20,21 @@ public class UsuarioService : IUsuarioService
     private readonly IPasswordHasher<Usuario> _passwordHasher;
     private readonly IValidator<LoginRequest> _loginValidator;
     private readonly IValidator<CreateUsuarioRequest> _createValidator;
+    private readonly IValidator<UpdateUsuarioRequest> _updateValidator;
 
     public UsuarioService(IUsuarioRepository repository,
         IConfiguration configuration,
         IPasswordHasher<Usuario> passwordHasher,
         IValidator<LoginRequest> loginValidator,
-        IValidator<CreateUsuarioRequest> createValidator)
+        IValidator<CreateUsuarioRequest> createValidator,
+        IValidator<UpdateUsuarioRequest> updateValidator)
     {
         _repository = repository;
         _configuration = configuration;
         _passwordHasher = passwordHasher;
         _loginValidator = loginValidator;
         _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
@@ -91,6 +94,59 @@ public class UsuarioService : IUsuarioService
         usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.Password);
 
         await _repository.AddAsync(usuario);
+        usuario.Rol = rol;
+        return MapToResponse(usuario);
+    }
+
+    public async Task<IEnumerable<UsuarioResponse>> GetAllAsync()
+    {
+        var usuarios = await _repository.GetAllConRolAsync();
+        return usuarios.Select(MapToResponse);
+    }
+
+    public async Task<UsuarioResponse> GetByIdAsync(int id)
+    {
+        var usuario = await _repository.GetByIdConRolAsync(id)
+            ?? throw new NotFoundException($"No existe el usuario {id}");
+
+        return MapToResponse(usuario);
+    }
+
+    public async Task<UsuarioResponse> UpdateAsync(int id, UpdateUsuarioRequest request)
+    {
+        await _updateValidator.ValidateAndThrowAsync(request);
+
+        var usuario = await _repository.GetByIdConRolAsync(id)
+            ?? throw new NotFoundException($"No existe el usuario {id}");
+
+        var otro = await _repository.GetByEmailAsync(request.Email);
+        if (otro is not null && otro.Id != id)
+        {
+            throw new ConflictException("Ya existe un usuario con ese email");
+        }
+
+        var rol = await _repository.GetRolAsync(request.RolId)
+            ?? throw new BadRequestException("El rol indicado no existe");
+
+        // Solo se exige rol activo si de verdad esta cambiando: si el rol se
+        // desactivo despues, editar el telefono del usuario no deberia fallar.
+        if (!rol.Activo && rol.Id != usuario.RolId)
+        {
+            throw new BadRequestException("El rol indicado está desactivado");
+        }
+
+        usuario.Nombre = request.Nombre;
+        usuario.Email = request.Email;
+        usuario.Dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni;
+        usuario.RolId = rol.Id;
+        usuario.Activo = request.Activo;
+
+        if (!string.IsNullOrWhiteSpace(request.Password))
+        {
+            usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.Password);
+        }
+
+        await _repository.UpdateAsync(usuario);
         usuario.Rol = rol;
         return MapToResponse(usuario);
     }

@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../compartido/widgets/app_buscador.dart';
+import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
-import '../../../compartido/widgets/app_shell.dart';
-import '../../../compartido/widgets/app_vacio.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../compartido/widgets/filtro_inactivos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
-import '../../../core/tema/dimensiones.dart';
 import '../datos/cliente.dart';
 import '../estado/maestros_controlador.dart';
 import 'cliente_formulario.dart';
@@ -25,80 +23,31 @@ class ClientesPagina extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final grupo = resolverRuta(ruta).grupo;
-    final estado = ref.watch(clientesProvider);
-    final visibles = ref.watch(clientesFiltradosProvider);
     final inactivos = ref.watch(verInactivosProvider);
 
-    return AppShell(
+    return AppListaPagina<Cliente>(
       titulo: 'Clientes',
-      subtitulo: grupo?.titulo,
-      acentado: grupo?.color,
-      rutaActual: ruta,
-      accionFlotante: FloatingActionButton.extended(
-        onPressed: () => _abrirFormulario(context, null),
-        backgroundColor: grupo?.color ?? Colores.marca,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Nuevo'),
+      ruta: ruta,
+      estado: ref.watch(clientesProvider),
+      visibles: ref.watch(clientesFiltradosProvider),
+      busqueda: ref.watch(busquedaClientesProvider),
+      onBuscar: (t) => ref.read(busquedaClientesProvider.notifier).state = t,
+      pistaBusqueda: 'Buscar por nombre, documento o mercado',
+      onRecargar: () => ref.read(clientesProvider.notifier).recargar(),
+      onNuevo: () => _abrirFormulario(context, null),
+      iconoVacio: Icons.contacts_outlined,
+      singular: 'cliente',
+      plural: 'clientes',
+      tituloVacio: inactivos ? 'No hay clientes desactivados' : null,
+      filtro: FiltroInactivos(
+        activo: inactivos,
+        onCambio: (v) => ref.read(verInactivosProvider.notifier).state = v,
       ),
-      child: Column(
-        children: [
-          _Filtros(
-            total: visibles.length,
-            viendoInactivos: inactivos,
-            onBuscar: (t) =>
-                ref.read(busquedaClientesProvider.notifier).state = t,
-            busqueda: ref.watch(busquedaClientesProvider),
-            onCambiarEstado: (v) =>
-                ref.read(verInactivosProvider.notifier).state = v,
-          ),
-          Expanded(
-            child: estado.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, pila) => _Error(
-                mensaje: e is ApiExcepcion
-                    ? e.texto
-                    : 'No pudimos cargar los clientes.',
-                onReintentar: () =>
-                    ref.read(clientesProvider.notifier).recargar(),
-              ),
-              data: (lista) => visibles.isEmpty
-                  ? AppVacio(
-                      icono: Icons.contacts_outlined,
-                      titulo: inactivos
-                          ? 'No hay clientes desactivados'
-                          : 'Sin clientes',
-                      detalle: ref.watch(busquedaClientesProvider).isEmpty
-                          ? 'Registra el primero con el botón de abajo.'
-                          : 'Ninguno coincide con lo que buscaste.',
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () =>
-                          ref.read(clientesProvider.notifier).recargar(),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(
-                          Dimen.espacio4,
-                          0,
-                          Dimen.espacio4,
-                          Dimen.espacio6 * 2,
-                        ),
-                        itemCount: visibles.length,
-                        separatorBuilder: (context, i) =>
-                            const SizedBox(height: Dimen.espacio2),
-                        itemBuilder: (context, i) => _TarjetaCliente(
-                          cliente: visibles[i],
-                          color: grupo?.color ?? Colores.marca,
-                          onEditar: () =>
-                              _abrirFormulario(context, visibles[i]),
-                          onEstado: () =>
-                              _cambiarEstado(context, ref, visibles[i]),
-                        ),
-                      ),
-                    ),
-            ),
-          ),
-        ],
+      fila: (context, cliente) => _TarjetaCliente(
+        cliente: cliente,
+        color: resolverRuta(ruta).grupo?.color ?? Colores.marca,
+        onEditar: () => _abrirFormulario(context, cliente),
+        onEstado: () => _cambiarEstado(context, ref, cliente),
       ),
     );
   }
@@ -143,76 +92,6 @@ class ClientesPagina extends ConsumerWidget {
     } on ApiExcepcion catch (e) {
       mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
     }
-  }
-}
-
-class _Filtros extends StatelessWidget {
-  const _Filtros({
-    required this.total,
-    required this.busqueda,
-    required this.viendoInactivos,
-    required this.onBuscar,
-    required this.onCambiarEstado,
-  });
-
-  final int total;
-  final String busqueda;
-  final bool viendoInactivos;
-  final ValueChanged<String> onBuscar;
-  final ValueChanged<bool> onCambiarEstado;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(Dimen.espacio4),
-      child: Column(
-        children: [
-          AppBuscador(
-            valor: busqueda,
-            onCambio: onBuscar,
-            pista: 'Buscar por nombre, documento o mercado',
-          ),
-          const SizedBox(height: Dimen.espacio3),
-          Row(
-            children: [
-              // Flexible: el conteo cede espacio antes que empujar al
-              // interruptor fuera de la fila.
-              Flexible(
-                child: Text(
-                  '$total ${total == 1 ? 'cliente' : 'clientes'}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: Colores.tintaSuave,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              // Interruptor en vez de dos pestañas: ocupa menos y deja claro
-              // que se esta viendo una lista distinta.
-              Text(
-                'Desactivados',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: viendoInactivos
-                      ? Colores.advertencia
-                      : Colores.tintaSuave,
-                  fontWeight: viendoInactivos
-                      ? FontWeight.w700
-                      : FontWeight.w400,
-                ),
-              ),
-              Switch(
-                value: viendoInactivos,
-                onChanged: onCambiarEstado,
-                activeThumbColor: Colores.advertencia,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -322,23 +201,4 @@ class _TarjetaCliente extends StatelessWidget {
       ],
     );
   }
-}
-
-class _Error extends StatelessWidget {
-  const _Error({required this.mensaje, required this.onReintentar});
-
-  final String mensaje;
-  final VoidCallback onReintentar;
-
-  @override
-  Widget build(BuildContext context) => AppVacio(
-    icono: Icons.wifi_off_outlined,
-    titulo: 'No se pudo cargar',
-    detalle: mensaje,
-    accion: FilledButton.icon(
-      onPressed: onReintentar,
-      icon: const Icon(Icons.refresh, size: 18),
-      label: const Text('Reintentar'),
-    ),
-  );
 }
