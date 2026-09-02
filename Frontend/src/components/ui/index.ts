@@ -19,6 +19,8 @@ export type {
   DataTableFilter,
   OperatorId,
 } from './SysDataTable'
+export { TablaEditable } from './TablaEditable'
+export type { TablaEditableProps, ColumnaEditable } from './TablaEditable'
 export { StatCard } from './StatCard'
 export type { StatCardProps } from './StatCard'
 export { PageSection } from './PageSection'
