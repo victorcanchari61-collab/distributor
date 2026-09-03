@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, Plus, Truck, Undo2 } from 'lucide-react'
+import { ArrowRight, Plus, Trash2, Truck, Undo2 } from 'lucide-react'
 import {
+  AgregarProductoPanel,
   Alert,
   Badge,
   Button,
@@ -10,24 +11,18 @@ import {
   Modal,
   RowAction,
   StatCard,
-  TablaEditable,
+  SysDataTable,
   useConfirmacion,
 } from '../../components/ui'
-import type { ColumnaEditable, DataTableColumn } from '../../components/ui'
+import type { DataTableColumn, LineaProductoNueva } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
-import { almacenApi, transferenciaApi } from './inventarioApi'
+import { almacenApi, stockApi, transferenciaApi } from './inventarioApi'
 import type { AlmacenResponse, DocumentoInventarioResponse } from './inventarioApi'
 import { useRealtime } from '../../lib/realtime'
 
-interface FilaTransferencia {
-  productoId: number
-  presentacionId: number
-  cantidad: string
-}
-
-const FILA_VACIA: FilaTransferencia = { productoId: 0, presentacionId: 0, cantidad: '' }
+type FilaTransferencia = LineaProductoNueva
 
 /**
  * Transferencias entre dos almacenes propios.
@@ -56,7 +51,8 @@ export function TransferenciasPage() {
     almacenDestinoId: 0,
     observacion: '',
   })
-  const [filas, setFilas] = useState<FilaTransferencia[]>([{ ...FILA_VACIA }])
+  const [filas, setFilas] = useState<FilaTransferencia[]>([])
+  const [stockMap, setStockMap] = useState<Record<number, number>>({})
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -87,19 +83,31 @@ export function TransferenciasPage() {
 
   const activos = almacenes.filter((a) => a.activo)
 
+  // Stock del almacén de origen, para mostrarlo mientras se arma cada línea.
+  useEffect(() => {
+    if (!abierto || !cabecera.almacenOrigenId) return
+    let cancelado = false
+    void stockApi.getAll(cabecera.almacenOrigenId).then((filas) => {
+      if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.stock])))
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [abierto, cabecera.almacenOrigenId])
+
   const abrirNuevo = () => {
     setCabecera({
       almacenOrigenId: activos.find((a) => a.esPrincipal)?.id ?? activos[0]?.id ?? 0,
       almacenDestinoId: 0,
       observacion: '',
     })
-    setFilas([{ ...FILA_VACIA }])
+    setFilas([])
     setErrorForm('')
     setAbierto(true)
   }
 
-  const actualizarFila = (i: number, cambio: Partial<FilaTransferencia>) =>
-    setFilas((prev) => prev.map((f, idx) => (idx === i ? { ...f, ...cambio } : f)))
+  const actualizarFila = (id: string, cambio: Partial<FilaTransferencia>) =>
+    setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
 
   const guardar = async () => {
     if (!cabecera.almacenOrigenId) return setErrorForm('Elige el almacén de origen.')
@@ -139,14 +147,15 @@ export function TransferenciasPage() {
     }
   }
 
-  const columnasFilas: ColumnaEditable<FilaTransferencia>[] = [
+  const columnasFilas: DataTableColumn<FilaTransferencia>[] = [
     {
       key: 'producto',
       label: 'Producto',
-      render: (fila, i) => (
+      value: (fila) => productos.find((p) => p.id === fila.productoId)?.nombre ?? '',
+      render: (fila) => (
         <Desplegable
           value={fila.productoId}
-          onChange={(v) => actualizarFila(i, { productoId: Number(v), presentacionId: 0 })}
+          onChange={(v) => actualizarFila(fila.id, { productoId: Number(v), presentacionId: 0 })}
           options={productos.map((p) => ({ value: p.id, label: p.nombre, detalle: p.codigo }))}
         />
       ),
@@ -154,15 +163,14 @@ export function TransferenciasPage() {
     {
       key: 'presentacion',
       label: 'Presentación',
-      className: 'w-36',
-      render: (fila, i) => {
+      render: (fila) => {
         const producto = productos.find((p) => p.id === fila.productoId)
         const presentaciones = producto?.presentaciones.filter((p) => p.activo) ?? []
 
         return (
           <Desplegable
             value={fila.presentacionId}
-            onChange={(v) => actualizarFila(i, { presentacionId: Number(v) })}
+            onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
             placeholder={producto?.unidadBase ?? 'Elegir'}
             disabled={!producto}
             options={
@@ -187,13 +195,13 @@ export function TransferenciasPage() {
       key: 'cantidad',
       label: 'Cantidad',
       align: 'right',
-      className: 'w-28',
-      render: (fila, i) => (
+      value: (fila) => Number(fila.cantidad) || 0,
+      render: (fila) => (
         <Input
           type="number"
           step="0.0001"
           value={fila.cantidad}
-          onChange={(e) => actualizarFila(i, { cantidad: e.target.value })}
+          onChange={(e) => actualizarFila(fila.id, { cantidad: e.target.value })}
         />
       ),
     },
@@ -363,26 +371,37 @@ export function TransferenciasPage() {
 
           <hr className="border-line" />
 
+          <p className="text-sm font-semibold text-ink">Agregar producto</p>
+          <AgregarProductoPanel
+            productos={productos}
+            stock={stockMap}
+            pideCosto={false}
+            onAgregar={(linea) => setFilas((f) => [...f, linea])}
+          />
+
+          <hr className="border-line" />
+
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-ink">Productos</p>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setFilas((f) => [...f, { ...FILA_VACIA }])}
-            >
-              <Plus size={14} />
-              Agregar
-            </Button>
+            <span className="text-xs text-ink-soft">
+              {filas.length} producto{filas.length === 1 ? '' : 's'} agregado{filas.length === 1 ? '' : 's'}
+            </span>
           </div>
 
-          <TablaEditable
-            columnas={columnasFilas}
-            filas={filas}
-            onQuitar={(i) => setFilas((f) => f.filter((_, idx) => idx !== i))}
-            quitarLabel={(fila) => {
-              const producto = productos.find((p) => p.id === fila.productoId)
-              return `Quitar ${producto?.nombre ?? 'línea'}`
-            }}
+          <SysDataTable
+            columns={columnasFilas}
+            rows={filas}
+            rowKey="id"
+            empty="Agrega productos con el buscador de arriba."
+            actions={(fila) => (
+              <RowAction
+                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                tone="danger"
+                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+              >
+                <Trash2 size={15} />
+              </RowAction>
+            )}
           />
         </div>
       </Modal>

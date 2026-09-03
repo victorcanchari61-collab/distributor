@@ -19,12 +19,16 @@ export type {
   DataTableFilter,
   OperatorId,
 } from './SysDataTable'
-export { TablaEditable } from './TablaEditable'
-export type { TablaEditableProps, ColumnaEditable } from './TablaEditable'
 export { BuscadorCampo } from './BuscadorCampo'
 export type { BuscadorCampoProps, OpcionBuscador } from './BuscadorCampo'
 export { BuscadorModal } from './BuscadorModal'
 export type { BuscadorModalProps } from './BuscadorModal'
+export { AgregarProductoPanel } from './AgregarProductoPanel'
+export type {
+  AgregarProductoPanelProps,
+  LineaProductoNueva,
+  ProductoBuscable,
+} from './AgregarProductoPanel'
 export { StatCard } from './StatCard'
 export type { StatCardProps } from './StatCard'
 export { PageSection } from './PageSection'

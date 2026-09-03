@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ClipboardCheck, ListChecks, Plus, Undo2 } from 'lucide-react'
+import { ClipboardCheck, ListChecks, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
+  AgregarProductoPanel,
   Alert,
   Badge,
   Button,
@@ -10,15 +11,15 @@ import {
   Modal,
   RowAction,
   StatCard,
+  SysDataTable,
   Tabs,
-  TablaEditable,
   useConfirmacion,
 } from '../../components/ui'
-import type { ColumnaEditable, DataTableColumn } from '../../components/ui'
+import type { DataTableColumn, LineaProductoNueva } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
-import { almacenApi, ajusteApi, motivoApi } from './inventarioApi'
+import { almacenApi, ajusteApi, motivoApi, stockApi } from './inventarioApi'
 import type {
   AlmacenResponse,
   DocumentoInventarioResponse,
@@ -29,23 +30,7 @@ import { useRealtime } from '../../lib/realtime'
 
 type Pestana = 'ajustes' | 'motivos'
 
-interface FilaAjuste {
-  productoId: number
-  presentacionId: number
-  cantidad: string
-  costo: string
-  lote: string
-  fechaVencimiento: string
-}
-
-const FILA_VACIA: FilaAjuste = {
-  productoId: 0,
-  presentacionId: 0,
-  cantidad: '',
-  costo: '',
-  lote: '',
-  fechaVencimiento: '',
-}
+type FilaAjuste = LineaProductoNueva
 
 /**
  * Ajustes de inventario: el documento formal que mueve stock a mano.
@@ -76,7 +61,8 @@ export function AjustesPage() {
     observacion: '',
     flete: '',
   })
-  const [filas, setFilas] = useState<FilaAjuste[]>([{ ...FILA_VACIA }])
+  const [filas, setFilas] = useState<FilaAjuste[]>([])
+  const [stockMap, setStockMap] = useState<Record<number, number>>({})
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -110,6 +96,18 @@ export function AjustesPage() {
 
   useRealtime(['ajustes', 'motivos'], cargar)
 
+  // Stock del almacén elegido, para mostrarlo mientras se arma cada línea.
+  useEffect(() => {
+    if (!abierto || !cabecera.almacenId) return
+    let cancelado = false
+    void stockApi.getAll(cabecera.almacenId).then((filas) => {
+      if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.stock])))
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [abierto, cabecera.almacenId])
+
   const abrirNuevo = () => {
     setCabecera({
       almacenId: almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0,
@@ -117,13 +115,13 @@ export function AjustesPage() {
       observacion: '',
       flete: '',
     })
-    setFilas([{ ...FILA_VACIA }])
+    setFilas([])
     setErrorForm('')
     setAbierto(true)
   }
 
-  const actualizarFila = (i: number, cambio: Partial<FilaAjuste>) =>
-    setFilas((prev) => prev.map((f, idx) => (idx === i ? { ...f, ...cambio } : f)))
+  const actualizarFila = (id: string, cambio: Partial<FilaAjuste>) =>
+    setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
 
   const guardar = async () => {
     if (!cabecera.almacenId) return setErrorForm('Elige el almacén.')
@@ -164,14 +162,15 @@ export function AjustesPage() {
     }
   }
 
-  const columnasFilas: ColumnaEditable<FilaAjuste>[] = [
+  const columnasFilas: DataTableColumn<FilaAjuste>[] = [
     {
       key: 'producto',
       label: 'Producto',
-      render: (fila, i) => (
+      value: (fila) => productos.find((p) => p.id === fila.productoId)?.nombre ?? '',
+      render: (fila) => (
         <Desplegable
           value={fila.productoId}
-          onChange={(v) => actualizarFila(i, { productoId: Number(v), presentacionId: 0 })}
+          onChange={(v) => actualizarFila(fila.id, { productoId: Number(v), presentacionId: 0 })}
           options={productos.map((p) => ({ value: p.id, label: p.nombre, detalle: p.codigo }))}
         />
       ),
@@ -179,15 +178,14 @@ export function AjustesPage() {
     {
       key: 'presentacion',
       label: 'Presentación',
-      className: 'w-36',
-      render: (fila, i) => {
+      render: (fila) => {
         const producto = productos.find((p) => p.id === fila.productoId)
         const compras = producto?.presentaciones.filter((p) => p.activo) ?? []
 
         return (
           <Desplegable
             value={fila.presentacionId}
-            onChange={(v) => actualizarFila(i, { presentacionId: Number(v) })}
+            onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
             placeholder={producto?.unidadBase ?? 'Elegir'}
             disabled={!producto}
             options={
@@ -212,13 +210,13 @@ export function AjustesPage() {
       key: 'cantidad',
       label: 'Cantidad',
       align: 'right',
-      className: 'w-28',
-      render: (fila, i) => (
+      value: (fila) => Number(fila.cantidad) || 0,
+      render: (fila) => (
         <Input
           type="number"
           step="0.0001"
           value={fila.cantidad}
-          onChange={(e) => actualizarFila(i, { cantidad: e.target.value })}
+          onChange={(e) => actualizarFila(fila.id, { cantidad: e.target.value })}
         />
       ),
     },
@@ -228,8 +226,8 @@ export function AjustesPage() {
             key: 'costo',
             label: 'Costo',
             align: 'right' as const,
-            className: 'w-32',
-            render: (fila: FilaAjuste, i: number) => {
+            value: (fila: FilaAjuste) => Number(fila.costo) || 0,
+            render: (fila: FilaAjuste) => {
               const producto = productos.find((p) => p.id === fila.productoId)
               const compras = producto?.presentaciones.filter((p) => p.activo) ?? []
               const presentacion = compras.find((p) => p.id === fila.presentacionId)
@@ -245,7 +243,7 @@ export function AjustesPage() {
                       : '0.00'
                   }
                   value={fila.costo}
-                  onChange={(e) => actualizarFila(i, { costo: e.target.value })}
+                  onChange={(e) => actualizarFila(fila.id, { costo: e.target.value })}
                 />
               )
             },
@@ -253,28 +251,33 @@ export function AjustesPage() {
           {
             key: 'lote',
             label: 'Lote',
-            className: 'w-28',
-            render: (fila: FilaAjuste, i: number) => (
+            render: (fila: FilaAjuste) => (
               <Input
                 optional
                 placeholder="Opcional"
                 value={fila.lote}
-                onChange={(e) => actualizarFila(i, { lote: e.target.value })}
+                onChange={(e) => actualizarFila(fila.id, { lote: e.target.value })}
               />
             ),
           },
           {
             key: 'vencimiento',
             label: 'Vencimiento',
-            className: 'w-36',
-            render: (fila: FilaAjuste, i: number) => (
+            render: (fila: FilaAjuste) => (
               <Input
                 optional
                 type="date"
                 value={fila.fechaVencimiento}
-                onChange={(e) => actualizarFila(i, { fechaVencimiento: e.target.value })}
+                onChange={(e) => actualizarFila(fila.id, { fechaVencimiento: e.target.value })}
               />
             ),
+          },
+          {
+            key: 'subtotal',
+            label: 'Subtotal',
+            align: 'right' as const,
+            value: (fila: FilaAjuste) => (Number(fila.cantidad) || 0) * (Number(fila.costo) || 0),
+            render: (fila: FilaAjuste) => `S/ ${((Number(fila.cantidad) || 0) * (Number(fila.costo) || 0)).toFixed(2)}`,
           },
         ]
       : []),
@@ -477,26 +480,38 @@ export function AjustesPage() {
 
           <hr className="border-line" />
 
+          <p className="text-sm font-semibold text-ink">Agregar producto</p>
+          <AgregarProductoPanel
+            productos={productos}
+            stock={stockMap}
+            pideCosto={motivo?.pideCosto ?? false}
+            pideLote={motivo?.pideCosto ?? false}
+            onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
+          />
+
+          <hr className="border-line" />
+
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-ink">Productos</p>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setFilas((f) => [...f, { ...FILA_VACIA }])}
-            >
-              <Plus size={14} />
-              Agregar
-            </Button>
+            <span className="text-xs text-ink-soft">
+              {filas.length} producto{filas.length === 1 ? '' : 's'} agregado{filas.length === 1 ? '' : 's'}
+            </span>
           </div>
 
-          <TablaEditable
-            columnas={columnasFilas}
-            filas={filas}
-            onQuitar={(i) => setFilas((f) => f.filter((_, idx) => idx !== i))}
-            quitarLabel={(fila) => {
-              const producto = productos.find((p) => p.id === fila.productoId)
-              return `Quitar ${producto?.nombre ?? 'línea'}`
-            }}
+          <SysDataTable
+            columns={columnasFilas}
+            rows={filas}
+            rowKey="id"
+            empty="Agrega productos con el buscador de arriba."
+            actions={(fila) => (
+              <RowAction
+                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                tone="danger"
+                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+              >
+                <Trash2 size={15} />
+              </RowAction>
+            )}
           />
         </div>
       </Modal>

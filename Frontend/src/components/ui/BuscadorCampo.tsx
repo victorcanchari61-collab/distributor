@@ -68,11 +68,13 @@ export function BuscadorCampo<T>({
   // nombre de lo elegido.
   const textoVisible = abierto ? texto : (elegido?.label ?? '')
 
-  const term = texto.trim().toLowerCase()
+  // Sin acentos y en minúsculas: escribir "azucar" debe encontrar "Azúcar",
+  // igual que ya hace el buscador de SysDataTable.
+  const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+  const term = normalizar(texto.trim())
   const visibles = term
-    ? opciones.filter((o) =>
-        `${o.label} ${o.detalle ?? ''} ${o.nota ?? ''}`.toLowerCase().includes(term),
-      )
+    ? opciones.filter((o) => normalizar(`${o.label} ${o.detalle ?? ''} ${o.nota ?? ''}`).includes(term))
     : opciones
 
   useEffect(() => {

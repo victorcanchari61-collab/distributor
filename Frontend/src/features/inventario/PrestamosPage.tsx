@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { HandCoins, Plus, Undo2 } from 'lucide-react'
+import { HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
+  AgregarProductoPanel,
   Alert,
   Badge,
   Button,
@@ -10,24 +11,17 @@ import {
   Modal,
   RowAction,
   StatCard,
-  TablaEditable,
+  SysDataTable,
 } from '../../components/ui'
-import type { ColumnaEditable, DataTableColumn } from '../../components/ui'
+import type { DataTableColumn, LineaProductoNueva } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
-import { almacenApi, prestamoApi } from './inventarioApi'
+import { almacenApi, prestamoApi, stockApi } from './inventarioApi'
 import type { AlmacenResponse, PrestamoResponse, TipoPrestamo } from './inventarioApi'
 import { useRealtime } from '../../lib/realtime'
 
-interface FilaPrestamo {
-  productoId: number
-  presentacionId: number
-  cantidad: string
-  costo: string
-}
-
-const FILA_VACIA: FilaPrestamo = { productoId: 0, presentacionId: 0, cantidad: '', costo: '' }
+type FilaPrestamo = LineaProductoNueva
 
 /**
  * Mercadería que sale o entra desde fuera de la empresa: se presta y se
@@ -59,7 +53,8 @@ export function PrestamosPage() {
     almacenId: 0,
     observacion: '',
   })
-  const [filas, setFilas] = useState<FilaPrestamo[]>([{ ...FILA_VACIA }])
+  const [filas, setFilas] = useState<FilaPrestamo[]>([])
+  const [stockMap, setStockMap] = useState<Record<number, number>>({})
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -88,6 +83,18 @@ export function PrestamosPage() {
 
   const activos = almacenes.filter((a) => a.activo)
 
+  // Stock del almacén elegido, para mostrarlo mientras se arma cada línea.
+  useEffect(() => {
+    if (!abierto || !cabecera.almacenId) return
+    let cancelado = false
+    void stockApi.getAll(cabecera.almacenId).then((filas) => {
+      if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.stock])))
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [abierto, cabecera.almacenId])
+
   const abrirNuevo = () => {
     setCabecera({
       tipo: 'DADO',
@@ -95,13 +102,13 @@ export function PrestamosPage() {
       almacenId: activos.find((a) => a.esPrincipal)?.id ?? activos[0]?.id ?? 0,
       observacion: '',
     })
-    setFilas([{ ...FILA_VACIA }])
+    setFilas([])
     setErrorForm('')
     setAbierto(true)
   }
 
-  const actualizarFila = (i: number, cambio: Partial<FilaPrestamo>) =>
-    setFilas((prev) => prev.map((f, idx) => (idx === i ? { ...f, ...cambio } : f)))
+  const actualizarFila = (id: string, cambio: Partial<FilaPrestamo>) =>
+    setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
 
   const guardar = async () => {
     if (!cabecera.contraparte.trim()) {
@@ -183,14 +190,15 @@ export function PrestamosPage() {
     }
   }
 
-  const columnasFilas: ColumnaEditable<FilaPrestamo>[] = [
+  const columnasFilas: DataTableColumn<FilaPrestamo>[] = [
     {
       key: 'producto',
       label: 'Producto',
-      render: (fila, i) => (
+      value: (fila) => productos.find((p) => p.id === fila.productoId)?.nombre ?? '',
+      render: (fila) => (
         <Desplegable
           value={fila.productoId}
-          onChange={(v) => actualizarFila(i, { productoId: Number(v), presentacionId: 0 })}
+          onChange={(v) => actualizarFila(fila.id, { productoId: Number(v), presentacionId: 0 })}
           options={productos.map((p) => ({ value: p.id, label: p.nombre, detalle: p.codigo }))}
         />
       ),
@@ -198,15 +206,14 @@ export function PrestamosPage() {
     {
       key: 'presentacion',
       label: 'Presentación',
-      className: 'w-36',
-      render: (fila, i) => {
+      render: (fila) => {
         const producto = productos.find((p) => p.id === fila.productoId)
         const presentaciones = producto?.presentaciones.filter((p) => p.activo) ?? []
 
         return (
           <Desplegable
             value={fila.presentacionId}
-            onChange={(v) => actualizarFila(i, { presentacionId: Number(v) })}
+            onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
             placeholder={producto?.unidadBase ?? 'Elegir'}
             disabled={!producto}
             options={
@@ -231,13 +238,13 @@ export function PrestamosPage() {
       key: 'cantidad',
       label: 'Cantidad',
       align: 'right',
-      className: 'w-28',
-      render: (fila, i) => (
+      value: (fila) => Number(fila.cantidad) || 0,
+      render: (fila) => (
         <Input
           type="number"
           step="0.0001"
           value={fila.cantidad}
-          onChange={(e) => actualizarFila(i, { cantidad: e.target.value })}
+          onChange={(e) => actualizarFila(fila.id, { cantidad: e.target.value })}
         />
       ),
     },
@@ -247,8 +254,8 @@ export function PrestamosPage() {
             key: 'costo',
             label: 'Costo',
             align: 'right' as const,
-            className: 'w-32',
-            render: (fila: FilaPrestamo, i: number) => {
+            value: (fila: FilaPrestamo) => Number(fila.costo) || 0,
+            render: (fila: FilaPrestamo) => {
               const producto = productos.find((p) => p.id === fila.productoId)
               const presentaciones = producto?.presentaciones.filter((p) => p.activo) ?? []
               const presentacionElegida = presentaciones.find((p) => p.id === fila.presentacionId)
@@ -264,7 +271,7 @@ export function PrestamosPage() {
                       : '0.00'
                   }
                   value={fila.costo}
-                  onChange={(e) => actualizarFila(i, { costo: e.target.value })}
+                  onChange={(e) => actualizarFila(fila.id, { costo: e.target.value })}
                 />
               )
             },
@@ -405,30 +412,40 @@ export function PrestamosPage() {
 
           <hr className="border-line" />
 
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-ink">Productos</p>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setFilas((f) => [...f, { ...FILA_VACIA }])}
-            >
-              <Plus size={14} />
-              Agregar
-            </Button>
-          </div>
-
+          <p className="text-sm font-semibold text-ink">Agregar producto</p>
           {cabecera.tipo === 'RECIBIDO' && (
             <p className="-mt-2 text-xs text-ink-soft">Costo vacío usa el costo de referencia.</p>
           )}
+          <AgregarProductoPanel
+            productos={productos}
+            stock={stockMap}
+            pideCosto={cabecera.tipo === 'RECIBIDO'}
+            onAgregar={(linea) => setFilas((f) => [...f, linea])}
+          />
 
-          <TablaEditable
-            columnas={columnasFilas}
-            filas={filas}
-            onQuitar={(i) => setFilas((f) => f.filter((_, idx) => idx !== i))}
-            quitarLabel={(fila) => {
-              const producto = productos.find((p) => p.id === fila.productoId)
-              return `Quitar ${producto?.nombre ?? 'línea'}`
-            }}
+          <hr className="border-line" />
+
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-ink">Productos</p>
+            <span className="text-xs text-ink-soft">
+              {filas.length} producto{filas.length === 1 ? '' : 's'} agregado{filas.length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          <SysDataTable
+            columns={columnasFilas}
+            rows={filas}
+            rowKey="id"
+            empty="Agrega productos con el buscador de arriba."
+            actions={(fila) => (
+              <RowAction
+                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                tone="danger"
+                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+              >
+                <Trash2 size={15} />
+              </RowAction>
+            )}
           />
         </div>
       </Modal>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Building2, PackageCheck, Plus, ShoppingBag, Undo2 } from 'lucide-react'
+import { ArrowLeft, Building2, PackageCheck, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
+  AgregarProductoPanel,
   Alert,
   Badge,
   BuscadorCampo,
@@ -14,28 +15,25 @@ import {
   PageSection,
   RowAction,
   StatCard,
-  TablaEditable,
+  SysDataTable,
   useConfirmacion,
 } from '../../components/ui'
-import type { ColumnaEditable, DataTableColumn, OpcionBuscador } from '../../components/ui'
+import type {
+  DataTableColumn,
+  LineaProductoNueva,
+  OpcionBuscador,
+} from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
 import { productoApi, proveedorApi } from '../maestros'
 import type { ProductoResponse, ProveedorResponse } from '../maestros'
-import { almacenApi } from '../inventario'
+import { almacenApi, stockApi } from '../inventario'
 import type { AlmacenResponse } from '../inventario'
 import { compraApi } from './comprasApi'
 import type { CompraResponse, CrearCompraRequest } from './comprasApi'
 import { NuevaRecepcionModal } from './NuevaRecepcionModal'
 
-interface FilaCompra {
-  productoId: number
-  presentacionId: number
-  cantidad: string
-  costo: string
-}
-
-const FILA_VACIA: FilaCompra = { productoId: 0, presentacionId: 0, cantidad: '', costo: '' }
+type FilaCompra = LineaProductoNueva
 
 /**
  * Mis compras: lo que está listo para recibir, sea porque vino de confirmar
@@ -61,23 +59,28 @@ export function MisComprasPage() {
 
   const [proveedorId, setProveedorId] = useState(0)
   const [observacion, setObservacion] = useState('')
-  const [filas, setFilas] = useState<FilaCompra[]>([{ ...FILA_VACIA }])
+  const [filas, setFilas] = useState<FilaCompra[]>([])
+  const [stockMap, setStockMap] = useState<Record<number, number>>({})
 
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [comps, provs, prods, alms] = await Promise.all([
+      const [comps, provs, prods, alms, stock] = await Promise.all([
         compraApi.getAll(),
         proveedorApi.getAll(),
         productoApi.getAll(),
         almacenApi.getAll(),
+        // Sin almacenId: una compra directa tampoco elige almacén todavía
+        // (eso se decide al recibir), así que se muestra el stock total.
+        stockApi.getAll(),
       ])
       setCompras(comps)
       setProveedores(provs.filter((p) => p.activo))
       setProductos(prods.filter((p) => p.activo && p.controlaStock))
       setAlmacenes(alms)
+      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.stock])))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las compras.')
@@ -90,18 +93,18 @@ export function MisComprasPage() {
     void cargar()
   }, [cargar])
 
-  useRealtime(['compras', 'recepciones'], cargar)
+  useRealtime(['compras', 'recepciones', 'stock'], cargar)
 
   const abrirNueva = () => {
     setProveedorId(0)
     setObservacion('')
-    setFilas([{ ...FILA_VACIA }])
+    setFilas([])
     setErrorForm('')
     setVista('form')
   }
 
-  const actualizarFila = (i: number, cambio: Partial<FilaCompra>) =>
-    setFilas((prev) => prev.map((f, idx) => (idx === i ? { ...f, ...cambio } : f)))
+  const actualizarFila = (id: string, cambio: Partial<FilaCompra>) =>
+    setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
 
   const guardar = async () => {
     if (!proveedorId) return setErrorForm('Elige el proveedor.')
@@ -156,14 +159,15 @@ export function MisComprasPage() {
       },
     })
 
-  const columnasFilas: ColumnaEditable<FilaCompra>[] = [
+  const columnasFilas: DataTableColumn<FilaCompra>[] = [
     {
       key: 'producto',
       label: 'Producto',
-      render: (fila, i) => (
+      value: (fila) => productos.find((p) => p.id === fila.productoId)?.nombre ?? '',
+      render: (fila) => (
         <Desplegable
           value={fila.productoId}
-          onChange={(v) => actualizarFila(i, { productoId: Number(v), presentacionId: 0 })}
+          onChange={(v) => actualizarFila(fila.id, { productoId: Number(v), presentacionId: 0 })}
           options={productos.map((p) => ({ value: p.id, label: p.nombre, detalle: p.codigo }))}
         />
       ),
@@ -171,15 +175,14 @@ export function MisComprasPage() {
     {
       key: 'presentacion',
       label: 'Presentación',
-      className: 'w-40',
-      render: (fila, i) => {
+      render: (fila) => {
         const producto = productos.find((p) => p.id === fila.productoId)
         const disponibles = producto?.presentaciones.filter((p) => p.esCompra && p.activo) ?? []
 
         return (
           <Desplegable
             value={fila.presentacionId}
-            onChange={(v) => actualizarFila(i, { presentacionId: Number(v) })}
+            onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
             placeholder={producto?.unidadBase ?? 'Elegir'}
             disabled={!producto}
             options={
@@ -204,13 +207,13 @@ export function MisComprasPage() {
       key: 'cantidad',
       label: 'Cantidad',
       align: 'right',
-      className: 'w-28',
-      render: (fila, i) => (
+      value: (fila) => Number(fila.cantidad) || 0,
+      render: (fila) => (
         <Input
           type="number"
           step="0.0001"
           value={fila.cantidad}
-          onChange={(e) => actualizarFila(i, { cantidad: e.target.value })}
+          onChange={(e) => actualizarFila(fila.id, { cantidad: e.target.value })}
         />
       ),
     },
@@ -218,15 +221,22 @@ export function MisComprasPage() {
       key: 'costo',
       label: 'Costo pactado',
       align: 'right',
-      className: 'w-36',
-      render: (fila, i) => (
+      value: (fila) => Number(fila.costo) || 0,
+      render: (fila) => (
         <Input
           type="number"
           step="0.01"
           value={fila.costo}
-          onChange={(e) => actualizarFila(i, { costo: e.target.value })}
+          onChange={(e) => actualizarFila(fila.id, { costo: e.target.value })}
         />
       ),
+    },
+    {
+      key: 'subtotal',
+      label: 'Subtotal',
+      align: 'right',
+      value: (fila) => (Number(fila.cantidad) || 0) * (Number(fila.costo) || 0),
+      render: (fila) => `S/ ${((Number(fila.cantidad) || 0) * (Number(fila.costo) || 0)).toFixed(2)}`,
     },
   ]
 
@@ -332,23 +342,33 @@ export function MisComprasPage() {
           />
         </PageSection>
 
+        <PageSection title="Agregar producto">
+          <AgregarProductoPanel
+            productos={productos}
+            stock={stockMap}
+            costoLabel="Costo pactado"
+            onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
+          />
+        </PageSection>
+
         <PageSection
           title="Productos"
-          actions={
-            <Button variant="secondary" size="sm" onClick={() => setFilas((f) => [...f, { ...FILA_VACIA }])}>
-              <Plus size={14} />
-              Agregar
-            </Button>
-          }
+          description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
         >
-          <TablaEditable
-            columnas={columnasFilas}
-            filas={filas}
-            onQuitar={(i) => setFilas((f) => f.filter((_, idx) => idx !== i))}
-            quitarLabel={(fila) => {
-              const producto = productos.find((p) => p.id === fila.productoId)
-              return `Quitar ${producto?.nombre ?? 'línea'}`
-            }}
+          <SysDataTable
+            columns={columnasFilas}
+            rows={filas}
+            rowKey="id"
+            empty="Agrega productos con el buscador de arriba."
+            actions={(fila) => (
+              <RowAction
+                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                tone="danger"
+                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+              >
+                <Trash2 size={15} />
+              </RowAction>
+            )}
           />
         </PageSection>
 
