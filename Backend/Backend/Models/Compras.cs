@@ -86,10 +86,9 @@ public static class TipoComprobanteCompra
 {
     public const string Factura = "FACTURA";
     public const string Boleta = "BOLETA";
-    public const string Guia = "GUIA";
-    public const string Otro = "OTRO";
+    public const string NotaVenta = "NOTA_VENTA";
 
-    public static readonly string[] Todos = [Factura, Boleta, Guia, Otro];
+    public static readonly string[] Todos = [Factura, Boleta, NotaVenta];
 }
 
 /// <summary>Cómo se paga la compra al proveedor.</summary>

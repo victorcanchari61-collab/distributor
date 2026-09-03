@@ -41,8 +41,7 @@ import { NuevaRecepcionModal } from './NuevaRecepcionModal'
 const TIPOS_COMPROBANTE: { value: TipoComprobanteCompra; label: string }[] = [
   { value: 'FACTURA', label: 'Factura' },
   { value: 'BOLETA', label: 'Boleta' },
-  { value: 'GUIA', label: 'Guía' },
-  { value: 'OTRO', label: 'Otro' },
+  { value: 'NOTA_VENTA', label: 'Nota de venta' },
 ]
 
 const FORMAS_PAGO: { value: FormaPagoCompra; label: string }[] = [
@@ -379,43 +378,52 @@ export function MisComprasPage() {
             avanzadoLabel="Búsqueda avanzada de proveedores"
           />
 
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <Input
-              label="Fecha"
-              type="date"
-              optional
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-            />
-            <Desplegable
-              label="Tipo documento"
-              value={tipoComprobante}
-              onChange={(v) => setTipoComprobante(v as TipoComprobanteCompra)}
-              options={TIPOS_COMPROBANTE}
-            />
-            <Desplegable
-              label="Forma de pago"
-              value={formaPago}
-              onChange={(v) => setFormaPago(v as FormaPagoCompra)}
-              options={FORMAS_PAGO}
-            />
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-4">
-            <Input
-              label="Serie"
-              optional
-              placeholder="F001"
-              value={serieComprobante}
-              onChange={(e) => setSerieComprobante(e.target.value)}
-            />
-            <Input
-              label="Número"
-              optional
-              placeholder="00000000"
-              value={numeroComprobante}
-              onChange={(e) => setNumeroComprobante(e.target.value)}
-            />
+          {/* Cada campo mide lo que su contenido pide, no una fracción pareja
+              de la fila: "F001" y "dd/mm/aaaa" no necesitan el mismo ancho. */}
+          <div className="mt-4 flex flex-wrap gap-4">
+            <div className="w-40">
+              <Input
+                label="Fecha"
+                type="date"
+                optional
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+              />
+            </div>
+            <div className="w-40">
+              <Desplegable
+                label="Tipo documento"
+                value={tipoComprobante}
+                onChange={(v) => setTipoComprobante(v as TipoComprobanteCompra)}
+                options={TIPOS_COMPROBANTE}
+              />
+            </div>
+            <div className="w-24">
+              <Input
+                label="Serie"
+                optional
+                placeholder="F001"
+                value={serieComprobante}
+                onChange={(e) => setSerieComprobante(e.target.value)}
+              />
+            </div>
+            <div className="w-32">
+              <Input
+                label="Número"
+                optional
+                placeholder="00000000"
+                value={numeroComprobante}
+                onChange={(e) => setNumeroComprobante(e.target.value)}
+              />
+            </div>
+            <div className="w-36">
+              <Desplegable
+                label="Forma de pago"
+                value={formaPago}
+                onChange={(v) => setFormaPago(v as FormaPagoCompra)}
+                options={FORMAS_PAGO}
+              />
+            </div>
           </div>
 
           <Input
