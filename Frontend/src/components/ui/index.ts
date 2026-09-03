@@ -23,12 +23,10 @@ export { BuscadorCampo } from './BuscadorCampo'
 export type { BuscadorCampoProps, OpcionBuscador } from './BuscadorCampo'
 export { BuscadorModal } from './BuscadorModal'
 export type { BuscadorModalProps } from './BuscadorModal'
+export { BuscadorProductoModal } from './BuscadorProductoModal'
+export type { BuscadorProductoModalProps, ProductoBuscable } from './BuscadorProductoModal'
 export { AgregarProductoPanel } from './AgregarProductoPanel'
-export type {
-  AgregarProductoPanelProps,
-  LineaProductoNueva,
-  ProductoBuscable,
-} from './AgregarProductoPanel'
+export type { AgregarProductoPanelProps, LineaProductoNueva } from './AgregarProductoPanel'
 export { StatCard } from './StatCard'
 export type { StatCardProps } from './StatCard'
 export { PageSection } from './PageSection'

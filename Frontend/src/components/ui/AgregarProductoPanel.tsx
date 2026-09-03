@@ -2,26 +2,13 @@ import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { BuscadorCampo } from './BuscadorCampo'
 import type { OpcionBuscador } from './BuscadorCampo'
+import { BuscadorProductoModal } from './BuscadorProductoModal'
+import type { ProductoBuscable } from './BuscadorProductoModal'
 import { Button } from './Button'
 import { Desplegable } from './Desplegable'
 import { Input } from './Input'
 
-/** Lo mínimo de un producto que este panel necesita para funcionar. */
-export interface ProductoBuscable {
-  id: number
-  codigo: string
-  nombre: string
-  descripcion: string | null
-  unidadBase: string
-  costoReferencia: number | null
-  presentaciones: {
-    id: number
-    nombre: string
-    factor: number
-    esBase: boolean
-    activo: boolean
-  }[]
-}
+export type { ProductoBuscable }
 
 /** Una línea lista para agregar a la tabla de productos. */
 export interface LineaProductoNueva {
@@ -59,6 +46,10 @@ const VACIO = { productoId: 0, presentacionId: 0, cantidad: '', costo: '', lote:
  * `pideCosto` oculta el costo cuando el motivo no lo declara (una
  * transferencia hereda el costo, no lo inventa), y `pideLote` solo aparece
  * donde tiene sentido guardar vencimiento.
+ *
+ * El campo de búsqueda trae también su búsqueda avanzada: un
+ * [BuscadorProductoModal] con tarjetas filtrables por categoría y marca,
+ * para cuando escribir dos letras no alcanza.
  */
 export function AgregarProductoPanel({
   productos,
@@ -69,6 +60,7 @@ export function AgregarProductoPanel({
   onAgregar,
 }: AgregarProductoPanelProps) {
   const [linea, setLinea] = useState(VACIO)
+  const [buscadorAbierto, setBuscadorAbierto] = useState(false)
 
   const producto = productos.find((p) => p.id === linea.productoId)
   const presentaciones = producto?.presentaciones.filter((p) => p.activo) ?? []
@@ -81,6 +73,8 @@ export function AgregarProductoPanel({
     label: p.nombre,
     detalle: p.codigo,
   }))
+
+  const elegir = (id: number) => setLinea({ ...VACIO, productoId: id })
 
   const agregar = () => {
     if (!producto || !linea.cantidad) return
@@ -105,10 +99,12 @@ export function AgregarProductoPanel({
       <BuscadorCampo
         label="Buscar producto"
         value={linea.productoId || null}
-        onChange={(id) => setLinea({ ...VACIO, productoId: id ?? 0 })}
+        onChange={(id) => elegir(id ?? 0)}
         opciones={opcionesProducto}
         placeholder="Nombre o código..."
         vacio="Ningún producto coincide"
+        onAvanzado={() => setBuscadorAbierto(true)}
+        avanzadoLabel="Búsqueda avanzada de productos"
       />
 
       {producto && (
@@ -183,6 +179,14 @@ export function AgregarProductoPanel({
           </Button>
         </>
       )}
+
+      <BuscadorProductoModal
+        open={buscadorAbierto}
+        onClose={() => setBuscadorAbierto(false)}
+        productos={productos}
+        stock={stock}
+        onSeleccionar={(p) => elegir(p.id)}
+      />
     </div>
   )
 }
