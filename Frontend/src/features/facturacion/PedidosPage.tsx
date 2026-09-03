@@ -133,6 +133,9 @@ export function PedidosPage() {
   const actualizarFila = (id: string, cambio: Partial<FilaPedido>) =>
     setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
 
+  // Lo que suma el pedido hasta ahora, con lo agregado en Productos.
+  const total = filas.reduce((n, f) => n + (Number(f.cantidad) || 0) * (Number(f.costo) || 0), 0)
+
   const guardar = async () => {
     if (!clienteId) return setErrorForm('Elige el cliente.')
 
@@ -344,69 +347,87 @@ export function PedidosPage() {
 
         {errorForm && <Alert>{errorForm}</Alert>}
 
-        <PageSection title="Datos generales">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <BuscadorCampo
-              label="Cliente"
-              value={clienteId || null}
-              onChange={(id) => setClienteId(id ?? 0)}
-              opciones={opcionesCliente}
-              placeholder="Buscar cliente..."
-              vacio="Ningún cliente coincide"
-              onAvanzado={() => setBuscadorAbierto(true)}
-              avanzadoLabel="Búsqueda avanzada de clientes"
+        {/* Mismo layout que Mis compras / Nueva venta: Productos a la
+            izquierda porque es lo que más espacio pide (buscador y tabla);
+            los datos del pedido y el total van en una columna angosta a la
+            derecha, como un resumen de pedido. */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:items-start">
+          <PageSection
+            title="Productos"
+            description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
+          >
+            <AgregarProductoPanel
+              productos={productos}
+              stock={stockMap}
+              costoLabel="Precio de venta"
+              onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
             />
 
-            <Desplegable
-              label="Lista de precios"
-              optional
-              value={listaPrecioId}
-              onChange={(v) => setListaPrecioId(Number(v))}
-              placeholder="Predeterminada"
-              options={listas.map((l) => ({ value: l.id, label: l.nombre }))}
-            />
+            <div className="mt-4">
+              <SysDataTable
+                columns={columnasFilas}
+                rows={filas}
+                rowKey="id"
+                toolbar={false}
+                empty="Agrega productos con el buscador de arriba."
+                actions={(fila) => (
+                  <RowAction
+                    label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                    tone="danger"
+                    onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+                  >
+                    <Trash2 size={15} />
+                  </RowAction>
+                )}
+              />
+            </div>
+          </PageSection>
+
+          <div className="flex flex-col gap-5">
+            <PageSection title="Pedido">
+              <BuscadorCampo
+                label="Cliente"
+                value={clienteId || null}
+                onChange={(id) => setClienteId(id ?? 0)}
+                opciones={opcionesCliente}
+                placeholder="Buscar cliente..."
+                vacio="Ningún cliente coincide"
+                onAvanzado={() => setBuscadorAbierto(true)}
+                avanzadoLabel="Búsqueda avanzada de clientes"
+              />
+
+              <Desplegable
+                className="mt-4"
+                label="Lista de precios"
+                optional
+                value={listaPrecioId}
+                onChange={(v) => setListaPrecioId(Number(v))}
+                placeholder="Predeterminada"
+                options={listas.map((l) => ({ value: l.id, label: l.nombre }))}
+              />
+
+              <Input
+                className="mt-4"
+                label="Observación"
+                optional
+                placeholder="Referencia..."
+                value={observacion}
+                onChange={(e) => setObservacion(e.target.value)}
+              />
+            </PageSection>
+
+            <PageSection title="Resumen">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-ink-soft uppercase tracking-wide">
+                  Total del pedido
+                </span>
+                <span className="text-xl font-bold text-[rgb(var(--sys-rgb))]">
+                  S/ {total.toFixed(2)}
+                </span>
+              </div>
+            </PageSection>
           </div>
-
-          <Input
-            className="mt-4"
-            label="Observación"
-            optional
-            placeholder="Referencia..."
-            value={observacion}
-            onChange={(e) => setObservacion(e.target.value)}
-          />
-        </PageSection>
-
-        <PageSection title="Agregar producto">
-          <AgregarProductoPanel
-            productos={productos}
-            stock={stockMap}
-            costoLabel="Precio de venta"
-            onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
-          />
-        </PageSection>
-
-        <PageSection
-          title="Productos"
-          description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
-        >
-          <SysDataTable
-            columns={columnasFilas}
-            rows={filas}
-            rowKey="id"
-            toolbar={false}
-            empty="Agrega productos con el buscador de arriba."
-            actions={(fila) => (
-              <RowAction
-                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
-                tone="danger"
-                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
-              >
-                <Trash2 size={15} />
-              </RowAction>
-            )}
-          />
-        </PageSection>
+        </div>
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>

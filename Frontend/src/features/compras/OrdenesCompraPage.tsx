@@ -141,6 +141,9 @@ export function OrdenesCompraPage() {
   const actualizarFila = (id: string, cambio: Partial<FilaOrden>) =>
     setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
 
+  // Lo que suma la orden hasta ahora, con lo agregado en Productos.
+  const total = filas.reduce((n, f) => n + (Number(f.cantidad) || 0) * (Number(f.costo) || 0), 0)
+
   const guardar = async () => {
     if (!proveedorId) return setErrorForm('Elige el proveedor.')
 
@@ -362,68 +365,86 @@ export function OrdenesCompraPage() {
 
         {errorForm && <Alert>{errorForm}</Alert>}
 
-        <PageSection title="Datos generales">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <BuscadorCampo
-              label="Proveedor"
-              value={proveedorId || null}
-              onChange={(id) => setProveedorId(id ?? 0)}
-              opciones={opcionesProveedor}
-              placeholder="Buscar proveedor..."
-              vacio="Ningún proveedor coincide"
-              onAvanzado={() => setBuscadorAbierto(true)}
-              avanzadoLabel="Búsqueda avanzada de proveedores"
+        {/* Mismo layout que Mis compras: Productos a la izquierda porque es lo
+            que más espacio pide (buscador y tabla); los datos de la orden y
+            el total van en una columna angosta a la derecha, como un
+            resumen de pedido. */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:items-start">
+          <PageSection
+            title="Productos"
+            description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
+          >
+            <AgregarProductoPanel
+              productos={productos}
+              stock={stockMap}
+              costoLabel="Costo pactado"
+              onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
             />
 
-            <Input
-              label="Fecha esperada de entrega"
-              optional
-              type="date"
-              value={fechaEsperada}
-              onChange={(e) => setFechaEsperada(e.target.value)}
-            />
+            <div className="mt-4">
+              <SysDataTable
+                columns={columnasFilas}
+                rows={filas}
+                rowKey="id"
+                toolbar={false}
+                empty="Agrega productos con el buscador de arriba."
+                actions={(fila) => (
+                  <RowAction
+                    label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                    tone="danger"
+                    onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+                  >
+                    <Trash2 size={15} />
+                  </RowAction>
+                )}
+              />
+            </div>
+          </PageSection>
+
+          <div className="flex flex-col gap-5">
+            <PageSection title="Orden">
+              <BuscadorCampo
+                label="Proveedor"
+                value={proveedorId || null}
+                onChange={(id) => setProveedorId(id ?? 0)}
+                opciones={opcionesProveedor}
+                placeholder="Buscar proveedor..."
+                vacio="Ningún proveedor coincide"
+                onAvanzado={() => setBuscadorAbierto(true)}
+                avanzadoLabel="Búsqueda avanzada de proveedores"
+              />
+
+              <Input
+                className="mt-4"
+                label="Fecha esperada de entrega"
+                optional
+                type="date"
+                value={fechaEsperada}
+                onChange={(e) => setFechaEsperada(e.target.value)}
+              />
+
+              <Input
+                className="mt-4"
+                label="Observación"
+                optional
+                placeholder="Condiciones, referencia..."
+                value={observacion}
+                onChange={(e) => setObservacion(e.target.value)}
+              />
+            </PageSection>
+
+            <PageSection title="Resumen">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-ink-soft uppercase tracking-wide">
+                  Total de la orden
+                </span>
+                <span className="text-xl font-bold text-[rgb(var(--sys-rgb))]">
+                  S/ {total.toFixed(2)}
+                </span>
+              </div>
+            </PageSection>
           </div>
-
-          <Input
-            className="mt-4"
-            label="Observación"
-            optional
-            placeholder="Condiciones, referencia..."
-            value={observacion}
-            onChange={(e) => setObservacion(e.target.value)}
-          />
-        </PageSection>
-
-        <PageSection title="Agregar producto">
-          <AgregarProductoPanel
-            productos={productos}
-            stock={stockMap}
-            costoLabel="Costo pactado"
-            onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
-          />
-        </PageSection>
-
-        <PageSection
-          title="Productos"
-          description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
-        >
-          <SysDataTable
-            columns={columnasFilas}
-            rows={filas}
-            rowKey="id"
-            toolbar={false}
-            empty="Agrega productos con el buscador de arriba."
-            actions={(fila) => (
-              <RowAction
-                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
-                tone="danger"
-                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
-              >
-                <Trash2 size={15} />
-              </RowAction>
-            )}
-          />
-        </PageSection>
+        </div>
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
