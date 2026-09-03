@@ -34,6 +34,7 @@ import type {
   CompraResponse,
   CrearCompraRequest,
   FormaPagoCompra,
+  InstrumentoPagoCompra,
   TipoComprobanteCompra,
 } from './comprasApi'
 import { NuevaRecepcionModal } from './NuevaRecepcionModal'
@@ -47,6 +48,14 @@ const TIPOS_COMPROBANTE: { value: TipoComprobanteCompra; label: string }[] = [
 const FORMAS_PAGO: { value: FormaPagoCompra; label: string }[] = [
   { value: 'CONTADO', label: 'Contado' },
   { value: 'CREDITO', label: 'Crédito' },
+]
+
+const INSTRUMENTOS_PAGO: { value: InstrumentoPagoCompra; label: string }[] = [
+  { value: 'EFECTIVO', label: 'Efectivo' },
+  { value: 'TRANSFERENCIA', label: 'Transferencia' },
+  { value: 'DEPOSITO', label: 'Depósito' },
+  { value: 'TARJETA', label: 'Tarjeta' },
+  { value: 'CHEQUE', label: 'Cheque' },
 ]
 
 /** "Factura F001-00000123", o solo el tipo si no se registró serie/número. */
@@ -88,6 +97,7 @@ export function MisComprasPage() {
   const [serieComprobante, setSerieComprobante] = useState('')
   const [numeroComprobante, setNumeroComprobante] = useState('')
   const [formaPago, setFormaPago] = useState<FormaPagoCompra>('CONTADO')
+  const [instrumentoPago, setInstrumentoPago] = useState<InstrumentoPagoCompra | ''>('')
   const [observacion, setObservacion] = useState('')
   const [filas, setFilas] = useState<FilaCompra[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
@@ -132,6 +142,7 @@ export function MisComprasPage() {
     setSerieComprobante('')
     setNumeroComprobante('')
     setFormaPago('CONTADO')
+    setInstrumentoPago('')
     setObservacion('')
     setFilas([])
     setErrorForm('')
@@ -154,6 +165,7 @@ export function MisComprasPage() {
       serieComprobante: serieComprobante.trim() || null,
       numeroComprobante: numeroComprobante.trim() || null,
       formaPago,
+      instrumentoPago: instrumentoPago || null,
       observacion: observacion.trim() || null,
       detalle: validas.map((f) => ({
         productoId: f.productoId,
@@ -349,6 +361,8 @@ export function MisComprasPage() {
   )
 
   if (vista === 'form') {
+    const total = filas.reduce((n, f) => n + (Number(f.cantidad) || 0) * (Number(f.costo) || 0), 0)
+
     return (
       <div className="space-y-5">
         <PageHeader
@@ -365,107 +379,127 @@ export function MisComprasPage() {
 
         {errorForm && <Alert>{errorForm}</Alert>}
 
-        <PageSection title="Datos generales">
-          <BuscadorCampo
-            className="sm:w-1/2"
-            label="Proveedor"
-            value={proveedorId || null}
-            onChange={(id) => setProveedorId(id ?? 0)}
-            opciones={opcionesProveedor}
-            placeholder="Buscar proveedor..."
-            vacio="Ningún proveedor coincide"
-            onAvanzado={() => setBuscadorAbierto(true)}
-            avanzadoLabel="Búsqueda avanzada de proveedores"
-          />
+        {/* Productos a la izquierda porque es lo que más espacio pide (buscador
+            y tabla); los datos de la compra y el total van en una columna
+            angosta a la derecha, como en un resumen de pedido. */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:items-start">
+          <PageSection
+            title="Productos"
+            description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
+          >
+            <AgregarProductoPanel
+              productos={productos}
+              stock={stockMap}
+              costoLabel="Costo pactado"
+              onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
+            />
 
-          {/* Cada campo mide lo que su contenido pide, no una fracción pareja
-              de la fila: "F001" y "dd/mm/aaaa" no necesitan el mismo ancho. */}
-          <div className="mt-4 flex flex-wrap gap-4">
-            <div className="w-40">
-              <Input
-                label="Fecha"
-                type="date"
-                optional
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
+            <div className="mt-4">
+              <SysDataTable
+                columns={columnasFilas}
+                rows={filas}
+                rowKey="id"
+                toolbar={false}
+                empty="Agrega productos con el buscador de arriba."
+                actions={(fila) => (
+                  <RowAction
+                    label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                    tone="danger"
+                    onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+                  >
+                    <Trash2 size={15} />
+                  </RowAction>
+                )}
               />
             </div>
-            <div className="w-40">
+          </PageSection>
+
+          <div className="flex flex-col gap-5">
+            <PageSection title="Compra">
+              <BuscadorCampo
+                label="Proveedor"
+                value={proveedorId || null}
+                onChange={(id) => setProveedorId(id ?? 0)}
+                opciones={opcionesProveedor}
+                placeholder="Buscar proveedor..."
+                vacio="Ningún proveedor coincide"
+                onAvanzado={() => setBuscadorAbierto(true)}
+                avanzadoLabel="Búsqueda avanzada de proveedores"
+              />
+
               <Desplegable
+                className="mt-4"
                 label="Tipo documento"
                 value={tipoComprobante}
                 onChange={(v) => setTipoComprobante(v as TipoComprobanteCompra)}
                 options={TIPOS_COMPROBANTE}
               />
-            </div>
-            <div className="w-24">
+
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <Input
+                  label="Serie"
+                  optional
+                  placeholder="F001"
+                  value={serieComprobante}
+                  onChange={(e) => setSerieComprobante(e.target.value)}
+                />
+                <Input
+                  label="Número"
+                  optional
+                  placeholder="00000000"
+                  value={numeroComprobante}
+                  onChange={(e) => setNumeroComprobante(e.target.value)}
+                />
+              </div>
+
               <Input
-                label="Serie"
+                className="mt-4"
+                label="Fecha de emisión"
+                type="date"
                 optional
-                placeholder="F001"
-                value={serieComprobante}
-                onChange={(e) => setSerieComprobante(e.target.value)}
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
               />
-            </div>
-            <div className="w-32">
+
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <Desplegable
+                  label="Forma de pago"
+                  value={formaPago}
+                  onChange={(v) => setFormaPago(v as FormaPagoCompra)}
+                  options={FORMAS_PAGO}
+                />
+                <Desplegable
+                  label="Instrumento de pago"
+                  optional
+                  placeholder="Seleccione una opción"
+                  value={instrumentoPago}
+                  onChange={(v) => setInstrumentoPago(v as InstrumentoPagoCompra | '')}
+                  options={[{ value: '', label: 'Sin especificar' }, ...INSTRUMENTOS_PAGO]}
+                />
+              </div>
+
               <Input
-                label="Número"
+                className="mt-4"
+                label="Observación"
                 optional
-                placeholder="00000000"
-                value={numeroComprobante}
-                onChange={(e) => setNumeroComprobante(e.target.value)}
+                placeholder="Guía, referencia..."
+                value={observacion}
+                onChange={(e) => setObservacion(e.target.value)}
               />
-            </div>
-            <div className="w-36">
-              <Desplegable
-                label="Forma de pago"
-                value={formaPago}
-                onChange={(v) => setFormaPago(v as FormaPagoCompra)}
-                options={FORMAS_PAGO}
-              />
-            </div>
+            </PageSection>
+
+            <PageSection title="Resumen">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-ink-soft uppercase tracking-wide">
+                  Total de la compra
+                </span>
+                <span className="text-xl font-bold text-[rgb(var(--sys-rgb))]">
+                  S/ {total.toFixed(2)}
+                </span>
+              </div>
+            </PageSection>
           </div>
-
-          <Input
-            className="mt-4"
-            label="Observación"
-            optional
-            placeholder="Guía, referencia..."
-            value={observacion}
-            onChange={(e) => setObservacion(e.target.value)}
-          />
-        </PageSection>
-
-        <PageSection title="Agregar producto">
-          <AgregarProductoPanel
-            productos={productos}
-            stock={stockMap}
-            costoLabel="Costo pactado"
-            onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
-          />
-        </PageSection>
-
-        <PageSection
-          title="Productos"
-          description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
-        >
-          <SysDataTable
-            columns={columnasFilas}
-            rows={filas}
-            rowKey="id"
-            toolbar={false}
-            empty="Agrega productos con el buscador de arriba."
-            actions={(fila) => (
-              <RowAction
-                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
-                tone="danger"
-                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
-              >
-                <Trash2 size={15} />
-              </RowAction>
-            )}
-          />
-        </PageSection>
+        </div>
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
@@ -553,6 +587,12 @@ export function MisComprasPage() {
             <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
               <Badge>{textoComprobante(detalleAbierto)}</Badge>
               <Badge>{FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago}</Badge>
+              {detalleAbierto.instrumentoPago && (
+                <Badge>
+                  {INSTRUMENTOS_PAGO.find((i) => i.value === detalleAbierto.instrumentoPago)?.label ??
+                    detalleAbierto.instrumentoPago}
+                </Badge>
+              )}
             </div>
             <ul className="flex flex-col gap-2">
               {detalleAbierto.detalle.map((l) => (

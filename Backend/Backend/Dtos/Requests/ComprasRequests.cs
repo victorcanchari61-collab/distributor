@@ -40,6 +40,9 @@ public class CrearCompraRequest
     /// <summary>CONTADO o CREDITO. Vacío usa CONTADO.</summary>
     public string? FormaPago { get; set; }
 
+    /// <summary>EFECTIVO, TRANSFERENCIA, DEPOSITO, TARJETA o CHEQUE. Opcional.</summary>
+    public string? InstrumentoPago { get; set; }
+
     public string? Observacion { get; set; }
     public List<LineaCompraRequest> Detalle { get; set; } = [];
 }

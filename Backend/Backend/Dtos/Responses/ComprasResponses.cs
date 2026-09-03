@@ -86,6 +86,9 @@ public class CompraResponse
     /// <summary>CONTADO o CREDITO.</summary>
     public string FormaPago { get; set; } = string.Empty;
 
+    /// <summary>EFECTIVO, TRANSFERENCIA, DEPOSITO, TARJETA o CHEQUE. Null si no se declaró.</summary>
+    public string? InstrumentoPago { get; set; }
+
     public string? Observacion { get; set; }
     public string? Usuario { get; set; }
 

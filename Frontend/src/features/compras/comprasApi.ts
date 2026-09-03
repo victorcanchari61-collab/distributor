@@ -72,6 +72,9 @@ export type TipoComprobanteCompra = 'FACTURA' | 'BOLETA' | 'NOTA_VENTA'
 /** Cómo se paga la compra al proveedor. */
 export type FormaPagoCompra = 'CONTADO' | 'CREDITO'
 
+/** El medio con el que se paga: efectivo, transferencia, etc. Opcional. */
+export type InstrumentoPagoCompra = 'EFECTIVO' | 'TRANSFERENCIA' | 'DEPOSITO' | 'TARJETA' | 'CHEQUE'
+
 export interface CompraDetalleResponse extends LineaCompraResponse {
   cantidadRecibida: number
   cantidadPendiente: number
@@ -90,6 +93,7 @@ export interface CompraResponse {
   serieComprobante: string | null
   numeroComprobante: string | null
   formaPago: FormaPagoCompra
+  instrumentoPago: InstrumentoPagoCompra | null
   observacion: string | null
   usuario: string | null
   total: number
@@ -103,6 +107,7 @@ export interface CrearCompraRequest {
   serieComprobante?: string | null
   numeroComprobante?: string | null
   formaPago?: FormaPagoCompra | null
+  instrumentoPago?: InstrumentoPagoCompra | null
   observacion?: string | null
   detalle: LineaCompraRequest[]
 }

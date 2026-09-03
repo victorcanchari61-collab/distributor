@@ -197,6 +197,7 @@ public class ComprasService : IComprasService
             FormaPago = string.IsNullOrWhiteSpace(request.FormaPago)
                 ? FormaPagoCompra.Contado
                 : request.FormaPago,
+            InstrumentoPago = Limpiar(request.InstrumentoPago),
             Observacion = Limpiar(request.Observacion),
             UsuarioId = usuarioId
         };
@@ -368,6 +369,7 @@ public class ComprasService : IComprasService
         SerieComprobante = c.SerieComprobante,
         NumeroComprobante = c.NumeroComprobante,
         FormaPago = c.FormaPago,
+        InstrumentoPago = c.InstrumentoPago,
         Observacion = c.Observacion,
         Usuario = c.Usuario?.Nombre,
         Total = Math.Round(c.Detalle.Sum(d => d.Cantidad * d.CostoUnitario), 2),

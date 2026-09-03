@@ -549,6 +549,7 @@ public class AppDbContext : DbContext
             entity.Property(c => c.SerieComprobante).HasMaxLength(10);
             entity.Property(c => c.NumeroComprobante).HasMaxLength(20);
             entity.Property(c => c.FormaPago).HasMaxLength(10).IsRequired();
+            entity.Property(c => c.InstrumentoPago).HasMaxLength(15);
             entity.Property(c => c.Observacion).HasMaxLength(250);
 
             entity.HasOne(c => c.Proveedor).WithMany()
