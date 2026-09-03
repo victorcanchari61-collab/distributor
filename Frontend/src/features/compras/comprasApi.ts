@@ -66,6 +66,12 @@ export const ordenCompraApi = {
 
 export type EstadoCompra = 'PENDIENTE' | 'RECIBIDA_PARCIAL' | 'RECIBIDA_TOTAL' | 'ANULADA'
 
+/** El comprobante que trae el proveedor por la compra. */
+export type TipoComprobanteCompra = 'FACTURA' | 'BOLETA' | 'GUIA' | 'OTRO'
+
+/** Cómo se paga la compra al proveedor. */
+export type FormaPagoCompra = 'CONTADO' | 'CREDITO'
+
 export interface CompraDetalleResponse extends LineaCompraResponse {
   cantidadRecibida: number
   cantidadPendiente: number
@@ -80,6 +86,10 @@ export interface CompraResponse {
   ordenCompraNumero: string | null
   fecha: string
   estado: EstadoCompra
+  tipoComprobante: TipoComprobanteCompra
+  serieComprobante: string | null
+  numeroComprobante: string | null
+  formaPago: FormaPagoCompra
   observacion: string | null
   usuario: string | null
   total: number
@@ -89,6 +99,10 @@ export interface CompraResponse {
 export interface CrearCompraRequest {
   proveedorId: number
   fecha?: string | null
+  tipoComprobante?: TipoComprobanteCompra | null
+  serieComprobante?: string | null
+  numeroComprobante?: string | null
+  formaPago?: FormaPagoCompra | null
   observacion?: string | null
   detalle: LineaCompraRequest[]
 }

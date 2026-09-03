@@ -545,6 +545,10 @@ public class AppDbContext : DbContext
             entity.HasIndex(c => c.Numero).IsUnique();
             entity.Property(c => c.Numero).HasMaxLength(20).IsRequired();
             entity.Property(c => c.Estado).HasMaxLength(20).IsRequired();
+            entity.Property(c => c.TipoComprobante).HasMaxLength(10).IsRequired();
+            entity.Property(c => c.SerieComprobante).HasMaxLength(10);
+            entity.Property(c => c.NumeroComprobante).HasMaxLength(20);
+            entity.Property(c => c.FormaPago).HasMaxLength(10).IsRequired();
             entity.Property(c => c.Observacion).HasMaxLength(250);
 
             entity.HasOne(c => c.Proveedor).WithMany()

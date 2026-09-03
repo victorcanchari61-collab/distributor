@@ -35,6 +35,7 @@ class AppListaPagina<T> extends StatelessWidget {
     this.textoNuevo = 'Nuevo',
     this.filtro,
     this.indicadores,
+    this.encabezado,
     this.tituloVacio,
     this.detalleVacio,
   });
@@ -68,6 +69,10 @@ class AppListaPagina<T> extends StatelessWidget {
   /// desliza: apiladas empujaban la lista fuera de la pantalla.
   final List<Widget>? indicadores;
 
+  /// Contenido entre los indicadores y el buscador — por ejemplo un selector
+  /// de almacén, cuando cambiar de contexto es más que un filtro más.
+  final Widget? encabezado;
+
   final IconData iconoVacio;
   final String singular;
   final String plural;
@@ -98,6 +103,10 @@ class AppListaPagina<T> extends StatelessWidget {
           if (indicadores != null && indicadores!.isNotEmpty) ...[
             const SizedBox(height: Dimen.espacio3),
             AppFilaDatos(tarjetas: indicadores!),
+          ],
+          if (encabezado != null) ...[
+            const SizedBox(height: Dimen.espacio3),
+            encabezado!,
           ],
           Padding(
             padding: const EdgeInsets.all(Dimen.espacio4),

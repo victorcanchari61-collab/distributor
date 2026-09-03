@@ -1,9 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/estado/filtro_estado.dart';
 import '../../auth/estado/auth_controlador.dart';
+import '../datos/catalogo.dart';
 import '../datos/cliente.dart';
 import '../datos/maestros_api.dart';
+import '../datos/producto.dart';
 import '../datos/proveedor.dart';
+
+// Re-exportado: las vistas de este modulo lo importan de aqui, no directo de
+// compartido, porque ya importaban este archivo antes de que el filtro se
+// compartiera con otros modulos.
+export '../../../compartido/estado/filtro_estado.dart';
 
 final maestrosApiProvider = Provider(
   (ref) => MaestrosApi(ref.watch(clienteApiProvider)),
@@ -12,14 +20,6 @@ final maestrosApiProvider = Provider(
 /// Texto del buscador de cada listado.
 final busquedaClientesProvider = StateProvider.autoDispose((ref) => '');
 final busquedaProveedoresProvider = StateProvider.autoDispose((ref) => '');
-
-/// Estado por el que se filtra un listado.
-enum FiltroEstado { activos, inactivos, todos }
-
-/// Filtro de estado. Por defecto solo los activos: es lo que se usa a diario.
-final estadoFiltroProvider = StateProvider.autoDispose(
-  (ref) => FiltroEstado.activos,
-);
 
 /// Filtros propios de clientes. Null es "todos".
 final diaVisitaFiltroProvider = StateProvider.autoDispose<String?>(
@@ -45,13 +45,6 @@ final filtrosProveedoresActivosProvider = Provider.autoDispose((ref) {
   if (ref.watch(rubroFiltroProvider) != null) n++;
   return n;
 });
-
-/// Comprueba un registro contra el filtro de estado.
-bool _pasaEstado(bool activo, FiltroEstado filtro) => switch (filtro) {
-  FiltroEstado.activos => activo,
-  FiltroEstado.inactivos => !activo,
-  FiltroEstado.todos => true,
-};
 
 /// Listado de clientes.
 ///
@@ -101,7 +94,7 @@ final clientesFiltradosProvider = Provider.autoDispose<List<Cliente>>((ref) {
   final ruta = ref.watch(rutaFiltroProvider);
 
   return todos
-      .where((c) => _pasaEstado(c.activo, estado))
+      .where((c) => pasaEstado(c.activo, estado))
       .where((c) => dia == null || c.diaVisita == dia)
       .where((c) => ruta == null || c.ruta == ruta)
       .where((c) => texto.isEmpty || c.buscable.contains(texto))
@@ -173,7 +166,7 @@ final proveedoresFiltradosProvider = Provider.autoDispose<List<Proveedor>>((
   final rubro = ref.watch(rubroFiltroProvider);
 
   return todos
-      .where((p) => _pasaEstado(p.activo, estado))
+      .where((p) => pasaEstado(p.activo, estado))
       .where((p) => rubro == null || p.rubro == rubro)
       .where((p) => texto.isEmpty || p.buscable.contains(texto))
       .toList();
@@ -192,4 +185,75 @@ final rubrosProvider = Provider.autoDispose<List<String>>((ref) {
           .toList()
         ..sort();
   return rubros;
+});
+
+// --- Catalogos de apoyo (categorias, marcas, unidades) ---
+//
+// Se usan sobre todo como opciones de un selector: se traen una vez y rara
+// vez cambian, asi que un FutureProvider sin controlador propio alcanza.
+
+final categoriasProvider = FutureProvider.autoDispose<List<Categoria>>(
+  (ref) => ref.watch(maestrosApiProvider).categorias(),
+);
+final marcasProvider = FutureProvider.autoDispose<List<Marca>>(
+  (ref) => ref.watch(maestrosApiProvider).marcas(),
+);
+final unidadesProvider = FutureProvider.autoDispose<List<UnidadMedida>>(
+  (ref) => ref.watch(maestrosApiProvider).unidades(),
+);
+
+// --- Productos ---
+
+final busquedaProductosProvider = StateProvider.autoDispose((ref) => '');
+
+/// Filtros propios de productos. Null es "todas".
+final categoriaFiltroProvider = StateProvider.autoDispose<int?>((ref) => null);
+final marcaFiltroProvider = StateProvider.autoDispose<int?>((ref) => null);
+
+final filtrosProductosActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
+  if (ref.watch(categoriaFiltroProvider) != null) n++;
+  if (ref.watch(marcaFiltroProvider) != null) n++;
+  return n;
+});
+
+/// Listado de productos.
+class ProductosControlador extends AsyncNotifier<List<Producto>> {
+  @override
+  Future<List<Producto>> build() => ref.watch(maestrosApiProvider).productos();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(maestrosApiProvider).productos(),
+    );
+  }
+
+  Future<void> cambiarEstado(Producto producto) async {
+    await ref
+        .read(maestrosApiProvider)
+        .cambiarEstadoProducto(producto.id, activo: !producto.activo);
+    await recargar();
+  }
+}
+
+final productosProvider =
+    AsyncNotifierProvider<ProductosControlador, List<Producto>>(
+      ProductosControlador.new,
+    );
+
+final productosFiltradosProvider = Provider.autoDispose<List<Producto>>((ref) {
+  final todos = ref.watch(productosProvider).valueOrNull ?? const <Producto>[];
+  final texto = ref.watch(busquedaProductosProvider).trim().toLowerCase();
+  final estado = ref.watch(estadoFiltroProvider);
+  final categoriaId = ref.watch(categoriaFiltroProvider);
+  final marcaId = ref.watch(marcaFiltroProvider);
+
+  return todos
+      .where((p) => pasaEstado(p.activo, estado))
+      .where((p) => categoriaId == null || p.categoriaId == categoriaId)
+      .where((p) => marcaId == null || p.marcaId == marcaId)
+      .where((p) => texto.isEmpty || p.buscable.contains(texto))
+      .toList();
 });

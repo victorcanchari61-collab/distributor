@@ -1,4 +1,5 @@
 using Backend.Dtos.Requests;
+using Backend.Models;
 using FluentValidation;
 
 namespace Backend.Dtos.Validators;
@@ -30,6 +31,16 @@ public class CrearCompraRequestValidator : AbstractValidator<CrearCompraRequest>
     public CrearCompraRequestValidator()
     {
         RuleFor(x => x.ProveedorId).GreaterThan(0).WithMessage("Elige el proveedor");
+
+        RuleFor(x => x.TipoComprobante)
+            .Must(t => string.IsNullOrWhiteSpace(t) || TipoComprobanteCompra.Todos.Contains(t))
+            .WithMessage("Tipo de comprobante inválido");
+        RuleFor(x => x.SerieComprobante).MaximumLength(10);
+        RuleFor(x => x.NumeroComprobante).MaximumLength(20);
+        RuleFor(x => x.FormaPago)
+            .Must(f => string.IsNullOrWhiteSpace(f) || FormaPagoCompra.Todas.Contains(f))
+            .WithMessage("Forma de pago inválida");
+
         RuleFor(x => x.Observacion).MaximumLength(250);
         RuleFor(x => x.Detalle).NotEmpty().WithMessage("Agrega al menos un producto");
         RuleForEach(x => x.Detalle).SetValidator(new LineaCompraRequestValidator());

@@ -81,6 +81,26 @@ public static class EstadoCompra
     public const string Anulada = "ANULADA";
 }
 
+/// <summary>Tipo de comprobante que emitió el proveedor por la compra.</summary>
+public static class TipoComprobanteCompra
+{
+    public const string Factura = "FACTURA";
+    public const string Boleta = "BOLETA";
+    public const string Guia = "GUIA";
+    public const string Otro = "OTRO";
+
+    public static readonly string[] Todos = [Factura, Boleta, Guia, Otro];
+}
+
+/// <summary>Cómo se paga la compra al proveedor.</summary>
+public static class FormaPagoCompra
+{
+    public const string Contado = "CONTADO";
+    public const string Credito = "CREDITO";
+
+    public static readonly string[] Todas = [Contado, Credito];
+}
+
 /// <summary>
 /// Una compra lista para recibir: o vino de confirmar una <see cref="OrdenCompra"/>,
 /// o se registró directa — una compra al contado, sin negociación previa.
@@ -105,6 +125,19 @@ public class Compra
 
     public DateTime Fecha { get; set; } = DateTime.UtcNow;
     public string Estado { get; set; } = EstadoCompra.Pendiente;
+
+    /// <summary>El comprobante que trae el proveedor: FACTURA, BOLETA, GUIA u OTRO.</summary>
+    public string TipoComprobante { get; set; } = TipoComprobanteCompra.Factura;
+
+    /// <summary>Serie del comprobante del proveedor, ej. "F001". No es nuestro correlativo.</summary>
+    public string? SerieComprobante { get; set; }
+
+    /// <summary>Número del comprobante del proveedor, ej. "00000123".</summary>
+    public string? NumeroComprobante { get; set; }
+
+    /// <summary>CONTADO o CREDITO.</summary>
+    public string FormaPago { get; set; } = FormaPagoCompra.Contado;
+
     public string? Observacion { get; set; }
 
     public int? UsuarioId { get; set; }

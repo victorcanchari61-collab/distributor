@@ -60,16 +60,19 @@ const menuGrupos = <MenuGrupo>[
     items: [
       MenuItem(
         id: 'maestros.clientes',
+        pendiente: false,
         titulo: 'Clientes',
         icono: Icons.contacts_outlined,
       ),
       MenuItem(
         id: 'maestros.proveedores',
+        pendiente: false,
         titulo: 'Proveedores',
         icono: Icons.business_outlined,
       ),
       MenuItem(
         id: 'maestros.productos',
+        pendiente: false,
         titulo: 'Productos',
         icono: Icons.inventory_2_outlined,
       ),
@@ -104,16 +107,19 @@ const menuGrupos = <MenuGrupo>[
     items: [
       MenuItem(
         id: 'inv.almacenes',
+        pendiente: false,
         titulo: 'Almacenes',
         icono: Icons.warehouse_outlined,
       ),
       MenuItem(
         id: 'inv.stock',
+        pendiente: false,
         titulo: 'Stock por almacén',
         icono: Icons.inventory_outlined,
       ),
       MenuItem(
         id: 'inv.kardex',
+        pendiente: false,
         titulo: 'Kardex',
         icono: Icons.move_to_inbox_outlined,
       ),
@@ -128,7 +134,13 @@ const menuGrupos = <MenuGrupo>[
         icono: Icons.local_shipping_outlined,
       ),
       MenuItem(
+        id: 'inv.prestamos',
+        titulo: 'Préstamos',
+        icono: Icons.handshake_outlined,
+      ),
+      MenuItem(
         id: 'inv.lotes',
+        pendiente: false,
         titulo: 'Lotes y vencimientos',
         icono: Icons.event_outlined,
       ),

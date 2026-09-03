@@ -9,7 +9,12 @@ import '../../features/config/vistas/roles_pagina.dart';
 import '../../features/config/vistas/usuarios_pagina.dart';
 import '../../features/inicio/vistas/inicio_pagina.dart';
 import '../../features/inicio/vistas/pendiente_pagina.dart';
+import '../../features/inventario/vistas/almacenes_pagina.dart';
+import '../../features/inventario/vistas/kardex_pagina.dart';
+import '../../features/inventario/vistas/lotes_pagina.dart';
+import '../../features/inventario/vistas/stock_pagina.dart';
 import '../../features/maestros/vistas/clientes_pagina.dart';
+import '../../features/maestros/vistas/productos_pagina.dart';
 import '../../features/maestros/vistas/proveedores_pagina.dart';
 import '../navegacion/menu.dart';
 import 'puerta_sesion.dart';
@@ -60,6 +65,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, estado) => const ProveedoresPagina(),
       ),
       GoRoute(
+        path: ProductosPagina.ruta,
+        builder: (context, estado) => const ProductosPagina(),
+      ),
+      GoRoute(
+        path: AlmacenesPagina.ruta,
+        builder: (context, estado) => const AlmacenesPagina(),
+      ),
+      GoRoute(
+        path: StockPagina.ruta,
+        builder: (context, estado) => const StockPagina(),
+      ),
+      GoRoute(
+        path: KardexPagina.ruta,
+        builder: (context, estado) => const KardexPagina(),
+      ),
+      GoRoute(
+        path: LotesPagina.ruta,
+        builder: (context, estado) => const LotesPagina(),
+      ),
+      GoRoute(
         path: UsuariosPagina.ruta,
         builder: (context, estado) => const UsuariosPagina(),
       ),
@@ -76,7 +101,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         for (final item in grupo.items)
           // Las que ya tienen pantalla propia se declaran arriba.
           if (item.ruta != ClientesPagina.ruta &&
-              item.ruta != ProveedoresPagina.ruta)
+              item.ruta != ProveedoresPagina.ruta &&
+              item.ruta != ProductosPagina.ruta &&
+              item.ruta != AlmacenesPagina.ruta &&
+              item.ruta != StockPagina.ruta &&
+              item.ruta != KardexPagina.ruta &&
+              item.ruta != LotesPagina.ruta)
             GoRoute(
               path: item.ruta,
               builder: (context, estado) => AppShell(

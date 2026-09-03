@@ -77,6 +77,15 @@ public class CompraResponse
     /// <summary>PENDIENTE, RECIBIDA_PARCIAL, RECIBIDA_TOTAL o ANULADA.</summary>
     public string Estado { get; set; } = string.Empty;
 
+    /// <summary>FACTURA, BOLETA, GUIA u OTRO.</summary>
+    public string TipoComprobante { get; set; } = string.Empty;
+
+    public string? SerieComprobante { get; set; }
+    public string? NumeroComprobante { get; set; }
+
+    /// <summary>CONTADO o CREDITO.</summary>
+    public string FormaPago { get; set; } = string.Empty;
+
     public string? Observacion { get; set; }
     public string? Usuario { get; set; }
 

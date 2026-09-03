@@ -30,6 +30,16 @@ public class CrearCompraRequest
 {
     public int ProveedorId { get; set; }
     public DateTime? Fecha { get; set; }
+
+    /// <summary>FACTURA, BOLETA, GUIA u OTRO. Vacío usa FACTURA.</summary>
+    public string? TipoComprobante { get; set; }
+
+    public string? SerieComprobante { get; set; }
+    public string? NumeroComprobante { get; set; }
+
+    /// <summary>CONTADO o CREDITO. Vacío usa CONTADO.</summary>
+    public string? FormaPago { get; set; }
+
     public string? Observacion { get; set; }
     public List<LineaCompraRequest> Detalle { get; set; } = [];
 }

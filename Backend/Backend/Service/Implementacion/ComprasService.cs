@@ -189,6 +189,14 @@ public class ComprasService : IComprasService
             OrdenCompraId = null,
             Fecha = request.Fecha ?? DateTime.UtcNow,
             Estado = EstadoCompra.Pendiente,
+            TipoComprobante = string.IsNullOrWhiteSpace(request.TipoComprobante)
+                ? TipoComprobanteCompra.Factura
+                : request.TipoComprobante,
+            SerieComprobante = Limpiar(request.SerieComprobante),
+            NumeroComprobante = Limpiar(request.NumeroComprobante),
+            FormaPago = string.IsNullOrWhiteSpace(request.FormaPago)
+                ? FormaPagoCompra.Contado
+                : request.FormaPago,
             Observacion = Limpiar(request.Observacion),
             UsuarioId = usuarioId
         };
@@ -356,6 +364,10 @@ public class ComprasService : IComprasService
         OrdenCompraNumero = c.OrdenCompra?.Numero,
         Fecha = c.Fecha,
         Estado = c.Estado,
+        TipoComprobante = c.TipoComprobante,
+        SerieComprobante = c.SerieComprobante,
+        NumeroComprobante = c.NumeroComprobante,
+        FormaPago = c.FormaPago,
         Observacion = c.Observacion,
         Usuario = c.Usuario?.Nombre,
         Total = Math.Round(c.Detalle.Sum(d => d.Cantidad * d.CostoUnitario), 2),

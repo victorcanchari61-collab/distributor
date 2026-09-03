@@ -30,8 +30,34 @@ import type { ProductoResponse, ProveedorResponse } from '../maestros'
 import { almacenApi, stockApi } from '../inventario'
 import type { AlmacenResponse } from '../inventario'
 import { compraApi } from './comprasApi'
-import type { CompraResponse, CrearCompraRequest } from './comprasApi'
+import type {
+  CompraResponse,
+  CrearCompraRequest,
+  FormaPagoCompra,
+  TipoComprobanteCompra,
+} from './comprasApi'
 import { NuevaRecepcionModal } from './NuevaRecepcionModal'
+
+const TIPOS_COMPROBANTE: { value: TipoComprobanteCompra; label: string }[] = [
+  { value: 'FACTURA', label: 'Factura' },
+  { value: 'BOLETA', label: 'Boleta' },
+  { value: 'GUIA', label: 'Guía' },
+  { value: 'OTRO', label: 'Otro' },
+]
+
+const FORMAS_PAGO: { value: FormaPagoCompra; label: string }[] = [
+  { value: 'CONTADO', label: 'Contado' },
+  { value: 'CREDITO', label: 'Crédito' },
+]
+
+/** "Factura F001-00000123", o solo el tipo si no se registró serie/número. */
+function textoComprobante(compra: CompraResponse) {
+  const tipo = TIPOS_COMPROBANTE.find((t) => t.value === compra.tipoComprobante)?.label ?? compra.tipoComprobante
+  const serie = compra.serieComprobante
+  const numero = compra.numeroComprobante
+  if (!serie && !numero) return tipo
+  return `${tipo} ${serie ?? ''}${serie && numero ? '-' : ''}${numero ?? ''}`
+}
 
 type FilaCompra = LineaProductoNueva
 
@@ -58,6 +84,11 @@ export function MisComprasPage() {
   const [errorForm, setErrorForm] = useState('')
 
   const [proveedorId, setProveedorId] = useState(0)
+  const [fecha, setFecha] = useState('')
+  const [tipoComprobante, setTipoComprobante] = useState<TipoComprobanteCompra>('FACTURA')
+  const [serieComprobante, setSerieComprobante] = useState('')
+  const [numeroComprobante, setNumeroComprobante] = useState('')
+  const [formaPago, setFormaPago] = useState<FormaPagoCompra>('CONTADO')
   const [observacion, setObservacion] = useState('')
   const [filas, setFilas] = useState<FilaCompra[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
@@ -97,6 +128,11 @@ export function MisComprasPage() {
 
   const abrirNueva = () => {
     setProveedorId(0)
+    setFecha('')
+    setTipoComprobante('FACTURA')
+    setSerieComprobante('')
+    setNumeroComprobante('')
+    setFormaPago('CONTADO')
     setObservacion('')
     setFilas([])
     setErrorForm('')
@@ -114,6 +150,11 @@ export function MisComprasPage() {
 
     const body: CrearCompraRequest = {
       proveedorId,
+      fecha: fecha || null,
+      tipoComprobante,
+      serieComprobante: serieComprobante.trim() || null,
+      numeroComprobante: numeroComprobante.trim() || null,
+      formaPago,
       observacion: observacion.trim() || null,
       detalle: validas.map((f) => ({
         productoId: f.productoId,
@@ -271,6 +312,12 @@ export function MisComprasPage() {
       label: 'Origen',
       render: (row) => (row.ordenCompraNumero ? row.ordenCompraNumero : 'Directa'),
     },
+    {
+      key: 'tipoComprobante',
+      label: 'Comprobante',
+      value: (row) => textoComprobante(row),
+      render: (row) => textoComprobante(row),
+    },
     { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
     { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
     {
@@ -331,6 +378,45 @@ export function MisComprasPage() {
             onAvanzado={() => setBuscadorAbierto(true)}
             avanzadoLabel="Búsqueda avanzada de proveedores"
           />
+
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <Input
+              label="Fecha"
+              type="date"
+              optional
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+            />
+            <Desplegable
+              label="Tipo documento"
+              value={tipoComprobante}
+              onChange={(v) => setTipoComprobante(v as TipoComprobanteCompra)}
+              options={TIPOS_COMPROBANTE}
+            />
+            <Desplegable
+              label="Forma de pago"
+              value={formaPago}
+              onChange={(v) => setFormaPago(v as FormaPagoCompra)}
+              options={FORMAS_PAGO}
+            />
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <Input
+              label="Serie"
+              optional
+              placeholder="F001"
+              value={serieComprobante}
+              onChange={(e) => setSerieComprobante(e.target.value)}
+            />
+            <Input
+              label="Número"
+              optional
+              placeholder="00000000"
+              value={numeroComprobante}
+              onChange={(e) => setNumeroComprobante(e.target.value)}
+            />
+          </div>
 
           <Input
             className="mt-4"
@@ -455,26 +541,32 @@ export function MisComprasPage() {
         onClose={() => setDetalleAbierto(null)}
       >
         {detalleAbierto && (
-          <ul className="flex flex-col gap-2">
-            {detalleAbierto.detalle.map((l) => (
-              <li
-                key={l.id}
-                className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2"
-              >
-                <span>
-                  <span className="font-medium text-ink">{l.producto}</span>
-                  <span className="ml-2 text-xs text-ink-soft">
-                    {l.presentacion ? `${l.cantidadPresentacion} ${l.presentacion}` : `${l.cantidad} ${l.unidadBase}`}
-                    {' · '}
-                    recibido {l.cantidadRecibida} de {l.cantidad} {l.unidadBase}
+          <>
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+              <Badge>{textoComprobante(detalleAbierto)}</Badge>
+              <Badge>{FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago}</Badge>
+            </div>
+            <ul className="flex flex-col gap-2">
+              {detalleAbierto.detalle.map((l) => (
+                <li
+                  key={l.id}
+                  className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2"
+                >
+                  <span>
+                    <span className="font-medium text-ink">{l.producto}</span>
+                    <span className="ml-2 text-xs text-ink-soft">
+                      {l.presentacion ? `${l.cantidadPresentacion} ${l.presentacion}` : `${l.cantidad} ${l.unidadBase}`}
+                      {' · '}
+                      recibido {l.cantidadRecibida} de {l.cantidad} {l.unidadBase}
+                    </span>
                   </span>
-                </span>
-                <span className="text-sm">
-                  S/ {l.costoUnitario} × {l.unidadBase} = S/ {l.costoTotal.toFixed(2)}
-                </span>
-              </li>
-            ))}
-          </ul>
+                  <span className="text-sm">
+                    S/ {l.costoUnitario} × {l.unidadBase} = S/ {l.costoTotal.toFixed(2)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </Modal>
 

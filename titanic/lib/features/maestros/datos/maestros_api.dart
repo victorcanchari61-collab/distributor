@@ -1,8 +1,10 @@
 import '../../../core/red/cliente_api.dart';
+import 'catalogo.dart';
 import 'cliente.dart';
+import 'producto.dart';
 import 'proveedor.dart';
 
-/// Llamadas de clientes y proveedores.
+/// Llamadas de clientes, proveedores y productos.
 class MaestrosApi {
   const MaestrosApi(this._api);
 
@@ -71,4 +73,81 @@ class MaestrosApi {
     await _api.patch('/proveedor/$id/${activo ? 'activar' : 'desactivar'}')
         as Map<String, dynamic>,
   );
+
+  // --- Productos ---
+
+  /// GET /api/producto
+  Future<List<Producto>> productos() async {
+    final datos = await _api.get('/producto') as List;
+    return datos
+        .map((e) => Producto.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// POST /api/producto
+  Future<Producto> crearProducto(Map<String, dynamic> cuerpo) async =>
+      Producto.desdeJson(
+        await _api.post('/producto', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
+
+  /// PUT /api/producto/{id}
+  Future<Producto> actualizarProducto(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => Producto.desdeJson(
+    await _api.put('/producto/$id', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
+
+  /// PATCH /api/producto/{id}/activar | /desactivar
+  Future<Producto> cambiarEstadoProducto(int id, {required bool activo}) async =>
+      Producto.desdeJson(
+        await _api.patch('/producto/$id/${activo ? 'activar' : 'desactivar'}')
+            as Map<String, dynamic>,
+      );
+
+  /// POST /api/producto/{productoId}/presentaciones
+  Future<Presentacion> agregarPresentacion(
+    int productoId,
+    Map<String, dynamic> cuerpo,
+  ) async => Presentacion.desdeJson(
+    await _api.post('/producto/$productoId/presentaciones', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
+
+  /// PUT /api/producto/presentaciones/{presentacionId}
+  Future<Presentacion> actualizarPresentacion(
+    int presentacionId,
+    Map<String, dynamic> cuerpo,
+  ) async => Presentacion.desdeJson(
+    await _api.put('/producto/presentaciones/$presentacionId', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
+
+  /// DELETE /api/producto/presentaciones/{presentacionId}
+  Future<void> eliminarPresentacion(int presentacionId) =>
+      _api.delete('/producto/presentaciones/$presentacionId');
+
+  // --- Catalogos de apoyo ---
+
+  /// GET /api/categoria
+  Future<List<Categoria>> categorias() async {
+    final datos = await _api.get('/categoria') as List;
+    return datos
+        .map((e) => Categoria.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// GET /api/marca
+  Future<List<Marca>> marcas() async {
+    final datos = await _api.get('/marca') as List;
+    return datos.map((e) => Marca.desdeJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// GET /api/unidad
+  Future<List<UnidadMedida>> unidades() async {
+    final datos = await _api.get('/unidad') as List;
+    return datos
+        .map((e) => UnidadMedida.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
 }
