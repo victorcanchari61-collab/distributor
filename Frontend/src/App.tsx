@@ -4,7 +4,7 @@ import { DashboardLayout, NAV_DEFAULT, navIdFromPath, navPath, resolveNav } from
 import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
-import { ListasPreciosPage } from './features/facturacion'
+import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
 import { MetodosPagoPage } from './features/finanzas'
 import {
   AlmacenesPage,
@@ -26,6 +26,8 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'maestros.clientes': ClientesPage,
   'maestros.proveedores': ProveedoresPage,
   'maestros.productos': ProductosPage,
+  'fact.pedidos': PedidosPage,
+  'fact.notaventa': NotasVentaPage,
   'fact.precios': ListasPreciosPage,
   'inv.almacenes': AlmacenesPage,
   'inv.stock': StockPage,

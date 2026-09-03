@@ -25,14 +25,16 @@ public class CrearPedidoRequest
     public List<LineaVentaRequest> Detalle { get; set; } = [];
 }
 
-/// <summary>Con qué almacén y forma de pago se despacha el pedido al confirmarlo.</summary>
+/// <summary>Con qué almacén se despacha el pedido al confirmarlo.</summary>
+///
+/// <remarks>
+/// Un pedido no lleva pagos — eso es cosa de la nota de venta que nace al
+/// confirmarlo, y ahí queda sin registrar ninguno (a crédito, pendiente de
+/// cobro) hasta que se pague.
+/// </remarks>
 public class ConfirmarPedidoRequest
 {
     public int AlmacenId { get; set; }
-
-    /// <summary>CONTADO o CREDITO. Vacío usa CONTADO.</summary>
-    public string? FormaPago { get; set; }
-    public List<PagoVentaRequest> Pagos { get; set; } = [];
 }
 
 /// <summary>Un pago parcial: un método del catálogo y cuánto se pagó con él.</summary>

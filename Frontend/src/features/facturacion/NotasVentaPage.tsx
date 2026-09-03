@@ -1,0 +1,662 @@
+import { useCallback, useEffect, useState } from 'react'
+import { ArrowLeft, Contact, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import {
+  AgregarProductoPanel,
+  Alert,
+  Badge,
+  BuscadorCampo,
+  BuscadorModal,
+  Button,
+  Desplegable,
+  Input,
+  ListPage,
+  Modal,
+  PageHeader,
+  PageSection,
+  RowAction,
+  StatCard,
+  SysDataTable,
+  useConfirmacion,
+} from '../../components/ui'
+import type { DataTableColumn, LineaProductoNueva, OpcionBuscador } from '../../components/ui'
+import { ApiError } from '../../lib/apiClient'
+import { useRealtime } from '../../lib/realtime'
+import { clienteApi, productoApi } from '../maestros'
+import type { ClienteResponse, ProductoResponse } from '../maestros'
+import { almacenApi, stockApi } from '../inventario'
+import type { AlmacenResponse } from '../inventario'
+import { metodoPagoApi } from '../finanzas'
+import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
+import { listaPrecioApi } from './listaPrecioApi'
+import type { ListaPrecioResponse } from './listaPrecioApi'
+import { notaVentaApi } from './ventasApi'
+import type { CrearNotaVentaRequest, FormaPagoVenta, NotaVentaResponse } from './ventasApi'
+
+const FORMAS_PAGO: { value: FormaPagoVenta; label: string }[] = [
+  { value: 'CONTADO', label: 'Contado' },
+  { value: 'CREDITO', label: 'Crédito' },
+]
+
+const TIPOS_METODO_PAGO: { value: TipoMetodoPago; label: string }[] = [
+  { value: 'EFECTIVO', label: 'Efectivo' },
+  { value: 'BILLETERA_DIGITAL', label: 'Billetera digital' },
+  { value: 'TRANSFERENCIA', label: 'Transferencia' },
+]
+
+type FilaVenta = LineaProductoNueva
+
+/**
+ * Notas de venta: la venta lista tal cual, nacida de confirmar un pedido o
+ * registrada directa. El stock sale al momento de crearla — no existe una
+ * "nota de venta a medio despachar" como sí existe una compra a medio
+ * recibir, así que no hay una pantalla de despachos aparte.
+ */
+export function NotasVentaPage() {
+  const [vista, setVista] = useState<'lista' | 'form'>('lista')
+  const [notas, setNotas] = useState<NotaVentaResponse[]>([])
+  const [clientes, setClientes] = useState<ClienteResponse[]>([])
+  const [productos, setProductos] = useState<ProductoResponse[]>([])
+  const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
+  const [listas, setListas] = useState<ListaPrecioResponse[]>([])
+  const [metodosPago, setMetodosPago] = useState<MetodoPagoResponse[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
+
+  const [detalleAbierto, setDetalleAbierto] = useState<NotaVentaResponse | null>(null)
+  const [buscadorAbierto, setBuscadorAbierto] = useState(false)
+  const [pagosAbierto, setPagosAbierto] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [errorForm, setErrorForm] = useState('')
+
+  const [clienteId, setClienteId] = useState(0)
+  const [almacenId, setAlmacenId] = useState(0)
+  const [listaPrecioId, setListaPrecioId] = useState(0)
+  const [formaPago, setFormaPago] = useState<FormaPagoVenta>('CONTADO')
+  const [pagos, setPagos] = useState<{ metodoPagoId: number; monto: string }[]>([])
+  const [pagoTipo, setPagoTipo] = useState<TipoMetodoPago | ''>('')
+  const [pagoMetodoId, setPagoMetodoId] = useState(0)
+  const [pagoMonto, setPagoMonto] = useState('')
+  const [observacion, setObservacion] = useState('')
+  const [filas, setFilas] = useState<FilaVenta[]>([])
+  const [stockMap, setStockMap] = useState<Record<number, number>>({})
+
+  const { confirmar, dialogo } = useConfirmacion()
+
+  const cargar = useCallback(async () => {
+    setCargando(true)
+    try {
+      const [nts, clis, prods, alms, lis, metodos] = await Promise.all([
+        notaVentaApi.getAll(),
+        clienteApi.getAll(),
+        productoApi.getAll(),
+        almacenApi.getAll(),
+        listaPrecioApi.getAll(),
+        metodoPagoApi.getAll(),
+      ])
+      setNotas(nts)
+      setClientes(clis.filter((c) => c.activo))
+      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+      setAlmacenes(alms.filter((a) => a.activo))
+      setListas(lis.filter((l) => l.activo))
+      setMetodosPago(metodos.filter((m) => m.activo))
+      const stock = await stockApi.getAll()
+      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.stock])))
+      setError('')
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar las notas de venta.')
+    } finally {
+      setCargando(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void cargar()
+  }, [cargar])
+
+  useRealtime(['notasventa', 'pedidos', 'stock'], cargar)
+
+  const abrirNueva = () => {
+    setClienteId(0)
+    setAlmacenId(0)
+    setListaPrecioId(0)
+    setFormaPago('CONTADO')
+    setPagos([])
+    setPagoTipo('')
+    setPagoMetodoId(0)
+    setPagoMonto('')
+    setObservacion('')
+    setFilas([])
+    setErrorForm('')
+    setVista('form')
+  }
+
+  const actualizarFila = (id: string, cambio: Partial<FilaVenta>) =>
+    setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
+
+  const total = filas.reduce((n, f) => n + (Number(f.cantidad) || 0) * (Number(f.costo) || 0), 0)
+  const totalPagado = pagos.reduce((n, p) => n + (Number(p.monto) || 0), 0)
+
+  const agregarPago = () => {
+    if (!pagoMetodoId || !pagoMonto || Number(pagoMonto) <= 0) return
+
+    if (totalPagado + Number(pagoMonto) > total + 0.001) {
+      setErrorForm(
+        `Ese pago deja lo pagado en S/ ${(totalPagado + Number(pagoMonto)).toFixed(2)}, más que el total de la venta (S/ ${total.toFixed(2)}).`,
+      )
+      return
+    }
+
+    setErrorForm('')
+    setPagos((prev) => [...prev, { metodoPagoId: pagoMetodoId, monto: pagoMonto }])
+    setPagoTipo('')
+    setPagoMetodoId(0)
+    setPagoMonto('')
+  }
+
+  const quitarPago = (i: number) => setPagos((prev) => prev.filter((_, idx) => idx !== i))
+
+  const guardar = async () => {
+    if (!clienteId) return setErrorForm('Elige el cliente.')
+    if (!almacenId) return setErrorForm('Elige el almacén.')
+
+    const validas = filas.filter((f) => f.productoId && f.cantidad && f.costo)
+    if (validas.length === 0) return setErrorForm('Agrega al menos un producto con su precio.')
+
+    if (totalPagado > total + 0.001) {
+      return setErrorForm(
+        `Los pagos suman S/ ${totalPagado.toFixed(2)}, más que el total de la venta (S/ ${total.toFixed(2)}).`,
+      )
+    }
+
+    const body: CrearNotaVentaRequest = {
+      clienteId,
+      almacenId,
+      listaPrecioId: listaPrecioId || null,
+      formaPago,
+      pagos: pagos.map((p) => ({ metodoPagoId: p.metodoPagoId, monto: Number(p.monto) })),
+      observacion: observacion.trim() || null,
+      detalle: validas.map((f) => ({
+        productoId: f.productoId,
+        presentacionId: f.presentacionId || null,
+        cantidad: Number(f.cantidad),
+        precioUnitario: Number(f.costo),
+      })),
+    }
+
+    setGuardando(true)
+    setErrorForm('')
+    try {
+      await notaVentaApi.create(body)
+      setVista('lista')
+      await cargar()
+    } catch (e) {
+      setErrorForm(
+        e instanceof ApiError
+          ? e.errors.length
+            ? e.errors.join(' ')
+            : e.message
+          : 'No pudimos registrar la venta.',
+      )
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const anularNota = (nota: NotaVentaResponse) =>
+    confirmar({
+      titulo: `Anular ${nota.numero}`,
+      mensaje: 'Se anula la venta y el stock que salió vuelve al almacén. No se puede deshacer.',
+      confirmar: 'Anular',
+      tono: 'danger',
+      accion: async () => {
+        setError('')
+        try {
+          await notaVentaApi.anular(nota.id)
+          await cargar()
+        } catch (e) {
+          setError(e instanceof ApiError ? e.message : 'No pudimos anular la venta.')
+        }
+      },
+    })
+
+  const columnasFilas: DataTableColumn<FilaVenta>[] = [
+    {
+      key: 'producto',
+      label: 'Producto',
+      value: (fila) => productos.find((p) => p.id === fila.productoId)?.nombre ?? '',
+      render: (fila) => (
+        <Desplegable
+          value={fila.productoId}
+          onChange={(v) => actualizarFila(fila.id, { productoId: Number(v), presentacionId: 0 })}
+          options={productos.map((p) => ({ value: p.id, label: p.nombre, detalle: p.codigo }))}
+        />
+      ),
+    },
+    {
+      key: 'presentacion',
+      label: 'Presentación',
+      render: (fila) => {
+        const producto = productos.find((p) => p.id === fila.productoId)
+        const disponibles = producto?.presentaciones.filter((p) => p.esVenta && p.activo) ?? []
+        return (
+          <Desplegable
+            value={fila.presentacionId}
+            onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
+            placeholder={producto?.unidadBase ?? 'Elegir'}
+            disabled={!producto}
+            options={
+              producto
+                ? [
+                    { value: 0, label: producto.unidadBase, nota: 'unidad base' },
+                    ...disponibles
+                      .filter((p) => !p.esBase)
+                      .map((p) => ({ value: p.id, label: p.nombre, detalle: `${p.factor} ${producto.unidadBase}` })),
+                  ]
+                : []
+            }
+          />
+        )
+      },
+    },
+    {
+      key: 'cantidad',
+      label: 'Cantidad',
+      align: 'right',
+      value: (fila) => Number(fila.cantidad) || 0,
+      render: (fila) => (
+        <Input
+          type="number"
+          step="0.0001"
+          value={fila.cantidad}
+          onChange={(e) => actualizarFila(fila.id, { cantidad: e.target.value })}
+        />
+      ),
+    },
+    {
+      key: 'costo',
+      label: 'Precio de venta',
+      align: 'right',
+      value: (fila) => Number(fila.costo) || 0,
+      render: (fila) => (
+        <Input
+          type="number"
+          step="0.01"
+          value={fila.costo}
+          onChange={(e) => actualizarFila(fila.id, { costo: e.target.value })}
+        />
+      ),
+    },
+    {
+      key: 'subtotal',
+      label: 'Subtotal',
+      align: 'right',
+      value: (fila) => (Number(fila.cantidad) || 0) * (Number(fila.costo) || 0),
+      render: (fila) => `S/ ${((Number(fila.cantidad) || 0) * (Number(fila.costo) || 0)).toFixed(2)}`,
+    },
+  ]
+
+  const opcionesCliente: OpcionBuscador<number>[] = clientes.map((c) => ({
+    item: c.id,
+    label: c.nombre,
+    detalle: c.documento,
+    nota: c.distrito ?? undefined,
+  }))
+
+  const columnasCliente: DataTableColumn<ClienteResponse>[] = [
+    {
+      key: 'documento',
+      label: 'Documento',
+      render: (row) => (
+        <span className="flex items-center gap-2">
+          <span className="font-medium text-ink">{row.documento}</span>
+          <Badge>{row.tipoDoc}</Badge>
+        </span>
+      ),
+    },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'distrito', label: 'Distrito' },
+    { key: 'ruta', label: 'Ruta' },
+  ]
+
+  const columns: DataTableColumn<NotaVentaResponse>[] = [
+    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
+    { key: 'cliente', label: 'Cliente' },
+    {
+      key: 'pedidoNumero',
+      label: 'Origen',
+      render: (row) => (row.pedidoNumero ? row.pedidoNumero : 'Directa'),
+    },
+    { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
+    { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (row) => (
+        <Badge tone={row.estado === 'ANULADA' ? 'neutral' : 'success'}>
+          {row.estado === 'ANULADA' ? 'Anulada' : 'Confirmada'}
+        </Badge>
+      ),
+    },
+  ]
+
+  if (vista === 'form') {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          icon={<ShoppingBag size={20} />}
+          title="Nueva venta directa"
+          description="Sin pasar por un pedido primero. El stock sale del almacén elegido al momento de registrarla."
+          actions={
+            <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+              <ArrowLeft size={15} />
+              Volver
+            </Button>
+          }
+        />
+
+        {errorForm && <Alert>{errorForm}</Alert>}
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:items-start">
+          <PageSection
+            title="Productos"
+            description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
+          >
+            <AgregarProductoPanel
+              productos={productos}
+              stock={stockMap}
+              costoLabel="Precio de venta"
+              onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
+            />
+
+            <div className="mt-4">
+              <SysDataTable
+                columns={columnasFilas}
+                rows={filas}
+                rowKey="id"
+                toolbar={false}
+                empty="Agrega productos con el buscador de arriba."
+                actions={(fila) => (
+                  <RowAction
+                    label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                    tone="danger"
+                    onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+                  >
+                    <Trash2 size={15} />
+                  </RowAction>
+                )}
+              />
+            </div>
+          </PageSection>
+
+          <div className="flex flex-col gap-5">
+            <PageSection title="Venta">
+              <BuscadorCampo
+                label="Cliente"
+                value={clienteId || null}
+                onChange={(id) => setClienteId(id ?? 0)}
+                opciones={opcionesCliente}
+                placeholder="Buscar cliente..."
+                vacio="Ningún cliente coincide"
+                onAvanzado={() => setBuscadorAbierto(true)}
+                avanzadoLabel="Búsqueda avanzada de clientes"
+              />
+
+              <Desplegable
+                className="mt-4"
+                label="Almacén"
+                value={almacenId}
+                onChange={(v) => setAlmacenId(Number(v))}
+                placeholder="Elige el almacén"
+                options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
+              />
+
+              <Desplegable
+                className="mt-4"
+                label="Lista de precios"
+                optional
+                value={listaPrecioId}
+                onChange={(v) => setListaPrecioId(Number(v))}
+                placeholder="Predeterminada"
+                options={listas.map((l) => ({ value: l.id, label: l.nombre }))}
+              />
+
+              <Desplegable
+                className="mt-4"
+                label="Forma de pago"
+                value={formaPago}
+                onChange={(v) => {
+                  const nueva = v as FormaPagoVenta
+                  setFormaPago(nueva)
+                  if (nueva === 'CREDITO') setPagos([])
+                }}
+                options={FORMAS_PAGO}
+              />
+
+              {formaPago === 'CONTADO' ? (
+                <div className="mt-4 flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2.5">
+                  <div>
+                    <span className="ui-label block">Pagos</span>
+                    <span className="text-xs text-ink-soft">
+                      {pagos.length === 0
+                        ? 'Sin registrar'
+                        : `S/ ${totalPagado.toFixed(2)} de S/ ${total.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
+                    </span>
+                  </div>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
+                    {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
+                  </Button>
+                </div>
+              ) : (
+                <p className="mt-4 text-xs text-ink-soft">
+                  Al crédito no se registra pago ahora — queda pendiente de cobro.
+                </p>
+              )}
+
+              <Input
+                className="mt-4"
+                label="Observación"
+                optional
+                placeholder="Referencia..."
+                value={observacion}
+                onChange={(e) => setObservacion(e.target.value)}
+              />
+            </PageSection>
+
+            <PageSection title="Resumen">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-ink-soft uppercase tracking-wide">Total de la venta</span>
+                <span className="text-xl font-bold text-[rgb(var(--sys-rgb))]">S/ {total.toFixed(2)}</span>
+              </div>
+            </PageSection>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+            Cancelar
+          </Button>
+          <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+            Registrar venta
+          </Button>
+        </div>
+
+        <BuscadorModal
+          open={buscadorAbierto}
+          onClose={() => setBuscadorAbierto(false)}
+          title="Elegir cliente"
+          description="Busca por documento, nombre o distrito."
+          columns={columnasCliente}
+          rows={clientes}
+          cardIcon={Contact}
+          searchPlaceholder="Buscar cliente..."
+          onSeleccionar={(c) => setClienteId(c.id)}
+        />
+
+        <Modal
+          open={pagosAbierto}
+          onClose={() => setPagosAbierto(false)}
+          size="sm"
+          title="Pagos"
+          description="Reparte el total entre uno o varios métodos."
+          footer={
+            <Button size="sm" onClick={() => setPagosAbierto(false)}>
+              Listo
+            </Button>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            {errorForm && <Alert>{errorForm}</Alert>}
+
+            <Desplegable
+              label="Tipo"
+              value={pagoTipo}
+              onChange={(v) => {
+                setPagoTipo(v as TipoMetodoPago)
+                setPagoMetodoId(0)
+              }}
+              placeholder="Elige el tipo"
+              options={TIPOS_METODO_PAGO}
+            />
+
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <Desplegable
+                  value={pagoMetodoId}
+                  onChange={(v) => setPagoMetodoId(Number(v))}
+                  placeholder={pagoTipo ? 'Método' : 'Elige el tipo primero'}
+                  disabled={!pagoTipo}
+                  options={metodosPago.filter((m) => m.tipo === pagoTipo).map((m) => ({ value: m.id, label: m.nombre }))}
+                />
+              </div>
+              <div className="w-28 shrink-0">
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Monto"
+                  value={pagoMonto}
+                  onChange={(e) => setPagoMonto(e.target.value)}
+                />
+              </div>
+              <Button type="button" size="sm" variant="secondary" onClick={agregarPago}>
+                <Plus size={15} />
+              </Button>
+            </div>
+
+            {pagos.length === 0 ? (
+              <p className="text-sm text-ink-soft">Todavía no hay pagos registrados.</p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {pagos.map((p, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-field border border-line px-3 py-1.5 text-sm">
+                    <span>{metodosPago.find((m) => m.id === p.metodoPagoId)?.nombre ?? '—'}</span>
+                    <span className="flex items-center gap-2">
+                      S/ {(Number(p.monto) || 0).toFixed(2)}
+                      <button
+                        type="button"
+                        onClick={() => quitarPago(i)}
+                        aria-label="Quitar pago"
+                        className="text-ink-soft transition-colors hover:text-red-600"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between border-t border-line pt-3 text-sm font-semibold">
+              <span>Pagado</span>
+              <span className={totalPagado > total + 0.001 ? 'text-red-600' : 'text-ink'}>
+                S/ {totalPagado.toFixed(2)} de S/ {total.toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </Modal>
+      </div>
+    )
+  }
+
+  return (
+    <ListPage
+      icon={<ShoppingBag size={20} />}
+      title="Notas de venta"
+      description="La venta lista tal cual: nació de confirmar un pedido o se registró directa."
+      actions={
+        <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
+          Nueva venta
+        </Button>
+      }
+      alert={error ? <Alert>{error}</Alert> : undefined}
+      stats={
+        <>
+          <StatCard label="Notas de venta" value={String(notas.length)} icon={<ShoppingBag size={18} />} />
+          <StatCard
+            label="Confirmadas"
+            value={String(notas.filter((n) => n.estado === 'CONFIRMADA').length)}
+            icon={<ShoppingBag size={18} />}
+            tono="success"
+          />
+          <StatCard
+            label="Total vendido"
+            value={`S/ ${notas.filter((n) => n.estado === 'CONFIRMADA').reduce((n, x) => n + x.total, 0).toFixed(2)}`}
+            icon={<ShoppingBag size={18} />}
+          />
+        </>
+      }
+      columns={columns}
+      rows={notas}
+      cardIcon={ShoppingBag}
+      searchPlaceholder="Buscar por número, cliente..."
+      empty={cargando ? 'Cargando notas de venta...' : 'Todavía no hay notas de venta registradas.'}
+      rowActions={(row) => (
+        <>
+          <RowAction label={`Ver ${row.numero}`} onClick={() => setDetalleAbierto(row)}>
+            <ShoppingBag size={15} />
+          </RowAction>
+          {row.estado === 'CONFIRMADA' && (
+            <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anularNota(row)}>
+              <Undo2 size={15} />
+            </RowAction>
+          )}
+        </>
+      )}
+    >
+      <Modal
+        open={detalleAbierto !== null}
+        title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.cliente}` : ''}
+        description={detalleAbierto?.observacion ?? undefined}
+        onClose={() => setDetalleAbierto(null)}
+      >
+        {detalleAbierto && (
+          <>
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+              <Badge>{detalleAbierto.almacen}</Badge>
+              <Badge>{FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago}</Badge>
+              {detalleAbierto.pagos.map((p) => (
+                <Badge key={p.id}>
+                  {p.metodoPago} · S/ {p.monto.toFixed(2)}
+                </Badge>
+              ))}
+            </div>
+            <ul className="flex flex-col gap-2">
+              {detalleAbierto.detalle.map((l) => (
+                <li key={l.id} className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2">
+                  <span>
+                    <span className="font-medium text-ink">{l.producto}</span>
+                    <span className="ml-2 text-xs text-ink-soft">
+                      {l.presentacion ? `${l.cantidadPresentacion} ${l.presentacion}` : `${l.cantidad} ${l.unidadBase}`}
+                    </span>
+                  </span>
+                  <span className="text-sm">S/ {l.subtotal.toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </Modal>
+
+      {dialogo}
+    </ListPage>
+  )
+}

@@ -39,10 +39,6 @@ public class ConfirmarPedidoRequestValidator : AbstractValidator<ConfirmarPedido
     public ConfirmarPedidoRequestValidator()
     {
         RuleFor(x => x.AlmacenId).GreaterThan(0).WithMessage("Elige el almacén");
-        RuleFor(x => x.FormaPago)
-            .Must(f => string.IsNullOrWhiteSpace(f) || FormaPagoVenta.Todas.Contains(f))
-            .WithMessage("Forma de pago inválida");
-        RuleForEach(x => x.Pagos).SetValidator(new PagoVentaRequestValidator());
     }
 }
 

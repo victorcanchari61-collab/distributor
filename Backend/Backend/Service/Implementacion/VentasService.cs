@@ -125,12 +125,14 @@ public class VentasService : IVentasService
             throw new BadRequestException("Este pedido ya fue confirmado o anulado.");
         }
 
+        // Un pedido no lleva pagos: la nota que nace al confirmarlo queda a
+        // crédito, pendiente de cobro, hasta que se registre uno.
         var notaVenta = await CrearNotaVentaInternaAsync(
             clienteId: pedido.ClienteId,
             almacenId: request.AlmacenId,
             pedidoId: pedido.Id,
-            formaPago: request.FormaPago,
-            pagos: request.Pagos,
+            formaPago: FormaPagoVenta.Credito,
+            pagos: [],
             observacion: pedido.Observacion,
             lineas: pedido.Detalle.Select(d => new PedidoDetalle
             {

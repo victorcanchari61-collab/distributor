@@ -1,0 +1,556 @@
+import { useCallback, useEffect, useState } from 'react'
+import { ArrowLeft, CheckCircle2, ClipboardList, Contact, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import {
+  AgregarProductoPanel,
+  Alert,
+  Badge,
+  BuscadorCampo,
+  BuscadorModal,
+  Button,
+  Desplegable,
+  Input,
+  ListPage,
+  Modal,
+  PageHeader,
+  PageSection,
+  RowAction,
+  StatCard,
+  SysDataTable,
+  useConfirmacion,
+} from '../../components/ui'
+import type { DataTableColumn, LineaProductoNueva, OpcionBuscador } from '../../components/ui'
+import { ApiError } from '../../lib/apiClient'
+import { useRealtime } from '../../lib/realtime'
+import { clienteApi, productoApi } from '../maestros'
+import type { ClienteResponse, ProductoResponse } from '../maestros'
+import { almacenApi, stockApi } from '../inventario'
+import type { AlmacenResponse } from '../inventario'
+import { listaPrecioApi } from './listaPrecioApi'
+import type { ListaPrecioResponse } from './listaPrecioApi'
+import { pedidoApi } from './ventasApi'
+import type { CrearPedidoRequest, PedidoResponse } from './ventasApi'
+
+type FilaPedido = LineaProductoNueva
+
+/**
+ * Pedidos: lo que pidió un cliente, antes de que exista una venta firme.
+ *
+ * Confirmarlo es despacharlo: ahí recién se elige el almacén y se crea la
+ * NotaVenta correspondiente, que es la que descuenta el stock — el pedido
+ * nunca lo toca.
+ */
+export function PedidosPage() {
+  const [vista, setVista] = useState<'lista' | 'form'>('lista')
+  const [pedidos, setPedidos] = useState<PedidoResponse[]>([])
+  const [clientes, setClientes] = useState<ClienteResponse[]>([])
+  const [productos, setProductos] = useState<ProductoResponse[]>([])
+  const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
+  const [listas, setListas] = useState<ListaPrecioResponse[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
+
+  const [editando, setEditando] = useState<PedidoResponse | null>(null)
+  const [detalleAbierto, setDetalleAbierto] = useState<PedidoResponse | null>(null)
+  const [buscadorAbierto, setBuscadorAbierto] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [errorForm, setErrorForm] = useState('')
+
+  const [clienteId, setClienteId] = useState(0)
+  const [listaPrecioId, setListaPrecioId] = useState(0)
+  const [observacion, setObservacion] = useState('')
+  const [filas, setFilas] = useState<FilaPedido[]>([])
+  const [stockMap, setStockMap] = useState<Record<number, number>>({})
+
+  // --- Confirmar (despachar): un pedido no lleva pagos, solo pide almacén ---
+  const [confirmando, setConfirmando] = useState<PedidoResponse | null>(null)
+  const [confAlmacenId, setConfAlmacenId] = useState(0)
+  const [confGuardando, setConfGuardando] = useState(false)
+  const [confError, setConfError] = useState('')
+
+  const { confirmar, dialogo } = useConfirmacion()
+
+  const cargar = useCallback(async () => {
+    setCargando(true)
+    try {
+      const [peds, clis, prods, alms, lis] = await Promise.all([
+        pedidoApi.getAll(),
+        clienteApi.getAll(),
+        productoApi.getAll(),
+        almacenApi.getAll(),
+        listaPrecioApi.getAll(),
+      ])
+      setPedidos(peds)
+      setClientes(clis.filter((c) => c.activo))
+      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+      setAlmacenes(alms.filter((a) => a.activo))
+      setListas(lis.filter((l) => l.activo))
+      const stock = await stockApi.getAll()
+      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.stock])))
+      setError('')
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los pedidos.')
+    } finally {
+      setCargando(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void cargar()
+  }, [cargar])
+
+  useRealtime(['pedidos', 'notasventa', 'stock'], cargar)
+
+  const abrirNuevo = () => {
+    setEditando(null)
+    setClienteId(0)
+    setListaPrecioId(0)
+    setObservacion('')
+    setFilas([])
+    setErrorForm('')
+    setVista('form')
+  }
+
+  const abrirEdicion = (pedido: PedidoResponse) => {
+    setEditando(pedido)
+    setClienteId(pedido.clienteId)
+    setListaPrecioId(pedido.listaPrecioId ?? 0)
+    setObservacion(pedido.observacion ?? '')
+    setFilas(
+      pedido.detalle.map((l) => ({
+        id: crypto.randomUUID(),
+        productoId: l.productoId,
+        presentacionId: l.presentacionId ?? 0,
+        cantidad: String(l.cantidadPresentacion),
+        costo: String(l.precioUnitario * (l.cantidadPresentacion ? l.cantidad / l.cantidadPresentacion : 1)),
+        lote: '',
+        fechaVencimiento: '',
+      })),
+    )
+    setErrorForm('')
+    setVista('form')
+  }
+
+  const actualizarFila = (id: string, cambio: Partial<FilaPedido>) =>
+    setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
+
+  const guardar = async () => {
+    if (!clienteId) return setErrorForm('Elige el cliente.')
+
+    const validas = filas.filter((f) => f.productoId && f.cantidad && f.costo)
+    if (validas.length === 0) return setErrorForm('Agrega al menos un producto con su precio.')
+
+    const body: CrearPedidoRequest = {
+      clienteId,
+      listaPrecioId: listaPrecioId || null,
+      observacion: observacion.trim() || null,
+      detalle: validas.map((f) => ({
+        productoId: f.productoId,
+        presentacionId: f.presentacionId || null,
+        cantidad: Number(f.cantidad),
+        precioUnitario: Number(f.costo),
+      })),
+    }
+
+    setGuardando(true)
+    setErrorForm('')
+    try {
+      if (editando) {
+        await pedidoApi.update(editando.id, body)
+      } else {
+        await pedidoApi.create(body)
+      }
+      setVista('lista')
+      await cargar()
+    } catch (e) {
+      setErrorForm(
+        e instanceof ApiError ? (e.errors.length ? e.errors.join(' ') : e.message) : 'No pudimos guardar el pedido.',
+      )
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const anularPedido = (pedido: PedidoResponse) =>
+    confirmar({
+      titulo: `Anular ${pedido.numero}`,
+      mensaje: 'Se anula el pedido. No se puede deshacer.',
+      confirmar: 'Anular',
+      tono: 'danger',
+      accion: async () => {
+        setError('')
+        try {
+          await pedidoApi.anular(pedido.id)
+          await cargar()
+        } catch (e) {
+          setError(e instanceof ApiError ? e.message : 'No pudimos anular el pedido.')
+        }
+      },
+    })
+
+  const abrirConfirmar = (pedido: PedidoResponse) => {
+    setConfirmando(pedido)
+    setConfAlmacenId(0)
+    setConfError('')
+  }
+
+  const confirmarDespacho = async () => {
+    if (!confirmando) return
+    if (!confAlmacenId) return setConfError('Elige el almacén.')
+
+    setConfGuardando(true)
+    setConfError('')
+    try {
+      await pedidoApi.confirmar(confirmando.id, { almacenId: confAlmacenId })
+      setConfirmando(null)
+      await cargar()
+    } catch (e) {
+      setConfError(
+        e instanceof ApiError ? (e.errors.length ? e.errors.join(' ') : e.message) : 'No pudimos confirmar el pedido.',
+      )
+    } finally {
+      setConfGuardando(false)
+    }
+  }
+
+  const columnasFilas: DataTableColumn<FilaPedido>[] = [
+    {
+      key: 'producto',
+      label: 'Producto',
+      value: (fila) => productos.find((p) => p.id === fila.productoId)?.nombre ?? '',
+      render: (fila) => (
+        <Desplegable
+          value={fila.productoId}
+          onChange={(v) => actualizarFila(fila.id, { productoId: Number(v), presentacionId: 0 })}
+          options={productos.map((p) => ({ value: p.id, label: p.nombre, detalle: p.codigo }))}
+        />
+      ),
+    },
+    {
+      key: 'presentacion',
+      label: 'Presentación',
+      render: (fila) => {
+        const producto = productos.find((p) => p.id === fila.productoId)
+        const disponibles = producto?.presentaciones.filter((p) => p.esVenta && p.activo) ?? []
+        return (
+          <Desplegable
+            value={fila.presentacionId}
+            onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
+            placeholder={producto?.unidadBase ?? 'Elegir'}
+            disabled={!producto}
+            options={
+              producto
+                ? [
+                    { value: 0, label: producto.unidadBase, nota: 'unidad base' },
+                    ...disponibles
+                      .filter((p) => !p.esBase)
+                      .map((p) => ({ value: p.id, label: p.nombre, detalle: `${p.factor} ${producto.unidadBase}` })),
+                  ]
+                : []
+            }
+          />
+        )
+      },
+    },
+    {
+      key: 'cantidad',
+      label: 'Cantidad',
+      align: 'right',
+      value: (fila) => Number(fila.cantidad) || 0,
+      render: (fila) => (
+        <Input
+          type="number"
+          step="0.0001"
+          value={fila.cantidad}
+          onChange={(e) => actualizarFila(fila.id, { cantidad: e.target.value })}
+        />
+      ),
+    },
+    {
+      key: 'costo',
+      label: 'Precio de venta',
+      align: 'right',
+      value: (fila) => Number(fila.costo) || 0,
+      render: (fila) => (
+        <Input
+          type="number"
+          step="0.01"
+          value={fila.costo}
+          onChange={(e) => actualizarFila(fila.id, { costo: e.target.value })}
+        />
+      ),
+    },
+    {
+      key: 'subtotal',
+      label: 'Subtotal',
+      align: 'right',
+      value: (fila) => (Number(fila.cantidad) || 0) * (Number(fila.costo) || 0),
+      render: (fila) => `S/ ${((Number(fila.cantidad) || 0) * (Number(fila.costo) || 0)).toFixed(2)}`,
+    },
+  ]
+
+  const opcionesCliente: OpcionBuscador<number>[] = clientes.map((c) => ({
+    item: c.id,
+    label: c.nombre,
+    detalle: c.documento,
+    nota: c.distrito ?? undefined,
+  }))
+
+  const columnasCliente: DataTableColumn<ClienteResponse>[] = [
+    {
+      key: 'documento',
+      label: 'Documento',
+      render: (row) => (
+        <span className="flex items-center gap-2">
+          <span className="font-medium text-ink">{row.documento}</span>
+          <Badge>{row.tipoDoc}</Badge>
+        </span>
+      ),
+    },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'distrito', label: 'Distrito' },
+    { key: 'ruta', label: 'Ruta' },
+  ]
+
+  const columns: DataTableColumn<PedidoResponse>[] = [
+    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
+    { key: 'cliente', label: 'Cliente' },
+    { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
+    { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (row) => (
+        <Badge tone={row.estado === 'CONFIRMADO' ? 'success' : row.estado === 'ANULADO' ? 'neutral' : 'warning'}>
+          {row.estado === 'CONFIRMADO' ? 'Confirmado' : row.estado === 'ANULADO' ? 'Anulado' : 'Pendiente'}
+        </Badge>
+      ),
+    },
+  ]
+
+  if (vista === 'form') {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          icon={<ClipboardList size={20} />}
+          title={editando ? `Editar ${editando.numero}` : 'Nuevo pedido'}
+          description="Lo que pide el cliente. Mientras esté Pendiente se puede editar; al confirmarlo, ya no."
+          actions={
+            <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+              <ArrowLeft size={15} />
+              Volver
+            </Button>
+          }
+        />
+
+        {errorForm && <Alert>{errorForm}</Alert>}
+
+        <PageSection title="Datos generales">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <BuscadorCampo
+              label="Cliente"
+              value={clienteId || null}
+              onChange={(id) => setClienteId(id ?? 0)}
+              opciones={opcionesCliente}
+              placeholder="Buscar cliente..."
+              vacio="Ningún cliente coincide"
+              onAvanzado={() => setBuscadorAbierto(true)}
+              avanzadoLabel="Búsqueda avanzada de clientes"
+            />
+
+            <Desplegable
+              label="Lista de precios"
+              optional
+              value={listaPrecioId}
+              onChange={(v) => setListaPrecioId(Number(v))}
+              placeholder="Predeterminada"
+              options={listas.map((l) => ({ value: l.id, label: l.nombre }))}
+            />
+          </div>
+
+          <Input
+            className="mt-4"
+            label="Observación"
+            optional
+            placeholder="Referencia..."
+            value={observacion}
+            onChange={(e) => setObservacion(e.target.value)}
+          />
+        </PageSection>
+
+        <PageSection title="Agregar producto">
+          <AgregarProductoPanel
+            productos={productos}
+            stock={stockMap}
+            costoLabel="Precio de venta"
+            onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
+          />
+        </PageSection>
+
+        <PageSection
+          title="Productos"
+          description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
+        >
+          <SysDataTable
+            columns={columnasFilas}
+            rows={filas}
+            rowKey="id"
+            toolbar={false}
+            empty="Agrega productos con el buscador de arriba."
+            actions={(fila) => (
+              <RowAction
+                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                tone="danger"
+                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+              >
+                <Trash2 size={15} />
+              </RowAction>
+            )}
+          />
+        </PageSection>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+            Cancelar
+          </Button>
+          <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+            {editando ? 'Guardar cambios' : 'Registrar pedido'}
+          </Button>
+        </div>
+
+        <BuscadorModal
+          open={buscadorAbierto}
+          onClose={() => setBuscadorAbierto(false)}
+          title="Elegir cliente"
+          description="Busca por documento, nombre o distrito."
+          columns={columnasCliente}
+          rows={clientes}
+          cardIcon={Contact}
+          searchPlaceholder="Buscar cliente..."
+          onSeleccionar={(c) => setClienteId(c.id)}
+        />
+
+        {dialogo}
+      </div>
+    )
+  }
+
+  return (
+    <ListPage
+      icon={<ClipboardList size={20} />}
+      title="Pedidos"
+      description="Lo que pide un cliente. Al confirmarlo nace la nota de venta correspondiente."
+      actions={
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+          Nuevo pedido
+        </Button>
+      }
+      alert={error ? <Alert>{error}</Alert> : undefined}
+      stats={
+        <>
+          <StatCard label="Pedidos" value={String(pedidos.length)} icon={<ClipboardList size={18} />} />
+          <StatCard
+            label="Pendientes"
+            value={String(pedidos.filter((p) => p.estado === 'PENDIENTE').length)}
+            icon={<ClipboardList size={18} />}
+            tono="warning"
+          />
+          <StatCard
+            label="Confirmados"
+            value={String(pedidos.filter((p) => p.estado === 'CONFIRMADO').length)}
+            icon={<CheckCircle2 size={18} />}
+            tono="success"
+          />
+        </>
+      }
+      columns={columns}
+      rows={pedidos}
+      cardIcon={ClipboardList}
+      searchPlaceholder="Buscar por número, cliente..."
+      empty={cargando ? 'Cargando pedidos...' : 'Todavía no hay pedidos registrados.'}
+      rowActions={(row) => (
+        <>
+          <RowAction label={`Ver ${row.numero}`} onClick={() => setDetalleAbierto(row)}>
+            <ClipboardList size={15} />
+          </RowAction>
+          {row.estado === 'PENDIENTE' && (
+            <>
+              <RowAction label={`Editar ${row.numero}`} onClick={() => abrirEdicion(row)}>
+                <ClipboardList size={15} />
+              </RowAction>
+              <RowAction label={`Confirmar y despachar ${row.numero}`} onClick={() => abrirConfirmar(row)}>
+                <ShoppingBag size={15} />
+              </RowAction>
+              <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anularPedido(row)}>
+                <Undo2 size={15} />
+              </RowAction>
+            </>
+          )}
+        </>
+      )}
+    >
+      <Modal
+        open={detalleAbierto !== null}
+        title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.cliente}` : ''}
+        description={detalleAbierto?.observacion ?? undefined}
+        onClose={() => setDetalleAbierto(null)}
+      >
+        {detalleAbierto && (
+          <ul className="flex flex-col gap-2">
+            {detalleAbierto.detalle.map((l) => (
+              <li key={l.id} className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2">
+                <span>
+                  <span className="font-medium text-ink">{l.producto}</span>
+                  <span className="ml-2 text-xs text-ink-soft">
+                    {l.presentacion ? `${l.cantidadPresentacion} ${l.presentacion}` : `${l.cantidad} ${l.unidadBase}`}
+                  </span>
+                </span>
+                <span className="text-sm">S/ {l.subtotal.toFixed(2)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
+
+      <Modal
+        open={confirmando !== null}
+        onClose={() => setConfirmando(null)}
+        size="sm"
+        title={confirmando ? `Confirmar ${confirmando.numero}` : ''}
+        description="Elige de dónde sale la mercadería. El stock se descuenta al confirmar."
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setConfirmando(null)}>
+              Cancelar
+            </Button>
+            <Button size="sm" loading={confGuardando} onClick={() => void confirmarDespacho()}>
+              Confirmar y despachar
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          {confError && <Alert>{confError}</Alert>}
+
+          <Desplegable
+            label="Almacén"
+            value={confAlmacenId}
+            onChange={(v) => setConfAlmacenId(Number(v))}
+            placeholder="Elige el almacén"
+            options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
+          />
+
+          <p className="text-xs text-ink-soft">
+            La nota de venta que nace queda a crédito, pendiente de cobro — un pedido no registra pagos.
+          </p>
+
+          <div className="flex items-center justify-between border-t border-line pt-3 text-sm font-semibold">
+            <span>Total</span>
+            <span className="text-ink">S/ {(confirmando?.total ?? 0).toFixed(2)}</span>
+          </div>
+        </div>
+      </Modal>
+
+      {dialogo}
+    </ListPage>
+  )
+}

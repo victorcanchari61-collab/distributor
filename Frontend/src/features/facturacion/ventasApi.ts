@@ -67,10 +67,9 @@ export interface CrearPedidoRequest {
   detalle: LineaVentaRequest[]
 }
 
+/** Un pedido no lleva pagos: la nota que nace al confirmarlo queda a crédito. */
 export interface ConfirmarPedidoRequest {
   almacenId: number
-  formaPago?: FormaPagoVenta | null
-  pagos?: PagoVentaRequest[]
 }
 
 export const pedidoApi = {
