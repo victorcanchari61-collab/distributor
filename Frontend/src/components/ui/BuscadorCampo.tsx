@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Search } from 'lucide-react'
+import { ListFilter, Search } from 'lucide-react'
 import { cn } from './cn'
 
 export interface OpcionBuscador<T> {
@@ -23,6 +23,13 @@ export interface BuscadorCampoProps<T> {
   error?: string
   className?: string
   vacio?: string
+  /**
+   * Abre una búsqueda más completa (normalmente un [BuscadorModal] con
+   * filtros por columna) para cuando escribir dos letras acá no alcanza.
+   * Sin esto, el campo solo ofrece el filtro simple.
+   */
+  onAvanzado?: () => void
+  avanzadoLabel?: string
 }
 
 /**
@@ -45,6 +52,8 @@ export function BuscadorCampo<T>({
   error,
   className,
   vacio = 'Nada coincide',
+  onAvanzado,
+  avanzadoLabel = 'Búsqueda avanzada',
 }: BuscadorCampoProps<T>) {
   const [abierto, setAbierto] = useState(false)
   const [texto, setTexto] = useState('')
@@ -147,6 +156,17 @@ export function BuscadorCampo<T>({
           onChange={(e) => setTexto(e.target.value)}
           className="min-w-0 flex-1 border-none bg-transparent text-sm text-ink outline-none placeholder:text-ink-soft"
         />
+        {onAvanzado && (
+          <button
+            type="button"
+            onClick={onAvanzado}
+            aria-label={avanzadoLabel}
+            title={avanzadoLabel}
+            className="shrink-0 text-ink-soft transition-colors hover:text-[rgb(var(--sys-rgb))]"
+          >
+            <ListFilter size={16} />
+          </button>
+        )}
       </div>
 
       {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}

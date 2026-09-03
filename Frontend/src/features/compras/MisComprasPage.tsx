@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, PackageCheck, Plus, ShoppingBag, Undo2 } from 'lucide-react'
+import { ArrowLeft, Building2, PackageCheck, Plus, ShoppingBag, Undo2 } from 'lucide-react'
 import {
   Alert,
   Badge,
   BuscadorCampo,
+  BuscadorModal,
   Button,
   Desplegable,
   Input,
@@ -54,6 +55,7 @@ export function MisComprasPage() {
 
   const [detalleAbierto, setDetalleAbierto] = useState<CompraResponse | null>(null)
   const [recepcionAbierta, setRecepcionAbierta] = useState<CompraResponse | null>(null)
+  const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
 
@@ -235,6 +237,22 @@ export function MisComprasPage() {
     nota: p.rubro ?? undefined,
   }))
 
+  const columnasProveedor: DataTableColumn<ProveedorResponse>[] = [
+    {
+      key: 'documento',
+      label: 'Documento',
+      render: (row) => (
+        <span className="flex items-center gap-2">
+          <span className="font-medium text-ink">{row.documento}</span>
+          <Badge>{row.tipoDoc}</Badge>
+        </span>
+      ),
+    },
+    { key: 'nombre', label: 'Razón social' },
+    { key: 'rubro', label: 'Rubro' },
+    { key: 'distrito', label: 'Distrito' },
+  ]
+
   const columns: DataTableColumn<CompraResponse>[] = [
     { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
     { key: 'proveedor', label: 'Proveedor' },
@@ -300,6 +318,8 @@ export function MisComprasPage() {
             opciones={opcionesProveedor}
             placeholder="Buscar proveedor..."
             vacio="Ningún proveedor coincide"
+            onAvanzado={() => setBuscadorAbierto(true)}
+            avanzadoLabel="Búsqueda avanzada de proveedores"
           />
 
           <Input
@@ -341,6 +361,17 @@ export function MisComprasPage() {
           </Button>
         </div>
 
+        <BuscadorModal
+          open={buscadorAbierto}
+          onClose={() => setBuscadorAbierto(false)}
+          title="Elegir proveedor"
+          description="Busca por documento, razón social o rubro."
+          columns={columnasProveedor}
+          rows={proveedores}
+          cardIcon={Building2}
+          searchPlaceholder="Buscar proveedor..."
+          onSeleccionar={(p) => setProveedorId(p.id)}
+        />
       </div>
     )
   }

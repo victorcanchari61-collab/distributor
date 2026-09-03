@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
+import { PackageCheck } from 'lucide-react'
 import {
   Alert,
   Badge,
   BuscadorCampo,
+  BuscadorModal,
   Button,
   Desplegable,
   Input,
   Modal,
 } from '../../components/ui'
-import type { OpcionBuscador } from '../../components/ui'
+import type { DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import type { AlmacenResponse, CrearRecepcionRequest } from '../inventario'
 import { recepcionApi } from '../inventario'
@@ -40,6 +42,7 @@ export function NuevaRecepcionModal({
   onCreada,
 }: NuevaRecepcionModalProps) {
   const [compra, setCompra] = useState<CompraResponse | null>(compraFija ?? null)
+  const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [almacenId, setAlmacenId] = useState(0)
   const [observacion, setObservacion] = useState('')
   const [cantidades, setCantidades] = useState<Record<number, string>>({})
@@ -124,6 +127,21 @@ export function NuevaRecepcionModal({
     nota: `S/ ${c.total.toFixed(2)}`,
   }))
 
+  const columnasCompra: DataTableColumn<CompraResponse>[] = [
+    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
+    { key: 'proveedor', label: 'Proveedor' },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (row) => (
+        <Badge tone={row.estado === 'RECIBIDA_PARCIAL' ? 'warning' : 'neutral'}>
+          {row.estado === 'RECIBIDA_PARCIAL' ? 'Parcial' : 'Pendiente'}
+        </Badge>
+      ),
+    },
+    { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
+  ]
+
   return (
     <>
       <Modal
@@ -161,6 +179,8 @@ export function NuevaRecepcionModal({
               opciones={opcionesCompra}
               placeholder="Buscar compra..."
               vacio="Ninguna compra coincide"
+              onAvanzado={() => setBuscadorAbierto(true)}
+              avanzadoLabel="Búsqueda avanzada de compras"
             />
           )}
 
@@ -229,6 +249,20 @@ export function NuevaRecepcionModal({
           )}
         </div>
       </Modal>
+
+      {!compraFija && (
+        <BuscadorModal
+          open={buscadorAbierto}
+          onClose={() => setBuscadorAbierto(false)}
+          title="Elegir compra"
+          description="Solo las que aún tienen algo pendiente de recibir."
+          columns={columnasCompra}
+          rows={compras}
+          cardIcon={PackageCheck}
+          searchPlaceholder="Buscar por número, proveedor..."
+          onSeleccionar={elegirCompra}
+        />
+      )}
     </>
   )
 }
