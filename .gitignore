@@ -11,3 +11,11 @@ dist/
 
 # Logs
 *.log
+
+# Artefactos de despliegue: se generan localmente, nunca se versionan
+publish/
+deploy-*.tar.gz
+
+# Config de producción: credenciales reales, nunca al repo
+**/appsettings.Production.json
+**/appsettings.*.local.json
