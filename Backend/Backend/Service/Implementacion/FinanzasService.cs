@@ -68,6 +68,7 @@ public class FinanzasService : IFinanzasService
         }
 
         var metodo = new MetodoPago { Nombre = nombre, Activo = true };
+        AplicarDatosBancarios(metodo, request);
 
         await _repository.AddMetodoPagoAsync(metodo);
         var response = MapMetodoPago(metodo, 0);
@@ -89,6 +90,7 @@ public class FinanzasService : IFinanzasService
 
         metodo.Nombre = nombre;
         metodo.Activo = request.Activo;
+        AplicarDatosBancarios(metodo, request);
 
         await _repository.UpdateMetodoPagoAsync(metodo);
         var response = MapMetodoPago(metodo, await _repository.ContarUsosMetodoPagoAsync(id));
@@ -117,10 +119,42 @@ public class FinanzasService : IFinanzasService
         await _repository.GetMetodoPagoAsync(id)
         ?? throw new NotFoundException($"No existe el método de pago {id}");
 
+    /// <summary>
+    /// El efectivo no guarda banco ni cuenta: aunque llegaran en el request se
+    /// descartan, para que cambiar de tipo no deje datos bancarios huerfanos.
+    /// El CCI solo tiene sentido en transferencia, nunca en billetera digital.
+    /// </summary>
+    private static void AplicarDatosBancarios(MetodoPago metodo, MetodoPagoRequestBase request)
+    {
+        metodo.Tipo = request.Tipo;
+
+        if (request.Tipo == TipoMetodoPago.Efectivo)
+        {
+            metodo.Banco = null;
+            metodo.NumeroCuenta = null;
+            metodo.Cci = null;
+            metodo.Titular = null;
+            return;
+        }
+
+        metodo.Banco = Limpiar(request.Banco);
+        metodo.NumeroCuenta = Limpiar(request.NumeroCuenta);
+        metodo.Cci = request.Tipo == TipoMetodoPago.Transferencia ? Limpiar(request.Cci) : null;
+        metodo.Titular = Limpiar(request.Titular);
+    }
+
+    private static string? Limpiar(string? texto) =>
+        string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
+
     private static MetodoPagoResponse MapMetodoPago(MetodoPago m, int usos) => new()
     {
         Id = m.Id,
         Nombre = m.Nombre,
+        Tipo = m.Tipo,
+        Banco = m.Banco,
+        NumeroCuenta = m.NumeroCuenta,
+        Cci = m.Cci,
+        Titular = m.Titular,
         Activo = m.Activo,
         Usos = usos
     };

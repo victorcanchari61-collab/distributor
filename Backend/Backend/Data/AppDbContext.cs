@@ -587,15 +587,18 @@ public class AppDbContext : DbContext
             entity.ToTable("MetodosPago");
             entity.HasIndex(m => m.Nombre).IsUnique();
             entity.Property(m => m.Nombre).HasMaxLength(60).IsRequired();
+            entity.Property(m => m.Tipo).HasMaxLength(20).IsRequired();
+            entity.Property(m => m.Banco).HasMaxLength(60);
+            entity.Property(m => m.NumeroCuenta).HasMaxLength(30);
+            entity.Property(m => m.Cci).HasMaxLength(30);
+            entity.Property(m => m.Titular).HasMaxLength(120);
 
-            // Los mismos que antes vivian fijos en el código, ahora editables
-            // desde Finanzas sin perder lo que ya hubiera guardado.
+            // Único dato universal: el efectivo no necesita cuenta ni banco.
+            // Billetera digital y transferencia los crea el propio negocio
+            // desde Finanzas, con su banco, número y titular reales — no hay
+            // uno correcto para adivinar aquí.
             entity.HasData(
-                new MetodoPago { Id = 1, Nombre = "Efectivo", Activo = true },
-                new MetodoPago { Id = 2, Nombre = "Transferencia", Activo = true },
-                new MetodoPago { Id = 3, Nombre = "Depósito", Activo = true },
-                new MetodoPago { Id = 4, Nombre = "Tarjeta", Activo = true },
-                new MetodoPago { Id = 5, Nombre = "Cheque", Activo = true }
+                new MetodoPago { Id = 1, Nombre = "Efectivo", Tipo = TipoMetodoPago.Efectivo, Activo = true }
             );
         });
     }
