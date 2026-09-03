@@ -185,7 +185,19 @@ export function AgregarProductoPanel({
         onClose={() => setBuscadorAbierto(false)}
         productos={productos}
         stock={stock}
-        onSeleccionar={(p) => elegir(p.id)}
+        onAgregar={(selecciones) => {
+          selecciones.forEach(({ producto, presentacionId, cantidad }) =>
+            onAgregar({
+              id: crypto.randomUUID(),
+              productoId: producto.id,
+              presentacionId,
+              cantidad: String(cantidad),
+              costo: '',
+              lote: '',
+              fechaVencimiento: '',
+            }),
+          )
+        }}
       />
     </div>
   )
