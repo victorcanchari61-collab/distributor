@@ -75,6 +75,8 @@ export interface SysDataTableProps<T> {
   actions?: (row: T) => ReactNode
   /** Si se pasa, toda la fila (y la tarjeta en movil) queda clickeable. */
   onRowClick?: (row: T) => void
+  /** Oculta el buscador general y los botones de filtros/columnas — para tablas chicas (ej. líneas de un documento) donde solo estorban. */
+  toolbar?: boolean
   className?: string
 }
 
@@ -201,6 +203,7 @@ export function SysDataTable<T>({
   actions,
   onRowClick,
   className,
+  toolbar = true,
 }: SysDataTableProps<T>) {
   const [order, setOrder] = useState<string[]>(() => columns.map((c) => c.key))
   const [hidden, setHidden] = useState<string[]>([])
@@ -406,58 +409,60 @@ export function SysDataTable<T>({
 
   return (
     <div className={className}>
-      {/* barra de herramientas: suelta, sin tarjeta que la envuelva */}
-      <div className="mb-2 flex items-center justify-end gap-2">
-        <div className="relative min-w-0 flex-1 sm:max-w-xs sm:flex-none sm:basis-80">
-          <Search
-            size={15}
-            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-zinc-400"
-          />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={searchPlaceholder}
-            className="w-full rounded-lg border border-zinc-200 bg-white py-2 pr-8 pl-9 text-sm text-zinc-900 transition outline-none placeholder:text-zinc-400 focus:border-zinc-400"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              aria-label="Limpiar busqueda"
-              className="absolute top-1/2 right-2.5 -translate-y-1/2 text-zinc-400 transition-colors hover:text-zinc-700"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
+      {toolbar && (
+        <>
+          {/* barra de herramientas: suelta, sin tarjeta que la envuelva */}
+          <div className="mb-2 flex items-center justify-end gap-2">
+            <div className="relative min-w-0 flex-1 sm:max-w-xs sm:flex-none sm:basis-80">
+              <Search
+                size={15}
+                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-zinc-400"
+              />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full rounded-lg border border-zinc-200 bg-white py-2 pr-8 pl-9 text-sm text-zinc-900 transition outline-none placeholder:text-zinc-400 focus:border-zinc-400"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  aria-label="Limpiar busqueda"
+                  className="absolute top-1/2 right-2.5 -translate-y-1/2 text-zinc-400 transition-colors hover:text-zinc-700"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
 
-        {/* iconos junto al buscador, en el extremo derecho */}
-        <div className="flex items-center gap-1">
-          <FiltersButton
-            columns={columns}
-            filters={filters}
-            setFilters={setFilters}
-            open={panel === 'filters'}
-            onToggle={() => setPanel((p) => (p === 'filters' ? null : 'filters'))}
-            onClose={() => setPanel(null)}
-          />
+            {/* iconos junto al buscador, en el extremo derecho */}
+            <div className="flex items-center gap-1">
+              <FiltersButton
+                columns={columns}
+                filters={filters}
+                setFilters={setFilters}
+                open={panel === 'filters'}
+                onToggle={() => setPanel((p) => (p === 'filters' ? null : 'filters'))}
+                onClose={() => setPanel(null)}
+              />
 
-          <ColumnsButton
-            order={order}
-            byKey={byKey}
-            hidden={hidden}
-            onToggle={toggleColumn}
-            onShowAll={() => setHidden([])}
-            open={panel === 'columns'}
-            onOpen={() => setPanel((p) => (p === 'columns' ? null : 'columns'))}
-            onClose={() => setPanel(null)}
-          />
-        </div>
-      </div>
+              <ColumnsButton
+                order={order}
+                byKey={byKey}
+                hidden={hidden}
+                onToggle={toggleColumn}
+                onShowAll={() => setHidden([])}
+                open={panel === 'columns'}
+                onOpen={() => setPanel((p) => (p === 'columns' ? null : 'columns'))}
+                onClose={() => setPanel(null)}
+              />
+            </div>
+          </div>
 
-      {/* chips de filtros activos */}
-      {(filters.length > 0 || activeColumnSearches > 0) && (
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          {/* chips de filtros activos */}
+          {(filters.length > 0 || activeColumnSearches > 0) && (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
           {filters.map((f) => (
             <span
               key={f.id}
@@ -509,6 +514,8 @@ export function SysDataTable<T>({
             Limpiar todo
           </button>
         </div>
+          )}
+        </>
       )}
 
       {/* tabla */}

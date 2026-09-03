@@ -392,6 +392,7 @@ export function TransferenciasPage() {
             columns={columnasFilas}
             rows={filas}
             rowKey="id"
+            toolbar={false}
             empty="Agrega productos con el buscador de arriba."
             actions={(fila) => (
               <RowAction
