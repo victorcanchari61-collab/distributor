@@ -100,7 +100,7 @@ export function RecepcionesPage() {
         <Button
           size="sm"
           onClick={() => setNuevaAbierta(true)}
-          disabled={comprasParaRecibir.length === 0}
+          disabled={!cargando && comprasParaRecibir.length === 0}
           iconRight={<Plus size={15} />}
         >
           Nueva recepción
@@ -109,7 +109,7 @@ export function RecepcionesPage() {
       alert={
         error ? (
           <Alert>{error}</Alert>
-        ) : comprasParaRecibir.length === 0 ? (
+        ) : !cargando && comprasParaRecibir.length === 0 ? (
           <Alert>No hay compras pendientes de recibir por ahora.</Alert>
         ) : undefined
       }
