@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react'
 import { HttpTransportType, HubConnectionBuilder, LogLevel, type HubConnection } from '@microsoft/signalr'
 import { getToken } from './authStorage'
 
-const HUB_URL = 'http://localhost:5220/hubs/cambios'
+// Relativa, igual que API_BASE_URL: el proxy de Vite la resuelve en dev y
+// Nginx en producción, sin depender de en qué máquina termine publicada.
+const HUB_URL = '/hubs/cambios'
 
 export type CambioEvento = {
   modulo: string

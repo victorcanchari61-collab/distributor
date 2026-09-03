@@ -6,6 +6,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>0868636b-ceea-4bb0-aaeb-8399d0e32235</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <!-- Server GC (el default de Sdk.Web) reserva un heap por núcleo y pesa
+         mucho más en RAM: bien para un servidor grande, mal para un VPS de
+         1 núcleo / 1 GB. Workstation GC es más liviano y le sobra para el
+         tráfico que va a tener. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>
