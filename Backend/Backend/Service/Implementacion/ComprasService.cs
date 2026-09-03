@@ -212,6 +212,16 @@ public class ComprasService : IComprasService
             CantidadRecibida = 0
         }).ToList();
 
+        // Un pago mixto puede quedar corto (crédito parcial), pero nunca pasarse:
+        // no tiene sentido pagar más de lo que cuesta la compra.
+        var total = Math.Round(lineas.Sum(l => l.Cantidad * l.CostoUnitario), 2);
+        var totalPagado = Math.Round(request.Pagos.Sum(p => p.Monto), 2);
+        if (totalPagado > total)
+        {
+            throw new BadRequestException(
+                $"Los pagos suman S/ {totalPagado}, más que el total de la compra (S/ {total}).");
+        }
+
         compra.Pagos = request.Pagos.Select(p => new CompraPago
         {
             MetodoPagoId = p.MetodoPagoId,

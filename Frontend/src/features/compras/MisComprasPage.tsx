@@ -82,6 +82,7 @@ export function MisComprasPage() {
   const [detalleAbierto, setDetalleAbierto] = useState<CompraResponse | null>(null)
   const [recepcionAbierta, setRecepcionAbierta] = useState<CompraResponse | null>(null)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
+  const [pagosAbierto, setPagosAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
 
@@ -152,9 +153,26 @@ export function MisComprasPage() {
   const actualizarFila = (id: string, cambio: Partial<FilaCompra>) =>
     setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
 
-  /** Un pago mixto: cada línea marca la fila y limpia los campos, igual que agregar un producto. */
+  // Lo que cuesta la compra hasta ahora, con lo agregado en Productos.
+  const total = filas.reduce((n, f) => n + (Number(f.cantidad) || 0) * (Number(f.costo) || 0), 0)
+  const totalPagado = pagos.reduce((n, p) => n + (Number(p.monto) || 0), 0)
+
+  /**
+   * Un pago mixto: cada línea marca la fila y limpia los campos, igual que
+   * agregar un producto. Nunca deja que lo pagado supere el total: no tiene
+   * sentido pagar más de lo que cuesta la compra.
+   */
   const agregarPago = () => {
     if (!pagoMetodoId || !pagoMonto || Number(pagoMonto) <= 0) return
+
+    if (totalPagado + Number(pagoMonto) > total + 0.001) {
+      setErrorForm(
+        `Ese pago deja lo pagado en S/ ${(totalPagado + Number(pagoMonto)).toFixed(2)}, más que el total de la compra (S/ ${total.toFixed(2)}).`,
+      )
+      return
+    }
+
+    setErrorForm('')
     setPagos((prev) => [...prev, { metodoPagoId: pagoMetodoId, monto: pagoMonto }])
     setPagoMetodoId(0)
     setPagoMonto('')
@@ -167,6 +185,12 @@ export function MisComprasPage() {
 
     const validas = filas.filter((f) => f.productoId && f.cantidad && f.costo)
     if (validas.length === 0) return setErrorForm('Agrega al menos un producto con su costo.')
+
+    if (totalPagado > total + 0.001) {
+      return setErrorForm(
+        `Los pagos suman S/ ${totalPagado.toFixed(2)}, más que el total de la compra (S/ ${total.toFixed(2)}).`,
+      )
+    }
 
     const body: CrearCompraRequest = {
       proveedorId,
@@ -371,8 +395,6 @@ export function MisComprasPage() {
   )
 
   if (vista === 'form') {
-    const total = filas.reduce((n, f) => n + (Number(f.cantidad) || 0) * (Number(f.costo) || 0), 0)
-
     return (
       <div className="space-y-5">
         <PageHeader
@@ -471,72 +493,40 @@ export function MisComprasPage() {
                 onChange={(e) => setFecha(e.target.value)}
               />
 
+              {/* La forma de pago decide si tiene sentido registrar pagos
+                  ahora: al crédito se paga después, así que el desglose de
+                  pagos solo aparece al contado. */}
               <Desplegable
                 className="mt-4"
                 label="Forma de pago"
                 value={formaPago}
-                onChange={(v) => setFormaPago(v as FormaPagoCompra)}
+                onChange={(v) => {
+                  const nueva = v as FormaPagoCompra
+                  setFormaPago(nueva)
+                  if (nueva === 'CREDITO') setPagos([])
+                }}
                 options={FORMAS_PAGO}
               />
 
-              {/* Pago mixto: se puede repartir el total entre varios métodos
-                  (parte en efectivo, parte por Yape), agregando una línea a
-                  la vez — igual que se agrega un producto. */}
-              <div className="mt-4">
-                <span className="ui-label mb-1.5 block">
-                  Pagos <span className="font-normal text-ink-soft">(opcional)</span>
-                </span>
-                <div className="flex gap-2">
-                  <div className="min-w-0 flex-1">
-                    <Desplegable
-                      value={pagoMetodoId}
-                      onChange={(v) => setPagoMetodoId(Number(v))}
-                      placeholder="Método"
-                      options={metodosPago.map((m) => ({ value: m.id, label: m.nombre }))}
-                    />
+              {formaPago === 'CONTADO' ? (
+                <div className="mt-4 flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2.5">
+                  <div>
+                    <span className="ui-label block">Pagos</span>
+                    <span className="text-xs text-ink-soft">
+                      {pagos.length === 0
+                        ? 'Sin registrar'
+                        : `S/ ${totalPagado.toFixed(2)} de S/ ${total.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
+                    </span>
                   </div>
-                  <div className="w-28 shrink-0">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Monto"
-                      value={pagoMonto}
-                      onChange={(e) => setPagoMonto(e.target.value)}
-                    />
-                  </div>
-                  <Button type="button" size="sm" variant="secondary" onClick={agregarPago}>
-                    <Plus size={15} />
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
+                    {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
                   </Button>
                 </div>
-
-                {pagos.length > 0 && (
-                  <div className="mt-2 flex flex-col gap-1.5">
-                    {pagos.map((p, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between rounded-field border border-line px-3 py-1.5 text-sm"
-                      >
-                        <span>{metodosPago.find((m) => m.id === p.metodoPagoId)?.nombre ?? '—'}</span>
-                        <span className="flex items-center gap-2">
-                          S/ {(Number(p.monto) || 0).toFixed(2)}
-                          <button
-                            type="button"
-                            onClick={() => quitarPago(i)}
-                            aria-label="Quitar pago"
-                            className="text-ink-soft transition-colors hover:text-red-600"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </span>
-                      </div>
-                    ))}
-                    <div className="mt-0.5 text-right text-xs text-ink-soft">
-                      Pagado: S/ {pagos.reduce((n, p) => n + (Number(p.monto) || 0), 0).toFixed(2)} de S/{' '}
-                      {total.toFixed(2)}
-                    </div>
-                  </div>
-                )}
-              </div>
+              ) : (
+                <p className="mt-4 text-xs text-ink-soft">
+                  Al crédito no se registra pago ahora — queda pendiente para cuando corresponda.
+                </p>
+              )}
 
               <Input
                 className="mt-4"
@@ -581,6 +571,79 @@ export function MisComprasPage() {
           searchPlaceholder="Buscar proveedor..."
           onSeleccionar={(p) => setProveedorId(p.id)}
         />
+
+        <Modal
+          open={pagosAbierto}
+          onClose={() => setPagosAbierto(false)}
+          size="sm"
+          title="Pagos"
+          description="Reparte el total entre uno o varios métodos."
+          footer={
+            <Button size="sm" onClick={() => setPagosAbierto(false)}>
+              Listo
+            </Button>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            {errorForm && <Alert>{errorForm}</Alert>}
+
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <Desplegable
+                  value={pagoMetodoId}
+                  onChange={(v) => setPagoMetodoId(Number(v))}
+                  placeholder="Método"
+                  options={metodosPago.map((m) => ({ value: m.id, label: m.nombre }))}
+                />
+              </div>
+              <div className="w-28 shrink-0">
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Monto"
+                  value={pagoMonto}
+                  onChange={(e) => setPagoMonto(e.target.value)}
+                />
+              </div>
+              <Button type="button" size="sm" variant="secondary" onClick={agregarPago}>
+                <Plus size={15} />
+              </Button>
+            </div>
+
+            {pagos.length === 0 ? (
+              <p className="text-sm text-ink-soft">Todavía no hay pagos registrados.</p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {pagos.map((p, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between rounded-field border border-line px-3 py-1.5 text-sm"
+                  >
+                    <span>{metodosPago.find((m) => m.id === p.metodoPagoId)?.nombre ?? '—'}</span>
+                    <span className="flex items-center gap-2">
+                      S/ {(Number(p.monto) || 0).toFixed(2)}
+                      <button
+                        type="button"
+                        onClick={() => quitarPago(i)}
+                        aria-label="Quitar pago"
+                        className="text-ink-soft transition-colors hover:text-red-600"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between border-t border-line pt-3 text-sm font-semibold">
+              <span>Pagado</span>
+              <span className={totalPagado > total + 0.001 ? 'text-red-600' : 'text-ink'}>
+                S/ {totalPagado.toFixed(2)} de S/ {total.toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </Modal>
       </div>
     )
   }
