@@ -26,6 +26,8 @@ import '../../features/inventario/vistas/transferencias_pagina.dart';
 import '../../features/maestros/vistas/clientes_pagina.dart';
 import '../../features/maestros/vistas/productos_pagina.dart';
 import '../../features/maestros/vistas/proveedores_pagina.dart';
+import '../../features/ventas/vistas/notas_venta_pagina.dart';
+import '../../features/ventas/vistas/pedidos_pagina.dart';
 import '../navegacion/menu.dart';
 import 'puerta_sesion.dart';
 
@@ -146,6 +148,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AccesosPagina.ruta,
         builder: (context, estado) => const AccesosPagina(),
       ),
+      GoRoute(
+        path: PedidosPagina.ruta,
+        builder: (context, estado) => const PedidosPagina(),
+      ),
+      GoRoute(
+        path: NotasVentaPagina.ruta,
+        builder: (context, estado) => const NotasVentaPagina(),
+      ),
 
       for (final grupo in menuGrupos)
         for (final item in grupo.items)
@@ -166,7 +176,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != PrestamosPagina.ruta &&
               item.ruta != ConteosPagina.ruta &&
               item.ruta != ListasPreciosPagina.ruta &&
-              item.ruta != AccesosPagina.ruta)
+              item.ruta != AccesosPagina.ruta &&
+              item.ruta != PedidosPagina.ruta &&
+              item.ruta != NotasVentaPagina.ruta)
             GoRoute(
               path: item.ruta,
               builder: (context, estado) => AppShell(

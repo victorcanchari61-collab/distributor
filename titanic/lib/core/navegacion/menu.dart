@@ -165,11 +165,13 @@ const menuGrupos = <MenuGrupo>[
     items: [
       MenuItem(
         id: 'fact.pedidos',
+        pendiente: false,
         titulo: 'Pedidos',
         icono: Icons.list_alt_outlined,
       ),
       MenuItem(
         id: 'fact.notaventa',
+        pendiente: false,
         titulo: 'Notas de venta',
         icono: Icons.description_outlined,
       ),
