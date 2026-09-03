@@ -85,16 +85,19 @@ const menuGrupos = <MenuGrupo>[
     items: [
       MenuItem(
         id: 'compras.ordenes',
+        pendiente: false,
         titulo: 'Órdenes de compra',
         icono: Icons.list_alt_outlined,
       ),
       MenuItem(
         id: 'compras.compras',
+        pendiente: false,
         titulo: 'Mis compras',
         icono: Icons.shopping_bag_outlined,
       ),
       MenuItem(
         id: 'compras.recepciones',
+        pendiente: false,
         titulo: 'Recepciones',
         icono: Icons.check_box_outlined,
       ),
@@ -125,16 +128,19 @@ const menuGrupos = <MenuGrupo>[
       ),
       MenuItem(
         id: 'inv.ajustes',
+        pendiente: false,
         titulo: 'Ajustes de inventario',
         icono: Icons.fact_check_outlined,
       ),
       MenuItem(
         id: 'inv.transferencias',
+        pendiente: false,
         titulo: 'Transferencias',
         icono: Icons.local_shipping_outlined,
       ),
       MenuItem(
         id: 'inv.prestamos',
+        pendiente: false,
         titulo: 'Préstamos',
         icono: Icons.handshake_outlined,
       ),
@@ -146,6 +152,7 @@ const menuGrupos = <MenuGrupo>[
       ),
       MenuItem(
         id: 'inv.conteos',
+        pendiente: false,
         titulo: 'Conteos cíclicos',
         icono: Icons.fact_check_outlined,
       ),
@@ -168,6 +175,7 @@ const menuGrupos = <MenuGrupo>[
       ),
       MenuItem(
         id: 'fact.precios',
+        pendiente: false,
         titulo: 'Listas de precios',
         icono: Icons.payments_outlined,
       ),
@@ -178,6 +186,12 @@ const menuGrupos = <MenuGrupo>[
     titulo: 'Finanzas',
     icono: Icons.account_balance_outlined,
     items: [
+      MenuItem(
+        id: 'finanzas.metodospago',
+        pendiente: false,
+        titulo: 'Métodos de pago',
+        icono: Icons.payments_outlined,
+      ),
       MenuItem(
         id: 'finanzas.cobrar',
         titulo: 'Cuentas por cobrar',
@@ -306,6 +320,7 @@ const menuGrupos = <MenuGrupo>[
       ),
       MenuItem(
         id: 'config.accesos',
+        pendiente: false,
         titulo: 'Accesos',
         icono: Icons.verified_user_outlined,
       ),

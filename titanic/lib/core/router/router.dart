@@ -4,15 +4,25 @@ import 'package:go_router/go_router.dart';
 
 import '../../compartido/widgets/app_shell.dart';
 import '../../features/auth/estado/auth_controlador.dart';
+import '../../features/compras/vistas/mis_compras_pagina.dart';
+import '../../features/compras/vistas/ordenes_compra_pagina.dart';
+import '../../features/compras/vistas/recepciones_pagina.dart';
+import '../../features/config/vistas/accesos_pagina.dart';
 import '../../features/config/vistas/empresas_pagina.dart';
 import '../../features/config/vistas/roles_pagina.dart';
 import '../../features/config/vistas/usuarios_pagina.dart';
+import '../../features/facturacion/vistas/listas_precios_pagina.dart';
+import '../../features/finanzas/vistas/metodos_pago_pagina.dart';
 import '../../features/inicio/vistas/inicio_pagina.dart';
 import '../../features/inicio/vistas/pendiente_pagina.dart';
+import '../../features/inventario/vistas/ajustes_pagina.dart';
 import '../../features/inventario/vistas/almacenes_pagina.dart';
+import '../../features/inventario/vistas/conteos_pagina.dart';
 import '../../features/inventario/vistas/kardex_pagina.dart';
 import '../../features/inventario/vistas/lotes_pagina.dart';
+import '../../features/inventario/vistas/prestamos_pagina.dart';
 import '../../features/inventario/vistas/stock_pagina.dart';
+import '../../features/inventario/vistas/transferencias_pagina.dart';
 import '../../features/maestros/vistas/clientes_pagina.dart';
 import '../../features/maestros/vistas/productos_pagina.dart';
 import '../../features/maestros/vistas/proveedores_pagina.dart';
@@ -96,6 +106,46 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: EmpresasPagina.ruta,
         builder: (context, estado) => const EmpresasPagina(),
       ),
+      GoRoute(
+        path: MetodosPagoPagina.ruta,
+        builder: (context, estado) => const MetodosPagoPagina(),
+      ),
+      GoRoute(
+        path: OrdenesCompraPagina.ruta,
+        builder: (context, estado) => const OrdenesCompraPagina(),
+      ),
+      GoRoute(
+        path: MisComprasPagina.ruta,
+        builder: (context, estado) => const MisComprasPagina(),
+      ),
+      GoRoute(
+        path: RecepcionesPagina.ruta,
+        builder: (context, estado) => const RecepcionesPagina(),
+      ),
+      GoRoute(
+        path: AjustesPagina.ruta,
+        builder: (context, estado) => const AjustesPagina(),
+      ),
+      GoRoute(
+        path: TransferenciasPagina.ruta,
+        builder: (context, estado) => const TransferenciasPagina(),
+      ),
+      GoRoute(
+        path: PrestamosPagina.ruta,
+        builder: (context, estado) => const PrestamosPagina(),
+      ),
+      GoRoute(
+        path: ConteosPagina.ruta,
+        builder: (context, estado) => const ConteosPagina(),
+      ),
+      GoRoute(
+        path: ListasPreciosPagina.ruta,
+        builder: (context, estado) => const ListasPreciosPagina(),
+      ),
+      GoRoute(
+        path: AccesosPagina.ruta,
+        builder: (context, estado) => const AccesosPagina(),
+      ),
 
       for (final grupo in menuGrupos)
         for (final item in grupo.items)
@@ -106,7 +156,17 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != AlmacenesPagina.ruta &&
               item.ruta != StockPagina.ruta &&
               item.ruta != KardexPagina.ruta &&
-              item.ruta != LotesPagina.ruta)
+              item.ruta != LotesPagina.ruta &&
+              item.ruta != MetodosPagoPagina.ruta &&
+              item.ruta != OrdenesCompraPagina.ruta &&
+              item.ruta != MisComprasPagina.ruta &&
+              item.ruta != RecepcionesPagina.ruta &&
+              item.ruta != AjustesPagina.ruta &&
+              item.ruta != TransferenciasPagina.ruta &&
+              item.ruta != PrestamosPagina.ruta &&
+              item.ruta != ConteosPagina.ruta &&
+              item.ruta != ListasPreciosPagina.ruta &&
+              item.ruta != AccesosPagina.ruta)
             GoRoute(
               path: item.ruta,
               builder: (context, estado) => AppShell(

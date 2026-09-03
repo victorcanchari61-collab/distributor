@@ -91,6 +91,13 @@ class RolesControlador extends AsyncNotifier<List<Rol>> {
     });
     await recargar();
   }
+
+  Future<void> guardarPermisos(int rolId, List<RolPermiso> permisos) async {
+    await ref
+        .read(configApiProvider)
+        .actualizarPermisos(rolId, [for (final p in permisos) p.aCuerpo()]);
+    await recargar();
+  }
 }
 
 final rolesProvider = AsyncNotifierProvider<RolesControlador, List<Rol>>(

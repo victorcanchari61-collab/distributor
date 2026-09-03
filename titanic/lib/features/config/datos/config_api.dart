@@ -50,6 +50,13 @@ class ConfigApi {
         await _api.put('/rol/$id', cuerpo: cuerpo) as Map<String, dynamic>,
       );
 
+  /// PUT /api/rol/{id}/permisos. Manda la matriz completa del rol.
+  Future<Rol> actualizarPermisos(int id, List<Map<String, dynamic>> permisos) async =>
+      Rol.desdeJson(
+        await _api.put('/rol/$id/permisos', cuerpo: {'permisos': permisos})
+            as Map<String, dynamic>,
+      );
+
   // --- Consultas a SUNAT ---
 
   /// GET /api/consulta/ruc/{ruc}

@@ -39,6 +39,47 @@ class Usuario {
   );
 }
 
+/// Cuanto puede hacer un rol en un modulo del sistema.
+class RolPermiso {
+  const RolPermiso({
+    required this.modulo,
+    required this.ver,
+    required this.crear,
+    required this.editar,
+    required this.eliminar,
+  });
+
+  final String modulo;
+  final bool ver;
+  final bool crear;
+  final bool editar;
+  final bool eliminar;
+
+  RolPermiso copiar({bool? ver, bool? crear, bool? editar, bool? eliminar}) => RolPermiso(
+    modulo: modulo,
+    ver: ver ?? this.ver,
+    crear: crear ?? this.crear,
+    editar: editar ?? this.editar,
+    eliminar: eliminar ?? this.eliminar,
+  );
+
+  Map<String, dynamic> aCuerpo() => {
+    'modulo': modulo,
+    'ver': ver,
+    'crear': crear,
+    'editar': editar,
+    'eliminar': eliminar,
+  };
+
+  factory RolPermiso.desdeJson(Map<String, dynamic> json) => RolPermiso(
+    modulo: json['modulo'] as String? ?? '',
+    ver: json['ver'] as bool? ?? false,
+    crear: json['crear'] as bool? ?? false,
+    editar: json['editar'] as bool? ?? false,
+    eliminar: json['eliminar'] as bool? ?? false,
+  );
+}
+
 class Rol {
   const Rol({
     required this.id,
@@ -47,6 +88,7 @@ class Rol {
     required this.delSistema,
     required this.protegido,
     required this.usuarios,
+    required this.permisos,
     this.descripcion,
   });
 
@@ -65,6 +107,8 @@ class Rol {
   /// Cuantos usuarios lo tienen asignado.
   final int usuarios;
 
+  final List<RolPermiso> permisos;
+
   String get buscable => '$nombre ${descripcion ?? ''}'.toLowerCase();
 
   factory Rol.desdeJson(Map<String, dynamic> json) => Rol(
@@ -75,6 +119,9 @@ class Rol {
     delSistema: json['delSistema'] as bool? ?? false,
     protegido: json['protegido'] as bool? ?? false,
     usuarios: json['usuarios'] as int? ?? 0,
+    permisos: (json['permisos'] as List? ?? const [])
+        .map((e) => RolPermiso.desdeJson(e as Map<String, dynamic>))
+        .toList(),
   );
 }
 

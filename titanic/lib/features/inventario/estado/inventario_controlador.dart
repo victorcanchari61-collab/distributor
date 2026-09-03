@@ -2,10 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/estado/filtro_estado.dart';
 import '../../auth/estado/auth_controlador.dart';
+import '../../compras/estado/compras_controlador.dart';
 import '../datos/almacen.dart';
+import '../datos/documento_inventario.dart';
 import '../datos/inventario_api.dart';
 import '../datos/kardex.dart';
 import '../datos/lote.dart';
+import '../datos/motivo.dart';
+import '../datos/prestamo.dart';
 import '../datos/stock.dart';
 
 final inventarioApiProvider = Provider(
@@ -140,4 +144,221 @@ final lotesFiltradosProvider = Provider.autoDispose<List<Lote>>((ref) {
   final todos = ref.watch(lotesProvider).valueOrNull ?? const <Lote>[];
   final texto = ref.watch(busquedaLotesProvider).trim().toLowerCase();
   return todos.where((l) => texto.isEmpty || l.buscable.contains(texto)).toList();
+});
+
+// --- Recepciones ---
+
+final busquedaRecepcionesProvider = StateProvider.autoDispose((ref) => '');
+
+class RecepcionesControlador extends AsyncNotifier<List<DocumentoInventario>> {
+  @override
+  Future<List<DocumentoInventario>> build() =>
+      ref.watch(inventarioApiProvider).recepciones();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(inventarioApiProvider).recepciones(),
+    );
+  }
+
+  Future<void> crear(Map<String, dynamic> cuerpo) async {
+    await ref.read(inventarioApiProvider).crearRecepcion(cuerpo);
+    await recargar();
+    // La compra que se recibio cambia de estado (parcial/total): que la
+    // pantalla de Mis compras lo refleje sin salir y volver a entrar.
+    ref.invalidate(comprasProvider);
+  }
+
+  Future<void> anular(int id) async {
+    await ref.read(inventarioApiProvider).anularRecepcion(id);
+    await recargar();
+    ref.invalidate(comprasProvider);
+  }
+}
+
+final recepcionesProvider =
+    AsyncNotifierProvider<RecepcionesControlador, List<DocumentoInventario>>(
+      RecepcionesControlador.new,
+    );
+
+final recepcionesFiltradasProvider = Provider.autoDispose<List<DocumentoInventario>>((
+  ref,
+) {
+  final todas =
+      ref.watch(recepcionesProvider).valueOrNull ?? const <DocumentoInventario>[];
+  final texto = ref.watch(busquedaRecepcionesProvider).trim().toLowerCase();
+  return todas.where((d) => texto.isEmpty || d.buscable.contains(texto)).toList();
+});
+
+// --- Motivos ---
+
+final busquedaMotivosProvider = StateProvider.autoDispose((ref) => '');
+
+class MotivosControlador extends AsyncNotifier<List<Motivo>> {
+  @override
+  Future<List<Motivo>> build() => ref.watch(inventarioApiProvider).motivos();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => ref.read(inventarioApiProvider).motivos());
+  }
+
+  Future<void> guardar({int? id, required Map<String, dynamic> cuerpo}) async {
+    final api = ref.read(inventarioApiProvider);
+    if (id == null) {
+      await api.crearMotivo(cuerpo);
+    } else {
+      await api.actualizarMotivo(id, cuerpo);
+    }
+    await recargar();
+  }
+
+  Future<void> eliminar(int id) async {
+    await ref.read(inventarioApiProvider).eliminarMotivo(id);
+    await recargar();
+  }
+}
+
+final motivosProvider = AsyncNotifierProvider<MotivosControlador, List<Motivo>>(
+  MotivosControlador.new,
+);
+
+/// Motivos manuales y activos: los unicos que se ofrecen al armar un ajuste.
+/// Los del sistema (venta, compra...) no se eligen a mano.
+final motivosDisponiblesProvider = Provider.autoDispose<List<Motivo>>((ref) {
+  final todos = ref.watch(motivosProvider).valueOrNull ?? const <Motivo>[];
+  return todos.where((m) => !m.delSistema && m.activo).toList();
+});
+
+final motivosFiltradosProvider = Provider.autoDispose<List<Motivo>>((ref) {
+  final todos = ref.watch(motivosProvider).valueOrNull ?? const <Motivo>[];
+  final texto = ref.watch(busquedaMotivosProvider).trim().toLowerCase();
+  return todos
+      .where((m) => !m.delSistema)
+      .where((m) => texto.isEmpty || m.buscable.contains(texto))
+      .toList();
+});
+
+// --- Ajustes ---
+
+final busquedaAjustesProvider = StateProvider.autoDispose((ref) => '');
+
+class AjustesControlador extends AsyncNotifier<List<DocumentoInventario>> {
+  @override
+  Future<List<DocumentoInventario>> build() => ref.watch(inventarioApiProvider).ajustes();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => ref.read(inventarioApiProvider).ajustes());
+  }
+
+  Future<void> crear(Map<String, dynamic> cuerpo) async {
+    await ref.read(inventarioApiProvider).crearAjuste(cuerpo);
+    await recargar();
+  }
+
+  Future<void> anular(int id) async {
+    await ref.read(inventarioApiProvider).anularAjuste(id);
+    await recargar();
+  }
+}
+
+final ajustesProvider =
+    AsyncNotifierProvider<AjustesControlador, List<DocumentoInventario>>(
+      AjustesControlador.new,
+    );
+
+final ajustesFiltradosProvider = Provider.autoDispose<List<DocumentoInventario>>((ref) {
+  final todos = ref.watch(ajustesProvider).valueOrNull ?? const <DocumentoInventario>[];
+  final texto = ref.watch(busquedaAjustesProvider).trim().toLowerCase();
+  return todos.where((d) => texto.isEmpty || d.buscable.contains(texto)).toList();
+});
+
+// --- Transferencias ---
+
+final busquedaTransferenciasProvider = StateProvider.autoDispose((ref) => '');
+
+class TransferenciasControlador extends AsyncNotifier<List<DocumentoInventario>> {
+  @override
+  Future<List<DocumentoInventario>> build() =>
+      ref.watch(inventarioApiProvider).transferencias();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => ref.read(inventarioApiProvider).transferencias());
+  }
+
+  Future<void> crear(Map<String, dynamic> cuerpo) async {
+    await ref.read(inventarioApiProvider).crearTransferencia(cuerpo);
+    await recargar();
+  }
+
+  /// Mismo endpoint generico que Ajustes: no hay uno propio de transferencias.
+  Future<void> anular(int id) async {
+    await ref.read(inventarioApiProvider).anularAjuste(id);
+    await recargar();
+  }
+}
+
+final transferenciasProvider =
+    AsyncNotifierProvider<TransferenciasControlador, List<DocumentoInventario>>(
+      TransferenciasControlador.new,
+    );
+
+final transferenciasFiltradasProvider =
+    Provider.autoDispose<List<DocumentoInventario>>((ref) {
+      final todos =
+          ref.watch(transferenciasProvider).valueOrNull ?? const <DocumentoInventario>[];
+      final texto = ref.watch(busquedaTransferenciasProvider).trim().toLowerCase();
+      return todos.where((d) => texto.isEmpty || d.buscable.contains(texto)).toList();
+    });
+
+// --- Prestamos ---
+
+final busquedaPrestamosProvider = StateProvider.autoDispose((ref) => '');
+
+class PrestamosControlador extends AsyncNotifier<List<Prestamo>> {
+  @override
+  Future<List<Prestamo>> build() => ref.watch(inventarioApiProvider).prestamos();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => ref.read(inventarioApiProvider).prestamos());
+  }
+
+  Future<void> crear(Map<String, dynamic> cuerpo) async {
+    await ref.read(inventarioApiProvider).crearPrestamo(cuerpo);
+    await recargar();
+  }
+
+  Future<void> devolver(int id, Map<String, dynamic> cuerpo) async {
+    await ref.read(inventarioApiProvider).registrarDevolucion(id, cuerpo);
+    await recargar();
+  }
+}
+
+final prestamosProvider =
+    AsyncNotifierProvider<PrestamosControlador, List<Prestamo>>(
+      PrestamosControlador.new,
+    );
+
+final prestamosFiltradosProvider = Provider.autoDispose<List<Prestamo>>((ref) {
+  final todos = ref.watch(prestamosProvider).valueOrNull ?? const <Prestamo>[];
+  final texto = ref.watch(busquedaPrestamosProvider).trim().toLowerCase();
+  return todos.where((p) => texto.isEmpty || p.buscable.contains(texto)).toList();
+});
+
+// --- Conteos ciclicos ---
+//
+// No tiene documento ni endpoint propio: es un ajuste guiado. Su propio
+// almacen de contexto, separado del de la pantalla de Stock, para no
+// interferir con esa seleccion.
+
+final almacenConteoProvider = StateProvider.autoDispose<int?>((ref) => null);
+
+final stockConteoProvider = FutureProvider.autoDispose<List<Stock>>((ref) {
+  final almacenId = ref.watch(almacenConteoProvider);
+  if (almacenId == null) return Future.value(const []);
+  return ref.watch(inventarioApiProvider).stock(almacenId: almacenId);
 });
