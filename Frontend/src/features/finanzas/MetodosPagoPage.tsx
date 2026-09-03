@@ -33,13 +33,6 @@ const VACIO = {
   titular: '',
 }
 
-/** "BCP · 191-123456789", o solo el número si no tiene banco (billetera). */
-function textoCuenta(m: MetodoPagoResponse) {
-  if (m.tipo === 'EFECTIVO') return null
-  if (!m.numeroCuenta) return null
-  return m.banco ? `${m.banco} · ${m.numeroCuenta}` : m.numeroCuenta
-}
-
 /**
  * Métodos de pago: efectivo, billetera digital, transferencia... Catálogo
  * compartido por compras, cuentas por cobrar, cuentas por pagar, mis cobros y
@@ -170,9 +163,24 @@ export function MetodosPagoPage() {
       render: (row) => <Badge>{TIPOS.find((t) => t.value === row.tipo)?.label ?? row.tipo}</Badge>,
     },
     {
+      key: 'banco',
+      label: 'Banco',
+      render: (row) => row.banco ?? <span className="text-ink-soft">—</span>,
+    },
+    {
       key: 'numeroCuenta',
-      label: 'Cuenta',
-      render: (row) => textoCuenta(row) ?? <span className="text-ink-soft">—</span>,
+      label: 'Número',
+      render: (row) => row.numeroCuenta ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'cci',
+      label: 'CCI',
+      render: (row) => row.cci ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'titular',
+      label: 'Titular',
+      render: (row) => row.titular ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'activo',
