@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -192,12 +193,23 @@ class _TarjetaOrden extends StatelessWidget {
     CampoDetalle('Total', 'S/ ${orden.total.toStringAsFixed(2)}'),
     if (orden.usuario != null) CampoDetalle('Registrada por', orden.usuario),
     if (orden.observacion != null) CampoDetalle('Observación', orden.observacion),
+  ];
+
+  List<Widget> get _lineas => [
     for (final linea in orden.detalle)
-      CampoDetalle(
-        linea.producto,
-        '${formatoNumero(linea.cantidadPresentacion)} ${linea.presentacion ?? linea.unidadBase} · '
-        'S/ ${linea.costoTotal.toStringAsFixed(2)}',
-        enTarjeta: false,
+      LineaProductoTarjeta(
+        titulo: linea.producto,
+        subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
+        filas: [
+          [
+            ('Cant.', formatoNumero(linea.cantidadPresentacion)),
+            (
+              'Costo',
+              'S/ ${(linea.cantidadPresentacion == 0 ? 0 : linea.costoTotal / linea.cantidadPresentacion).toStringAsFixed(2)}',
+            ),
+            ('Subtotal', 'S/ ${linea.costoTotal.toStringAsFixed(2)}'),
+          ],
+        ],
       ),
   ];
 
@@ -251,6 +263,7 @@ class _TarjetaOrden extends StatelessWidget {
         tono: _tonoEstadoOrden(orden.estado),
       ),
       campos: _campos,
+      contenidoExtra: _lineas,
       acciones: [
         if (onConfirmar != null)
           AppBoton(

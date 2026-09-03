@@ -5,6 +5,7 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -85,12 +86,27 @@ class _TarjetaPrestamo extends StatelessWidget {
     CampoDetalle('Total', 'S/ ${prestamo.total.toStringAsFixed(2)}'),
     if (prestamo.usuario != null) CampoDetalle('Registrado por', prestamo.usuario),
     if (prestamo.observacion != null) CampoDetalle('Observación', prestamo.observacion),
+  ];
+
+  List<Widget> get _lineas => [
     for (final linea in prestamo.detalle)
-      CampoDetalle(
-        linea.producto,
-        '${formatoNumero(linea.cantidadPresentacion)} ${linea.presentacion ?? linea.unidadBase}'
-        '${linea.cantidadPendiente > 0 ? ' · pendiente ${formatoNumero(linea.cantidadPendiente)} ${linea.unidadBase}' : ''}',
-        enTarjeta: false,
+      LineaProductoTarjeta(
+        titulo: linea.producto,
+        subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
+        filas: [
+          [
+            ('Cant.', formatoNumero(linea.cantidadPresentacion)),
+            (
+              'Costo',
+              'S/ ${(linea.cantidadPresentacion == 0 ? 0 : linea.costoTotal / linea.cantidadPresentacion).toStringAsFixed(2)}',
+            ),
+            ('Subtotal', 'S/ ${linea.costoTotal.toStringAsFixed(2)}'),
+          ],
+          [
+            ('Devuelto', '${formatoNumero(linea.cantidadDevuelta)} ${linea.unidadBase}'),
+            ('Pendiente', '${formatoNumero(linea.cantidadPendiente)} ${linea.unidadBase}'),
+          ],
+        ],
       ),
   ];
 
@@ -127,6 +143,7 @@ class _TarjetaPrestamo extends StatelessWidget {
         tono: prestamo.estado == EstadoPrestamo.pendiente ? EtiquetaTono.aviso : EtiquetaTono.exito,
       ),
       campos: _campos,
+      contenidoExtra: _lineas,
       acciones: [
         if (onDevolver != null)
           AppBoton(

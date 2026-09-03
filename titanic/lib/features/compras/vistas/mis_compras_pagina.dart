@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -185,12 +186,27 @@ class _TarjetaCompra extends StatelessWidget {
     if (compra.ordenCompraNumero != null) CampoDetalle('Orden de compra', compra.ordenCompraNumero),
     if (compra.usuario != null) CampoDetalle('Registrada por', compra.usuario),
     if (compra.observacion != null) CampoDetalle('Observación', compra.observacion),
+  ];
+
+  List<Widget> get _lineas => [
     for (final linea in compra.detalle)
-      CampoDetalle(
-        linea.producto,
-        '${formatoNumero(linea.cantidadPresentacion)} ${linea.presentacion ?? linea.unidadBase} · '
-        'S/ ${linea.costoTotal.toStringAsFixed(2)}',
-        enTarjeta: false,
+      LineaProductoTarjeta(
+        titulo: linea.producto,
+        subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
+        filas: [
+          [
+            ('Cant.', formatoNumero(linea.cantidadPresentacion)),
+            (
+              'Costo',
+              'S/ ${(linea.cantidadPresentacion == 0 ? 0 : linea.costoTotal / linea.cantidadPresentacion).toStringAsFixed(2)}',
+            ),
+            ('Subtotal', 'S/ ${linea.costoTotal.toStringAsFixed(2)}'),
+          ],
+          [
+            ('Recibido', '${formatoNumero(linea.cantidadRecibida)} ${linea.unidadBase}'),
+            ('Pendiente', '${formatoNumero(linea.cantidadPendiente)} ${linea.unidadBase}'),
+          ],
+        ],
       ),
   ];
 
@@ -235,6 +251,7 @@ class _TarjetaCompra extends StatelessWidget {
         for (final pago in compra.pagos)
           CampoDetalle(pago.metodoPago, 'S/ ${pago.monto.toStringAsFixed(2)}'),
       ],
+      contenidoExtra: _lineas,
       acciones: [
         if (onRecibir != null)
           AppBoton(

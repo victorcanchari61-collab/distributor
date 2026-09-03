@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -123,15 +124,21 @@ class _TarjetaStock extends StatelessWidget {
       stock.costoActual == null ? null : 'S/ ${stock.costoActual!.toStringAsFixed(2)}',
     ),
     CampoDetalle('Valorizado', 'S/ ${stock.valorizado.toStringAsFixed(2)}'),
-    CampoDetalle(
-      'Capas de costo',
-      stock.capas.isEmpty
-          ? null
-          : stock.capas.length == 1
-          ? '1 capa'
-          : '${stock.capas.length} capas',
-      enTarjeta: false,
-    ),
+  ];
+
+  List<Widget> get _capas => [
+    for (var i = 0; i < stock.capas.length; i++)
+      LineaProductoTarjeta(
+        titulo: i == 0 ? 'Capa ${i + 1} (la que se consume ahora)' : 'Capa ${i + 1}',
+        subtitulo: _fecha(stock.capas[i].fecha),
+        filas: [
+          [
+            ('Disponible', '${formatoNumero(stock.capas[i].cantidadDisponible)} ${stock.unidadBase}'),
+            ('Costo unit.', 'S/ ${stock.capas[i].costoUnitario.toStringAsFixed(2)}'),
+            ('Valor', 'S/ ${stock.capas[i].valor.toStringAsFixed(2)}'),
+          ],
+        ],
+      ),
   ];
 
   @override
@@ -149,7 +156,11 @@ class _TarjetaStock extends StatelessWidget {
         titulo: stock.producto,
         subtitulo: stock.codigo,
         campos: _campos,
+        contenidoExtra: _capas,
       ),
     );
   }
 }
+
+String _fecha(DateTime f) =>
+    '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';

@@ -18,6 +18,9 @@ Future<void> mostrarDetalle(
   Widget? insignia,
   required List<CampoDetalle> campos,
   List<Widget> acciones = const [],
+  /// Contenido libre despues de los campos, como las tarjetas de producto de
+  /// una compra: no cabe en el formato etiqueta/valor de [CampoDetalle].
+  List<Widget> contenidoExtra = const [],
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -108,7 +111,16 @@ Future<void> mostrarDetalle(
                   horizontal: Dimen.espacio4,
                   vertical: Dimen.espacio3,
                 ),
-                children: [for (final campo in campos) FilaDato(campo)],
+                children: [
+                  for (final campo in campos) FilaDato(campo),
+                  if (contenidoExtra.isNotEmpty) ...[
+                    const SizedBox(height: Dimen.espacio2),
+                    for (final w in contenidoExtra) ...[
+                      w,
+                      const SizedBox(height: Dimen.espacio2),
+                    ],
+                  ],
+                ],
               ),
             ),
             if (acciones.isNotEmpty) ...[

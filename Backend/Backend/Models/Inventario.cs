@@ -111,6 +111,9 @@ public static class TipoDocumentoInventario
 
     /// <summary>Mercadería que llega contra una Compra. AlmacenId es donde entra.</summary>
     public const string Recepcion = "RECEPCION";
+
+    /// <summary>Mercadería que sale por una venta. AlmacenId es de donde sale.</summary>
+    public const string NotaVenta = "NOTA_VENTA";
 }
 
 /// <summary>
@@ -158,6 +161,10 @@ public class DocumentoInventario
     /// <summary>Solo en una recepción: la compra que se está descargando.</summary>
     public int? CompraId { get; set; }
     public Compra? Compra { get; set; }
+
+    /// <summary>Solo en una salida de venta: la nota de venta que descarga.</summary>
+    public int? NotaVentaId { get; set; }
+    public NotaVenta? NotaVenta { get; set; }
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
@@ -218,6 +225,13 @@ public class MovimientoInventario
     /// </summary>
     public int? CompraDetalleId { get; set; }
     public CompraDetalle? CompraDetalle { get; set; }
+
+    /// <summary>
+    /// Solo en una salida de venta: la línea de la nota de venta que este
+    /// movimiento descargó. Igual que CompraDetalleId, pero al revés.
+    /// </summary>
+    public int? NotaVentaDetalleId { get; set; }
+    public NotaVentaDetalle? NotaVentaDetalle { get; set; }
 
     public List<ConsumoCapa> Consumos { get; set; } = [];
 }
