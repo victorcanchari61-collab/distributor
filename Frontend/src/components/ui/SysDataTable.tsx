@@ -73,6 +73,8 @@ export interface SysDataTableProps<T> {
   cardIcon?: ComponentType<{ size?: number; className?: string; 'aria-hidden'?: boolean }>
   /** Columna de acciones en la tabla y botones de cada tarjeta en movil. */
   actions?: (row: T) => ReactNode
+  /** Si se pasa, toda la fila (y la tarjeta en movil) queda clickeable. */
+  onRowClick?: (row: T) => void
   className?: string
 }
 
@@ -197,6 +199,7 @@ export function SysDataTable<T>({
   pageSize = 30,
   cardIcon: CardIcon,
   actions,
+  onRowClick,
   className,
 }: SysDataTableProps<T>) {
   const [order, setOrder] = useState<string[]>(() => columns.map((c) => c.key))
@@ -686,7 +689,11 @@ export function SysDataTable<T>({
                 pageRows.map((row) => (
                   <tr
                     key={String((row as Row)[rowKey])}
-                    className="border-b border-zinc-100 transition-colors last:border-b-0 hover:bg-[rgb(var(--sys-rgb)/0.05)]"
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    className={cn(
+                      'border-b border-zinc-100 transition-colors last:border-b-0 hover:bg-[rgb(var(--sys-rgb)/0.05)]',
+                      onRowClick && 'cursor-pointer',
+                    )}
                   >
                     {visible.map((col) => (
                       <td
@@ -727,7 +734,11 @@ export function SysDataTable<T>({
             return (
               <div
                 key={String((row as Row)[rowKey])}
-                className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-zinc-200"
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={cn(
+                  'rounded-xl bg-white p-3 shadow-sm ring-1 ring-zinc-200 transition-colors',
+                  onRowClick && 'cursor-pointer active:bg-[rgb(var(--sys-rgb)/0.05)]',
+                )}
               >
                 {head && (
                   <div className="mb-2.5 flex items-start justify-between gap-2">

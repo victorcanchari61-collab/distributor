@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Building2, CheckCircle2, ClipboardList, Pencil, Plus, Search, Undo2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ClipboardList,
+  Pencil,
+  Plus,
+  ShoppingBag,
+  Undo2,
+} from 'lucide-react'
 import {
   Alert,
   Badge,
-  BuscadorModal,
+  BuscadorCampo,
   Button,
   Desplegable,
   Input,
@@ -16,7 +24,7 @@ import {
   TablaEditable,
   useConfirmacion,
 } from '../../components/ui'
-import type { ColumnaEditable, DataTableColumn } from '../../components/ui'
+import type { ColumnaEditable, DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
 import { productoApi, proveedorApi } from '../maestros'
@@ -51,7 +59,6 @@ export function OrdenesCompraPage() {
 
   const [editando, setEditando] = useState<OrdenCompraResponse | null>(null)
   const [detalleAbierto, setDetalleAbierto] = useState<OrdenCompraResponse | null>(null)
-  const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
 
@@ -61,8 +68,6 @@ export function OrdenesCompraPage() {
   const [filas, setFilas] = useState<FilaOrden[]>([{ ...FILA_VACIA }])
 
   const { confirmar, dialogo } = useConfirmacion()
-
-  const proveedor = proveedores.find((p) => p.id === proveedorId)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -274,21 +279,12 @@ export function OrdenesCompraPage() {
     },
   ]
 
-  const columnasProveedor: DataTableColumn<ProveedorResponse>[] = [
-    {
-      key: 'documento',
-      label: 'Documento',
-      render: (row) => (
-        <span className="flex items-center gap-2">
-          <span className="font-medium text-ink">{row.documento}</span>
-          <Badge>{row.tipoDoc}</Badge>
-        </span>
-      ),
-    },
-    { key: 'nombre', label: 'Razón social' },
-    { key: 'rubro', label: 'Rubro' },
-    { key: 'distrito', label: 'Distrito' },
-  ]
+  const opcionesProveedor: OpcionBuscador<number>[] = proveedores.map((p) => ({
+    item: p.id,
+    label: p.nombre,
+    detalle: p.documento,
+    nota: p.rubro ?? undefined,
+  }))
 
   const columns: DataTableColumn<OrdenCompraResponse>[] = [
     { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
@@ -334,19 +330,14 @@ export function OrdenesCompraPage() {
 
         <PageSection title="Datos generales">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <span className="ui-label mb-1.5 block">Proveedor</span>
-              <button
-                type="button"
-                onClick={() => setBuscadorAbierto(true)}
-                className="flex h-[var(--height-field-md)] w-full items-center justify-between gap-2 rounded-field border border-line px-3 text-left text-sm hover:bg-surface-alt"
-              >
-                <span className={proveedor ? 'text-ink' : 'text-ink-soft'}>
-                  {proveedor ? proveedor.nombre : 'Buscar proveedor...'}
-                </span>
-                <Search size={15} className="shrink-0 text-ink-soft" />
-              </button>
-            </div>
+            <BuscadorCampo
+              label="Proveedor"
+              value={proveedorId || null}
+              onChange={(id) => setProveedorId(id ?? 0)}
+              opciones={opcionesProveedor}
+              placeholder="Buscar proveedor..."
+              vacio="Ningún proveedor coincide"
+            />
 
             <Input
               label="Fecha esperada de entrega"
@@ -396,18 +387,6 @@ export function OrdenesCompraPage() {
           </Button>
         </div>
 
-        <BuscadorModal
-          open={buscadorAbierto}
-          onClose={() => setBuscadorAbierto(false)}
-          title="Elegir proveedor"
-          description="Busca por documento, razón social o rubro."
-          columns={columnasProveedor}
-          rows={proveedores}
-          cardIcon={Building2}
-          searchPlaceholder="Buscar proveedor..."
-          onSeleccionar={(p) => setProveedorId(p.id)}
-        />
-
         {dialogo}
       </div>
     )
@@ -456,8 +435,8 @@ export function OrdenesCompraPage() {
               <RowAction label={`Editar ${row.numero}`} onClick={() => abrirEdicion(row)}>
                 <Pencil size={15} />
               </RowAction>
-              <RowAction label={`Confirmar ${row.numero}`} onClick={() => confirmarOrden(row)}>
-                <CheckCircle2 size={15} />
+              <RowAction label={`Confirmar y convertir a compra ${row.numero}`} onClick={() => confirmarOrden(row)}>
+                <ShoppingBag size={15} />
               </RowAction>
               <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anularOrden(row)}>
                 <Undo2 size={15} />

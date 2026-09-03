@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react'
-import { PackageCheck, Search } from 'lucide-react'
 import {
   Alert,
   Badge,
-  BuscadorModal,
+  BuscadorCampo,
   Button,
   Desplegable,
   Input,
   Modal,
 } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import type { AlmacenResponse, CrearRecepcionRequest } from '../inventario'
 import { recepcionApi } from '../inventario'
@@ -41,7 +40,6 @@ export function NuevaRecepcionModal({
   onCreada,
 }: NuevaRecepcionModalProps) {
   const [compra, setCompra] = useState<CompraResponse | null>(compraFija ?? null)
-  const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [almacenId, setAlmacenId] = useState(0)
   const [observacion, setObservacion] = useState('')
   const [cantidades, setCantidades] = useState<Record<number, string>>({})
@@ -119,20 +117,12 @@ export function NuevaRecepcionModal({
     }
   }
 
-  const columnasCompra: DataTableColumn<CompraResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
-    { key: 'proveedor', label: 'Proveedor' },
-    {
-      key: 'estado',
-      label: 'Estado',
-      render: (row) => (
-        <Badge tone={row.estado === 'RECIBIDA_PARCIAL' ? 'warning' : 'neutral'}>
-          {row.estado === 'RECIBIDA_PARCIAL' ? 'Parcial' : 'Pendiente'}
-        </Badge>
-      ),
-    },
-    { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
-  ]
+  const opcionesCompra: OpcionBuscador<CompraResponse>[] = compras.map((c) => ({
+    item: c,
+    label: `${c.numero} · ${c.proveedor}`,
+    detalle: c.estado === 'RECIBIDA_PARCIAL' ? 'Parcial' : 'Pendiente',
+    nota: `S/ ${c.total.toFixed(2)}`,
+  }))
 
   return (
     <>
@@ -155,26 +145,24 @@ export function NuevaRecepcionModal({
         <div className="flex flex-col gap-4">
           {error && <Alert>{error}</Alert>}
 
-          <div>
-            <span className="ui-label mb-1.5 block">Compra</span>
-            {compraFija ? (
+          {compraFija ? (
+            <div>
+              <span className="ui-label mb-1.5 block">Compra</span>
               <div className="flex items-center gap-2 rounded-field border border-line px-3 py-2 text-sm">
                 <Badge>{compraFija.numero}</Badge>
                 <span className="text-ink">{compraFija.proveedor}</span>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setBuscadorAbierto(true)}
-                className="flex h-[var(--height-field-md)] w-full items-center justify-between gap-2 rounded-field border border-line px-3 text-left text-sm hover:bg-surface-alt"
-              >
-                <span className={compra ? 'text-ink' : 'text-ink-soft'}>
-                  {compra ? `${compra.numero} · ${compra.proveedor}` : 'Buscar compra...'}
-                </span>
-                <Search size={15} className="shrink-0 text-ink-soft" />
-              </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <BuscadorCampo
+              label="Compra"
+              value={compra}
+              onChange={(c) => c && elegirCompra(c)}
+              opciones={opcionesCompra}
+              placeholder="Buscar compra..."
+              vacio="Ninguna compra coincide"
+            />
+          )}
 
           <Desplegable
             label="Almacén de destino"
@@ -241,20 +229,6 @@ export function NuevaRecepcionModal({
           )}
         </div>
       </Modal>
-
-      {!compraFija && (
-        <BuscadorModal
-          open={buscadorAbierto}
-          onClose={() => setBuscadorAbierto(false)}
-          title="Elegir compra"
-          description="Solo las que aún tienen algo pendiente de recibir."
-          columns={columnasCompra}
-          rows={compras}
-          cardIcon={PackageCheck}
-          searchPlaceholder="Buscar por número, proveedor..."
-          onSeleccionar={elegirCompra}
-        />
-      )}
     </>
   )
 }

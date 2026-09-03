@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Building2, PackageCheck, Plus, Search, ShoppingBag, Undo2 } from 'lucide-react'
+import { ArrowLeft, PackageCheck, Plus, ShoppingBag, Undo2 } from 'lucide-react'
 import {
   Alert,
   Badge,
-  BuscadorModal,
+  BuscadorCampo,
   Button,
   Desplegable,
   Input,
@@ -16,7 +16,7 @@ import {
   TablaEditable,
   useConfirmacion,
 } from '../../components/ui'
-import type { ColumnaEditable, DataTableColumn } from '../../components/ui'
+import type { ColumnaEditable, DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
 import { productoApi, proveedorApi } from '../maestros'
@@ -53,7 +53,6 @@ export function MisComprasPage() {
   const [error, setError] = useState('')
 
   const [detalleAbierto, setDetalleAbierto] = useState<CompraResponse | null>(null)
-  const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [recepcionAbierta, setRecepcionAbierta] = useState<CompraResponse | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -63,8 +62,6 @@ export function MisComprasPage() {
   const [filas, setFilas] = useState<FilaCompra[]>([{ ...FILA_VACIA }])
 
   const { confirmar, dialogo } = useConfirmacion()
-
-  const proveedor = proveedores.find((p) => p.id === proveedorId)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -231,21 +228,12 @@ export function MisComprasPage() {
     },
   ]
 
-  const columnasProveedor: DataTableColumn<ProveedorResponse>[] = [
-    {
-      key: 'documento',
-      label: 'Documento',
-      render: (row) => (
-        <span className="flex items-center gap-2">
-          <span className="font-medium text-ink">{row.documento}</span>
-          <Badge>{row.tipoDoc}</Badge>
-        </span>
-      ),
-    },
-    { key: 'nombre', label: 'Razón social' },
-    { key: 'rubro', label: 'Rubro' },
-    { key: 'distrito', label: 'Distrito' },
-  ]
+  const opcionesProveedor: OpcionBuscador<number>[] = proveedores.map((p) => ({
+    item: p.id,
+    label: p.nombre,
+    detalle: p.documento,
+    nota: p.rubro ?? undefined,
+  }))
 
   const columns: DataTableColumn<CompraResponse>[] = [
     { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
@@ -304,19 +292,15 @@ export function MisComprasPage() {
         {errorForm && <Alert>{errorForm}</Alert>}
 
         <PageSection title="Datos generales">
-          <div>
-            <span className="ui-label mb-1.5 block">Proveedor</span>
-            <button
-              type="button"
-              onClick={() => setBuscadorAbierto(true)}
-              className="flex h-[var(--height-field-md)] w-full items-center justify-between gap-2 rounded-field border border-line px-3 text-left text-sm hover:bg-surface-alt sm:w-1/2"
-            >
-              <span className={proveedor ? 'text-ink' : 'text-ink-soft'}>
-                {proveedor ? proveedor.nombre : 'Buscar proveedor...'}
-              </span>
-              <Search size={15} className="shrink-0 text-ink-soft" />
-            </button>
-          </div>
+          <BuscadorCampo
+            className="sm:w-1/2"
+            label="Proveedor"
+            value={proveedorId || null}
+            onChange={(id) => setProveedorId(id ?? 0)}
+            opciones={opcionesProveedor}
+            placeholder="Buscar proveedor..."
+            vacio="Ningún proveedor coincide"
+          />
 
           <Input
             className="mt-4"
@@ -357,17 +341,6 @@ export function MisComprasPage() {
           </Button>
         </div>
 
-        <BuscadorModal
-          open={buscadorAbierto}
-          onClose={() => setBuscadorAbierto(false)}
-          title="Elegir proveedor"
-          description="Busca por documento, razón social o rubro."
-          columns={columnasProveedor}
-          rows={proveedores}
-          cardIcon={Building2}
-          searchPlaceholder="Buscar proveedor..."
-          onSeleccionar={(p) => setProveedorId(p.id)}
-        />
       </div>
     )
   }
