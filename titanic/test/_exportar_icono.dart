@@ -31,7 +31,7 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     final boundary =
         key.currentContext!.findRenderObject() as RenderRepaintBoundary;

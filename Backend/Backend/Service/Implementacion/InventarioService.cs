@@ -734,12 +734,15 @@ public class InventarioService : IInventarioService
             // la mitad de las lineas.
             var eraEntrada = m.Tipo == TipoMovimiento.Entrada;
 
-            // Una recepción anulada se tipifica distinto (COMPRA_ANULADA en vez
-            // de COMPRA): son movimientos de sentido contrario y conviene poder
-            // distinguirlos en el kardex, igual que ya estaba sembrado el motivo.
+            // Una recepción o una venta anulada se tipifican distinto
+            // (COMPRA_ANULADA, VENTA_ANULADA) en vez del motivo original: son
+            // movimientos de sentido contrario y conviene poder distinguirlos
+            // en el kardex, igual que ya estaba sembrado el motivo.
             var motivoEspejoId = m.CompraDetalleId is not null
                 ? Motivos.CompraAnulada
-                : m.MotivoId;
+                : m.NotaVentaDetalleId is not null
+                    ? Motivos.VentaAnulada
+                    : m.MotivoId;
 
             var espejo = new MovimientoInventario
             {
@@ -829,6 +832,7 @@ public class InventarioService : IInventarioService
         {
             TipoDocumentoInventario.Transferencia => "transferencias",
             TipoDocumentoInventario.Recepcion => "recepciones",
+            TipoDocumentoInventario.NotaVenta => "notasventa",
             _ => "ajustes"
         };
         await _notificador.AvisarAsync(modulo, "anulado", response);
@@ -952,6 +956,67 @@ public class InventarioService : IInventarioService
         await _notificador.AvisarAsync("stock", "cambio", new { almacenId = almacen.Id });
         await _notificador.AvisarAsync("kardex", "cambio", new { almacenId = almacen.Id });
         return creada;
+    }
+
+    // ------------------------------------------------------------------ Ventas
+
+    public async Task<DocumentoInventarioResponse> CrearSalidaVentaAsync(NotaVenta notaVenta, int? usuarioId)
+    {
+        var almacen = await GetAlmacenOrThrowAsync(notaVenta.AlmacenId);
+        var motivo = await GetMotivoOrThrowAsync(Motivos.Venta);
+        var fecha = notaVenta.Fecha;
+
+        var documento = new DocumentoInventario
+        {
+            Numero = await _repository.SiguienteNumeroAsync(TipoDocumentoInventario.NotaVenta),
+            Tipo = TipoDocumentoInventario.NotaVenta,
+            AlmacenId = almacen.Id,
+            MotivoId = motivo.Id,
+            NotaVentaId = notaVenta.Id,
+            Fecha = fecha,
+            Estado = EstadoDocumento.Confirmado,
+            UsuarioId = usuarioId
+        };
+
+        await using var transaccion = await _repository.IniciarTransaccionAsync();
+
+        await _repository.AddDocumentoAsync(documento);
+        await _repository.GuardarAsync();
+
+        foreach (var linea in notaVenta.Detalle)
+        {
+            var producto = await _productos.GetConDetalleAsync(linea.ProductoId)
+                ?? throw new BadRequestException($"No existe el producto {linea.ProductoId}");
+
+            var movimiento = new MovimientoInventario
+            {
+                DocumentoId = documento.Id,
+                ProductoId = producto.Id,
+                AlmacenId = almacen.Id,
+                MotivoId = motivo.Id,
+                Tipo = motivo.Tipo,
+                PresentacionId = linea.PresentacionId,
+                CantidadPresentacion = linea.CantidadPresentacion,
+                Cantidad = linea.Cantidad,
+                Fecha = fecha,
+                NotaVentaDetalleId = linea.Id
+            };
+
+            await _repository.AddDocumentoMovimientoAsync(movimiento);
+            await _repository.GuardarAsync();
+
+            // El costo NO se declara: sale de las capas que se consumen, mas
+            // antiguas primero — la venta se lleva lo que ya estaba, no lo que
+            // se cobra por ella.
+            await ConsumirAsync(movimiento, producto, almacen.Id, linea.Cantidad);
+        }
+
+        await transaccion.CommitAsync();
+
+        var creado = await GetDocumentoAsync(documento.Id);
+        await _notificador.AvisarAsync("stock", "cambio", new { almacenId = almacen.Id });
+        await _notificador.AvisarAsync("kardex", "cambio", new { almacenId = almacen.Id });
+        return creado;
     }
 
     // ------------------------------------------------------------ Auxiliares

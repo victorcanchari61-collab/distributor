@@ -1,5 +1,6 @@
 using Backend.Dtos.Requests;
 using Backend.Dtos.Responses;
+using Backend.Models;
 
 namespace Backend.Service.Interfaces;
 
@@ -80,4 +81,13 @@ public interface IInventarioService
     /// </summary>
     Task<DocumentoInventarioResponse> CrearRecepcionAsync(
         CrearRecepcionRequest request, int? usuarioId);
+
+    // --- Ventas ---
+
+    /// <summary>
+    /// Descuenta el stock de una NotaVenta ya guardada (con su Detalle
+    /// cargado), con motivo del sistema "Venta": consume las capas más
+    /// antiguas primero, igual que cualquier otra salida.
+    /// </summary>
+    Task<DocumentoInventarioResponse> CrearSalidaVentaAsync(NotaVenta notaVenta, int? usuarioId);
 }

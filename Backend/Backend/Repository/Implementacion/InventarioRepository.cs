@@ -182,6 +182,7 @@ public class InventarioRepository : IInventarioRepository
             TipoDocumentoInventario.Prestamo => "PR",
             TipoDocumentoInventario.DevolucionPrestamo => "DP",
             TipoDocumentoInventario.Recepcion => "RC",
+            TipoDocumentoInventario.NotaVenta => "SV",
             _ => "AJ"
         };
 

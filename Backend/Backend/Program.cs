@@ -61,6 +61,7 @@ builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
 builder.Services.AddScoped<IListaPrecioRepository, ListaPrecioRepository>();
 builder.Services.AddScoped<IInventarioRepository, InventarioRepository>();
 builder.Services.AddScoped<IComprasRepository, ComprasRepository>();
+builder.Services.AddScoped<IVentasRepository, VentasRepository>();
 builder.Services.AddScoped<IFinanzasRepository, FinanzasRepository>();
 
 builder.Services.AddScoped<IClienteService, ClienteService>();
@@ -73,6 +74,7 @@ builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IListaPrecioService, ListaPrecioService>();
 builder.Services.AddScoped<IInventarioService, InventarioService>();
 builder.Services.AddScoped<IComprasService, ComprasService>();
+builder.Services.AddScoped<IVentasService, VentasService>();
 builder.Services.AddScoped<IFinanzasService, FinanzasService>();
 
 // Consulta de RUC y DNI: se llama al proveedor desde el backend para no

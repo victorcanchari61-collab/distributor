@@ -36,6 +36,11 @@ public class AppDbContext : DbContext
     public DbSet<CompraDetalle> CompraDetalles => Set<CompraDetalle>();
     public DbSet<CompraPago> CompraPagos => Set<CompraPago>();
     public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
+    public DbSet<Pedido> Pedidos => Set<Pedido>();
+    public DbSet<PedidoDetalle> PedidoDetalles => Set<PedidoDetalle>();
+    public DbSet<NotaVenta> NotasVenta => Set<NotaVenta>();
+    public DbSet<NotaVentaDetalle> NotaVentaDetalles => Set<NotaVentaDetalle>();
+    public DbSet<PagoVenta> PagosVenta => Set<PagoVenta>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,6 +49,7 @@ public class AppDbContext : DbContext
         ConfigurarCatalogo(modelBuilder);
         ConfigurarInventario(modelBuilder);
         ConfigurarCompras(modelBuilder);
+        ConfigurarVentas(modelBuilder);
         ConfigurarFinanzas(modelBuilder);
 
         modelBuilder.Entity<Rol>(entity =>
@@ -411,6 +417,8 @@ public class AppDbContext : DbContext
                 .HasForeignKey(d => d.DocumentoAnuladoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(d => d.Compra).WithMany()
                 .HasForeignKey(d => d.CompraId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.NotaVenta).WithMany()
+                .HasForeignKey(d => d.NotaVentaId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<MovimientoInventario>(entity =>
@@ -438,6 +446,8 @@ public class AppDbContext : DbContext
                 .HasForeignKey(m => m.PresentacionId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(m => m.CompraDetalle).WithMany()
                 .HasForeignKey(m => m.CompraDetalleId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(m => m.NotaVentaDetalle).WithMany()
+                .HasForeignKey(m => m.NotaVentaDetalleId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CapaCosto>(entity =>
@@ -585,6 +595,85 @@ public class AppDbContext : DbContext
 
             entity.HasOne(p => p.Compra).WithMany(c => c.Pagos)
                 .HasForeignKey(p => p.CompraId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(p => p.MetodoPago).WithMany()
+                .HasForeignKey(p => p.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static void ConfigurarVentas(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Pedido>(entity =>
+        {
+            entity.ToTable("Pedidos");
+            entity.HasIndex(p => p.Numero).IsUnique();
+            entity.Property(p => p.Numero).HasMaxLength(20).IsRequired();
+            entity.Property(p => p.Estado).HasMaxLength(15).IsRequired();
+            entity.Property(p => p.Observacion).HasMaxLength(250);
+
+            entity.HasOne(p => p.Cliente).WithMany()
+                .HasForeignKey(p => p.ClienteId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.ListaPrecio).WithMany()
+                .HasForeignKey(p => p.ListaPrecioId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.Usuario).WithMany()
+                .HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PedidoDetalle>(entity =>
+        {
+            entity.ToTable("PedidoDetalle");
+            entity.Property(d => d.CantidadPresentacion).HasPrecision(18, 4);
+            entity.Property(d => d.Cantidad).HasPrecision(18, 4);
+            entity.Property(d => d.PrecioUnitario).HasPrecision(18, 4);
+
+            entity.HasOne(d => d.Pedido).WithMany(p => p.Detalle)
+                .HasForeignKey(d => d.PedidoId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(d => d.Producto).WithMany()
+                .HasForeignKey(d => d.ProductoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Presentacion).WithMany()
+                .HasForeignKey(d => d.PresentacionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<NotaVenta>(entity =>
+        {
+            entity.ToTable("NotasVenta");
+            entity.HasIndex(n => n.Numero).IsUnique();
+            entity.Property(n => n.Numero).HasMaxLength(20).IsRequired();
+            entity.Property(n => n.Estado).HasMaxLength(15).IsRequired();
+            entity.Property(n => n.FormaPago).HasMaxLength(10).IsRequired();
+            entity.Property(n => n.Observacion).HasMaxLength(250);
+
+            entity.HasOne(n => n.Cliente).WithMany()
+                .HasForeignKey(n => n.ClienteId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(n => n.Pedido).WithMany()
+                .HasForeignKey(n => n.PedidoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(n => n.Almacen).WithMany()
+                .HasForeignKey(n => n.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(n => n.Usuario).WithMany()
+                .HasForeignKey(n => n.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<NotaVentaDetalle>(entity =>
+        {
+            entity.ToTable("NotaVentaDetalle");
+            entity.Property(d => d.CantidadPresentacion).HasPrecision(18, 4);
+            entity.Property(d => d.Cantidad).HasPrecision(18, 4);
+            entity.Property(d => d.PrecioUnitario).HasPrecision(18, 4);
+
+            entity.HasOne(d => d.NotaVenta).WithMany(n => n.Detalle)
+                .HasForeignKey(d => d.NotaVentaId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(d => d.Producto).WithMany()
+                .HasForeignKey(d => d.ProductoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Presentacion).WithMany()
+                .HasForeignKey(d => d.PresentacionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PagoVenta>(entity =>
+        {
+            entity.ToTable("PagoVenta");
+            entity.Property(p => p.Monto).HasPrecision(18, 4);
+
+            entity.HasOne(p => p.NotaVenta).WithMany(n => n.Pagos)
+                .HasForeignKey(p => p.NotaVentaId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(p => p.MetodoPago).WithMany()
                 .HasForeignKey(p => p.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
         });
