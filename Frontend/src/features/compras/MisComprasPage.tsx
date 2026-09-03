@@ -91,7 +91,9 @@ export function MisComprasPage() {
   const [serieComprobante, setSerieComprobante] = useState('')
   const [numeroComprobante, setNumeroComprobante] = useState('')
   const [formaPago, setFormaPago] = useState<FormaPagoCompra>('CONTADO')
-  const [metodoPagoId, setMetodoPagoId] = useState(0)
+  const [pagos, setPagos] = useState<{ metodoPagoId: number; monto: string }[]>([])
+  const [pagoMetodoId, setPagoMetodoId] = useState(0)
+  const [pagoMonto, setPagoMonto] = useState('')
   const [observacion, setObservacion] = useState('')
   const [filas, setFilas] = useState<FilaCompra[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
@@ -138,7 +140,9 @@ export function MisComprasPage() {
     setSerieComprobante('')
     setNumeroComprobante('')
     setFormaPago('CONTADO')
-    setMetodoPagoId(0)
+    setPagos([])
+    setPagoMetodoId(0)
+    setPagoMonto('')
     setObservacion('')
     setFilas([])
     setErrorForm('')
@@ -147,6 +151,16 @@ export function MisComprasPage() {
 
   const actualizarFila = (id: string, cambio: Partial<FilaCompra>) =>
     setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
+
+  /** Un pago mixto: cada línea marca la fila y limpia los campos, igual que agregar un producto. */
+  const agregarPago = () => {
+    if (!pagoMetodoId || !pagoMonto || Number(pagoMonto) <= 0) return
+    setPagos((prev) => [...prev, { metodoPagoId: pagoMetodoId, monto: pagoMonto }])
+    setPagoMetodoId(0)
+    setPagoMonto('')
+  }
+
+  const quitarPago = (i: number) => setPagos((prev) => prev.filter((_, idx) => idx !== i))
 
   const guardar = async () => {
     if (!proveedorId) return setErrorForm('Elige el proveedor.')
@@ -161,7 +175,7 @@ export function MisComprasPage() {
       serieComprobante: serieComprobante.trim() || null,
       numeroComprobante: numeroComprobante.trim() || null,
       formaPago,
-      metodoPagoId: metodoPagoId || null,
+      pagos: pagos.map((p) => ({ metodoPagoId: p.metodoPagoId, monto: Number(p.monto) })),
       observacion: observacion.trim() || null,
       detalle: validas.map((f) => ({
         productoId: f.productoId,
@@ -457,24 +471,71 @@ export function MisComprasPage() {
                 onChange={(e) => setFecha(e.target.value)}
               />
 
-              <div className="mt-4 grid grid-cols-2 gap-4">
-                <Desplegable
-                  label="Forma de pago"
-                  value={formaPago}
-                  onChange={(v) => setFormaPago(v as FormaPagoCompra)}
-                  options={FORMAS_PAGO}
-                />
-                <Desplegable
-                  label="Instrumento de pago"
-                  optional
-                  placeholder="Seleccione una opción"
-                  value={metodoPagoId}
-                  onChange={(v) => setMetodoPagoId(Number(v))}
-                  options={[
-                    { value: 0, label: 'Sin especificar' },
-                    ...metodosPago.map((m) => ({ value: m.id, label: m.nombre })),
-                  ]}
-                />
+              <Desplegable
+                className="mt-4"
+                label="Forma de pago"
+                value={formaPago}
+                onChange={(v) => setFormaPago(v as FormaPagoCompra)}
+                options={FORMAS_PAGO}
+              />
+
+              {/* Pago mixto: se puede repartir el total entre varios métodos
+                  (parte en efectivo, parte por Yape), agregando una línea a
+                  la vez — igual que se agrega un producto. */}
+              <div className="mt-4">
+                <span className="ui-label mb-1.5 block">
+                  Pagos <span className="font-normal text-ink-soft">(opcional)</span>
+                </span>
+                <div className="flex gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Desplegable
+                      value={pagoMetodoId}
+                      onChange={(v) => setPagoMetodoId(Number(v))}
+                      placeholder="Método"
+                      options={metodosPago.map((m) => ({ value: m.id, label: m.nombre }))}
+                    />
+                  </div>
+                  <div className="w-28 shrink-0">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Monto"
+                      value={pagoMonto}
+                      onChange={(e) => setPagoMonto(e.target.value)}
+                    />
+                  </div>
+                  <Button type="button" size="sm" variant="secondary" onClick={agregarPago}>
+                    <Plus size={15} />
+                  </Button>
+                </div>
+
+                {pagos.length > 0 && (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {pagos.map((p, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between rounded-field border border-line px-3 py-1.5 text-sm"
+                      >
+                        <span>{metodosPago.find((m) => m.id === p.metodoPagoId)?.nombre ?? '—'}</span>
+                        <span className="flex items-center gap-2">
+                          S/ {(Number(p.monto) || 0).toFixed(2)}
+                          <button
+                            type="button"
+                            onClick={() => quitarPago(i)}
+                            aria-label="Quitar pago"
+                            className="text-ink-soft transition-colors hover:text-red-600"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </span>
+                      </div>
+                    ))}
+                    <div className="mt-0.5 text-right text-xs text-ink-soft">
+                      Pagado: S/ {pagos.reduce((n, p) => n + (Number(p.monto) || 0), 0).toFixed(2)} de S/{' '}
+                      {total.toFixed(2)}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <Input
@@ -586,9 +647,11 @@ export function MisComprasPage() {
             <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
               <Badge>{textoComprobante(detalleAbierto)}</Badge>
               <Badge>{FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago}</Badge>
-              {detalleAbierto.metodoPago && (
-                <Badge>{detalleAbierto.metodoPago}</Badge>
-              )}
+              {detalleAbierto.pagos.map((p) => (
+                <Badge key={p.id}>
+                  {p.metodoPago} · S/ {p.monto.toFixed(2)}
+                </Badge>
+              ))}
             </div>
             <ul className="flex flex-col gap-2">
               {detalleAbierto.detalle.map((l) => (

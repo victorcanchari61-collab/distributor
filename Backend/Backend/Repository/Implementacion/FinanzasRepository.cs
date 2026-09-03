@@ -49,5 +49,5 @@ public class FinanzasRepository : IFinanzasRepository
     }
 
     public async Task<int> ContarUsosMetodoPagoAsync(int metodoPagoId) =>
-        await _context.Compras.CountAsync(c => c.MetodoPagoId == metodoPagoId);
+        await _context.CompraPagos.CountAsync(p => p.MetodoPagoId == metodoPagoId);
 }

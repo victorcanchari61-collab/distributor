@@ -110,7 +110,7 @@ public class ComprasRepository : IComprasRepository
             .Include(c => c.Proveedor)
             .Include(c => c.OrdenCompra)
             .Include(c => c.Usuario)
-            .Include(c => c.MetodoPago)
+            .Include(c => c.Pagos).ThenInclude(p => p.MetodoPago)
             .Include(c => c.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(c => c.Detalle).ThenInclude(d => d.Presentacion);
 

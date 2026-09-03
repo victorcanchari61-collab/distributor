@@ -34,6 +34,7 @@ public class AppDbContext : DbContext
     public DbSet<OrdenCompraDetalle> OrdenCompraDetalles => Set<OrdenCompraDetalle>();
     public DbSet<Compra> Compras => Set<Compra>();
     public DbSet<CompraDetalle> CompraDetalles => Set<CompraDetalle>();
+    public DbSet<CompraPago> CompraPagos => Set<CompraPago>();
     public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -559,8 +560,6 @@ public class AppDbContext : DbContext
                 .HasForeignKey(c => c.OrdenCompraId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(c => c.Usuario).WithMany()
                 .HasForeignKey(c => c.UsuarioId).OnDelete(DeleteBehavior.SetNull);
-            entity.HasOne(c => c.MetodoPago).WithMany()
-                .HasForeignKey(c => c.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CompraDetalle>(entity =>
@@ -577,6 +576,17 @@ public class AppDbContext : DbContext
                 .HasForeignKey(d => d.ProductoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(d => d.Presentacion).WithMany()
                 .HasForeignKey(d => d.PresentacionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CompraPago>(entity =>
+        {
+            entity.ToTable("CompraPago");
+            entity.Property(p => p.Monto).HasPrecision(18, 4);
+
+            entity.HasOne(p => p.Compra).WithMany(c => c.Pagos)
+                .HasForeignKey(p => p.CompraId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(p => p.MetodoPago).WithMany()
+                .HasForeignKey(p => p.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 

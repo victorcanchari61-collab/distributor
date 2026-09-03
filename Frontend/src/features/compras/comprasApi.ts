@@ -77,6 +77,19 @@ export interface CompraDetalleResponse extends LineaCompraResponse {
   cantidadPendiente: number
 }
 
+/** Un pago parcial: un método del catálogo y cuánto se pagó con él. */
+export interface PagoCompraResponse {
+  id: number
+  metodoPagoId: number
+  metodoPago: string
+  monto: number
+}
+
+export interface PagoCompraRequest {
+  metodoPagoId: number
+  monto: number
+}
+
 export interface CompraResponse {
   id: number
   numero: string
@@ -90,12 +103,14 @@ export interface CompraResponse {
   serieComprobante: string | null
   numeroComprobante: string | null
   formaPago: FormaPagoCompra
-  metodoPagoId: number | null
-  metodoPago: string | null
   observacion: string | null
   usuario: string | null
   total: number
   detalle: CompraDetalleResponse[]
+  /** Puede ser más de un método — un pago mixto. */
+  pagos: PagoCompraResponse[]
+  /** Suma de pagos. Si es menor que total, falta esa diferencia por pagar. */
+  totalPagado: number
 }
 
 export interface CrearCompraRequest {
@@ -105,7 +120,8 @@ export interface CrearCompraRequest {
   serieComprobante?: string | null
   numeroComprobante?: string | null
   formaPago?: FormaPagoCompra | null
-  metodoPagoId?: number | null
+  /** Pago mixto: una línea por método usado, o ninguna si todavía no se paga nada. */
+  pagos?: PagoCompraRequest[]
   observacion?: string | null
   detalle: LineaCompraRequest[]
 }

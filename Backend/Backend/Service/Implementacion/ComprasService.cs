@@ -197,7 +197,6 @@ public class ComprasService : IComprasService
             FormaPago = string.IsNullOrWhiteSpace(request.FormaPago)
                 ? FormaPagoCompra.Contado
                 : request.FormaPago,
-            MetodoPagoId = request.MetodoPagoId,
             Observacion = Limpiar(request.Observacion),
             UsuarioId = usuarioId
         };
@@ -211,6 +210,12 @@ public class ComprasService : IComprasService
             Cantidad = l.Cantidad,
             CostoUnitario = l.CostoUnitario,
             CantidadRecibida = 0
+        }).ToList();
+
+        compra.Pagos = request.Pagos.Select(p => new CompraPago
+        {
+            MetodoPagoId = p.MetodoPagoId,
+            Monto = p.Monto
         }).ToList();
 
         await _repository.AddCompraAsync(compra);
@@ -369,11 +374,19 @@ public class ComprasService : IComprasService
         SerieComprobante = c.SerieComprobante,
         NumeroComprobante = c.NumeroComprobante,
         FormaPago = c.FormaPago,
-        MetodoPagoId = c.MetodoPagoId,
-        MetodoPago = c.MetodoPago?.Nombre,
         Observacion = c.Observacion,
         Usuario = c.Usuario?.Nombre,
         Total = Math.Round(c.Detalle.Sum(d => d.Cantidad * d.CostoUnitario), 2),
-        Detalle = c.Detalle.Select(MapCompraDetalle).ToList()
+        Detalle = c.Detalle.Select(MapCompraDetalle).ToList(),
+        Pagos = c.Pagos.Select(MapPago).ToList(),
+        TotalPagado = Math.Round(c.Pagos.Sum(p => p.Monto), 2)
+    };
+
+    private static PagoCompraResponse MapPago(CompraPago p) => new()
+    {
+        Id = p.Id,
+        MetodoPagoId = p.MetodoPagoId,
+        MetodoPago = p.MetodoPago?.Nombre ?? string.Empty,
+        Monto = p.Monto
     };
 }

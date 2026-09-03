@@ -137,10 +137,6 @@ public class Compra
     /// <summary>CONTADO o CREDITO.</summary>
     public string FormaPago { get; set; } = FormaPagoCompra.Contado;
 
-    /// <summary>Con qué se pagó: efectivo, transferencia... Opcional.</summary>
-    public int? MetodoPagoId { get; set; }
-    public MetodoPago? MetodoPago { get; set; }
-
     public string? Observacion { get; set; }
 
     public int? UsuarioId { get; set; }
@@ -149,6 +145,27 @@ public class Compra
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
     public List<CompraDetalle> Detalle { get; set; } = [];
+
+    /// <summary>
+    /// Con qué se pagó. Puede ser más de uno — un pago mixto, parte en
+    /// efectivo y parte por Yape, por ejemplo — así que es una lista y no un
+    /// único método.
+    /// </summary>
+    public List<CompraPago> Pagos { get; set; } = [];
+}
+
+/// <summary>Un pago parcial dentro de una compra: un método y cuánto se pagó con él.</summary>
+public class CompraPago
+{
+    public int Id { get; set; }
+
+    public int CompraId { get; set; }
+    public Compra? Compra { get; set; }
+
+    public int MetodoPagoId { get; set; }
+    public MetodoPago? MetodoPago { get; set; }
+
+    public decimal Monto { get; set; }
 }
 
 /// <summary>Un producto de la compra, con cuánto ya llegó.</summary>

@@ -25,13 +25,20 @@ public class CrearOrdenCompraRequest
     public List<LineaCompraRequest> Detalle { get; set; } = [];
 }
 
+/// <summary>Un pago parcial: un método del catálogo y cuánto se pagó con él.</summary>
+public class PagoCompraRequest
+{
+    public int MetodoPagoId { get; set; }
+    public decimal Monto { get; set; }
+}
+
 /// <summary>Una compra registrada directa, sin orden previa (al contado, en el momento).</summary>
 public class CrearCompraRequest
 {
     public int ProveedorId { get; set; }
     public DateTime? Fecha { get; set; }
 
-    /// <summary>FACTURA, BOLETA, GUIA u OTRO. Vacío usa FACTURA.</summary>
+    /// <summary>FACTURA, BOLETA o NOTA_VENTA. Vacío usa FACTURA.</summary>
     public string? TipoComprobante { get; set; }
 
     public string? SerieComprobante { get; set; }
@@ -40,8 +47,11 @@ public class CrearCompraRequest
     /// <summary>CONTADO o CREDITO. Vacío usa CONTADO.</summary>
     public string? FormaPago { get; set; }
 
-    /// <summary>Con qué se pagó, del catálogo de métodos de pago. Opcional.</summary>
-    public int? MetodoPagoId { get; set; }
+    /// <summary>
+    /// Con qué se pagó. Puede traer más de una línea — un pago mixto, parte
+    /// en efectivo y parte por Yape — o ninguna si todavía no se paga nada.
+    /// </summary>
+    public List<PagoCompraRequest> Pagos { get; set; } = [];
 
     public string? Observacion { get; set; }
     public List<LineaCompraRequest> Detalle { get; set; } = [];

@@ -60,6 +60,14 @@ public class CompraDetalleResponse
     public decimal CantidadPendiente { get; set; }
 }
 
+public class PagoCompraResponse
+{
+    public int Id { get; set; }
+    public int MetodoPagoId { get; set; }
+    public string MetodoPago { get; set; } = string.Empty;
+    public decimal Monto { get; set; }
+}
+
 public class CompraResponse
 {
     public int Id { get; set; }
@@ -86,13 +94,15 @@ public class CompraResponse
     /// <summary>CONTADO o CREDITO.</summary>
     public string FormaPago { get; set; } = string.Empty;
 
-    /// <summary>Con qué se pagó. Null si no se declaró.</summary>
-    public int? MetodoPagoId { get; set; }
-    public string? MetodoPago { get; set; }
-
     public string? Observacion { get; set; }
     public string? Usuario { get; set; }
 
     public decimal Total { get; set; }
     public List<CompraDetalleResponse> Detalle { get; set; } = [];
+
+    /// <summary>Con qué se pagó. Puede ser más de un método — un pago mixto.</summary>
+    public List<PagoCompraResponse> Pagos { get; set; } = [];
+
+    /// <summary>Suma de Pagos. Si es menor que Total, falta esa diferencia por pagar.</summary>
+    public decimal TotalPagado { get; set; }
 }

@@ -26,6 +26,15 @@ public class CrearOrdenCompraRequestValidator : AbstractValidator<CrearOrdenComp
     }
 }
 
+public class PagoCompraRequestValidator : AbstractValidator<PagoCompraRequest>
+{
+    public PagoCompraRequestValidator()
+    {
+        RuleFor(x => x.MetodoPagoId).GreaterThan(0).WithMessage("Elige el método de pago");
+        RuleFor(x => x.Monto).GreaterThan(0).WithMessage("El monto debe ser mayor que cero");
+    }
+}
+
 public class CrearCompraRequestValidator : AbstractValidator<CrearCompraRequest>
 {
     public CrearCompraRequestValidator()
@@ -40,8 +49,7 @@ public class CrearCompraRequestValidator : AbstractValidator<CrearCompraRequest>
         RuleFor(x => x.FormaPago)
             .Must(f => string.IsNullOrWhiteSpace(f) || FormaPagoCompra.Todas.Contains(f))
             .WithMessage("Forma de pago inválida");
-        RuleFor(x => x.MetodoPagoId).GreaterThan(0).When(x => x.MetodoPagoId.HasValue)
-            .WithMessage("Elige un método de pago válido");
+        RuleForEach(x => x.Pagos).SetValidator(new PagoCompraRequestValidator());
 
         RuleFor(x => x.Observacion).MaximumLength(250);
         RuleFor(x => x.Detalle).NotEmpty().WithMessage("Agrega al menos un producto");
