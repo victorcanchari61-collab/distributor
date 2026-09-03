@@ -40,9 +40,8 @@ public class CrearCompraRequestValidator : AbstractValidator<CrearCompraRequest>
         RuleFor(x => x.FormaPago)
             .Must(f => string.IsNullOrWhiteSpace(f) || FormaPagoCompra.Todas.Contains(f))
             .WithMessage("Forma de pago inválida");
-        RuleFor(x => x.InstrumentoPago)
-            .Must(i => string.IsNullOrWhiteSpace(i) || InstrumentoPagoCompra.Todos.Contains(i))
-            .WithMessage("Instrumento de pago inválido");
+        RuleFor(x => x.MetodoPagoId).GreaterThan(0).When(x => x.MetodoPagoId.HasValue)
+            .WithMessage("Elige un método de pago válido");
 
         RuleFor(x => x.Observacion).MaximumLength(250);
         RuleFor(x => x.Detalle).NotEmpty().WithMessage("Agrega al menos un producto");

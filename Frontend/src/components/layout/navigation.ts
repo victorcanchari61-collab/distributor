@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   ClipboardList,
+  Coins,
   Contact,
   CreditCard,
   FileMinus,
@@ -150,6 +151,7 @@ export const NAV_GROUPS: NavGroup[] = [
     sys: 'finanzas',
     icon: Landmark,
     items: [
+      { id: 'finanzas.metodospago', label: 'Métodos de pago', icon: Coins },
       { id: 'finanzas.cobrar', label: 'Cuentas por cobrar', icon: Wallet, pending: true },
       { id: 'finanzas.pagar', label: 'Cuentas por pagar', icon: CreditCard, pending: true },
       { id: 'finanzas.miscobros', label: 'Mis cobros', icon: HandCoins, pending: true },

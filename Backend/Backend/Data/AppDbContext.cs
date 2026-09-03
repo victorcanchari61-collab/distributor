@@ -34,6 +34,7 @@ public class AppDbContext : DbContext
     public DbSet<OrdenCompraDetalle> OrdenCompraDetalles => Set<OrdenCompraDetalle>();
     public DbSet<Compra> Compras => Set<Compra>();
     public DbSet<CompraDetalle> CompraDetalles => Set<CompraDetalle>();
+    public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +43,7 @@ public class AppDbContext : DbContext
         ConfigurarCatalogo(modelBuilder);
         ConfigurarInventario(modelBuilder);
         ConfigurarCompras(modelBuilder);
+        ConfigurarFinanzas(modelBuilder);
 
         modelBuilder.Entity<Rol>(entity =>
         {
@@ -549,7 +551,6 @@ public class AppDbContext : DbContext
             entity.Property(c => c.SerieComprobante).HasMaxLength(10);
             entity.Property(c => c.NumeroComprobante).HasMaxLength(20);
             entity.Property(c => c.FormaPago).HasMaxLength(10).IsRequired();
-            entity.Property(c => c.InstrumentoPago).HasMaxLength(15);
             entity.Property(c => c.Observacion).HasMaxLength(250);
 
             entity.HasOne(c => c.Proveedor).WithMany()
@@ -558,6 +559,8 @@ public class AppDbContext : DbContext
                 .HasForeignKey(c => c.OrdenCompraId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(c => c.Usuario).WithMany()
                 .HasForeignKey(c => c.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(c => c.MetodoPago).WithMany()
+                .HasForeignKey(c => c.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CompraDetalle>(entity =>
@@ -574,6 +577,26 @@ public class AppDbContext : DbContext
                 .HasForeignKey(d => d.ProductoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(d => d.Presentacion).WithMany()
                 .HasForeignKey(d => d.PresentacionId).OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static void ConfigurarFinanzas(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<MetodoPago>(entity =>
+        {
+            entity.ToTable("MetodosPago");
+            entity.HasIndex(m => m.Nombre).IsUnique();
+            entity.Property(m => m.Nombre).HasMaxLength(60).IsRequired();
+
+            // Los mismos que antes vivian fijos en el código, ahora editables
+            // desde Finanzas sin perder lo que ya hubiera guardado.
+            entity.HasData(
+                new MetodoPago { Id = 1, Nombre = "Efectivo", Activo = true },
+                new MetodoPago { Id = 2, Nombre = "Transferencia", Activo = true },
+                new MetodoPago { Id = 3, Nombre = "Depósito", Activo = true },
+                new MetodoPago { Id = 4, Nombre = "Tarjeta", Activo = true },
+                new MetodoPago { Id = 5, Nombre = "Cheque", Activo = true }
+            );
         });
     }
 

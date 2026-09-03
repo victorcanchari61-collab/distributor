@@ -5,6 +5,7 @@ import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
 import { ListasPreciosPage } from './features/facturacion'
+import { MetodosPagoPage } from './features/finanzas'
 import {
   AlmacenesPage,
   AjustesPage,
@@ -37,6 +38,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'compras.ordenes': OrdenesCompraPage,
   'compras.compras': MisComprasPage,
   'compras.recepciones': RecepcionesPage,
+  'finanzas.metodospago': MetodosPagoPage,
   'config.usuarios': UsuariosPage,
   'config.accesos': AccesosPage,
   'config.roles': RolesPage,

@@ -29,12 +29,13 @@ import { productoApi, proveedorApi } from '../maestros'
 import type { ProductoResponse, ProveedorResponse } from '../maestros'
 import { almacenApi, stockApi } from '../inventario'
 import type { AlmacenResponse } from '../inventario'
+import { metodoPagoApi } from '../finanzas'
+import type { MetodoPagoResponse } from '../finanzas'
 import { compraApi } from './comprasApi'
 import type {
   CompraResponse,
   CrearCompraRequest,
   FormaPagoCompra,
-  InstrumentoPagoCompra,
   TipoComprobanteCompra,
 } from './comprasApi'
 import { NuevaRecepcionModal } from './NuevaRecepcionModal'
@@ -48,14 +49,6 @@ const TIPOS_COMPROBANTE: { value: TipoComprobanteCompra; label: string }[] = [
 const FORMAS_PAGO: { value: FormaPagoCompra; label: string }[] = [
   { value: 'CONTADO', label: 'Contado' },
   { value: 'CREDITO', label: 'Crédito' },
-]
-
-const INSTRUMENTOS_PAGO: { value: InstrumentoPagoCompra; label: string }[] = [
-  { value: 'EFECTIVO', label: 'Efectivo' },
-  { value: 'TRANSFERENCIA', label: 'Transferencia' },
-  { value: 'DEPOSITO', label: 'Depósito' },
-  { value: 'TARJETA', label: 'Tarjeta' },
-  { value: 'CHEQUE', label: 'Cheque' },
 ]
 
 /** "Factura F001-00000123", o solo el tipo si no se registró serie/número. */
@@ -82,6 +75,7 @@ export function MisComprasPage() {
   const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
+  const [metodosPago, setMetodosPago] = useState<MetodoPagoResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -97,7 +91,7 @@ export function MisComprasPage() {
   const [serieComprobante, setSerieComprobante] = useState('')
   const [numeroComprobante, setNumeroComprobante] = useState('')
   const [formaPago, setFormaPago] = useState<FormaPagoCompra>('CONTADO')
-  const [instrumentoPago, setInstrumentoPago] = useState<InstrumentoPagoCompra | ''>('')
+  const [metodoPagoId, setMetodoPagoId] = useState(0)
   const [observacion, setObservacion] = useState('')
   const [filas, setFilas] = useState<FilaCompra[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
@@ -107,7 +101,7 @@ export function MisComprasPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [comps, provs, prods, alms, stock] = await Promise.all([
+      const [comps, provs, prods, alms, stock, metodos] = await Promise.all([
         compraApi.getAll(),
         proveedorApi.getAll(),
         productoApi.getAll(),
@@ -115,12 +109,14 @@ export function MisComprasPage() {
         // Sin almacenId: una compra directa tampoco elige almacén todavía
         // (eso se decide al recibir), así que se muestra el stock total.
         stockApi.getAll(),
+        metodoPagoApi.getAll(),
       ])
       setCompras(comps)
       setProveedores(provs.filter((p) => p.activo))
       setProductos(prods.filter((p) => p.activo && p.controlaStock))
       setAlmacenes(alms)
       setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.stock])))
+      setMetodosPago(metodos.filter((m) => m.activo))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las compras.')
@@ -142,7 +138,7 @@ export function MisComprasPage() {
     setSerieComprobante('')
     setNumeroComprobante('')
     setFormaPago('CONTADO')
-    setInstrumentoPago('')
+    setMetodoPagoId(0)
     setObservacion('')
     setFilas([])
     setErrorForm('')
@@ -165,7 +161,7 @@ export function MisComprasPage() {
       serieComprobante: serieComprobante.trim() || null,
       numeroComprobante: numeroComprobante.trim() || null,
       formaPago,
-      instrumentoPago: instrumentoPago || null,
+      metodoPagoId: metodoPagoId || null,
       observacion: observacion.trim() || null,
       detalle: validas.map((f) => ({
         productoId: f.productoId,
@@ -472,9 +468,12 @@ export function MisComprasPage() {
                   label="Instrumento de pago"
                   optional
                   placeholder="Seleccione una opción"
-                  value={instrumentoPago}
-                  onChange={(v) => setInstrumentoPago(v as InstrumentoPagoCompra | '')}
-                  options={[{ value: '', label: 'Sin especificar' }, ...INSTRUMENTOS_PAGO]}
+                  value={metodoPagoId}
+                  onChange={(v) => setMetodoPagoId(Number(v))}
+                  options={[
+                    { value: 0, label: 'Sin especificar' },
+                    ...metodosPago.map((m) => ({ value: m.id, label: m.nombre })),
+                  ]}
                 />
               </div>
 
@@ -587,11 +586,8 @@ export function MisComprasPage() {
             <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
               <Badge>{textoComprobante(detalleAbierto)}</Badge>
               <Badge>{FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago}</Badge>
-              {detalleAbierto.instrumentoPago && (
-                <Badge>
-                  {INSTRUMENTOS_PAGO.find((i) => i.value === detalleAbierto.instrumentoPago)?.label ??
-                    detalleAbierto.instrumentoPago}
-                </Badge>
+              {detalleAbierto.metodoPago && (
+                <Badge>{detalleAbierto.metodoPago}</Badge>
               )}
             </div>
             <ul className="flex flex-col gap-2">

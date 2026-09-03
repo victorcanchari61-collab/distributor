@@ -100,18 +100,6 @@ public static class FormaPagoCompra
     public static readonly string[] Todas = [Contado, Credito];
 }
 
-/// <summary>El medio con el que se paga: efectivo, transferencia, etc. Opcional.</summary>
-public static class InstrumentoPagoCompra
-{
-    public const string Efectivo = "EFECTIVO";
-    public const string Transferencia = "TRANSFERENCIA";
-    public const string Deposito = "DEPOSITO";
-    public const string Tarjeta = "TARJETA";
-    public const string Cheque = "CHEQUE";
-
-    public static readonly string[] Todos = [Efectivo, Transferencia, Deposito, Tarjeta, Cheque];
-}
-
 /// <summary>
 /// Una compra lista para recibir: o vino de confirmar una <see cref="OrdenCompra"/>,
 /// o se registró directa — una compra al contado, sin negociación previa.
@@ -149,8 +137,9 @@ public class Compra
     /// <summary>CONTADO o CREDITO.</summary>
     public string FormaPago { get; set; } = FormaPagoCompra.Contado;
 
-    /// <summary>EFECTIVO, TRANSFERENCIA, DEPOSITO, TARJETA o CHEQUE. Opcional.</summary>
-    public string? InstrumentoPago { get; set; }
+    /// <summary>Con qué se pagó: efectivo, transferencia... Opcional.</summary>
+    public int? MetodoPagoId { get; set; }
+    public MetodoPago? MetodoPago { get; set; }
 
     public string? Observacion { get; set; }
 
