@@ -274,7 +274,18 @@ public class InventarioRepository : IInventarioRepository
 
     public async Task<List<ConsumoCapa>> GetConsumosAsync(int movimientoId) =>
         await _context.Consumos
+            .Include(c => c.Capa)
             .Where(c => c.MovimientoId == movimientoId)
+            .ToListAsync();
+
+    public async Task<List<CapaCosto>> GetCapasConVencimientoAsync() =>
+        await _context.CapasCosto
+            .Include(c => c.Producto).ThenInclude(p => p!.UnidadBase)
+            .Include(c => c.Almacen)
+            .Where(c => c.CantidadDisponible > 0 && c.FechaVencimiento != null)
+            // La que vence primero, arriba: es la que urge revisar.
+            .OrderBy(c => c.FechaVencimiento)
+            .ThenBy(c => c.Id)
             .ToListAsync();
 
     public async Task AddConsumoAsync(ConsumoCapa consumo) =>

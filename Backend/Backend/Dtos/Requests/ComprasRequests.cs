@@ -39,6 +39,12 @@ public class LineaRecepcionRequest
 {
     public int CompraDetalleId { get; set; }
     public decimal Cantidad { get; set; }
+
+    /// <summary>El lote del proveedor, si lo trae.</summary>
+    public string? Lote { get; set; }
+
+    /// <summary>Cuándo vence, si aplica.</summary>
+    public DateTime? FechaVencimiento { get; set; }
 }
 
 /// <summary>Registra que llegó mercadería de una compra, total o parcialmente.</summary>

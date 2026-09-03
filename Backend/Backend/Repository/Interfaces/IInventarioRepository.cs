@@ -84,6 +84,9 @@ public interface IInventarioRepository
     Task<List<ConsumoCapa>> GetConsumosAsync(int movimientoId);
     Task AddConsumoAsync(ConsumoCapa consumo);
 
+    /// <summary>Capas con stock que además tienen fecha de vencimiento, la más próxima primero.</summary>
+    Task<List<CapaCosto>> GetCapasConVencimientoAsync();
+
     // --- Prestamos ---
 
     Task AddPrestamoAsync(Prestamo prestamo);

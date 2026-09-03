@@ -337,6 +337,29 @@ public class InventarioService : IInventarioService
         };
     }
 
+    public async Task<IEnumerable<LoteResponse>> GetLotesAsync()
+    {
+        var hoy = DateTime.UtcNow.Date;
+        var capas = await _repository.GetCapasConVencimientoAsync();
+
+        return capas.Select(c => new LoteResponse
+        {
+            CapaId = c.Id,
+            ProductoId = c.ProductoId,
+            Codigo = c.Producto?.Codigo ?? string.Empty,
+            Producto = c.Producto?.Nombre ?? string.Empty,
+            UnidadBase = c.Producto?.UnidadBase?.Codigo ?? string.Empty,
+            AlmacenId = c.AlmacenId,
+            Almacen = c.Almacen?.Nombre ?? string.Empty,
+            Lote = c.Lote,
+            FechaVencimiento = c.FechaVencimiento,
+            DiasParaVencer = c.FechaVencimiento is DateTime v ? (v.Date - hoy).Days : null,
+            CantidadDisponible = c.CantidadDisponible,
+            CostoUnitario = c.CostoUnitario,
+            Valor = Math.Round(c.CantidadDisponible * c.CostoUnitario, 2)
+        });
+    }
+
     // ----------------------------------------------------------------- Kardex
 
     public async Task<IEnumerable<KardexResponse>> GetKardexAsync(
@@ -519,6 +542,8 @@ public class InventarioService : IInventarioService
                     CantidadInicial = cantidad,
                     CantidadDisponible = cantidad,
                     CostoUnitario = movimiento.CostoUnitario,
+                    Lote = Limpiar(linea.Lote),
+                    FechaVencimiento = linea.FechaVencimiento,
                     Origen = motivo.Id == Motivos.CargaInicial
                         ? OrigenCapa.CargaInicial
                         : OrigenCapa.Ajuste,
@@ -634,7 +659,9 @@ public class InventarioService : IInventarioService
             await _repository.GuardarAsync();
 
             // Una capa nueva en destino por cada capa que se toco en origen:
-            // preserva el costo exacto de cada una, en vez de promediarlas.
+            // preserva el costo exacto de cada una, en vez de promediarlas. El
+            // lote y el vencimiento viajan con la mercadería: siguen siendo el
+            // mismo lote, solo cambió de almacén.
             foreach (var consumo in await _repository.GetConsumosAsync(salida.Id))
             {
                 await _repository.AddCapaAsync(new CapaCosto
@@ -645,6 +672,8 @@ public class InventarioService : IInventarioService
                     CantidadInicial = consumo.Cantidad,
                     CantidadDisponible = consumo.Cantidad,
                     CostoUnitario = consumo.CostoUnitario,
+                    Lote = consumo.Capa?.Lote,
+                    FechaVencimiento = consumo.Capa?.FechaVencimiento,
                     Origen = OrigenCapa.Transferencia,
                     Fecha = fecha
                 });
@@ -685,6 +714,7 @@ public class InventarioService : IInventarioService
             Tipo = TipoDocumentoInventario.Anulacion,
             AlmacenId = original.AlmacenId,
             AlmacenDestinoId = original.AlmacenDestinoId,
+            CompraId = original.CompraId,
             MotivoId = original.MotivoId,
             Fecha = DateTime.UtcNow,
             Estado = EstadoDocumento.Confirmado,
@@ -899,6 +929,8 @@ public class InventarioService : IInventarioService
                 CantidadInicial = linea.Cantidad,
                 CantidadDisponible = linea.Cantidad,
                 CostoUnitario = detalle.CostoUnitario,
+                Lote = Limpiar(linea.Lote),
+                FechaVencimiento = linea.FechaVencimiento,
                 Origen = OrigenCapa.Compra,
                 Fecha = fecha
             });
@@ -1030,6 +1062,8 @@ public class InventarioService : IInventarioService
         CostoUnitario = c.CostoUnitario,
         Valor = Math.Round(c.CantidadDisponible * c.CostoUnitario, 4),
         Origen = c.Origen,
+        Lote = c.Lote,
+        FechaVencimiento = c.FechaVencimiento,
         Fecha = c.Fecha
     };
 

@@ -12,7 +12,10 @@ import {
   StockPage,
   TransferenciasPage,
   PrestamosPage,
+  LotesVencimientosPage,
+  ConteosPage,
 } from './features/inventario'
+import { OrdenesCompraPage, MisComprasPage, RecepcionesPage } from './features/compras'
 import { ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
@@ -29,6 +32,11 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'inv.ajustes': AjustesPage,
   'inv.transferencias': TransferenciasPage,
   'inv.prestamos': PrestamosPage,
+  'inv.lotes': LotesVencimientosPage,
+  'inv.conteos': ConteosPage,
+  'compras.ordenes': OrdenesCompraPage,
+  'compras.compras': MisComprasPage,
+  'compras.recepciones': RecepcionesPage,
   'config.usuarios': UsuariosPage,
   'config.accesos': AccesosPage,
   'config.roles': RolesPage,

@@ -1,0 +1,194 @@
+import { useCallback, useEffect, useState } from 'react'
+import { PackageCheck, Plus, Undo2 } from 'lucide-react'
+import { Alert, Badge, Button, ListPage, Modal, RowAction, StatCard, useConfirmacion } from '../../components/ui'
+import type { DataTableColumn } from '../../components/ui'
+import { ApiError } from '../../lib/apiClient'
+import { useRealtime } from '../../lib/realtime'
+import { almacenApi, recepcionApi } from '../inventario'
+import type { AlmacenResponse, DocumentoInventarioResponse } from '../inventario'
+import { compraApi } from './comprasApi'
+import type { CompraResponse } from './comprasApi'
+import { NuevaRecepcionModal } from './NuevaRecepcionModal'
+
+/**
+ * Recepciones: mercadería que llegó contra una compra. El historial completo,
+ * y el punto de entrada para registrar una nueva sin pasar por Mis compras.
+ */
+export function RecepcionesPage() {
+  const [recepciones, setRecepciones] = useState<DocumentoInventarioResponse[]>([])
+  const [compras, setCompras] = useState<CompraResponse[]>([])
+  const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
+
+  const [detalleAbierto, setDetalleAbierto] = useState<DocumentoInventarioResponse | null>(null)
+  const [nuevaAbierta, setNuevaAbierta] = useState(false)
+
+  const { confirmar, dialogo } = useConfirmacion()
+
+  const cargar = useCallback(async () => {
+    setCargando(true)
+    try {
+      const [recs, comps, alms] = await Promise.all([
+        recepcionApi.getAll(),
+        compraApi.getAll(),
+        almacenApi.getAll(),
+      ])
+      setRecepciones(recs)
+      setCompras(comps)
+      setAlmacenes(alms)
+      setError('')
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar las recepciones.')
+    } finally {
+      setCargando(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void cargar()
+  }, [cargar])
+
+  useRealtime(['recepciones', 'compras'], cargar)
+
+  const anular = (doc: DocumentoInventarioResponse) =>
+    confirmar({
+      titulo: `Anular ${doc.numero}`,
+      mensaje:
+        'Devuelve la mercadería recibida y la compra vuelve a quedar pendiente por esa cantidad. No se puede deshacer.',
+      confirmar: 'Anular',
+      tono: 'danger',
+      accion: async () => {
+        setError('')
+        try {
+          await recepcionApi.anular(doc.id)
+          await cargar()
+        } catch (e) {
+          setError(e instanceof ApiError ? e.message : 'No pudimos anular la recepción.')
+        }
+      },
+    })
+
+  const columns: DataTableColumn<DocumentoInventarioResponse>[] = [
+    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
+    { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
+    { key: 'compra', label: 'Compra', render: (row) => row.compra ?? '—' },
+    { key: 'almacen', label: 'Almacén' },
+    { key: 'lineas', label: 'Productos', align: 'right' },
+    { key: 'total', label: 'Valor', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (row) => (
+        <Badge tone={row.estado === 'ANULADO' ? 'neutral' : 'success'}>
+          {row.estado === 'ANULADO' ? `Anulada${row.anuladoPor ? ` (${row.anuladoPor})` : ''}` : 'Confirmada'}
+        </Badge>
+      ),
+    },
+  ]
+
+  const comprasParaRecibir = compras.filter(
+    (c) => c.estado === 'PENDIENTE' || c.estado === 'RECIBIDA_PARCIAL',
+  )
+
+  return (
+    <ListPage
+      icon={<PackageCheck size={20} />}
+      title="Recepciones"
+      description="Mercadería que llegó contra una compra. Puede ser total o parcial."
+      actions={
+        <Button
+          size="sm"
+          onClick={() => setNuevaAbierta(true)}
+          disabled={comprasParaRecibir.length === 0}
+          iconRight={<Plus size={15} />}
+        >
+          Nueva recepción
+        </Button>
+      }
+      alert={
+        error ? (
+          <Alert>{error}</Alert>
+        ) : comprasParaRecibir.length === 0 ? (
+          <Alert>No hay compras pendientes de recibir por ahora.</Alert>
+        ) : undefined
+      }
+      stats={
+        <>
+          <StatCard label="Recepciones" value={String(recepciones.length)} icon={<PackageCheck size={18} />} />
+          <StatCard
+            label="Confirmadas"
+            value={String(recepciones.filter((r) => r.estado === 'CONFIRMADO').length)}
+            icon={<PackageCheck size={18} />}
+            tono="success"
+          />
+          <StatCard
+            label="Anuladas"
+            value={String(recepciones.filter((r) => r.estado === 'ANULADO').length)}
+            icon={<Undo2 size={18} />}
+            tono="neutral"
+          />
+        </>
+      }
+      columns={columns}
+      rows={recepciones}
+      cardIcon={PackageCheck}
+      searchPlaceholder="Buscar por número, compra, almacén..."
+      empty={cargando ? 'Cargando recepciones...' : 'Todavía no hay recepciones registradas.'}
+      rowActions={(row) => (
+        <>
+          <RowAction
+            label={`Ver ${row.numero}`}
+            onClick={() => {
+              setDetalleAbierto(row)
+              void recepcionApi.getById(row.id).then(setDetalleAbierto)
+            }}
+          >
+            <PackageCheck size={15} />
+          </RowAction>
+          {row.estado === 'CONFIRMADO' && (
+            <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anular(row)}>
+              <Undo2 size={15} />
+            </RowAction>
+          )}
+        </>
+      )}
+    >
+      <Modal
+        open={detalleAbierto !== null}
+        title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.compra ?? ''}` : ''}
+        description={detalleAbierto?.observacion ?? undefined}
+        onClose={() => setDetalleAbierto(null)}
+      >
+        {detalleAbierto && (
+          <ul className="flex flex-col gap-2">
+            {detalleAbierto.detalle.map((l) => (
+              <li
+                key={l.id}
+                className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2"
+              >
+                <span>
+                  <span className="font-medium text-ink">{l.producto}</span>
+                  <span className="ml-2 text-xs text-ink-soft">{l.cantidad} {l.unidadBase}</span>
+                </span>
+                <span className="text-sm">
+                  S/ {l.costoUnitario} × {l.unidadBase} = S/ {l.costoTotal.toFixed(2)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
+
+      <NuevaRecepcionModal
+        open={nuevaAbierta}
+        onClose={() => setNuevaAbierta(false)}
+        compras={comprasParaRecibir}
+        almacenes={almacenes}
+        onCreada={() => void cargar()}
+      />
+
+      {dialogo}
+    </ListPage>
+  )
+}

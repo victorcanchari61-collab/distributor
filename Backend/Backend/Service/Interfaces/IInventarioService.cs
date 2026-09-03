@@ -26,6 +26,9 @@ public interface IInventarioService
     /// <summary>Stock y capas de un producto.</summary>
     Task<StockResponse> GetStockProductoAsync(int productoId, int? almacenId);
 
+    /// <summary>Todo lo que tiene fecha de vencimiento y todavía tiene stock, lo más próximo primero.</summary>
+    Task<IEnumerable<LoteResponse>> GetLotesAsync();
+
     // --- Kardex ---
     Task<IEnumerable<KardexResponse>> GetKardexAsync(
         int? productoId, int? almacenId, DateTime? desde, DateTime? hasta);

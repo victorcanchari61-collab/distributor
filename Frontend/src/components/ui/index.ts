@@ -21,6 +21,8 @@ export type {
 } from './SysDataTable'
 export { TablaEditable } from './TablaEditable'
 export type { TablaEditableProps, ColumnaEditable } from './TablaEditable'
+export { BuscadorModal } from './BuscadorModal'
+export type { BuscadorModalProps } from './BuscadorModal'
 export { StatCard } from './StatCard'
 export type { StatCardProps } from './StatCard'
 export { PageSection } from './PageSection'

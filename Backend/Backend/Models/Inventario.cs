@@ -271,6 +271,12 @@ public class CapaCosto
     /// <summary>Costo por unidad base, flete incluido.</summary>
     public decimal CostoUnitario { get; set; }
 
+    /// <summary>Lote del proveedor o de fabricación, si se indicó.</summary>
+    public string? Lote { get; set; }
+
+    /// <summary>Cuándo vence esta capa. Solo informativo: no bloquea salidas.</summary>
+    public DateTime? FechaVencimiento { get; set; }
+
     public string Origen { get; set; } = OrigenCapa.Compra;
 
     /// <summary>Ordena el consumo: primero se gasta la mas antigua.</summary>

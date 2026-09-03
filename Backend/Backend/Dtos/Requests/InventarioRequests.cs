@@ -47,6 +47,12 @@ public class LineaAjusteRequest
     /// del stock que sale.
     /// </summary>
     public decimal? CostoPresentacion { get; set; }
+
+    /// <summary>Solo en motivos de entrada: el lote del proveedor, si lo trae.</summary>
+    public string? Lote { get; set; }
+
+    /// <summary>Solo en motivos de entrada: cuándo vence, si aplica.</summary>
+    public DateTime? FechaVencimiento { get; set; }
 }
 
 /// <summary>Ajuste de inventario: el documento formal con su motivo.</summary>

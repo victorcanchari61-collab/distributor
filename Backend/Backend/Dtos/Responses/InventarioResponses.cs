@@ -72,7 +72,30 @@ public class CapaResponse
     public decimal CostoUnitario { get; set; }
     public decimal Valor { get; set; }
     public string Origen { get; set; } = string.Empty;
+    public string? Lote { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
     public DateTime Fecha { get; set; }
+}
+
+/// <summary>Una capa con stock, vista desde "qué vence pronto" en vez de "qué tiene un producto".</summary>
+public class LoteResponse
+{
+    public int CapaId { get; set; }
+    public int ProductoId { get; set; }
+    public string Codigo { get; set; } = string.Empty;
+    public string Producto { get; set; } = string.Empty;
+    public string UnidadBase { get; set; } = string.Empty;
+    public int AlmacenId { get; set; }
+    public string Almacen { get; set; } = string.Empty;
+    public string? Lote { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
+
+    /// <summary>Negativo si ya venció. Null si no tiene fecha de vencimiento.</summary>
+    public int? DiasParaVencer { get; set; }
+
+    public decimal CantidadDisponible { get; set; }
+    public decimal CostoUnitario { get; set; }
+    public decimal Valor { get; set; }
 }
 
 /// <summary>Una línea del kardex, con el saldo que dejó.</summary>

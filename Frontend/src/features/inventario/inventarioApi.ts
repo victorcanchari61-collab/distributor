@@ -85,7 +85,30 @@ export interface CapaResponse {
   costoUnitario: number
   valor: number
   origen: string
+  lote: string | null
+  fechaVencimiento: string | null
   fecha: string
+}
+
+export interface LoteResponse {
+  capaId: number
+  productoId: number
+  codigo: string
+  producto: string
+  unidadBase: string
+  almacenId: number
+  almacen: string
+  lote: string | null
+  fechaVencimiento: string | null
+  /** Negativo si ya venció. Null si no tiene fecha de vencimiento. */
+  diasParaVencer: number | null
+  cantidadDisponible: number
+  costoUnitario: number
+  valor: number
+}
+
+export const loteApi = {
+  getAll: () => api.get<LoteResponse[]>('/inventario/lotes'),
 }
 
 export const stockApi = {
@@ -143,6 +166,10 @@ export interface LineaAjusteRequest {
   cantidad: number
   /** Solo en motivos de entrada: lo que costó una presentación completa. */
   costoPresentacion?: number | null
+  /** Solo en motivos de entrada: el lote del proveedor, si lo trae. */
+  lote?: string | null
+  /** Solo en motivos de entrada: cuándo vence, si aplica. */
+  fechaVencimiento?: string | null
 }
 
 export interface CrearAjusteRequest {
@@ -182,6 +209,9 @@ export interface DocumentoInventarioResponse {
   /** Solo en transferencias: el almacén que recibe. */
   almacenDestinoId: number | null
   almacenDestino: string | null
+  /** Solo en recepciones: la compra que se está descargando. */
+  compraId: number | null
+  compra: string | null
   motivoId: number
   motivo: string
   motivoTipo: TipoMovimiento
@@ -297,4 +327,33 @@ export const prestamoApi = {
   /** Devolución total o parcial: una o varias líneas a la vez. */
   devolver: (id: number, detalle: LineaDevolucionPrestamoRequest[]) =>
     api.post<PrestamoResponse>(`/inventario/prestamos/${id}/devolucion`, { detalle }),
+}
+
+// --- Recepciones ---
+
+export interface LineaRecepcionRequest {
+  compraDetalleId: number
+  /** En unidad base: lo que llegó ahora. */
+  cantidad: number
+  /** El lote del proveedor, si lo trae. */
+  lote?: string | null
+  /** Cuándo vence, si aplica. */
+  fechaVencimiento?: string | null
+}
+
+export interface CrearRecepcionRequest {
+  compraId: number
+  almacenId: number
+  fecha?: string | null
+  observacion?: string | null
+  detalle: LineaRecepcionRequest[]
+}
+
+export const recepcionApi = {
+  getAll: () => api.get<DocumentoInventarioResponse[]>('/inventario/recepciones'),
+  getById: (id: number) => api.get<DocumentoInventarioResponse>(`/inventario/recepciones/${id}`),
+  create: (body: CrearRecepcionRequest) =>
+    api.post<DocumentoInventarioResponse>('/inventario/recepciones', body),
+  anular: (id: number) =>
+    api.patch<DocumentoInventarioResponse>(`/inventario/recepciones/${id}/anular`),
 }

@@ -101,9 +101,9 @@ export const NAV_GROUPS: NavGroup[] = [
     // la confirma se convierte en compra, y al llegar la mercaderia se
     // registra la recepcion.
     items: [
-      { id: 'compras.ordenes', label: 'Órdenes de compra', icon: ClipboardList, pending: true },
-      { id: 'compras.compras', label: 'Mis compras', icon: ShoppingBag, pending: true },
-      { id: 'compras.recepciones', label: 'Recepciones', icon: PackageCheck, pending: true },
+      { id: 'compras.ordenes', label: 'Órdenes de compra', icon: ClipboardList },
+      { id: 'compras.compras', label: 'Mis compras', icon: ShoppingBag },
+      { id: 'compras.recepciones', label: 'Recepciones', icon: PackageCheck },
     ],
   },
   {
@@ -118,8 +118,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'inv.ajustes', label: 'Ajustes de inventario', icon: ClipboardCheck },
       { id: 'inv.transferencias', label: 'Transferencias', icon: Truck },
       { id: 'inv.prestamos', label: 'Préstamos', icon: HandCoins },
-      { id: 'inv.lotes', label: 'Lotes y vencimientos', icon: CalendarDays, pending: true },
-      { id: 'inv.conteos', label: 'Conteos cíclicos', icon: ClipboardCheck, pending: true },
+      { id: 'inv.lotes', label: 'Lotes y vencimientos', icon: CalendarDays },
+      { id: 'inv.conteos', label: 'Conteos cíclicos', icon: ClipboardCheck },
     ],
   },
   {

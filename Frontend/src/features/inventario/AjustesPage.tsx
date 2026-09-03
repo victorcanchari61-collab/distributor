@@ -34,9 +34,18 @@ interface FilaAjuste {
   presentacionId: number
   cantidad: string
   costo: string
+  lote: string
+  fechaVencimiento: string
 }
 
-const FILA_VACIA: FilaAjuste = { productoId: 0, presentacionId: 0, cantidad: '', costo: '' }
+const FILA_VACIA: FilaAjuste = {
+  productoId: 0,
+  presentacionId: 0,
+  cantidad: '',
+  costo: '',
+  lote: '',
+  fechaVencimiento: '',
+}
 
 /**
  * Ajustes de inventario: el documento formal que mueve stock a mano.
@@ -136,6 +145,8 @@ export function AjustesPage() {
           presentacionId: f.presentacionId || null,
           cantidad: Number(f.cantidad),
           costoPresentacion: motivo?.pideCosto ? Number(f.costo || 0) : null,
+          lote: motivo?.pideCosto ? f.lote.trim() || null : null,
+          fechaVencimiento: motivo?.pideCosto ? f.fechaVencimiento || null : null,
         })),
       })
       setAbierto(false)
@@ -238,6 +249,32 @@ export function AjustesPage() {
                 />
               )
             },
+          },
+          {
+            key: 'lote',
+            label: 'Lote',
+            className: 'w-28',
+            render: (fila: FilaAjuste, i: number) => (
+              <Input
+                optional
+                placeholder="Opcional"
+                value={fila.lote}
+                onChange={(e) => actualizarFila(i, { lote: e.target.value })}
+              />
+            ),
+          },
+          {
+            key: 'vencimiento',
+            label: 'Vencimiento',
+            className: 'w-36',
+            render: (fila: FilaAjuste, i: number) => (
+              <Input
+                optional
+                type="date"
+                value={fila.fechaVencimiento}
+                onChange={(e) => actualizarFila(i, { fechaVencimiento: e.target.value })}
+              />
+            ),
           },
         ]
       : []),

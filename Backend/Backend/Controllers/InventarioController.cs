@@ -112,6 +112,10 @@ public class InventarioController : ControllerBase
     public async Task<IActionResult> StockProducto(int productoId, [FromQuery] int? almacenId) =>
         Ok(await _inventario.GetStockProductoAsync(productoId, almacenId));
 
+    /// <summary>Todo lo que tiene fecha de vencimiento y todavía tiene stock, lo más próximo primero.</summary>
+    [HttpGet("lotes")]
+    public async Task<IActionResult> Lotes() => Ok(await _inventario.GetLotesAsync());
+
     /// <summary>Kardex: todo lo que entró y salió, con el saldo que dejó.</summary>
     [HttpGet("kardex")]
     public async Task<IActionResult> Kardex(

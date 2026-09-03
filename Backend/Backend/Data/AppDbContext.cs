@@ -443,11 +443,16 @@ public class AppDbContext : DbContext
             entity.Property(c => c.CantidadInicial).HasPrecision(18, 4);
             entity.Property(c => c.CantidadDisponible).HasPrecision(18, 4);
             entity.Property(c => c.CostoUnitario).HasPrecision(18, 4);
+            entity.Property(c => c.Lote).HasMaxLength(40);
             entity.Property(c => c.Origen).HasMaxLength(20).IsRequired();
 
             // Las salidas buscan capas con mercaderia de un producto en un
             // almacen, por fecha.
             entity.HasIndex(c => new { c.ProductoId, c.AlmacenId, c.Fecha });
+
+            // Lotes y vencimientos: encontrar lo que vence pronto, en cualquier
+            // producto o almacen, sin recorrer toda la tabla.
+            entity.HasIndex(c => c.FechaVencimiento);
 
             entity.HasOne(c => c.Producto).WithMany()
                 .HasForeignKey(c => c.ProductoId).OnDelete(DeleteBehavior.Restrict);
