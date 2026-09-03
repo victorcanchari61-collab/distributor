@@ -30,7 +30,7 @@ import type { ProductoResponse, ProveedorResponse } from '../maestros'
 import { almacenApi, stockApi } from '../inventario'
 import type { AlmacenResponse } from '../inventario'
 import { metodoPagoApi } from '../finanzas'
-import type { MetodoPagoResponse } from '../finanzas'
+import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
 import { compraApi } from './comprasApi'
 import type {
   CompraResponse,
@@ -49,6 +49,12 @@ const TIPOS_COMPROBANTE: { value: TipoComprobanteCompra; label: string }[] = [
 const FORMAS_PAGO: { value: FormaPagoCompra; label: string }[] = [
   { value: 'CONTADO', label: 'Contado' },
   { value: 'CREDITO', label: 'Crédito' },
+]
+
+const TIPOS_METODO_PAGO: { value: TipoMetodoPago; label: string }[] = [
+  { value: 'EFECTIVO', label: 'Efectivo' },
+  { value: 'BILLETERA_DIGITAL', label: 'Billetera digital' },
+  { value: 'TRANSFERENCIA', label: 'Transferencia' },
 ]
 
 /** "Factura F001-00000123", o solo el tipo si no se registró serie/número. */
@@ -93,6 +99,7 @@ export function MisComprasPage() {
   const [numeroComprobante, setNumeroComprobante] = useState('')
   const [formaPago, setFormaPago] = useState<FormaPagoCompra>('CONTADO')
   const [pagos, setPagos] = useState<{ metodoPagoId: number; monto: string }[]>([])
+  const [pagoTipo, setPagoTipo] = useState<TipoMetodoPago | ''>('')
   const [pagoMetodoId, setPagoMetodoId] = useState(0)
   const [pagoMonto, setPagoMonto] = useState('')
   const [observacion, setObservacion] = useState('')
@@ -142,6 +149,7 @@ export function MisComprasPage() {
     setNumeroComprobante('')
     setFormaPago('CONTADO')
     setPagos([])
+    setPagoTipo('')
     setPagoMetodoId(0)
     setPagoMonto('')
     setObservacion('')
@@ -174,6 +182,7 @@ export function MisComprasPage() {
 
     setErrorForm('')
     setPagos((prev) => [...prev, { metodoPagoId: pagoMetodoId, monto: pagoMonto }])
+    setPagoTipo('')
     setPagoMetodoId(0)
     setPagoMonto('')
   }
@@ -587,13 +596,29 @@ export function MisComprasPage() {
           <div className="flex flex-col gap-4">
             {errorForm && <Alert>{errorForm}</Alert>}
 
+            {/* Primero el tipo, para no buscar el método entre los 11 juntos:
+                elegido el tipo, el método solo lista los que le corresponden. */}
+            <Desplegable
+              label="Tipo"
+              value={pagoTipo}
+              onChange={(v) => {
+                setPagoTipo(v as TipoMetodoPago)
+                setPagoMetodoId(0)
+              }}
+              placeholder="Elige el tipo"
+              options={TIPOS_METODO_PAGO}
+            />
+
             <div className="flex gap-2">
               <div className="min-w-0 flex-1">
                 <Desplegable
                   value={pagoMetodoId}
                   onChange={(v) => setPagoMetodoId(Number(v))}
-                  placeholder="Método"
-                  options={metodosPago.map((m) => ({ value: m.id, label: m.nombre }))}
+                  placeholder={pagoTipo ? 'Método' : 'Elige el tipo primero'}
+                  disabled={!pagoTipo}
+                  options={metodosPago
+                    .filter((m) => m.tipo === pagoTipo)
+                    .map((m) => ({ value: m.id, label: m.nombre }))}
                 />
               </div>
               <div className="w-28 shrink-0">
