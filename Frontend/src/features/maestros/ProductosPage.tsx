@@ -183,6 +183,7 @@ export function ProductosPage() {
       producto.presentaciones
         .filter((p) => !p.esBase)
         .map((p) => ({
+          clave: crypto.randomUUID(),
           id: p.id,
           unidadId: p.unidadId,
           nombre: p.nombre,
@@ -589,6 +590,7 @@ export function ProductosPage() {
         <Modal
           open={abierto}
           title={editando ? `Editar ${editando.nombre}` : 'Nuevo producto'}
+          size="lg"
           onClose={() => setAbierto(false)}
           footer={
             <>

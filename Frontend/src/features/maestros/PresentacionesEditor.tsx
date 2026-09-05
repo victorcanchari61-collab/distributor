@@ -1,11 +1,14 @@
 import { Plus, Trash2 } from 'lucide-react'
-import { Badge, Button, Desplegable, Input, cn } from '../../components/ui'
+import { Badge, Button, Checkbox, Desplegable, Input, RowAction, SysDataTable } from '../../components/ui'
+import type { DataTableColumn } from '../../components/ui'
 import type { PresentacionRequest, UnidadResponse } from './productoApi'
 
 export interface FilaPresentacion extends PresentacionRequest {
   /** Id cuando ya existe en la base; undefined mientras es nueva. */
   id?: number
   esBase?: boolean
+  /** Clave estable para la tabla: SysDataTable la necesita aunque la fila sea nueva y no tenga id. */
+  clave: string
 }
 
 export interface PresentacionesEditorProps {
@@ -43,6 +46,7 @@ export function PresentacionesEditor({
     onChange([
       ...filas,
       {
+        clave: crypto.randomUUID(),
         unidadId: activas[0]?.id ?? 0,
         nombre: '',
         factor: 0,
@@ -52,7 +56,92 @@ export function PresentacionesEditor({
       },
     ])
 
-  const quitar = (indice: number) => onChange(filas.filter((_, i) => i !== indice))
+  const quitar = (clave: string) => onChange(filas.filter((f) => f.clave !== clave))
+
+  const columnas: DataTableColumn<FilaPresentacion>[] = [
+    {
+      key: 'nombre',
+      label: 'Nombre',
+      render: (fila) => (
+        <Input
+          size="sm"
+          placeholder="Saco 50 kg"
+          value={fila.nombre}
+          onChange={(e) => actualizar(filas.indexOf(fila), { nombre: e.target.value })}
+          disabled={disabled}
+        />
+      ),
+    },
+    {
+      key: 'unidad',
+      label: 'Unidad',
+      render: (fila) => (
+        <Desplegable
+          value={fila.unidadId}
+          onChange={(v) => actualizar(filas.indexOf(fila), { unidadId: Number(v) })}
+          disabled={disabled}
+          options={activas.map((u) => ({ value: u.id, label: u.codigo, nota: u.nombre }))}
+        />
+      ),
+    },
+    {
+      key: 'factor',
+      label: 'Factor',
+      align: 'right',
+      value: (fila) => fila.factor,
+      render: (fila) => (
+        <Input
+          size="sm"
+          type="number"
+          min={0}
+          step="0.0001"
+          value={fila.factor || ''}
+          onChange={(e) => actualizar(filas.indexOf(fila), { factor: Number(e.target.value) })}
+          disabled={disabled}
+        />
+      ),
+    },
+    {
+      key: 'equivalencia',
+      label: 'Equivalencia',
+      render: (fila) => {
+        const unidad = activas.find((u) => u.id === fila.unidadId)
+        return (
+          // La equivalencia escrita evita el error clasico de poner el
+          // factor al reves (1/50 en vez de 50).
+          <Badge tone={fila.factor > 0 ? 'sys' : 'neutral'}>
+            {fila.factor > 0
+              ? `1 ${unidad?.codigo ?? '?'} = ${fila.factor} ${unidadBase}`
+              : 'Falta el factor'}
+          </Badge>
+        )
+      },
+    },
+    {
+      key: 'esCompra',
+      label: 'Se compra',
+      render: (fila) => (
+        <Checkbox
+          label=""
+          checked={fila.esCompra}
+          onChange={(e) => actualizar(filas.indexOf(fila), { esCompra: e.target.checked })}
+          disabled={disabled}
+        />
+      ),
+    },
+    {
+      key: 'esVenta',
+      label: 'Se vende',
+      render: (fila) => (
+        <Checkbox
+          label=""
+          checked={fila.esVenta}
+          onChange={(e) => actualizar(filas.indexOf(fila), { esVenta: e.target.checked })}
+          disabled={disabled}
+        />
+      ),
+    },
+  ]
 
   return (
     <div className="flex flex-col gap-3">
@@ -70,103 +159,23 @@ export function PresentacionesEditor({
         </Button>
       </div>
 
-      {filas.length === 0 ? (
-        <p className="rounded-field bg-slate-50 px-3 py-4 text-center text-xs text-ink-soft">
-          Solo se venderá por {unidadBase || 'la unidad base'}. Agrega una presentación si
-          además vendes por saco, caja o bolsa.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {filas.map((fila, i) => {
-            const unidad = activas.find((u) => u.id === fila.unidadId)
-            return (
-              <li
-                key={fila.id ?? `nueva-${i}`}
-                className="rounded-field border border-line bg-white p-3"
-              >
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_7rem_6.5rem_auto]">
-                  <Input
-                    label="Nombre"
-                    size="sm"
-                    placeholder="Saco 50 kg"
-                    value={fila.nombre}
-                    onChange={(e) => actualizar(i, { nombre: e.target.value })}
-                    disabled={disabled}
-                  />
-
-                  <Desplegable
-                    label="Unidad"
-                    value={fila.unidadId}
-                    onChange={(v) => actualizar(i, { unidadId: Number(v) })}
-                    disabled={disabled}
-                    options={activas.map((u) => ({
-                      value: u.id,
-                      label: u.codigo,
-                      nota: u.nombre,
-                    }))}
-                  />
-
-                  <Input
-                    label="Factor"
-                    size="sm"
-                    type="number"
-                    min={0}
-                    step="0.0001"
-                    value={fila.factor || ''}
-                    onChange={(e) => actualizar(i, { factor: Number(e.target.value) })}
-                    disabled={disabled}
-                  />
-
-                  <div className="flex items-end pb-0.5">
-                    <button
-                      type="button"
-                      onClick={() => quitar(i)}
-                      disabled={disabled}
-                      aria-label={`Quitar ${fila.nombre || 'presentación'}`}
-                      className={cn(
-                        'inline-flex size-9 items-center justify-center rounded-field',
-                        'text-red-600 transition-colors hover:bg-red-50 disabled:opacity-40',
-                      )}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-2 flex flex-wrap items-center gap-3">
-                  {/* La equivalencia escrita evita el error clasico de poner
-                      el factor al reves (1/50 en vez de 50). */}
-                  <Badge tone={fila.factor > 0 ? 'sys' : 'neutral'}>
-                    {fila.factor > 0
-                      ? `1 ${unidad?.codigo ?? '?'} = ${fila.factor} ${unidadBase}`
-                      : 'Falta el factor'}
-                  </Badge>
-
-                  <label className="flex items-center gap-1.5 text-xs text-ink-muted">
-                    <input
-                      type="checkbox"
-                      checked={fila.esCompra}
-                      onChange={(e) => actualizar(i, { esCompra: e.target.checked })}
-                      disabled={disabled}
-                    />
-                    Se compra así
-                  </label>
-
-                  <label className="flex items-center gap-1.5 text-xs text-ink-muted">
-                    <input
-                      type="checkbox"
-                      checked={fila.esVenta}
-                      onChange={(e) => actualizar(i, { esVenta: e.target.checked })}
-                      disabled={disabled}
-                    />
-                    Se vende así
-                  </label>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+      <SysDataTable<FilaPresentacion>
+        columns={columnas}
+        rows={filas}
+        rowKey="clave"
+        toolbar={false}
+        empty={`Solo se venderá por ${unidadBase || 'la unidad base'}. Agrega una presentación si además vendes por saco, caja o bolsa.`}
+        actions={(fila) => (
+          <RowAction
+            label={`Quitar ${fila.nombre || 'presentación'}`}
+            tone="danger"
+            disabled={disabled}
+            onClick={() => quitar(fila.clave)}
+          >
+            <Trash2 size={15} />
+          </RowAction>
+        )}
+      />
     </div>
   )
 }
