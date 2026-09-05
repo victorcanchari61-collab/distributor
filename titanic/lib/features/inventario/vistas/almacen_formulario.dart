@@ -5,6 +5,7 @@ import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../core/red/excepciones.dart';
+import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/almacen.dart';
 import '../estado/inventario_controlador.dart';
@@ -30,6 +31,8 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
   late final _direccion = TextEditingController(
     text: widget.almacen?.direccion ?? '',
   );
+
+  late bool _esPrincipal = widget.almacen?.esPrincipal ?? false;
 
   bool _guardando = false;
   String? _error;
@@ -70,6 +73,7 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
       'codigo': _codigo.text.trim(),
       'nombre': _nombre.text.trim(),
       'direccion': _direccion.text.trim(),
+      'esPrincipal': _esPrincipal,
       if (!_esNuevo) 'activo': widget.almacen!.activo,
     };
 
@@ -140,6 +144,24 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
             icono: Icons.place_outlined,
             opcional: true,
             habilitado: !_guardando,
+          ),
+          const SizedBox(height: Dimen.espacio3),
+
+          CheckboxListTile(
+            value: _esPrincipal,
+            onChanged: _guardando ? null : (v) => setState(() => _esPrincipal = v ?? false),
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text(
+              'Almacén principal',
+              style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Colores.tinta),
+            ),
+            subtitle: const Text(
+              'Solo uno puede serlo: sale por defecto en pedidos y ventas, y es del que se '
+              'muestra el stock al buscar productos. Marcarlo desmarca al anterior.',
+              style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+            ),
           ),
           const SizedBox(height: Dimen.espacio6),
 

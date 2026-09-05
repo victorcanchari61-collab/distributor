@@ -95,6 +95,11 @@ class ComprasControlador extends AsyncNotifier<List<Compra>> {
     await recargar();
   }
 
+  Future<void> actualizar(int id, Map<String, dynamic> cuerpo) async {
+    await ref.read(comprasApiProvider).actualizarCompra(id, cuerpo);
+    await recargar();
+  }
+
   Future<void> anular(int id) async {
     await ref.read(comprasApiProvider).anularCompra(id);
     await recargar();

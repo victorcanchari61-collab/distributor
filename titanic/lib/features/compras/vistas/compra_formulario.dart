@@ -55,29 +55,48 @@ class _FilaPago {
   Map<String, dynamic> aCuerpo() => {'metodoPagoId': metodoPagoId, 'monto': monto};
 }
 
-/// Alta de una compra directa, sin orden previa: al contado, en el momento.
+/// Alta y edicion de una compra directa, sin orden previa.
 ///
-/// No se edita: una vez creada, solo se puede anular o recibir mercaderia
-/// contra ella (eso vive en Recepciones).
+/// Solo se edita mientras sigue Pendiente (nada recibido): en cuanto entra
+/// mercaderia contra ella, solo se puede anular o seguir recibiendo.
 class CompraFormulario extends ConsumerStatefulWidget {
-  const CompraFormulario({super.key});
+  const CompraFormulario({super.key, this.compra});
+
+  /// Null cuando es una compra nueva.
+  final Compra? compra;
 
   @override
   ConsumerState<CompraFormulario> createState() => _CompraFormularioState();
 }
 
 class _CompraFormularioState extends ConsumerState<CompraFormulario> {
-  final _serie = TextEditingController();
-  final _numero = TextEditingController();
-  final _observacion = TextEditingController();
+  late final _serie = TextEditingController(text: widget.compra?.serieComprobante ?? '');
+  late final _numero = TextEditingController(text: widget.compra?.numeroComprobante ?? '');
+  late final _observacion = TextEditingController(text: widget.compra?.observacion ?? '');
 
-  int? _proveedorId;
-  String? _proveedorNombre;
-  String _tipoComprobante = TipoComprobanteCompra.factura;
-  String _formaPago = FormaPagoCompra.contado;
+  late int? _proveedorId = widget.compra?.proveedorId;
+  late String? _proveedorNombre = widget.compra?.proveedor;
+  late String _tipoComprobante = widget.compra?.tipoComprobante ?? TipoComprobanteCompra.factura;
+  late String _formaPago = widget.compra?.formaPago ?? FormaPagoCompra.contado;
 
-  final List<_FilaLinea> _lineas = [];
-  final List<_FilaPago> _pagos = [];
+  late final List<_FilaLinea> _lineas = [
+    for (final l in widget.compra?.detalle ?? const [])
+      _FilaLinea(
+        productoId: l.productoId,
+        producto: l.producto,
+        presentacionId: l.presentacionId,
+        presentacion: l.presentacion ?? l.unidadBase,
+        cantidad: l.cantidadPresentacion,
+        // El costo se guarda por unidad base; aqui se edita por presentacion.
+        costoPresentacion: l.cantidadPresentacion == 0 ? 0 : l.costoTotal / l.cantidadPresentacion,
+      ),
+  ];
+  late final List<_FilaPago> _pagos = [
+    for (final p in widget.compra?.pagos ?? const [])
+      _FilaPago(metodoPagoId: p.metodoPagoId, metodoPago: p.metodoPago, monto: p.monto),
+  ];
+
+  bool get _esNuevo => widget.compra == null;
 
   bool _guardando = false;
   String? _error;
@@ -134,10 +153,16 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
     };
 
     try {
-      await ref.read(comprasProvider.notifier).crear(cuerpo);
+      if (_esNuevo) {
+        await ref.read(comprasProvider.notifier).crear(cuerpo);
+      } else {
+        await ref.read(comprasProvider.notifier).actualizar(widget.compra!.id, cuerpo);
+      }
 
       navegador.pop();
-      mensajero.showSnackBar(const SnackBar(content: Text('Compra registrada')));
+      mensajero.showSnackBar(
+        SnackBar(content: Text(_esNuevo ? 'Compra registrada' : 'Compra actualizada')),
+      );
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;
@@ -504,7 +529,10 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nueva compra', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        title: Text(
+          _esNuevo ? 'Nueva compra' : 'Editar ${widget.compra!.numero}',
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        ),
         bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
       ),
       body: ListView(
@@ -685,7 +713,11 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
           ),
           const SizedBox(height: Dimen.espacio6),
 
-          AppBoton(texto: 'Registrar compra', cargando: _guardando, onPressed: _guardar),
+          AppBoton(
+            texto: _esNuevo ? 'Registrar compra' : 'Guardar cambios',
+            cargando: _guardando,
+            onPressed: _guardar,
+          ),
           const SizedBox(height: Dimen.espacio3),
           AppBoton(
             texto: 'Cancelar',

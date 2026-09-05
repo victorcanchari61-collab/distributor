@@ -89,6 +89,17 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
   double get _totalPagado => _pagos.fold<double>(0, (n, p) => n + p.monto);
 
   @override
+  void initState() {
+    super.initState();
+    // El principal por defecto: quien tiene un solo depósito nunca lo elige.
+    final almacenes = ref.read(almacenesActivosProvider);
+    for (final a in almacenes) {
+      if (a.esPrincipal) _almacenId = a.id;
+    }
+    _almacenId ??= almacenes.isEmpty ? null : almacenes.first.id;
+  }
+
+  @override
   void dispose() {
     _observacion.dispose();
     super.dispose();

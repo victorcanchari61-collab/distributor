@@ -110,8 +110,6 @@ export function NotasVentaPage() {
       setAlmacenes(alms.filter((a) => a.activo))
       setListas(lis.filter((l) => l.activo))
       setMetodosPago(metodos.filter((m) => m.activo))
-      const stock = await stockApi.getAll()
-      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las notas de venta.')
@@ -126,9 +124,22 @@ export function NotasVentaPage() {
 
   useRealtime(['notasventa', 'pedidos', 'stock'], cargar)
 
+  // Stock disponible del almacén elegido: es lo que se puede vender desde ahí.
+  useEffect(() => {
+    if (!almacenId) return
+    let cancelado = false
+    void stockApi.getAll(almacenId).then((stock) => {
+      if (!cancelado) setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [almacenId, notas])
+
   const abrirNueva = () => {
     setClienteId(0)
-    setAlmacenId(0)
+    // El principal por defecto: quien tiene un solo depósito nunca lo elige.
+    setAlmacenId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
     setListaPrecioId(0)
     setFormaPago('CONTADO')
     setPagos([])

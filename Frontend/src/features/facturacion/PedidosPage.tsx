@@ -100,8 +100,6 @@ export function PedidosPage() {
       setProductos(prods.filter((p) => p.activo && p.controlaStock))
       setAlmacenes(alms.filter((a) => a.activo))
       setListas(lis.filter((l) => l.activo))
-      const stock = await stockApi.getAll()
-      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los pedidos.')
@@ -116,11 +114,23 @@ export function PedidosPage() {
 
   useRealtime(['pedidos', 'notasventa', 'stock'], cargar)
 
-  // El primero que se creó, no el primero de la lista (que viene ordenada
-  // por nombre): es el que tiene el id más chico.
-  const primerAlmacenId = almacenes.length
-    ? almacenes.reduce((min, a) => (a.id < min ? a.id : min), almacenes[0].id)
-    : 0
+  // El buscador de productos muestra el stock disponible del almacén elegido,
+  // no el total: es lo que de verdad se puede prometer desde ahí.
+  useEffect(() => {
+    if (!almacenReservaId) return
+    let cancelado = false
+    void stockApi.getAll(almacenReservaId).then((stock) => {
+      if (!cancelado) setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [almacenReservaId, pedidos])
+
+  // El almacén principal (marcado en Almacenes); si no hubiera, el más antiguo.
+  const primerAlmacenId =
+    almacenes.find((a) => a.esPrincipal)?.id ??
+    (almacenes.length ? almacenes.reduce((min, a) => (a.id < min ? a.id : min), almacenes[0].id) : 0)
 
   const abrirNuevo = () => {
     setEditando(null)
@@ -440,7 +450,21 @@ export function PedidosPage() {
                 onChange={(e) => setObservacion(e.target.value)}
               />
 
-              <hr className="mt-4 border-line" />
+              <Desplegable
+                className="mt-4"
+                label="Almacén"
+                value={almacenReservaId}
+                onChange={(v) => setAlmacenReservaId(Number(v))}
+                options={almacenes.map((a) => ({
+                  value: a.id,
+                  label: a.nombre,
+                  detalle: a.codigo,
+                  nota: a.esPrincipal ? 'principal' : undefined,
+                }))}
+              />
+              <p className="mt-1 text-xs text-ink-soft">
+                El buscador de productos muestra el stock disponible de este almacén.
+              </p>
 
               <Checkbox
                 className="mt-4"
@@ -449,19 +473,9 @@ export function PedidosPage() {
                 onChange={(e) => setReservaStock(e.target.checked)}
               />
               <p className="mt-1 text-xs text-ink-soft">
-                Aparta el stock de un almacén mientras el pedido esté pendiente, para que no se
+                Aparta el stock de ese almacén mientras el pedido esté pendiente, para que no se
                 pueda prometer dos veces. Se libera solo al confirmar o anular el pedido.
               </p>
-
-              {reservaStock && (
-                <Desplegable
-                  className="mt-3"
-                  label="Almacén"
-                  value={almacenReservaId}
-                  onChange={(v) => setAlmacenReservaId(Number(v))}
-                  options={almacenes.map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
-                />
-              )}
             </PageSection>
 
             <PageSection title="Resumen">

@@ -1,4 +1,5 @@
 import '../../../core/red/cliente_api.dart';
+import 'auditoria.dart';
 import 'config_modelos.dart';
 
 /// Llamadas del modulo de configuracion.
@@ -63,6 +64,16 @@ class ConfigApi {
   Future<ConsultaRuc> consultarRuc(String ruc) async => ConsultaRuc.desdeJson(
     await _api.get('/consulta/ruc/$ruc') as Map<String, dynamic>,
   );
+
+  // --- Auditoria ---
+
+  /// GET /api/auditoria. Los ultimos cambios, del mas nuevo al mas viejo.
+  Future<List<RegistroAuditoria>> auditoria() async {
+    final datos = await _api.get('/auditoria') as List;
+    return datos
+        .map((e) => RegistroAuditoria.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
 
   // --- Empresas ---
 

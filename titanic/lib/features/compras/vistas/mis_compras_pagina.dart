@@ -77,6 +77,9 @@ class MisComprasPagina extends ConsumerWidget {
       fila: (context, compra) => _TarjetaCompra(
         compra: compra,
         color: color,
+        onEditar: compra.estado == EstadoCompra.pendiente
+            ? () => _abrirFormulario(context, compra)
+            : null,
         onRecibir: compra.detalle.any((d) => d.cantidadPendiente > 0)
             ? () => _recibir(context, compra)
             : null,
@@ -111,9 +114,9 @@ class MisComprasPagina extends ConsumerWidget {
     );
   }
 
-  Future<void> _abrirFormulario(BuildContext context) {
+  Future<void> _abrirFormulario(BuildContext context, [Compra? compra]) {
     return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const CompraFormulario()),
+      MaterialPageRoute(builder: (_) => CompraFormulario(compra: compra)),
     );
   }
 
@@ -158,10 +161,17 @@ String _etiquetaEstadoCompra(String estado) => switch (estado) {
 };
 
 class _TarjetaCompra extends StatelessWidget {
-  const _TarjetaCompra({required this.compra, required this.color, this.onRecibir, this.onAnular});
+  const _TarjetaCompra({
+    required this.compra,
+    required this.color,
+    this.onEditar,
+    this.onRecibir,
+    this.onAnular,
+  });
 
   final Compra compra;
   final Color color;
+  final VoidCallback? onEditar;
   final VoidCallback? onRecibir;
   final VoidCallback? onAnular;
 
@@ -220,6 +230,13 @@ class _TarjetaCompra extends StatelessWidget {
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.edit_outlined, size: 18, color: Colores.marca),
+          ),
         if (onRecibir != null)
           IconButton(
             onPressed: onRecibir,
@@ -253,6 +270,16 @@ class _TarjetaCompra extends StatelessWidget {
       ],
       contenidoExtra: _lineas,
       acciones: [
+        if (onEditar != null)
+          AppBoton(
+            texto: 'Editar',
+            variante: BotonVariante.secundario,
+            expandido: true,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onEditar!();
+            },
+          ),
         if (onRecibir != null)
           AppBoton(
             texto: 'Recibir',

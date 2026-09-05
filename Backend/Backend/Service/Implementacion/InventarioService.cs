@@ -116,9 +116,14 @@ public class InventarioService : IInventarioService
             Codigo = codigo,
             Nombre = request.Nombre.Trim(),
             Direccion = Limpiar(request.Direccion),
-            EsPrincipal = esPrimero,
+            EsPrincipal = esPrimero || request.EsPrincipal,
             Activo = true
         };
+
+        if (almacen.EsPrincipal && !esPrimero)
+        {
+            await QuitarPrincipalAsync();
+        }
 
         await _repository.AddAlmacenAsync(almacen);
         var response = MapAlmacen(almacen, []);
@@ -138,20 +143,43 @@ public class InventarioService : IInventarioService
             throw new ConflictException("Ya existe un almacén con ese código");
         }
 
-        if (almacen.EsPrincipal && !request.Activo)
+        if (request.EsPrincipal && !request.Activo)
         {
             throw new BadRequestException("El almacén principal no se puede desactivar");
+        }
+
+        // Siempre tiene que haber uno: para quitarle el principal a este,
+        // se marca otro y este se desmarca solo.
+        if (almacen.EsPrincipal && !request.EsPrincipal)
+        {
+            throw new BadRequestException("Marca otro almacén como principal; este dejará de serlo automáticamente");
+        }
+
+        if (request.EsPrincipal && !almacen.EsPrincipal)
+        {
+            await QuitarPrincipalAsync();
         }
 
         almacen.Codigo = codigo;
         almacen.Nombre = request.Nombre.Trim();
         almacen.Direccion = Limpiar(request.Direccion);
+        almacen.EsPrincipal = request.EsPrincipal;
         almacen.Activo = request.Activo;
 
         await _repository.UpdateAlmacenAsync(almacen);
         var response = MapAlmacen(almacen, await _repository.GetCapasDisponiblesAsync(0, id));
         await _notificador.AvisarAsync("almacenes", "actualizado", response);
         return response;
+    }
+
+    /// <summary>Desmarca al principal actual: solo puede haber uno.</summary>
+    private async Task QuitarPrincipalAsync()
+    {
+        foreach (var otro in (await _repository.GetAlmacenesAsync()).Where(a => a.EsPrincipal))
+        {
+            otro.EsPrincipal = false;
+            await _repository.UpdateAlmacenAsync(otro);
+        }
     }
 
     public async Task DeleteAlmacenAsync(int id)

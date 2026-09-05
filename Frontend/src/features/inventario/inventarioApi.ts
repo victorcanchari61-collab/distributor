@@ -17,6 +17,8 @@ export interface AlmacenRequest {
   codigo: string
   nombre: string
   direccion?: string | null
+  /** Solo uno puede serlo: marcarlo aquí desmarca al anterior. */
+  esPrincipal?: boolean
 }
 
 export const almacenApi = {

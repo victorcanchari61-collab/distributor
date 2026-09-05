@@ -54,6 +54,10 @@ class ComprasApi {
   Future<Compra> crearCompra(Map<String, dynamic> cuerpo) async =>
       Compra.desdeJson(await _api.post('/compra', cuerpo: cuerpo) as Map<String, dynamic>);
 
+  /// PUT /api/compra/{id}. Solo mientras esta Pendiente: sin nada recibido.
+  Future<Compra> actualizarCompra(int id, Map<String, dynamic> cuerpo) async =>
+      Compra.desdeJson(await _api.put('/compra/$id', cuerpo: cuerpo) as Map<String, dynamic>);
+
   /// PATCH /api/compra/{id}/anular. Solo si nada se ha recibido.
   Future<void> anularCompra(int id) async {
     await _api.patch('/compra/$id/anular');

@@ -88,11 +88,20 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
 
   double get _total => _lineas.fold<double>(0, (n, f) => n + f.subtotal);
 
-  /// El primero que se creó, no el primero de la lista (que viene ordenada
-  /// por nombre): es el que tiene el id más chico.
+  /// El almacén principal (marcado en Almacenes); si no hubiera, el más antiguo.
   int? _primerAlmacenId(List<Almacen> almacenes) {
     if (almacenes.isEmpty) return null;
+    for (final a in almacenes) {
+      if (a.esPrincipal) return a.id;
+    }
     return almacenes.map((a) => a.id).reduce((a, b) => a < b ? a : b);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // El principal por defecto: quien tiene un solo depósito nunca lo elige.
+    _almacenReservaId ??= _primerAlmacenId(ref.read(almacenesActivosProvider));
   }
 
   @override
@@ -386,15 +395,23 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
             habilitado: !_guardando,
           ),
           const SizedBox(height: Dimen.espacio4),
-          const Divider(height: 1),
+
+          AppSelector<int>(
+            valor: _almacenReservaId,
+            etiqueta: 'Almacén',
+            icono: Icons.warehouse_outlined,
+            error: _errorAlmacen,
+            opciones: [
+              for (final a in almacenes)
+                Opcion<int>(a.id, a.esPrincipal ? '${a.nombre} (principal)' : a.nombre),
+            ],
+            onCambio: (v) => setState(() => _almacenReservaId = v),
+          ),
           const SizedBox(height: Dimen.espacio2),
 
           CheckboxListTile(
             value: _reservaStock,
-            onChanged: (v) => setState(() {
-              _reservaStock = v ?? false;
-              _almacenReservaId ??= _primerAlmacenId(almacenes);
-            }),
+            onChanged: (v) => setState(() => _reservaStock = v ?? false),
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
             dense: true,
@@ -403,22 +420,11 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
               style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Colores.tinta),
             ),
             subtitle: const Text(
-              'Aparta el stock de un almacén mientras el pedido esté pendiente, para que '
+              'Aparta el stock de ese almacén mientras el pedido esté pendiente, para que '
               'no se pueda prometer dos veces. Se libera al confirmar o anular.',
               style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
             ),
           ),
-          if (_reservaStock) ...[
-            const SizedBox(height: Dimen.espacio2),
-            AppSelector<int>(
-              valor: _almacenReservaId,
-              etiqueta: 'Almacén',
-              icono: Icons.warehouse_outlined,
-              error: _errorAlmacen,
-              opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
-              onCambio: (v) => setState(() => _almacenReservaId = v),
-            ),
-          ],
           const SizedBox(height: Dimen.espacio5),
 
           Row(

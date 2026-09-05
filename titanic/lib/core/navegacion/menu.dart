@@ -332,6 +332,12 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Empresa',
         icono: Icons.business_outlined,
       ),
+      MenuItem(
+        id: 'config.auditoria',
+        pendiente: false,
+        titulo: 'Auditoría',
+        icono: Icons.history_outlined,
+      ),
     ],
   ),
 ];

@@ -5,6 +5,9 @@ public abstract class AlmacenRequestBase
     public string Codigo { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;
     public string? Direccion { get; set; }
+
+    /// <summary>Solo uno puede serlo: marcarlo aquí desmarca al anterior.</summary>
+    public bool EsPrincipal { get; set; }
 }
 
 public class CreateAlmacenRequest : AlmacenRequestBase;

@@ -8,6 +8,7 @@ import '../../features/compras/vistas/mis_compras_pagina.dart';
 import '../../features/compras/vistas/ordenes_compra_pagina.dart';
 import '../../features/compras/vistas/recepciones_pagina.dart';
 import '../../features/config/vistas/accesos_pagina.dart';
+import '../../features/config/vistas/auditoria_pagina.dart';
 import '../../features/config/vistas/empresas_pagina.dart';
 import '../../features/config/vistas/roles_pagina.dart';
 import '../../features/config/vistas/usuarios_pagina.dart';
@@ -149,6 +150,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, estado) => const AccesosPagina(),
       ),
       GoRoute(
+        path: AuditoriaPagina.ruta,
+        builder: (context, estado) => const AuditoriaPagina(),
+      ),
+      GoRoute(
         path: PedidosPagina.ruta,
         builder: (context, estado) => const PedidosPagina(),
       ),
@@ -177,6 +182,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != ConteosPagina.ruta &&
               item.ruta != ListasPreciosPagina.ruta &&
               item.ruta != AccesosPagina.ruta &&
+              item.ruta != AuditoriaPagina.ruta &&
               item.ruta != PedidosPagina.ruta &&
               item.ruta != NotasVentaPagina.ruta)
             GoRoute(

@@ -16,8 +16,9 @@ import { ApiError } from '../../lib/apiClient'
 import { almacenApi } from './inventarioApi'
 import type { AlmacenResponse } from './inventarioApi'
 import { useRealtime } from '../../lib/realtime'
+import { Checkbox } from '../../components/ui'
 
-const VACIO = { codigo: '', nombre: '', direccion: '' }
+const VACIO = { codigo: '', nombre: '', direccion: '', esPrincipal: false }
 
 export function AlmacenesPage() {
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
@@ -59,7 +60,7 @@ export function AlmacenesPage() {
 
   const abrirEdicion = (a: AlmacenResponse) => {
     setEditando(a)
-    setForm({ codigo: a.codigo, nombre: a.nombre, direccion: a.direccion ?? '' })
+    setForm({ codigo: a.codigo, nombre: a.nombre, direccion: a.direccion ?? '', esPrincipal: a.esPrincipal })
     setErrorForm('')
     setAbierto(true)
   }
@@ -74,6 +75,7 @@ export function AlmacenesPage() {
         codigo: form.codigo.trim(),
         nombre: form.nombre.trim(),
         direccion: form.direccion.trim() || null,
+        esPrincipal: form.esPrincipal,
       }
       if (editando) {
         await almacenApi.update(editando.id, { ...cuerpo, activo: editando.activo })
@@ -104,6 +106,7 @@ export function AlmacenesPage() {
             codigo: a.codigo,
             nombre: a.nombre,
             direccion: a.direccion,
+            esPrincipal: a.esPrincipal,
             activo: !a.activo,
           })
           await cargar()
@@ -234,6 +237,17 @@ export function AlmacenesPage() {
             value={form.direccion}
             onChange={(e) => setForm({ ...form, direccion: e.target.value })}
           />
+          <div>
+            <Checkbox
+              label="Almacén principal"
+              checked={form.esPrincipal}
+              onChange={(e) => setForm({ ...form, esPrincipal: e.target.checked })}
+            />
+            <p className="mt-1 text-xs text-ink-soft">
+              Solo uno puede serlo: es el que sale por defecto en pedidos y ventas, y del que se muestra
+              el stock al buscar productos. Marcarlo aquí desmarca al anterior.
+            </p>
+          </div>
         </div>
       </Modal>
 
