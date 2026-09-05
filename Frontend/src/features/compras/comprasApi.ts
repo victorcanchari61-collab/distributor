@@ -134,4 +134,9 @@ export const compraApi = {
   /** Solo si la compra sigue Pendiente: sin nada recibido todavía. */
   update: (id: number, body: CrearCompraRequest) => api.put<CompraResponse>(`/compra/${id}`, body),
   anular: (id: number) => api.patch<void>(`/compra/${id}/anular`),
+  /** Compras a crédito con saldo pendiente: la base de "Cuentas por pagar". */
+  cuentasPorPagar: () => api.get<CompraResponse[]>('/compra/cuentasporpagar'),
+  /** Registra un abono contra el saldo pendiente de la compra. */
+  registrarPago: (id: number, body: PagoCompraRequest) =>
+    api.post<CompraResponse>(`/compra/${id}/pagos`, body),
 }

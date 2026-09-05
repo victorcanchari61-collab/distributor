@@ -27,4 +27,10 @@ public interface IComprasService
     Task<CompraResponse> ActualizarCompraAsync(int id, CrearCompraRequest request);
 
     Task AnularCompraAsync(int id);
+
+    /// <summary>Registra un abono contra el saldo pendiente de una compra.</summary>
+    Task<CompraResponse> RegistrarPagoAsync(int id, PagoCompraRequest request);
+
+    /// <summary>Compras con saldo pendiente de pago: base de "Cuentas por pagar".</summary>
+    Task<IEnumerable<CompraResponse>> GetCuentasPorPagarAsync();
 }

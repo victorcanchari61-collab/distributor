@@ -24,4 +24,10 @@ public interface IVentasService
     Task<NotaVentaResponse> CrearNotaVentaAsync(CrearNotaVentaRequest request, int? usuarioId);
 
     Task AnularNotaVentaAsync(int id, int? usuarioId);
+
+    /// <summary>Registra un abono contra el saldo pendiente de una nota de venta.</summary>
+    Task<NotaVentaResponse> RegistrarPagoAsync(int id, PagoVentaRequest request);
+
+    /// <summary>Notas de venta con saldo pendiente de cobro: base de "Cuentas por cobrar".</summary>
+    Task<IEnumerable<NotaVentaResponse>> GetCuentasPorCobrarAsync();
 }

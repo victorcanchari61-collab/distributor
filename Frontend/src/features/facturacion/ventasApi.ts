@@ -134,4 +134,9 @@ export const notaVentaApi = {
   getById: (id: number) => api.get<NotaVentaResponse>(`/notaventa/${id}`),
   create: (body: CrearNotaVentaRequest) => api.post<NotaVentaResponse>('/notaventa', body),
   anular: (id: number) => api.patch<void>(`/notaventa/${id}/anular`),
+  /** Notas a crédito con saldo pendiente: la base de "Cuentas por cobrar". */
+  cuentasPorCobrar: () => api.get<NotaVentaResponse[]>('/notaventa/cuentasporcobrar'),
+  /** Registra un abono contra el saldo pendiente de la nota. */
+  registrarPago: (id: number, body: PagoVentaRequest) =>
+    api.post<NotaVentaResponse>(`/notaventa/${id}/pagos`, body),
 }

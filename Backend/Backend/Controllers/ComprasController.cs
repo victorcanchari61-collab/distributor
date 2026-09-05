@@ -81,6 +81,10 @@ public class CompraController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id) => Ok(await _compras.GetCompraAsync(id));
 
+    /// <summary>Compras a crédito con saldo pendiente: base de "Cuentas por pagar".</summary>
+    [HttpGet("cuentasporpagar")]
+    public async Task<IActionResult> CuentasPorPagar() => Ok(await _compras.GetCuentasPorPagarAsync());
+
     /// <summary>Compra directa, sin orden previa: al contado, en el momento.</summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CrearCompraRequest request)
@@ -101,4 +105,9 @@ public class CompraController : ControllerBase
         await _compras.AnularCompraAsync(id);
         return NoContent();
     }
+
+    /// <summary>Registra un abono contra el saldo pendiente de la compra.</summary>
+    [HttpPost("{id:int}/pagos")]
+    public async Task<IActionResult> RegistrarPago(int id, [FromBody] PagoCompraRequest request) =>
+        Ok(await _compras.RegistrarPagoAsync(id, request));
 }

@@ -29,6 +29,7 @@ public class ComprasService : IComprasService
     private readonly IProductoRepository _productos;
     private readonly IValidator<CrearOrdenCompraRequest> _ordenValidator;
     private readonly IValidator<CrearCompraRequest> _compraValidator;
+    private readonly IValidator<PagoCompraRequest> _pagoValidator;
     private readonly INotificador _notificador;
 
     public ComprasService(
@@ -36,12 +37,14 @@ public class ComprasService : IComprasService
         IProductoRepository productos,
         IValidator<CrearOrdenCompraRequest> ordenValidator,
         IValidator<CrearCompraRequest> compraValidator,
+        IValidator<PagoCompraRequest> pagoValidator,
         INotificador notificador)
     {
         _repository = repository;
         _productos = productos;
         _ordenValidator = ordenValidator;
         _compraValidator = compraValidator;
+        _pagoValidator = pagoValidator;
         _notificador = notificador;
     }
 
@@ -311,6 +314,54 @@ public class ComprasService : IComprasService
         compra.Estado = EstadoCompra.Anulada;
         await _repository.UpdateCompraAsync(compra);
         await _notificador.AvisarAsync("compras", "anulada", MapCompra(compra));
+    }
+
+    /// <summary>
+    /// Un abono más contra la compra: no reemplaza los pagos existentes, se
+    /// suma. No se acepta si ya está saldada o si el abono se pasa del saldo
+    /// pendiente — no tiene sentido pagar de más.
+    /// </summary>
+    public async Task<CompraResponse> RegistrarPagoAsync(int id, PagoCompraRequest request)
+    {
+        await _pagoValidator.ValidateAndThrowAsync(request);
+
+        var compra = await GetCompraOrThrowAsync(id);
+
+        if (compra.Estado == EstadoCompra.Anulada)
+        {
+            throw new BadRequestException("Esta compra está anulada: no se le pueden registrar pagos.");
+        }
+
+        var total = Math.Round(compra.Detalle.Sum(d => d.Cantidad * d.CostoUnitario), 2);
+        var pagado = Math.Round(compra.Pagos.Sum(p => p.Monto), 2);
+        var saldo = total - pagado;
+
+        if (saldo <= 0)
+        {
+            throw new BadRequestException("Esta compra ya está pagada por completo.");
+        }
+
+        if (request.Monto > saldo)
+        {
+            throw new BadRequestException(
+                $"El abono (S/ {request.Monto}) supera el saldo pendiente (S/ {saldo}).");
+        }
+
+        compra.Pagos.Add(new CompraPago { MetodoPagoId = request.MetodoPagoId, Monto = request.Monto });
+        await _repository.UpdateCompraAsync(compra);
+
+        var actualizada = await GetCompraAsync(id);
+        await _notificador.AvisarAsync("compras", "pago", actualizada);
+        return actualizada;
+    }
+
+    public async Task<IEnumerable<CompraResponse>> GetCuentasPorPagarAsync()
+    {
+        var compras = await _repository.GetComprasAsync();
+        return compras
+            .Where(c => c.Estado != EstadoCompra.Anulada && c.FormaPago == FormaPagoCompra.Credito)
+            .Select(MapCompra)
+            .Where(c => c.Total - c.TotalPagado > 0);
     }
 
     // ------------------------------------------------------------ Auxiliares

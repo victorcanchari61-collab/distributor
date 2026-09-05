@@ -82,6 +82,10 @@ public class NotaVentaController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id) => Ok(await _ventas.GetNotaVentaAsync(id));
 
+    /// <summary>Notas de venta a crédito con saldo pendiente: base de "Cuentas por cobrar".</summary>
+    [HttpGet("cuentasporcobrar")]
+    public async Task<IActionResult> CuentasPorCobrar() => Ok(await _ventas.GetCuentasPorCobrarAsync());
+
     /// <summary>Venta directa, sin pedido previo: el stock sale al momento.</summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CrearNotaVentaRequest request)
@@ -96,4 +100,9 @@ public class NotaVentaController : ControllerBase
         await _ventas.AnularNotaVentaAsync(id, UsuarioId);
         return NoContent();
     }
+
+    /// <summary>Registra un abono contra el saldo pendiente de la nota.</summary>
+    [HttpPost("{id:int}/pagos")]
+    public async Task<IActionResult> RegistrarPago(int id, [FromBody] PagoVentaRequest request) =>
+        Ok(await _ventas.RegistrarPagoAsync(id, request));
 }

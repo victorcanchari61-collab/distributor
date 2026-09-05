@@ -1,3 +1,5 @@
 export { MetodosPagoPage } from './MetodosPagoPage'
+export { CuentasPorCobrarPage } from './CuentasPorCobrarPage'
+export { CuentasPorPagarPage } from './CuentasPorPagarPage'
 export { metodoPagoApi } from './finanzasApi'
 export type { MetodoPagoResponse, MetodoPagoRequest, TipoMetodoPago } from './finanzasApi'

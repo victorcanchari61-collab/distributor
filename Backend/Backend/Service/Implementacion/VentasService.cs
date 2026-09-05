@@ -33,6 +33,7 @@ public class VentasService : IVentasService
     private readonly IValidator<CrearPedidoRequest> _pedidoValidator;
     private readonly IValidator<ConfirmarPedidoRequest> _confirmarValidator;
     private readonly IValidator<CrearNotaVentaRequest> _notaVentaValidator;
+    private readonly IValidator<PagoVentaRequest> _pagoValidator;
     private readonly INotificador _notificador;
 
     public VentasService(
@@ -42,6 +43,7 @@ public class VentasService : IVentasService
         IValidator<CrearPedidoRequest> pedidoValidator,
         IValidator<ConfirmarPedidoRequest> confirmarValidator,
         IValidator<CrearNotaVentaRequest> notaVentaValidator,
+        IValidator<PagoVentaRequest> pagoValidator,
         INotificador notificador)
     {
         _repository = repository;
@@ -50,6 +52,7 @@ public class VentasService : IVentasService
         _pedidoValidator = pedidoValidator;
         _confirmarValidator = confirmarValidator;
         _notaVentaValidator = notaVentaValidator;
+        _pagoValidator = pagoValidator;
         _notificador = notificador;
     }
 
@@ -225,6 +228,54 @@ public class VentasService : IVentasService
         notaVenta.Estado = EstadoNotaVenta.Anulada;
         await _repository.UpdateNotaVentaAsync(notaVenta);
         await _notificador.AvisarAsync("notasventa", "anulada", MapNotaVenta(notaVenta));
+    }
+
+    /// <summary>
+    /// Un abono más contra la nota: no reemplaza los pagos existentes, se
+    /// suma. No se acepta si ya está saldada o si el abono se pasa del saldo
+    /// pendiente — no tiene sentido cobrar de más.
+    /// </summary>
+    public async Task<NotaVentaResponse> RegistrarPagoAsync(int id, PagoVentaRequest request)
+    {
+        await _pagoValidator.ValidateAndThrowAsync(request);
+
+        var notaVenta = await GetNotaVentaOrThrowAsync(id);
+
+        if (notaVenta.Estado == EstadoNotaVenta.Anulada)
+        {
+            throw new BadRequestException("Esta nota de venta está anulada: no se le pueden registrar pagos.");
+        }
+
+        var total = Math.Round(notaVenta.Detalle.Sum(d => d.Cantidad * d.PrecioUnitario), 2);
+        var pagado = Math.Round(notaVenta.Pagos.Sum(p => p.Monto), 2);
+        var saldo = total - pagado;
+
+        if (saldo <= 0)
+        {
+            throw new BadRequestException("Esta nota de venta ya está pagada por completo.");
+        }
+
+        if (request.Monto > saldo)
+        {
+            throw new BadRequestException(
+                $"El abono (S/ {request.Monto}) supera el saldo pendiente (S/ {saldo}).");
+        }
+
+        notaVenta.Pagos.Add(new PagoVenta { MetodoPagoId = request.MetodoPagoId, Monto = request.Monto });
+        await _repository.UpdateNotaVentaAsync(notaVenta);
+
+        var actualizada = await GetNotaVentaAsync(id);
+        await _notificador.AvisarAsync("notasventa", "pago", actualizada);
+        return actualizada;
+    }
+
+    public async Task<IEnumerable<NotaVentaResponse>> GetCuentasPorCobrarAsync()
+    {
+        var notas = await _repository.GetNotasVentaAsync(EstadoNotaVenta.Confirmada);
+        return notas
+            .Where(n => n.FormaPago == FormaPagoVenta.Credito)
+            .Select(MapNotaVenta)
+            .Where(n => n.Total - n.TotalPagado > 0);
     }
 
     // ------------------------------------------------------------ Auxiliares
