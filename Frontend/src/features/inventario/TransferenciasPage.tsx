@@ -9,20 +9,30 @@ import {
   Input,
   ListPage,
   Modal,
+  ResumenDocumento,
   RowAction,
   StatCard,
   SysDataTable,
+  TablaProductosDetalle,
   useConfirmacion,
 } from '../../components/ui'
-import type { DataTableColumn, LineaProductoNueva } from '../../components/ui'
+import type { ColumnaDetalleProducto, DataTableColumn, LineaProductoNueva } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
 import { almacenApi, stockApi, transferenciaApi } from './inventarioApi'
-import type { AlmacenResponse, DocumentoInventarioResponse } from './inventarioApi'
+import type { AlmacenResponse, DocumentoInventarioResponse, LineaDocumentoResponse } from './inventarioApi'
 import { useRealtime } from '../../lib/realtime'
 
 type FilaTransferencia = LineaProductoNueva
+
+function estadoDocumentoBadge(row: DocumentoInventarioResponse) {
+  return (
+    <Badge tone={row.estado === 'ANULADO' ? 'neutral' : 'success'}>
+      {row.estado === 'ANULADO' ? `Anulada${row.anuladoPor ? ` (${row.anuladoPor})` : ''}` : 'Confirmada'}
+    </Badge>
+  )
+}
 
 /**
  * Transferencias entre dos almacenes propios.
@@ -248,11 +258,7 @@ export function TransferenciasPage() {
     {
       key: 'estado',
       label: 'Estado',
-      render: (row) => (
-        <Badge tone={row.estado === 'ANULADO' ? 'neutral' : 'success'}>
-          {row.estado === 'ANULADO' ? `Anulada${row.anuladoPor ? ` (${row.anuladoPor})` : ''}` : 'Confirmada'}
-        </Badge>
-      ),
+      render: (row) => estadoDocumentoBadge(row),
     },
   ]
 
@@ -413,34 +419,50 @@ export function TransferenciasPage() {
         title={detalleAbierto?.numero ?? ''}
         description={
           detalleAbierto
-            ? `${detalleAbierto.almacen} → ${detalleAbierto.almacenDestino}`
+            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')} · ${detalleAbierto.almacen} → ${detalleAbierto.almacenDestino}`
             : undefined
         }
         onClose={() => setDetalleAbierto(null)}
+        size="lg"
       >
         {detalleAbierto && (
-          <ul className="flex flex-col gap-2">
-            {detalleAbierto.detalle.map((l) => (
-              <li
-                key={l.id}
-                className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2"
-              >
-                <span>
-                  <Badge tone={l.tipo === 'ENTRADA' ? 'success' : 'warning'}>
-                    {l.tipo === 'ENTRADA' ? 'Entra' : 'Sale'}
-                  </Badge>
-                  <span className="ml-2 font-medium text-ink">{l.producto}</span>
-                  <span className="ml-2 text-xs text-ink-soft">
-                    {l.almacen} ·{' '}
-                    {l.presentacion
-                      ? `${l.cantidadPresentacion} ${l.presentacion}`
-                      : `${l.cantidad} ${l.unidadBase}`}
-                  </span>
-                </span>
-                <span className="text-sm">S/ {l.costoTotal.toFixed(2)}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="flex flex-col gap-3">
+            {detalleAbierto.estado === 'ANULADO' && <div>{estadoDocumentoBadge(detalleAbierto)}</div>}
+
+            <TablaProductosDetalle<LineaDocumentoResponse>
+              filas={detalleAbierto.detalle}
+              rowKey={(l) => l.id}
+              titulo={(l) => l.producto}
+              subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
+              grupos={[
+                [
+                  {
+                    key: 'tipo',
+                    label: 'Tipo',
+                    render: (l) => (
+                      <Badge tone={l.tipo === 'ENTRADA' ? 'success' : 'warning'}>
+                        {l.tipo === 'ENTRADA' ? 'Entra' : 'Sale'}
+                      </Badge>
+                    ),
+                  },
+                  { key: 'almacen', label: 'Almacén', render: (l) => l.almacen },
+                  { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
+                ] satisfies ColumnaDetalleProducto<LineaDocumentoResponse>[],
+                [
+                  { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.costoTotal.toFixed(2)}` },
+                ] satisfies ColumnaDetalleProducto<LineaDocumentoResponse>[],
+              ]}
+            />
+
+            <ResumenDocumento total={detalleAbierto.total} />
+
+            {detalleAbierto.observacion && (
+              <p className="text-sm text-ink-soft">
+                <span className="font-semibold text-ink-muted">Observación: </span>
+                {detalleAbierto.observacion}
+              </p>
+            )}
+          </div>
         )}
       </Modal>
 

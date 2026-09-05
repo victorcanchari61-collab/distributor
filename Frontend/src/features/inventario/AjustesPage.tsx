@@ -9,13 +9,15 @@ import {
   Input,
   ListPage,
   Modal,
+  ResumenDocumento,
   RowAction,
   StatCard,
   SysDataTable,
+  TablaProductosDetalle,
   Tabs,
   useConfirmacion,
 } from '../../components/ui'
-import type { DataTableColumn, LineaProductoNueva } from '../../components/ui'
+import type { ColumnaDetalleProducto, DataTableColumn, LineaProductoNueva } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
@@ -23,6 +25,7 @@ import { almacenApi, ajusteApi, motivoApi, stockApi } from './inventarioApi'
 import type {
   AlmacenResponse,
   DocumentoInventarioResponse,
+  LineaDocumentoResponse,
   MotivoResponse,
 } from './inventarioApi'
 import { MotivosTabla } from './MotivosTabla'
@@ -31,6 +34,14 @@ import { useRealtime } from '../../lib/realtime'
 type Pestana = 'ajustes' | 'motivos'
 
 type FilaAjuste = LineaProductoNueva
+
+function estadoDocumentoBadge(row: DocumentoInventarioResponse) {
+  return (
+    <Badge tone={row.estado === 'ANULADO' ? 'neutral' : 'success'}>
+      {row.estado === 'ANULADO' ? `Anulado${row.anuladoPor ? ` (${row.anuladoPor})` : ''}` : 'Confirmado'}
+    </Badge>
+  )
+}
 
 /**
  * Ajustes de inventario: el documento formal que mueve stock a mano.
@@ -322,11 +333,7 @@ export function AjustesPage() {
     {
       key: 'estado',
       label: 'Estado',
-      render: (row) => (
-        <Badge tone={row.estado === 'ANULADO' ? 'neutral' : 'success'}>
-          {row.estado === 'ANULADO' ? `Anulado${row.anuladoPor ? ` (${row.anuladoPor})` : ''}` : 'Confirmado'}
-        </Badge>
-      ),
+      render: (row) => estadoDocumentoBadge(row),
     },
   ]
 
@@ -521,30 +528,41 @@ export function AjustesPage() {
       <Modal
         open={detalleAbierto !== null}
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.motivo}` : ''}
-        description={detalleAbierto?.observacion ?? undefined}
+        description={
+          detalleAbierto
+            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')} · ${detalleAbierto.almacen}`
+            : undefined
+        }
         onClose={() => setDetalleAbierto(null)}
+        size="lg"
       >
         {detalleAbierto && (
-          <ul className="flex flex-col gap-2">
-            {detalleAbierto.detalle.map((l) => (
-              <li
-                key={l.id}
-                className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2"
-              >
-                <span>
-                  <span className="font-medium text-ink">{l.producto}</span>
-                  <span className="ml-2 text-xs text-ink-soft">
-                    {l.presentacion
-                      ? `${l.cantidadPresentacion} ${l.presentacion}`
-                      : `${l.cantidad} ${l.unidadBase}`}
-                  </span>
-                </span>
-                <span className="text-sm">
-                  S/ {l.costoUnitario} × {l.unidadBase} = S/ {l.costoTotal.toFixed(2)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="flex flex-col gap-3">
+            {detalleAbierto.estado === 'ANULADO' && <div>{estadoDocumentoBadge(detalleAbierto)}</div>}
+
+            <TablaProductosDetalle<LineaDocumentoResponse>
+              filas={detalleAbierto.detalle}
+              rowKey={(l) => l.id}
+              titulo={(l) => l.producto}
+              subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
+              grupos={[
+                [
+                  { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
+                  { key: 'costo', label: 'Costo', render: (l) => `S/ ${l.costoUnitario.toFixed(2)}` },
+                  { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.costoTotal.toFixed(2)}` },
+                ] satisfies ColumnaDetalleProducto<LineaDocumentoResponse>[],
+              ]}
+            />
+
+            <ResumenDocumento total={detalleAbierto.total} />
+
+            {detalleAbierto.observacion && (
+              <p className="text-sm text-ink-soft">
+                <span className="font-semibold text-ink-muted">Observación: </span>
+                {detalleAbierto.observacion}
+              </p>
+            )}
+          </div>
         )}
       </Modal>
 

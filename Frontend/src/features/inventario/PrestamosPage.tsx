@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
+import { Eye, HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
   AgregarProductoPanel,
   Alert,
@@ -9,19 +9,34 @@ import {
   Input,
   ListPage,
   Modal,
+  ResumenDocumento,
   RowAction,
   StatCard,
   SysDataTable,
+  TablaProductosDetalle,
 } from '../../components/ui'
-import type { DataTableColumn, LineaProductoNueva } from '../../components/ui'
+import type { ColumnaDetalleProducto, DataTableColumn, LineaProductoNueva } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
 import { almacenApi, prestamoApi, stockApi } from './inventarioApi'
-import type { AlmacenResponse, PrestamoResponse, TipoPrestamo } from './inventarioApi'
+import type {
+  AlmacenResponse,
+  PrestamoDetalleResponse,
+  PrestamoResponse,
+  TipoPrestamo,
+} from './inventarioApi'
 import { useRealtime } from '../../lib/realtime'
 
 type FilaPrestamo = LineaProductoNueva
+
+function estadoPrestamoBadge(estado: PrestamoResponse['estado']) {
+  return (
+    <Badge tone={estado === 'DEVUELTO' ? 'neutral' : 'warning'}>
+      {estado === 'DEVUELTO' ? 'Devuelto' : 'Pendiente'}
+    </Badge>
+  )
+}
 
 /**
  * Mercadería que sale o entra desde fuera de la empresa: se presta y se
@@ -42,6 +57,7 @@ export function PrestamosPage() {
   const [error, setError] = useState('')
 
   const [abierto, setAbierto] = useState(false)
+  const [detalleAbierto, setDetalleAbierto] = useState<PrestamoResponse | null>(null)
   const [devolucionAbierta, setDevolucionAbierta] = useState<PrestamoResponse | null>(null)
   const [cantidadesDevolucion, setCantidadesDevolucion] = useState<Record<number, string>>({})
   const [guardando, setGuardando] = useState(false)
@@ -302,11 +318,7 @@ export function PrestamosPage() {
     {
       key: 'estado',
       label: 'Estado',
-      render: (row) => (
-        <Badge tone={row.estado === 'DEVUELTO' ? 'neutral' : 'warning'}>
-          {row.estado === 'DEVUELTO' ? 'Devuelto' : 'Pendiente'}
-        </Badge>
-      ),
+      render: (row) => estadoPrestamoBadge(row.estado),
     },
   ]
 
@@ -349,6 +361,9 @@ export function PrestamosPage() {
       empty={cargando ? 'Cargando préstamos...' : 'Todavía no hay préstamos registrados.'}
       rowActions={(row) => (
         <>
+          <RowAction label={`Ver ${row.numero}`} onClick={() => setDetalleAbierto(row)}>
+            <Eye size={15} />
+          </RowAction>
           {row.estado === 'PENDIENTE' && (
             <RowAction label={`Registrar devolución de ${row.numero}`} onClick={() => abrirDevolucion(row)}>
               <Undo2 size={15} />
@@ -449,6 +464,62 @@ export function PrestamosPage() {
             )}
           />
         </div>
+      </Modal>
+
+      {/* Ver detalle */}
+      <Modal
+        open={detalleAbierto !== null}
+        title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.contraparte}` : ''}
+        description={
+          detalleAbierto
+            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')} · ${detalleAbierto.almacen} · ${
+                detalleAbierto.tipo === 'DADO' ? 'Prestado' : 'Recibido'
+              }`
+            : undefined
+        }
+        onClose={() => setDetalleAbierto(null)}
+        size="lg"
+      >
+        {detalleAbierto && (
+          <div className="flex flex-col gap-3">
+            {detalleAbierto.estado === 'DEVUELTO' && <div>{estadoPrestamoBadge(detalleAbierto.estado)}</div>}
+
+            <TablaProductosDetalle<PrestamoDetalleResponse>
+              filas={detalleAbierto.detalle}
+              rowKey={(l) => l.id}
+              titulo={(l) => l.producto}
+              subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
+              grupos={[
+                [
+                  { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
+                  { key: 'costo', label: 'Costo', render: (l) => `S/ ${l.costoUnitario.toFixed(2)}` },
+                  { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.costoTotal.toFixed(2)}` },
+                ] satisfies ColumnaDetalleProducto<PrestamoDetalleResponse>[],
+                [
+                  {
+                    key: 'devuelto',
+                    label: 'Devuelto',
+                    render: (l) => `${l.cantidadDevuelta} ${l.unidadBase}`,
+                  },
+                  {
+                    key: 'pendiente',
+                    label: 'Pendiente',
+                    render: (l) => `${l.cantidadPendiente} ${l.unidadBase}`,
+                  },
+                ] satisfies ColumnaDetalleProducto<PrestamoDetalleResponse>[],
+              ]}
+            />
+
+            <ResumenDocumento total={detalleAbierto.total} />
+
+            {detalleAbierto.observacion && (
+              <p className="text-sm text-ink-soft">
+                <span className="font-semibold text-ink-muted">Observación: </span>
+                {detalleAbierto.observacion}
+              </p>
+            )}
+          </div>
+        )}
       </Modal>
 
       {/* Devolución */}
