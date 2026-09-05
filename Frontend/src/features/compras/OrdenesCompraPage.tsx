@@ -4,6 +4,7 @@ import {
   Building2,
   CheckCircle2,
   ClipboardList,
+  Eye,
   Pencil,
   Plus,
   ShoppingBag,
@@ -508,22 +509,35 @@ export function OrdenesCompraPage() {
       empty={cargando ? 'Cargando órdenes...' : 'Todavía no hay órdenes de compra registradas.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} onClick={() => setDetalleAbierto(row)}>
-            <ClipboardList size={15} />
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+            <Eye size={15} />
           </RowAction>
-          {row.estado === 'PENDIENTE' && (
-            <>
-              <RowAction label={`Editar ${row.numero}`} onClick={() => abrirEdicion(row)}>
-                <Pencil size={15} />
-              </RowAction>
-              <RowAction label={`Confirmar y convertir a compra ${row.numero}`} onClick={() => confirmarOrden(row)}>
-                <ShoppingBag size={15} />
-              </RowAction>
-              <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anularOrden(row)}>
-                <Undo2 size={15} />
-              </RowAction>
-            </>
-          )}
+          <RowAction
+            label={`Editar ${row.numero}`}
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason="Solo se edita una orden pendiente"
+            onClick={() => abrirEdicion(row)}
+          >
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`Confirmar y convertir a compra ${row.numero}`}
+            tone="success"
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason={row.estado === 'CONFIRMADA' ? 'Ya fue confirmada' : 'Está anulada'}
+            onClick={() => confirmarOrden(row)}
+          >
+            <ShoppingBag size={15} />
+          </RowAction>
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason={row.estado === 'CONFIRMADA' ? 'Ya generó su compra: anula esa' : 'Ya está anulada'}
+            onClick={() => anularOrden(row)}
+          >
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { PackageCheck, Plus, Undo2 } from 'lucide-react'
+import { Eye, PackageCheck, Plus, Undo2 } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -154,18 +154,23 @@ export function RecepcionesPage() {
         <>
           <RowAction
             label={`Ver ${row.numero}`}
+            tone="view"
             onClick={() => {
               setDetalleAbierto(row)
               void recepcionApi.getById(row.id).then(setDetalleAbierto)
             }}
           >
-            <PackageCheck size={15} />
+            <Eye size={15} />
           </RowAction>
-          {row.estado === 'CONFIRMADO' && (
-            <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anular(row)}>
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'CONFIRMADO'}
+            disabledReason="Ya está anulada"
+            onClick={() => anular(row)}
+          >
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

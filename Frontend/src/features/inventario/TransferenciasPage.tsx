@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, Plus, Trash2, Truck, Undo2 } from 'lucide-react'
+import { ArrowRight, Eye, Plus, Trash2, Truck, Undo2 } from 'lucide-react'
 import {
   AgregarProductoPanel,
   Alert,
@@ -314,19 +314,24 @@ export function TransferenciasPage() {
         <>
           <RowAction
             label={`Ver ${row.numero}`}
+            tone="view"
             onClick={() => {
               // El listado no trae el detalle completo: se pide al abrir.
               setDetalleAbierto(row)
               void transferenciaApi.getById(row.id).then(setDetalleAbierto)
             }}
           >
-            <Truck size={15} />
+            <Eye size={15} />
           </RowAction>
-          {row.estado === 'CONFIRMADO' && (
-            <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anular(row)}>
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'CONFIRMADO'}
+            disabledReason="Ya está anulada"
+            onClick={() => anular(row)}
+          >
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

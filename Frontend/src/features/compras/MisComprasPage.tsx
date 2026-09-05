@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Building2, PackageCheck, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, Building2, Eye, PackageCheck, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AgregarProductoPanel,
   Alert,
@@ -752,24 +752,35 @@ export function MisComprasPage() {
       empty={cargando ? 'Cargando compras...' : 'Todavía no hay compras registradas.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} onClick={() => setDetalleAbierto(row)}>
-            <ShoppingBag size={15} />
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+            <Eye size={15} />
           </RowAction>
-          {row.estado === 'PENDIENTE' && (
-            <RowAction label={`Editar ${row.numero}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {(row.estado === 'PENDIENTE' || row.estado === 'RECIBIDA_PARCIAL') && (
-            <RowAction label={`Recibir ${row.numero}`} onClick={() => setRecepcionAbierta(row)}>
-              <PackageCheck size={15} />
-            </RowAction>
-          )}
-          {row.estado === 'PENDIENTE' && (
-            <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anularCompra(row)}>
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Editar ${row.numero}`}
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason={row.estado === 'ANULADA' ? 'Está anulada' : 'Ya tiene mercadería recibida'}
+            onClick={() => abrirEdicion(row)}
+          >
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`Recibir ${row.numero}`}
+            tone="success"
+            disabled={row.estado !== 'PENDIENTE' && row.estado !== 'RECIBIDA_PARCIAL'}
+            disabledReason={row.estado === 'ANULADA' ? 'Está anulada' : 'Ya se recibió completa'}
+            onClick={() => setRecepcionAbierta(row)}
+          >
+            <PackageCheck size={15} />
+          </RowAction>
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason={row.estado === 'ANULADA' ? 'Ya está anulada' : 'Tiene recepciones: anula esas'}
+            onClick={() => anularCompra(row)}
+          >
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

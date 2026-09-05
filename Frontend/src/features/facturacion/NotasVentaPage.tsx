@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Contact, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, Contact, Eye, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AgregarProductoPanel,
   Alert,
@@ -618,14 +618,18 @@ export function NotasVentaPage() {
       empty={cargando ? 'Cargando notas de venta...' : 'Todavía no hay notas de venta registradas.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} onClick={() => setDetalleAbierto(row)}>
-            <ShoppingBag size={15} />
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+            <Eye size={15} />
           </RowAction>
-          {row.estado === 'CONFIRMADA' && (
-            <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anularNota(row)}>
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'CONFIRMADA'}
+            disabledReason="Ya está anulada"
+            onClick={() => anularNota(row)}
+          >
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

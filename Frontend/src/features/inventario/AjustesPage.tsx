@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ClipboardCheck, ListChecks, Plus, Trash2, Undo2 } from 'lucide-react'
+import { ClipboardCheck, Eye, ListChecks, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
   AgregarProductoPanel,
   Alert,
@@ -409,6 +409,7 @@ export function AjustesPage() {
         <>
           <RowAction
             label={`Ver ${row.numero}`}
+            tone="view"
             onClick={() => {
               // El listado no trae el detalle: se pide completo al abrir, para
               // no cargar las líneas de 300 documentos que nadie va a mirar.
@@ -416,13 +417,17 @@ export function AjustesPage() {
               void ajusteApi.getById(row.id).then(setDetalleAbierto)
             }}
           >
-            <ClipboardCheck size={15} />
+            <Eye size={15} />
           </RowAction>
-          {row.estado === 'CONFIRMADO' && (
-            <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anular(row)}>
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'CONFIRMADO'}
+            disabledReason="Ya está anulado"
+            onClick={() => anular(row)}
+          >
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

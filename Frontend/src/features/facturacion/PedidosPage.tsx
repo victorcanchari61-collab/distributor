@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, CheckCircle2, ClipboardList, Contact, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ClipboardList, Contact, Eye, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AgregarProductoPanel,
   Alert,
@@ -538,22 +538,35 @@ export function PedidosPage() {
       empty={cargando ? 'Cargando pedidos...' : 'Todavía no hay pedidos registrados.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} onClick={() => setDetalleAbierto(row)}>
-            <ClipboardList size={15} />
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+            <Eye size={15} />
           </RowAction>
-          {row.estado === 'PENDIENTE' && (
-            <>
-              <RowAction label={`Editar ${row.numero}`} onClick={() => abrirEdicion(row)}>
-                <ClipboardList size={15} />
-              </RowAction>
-              <RowAction label={`Confirmar y despachar ${row.numero}`} onClick={() => abrirConfirmar(row)}>
-                <ShoppingBag size={15} />
-              </RowAction>
-              <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anularPedido(row)}>
-                <Undo2 size={15} />
-              </RowAction>
-            </>
-          )}
+          <RowAction
+            label={`Editar ${row.numero}`}
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason="Solo se edita un pedido pendiente"
+            onClick={() => abrirEdicion(row)}
+          >
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`Confirmar y despachar ${row.numero}`}
+            tone="success"
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason={row.estado === 'CONFIRMADO' ? 'Ya fue confirmado' : 'Está anulado'}
+            onClick={() => abrirConfirmar(row)}
+          >
+            <ShoppingBag size={15} />
+          </RowAction>
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason={row.estado === 'CONFIRMADO' ? 'Ya generó su venta: anula esa' : 'Ya está anulado'}
+            onClick={() => anularPedido(row)}
+          >
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

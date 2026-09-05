@@ -361,14 +361,18 @@ export function PrestamosPage() {
       empty={cargando ? 'Cargando préstamos...' : 'Todavía no hay préstamos registrados.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} onClick={() => setDetalleAbierto(row)}>
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
             <Eye size={15} />
           </RowAction>
-          {row.estado === 'PENDIENTE' && (
-            <RowAction label={`Registrar devolución de ${row.numero}`} onClick={() => abrirDevolucion(row)}>
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Registrar devolución de ${row.numero}`}
+            tone="warning"
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason="Ya fue devuelto"
+            onClick={() => abrirDevolucion(row)}
+          >
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

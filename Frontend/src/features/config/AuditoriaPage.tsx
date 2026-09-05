@@ -125,7 +125,7 @@ export function AuditoriaPage() {
       empty={cargando ? 'Cargando auditoría...' : 'No hay cambios registrados con esos filtros.'}
       note="Se muestran los últimos 300 cambios. Usa el ícono de filtros de la tabla para acotar por entidad, acción o fecha."
       rowActions={(row) => (
-        <RowAction label={`Ver cambios de ${row.entidad} #${row.entidadId}`} onClick={() => setDetalleAbierto(row)}>
+        <RowAction label={`Ver cambios de ${row.entidad} #${row.entidadId}`} tone="view" onClick={() => setDetalleAbierto(row)}>
           <Eye size={15} />
         </RowAction>
       )}
