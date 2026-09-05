@@ -9,17 +9,25 @@ import {
   Button,
   Checkbox,
   Desplegable,
+  InfoDocumento,
   Input,
   ListPage,
   Modal,
   PageHeader,
   PageSection,
+  ResumenDocumento,
   RowAction,
   StatCard,
   SysDataTable,
+  TablaProductosDetalle,
   useConfirmacion,
 } from '../../components/ui'
-import type { DataTableColumn, LineaProductoNueva, OpcionBuscador } from '../../components/ui'
+import type {
+  ColumnaDetalleProducto,
+  DataTableColumn,
+  LineaProductoNueva,
+  OpcionBuscador,
+} from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
 import { clienteApi, productoApi } from '../maestros'
@@ -29,7 +37,13 @@ import type { AlmacenResponse } from '../inventario'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { pedidoApi } from './ventasApi'
-import type { CrearPedidoRequest, PedidoResponse } from './ventasApi'
+import type { CrearPedidoRequest, LineaVentaResponse, PedidoResponse } from './ventasApi'
+
+function estadoPedidoBadge(estado: PedidoResponse['estado']) {
+  const tono = estado === 'CONFIRMADO' ? 'success' : estado === 'ANULADO' ? 'neutral' : 'warning'
+  const texto = estado === 'CONFIRMADO' ? 'Confirmado' : estado === 'ANULADO' ? 'Anulado' : 'Pendiente'
+  return <Badge tone={tono}>{texto}</Badge>
+}
 
 type FilaPedido = LineaProductoNueva
 
@@ -338,11 +352,7 @@ export function PedidosPage() {
     {
       key: 'estado',
       label: 'Estado',
-      render: (row) => (
-        <Badge tone={row.estado === 'CONFIRMADO' ? 'success' : row.estado === 'ANULADO' ? 'neutral' : 'warning'}>
-          {row.estado === 'CONFIRMADO' ? 'Confirmado' : row.estado === 'ANULADO' ? 'Anulado' : 'Pendiente'}
-        </Badge>
-      ),
+      render: (row) => estadoPedidoBadge(row.estado),
     },
   ]
 
@@ -551,28 +561,55 @@ export function PedidosPage() {
       <Modal
         open={detalleAbierto !== null}
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.cliente}` : ''}
-        description={detalleAbierto?.observacion ?? undefined}
         onClose={() => setDetalleAbierto(null)}
+        size="lg"
       >
         {detalleAbierto && (
-          <ul className="flex flex-col gap-2">
+          <div className="flex flex-col gap-4">
+            <InfoDocumento
+              campos={[
+                { etiqueta: 'Cliente', valor: detalleAbierto.cliente },
+                { etiqueta: 'Fecha', valor: new Date(detalleAbierto.fecha).toLocaleDateString('es-PE') },
+                {
+                  etiqueta: 'Lista de precios',
+                  valor: detalleAbierto.listaPrecio ?? 'Predeterminada',
+                },
+                { etiqueta: 'Estado', valor: estadoPedidoBadge(detalleAbierto.estado) },
+              ]}
+            />
+
             {detalleAbierto.reservaStock && (
-              <li className="rounded-field bg-brand-soft px-3 py-2 text-xs font-medium text-brand">
+              <p className="rounded-field bg-brand-soft px-3 py-2 text-xs font-medium text-brand">
                 Stock reservado en {detalleAbierto.almacen}
-              </li>
+              </p>
             )}
-            {detalleAbierto.detalle.map((l) => (
-              <li key={l.id} className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2">
-                <span>
-                  <span className="font-medium text-ink">{l.producto}</span>
-                  <span className="ml-2 text-xs text-ink-soft">
-                    {l.presentacion ? `${l.cantidadPresentacion} ${l.presentacion}` : `${l.cantidad} ${l.unidadBase}`}
-                  </span>
-                </span>
-                <span className="text-sm">S/ {l.subtotal.toFixed(2)}</span>
-              </li>
-            ))}
-          </ul>
+
+            <div>
+              <p className="mb-2 text-[11px] font-semibold tracking-wide text-ink-muted uppercase">Productos</p>
+              <TablaProductosDetalle<LineaVentaResponse>
+                filas={detalleAbierto.detalle}
+                rowKey={(l) => l.id}
+                titulo={(l) => l.producto}
+                subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
+                grupos={[
+                  [
+                    { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
+                    { key: 'precio', label: 'Precio', render: (l) => `S/ ${l.precioUnitario.toFixed(2)}` },
+                    { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.subtotal.toFixed(2)}` },
+                  ] satisfies ColumnaDetalleProducto<LineaVentaResponse>[],
+                ]}
+              />
+            </div>
+
+            <ResumenDocumento total={detalleAbierto.total} />
+
+            {detalleAbierto.observacion && (
+              <p className="text-sm text-ink-soft">
+                <span className="font-semibold text-ink-muted">Observación: </span>
+                {detalleAbierto.observacion}
+              </p>
+            )}
+          </div>
         )}
       </Modal>
 

@@ -8,17 +8,25 @@ import {
   BuscadorModal,
   Button,
   Desplegable,
+  InfoDocumento,
   Input,
   ListPage,
   Modal,
   PageHeader,
   PageSection,
+  ResumenDocumento,
   RowAction,
   StatCard,
   SysDataTable,
+  TablaProductosDetalle,
   useConfirmacion,
 } from '../../components/ui'
-import type { DataTableColumn, LineaProductoNueva, OpcionBuscador } from '../../components/ui'
+import type {
+  ColumnaDetalleProducto,
+  DataTableColumn,
+  LineaProductoNueva,
+  OpcionBuscador,
+} from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
 import { clienteApi, productoApi } from '../maestros'
@@ -30,12 +38,16 @@ import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { notaVentaApi } from './ventasApi'
-import type { CrearNotaVentaRequest, FormaPagoVenta, NotaVentaResponse } from './ventasApi'
+import type { CrearNotaVentaRequest, FormaPagoVenta, LineaVentaResponse, NotaVentaResponse } from './ventasApi'
 
 const FORMAS_PAGO: { value: FormaPagoVenta; label: string }[] = [
   { value: 'CONTADO', label: 'Contado' },
   { value: 'CREDITO', label: 'Crédito' },
 ]
+
+function estadoNotaVentaBadge(estado: NotaVentaResponse['estado']) {
+  return <Badge tone={estado === 'ANULADA' ? 'neutral' : 'success'}>{estado === 'ANULADA' ? 'Anulada' : 'Confirmada'}</Badge>
+}
 
 const TIPOS_METODO_PAGO: { value: TipoMetodoPago; label: string }[] = [
   { value: 'EFECTIVO', label: 'Efectivo' },
@@ -331,11 +343,7 @@ export function NotasVentaPage() {
     {
       key: 'estado',
       label: 'Estado',
-      render: (row) => (
-        <Badge tone={row.estado === 'ANULADA' ? 'neutral' : 'success'}>
-          {row.estado === 'ANULADA' ? 'Anulada' : 'Confirmada'}
-        </Badge>
-      ),
+      render: (row) => estadoNotaVentaBadge(row.estado),
     },
   ]
 
@@ -625,34 +633,59 @@ export function NotasVentaPage() {
       <Modal
         open={detalleAbierto !== null}
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.cliente}` : ''}
-        description={detalleAbierto?.observacion ?? undefined}
         onClose={() => setDetalleAbierto(null)}
+        size="lg"
       >
         {detalleAbierto && (
-          <>
-            <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
-              <Badge>{detalleAbierto.almacen}</Badge>
-              <Badge>{FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago}</Badge>
-              {detalleAbierto.pagos.map((p) => (
-                <Badge key={p.id}>
-                  {p.metodoPago} · S/ {p.monto.toFixed(2)}
-                </Badge>
-              ))}
+          <div className="flex flex-col gap-4">
+            <InfoDocumento
+              campos={[
+                { etiqueta: 'Cliente', valor: detalleAbierto.cliente },
+                { etiqueta: 'Fecha', valor: new Date(detalleAbierto.fecha).toLocaleDateString('es-PE') },
+                { etiqueta: 'Almacén', valor: detalleAbierto.almacen },
+                {
+                  etiqueta: 'Forma de pago',
+                  valor: FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago,
+                },
+                { etiqueta: 'Estado', valor: estadoNotaVentaBadge(detalleAbierto.estado) },
+              ]}
+            />
+
+            <div>
+              <p className="mb-2 text-[11px] font-semibold tracking-wide text-ink-muted uppercase">Productos</p>
+              <TablaProductosDetalle<LineaVentaResponse>
+                filas={detalleAbierto.detalle}
+                rowKey={(l) => l.id}
+                titulo={(l) => l.producto}
+                subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
+                grupos={[
+                  [
+                    { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
+                    { key: 'precio', label: 'Precio', render: (l) => `S/ ${l.precioUnitario.toFixed(2)}` },
+                    { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.subtotal.toFixed(2)}` },
+                  ] satisfies ColumnaDetalleProducto<LineaVentaResponse>[],
+                ]}
+              />
             </div>
-            <ul className="flex flex-col gap-2">
-              {detalleAbierto.detalle.map((l) => (
-                <li key={l.id} className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2">
-                  <span>
-                    <span className="font-medium text-ink">{l.producto}</span>
-                    <span className="ml-2 text-xs text-ink-soft">
-                      {l.presentacion ? `${l.cantidadPresentacion} ${l.presentacion}` : `${l.cantidad} ${l.unidadBase}`}
-                    </span>
-                  </span>
-                  <span className="text-sm">S/ {l.subtotal.toFixed(2)}</span>
-                </li>
-              ))}
-            </ul>
-          </>
+
+            <ResumenDocumento
+              pagos={detalleAbierto.pagos.map((p) => ({ id: p.id, label: p.metodoPago, monto: p.monto }))}
+              total={detalleAbierto.total}
+            />
+
+            {detalleAbierto.pedidoNumero && (
+              <p className="text-sm text-ink-soft">
+                <span className="font-semibold text-ink-muted">Pedido: </span>
+                {detalleAbierto.pedidoNumero}
+              </p>
+            )}
+            {detalleAbierto.observacion && (
+              <p className="text-sm text-ink-soft">
+                <span className="font-semibold text-ink-muted">Observación: </span>
+                {detalleAbierto.observacion}
+              </p>
+            )}
+          </div>
         )}
       </Modal>
 

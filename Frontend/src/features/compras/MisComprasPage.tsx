@@ -8,17 +8,21 @@ import {
   BuscadorModal,
   Button,
   Desplegable,
+  InfoDocumento,
   Input,
   ListPage,
   Modal,
   PageHeader,
   PageSection,
+  ResumenDocumento,
   RowAction,
   StatCard,
   SysDataTable,
+  TablaProductosDetalle,
   useConfirmacion,
 } from '../../components/ui'
 import type {
+  ColumnaDetalleProducto,
   DataTableColumn,
   LineaProductoNueva,
   OpcionBuscador,
@@ -33,6 +37,7 @@ import { metodoPagoApi } from '../finanzas'
 import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
 import { compraApi } from './comprasApi'
 import type {
+  CompraDetalleResponse,
   CompraResponse,
   CrearCompraRequest,
   FormaPagoCompra,
@@ -56,6 +61,26 @@ const TIPOS_METODO_PAGO: { value: TipoMetodoPago; label: string }[] = [
   { value: 'BILLETERA_DIGITAL', label: 'Billetera digital' },
   { value: 'TRANSFERENCIA', label: 'Transferencia' },
 ]
+
+function estadoCompraBadge(estado: CompraResponse['estado']) {
+  const tono =
+    estado === 'RECIBIDA_TOTAL'
+      ? 'success'
+      : estado === 'RECIBIDA_PARCIAL'
+        ? 'warning'
+        : estado === 'ANULADA'
+          ? 'neutral'
+          : 'warning'
+  const texto =
+    estado === 'RECIBIDA_TOTAL'
+      ? 'Recibida'
+      : estado === 'RECIBIDA_PARCIAL'
+        ? 'Parcial'
+        : estado === 'ANULADA'
+          ? 'Anulada'
+          : 'Pendiente'
+  return <Badge tone={tono}>{texto}</Badge>
+}
 
 /** "Factura F001-00000123", o solo el tipo si no se registró serie/número. */
 function textoComprobante(compra: CompraResponse) {
@@ -377,25 +402,7 @@ export function MisComprasPage() {
     {
       key: 'estado',
       label: 'Estado',
-      render: (row) => {
-        const tono =
-          row.estado === 'RECIBIDA_TOTAL'
-            ? 'success'
-            : row.estado === 'RECIBIDA_PARCIAL'
-              ? 'warning'
-              : row.estado === 'ANULADA'
-                ? 'neutral'
-                : 'warning'
-        const texto =
-          row.estado === 'RECIBIDA_TOTAL'
-            ? 'Recibida'
-            : row.estado === 'RECIBIDA_PARCIAL'
-              ? 'Parcial'
-              : row.estado === 'ANULADA'
-                ? 'Anulada'
-                : 'Pendiente'
-        return <Badge tone={tono}>{texto}</Badge>
-      },
+      render: (row) => estadoCompraBadge(row.estado),
     },
   ]
 
@@ -727,41 +734,65 @@ export function MisComprasPage() {
       <Modal
         open={detalleAbierto !== null}
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.proveedor}` : ''}
-        description={detalleAbierto?.observacion ?? undefined}
         onClose={() => setDetalleAbierto(null)}
+        size="lg"
       >
         {detalleAbierto && (
-          <>
-            <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
-              <Badge>{textoComprobante(detalleAbierto)}</Badge>
-              <Badge>{FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago}</Badge>
-              {detalleAbierto.pagos.map((p) => (
-                <Badge key={p.id}>
-                  {p.metodoPago} · S/ {p.monto.toFixed(2)}
-                </Badge>
-              ))}
+          <div className="flex flex-col gap-4">
+            <InfoDocumento
+              campos={[
+                { etiqueta: 'Proveedor', valor: detalleAbierto.proveedor },
+                { etiqueta: 'Fecha', valor: new Date(detalleAbierto.fecha).toLocaleDateString('es-PE') },
+                { etiqueta: 'Comprobante', valor: textoComprobante(detalleAbierto) },
+                {
+                  etiqueta: 'Forma de pago',
+                  valor: FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago,
+                },
+                { etiqueta: 'Estado', valor: estadoCompraBadge(detalleAbierto.estado) },
+              ]}
+            />
+
+            <div>
+              <p className="mb-2 text-[11px] font-semibold tracking-wide text-ink-muted uppercase">Productos</p>
+              <TablaProductosDetalle<CompraDetalleResponse>
+                filas={detalleAbierto.detalle}
+                rowKey={(l) => l.id}
+                titulo={(l) => l.producto}
+                subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
+                grupos={[
+                  [
+                    { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
+                    { key: 'costo', label: 'Costo', render: (l) => `S/ ${l.costoUnitario.toFixed(2)}` },
+                    { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.costoTotal.toFixed(2)}` },
+                  ] satisfies ColumnaDetalleProducto<CompraDetalleResponse>[],
+                  [
+                    {
+                      key: 'recibido',
+                      label: 'Recibido',
+                      render: (l) => `${l.cantidadRecibida} ${l.unidadBase}`,
+                    },
+                    {
+                      key: 'pendiente',
+                      label: 'Pendiente',
+                      render: (l) => `${l.cantidadPendiente} ${l.unidadBase}`,
+                    },
+                  ] satisfies ColumnaDetalleProducto<CompraDetalleResponse>[],
+                ]}
+              />
             </div>
-            <ul className="flex flex-col gap-2">
-              {detalleAbierto.detalle.map((l) => (
-                <li
-                  key={l.id}
-                  className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2"
-                >
-                  <span>
-                    <span className="font-medium text-ink">{l.producto}</span>
-                    <span className="ml-2 text-xs text-ink-soft">
-                      {l.presentacion ? `${l.cantidadPresentacion} ${l.presentacion}` : `${l.cantidad} ${l.unidadBase}`}
-                      {' · '}
-                      recibido {l.cantidadRecibida} de {l.cantidad} {l.unidadBase}
-                    </span>
-                  </span>
-                  <span className="text-sm">
-                    S/ {l.costoUnitario} × {l.unidadBase} = S/ {l.costoTotal.toFixed(2)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </>
+
+            <ResumenDocumento
+              pagos={detalleAbierto.pagos.map((p) => ({ id: p.id, label: p.metodoPago, monto: p.monto }))}
+              total={detalleAbierto.total}
+            />
+
+            {detalleAbierto.observacion && (
+              <p className="text-sm text-ink-soft">
+                <span className="font-semibold text-ink-muted">Observación: </span>
+                {detalleAbierto.observacion}
+              </p>
+            )}
+          </div>
         )}
       </Modal>
 

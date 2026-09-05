@@ -18,17 +18,21 @@ import {
   BuscadorModal,
   Button,
   Desplegable,
+  InfoDocumento,
   Input,
   ListPage,
   Modal,
   PageHeader,
   PageSection,
+  ResumenDocumento,
   RowAction,
   StatCard,
   SysDataTable,
+  TablaProductosDetalle,
   useConfirmacion,
 } from '../../components/ui'
 import type {
+  ColumnaDetalleProducto,
   DataTableColumn,
   LineaProductoNueva,
   OpcionBuscador,
@@ -39,7 +43,13 @@ import { productoApi, proveedorApi } from '../maestros'
 import type { ProductoResponse, ProveedorResponse } from '../maestros'
 import { stockApi } from '../inventario'
 import { ordenCompraApi } from './comprasApi'
-import type { CrearOrdenCompraRequest, OrdenCompraResponse } from './comprasApi'
+import type { CrearOrdenCompraRequest, LineaCompraResponse, OrdenCompraResponse } from './comprasApi'
+
+function estadoOrdenBadge(estado: OrdenCompraResponse['estado']) {
+  const tono = estado === 'CONFIRMADA' ? 'success' : estado === 'ANULADA' ? 'neutral' : 'warning'
+  const texto = estado === 'CONFIRMADA' ? 'Confirmada' : estado === 'ANULADA' ? 'Anulada' : 'Pendiente'
+  return <Badge tone={tono}>{texto}</Badge>
+}
 
 type FilaOrden = LineaProductoNueva
 
@@ -336,15 +346,7 @@ export function OrdenesCompraPage() {
     {
       key: 'estado',
       label: 'Estado',
-      render: (row) => (
-        <Badge
-          tone={
-            row.estado === 'CONFIRMADA' ? 'success' : row.estado === 'ANULADA' ? 'neutral' : 'warning'
-          }
-        >
-          {row.estado === 'CONFIRMADA' ? 'Confirmada' : row.estado === 'ANULADA' ? 'Anulada' : 'Pendiente'}
-        </Badge>
-      ),
+      render: (row) => estadoOrdenBadge(row.estado),
     },
   ]
 
@@ -529,28 +531,51 @@ export function OrdenesCompraPage() {
       <Modal
         open={detalleAbierto !== null}
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.proveedor}` : ''}
-        description={detalleAbierto?.observacion ?? undefined}
         onClose={() => setDetalleAbierto(null)}
+        size="lg"
       >
         {detalleAbierto && (
-          <ul className="flex flex-col gap-2">
-            {detalleAbierto.detalle.map((l) => (
-              <li
-                key={l.id}
-                className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2"
-              >
-                <span>
-                  <span className="font-medium text-ink">{l.producto}</span>
-                  <span className="ml-2 text-xs text-ink-soft">
-                    {l.presentacion ? `${l.cantidadPresentacion} ${l.presentacion}` : `${l.cantidad} ${l.unidadBase}`}
-                  </span>
-                </span>
-                <span className="text-sm">
-                  S/ {l.costoUnitario} × {l.unidadBase} = S/ {l.costoTotal.toFixed(2)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="flex flex-col gap-4">
+            <InfoDocumento
+              campos={[
+                { etiqueta: 'Proveedor', valor: detalleAbierto.proveedor },
+                { etiqueta: 'Fecha', valor: new Date(detalleAbierto.fecha).toLocaleDateString('es-PE') },
+                {
+                  etiqueta: 'Fecha esperada',
+                  valor: detalleAbierto.fechaEsperada
+                    ? new Date(detalleAbierto.fechaEsperada).toLocaleDateString('es-PE')
+                    : '—',
+                },
+                { etiqueta: 'Estado', valor: estadoOrdenBadge(detalleAbierto.estado) },
+              ]}
+            />
+
+            <div>
+              <p className="mb-2 text-[11px] font-semibold tracking-wide text-ink-muted uppercase">Productos</p>
+              <TablaProductosDetalle<LineaCompraResponse>
+                filas={detalleAbierto.detalle}
+                rowKey={(l) => l.id}
+                titulo={(l) => l.producto}
+                subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
+                grupos={[
+                  [
+                    { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
+                    { key: 'costo', label: 'Costo', render: (l) => `S/ ${l.costoUnitario.toFixed(2)}` },
+                    { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.costoTotal.toFixed(2)}` },
+                  ] satisfies ColumnaDetalleProducto<LineaCompraResponse>[],
+                ]}
+              />
+            </div>
+
+            <ResumenDocumento total={detalleAbierto.total} />
+
+            {detalleAbierto.observacion && (
+              <p className="text-sm text-ink-soft">
+                <span className="font-semibold text-ink-muted">Observación: </span>
+                {detalleAbierto.observacion}
+              </p>
+            )}
+          </div>
         )}
       </Modal>
 
