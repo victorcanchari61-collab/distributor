@@ -62,6 +62,7 @@ export function AjustesPage() {
   const [error, setError] = useState('')
 
   const [abierto, setAbierto] = useState(false)
+  const [pestanaForm, setPestanaForm] = useState<'datos' | 'productos'>('datos')
   const [detalleAbierto, setDetalleAbierto] = useState<DocumentoInventarioResponse | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -128,6 +129,7 @@ export function AjustesPage() {
     })
     setFilas([])
     setErrorForm('')
+    setPestanaForm('datos')
     setAbierto(true)
   }
 
@@ -444,83 +446,90 @@ export function AjustesPage() {
         <div className="flex flex-col gap-4">
           {errorForm && <Alert>{errorForm}</Alert>}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Desplegable
-              label="Almacén"
-              value={cabecera.almacenId}
-              onChange={(v) => setCabecera({ ...cabecera, almacenId: Number(v) })}
-              options={almacenes
-                .filter((a) => a.activo)
-                .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
-            />
-            <Desplegable
-              label="Motivo"
-              value={cabecera.motivoId}
-              onChange={(v) => setCabecera({ ...cabecera, motivoId: Number(v) })}
-              options={motivosManuales.map((m) => ({
-                value: m.id,
-                label: m.nombre,
-                nota: m.tipo === 'ENTRADA' ? 'suma stock' : 'resta stock',
-              }))}
-            />
-          </div>
-
-          <Input
-            label="Observación"
-            optional
-            placeholder="Motivo del ajuste, referencia..."
-            value={cabecera.observacion}
-            onChange={(e) => setCabecera({ ...cabecera, observacion: e.target.value })}
+          <Tabs
+            items={[
+              { id: 'datos', label: 'Datos' },
+              { id: 'productos', label: 'Productos', badge: filas.length },
+            ]}
+            active={pestanaForm}
+            onChange={(id) => setPestanaForm(id as 'datos' | 'productos')}
           />
 
-          {motivo?.pideCosto && (
-            <Input
-              label="Flete"
-              optional
-              type="number"
-              step="0.01"
-              hint={<span className="text-xs text-ink-soft">de toda la entrada, se reparte</span>}
-              value={cabecera.flete}
-              onChange={(e) => setCabecera({ ...cabecera, flete: e.target.value })}
-            />
+          {pestanaForm === 'datos' && (
+            <div className="flex flex-col gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Desplegable
+                  label="Almacén"
+                  value={cabecera.almacenId}
+                  onChange={(v) => setCabecera({ ...cabecera, almacenId: Number(v) })}
+                  options={almacenes
+                    .filter((a) => a.activo)
+                    .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
+                />
+                <Desplegable
+                  label="Motivo"
+                  value={cabecera.motivoId}
+                  onChange={(v) => setCabecera({ ...cabecera, motivoId: Number(v) })}
+                  options={motivosManuales.map((m) => ({
+                    value: m.id,
+                    label: m.nombre,
+                    nota: m.tipo === 'ENTRADA' ? 'suma stock' : 'resta stock',
+                  }))}
+                />
+              </div>
+
+              <Input
+                label="Observación"
+                optional
+                placeholder="Motivo del ajuste, referencia..."
+                value={cabecera.observacion}
+                onChange={(e) => setCabecera({ ...cabecera, observacion: e.target.value })}
+              />
+
+              {motivo?.pideCosto && (
+                <Input
+                  label="Flete"
+                  optional
+                  type="number"
+                  step="0.01"
+                  hint={<span className="text-xs text-ink-soft">de toda la entrada, se reparte</span>}
+                  value={cabecera.flete}
+                  onChange={(e) => setCabecera({ ...cabecera, flete: e.target.value })}
+                />
+              )}
+            </div>
           )}
 
-          <hr className="border-line" />
+          {pestanaForm === 'productos' && (
+            <div className="flex flex-col gap-4">
+              <AgregarProductoPanel
+                productos={productos}
+                stock={stockMap}
+                pideCosto={motivo?.pideCosto ?? false}
+                pideLote={motivo?.pideCosto ?? false}
+                onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
+              />
 
-          <p className="text-sm font-semibold text-ink">Agregar producto</p>
-          <AgregarProductoPanel
-            productos={productos}
-            stock={stockMap}
-            pideCosto={motivo?.pideCosto ?? false}
-            pideLote={motivo?.pideCosto ?? false}
-            onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
-          />
+              <hr className="border-line" />
 
-          <hr className="border-line" />
-
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-ink">Productos</p>
-            <span className="text-xs text-ink-soft">
-              {filas.length} producto{filas.length === 1 ? '' : 's'} agregado{filas.length === 1 ? '' : 's'}
-            </span>
-          </div>
-
-          <SysDataTable
-            columns={columnasFilas}
-            rows={filas}
-            rowKey="id"
-            toolbar={false}
-            empty="Agrega productos con el buscador de arriba."
-            actions={(fila) => (
-              <RowAction
-                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
-                tone="danger"
-                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
-              >
-                <Trash2 size={15} />
-              </RowAction>
-            )}
-          />
+              <SysDataTable
+                columns={columnasFilas}
+                rows={filas}
+                rowKey="id"
+                toolbar={false}
+                empty="Agrega productos con el buscador de arriba."
+                actions={(fila) => (
+                  <RowAction
+                    label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                    tone="danger"
+                    onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+                  >
+                    <Trash2 size={15} />
+                  </RowAction>
+                )}
+              />
+            </div>
+          )}
         </div>
       </Modal>
 

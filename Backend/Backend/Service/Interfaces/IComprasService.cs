@@ -23,5 +23,8 @@ public interface IComprasService
     /// <summary>Compra directa, sin orden previa: al contado, en el momento.</summary>
     Task<CompraResponse> CrearCompraAsync(CrearCompraRequest request, int? usuarioId);
 
+    /// <summary>Solo si nada se ha recibido: si ya hay recepciones, ya no se edita.</summary>
+    Task<CompraResponse> ActualizarCompraAsync(int id, CrearCompraRequest request);
+
     Task AnularCompraAsync(int id);
 }

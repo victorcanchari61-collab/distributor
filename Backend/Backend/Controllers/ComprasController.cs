@@ -89,6 +89,11 @@ public class CompraController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
     }
 
+    /// <summary>Solo si nada se ha recibido: si ya hay recepciones, ya no se edita.</summary>
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, [FromBody] CrearCompraRequest request) =>
+        Ok(await _compras.ActualizarCompraAsync(id, request));
+
     /// <summary>Solo si nada se ha recibido: si ya hay recepciones, se anulan ellas.</summary>
     [HttpPatch("{id:int}/anular")]
     public async Task<IActionResult> Anular(int id)

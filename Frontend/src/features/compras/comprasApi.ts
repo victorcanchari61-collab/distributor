@@ -131,5 +131,7 @@ export const compraApi = {
     api.get<CompraResponse[]>(`/compra${estado ? `?estado=${estado}` : ''}`),
   getById: (id: number) => api.get<CompraResponse>(`/compra/${id}`),
   create: (body: CrearCompraRequest) => api.post<CompraResponse>('/compra', body),
+  /** Solo si la compra sigue Pendiente: sin nada recibido todavía. */
+  update: (id: number, body: CrearCompraRequest) => api.put<CompraResponse>(`/compra/${id}`, body),
   anular: (id: number) => api.patch<void>(`/compra/${id}/anular`),
 }

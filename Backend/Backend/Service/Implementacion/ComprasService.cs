@@ -235,6 +235,64 @@ public class ComprasService : IComprasService
         return creada;
     }
 
+    public async Task<CompraResponse> ActualizarCompraAsync(int id, CrearCompraRequest request)
+    {
+        await _compraValidator.ValidateAndThrowAsync(request);
+
+        var compra = await GetCompraOrThrowAsync(id);
+
+        if (compra.Estado != EstadoCompra.Pendiente)
+        {
+            throw new BadRequestException(
+                "Solo se puede editar una compra Pendiente. Si ya tiene mercadería recibida, anula las recepciones primero.");
+        }
+
+        var lineas = await ResolverLineasAsync(request.Detalle);
+        var total = Math.Round(lineas.Sum(l => l.Cantidad * l.CostoUnitario), 2);
+        var totalPagado = Math.Round(request.Pagos.Sum(p => p.Monto), 2);
+        if (totalPagado > total)
+        {
+            throw new BadRequestException(
+                $"Los pagos suman S/ {totalPagado}, más que el total de la compra (S/ {total}).");
+        }
+
+        compra.ProveedorId = request.ProveedorId;
+        compra.Fecha = request.Fecha ?? compra.Fecha;
+        compra.TipoComprobante = string.IsNullOrWhiteSpace(request.TipoComprobante)
+            ? TipoComprobanteCompra.Factura
+            : request.TipoComprobante;
+        compra.SerieComprobante = Limpiar(request.SerieComprobante);
+        compra.NumeroComprobante = Limpiar(request.NumeroComprobante);
+        compra.FormaPago = string.IsNullOrWhiteSpace(request.FormaPago)
+            ? FormaPagoCompra.Contado
+            : request.FormaPago;
+        compra.Observacion = Limpiar(request.Observacion);
+
+        await _repository.UpdateCompraAsync(compra);
+
+        await _repository.ReemplazarDetalleCompraAsync(id, lineas.Select(l => new CompraDetalle
+        {
+            CompraId = id,
+            ProductoId = l.ProductoId,
+            PresentacionId = l.PresentacionId,
+            CantidadPresentacion = l.CantidadPresentacion,
+            Cantidad = l.Cantidad,
+            CostoUnitario = l.CostoUnitario,
+            CantidadRecibida = 0
+        }));
+
+        await _repository.ReemplazarPagosCompraAsync(id, request.Pagos.Select(p => new CompraPago
+        {
+            CompraId = id,
+            MetodoPagoId = p.MetodoPagoId,
+            Monto = p.Monto
+        }));
+
+        var actualizada = await GetCompraAsync(id);
+        await _notificador.AvisarAsync("compras", "actualizado", actualizada);
+        return actualizada;
+    }
+
     public async Task AnularCompraAsync(int id)
     {
         var compra = await GetCompraOrThrowAsync(id);

@@ -136,4 +136,26 @@ public class ComprasRepository : IComprasRepository
             .Include(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(d => d.Compra).ThenInclude(c => c!.Detalle)
             .FirstOrDefaultAsync(d => d.Id == id);
+
+    public async Task ReemplazarDetalleCompraAsync(int compraId, IEnumerable<CompraDetalle> detalle)
+    {
+        var actuales = await _context.CompraDetalles
+            .Where(d => d.CompraId == compraId)
+            .ToListAsync();
+
+        _context.CompraDetalles.RemoveRange(actuales);
+        await _context.CompraDetalles.AddRangeAsync(detalle);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task ReemplazarPagosCompraAsync(int compraId, IEnumerable<CompraPago> pagos)
+    {
+        var actuales = await _context.CompraPagos
+            .Where(p => p.CompraId == compraId)
+            .ToListAsync();
+
+        _context.CompraPagos.RemoveRange(actuales);
+        await _context.CompraPagos.AddRangeAsync(pagos);
+        await _context.SaveChangesAsync();
+    }
 }

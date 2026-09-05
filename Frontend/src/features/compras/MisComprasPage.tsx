@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Building2, PackageCheck, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, Building2, PackageCheck, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AgregarProductoPanel,
   Alert,
@@ -109,6 +109,7 @@ export function MisComprasPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
+  const [editando, setEditando] = useState<CompraResponse | null>(null)
   const [detalleAbierto, setDetalleAbierto] = useState<CompraResponse | null>(null)
   const [recepcionAbierta, setRecepcionAbierta] = useState<CompraResponse | null>(null)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
@@ -166,6 +167,7 @@ export function MisComprasPage() {
   useRealtime(['compras', 'recepciones', 'stock'], cargar)
 
   const abrirNueva = () => {
+    setEditando(null)
     setProveedorId(0)
     setFecha('')
     setTipoComprobante('FACTURA')
@@ -178,6 +180,34 @@ export function MisComprasPage() {
     setPagoMonto('')
     setObservacion('')
     setFilas([])
+    setErrorForm('')
+    setVista('form')
+  }
+
+  const abrirEdicion = (compra: CompraResponse) => {
+    setEditando(compra)
+    setProveedorId(compra.proveedorId)
+    setFecha(compra.fecha.slice(0, 10))
+    setTipoComprobante(compra.tipoComprobante)
+    setSerieComprobante(compra.serieComprobante ?? '')
+    setNumeroComprobante(compra.numeroComprobante ?? '')
+    setFormaPago(compra.formaPago)
+    setPagos(compra.pagos.map((p) => ({ metodoPagoId: p.metodoPagoId, monto: String(p.monto) })))
+    setPagoTipo('')
+    setPagoMetodoId(0)
+    setPagoMonto('')
+    setObservacion(compra.observacion ?? '')
+    setFilas(
+      compra.detalle.map((l) => ({
+        id: crypto.randomUUID(),
+        productoId: l.productoId,
+        presentacionId: l.presentacionId ?? 0,
+        cantidad: String(l.cantidadPresentacion),
+        costo: String(l.costoUnitario * (l.cantidadPresentacion ? l.cantidad / l.cantidadPresentacion : 1)),
+        lote: '',
+        fechaVencimiento: '',
+      })),
+    )
     setErrorForm('')
     setVista('form')
   }
@@ -245,7 +275,11 @@ export function MisComprasPage() {
     setGuardando(true)
     setErrorForm('')
     try {
-      await compraApi.create(body)
+      if (editando) {
+        await compraApi.update(editando.id, body)
+      } else {
+        await compraApi.create(body)
+      }
       setVista('lista')
       await cargar()
     } catch (e) {
@@ -414,8 +448,12 @@ export function MisComprasPage() {
       <div className="space-y-5">
         <PageHeader
           icon={<ShoppingBag size={20} />}
-          title="Nueva compra directa"
-          description="Al contado, en el momento: sin pasar por una orden formal al proveedor primero."
+          title={editando ? `Editar ${editando.numero}` : 'Nueva compra directa'}
+          description={
+            editando
+              ? 'Solo se puede editar mientras siga Pendiente: nada recibido todavía.'
+              : 'Al contado, en el momento: sin pasar por una orden formal al proveedor primero.'
+          }
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
               <ArrowLeft size={15} />
@@ -571,7 +609,7 @@ export function MisComprasPage() {
             Cancelar
           </Button>
           <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-            Registrar compra
+            {editando ? 'Guardar cambios' : 'Registrar compra'}
           </Button>
         </div>
 
@@ -717,6 +755,11 @@ export function MisComprasPage() {
           <RowAction label={`Ver ${row.numero}`} onClick={() => setDetalleAbierto(row)}>
             <ShoppingBag size={15} />
           </RowAction>
+          {row.estado === 'PENDIENTE' && (
+            <RowAction label={`Editar ${row.numero}`} onClick={() => abrirEdicion(row)}>
+              <Pencil size={15} />
+            </RowAction>
+          )}
           {(row.estado === 'PENDIENTE' || row.estado === 'RECIBIDA_PARCIAL') && (
             <RowAction label={`Recibir ${row.numero}`} onClick={() => setRecepcionAbierta(row)}>
               <PackageCheck size={15} />

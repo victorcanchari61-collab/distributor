@@ -34,4 +34,13 @@ public interface IComprasRepository
     /// total) después de sumar o restar lo recibido.
     /// </summary>
     Task<CompraDetalle?> GetCompraDetalleConCompraAsync(int id);
+
+    /// <summary>
+    /// Reemplaza las líneas de una compra Pendiente (nada recibido aún): se
+    /// borran las actuales y se graban las nuevas, en una sola transacción.
+    /// </summary>
+    Task ReemplazarDetalleCompraAsync(int compraId, IEnumerable<CompraDetalle> detalle);
+
+    /// <summary>Reemplaza los pagos de una compra Pendiente, igual que sus líneas.</summary>
+    Task ReemplazarPagosCompraAsync(int compraId, IEnumerable<CompraPago> pagos);
 }
