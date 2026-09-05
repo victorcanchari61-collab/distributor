@@ -63,6 +63,7 @@ export function DashboardLayout({
           userName={userName}
           userEmail={userEmail}
           onOpenMenu={() => setMobileOpen(true)}
+          onNavigate={onSelect}
           onLogout={onLogout}
         />
 
