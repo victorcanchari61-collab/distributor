@@ -27,6 +27,7 @@ import {
   Receipt,
   ReceiptText,
   Route,
+  ScrollText,
   Settings,
   ShieldCheck,
   ShoppingBag,
@@ -206,6 +207,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'config.roles', label: 'Roles', icon: IdCard },
       { id: 'config.accesos', label: 'Accesos', icon: ShieldCheck },
       { id: 'config.empresa', label: 'Empresa', icon: Building2 },
+      { id: 'config.auditoria', label: 'Auditoría', icon: ScrollText },
       // Reservados: se muestran cuando el cliente decida usar facturacion.
       { id: 'config.series', label: 'Series de comprobantes', icon: Hash, pending: true, hidden: true },
       { id: 'config.parametros', label: 'Parámetros', icon: Sliders, pending: true, hidden: true },

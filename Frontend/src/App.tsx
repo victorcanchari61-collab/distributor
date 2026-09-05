@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { DashboardLayout, NAV_DEFAULT, navIdFromPath, navPath, resolveNav } from './components/layout'
 import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
-import { AccesosPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
+import { AccesosPage, AuditoriaPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
 import { MetodosPagoPage } from './features/finanzas'
 import {
@@ -45,6 +45,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'config.accesos': AccesosPage,
   'config.roles': RolesPage,
   'config.empresa': EmpresaPage,
+  'config.auditoria': AuditoriaPage,
 }
 
 function App() {

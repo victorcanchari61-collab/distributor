@@ -1,12 +1,20 @@
+using System.Security.Claims;
+using System.Text.Json;
 using Backend.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Backend.Data;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    private readonly IHttpContextAccessor? _httpContextAccessor;
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor? httpContextAccessor = null)
+        : base(options)
     {
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
@@ -41,6 +49,7 @@ public class AppDbContext : DbContext
     public DbSet<NotaVenta> NotasVenta => Set<NotaVenta>();
     public DbSet<NotaVentaDetalle> NotaVentaDetalles => Set<NotaVentaDetalle>();
     public DbSet<PagoVenta> PagosVenta => Set<PagoVenta>();
+    public DbSet<RegistroAuditoria> RegistrosAuditoria => Set<RegistroAuditoria>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +60,7 @@ public class AppDbContext : DbContext
         ConfigurarCompras(modelBuilder);
         ConfigurarVentas(modelBuilder);
         ConfigurarFinanzas(modelBuilder);
+        ConfigurarAuditoria(modelBuilder);
 
         modelBuilder.Entity<Rol>(entity =>
         {
@@ -702,6 +712,137 @@ public class AppDbContext : DbContext
                 new MetodoPago { Id = 1, Nombre = "Efectivo", Tipo = TipoMetodoPago.Efectivo, Activo = true }
             );
         });
+    }
+
+    private static void ConfigurarAuditoria(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<RegistroAuditoria>(entity =>
+        {
+            entity.ToTable("Auditoria");
+            entity.HasIndex(r => r.Fecha);
+            entity.HasIndex(r => new { r.Entidad, r.EntidadId });
+            entity.Property(r => r.Entidad).HasMaxLength(80).IsRequired();
+            entity.Property(r => r.EntidadId).HasMaxLength(80).IsRequired();
+            entity.Property(r => r.Accion).HasMaxLength(15).IsRequired();
+            entity.Property(r => r.ValoresAnteriores).HasColumnType("longtext");
+            entity.Property(r => r.ValoresNuevos).HasColumnType("longtext");
+
+            // Si se borra el usuario, la bitácora queda: solo pierde el vínculo.
+            entity.HasOne(r => r.Usuario).WithMany()
+                .HasForeignKey(r => r.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+    }
+
+    // ------------------------------------------------------------- Auditoría
+
+    /// <summary>
+    /// Cada guardado deja rastro de todo lo que cambió, sin que ningún servicio
+    /// tenga que acordarse. Se hace en dos pasos porque un alta no tiene Id
+    /// hasta después de guardarse: primero se guardan los cambios reales, y
+    /// con los Ids ya asignados se escriben los registros de auditoría.
+    /// </summary>
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var entradas = ChangeTracker.Entries()
+            .Where(e => e.Entity is not RegistroAuditoria
+                        && e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .ToList();
+
+        if (entradas.Count == 0)
+        {
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
+        var usuarioId = ObtenerUsuarioId();
+        var pendientes = entradas.Select(e => (entrada: e, registro: CrearRegistro(e, usuarioId))).ToList();
+
+        var resultado = await base.SaveChangesAsync(cancellationToken);
+
+        foreach (var (entrada, registro) in pendientes)
+        {
+            // Un alta recién ahora tiene su Id; los demás ya lo tenían.
+            registro.EntidadId = ObtenerClave(entrada);
+        }
+
+        await RegistrosAuditoria.AddRangeAsync(pendientes.Select(p => p.registro), cancellationToken);
+        await base.SaveChangesAsync(cancellationToken);
+
+        return resultado;
+    }
+
+    private static RegistroAuditoria CrearRegistro(EntityEntry entrada, int? usuarioId)
+    {
+        var (anteriores, nuevos) = CapturarValores(entrada);
+
+        return new RegistroAuditoria
+        {
+            UsuarioId = usuarioId,
+            Entidad = entrada.Metadata.ClrType.Name,
+            EntidadId = ObtenerClave(entrada),
+            Accion = entrada.State switch
+            {
+                EntityState.Added => AccionAuditoria.Creado,
+                EntityState.Deleted => AccionAuditoria.Eliminado,
+                _ => AccionAuditoria.Actualizado
+            },
+            ValoresAnteriores = anteriores,
+            ValoresNuevos = nuevos
+        };
+    }
+
+    /// <summary>La clave primaria como texto; si es compuesta, sus partes unidas con "/".</summary>
+    private static string ObtenerClave(EntityEntry entrada)
+    {
+        var clave = entrada.Metadata.FindPrimaryKey();
+        if (clave is null) return "?";
+
+        var partes = clave.Properties.Select(p =>
+        {
+            var propiedad = entrada.Property(p.Name);
+            var valor = entrada.State == EntityState.Deleted ? propiedad.OriginalValue : propiedad.CurrentValue;
+            return valor?.ToString() ?? "";
+        });
+
+        return string.Join("/", partes);
+    }
+
+    /// <summary>Nunca deja un hash de contraseña en la bitácora.</summary>
+    private static bool EsSensible(string nombre) =>
+        nombre.Contains("Password", StringComparison.OrdinalIgnoreCase)
+        || nombre.Contains("Hash", StringComparison.OrdinalIgnoreCase);
+
+    private static (string? anteriores, string? nuevos) CapturarValores(EntityEntry entrada)
+    {
+        var propiedades = entrada.Properties.Where(p => !EsSensible(p.Metadata.Name)).ToList();
+
+        // En una edición solo interesa lo que cambió; en alta o baja, todo.
+        // Se compara el valor, no solo IsModified: un Update() marca todas las
+        // propiedades como modificadas aunque tengan el mismo valor.
+        if (entrada.State == EntityState.Modified)
+        {
+            propiedades = propiedades
+                .Where(p => p.IsModified && !Equals(p.OriginalValue, p.CurrentValue))
+                .ToList();
+        }
+
+        string? anteriores = entrada.State == EntityState.Added
+            ? null
+            : JsonSerializer.Serialize(propiedades.ToDictionary(p => p.Metadata.Name, p => p.OriginalValue));
+
+        string? nuevos = entrada.State == EntityState.Deleted
+            ? null
+            : JsonSerializer.Serialize(propiedades.ToDictionary(p => p.Metadata.Name, p => p.CurrentValue));
+
+        return (anteriores, nuevos);
+    }
+
+    private int? ObtenerUsuarioId()
+    {
+        var usuario = _httpContextAccessor?.HttpContext?.User;
+        if (usuario is null) return null;
+
+        var valor = usuario.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? usuario.FindFirst("sub")?.Value;
+        return int.TryParse(valor, out var id) ? id : null;
     }
 
     private static readonly DateTime Semilla = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
