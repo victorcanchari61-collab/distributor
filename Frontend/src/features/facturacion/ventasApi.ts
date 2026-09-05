@@ -38,6 +38,21 @@ export interface PagoVentaResponse {
   metodoPagoId: number
   metodoPago: string
   monto: number
+  fecha: string
+  usuario: string | null
+}
+
+/** Un cobro: un pago de una nota de venta, visto desde quién lo cobró. */
+export interface CobroResponse {
+  id: number
+  fecha: string
+  notaVentaId: number
+  notaVentaNumero: string
+  clienteId: number
+  cliente: string
+  metodoPagoId: number
+  metodoPago: string
+  monto: number
 }
 
 // --- Pedidos ---
@@ -139,4 +154,12 @@ export const notaVentaApi = {
   /** Registra un abono contra el saldo pendiente de la nota. */
   registrarPago: (id: number, body: PagoVentaRequest) =>
     api.post<NotaVentaResponse>(`/notaventa/${id}/pagos`, body),
+  /** Los cobros del usuario que hizo login, opcionalmente por rango de fechas (ISO). */
+  misCobros: (desde?: string, hasta?: string) => {
+    const params = new URLSearchParams()
+    if (desde) params.set('desde', desde)
+    if (hasta) params.set('hasta', hasta)
+    const query = params.toString()
+    return api.get<CobroResponse[]>(`/notaventa/miscobros${query ? `?${query}` : ''}`)
+  },
 }

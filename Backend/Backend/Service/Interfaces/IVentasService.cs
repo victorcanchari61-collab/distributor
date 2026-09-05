@@ -26,8 +26,15 @@ public interface IVentasService
     Task AnularNotaVentaAsync(int id, int? usuarioId);
 
     /// <summary>Registra un abono contra el saldo pendiente de una nota de venta.</summary>
-    Task<NotaVentaResponse> RegistrarPagoAsync(int id, PagoVentaRequest request);
+    Task<NotaVentaResponse> RegistrarPagoAsync(int id, PagoVentaRequest request, int? usuarioId);
 
     /// <summary>Notas de venta con saldo pendiente de cobro: base de "Cuentas por cobrar".</summary>
     Task<IEnumerable<NotaVentaResponse>> GetCuentasPorCobrarAsync();
+
+    /// <summary>
+    /// Los cobros que registró un usuario (el que hizo login si no se indica
+    /// otro), de notas de venta vigentes — no las anuladas, esas revirtieron
+    /// el cobro. Filtrable por rango de fechas.
+    /// </summary>
+    Task<IEnumerable<CobroResponse>> GetMisCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta);
 }

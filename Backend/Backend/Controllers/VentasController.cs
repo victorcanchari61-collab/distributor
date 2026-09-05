@@ -104,5 +104,10 @@ public class NotaVentaController : ControllerBase
     /// <summary>Registra un abono contra el saldo pendiente de la nota.</summary>
     [HttpPost("{id:int}/pagos")]
     public async Task<IActionResult> RegistrarPago(int id, [FromBody] PagoVentaRequest request) =>
-        Ok(await _ventas.RegistrarPagoAsync(id, request));
+        Ok(await _ventas.RegistrarPagoAsync(id, request, UsuarioId));
+
+    /// <summary>Los cobros que registró el usuario que hizo login, opcionalmente por rango de fechas.</summary>
+    [HttpGet("miscobros")]
+    public async Task<IActionResult> MisCobros([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
+        Ok(await _ventas.GetMisCobrosAsync(UsuarioId, desde, hasta));
 }

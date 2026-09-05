@@ -123,6 +123,7 @@ public class VentasRepository : IVentasRepository
             .Include(n => n.Almacen)
             .Include(n => n.Usuario)
             .Include(n => n.Pagos).ThenInclude(p => p.MetodoPago)
+            .Include(n => n.Pagos).ThenInclude(p => p.Usuario)
             .Include(n => n.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(n => n.Detalle).ThenInclude(d => d.Presentacion);
 

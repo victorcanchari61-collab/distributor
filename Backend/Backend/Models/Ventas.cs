@@ -162,6 +162,13 @@ public class PagoVenta
     public MetodoPago? MetodoPago { get; set; }
 
     public decimal Monto { get; set; }
+
+    /// <summary>Cuándo se registró: el de la venta si nació con ella, o el del abono posterior.</summary>
+    public DateTime Fecha { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Quién lo cobró. Base de "Mis cobros".</summary>
+    public int? UsuarioId { get; set; }
+    public Usuario? Usuario { get; set; }
 }
 
 /// <summary>Un producto de la nota de venta. El stock ya salió por esta línea.</summary>

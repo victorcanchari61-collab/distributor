@@ -51,6 +51,29 @@ public class PagoVentaResponse
     public int MetodoPagoId { get; set; }
     public string MetodoPago { get; set; } = string.Empty;
     public decimal Monto { get; set; }
+    public DateTime Fecha { get; set; }
+    public string? Usuario { get; set; }
+}
+
+/// <summary>
+/// Un cobro: un pago de una nota de venta, visto desde quién lo cobró en vez
+/// de desde el documento. Es la base de "Mis cobros".
+/// </summary>
+public class CobroResponse
+{
+    public int Id { get; set; }
+    public DateTime Fecha { get; set; }
+
+    public int NotaVentaId { get; set; }
+    public string NotaVentaNumero { get; set; } = string.Empty;
+
+    public int ClienteId { get; set; }
+    public string Cliente { get; set; } = string.Empty;
+
+    public int MetodoPagoId { get; set; }
+    public string MetodoPago { get; set; } = string.Empty;
+
+    public decimal Monto { get; set; }
 }
 
 public class NotaVentaResponse

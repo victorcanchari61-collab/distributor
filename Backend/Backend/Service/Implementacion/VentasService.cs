@@ -235,7 +235,7 @@ public class VentasService : IVentasService
     /// suma. No se acepta si ya está saldada o si el abono se pasa del saldo
     /// pendiente — no tiene sentido cobrar de más.
     /// </summary>
-    public async Task<NotaVentaResponse> RegistrarPagoAsync(int id, PagoVentaRequest request)
+    public async Task<NotaVentaResponse> RegistrarPagoAsync(int id, PagoVentaRequest request, int? usuarioId)
     {
         await _pagoValidator.ValidateAndThrowAsync(request);
 
@@ -261,7 +261,12 @@ public class VentasService : IVentasService
                 $"El abono (S/ {request.Monto}) supera el saldo pendiente (S/ {saldo}).");
         }
 
-        notaVenta.Pagos.Add(new PagoVenta { MetodoPagoId = request.MetodoPagoId, Monto = request.Monto });
+        notaVenta.Pagos.Add(new PagoVenta
+        {
+            MetodoPagoId = request.MetodoPagoId,
+            Monto = request.Monto,
+            UsuarioId = usuarioId
+        });
         await _repository.UpdateNotaVentaAsync(notaVenta);
 
         var actualizada = await GetNotaVentaAsync(id);
@@ -276,6 +281,30 @@ public class VentasService : IVentasService
             .Where(n => n.FormaPago == FormaPagoVenta.Credito)
             .Select(MapNotaVenta)
             .Where(n => n.Total - n.TotalPagado > 0);
+    }
+
+    public async Task<IEnumerable<CobroResponse>> GetMisCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta)
+    {
+        var notas = await _repository.GetNotasVentaAsync(EstadoNotaVenta.Confirmada);
+
+        return notas
+            .SelectMany(n => n.Pagos.Select(p => (Nota: n, Pago: p)))
+            .Where(x => usuarioId == null || x.Pago.UsuarioId == usuarioId)
+            .Where(x => desde == null || x.Pago.Fecha >= desde)
+            .Where(x => hasta == null || x.Pago.Fecha <= hasta)
+            .OrderByDescending(x => x.Pago.Fecha)
+            .Select(x => new CobroResponse
+            {
+                Id = x.Pago.Id,
+                Fecha = x.Pago.Fecha,
+                NotaVentaId = x.Nota.Id,
+                NotaVentaNumero = x.Nota.Numero,
+                ClienteId = x.Nota.ClienteId,
+                Cliente = x.Nota.Cliente?.Nombre ?? string.Empty,
+                MetodoPagoId = x.Pago.MetodoPagoId,
+                MetodoPago = x.Pago.MetodoPago?.Nombre ?? string.Empty,
+                Monto = x.Pago.Monto
+            });
     }
 
     // ------------------------------------------------------------ Auxiliares
@@ -326,7 +355,8 @@ public class VentasService : IVentasService
             Pagos = pagos.Select(p => new PagoVenta
             {
                 MetodoPagoId = p.MetodoPagoId,
-                Monto = p.Monto
+                Monto = p.Monto,
+                UsuarioId = usuarioId
             }).ToList()
         };
 
@@ -498,6 +528,8 @@ public class VentasService : IVentasService
         Id = p.Id,
         MetodoPagoId = p.MetodoPagoId,
         MetodoPago = p.MetodoPago?.Nombre ?? string.Empty,
-        Monto = p.Monto
+        Monto = p.Monto,
+        Fecha = p.Fecha,
+        Usuario = p.Usuario?.Nombre
     };
 }

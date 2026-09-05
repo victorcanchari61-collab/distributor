@@ -697,11 +697,14 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("PagoVenta");
             entity.Property(p => p.Monto).HasPrecision(18, 4);
+            entity.HasIndex(p => new { p.UsuarioId, p.Fecha });
 
             entity.HasOne(p => p.NotaVenta).WithMany(n => n.Pagos)
                 .HasForeignKey(p => p.NotaVentaId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(p => p.MetodoPago).WithMany()
                 .HasForeignKey(p => p.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.Usuario).WithMany()
+                .HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 
