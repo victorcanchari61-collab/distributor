@@ -154,6 +154,12 @@ export const notaVentaApi = {
   /** Registra un abono contra el saldo pendiente de la nota. */
   registrarPago: (id: number, body: PagoVentaRequest) =>
     api.post<NotaVentaResponse>(`/notaventa/${id}/pagos`, body),
+  /** Corrige un pago ya registrado: método o monto. */
+  actualizarPago: (id: number, pagoId: number, body: PagoVentaRequest) =>
+    api.put<NotaVentaResponse>(`/notaventa/${id}/pagos/${pagoId}`, body),
+  /** Quita un pago registrado por error: su monto vuelve al saldo pendiente. */
+  anularPago: (id: number, pagoId: number) =>
+    api.del<NotaVentaResponse>(`/notaventa/${id}/pagos/${pagoId}`),
   /** Los cobros del usuario que hizo login, opcionalmente por rango de fechas (ISO). */
   misCobros: (desde?: string, hasta?: string) => {
     const params = new URLSearchParams()

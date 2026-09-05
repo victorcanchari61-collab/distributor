@@ -28,6 +28,12 @@ public interface IVentasService
     /// <summary>Registra un abono contra el saldo pendiente de una nota de venta.</summary>
     Task<NotaVentaResponse> RegistrarPagoAsync(int id, PagoVentaRequest request, int? usuarioId);
 
+    /// <summary>Corrige un pago ya registrado: método o monto.</summary>
+    Task<NotaVentaResponse> ActualizarPagoAsync(int id, int pagoId, PagoVentaRequest request);
+
+    /// <summary>Quita un pago registrado por error: su monto vuelve al saldo pendiente.</summary>
+    Task<NotaVentaResponse> AnularPagoAsync(int id, int pagoId);
+
     /// <summary>Notas de venta con saldo pendiente de cobro: base de "Cuentas por cobrar".</summary>
     Task<IEnumerable<NotaVentaResponse>> GetCuentasPorCobrarAsync();
 

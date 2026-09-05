@@ -139,4 +139,10 @@ export const compraApi = {
   /** Registra un abono contra el saldo pendiente de la compra. */
   registrarPago: (id: number, body: PagoCompraRequest) =>
     api.post<CompraResponse>(`/compra/${id}/pagos`, body),
+  /** Corrige un pago ya registrado: método o monto. */
+  actualizarPago: (id: number, pagoId: number, body: PagoCompraRequest) =>
+    api.put<CompraResponse>(`/compra/${id}/pagos/${pagoId}`, body),
+  /** Quita un pago registrado por error: su monto vuelve al saldo pendiente. */
+  anularPago: (id: number, pagoId: number) =>
+    api.del<CompraResponse>(`/compra/${id}/pagos/${pagoId}`),
 }

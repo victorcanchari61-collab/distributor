@@ -355,6 +355,58 @@ public class ComprasService : IComprasService
         return actualizada;
     }
 
+    public async Task<CompraResponse> ActualizarPagoAsync(int id, int pagoId, PagoCompraRequest request)
+    {
+        await _pagoValidator.ValidateAndThrowAsync(request);
+
+        var compra = await GetCompraOrThrowAsync(id);
+
+        if (compra.Estado == EstadoCompra.Anulada)
+        {
+            throw new BadRequestException("Esta compra está anulada: no se le pueden editar pagos.");
+        }
+
+        var pago = compra.Pagos.FirstOrDefault(p => p.Id == pagoId)
+            ?? throw new NotFoundException($"Esta compra no tiene el pago {pagoId}");
+
+        var total = Math.Round(compra.Detalle.Sum(d => d.Cantidad * d.CostoUnitario), 2);
+        var pagadoSinEste = Math.Round(compra.Pagos.Where(p => p.Id != pagoId).Sum(p => p.Monto), 2);
+
+        if (pagadoSinEste + request.Monto > total + 0.001m)
+        {
+            throw new BadRequestException(
+                $"Ese cambio deja lo pagado en S/ {pagadoSinEste + request.Monto}, más que el total de la compra (S/ {total}).");
+        }
+
+        pago.MetodoPagoId = request.MetodoPagoId;
+        pago.Monto = request.Monto;
+        await _repository.GuardarAsync();
+
+        var actualizada = await GetCompraAsync(id);
+        await _notificador.AvisarAsync("compras", "pago", actualizada);
+        return actualizada;
+    }
+
+    public async Task<CompraResponse> AnularPagoAsync(int id, int pagoId)
+    {
+        var compra = await GetCompraOrThrowAsync(id);
+
+        if (compra.Estado == EstadoCompra.Anulada)
+        {
+            throw new BadRequestException("Esta compra está anulada: no se le pueden quitar pagos.");
+        }
+
+        var pago = compra.Pagos.FirstOrDefault(p => p.Id == pagoId)
+            ?? throw new NotFoundException($"Esta compra no tiene el pago {pagoId}");
+
+        compra.Pagos.Remove(pago);
+        await _repository.GuardarAsync();
+
+        var actualizada = await GetCompraAsync(id);
+        await _notificador.AvisarAsync("compras", "pago", actualizada);
+        return actualizada;
+    }
+
     public async Task<IEnumerable<CompraResponse>> GetCuentasPorPagarAsync()
     {
         var compras = await _repository.GetComprasAsync();

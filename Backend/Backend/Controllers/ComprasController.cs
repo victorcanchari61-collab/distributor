@@ -110,4 +110,14 @@ public class CompraController : ControllerBase
     [HttpPost("{id:int}/pagos")]
     public async Task<IActionResult> RegistrarPago(int id, [FromBody] PagoCompraRequest request) =>
         Ok(await _compras.RegistrarPagoAsync(id, request));
+
+    /// <summary>Corrige un pago ya registrado: método o monto.</summary>
+    [HttpPut("{id:int}/pagos/{pagoId:int}")]
+    public async Task<IActionResult> ActualizarPago(int id, int pagoId, [FromBody] PagoCompraRequest request) =>
+        Ok(await _compras.ActualizarPagoAsync(id, pagoId, request));
+
+    /// <summary>Quita un pago registrado por error: su monto vuelve al saldo pendiente.</summary>
+    [HttpDelete("{id:int}/pagos/{pagoId:int}")]
+    public async Task<IActionResult> AnularPago(int id, int pagoId) =>
+        Ok(await _compras.AnularPagoAsync(id, pagoId));
 }

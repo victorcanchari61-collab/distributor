@@ -274,6 +274,58 @@ public class VentasService : IVentasService
         return actualizada;
     }
 
+    public async Task<NotaVentaResponse> ActualizarPagoAsync(int id, int pagoId, PagoVentaRequest request)
+    {
+        await _pagoValidator.ValidateAndThrowAsync(request);
+
+        var notaVenta = await GetNotaVentaOrThrowAsync(id);
+
+        if (notaVenta.Estado == EstadoNotaVenta.Anulada)
+        {
+            throw new BadRequestException("Esta nota de venta está anulada: no se le pueden editar pagos.");
+        }
+
+        var pago = notaVenta.Pagos.FirstOrDefault(p => p.Id == pagoId)
+            ?? throw new NotFoundException($"Esta nota de venta no tiene el pago {pagoId}");
+
+        var total = Math.Round(notaVenta.Detalle.Sum(d => d.Cantidad * d.PrecioUnitario), 2);
+        var pagadoSinEste = Math.Round(notaVenta.Pagos.Where(p => p.Id != pagoId).Sum(p => p.Monto), 2);
+
+        if (pagadoSinEste + request.Monto > total + 0.001m)
+        {
+            throw new BadRequestException(
+                $"Ese cambio deja lo pagado en S/ {pagadoSinEste + request.Monto}, más que el total de la venta (S/ {total}).");
+        }
+
+        pago.MetodoPagoId = request.MetodoPagoId;
+        pago.Monto = request.Monto;
+        await _repository.GuardarAsync();
+
+        var actualizada = await GetNotaVentaAsync(id);
+        await _notificador.AvisarAsync("notasventa", "pago", actualizada);
+        return actualizada;
+    }
+
+    public async Task<NotaVentaResponse> AnularPagoAsync(int id, int pagoId)
+    {
+        var notaVenta = await GetNotaVentaOrThrowAsync(id);
+
+        if (notaVenta.Estado == EstadoNotaVenta.Anulada)
+        {
+            throw new BadRequestException("Esta nota de venta está anulada: no se le pueden quitar pagos.");
+        }
+
+        var pago = notaVenta.Pagos.FirstOrDefault(p => p.Id == pagoId)
+            ?? throw new NotFoundException($"Esta nota de venta no tiene el pago {pagoId}");
+
+        notaVenta.Pagos.Remove(pago);
+        await _repository.GuardarAsync();
+
+        var actualizada = await GetNotaVentaAsync(id);
+        await _notificador.AvisarAsync("notasventa", "pago", actualizada);
+        return actualizada;
+    }
+
     public async Task<IEnumerable<NotaVentaResponse>> GetCuentasPorCobrarAsync()
     {
         var notas = await _repository.GetNotasVentaAsync(EstadoNotaVenta.Confirmada);

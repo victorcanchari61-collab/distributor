@@ -106,6 +106,16 @@ public class NotaVentaController : ControllerBase
     public async Task<IActionResult> RegistrarPago(int id, [FromBody] PagoVentaRequest request) =>
         Ok(await _ventas.RegistrarPagoAsync(id, request, UsuarioId));
 
+    /// <summary>Corrige un pago ya registrado: método o monto.</summary>
+    [HttpPut("{id:int}/pagos/{pagoId:int}")]
+    public async Task<IActionResult> ActualizarPago(int id, int pagoId, [FromBody] PagoVentaRequest request) =>
+        Ok(await _ventas.ActualizarPagoAsync(id, pagoId, request));
+
+    /// <summary>Quita un pago registrado por error: su monto vuelve al saldo pendiente.</summary>
+    [HttpDelete("{id:int}/pagos/{pagoId:int}")]
+    public async Task<IActionResult> AnularPago(int id, int pagoId) =>
+        Ok(await _ventas.AnularPagoAsync(id, pagoId));
+
     /// <summary>Los cobros que registró el usuario que hizo login, opcionalmente por rango de fechas.</summary>
     [HttpGet("miscobros")]
     public async Task<IActionResult> MisCobros([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>

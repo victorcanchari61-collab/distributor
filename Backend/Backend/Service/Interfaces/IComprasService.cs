@@ -31,6 +31,12 @@ public interface IComprasService
     /// <summary>Registra un abono contra el saldo pendiente de una compra.</summary>
     Task<CompraResponse> RegistrarPagoAsync(int id, PagoCompraRequest request);
 
+    /// <summary>Corrige un pago ya registrado: método o monto.</summary>
+    Task<CompraResponse> ActualizarPagoAsync(int id, int pagoId, PagoCompraRequest request);
+
+    /// <summary>Quita un pago registrado por error: su monto vuelve al saldo pendiente.</summary>
+    Task<CompraResponse> AnularPagoAsync(int id, int pagoId);
+
     /// <summary>Compras con saldo pendiente de pago: base de "Cuentas por pagar".</summary>
     Task<IEnumerable<CompraResponse>> GetCuentasPorPagarAsync();
 }
