@@ -196,12 +196,17 @@ export function CuentasPorPagarPage() {
     ? [
         ...gestionando.pagos.map((p) => ({ ...p, clave: String(p.id) })),
         ...(editandoClave === NUEVA
-          ? [{ id: 0, clave: NUEVA, metodoPagoId: 0, metodoPago: '', monto: 0, anulado: false }]
+          ? [{ id: 0, clave: NUEVA, fecha: '', metodoPagoId: 0, metodoPago: '', monto: 0, usuario: null, anulado: false }]
           : []),
       ]
     : []
 
   const columnasPagos: DataTableColumn<FilaPago>[] = [
+    {
+      key: 'fecha',
+      label: 'Fecha',
+      render: (fila) => (fila.clave === NUEVA ? <span className="text-ink-soft">—</span> : new Date(fila.fecha).toLocaleString('es-PE')),
+    },
     {
       key: 'tipo',
       label: 'Tipo de pago',
@@ -244,6 +249,12 @@ export function CuentasPorPagarPage() {
         ) : (
           fila.metodoPago
         ),
+    },
+    {
+      key: 'usuario',
+      label: 'Pagado por',
+      render: (fila) =>
+        fila.clave === NUEVA ? <span className="text-ink-soft">—</span> : (fila.usuario ?? <span className="text-ink-soft">—</span>),
     },
     {
       key: 'monto',
