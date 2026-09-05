@@ -68,7 +68,7 @@ function estadoCompraBadge(estado: CompraResponse['estado']) {
       : estado === 'RECIBIDA_PARCIAL'
         ? 'warning'
         : estado === 'ANULADA'
-          ? 'neutral'
+          ? 'danger'
           : 'warning'
   const texto =
     estado === 'RECIBIDA_TOTAL'

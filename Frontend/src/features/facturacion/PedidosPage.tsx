@@ -39,7 +39,7 @@ import { pedidoApi } from './ventasApi'
 import type { CrearPedidoRequest, LineaVentaResponse, PedidoResponse } from './ventasApi'
 
 function estadoPedidoBadge(estado: PedidoResponse['estado']) {
-  const tono = estado === 'CONFIRMADO' ? 'success' : estado === 'ANULADO' ? 'neutral' : 'warning'
+  const tono = estado === 'CONFIRMADO' ? 'success' : estado === 'ANULADO' ? 'danger' : 'warning'
   const texto = estado === 'CONFIRMADO' ? 'Confirmado' : estado === 'ANULADO' ? 'Anulado' : 'Pendiente'
   return <Badge tone={tono}>{texto}</Badge>
 }

@@ -46,7 +46,7 @@ import { ordenCompraApi } from './comprasApi'
 import type { CrearOrdenCompraRequest, LineaCompraResponse, OrdenCompraResponse } from './comprasApi'
 
 function estadoOrdenBadge(estado: OrdenCompraResponse['estado']) {
-  const tono = estado === 'CONFIRMADA' ? 'success' : estado === 'ANULADA' ? 'neutral' : 'warning'
+  const tono = estado === 'CONFIRMADA' ? 'success' : estado === 'ANULADA' ? 'danger' : 'warning'
   const texto = estado === 'CONFIRMADA' ? 'Confirmada' : estado === 'ANULADA' ? 'Anulada' : 'Pendiente'
   return <Badge tone={tono}>{texto}</Badge>
 }

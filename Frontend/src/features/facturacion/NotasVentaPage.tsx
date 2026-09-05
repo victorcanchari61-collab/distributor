@@ -45,7 +45,7 @@ const FORMAS_PAGO: { value: FormaPagoVenta; label: string }[] = [
 ]
 
 function estadoNotaVentaBadge(estado: NotaVentaResponse['estado']) {
-  return <Badge tone={estado === 'ANULADA' ? 'neutral' : 'success'}>{estado === 'ANULADA' ? 'Anulada' : 'Confirmada'}</Badge>
+  return <Badge tone={estado === 'ANULADA' ? 'danger' : 'success'}>{estado === 'ANULADA' ? 'Anulada' : 'Confirmada'}</Badge>
 }
 
 const TIPOS_METODO_PAGO: { value: TipoMetodoPago; label: string }[] = [

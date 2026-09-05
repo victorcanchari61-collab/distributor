@@ -28,7 +28,7 @@ type FilaTransferencia = LineaProductoNueva
 
 function estadoDocumentoBadge(row: DocumentoInventarioResponse) {
   return (
-    <Badge tone={row.estado === 'ANULADO' ? 'neutral' : 'success'}>
+    <Badge tone={row.estado === 'ANULADO' ? 'danger' : 'success'}>
       {row.estado === 'ANULADO' ? `Anulada${row.anuladoPor ? ` (${row.anuladoPor})` : ''}` : 'Confirmada'}
     </Badge>
   )
