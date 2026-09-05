@@ -66,6 +66,9 @@ class Pedido {
     required this.estado,
     this.observacion,
     this.usuario,
+    required this.reservaStock,
+    this.almacenId,
+    this.almacen,
     required this.total,
     required this.detalle,
   });
@@ -84,6 +87,12 @@ class Pedido {
   final String estado;
   final String? observacion;
   final String? usuario;
+
+  /// Si aparta stock de [almacenId] mientras el pedido siga Pendiente.
+  final bool reservaStock;
+  final int? almacenId;
+  final String? almacen;
+
   final double total;
   final List<LineaVenta> detalle;
 
@@ -100,6 +109,9 @@ class Pedido {
     estado: json['estado'] as String? ?? EstadoPedido.pendiente,
     observacion: json['observacion'] as String?,
     usuario: json['usuario'] as String?,
+    reservaStock: json['reservaStock'] as bool? ?? false,
+    almacenId: json['almacenId'] as int?,
+    almacen: json['almacen'] as String?,
     total: (json['total'] as num?)?.toDouble() ?? 0,
     detalle: (json['detalle'] as List? ?? const [])
         .map((e) => LineaVenta.desdeJson(e as Map<String, dynamic>))

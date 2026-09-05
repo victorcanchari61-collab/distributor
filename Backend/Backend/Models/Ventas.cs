@@ -37,6 +37,19 @@ public class Pedido
     public string Estado { get; set; } = EstadoPedido.Pendiente;
     public string? Observacion { get; set; }
 
+    /// <summary>
+    /// Si aparta stock de <see cref="AlmacenId"/> mientras el pedido siga
+    /// Pendiente — no mueve nada, solo se resta del disponible que se
+    /// muestra en Stock y en los buscadores de producto, para que otro
+    /// pedido o venta no prometa lo mismo dos veces. Se libera solo al
+    /// confirmar (ahí la NotaVenta ya descuenta el stock real) o al anular.
+    /// </summary>
+    public bool ReservaStock { get; set; }
+
+    /// <summary>De qué almacén se reserva. Requerido si <see cref="ReservaStock"/>.</summary>
+    public int? AlmacenId { get; set; }
+    public Almacen? Almacen { get; set; }
+
     public int? UsuarioId { get; set; }
     public Usuario? Usuario { get; set; }
 

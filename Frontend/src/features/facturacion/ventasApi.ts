@@ -55,6 +55,9 @@ export interface PedidoResponse {
   estado: EstadoPedido
   observacion: string | null
   usuario: string | null
+  reservaStock: boolean
+  almacenId: number | null
+  almacen: string | null
   total: number
   detalle: LineaVentaResponse[]
 }
@@ -64,6 +67,10 @@ export interface CrearPedidoRequest {
   listaPrecioId?: number | null
   fecha?: string | null
   observacion?: string | null
+  /** Si aparta stock de almacenId mientras el pedido siga Pendiente. */
+  reservaStock: boolean
+  /** Requerido cuando reservaStock es true. */
+  almacenId?: number | null
   detalle: LineaVentaRequest[]
 }
 

@@ -87,7 +87,7 @@ export function OrdenesCompraPage() {
       setOrdenes(ords)
       setProveedores(provs.filter((p) => p.activo))
       setProductos(prods.filter((p) => p.activo && p.controlaStock))
-      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.stock])))
+      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las órdenes de compra.')

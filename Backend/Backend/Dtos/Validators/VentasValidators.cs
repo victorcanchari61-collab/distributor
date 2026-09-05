@@ -20,6 +20,10 @@ public class CrearPedidoRequestValidator : AbstractValidator<CrearPedidoRequest>
     {
         RuleFor(x => x.ClienteId).GreaterThan(0).WithMessage("Elige el cliente");
         RuleFor(x => x.Observacion).MaximumLength(250);
+        RuleFor(x => x.AlmacenId)
+            .NotNull().GreaterThan(0)
+            .When(x => x.ReservaStock)
+            .WithMessage("Elige el almacén para reservar el stock");
         RuleFor(x => x.Detalle).NotEmpty().WithMessage("Agrega al menos un producto");
         RuleForEach(x => x.Detalle).SetValidator(new LineaVentaRequestValidator());
     }

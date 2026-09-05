@@ -125,7 +125,7 @@ export function MisComprasPage() {
       setProveedores(provs.filter((p) => p.activo))
       setProductos(prods.filter((p) => p.activo && p.controlaStock))
       setAlmacenes(alms)
-      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.stock])))
+      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
       setMetodosPago(metodos.filter((m) => m.activo))
       setError('')
     } catch (e) {

@@ -88,7 +88,7 @@ export function PrestamosPage() {
     if (!abierto || !cabecera.almacenId) return
     let cancelado = false
     void stockApi.getAll(cabecera.almacenId).then((filas) => {
-      if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.stock])))
+      if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.disponible])))
     })
     return () => {
       cancelado = true

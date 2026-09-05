@@ -119,6 +119,10 @@ class _TarjetaStock extends StatelessWidget {
               ],
             ),
     ),
+    if (stock.reservado > 0) ...[
+      CampoDetalle('Reservado', '${formatoNumero(stock.reservado)} ${stock.unidadBase}'),
+      CampoDetalle('Disponible', '${formatoNumero(stock.disponible)} ${stock.unidadBase}'),
+    ],
     CampoDetalle(
       'Costo actual',
       stock.costoActual == null ? null : 'S/ ${stock.costoActual!.toStringAsFixed(2)}',

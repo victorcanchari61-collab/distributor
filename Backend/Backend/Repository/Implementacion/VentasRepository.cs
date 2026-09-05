@@ -49,6 +49,7 @@ public class VentasRepository : IVentasRepository
         _context.Pedidos
             .Include(p => p.Cliente)
             .Include(p => p.ListaPrecio)
+            .Include(p => p.Almacen)
             .Include(p => p.Usuario)
             .Include(p => p.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(p => p.Detalle).ThenInclude(d => d.Presentacion);
@@ -80,6 +81,15 @@ public class VentasRepository : IVentasRepository
         await _context.PedidoDetalles.AddRangeAsync(detalle);
         await _context.SaveChangesAsync();
     }
+
+    public async Task<Dictionary<int, decimal>> GetReservadoPorProductoAsync(int? almacenId) =>
+        await _context.PedidoDetalles
+            .Where(d => d.Pedido!.Estado == EstadoPedido.Pendiente
+                        && d.Pedido.ReservaStock
+                        && (almacenId == null || d.Pedido.AlmacenId == almacenId))
+            .GroupBy(d => d.ProductoId)
+            .Select(g => new { ProductoId = g.Key, Cantidad = g.Sum(d => d.Cantidad) })
+            .ToDictionaryAsync(x => x.ProductoId, x => x.Cantidad);
 
     // ---------------------------------------------------------- Notas de venta
 

@@ -70,6 +70,10 @@ export interface StockResponse {
   almacenId: number
   almacen: string
   stock: number
+  /** Lo que apartan los pedidos Pendientes con reserva de stock activa. */
+  reservado: number
+  /** Stock menos lo reservado: lo que de verdad se puede prometer. */
+  disponible: number
   stockMinimo: number
   bajoMinimo: boolean
   costoActual: number | null

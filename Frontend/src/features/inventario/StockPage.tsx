@@ -81,6 +81,22 @@ export function StockPage() {
       ),
     },
     {
+      key: 'disponible',
+      label: 'Disponible',
+      align: 'right',
+      render: (row) =>
+        row.reservado > 0 ? (
+          <span>
+            {row.disponible} {row.unidadBase}
+            <span className="ml-1.5 text-xs text-ink-soft">
+              ({row.reservado} reservado)
+            </span>
+          </span>
+        ) : (
+          <span className="text-ink-soft">{row.disponible} {row.unidadBase}</span>
+        ),
+    },
+    {
       key: 'costoActual',
       label: 'Costo',
       align: 'right',

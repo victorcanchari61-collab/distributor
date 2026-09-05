@@ -51,6 +51,13 @@ public class StockResponse
     public string Almacen { get; set; } = string.Empty;
 
     public decimal Stock { get; set; }
+
+    /// <summary>Lo que apartan los pedidos Pendientes con reserva de stock activa.</summary>
+    public decimal Reservado { get; set; }
+
+    /// <summary>Stock menos lo reservado: lo que de verdad se puede prometer.</summary>
+    public decimal Disponible { get; set; }
+
     public decimal StockMinimo { get; set; }
 
     /// <summary>Debajo del mínimo: hay que reponer.</summary>

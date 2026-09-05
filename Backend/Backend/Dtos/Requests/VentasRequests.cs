@@ -22,6 +22,13 @@ public class CrearPedidoRequest
     public int? ListaPrecioId { get; set; }
     public DateTime? Fecha { get; set; }
     public string? Observacion { get; set; }
+
+    /// <summary>Si aparta stock de <see cref="AlmacenId"/> mientras esté Pendiente.</summary>
+    public bool ReservaStock { get; set; }
+
+    /// <summary>Requerido cuando <see cref="ReservaStock"/> es true.</summary>
+    public int? AlmacenId { get; set; }
+
     public List<LineaVentaRequest> Detalle { get; set; } = [];
 }
 

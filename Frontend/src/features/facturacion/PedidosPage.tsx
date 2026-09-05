@@ -7,6 +7,7 @@ import {
   BuscadorCampo,
   BuscadorModal,
   Button,
+  Checkbox,
   Desplegable,
   Input,
   ListPage,
@@ -58,6 +59,8 @@ export function PedidosPage() {
   const [clienteId, setClienteId] = useState(0)
   const [listaPrecioId, setListaPrecioId] = useState(0)
   const [observacion, setObservacion] = useState('')
+  const [reservaStock, setReservaStock] = useState(false)
+  const [almacenReservaId, setAlmacenReservaId] = useState(0)
   const [filas, setFilas] = useState<FilaPedido[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
 
@@ -85,7 +88,7 @@ export function PedidosPage() {
       setAlmacenes(alms.filter((a) => a.activo))
       setListas(lis.filter((l) => l.activo))
       const stock = await stockApi.getAll()
-      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.stock])))
+      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los pedidos.')
@@ -100,11 +103,19 @@ export function PedidosPage() {
 
   useRealtime(['pedidos', 'notasventa', 'stock'], cargar)
 
+  // El primero que se creó, no el primero de la lista (que viene ordenada
+  // por nombre): es el que tiene el id más chico.
+  const primerAlmacenId = almacenes.length
+    ? almacenes.reduce((min, a) => (a.id < min ? a.id : min), almacenes[0].id)
+    : 0
+
   const abrirNuevo = () => {
     setEditando(null)
     setClienteId(0)
     setListaPrecioId(0)
     setObservacion('')
+    setReservaStock(false)
+    setAlmacenReservaId(primerAlmacenId)
     setFilas([])
     setErrorForm('')
     setVista('form')
@@ -115,6 +126,8 @@ export function PedidosPage() {
     setClienteId(pedido.clienteId)
     setListaPrecioId(pedido.listaPrecioId ?? 0)
     setObservacion(pedido.observacion ?? '')
+    setReservaStock(pedido.reservaStock)
+    setAlmacenReservaId(pedido.almacenId ?? primerAlmacenId)
     setFilas(
       pedido.detalle.map((l) => ({
         id: crypto.randomUUID(),
@@ -141,11 +154,14 @@ export function PedidosPage() {
 
     const validas = filas.filter((f) => f.productoId && f.cantidad && f.costo)
     if (validas.length === 0) return setErrorForm('Agrega al menos un producto con su precio.')
+    if (reservaStock && !almacenReservaId) return setErrorForm('Elige el almacén para reservar el stock.')
 
     const body: CrearPedidoRequest = {
       clienteId,
       listaPrecioId: listaPrecioId || null,
       observacion: observacion.trim() || null,
+      reservaStock,
+      almacenId: reservaStock ? almacenReservaId : null,
       detalle: validas.map((f) => ({
         productoId: f.productoId,
         presentacionId: f.presentacionId || null,
@@ -414,6 +430,29 @@ export function PedidosPage() {
                 value={observacion}
                 onChange={(e) => setObservacion(e.target.value)}
               />
+
+              <hr className="mt-4 border-line" />
+
+              <Checkbox
+                className="mt-4"
+                label="Reservar stock"
+                checked={reservaStock}
+                onChange={(e) => setReservaStock(e.target.checked)}
+              />
+              <p className="mt-1 text-xs text-ink-soft">
+                Aparta el stock de un almacén mientras el pedido esté pendiente, para que no se
+                pueda prometer dos veces. Se libera solo al confirmar o anular el pedido.
+              </p>
+
+              {reservaStock && (
+                <Desplegable
+                  className="mt-3"
+                  label="Almacén"
+                  value={almacenReservaId}
+                  onChange={(v) => setAlmacenReservaId(Number(v))}
+                  options={almacenes.map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
+                />
+              )}
             </PageSection>
 
             <PageSection title="Resumen">
@@ -517,6 +556,11 @@ export function PedidosPage() {
       >
         {detalleAbierto && (
           <ul className="flex flex-col gap-2">
+            {detalleAbierto.reservaStock && (
+              <li className="rounded-field bg-brand-soft px-3 py-2 text-xs font-medium text-brand">
+                Stock reservado en {detalleAbierto.almacen}
+              </li>
+            )}
             {detalleAbierto.detalle.map((l) => (
               <li key={l.id} className="flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2">
                 <span>

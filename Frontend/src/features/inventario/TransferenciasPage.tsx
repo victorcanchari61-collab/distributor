@@ -88,7 +88,7 @@ export function TransferenciasPage() {
     if (!abierto || !cabecera.almacenOrigenId) return
     let cancelado = false
     void stockApi.getAll(cabecera.almacenOrigenId).then((filas) => {
-      if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.stock])))
+      if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.disponible])))
     })
     return () => {
       cancelado = true

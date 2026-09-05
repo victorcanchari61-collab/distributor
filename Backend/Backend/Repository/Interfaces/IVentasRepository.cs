@@ -21,6 +21,15 @@ public interface IVentasRepository
     /// </summary>
     Task ReemplazarDetallePedidoAsync(int pedidoId, IEnumerable<PedidoDetalle> detalle);
 
+    /// <summary>
+    /// Cuánto está reservado por producto, sumando los pedidos Pendientes con
+    /// reserva de stock activa — filtrado a un almacén si se indica. No hay
+    /// una tabla de reservas aparte: se calcula de los pedidos vivos, así que
+    /// confirmar o anular uno libera su reserva solo con dejar de cumplir el
+    /// filtro.
+    /// </summary>
+    Task<Dictionary<int, decimal>> GetReservadoPorProductoAsync(int? almacenId);
+
     // --- Notas de venta ---
     Task<string> SiguienteNumeroNotaVentaAsync();
     Task<NotaVenta> AddNotaVentaAsync(NotaVenta notaVenta);

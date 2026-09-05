@@ -614,6 +614,8 @@ public class AppDbContext : DbContext
                 .HasForeignKey(p => p.ClienteId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(p => p.ListaPrecio).WithMany()
                 .HasForeignKey(p => p.ListaPrecioId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.Almacen).WithMany()
+                .HasForeignKey(p => p.AlmacenId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(p => p.Usuario).WithMany()
                 .HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.SetNull);
         });

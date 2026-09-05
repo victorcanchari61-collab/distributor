@@ -36,6 +36,8 @@ class Stock {
     required this.almacenId,
     required this.almacen,
     required this.stock,
+    required this.reservado,
+    required this.disponible,
     required this.stockMinimo,
     required this.bajoMinimo,
     this.costoActual,
@@ -53,6 +55,13 @@ class Stock {
   final int almacenId;
   final String almacen;
   final double stock;
+
+  /// Lo que apartan los pedidos Pendientes con reserva de stock activa.
+  final double reservado;
+
+  /// Stock menos lo reservado: lo que de verdad se puede prometer.
+  final double disponible;
+
   final double stockMinimo;
 
   /// Debajo del mínimo: hay que reponer.
@@ -78,6 +87,8 @@ class Stock {
     almacenId: json['almacenId'] as int,
     almacen: json['almacen'] as String? ?? '',
     stock: (json['stock'] as num?)?.toDouble() ?? 0,
+    reservado: (json['reservado'] as num?)?.toDouble() ?? 0,
+    disponible: (json['disponible'] as num?)?.toDouble() ?? 0,
     stockMinimo: (json['stockMinimo'] as num?)?.toDouble() ?? 0,
     bajoMinimo: json['bajoMinimo'] as bool? ?? false,
     costoActual: (json['costoActual'] as num?)?.toDouble(),

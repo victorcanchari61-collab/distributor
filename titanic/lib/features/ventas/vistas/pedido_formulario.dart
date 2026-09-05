@@ -12,6 +12,8 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../facturacion/datos/lista_precio.dart';
 import '../../facturacion/estado/facturacion_controlador.dart';
+import '../../inventario/datos/almacen.dart';
+import '../../inventario/estado/inventario_controlador.dart';
 import '../../maestros/datos/cliente.dart';
 import '../../maestros/datos/producto.dart';
 import '../../maestros/estado/maestros_controlador.dart';
@@ -61,6 +63,8 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
   late int? _clienteId = widget.pedido?.clienteId;
   late String? _clienteNombre = widget.pedido?.cliente;
   late int? _listaPrecioId = widget.pedido?.listaPrecioId;
+  late bool _reservaStock = widget.pedido?.reservaStock ?? false;
+  late int? _almacenReservaId = widget.pedido?.almacenId;
 
   late final List<_FilaLinea> _lineas = [
     for (final l in widget.pedido?.detalle ?? const <LineaVenta>[])
@@ -78,10 +82,18 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
   String? _error;
   String? _errorCliente;
   String? _errorLineas;
+  String? _errorAlmacen;
 
   bool get _esNuevo => widget.pedido == null;
 
   double get _total => _lineas.fold<double>(0, (n, f) => n + f.subtotal);
+
+  /// El primero que se creó, no el primero de la lista (que viene ordenada
+  /// por nombre): es el que tiene el id más chico.
+  int? _primerAlmacenId(List<Almacen> almacenes) {
+    if (almacenes.isEmpty) return null;
+    return almacenes.map((a) => a.id).reduce((a, b) => a < b ? a : b);
+  }
 
   @override
   void dispose() {
@@ -93,8 +105,9 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
     setState(() {
       _errorCliente = _clienteId == null ? 'Elige el cliente.' : null;
       _errorLineas = _lineas.isEmpty ? 'Agrega al menos un producto.' : null;
+      _errorAlmacen = _reservaStock && _almacenReservaId == null ? 'Elige el almacén.' : null;
     });
-    return _errorCliente == null && _errorLineas == null;
+    return _errorCliente == null && _errorLineas == null && _errorAlmacen == null;
   }
 
   Future<void> _guardar() async {
@@ -113,6 +126,8 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
       'clienteId': _clienteId,
       'listaPrecioId': _listaPrecioId,
       'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
+      'reservaStock': _reservaStock,
+      'almacenId': _reservaStock ? _almacenReservaId : null,
       'detalle': [for (final f in _lineas) f.aCuerpo()],
     };
 
@@ -310,6 +325,7 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
   @override
   Widget build(BuildContext context) {
     final listas = ref.watch(listasPrecioProvider).valueOrNull ?? const <ListaPrecio>[];
+    final almacenes = ref.watch(almacenesActivosProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -369,6 +385,40 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
             maxLargo: 250,
             habilitado: !_guardando,
           ),
+          const SizedBox(height: Dimen.espacio4),
+          const Divider(height: 1),
+          const SizedBox(height: Dimen.espacio2),
+
+          CheckboxListTile(
+            value: _reservaStock,
+            onChanged: (v) => setState(() {
+              _reservaStock = v ?? false;
+              _almacenReservaId ??= _primerAlmacenId(almacenes);
+            }),
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text(
+              'Reservar stock',
+              style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Colores.tinta),
+            ),
+            subtitle: const Text(
+              'Aparta el stock de un almacén mientras el pedido esté pendiente, para que '
+              'no se pueda prometer dos veces. Se libera al confirmar o anular.',
+              style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+            ),
+          ),
+          if (_reservaStock) ...[
+            const SizedBox(height: Dimen.espacio2),
+            AppSelector<int>(
+              valor: _almacenReservaId,
+              etiqueta: 'Almacén',
+              icono: Icons.warehouse_outlined,
+              error: _errorAlmacen,
+              opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
+              onCambio: (v) => setState(() => _almacenReservaId = v),
+            ),
+          ],
           const SizedBox(height: Dimen.espacio5),
 
           Row(

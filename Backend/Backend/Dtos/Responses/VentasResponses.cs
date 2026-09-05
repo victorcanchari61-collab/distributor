@@ -36,6 +36,10 @@ public class PedidoResponse
     public string? Observacion { get; set; }
     public string? Usuario { get; set; }
 
+    public bool ReservaStock { get; set; }
+    public int? AlmacenId { get; set; }
+    public string? Almacen { get; set; }
+
     public decimal Total { get; set; }
     public List<LineaVentaResponse> Detalle { get; set; } = [];
 }

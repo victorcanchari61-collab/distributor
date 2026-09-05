@@ -251,6 +251,7 @@ class _TarjetaPedido extends StatelessWidget {
     CampoDetalle('Cliente', pedido.cliente),
     CampoDetalle('Fecha', _fecha(pedido.fecha)),
     CampoDetalle('Total', 'S/ ${pedido.total.toStringAsFixed(2)}'),
+    if (pedido.reservaStock) CampoDetalle('Stock reservado en', pedido.almacen),
     if (pedido.usuario != null) CampoDetalle('Registrado por', pedido.usuario),
     if (pedido.observacion != null) CampoDetalle('Observación', pedido.observacion),
   ];

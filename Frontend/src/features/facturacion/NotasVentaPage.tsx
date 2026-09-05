@@ -100,7 +100,7 @@ export function NotasVentaPage() {
       setListas(lis.filter((l) => l.activo))
       setMetodosPago(metodos.filter((m) => m.activo))
       const stock = await stockApi.getAll()
-      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.stock])))
+      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las notas de venta.')

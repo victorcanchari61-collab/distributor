@@ -40,6 +40,7 @@ public class InventarioService : IInventarioService
     private readonly IValidator<DevolverPrestamoRequest> _devolucionValidator;
     private readonly IValidator<CrearRecepcionRequest> _recepcionValidator;
     private readonly IComprasRepository _compras;
+    private readonly IVentasRepository _ventas;
     private readonly INotificador _notificador;
 
     public InventarioService(
@@ -55,6 +56,7 @@ public class InventarioService : IInventarioService
         IValidator<DevolverPrestamoRequest> devolucionValidator,
         IValidator<CrearRecepcionRequest> recepcionValidator,
         IComprasRepository compras,
+        IVentasRepository ventas,
         INotificador notificador)
     {
         _repository = repository;
@@ -69,6 +71,7 @@ public class InventarioService : IInventarioService
         _devolucionValidator = devolucionValidator;
         _recepcionValidator = recepcionValidator;
         _compras = compras;
+        _ventas = ventas;
         _notificador = notificador;
     }
 
@@ -282,10 +285,13 @@ public class InventarioService : IInventarioService
 
         var resumen = await _repository.GetResumenAsync(productos.Select(p => p.Id), almacenId);
         var almacen = almacenId is int id ? await _repository.GetAlmacenAsync(id) : null;
+        var reservado = await _ventas.GetReservadoPorProductoAsync(almacenId);
 
         return productos.Select(p =>
         {
             var r = resumen.GetValueOrDefault(p.Id);
+            var stock = r?.Stock ?? 0;
+            var res = reservado.GetValueOrDefault(p.Id);
             return new StockResponse
             {
                 ProductoId = p.Id,
@@ -296,9 +302,11 @@ public class InventarioService : IInventarioService
                 UnidadBase = p.UnidadBase?.Codigo ?? string.Empty,
                 AlmacenId = almacenId ?? 0,
                 Almacen = almacen?.Nombre ?? "Todos",
-                Stock = r?.Stock ?? 0,
+                Stock = stock,
+                Reservado = res,
+                Disponible = stock - res,
                 StockMinimo = p.StockMinimo,
-                BajoMinimo = p.StockMinimo > 0 && (r?.Stock ?? 0) <= p.StockMinimo,
+                BajoMinimo = p.StockMinimo > 0 && stock <= p.StockMinimo,
                 CostoActual = r?.CostoMin,
                 CostoUltimo = r?.CostoMax,
                 Valorizado = r?.Valorizado ?? 0
@@ -314,6 +322,8 @@ public class InventarioService : IInventarioService
         var capas = await _repository.GetCapasDisponiblesAsync(productoId, almacenId);
         var ultima = await _repository.GetUltimaCapaAsync(productoId, almacenId);
         var almacen = almacenId is int id ? await _repository.GetAlmacenAsync(id) : null;
+        var reservado = (await _ventas.GetReservadoPorProductoAsync(almacenId)).GetValueOrDefault(productoId);
+        var stock = capas.Sum(c => c.CantidadDisponible);
 
         return new StockResponse
         {
@@ -325,10 +335,11 @@ public class InventarioService : IInventarioService
             UnidadBase = producto.UnidadBase?.Codigo ?? string.Empty,
             AlmacenId = almacenId ?? 0,
             Almacen = almacen?.Nombre ?? "Todos",
-            Stock = capas.Sum(c => c.CantidadDisponible),
+            Stock = stock,
+            Reservado = reservado,
+            Disponible = stock - reservado,
             StockMinimo = producto.StockMinimo,
-            BajoMinimo = producto.StockMinimo > 0
-                         && capas.Sum(c => c.CantidadDisponible) <= producto.StockMinimo,
+            BajoMinimo = producto.StockMinimo > 0 && stock <= producto.StockMinimo,
             // La mas antigua con mercaderia: es la que se consume ahora.
             CostoActual = capas.FirstOrDefault()?.CostoUnitario,
             CostoUltimo = ultima?.CostoUnitario,

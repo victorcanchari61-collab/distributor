@@ -68,6 +68,11 @@ public class VentasService : IVentasService
     {
         await _pedidoValidator.ValidateAndThrowAsync(request);
 
+        if (request.ReservaStock)
+        {
+            await ValidarAlmacenReservaAsync(request.AlmacenId!.Value);
+        }
+
         var pedido = new Pedido
         {
             Numero = await _repository.SiguienteNumeroPedidoAsync(),
@@ -76,6 +81,8 @@ public class VentasService : IVentasService
             Fecha = request.Fecha ?? DateTime.UtcNow,
             Estado = EstadoPedido.Pendiente,
             Observacion = Limpiar(request.Observacion),
+            ReservaStock = request.ReservaStock,
+            AlmacenId = request.ReservaStock ? request.AlmacenId : null,
             UsuarioId = usuarioId
         };
 
@@ -100,10 +107,17 @@ public class VentasService : IVentasService
                 "Solo se puede editar un pedido Pendiente. Si ya se despachó, anúlalo y crea uno nuevo.");
         }
 
+        if (request.ReservaStock)
+        {
+            await ValidarAlmacenReservaAsync(request.AlmacenId!.Value);
+        }
+
         pedido.ClienteId = request.ClienteId;
         pedido.ListaPrecioId = request.ListaPrecioId;
         pedido.Fecha = request.Fecha ?? pedido.Fecha;
         pedido.Observacion = Limpiar(request.Observacion);
+        pedido.ReservaStock = request.ReservaStock;
+        pedido.AlmacenId = request.ReservaStock ? request.AlmacenId : null;
 
         await _repository.UpdatePedidoAsync(pedido);
         await _repository.ReemplazarDetallePedidoAsync(id, await ResolverLineasAsync(request.Detalle, id));
@@ -338,6 +352,15 @@ public class VentasService : IVentasService
         return lineas;
     }
 
+    private async Task ValidarAlmacenReservaAsync(int almacenId)
+    {
+        var almacen = await _inventario.GetAlmacenAsync(almacenId);
+        if (!almacen.Activo)
+        {
+            throw new BadRequestException("El almacén está desactivado");
+        }
+    }
+
     private async Task<Pedido> GetPedidoOrThrowAsync(int id) =>
         await _repository.GetPedidoAsync(id)
         ?? throw new NotFoundException($"No existe el pedido {id}");
@@ -391,6 +414,9 @@ public class VentasService : IVentasService
         Estado = p.Estado,
         Observacion = p.Observacion,
         Usuario = p.Usuario?.Nombre,
+        ReservaStock = p.ReservaStock,
+        AlmacenId = p.AlmacenId,
+        Almacen = p.Almacen?.Nombre,
         Total = Math.Round(p.Detalle.Sum(d => d.Cantidad * d.PrecioUnitario), 2),
         Detalle = p.Detalle.Select(MapLinea).ToList()
     };
