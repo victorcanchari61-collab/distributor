@@ -107,78 +107,86 @@ export function AgregarProductoPanel({
         avanzadoLabel="Búsqueda avanzada de productos"
       />
 
-      {producto && (
-        <>
-          <Input label="Descripción" disabled value={producto.descripcion || producto.nombre} />
+      {/* Siempre visible, aunque no haya producto elegido todavía: así el
+          panel no "salta" de tamaño al buscar, y se ve de entrada qué datos
+          va a pedir (costo incluido) en vez de sorprender después. */}
+      <Input label="Descripción" disabled value={producto ? producto.descripcion || producto.nombre : ''} />
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Input
-              label="Stock"
-              disabled
-              value={stockActual == null ? '' : `${stockActual} ${producto.unidadBase}`}
-            />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Input
+          label="Stock"
+          disabled
+          value={producto && stockActual != null ? `${stockActual} ${producto.unidadBase}` : ''}
+        />
 
-            <Desplegable
-              label="Unidad"
-              value={linea.presentacionId}
-              onChange={(v) => setLinea({ ...linea, presentacionId: Number(v) })}
-              options={[
-                { value: 0, label: producto.unidadBase, nota: 'unidad base' },
-                ...presentaciones
-                  .filter((p) => !p.esBase)
-                  .map((p) => ({
-                    value: p.id,
-                    label: p.nombre,
-                    detalle: `${p.factor} ${producto.unidadBase}`,
-                  })),
-              ]}
-            />
+        <Desplegable
+          label="Unidad"
+          value={linea.presentacionId}
+          onChange={(v) => setLinea({ ...linea, presentacionId: Number(v) })}
+          disabled={!producto}
+          options={
+            producto
+              ? [
+                  { value: 0, label: producto.unidadBase, nota: 'unidad base' },
+                  ...presentaciones
+                    .filter((p) => !p.esBase)
+                    .map((p) => ({
+                      value: p.id,
+                      label: p.nombre,
+                      detalle: `${p.factor} ${producto.unidadBase}`,
+                    })),
+                ]
+              : []
+          }
+        />
 
-            <Input
-              label="Cantidad"
-              type="number"
-              step="0.0001"
-              value={linea.cantidad}
-              onChange={(e) => setLinea({ ...linea, cantidad: e.target.value })}
-            />
+        <Input
+          label="Cantidad"
+          type="number"
+          step="0.0001"
+          disabled={!producto}
+          value={linea.cantidad}
+          onChange={(e) => setLinea({ ...linea, cantidad: e.target.value })}
+        />
 
-            {pideCosto && (
-              <Input
-                label={costoLabel}
-                type="number"
-                step="0.01"
-                placeholder={producto.costoReferencia ? String(producto.costoReferencia * factor) : '0.00'}
-                value={linea.costo}
-                onChange={(e) => setLinea({ ...linea, costo: e.target.value })}
-              />
-            )}
-          </div>
+        {pideCosto && (
+          <Input
+            label={costoLabel}
+            type="number"
+            step="0.01"
+            disabled={!producto}
+            placeholder={producto?.costoReferencia ? String(producto.costoReferencia * factor) : '0.00'}
+            value={linea.costo}
+            onChange={(e) => setLinea({ ...linea, costo: e.target.value })}
+          />
+        )}
+      </div>
 
-          {pideLote && (
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Lote"
-                optional
-                placeholder="Opcional"
-                value={linea.lote}
-                onChange={(e) => setLinea({ ...linea, lote: e.target.value })}
-              />
-              <Input
-                label="Vencimiento"
-                optional
-                type="date"
-                value={linea.fechaVencimiento}
-                onChange={(e) => setLinea({ ...linea, fechaVencimiento: e.target.value })}
-              />
-            </div>
-          )}
-
-          <Button size="sm" onClick={agregar} disabled={!linea.cantidad} className="self-start">
-            <Plus size={15} />
-            Agregar producto
-          </Button>
-        </>
+      {pideLote && (
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Lote"
+            optional
+            disabled={!producto}
+            placeholder="Opcional"
+            value={linea.lote}
+            onChange={(e) => setLinea({ ...linea, lote: e.target.value })}
+          />
+          <Input
+            label="Vencimiento"
+            optional
+            type="date"
+            disabled={!producto}
+            value={linea.fechaVencimiento}
+            onChange={(e) => setLinea({ ...linea, fechaVencimiento: e.target.value })}
+          />
+        </div>
       )}
+
+      <Button size="sm" onClick={agregar} disabled={!producto || !linea.cantidad} className="self-start">
+        <Plus size={15} />
+        Agregar producto
+      </Button>
 
       <BuscadorProductoModal
         open={buscadorAbierto}
