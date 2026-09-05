@@ -532,10 +532,11 @@ export function OrdenesCompraPage() {
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.proveedor}` : ''}
         description={
           detalleAbierto
-            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')}` +
-              (detalleAbierto.fechaEsperada
-                ? ` · Entrega est. ${new Date(detalleAbierto.fechaEsperada).toLocaleDateString('es-PE')}`
-                : '')
+            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')} · Entrega est. ${
+                detalleAbierto.fechaEsperada
+                  ? new Date(detalleAbierto.fechaEsperada).toLocaleDateString('es-PE')
+                  : '—'
+              }`
             : undefined
         }
         onClose={() => setDetalleAbierto(null)}

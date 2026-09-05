@@ -65,10 +65,10 @@ export function Modal({
           SIZES[size],
         )}
       >
-        <div className="flex items-start justify-between gap-3 bg-[rgb(var(--sys-rgb))] px-5 py-3.5">
-          <div className="min-w-0">
-            <h2 className="text-[15px] font-bold text-white">{title}</h2>
-            {description && <p className="mt-0.5 text-xs text-white/80">{description}</p>}
+        <div className="flex items-center justify-between gap-3 bg-[rgb(var(--sys-rgb))] px-4 py-2.5">
+          <div className="min-w-0 leading-tight">
+            <h2 className="truncate text-sm font-bold text-white">{title}</h2>
+            {description && <p className="truncate text-[11px] text-white/80">{description}</p>}
           </div>
 
           {/*
@@ -81,9 +81,9 @@ export function Modal({
               type="button"
               onClick={onClose}
               aria-label="Cerrar"
-              className="cursor-pointer rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+              className="cursor-pointer rounded-lg p-1 text-white/80 transition-colors hover:bg-white/15 hover:text-white"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           )}
         </div>
