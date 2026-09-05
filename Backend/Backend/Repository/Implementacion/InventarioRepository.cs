@@ -29,6 +29,19 @@ public class InventarioRepository : IInventarioRepository
             .ThenBy(a => a.Nombre)
             .ToListAsync();
 
+    public async Task<IEnumerable<MovimientoInventario>> GetEntradasRecientesAsync(DateTime desde) =>
+        await _context.Movimientos
+            .Include(m => m.Producto).ThenInclude(p => p!.UnidadBase)
+            .Include(m => m.Almacen)
+            .Include(m => m.Documento)
+            .Where(m => m.Tipo == TipoMovimiento.Entrada
+                        && m.Fecha >= desde
+                        && m.Documento!.Estado == EstadoDocumento.Confirmado
+                        && (m.Documento.Tipo == TipoDocumentoInventario.Recepcion
+                            || m.Documento.Tipo == TipoDocumentoInventario.Ajuste))
+            .OrderByDescending(m => m.Fecha)
+            .ToListAsync();
+
     public async Task<Almacen?> GetAlmacenAsync(int id) =>
         await _context.Almacenes.FirstOrDefaultAsync(a => a.Id == id);
 

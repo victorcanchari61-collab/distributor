@@ -4,6 +4,9 @@ public static class SeveridadAlerta
 {
     public const string Critica = "CRITICA";
     public const string Advertencia = "ADVERTENCIA";
+
+    /// <summary>Buena noticia, no algo por corregir: llegó mercadería.</summary>
+    public const string Info = "INFO";
 }
 
 public static class TipoAlerta
@@ -13,6 +16,9 @@ public static class TipoAlerta
     public const string CompraPendiente = "COMPRA_PENDIENTE";
     public const string CreditoPendiente = "CREDITO_PENDIENTE";
     public const string ReservaVencida = "RESERVA_VENCIDA";
+
+    /// <summary>Entró mercadería nueva o se repuso stock: para que ventas sepa que ya puede ofrecerlo.</summary>
+    public const string StockRepuesto = "STOCK_REPUESTO";
 }
 
 /// <summary>

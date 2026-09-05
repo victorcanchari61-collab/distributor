@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Bell, LogOut, Menu, PackageX, PanelLeftOpen, Search } from 'lucide-react'
+import { AlertTriangle, Bell, LogOut, Menu, PackageCheck, PackageX, PanelLeftOpen, Search } from 'lucide-react'
 import { cn } from '../ui'
 import { alertaApi } from '../../lib/alertasApi'
 import type { AlertaResponse } from '../../lib/alertasApi'
@@ -56,6 +56,8 @@ export function Topbar({
   }, [abierto])
 
   const criticas = alertas.filter((a) => a.severidad === 'CRITICA').length
+  const advertencias = alertas.filter((a) => a.severidad === 'ADVERTENCIA').length
+  const colorContador = criticas > 0 ? 'bg-red-600' : advertencias > 0 ? 'bg-amber-500' : 'bg-emerald-600'
 
   const irA = (a: AlertaResponse) => {
     setAbierto(false)
@@ -117,7 +119,7 @@ export function Topbar({
             <span
               className={cn(
                 'absolute top-0.5 right-0.5 flex size-4 items-center justify-center rounded-full text-[9px] font-bold text-white ring-2 ring-white',
-                criticas > 0 ? 'bg-red-600' : 'bg-amber-500',
+                colorContador,
               )}
             >
               {alertas.length > 9 ? '9+' : alertas.length}
@@ -130,7 +132,11 @@ export function Topbar({
             <div className="border-b border-line px-4 py-3">
               <h3 className="text-sm font-bold text-ink">Alertas</h3>
               <p className="text-xs text-ink-soft">
-                {alertas.length === 0 ? 'Todo en orden' : `${alertas.length} cosas para revisar`}
+                {alertas.length === 0
+                  ? 'Todo en orden'
+                  : criticas > 0 || advertencias > 0
+                    ? `${alertas.length} cosas para revisar`
+                    : `${alertas.length} novedades`}
               </p>
             </div>
 
@@ -152,10 +158,20 @@ export function Topbar({
                     <span
                       className={cn(
                         'mt-0.5 shrink-0 rounded-full p-1.5',
-                        a.severidad === 'CRITICA' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600',
+                        a.severidad === 'CRITICA'
+                          ? 'bg-red-50 text-red-600'
+                          : a.severidad === 'ADVERTENCIA'
+                            ? 'bg-amber-50 text-amber-600'
+                            : 'bg-emerald-50 text-emerald-600',
                       )}
                     >
-                      {a.tipo === 'LOTE_POR_VENCER' ? <PackageX size={14} /> : <AlertTriangle size={14} />}
+                      {a.tipo === 'STOCK_REPUESTO' ? (
+                        <PackageCheck size={14} />
+                      ) : a.tipo === 'LOTE_POR_VENCER' ? (
+                        <PackageX size={14} />
+                      ) : (
+                        <AlertTriangle size={14} />
+                      )}
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold text-ink">{a.titulo}</span>

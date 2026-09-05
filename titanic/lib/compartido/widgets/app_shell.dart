@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/auth/estado/auth_controlador.dart';
+import 'app_alertas_boton.dart';
 import 'app_drawer.dart';
 
 /// Armazon de las pantallas internas: barra superior, menu lateral y contenido.
@@ -66,6 +67,7 @@ class AppShell extends ConsumerWidget {
         ),
         actions: [
           ...?acciones,
+          const AppAlertasBoton(),
           // Quien esta conectado va aqui, no en el menu: se ve siempre, sin
           // tener que abrir el drawer.
           if (usuario != null)

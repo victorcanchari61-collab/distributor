@@ -17,6 +17,13 @@ public interface IInventarioRepository
 
     // --- Almacenes ---
     Task<IEnumerable<Almacen>> GetAlmacenesAsync();
+
+    /// <summary>
+    /// Entradas confirmadas (recepción o ajuste) desde una fecha, con
+    /// producto y almacén cargados — para avisar que llegó mercadería nueva.
+    /// No incluye lo que entra por anular una venta: eso no es "nuevo".
+    /// </summary>
+    Task<IEnumerable<MovimientoInventario>> GetEntradasRecientesAsync(DateTime desde);
     Task<Almacen?> GetAlmacenAsync(int id);
     Task<Almacen?> GetAlmacenPrincipalAsync();
     Task<bool> ExisteCodigoAlmacenAsync(string codigo, int? excepto = null);

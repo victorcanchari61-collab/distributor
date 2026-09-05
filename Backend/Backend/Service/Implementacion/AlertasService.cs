@@ -17,14 +17,22 @@ public class AlertasService : IAlertasService
     private const int DiasCompraPendiente = 5;
     private const int DiasCreditoPendiente = 15;
     private const int DiasReservaVencida = 3;
+    private const int HorasStockRepuesto = 48;
+    private const int DiasProductoNuevo = 7;
 
     private readonly IInventarioService _inventario;
+    private readonly IInventarioRepository _inventarioRepo;
     private readonly IComprasRepository _compras;
     private readonly IVentasRepository _ventas;
 
-    public AlertasService(IInventarioService inventario, IComprasRepository compras, IVentasRepository ventas)
+    public AlertasService(
+        IInventarioService inventario,
+        IInventarioRepository inventarioRepo,
+        IComprasRepository compras,
+        IVentasRepository ventas)
     {
         _inventario = inventario;
+        _inventarioRepo = inventarioRepo;
         _compras = compras;
         _ventas = ventas;
     }
@@ -39,9 +47,20 @@ public class AlertasService : IAlertasService
         alertas.AddRange(await ComprasPendientesAsync(ahora));
         alertas.AddRange(await CreditosPendientesAsync(ahora));
         alertas.AddRange(await ReservasVencidasAsync(ahora));
+        alertas.AddRange(await StockRepuestoAsync(ahora));
 
-        return alertas.OrderByDescending(a => a.Severidad == SeveridadAlerta.Critica).ThenBy(a => a.Fecha);
+        return alertas
+            .OrderBy(a => Peso(a.Severidad))
+            .ThenByDescending(a => a.Fecha);
     }
+
+    /// <summary>Crítica primero, luego advertencia, y al final las buenas noticias.</summary>
+    private static int Peso(string severidad) => severidad switch
+    {
+        SeveridadAlerta.Critica => 0,
+        SeveridadAlerta.Advertencia => 1,
+        _ => 2
+    };
 
     private async Task<List<AlertaResponse>> StockBajoAsync()
     {
@@ -157,6 +176,41 @@ public class AlertasService : IAlertasService
                 Ruta = "fact.pedidos",
                 Fecha = p.Fecha
             })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Mercadería que entró hace poco (recepción o ajuste), agrupada por
+    /// producto y almacén: para que ventas sepa que ya puede ofrecerlo — sea
+    /// porque es un producto nuevo o porque se repuso uno que estaba bajo.
+    /// </summary>
+    private async Task<List<AlertaResponse>> StockRepuestoAsync(DateTime ahora)
+    {
+        var desde = ahora.AddHours(-HorasStockRepuesto);
+        var movimientos = await _inventarioRepo.GetEntradasRecientesAsync(desde);
+
+        return movimientos
+            .GroupBy(m => (m.ProductoId, m.AlmacenId))
+            .Select(g =>
+            {
+                var producto = g.First().Producto!;
+                var almacen = g.First().Almacen!;
+                var cantidad = g.Sum(m => m.Cantidad);
+                var esNuevo = producto.FechaCreacion >= ahora.AddDays(-DiasProductoNuevo);
+
+                return new AlertaResponse
+                {
+                    Id = $"repuesto-{producto.Id}-{almacen.Id}",
+                    Tipo = TipoAlerta.StockRepuesto,
+                    Severidad = SeveridadAlerta.Info,
+                    Titulo = esNuevo ? $"Nuevo producto: {producto.Nombre}" : $"Llegó stock: {producto.Nombre}",
+                    Detalle = $"{cantidad} {producto.UnidadBase?.Codigo} en {almacen.Nombre}",
+                    Ruta = "inv.stock",
+                    Fecha = g.Max(m => m.Fecha)
+                };
+            })
+            .OrderByDescending(a => a.Fecha)
+            .Take(20)
             .ToList();
     }
 }

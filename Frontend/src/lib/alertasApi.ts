@@ -1,6 +1,6 @@
 import { api } from './apiClient'
 
-export type SeveridadAlerta = 'CRITICA' | 'ADVERTENCIA'
+export type SeveridadAlerta = 'CRITICA' | 'ADVERTENCIA' | 'INFO'
 
 export type TipoAlerta =
   | 'STOCK_BAJO'
@@ -8,6 +8,7 @@ export type TipoAlerta =
   | 'COMPRA_PENDIENTE'
   | 'CREDITO_PENDIENTE'
   | 'RESERVA_VENCIDA'
+  | 'STOCK_REPUESTO'
 
 export interface AlertaResponse {
   id: string
