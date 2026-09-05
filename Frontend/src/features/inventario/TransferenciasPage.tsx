@@ -271,7 +271,7 @@ export function TransferenciasPage() {
         <Button
           size="sm"
           onClick={abrirNuevo}
-          disabled={activos.length < 2}
+          disabled={!cargando && activos.length < 2}
           iconRight={<Plus size={15} />}
         >
           Nueva transferencia
@@ -280,7 +280,7 @@ export function TransferenciasPage() {
       alert={
         error ? (
           <Alert>{error}</Alert>
-        ) : activos.length < 2 ? (
+        ) : !cargando && activos.length < 2 ? (
           <Alert>Necesitas al menos dos almacenes activos para transferir.</Alert>
         ) : undefined
       }

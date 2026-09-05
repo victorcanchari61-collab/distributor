@@ -1,17 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Eye, RefreshCw, ScrollText } from 'lucide-react'
-import { Alert, Badge, Button, Desplegable, Input, ListPage, Modal, RowAction, StatCard } from '../../components/ui'
+import { Alert, Badge, Button, ListPage, Modal, RowAction, StatCard } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { auditoriaApi } from './auditoriaApi'
 import type { AccionAuditoria, AuditoriaResponse } from './auditoriaApi'
-
-const ACCIONES: { value: AccionAuditoria | ''; label: string }[] = [
-  { value: '', label: 'Todas' },
-  { value: 'CREADO', label: 'Creado' },
-  { value: 'ACTUALIZADO', label: 'Actualizado' },
-  { value: 'ELIMINADO', label: 'Eliminado' },
-]
 
 function accionBadge(accion: AccionAuditoria) {
   const tono = accion === 'CREADO' ? 'success' : accion === 'ELIMINADO' ? 'danger' : 'warning'
@@ -39,39 +32,24 @@ function formatearValor(valor: unknown): string {
  */
 export function AuditoriaPage() {
   const [registros, setRegistros] = useState<AuditoriaResponse[]>([])
-  const [entidades, setEntidades] = useState<string[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
-  const [entidad, setEntidad] = useState('')
-  const [accion, setAccion] = useState<AccionAuditoria | ''>('')
-  const [desde, setDesde] = useState('')
-  const [hasta, setHasta] = useState('')
-
   const [detalleAbierto, setDetalleAbierto] = useState<AuditoriaResponse | null>(null)
 
+  // Los filtros (entidad, acción, fecha) van en el ícono de filtros de la
+  // tabla, como en todas las vistas: aquí solo se traen los últimos cambios.
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [regs, ents] = await Promise.all([
-        auditoriaApi.getAll({
-          entidad: entidad || undefined,
-          accion: accion || undefined,
-          desde: desde || undefined,
-          // Hasta incluye el día completo, no solo su medianoche.
-          hasta: hasta ? `${hasta}T23:59:59` : undefined,
-        }),
-        auditoriaApi.getEntidades(),
-      ])
-      setRegistros(regs)
-      setEntidades(ents)
+      setRegistros(await auditoriaApi.getAll())
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar la auditoría.')
     } finally {
       setCargando(false)
     }
-  }, [entidad, accion, desde, hasta])
+  }, [])
 
   useEffect(() => {
     void cargar()
@@ -145,25 +123,7 @@ export function AuditoriaPage() {
       cardIcon={ScrollText}
       searchPlaceholder="Buscar por usuario, entidad, registro..."
       empty={cargando ? 'Cargando auditoría...' : 'No hay cambios registrados con esos filtros.'}
-      note={
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Desplegable
-            label="Entidad"
-            value={entidad}
-            onChange={(v) => setEntidad(String(v))}
-            placeholder="Todas"
-            options={[{ value: '', label: 'Todas' }, ...entidades.map((e) => ({ value: e, label: e }))]}
-          />
-          <Desplegable
-            label="Acción"
-            value={accion}
-            onChange={(v) => setAccion(v as AccionAuditoria | '')}
-            options={ACCIONES}
-          />
-          <Input label="Desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
-          <Input label="Hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
-        </div>
-      }
+      note="Se muestran los últimos 300 cambios. Usa el ícono de filtros de la tabla para acotar por entidad, acción o fecha."
       rowActions={(row) => (
         <RowAction label={`Ver cambios de ${row.entidad} #${row.entidadId}`} onClick={() => setDetalleAbierto(row)}>
           <Eye size={15} />

@@ -10,12 +10,16 @@ export default defineConfig({
     // manda al backend local, igual que Nginx lo hace en producción.
     proxy: {
       '/api': {
-        target: 'http://localhost:5220',
+        // 127.0.0.1 y no localhost: en Windows, localhost prueba primero IPv6 y
+        // recién después cae a IPv4 — ~200 ms perdidos en CADA petición.
+        target: 'http://127.0.0.1:5220',
         changeOrigin: true,
       },
       // ws: true porque SignalR sube la conexión a WebSocket.
       '/hubs': {
-        target: 'http://localhost:5220',
+        // 127.0.0.1 y no localhost: en Windows, localhost prueba primero IPv6 y
+        // recién después cae a IPv4 — ~200 ms perdidos en CADA petición.
+        target: 'http://127.0.0.1:5220',
         changeOrigin: true,
         ws: true,
       },

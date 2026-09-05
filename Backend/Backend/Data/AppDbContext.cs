@@ -410,6 +410,9 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("DocumentosInventario");
             entity.HasIndex(d => d.Numero).IsUnique();
+            // Los listados filtran por tipo/estado y ordenan por fecha.
+            entity.HasIndex(d => new { d.Tipo, d.Fecha });
+            entity.HasIndex(d => d.Estado);
             entity.Property(d => d.Numero).HasMaxLength(20).IsRequired();
             entity.Property(d => d.Tipo).HasMaxLength(25).IsRequired();
             entity.Property(d => d.Estado).HasMaxLength(15).IsRequired();
@@ -501,6 +504,8 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("Prestamos");
             entity.HasIndex(p => p.Numero).IsUnique();
+            entity.HasIndex(p => p.Fecha);
+            entity.HasIndex(p => p.Estado);
             entity.Property(p => p.Numero).HasMaxLength(20).IsRequired();
             entity.Property(p => p.Tipo).HasMaxLength(10).IsRequired();
             entity.Property(p => p.Contraparte).HasMaxLength(150).IsRequired();
@@ -537,6 +542,8 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("OrdenesCompra");
             entity.HasIndex(o => o.Numero).IsUnique();
+            entity.HasIndex(o => o.Fecha);
+            entity.HasIndex(o => o.Estado);
             entity.Property(o => o.Numero).HasMaxLength(20).IsRequired();
             entity.Property(o => o.Estado).HasMaxLength(15).IsRequired();
             entity.Property(o => o.Observacion).HasMaxLength(250);
@@ -566,6 +573,8 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("Compras");
             entity.HasIndex(c => c.Numero).IsUnique();
+            entity.HasIndex(c => c.Fecha);
+            entity.HasIndex(c => c.Estado);
             entity.Property(c => c.Numero).HasMaxLength(20).IsRequired();
             entity.Property(c => c.Estado).HasMaxLength(20).IsRequired();
             entity.Property(c => c.TipoComprobante).HasMaxLength(10).IsRequired();
@@ -616,6 +625,9 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("Pedidos");
             entity.HasIndex(p => p.Numero).IsUnique();
+            entity.HasIndex(p => p.Fecha);
+            // La reserva de stock suma pedidos por estado + flag: que no recorra la tabla.
+            entity.HasIndex(p => new { p.Estado, p.ReservaStock });
             entity.Property(p => p.Numero).HasMaxLength(20).IsRequired();
             entity.Property(p => p.Estado).HasMaxLength(15).IsRequired();
             entity.Property(p => p.Observacion).HasMaxLength(250);
@@ -649,6 +661,8 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("NotasVenta");
             entity.HasIndex(n => n.Numero).IsUnique();
+            entity.HasIndex(n => n.Fecha);
+            entity.HasIndex(n => n.Estado);
             entity.Property(n => n.Numero).HasMaxLength(20).IsRequired();
             entity.Property(n => n.Estado).HasMaxLength(15).IsRequired();
             entity.Property(n => n.FormaPago).HasMaxLength(10).IsRequired();
