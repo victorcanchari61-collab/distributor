@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Boxes,
+  Download,
   Package,
   PackageCheck,
   Pencil,
@@ -10,6 +11,7 @@ import {
   ShieldOff,
   Tags,
   Trash2,
+  Upload,
 } from 'lucide-react'
 import {
   Alert,
@@ -17,6 +19,7 @@ import {
   BotonMas,
   Button,
   Desplegable,
+  ImportarModal,
   Input,
   ListaDesplegable,
   ListPage,
@@ -28,6 +31,7 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { exportarExcel, valorDe } from '../../lib/excel'
 import { CatalogoSimple } from './CatalogoSimple'
 import { CostoReferenciaInput } from './CostoReferenciaInput'
 import { PresentacionesEditor } from './PresentacionesEditor'
@@ -36,10 +40,27 @@ import { categoriaApi, marcaApi, productoApi, unidadApi } from './productoApi'
 import type {
   CategoriaResponse,
   MarcaResponse,
+  ProductoImportRequest,
   ProductoResponse,
   UnidadResponse,
 } from './productoApi'
 import { useRealtime } from '../../lib/realtime'
+
+/** "Kilos" -> KG, "Sacos" -> SAC... lo que ya trae el catálogo de unidades. */
+function unidadDesdeMedida(medida: string): string {
+  const m = medida.trim().toLowerCase()
+  if (m === 'kilos' || m === 'kilo' || m === 'kg') return 'KG'
+  if (m === 'sacos' || m === 'saco') return 'SAC'
+  if (m === 'caja' || m === 'cajas') return 'CJA'
+  if (m === 'litros' || m === 'litro') return 'LT'
+  return 'UND'
+}
+
+/** Solo el número si es mayor que cero: precios en 0 o negativos no son reales. */
+function numeroPositivo(texto: string): number | null {
+  const n = Number(String(texto).replace(',', '.'))
+  return Number.isFinite(n) && n > 0 ? n : null
+}
 
 const VACIO = {
   codigo: '',
@@ -75,6 +96,7 @@ export function ProductosPage() {
   const [error, setError] = useState('')
 
   const [abierto, setAbierto] = useState(false)
+  const [importando, setImportando] = useState(false)
   const [editando, setEditando] = useState<ProductoResponse | null>(null)
   const [form, setForm] = useState(VACIO)
   const [presentaciones, setPresentaciones] = useState<FilaPresentacion[]>([])
@@ -331,6 +353,22 @@ export function ProductosPage() {
       },
     })
 
+  const exportarProductos = () => {
+    exportarExcel(
+      'catalogo_productos',
+      productos.map((p) => ({
+        Código: p.codigo,
+        Nombre: p.nombre,
+        Categoría: p.categoria ?? '',
+        Marca: p.marca ?? '',
+        'Unidad base': p.unidadBase,
+        'Costo referencia': p.costoReferencia ?? '',
+        Presentaciones: p.presentaciones.map((pr) => `${pr.nombre} (${pr.factor})`).join(', '),
+        Estado: p.activo ? 'Activo' : 'Inactivo',
+      })),
+    )
+  }
+
   const eliminar = (producto: ProductoResponse) =>
     confirmar({
       titulo: `Eliminar ${producto.nombre}`,
@@ -483,9 +521,17 @@ export function ProductosPage() {
         title="Productos"
         description="Qué se compra y se vende, y en qué presentaciones."
         actions={
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo producto
-          </Button>
+          <>
+            <Button variant="secondary" size="sm" onClick={exportarProductos} iconRight={<Download size={15} />}>
+              Exportar
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setImportando(true)} iconRight={<Upload size={15} />}>
+              Importar
+            </Button>
+            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+              Nuevo producto
+            </Button>
+          </>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
         stats={
@@ -793,6 +839,66 @@ export function ProductosPage() {
             )}
           </div>
         </Modal>
+
+        <ImportarModal<ProductoImportRequest>
+          open={importando}
+          onClose={() => setImportando(false)}
+          titulo="productos"
+          columnasEsperadas={[
+            'Codigo',
+            'Descripcion',
+            'Medida',
+            'Presentacion',
+            'Costo',
+            'Precio',
+            'P. Saco',
+            'P. Mayor',
+          ]}
+          mapear={(() => {
+            // Mismo código con nombre distinto = producto distinto en el
+            // archivo viejo: se le agrega un sufijo para no perderlo. Mismo
+            // código con el mismo nombre es una fila repetida de verdad, y esa
+            // la detecta sola el backend (queda como omitida, con su motivo).
+            const vistos = new Map<string, string>()
+            const sufijos = new Map<string, number>()
+
+            return (fila): ProductoImportRequest => {
+              const codigoOriginal = valorDe(fila, 'codigo').trim().toUpperCase()
+              const nombre = valorDe(fila, 'descripcion').trim()
+
+              let codigo = codigoOriginal
+              const previo = vistos.get(codigoOriginal)
+              if (codigoOriginal && previo !== undefined && previo !== nombre) {
+                const n = (sufijos.get(codigoOriginal) ?? 0) + 1
+                sufijos.set(codigoOriginal, n)
+                codigo = `${codigoOriginal}-${String.fromCharCode(65 + n)}`
+              } else if (codigoOriginal && previo === undefined) {
+                vistos.set(codigoOriginal, nombre)
+              }
+
+              const presentaciones = valorDe(fila, 'presentacion')
+                .split(',')
+                .map((n) => numeroPositivo(n))
+                .filter((n): n is number => n !== null && n !== 1)
+
+              const mayor = numeroPositivo(valorDe(fila, 'p. mayor', 'p mayor'))
+
+              return {
+                codigo,
+                nombre,
+                unidadBaseCodigo: unidadDesdeMedida(valorDe(fila, 'medida')),
+                costoReferencia: numeroPositivo(valorDe(fila, 'costo')),
+                presentaciones,
+                precioContado: numeroPositivo(valorDe(fila, 'precio')),
+                precioPorSaco: numeroPositivo(valorDe(fila, 'p. saco', 'p saco')),
+                // "1" es el relleno del sistema viejo para "no aplica".
+                precioMayorista: mayor !== null && mayor > 1 ? mayor : null,
+              }
+            }
+          })()}
+          onImportar={productoApi.importar}
+          onListo={() => void cargar()}
+        />
 
         {dialogo}
       </ListPage>

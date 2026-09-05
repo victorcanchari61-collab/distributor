@@ -9,6 +9,8 @@ public interface IProductoRepository
 
     Task<Producto?> GetConDetalleAsync(int id);
 
+    Task<Producto?> GetByCodigoAsync(string codigo);
+
     Task<bool> ExisteCodigoAsync(string codigo, int? excepto = null);
 
     Task<Producto> AddAsync(Producto producto);

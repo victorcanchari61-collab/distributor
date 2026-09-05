@@ -35,6 +35,11 @@ public class ProductoController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] UpdateProductoRequest request) =>
         Ok(await _productoService.UpdateAsync(id, request));
 
+    /// <summary>Alta masiva desde un catálogo de un sistema externo.</summary>
+    [HttpPost("importar")]
+    public async Task<IActionResult> Importar([FromBody] ImportarProductosRequest request) =>
+        Ok(await _productoService.ImportarAsync(request));
+
     [HttpPatch("{id:int}/activar")]
     public async Task<IActionResult> Activar(int id) =>
         Ok(await _productoService.CambiarEstadoAsync(id, true));

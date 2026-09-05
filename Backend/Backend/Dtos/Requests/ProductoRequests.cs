@@ -35,6 +35,31 @@ public class UpdateProductoRequest : ProductoRequestBase
     public bool Activo { get; set; } = true;
 }
 
+/// <summary>
+/// Una fila de un catálogo de un sistema viejo: trae la unidad por código
+/// ("KG", "UND") en vez de por id, y hasta tres precios sueltos en vez de la
+/// estructura de listas — el servicio se encarga de traducir ambas cosas.
+/// </summary>
+public class CreateProductoImportRequest
+{
+    public string Codigo { get; set; } = string.Empty;
+    public string Nombre { get; set; } = string.Empty;
+    public string UnidadBaseCodigo { get; set; } = string.Empty;
+    public decimal? CostoReferencia { get; set; }
+
+    /// <summary>Factores de presentaciones adicionales a la base (factor 1).</summary>
+    public List<decimal> Presentaciones { get; set; } = [];
+
+    /// <summary>Precio en la lista predeterminada (contado).</summary>
+    public decimal? PrecioContado { get; set; }
+
+    /// <summary>Precio en la lista "Por saco" (se crea si no existe).</summary>
+    public decimal? PrecioPorSaco { get; set; }
+
+    /// <summary>Precio en la lista "Mayorista" (se crea si no existe).</summary>
+    public decimal? PrecioMayorista { get; set; }
+}
+
 public class PresentacionRequest
 {
     public int UnidadId { get; set; }

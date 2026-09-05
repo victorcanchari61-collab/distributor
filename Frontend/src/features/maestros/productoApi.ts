@@ -1,4 +1,5 @@
 import { api } from '../../lib/apiClient'
+import type { ResultadoImportacion } from '../../components/ui'
 
 // --- Catalogos de apoyo ---
 
@@ -112,6 +113,18 @@ export interface UpdateProductoRequest extends ProductoRequest {
   activo: boolean
 }
 
+/** Una fila de un catálogo externo: unidad por código, hasta tres precios sueltos. */
+export interface ProductoImportRequest {
+  codigo: string
+  nombre: string
+  unidadBaseCodigo: string
+  costoReferencia?: number | null
+  presentaciones: number[]
+  precioContado?: number | null
+  precioPorSaco?: number | null
+  precioMayorista?: number | null
+}
+
 export const productoApi = {
   getAll: () => api.get<ProductoResponse[]>('/producto'),
   getById: (id: number) => api.get<ProductoResponse>(`/producto/${id}`),
@@ -131,6 +144,10 @@ export const productoApi = {
 
   eliminarPresentacion: (presentacionId: number) =>
     api.del<void>(`/producto/presentaciones/${presentacionId}`),
+
+  /** POST /api/producto/importar — alta masiva desde un catálogo externo. */
+  importar: (filas: ProductoImportRequest[], actualizarExistentes: boolean) =>
+    api.post<ResultadoImportacion>('/producto/importar', { filas, actualizarExistentes }),
 }
 
 export const categoriaApi = {

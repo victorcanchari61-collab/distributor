@@ -33,6 +33,9 @@ public class ProductoRepository : IProductoRepository
     public async Task<Producto?> GetConDetalleAsync(int id) =>
         await ConDetalle().FirstOrDefaultAsync(p => p.Id == id);
 
+    public async Task<Producto?> GetByCodigoAsync(string codigo) =>
+        await ConDetalle().FirstOrDefaultAsync(p => p.Codigo == codigo);
+
     public async Task<bool> ExisteCodigoAsync(string codigo, int? excepto = null) =>
         await _context.Productos.AnyAsync(p =>
             p.Codigo == codigo && (excepto == null || p.Id != excepto));

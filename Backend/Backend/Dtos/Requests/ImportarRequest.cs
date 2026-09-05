@@ -21,3 +21,7 @@ public class ImportarClientesRequest : ImportarRequest<CreateClienteRequest>
 public class ImportarProveedoresRequest : ImportarRequest<CreateProveedorRequest>
 {
 }
+
+public class ImportarProductosRequest : ImportarRequest<CreateProductoImportRequest>
+{
+}

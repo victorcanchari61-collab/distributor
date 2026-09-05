@@ -27,6 +27,7 @@ public class ProductoService : IProductoService
 {
     private readonly IProductoRepository _repository;
     private readonly ICatalogoRepository _catalogo;
+    private readonly IListaPrecioRepository _listasPrecio;
     private readonly IValidator<CreateProductoRequest> _createValidator;
     private readonly IValidator<UpdateProductoRequest> _updateValidator;
     private readonly IValidator<PresentacionRequest> _presentacionValidator;
@@ -35,6 +36,7 @@ public class ProductoService : IProductoService
     public ProductoService(
         IProductoRepository repository,
         ICatalogoRepository catalogo,
+        IListaPrecioRepository listasPrecio,
         IValidator<CreateProductoRequest> createValidator,
         IValidator<UpdateProductoRequest> updateValidator,
         IValidator<PresentacionRequest> presentacionValidator,
@@ -42,6 +44,7 @@ public class ProductoService : IProductoService
     {
         _repository = repository;
         _catalogo = catalogo;
+        _listasPrecio = listasPrecio;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _presentacionValidator = presentacionValidator;
@@ -200,6 +203,162 @@ public class ProductoService : IProductoService
 
         await _repository.DeleteAsync(producto);
         await _notificador.AvisarAsync("productos", "eliminado", new { id });
+    }
+
+    /// <summary>
+    /// Alta masiva desde un catálogo externo (Excel de un sistema viejo, por
+    /// ejemplo). Cada fila va por su cuenta: una mala no tumba a las buenas.
+    ///
+    /// La lista "predeterminada" recibe PrecioContado; "Por saco" y
+    /// "Mayorista" se crean solas la primera vez que una fila trae ese
+    /// precio. Si el producto ya existe y se pide actualizar, se refresca su
+    /// nombre, costo y los precios que traiga — nunca sus presentaciones, para
+    /// no pisar lo que ya se ajustó a mano.
+    /// </summary>
+    public async Task<ImportarResponse> ImportarAsync(ImportarProductosRequest request)
+    {
+        var resultado = new ImportarResponse();
+        var unidades = (await _catalogo.GetUnidadesAsync()).ToList();
+        var vistos = new HashSet<string>();
+
+        var listas = (await _listasPrecio.GetAllAsync()).ToList();
+        var listaContado = listas.FirstOrDefault(l => l.EsPredeterminada)
+            ?? await ObtenerOCrearListaAsync(listas, "Contado");
+        var listaPorSaco = await ObtenerOCrearListaAsync(listas, "Por saco");
+        var listaMayorista = await ObtenerOCrearListaAsync(listas, "Mayorista");
+
+        for (var i = 0; i < request.Filas.Count; i++)
+        {
+            var fila = request.Filas[i];
+            var numero = i + 1;
+            var codigo = fila.Codigo?.Trim().ToUpperInvariant() ?? string.Empty;
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(codigo))
+                {
+                    throw new BadRequestException("Falta el código");
+                }
+
+                if (string.IsNullOrWhiteSpace(fila.Nombre))
+                {
+                    throw new BadRequestException("Falta el nombre");
+                }
+
+                var unidad = unidades.FirstOrDefault(u =>
+                    string.Equals(u.Codigo, fila.UnidadBaseCodigo?.Trim(), StringComparison.OrdinalIgnoreCase));
+                if (unidad is null)
+                {
+                    throw new BadRequestException($"No existe la unidad '{fila.UnidadBaseCodigo}'");
+                }
+
+                if (!vistos.Add(codigo))
+                {
+                    resultado.Omitidos++;
+                    resultado.Errores.Add(new ImportarFilaError
+                    {
+                        Fila = numero,
+                        Documento = codigo,
+                        Motivo = "El código se repite dentro del archivo"
+                    });
+                    continue;
+                }
+
+                var existente = await _repository.GetByCodigoAsync(codigo);
+
+                if (existente is not null)
+                {
+                    if (!request.ActualizarExistentes)
+                    {
+                        resultado.Omitidos++;
+                        resultado.Errores.Add(new ImportarFilaError
+                        {
+                            Fila = numero,
+                            Documento = codigo,
+                            Motivo = "Ya existe un producto con ese código"
+                        });
+                        continue;
+                    }
+
+                    existente.Nombre = fila.Nombre.Trim();
+                    if (fila.CostoReferencia is decimal costo)
+                    {
+                        existente.CostoReferencia = costo;
+                    }
+
+                    await _repository.UpdateAsync(existente);
+
+                    var basePresentacion = existente.Presentaciones.FirstOrDefault(p => p.Factor == 1m);
+                    if (basePresentacion is not null)
+                    {
+                        await AsignarPreciosAsync(basePresentacion.Id, listaContado, listaPorSaco, listaMayorista, fila);
+                    }
+
+                    resultado.Actualizados++;
+                    continue;
+                }
+
+                var producto = new Producto
+                {
+                    Codigo = codigo,
+                    Nombre = fila.Nombre.Trim(),
+                    UnidadBaseId = unidad.Id,
+                    CostoReferencia = fila.CostoReferencia,
+                    ControlaStock = true,
+                    Activo = true
+                };
+
+                producto.Presentaciones.Add(new ProductoPresentacion
+                {
+                    UnidadId = unidad.Id,
+                    Nombre = unidad.Nombre,
+                    Factor = 1m,
+                    EsCompra = true,
+                    EsVenta = true,
+                    PredeterminadaVenta = true,
+                    PredeterminadaCompra = true,
+                    Activo = true
+                });
+
+                foreach (var factor in fila.Presentaciones.Where(f => f > 0 && f != 1m).Distinct())
+                {
+                    producto.Presentaciones.Add(new ProductoPresentacion
+                    {
+                        UnidadId = unidad.Id,
+                        Nombre = $"{factor:0.####} {unidad.Codigo}",
+                        Factor = factor,
+                        EsCompra = true,
+                        EsVenta = true,
+                        Activo = true
+                    });
+                }
+
+                await _repository.AddAsync(producto);
+
+                var nuevaBase = producto.Presentaciones.First(p => p.Factor == 1m);
+                await AsignarPreciosAsync(nuevaBase.Id, listaContado, listaPorSaco, listaMayorista, fila);
+
+                resultado.Creados++;
+            }
+            catch (Exception ex) when (ex is BadRequestException or ConflictException)
+            {
+                resultado.Omitidos++;
+                resultado.Errores.Add(new ImportarFilaError
+                {
+                    Fila = numero,
+                    Documento = codigo,
+                    Motivo = ex.Message
+                });
+            }
+        }
+
+        await _notificador.AvisarAsync("productos", "importado", new { resultado.Creados, resultado.Actualizados });
+        if (resultado.Creados > 0 || resultado.Actualizados > 0)
+        {
+            await _notificador.AvisarAsync("listasprecio", "precios", new { });
+        }
+
+        return resultado;
     }
 
     // -------------------------------------------------------- Presentaciones
@@ -412,6 +571,60 @@ public class ProductoService : IProductoService
 
     private static string? Limpiar(string? texto) =>
         string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
+
+    /// <summary>Busca una lista por nombre entre las ya cargadas, o la crea si falta.</summary>
+    private async Task<ListaPrecio> ObtenerOCrearListaAsync(List<ListaPrecio> listas, string nombre)
+    {
+        var existente = listas.FirstOrDefault(l => l.Nombre == nombre);
+        if (existente is not null) return existente;
+
+        var lista = new ListaPrecio { Nombre = nombre, Activo = true };
+        await _listasPrecio.AddAsync(lista);
+        listas.Add(lista);
+        return lista;
+    }
+
+    /// <summary>
+    /// Deja el precio de cada columna que traiga la fila en su lista, sobre la
+    /// presentación base. Una columna vacía o en cero no toca nada.
+    /// </summary>
+    private async Task AsignarPreciosAsync(
+        int presentacionBaseId,
+        ListaPrecio contado,
+        ListaPrecio porSaco,
+        ListaPrecio mayorista,
+        CreateProductoImportRequest fila)
+    {
+        async Task Asignar(ListaPrecio lista, decimal? precio)
+        {
+            if (precio is not decimal valor || valor <= 0) return;
+
+            var existente = await _listasPrecio.BuscarPrecioAsync(lista.Id, presentacionBaseId, 1m);
+            if (existente is null)
+            {
+                await _listasPrecio.AddPrecioAsync(new PrecioProducto
+                {
+                    ListaPrecioId = lista.Id,
+                    PresentacionId = presentacionBaseId,
+                    Precio = valor,
+                    CantidadMinima = 1m,
+                    Activo = true,
+                    FechaActualizacion = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                existente.Precio = valor;
+                existente.Activo = true;
+                existente.FechaActualizacion = DateTime.UtcNow;
+                await _listasPrecio.UpdatePrecioAsync(existente);
+            }
+        }
+
+        await Asignar(contado, fila.PrecioContado);
+        await Asignar(porSaco, fila.PrecioPorSaco);
+        await Asignar(mayorista, fila.PrecioMayorista);
+    }
 
     private static ProductoResponse MapToResponse(Producto p) => new()
     {

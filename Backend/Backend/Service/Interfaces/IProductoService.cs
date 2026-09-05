@@ -12,6 +12,12 @@ public interface IProductoService
     Task<ProductoResponse> CambiarEstadoAsync(int id, bool activo);
     Task DeleteAsync(int id);
 
+    /// <summary>
+    /// Alta masiva desde un catálogo externo: crea el producto, sus
+    /// presentaciones y hasta tres precios (contado, por saco, mayorista).
+    /// </summary>
+    Task<ImportarResponse> ImportarAsync(ImportarProductosRequest request);
+
     // --- Presentaciones ---
 
     Task<PresentacionResponse> AgregarPresentacionAsync(int productoId, PresentacionRequest request);
