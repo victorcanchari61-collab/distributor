@@ -247,7 +247,7 @@ public class VentasService : IVentasService
         }
 
         var total = Math.Round(notaVenta.Detalle.Sum(d => d.Cantidad * d.PrecioUnitario), 2);
-        var pagado = Math.Round(notaVenta.Pagos.Sum(p => p.Monto), 2);
+        var pagado = Math.Round(notaVenta.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2);
         var saldo = total - pagado;
 
         if (saldo <= 0)
@@ -288,8 +288,14 @@ public class VentasService : IVentasService
         var pago = notaVenta.Pagos.FirstOrDefault(p => p.Id == pagoId)
             ?? throw new NotFoundException($"Esta nota de venta no tiene el pago {pagoId}");
 
+        if (pago.Anulado)
+        {
+            throw new BadRequestException("Este pago está anulado: no se puede editar.");
+        }
+
         var total = Math.Round(notaVenta.Detalle.Sum(d => d.Cantidad * d.PrecioUnitario), 2);
-        var pagadoSinEste = Math.Round(notaVenta.Pagos.Where(p => p.Id != pagoId).Sum(p => p.Monto), 2);
+        var pagadoSinEste = Math.Round(
+            notaVenta.Pagos.Where(p => p.Id != pagoId && !p.Anulado).Sum(p => p.Monto), 2);
 
         if (pagadoSinEste + request.Monto > total + 0.001m)
         {
@@ -306,19 +312,29 @@ public class VentasService : IVentasService
         return actualizada;
     }
 
+    /// <summary>
+    /// Anula un pago registrado por error: se conserva en el historial (no se
+    /// borra), pero deja de contar para el total cobrado — su monto vuelve al
+    /// saldo pendiente.
+    /// </summary>
     public async Task<NotaVentaResponse> AnularPagoAsync(int id, int pagoId)
     {
         var notaVenta = await GetNotaVentaOrThrowAsync(id);
 
         if (notaVenta.Estado == EstadoNotaVenta.Anulada)
         {
-            throw new BadRequestException("Esta nota de venta está anulada: no se le pueden quitar pagos.");
+            throw new BadRequestException("Esta nota de venta está anulada: no se le pueden anular pagos.");
         }
 
         var pago = notaVenta.Pagos.FirstOrDefault(p => p.Id == pagoId)
             ?? throw new NotFoundException($"Esta nota de venta no tiene el pago {pagoId}");
 
-        notaVenta.Pagos.Remove(pago);
+        if (pago.Anulado)
+        {
+            throw new BadRequestException("Este pago ya está anulado.");
+        }
+
+        pago.Anulado = true;
         await _repository.GuardarAsync();
 
         var actualizada = await GetNotaVentaAsync(id);
@@ -355,7 +371,8 @@ public class VentasService : IVentasService
                 Cliente = x.Nota.Cliente?.Nombre ?? string.Empty,
                 MetodoPagoId = x.Pago.MetodoPagoId,
                 MetodoPago = x.Pago.MetodoPago?.Nombre ?? string.Empty,
-                Monto = x.Pago.Monto
+                Monto = x.Pago.Monto,
+                Anulado = x.Pago.Anulado
             });
     }
 
@@ -572,7 +589,7 @@ public class VentasService : IVentasService
         Total = Math.Round(n.Detalle.Sum(d => d.Cantidad * d.PrecioUnitario), 2),
         Detalle = n.Detalle.Select(MapLinea).ToList(),
         Pagos = n.Pagos.Select(MapPago).ToList(),
-        TotalPagado = Math.Round(n.Pagos.Sum(p => p.Monto), 2)
+        TotalPagado = Math.Round(n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2)
     };
 
     private static PagoVentaResponse MapPago(PagoVenta p) => new()
@@ -582,6 +599,7 @@ public class VentasService : IVentasService
         MetodoPago = p.MetodoPago?.Nombre ?? string.Empty,
         Monto = p.Monto,
         Fecha = p.Fecha,
-        Usuario = p.Usuario?.Nombre
+        Usuario = p.Usuario?.Nombre,
+        Anulado = p.Anulado
     };
 }

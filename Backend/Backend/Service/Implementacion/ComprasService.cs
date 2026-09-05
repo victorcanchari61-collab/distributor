@@ -333,7 +333,7 @@ public class ComprasService : IComprasService
         }
 
         var total = Math.Round(compra.Detalle.Sum(d => d.Cantidad * d.CostoUnitario), 2);
-        var pagado = Math.Round(compra.Pagos.Sum(p => p.Monto), 2);
+        var pagado = Math.Round(compra.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2);
         var saldo = total - pagado;
 
         if (saldo <= 0)
@@ -369,8 +369,14 @@ public class ComprasService : IComprasService
         var pago = compra.Pagos.FirstOrDefault(p => p.Id == pagoId)
             ?? throw new NotFoundException($"Esta compra no tiene el pago {pagoId}");
 
+        if (pago.Anulado)
+        {
+            throw new BadRequestException("Este pago está anulado: no se puede editar.");
+        }
+
         var total = Math.Round(compra.Detalle.Sum(d => d.Cantidad * d.CostoUnitario), 2);
-        var pagadoSinEste = Math.Round(compra.Pagos.Where(p => p.Id != pagoId).Sum(p => p.Monto), 2);
+        var pagadoSinEste = Math.Round(
+            compra.Pagos.Where(p => p.Id != pagoId && !p.Anulado).Sum(p => p.Monto), 2);
 
         if (pagadoSinEste + request.Monto > total + 0.001m)
         {
@@ -387,19 +393,29 @@ public class ComprasService : IComprasService
         return actualizada;
     }
 
+    /// <summary>
+    /// Anula un pago registrado por error: se conserva en el historial (no se
+    /// borra), pero deja de contar para el total pagado — su monto vuelve al
+    /// saldo pendiente.
+    /// </summary>
     public async Task<CompraResponse> AnularPagoAsync(int id, int pagoId)
     {
         var compra = await GetCompraOrThrowAsync(id);
 
         if (compra.Estado == EstadoCompra.Anulada)
         {
-            throw new BadRequestException("Esta compra está anulada: no se le pueden quitar pagos.");
+            throw new BadRequestException("Esta compra está anulada: no se le pueden anular pagos.");
         }
 
         var pago = compra.Pagos.FirstOrDefault(p => p.Id == pagoId)
             ?? throw new NotFoundException($"Esta compra no tiene el pago {pagoId}");
 
-        compra.Pagos.Remove(pago);
+        if (pago.Anulado)
+        {
+            throw new BadRequestException("Este pago ya está anulado.");
+        }
+
+        pago.Anulado = true;
         await _repository.GuardarAsync();
 
         var actualizada = await GetCompraAsync(id);
@@ -550,7 +566,7 @@ public class ComprasService : IComprasService
         Total = Math.Round(c.Detalle.Sum(d => d.Cantidad * d.CostoUnitario), 2),
         Detalle = c.Detalle.Select(MapCompraDetalle).ToList(),
         Pagos = c.Pagos.Select(MapPago).ToList(),
-        TotalPagado = Math.Round(c.Pagos.Sum(p => p.Monto), 2)
+        TotalPagado = Math.Round(c.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2)
     };
 
     private static PagoCompraResponse MapPago(CompraPago p) => new()
@@ -558,6 +574,7 @@ public class ComprasService : IComprasService
         Id = p.Id,
         MetodoPagoId = p.MetodoPagoId,
         MetodoPago = p.MetodoPago?.Nombre ?? string.Empty,
-        Monto = p.Monto
+        Monto = p.Monto,
+        Anulado = p.Anulado
     };
 }

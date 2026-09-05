@@ -169,6 +169,12 @@ public class PagoVenta
     /// <summary>Quién lo cobró. Base de "Mis cobros".</summary>
     public int? UsuarioId { get; set; }
     public Usuario? Usuario { get; set; }
+
+    /// <summary>
+    /// Se registró por error: no cuenta para el total cobrado ni para "Mis
+    /// cobros", pero se conserva en el historial en vez de borrarse.
+    /// </summary>
+    public bool Anulado { get; set; }
 }
 
 /// <summary>Un producto de la nota de venta. El stock ya salió por esta línea.</summary>

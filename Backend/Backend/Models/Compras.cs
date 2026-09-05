@@ -166,6 +166,12 @@ public class CompraPago
     public MetodoPago? MetodoPago { get; set; }
 
     public decimal Monto { get; set; }
+
+    /// <summary>
+    /// Se registró por error: no cuenta para el total pagado, pero se
+    /// conserva en el historial en vez de borrarse.
+    /// </summary>
+    public bool Anulado { get; set; }
 }
 
 /// <summary>Un producto de la compra, con cuánto ya llegó.</summary>

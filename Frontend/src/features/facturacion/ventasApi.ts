@@ -40,6 +40,8 @@ export interface PagoVentaResponse {
   monto: number
   fecha: string
   usuario: string | null
+  /** Se registró por error: no cuenta para el total cobrado, pero se conserva en el historial. */
+  anulado: boolean
 }
 
 /** Un cobro: un pago de una nota de venta, visto desde quién lo cobró. */
@@ -53,6 +55,8 @@ export interface CobroResponse {
   metodoPagoId: number
   metodoPago: string
   monto: number
+  /** Se anuló después de registrarse: no cuenta para el total cobrado. */
+  anulado: boolean
 }
 
 // --- Pedidos ---

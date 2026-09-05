@@ -83,6 +83,8 @@ export interface PagoCompraResponse {
   metodoPagoId: number
   metodoPago: string
   monto: number
+  /** Se registró por error: no cuenta para el total pagado, pero se conserva en el historial. */
+  anulado: boolean
 }
 
 export interface PagoCompraRequest {

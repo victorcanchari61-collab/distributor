@@ -53,6 +53,7 @@ public class PagoVentaResponse
     public decimal Monto { get; set; }
     public DateTime Fecha { get; set; }
     public string? Usuario { get; set; }
+    public bool Anulado { get; set; }
 }
 
 /// <summary>
@@ -74,6 +75,9 @@ public class CobroResponse
     public string MetodoPago { get; set; } = string.Empty;
 
     public decimal Monto { get; set; }
+
+    /// <summary>Se anuló después de registrarse: no cuenta para el total cobrado.</summary>
+    public bool Anulado { get; set; }
 }
 
 public class NotaVentaResponse

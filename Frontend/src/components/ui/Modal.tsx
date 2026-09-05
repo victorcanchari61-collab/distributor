@@ -11,11 +11,11 @@ export interface ModalProps {
   onClose: () => void
   /** Botones del pie. */
   footer?: ReactNode
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   children: ReactNode
 }
 
-const SIZES = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' }
+const SIZES = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl', '2xl': 'max-w-6xl' }
 
 export function Modal({
   open,
