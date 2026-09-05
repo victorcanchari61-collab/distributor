@@ -35,7 +35,7 @@ public class ComprasRepository : IComprasRepository
             correlativo = n + 1;
         }
 
-        return $"OC-{correlativo:D6}";
+        return $"OC-{correlativo:D4}";
     }
 
     public async Task<OrdenCompra> AddOrdenAsync(OrdenCompra orden)
@@ -95,7 +95,7 @@ public class ComprasRepository : IComprasRepository
             correlativo = n + 1;
         }
 
-        return $"CP-{correlativo:D6}";
+        return $"CP-{correlativo:D4}";
     }
 
     public async Task<Compra> AddCompraAsync(Compra compra)

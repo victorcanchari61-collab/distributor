@@ -35,7 +35,7 @@ public class VentasRepository : IVentasRepository
             correlativo = n + 1;
         }
 
-        return $"PD-{correlativo:D6}";
+        return $"PD-{correlativo:D4}";
     }
 
     public async Task<Pedido> AddPedidoAsync(Pedido pedido)
@@ -106,7 +106,7 @@ public class VentasRepository : IVentasRepository
             correlativo = n + 1;
         }
 
-        return $"NV-{correlativo:D6}";
+        return $"NV-{correlativo:D4}";
     }
 
     public async Task<NotaVenta> AddNotaVentaAsync(NotaVenta notaVenta)

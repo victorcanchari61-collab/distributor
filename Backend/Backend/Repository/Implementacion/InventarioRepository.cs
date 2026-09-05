@@ -198,7 +198,7 @@ public class InventarioRepository : IInventarioRepository
             correlativo = n + 1;
         }
 
-        return $"{prefijo}-{correlativo:D6}";
+        return $"{prefijo}-{correlativo:D4}";
     }
 
     public async Task AddDocumentoAsync(DocumentoInventario documento) =>

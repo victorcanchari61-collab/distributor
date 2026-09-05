@@ -65,10 +65,10 @@ export function Modal({
           SIZES[size],
         )}
       >
-        <div className="flex items-start justify-between gap-3 bg-[rgb(var(--sys-rgb))] px-5 py-4">
+        <div className="flex items-start justify-between gap-3 bg-[rgb(var(--sys-rgb))] px-5 py-3.5">
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-white">{title}</h2>
-            {description && <p className="mt-0.5 text-sm text-white/80">{description}</p>}
+            <h2 className="text-[15px] font-bold text-white">{title}</h2>
+            {description && <p className="mt-0.5 text-xs text-white/80">{description}</p>}
           </div>
 
           {/*
