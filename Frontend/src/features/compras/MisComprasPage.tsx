@@ -8,7 +8,6 @@ import {
   BuscadorModal,
   Button,
   Desplegable,
-  InfoDocumento,
   Input,
   ListPage,
   Modal,
@@ -734,52 +733,46 @@ export function MisComprasPage() {
       <Modal
         open={detalleAbierto !== null}
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.proveedor}` : ''}
+        description={
+          detalleAbierto
+            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')} · ${textoComprobante(detalleAbierto)} · ` +
+              (FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago)
+            : undefined
+        }
         onClose={() => setDetalleAbierto(null)}
         size="lg"
       >
         {detalleAbierto && (
-          <div className="flex flex-col gap-4">
-            <InfoDocumento
-              campos={[
-                { etiqueta: 'Proveedor', valor: detalleAbierto.proveedor },
-                { etiqueta: 'Fecha', valor: new Date(detalleAbierto.fecha).toLocaleDateString('es-PE') },
-                { etiqueta: 'Comprobante', valor: textoComprobante(detalleAbierto) },
-                {
-                  etiqueta: 'Forma de pago',
-                  valor: FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago,
-                },
-                { etiqueta: 'Estado', valor: estadoCompraBadge(detalleAbierto.estado) },
+          <div className="flex flex-col gap-3">
+            {detalleAbierto.estado !== 'PENDIENTE' && (
+              <div>{estadoCompraBadge(detalleAbierto.estado)}</div>
+            )}
+
+            <TablaProductosDetalle<CompraDetalleResponse>
+              filas={detalleAbierto.detalle}
+              rowKey={(l) => l.id}
+              titulo={(l) => l.producto}
+              subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
+              grupos={[
+                [
+                  { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
+                  { key: 'costo', label: 'Costo', render: (l) => `S/ ${l.costoUnitario.toFixed(2)}` },
+                  { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.costoTotal.toFixed(2)}` },
+                ] satisfies ColumnaDetalleProducto<CompraDetalleResponse>[],
+                [
+                  {
+                    key: 'recibido',
+                    label: 'Recibido',
+                    render: (l) => `${l.cantidadRecibida} ${l.unidadBase}`,
+                  },
+                  {
+                    key: 'pendiente',
+                    label: 'Pendiente',
+                    render: (l) => `${l.cantidadPendiente} ${l.unidadBase}`,
+                  },
+                ] satisfies ColumnaDetalleProducto<CompraDetalleResponse>[],
               ]}
             />
-
-            <div>
-              <p className="mb-2 text-[11px] font-semibold tracking-wide text-ink-muted uppercase">Productos</p>
-              <TablaProductosDetalle<CompraDetalleResponse>
-                filas={detalleAbierto.detalle}
-                rowKey={(l) => l.id}
-                titulo={(l) => l.producto}
-                subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
-                grupos={[
-                  [
-                    { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
-                    { key: 'costo', label: 'Costo', render: (l) => `S/ ${l.costoUnitario.toFixed(2)}` },
-                    { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.costoTotal.toFixed(2)}` },
-                  ] satisfies ColumnaDetalleProducto<CompraDetalleResponse>[],
-                  [
-                    {
-                      key: 'recibido',
-                      label: 'Recibido',
-                      render: (l) => `${l.cantidadRecibida} ${l.unidadBase}`,
-                    },
-                    {
-                      key: 'pendiente',
-                      label: 'Pendiente',
-                      render: (l) => `${l.cantidadPendiente} ${l.unidadBase}`,
-                    },
-                  ] satisfies ColumnaDetalleProducto<CompraDetalleResponse>[],
-                ]}
-              />
-            </div>
 
             <ResumenDocumento
               pagos={detalleAbierto.pagos.map((p) => ({ id: p.id, label: p.metodoPago, monto: p.monto }))}

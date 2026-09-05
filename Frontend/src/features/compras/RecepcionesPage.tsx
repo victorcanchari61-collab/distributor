@@ -4,7 +4,6 @@ import {
   Alert,
   Badge,
   Button,
-  InfoDocumento,
   ListPage,
   Modal,
   ResumenDocumento,
@@ -173,36 +172,31 @@ export function RecepcionesPage() {
       <Modal
         open={detalleAbierto !== null}
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.compra ?? ''}` : ''}
+        description={
+          detalleAbierto
+            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')} · ${detalleAbierto.almacen}`
+            : undefined
+        }
         onClose={() => setDetalleAbierto(null)}
         size="lg"
       >
         {detalleAbierto && (
-          <div className="flex flex-col gap-4">
-            <InfoDocumento
-              campos={[
-                { etiqueta: 'Compra', valor: detalleAbierto.compra ?? '—' },
-                { etiqueta: 'Almacén', valor: detalleAbierto.almacen },
-                { etiqueta: 'Fecha', valor: new Date(detalleAbierto.fecha).toLocaleDateString('es-PE') },
-                { etiqueta: 'Estado', valor: estadoRecepcionBadge(detalleAbierto) },
+          <div className="flex flex-col gap-3">
+            {detalleAbierto.estado === 'ANULADO' && <div>{estadoRecepcionBadge(detalleAbierto)}</div>}
+
+            <TablaProductosDetalle<LineaDocumentoResponse>
+              filas={detalleAbierto.detalle}
+              rowKey={(l) => l.id}
+              titulo={(l) => l.producto}
+              subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
+              grupos={[
+                [
+                  { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
+                  { key: 'costo', label: 'Costo', render: (l) => `S/ ${l.costoUnitario.toFixed(2)}` },
+                  { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.costoTotal.toFixed(2)}` },
+                ] satisfies ColumnaDetalleProducto<LineaDocumentoResponse>[],
               ]}
             />
-
-            <div>
-              <p className="mb-2 text-[11px] font-semibold tracking-wide text-ink-muted uppercase">Productos</p>
-              <TablaProductosDetalle<LineaDocumentoResponse>
-                filas={detalleAbierto.detalle}
-                rowKey={(l) => l.id}
-                titulo={(l) => l.producto}
-                subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
-                grupos={[
-                  [
-                    { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
-                    { key: 'costo', label: 'Costo', render: (l) => `S/ ${l.costoUnitario.toFixed(2)}` },
-                    { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.costoTotal.toFixed(2)}` },
-                  ] satisfies ColumnaDetalleProducto<LineaDocumentoResponse>[],
-                ]}
-              />
-            </div>
 
             <ResumenDocumento total={detalleAbierto.total} />
 

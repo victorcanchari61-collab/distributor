@@ -8,7 +8,6 @@ import {
   BuscadorModal,
   Button,
   Desplegable,
-  InfoDocumento,
   Input,
   ListPage,
   Modal,
@@ -633,40 +632,32 @@ export function NotasVentaPage() {
       <Modal
         open={detalleAbierto !== null}
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.cliente}` : ''}
+        description={
+          detalleAbierto
+            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')} · ${detalleAbierto.almacen} · ` +
+              (FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago)
+            : undefined
+        }
         onClose={() => setDetalleAbierto(null)}
         size="lg"
       >
         {detalleAbierto && (
-          <div className="flex flex-col gap-4">
-            <InfoDocumento
-              campos={[
-                { etiqueta: 'Cliente', valor: detalleAbierto.cliente },
-                { etiqueta: 'Fecha', valor: new Date(detalleAbierto.fecha).toLocaleDateString('es-PE') },
-                { etiqueta: 'Almacén', valor: detalleAbierto.almacen },
-                {
-                  etiqueta: 'Forma de pago',
-                  valor: FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago,
-                },
-                { etiqueta: 'Estado', valor: estadoNotaVentaBadge(detalleAbierto.estado) },
+          <div className="flex flex-col gap-3">
+            {detalleAbierto.estado === 'ANULADA' && <div>{estadoNotaVentaBadge(detalleAbierto.estado)}</div>}
+
+            <TablaProductosDetalle<LineaVentaResponse>
+              filas={detalleAbierto.detalle}
+              rowKey={(l) => l.id}
+              titulo={(l) => l.producto}
+              subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
+              grupos={[
+                [
+                  { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
+                  { key: 'precio', label: 'Precio', render: (l) => `S/ ${l.precioUnitario.toFixed(2)}` },
+                  { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.subtotal.toFixed(2)}` },
+                ] satisfies ColumnaDetalleProducto<LineaVentaResponse>[],
               ]}
             />
-
-            <div>
-              <p className="mb-2 text-[11px] font-semibold tracking-wide text-ink-muted uppercase">Productos</p>
-              <TablaProductosDetalle<LineaVentaResponse>
-                filas={detalleAbierto.detalle}
-                rowKey={(l) => l.id}
-                titulo={(l) => l.producto}
-                subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
-                grupos={[
-                  [
-                    { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
-                    { key: 'precio', label: 'Precio', render: (l) => `S/ ${l.precioUnitario.toFixed(2)}` },
-                    { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.subtotal.toFixed(2)}` },
-                  ] satisfies ColumnaDetalleProducto<LineaVentaResponse>[],
-                ]}
-              />
-            </div>
 
             <ResumenDocumento
               pagos={detalleAbierto.pagos.map((p) => ({ id: p.id, label: p.metodoPago, monto: p.monto }))}
