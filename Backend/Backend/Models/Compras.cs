@@ -167,6 +167,13 @@ public class CompraPago
 
     public decimal Monto { get; set; }
 
+    /// <summary>Cuándo se registró: el de la compra si nació con ella, o el del abono posterior.</summary>
+    public DateTime Fecha { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Quién lo pagó.</summary>
+    public int? UsuarioId { get; set; }
+    public Usuario? Usuario { get; set; }
+
     /// <summary>
     /// Se registró por error: no cuenta para el total pagado, pero se
     /// conserva en el historial en vez de borrarse.

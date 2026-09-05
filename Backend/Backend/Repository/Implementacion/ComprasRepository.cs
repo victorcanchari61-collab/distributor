@@ -111,6 +111,7 @@ public class ComprasRepository : IComprasRepository
             .Include(c => c.OrdenCompra)
             .Include(c => c.Usuario)
             .Include(c => c.Pagos).ThenInclude(p => p.MetodoPago)
+            .Include(c => c.Pagos).ThenInclude(p => p.Usuario)
             .Include(c => c.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(c => c.Detalle).ThenInclude(d => d.Presentacion);
 

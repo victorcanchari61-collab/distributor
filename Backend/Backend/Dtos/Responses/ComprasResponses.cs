@@ -66,6 +66,8 @@ public class PagoCompraResponse
     public int MetodoPagoId { get; set; }
     public string MetodoPago { get; set; } = string.Empty;
     public decimal Monto { get; set; }
+    public DateTime Fecha { get; set; }
+    public string? Usuario { get; set; }
     public bool Anulado { get; set; }
 }
 

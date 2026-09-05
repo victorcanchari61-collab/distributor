@@ -109,7 +109,7 @@ public class CompraController : ControllerBase
     /// <summary>Registra un abono contra el saldo pendiente de la compra.</summary>
     [HttpPost("{id:int}/pagos")]
     public async Task<IActionResult> RegistrarPago(int id, [FromBody] PagoCompraRequest request) =>
-        Ok(await _compras.RegistrarPagoAsync(id, request));
+        Ok(await _compras.RegistrarPagoAsync(id, request, UsuarioId));
 
     /// <summary>Corrige un pago ya registrado: método o monto.</summary>
     [HttpPut("{id:int}/pagos/{pagoId:int}")]

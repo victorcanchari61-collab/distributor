@@ -228,7 +228,8 @@ public class ComprasService : IComprasService
         compra.Pagos = request.Pagos.Select(p => new CompraPago
         {
             MetodoPagoId = p.MetodoPagoId,
-            Monto = p.Monto
+            Monto = p.Monto,
+            UsuarioId = usuarioId
         }).ToList();
 
         await _repository.AddCompraAsync(compra);
@@ -321,7 +322,7 @@ public class ComprasService : IComprasService
     /// suma. No se acepta si ya está saldada o si el abono se pasa del saldo
     /// pendiente — no tiene sentido pagar de más.
     /// </summary>
-    public async Task<CompraResponse> RegistrarPagoAsync(int id, PagoCompraRequest request)
+    public async Task<CompraResponse> RegistrarPagoAsync(int id, PagoCompraRequest request, int? usuarioId)
     {
         await _pagoValidator.ValidateAndThrowAsync(request);
 
@@ -347,7 +348,12 @@ public class ComprasService : IComprasService
                 $"El abono (S/ {request.Monto}) supera el saldo pendiente (S/ {saldo}).");
         }
 
-        compra.Pagos.Add(new CompraPago { MetodoPagoId = request.MetodoPagoId, Monto = request.Monto });
+        compra.Pagos.Add(new CompraPago
+        {
+            MetodoPagoId = request.MetodoPagoId,
+            Monto = request.Monto,
+            UsuarioId = usuarioId
+        });
         await _repository.UpdateCompraAsync(compra);
 
         var actualizada = await GetCompraAsync(id);
@@ -575,6 +581,8 @@ public class ComprasService : IComprasService
         MetodoPagoId = p.MetodoPagoId,
         MetodoPago = p.MetodoPago?.Nombre ?? string.Empty,
         Monto = p.Monto,
+        Fecha = p.Fecha,
+        Usuario = p.Usuario?.Nombre,
         Anulado = p.Anulado
     };
 }

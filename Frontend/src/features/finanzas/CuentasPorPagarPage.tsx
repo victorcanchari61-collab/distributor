@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Check, CreditCard, HandCoins, Pencil, Plus, Undo2, X } from 'lucide-react'
+import { CalendarClock, Check, CircleCheck, CreditCard, HandCoins, Pencil, Plus, Receipt, Undo2, X } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -280,6 +280,11 @@ export function CuentasPorPagarPage() {
   ]
 
   const totalPendiente = cuentas.reduce((n, c) => n + saldo(c), 0)
+  const totalFacturado = cuentas.reduce((n, c) => n + c.total, 0)
+  const totalPagadoDeEstas = cuentas.reduce((n, c) => n + c.totalPagado, 0)
+  const diasDesde = (fecha: string) =>
+    Math.max(0, Math.floor((Date.now() - new Date(fecha).getTime()) / 86_400_000))
+  const diasMasAntigua = cuentas.length ? Math.max(...cuentas.map((c) => diasDesde(c.fecha))) : 0
 
   return (
     <ListPage
@@ -295,6 +300,23 @@ export function CuentasPorPagarPage() {
             value={`S/ ${totalPendiente.toFixed(2)}`}
             icon={<HandCoins size={18} />}
             tono="warning"
+          />
+          <StatCard
+            label="Facturado (de estas)"
+            value={`S/ ${totalFacturado.toFixed(2)}`}
+            icon={<Receipt size={18} />}
+          />
+          <StatCard
+            label="Ya pagado (de estas)"
+            value={`S/ ${totalPagadoDeEstas.toFixed(2)}`}
+            icon={<CircleCheck size={18} />}
+            tono="success"
+          />
+          <StatCard
+            label="Cuenta más antigua"
+            value={cuentas.length ? `${diasMasAntigua} día${diasMasAntigua === 1 ? '' : 's'}` : '—'}
+            icon={<CalendarClock size={18} />}
+            tono={diasMasAntigua > 30 ? 'danger' : undefined}
           />
         </>
       }

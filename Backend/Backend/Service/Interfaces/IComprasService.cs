@@ -29,7 +29,7 @@ public interface IComprasService
     Task AnularCompraAsync(int id);
 
     /// <summary>Registra un abono contra el saldo pendiente de una compra.</summary>
-    Task<CompraResponse> RegistrarPagoAsync(int id, PagoCompraRequest request);
+    Task<CompraResponse> RegistrarPagoAsync(int id, PagoCompraRequest request, int? usuarioId);
 
     /// <summary>Corrige un pago ya registrado: método o monto.</summary>
     Task<CompraResponse> ActualizarPagoAsync(int id, int pagoId, PagoCompraRequest request);
