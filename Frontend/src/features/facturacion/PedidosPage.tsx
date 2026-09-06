@@ -618,7 +618,7 @@ export function PedidosPage() {
 
             {detalleAbierto.detalle.some((l) => l.anulado) && (
               <p className="text-xs text-ink-soft">
-                Las líneas anuladas no cuentan para el total. Se conservan solo para el historial.
+                Se quitaron productos al editar este pedido — quedan solo en el historial de abajo.
               </p>
             )}
 
@@ -629,7 +629,7 @@ export function PedidosPage() {
             )}
 
             <TablaProductosDetalle<LineaVentaResponse>
-              filas={detalleAbierto.detalle}
+              filas={detalleAbierto.detalle.filter((l) => !l.anulado)}
               rowKey={(l) => l.id}
               titulo={(l) => l.producto}
               subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
