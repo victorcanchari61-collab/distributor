@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { ShieldOff } from 'lucide-react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { DashboardLayout, NAV_DEFAULT, navIdFromPath, navPath, resolveNav } from './components/layout'
+import { DashboardLayout, NAV_GROUPS, navIdFromPath, navPath, resolveNav } from './components/layout'
 import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, AuditoriaPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
 import { SolicitudPermisoModal } from './features/config/SolicitudPermisoModal'
+import { solicitudApi } from './features/config/solicitudApi'
+import { Button } from './components/ui'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
 import { ArqueoDiarioPage, CuentasPorCobrarPage, CuentasPorPagarPage, MetodosPagoPage, MisCobrosPage } from './features/finanzas'
 import {
@@ -70,7 +72,9 @@ function App() {
       <LoginPage
         onSuccess={(u) => {
           setUsuario(u)
-          navigate(navPath(NAV_DEFAULT), { replace: true })
+          // A la raiz y no a una vista fija: es Inicio quien sabe cual es la
+          // primera pantalla que esta persona puede abrir.
+          navigate('/', { replace: true })
         }}
       />
     )
@@ -94,9 +98,9 @@ function App() {
       }}
     >
       <Routes>
-        <Route path="/" element={<Navigate to={navPath(NAV_DEFAULT)} replace />} />
+        <Route path="/" element={<Inicio />} />
         <Route path="/:modulo/:vista" element={<Vista />} />
-        <Route path="*" element={<Navigate to={navPath(NAV_DEFAULT)} replace />} />
+        <Route path="*" element={<Inicio />} />
       </Routes>
 
       {/*
@@ -119,7 +123,7 @@ function Vista() {
   // El menu ya esconde lo que no se puede abrir, pero la URL se escribe a mano
   // y se comparte por chat: sin esto, pegar un enlace saltaria el filtro.
   if (cargando) return null
-  if (!puedeVer(id)) return <SinAcceso />
+  if (!puedeVer(id)) return <SinAcceso submodulo={id} />
 
   const View = VIEWS[id]
   if (View) return <View />
@@ -128,8 +132,49 @@ function Vista() {
   return <PendingPage title={item?.label ?? 'Vista'} group={group?.label} />
 }
 
-/** Se llego a una pantalla que el rol no tiene concedida. */
-function SinAcceso() {
+/**
+ * A dónde va alguien que entra sin pedir una vista concreta.
+ *
+ * No a la de siempre: un almacenero no puede ver Clientes, y mandarlo ahi le
+ * daria un "no tienes acceso" nada mas entrar, como si el sistema estuviera
+ * roto. Va a la primera pantalla que si puede abrir, en el orden del menu.
+ */
+function Inicio() {
+  const { puedeVer, cargando } = usePermisos()
+
+  if (cargando) return null
+
+  const primera = NAV_GROUPS.flatMap((g) => g.items).find((i) => puedeVer(i.id))
+  if (!primera) return <SinAcceso />
+
+  return <Navigate to={navPath(primera.id)} replace />
+}
+
+/**
+ * Se llego a una pantalla que el rol no tiene concedida.
+ *
+ * Lleva el boton para pedirla porque entrar es lo unico que NO abre el modal
+ * solo: las vistas cargan catalogos de otros modulos al abrirse y un modal por
+ * cada uno seria ruido. Aqui, en cambio, se sabe con certeza que la persona
+ * queria entrar.
+ */
+function SinAcceso({ submodulo }: { submodulo?: string }) {
+  const [pedido, setPedido] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+
+  const pedir = async () => {
+    if (!submodulo) return
+    setEnviando(true)
+    try {
+      await solicitudApi.solicitar({ submodulo, accion: 'ver' })
+      setPedido(true)
+    } catch {
+      // Sin ruido: el boton se queda como estaba y se puede reintentar.
+    } finally {
+      setEnviando(false)
+    }
+  }
+
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-24 text-center">
       <ShieldOff size={32} className="text-ink-soft" />
@@ -137,6 +182,17 @@ function SinAcceso() {
       <p className="max-w-sm text-sm text-ink-muted">
         Tu rol no la incluye. Si necesitas entrar, pídeselo a un administrador.
       </p>
+
+      {submodulo &&
+        (pedido ? (
+          <p className="mt-2 text-sm font-medium text-emerald-700">
+            Listo, un administrador lo verá en su bandeja.
+          </p>
+        ) : (
+          <Button className="mt-3" loading={enviando} onClick={() => void pedir()}>
+            Pedir acceso
+          </Button>
+        ))}
     </div>
   )
 }

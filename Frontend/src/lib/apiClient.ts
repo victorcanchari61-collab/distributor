@@ -87,7 +87,15 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
         ? { submodulo: problem.submodulo, accion: problem.accion }
         : undefined
 
-    if (permiso) avisarPermisoNegado?.(permiso)
+    /*
+     * Solo se ofrece pedir permiso para lo que la persona pulsó. Un "ver"
+     * negado casi nunca lo pidió ella: las pantallas cargan de paso catálogos
+     * de otros módulos — métodos de pago, almacenes — y saltarle un modal por
+     * cada uno al abrir una vista es ruido que además desconcierta ("¿por qué
+     * me habla de Métodos de pago si abrí Notas de venta?"). Entrar a una
+     * pantalla se pide desde la propia pantalla bloqueada.
+     */
+    if (permiso && permiso.accion !== 'ver') avisarPermisoNegado?.(permiso)
 
     throw new ApiError(
       problem.message ?? `Error ${response.status}`,
