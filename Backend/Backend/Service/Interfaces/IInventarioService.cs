@@ -31,6 +31,26 @@ public interface IInventarioService
     Task<IEnumerable<LoteResponse>> GetLotesAsync();
 
     // --- Kardex ---
+
+    /// <summary>Una página de documentos de inventario de una familia.</summary>
+    Task<PaginaResponse<DocumentoInventarioResponse>> ListarDocumentosAsync(
+        ConsultaTablaRequest consulta, string? familia);
+
+    /// <summary>Contadores del listado completo de esa familia.</summary>
+    Task<ResumenDocumentosResponse> GetResumenDocumentosAsync(string? familia);
+
+    /// <summary>Contadores del listado completo de préstamos.</summary>
+    Task<ResumenPrestamosResponse> GetResumenPrestamosAsync();
+
+    /// <summary>Una página del listado de préstamos.</summary>
+    Task<PaginaResponse<PrestamoResponse>> ListarPrestamosAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Una página del kardex, con el saldo acumulado ya resuelto.</summary>
+    Task<PaginaResponse<KardexResponse>> ListarKardexAsync(ConsultaTablaRequest consulta, int? almacenId);
+
+    /// <summary>Cuántas entradas y salidas tiene el kardex completo del almacén.</summary>
+    Task<ResumenKardexResponse> GetResumenKardexAsync(int? almacenId);
+
     Task<IEnumerable<KardexResponse>> GetKardexAsync(
         int? productoId, int? almacenId, DateTime? desde, DateTime? hasta);
 

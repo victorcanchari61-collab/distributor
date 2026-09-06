@@ -1,5 +1,8 @@
 using Backend.Data;
+using Backend.Dtos.Requests;
+using Backend.Dtos.Responses;
 using Backend.Models;
+using Backend.Repository;
 using Backend.Repository.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -70,6 +73,73 @@ public class VentasRepository : IVentasRepository
         _context.Pedidos.Update(pedido);
         await _context.SaveChangesAsync();
     }
+
+    public async Task<(List<Pedido> Items, int Total)> ListarPedidosAsync(ConsultaTablaRequest consulta)
+    {
+        var query = PedidosConDetalle().AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(p =>
+                EF.Functions.Like(p.Numero, $"%{texto}%")
+                || (p.Cliente != null && EF.Functions.Like(p.Cliente.Nombre, $"%{texto}%"))
+                || (p.Cliente != null && EF.Functions.Like(p.Cliente.Documento, $"%{texto}%")));
+        }
+
+        if (consulta.ValorDe("numero") is string numero)
+        {
+            query = query.Where(p => EF.Functions.Like(p.Numero, $"%{numero}%"));
+        }
+
+        if (consulta.ValorDe("cliente") is string cliente)
+        {
+            query = query.Where(p => p.Cliente != null && EF.Functions.Like(p.Cliente.Nombre, $"%{cliente}%"));
+        }
+
+        if (consulta.ValorDe("estado") is string estado)
+        {
+            query = query.Where(p => p.Estado == estado);
+        }
+
+        var (desde, hasta) = consulta.RangoFechas("fecha");
+        if (desde is not null) query = query.Where(p => p.Fecha >= desde);
+        if (hasta is not null) query = query.Where(p => p.Fecha <= hasta);
+
+        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
+
+        query = consulta.Orden switch
+        {
+            "numero" => desc
+                ? query.OrderByDescending(p => p.Numero).ThenByDescending(p => p.Id)
+                : query.OrderBy(p => p.Numero).ThenBy(p => p.Id),
+            "cliente" => desc
+                ? query.OrderByDescending(p => p.Cliente!.Nombre).ThenByDescending(p => p.Id)
+                : query.OrderBy(p => p.Cliente!.Nombre).ThenBy(p => p.Id),
+            "estado" => desc
+                ? query.OrderByDescending(p => p.Estado).ThenByDescending(p => p.Id)
+                : query.OrderBy(p => p.Estado).ThenBy(p => p.Id),
+            // El total no es una columna: se suma del detalle, sin las lineas
+            // anuladas, igual que lo hace la respuesta.
+            "total" => desc
+                ? query.OrderByDescending(p => p.Detalle.Where(d => !d.Anulado)
+                        .Sum(d => d.Cantidad * d.PrecioUnitario)).ThenByDescending(p => p.Id)
+                : query.OrderBy(p => p.Detalle.Where(d => !d.Anulado)
+                        .Sum(d => d.Cantidad * d.PrecioUnitario)).ThenBy(p => p.Id),
+            _ => desc
+                ? query.OrderByDescending(p => p.Fecha).ThenByDescending(p => p.Id)
+                : query.OrderBy(p => p.Fecha).ThenBy(p => p.Id),
+        };
+
+        return await query.PaginarAsync(consulta);
+    }
+
+    public async Task<ResumenPedidosResponse> ResumenPedidosAsync() => new()
+    {
+        Total = await _context.Pedidos.CountAsync(),
+        Pendientes = await _context.Pedidos.CountAsync(p => p.Estado == EstadoPedido.Pendiente),
+        Confirmados = await _context.Pedidos.CountAsync(p => p.Estado == EstadoPedido.Confirmado),
+    };
 
     /// <summary>
     /// Actualiza línea por línea en vez de borrar todo y recrearlo: así una
@@ -176,6 +246,147 @@ public class VentasRepository : IVentasRepository
     {
         _context.NotasVenta.Update(notaVenta);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<(List<NotaVenta> Items, int Total)> ListarNotasVentaAsync(ConsultaTablaRequest consulta)
+    {
+        var query = NotasVentaConDetalle().AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(n =>
+                EF.Functions.Like(n.Numero, $"%{texto}%")
+                || (n.Cliente != null && EF.Functions.Like(n.Cliente.Nombre, $"%{texto}%"))
+                || (n.Cliente != null && EF.Functions.Like(n.Cliente.Documento, $"%{texto}%"))
+                || (n.Pedido != null && EF.Functions.Like(n.Pedido.Numero, $"%{texto}%")));
+        }
+
+        if (consulta.ValorDe("numero") is string numero)
+        {
+            query = query.Where(n => EF.Functions.Like(n.Numero, $"%{numero}%"));
+        }
+
+        if (consulta.ValorDe("cliente") is string cliente)
+        {
+            query = query.Where(n => n.Cliente != null && EF.Functions.Like(n.Cliente.Nombre, $"%{cliente}%"));
+        }
+
+        if (consulta.ValorDe("estado") is string estado)
+        {
+            query = query.Where(n => n.Estado == estado);
+        }
+
+        var (desde, hasta) = consulta.RangoFechas("fecha");
+        if (desde is not null) query = query.Where(n => n.Fecha >= desde);
+        if (hasta is not null) query = query.Where(n => n.Fecha <= hasta);
+
+        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
+
+        query = consulta.Orden switch
+        {
+            "numero" => desc
+                ? query.OrderByDescending(n => n.Numero).ThenByDescending(n => n.Id)
+                : query.OrderBy(n => n.Numero).ThenBy(n => n.Id),
+            "cliente" => desc
+                ? query.OrderByDescending(n => n.Cliente!.Nombre).ThenByDescending(n => n.Id)
+                : query.OrderBy(n => n.Cliente!.Nombre).ThenBy(n => n.Id),
+            "estado" => desc
+                ? query.OrderByDescending(n => n.Estado).ThenByDescending(n => n.Id)
+                : query.OrderBy(n => n.Estado).ThenBy(n => n.Id),
+            "total" => desc
+                ? query.OrderByDescending(n => n.Detalle.Where(d => !d.Anulado)
+                        .Sum(d => d.Cantidad * d.PrecioUnitario)).ThenByDescending(n => n.Id)
+                : query.OrderBy(n => n.Detalle.Where(d => !d.Anulado)
+                        .Sum(d => d.Cantidad * d.PrecioUnitario)).ThenBy(n => n.Id),
+            _ => desc
+                ? query.OrderByDescending(n => n.Fecha).ThenByDescending(n => n.Id)
+                : query.OrderBy(n => n.Fecha).ThenBy(n => n.Id),
+        };
+
+        return await query.PaginarAsync(consulta);
+    }
+
+    public async Task<ResumenNotasVentaResponse> ResumenNotasVentaAsync()
+    {
+        var confirmadas = _context.NotasVenta.Where(n => n.Estado == EstadoNotaVenta.Confirmada);
+
+        return new ResumenNotasVentaResponse
+        {
+            Total = await _context.NotasVenta.CountAsync(),
+            Confirmadas = await confirmadas.CountAsync(),
+            TotalVendido = await confirmadas
+                .SelectMany(n => n.Detalle)
+                .Where(d => !d.Anulado)
+                .SumAsync(d => (decimal?)(d.Cantidad * d.PrecioUnitario)) ?? 0m,
+        };
+    }
+
+    /// <summary>Los cobros de un usuario en un rango, sin ordenar ni paginar.</summary>
+    private IQueryable<PagoVenta> CobrosBase(int? usuarioId, DateTime? desde, DateTime? hasta) =>
+        _context.PagosVenta
+            .Include(p => p.MetodoPago)
+            .Include(p => p.NotaVenta).ThenInclude(n => n!.Cliente)
+            .Where(p => p.NotaVenta!.Estado == EstadoNotaVenta.Confirmada
+                        && (usuarioId == null || p.UsuarioId == usuarioId)
+                        && (desde == null || p.Fecha >= desde)
+                        && (hasta == null || p.Fecha <= hasta))
+            .AsNoTracking();
+
+    public async Task<(List<PagoVenta> Items, int Total)> ListarCobrosAsync(
+        ConsultaTablaRequest consulta, int? usuarioId, DateTime? desde, DateTime? hasta)
+    {
+        var query = CobrosBase(usuarioId, desde, hasta);
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(p =>
+                EF.Functions.Like(p.NotaVenta!.Numero, $"%{texto}%")
+                || (p.NotaVenta.Cliente != null && EF.Functions.Like(p.NotaVenta.Cliente.Nombre, $"%{texto}%"))
+                || (p.MetodoPago != null && EF.Functions.Like(p.MetodoPago.Nombre, $"%{texto}%")));
+        }
+
+        if (consulta.ValorDe("metodoPago") is string metodo)
+            query = query.Where(p => p.MetodoPago != null && p.MetodoPago.Nombre == metodo);
+
+        if (consulta.ValorDe("cliente") is string cliente)
+            query = query.Where(p => p.NotaVenta!.Cliente != null
+                                     && EF.Functions.Like(p.NotaVenta.Cliente.Nombre, $"%{cliente}%"));
+
+        var (fDesde, fHasta) = consulta.RangoFechas("fecha");
+        if (fDesde is not null) query = query.Where(p => p.Fecha >= fDesde);
+        if (fHasta is not null) query = query.Where(p => p.Fecha <= fHasta);
+
+        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
+
+        query = consulta.Orden switch
+        {
+            "monto" => desc ? query.OrderByDescending(p => p.Monto).ThenByDescending(p => p.Id)
+                            : query.OrderBy(p => p.Monto).ThenBy(p => p.Id),
+            "cliente" => desc ? query.OrderByDescending(p => p.NotaVenta!.Cliente!.Nombre).ThenByDescending(p => p.Id)
+                              : query.OrderBy(p => p.NotaVenta!.Cliente!.Nombre).ThenBy(p => p.Id),
+            "metodoPago" => desc ? query.OrderByDescending(p => p.MetodoPago!.Nombre).ThenByDescending(p => p.Id)
+                                 : query.OrderBy(p => p.MetodoPago!.Nombre).ThenBy(p => p.Id),
+            _ => desc ? query.OrderByDescending(p => p.Fecha).ThenByDescending(p => p.Id)
+                      : query.OrderBy(p => p.Fecha).ThenBy(p => p.Id),
+        };
+
+        return await query.PaginarAsync(consulta);
+    }
+
+    public async Task<ResumenCobrosResponse> ResumenCobrosAsync(
+        int? usuarioId, DateTime? desde, DateTime? hasta)
+    {
+        var cobros = CobrosBase(usuarioId, desde, hasta);
+
+        return new ResumenCobrosResponse
+        {
+            Validos = await cobros.CountAsync(p => !p.Anulado),
+            Anulados = await cobros.CountAsync(p => p.Anulado),
+            // Un cobro anulado no entra: su monto volvio al saldo pendiente.
+            TotalCobrado = await cobros.Where(p => !p.Anulado).SumAsync(p => (decimal?)p.Monto) ?? 0m,
+        };
     }
 
     public async Task<NotaVentaDetalle?> GetNotaVentaDetalleConNotaVentaAsync(int id) =>

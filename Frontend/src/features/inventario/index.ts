@@ -18,6 +18,9 @@ export {
   loteApi,
 } from './inventarioApi'
 export type {
+  ResumenDocumentos,
+  ResumenPrestamos,
+  ResumenKardex,
   AlmacenResponse,
   MotivoResponse,
   StockResponse,

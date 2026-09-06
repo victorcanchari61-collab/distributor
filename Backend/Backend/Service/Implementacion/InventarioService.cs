@@ -401,6 +401,66 @@ public class InventarioService : IInventarioService
 
     // ----------------------------------------------------------------- Kardex
 
+    /// <summary>
+    /// Una página del kardex. El saldo no se puede calcular con solo las filas
+    /// de la página — es un acumulado — así que el repositorio entrega además
+    /// con cuánto entra cada producto a la página, y acá se sigue sumando
+    /// desde ahí en orden cronológico.
+    /// </summary>
+    public async Task<PaginaResponse<KardexResponse>> ListarKardexAsync(
+        ConsultaTablaRequest consulta, int? almacenId)
+    {
+        var (items, total, aperturas) = await _repository.ListarKardexAsync(consulta, almacenId);
+
+        var saldos = new Dictionary<(int, int), decimal>(aperturas);
+        var porId = new Dictionary<int, decimal>();
+
+        // Siempre de lo mas viejo a lo mas nuevo: es el unico orden en el que
+        // un acumulado tiene sentido, sin importar como se pidio la pagina.
+        foreach (var m in items.OrderBy(m => m.Fecha).ThenBy(m => m.Id))
+        {
+            var clave = (m.ProductoId, m.AlmacenId);
+            var saldo = saldos.GetValueOrDefault(clave)
+                        + (m.Tipo == TipoMovimiento.Entrada ? m.Cantidad : -m.Cantidad);
+            saldos[clave] = saldo;
+            porId[m.Id] = saldo;
+        }
+
+        return new PaginaResponse<KardexResponse>
+        {
+            Items = items.Select(m => MapKardex(m, porId[m.Id])).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public async Task<ResumenKardexResponse> GetResumenKardexAsync(int? almacenId)
+    {
+        var (entradas, salidas) = await _repository.ResumenKardexAsync(almacenId);
+        return new ResumenKardexResponse { Entradas = entradas, Salidas = salidas };
+    }
+
+    private static KardexResponse MapKardex(MovimientoInventario m, decimal saldo) => new()
+    {
+        Id = m.Id,
+        Fecha = m.Fecha,
+        Documento = m.Documento?.Numero ?? string.Empty,
+        Motivo = m.Motivo?.Nombre ?? string.Empty,
+        Tipo = m.Tipo,
+        ProductoId = m.ProductoId,
+        Producto = m.Producto?.Nombre ?? string.Empty,
+        UnidadBase = m.Producto?.UnidadBase?.Codigo ?? string.Empty,
+        Almacen = m.Almacen?.Nombre ?? string.Empty,
+        Presentacion = m.Presentacion?.Nombre,
+        CantidadPresentacion = m.CantidadPresentacion,
+        Cantidad = m.Cantidad,
+        CostoUnitario = m.CostoUnitario,
+        CostoTotal = m.CostoTotal,
+        Saldo = saldo,
+        Anulado = m.Documento?.Estado == EstadoDocumento.Anulado,
+    };
+
     public async Task<IEnumerable<KardexResponse>> GetKardexAsync(
         int? productoId, int? almacenId, DateTime? desde, DateTime? hasta)
     {
@@ -462,6 +522,55 @@ public class InventarioService : IInventarioService
         }
 
         return respuesta;
+    }
+
+    public async Task<PaginaResponse<DocumentoInventarioResponse>> ListarDocumentosAsync(
+        ConsultaTablaRequest consulta, string? familia)
+    {
+        var (items, total) = await _repository.ListarDocumentosAsync(consulta, familia);
+
+        var respuesta = new List<DocumentoInventarioResponse>();
+        foreach (var d in items)
+        {
+            var anuladoPor = d.Estado == EstadoDocumento.Anulado
+                ? await _repository.GetNumeroAnulacionAsync(d.Id)
+                : null;
+            respuesta.Add(MapDocumento(d, conDetalle: false, anuladoPor));
+        }
+
+        return new PaginaResponse<DocumentoInventarioResponse>
+        {
+            Items = respuesta,
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public async Task<ResumenDocumentosResponse> GetResumenDocumentosAsync(string? familia)
+    {
+        var (total, confirmados, anulados) = await _repository.ResumenDocumentosAsync(familia);
+        return new ResumenDocumentosResponse
+        {
+            Total = total,
+            Confirmados = confirmados,
+            Anulados = anulados,
+        };
+    }
+
+    public Task<ResumenPrestamosResponse> GetResumenPrestamosAsync() => _repository.ResumenPrestamosAsync();
+
+    public async Task<PaginaResponse<PrestamoResponse>> ListarPrestamosAsync(ConsultaTablaRequest consulta)
+    {
+        var (items, total) = await _repository.ListarPrestamosAsync(consulta);
+
+        return new PaginaResponse<PrestamoResponse>
+        {
+            Items = items.Select(MapPrestamo).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
     }
 
     public async Task<DocumentoInventarioResponse> GetDocumentoAsync(int id)

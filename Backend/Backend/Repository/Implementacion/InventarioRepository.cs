@@ -1,5 +1,8 @@
 using Backend.Data;
+using Backend.Dtos.Requests;
+using Backend.Dtos.Responses;
 using Backend.Models;
+using Backend.Repository;
 using Backend.Repository.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -248,6 +251,120 @@ public class InventarioRepository : IInventarioRepository
             .Take(300)
             .ToListAsync();
 
+    /// <summary>Los documentos de una familia, sin ordenar ni paginar todavia.</summary>
+    private IQueryable<DocumentoInventario> DocumentosDe(string? familia) =>
+        DocumentosConDetalle()
+            .Where(d => familia == null
+                        || d.Tipo == familia
+                        || (d.Tipo == TipoDocumentoInventario.Anulacion
+                            && d.DocumentoAnulado!.Tipo == familia))
+            .AsNoTracking();
+
+    public async Task<(List<DocumentoInventario> Items, int Total)> ListarDocumentosAsync(
+        ConsultaTablaRequest consulta, string? familia)
+    {
+        var query = DocumentosDe(familia);
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(d =>
+                EF.Functions.Like(d.Numero, $"%{texto}%")
+                || (d.Almacen != null && EF.Functions.Like(d.Almacen.Nombre, $"%{texto}%"))
+                || (d.Motivo != null && EF.Functions.Like(d.Motivo.Nombre, $"%{texto}%")));
+        }
+
+        if (consulta.ValorDe("numero") is string numero)
+            query = query.Where(d => EF.Functions.Like(d.Numero, $"%{numero}%"));
+
+        if (consulta.ValorDe("almacen") is string almacen)
+            query = query.Where(d => d.Almacen != null && d.Almacen.Nombre == almacen);
+
+        if (consulta.ValorDe("motivo") is string motivo)
+            query = query.Where(d => d.Motivo != null && d.Motivo.Nombre == motivo);
+
+        if (consulta.ValorDe("estado") is string estado)
+            query = query.Where(d => d.Estado == estado);
+
+        var (desde, hasta) = consulta.RangoFechas("fecha");
+        if (desde is not null) query = query.Where(d => d.Fecha >= desde);
+        if (hasta is not null) query = query.Where(d => d.Fecha <= hasta);
+
+        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
+
+        query = consulta.Orden switch
+        {
+            "numero" => desc ? query.OrderByDescending(d => d.Numero).ThenByDescending(d => d.Id)
+                             : query.OrderBy(d => d.Numero).ThenBy(d => d.Id),
+            "almacen" => desc ? query.OrderByDescending(d => d.Almacen!.Nombre).ThenByDescending(d => d.Id)
+                              : query.OrderBy(d => d.Almacen!.Nombre).ThenBy(d => d.Id),
+            "motivo" => desc ? query.OrderByDescending(d => d.Motivo!.Nombre).ThenByDescending(d => d.Id)
+                             : query.OrderBy(d => d.Motivo!.Nombre).ThenBy(d => d.Id),
+            "estado" => desc ? query.OrderByDescending(d => d.Estado).ThenByDescending(d => d.Id)
+                             : query.OrderBy(d => d.Estado).ThenBy(d => d.Id),
+            _ => desc ? query.OrderByDescending(d => d.Fecha).ThenByDescending(d => d.Id)
+                      : query.OrderBy(d => d.Fecha).ThenBy(d => d.Id),
+        };
+
+        return await query.PaginarAsync(consulta);
+    }
+
+    public async Task<(int Total, int Confirmados, int Anulados)> ResumenDocumentosAsync(string? familia) => (
+        await DocumentosDe(familia).CountAsync(),
+        await DocumentosDe(familia).CountAsync(d => d.Estado == EstadoDocumento.Confirmado),
+        await DocumentosDe(familia).CountAsync(d => d.Estado == EstadoDocumento.Anulado));
+
+    public async Task<ResumenPrestamosResponse> ResumenPrestamosAsync() => new()
+    {
+        Total = await _context.Prestamos.CountAsync(),
+        Pendientes = await _context.Prestamos.CountAsync(p => p.Estado == EstadoPrestamo.Pendiente),
+        Devueltos = await _context.Prestamos.CountAsync(p => p.Estado == EstadoPrestamo.Devuelto),
+    };
+
+    public async Task<(List<Prestamo> Items, int Total)> ListarPrestamosAsync(ConsultaTablaRequest consulta)
+    {
+        var query = PrestamosConDetalle().AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(p => EF.Functions.Like(p.Numero, $"%{texto}%")
+                                     || EF.Functions.Like(p.Contraparte, $"%{texto}%"));
+        }
+
+        if (consulta.ValorDe("numero") is string numero)
+            query = query.Where(p => EF.Functions.Like(p.Numero, $"%{numero}%"));
+
+        if (consulta.ValorDe("contraparte") is string contraparte)
+            query = query.Where(p => EF.Functions.Like(p.Contraparte, $"%{contraparte}%"));
+
+        if (consulta.ValorDe("estado") is string estado)
+            query = query.Where(p => p.Estado == estado);
+
+        if (consulta.ValorDe("tipo") is string tipo)
+            query = query.Where(p => p.Tipo == tipo);
+
+        var (desde, hasta) = consulta.RangoFechas("fecha");
+        if (desde is not null) query = query.Where(p => p.Fecha >= desde);
+        if (hasta is not null) query = query.Where(p => p.Fecha <= hasta);
+
+        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
+
+        query = consulta.Orden switch
+        {
+            "numero" => desc ? query.OrderByDescending(p => p.Numero).ThenByDescending(p => p.Id)
+                             : query.OrderBy(p => p.Numero).ThenBy(p => p.Id),
+            "contraparte" => desc ? query.OrderByDescending(p => p.Contraparte).ThenByDescending(p => p.Id)
+                                  : query.OrderBy(p => p.Contraparte).ThenBy(p => p.Id),
+            "estado" => desc ? query.OrderByDescending(p => p.Estado).ThenByDescending(p => p.Id)
+                             : query.OrderBy(p => p.Estado).ThenBy(p => p.Id),
+            _ => desc ? query.OrderByDescending(p => p.Fecha).ThenByDescending(p => p.Id)
+                      : query.OrderBy(p => p.Fecha).ThenBy(p => p.Id),
+        };
+
+        return await query.PaginarAsync(consulta);
+    }
+
     public async Task UpdateDocumentoAsync(DocumentoInventario documento)
     {
         _context.DocumentosInventario.Update(documento);
@@ -267,6 +384,110 @@ public class InventarioRepository : IInventarioRepository
         await _context.Movimientos
             .Where(m => m.DocumentoId == documentoId)
             .ToListAsync();
+
+    /// <summary>El kardex del almacen elegido, sin ordenar ni paginar todavia.</summary>
+    private IQueryable<MovimientoInventario> KardexBase(int? almacenId) =>
+        _context.Movimientos
+            .Where(m => almacenId == null || m.AlmacenId == almacenId)
+            .AsNoTracking();
+
+    public async Task<(List<MovimientoInventario> Items, int Total, Dictionary<(int Producto, int Almacen), decimal> Aperturas)>
+        ListarKardexAsync(ConsultaTablaRequest consulta, int? almacenId)
+    {
+        var query = KardexBase(almacenId)
+            .Include(m => m.Documento)
+            .Include(m => m.Producto).ThenInclude(p => p!.UnidadBase)
+            .Include(m => m.Motivo)
+            .Include(m => m.Almacen)
+            .Include(m => m.Presentacion)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(m =>
+                (m.Producto != null && EF.Functions.Like(m.Producto.Nombre, $"%{texto}%"))
+                || (m.Documento != null && EF.Functions.Like(m.Documento.Numero, $"%{texto}%"))
+                || (m.Motivo != null && EF.Functions.Like(m.Motivo.Nombre, $"%{texto}%"))
+                || (m.Almacen != null && EF.Functions.Like(m.Almacen.Nombre, $"%{texto}%")));
+        }
+
+        if (consulta.ValorDe("producto") is string producto)
+        {
+            query = query.Where(m => m.Producto != null && m.Producto.Nombre == producto);
+        }
+
+        if (consulta.ValorDe("motivo") is string motivo)
+        {
+            query = query.Where(m => m.Motivo != null && m.Motivo.Nombre == motivo);
+        }
+
+        if (consulta.ValorDe("tipo") is string tipo)
+        {
+            query = query.Where(m => m.Tipo == tipo);
+        }
+
+        if (consulta.ValorDe("almacen") is string almacen)
+        {
+            query = query.Where(m => m.Almacen != null && m.Almacen.Nombre == almacen);
+        }
+
+        if (consulta.ValorDe("documento") is string documento)
+        {
+            query = query.Where(m => m.Documento != null
+                                     && EF.Functions.Like(m.Documento.Numero, $"%{documento}%"));
+        }
+
+        var (desde, hasta) = consulta.RangoFechas("fecha");
+        if (desde is not null) query = query.Where(m => m.Fecha >= desde);
+        if (hasta is not null) query = query.Where(m => m.Fecha <= hasta);
+
+        var total = await query.CountAsync();
+
+        // El kardex es un libro cronologico: el unico orden que admite es por
+        // fecha. Ordenar por otra columna partiria la pagina en un tramo no
+        // contiguo y el saldo acumulado dejaria de tener sentido.
+        var desc = string.Equals(consulta.Sentido, "desc", StringComparison.OrdinalIgnoreCase);
+        query = desc
+            ? query.OrderByDescending(m => m.Fecha).ThenByDescending(m => m.Id)
+            : query.OrderBy(m => m.Fecha).ThenBy(m => m.Id);
+
+        var items = await query
+            .Skip((consulta.PaginaSegura - 1) * consulta.PorPaginaSegura)
+            .Take(consulta.PorPaginaSegura)
+            .ToListAsync();
+
+        var aperturas = new Dictionary<(int, int), decimal>();
+        if (items.Count > 0)
+        {
+            // Saldo con el que entra la pagina: todo lo anterior al movimiento
+            // mas viejo que se va a mostrar, sumado por producto y almacen.
+            var primera = items.OrderBy(m => m.Fecha).ThenBy(m => m.Id).First();
+
+            var previos = await query
+                .Where(m => m.Fecha < primera.Fecha
+                            || (m.Fecha == primera.Fecha && m.Id < primera.Id))
+                .GroupBy(m => new { m.ProductoId, m.AlmacenId })
+                .Select(g => new
+                {
+                    g.Key.ProductoId,
+                    g.Key.AlmacenId,
+                    Saldo = g.Sum(m => m.Tipo == TipoMovimiento.Entrada ? m.Cantidad : -m.Cantidad),
+                })
+                .ToListAsync();
+
+            foreach (var p in previos)
+            {
+                aperturas[(p.ProductoId, p.AlmacenId)] = p.Saldo;
+            }
+        }
+
+        return (items, total, aperturas);
+    }
+
+    public async Task<(int Entradas, int Salidas)> ResumenKardexAsync(int? almacenId) => (
+        await KardexBase(almacenId).CountAsync(m => m.Tipo == TipoMovimiento.Entrada),
+        await KardexBase(almacenId).CountAsync(m => m.Tipo == TipoMovimiento.Salida));
 
     public async Task<List<MovimientoInventario>> GetKardexAsync(
         int? productoId, int? almacenId, DateTime? desde, DateTime? hasta) =>

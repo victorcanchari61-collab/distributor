@@ -1,5 +1,7 @@
 using Backend.Data;
+using Backend.Dtos.Requests;
 using Backend.Models;
+using Backend.Repository;
 using Backend.Repository.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -80,6 +82,36 @@ public class FinanzasRepository : IFinanzasRepository
             .OrderByDescending(a => a.Fecha)
             .Take(90)
             .ToListAsync();
+
+    public async Task<(List<ArqueoCaja> Items, int Total)> ListarArqueosAsync(ConsultaTablaRequest consulta)
+    {
+        var query = _context.ArqueosCaja.Include(a => a.Usuario).AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(a => a.Usuario != null && EF.Functions.Like(a.Usuario.Nombre, $"%{texto}%"));
+        }
+
+        if (consulta.ValorDe("usuario") is string usuario)
+            query = query.Where(a => a.Usuario != null && a.Usuario.Nombre == usuario);
+
+        var (desde, hasta) = consulta.RangoFechas("fecha");
+        if (desde is not null) query = query.Where(a => a.Fecha >= desde);
+        if (hasta is not null) query = query.Where(a => a.Fecha <= hasta);
+
+        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
+
+        query = consulta.Orden switch
+        {
+            "usuario" => desc ? query.OrderByDescending(a => a.Usuario!.Nombre).ThenByDescending(a => a.Id)
+                              : query.OrderBy(a => a.Usuario!.Nombre).ThenBy(a => a.Id),
+            _ => desc ? query.OrderByDescending(a => a.Fecha).ThenByDescending(a => a.Id)
+                      : query.OrderBy(a => a.Fecha).ThenBy(a => a.Id),
+        };
+
+        return await query.PaginarAsync(consulta);
+    }
 
     public async Task<ArqueoCaja> GuardarArqueoAsync(ArqueoCaja arqueo)
     {

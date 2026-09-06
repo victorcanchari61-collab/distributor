@@ -24,6 +24,13 @@ public interface IFinanzasRepository
     Task<ArqueoCaja?> GetArqueoAsync(DateTime fecha);
     Task<IEnumerable<ArqueoCaja>> GetHistorialArqueoAsync();
 
+    /// <summary>
+    /// Una página del historial de cierres. Reemplaza al tope de 90 días: se
+    /// cierra caja todos los días, así que en tres meses el resto quedaba
+    /// fuera de alcance.
+    /// </summary>
+    Task<(List<ArqueoCaja> Items, int Total)> ListarArqueosAsync(Dtos.Requests.ConsultaTablaRequest consulta);
+
     /// <summary>Crea el cierre del día, o reemplaza el que ya hubiera para esa fecha.</summary>
     Task<ArqueoCaja> GuardarArqueoAsync(ArqueoCaja arqueo);
 }

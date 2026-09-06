@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Calculator, Coins, HandCoins, Scale } from 'lucide-react'
 import { Alert, Badge, Button, Input, ListPage, PageSection, StatCard } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { arqueoApi } from './finanzasApi'
 import type { ArqueoCajaResponse, ArqueoResumenResponse } from './finanzasApi'
@@ -30,12 +30,29 @@ export function ArqueoDiarioPage() {
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
 
+  /*
+   * Se cierra caja todos los dias, asi que el historial crece 365 filas al
+   * ano: la tabla pide solo su pagina. El resumen del dia elegido va aparte,
+   * porque no depende de la paginacion.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
+    try {
+      const pagina = await arqueoApi.listar(q)
+      setHistorial(pagina.items)
+      setTotalRegistros(pagina.total)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar el historial de cierres.')
+    }
+  }, [])
+
   const cargar = useCallback(async (f: string) => {
     setCargando(true)
     try {
-      const [res, hist] = await Promise.all([arqueoApi.resumen(f), arqueoApi.historial()])
+      const res = await arqueoApi.resumen(f)
       setResumen(res)
-      setHistorial(hist)
       setMontoContado(res.arqueo ? String(res.arqueo.montoContado) : '')
       setObservacion(res.arqueo?.observacion ?? '')
       setError('')
@@ -61,7 +78,9 @@ export function ArqueoDiarioPage() {
     setErrorForm('')
     try {
       await arqueoApi.registrar({ fecha, montoContado: valor, observacion: observacion.trim() || null })
-      await cargar(fecha)
+      // El cierre recien guardado tiene que aparecer en el historial, no solo
+      // en el resumen del dia: se recarga tambien la pagina que se esta viendo.
+      await Promise.all([cargar(fecha), consulta ? cargarPagina(consulta) : Promise.resolve()])
     } catch (e) {
       setErrorForm(e instanceof ApiError ? e.message : 'No pudimos registrar el cierre.')
     } finally {
@@ -70,7 +89,12 @@ export function ArqueoDiarioPage() {
   }
 
   const columns: DataTableColumn<ArqueoCajaResponse>[] = [
-    { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
+    {
+      key: 'fecha',
+      label: 'Fecha',
+      filterType: 'date',
+      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+    },
     { key: 'montoEsperado', label: 'Esperado', align: 'right', render: (row) => `S/ ${row.montoEsperado.toFixed(2)}` },
     { key: 'montoContado', label: 'Contado', align: 'right', render: (row) => `S/ ${row.montoContado.toFixed(2)}` },
     {
@@ -123,6 +147,14 @@ export function ArqueoDiarioPage() {
       }
       columns={columns}
       rows={historial}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={Calculator}
       searchPlaceholder="Buscar por fecha..."
       empty={cargando ? 'Cargando historial...' : 'Todavía no se registró ningún cierre.'}

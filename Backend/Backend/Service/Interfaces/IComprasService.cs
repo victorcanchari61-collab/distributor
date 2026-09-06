@@ -5,6 +5,21 @@ namespace Backend.Service.Interfaces;
 
 public interface IComprasService
 {
+    /// <summary>Una página del listado de órdenes de compra.</summary>
+    Task<PaginaResponse<OrdenCompraResponse>> ListarOrdenesAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Contadores del listado completo de órdenes.</summary>
+    Task<ResumenOrdenesCompraResponse> GetResumenOrdenesAsync();
+
+    /// <summary>Una página del listado de compras.</summary>
+    Task<PaginaResponse<CompraResponse>> ListarComprasAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Contadores del listado completo de compras.</summary>
+    Task<ResumenComprasResponse> GetResumenComprasAsync();
+
+    /// <summary>Las compras que todavía esperan mercadería, sin paginar.</summary>
+    Task<IEnumerable<CompraResponse>> GetComprasAbiertasAsync();
+
     // --- Ordenes de compra ---
     Task<IEnumerable<OrdenCompraResponse>> GetOrdenesAsync(string? estado = null);
     Task<OrdenCompraResponse> GetOrdenAsync(int id);

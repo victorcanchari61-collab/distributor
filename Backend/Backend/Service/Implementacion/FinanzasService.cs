@@ -137,6 +137,19 @@ public class FinanzasService : IFinanzasService
         return historial.Select(MapArqueo);
     }
 
+    public async Task<PaginaResponse<ArqueoCajaResponse>> ListarArqueosAsync(ConsultaTablaRequest consulta)
+    {
+        var (items, total) = await _repository.ListarArqueosAsync(consulta);
+
+        return new PaginaResponse<ArqueoCajaResponse>
+        {
+            Items = items.Select(MapArqueo).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
     public async Task<ArqueoCajaResponse> RegistrarArqueoAsync(RegistrarArqueoRequest request, int? usuarioId)
     {
         var cobrado = await _repository.GetCobradoEfectivoAsync(request.Fecha);

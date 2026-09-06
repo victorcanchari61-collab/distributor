@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Ban, Coins, HandCoins, Wallet } from 'lucide-react'
 import { Alert, Badge, ListPage, StatCard } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
 import { notaVentaApi } from '../facturacion/ventasApi'
-import type { CobroResponse } from '../facturacion/ventasApi'
+import type { CobroResponse, ResumenCobros } from '../facturacion/ventasApi'
 
 /**
  * Los cobros que YO registré: cada pago de una nota de venta, visto desde
@@ -22,10 +22,21 @@ export function MisCobrosPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
-  const cargar = useCallback(async () => {
+  /*
+   * Los cobros se acumulan sin techo: uno por cada pago que registra el
+   * usuario. La tabla pide su pagina y los totales salen del resumen — sumar
+   * sobre las filas cargadas daria el total de 20 cobros, no el del periodo.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenCobros | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      setCobros(await notaVentaApi.misCobros())
+      const pagina = await notaVentaApi.listarCobros(q)
+      setCobros(pagina.items)
+      setTotalRegistros(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar tus cobros.')
@@ -34,9 +45,21 @@ export function MisCobrosPage() {
     }
   }, [])
 
+  const cargarResumen = useCallback(async () => {
+    try {
+      setResumen(await notaVentaApi.resumenCobros())
+    } catch {
+      // Los totales son secundarios: la tabla igual sirve.
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarResumen()])
+  }, [consulta, cargarPagina, cargarResumen])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarResumen()
+  }, [cargarResumen])
 
   useRealtime(['notasventa'], cargar)
 
@@ -69,10 +92,10 @@ export function MisCobrosPage() {
     },
   ]
 
-  const validos = cobros.filter((c) => !c.anulado)
-  const anulados = cobros.filter((c) => c.anulado)
-  const totalCobrado = validos.reduce((n, c) => n + c.monto, 0)
-  const promedio = validos.length ? totalCobrado / validos.length : 0
+  const validos = resumen?.validos ?? 0
+  const anulados = resumen?.anulados ?? 0
+  const totalCobrado = resumen?.totalCobrado ?? 0
+  const promedio = validos ? totalCobrado / validos : 0
 
   return (
     <ListPage
@@ -82,7 +105,7 @@ export function MisCobrosPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Cobros válidos" value={String(validos.length)} icon={<HandCoins size={18} />} />
+          <StatCard label="Cobros válidos" value={String(validos)} icon={<HandCoins size={18} />} />
           <StatCard
             label="Total cobrado"
             value={`S/ ${totalCobrado.toFixed(2)}`}
@@ -96,14 +119,22 @@ export function MisCobrosPage() {
           />
           <StatCard
             label="Cobros anulados"
-            value={String(anulados.length)}
+            value={String(anulados)}
             icon={<Ban size={18} />}
-            tono={anulados.length > 0 ? 'warning' : undefined}
+            tono={anulados > 0 ? 'warning' : undefined}
           />
         </>
       }
       columns={columns}
       rows={cobros}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={HandCoins}
       searchPlaceholder="Buscar por número, cliente..."
       empty={cargando ? 'Cargando tus cobros...' : 'Todavía no registraste cobros.'}

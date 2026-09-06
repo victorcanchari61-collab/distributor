@@ -22,6 +22,7 @@ import {
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
+  ConsultaTabla,
   DataTableColumn,
   LineaProductoNueva,
   OpcionBuscador,
@@ -40,6 +41,7 @@ import type {
   CompraResponse,
   CrearCompraRequest,
   FormaPagoCompra,
+  ResumenCompras,
   TipoComprobanteCompra,
 } from './comprasApi'
 import { NuevaRecepcionModal } from './NuevaRecepcionModal'
@@ -133,25 +135,25 @@ export function MisComprasPage() {
 
   const { confirmar, dialogo } = useConfirmacion()
 
-  const cargar = useCallback(async () => {
+  /*
+   * Las compras se acumulan con la operacion: la tabla pide solo su pagina.
+   *
+   * `comprasParaRecibir` NO sale de esa pagina: alimenta el selector del modal
+   * de recepcion, que tiene que ver todas las compras abiertas aunque esten en
+   * la pagina 40. Se pide aparte — son pocas, una compra deja esa lista apenas
+   * se recibe completa.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenCompras | null>(null)
+  const [comprasParaRecibir, setComprasParaRecibir] = useState<CompraResponse[]>([])
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      const [comps, provs, prods, alms, stock, metodos] = await Promise.all([
-        compraApi.getAll(),
-        proveedorApi.getAll(),
-        productoApi.getAll(),
-        almacenApi.getAll(),
-        // Sin almacenId: una compra directa tampoco elige almacén todavía
-        // (eso se decide al recibir), así que se muestra el stock total.
-        stockApi.getAll(),
-        metodoPagoApi.getAll(),
-      ])
-      setCompras(comps)
-      setProveedores(provs.filter((p) => p.activo))
-      setProductos(prods.filter((p) => p.activo && p.controlaStock))
-      setAlmacenes(alms)
-      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
-      setMetodosPago(metodos.filter((m) => m.activo))
+      const pagina = await compraApi.listar(q)
+      setCompras(pagina.items)
+      setTotalRegistros(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las compras.')
@@ -160,9 +162,39 @@ export function MisComprasPage() {
     }
   }, [])
 
+  /** Catalogos, contadores y compras abiertas: no cambian al paginar. */
+  const cargarApoyo = useCallback(async () => {
+    try {
+      const [res, abiertas, provs, prods, alms, stock, metodos] = await Promise.all([
+        compraApi.resumen(),
+        compraApi.abiertas(),
+        proveedorApi.getAll(),
+        productoApi.getAll(),
+        almacenApi.getAll(),
+        // Sin almacenId: una compra directa tampoco elige almacén todavía
+        // (eso se decide al recibir), así que se muestra el stock total.
+        stockApi.getAll(),
+        metodoPagoApi.getAll(),
+      ])
+      setResumen(res)
+      setComprasParaRecibir(abiertas)
+      setProveedores(provs.filter((p) => p.activo))
+      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+      setAlmacenes(alms)
+      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
+      setMetodosPago(metodos.filter((m) => m.activo))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarApoyo()])
+  }, [consulta, cargarPagina, cargarApoyo])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarApoyo()
+  }, [cargarApoyo])
 
   useRealtime(['compras', 'recepciones', 'stock'], cargar)
 
@@ -438,10 +470,6 @@ export function MisComprasPage() {
       render: (row) => estadoCompraBadge(row.estado),
     },
   ]
-
-  const comprasParaRecibir = compras.filter(
-    (c) => c.estado === 'PENDIENTE' || c.estado === 'RECIBIDA_PARCIAL',
-  )
 
   if (vista === 'form') {
     return (
@@ -730,16 +758,16 @@ export function MisComprasPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Compras" value={String(compras.length)} icon={<ShoppingBag size={18} />} />
+          <StatCard label="Compras" value={String(resumen?.total ?? 0)} icon={<ShoppingBag size={18} />} />
           <StatCard
             label="Por recibir"
-            value={String(comprasParaRecibir.length)}
+            value={String(resumen?.porRecibir ?? 0)}
             icon={<PackageCheck size={18} />}
             tono="warning"
           />
           <StatCard
             label="Recibidas"
-            value={String(compras.filter((c) => c.estado === 'RECIBIDA_TOTAL').length)}
+            value={String(resumen?.recibidas ?? 0)}
             icon={<PackageCheck size={18} />}
             tono="success"
           />
@@ -747,6 +775,14 @@ export function MisComprasPage() {
       }
       columns={columns}
       rows={compras}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={ShoppingBag}
       searchPlaceholder="Buscar por número, proveedor..."
       empty={cargando ? 'Cargando compras...' : 'Todavía no hay compras registradas.'}

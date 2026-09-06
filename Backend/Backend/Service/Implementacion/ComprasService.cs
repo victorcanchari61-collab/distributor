@@ -56,6 +56,39 @@ public class ComprasService : IComprasService
         return ordenes.Select(MapOrden);
     }
 
+    public async Task<PaginaResponse<OrdenCompraResponse>> ListarOrdenesAsync(ConsultaTablaRequest consulta)
+    {
+        var (items, total) = await _repository.ListarOrdenesAsync(consulta);
+
+        return new PaginaResponse<OrdenCompraResponse>
+        {
+            Items = items.Select(MapOrden).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public Task<ResumenOrdenesCompraResponse> GetResumenOrdenesAsync() => _repository.ResumenOrdenesAsync();
+
+    public async Task<PaginaResponse<CompraResponse>> ListarComprasAsync(ConsultaTablaRequest consulta)
+    {
+        var (items, total) = await _repository.ListarComprasAsync(consulta);
+
+        return new PaginaResponse<CompraResponse>
+        {
+            Items = items.Select(MapCompra).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public Task<ResumenComprasResponse> GetResumenComprasAsync() => _repository.ResumenComprasAsync();
+
+    public async Task<IEnumerable<CompraResponse>> GetComprasAbiertasAsync() =>
+        (await _repository.GetComprasAbiertasAsync()).Select(MapCompra);
+
     public async Task<OrdenCompraResponse> GetOrdenAsync(int id) =>
         MapOrden(await GetOrdenOrThrowAsync(id));
 

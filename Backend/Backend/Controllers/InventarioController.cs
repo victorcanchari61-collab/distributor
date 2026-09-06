@@ -116,6 +116,37 @@ public class InventarioController : ControllerBase
     [HttpGet("lotes")]
     public async Task<IActionResult> Lotes() => Ok(await _inventario.GetLotesAsync());
 
+    /// <summary>Una página de documentos de una familia (ajustes, transferencias, recepciones).</summary>
+    [HttpPost("documentos/listar")]
+    public async Task<IActionResult> ListarDocumentos(
+        [FromBody] ConsultaTablaRequest consulta, [FromQuery] string? familia) =>
+        Ok(await _inventario.ListarDocumentosAsync(consulta, familia));
+
+    /// <summary>Contadores del listado completo de esa familia.</summary>
+    [HttpGet("documentos/resumen")]
+    public async Task<IActionResult> ResumenDocumentos([FromQuery] string? familia) =>
+        Ok(await _inventario.GetResumenDocumentosAsync(familia));
+
+    /// <summary>Contadores del listado completo de préstamos.</summary>
+    [HttpGet("prestamos/resumen")]
+    public async Task<IActionResult> ResumenPrestamos() => Ok(await _inventario.GetResumenPrestamosAsync());
+
+    /// <summary>Una página del listado de préstamos.</summary>
+    [HttpPost("prestamos/listar")]
+    public async Task<IActionResult> ListarPrestamos([FromBody] ConsultaTablaRequest consulta) =>
+        Ok(await _inventario.ListarPrestamosAsync(consulta));
+
+    /// <summary>Una página del kardex, con búsqueda, filtros y orden resueltos en la base.</summary>
+    [HttpPost("kardex/listar")]
+    public async Task<IActionResult> ListarKardex(
+        [FromBody] ConsultaTablaRequest consulta, [FromQuery] int? almacenId) =>
+        Ok(await _inventario.ListarKardexAsync(consulta, almacenId));
+
+    /// <summary>Contadores del kardex completo del almacén.</summary>
+    [HttpGet("kardex/resumen")]
+    public async Task<IActionResult> ResumenKardex([FromQuery] int? almacenId) =>
+        Ok(await _inventario.GetResumenKardexAsync(almacenId));
+
     /// <summary>Kardex: todo lo que entró y salió, con el saldo que dejó.</summary>
     [HttpGet("kardex")]
     public async Task<IActionResult> Kardex(

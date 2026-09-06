@@ -1,5 +1,7 @@
 import { api } from '../../lib/apiClient'
 import type { AuditoriaResponse } from '../config'
+import type { ConsultaTabla } from '../../components/ui'
+import type { PaginaResponse } from '../../lib/paginacion'
 
 // --- Comun ---
 
@@ -105,7 +107,34 @@ export interface ConfirmarPedidoRequest {
   almacenId: number
 }
 
+/** Contadores del listado completo de pedidos, no de la página visible. */
+export interface ResumenPedidos {
+  total: number
+  pendientes: number
+  confirmados: number
+}
+
+/** Totales de los cobros de un usuario, sobre todo el rango y no una página. */
+export interface ResumenCobros {
+  validos: number
+  anulados: number
+  totalCobrado: number
+}
+
+/** Contadores del listado completo de notas de venta. */
+export interface ResumenNotasVenta {
+  total: number
+  confirmadas: number
+  totalVendido: number
+}
+
 export const pedidoApi = {
+  /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
+  listar: (consulta: ConsultaTabla) =>
+    api.post<PaginaResponse<PedidoResponse>>('/pedido/listar', consulta),
+
+  resumen: () => api.get<ResumenPedidos>('/pedido/resumen'),
+
   getAll: (estado?: string) =>
     api.get<PedidoResponse[]>(`/pedido${estado ? `?estado=${estado}` : ''}`),
   getById: (id: number) => api.get<PedidoResponse>(`/pedido/${id}`),
@@ -157,6 +186,12 @@ export interface CrearNotaVentaRequest {
 }
 
 export const notaVentaApi = {
+  /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
+  listar: (consulta: ConsultaTabla) =>
+    api.post<PaginaResponse<NotaVentaResponse>>('/notaventa/listar', consulta),
+
+  resumen: () => api.get<ResumenNotasVenta>('/notaventa/resumen'),
+
   getAll: (estado?: string) =>
     api.get<NotaVentaResponse[]>(`/notaventa${estado ? `?estado=${estado}` : ''}`),
   getById: (id: number) => api.get<NotaVentaResponse>(`/notaventa/${id}`),
@@ -175,6 +210,27 @@ export const notaVentaApi = {
   /** Quita un pago registrado por error: su monto vuelve al saldo pendiente. */
   anularPago: (id: number, pagoId: number) =>
     api.del<NotaVentaResponse>(`/notaventa/${id}/pagos/${pagoId}`),
+  /** Una página de los cobros del usuario, resuelta en el servidor. */
+  listarCobros: (consulta: ConsultaTabla, desde?: string, hasta?: string) => {
+    const params = new URLSearchParams()
+    if (desde) params.set('desde', desde)
+    if (hasta) params.set('hasta', hasta)
+    const query = params.toString()
+    return api.post<PaginaResponse<CobroResponse>>(
+      `/notaventa/miscobros/listar${query ? `?${query}` : ''}`,
+      consulta,
+    )
+  },
+
+  /** Totales de esos cobros, sobre todo el rango. */
+  resumenCobros: (desde?: string, hasta?: string) => {
+    const params = new URLSearchParams()
+    if (desde) params.set('desde', desde)
+    if (hasta) params.set('hasta', hasta)
+    const query = params.toString()
+    return api.get<ResumenCobros>(`/notaventa/miscobros/resumen${query ? `?${query}` : ''}`)
+  },
+
   /** Los cobros del usuario que hizo login, opcionalmente por rango de fechas (ISO). */
   misCobros: (desde?: string, hasta?: string) => {
     const params = new URLSearchParams()

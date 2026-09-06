@@ -1,4 +1,6 @@
 import { api } from '../../lib/apiClient'
+import type { ConsultaTabla } from '../../components/ui'
+import type { PaginaResponse } from '../../lib/paginacion'
 
 // --- Métodos de pago ---
 //
@@ -73,5 +75,9 @@ export interface RegistrarArqueoRequest {
 export const arqueoApi = {
   resumen: (fecha: string) => api.get<ArqueoResumenResponse>(`/arqueo/resumen?fecha=${fecha}`),
   historial: () => api.get<ArqueoCajaResponse[]>('/arqueo/historial'),
+
+  /** Una página del historial de cierres, resuelta en el servidor. */
+  listar: (consulta: ConsultaTabla) =>
+    api.post<PaginaResponse<ArqueoCajaResponse>>('/arqueo/listar', consulta),
   registrar: (body: RegistrarArqueoRequest) => api.post<ArqueoCajaResponse>('/arqueo', body),
 }

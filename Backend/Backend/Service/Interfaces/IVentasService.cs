@@ -8,6 +8,12 @@ public interface IVentasService
     // --- Pedidos ---
     Task<IEnumerable<PedidoResponse>> GetPedidosAsync(string? estado = null);
     Task<PedidoResponse> GetPedidoAsync(int id);
+
+    /// <summary>Una página del listado de pedidos, resuelta en la base.</summary>
+    Task<PaginaResponse<PedidoResponse>> ListarPedidosAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Contadores del listado completo de pedidos.</summary>
+    Task<ResumenPedidosResponse> GetResumenPedidosAsync();
     Task<PedidoResponse> CrearPedidoAsync(CrearPedidoRequest request, int? usuarioId);
     Task<PedidoResponse> ActualizarPedidoAsync(int id, CrearPedidoRequest request);
 
@@ -22,6 +28,12 @@ public interface IVentasService
     // --- Notas de venta ---
     Task<IEnumerable<NotaVentaResponse>> GetNotasVentaAsync(string? estado = null);
     Task<NotaVentaResponse> GetNotaVentaAsync(int id);
+
+    /// <summary>Una página del listado de notas de venta.</summary>
+    Task<PaginaResponse<NotaVentaResponse>> ListarNotasVentaAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Contadores del listado completo de notas de venta.</summary>
+    Task<ResumenNotasVentaResponse> GetResumenNotasVentaAsync();
 
     /// <summary>Venta directa, sin pedido previo: el stock sale al momento.</summary>
     Task<NotaVentaResponse> CrearNotaVentaAsync(CrearNotaVentaRequest request, int? usuarioId);
@@ -53,6 +65,13 @@ public interface IVentasService
     /// el cobro. Filtrable por rango de fechas.
     /// </summary>
     Task<IEnumerable<CobroResponse>> GetMisCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta);
+
+    /// <summary>Una página de los cobros del usuario, en el rango pedido.</summary>
+    Task<PaginaResponse<CobroResponse>> ListarMisCobrosAsync(
+        ConsultaTablaRequest consulta, int? usuarioId, DateTime? desde, DateTime? hasta);
+
+    /// <summary>Totales de esos cobros, calculados sobre todo el rango.</summary>
+    Task<ResumenCobrosResponse> GetResumenCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta);
 
     /// <summary>Qué cambió en esta nota de venta: sobre todo anulaciones y movimientos de pago.</summary>
     Task<IEnumerable<AuditoriaResponse>> GetHistorialNotaVentaAsync(int id);

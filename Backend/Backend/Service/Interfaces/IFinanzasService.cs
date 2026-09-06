@@ -15,5 +15,8 @@ public interface IFinanzasService
     // --- Arqueo de caja ---
     Task<ArqueoResumenResponse> GetResumenArqueoAsync(DateTime fecha);
     Task<IEnumerable<ArqueoCajaResponse>> GetHistorialArqueoAsync();
+
+    /// <summary>Una página del historial de cierres de caja.</summary>
+    Task<PaginaResponse<ArqueoCajaResponse>> ListarArqueosAsync(ConsultaTablaRequest consulta);
     Task<ArqueoCajaResponse> RegistrarArqueoAsync(RegistrarArqueoRequest request, int? usuarioId);
 }

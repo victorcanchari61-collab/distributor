@@ -1,3 +1,5 @@
+using Backend.Dtos.Requests;
+using Backend.Dtos.Responses;
 using Backend.Models;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -14,6 +16,12 @@ public interface IVentasRepository
     Task<Pedido?> GetPedidoAsync(int id);
     Task<IEnumerable<Pedido>> GetPedidosAsync(string? estado = null);
     Task UpdatePedidoAsync(Pedido pedido);
+
+    /// <summary>Una página del listado de pedidos, buscada, filtrada y ordenada en la base.</summary>
+    Task<(List<Pedido> Items, int Total)> ListarPedidosAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Contadores del listado completo de pedidos.</summary>
+    Task<ResumenPedidosResponse> ResumenPedidosAsync();
 
     /// <summary>
     /// Reemplaza las líneas de un pedido Pendiente: se borran las actuales y
@@ -36,6 +44,23 @@ public interface IVentasRepository
     Task<NotaVenta?> GetNotaVentaAsync(int id);
     Task<IEnumerable<NotaVenta>> GetNotasVentaAsync(string? estado = null);
     Task UpdateNotaVentaAsync(NotaVenta notaVenta);
+
+    /// <summary>Una página del listado de notas de venta.</summary>
+    Task<(List<NotaVenta> Items, int Total)> ListarNotasVentaAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Contadores del listado completo de notas de venta.</summary>
+    Task<ResumenNotasVentaResponse> ResumenNotasVentaAsync();
+
+    /// <summary>
+    /// Una página de los cobros de un usuario. Va directo contra los pagos y
+    /// no recorriendo las notas de venta: antes se traían 300 notas enteras
+    /// para quedarse con unos pocos pagos.
+    /// </summary>
+    Task<(List<PagoVenta> Items, int Total)> ListarCobrosAsync(
+        ConsultaTablaRequest consulta, int? usuarioId, DateTime? desde, DateTime? hasta);
+
+    /// <summary>Totales de esos cobros, sobre todo el rango y no sobre una página.</summary>
+    Task<ResumenCobrosResponse> ResumenCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta);
 
     /// <summary>
     /// Una línea de nota de venta con su cabecera cargada, para poder marcar

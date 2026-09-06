@@ -19,7 +19,12 @@ import {
   Tabs,
   useConfirmacion,
 } from '../../components/ui'
-import type { ColumnaDetalleProducto, DataTableColumn, LineaProductoNueva } from '../../components/ui'
+import type {
+  ColumnaDetalleProducto,
+  ConsultaTabla,
+  DataTableColumn,
+  LineaProductoNueva,
+} from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
@@ -29,6 +34,7 @@ import type {
   DocumentoInventarioResponse,
   LineaDocumentoResponse,
   MotivoResponse,
+  ResumenDocumentos,
 } from './inventarioApi'
 import { MotivosTabla } from './MotivosTabla'
 import { useRealtime } from '../../lib/realtime'
@@ -82,19 +88,20 @@ export function AjustesPage() {
   const motivosManuales = motivos.filter((m) => !m.delSistema && m.activo)
   const motivo = motivos.find((m) => m.id === cabecera.motivoId)
 
-  const cargar = useCallback(async () => {
+  /*
+   * Los ajustes se acumulan con la operacion: la tabla pide su pagina y los
+   * contadores salen del resumen.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenDocumentos | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      const [docs, alms, mots, prods] = await Promise.all([
-        ajusteApi.getAll(),
-        almacenApi.getAll(),
-        motivoApi.getAll(),
-        productoApi.getAll(),
-      ])
-      setDocumentos(docs)
-      setAlmacenes(alms)
-      setMotivos(mots)
-      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+      const pagina = await ajusteApi.listar(q)
+      setDocumentos(pagina.items)
+      setTotalRegistros(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los ajustes.')
@@ -103,9 +110,30 @@ export function AjustesPage() {
     }
   }, [])
 
+  const cargarApoyo = useCallback(async () => {
+    try {
+      const [res, alms, mots, prods] = await Promise.all([
+        ajusteApi.resumen(),
+        almacenApi.getAll(),
+        motivoApi.getAll(),
+        productoApi.getAll(),
+      ])
+      setResumen(res)
+      setAlmacenes(alms)
+      setMotivos(mots)
+      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarApoyo()])
+  }, [consulta, cargarPagina, cargarApoyo])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarApoyo()
+  }, [cargarApoyo])
 
   useRealtime(['ajustes', 'motivos'], cargar)
 
@@ -349,7 +377,7 @@ export function AjustesPage() {
       active={pestana}
       onChange={(id) => setPestana(id as Pestana)}
       items={[
-        { id: 'ajustes', label: 'Ajustes', icon: <ClipboardCheck size={15} />, badge: documentos.length },
+        { id: 'ajustes', label: 'Ajustes', icon: <ClipboardCheck size={15} />, badge: resumen?.total ?? 0 },
         {
           id: 'motivos',
           label: 'Motivos',
@@ -512,18 +540,18 @@ export function AjustesPage() {
         <>
           <StatCard
             label="Documentos"
-            value={String(documentos.length)}
+            value={String(resumen?.total ?? 0)}
             icon={<ClipboardCheck size={18} />}
           />
           <StatCard
             label="Confirmados"
-            value={String(documentos.filter((d) => d.estado === 'CONFIRMADO').length)}
+            value={String(resumen?.confirmados ?? 0)}
             icon={<ClipboardCheck size={18} />}
             tono="success"
           />
           <StatCard
             label="Anulados"
-            value={String(documentos.filter((d) => d.estado === 'ANULADO').length)}
+            value={String(resumen?.anulados ?? 0)}
             icon={<Undo2 size={18} />}
             tono="neutral"
           />
@@ -531,6 +559,14 @@ export function AjustesPage() {
       }
       columns={columns}
       rows={documentos}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={ClipboardCheck}
       searchPlaceholder="Buscar por número, almacén, motivo..."
       empty={cargando ? 'Cargando ajustes...' : 'Todavía no hay ajustes registrados.'}

@@ -15,7 +15,12 @@ import {
   SysDataTable,
   TablaProductosDetalle,
 } from '../../components/ui'
-import type { ColumnaDetalleProducto, DataTableColumn, LineaProductoNueva } from '../../components/ui'
+import type {
+  ColumnaDetalleProducto,
+  ConsultaTabla,
+  DataTableColumn,
+  LineaProductoNueva,
+} from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
@@ -25,6 +30,7 @@ import type {
   PrestamoDetalleResponse,
   PrestamoResponse,
   TipoPrestamo,
+  ResumenPrestamos,
 } from './inventarioApi'
 import { useRealtime } from '../../lib/realtime'
 
@@ -72,17 +78,20 @@ export function PrestamosPage() {
   const [filas, setFilas] = useState<FilaPrestamo[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
 
-  const cargar = useCallback(async () => {
+  /*
+   * Los prestamos se acumulan con la operacion: la tabla pide su pagina y los
+   * contadores salen del resumen.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenPrestamos | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      const [prest, alms, prods] = await Promise.all([
-        prestamoApi.getAll(),
-        almacenApi.getAll(),
-        productoApi.getAll(),
-      ])
-      setPrestamos(prest)
-      setAlmacenes(alms)
-      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+      const pagina = await prestamoApi.listar(q)
+      setPrestamos(pagina.items)
+      setTotalRegistros(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los préstamos.')
@@ -91,9 +100,28 @@ export function PrestamosPage() {
     }
   }, [])
 
+  const cargarApoyo = useCallback(async () => {
+    try {
+      const [res, alms, prods] = await Promise.all([
+        prestamoApi.resumen(),
+        almacenApi.getAll(),
+        productoApi.getAll(),
+      ])
+      setResumen(res)
+      setAlmacenes(alms)
+      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarApoyo()])
+  }, [consulta, cargarPagina, cargarApoyo])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarApoyo()
+  }, [cargarApoyo])
 
   useRealtime('prestamos', cargar)
 
@@ -337,18 +365,18 @@ export function PrestamosPage() {
         <>
           <StatCard
             label="Préstamos"
-            value={String(prestamos.length)}
+            value={String(resumen?.total ?? 0)}
             icon={<HandCoins size={18} />}
           />
           <StatCard
             label="Pendientes"
-            value={String(prestamos.filter((p) => p.estado === 'PENDIENTE').length)}
+            value={String(resumen?.pendientes ?? 0)}
             icon={<HandCoins size={18} />}
             tono="warning"
           />
           <StatCard
             label="Devueltos"
-            value={String(prestamos.filter((p) => p.estado === 'DEVUELTO').length)}
+            value={String(resumen?.devueltos ?? 0)}
             icon={<Undo2 size={18} />}
             tono="neutral"
           />
@@ -356,6 +384,14 @@ export function PrestamosPage() {
       }
       columns={columns}
       rows={prestamos}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={HandCoins}
       searchPlaceholder="Buscar por número, contraparte..."
       empty={cargando ? 'Cargando préstamos...' : 'Todavía no hay préstamos registrados.'}

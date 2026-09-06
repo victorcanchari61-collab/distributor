@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowDownCircle, ArrowUpCircle, BookOpen, Boxes, Warehouse } from 'lucide-react'
 import { Alert, Badge, ListPage, Tabs } from '../../components/ui'
-import type { DataTableColumn, TabItem } from '../../components/ui'
+import type { ConsultaTabla, DataTableColumn, TabItem } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { almacenApi, kardexApi } from './inventarioApi'
-import type { AlmacenResponse, KardexResponse } from './inventarioApi'
+import type { AlmacenResponse, KardexResponse, ResumenKardex } from './inventarioApi'
 import { useRealtime } from '../../lib/realtime'
 
 /**
@@ -30,26 +30,53 @@ export function KardexPage() {
     void almacenApi.getAll().then(setAlmacenes)
   }, [])
 
-  const cargar = useCallback(async () => {
-    setCargando(true)
+  /*
+   * El kardex crece una fila por cada linea de cada documento: es la tabla que
+   * mas rapido escala, asi que no se trae entera. La tabla pide una pagina y
+   * el servidor devuelve el saldo ya acumulado — no se puede calcular aca,
+   * porque cada fila depende de todas las anteriores.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [total, setTotal] = useState(0)
+  const [resumen, setResumen] = useState<ResumenKardex | null>(null)
+
+  const cargarPagina = useCallback(
+    async (q: ConsultaTabla) => {
+      setCargando(true)
+      try {
+        const pagina = await kardexApi.listar(q, almacenId || undefined)
+        setKardex(pagina.items)
+        setTotal(pagina.total)
+        setError('')
+      } catch (e) {
+        setError(e instanceof ApiError ? e.message : 'No pudimos cargar el kardex.')
+      } finally {
+        setCargando(false)
+      }
+    },
+    [almacenId],
+  )
+
+  const cargarResumen = useCallback(async () => {
     try {
-      setKardex(await kardexApi.getAll({ almacenId: almacenId || undefined }))
-      setError('')
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos cargar el kardex.')
-    } finally {
-      setCargando(false)
+      setResumen(await kardexApi.resumen(almacenId || undefined))
+    } catch {
+      // Los contadores del pie son secundarios: la tabla igual sirve.
     }
   }, [almacenId])
 
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarResumen()])
+  }, [consulta, cargarPagina, cargarResumen])
+
+  // Cambiar de almacen es cambiar el listado entero: se vuelve a pedir.
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarResumen()
+    if (consulta) void cargarPagina({ ...consulta, pagina: 1 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [almacenId])
 
   useRealtime('kardex', cargar)
-
-  const entradas = kardex.filter((k) => k.tipo === 'ENTRADA')
-  const salidas = kardex.filter((k) => k.tipo === 'SALIDA')
   const almacenActivo = almacenes.find((a) => a.id === almacenId)
 
   const tabs: TabItem[] = [
@@ -65,12 +92,22 @@ export function KardexPage() {
     {
       key: 'fecha',
       label: 'Fecha',
+      filterType: 'date',
       render: (row) => new Date(row.fecha).toLocaleString('es-PE'),
     },
-    { key: 'documento', label: 'Documento', render: (row) => <Badge>{row.documento}</Badge> },
+    { key: 'documento', label: 'Documento', sortable: false, render: (row) => <Badge>{row.documento}</Badge> },
     {
       key: 'tipo',
       label: 'Tipo',
+      // El kardex es un libro cronologico: reordenarlo por otra columna
+      // partiria la pagina en un tramo no contiguo y el saldo acumulado
+      // dejaria de tener sentido. Solo la fecha ordena.
+      sortable: false,
+      filterType: 'select',
+      filterOptions: [
+        { value: 'ENTRADA', label: 'Ingreso' },
+        { value: 'SALIDA', label: 'Salida' },
+      ],
       render: (row) =>
         row.tipo === 'ENTRADA' ? (
           <Badge tone="success">
@@ -86,6 +123,7 @@ export function KardexPage() {
     },
     {
       key: 'motivo',
+      sortable: false,
       label: 'Motivo',
       render: (row) => (
         <span className="flex items-center gap-1.5">
@@ -94,10 +132,11 @@ export function KardexPage() {
         </span>
       ),
     },
-    { key: 'producto', label: 'Producto' },
-    { key: 'almacen', label: 'Almacén' },
+    { key: 'producto', label: 'Producto', sortable: false },
+    { key: 'almacen', label: 'Almacén', sortable: false },
     {
       key: 'cantidadPresentacion',
+      sortable: false,
       label: 'Cantidad',
       align: 'right',
       render: (row) =>
@@ -105,6 +144,7 @@ export function KardexPage() {
     },
     {
       key: 'cantidad',
+      sortable: false,
       label: 'En unidad base',
       align: 'right',
       render: (row) => (
@@ -116,12 +156,14 @@ export function KardexPage() {
     },
     {
       key: 'costoTotal',
+      sortable: false,
       label: 'Costo',
       align: 'right',
       render: (row) => `S/ ${row.costoTotal.toFixed(2)}`,
     },
     {
       key: 'saldo',
+      sortable: false,
       label: 'Saldo',
       align: 'right',
       render: (row) => (
@@ -154,6 +196,14 @@ export function KardexPage() {
         alert={error ? <Alert>{error}</Alert> : undefined}
         columns={columns}
         rows={kardex}
+        servidor={{
+          total,
+          cargando,
+          onConsulta: (q) => {
+            setConsulta(q)
+            void cargarPagina(q)
+          },
+        }}
         cardIcon={BookOpen}
         searchPlaceholder="Buscar por documento, motivo, producto..."
         empty={
@@ -163,7 +213,7 @@ export function KardexPage() {
         }
         note={
           <>
-            {entradas.length} entrada(s) · {salidas.length} salida(s)
+            {resumen?.entradas ?? 0} entrada(s) · {resumen?.salidas ?? 0} salida(s)
           </>
         }
       />

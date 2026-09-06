@@ -78,6 +78,19 @@ public interface IInventarioRepository
     /// </summary>
     Task<IEnumerable<DocumentoInventario>> GetDocumentosAsync(string? familia = null);
 
+    /// <summary>Una página de documentos de inventario de una familia (ajustes, transferencias...).</summary>
+    Task<(List<DocumentoInventario> Items, int Total)> ListarDocumentosAsync(
+        Dtos.Requests.ConsultaTablaRequest consulta, string? familia);
+
+    /// <summary>Cuántos documentos confirmados y anulados hay en esa familia.</summary>
+    Task<(int Total, int Confirmados, int Anulados)> ResumenDocumentosAsync(string? familia);
+
+    /// <summary>Contadores del listado completo de préstamos.</summary>
+    Task<Dtos.Responses.ResumenPrestamosResponse> ResumenPrestamosAsync();
+
+    /// <summary>Una página de préstamos.</summary>
+    Task<(List<Prestamo> Items, int Total)> ListarPrestamosAsync(Dtos.Requests.ConsultaTablaRequest consulta);
+
     Task UpdateDocumentoAsync(DocumentoInventario documento);
     Task<string?> GetNumeroAnulacionAsync(int documentoId);
 
@@ -85,6 +98,17 @@ public interface IInventarioRepository
     Task<List<MovimientoInventario>> GetMovimientosDocumentoAsync(int documentoId);
 
     /// <summary>Kardex: movimientos de un producto, del mas antiguo al mas nuevo.</summary>
+    /// <summary>
+    /// Una página del kardex, con el saldo de apertura por producto y almacén:
+    /// lo que dejaron los movimientos anteriores a esta página. Sin eso, la
+    /// página 2 arrancaría el saldo desde cero.
+    /// </summary>
+    Task<(List<MovimientoInventario> Items, int Total, Dictionary<(int Producto, int Almacen), decimal> Aperturas)>
+        ListarKardexAsync(Dtos.Requests.ConsultaTablaRequest consulta, int? almacenId);
+
+    /// <summary>Cuántas entradas y salidas hay en todo el kardex del almacén.</summary>
+    Task<(int Entradas, int Salidas)> ResumenKardexAsync(int? almacenId);
+
     Task<List<MovimientoInventario>> GetKardexAsync(
         int? productoId, int? almacenId, DateTime? desde, DateTime? hasta);
 

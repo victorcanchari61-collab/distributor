@@ -16,12 +16,22 @@ import {
   TablaProductosDetalle,
   useConfirmacion,
 } from '../../components/ui'
-import type { ColumnaDetalleProducto, DataTableColumn, LineaProductoNueva } from '../../components/ui'
+import type {
+  ColumnaDetalleProducto,
+  ConsultaTabla,
+  DataTableColumn,
+  LineaProductoNueva,
+} from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
 import { almacenApi, stockApi, transferenciaApi } from './inventarioApi'
-import type { AlmacenResponse, DocumentoInventarioResponse, LineaDocumentoResponse } from './inventarioApi'
+import type {
+  AlmacenResponse,
+  DocumentoInventarioResponse,
+  LineaDocumentoResponse,
+  ResumenDocumentos,
+} from './inventarioApi'
 import { useRealtime } from '../../lib/realtime'
 
 type FilaTransferencia = LineaProductoNueva
@@ -66,17 +76,20 @@ export function TransferenciasPage() {
 
   const { confirmar, dialogo } = useConfirmacion()
 
-  const cargar = useCallback(async () => {
+  /*
+   * Las transferencias se acumulan con la operacion: la tabla pide su pagina y
+   * los contadores salen del resumen.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenDocumentos | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      const [docs, alms, prods] = await Promise.all([
-        transferenciaApi.getAll(),
-        almacenApi.getAll(),
-        productoApi.getAll(),
-      ])
-      setDocumentos(docs)
-      setAlmacenes(alms)
-      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+      const pagina = await transferenciaApi.listar(q)
+      setDocumentos(pagina.items)
+      setTotalRegistros(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las transferencias.')
@@ -85,9 +98,28 @@ export function TransferenciasPage() {
     }
   }, [])
 
+  const cargarApoyo = useCallback(async () => {
+    try {
+      const [res, alms, prods] = await Promise.all([
+        transferenciaApi.resumen(),
+        almacenApi.getAll(),
+        productoApi.getAll(),
+      ])
+      setResumen(res)
+      setAlmacenes(alms)
+      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarApoyo()])
+  }, [consulta, cargarPagina, cargarApoyo])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarApoyo()
+  }, [cargarApoyo])
 
   useRealtime('transferencias', cargar)
 
@@ -288,18 +320,18 @@ export function TransferenciasPage() {
         <>
           <StatCard
             label="Transferencias"
-            value={String(documentos.length)}
+            value={String(resumen?.total ?? 0)}
             icon={<Truck size={18} />}
           />
           <StatCard
             label="Confirmadas"
-            value={String(documentos.filter((d) => d.estado === 'CONFIRMADO').length)}
+            value={String(resumen?.confirmados ?? 0)}
             icon={<Truck size={18} />}
             tono="success"
           />
           <StatCard
             label="Anuladas"
-            value={String(documentos.filter((d) => d.estado === 'ANULADO').length)}
+            value={String(resumen?.anulados ?? 0)}
             icon={<Undo2 size={18} />}
             tono="neutral"
           />
@@ -307,6 +339,14 @@ export function TransferenciasPage() {
       }
       columns={columns}
       rows={documentos}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={Truck}
       searchPlaceholder="Buscar por número, almacén..."
       empty={cargando ? 'Cargando transferencias...' : 'Todavía no hay transferencias registradas.'}

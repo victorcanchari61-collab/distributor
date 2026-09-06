@@ -33,6 +33,7 @@ import {
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
+  ConsultaTabla,
   DataTableColumn,
   LineaProductoNueva,
   OpcionBuscador,
@@ -43,7 +44,12 @@ import { productoApi, proveedorApi } from '../maestros'
 import type { ProductoResponse, ProveedorResponse } from '../maestros'
 import { stockApi } from '../inventario'
 import { ordenCompraApi } from './comprasApi'
-import type { CrearOrdenCompraRequest, LineaCompraResponse, OrdenCompraResponse } from './comprasApi'
+import type {
+  CrearOrdenCompraRequest,
+  LineaCompraResponse,
+  OrdenCompraResponse,
+  ResumenOrdenesCompra,
+} from './comprasApi'
 
 function estadoOrdenBadge(estado: OrdenCompraResponse['estado']) {
   const tono = estado === 'CONFIRMADA' ? 'success' : estado === 'ANULADA' ? 'danger' : 'warning'
@@ -83,21 +89,20 @@ export function OrdenesCompraPage() {
 
   const { confirmar, dialogo } = useConfirmacion()
 
-  const cargar = useCallback(async () => {
+  /*
+   * Las ordenes se acumulan con la operacion: la tabla pide solo su pagina.
+   * Los contadores salen del resumen, no de las filas cargadas.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenOrdenesCompra | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      const [ords, provs, prods, stock] = await Promise.all([
-        ordenCompraApi.getAll(),
-        proveedorApi.getAll(),
-        productoApi.getAll(),
-        // Sin almacenId: no hay uno elegido en una orden todavía, así que se
-        // muestra el stock total de la empresa.
-        stockApi.getAll(),
-      ])
-      setOrdenes(ords)
-      setProveedores(provs.filter((p) => p.activo))
-      setProductos(prods.filter((p) => p.activo && p.controlaStock))
-      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
+      const pagina = await ordenCompraApi.listar(q)
+      setOrdenes(pagina.items)
+      setTotalRegistros(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las órdenes de compra.')
@@ -106,9 +111,33 @@ export function OrdenesCompraPage() {
     }
   }, [])
 
+  /** Catalogos del formulario y contadores: no cambian al paginar. */
+  const cargarApoyo = useCallback(async () => {
+    try {
+      const [res, provs, prods, stock] = await Promise.all([
+        ordenCompraApi.resumen(),
+        proveedorApi.getAll(),
+        productoApi.getAll(),
+        // Sin almacenId: no hay uno elegido en una orden todavía, así que se
+        // muestra el stock total de la empresa.
+        stockApi.getAll(),
+      ])
+      setResumen(res)
+      setProveedores(provs.filter((p) => p.activo))
+      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+      setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarApoyo()])
+  }, [consulta, cargarPagina, cargarApoyo])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarApoyo()
+  }, [cargarApoyo])
 
   useRealtime(['ordenescompra', 'stock'], cargar)
 
@@ -487,16 +516,16 @@ export function OrdenesCompraPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Órdenes" value={String(ordenes.length)} icon={<ClipboardList size={18} />} />
+          <StatCard label="Órdenes" value={String(resumen?.total ?? 0)} icon={<ClipboardList size={18} />} />
           <StatCard
             label="Pendientes"
-            value={String(ordenes.filter((o) => o.estado === 'PENDIENTE').length)}
+            value={String(resumen?.pendientes ?? 0)}
             icon={<ClipboardList size={18} />}
             tono="warning"
           />
           <StatCard
             label="Confirmadas"
-            value={String(ordenes.filter((o) => o.estado === 'CONFIRMADA').length)}
+            value={String(resumen?.confirmadas ?? 0)}
             icon={<CheckCircle2 size={18} />}
             tono="success"
           />
@@ -504,6 +533,14 @@ export function OrdenesCompraPage() {
       }
       columns={columns}
       rows={ordenes}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={ClipboardList}
       searchPlaceholder="Buscar por número, proveedor..."
       empty={cargando ? 'Cargando órdenes...' : 'Todavía no hay órdenes de compra registradas.'}

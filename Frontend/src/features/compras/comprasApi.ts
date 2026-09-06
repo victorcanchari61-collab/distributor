@@ -1,4 +1,6 @@
 import { api } from '../../lib/apiClient'
+import type { ConsultaTabla } from '../../components/ui'
+import type { PaginaResponse } from '../../lib/paginacion'
 
 // --- Comun ---
 
@@ -50,7 +52,27 @@ export interface CrearOrdenCompraRequest {
   detalle: LineaCompraRequest[]
 }
 
+/** Contadores del listado completo de órdenes de compra. */
+export interface ResumenOrdenesCompra {
+  total: number
+  pendientes: number
+  confirmadas: number
+}
+
+/** Contadores del listado completo de compras. */
+export interface ResumenCompras {
+  total: number
+  porRecibir: number
+  recibidas: number
+}
+
 export const ordenCompraApi = {
+  /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
+  listar: (consulta: ConsultaTabla) =>
+    api.post<PaginaResponse<OrdenCompraResponse>>('/ordencompra/listar', consulta),
+
+  resumen: () => api.get<ResumenOrdenesCompra>('/ordencompra/resumen'),
+
   getAll: (estado?: string) =>
     api.get<OrdenCompraResponse[]>(`/ordencompra${estado ? `?estado=${estado}` : ''}`),
   getById: (id: number) => api.get<OrdenCompraResponse>(`/ordencompra/${id}`),
@@ -131,6 +153,15 @@ export interface CrearCompraRequest {
 }
 
 export const compraApi = {
+  /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
+  listar: (consulta: ConsultaTabla) =>
+    api.post<PaginaResponse<CompraResponse>>('/compra/listar', consulta),
+
+  resumen: () => api.get<ResumenCompras>('/compra/resumen'),
+
+  /** Las compras que todavía esperan mercadería, sin paginar: son pocas. */
+  abiertas: () => api.get<CompraResponse[]>('/compra/abiertas'),
+
   getAll: (estado?: string) =>
     api.get<CompraResponse[]>(`/compra${estado ? `?estado=${estado}` : ''}`),
   getById: (id: number) => api.get<CompraResponse>(`/compra/${id}`),

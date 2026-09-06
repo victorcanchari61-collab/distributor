@@ -70,6 +70,11 @@ public class ArqueoController : ControllerBase
     [HttpGet("historial")]
     public async Task<IActionResult> Historial() => Ok(await _finanzas.GetHistorialArqueoAsync());
 
+    /// <summary>Una página del historial de cierres, con búsqueda y filtros en la base.</summary>
+    [HttpPost("listar")]
+    public async Task<IActionResult> ListarArqueos([FromBody] ConsultaTablaRequest consulta) =>
+        Ok(await _finanzas.ListarArqueosAsync(consulta));
+
     /// <summary>Registra el cierre de caja del día: reemplaza el que ya hubiera para esa fecha.</summary>
     [HttpPost]
     public async Task<IActionResult> Registrar([FromBody] RegistrarArqueoRequest request) =>

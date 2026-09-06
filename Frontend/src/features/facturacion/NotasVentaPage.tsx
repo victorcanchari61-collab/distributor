@@ -23,6 +23,7 @@ import {
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
+  ConsultaTabla,
   DataTableColumn,
   LineaProductoNueva,
   OpcionBuscador,
@@ -39,7 +40,13 @@ import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { notaVentaApi } from './ventasApi'
 import type { AuditoriaResponse } from '../config'
-import type { CrearNotaVentaRequest, FormaPagoVenta, LineaVentaResponse, NotaVentaResponse } from './ventasApi'
+import type {
+  CrearNotaVentaRequest,
+  FormaPagoVenta,
+  LineaVentaResponse,
+  NotaVentaResponse,
+  ResumenNotasVenta,
+} from './ventasApi'
 
 const FORMAS_PAGO: { value: FormaPagoVenta; label: string }[] = [
   { value: 'CONTADO', label: 'Contado' },
@@ -99,23 +106,21 @@ export function NotasVentaPage() {
 
   const { confirmar, dialogo } = useConfirmacion()
 
-  const cargar = useCallback(async () => {
+  /*
+   * Las ventas se acumulan con la operacion: la tabla pide solo la pagina que
+   * muestra. Los contadores vienen del resumen — sumarlos sobre las filas
+   * cargadas daria el total de 20 ventas, no el del negocio.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenNotasVenta | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      const [nts, clis, prods, alms, lis, metodos] = await Promise.all([
-        notaVentaApi.getAll(),
-        clienteApi.getAll(),
-        productoApi.getAll(),
-        almacenApi.getAll(),
-        listaPrecioApi.getAll(),
-        metodoPagoApi.getAll(),
-      ])
-      setNotas(nts)
-      setClientes(clis.filter((c) => c.activo))
-      setProductos(prods.filter((p) => p.activo && p.controlaStock))
-      setAlmacenes(alms.filter((a) => a.activo))
-      setListas(lis.filter((l) => l.activo))
-      setMetodosPago(metodos.filter((m) => m.activo))
+      const pagina = await notaVentaApi.listar(q)
+      setNotas(pagina.items)
+      setTotalRegistros(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las notas de venta.')
@@ -124,9 +129,35 @@ export function NotasVentaPage() {
     }
   }, [])
 
+  /** Catalogos del formulario y contadores: no cambian al paginar. */
+  const cargarApoyo = useCallback(async () => {
+    try {
+      const [res, clis, prods, alms, lis, metodos] = await Promise.all([
+        notaVentaApi.resumen(),
+        clienteApi.getAll(),
+        productoApi.getAll(),
+        almacenApi.getAll(),
+        listaPrecioApi.getAll(),
+        metodoPagoApi.getAll(),
+      ])
+      setResumen(res)
+      setClientes(clis.filter((c) => c.activo))
+      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+      setAlmacenes(alms.filter((a) => a.activo))
+      setListas(lis.filter((l) => l.activo))
+      setMetodosPago(metodos.filter((m) => m.activo))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarApoyo()])
+  }, [consulta, cargarPagina, cargarApoyo])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarApoyo()
+  }, [cargarApoyo])
 
   useRealtime(['notasventa', 'pedidos', 'stock'], cargar)
 
@@ -400,13 +431,25 @@ export function NotasVentaPage() {
     {
       key: 'pedidoNumero',
       label: 'Origen',
+      sortable: false,
+      filterable: false,
       render: (row) => (row.pedidoNumero ? row.pedidoNumero : 'Directa'),
     },
-    { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
+    {
+      key: 'fecha',
+      label: 'Fecha',
+      filterType: 'date',
+      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+    },
     { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
     {
       key: 'estado',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'CONFIRMADA', label: 'Confirmada' },
+        { value: 'ANULADA', label: 'Anulada' },
+      ],
       render: (row) => estadoNotaVentaBadge(row.estado),
     },
   ]
@@ -677,16 +720,16 @@ export function NotasVentaPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Notas de venta" value={String(notas.length)} icon={<ShoppingBag size={18} />} />
+          <StatCard label="Notas de venta" value={String(resumen?.total ?? 0)} icon={<ShoppingBag size={18} />} />
           <StatCard
             label="Confirmadas"
-            value={String(notas.filter((n) => n.estado === 'CONFIRMADA').length)}
+            value={String(resumen?.confirmadas ?? 0)}
             icon={<ShoppingBag size={18} />}
             tono="success"
           />
           <StatCard
             label="Total vendido"
-            value={`S/ ${notas.filter((n) => n.estado === 'CONFIRMADA').reduce((n, x) => n + x.total, 0).toFixed(2)}`}
+            value={`S/ ${(resumen?.totalVendido ?? 0).toFixed(2)}`}
             icon={<ShoppingBag size={18} />}
           />
         </>
@@ -696,6 +739,14 @@ export function NotasVentaPage() {
       // datos: el ancho por defecto de Acciones queda muy justo.
       actionsWidth={150}
       rows={notas}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={ShoppingBag}
       searchPlaceholder="Buscar por número, cliente..."
       empty={cargando ? 'Cargando notas de venta...' : 'Todavía no hay notas de venta registradas.'}

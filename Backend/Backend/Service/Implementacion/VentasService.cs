@@ -71,6 +71,37 @@ public class VentasService : IVentasService
     public async Task<PedidoResponse> GetPedidoAsync(int id) =>
         MapPedido(await GetPedidoOrThrowAsync(id));
 
+    public async Task<PaginaResponse<PedidoResponse>> ListarPedidosAsync(ConsultaTablaRequest consulta)
+    {
+        var (items, total) = await _repository.ListarPedidosAsync(consulta);
+
+        return new PaginaResponse<PedidoResponse>
+        {
+            Items = items.Select(MapPedido).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public Task<ResumenPedidosResponse> GetResumenPedidosAsync() => _repository.ResumenPedidosAsync();
+
+    public async Task<PaginaResponse<NotaVentaResponse>> ListarNotasVentaAsync(ConsultaTablaRequest consulta)
+    {
+        var (items, total) = await _repository.ListarNotasVentaAsync(consulta);
+
+        return new PaginaResponse<NotaVentaResponse>
+        {
+            Items = items.Select(MapNotaVenta).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public Task<ResumenNotasVentaResponse> GetResumenNotasVentaAsync() =>
+        _repository.ResumenNotasVentaAsync();
+
     public async Task<PedidoResponse> CrearPedidoAsync(CrearPedidoRequest request, int? usuarioId)
     {
         await _pedidoValidator.ValidateAndThrowAsync(request);
@@ -548,6 +579,37 @@ public class VentasService : IVentasService
                 Anulado = x.Pago.Anulado
             });
     }
+
+    public async Task<PaginaResponse<CobroResponse>> ListarMisCobrosAsync(
+        ConsultaTablaRequest consulta, int? usuarioId, DateTime? desde, DateTime? hasta)
+    {
+        var (items, total) = await _repository.ListarCobrosAsync(consulta, usuarioId, desde, hasta);
+
+        return new PaginaResponse<CobroResponse>
+        {
+            Items = items.Select(MapCobro).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public Task<ResumenCobrosResponse> GetResumenCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta) =>
+        _repository.ResumenCobrosAsync(usuarioId, desde, hasta);
+
+    private static CobroResponse MapCobro(PagoVenta p) => new()
+    {
+        Id = p.Id,
+        Fecha = p.Fecha,
+        NotaVentaId = p.NotaVentaId,
+        NotaVentaNumero = p.NotaVenta?.Numero ?? string.Empty,
+        ClienteId = p.NotaVenta?.ClienteId ?? 0,
+        Cliente = p.NotaVenta?.Cliente?.Nombre ?? string.Empty,
+        MetodoPagoId = p.MetodoPagoId,
+        MetodoPago = p.MetodoPago?.Nombre ?? string.Empty,
+        Monto = p.Monto,
+        Anulado = p.Anulado,
+    };
 
     // ------------------------------------------------------------ Auxiliares
 

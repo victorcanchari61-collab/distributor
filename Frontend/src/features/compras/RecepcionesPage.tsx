@@ -12,11 +12,16 @@ import {
   TablaProductosDetalle,
   useConfirmacion,
 } from '../../components/ui'
-import type { ColumnaDetalleProducto, DataTableColumn } from '../../components/ui'
+import type { ColumnaDetalleProducto, ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
 import { almacenApi, recepcionApi } from '../inventario'
-import type { AlmacenResponse, DocumentoInventarioResponse, LineaDocumentoResponse } from '../inventario'
+import type {
+  AlmacenResponse,
+  DocumentoInventarioResponse,
+  LineaDocumentoResponse,
+  ResumenDocumentos,
+} from '../inventario'
 import { compraApi } from './comprasApi'
 import type { CompraResponse } from './comprasApi'
 import { NuevaRecepcionModal } from './NuevaRecepcionModal'
@@ -45,17 +50,23 @@ export function RecepcionesPage() {
 
   const { confirmar, dialogo } = useConfirmacion()
 
-  const cargar = useCallback(async () => {
+  /*
+   * Las recepciones se acumulan con la operacion: la tabla pide su pagina.
+   *
+   * Las compras NO se paginan: alimentan el selector de "nueva recepcion", que
+   * tiene que ver todas las que esperan mercaderia aunque esten lejos en el
+   * listado. Se piden ya filtradas — son pocas por definicion.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenDocumentos | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      const [recs, comps, alms] = await Promise.all([
-        recepcionApi.getAll(),
-        compraApi.getAll(),
-        almacenApi.getAll(),
-      ])
-      setRecepciones(recs)
-      setCompras(comps)
-      setAlmacenes(alms)
+      const pagina = await recepcionApi.listar(q)
+      setRecepciones(pagina.items)
+      setTotalRegistros(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las recepciones.')
@@ -64,9 +75,28 @@ export function RecepcionesPage() {
     }
   }, [])
 
+  const cargarApoyo = useCallback(async () => {
+    try {
+      const [res, abiertas, alms] = await Promise.all([
+        recepcionApi.resumen(),
+        compraApi.abiertas(),
+        almacenApi.getAll(),
+      ])
+      setResumen(res)
+      setCompras(abiertas)
+      setAlmacenes(alms)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarApoyo()])
+  }, [consulta, cargarPagina, cargarApoyo])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarApoyo()
+  }, [cargarApoyo])
 
   useRealtime(['recepciones', 'compras'], cargar)
 
@@ -130,16 +160,16 @@ export function RecepcionesPage() {
       }
       stats={
         <>
-          <StatCard label="Recepciones" value={String(recepciones.length)} icon={<PackageCheck size={18} />} />
+          <StatCard label="Recepciones" value={String(resumen?.total ?? 0)} icon={<PackageCheck size={18} />} />
           <StatCard
             label="Confirmadas"
-            value={String(recepciones.filter((r) => r.estado === 'CONFIRMADO').length)}
+            value={String(resumen?.confirmados ?? 0)}
             icon={<PackageCheck size={18} />}
             tono="success"
           />
           <StatCard
             label="Anuladas"
-            value={String(recepciones.filter((r) => r.estado === 'ANULADO').length)}
+            value={String(resumen?.anulados ?? 0)}
             icon={<Undo2 size={18} />}
             tono="neutral"
           />
@@ -147,6 +177,14 @@ export function RecepcionesPage() {
       }
       columns={columns}
       rows={recepciones}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={PackageCheck}
       searchPlaceholder="Buscar por número, compra, almacén..."
       empty={cargando ? 'Cargando recepciones...' : 'Todavía no hay recepciones registradas.'}

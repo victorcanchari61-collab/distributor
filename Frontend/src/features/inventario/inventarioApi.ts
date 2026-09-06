@@ -1,4 +1,6 @@
 import { api } from '../../lib/apiClient'
+import type { ConsultaTabla } from '../../components/ui'
+import type { PaginaResponse } from '../../lib/paginacion'
 
 // --- Almacenes ---
 
@@ -147,7 +149,23 @@ export interface KardexResponse {
   anulado: boolean
 }
 
+/** Contadores del kardex completo del almacén, no de la página visible. */
+export interface ResumenKardex {
+  entradas: number
+  salidas: number
+}
+
 export const kardexApi = {
+  /** Una página del kardex, con el saldo acumulado ya resuelto en el servidor. */
+  listar: (consulta: ConsultaTabla, almacenId?: number) =>
+    api.post<PaginaResponse<KardexResponse>>(
+      `/inventario/kardex/listar${almacenId ? `?almacenId=${almacenId}` : ''}`,
+      consulta,
+    ),
+
+  resumen: (almacenId?: number) =>
+    api.get<ResumenKardex>(`/inventario/kardex/resumen${almacenId ? `?almacenId=${almacenId}` : ''}`),
+
   getAll: (filtros: {
     productoId?: number
     almacenId?: number
@@ -230,7 +248,26 @@ export interface DocumentoInventarioResponse {
   detalle: LineaDocumentoResponse[]
 }
 
+/** Contadores de una familia completa de documentos, no de la página visible. */
+export interface ResumenDocumentos {
+  total: number
+  confirmados: number
+  anulados: number
+}
+
+/** Una página de documentos de una familia, resuelta en el servidor. */
+const listarDocumentos = (familia: string) => (consulta: ConsultaTabla) =>
+  api.post<PaginaResponse<DocumentoInventarioResponse>>(
+    `/inventario/documentos/listar?familia=${familia}`,
+    consulta,
+  )
+
+const resumenDocumentos = (familia: string) => () =>
+  api.get<ResumenDocumentos>(`/inventario/documentos/resumen?familia=${familia}`)
+
 export const ajusteApi = {
+  listar: listarDocumentos('AJUSTE'),
+  resumen: resumenDocumentos('AJUSTE'),
   getAll: () => api.get<DocumentoInventarioResponse[]>('/inventario/ajustes'),
   getById: (id: number) => api.get<DocumentoInventarioResponse>(`/inventario/ajustes/${id}`),
   create: (body: CrearAjusteRequest) =>
@@ -257,6 +294,8 @@ export interface CrearTransferenciaRequest {
 }
 
 export const transferenciaApi = {
+  listar: listarDocumentos('TRANSFERENCIA'),
+  resumen: resumenDocumentos('TRANSFERENCIA'),
   getAll: () => api.get<DocumentoInventarioResponse[]>('/inventario/transferencias'),
   getById: (id: number) => api.get<DocumentoInventarioResponse>(`/inventario/transferencias/${id}`),
   create: (body: CrearTransferenciaRequest) =>
@@ -325,7 +364,19 @@ export interface LineaDevolucionPrestamoRequest {
   cantidad: number
 }
 
+/** Contadores del listado completo de préstamos. */
+export interface ResumenPrestamos {
+  total: number
+  pendientes: number
+  devueltos: number
+}
+
 export const prestamoApi = {
+  resumen: () => api.get<ResumenPrestamos>('/inventario/prestamos/resumen'),
+
+  /** Una página del listado, resuelta en el servidor. */
+  listar: (consulta: ConsultaTabla) =>
+    api.post<PaginaResponse<PrestamoResponse>>('/inventario/prestamos/listar', consulta),
   getAll: () => api.get<PrestamoResponse[]>('/inventario/prestamos'),
   getById: (id: number) => api.get<PrestamoResponse>(`/inventario/prestamos/${id}`),
   create: (body: CrearPrestamoRequest) =>
@@ -356,6 +407,8 @@ export interface CrearRecepcionRequest {
 }
 
 export const recepcionApi = {
+  listar: listarDocumentos('RECEPCION'),
+  resumen: resumenDocumentos('RECEPCION'),
   getAll: () => api.get<DocumentoInventarioResponse[]>('/inventario/recepciones'),
   getById: (id: number) => api.get<DocumentoInventarioResponse>(`/inventario/recepciones/${id}`),
   create: (body: CrearRecepcionRequest) =>

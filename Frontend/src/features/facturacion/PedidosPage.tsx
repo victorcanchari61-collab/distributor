@@ -24,6 +24,7 @@ import {
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
+  ConsultaTabla,
   DataTableColumn,
   LineaProductoNueva,
   OpcionBuscador,
@@ -38,7 +39,7 @@ import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { pedidoApi } from './ventasApi'
 import type { AuditoriaResponse } from '../config'
-import type { CrearPedidoRequest, LineaVentaResponse, PedidoResponse } from './ventasApi'
+import type { CrearPedidoRequest, LineaVentaResponse, PedidoResponse, ResumenPedidos } from './ventasApi'
 
 function estadoPedidoBadge(estado: PedidoResponse['estado']) {
   const tono = estado === 'CONFIRMADO' ? 'success' : estado === 'ANULADO' ? 'danger' : 'warning'
@@ -90,21 +91,21 @@ export function PedidosPage() {
 
   const { confirmar, dialogo } = useConfirmacion()
 
-  const cargar = useCallback(async () => {
+  /*
+   * Los pedidos se acumulan con la operacion, asi que la tabla pide solo la
+   * pagina que muestra. Los contadores de arriba vienen del resumen: contarlos
+   * sobre las filas cargadas diria "20 pedidos".
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenPedidos | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      const [peds, clis, prods, alms, lis] = await Promise.all([
-        pedidoApi.getAll(),
-        clienteApi.getAll(),
-        productoApi.getAll(),
-        almacenApi.getAll(),
-        listaPrecioApi.getAll(),
-      ])
-      setPedidos(peds)
-      setClientes(clis.filter((c) => c.activo))
-      setProductos(prods.filter((p) => p.activo && p.controlaStock))
-      setAlmacenes(alms.filter((a) => a.activo))
-      setListas(lis.filter((l) => l.activo))
+      const pagina = await pedidoApi.listar(q)
+      setPedidos(pagina.items)
+      setTotalRegistros(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los pedidos.')
@@ -113,9 +114,33 @@ export function PedidosPage() {
     }
   }, [])
 
+  /** Catalogos del formulario y contadores: no cambian al paginar. */
+  const cargarApoyo = useCallback(async () => {
+    try {
+      const [res, clis, prods, alms, lis] = await Promise.all([
+        pedidoApi.resumen(),
+        clienteApi.getAll(),
+        productoApi.getAll(),
+        almacenApi.getAll(),
+        listaPrecioApi.getAll(),
+      ])
+      setResumen(res)
+      setClientes(clis.filter((c) => c.activo))
+      setProductos(prods.filter((p) => p.activo && p.controlaStock))
+      setAlmacenes(alms.filter((a) => a.activo))
+      setListas(lis.filter((l) => l.activo))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarApoyo()])
+  }, [consulta, cargarPagina, cargarApoyo])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarApoyo()
+  }, [cargarApoyo])
 
   useRealtime(['pedidos', 'notasventa', 'stock'], cargar)
 
@@ -376,11 +401,22 @@ export function PedidosPage() {
   const columns: DataTableColumn<PedidoResponse>[] = [
     { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
     { key: 'cliente', label: 'Cliente' },
-    { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
+    {
+      key: 'fecha',
+      label: 'Fecha',
+      filterType: 'date',
+      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+    },
     { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
     {
       key: 'estado',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'PENDIENTE', label: 'Pendiente' },
+        { value: 'CONFIRMADO', label: 'Confirmado' },
+        { value: 'ANULADO', label: 'Anulado' },
+      ],
       render: (row) => estadoPedidoBadge(row.estado),
     },
   ]
@@ -550,16 +586,16 @@ export function PedidosPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Pedidos" value={String(pedidos.length)} icon={<ClipboardList size={18} />} />
+          <StatCard label="Pedidos" value={String(resumen?.total ?? 0)} icon={<ClipboardList size={18} />} />
           <StatCard
             label="Pendientes"
-            value={String(pedidos.filter((p) => p.estado === 'PENDIENTE').length)}
+            value={String(resumen?.pendientes ?? 0)}
             icon={<ClipboardList size={18} />}
             tono="warning"
           />
           <StatCard
             label="Confirmados"
-            value={String(pedidos.filter((p) => p.estado === 'CONFIRMADO').length)}
+            value={String(resumen?.confirmados ?? 0)}
             icon={<CheckCircle2 size={18} />}
             tono="success"
           />
@@ -570,6 +606,14 @@ export function PedidosPage() {
       // ancho por defecto de Acciones se queda corto y fuerza scroll horizontal.
       actionsWidth={175}
       rows={pedidos}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={ClipboardList}
       searchPlaceholder="Buscar por número, cliente..."
       empty={cargando ? 'Cargando pedidos...' : 'Todavía no hay pedidos registrados.'}

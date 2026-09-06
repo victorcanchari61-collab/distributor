@@ -32,6 +32,15 @@ public class PedidoController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id) => Ok(await _ventas.GetPedidoAsync(id));
 
+    /// <summary>Una página del listado, con búsqueda, filtros y orden resueltos en la base.</summary>
+    [HttpPost("listar")]
+    public async Task<IActionResult> Listar([FromBody] ConsultaTablaRequest consulta) =>
+        Ok(await _ventas.ListarPedidosAsync(consulta));
+
+    /// <summary>Contadores del listado completo.</summary>
+    [HttpGet("resumen")]
+    public async Task<IActionResult> Resumen() => Ok(await _ventas.GetResumenPedidosAsync());
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CrearPedidoRequest request)
     {
@@ -86,6 +95,15 @@ public class NotaVentaController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id) => Ok(await _ventas.GetNotaVentaAsync(id));
 
+    /// <summary>Una página del listado, con búsqueda, filtros y orden resueltos en la base.</summary>
+    [HttpPost("listar")]
+    public async Task<IActionResult> Listar([FromBody] ConsultaTablaRequest consulta) =>
+        Ok(await _ventas.ListarNotasVentaAsync(consulta));
+
+    /// <summary>Contadores del listado completo.</summary>
+    [HttpGet("resumen")]
+    public async Task<IActionResult> Resumen() => Ok(await _ventas.GetResumenNotasVentaAsync());
+
     /// <summary>Notas de venta a crédito con saldo pendiente: base de "Cuentas por cobrar".</summary>
     [HttpGet("cuentasporcobrar")]
     public async Task<IActionResult> CuentasPorCobrar() => Ok(await _ventas.GetCuentasPorCobrarAsync());
@@ -129,6 +147,20 @@ public class NotaVentaController : ControllerBase
     [HttpGet("miscobros")]
     public async Task<IActionResult> MisCobros([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
         Ok(await _ventas.GetMisCobrosAsync(UsuarioId, desde, hasta));
+
+    /// <summary>Una página de los cobros del usuario que hizo login.</summary>
+    [HttpPost("miscobros/listar")]
+    public async Task<IActionResult> ListarMisCobros(
+        [FromBody] ConsultaTablaRequest consulta,
+        [FromQuery] DateTime? desde,
+        [FromQuery] DateTime? hasta) =>
+        Ok(await _ventas.ListarMisCobrosAsync(consulta, UsuarioId, desde, hasta));
+
+    /// <summary>Totales de esos cobros, sobre todo el rango.</summary>
+    [HttpGet("miscobros/resumen")]
+    public async Task<IActionResult> ResumenMisCobros(
+        [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
+        Ok(await _ventas.GetResumenCobrosAsync(UsuarioId, desde, hasta));
 
     /// <summary>Qué cambió en esta nota de venta: sobre todo anulaciones y movimientos de pago.</summary>
     [HttpGet("{id:int}/historial")]

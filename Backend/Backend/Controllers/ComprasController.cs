@@ -32,6 +32,15 @@ public class OrdenCompraController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id) => Ok(await _compras.GetOrdenAsync(id));
 
+    /// <summary>Una página del listado, con búsqueda, filtros y orden resueltos en la base.</summary>
+    [HttpPost("listar")]
+    public async Task<IActionResult> Listar([FromBody] ConsultaTablaRequest consulta) =>
+        Ok(await _compras.ListarOrdenesAsync(consulta));
+
+    /// <summary>Contadores del listado completo.</summary>
+    [HttpGet("resumen")]
+    public async Task<IActionResult> Resumen() => Ok(await _compras.GetResumenOrdenesAsync());
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CrearOrdenCompraRequest request)
     {
@@ -80,6 +89,19 @@ public class CompraController : ControllerBase
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id) => Ok(await _compras.GetCompraAsync(id));
+
+    /// <summary>Una página del listado, con búsqueda, filtros y orden resueltos en la base.</summary>
+    [HttpPost("listar")]
+    public async Task<IActionResult> Listar([FromBody] ConsultaTablaRequest consulta) =>
+        Ok(await _compras.ListarComprasAsync(consulta));
+
+    /// <summary>Contadores del listado completo.</summary>
+    [HttpGet("resumen")]
+    public async Task<IActionResult> Resumen() => Ok(await _compras.GetResumenComprasAsync());
+
+    /// <summary>Las compras que todavía esperan mercadería: alimenta el modal de recepción.</summary>
+    [HttpGet("abiertas")]
+    public async Task<IActionResult> Abiertas() => Ok(await _compras.GetComprasAbiertasAsync());
 
     /// <summary>Compras a crédito con saldo pendiente: base de "Cuentas por pagar".</summary>
     [HttpGet("cuentasporpagar")]
