@@ -44,6 +44,7 @@ class AppCampoBusqueda<T> extends StatefulWidget {
     this.error,
     this.habilitado = true,
     this.maximoSugerencias = 8,
+    this.onBusquedaAmpliada,
   });
 
   final String etiqueta;
@@ -69,6 +70,14 @@ class AppCampoBusqueda<T> extends StatefulWidget {
   /// Cuántas coincidencias caen bajo el campo. Más no caben en el teclado
   /// abierto, y a partir de ahí lo que hace falta es afinar la búsqueda.
   final int maximoSugerencias;
+
+  /// Qué hace la lupa, cuando la lista genérica no alcanza.
+  ///
+  /// Los productos abren la hoja de selección múltiple —con su unidad, su
+  /// cantidad y su precio por fila— en vez de la lista de elegir uno: cargar
+  /// diez líneas de un pedido de una en una es lo que hace inservible un
+  /// formulario en el móvil.
+  final Future<void> Function()? onBusquedaAmpliada;
 
   @override
   State<AppCampoBusqueda<T>> createState() => _AppCampoBusquedaState<T>();
@@ -101,11 +110,12 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
     super.didUpdateWidget(viejo);
 
     // El formulario puede cambiar la selección por su cuenta — al elegir desde
-    // la hoja ampliada, por ejemplo. Si no se reflejara aquí, el campo seguiría
-    // mostrando lo anterior.
-    if (widget.textoElegido != viejo.textoElegido && widget.textoElegido != null) {
-      _controlador.text = widget.textoElegido!;
-      _resuelto = true;
+    // la hoja ampliada, o al vaciarla después de agregar la línea. Si no se
+    // reflejara aquí, el campo seguiría mostrando lo anterior: el producto que
+    // ya se cargó al documento se quedaba escrito como si siguiera pendiente.
+    if (widget.textoElegido != viejo.textoElegido) {
+      _controlador.text = widget.textoElegido ?? '';
+      _resuelto = widget.textoElegido != null;
       _texto = '';
     }
   }
@@ -257,6 +267,11 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
 
   Future<void> _abrirHoja(BuildContext context) async {
     _foco.unfocus();
+
+    if (widget.onBusquedaAmpliada != null) {
+      await widget.onBusquedaAmpliada!();
+      return;
+    }
 
     final elegido = await showModalBottomSheet<T>(
       context: context,

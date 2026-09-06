@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
-import '../../../compartido/widgets/app_buscador_productos.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_panel_producto.dart';
 import '../../../compartido/widgets/app_campo_cliente.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
@@ -181,44 +181,22 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
     }
   }
 
-  Future<void> _agregarLinea() async {
-    final productos = ref.read(productosProvider).valueOrNull ?? const <Producto>[];
-    final activos = productos.where((p) => p.activo && p.controlaStock).toList();
-
-    // Se eligen VARIOS de una vez, con su unidad, cantidad e importe: antes
-    // era un producto por hoja y cargar un documento largo se hacia eterno.
-    // El stock que se muestra es el del almacen desde donde se despacha (por
-    // defecto el principal), no el total de la empresa: prometerle a un
-    // cliente algo que esta en otro deposito es prometer lo que no hay.
-    final stock = await ref.read(stockDisponibleProvider(_almacenId).future);
-    if (!mounted) return;
-
-    final elegidos = await mostrarBuscadorProductos(
-      context: context,
-      productos: activos,
-      paraVenta: true,
-      stock: stock,
-    );
-    if (elegidos == null || elegidos.isEmpty) return;
-
+  /// Agrega las lineas elegidas, vengan del panel o de la hoja multiple.
+  void _agregarLineas(List<LineaElegida> elegidas) {
     setState(() {
-      for (final e in elegidos) {
-        Presentacion? presentacion;
-        for (final pr in e.producto.presentaciones) {
-          if (pr.id == e.presentacionId) presentacion = pr;
-        }
-
+      for (final e in elegidas) {
         _lineas.add(
           _FilaLinea(
             productoId: e.producto.id,
             producto: e.producto.nombre,
             presentacionId: e.presentacionId == 0 ? null : e.presentacionId,
-            presentacion: presentacion?.nombre ?? e.producto.unidadBase,
+            presentacion: e.presentacion,
             cantidad: e.cantidad,
             precioUnitario: e.importe,
           ),
         );
       }
+      _errorLineas = null;
     });
   }
 
@@ -585,6 +563,81 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
           ),
           const SizedBox(height: Dimen.espacio4),
 
+          AppCampo(
+            controlador: _observacion,
+            etiqueta: 'Observación',
+            icono: Icons.notes_outlined,
+            opcional: true,
+            maxLargo: 250,
+            habilitado: !_guardando,
+          ),
+          const SizedBox(height: Dimen.espacio5),
+
+          Row(
+            children: [
+              const Text(
+                'Productos',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
+              ),
+              const Spacer(),
+              Text(
+                'Total: S/ ${_total.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colores.marca),
+              ),
+            ],
+          ),
+          if (_errorLineas != null) ...[
+            const SizedBox(height: Dimen.espacio1),
+            Text(_errorLineas!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
+          ],
+          const SizedBox(height: Dimen.espacio3),
+
+          for (final fila in _lineas) ...[
+            _TarjetaLineaVenta(
+              fila: fila,
+              onEditar: () => _editarLinea(fila),
+              onEliminar: () => setState(() => _lineas.remove(fila)),
+            ),
+            const SizedBox(height: Dimen.espacio2),
+          ],
+          if (_lineas.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: Dimen.espacio3),
+              child: Text(
+                'Todavía no agregaste productos.',
+                style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
+              ),
+            ),
+          const SizedBox(height: Dimen.espacio2),
+
+          /*
+           * El stock que se ofrece es el del almacen desde donde se despacha
+           * (por defecto el principal), no el total de la empresa: prometerle
+           * a un cliente algo que esta en otro deposito es prometer lo que no
+           * hay.
+           */
+          AppPanelProducto(
+            productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
+                .where((p) => p.activo && p.controlaStock)
+                .toList(),
+            paraVenta: true,
+            stock: ref.watch(stockDisponibleProvider(_almacenId)).valueOrNull,
+            habilitado: !_guardando,
+            onAgregar: _agregarLineas,
+          ),
+          const SizedBox(height: Dimen.espacio5),
+
+          /*
+           * El pago va al final, despues de los productos: hasta que no hay
+           * lineas no se sabe cuanto se debe cobrar, y pedirlo antes obligaba a
+           * volver a subir para corregir el monto cada vez que se agregaba algo.
+           */
+          const Text(
+            'Pago',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
+          ),
+          const SizedBox(height: Dimen.espacio3),
+
           AppSelector<String>(
             valor: _formaPago,
             etiqueta: 'Forma de pago',
@@ -641,60 +694,6 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
               style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
             ),
           const SizedBox(height: Dimen.espacio4),
-
-          AppCampo(
-            controlador: _observacion,
-            etiqueta: 'Observación',
-            icono: Icons.notes_outlined,
-            opcional: true,
-            maxLargo: 250,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio5),
-
-          Row(
-            children: [
-              const Text(
-                'Productos',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
-              ),
-              const Spacer(),
-              Text(
-                'Total: S/ ${_total.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colores.marca),
-              ),
-            ],
-          ),
-          if (_errorLineas != null) ...[
-            const SizedBox(height: Dimen.espacio1),
-            Text(_errorLineas!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
-          ],
-          const SizedBox(height: Dimen.espacio3),
-
-          for (final fila in _lineas) ...[
-            _TarjetaLineaVenta(
-              fila: fila,
-              onEditar: () => _editarLinea(fila),
-              onEliminar: () => setState(() => _lineas.remove(fila)),
-            ),
-            const SizedBox(height: Dimen.espacio2),
-          ],
-          if (_lineas.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: Dimen.espacio3),
-              child: Text(
-                'Todavía no agregaste productos.',
-                style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
-              ),
-            ),
-          const SizedBox(height: Dimen.espacio2),
-
-          AppBoton(
-            texto: 'Agregar producto',
-            variante: BotonVariante.secundario,
-            icono: Icons.add,
-            onPressed: _guardando ? null : _agregarLinea,
-          ),
           const SizedBox(height: Dimen.espacio6),
 
           AppBoton(texto: 'Registrar venta', cargando: _guardando, onPressed: _guardar),

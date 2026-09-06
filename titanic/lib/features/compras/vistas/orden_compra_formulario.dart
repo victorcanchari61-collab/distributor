@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
-import '../../../compartido/widgets/app_buscador_productos.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_panel_producto.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_selector_buscable.dart';
 import '../../../core/red/excepciones.dart';
@@ -166,37 +166,22 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
     if (elegida != null) setState(() => _fechaEsperada = elegida);
   }
 
-  Future<void> _agregarLinea() async {
-    final productos = ref.read(productosProvider).valueOrNull ?? const <Producto>[];
-    final activos = productos.where((p) => p.activo && p.controlaStock).toList();
-
-    // Se eligen VARIOS de una vez, con su unidad, cantidad e importe: antes
-    // era un producto por hoja y cargar un documento largo se hacia eterno.
-    final elegidos = await mostrarBuscadorProductos(
-      context: context,
-      productos: activos,
-      paraVenta: false,
-    );
-    if (elegidos == null || elegidos.isEmpty) return;
-
+  /// Agrega las lineas elegidas, vengan del panel o de la hoja multiple.
+  void _agregarLineas(List<LineaElegida> elegidas) {
     setState(() {
-      for (final e in elegidos) {
-        Presentacion? presentacion;
-        for (final pr in e.producto.presentaciones) {
-          if (pr.id == e.presentacionId) presentacion = pr;
-        }
-
+      for (final e in elegidas) {
         _lineas.add(
           _FilaLinea(
             productoId: e.producto.id,
             producto: e.producto.nombre,
             presentacionId: e.presentacionId == 0 ? null : e.presentacionId,
-            presentacion: presentacion?.nombre ?? e.producto.unidadBase,
+            presentacion: e.presentacion,
             cantidad: e.cantidad,
             costoPresentacion: e.importe,
           ),
         );
       }
+      _errorLineas = null;
     });
   }
 
@@ -461,11 +446,13 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
             ),
           const SizedBox(height: Dimen.espacio2),
 
-          AppBoton(
-            texto: 'Agregar producto',
-            variante: BotonVariante.secundario,
-            icono: Icons.add,
-            onPressed: _guardando ? null : _agregarLinea,
+          AppPanelProducto(
+            productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
+                .where((p) => p.activo && p.controlaStock)
+                .toList(),
+            paraVenta: false,
+            habilitado: !_guardando,
+            onAgregar: _agregarLineas,
           ),
           const SizedBox(height: Dimen.espacio6),
 
