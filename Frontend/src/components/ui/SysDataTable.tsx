@@ -383,8 +383,14 @@ export function SysDataTable<T>({
   }, [perPage, search, columnSearch, filters, sort, ...(enServidor ? [] : [rows])])
 
   /*
-   * Lo que la tabla necesita del backend. Se manda con un respiro de 300ms
-   * para que escribir en el buscador no dispare una peticion por tecla.
+   * Lo que la tabla necesita del backend.
+   *
+   * Escribir espera 300ms, para no disparar una peticion por tecla. Todo lo
+   * demas — cambiar de pagina, ordenar, filtrar — sale al instante: son
+   * acciones de un clic, y hacerlas esperar da la sensacion de que el clic no
+   * registro. Con el retardo parejo pasaba justo eso: el usuario volvia a
+   * hacer clic, la pagina avanzaba dos veces y la peticion intermedia se
+   * cancelaba, asi que parecia que el listado se saltaba una pagina.
    *
    * `onConsulta` se guarda en una ref y NO entra en las dependencias: la vista
    * normalmente la pasa como funcion inline, que cambia en cada render — si
@@ -392,6 +398,9 @@ export function SysDataTable<T>({
    */
   const onConsultaRef = useRef(servidor?.onConsulta)
   onConsultaRef.current = servidor?.onConsulta
+
+  // Firma de lo que se escribe a mano, para distinguirlo de un clic.
+  const textoRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!enServidor) return
@@ -422,7 +431,12 @@ export function SysDataTable<T>({
         ],
       })
 
-    const id = setTimeout(pedir, 300)
+    // Solo se espera cuando lo que cambio fue texto tecleado.
+    const texto = `${search}|${JSON.stringify(columnSearch)}`
+    const tecleo = textoRef.current !== null && textoRef.current !== texto
+    textoRef.current = texto
+
+    const id = setTimeout(pedir, tecleo ? 300 : 0)
     return () => clearTimeout(id)
   }, [enServidor, page, perPage, search, columnSearch, filters, sort])
 
@@ -470,15 +484,39 @@ export function SysDataTable<T>({
     return cols
   }, [visible, widths, actions, actionsWidth])
 
+  /*
+   * Cerrojo de la paginacion por scroll.
+   *
+   * Un solo golpe de rueda no dispara UN evento de scroll sino varios, y
+   * mientras el contenedor sigue tocando el fondo todos cumplen la condicion
+   * de avanzar. Como el avance es `p => p + 1`, cada evento sumaba una pagina:
+   * bajar una vez saltaba de la 1 a la 3, y el siguiente golpe a la 5.
+   *
+   * El cerrojo deja pasar UN avance por llegada al fondo, y se libera solo
+   * cuando un scroll posterior muestra que ya no estamos abajo — cosa que la
+   * vuelta al tope de la pagina nueva garantiza.
+   */
+  const avanzandoRef = useRef(false)
+
   const onBodyScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget
     if (headRef.current) headRef.current.scrollLeft = el.scrollLeft
 
     // Sin desbordamiento vertical no se pagina: tope y fondo coincidirian.
-    if (el.scrollHeight <= el.clientHeight + 4) return
+    if (el.scrollHeight <= el.clientHeight + 4) {
+      avanzandoRef.current = false
+      return
+    }
 
-    const alFondo = el.scrollTop + el.clientHeight >= el.scrollHeight - 4
-    if (alFondo && page < pageCount) setPage((p) => Math.min(p + 1, pageCount))
+    if (el.scrollTop + el.clientHeight < el.scrollHeight - 4) {
+      avanzandoRef.current = false
+      return
+    }
+
+    if (avanzandoRef.current || page >= pageCount) return
+
+    avanzandoRef.current = true
+    setPage((p) => Math.min(p + 1, pageCount))
   }
 
   // Cada cambio de pagina empieza por la primera fila.
@@ -972,20 +1010,27 @@ export function SysDataTable<T>({
 
 /* ------------------------------- paginacion ------------------------------- */
 
-/** Numeros de pagina a mostrar, con elipsis cuando hay muchas. */
+/**
+ * Numeros de pagina a mostrar, con elipsis cuando hay muchas.
+ *
+ * Con muchas paginas SIEMPRE devuelve 7 casillas, aunque algunas sean "...".
+ * Que la cantidad cambiara al navegar corria los botones de lugar: el que
+ * estaba bajo el cursor pasaba a ser otro, y un segundo clic en el mismo
+ * punto caia en una pagina distinta de la que se veia.
+ */
 function pageNumbers(current: number, total: number): (number | string)[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
 
-  const pages: (number | string)[] = [1]
-  const start = Math.max(2, current - 1)
-  const end = Math.min(total - 1, current + 1)
+  // Cerca del principio: se ven las primeras y el salto al final.
+  if (current <= 4) return [1, 2, 3, 4, 5, '...', total]
 
-  if (start > 2) pages.push('...')
-  for (let i = start; i <= end; i++) pages.push(i)
-  if (end < total - 1) pages.push('...')
-  pages.push(total)
+  // Cerca del final: el salto va al principio.
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
+  }
 
-  return pages
+  // En el medio: la pagina actual con una vecina de cada lado.
+  return [1, '...', current - 1, current, current + 1, '...', total]
 }
 
 function PageButton({
