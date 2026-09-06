@@ -28,7 +28,10 @@ import type { DataTableFilter, FilterType } from './dataTableFilters'
  * styles/systems.css). Envuelve la tabla en un `data-sys="tms"` y cambia
  * entera de color; sin envolver hereda el azul del boton de login.
  *
- * Todo el trabajo (filtrar, ordenar, paginar) se hace en cliente sobre `rows`.
+ * Por defecto todo el trabajo (filtrar, ordenar, paginar) se hace en cliente
+ * sobre `rows`, que es lo que sirve para un listado chico. Un listado grande
+ * pasa `servidor`: ahí la tabla deja de recortar nada y solo avisa qué está
+ * pidiendo, para que la vista traiga esa página del backend.
  */
 
 /** Ancho fijo de la columna de acciones: no se redimensiona ni se reparte. */
@@ -50,9 +53,35 @@ export interface DataTableColumn<T> {
   render?: (row: T) => ReactNode
 }
 
+/** Lo que la tabla está pidiendo: el espejo de su estado, para mandarlo al backend. */
+export interface ConsultaTabla {
+  pagina: number
+  porPagina: number
+  buscar: string
+  /** Columna por la que ordena, o null si no hay orden elegido. */
+  orden: string | null
+  sentido: 'asc' | 'desc' | null
+  filtros: { columna: string; operador: string; valor: string; valorHasta?: string }[]
+}
+
+/**
+ * Modo servidor: la tabla no filtra ni pagina en memoria, solo avisa qué
+ * necesita. Se usa cuando el listado es grande y traerlo entero no tiene
+ * sentido.
+ */
+export interface SysDataTableServidor {
+  /** Cuántas filas hay en todo el listado ya filtrado, no en esta página. */
+  total: number
+  /** Se llama cada vez que cambia la búsqueda, un filtro, el orden o la página. */
+  onConsulta: (consulta: ConsultaTabla) => void
+  cargando?: boolean
+}
+
 export interface SysDataTableProps<T> {
   columns: DataTableColumn<T>[]
   rows: T[]
+  /** Si se pasa, la tabla trabaja contra el backend en vez de en memoria. */
+  servidor?: SysDataTableServidor
   /** Propiedad que identifica cada fila. */
   rowKey?: keyof T & string
   searchPlaceholder?: string
@@ -180,6 +209,7 @@ export function SysDataTable<T>({
   cardIcon: CardIcon,
   actions,
   actionsWidth = ACTIONS_WIDTH,
+  servidor,
   onRowClick,
   className,
   toolbar = true,
@@ -288,6 +318,11 @@ export function SysDataTable<T>({
     })
 
   const data = useMemo(() => {
+    // En modo servidor las filas ya vienen buscadas, filtradas, ordenadas y
+    // recortadas por el backend: volver a tocarlas acá filtraría la página
+    // contra sí misma y escondería resultados que sí existen.
+    if (servidor) return rows
+
     let result = rows
 
     // buscador general
@@ -323,16 +358,73 @@ export function SysDataTable<T>({
     }
 
     return result
-  }, [rows, search, columnSearch, filters, sort, visible, byKey])
+  }, [rows, search, columnSearch, filters, sort, visible, byKey, servidor])
+
+  const enServidor = servidor !== undefined
 
   // Cualquier cambio en el filtrado devuelve el listado a la primera pagina.
+  //
+  // `rows` entra en la lista solo en modo cliente: contra el servidor las
+  // filas cambian justamente PORQUE se pidio otra pagina, asi que volver a la
+  // primera dispararia otra peticion y se quedaria dando vueltas.
   useEffect(() => {
     setPage(1)
-  }, [perPage, search, columnSearch, filters, sort, rows])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perPage, search, columnSearch, filters, sort, ...(enServidor ? [] : [rows])])
 
-  const pageCount = Math.max(1, Math.ceil(data.length / perPage))
+  /*
+   * Lo que la tabla necesita del backend. Se manda con un respiro de 300ms
+   * para que escribir en el buscador no dispare una peticion por tecla.
+   *
+   * `onConsulta` se guarda en una ref y NO entra en las dependencias: la vista
+   * normalmente la pasa como funcion inline, que cambia en cada render — si
+   * estuviera en la lista, el efecto se repetiria sin parar.
+   */
+  const onConsultaRef = useRef(servidor?.onConsulta)
+  onConsultaRef.current = servidor?.onConsulta
+
+  useEffect(() => {
+    if (!enServidor) return
+
+    const pedir = () =>
+      onConsultaRef.current?.({
+        pagina: page,
+        porPagina: perPage,
+        buscar: search.trim(),
+        orden: sort.key,
+        sentido: sort.dir,
+        filtros: [
+          ...filters.map((f) => ({
+            columna: f.column,
+            operador: f.operator,
+            valor: f.value ?? '',
+            valorHasta: f.valueTo,
+          })),
+          // La busqueda por columna es un filtro mas, solo que escrito desde
+          // la cabecera en vez del panel de filtros.
+          ...Object.entries(columnSearch)
+            .filter(([, texto]) => texto?.trim())
+            .map(([columna, texto]) => ({
+              columna,
+              operador: 'contains',
+              valor: texto.trim(),
+            })),
+        ],
+      })
+
+    const id = setTimeout(pedir, 300)
+    return () => clearTimeout(id)
+  }, [enServidor, page, perPage, search, columnSearch, filters, sort])
+
+  // Contra el servidor el total lo dice el backend, y las filas que llegaron
+  // YA son la pagina: recortarlas otra vez dejaria la tabla vacia.
+  const total = enServidor ? servidor.total : data.length
+  const pageCount = Math.max(1, Math.ceil(total / perPage))
   const from = (page - 1) * perPage
-  const pageRows = useMemo(() => data.slice(from, from + perPage), [data, from, perPage])
+  const pageRows = useMemo(
+    () => (enServidor ? data : data.slice(from, from + perPage)),
+    [enServidor, data, from, perPage],
+  )
 
   const headRef = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -783,10 +875,12 @@ export function SysDataTable<T>({
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[12px] text-zinc-500">
         <div className="flex items-center gap-3">
           <span>
-            {data.length === 0
+            {total === 0
               ? 'Sin registros'
-              : `${from + 1}–${Math.min(from + perPage, data.length)} de ${data.length}`}
-            {data.length !== rows.length && ` (${rows.length} en total)`}
+              : `${from + 1}–${Math.min(from + perPage, total)} de ${total}`}
+            {/* En modo cliente se aclara sobre cuantas filas se filtro; contra
+                el servidor no aplica: `rows` es solo la pagina que llego. */}
+            {!enServidor && data.length !== rows.length && ` (${rows.length} en total)`}
           </span>
 
           <label className="flex items-center gap-1.5">

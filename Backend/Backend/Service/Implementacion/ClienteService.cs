@@ -45,6 +45,21 @@ public class ClienteService : IClienteService
             .Select(MapToResponse);
     }
 
+    public async Task<PaginaResponse<ClienteResponse>> ListarAsync(ConsultaTablaRequest consulta)
+    {
+        var (items, total) = await _repository.ListarAsync(consulta);
+
+        return new PaginaResponse<ClienteResponse>
+        {
+            Items = items.Select(MapToResponse).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura
+        };
+    }
+
+    public Task<ResumenClientesResponse> GetResumenAsync() => _repository.ResumenAsync();
+
     public async Task<ClienteResponse> GetByIdAsync(int id)
     {
         return MapToResponse(await GetOrThrowAsync(id));

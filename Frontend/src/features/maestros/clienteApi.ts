@@ -1,5 +1,5 @@
 import { api } from '../../lib/apiClient'
-import type { ResultadoImportacion } from '../../components/ui'
+import type { ConsultaTabla, ResultadoImportacion } from '../../components/ui'
 
 export interface ClienteResponse {
   id: number
@@ -52,8 +52,36 @@ export interface UpdateClienteRequest extends ClienteRequest {
   activo: boolean
 }
 
+/** Una página de un listado, con el total tras filtros para saber cuántas hay. */
+export interface PaginaResponse<T> {
+  items: T[]
+  total: number
+  pagina: number
+  porPagina: number
+}
+
+/** Contadores y valores de filtro del listado completo de clientes. */
+export interface ResumenClientes {
+  activos: number
+  desactivados: number
+  conRuta: number
+  rutas: number
+  direcciones: string[]
+  distritos: string[]
+  rutasNombres: string[]
+  mercados: string[]
+}
+
 export const clienteApi = {
+  /** Todos, sin paginar: para los buscadores de cliente de otras pantallas. */
   getAll: () => api.get<ClienteResponse[]>('/cliente'),
+
+  /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
+  listar: (consulta: ConsultaTabla) =>
+    api.post<PaginaResponse<ClienteResponse>>('/cliente/listar', consulta),
+
+  /** Contadores y opciones de filtro, calculados sobre todos los clientes. */
+  resumen: () => api.get<ResumenClientes>('/cliente/resumen'),
   create: (body: ClienteRequest) => api.post<ClienteResponse>('/cliente', body),
   update: (id: number, body: UpdateClienteRequest) =>
     api.put<ClienteResponse>(`/cliente/${id}`, body),

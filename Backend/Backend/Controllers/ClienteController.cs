@@ -17,10 +17,32 @@ public class ClienteController : ControllerBase
         _clienteService = clienteService;
     }
 
+    /// <summary>
+    /// Todos, sin paginar. Lo usan los buscadores de cliente de otras
+    /// pantallas; el listado de Clientes usa <see cref="Listar"/>.
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         return Ok(await _clienteService.GetAllAsync());
+    }
+
+    /// <summary>
+    /// Una página del listado. Va por POST y no por GET porque los filtros son
+    /// una lista de objetos: armarlos en la query string obligaría a inventar
+    /// una codificación propia y a mantenerla en los dos lados.
+    /// </summary>
+    [HttpPost("listar")]
+    public async Task<IActionResult> Listar([FromBody] ConsultaTablaRequest consulta)
+    {
+        return Ok(await _clienteService.ListarAsync(consulta));
+    }
+
+    /// <summary>Contadores y valores de filtro del listado completo.</summary>
+    [HttpGet("resumen")]
+    public async Task<IActionResult> Resumen()
+    {
+        return Ok(await _clienteService.GetResumenAsync());
     }
 
     [HttpGet("{id:int}")]

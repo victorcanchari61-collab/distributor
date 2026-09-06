@@ -25,7 +25,7 @@ import {
   StatCard,
   useConfirmacion,
 } from '../../components/ui'
-import type { DataTableColumn, TipoDocumento } from '../../components/ui'
+import type { ConsultaTabla, DataTableColumn, TipoDocumento } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { valorDe } from '../../lib/excel'
@@ -35,7 +35,7 @@ import type { DepartamentoResponse, DistritoResponse, ProvinciaResponse } from '
 import { mercadoApi, rutaApi } from '../tms'
 import type { MercadoResponse, RutaResponse } from '../tms'
 import { clienteApi } from './clienteApi'
-import type { ClienteRequest, ClienteResponse } from './clienteApi'
+import type { ClienteRequest, ClienteResponse, ResumenClientes } from './clienteApi'
 
 const VACIO: ClienteRequest = {
   documento: '',
@@ -86,24 +86,26 @@ export function ClientesPage() {
 
   const { confirmar, dialogo } = useConfirmacion()
 
-  const cargar = useCallback(async () => {
+  /*
+   * El listado NO se trae entero: la tabla dice qué página necesita y solo esa
+   * se pide. Con ~2000 clientes, traerlos todos en cada carga era el grueso
+   * del tiempo de la pantalla.
+   *
+   * Los contadores de arriba y las opciones de los filtros no salen de las
+   * filas cargadas (serían las de la página visible, no las del listado), sino
+   * de `resumen`, que el backend calcula con conteos.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [total, setTotal] = useState(0)
+  const [resumen, setResumen] = useState<ResumenClientes | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     setError('')
     try {
-      const [cli, merc, rts, deps, provs, dists] = await Promise.all([
-        clienteApi.getAll(),
-        mercadoApi.getAll(),
-        rutaApi.getAll(),
-        ubigeoApi.departamentos(),
-        ubigeoApi.provincias(),
-        ubigeoApi.distritos(),
-      ])
-      setClientes(cli)
-      setMercados(merc)
-      setRutas(rts)
-      setDepartamentos(deps)
-      setProvincias(provs)
-      setDistritos(dists)
+      const pagina = await clienteApi.listar(q)
+      setClientes(pagina.items)
+      setTotal(pagina.total)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los clientes.')
     } finally {
@@ -111,9 +113,36 @@ export function ClientesPage() {
     }
   }, [])
 
+  /** Todo lo que no cambia al paginar: catálogos del formulario y el resumen. */
+  const cargarApoyo = useCallback(async () => {
+    try {
+      const [res, merc, rts, deps, provs, dists] = await Promise.all([
+        clienteApi.resumen(),
+        mercadoApi.getAll(),
+        rutaApi.getAll(),
+        ubigeoApi.departamentos(),
+        ubigeoApi.provincias(),
+        ubigeoApi.distritos(),
+      ])
+      setResumen(res)
+      setMercados(merc)
+      setRutas(rts)
+      setDepartamentos(deps)
+      setProvincias(provs)
+      setDistritos(dists)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
+    }
+  }, [])
+
+  /** Tras crear, editar o borrar: se recarga la página actual y los contadores. */
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarApoyo()])
+  }, [consulta, cargarPagina, cargarApoyo])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarApoyo()
+  }, [cargarApoyo])
 
   useRealtime(['clientes', 'mercados', 'rutas'], cargar)
 
@@ -295,18 +324,17 @@ export function ClientesPage() {
       },
     })
 
-  // El listado trae activos e inactivos: los contadores tienen que separarlos.
-  const activos = clientes.filter((c) => c.activo)
-  const desactivados = clientes.length - activos.length
-  const conRuta = activos.filter((c) => c.ruta).length
-  const rutasDistintas = new Set(activos.map((c) => c.ruta).filter(Boolean)).size
+  // Contadores del listado completo. Vienen del backend porque en pantalla
+  // solo hay una página: contarlos sobre `clientes` daría "30 activos".
+  const activos = resumen?.activos ?? 0
+  const desactivados = resumen?.desactivados ?? 0
+  const conRuta = resumen?.conRuta ?? 0
+  const rutasDistintas = resumen?.rutas ?? 0
 
   // Opciones del filtro "select" de una columna libre: los valores que de
-  // verdad existen en los clientes cargados, sin repetir.
-  const opcionesDistintas = (valores: (string | null | undefined)[]) =>
-    [...new Set(valores.filter((v): v is string => Boolean(v?.trim())))]
-      .sort((a, b) => a.localeCompare(b, 'es'))
-      .map((v) => ({ value: v, label: v }))
+  // verdad existen en TODOS los clientes, no solo en la página cargada.
+  const opcionesDistintas = (valores: string[] | undefined) =>
+    (valores ?? []).map((v) => ({ value: v, label: v }))
 
   const columns: DataTableColumn<ClienteResponse>[] = [
     {
@@ -333,13 +361,13 @@ export function ClientesPage() {
       key: 'direccion',
       label: 'Dirección',
       filterType: 'select',
-      filterOptions: opcionesDistintas(clientes.map((c) => c.direccion)),
+      filterOptions: opcionesDistintas(resumen?.direcciones),
     },
     {
       key: 'distrito',
       label: 'Distrito',
       filterType: 'select',
-      filterOptions: opcionesDistintas(clientes.map((c) => c.distrito)),
+      filterOptions: opcionesDistintas(resumen?.distritos),
     },
     { key: 'telefono', label: 'Teléfono' },
     {
@@ -354,14 +382,14 @@ export function ClientesPage() {
       label: 'Ruta',
       align: 'right',
       filterType: 'select',
-      filterOptions: opcionesDistintas(clientes.map((c) => c.ruta)),
+      filterOptions: opcionesDistintas(resumen?.rutasNombres),
     },
     {
       key: 'mercado',
       label: 'Mercado',
       align: 'right',
       filterType: 'select',
-      filterOptions: opcionesDistintas(clientes.map((c) => c.mercado)),
+      filterOptions: opcionesDistintas(resumen?.mercados),
     },
     {
       key: 'fechaCreacion',
@@ -406,7 +434,7 @@ export function ClientesPage() {
           <>
             <StatCard
               label="Clientes activos"
-              value={String(activos.length)}
+              value={String(activos)}
               icon={<Contact size={18} />}
             />
             <StatCard
@@ -421,7 +449,7 @@ export function ClientesPage() {
               value={String(conRuta)}
               icon={<Route size={18} />}
               tono="success"
-              hint={`${activos.length - conRuta} sin ruta`}
+              hint={`${activos - conRuta} sin ruta`}
             />
             <StatCard
               label="Rutas"
@@ -434,6 +462,16 @@ export function ClientesPage() {
         }
         columns={columns}
         rows={clientes}
+        // Con ~2000 clientes la tabla pide solo la página que muestra: la
+        // búsqueda, los filtros y el orden se resuelven en la base.
+        servidor={{
+          total,
+          cargando,
+          onConsulta: (q) => {
+            setConsulta(q)
+            void cargarPagina(q)
+          },
+        }}
         cardIcon={Contact}
         searchPlaceholder="Buscar por nombre, documento, mercado..."
         empty={cargando ? 'Cargando clientes...' : 'Todavía no hay clientes registrados.'}
