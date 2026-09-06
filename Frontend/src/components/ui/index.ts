@@ -15,13 +15,8 @@ export { cn } from './cn'
 export { ModuleIcon } from './ModuleIcon'
 export type { ModuleIconKey, ModuleIconProps } from './ModuleIcon'
 export { SysDataTable } from './SysDataTable'
-export type {
-  SysDataTableProps,
-  DataTableColumn,
-  DataTableFilter,
-  OperatorId,
-  FilterType,
-} from './SysDataTable'
+export type { SysDataTableProps, DataTableColumn } from './SysDataTable'
+export type { DataTableFilter, OperatorId, FilterType } from './dataTableFilters'
 export { BuscadorCampo } from './BuscadorCampo'
 export type { BuscadorCampoProps, OpcionBuscador } from './BuscadorCampo'
 export { BuscadorModal } from './BuscadorModal'

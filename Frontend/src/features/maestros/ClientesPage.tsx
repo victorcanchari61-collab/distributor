@@ -238,6 +238,13 @@ export function ClientesPage() {
   const conRuta = activos.filter((c) => c.ruta).length
   const rutas = new Set(activos.map((c) => c.ruta).filter(Boolean)).size
 
+  // Opciones del filtro "select" de una columna libre: los valores que de
+  // verdad existen en los clientes cargados, sin repetir.
+  const opcionesDistintas = (valores: (string | null | undefined)[]) =>
+    [...new Set(valores.filter((v): v is string => Boolean(v?.trim())))]
+      .sort((a, b) => a.localeCompare(b, 'es'))
+      .map((v) => ({ value: v, label: v }))
+
   const columns: DataTableColumn<ClienteResponse>[] = [
     {
       key: 'documento',
@@ -262,16 +269,40 @@ export function ClientesPage() {
       render: (row) => <Badge>{row.tipoDoc}</Badge>,
     },
     { key: 'nombre', label: 'Nombre' },
-    { key: 'direccion', label: 'Dirección' },
-    { key: 'distrito', label: 'Distrito' },
+    {
+      key: 'direccion',
+      label: 'Dirección',
+      filterType: 'select',
+      filterOptions: opcionesDistintas(clientes.map((c) => c.direccion)),
+    },
+    {
+      key: 'distrito',
+      label: 'Distrito',
+      filterType: 'select',
+      filterOptions: opcionesDistintas(clientes.map((c) => c.distrito)),
+    },
     { key: 'telefono', label: 'Teléfono' },
     {
       key: 'diaVisita',
       label: 'Día visita',
+      filterType: 'select',
+      filterOptions: DIAS.map((d) => ({ value: d, label: d })),
       render: (row) => (row.diaVisita ? <Badge tone="sys">{row.diaVisita}</Badge> : '—'),
     },
-    { key: 'ruta', label: 'Ruta', align: 'right' },
-    { key: 'mercado', label: 'Mercado', align: 'right' },
+    {
+      key: 'ruta',
+      label: 'Ruta',
+      align: 'right',
+      filterType: 'select',
+      filterOptions: opcionesDistintas(clientes.map((c) => c.ruta)),
+    },
+    {
+      key: 'mercado',
+      label: 'Mercado',
+      align: 'right',
+      filterType: 'select',
+      filterOptions: opcionesDistintas(clientes.map((c) => c.mercado)),
+    },
     {
       key: 'fechaCreacion',
       label: 'Fecha de registro',

@@ -10,17 +10,15 @@ import {
   ChevronsRight,
   ChevronsUpDown,
   Eye,
-  Filter,
   GripVertical,
-  Plus,
-  RotateCcw,
   Search,
   X,
 } from 'lucide-react'
 import { cn } from './cn'
-import { Modal } from './Modal'
-import { Button } from './Button'
-import { DateRangePicker } from './DateRangePicker'
+import { useDismiss } from './useDismiss'
+import { FiltersButton } from './FiltersButton'
+import { describeFilter } from './dataTableFilters'
+import type { DataTableFilter, FilterType } from './dataTableFilters'
 
 /**
  * Tabla de listado con columnas movibles y ocultables, orden y busqueda por
@@ -36,29 +34,6 @@ import { DateRangePicker } from './DateRangePicker'
 /** Ancho fijo de la columna de acciones: no se redimensiona ni se reparte. */
 const ACTIONS_WIDTH = 140
 
-const OPERATORS = [
-  { id: 'contains', label: 'contiene' },
-  { id: 'equals', label: 'es igual a' },
-  { id: 'between', label: 'entre' },
-] as const
-
-export type OperatorId = (typeof OPERATORS)[number]['id']
-
-/**
- * Cómo se arma el filtro de una columna en el panel de "Filtros":
- *
- *   'text' (por defecto): los 5 operadores de siempre + un input libre.
- *   'select': un unico operador ("es igual a") con un <select> de
- *      `filterOptions`, para columnas de estado/categoria/tipo — no tiene
- *      sentido "contiene" ni "mayor que" sobre un enum.
- *   'date': un rango Desde/Hasta con dos date-pickers — para que filtrar por
- *      fecha no dependa de escribir un timestamp a mano en "mayor que".
- *
- * En los tres casos `column.value(row)` sigue siendo la fuente del dato: para
- * 'date' debe devolver un epoch (`new Date(row.fecha).getTime()`).
- */
-export type FilterType = 'text' | 'select' | 'date'
-
 export interface DataTableColumn<T> {
   key: string
   label: string
@@ -73,15 +48,6 @@ export interface DataTableColumn<T> {
   /** Escape hatch: valor a usar para buscar, ordenar y filtrar. */
   value?: (row: T) => string | number
   render?: (row: T) => ReactNode
-}
-
-export interface DataTableFilter {
-  id: string
-  column: string
-  operator: OperatorId
-  value: string
-  /** Solo para operator: 'between' — el extremo superior del rango. */
-  valueTo?: string
 }
 
 export interface SysDataTableProps<T> {
@@ -195,41 +161,6 @@ function matchesFilter<T>(row: T, filter: DataTableFilter, col?: DataTableColumn
     default:
       return value.includes(term)
   }
-}
-
-/** Texto legible de lo que compara un filtro, para el chip y la lista del panel. */
-function describeFilter(f: DataTableFilter): ReactNode {
-  if (f.operator === 'between') {
-    if (f.value && f.valueTo) return <><b>{f.value}</b> — <b>{f.valueTo}</b></>
-    return <b>{f.value ? `desde ${f.value}` : `hasta ${f.valueTo}`}</b>
-  }
-  return (
-    <>
-      <span className="opacity-70">{OPERATORS.find((o) => o.id === f.operator)?.label}</span>{' '}
-      <b>{f.value}</b>
-    </>
-  )
-}
-
-/** Cierra el popover al pulsar fuera o con Escape. */
-function useDismiss(onDismiss: () => void) {
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onDismiss()
-    }
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onDismiss()
-
-    document.addEventListener('mousedown', onClick)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onClick)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [onDismiss])
-
-  return ref
 }
 
 export function SysDataTable<T>({
@@ -1143,301 +1074,5 @@ function ColumnsButton<T>({
         </p>
       </div>
     </div>
-  )
-}
-
-/* ------------------------------ panel de filtros --------------------------- */
-
-function FiltersButton<T>({
-  columns,
-  filters,
-  setFilters,
-  open,
-  onToggle,
-  onClose,
-}: {
-  columns: DataTableColumn<T>[]
-  filters: DataTableFilter[]
-  setFilters: React.Dispatch<React.SetStateAction<DataTableFilter[]>>
-  open: boolean
-  onToggle: () => void
-  onClose: () => void
-}) {
-  const filterable = columns.filter((c) => c.filterable !== false)
-  const [draft, setDraft] = useState<{ column: string; operator: OperatorId; value: string; valueTo: string }>({
-    column: filterable[0]?.key ?? '',
-    operator: 'contains',
-    value: '',
-    valueTo: '',
-  })
-
-  // Panel de escritorio: todos los filtros disponibles a la vista, uno por
-  // columna, en vez del flujo "agregar filtro" de a uno que usa movil. Se
-  // arma de nuevo cada vez que se abre, a partir de lo ya aplicado.
-  const [desktopDraft, setDesktopDraft] = useState<Record<string, { value: string; valueTo: string }>>({})
-
-  useEffect(() => {
-    if (!open) return
-    const inicial: Record<string, { value: string; valueTo: string }> = {}
-    for (const f of filters) inicial[f.column] = { value: f.value, valueTo: f.valueTo ?? '' }
-    setDesktopDraft(inicial)
-  }, [open, filters])
-
-  const setDesktopValue = (key: string, campo: 'value' | 'valueTo', valor: string) =>
-    setDesktopDraft((prev) => ({ ...prev, [key]: { ...prev[key], value: prev[key]?.value ?? '', valueTo: prev[key]?.valueTo ?? '', [campo]: valor } }))
-
-  const setDesktopRange = (key: string, from: string, to: string) =>
-    setDesktopDraft((prev) => ({ ...prev, [key]: { value: from, valueTo: to } }))
-
-  const aplicarDesktop = () => {
-    const nuevos: DataTableFilter[] = []
-    for (const col of filterable) {
-      const d = desktopDraft[col.key]
-      if (!d) continue
-      const tipo: FilterType = col.filterType ?? 'text'
-      if (tipo === 'date') {
-        if (d.value || d.valueTo) {
-          nuevos.push({ id: col.key, column: col.key, operator: 'between', value: d.value, valueTo: d.valueTo })
-        }
-      } else if (d.value?.trim()) {
-        nuevos.push({
-          id: col.key,
-          column: col.key,
-          operator: tipo === 'select' ? 'equals' : 'contains',
-          value: d.value,
-        })
-      }
-    }
-    setFilters(nuevos)
-    onClose()
-  }
-
-  const restablecerDesktop = () => {
-    setDesktopDraft({})
-    setFilters([])
-  }
-
-  const draftCol = columns.find((c) => c.key === draft.column)
-  const draftType: FilterType = draftCol?.filterType ?? 'text'
-
-  // Cambiar de columna cambia de tipo de filtro: el operador tiene que
-  // encajar con el nuevo control (un <select> de estado no entiende "mayor
-  // que", un rango de fechas no tiene operador — siempre es "entre").
-  const elegirColumna = (key: string) => {
-    const col = columns.find((c) => c.key === key)
-    const tipo: FilterType = col?.filterType ?? 'text'
-    setDraft({
-      column: key,
-      operator: tipo === 'select' ? 'equals' : tipo === 'date' ? 'between' : 'contains',
-      value: '',
-      valueTo: '',
-    })
-  }
-
-  const add = () => {
-    if (!draft.column) return
-    if (draftType === 'date' ? !draft.value && !draft.valueTo : !draft.value.trim()) return
-    setFilters((prev) => [
-      ...prev,
-      { ...draft, id: `${draft.column}-${prev.length}-${draft.value}-${draft.valueTo}` },
-    ])
-    setDraft((d) => ({ ...d, value: '', valueTo: '' }))
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        aria-label="Filtros"
-        title="Filtros"
-        className={cn(
-          'relative flex h-[38px] w-[38px] items-center justify-center rounded-lg transition-colors',
-          'text-[rgb(var(--sys-ink-rgb))] hover:bg-[rgb(var(--sys-rgb)/0.12)]',
-          open && 'bg-[rgb(var(--sys-rgb)/0.12)]',
-        )}
-      >
-        <Filter size={17} />
-        {filters.length > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[rgb(var(--sys-rgb))] px-1 text-[10px] leading-none font-semibold text-[var(--sys-on)] ring-2 ring-white">
-            {filters.length}
-          </span>
-        )}
-      </button>
-
-      <Modal open={open} title="Filtros" onClose={onClose} size="sm">
-        {/* escritorio: todos los filtros disponibles a la vista, uno por
-            columna, con Restablecer/Aplicar — sin el flujo de a uno de movil */}
-        <div className="hidden flex-col gap-4 sm:flex">
-          <div className="flex flex-col gap-3.5">
-            {filterable.map((col) => {
-              const tipo: FilterType = col.filterType ?? 'text'
-              const d = desktopDraft[col.key] ?? { value: '', valueTo: '' }
-              return (
-                <div key={col.key} className="flex flex-col gap-1">
-                  <p className="text-[11px] font-semibold tracking-wide text-zinc-400 uppercase">
-                    {col.label}
-                  </p>
-
-                  {tipo === 'select' ? (
-                    <select
-                      value={d.value}
-                      onChange={(e) => setDesktopValue(col.key, 'value', e.target.value)}
-                      className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
-                    >
-                      <option value="">Todos</option>
-                      {col.filterOptions?.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : tipo === 'date' ? (
-                    <DateRangePicker
-                      from={d.value}
-                      to={d.valueTo}
-                      onChange={(from, to) => setDesktopRange(col.key, from, to)}
-                    />
-                  ) : (
-                    <input
-                      value={d.value}
-                      onChange={(e) => setDesktopValue(col.key, 'value', e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && aplicarDesktop()}
-                      placeholder={`Buscar ${col.label.toLowerCase()}...`}
-                      className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
-                    />
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="flex items-center gap-2 border-t border-line pt-3">
-            <Button type="button" size="sm" variant="secondary" onClick={restablecerDesktop}>
-              <RotateCcw size={13} />
-              Restablecer
-            </Button>
-            <Button type="button" size="sm" onClick={aplicarDesktop} className="flex-1">
-              Aplicar filtros
-            </Button>
-          </div>
-        </div>
-
-        {/* movil: agrega los filtros de a uno, tal como ya funcionaba */}
-        <div className="flex flex-col gap-4 sm:hidden">
-          <div className="flex flex-col gap-2">
-            <p className="text-[11px] font-semibold tracking-wide text-zinc-400 uppercase">Agregar filtro</p>
-
-            <select
-              value={draft.column}
-              onChange={(e) => elegirColumna(e.target.value)}
-              className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
-            >
-              {filterable.map((c) => (
-                <option key={c.key} value={c.key}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-
-            {/* El operador solo se elige en filtros de texto libre: un select
-                de estado siempre es "es igual a", y una fecha siempre es un
-                rango — mostrar el operador ahí solo confundiría. */}
-            {draftType === 'text' && (
-              <select
-                value={draft.operator}
-                onChange={(e) => setDraft((d) => ({ ...d, operator: e.target.value as OperatorId }))}
-                className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
-              >
-                {OPERATORS.filter((o) => o.id !== 'between').map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {draftType === 'select' ? (
-              <select
-                value={draft.value}
-                onChange={(e) => setDraft((d) => ({ ...d, value: e.target.value }))}
-                className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
-              >
-                <option value="">Elige un valor...</option>
-                {draftCol?.filterOptions?.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            ) : draftType === 'date' ? (
-              <div className="flex gap-2">
-                <label className="flex-1 text-[11px] text-zinc-500">
-                  Desde
-                  <input
-                    type="date"
-                    value={draft.value}
-                    onChange={(e) => setDraft((d) => ({ ...d, value: e.target.value }))}
-                    className="mt-0.5 w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
-                  />
-                </label>
-                <label className="flex-1 text-[11px] text-zinc-500">
-                  Hasta
-                  <input
-                    type="date"
-                    value={draft.valueTo}
-                    onChange={(e) => setDraft((d) => ({ ...d, valueTo: e.target.value }))}
-                    className="mt-0.5 w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
-                  />
-                </label>
-              </div>
-            ) : (
-              <input
-                value={draft.value}
-                onChange={(e) => setDraft((d) => ({ ...d, value: e.target.value }))}
-                onKeyDown={(e) => e.key === 'Enter' && add()}
-                placeholder="Valor"
-                className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
-              />
-            )}
-
-            <Button type="button" size="sm" onClick={add}>
-              <Plus size={14} />
-              Agregar filtro
-            </Button>
-          </div>
-
-          {filters.length > 0 && (
-            <div className="flex flex-col gap-1.5 border-t border-line pt-3">
-              <p className="text-[11px] font-semibold tracking-wide text-zinc-400 uppercase">
-                Filtros aplicados
-              </p>
-              <ul className="flex flex-col gap-1.5">
-                {filters.map((f) => (
-                  <li
-                    key={f.id}
-                    className="flex items-center justify-between gap-2 rounded-lg bg-zinc-50 px-2.5 py-2 text-[12px] text-zinc-700"
-                  >
-                    <span className="truncate">
-                      <b className="font-medium">{columns.find((c) => c.key === f.column)?.label}</b>{' '}
-                      {describeFilter(f)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setFilters((prev) => prev.filter((x) => x.id !== f.id))}
-                      aria-label="Quitar filtro"
-                      className="shrink-0 rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-700"
-                    >
-                      <X size={13} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </Modal>
-    </>
   )
 }

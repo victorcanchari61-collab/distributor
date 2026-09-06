@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { cn } from './cn'
+import { useDismiss } from './useDismiss'
 
 /**
  * Selector de rango de fechas: un campo con "desde → hasta" que abre un
@@ -62,27 +63,6 @@ function presets(): { label: string; from: string; to: string }[] {
     { label: 'Este año', from: toIso(new Date(y, 0, 1)), to: toIso(hoy) },
     { label: 'Último año', from: toIso(new Date(y - 1, 0, 1)), to: toIso(new Date(y - 1, 11, 31)) },
   ]
-}
-
-/** Cierra al hacer clic fuera o con Escape. */
-function useDismiss(onDismiss: () => void) {
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onDismiss()
-    }
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onDismiss()
-
-    document.addEventListener('mousedown', onClick)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onClick)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [onDismiss])
-
-  return ref
 }
 
 export interface DateRangePickerProps {
