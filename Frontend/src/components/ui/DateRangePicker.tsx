@@ -144,6 +144,7 @@ export function DateRangePicker({ from, to, onChange, placeholder = 'Selecciona 
         createPortal(
           <div
             ref={ref}
+            data-floating-panel
             style={{ top: pos.top, left: pos.left, width: pos.width }}
             className="fixed z-[60] flex overflow-hidden rounded-xl bg-white shadow-xl shadow-zinc-900/20 ring-1 ring-zinc-200"
           >

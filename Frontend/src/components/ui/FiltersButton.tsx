@@ -4,6 +4,7 @@ import { cn } from './cn'
 import { Modal } from './Modal'
 import { Button } from './Button'
 import { FilterField } from './FilterField'
+import { useDismiss } from './useDismiss'
 import { OPERATORS, describeFilter } from './dataTableFilters'
 import type { DataTableFilter, FilterType, OperatorId } from './dataTableFilters'
 import type { DataTableColumn } from './SysDataTable'
@@ -12,9 +13,11 @@ import type { DataTableColumn } from './SysDataTable'
  * Boton de "Filtros" de `SysDataTable`, con sus dos flujos:
  *
  *   - escritorio: todos los filtros disponibles a la vista, uno por columna,
- *     con Restablecer/Aplicar (`PanelEscritorio`).
+ *     con Restablecer/Aplicar (`PanelEscritorio`), en un panel que cuelga del
+ *     boton hacia la derecha — no un modal centrado que tapa toda la pantalla.
  *   - movil: se agregan de a uno, eligiendo columna, operador y valor
- *     (`PanelMovil`) — la pantalla no da espacio para mostrarlos todos juntos.
+ *     (`PanelMovil`), en la hoja inferior de siempre — la pantalla no da
+ *     espacio para mostrarlos todos juntos.
  *
  * Cada flujo vive en su propio componente: antes estaban mezclados en una
  * sola funcion de 300 lineas que ademas construia los `DataTableFilter[]` a
@@ -38,9 +41,10 @@ export function FiltersButton<T>({
   onClose: () => void
 }) {
   const filterable = columns.filter((c) => c.filterable !== false)
+  const ref = useDismiss<HTMLDivElement>(() => open && onClose())
 
   return (
-    <>
+    <div ref={ref} className="relative">
       <button
         type="button"
         onClick={onToggle}
@@ -61,24 +65,39 @@ export function FiltersButton<T>({
         )}
       </button>
 
-      <Modal open={open} title="Filtros" onClose={onClose} size="sm">
-        {/* escritorio: todos los filtros disponibles a la vista */}
-        <div className="hidden flex-col gap-4 sm:flex">
-          <PanelEscritorio
-            filterable={filterable}
-            filters={filters}
-            setFilters={setFilters}
-            open={open}
-            onClose={onClose}
-          />
+      {/* escritorio: panel colgando del boton hacia la derecha, sin fondo oscuro */}
+      {open && (
+        <div className="absolute right-0 z-30 mt-2 hidden w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-panel bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 sm:flex">
+          <div className="flex items-center justify-between gap-3 bg-[rgb(var(--sys-rgb))] px-4 py-2.5">
+            <h2 className="text-sm font-bold text-white">Filtros</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Cerrar"
+              className="cursor-pointer rounded-lg p-1 text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto px-4 py-3.5">
+            <PanelEscritorio
+              filterable={filterable}
+              filters={filters}
+              setFilters={setFilters}
+              open={open}
+              onClose={onClose}
+            />
+          </div>
         </div>
+      )}
 
-        {/* movil: agrega los filtros de a uno */}
-        <div className="flex flex-col gap-4 sm:hidden">
+      {/* movil: hoja inferior de siempre, agregando de a uno */}
+      <Modal open={open} title="Filtros" onClose={onClose} size="sm" className="sm:hidden">
+        <div className="flex flex-col gap-4">
           <PanelMovil filterable={filterable} filters={filters} setFilters={setFilters} />
         </div>
       </Modal>
-    </>
+    </div>
   )
 }
 

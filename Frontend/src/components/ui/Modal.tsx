@@ -12,6 +12,8 @@ export interface ModalProps {
   /** Botones del pie. */
   footer?: ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+  /** Clases extra en el fondo fijo, ej. "sm:hidden" para una variante que solo se ve en movil. */
+  className?: string
   children: ReactNode
 }
 
@@ -24,6 +26,7 @@ export function Modal({
   onClose,
   footer,
   size = 'md',
+  className,
   children,
 }: ModalProps) {
   useEffect(() => {
@@ -56,7 +59,10 @@ export function Modal({
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+      className={cn(
+        'fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4',
+        className,
+      )}
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div

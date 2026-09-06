@@ -249,6 +249,7 @@ export function ClientesPage() {
     {
       key: 'documento',
       label: 'Documento',
+      filterable: false,
       render: (row) => (
         <span className="flex items-center gap-2">
           <span className="font-medium text-ink">{row.documento}</span>
@@ -268,7 +269,7 @@ export function ClientesPage() {
       value: (row) => row.tipoDoc,
       render: (row) => <Badge>{row.tipoDoc}</Badge>,
     },
-    { key: 'nombre', label: 'Nombre' },
+    { key: 'nombre', label: 'Nombre', filterable: false },
     {
       key: 'direccion',
       label: 'Dirección',

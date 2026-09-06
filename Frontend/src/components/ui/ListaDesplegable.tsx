@@ -209,6 +209,7 @@ export function ListaDesplegable({
         createPortal(
           <div
             ref={panelRef}
+            data-floating-panel
             style={{ top: pos.top, left: pos.left, width: pos.ancho }}
             className={cn(
               'fixed z-50 max-w-[calc(100vw-2rem)] origin-top overflow-hidden',

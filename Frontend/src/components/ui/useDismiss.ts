@@ -6,7 +6,17 @@ export function useDismiss<E extends HTMLElement = HTMLDivElement>(onDismiss: ()
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onDismiss()
+      const target = e.target as Node
+      if (ref.current?.contains(target)) return
+
+      // Un `<Modal>` o un panel flotante (el listado de un `Desplegable`, el
+      // calendario de `DateRangePicker`...) se portan fuera de `ref` — viven
+      // en #modal-root o document.body — asi que un clic dentro de uno
+      // abierto desde este mismo widget se veria como "de afuera" y lo
+      // cerraria de inmediato al tocar cualquier campo.
+      if (target instanceof Element && target.closest('[role="dialog"], [data-floating-panel]')) return
+
+      onDismiss()
     }
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onDismiss()
 
