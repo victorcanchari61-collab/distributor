@@ -179,7 +179,7 @@ class _EmpresaFormularioState extends ConsumerState<EmpresaFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'config',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: Text(
             _esNuevo ? 'Nueva empresa' : 'Editar empresa',

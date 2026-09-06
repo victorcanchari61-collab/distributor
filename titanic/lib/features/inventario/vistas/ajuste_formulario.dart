@@ -275,7 +275,7 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'inv',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: const Text(
             'Nuevo ajuste',

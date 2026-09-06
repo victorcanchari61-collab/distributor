@@ -384,7 +384,7 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'fact',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: const Text(
             'Nueva venta',
@@ -475,10 +475,10 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
               alignment: Alignment.centerRight,
               child: Text(
                 'Total: S/ ${_total.toStringAsFixed(2)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: Colores.marca,
+                  color: Acento.de(context),
                 ),
               ),
             ),

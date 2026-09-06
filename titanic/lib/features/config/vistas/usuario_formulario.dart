@@ -134,7 +134,7 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'config',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: Text(
             _esNuevo ? 'Nuevo usuario' : 'Editar usuario',

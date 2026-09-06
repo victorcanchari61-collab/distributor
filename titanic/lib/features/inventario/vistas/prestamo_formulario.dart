@@ -253,7 +253,7 @@ class _PrestamoFormularioState extends ConsumerState<PrestamoFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'inv',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: const Text(
             'Nuevo préstamo',

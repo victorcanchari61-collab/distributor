@@ -106,7 +106,7 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'finanzas',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: Text(
             _esNuevo ? 'Nuevo método de pago' : 'Editar método de pago',

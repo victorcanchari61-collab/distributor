@@ -94,7 +94,7 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'inv',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: Text(
             _esNuevo ? 'Nuevo almacén' : 'Editar almacén',

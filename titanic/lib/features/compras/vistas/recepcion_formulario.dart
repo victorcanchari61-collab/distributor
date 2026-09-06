@@ -163,7 +163,7 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'compras',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: const Text(
             'Nueva recepción',

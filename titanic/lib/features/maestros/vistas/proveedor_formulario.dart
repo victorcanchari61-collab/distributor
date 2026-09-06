@@ -123,7 +123,7 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'maestros',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: Text(
             _esNuevo ? 'Nuevo proveedor' : 'Editar proveedor',

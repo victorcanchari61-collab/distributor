@@ -223,7 +223,7 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'maestros',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: Text(
             _esNuevo ? 'Nuevo producto' : 'Editar producto',
@@ -437,12 +437,12 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
         Container(
           padding: const EdgeInsets.all(Dimen.espacio3),
           decoration: BoxDecoration(
-            color: Colores.marca.withValues(alpha: 0.06),
+            color: Acento.de(context).withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(Dimen.radioCampo),
           ),
           child: Row(
             children: [
-              const Icon(Icons.inventory_2_outlined, size: 17, color: Colores.marca),
+              Icon(Icons.inventory_2_outlined, size: 17, color: Acento.de(context)),
               const SizedBox(width: Dimen.espacio2),
               Expanded(
                 child: Text(
@@ -543,7 +543,7 @@ class _TarjetaPresentacion extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.edit_outlined, size: 18, color: Colores.marca),
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
           IconButton(
             onPressed: onEliminar,

@@ -12,6 +12,7 @@ import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_vacio.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
+import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/documento_inventario.dart';
@@ -320,7 +321,7 @@ class _TarjetaMotivo extends StatelessWidget {
           onPressed: onEditar,
           tooltip: 'Editar',
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.edit_outlined, size: 18, color: Colores.marca),
+          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
         ),
       ],
     );

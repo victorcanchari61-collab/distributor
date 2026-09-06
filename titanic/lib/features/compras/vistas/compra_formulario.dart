@@ -415,7 +415,7 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'compras',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: Text(
             _esNuevo ? 'Nueva compra' : 'Editar ${widget.compra!.numero}',
@@ -528,10 +528,10 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
               alignment: Alignment.centerRight,
               child: Text(
                 'Total: S/ ${_total.toStringAsFixed(2)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: Colores.marca,
+                  color: Acento.de(context),
                 ),
               ),
             ),

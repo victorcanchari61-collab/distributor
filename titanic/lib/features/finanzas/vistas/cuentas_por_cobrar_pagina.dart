@@ -12,6 +12,7 @@ import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
+import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../ventas/datos/nota_venta.dart';
@@ -122,7 +123,7 @@ class _TarjetaCuentaCobrar extends StatelessWidget {
           onPressed: onGestionarPagos,
           tooltip: 'Gestionar pagos',
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.request_quote_outlined, size: 18, color: Colores.marca),
+          icon: Icon(Icons.request_quote_outlined, size: 18, color: Acento.de(context)),
         ),
       ],
     );
@@ -396,7 +397,7 @@ class _FilaPago extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(Dimen.espacio3),
       decoration: BoxDecoration(
-        color: enEdicion ? Colores.marcaSuave : Colores.fondo,
+        color: enEdicion ? Acento.suave(context) : Colores.fondo,
         borderRadius: BorderRadius.circular(Dimen.radioCampo),
       ),
       child: Row(
@@ -436,7 +437,7 @@ class _FilaPago extends StatelessWidget {
               onPressed: onEditar,
               tooltip: 'Editar',
               visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.edit_outlined, size: 17, color: Colores.marca),
+              icon: Icon(Icons.edit_outlined, size: 17, color: Acento.de(context)),
             ),
           if (onAnular != null)
             IconButton(

@@ -88,7 +88,7 @@ class _MercadoFormularioState extends ConsumerState<MercadoFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'tms',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: Text(
             _esNuevo ? 'Nuevo mercado' : 'Editar mercado',

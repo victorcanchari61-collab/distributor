@@ -82,7 +82,7 @@ class _RutaFormularioState extends ConsumerState<RutaFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'tms',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: Text(
             _esNuevo ? 'Nueva ruta' : 'Editar ruta',

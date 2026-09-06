@@ -82,7 +82,7 @@ class _RolFormularioState extends ConsumerState<RolFormulario> {
     // se abran desde dentro saldrian con el azul de marca.
     return Acento.modulo(
       'config',
-      Scaffold(
+      (context) => Scaffold(
         appBar: AppBar(
           title: Text(
             _esNuevo ? 'Nuevo rol' : 'Editar rol',

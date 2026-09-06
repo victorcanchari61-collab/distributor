@@ -83,6 +83,11 @@ class AppBoton extends StatelessWidget {
           minimumSize: tamano,
           shape: forma,
           backgroundColor: color ?? Acento.de(context),
+          // El deshabilitado tambien: si no, lo hereda del tema, que lo tiene
+          // fijado al azul de marca. Un boton apagado se pasa mas tiempo a la
+          // vista que uno activo — el de "Agregar producto" esta apagado hasta
+          // que se elige algo — asi que era justo el que delataba el color.
+          disabledBackgroundColor: (color ?? Acento.de(context)).withValues(alpha: 0.5),
         ),
         child: contenido,
       ),
