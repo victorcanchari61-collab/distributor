@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ClipboardCheck, Eye, ListChecks, Plus, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, ClipboardCheck, Eye, ListChecks, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
   AgregarProductoPanel,
   Alert,
@@ -9,6 +9,8 @@ import {
   Input,
   ListPage,
   Modal,
+  PageHeader,
+  PageSection,
   ResumenDocumento,
   RowAction,
   StatCard,
@@ -61,8 +63,7 @@ export function AjustesPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
-  const [abierto, setAbierto] = useState(false)
-  const [pestanaForm, setPestanaForm] = useState<'datos' | 'productos'>('datos')
+  const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [detalleAbierto, setDetalleAbierto] = useState<DocumentoInventarioResponse | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -110,7 +111,7 @@ export function AjustesPage() {
 
   // Stock del almacén elegido, para mostrarlo mientras se arma cada línea.
   useEffect(() => {
-    if (!abierto || !cabecera.almacenId) return
+    if (vista !== 'form' || !cabecera.almacenId) return
     let cancelado = false
     void stockApi.getAll(cabecera.almacenId).then((filas) => {
       if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.disponible])))
@@ -118,7 +119,7 @@ export function AjustesPage() {
     return () => {
       cancelado = true
     }
-  }, [abierto, cabecera.almacenId])
+  }, [vista, cabecera.almacenId])
 
   const abrirNuevo = () => {
     setCabecera({
@@ -129,12 +130,15 @@ export function AjustesPage() {
     })
     setFilas([])
     setErrorForm('')
-    setPestanaForm('datos')
-    setAbierto(true)
+    setVista('form')
   }
 
   const actualizarFila = (id: string, cambio: Partial<FilaAjuste>) =>
     setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
+
+  // Solo tiene sentido cuando el motivo declara costo: un ajuste de salida
+  // (merma, faltante) no valoriza nada, así que no hay total que mostrar.
+  const total = filas.reduce((n, f) => n + (Number(f.cantidad) || 0) * (Number(f.costo) || 0), 0)
 
   const guardar = async () => {
     if (!cabecera.almacenId) return setErrorForm('Elige el almacén.')
@@ -160,7 +164,7 @@ export function AjustesPage() {
           fechaVencimiento: motivo?.pideCosto ? f.fechaVencimiento || null : null,
         })),
       })
-      setAbierto(false)
+      setVista('lista')
       await cargar()
     } catch (e) {
       setErrorForm(
@@ -366,6 +370,131 @@ export function AjustesPage() {
     )
   }
 
+  if (vista === 'form') {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          icon={<ClipboardCheck size={20} />}
+          title="Nuevo ajuste de inventario"
+          description="Registra qué cambió y por qué. Confirmado, no se edita: se anula con otro documento."
+          actions={
+            <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+              <ArrowLeft size={15} />
+              Volver
+            </Button>
+          }
+        />
+
+        {errorForm && <Alert>{errorForm}</Alert>}
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:items-start">
+          <PageSection
+            title="Productos"
+            description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
+          >
+            <AgregarProductoPanel
+              productos={productos}
+              stock={stockMap}
+              pideCosto={motivo?.pideCosto ?? false}
+              pideLote={motivo?.pideCosto ?? false}
+              onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
+            />
+
+            <div className="mt-4">
+              <SysDataTable
+                columns={columnasFilas}
+                rows={filas}
+                rowKey="id"
+                toolbar={false}
+                empty="Agrega productos con el buscador de arriba."
+                actions={(fila) => (
+                  <RowAction
+                    label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                    tone="danger"
+                    onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+                  >
+                    <Trash2 size={15} />
+                  </RowAction>
+                )}
+              />
+            </div>
+          </PageSection>
+
+          <div className="flex flex-col gap-5">
+            <PageSection title="Ajuste">
+              <Desplegable
+                label="Almacén"
+                value={cabecera.almacenId}
+                onChange={(v) => setCabecera({ ...cabecera, almacenId: Number(v) })}
+                options={almacenes
+                  .filter((a) => a.activo)
+                  .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
+              />
+
+              <Desplegable
+                className="mt-4"
+                label="Motivo"
+                value={cabecera.motivoId}
+                onChange={(v) => setCabecera({ ...cabecera, motivoId: Number(v) })}
+                options={motivosManuales.map((m) => ({
+                  value: m.id,
+                  label: m.nombre,
+                  nota: m.tipo === 'ENTRADA' ? 'suma stock' : 'resta stock',
+                }))}
+              />
+
+              <Input
+                className="mt-4"
+                label="Observación"
+                optional
+                placeholder="Motivo del ajuste, referencia..."
+                value={cabecera.observacion}
+                onChange={(e) => setCabecera({ ...cabecera, observacion: e.target.value })}
+              />
+
+              {motivo?.pideCosto && (
+                <Input
+                  className="mt-4"
+                  label="Flete"
+                  optional
+                  type="number"
+                  step="0.01"
+                  hint={<span className="text-xs text-ink-soft">de toda la entrada, se reparte</span>}
+                  value={cabecera.flete}
+                  onChange={(e) => setCabecera({ ...cabecera, flete: e.target.value })}
+                />
+              )}
+            </PageSection>
+
+            {motivo?.pideCosto && (
+              <PageSection title="Resumen">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-ink-soft uppercase tracking-wide">
+                    Total del ajuste
+                  </span>
+                  <span className="text-xl font-bold text-[rgb(var(--sys-rgb))]">
+                    S/ {total.toFixed(2)}
+                  </span>
+                </div>
+              </PageSection>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+            Cancelar
+          </Button>
+          <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+            Registrar ajuste
+          </Button>
+        </div>
+
+        {dialogo}
+      </div>
+    )
+  }
+
   return (
     <>
       {cabeceraPestanas}
@@ -431,113 +560,6 @@ export function AjustesPage() {
         </>
       )}
     >
-      {/* Nuevo ajuste */}
-      <Modal
-        open={abierto}
-        title="Nuevo ajuste de inventario"
-        description="Registra qué cambió y por qué. Confirmado, no se edita: se anula con otro documento."
-        onClose={() => setAbierto(false)}
-        footer={
-          <>
-            <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
-              Cancelar
-            </Button>
-            <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-              Registrar ajuste
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
-
-          <Tabs
-            items={[
-              { id: 'datos', label: 'Datos' },
-              { id: 'productos', label: 'Productos', badge: filas.length },
-            ]}
-            active={pestanaForm}
-            onChange={(id) => setPestanaForm(id as 'datos' | 'productos')}
-          />
-
-          {pestanaForm === 'datos' && (
-            <div className="flex flex-col gap-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Desplegable
-                  label="Almacén"
-                  value={cabecera.almacenId}
-                  onChange={(v) => setCabecera({ ...cabecera, almacenId: Number(v) })}
-                  options={almacenes
-                    .filter((a) => a.activo)
-                    .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
-                />
-                <Desplegable
-                  label="Motivo"
-                  value={cabecera.motivoId}
-                  onChange={(v) => setCabecera({ ...cabecera, motivoId: Number(v) })}
-                  options={motivosManuales.map((m) => ({
-                    value: m.id,
-                    label: m.nombre,
-                    nota: m.tipo === 'ENTRADA' ? 'suma stock' : 'resta stock',
-                  }))}
-                />
-              </div>
-
-              <Input
-                label="Observación"
-                optional
-                placeholder="Motivo del ajuste, referencia..."
-                value={cabecera.observacion}
-                onChange={(e) => setCabecera({ ...cabecera, observacion: e.target.value })}
-              />
-
-              {motivo?.pideCosto && (
-                <Input
-                  label="Flete"
-                  optional
-                  type="number"
-                  step="0.01"
-                  hint={<span className="text-xs text-ink-soft">de toda la entrada, se reparte</span>}
-                  value={cabecera.flete}
-                  onChange={(e) => setCabecera({ ...cabecera, flete: e.target.value })}
-                />
-              )}
-            </div>
-          )}
-
-          {pestanaForm === 'productos' && (
-            <div className="flex flex-col gap-4">
-              <AgregarProductoPanel
-                productos={productos}
-                stock={stockMap}
-                pideCosto={motivo?.pideCosto ?? false}
-                pideLote={motivo?.pideCosto ?? false}
-                onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
-              />
-
-              <hr className="border-line" />
-
-              <SysDataTable
-                columns={columnasFilas}
-                rows={filas}
-                rowKey="id"
-                toolbar={false}
-                empty="Agrega productos con el buscador de arriba."
-                actions={(fila) => (
-                  <RowAction
-                    label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
-                    tone="danger"
-                    onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
-                  >
-                    <Trash2 size={15} />
-                  </RowAction>
-                )}
-              />
-            </div>
-          )}
-        </div>
-      </Modal>
-
       {/* Ver detalle */}
       <Modal
         open={detalleAbierto !== null}
