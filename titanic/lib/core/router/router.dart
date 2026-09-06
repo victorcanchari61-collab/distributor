@@ -32,6 +32,7 @@ import '../../features/maestros/vistas/clientes_pagina.dart';
 import '../../features/maestros/vistas/productos_pagina.dart';
 import '../../features/maestros/vistas/proveedores_pagina.dart';
 import '../../features/tms/vistas/mercados_pagina.dart';
+import '../../features/tms/vistas/rutas_pagina.dart';
 import '../../features/ventas/vistas/notas_venta_pagina.dart';
 import '../../features/ventas/vistas/pedidos_pagina.dart';
 import '../navegacion/menu.dart';
@@ -186,6 +187,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: MercadosPagina.ruta,
         builder: (context, estado) => const MercadosPagina(),
       ),
+      GoRoute(
+        path: RutasPagina.ruta,
+        builder: (context, estado) => const RutasPagina(),
+      ),
 
       for (final grupo in menuGrupos)
         for (final item in grupo.items)
@@ -214,7 +219,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != CuentasPorPagarPagina.ruta &&
               item.ruta != MisCobrosPagina.ruta &&
               item.ruta != ArqueoDiarioPagina.ruta &&
-              item.ruta != MercadosPagina.ruta)
+              item.ruta != MercadosPagina.ruta &&
+              item.ruta != RutasPagina.ruta)
             GoRoute(
               path: item.ruta,
               builder: (context, estado) => AppShell(

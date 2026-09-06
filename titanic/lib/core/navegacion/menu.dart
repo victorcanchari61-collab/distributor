@@ -231,7 +231,12 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Mercados',
         icono: Icons.storefront_outlined,
       ),
-      MenuItem(id: 'tms.rutas', titulo: 'Rutas', icono: Icons.route_outlined),
+      MenuItem(
+        id: 'tms.rutas',
+        pendiente: false,
+        titulo: 'Rutas',
+        icono: Icons.route_outlined,
+      ),
       MenuItem(
         id: 'tms.flota',
         titulo: 'Flota',

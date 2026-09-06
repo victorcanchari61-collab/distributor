@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/estado/ubigeo_controlador.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
@@ -43,19 +44,23 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
   late final _direccion = TextEditingController(
     text: widget.cliente?.direccion ?? '',
   );
-  late final _distrito = TextEditingController(
-    text: widget.cliente?.distrito ?? '',
-  );
   late final _telefono = TextEditingController(
     text: widget.cliente?.telefono ?? '',
   );
-  late final _ruta = TextEditingController(text: widget.cliente?.ruta ?? '');
 
   late String _tipoDoc = widget.cliente?.tipoDoc.isNotEmpty == true
       ? widget.cliente!.tipoDoc
       : 'DNI';
   late String? _diaVisita = widget.cliente?.diaVisita;
+  late int? _rutaId = widget.cliente?.rutaId;
   late int? _mercadoId = widget.cliente?.mercadoId;
+
+  // Solo para encadenar los selects: lo unico que se manda es _distritoId,
+  // pero para mostrar provincias/distritos hay que saber que departamento y
+  // provincia se eligieron primero.
+  late int? _departamentoId = widget.cliente?.departamentoId;
+  late int? _provinciaId = widget.cliente?.provinciaId;
+  late int? _distritoId = widget.cliente?.distritoId;
 
   bool _guardando = false;
   String? _error;
@@ -66,14 +71,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
 
   @override
   void dispose() {
-    for (final c in [
-      _documento,
-      _nombre,
-      _direccion,
-      _distrito,
-      _telefono,
-      _ruta,
-    ]) {
+    for (final c in [_documento, _nombre, _direccion, _telefono]) {
       c.dispose();
     }
     super.dispose();
@@ -122,10 +120,10 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
       'tipoDoc': _tipoDoc,
       'nombre': _nombre.text.trim(),
       'direccion': _direccion.text.trim(),
-      'distrito': _distrito.text.trim(),
+      'distritoId': _distritoId,
       'telefono': _telefono.text.trim(),
       'diaVisita': _diaVisita,
-      'ruta': _ruta.text.trim(),
+      'rutaId': _rutaId,
       'mercadoId': _mercadoId,
       if (!_esNuevo) 'activo': widget.cliente!.activo,
     };
@@ -231,12 +229,52 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
           ),
           const SizedBox(height: Dimen.espacio4),
 
-          AppCampo(
-            controlador: _distrito,
-            etiqueta: 'Distrito',
-            icono: Icons.map_outlined,
-            opcional: true,
+          AppSelector<int?>(
+            valor: _departamentoId,
+            etiqueta: 'Departamento',
+            icono: Icons.public_outlined,
             habilitado: !_guardando,
+            opciones: [
+              const Opcion<int?>(null, 'Elegir'),
+              for (final d in ref.watch(departamentosProvider).valueOrNull ?? const [])
+                Opcion<int?>(d.id, d.nombre),
+            ],
+            onCambio: (v) => setState(() {
+              _departamentoId = v;
+              _provinciaId = null;
+              _distritoId = null;
+            }),
+          ),
+          const SizedBox(height: Dimen.espacio4),
+
+          AppSelector<int?>(
+            valor: _provinciaId,
+            etiqueta: 'Provincia',
+            icono: Icons.map_outlined,
+            habilitado: !_guardando && _departamentoId != null,
+            opciones: [
+              const Opcion<int?>(null, 'Elegir'),
+              for (final p in ref.watch(provinciasProvider).valueOrNull ?? const [])
+                if (p.departamentoId == _departamentoId) Opcion<int?>(p.id, p.nombre),
+            ],
+            onCambio: (v) => setState(() {
+              _provinciaId = v;
+              _distritoId = null;
+            }),
+          ),
+          const SizedBox(height: Dimen.espacio4),
+
+          AppSelector<int?>(
+            valor: _distritoId,
+            etiqueta: 'Distrito',
+            icono: Icons.location_city_outlined,
+            habilitado: !_guardando && _provinciaId != null,
+            opciones: [
+              const Opcion<int?>(null, 'Elegir'),
+              for (final d in ref.watch(distritosProvider).valueOrNull ?? const [])
+                if (d.provinciaId == _provinciaId) Opcion<int?>(d.id, d.nombre),
+            ],
+            onCambio: (v) => setState(() => _distritoId = v),
           ),
           const SizedBox(height: Dimen.espacio4),
 
@@ -266,12 +304,17 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
           Row(
             children: [
               Expanded(
-                child: AppCampo(
-                  controlador: _ruta,
+                child: AppSelector<int?>(
+                  valor: _rutaId,
                   etiqueta: 'Ruta',
                   icono: Icons.route_outlined,
-                  opcional: true,
                   habilitado: !_guardando,
+                  opciones: [
+                    const Opcion<int?>(null, 'Sin ruta'),
+                    for (final r in ref.watch(rutasActivasProvider))
+                      Opcion<int?>(r.id, r.nombre),
+                  ],
+                  onCambio: (v) => setState(() => _rutaId = v),
                 ),
               ),
               const SizedBox(width: Dimen.espacio3),

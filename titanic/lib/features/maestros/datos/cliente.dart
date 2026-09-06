@@ -7,10 +7,16 @@ class Cliente {
     required this.nombre,
     required this.activo,
     this.direccion,
+    this.distritoId,
     this.distrito,
+    this.provinciaId,
+    this.provincia,
+    this.departamentoId,
+    this.departamento,
     this.telefono,
     this.email,
     this.diaVisita,
+    this.rutaId,
     this.ruta,
     this.mercadoId,
     this.mercado,
@@ -24,12 +30,27 @@ class Cliente {
 
   final String nombre;
   final String? direccion;
+
+  /// Distrito del ubigeo oficial (INEI/RENIEC), referencia al catalogo.
+  final int? distritoId;
+
+  /// Nombre del distrito, solo para mostrar: no se envia al guardar.
   final String? distrito;
+  final int? provinciaId;
+  final String? provincia;
+  final int? departamentoId;
+  final String? departamento;
+
   final String? telefono;
   final String? email;
 
   /// Dia en que el vendedor lo visita.
   final String? diaVisita;
+
+  /// Ruta de reparto, referencia al catalogo.
+  final int? rutaId;
+
+  /// Nombre de la ruta, solo para mostrar: no se envia al guardar.
   final String? ruta;
 
   /// Mercado donde se entrega, referencia al catalogo.
@@ -51,10 +72,16 @@ class Cliente {
     tipoDoc: json['tipoDoc'] as String? ?? '',
     nombre: json['nombre'] as String? ?? '',
     direccion: json['direccion'] as String?,
+    distritoId: json['distritoId'] as int?,
     distrito: json['distrito'] as String?,
+    provinciaId: json['provinciaId'] as int?,
+    provincia: json['provincia'] as String?,
+    departamentoId: json['departamentoId'] as int?,
+    departamento: json['departamento'] as String?,
     telefono: json['telefono'] as String?,
     email: json['email'] as String?,
     diaVisita: json['diaVisita'] as String?,
+    rutaId: json['rutaId'] as int?,
     ruta: json['ruta'] as String?,
     mercadoId: json['mercadoId'] as int?,
     mercado: json['mercado'] as String?,
@@ -66,11 +93,11 @@ class Cliente {
     'tipoDoc': tipoDoc,
     'nombre': nombre,
     'direccion': direccion,
-    'distrito': distrito,
+    'distritoId': distritoId,
     'telefono': telefono,
     'email': email,
     'diaVisita': diaVisita,
-    'ruta': ruta,
+    'rutaId': rutaId,
     'mercadoId': mercadoId,
   };
 
@@ -79,11 +106,11 @@ class Cliente {
     String? tipoDoc,
     String? nombre,
     String? direccion,
-    String? distrito,
+    int? distritoId,
     String? telefono,
     String? email,
     String? diaVisita,
-    String? ruta,
+    int? rutaId,
     int? mercadoId,
     bool? activo,
   }) => Cliente(
@@ -92,11 +119,17 @@ class Cliente {
     tipoDoc: tipoDoc ?? this.tipoDoc,
     nombre: nombre ?? this.nombre,
     direccion: direccion ?? this.direccion,
-    distrito: distrito ?? this.distrito,
+    distritoId: distritoId ?? this.distritoId,
+    distrito: distrito,
+    provinciaId: provinciaId,
+    provincia: provincia,
+    departamentoId: departamentoId,
+    departamento: departamento,
     telefono: telefono ?? this.telefono,
     email: email ?? this.email,
     diaVisita: diaVisita ?? this.diaVisita,
-    ruta: ruta ?? this.ruta,
+    rutaId: rutaId ?? this.rutaId,
+    ruta: ruta,
     mercadoId: mercadoId ?? this.mercadoId,
     mercado: mercado,
     activo: activo ?? this.activo,
