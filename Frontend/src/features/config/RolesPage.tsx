@@ -114,8 +114,9 @@ export function RolesPage() {
     }
   }
 
-  /** Modulos a los que el rol tiene acceso. */
-  const modulosDe = (rol: RolResponse) => rol.permisos.filter((p) => p.ver).length
+  /** Pantallas a las que el rol puede entrar. */
+  const modulosDe = (rol: RolResponse) =>
+    rol.permisos.filter((p) => p.accion === 'ver').length
 
   const columns: DataTableColumn<RolResponse>[] = [
     {
@@ -132,14 +133,13 @@ export function RolesPage() {
     { key: 'usuarios', label: 'Usuarios', align: 'right', value: (row) => row.usuarios },
     {
       key: 'modulos',
-      label: 'Módulos',
+      label: 'Pantallas',
       align: 'right',
       value: (row) => modulosDe(row),
-      render: (row) => (
-        <Badge tone="sys">
-          {modulosDe(row)} de {NAV_GROUPS.length}
-        </Badge>
-      ),
+      // Se cuentan pantallas y no modulos porque desde que los permisos son por
+      // submodulo un rol puede tener media Facturacion: "1 de 9 modulos" decia
+      // menos que nada.
+      render: (row) => <Badge tone="sys">{modulosDe(row)}</Badge>,
     },
     {
       key: 'activo',

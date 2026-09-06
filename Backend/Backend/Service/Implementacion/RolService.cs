@@ -136,6 +136,11 @@ public class RolService : IRolService
         var actualizado = await _repository.GetConPermisosAsync(id);
         var response = MapToResponse(actualizado!, await _repository.ContarUsuariosAsync(id));
         await _notificador.AvisarAsync("roles", "permisos", response);
+
+        // Tambien por "permisos": es lo que escuchan las sesiones abiertas para
+        // rehacer su menu. Sin esto, a quien acaban de darle una pantalla le
+        // sigue sin aparecer hasta que recargue.
+        await _notificador.AvisarAsync("permisos", "rol", new { rolId = id });
         return response;
     }
 

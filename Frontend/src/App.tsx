@@ -5,6 +5,7 @@ import { DashboardLayout, NAV_DEFAULT, navIdFromPath, navPath, resolveNav } from
 import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, AuditoriaPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
+import { SolicitudPermisoModal } from './features/config/SolicitudPermisoModal'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
 import { ArqueoDiarioPage, CuentasPorCobrarPage, CuentasPorPagarPage, MetodosPagoPage, MisCobrosPage } from './features/finanzas'
 import {
@@ -97,6 +98,13 @@ function App() {
         <Route path="/:modulo/:vista" element={<Vista />} />
         <Route path="*" element={<Navigate to={navPath(NAV_DEFAULT)} replace />} />
       </Routes>
+
+      {/*
+        Se monta una vez, fuera de las vistas: cualquier 403 del filtro de
+        permisos lo abre, venga de donde venga, sin que cada pantalla tenga que
+        acordarse de manejarlo.
+      */}
+      <SolicitudPermisoModal />
     </DashboardLayout>
     </PermisosProvider>
   )

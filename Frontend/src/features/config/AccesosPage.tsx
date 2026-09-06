@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, RotateCcw, Save, ShieldCheck } from 'lucide-react'
-import { Alert, Badge, Button, cn, PageHeader, PageSection } from '../../components/ui'
+import { ChevronDown, Inbox, RotateCcw, Save, ShieldCheck, ShieldPlus, Users } from 'lucide-react'
+import { Alert, Badge, Button, cn, PageHeader, PageSection, Tabs } from '../../components/ui'
+import { ExcepcionesPermisos } from './ExcepcionesPermisos'
+import { BandejaSolicitudes } from './BandejaSolicitudes'
+import { ESTADO_SOLICITUD, solicitudApi } from './solicitudApi'
 import { NAV_GROUPS, resolveNav } from '../../components/layout'
 import { ApiError } from '../../lib/apiClient'
 import { catalogoPermisos } from '../../lib/permisos'
@@ -48,6 +51,35 @@ export function AccesosPage() {
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
   const [abiertos, setAbiertos] = useState<string[]>([])
+
+  /*
+   * Dos pestañas porque son dos preguntas distintas: "que hace este rol" se
+   * configura una vez y vale para todos, "que le falta a esta persona" se
+   * resuelve caso por caso. Mezclarlas en una sola pantalla haria que quien
+   * viene a soltar una accion puntual tuviera que pasar por la matriz entera.
+   */
+  const [pestana, setPestana] = useState('rol')
+
+  /*
+   * Cuantas solicitudes esperan respuesta, para el numero de la pestaña: sin
+   * el, quien no entra a la bandeja no se entera de que alguien esta esperando.
+   */
+  const [pendientes, setPendientes] = useState(0)
+
+  const contarPendientes = useCallback(async () => {
+    try {
+      const abiertas = await solicitudApi.bandeja(true)
+      setPendientes(abiertas.filter((s) => s.estado === ESTADO_SOLICITUD.pendiente).length)
+    } catch {
+      // El contador es un adorno: si falla, la bandeja se abre igual.
+    }
+  }, [])
+
+  useEffect(() => {
+    void contarPendientes()
+  }, [contarPendientes])
+
+  useRealtime('permisos', contarPendientes)
 
   const cargar = useCallback(async () => {
     setError('')
@@ -180,31 +212,65 @@ export function AccesosPage() {
     <div className="space-y-5">
       <PageHeader
         icon={<ShieldCheck size={20} />}
-        title={rol ? `Accesos de ${rol.nombre}` : 'Accesos'}
+        title={
+          pestana === 'rol'
+            ? rol
+              ? `Accesos de ${rol.nombre}`
+              : 'Accesos'
+            : pestana === 'usuario'
+              ? 'Permisos por persona'
+              : 'Solicitudes de permiso'
+        }
         description={
-          rol
-            ? `${pantallasActivas} de ${catalogo.length} pantallas habilitadas. ${rol.descripcion ?? ''}`
-            : 'Elige un rol para configurar qué puede hacer en cada pantalla.'
+          pestana === 'solicitudes'
+            ? 'Lo que la gente pidió al toparse con una acción bloqueada.'
+            : pestana === 'usuario'
+            ? 'Lo que alguien necesita hacer y su rol no le da, sin tener que subirlo de rol.'
+            : rol
+              ? `${pantallasActivas} de ${catalogo.length} pantallas habilitadas. ${rol.descripcion ?? ''}`
+              : 'Elige un rol para configurar qué puede hacer en cada pantalla.'
         }
         actions={
-          <>
-            <Button variant="secondary" size="sm" disabled={!sucio} onClick={restablecer}>
-              <RotateCcw size={15} />
-              Restablecer
-            </Button>
-            <Button
-              size="sm"
-              disabled={!sucio}
-              loading={guardando}
-              onClick={() => void guardar()}
-              iconRight={<Save size={15} />}
-            >
-              Guardar
-            </Button>
-          </>
+          pestana === 'rol' ? (
+            <>
+              <Button variant="secondary" size="sm" disabled={!sucio} onClick={restablecer}>
+                <RotateCcw size={15} />
+                Restablecer
+              </Button>
+              <Button
+                size="sm"
+                disabled={!sucio}
+                loading={guardando}
+                onClick={() => void guardar()}
+                iconRight={<Save size={15} />}
+              >
+                Guardar
+              </Button>
+            </>
+          ) : undefined
         }
       />
 
+      <Tabs
+        active={pestana}
+        onChange={setPestana}
+        items={[
+          { id: 'rol', label: 'Por rol', icon: <Users size={15} /> },
+          { id: 'usuario', label: 'Por persona', icon: <ShieldPlus size={15} /> },
+          {
+            id: 'solicitudes',
+            label: 'Solicitudes',
+            icon: <Inbox size={15} />,
+            badge: pendientes || undefined,
+          },
+        ]}
+      />
+
+      {pestana === 'usuario' && <ExcepcionesPermisos />}
+      {pestana === 'solicitudes' && <BandejaSolicitudes />}
+
+      {pestana === 'rol' && (
+      <>
       {error && <Alert>{error}</Alert>}
       {ok && (
         <p className="rounded-field border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
@@ -388,6 +454,8 @@ export function AccesosPage() {
           pantalla.
         </p>
       </PageSection>
+      </>
+      )}
     </div>
   )
 }

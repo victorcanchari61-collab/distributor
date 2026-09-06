@@ -28,6 +28,8 @@ public class AppDbContext : DbContext
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<RolPermiso> RolPermisos => Set<RolPermiso>();
+    public DbSet<UsuarioPermiso> UsuarioPermisos => Set<UsuarioPermiso>();
+    public DbSet<SolicitudPermiso> SolicitudesPermiso => Set<SolicitudPermiso>();
     public DbSet<Categoria> Categorias => Set<Categoria>();
     public DbSet<Marca> Marcas => Set<Marca>();
     public DbSet<UnidadMedida> UnidadesMedida => Set<UnidadMedida>();
@@ -121,6 +123,56 @@ public class AppDbContext : DbContext
                 .WithMany(r => r.Permisos)
                 .HasForeignKey(p => p.RolId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UsuarioPermiso>(entity =>
+        {
+            entity.ToTable("UsuarioPermisos");
+            entity.Property(p => p.Submodulo).HasMaxLength(60).IsRequired();
+            entity.Property(p => p.Accion).HasMaxLength(20).IsRequired();
+            entity.Property(p => p.Motivo).HasMaxLength(300);
+            entity.Property(p => p.Alcance).HasConversion<int>();
+
+            // A diferencia de los del rol, aqui NO hay indice unico: la misma
+            // persona puede pedir dos veces el mismo permiso de un solo uso, y
+            // cada concesion es una fila con su propio rastro.
+            entity.HasIndex(p => new { p.UsuarioId, p.Submodulo, p.Accion });
+
+            entity.HasOne(p => p.Usuario)
+                .WithMany()
+                .HasForeignKey(p => p.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // SetNull: si el admin que lo aprobo se da de baja, la concesion
+            // sigue en pie — quitarsela a alguien por eso seria una sorpresa.
+            entity.HasOne<Usuario>()
+                .WithMany()
+                .HasForeignKey(p => p.OtorgadoPorId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SolicitudPermiso>(entity =>
+        {
+            entity.ToTable("SolicitudesPermiso");
+            entity.Property(s => s.Submodulo).HasMaxLength(60).IsRequired();
+            entity.Property(s => s.Accion).HasMaxLength(20).IsRequired();
+            entity.Property(s => s.Motivo).HasMaxLength(300);
+            entity.Property(s => s.Referencia).HasMaxLength(60);
+            entity.Property(s => s.Respuesta).HasMaxLength(300);
+            entity.Property(s => s.Estado).HasConversion<int>();
+
+            // La bandeja del admin siempre pregunta lo mismo: que hay pendiente.
+            entity.HasIndex(s => new { s.Estado, s.FechaSolicitud });
+
+            entity.HasOne(s => s.Usuario)
+                .WithMany()
+                .HasForeignKey(s => s.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne<Usuario>()
+                .WithMany()
+                .HasForeignKey(s => s.ResueltaPorId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Usuario>(entity =>

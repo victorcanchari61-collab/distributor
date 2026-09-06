@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { api } from './apiClient'
 import { getToken } from './authStorage'
+import { useRealtime } from './realtime'
 
 /** Una acción sobre un submódulo, tal como la nombra el backend. */
 export const ACCION = {
@@ -72,6 +73,16 @@ export function PermisosProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void refrescar()
   }, [refrescar])
+
+  /*
+   * Un admin aprueba desde su PC y la persona que esperaba lo tiene al momento,
+   * sin volver a entrar. Es la razon de que los permisos se resuelvan contra la
+   * base y no contra el token: en el token no habria forma de enterarse.
+   *
+   * Refresca cualquier cambio de permisos, no solo el propio: el aviso no dice
+   * a quien le toca, y una consulta de mas es mas barata que enterarse tarde.
+   */
+  useRealtime('permisos', () => void refrescar())
 
   const valor = useMemo(() => ({ permisos, cargando, refrescar }), [permisos, cargando, refrescar])
 

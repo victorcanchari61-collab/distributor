@@ -4,6 +4,7 @@ using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Backend.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260906184613_PermisosPorUsuario")]
+    partial class PermisosPorUsuario
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1999,65 +2002,6 @@ namespace Backend.Data.Migrations
                     b.ToTable("Rutas", (string)null);
                 });
 
-            modelBuilder.Entity("Backend.Models.SolicitudPermiso", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Accion")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)");
-
-                    b.Property<int>("Estado")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("FechaResolucion")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("FechaSolicitud")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Motivo")
-                        .HasMaxLength(300)
-                        .HasColumnType("varchar(300)");
-
-                    b.Property<int?>("PermisoId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Referencia")
-                        .HasMaxLength(60)
-                        .HasColumnType("varchar(60)");
-
-                    b.Property<string>("Respuesta")
-                        .HasMaxLength(300)
-                        .HasColumnType("varchar(300)");
-
-                    b.Property<int?>("ResueltaPorId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Submodulo")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("varchar(60)");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ResueltaPorId");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.HasIndex("Estado", "FechaSolicitud");
-
-                    b.ToTable("SolicitudesPermiso", (string)null);
-                });
-
             modelBuilder.Entity("Backend.Models.UnidadMedida", b =>
                 {
                     b.Property<int>("Id")
@@ -2928,22 +2872,6 @@ namespace Backend.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Rol");
-                });
-
-            modelBuilder.Entity("Backend.Models.SolicitudPermiso", b =>
-                {
-                    b.HasOne("Backend.Models.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("ResueltaPorId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Backend.Models.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("Backend.Models.Usuario", b =>
