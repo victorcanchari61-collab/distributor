@@ -183,4 +183,41 @@ public class VentasRepository : IVentasRepository
             .Include(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(d => d.NotaVenta)
             .FirstOrDefaultAsync(d => d.Id == id);
+
+    public async Task ReemplazarDetalleNotaVentaAsync(int notaVentaId, IEnumerable<NotaVentaDetalle> detalle)
+    {
+        var actuales = await _context.NotaVentaDetalles
+            .Where(d => d.NotaVentaId == notaVentaId)
+            .ToListAsync();
+        var actualesPorId = actuales.ToDictionary(d => d.Id);
+
+        var conservadas = new HashSet<int>();
+
+        foreach (var linea in detalle)
+        {
+            if (linea.Id > 0 && actualesPorId.TryGetValue(linea.Id, out var existente))
+            {
+                existente.ProductoId = linea.ProductoId;
+                existente.PresentacionId = linea.PresentacionId;
+                existente.CantidadPresentacion = linea.CantidadPresentacion;
+                existente.Cantidad = linea.Cantidad;
+                existente.PrecioUnitario = linea.PrecioUnitario;
+                existente.Anulado = linea.Anulado;
+                conservadas.Add(existente.Id);
+            }
+            else
+            {
+                linea.NotaVentaId = notaVentaId;
+                linea.Id = 0;
+                await _context.NotaVentaDetalles.AddAsync(linea);
+            }
+        }
+
+        foreach (var quitada in actuales.Where(d => !conservadas.Contains(d.Id)))
+        {
+            quitada.Anulado = true;
+        }
+
+        await _context.SaveChangesAsync();
+    }
 }

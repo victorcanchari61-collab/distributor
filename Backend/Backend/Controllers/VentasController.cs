@@ -98,6 +98,11 @@ public class NotaVentaController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
     }
 
+    /// <summary>Corrige una venta ya confirmada: el stock se ajusta solo, según la diferencia.</summary>
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, [FromBody] CrearNotaVentaRequest request) =>
+        Ok(await _ventas.ActualizarNotaVentaAsync(id, request, UsuarioId));
+
     [HttpPatch("{id:int}/anular")]
     public async Task<IActionResult> Anular(int id)
     {

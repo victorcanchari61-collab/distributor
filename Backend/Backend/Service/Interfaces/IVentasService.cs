@@ -26,6 +26,13 @@ public interface IVentasService
     /// <summary>Venta directa, sin pedido previo: el stock sale al momento.</summary>
     Task<NotaVentaResponse> CrearNotaVentaAsync(CrearNotaVentaRequest request, int? usuarioId);
 
+    /// <summary>
+    /// Corrige una venta ya confirmada: el stock que había salido con las
+    /// cantidades anteriores se devuelve y se vuelve a descontar con las
+    /// nuevas. Una línea que se quita no se borra, queda Anulada.
+    /// </summary>
+    Task<NotaVentaResponse> ActualizarNotaVentaAsync(int id, CrearNotaVentaRequest request, int? usuarioId);
+
     Task AnularNotaVentaAsync(int id, int? usuarioId);
 
     /// <summary>Registra un abono contra el saldo pendiente de una nota de venta.</summary>

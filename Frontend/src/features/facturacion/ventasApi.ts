@@ -161,6 +161,8 @@ export const notaVentaApi = {
     api.get<NotaVentaResponse[]>(`/notaventa${estado ? `?estado=${estado}` : ''}`),
   getById: (id: number) => api.get<NotaVentaResponse>(`/notaventa/${id}`),
   create: (body: CrearNotaVentaRequest) => api.post<NotaVentaResponse>('/notaventa', body),
+  /** Corrige una venta ya confirmada: el stock se ajusta solo, según la diferencia. */
+  update: (id: number, body: CrearNotaVentaRequest) => api.put<NotaVentaResponse>(`/notaventa/${id}`, body),
   anular: (id: number) => api.patch<void>(`/notaventa/${id}/anular`),
   /** Notas a crédito con saldo pendiente: la base de "Cuentas por cobrar". */
   cuentasPorCobrar: () => api.get<NotaVentaResponse[]>('/notaventa/cuentasporcobrar'),

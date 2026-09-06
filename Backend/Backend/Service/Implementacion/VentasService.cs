@@ -181,10 +181,7 @@ public class VentasService : IVentasService
         return await _auditoria.GetHistorialDocumentoAsync("Pedido", id, "PedidoDetalle", idsLineas);
     }
 
-    /// <summary>
-    /// Qué cambió en esta nota de venta: como no se editan cantidades, esto es
-    /// sobre todo anulaciones y movimientos de pago.
-    /// </summary>
+    /// <summary>Qué cambió en esta nota de venta: ediciones de línea, anulaciones y movimientos de pago.</summary>
     public async Task<IEnumerable<AuditoriaResponse>> GetHistorialNotaVentaAsync(int id)
     {
         var notaVenta = await GetNotaVentaOrThrowAsync(id);
@@ -242,6 +239,87 @@ public class VentasService : IVentasService
             observacion: request.Observacion,
             lineas: await ResolverLineasAsync(request.Detalle),
             usuarioId: usuarioId);
+    }
+
+    /// <summary>
+    /// Corrige una venta ya confirmada. El stock no se ajusta a mano: se
+    /// devuelve el que había salido con las cantidades anteriores (igual que
+    /// una anulación) y se vuelve a descontar con las cantidades corregidas,
+    /// así el kardex queda exacto sin importar si subió, bajó o se quitó una
+    /// línea entera.
+    /// </summary>
+    public async Task<NotaVentaResponse> ActualizarNotaVentaAsync(int id, CrearNotaVentaRequest request, int? usuarioId)
+    {
+        await _notaVentaValidator.ValidateAndThrowAsync(request);
+
+        var notaVenta = await GetNotaVentaOrThrowAsync(id);
+
+        if (notaVenta.Estado == EstadoNotaVenta.Anulada)
+        {
+            throw new BadRequestException("Esta nota de venta está anulada: no se puede editar.");
+        }
+
+        var almacen = await _inventario.GetAlmacenAsync(request.AlmacenId);
+        if (!almacen.Activo)
+        {
+            throw new BadRequestException("El almacén está desactivado");
+        }
+
+        var lineas = await ResolverLineasAsync(request.Detalle);
+        var nuevoTotal = Math.Round(lineas.Where(l => !l.Anulado).Sum(l => l.Cantidad * l.PrecioUnitario), 2);
+        var pagado = Math.Round(notaVenta.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2);
+
+        if (nuevoTotal < pagado - 0.001m)
+        {
+            throw new BadRequestException(
+                $"El nuevo total (S/ {nuevoTotal}) queda por debajo de lo ya cobrado (S/ {pagado}). "
+                + "Anula o corrige el pago primero.");
+        }
+
+        // Se devuelve el stock que había salido con las cantidades anteriores:
+        // abajo se vuelve a descontar ya con las cantidades corregidas.
+        if (notaVenta.DocumentoInventarioId is int documentoAnteriorId)
+        {
+            await _inventario.AnularAsync(documentoAnteriorId, usuarioId);
+        }
+
+        notaVenta.ClienteId = request.ClienteId;
+        notaVenta.AlmacenId = request.AlmacenId;
+        notaVenta.Observacion = Limpiar(request.Observacion);
+        await _repository.UpdateNotaVentaAsync(notaVenta);
+
+        await _repository.ReemplazarDetalleNotaVentaAsync(id, lineas.Select(l => new NotaVentaDetalle
+        {
+            Id = l.Id,
+            ProductoId = l.ProductoId,
+            PresentacionId = l.PresentacionId,
+            CantidadPresentacion = l.CantidadPresentacion,
+            Cantidad = l.Cantidad,
+            PrecioUnitario = l.PrecioUnitario,
+            Anulado = l.Anulado
+        }));
+
+        var actualizada = await GetNotaVentaOrThrowAsync(id);
+
+        try
+        {
+            var documento = await _inventario.CrearSalidaVentaAsync(actualizada, usuarioId);
+            actualizada.DocumentoInventarioId = documento.Id;
+            await _repository.UpdateNotaVentaAsync(actualizada);
+        }
+        catch
+        {
+            // Igual que al crearla: si el nuevo descuento no se puede hacer
+            // (ya no alcanza el stock), la nota no queda a medias — se anula.
+            actualizada.Estado = EstadoNotaVenta.Anulada;
+            actualizada.DocumentoInventarioId = null;
+            await _repository.UpdateNotaVentaAsync(actualizada);
+            throw;
+        }
+
+        var resultado = await GetNotaVentaAsync(id);
+        await _notificador.AvisarAsync("notasventa", "actualizada", resultado);
+        return resultado;
     }
 
     public async Task AnularNotaVentaAsync(int id, int? usuarioId)
@@ -587,7 +665,8 @@ public class VentasService : IVentasService
         CantidadPresentacion = d.CantidadPresentacion,
         Cantidad = d.Cantidad,
         PrecioUnitario = d.PrecioUnitario,
-        Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2)
+        Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2),
+        Anulado = d.Anulado
     };
 
     private static PedidoResponse MapPedido(Pedido p) => new()
@@ -626,7 +705,9 @@ public class VentasService : IVentasService
         FormaPago = n.FormaPago,
         Observacion = n.Observacion,
         Usuario = n.Usuario?.Nombre,
-        Total = Math.Round(n.Detalle.Sum(d => d.Cantidad * d.PrecioUnitario), 2),
+        // Una línea anulada se sigue mostrando (para no perder su rastro),
+        // pero no suma al total.
+        Total = Math.Round(n.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario), 2),
         Detalle = n.Detalle.Select(MapLinea).ToList(),
         Pagos = n.Pagos.Select(MapPago).ToList(),
         TotalPagado = Math.Round(n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2)

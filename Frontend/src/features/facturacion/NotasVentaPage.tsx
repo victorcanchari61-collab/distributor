@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Contact, Eye, History, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AgregarProductoPanel,
   Alert,
@@ -75,6 +75,7 @@ export function NotasVentaPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
+  const [editando, setEditando] = useState<NotaVentaResponse | null>(null)
   const [detalleAbierto, setDetalleAbierto] = useState<NotaVentaResponse | null>(null)
   const [historialAbierto, setHistorialAbierto] = useState<NotaVentaResponse | null>(null)
   const [historial, setHistorial] = useState<AuditoriaResponse[]>([])
@@ -142,6 +143,7 @@ export function NotasVentaPage() {
   }, [almacenId, notas])
 
   const abrirNueva = () => {
+    setEditando(null)
     setClienteId(0)
     // El principal por defecto: quien tiene un solo depósito nunca lo elige.
     setAlmacenId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
@@ -153,6 +155,35 @@ export function NotasVentaPage() {
     setPagoMonto('')
     setObservacion('')
     setFilas([])
+    setErrorForm('')
+    setVista('form')
+  }
+
+  const abrirEdicion = (nota: NotaVentaResponse) => {
+    setEditando(nota)
+    setClienteId(nota.clienteId)
+    setAlmacenId(nota.almacenId)
+    setListaPrecioId(0)
+    setFormaPago(nota.formaPago)
+    setPagos([])
+    setPagoTipo('')
+    setPagoMetodoId(0)
+    setPagoMonto('')
+    setObservacion(nota.observacion ?? '')
+    setFilas(
+      nota.detalle
+        .filter((l) => !l.anulado)
+        .map((l) => ({
+          id: crypto.randomUUID(),
+          lineaId: l.id,
+          productoId: l.productoId,
+          presentacionId: l.presentacionId ?? 0,
+          cantidad: String(l.cantidadPresentacion),
+          costo: String(l.precioUnitario * (l.cantidadPresentacion ? l.cantidad / l.cantidadPresentacion : 1)),
+          lote: '',
+          fechaVencimiento: '',
+        })),
+    )
     setErrorForm('')
     setVista('form')
   }
@@ -200,7 +231,9 @@ export function NotasVentaPage() {
     const validas = filas.filter((f) => f.productoId && f.cantidad && f.costo)
     if (validas.length === 0) return setErrorForm('Agrega al menos un producto con su precio.')
 
-    if (totalPagado > total + 0.001) {
+    // Al editar no se tocan los pagos: eso ya tiene su propio flujo
+    // ("Gestionar pagos" desde Ver detalle), así que ni se valida ni se envía.
+    if (!editando && totalPagado > total + 0.001) {
       return setErrorForm(
         `Los pagos suman S/ ${totalPagado.toFixed(2)}, más que el total de la venta (S/ ${total.toFixed(2)}).`,
       )
@@ -211,9 +244,10 @@ export function NotasVentaPage() {
       almacenId,
       listaPrecioId: listaPrecioId || null,
       formaPago,
-      pagos: pagos.map((p) => ({ metodoPagoId: p.metodoPagoId, monto: Number(p.monto) })),
+      pagos: editando ? [] : pagos.map((p) => ({ metodoPagoId: p.metodoPagoId, monto: Number(p.monto) })),
       observacion: observacion.trim() || null,
       detalle: validas.map((f) => ({
+        id: f.lineaId ?? null,
         productoId: f.productoId,
         presentacionId: f.presentacionId || null,
         cantidad: Number(f.cantidad),
@@ -224,7 +258,11 @@ export function NotasVentaPage() {
     setGuardando(true)
     setErrorForm('')
     try {
-      await notaVentaApi.create(body)
+      if (editando) {
+        await notaVentaApi.update(editando.id, body)
+      } else {
+        await notaVentaApi.create(body)
+      }
       setVista('lista')
       await cargar()
     } catch (e) {
@@ -378,8 +416,12 @@ export function NotasVentaPage() {
       <div className="space-y-5">
         <PageHeader
           icon={<ShoppingBag size={20} />}
-          title="Nueva venta directa"
-          description="Sin pasar por un pedido primero. El stock sale del almacén elegido al momento de registrarla."
+          title={editando ? `Editar ${editando.numero}` : 'Nueva venta directa'}
+          description={
+            editando
+              ? 'El stock se ajusta solo con la diferencia. Los pagos no se tocan aquí: usa "Gestionar pagos" desde Ver detalle.'
+              : 'Sin pasar por un pedido primero. El stock sale del almacén elegido al momento de registrarla.'
+          }
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
               <ArrowLeft size={15} />
@@ -454,36 +496,47 @@ export function NotasVentaPage() {
                 options={listas.map((l) => ({ value: l.id, label: l.nombre }))}
               />
 
-              <Desplegable
-                className="mt-4"
-                label="Forma de pago"
-                value={formaPago}
-                onChange={(v) => {
-                  const nueva = v as FormaPagoVenta
-                  setFormaPago(nueva)
-                  if (nueva === 'CREDITO') setPagos([])
-                }}
-                options={FORMAS_PAGO}
-              />
-
-              {formaPago === 'CONTADO' ? (
-                <div className="mt-4 flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2.5">
-                  <div>
-                    <span className="ui-label block">Pagos</span>
-                    <span className="text-xs text-ink-soft">
-                      {pagos.length === 0
-                        ? 'Sin registrar'
-                        : `S/ ${totalPagado.toFixed(2)} de S/ ${total.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
-                    </span>
-                  </div>
-                  <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
-                    {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
-                  </Button>
-                </div>
-              ) : (
-                <p className="mt-4 text-xs text-ink-soft">
-                  Al crédito no se registra pago ahora — queda pendiente de cobro.
+              {editando ? (
+                <p className="mt-4 rounded-field bg-surface-alt px-3 py-2 text-xs text-ink-soft">
+                  Forma de pago: <span className="font-medium text-ink">
+                    {FORMAS_PAGO.find((f) => f.value === formaPago)?.label ?? formaPago}
+                  </span>
+                  . Los pagos se gestionan desde "Ver detalle" → Gestionar pagos.
                 </p>
+              ) : (
+                <>
+                  <Desplegable
+                    className="mt-4"
+                    label="Forma de pago"
+                    value={formaPago}
+                    onChange={(v) => {
+                      const nueva = v as FormaPagoVenta
+                      setFormaPago(nueva)
+                      if (nueva === 'CREDITO') setPagos([])
+                    }}
+                    options={FORMAS_PAGO}
+                  />
+
+                  {formaPago === 'CONTADO' ? (
+                    <div className="mt-4 flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2.5">
+                      <div>
+                        <span className="ui-label block">Pagos</span>
+                        <span className="text-xs text-ink-soft">
+                          {pagos.length === 0
+                            ? 'Sin registrar'
+                            : `S/ ${totalPagado.toFixed(2)} de S/ ${total.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
+                        </span>
+                      </div>
+                      <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
+                        {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-xs text-ink-soft">
+                      Al crédito no se registra pago ahora — queda pendiente de cobro.
+                    </p>
+                  )}
+                </>
               )}
 
               <Input
@@ -510,7 +563,7 @@ export function NotasVentaPage() {
             Cancelar
           </Button>
           <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-            Registrar venta
+            {editando ? 'Guardar cambios' : 'Registrar venta'}
           </Button>
         </div>
 
@@ -652,6 +705,14 @@ export function NotasVentaPage() {
             <History size={15} />
           </RowAction>
           <RowAction
+            label={`Editar ${row.numero}`}
+            disabled={row.estado !== 'CONFIRMADA'}
+            disabledReason="Ya está anulada"
+            onClick={() => abrirEdicion(row)}
+          >
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
             label={`Anular ${row.numero}`}
             tone="danger"
             disabled={row.estado !== 'CONFIRMADA'}
@@ -679,8 +740,14 @@ export function NotasVentaPage() {
           <div className="flex flex-col gap-3">
             {detalleAbierto.estado === 'ANULADA' && <div>{estadoNotaVentaBadge(detalleAbierto.estado)}</div>}
 
+            {detalleAbierto.detalle.some((l) => l.anulado) && (
+              <p className="text-xs text-ink-soft">
+                Se quitaron productos al editar esta venta — quedan solo en "Ver historial".
+              </p>
+            )}
+
             <TablaProductosDetalle<LineaVentaResponse>
-              filas={detalleAbierto.detalle}
+              filas={detalleAbierto.detalle.filter((l) => !l.anulado)}
               rowKey={(l) => l.id}
               titulo={(l) => l.producto}
               subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}

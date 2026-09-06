@@ -42,4 +42,11 @@ public interface IVentasRepository
     /// la venta completa como anulada al revertir su salida de stock.
     /// </summary>
     Task<NotaVentaDetalle?> GetNotaVentaDetalleConNotaVentaAsync(int id);
+
+    /// <summary>
+    /// Igual que <see cref="ReemplazarDetallePedidoAsync"/> pero para una nota
+    /// de venta: diff línea por línea, nunca se borra, la que se quita queda
+    /// Anulada.
+    /// </summary>
+    Task ReemplazarDetalleNotaVentaAsync(int notaVentaId, IEnumerable<NotaVentaDetalle> detalle);
 }

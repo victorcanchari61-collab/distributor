@@ -206,4 +206,11 @@ public class NotaVentaDetalle
 
     /// <summary>Precio de venta por unidad base.</summary>
     public decimal PrecioUnitario { get; set; }
+
+    /// <summary>
+    /// Se quitó de la venta al editarla: no cuenta para el total ni para el
+    /// stock que sale, pero la fila se conserva (no se borra) para no perder
+    /// su historial de cambios.
+    /// </summary>
+    public bool Anulado { get; set; }
 }

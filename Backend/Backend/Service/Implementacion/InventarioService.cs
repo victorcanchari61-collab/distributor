@@ -1022,7 +1022,9 @@ public class InventarioService : IInventarioService
         await _repository.AddDocumentoAsync(documento);
         await _repository.GuardarAsync();
 
-        foreach (var linea in notaVenta.Detalle)
+        // Una línea anulada al editar la nota no debe salir del almacén: se
+        // conserva solo para el historial, igual que en un Pedido.
+        foreach (var linea in notaVenta.Detalle.Where(d => !d.Anulado))
         {
             var producto = await _productos.GetConDetalleAsync(linea.ProductoId)
                 ?? throw new BadRequestException($"No existe el producto {linea.ProductoId}");
