@@ -378,6 +378,7 @@ export function SysDataTable<T>({
   // filas cambian justamente PORQUE se pidio otra pagina, asi que volver a la
   // primera dispararia otra peticion y se quedaria dando vueltas.
   useEffect(() => {
+    irAlFondoRef.current = false
     setPage(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perPage, search, columnSearch, filters, sort, ...(enServidor ? [] : [rows])])
@@ -453,6 +454,16 @@ export function SysDataTable<T>({
   const headRef = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
 
+  /** Al retroceder se cae al final de la pagina anterior, no a su principio. */
+  const irAlFondoRef = useRef(false)
+
+  /**
+   * Marca el scroll que hace el propio componente al reubicar la vista. Sin
+   * esto, aterrizar en el fondo tras retroceder disparaba la regla de "estoy
+   * en el fondo, avanzo" y la pagina se iba sola hacia adelante otra vez.
+   */
+  const scrollPropioRef = useRef(false)
+
   /*
    * La cabecera va fuera del area con scroll, para que la barra aparezca solo
    * junto a las filas. Ambas tablas usan `table-layout: fixed` con los mismos
@@ -485,44 +496,92 @@ export function SysDataTable<T>({
   }, [visible, widths, actions, actionsWidth])
 
   /*
-   * Cerrojo de la paginacion por scroll.
+   * Paginacion con la rueda: al fondo se avanza, al tope se retrocede.
    *
-   * Un solo golpe de rueda no dispara UN evento de scroll sino varios, y
-   * mientras el contenedor sigue tocando el fondo todos cumplen la condicion
-   * de avanzar. Como el avance es `p => p + 1`, cada evento sumaba una pagina:
-   * bajar una vez saltaba de la 1 a la 3, y el siguiente golpe a la 5.
+   * Hay dos trampas que obligan a escuchar `wheel` y no solo `scroll`:
    *
-   * El cerrojo deja pasar UN avance por llegada al fondo, y se libera solo
-   * cuando un scroll posterior muestra que ya no estamos abajo — cosa que la
-   * vuelta al tope de la pagina nueva garantiza.
+   *   1. Un golpe de rueda no dispara UN evento sino decenas, y mientras el
+   *      contenedor sigue pegado al borde todos cumplen la condicion. Sin
+   *      freno, cada uno sumaba una pagina: bajar una vez saltaba de la 1 a
+   *      la 3, y el siguiente golpe a la 5.
+   *
+   *   2. Estando en el tope, girar la rueda hacia arriba NO genera ningun
+   *      evento `scroll` — no hay nada que desplazar. Colgada solo del
+   *      scroll, la vuelta atras era imposible.
+   *
+   * El freno es por tiempo (y no por posicion) justamente por el caso 2: en
+   * un borde no llega el evento que permitiria liberar un cerrojo posicional.
    */
-  const avanzandoRef = useRef(false)
+  const ultimoSaltoRef = useRef(0)
+
+  const saltarPagina = (delta: 1 | -1) => {
+    ultimoSaltoRef.current = performance.now()
+    irAlFondoRef.current = delta === -1
+    setPage((p) => Math.min(pageCount, Math.max(1, p + delta)))
+  }
+
+  /** Un salto por gesto: los eventos que siguen al primero se ignoran. */
+  const gestoNuevo = () => performance.now() - ultimoSaltoRef.current > 500
+
+  /** Donde esta el contenedor, y si tiene algo que desplazar. */
+  const bordes = (el: HTMLDivElement) => ({
+    desborda: el.scrollHeight > el.clientHeight + 4,
+    alFondo: el.scrollTop + el.clientHeight >= el.scrollHeight - 4,
+    alTope: el.scrollTop <= 4,
+  })
 
   const onBodyScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget
     if (headRef.current) headRef.current.scrollLeft = el.scrollLeft
 
-    // Sin desbordamiento vertical no se pagina: tope y fondo coincidirian.
-    if (el.scrollHeight <= el.clientHeight + 4) {
-      avanzandoRef.current = false
+    // El scroll que provoco el propio componente no es un gesto del usuario.
+    if (scrollPropioRef.current) {
+      scrollPropioRef.current = false
       return
     }
 
-    if (el.scrollTop + el.clientHeight < el.scrollHeight - 4) {
-      avanzandoRef.current = false
-      return
-    }
-
-    if (avanzandoRef.current || page >= pageCount) return
-
-    avanzandoRef.current = true
-    setPage((p) => Math.min(p + 1, pageCount))
+    // Cubre lo que la rueda no ve: arrastrar la barra, teclado, tactil.
+    const { desborda, alFondo } = bordes(el)
+    if (desborda && alFondo && page < pageCount && gestoNuevo()) saltarPagina(1)
   }
 
-  // Cada cambio de pagina empieza por la primera fila.
+  const onBodyWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const { desborda, alFondo, alTope } = bordes(e.currentTarget)
+    if (!desborda || !gestoNuevo()) return
+
+    if (e.deltaY > 0 && alFondo && page < pageCount) saltarPagina(1)
+    else if (e.deltaY < 0 && alTope && page > 1) saltarPagina(-1)
+  }
+
+  /** Ir a una pagina desde los botones: siempre se aterriza en la primera fila. */
+  const irAPagina = (n: number) => {
+    irAlFondoRef.current = false
+    setPage(Math.min(pageCount, Math.max(1, n)))
+  }
+
+  /*
+   * Donde queda la vista al cambiar de pagina: al avanzar, en la primera
+   * fila; al retroceder, en la ultima — para que leer hacia atras sea
+   * continuo y no haya que bajar de nuevo hasta el final.
+   *
+   * Depende tambien de las filas visibles porque contra el servidor la pagina
+   * cambia ANTES de que lleguen los datos: si solo mirara `page`, colocaria la
+   * vista sobre el contenido viejo y la fila nueva apareceria en otro lugar.
+   *
+   * La bandera no se limpia aca a proposito: la fija quien provoca el cambio
+   * (la rueda o los botones), asi las dos fases de una misma vuelta atras la
+   * ven igual.
+   */
   useEffect(() => {
-    if (bodyRef.current) bodyRef.current.scrollTop = 0
-  }, [page])
+    const el = bodyRef.current
+    if (!el) return
+
+    const destino = irAlFondoRef.current ? el.scrollHeight : 0
+    if (el.scrollTop === destino) return
+
+    scrollPropioRef.current = true
+    el.scrollTop = destino
+  }, [page, pageRows])
 
   const activeColumnSearches = Object.values(columnSearch).filter((v) => v?.trim()).length
 
@@ -789,7 +848,12 @@ export function SysDataTable<T>({
         </div>
 
         {/* solo las filas se desplazan: la barra queda por debajo de la cabecera */}
-        <div ref={bodyRef} onScroll={onBodyScroll} className="max-h-[55vh] overflow-auto">
+        <div
+          ref={bodyRef}
+          onScroll={onBodyScroll}
+          onWheel={onBodyWheel}
+          className="max-h-[55vh] overflow-auto"
+        >
           <table
             className="w-full border-collapse bg-white text-sm"
             style={{ tableLayout: 'fixed' }}
@@ -953,11 +1017,11 @@ export function SysDataTable<T>({
 
         {pageCount > 1 && (
           <div className="flex items-center gap-1">
-            <PageButton onClick={() => setPage(1)} disabled={page === 1} label="Primera">
+            <PageButton onClick={() => irAPagina(1)} disabled={page === 1} label="Primera">
               <ChevronsLeft size={15} />
             </PageButton>
             <PageButton
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={() => irAPagina(page - 1)}
               disabled={page === 1}
               label="Anterior"
             >
@@ -973,7 +1037,7 @@ export function SysDataTable<T>({
                 <button
                   key={n}
                   type="button"
-                  onClick={() => setPage(n as number)}
+                  onClick={() => irAPagina(n as number)}
                   aria-current={n === page ? 'page' : undefined}
                   className={cn(
                     'min-w-[28px] rounded-md px-2 py-1 font-medium transition-colors',
@@ -988,14 +1052,14 @@ export function SysDataTable<T>({
             )}
 
             <PageButton
-              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+              onClick={() => irAPagina(page + 1)}
               disabled={page === pageCount}
               label="Siguiente"
             >
               <ChevronRight size={15} />
             </PageButton>
             <PageButton
-              onClick={() => setPage(pageCount)}
+              onClick={() => irAPagina(pageCount)}
               disabled={page === pageCount}
               label="Ultima"
             >
