@@ -165,6 +165,7 @@ export const NAV_GROUPS: NavGroup[] = [
     sys: 'tms',
     icon: Truck,
     items: [
+      { id: 'tms.mercados', label: 'Mercados', icon: Store },
       { id: 'tms.rutas', label: 'Rutas', icon: Route, pending: true },
       { id: 'tms.flota', label: 'Flota', icon: Truck, pending: true },
       { id: 'tms.conductores', label: 'Conductores', icon: IdCard, pending: true },

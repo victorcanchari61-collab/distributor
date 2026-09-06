@@ -58,24 +58,3 @@ export const clienteApi = {
   importar: (filas: ClienteRequest[], actualizarExistentes: boolean) =>
     api.post<ResultadoImportacion>('/cliente/importar', { filas, actualizarExistentes }),
 }
-
-// --- Mercados ---
-//
-// Dónde se entrega: un mercado de abastos, pero también puede ser una zona
-// con tiendas o empresas.
-
-export interface MercadoResponse {
-  id: number
-  nombre: string
-  activo: boolean
-  /** Cuántos clientes ya lo usan. Si hay alguno, no se elimina. */
-  clientes: number
-}
-
-export const mercadoApi = {
-  getAll: () => api.get<MercadoResponse[]>('/mercado'),
-  create: (body: { nombre: string }) => api.post<MercadoResponse>('/mercado', body),
-  update: (id: number, body: { nombre: string; activo: boolean }) =>
-    api.put<MercadoResponse>(`/mercado/${id}`, body),
-  remove: (id: number) => api.del<void>(`/mercado/${id}`),
-}

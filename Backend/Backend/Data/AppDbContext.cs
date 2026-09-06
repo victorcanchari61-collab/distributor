@@ -184,6 +184,8 @@ public class AppDbContext : DbContext
             entity.ToTable("Mercados");
             entity.HasIndex(m => m.Nombre).IsUnique();
             entity.Property(m => m.Nombre).HasMaxLength(80).IsRequired();
+            entity.Property(m => m.Direccion).HasMaxLength(250);
+            entity.Property(m => m.Distrito).HasMaxLength(80);
         });
 
         modelBuilder.Entity<Proveedor>(entity =>

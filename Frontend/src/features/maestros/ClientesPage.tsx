@@ -7,7 +7,6 @@ import {
   Route,
   ShieldCheck,
   ShieldOff,
-  Store,
   Trash2,
   Upload,
 } from 'lucide-react'
@@ -24,7 +23,6 @@ import {
   Modal,
   RowAction,
   StatCard,
-  Tabs,
   useConfirmacion,
 } from '../../components/ui'
 import type { DataTableColumn, TipoDocumento } from '../../components/ui'
@@ -32,9 +30,10 @@ import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { valorDe } from '../../lib/excel'
 import { useRealtime } from '../../lib/realtime'
-import { CatalogoSimple } from './CatalogoSimple'
-import { clienteApi, mercadoApi } from './clienteApi'
-import type { ClienteRequest, ClienteResponse, MercadoResponse } from './clienteApi'
+import { mercadoApi } from '../tms'
+import type { MercadoResponse } from '../tms'
+import { clienteApi } from './clienteApi'
+import type { ClienteRequest, ClienteResponse } from './clienteApi'
 
 const VACIO: ClienteRequest = {
   documento: '',
@@ -51,10 +50,7 @@ const VACIO: ClienteRequest = {
 
 const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO']
 
-type Pestana = 'clientes' | 'mercados'
-
 export function ClientesPage() {
-  const [pestana, setPestana] = useState<Pestana>('clientes')
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [mercados, setMercados] = useState<MercadoResponse[]>([])
   const [cargando, setCargando] = useState(true)
@@ -242,39 +238,6 @@ export function ClientesPage() {
   const conRuta = activos.filter((c) => c.ruta).length
   const rutas = new Set(activos.map((c) => c.ruta).filter(Boolean)).size
 
-  const cabecera = (
-    <Tabs
-      active={pestana}
-      onChange={(id) => setPestana(id as Pestana)}
-      items={[
-        { id: 'clientes', label: 'Clientes', icon: <Contact size={15} />, badge: clientes.length },
-        { id: 'mercados', label: 'Mercados', icon: <Store size={15} />, badge: mercados.length },
-      ]}
-    />
-  )
-
-  if (pestana === 'mercados') {
-    return (
-      <>
-        {cabecera}
-        <CatalogoSimple
-          titulo="Mercados"
-          descripcion="Dónde se entrega: un mercado, una zona con tiendas o una empresa."
-          icono={<Store size={20} />}
-          filas={mercados.map((m) => ({ ...m, productos: m.clientes }))}
-          usosEtiqueta="Clientes"
-          usosSingular="cliente"
-          onCrear={(datos) => mercadoApi.create({ nombre: datos.nombre })}
-          onActualizar={(id, datos) =>
-            mercadoApi.update(id, { nombre: datos.nombre, activo: datos.activo })
-          }
-          onEliminar={(id) => mercadoApi.remove(id)}
-          onRecargar={cargar}
-        />
-      </>
-    )
-  }
-
   const columns: DataTableColumn<ClienteResponse>[] = [
     {
       key: 'documento',
@@ -332,10 +295,8 @@ export function ClientesPage() {
   ]
 
   return (
-    <>
-      {cabecera}
-      <ListPage
-        icon={<Contact size={20} />}
+    <ListPage
+      icon={<Contact size={20} />}
         title="Clientes"
         description="Bodegas y puestos a los que se vende. El documento puede ser DNI, RUC o un código interno."
         actions={
@@ -567,6 +528,5 @@ export function ClientesPage() {
 
         {dialogo}
       </ListPage>
-    </>
   )
 }

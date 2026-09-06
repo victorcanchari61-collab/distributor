@@ -1,12 +1,15 @@
 namespace Backend.Dtos.Requests;
 
-public class CreateMercadoRequest
+public abstract class MercadoRequestBase
 {
     public string Nombre { get; set; } = string.Empty;
+    public string? Direccion { get; set; }
+    public string? Distrito { get; set; }
 }
 
-public class UpdateMercadoRequest
+public class CreateMercadoRequest : MercadoRequestBase;
+
+public class UpdateMercadoRequest : MercadoRequestBase
 {
-    public string Nombre { get; set; } = string.Empty;
     public bool Activo { get; set; } = true;
 }

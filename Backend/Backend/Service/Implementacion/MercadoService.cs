@@ -59,7 +59,13 @@ public class MercadoService : IMercadoService
             throw new ConflictException("Ya existe un mercado con ese nombre");
         }
 
-        var mercado = new Mercado { Nombre = nombre, Activo = true };
+        var mercado = new Mercado
+        {
+            Nombre = nombre,
+            Direccion = Limpiar(request.Direccion),
+            Distrito = Limpiar(request.Distrito),
+            Activo = true
+        };
         await _repository.AddAsync(mercado);
 
         var response = MapToResponse(mercado, 0);
@@ -80,6 +86,8 @@ public class MercadoService : IMercadoService
         }
 
         mercado.Nombre = nombre;
+        mercado.Direccion = Limpiar(request.Direccion);
+        mercado.Distrito = Limpiar(request.Distrito);
         mercado.Activo = request.Activo;
         await _repository.UpdateAsync(mercado);
 
@@ -106,10 +114,18 @@ public class MercadoService : IMercadoService
         await _repository.GetByIdAsync(id)
         ?? throw new NotFoundException($"No existe el mercado {id}");
 
+    private static string? Limpiar(string? texto)
+    {
+        var limpio = texto?.Trim();
+        return string.IsNullOrEmpty(limpio) ? null : limpio;
+    }
+
     private static MercadoResponse MapToResponse(Mercado m, int clientes) => new()
     {
         Id = m.Id,
         Nombre = m.Nombre,
+        Direccion = m.Direccion,
+        Distrito = m.Distrito,
         Activo = m.Activo,
         Clientes = clientes
     };

@@ -3,18 +3,16 @@ using FluentValidation;
 
 namespace Backend.Dtos.Validators;
 
-public class CreateMercadoRequestValidator : AbstractValidator<CreateMercadoRequest>
+public class MercadoValidator<T> : AbstractValidator<T> where T : MercadoRequestBase
 {
-    public CreateMercadoRequestValidator()
+    public MercadoValidator()
     {
         RuleFor(x => x.Nombre).NotEmpty().WithMessage("Falta el nombre").MaximumLength(80);
+        RuleFor(x => x.Direccion).MaximumLength(250);
+        RuleFor(x => x.Distrito).MaximumLength(80);
     }
 }
 
-public class UpdateMercadoRequestValidator : AbstractValidator<UpdateMercadoRequest>
-{
-    public UpdateMercadoRequestValidator()
-    {
-        RuleFor(x => x.Nombre).NotEmpty().WithMessage("Falta el nombre").MaximumLength(80);
-    }
-}
+public class CreateMercadoRequestValidator : MercadoValidator<CreateMercadoRequest>;
+
+public class UpdateMercadoRequestValidator : MercadoValidator<UpdateMercadoRequest>;
