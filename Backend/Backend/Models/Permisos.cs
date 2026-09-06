@@ -136,7 +136,11 @@ public static class CatalogoPermisos
             ["config.usuarios"] = Catalogo,
             ["config.roles"] = Catalogo,
             ["config.accesos"] = [Accion.Ver, Accion.Editar],
-            ["config.empresa"] = [Accion.Ver, Accion.Editar],
+            // Con varias sucursales la empresa se da de alta y se retira, no
+            // solo se corrige: sin crear/eliminar esas dos operaciones tendrian
+            // que colgarse de "editar" y quien pudiera cambiar un RUC podria
+            // tambien borrar la sucursal.
+            ["config.empresa"] = Catalogo,
             ["config.auditoria"] = Consulta,
             ["config.series"] = Catalogo,
             ["config.parametros"] = [Accion.Ver, Accion.Editar],

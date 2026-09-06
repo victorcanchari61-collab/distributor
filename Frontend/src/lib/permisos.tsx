@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { apiFetch } from './apiClient'
+import { api } from './apiClient'
 import { getToken } from './authStorage'
 
 /** Una acción sobre un submódulo, tal como la nombra el backend. */
@@ -56,7 +56,7 @@ export function PermisosProvider({ children }: { children: React.ReactNode }) {
         return
       }
       try {
-        const claves = await apiFetch<string[]>('/api/permiso/mios')
+        const claves = await api.get<string[]>('/permiso/mios')
         setPermisos(new Set(claves))
       } catch {
         // Sin respuesta se queda sin permisos: es preferible una pantalla vacía
@@ -102,5 +102,5 @@ export function usePermisos() {
 
 /** El catálogo completo, para dibujar la matriz de Accesos. */
 export function catalogoPermisos() {
-  return apiFetch<SubmoduloCatalogo[]>('/api/permiso/catalogo')
+  return api.get<SubmoduloCatalogo[]>('/permiso/catalogo')
 }

@@ -42,7 +42,7 @@ public class EmpresaController : ControllerBase
     }
 
     [HttpPost]
-    [Permiso("config.empresa", Accion.Editar)]
+    [Permiso("config.empresa", Accion.Crear)]
     public async Task<IActionResult> Create([FromBody] CreateEmpresaRequest request)
     {
         var response = await _empresaService.CreateAsync(request);
@@ -81,7 +81,7 @@ public class EmpresaController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Permiso("config.empresa", Accion.Editar)]
+    [Permiso("config.empresa", Accion.Eliminar)]
     public async Task<IActionResult> Delete(int id)
     {
         await _empresaService.DeleteAsync(id);
