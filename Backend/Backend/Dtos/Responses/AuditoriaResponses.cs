@@ -19,4 +19,11 @@ public class AuditoriaResponse
     /// <summary>Campo → valor. En una edición solo los que cambiaron; en un alta o baja el registro entero.</summary>
     public Dictionary<string, object?>? ValoresAnteriores { get; set; }
     public Dictionary<string, object?>? ValoresNuevos { get; set; }
+
+    /// <summary>
+    /// A qué se refiere el cambio en palabras del negocio: el nombre del
+    /// producto de la línea editada. Lo llena el historial de un documento —
+    /// la bitácora general no sabe resolver la relación y lo deja vacío.
+    /// </summary>
+    public string? Descripcion { get; set; }
 }

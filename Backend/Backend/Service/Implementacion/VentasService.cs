@@ -173,32 +173,59 @@ public class VentasService : IVentasService
         return notaVenta;
     }
 
-    /// <summary>Qué cambió en este pedido y sus líneas, para verlo desde el propio documento.</summary>
+    /// <summary>
+    /// Qué se le cambió a los productos de este pedido después de crearlo:
+    /// cantidades corregidas y líneas anuladas, nada más. El alta no entra —
+    /// lo que se pidió de entrada ya se ve en el propio detalle.
+    /// </summary>
     public async Task<IEnumerable<AuditoriaResponse>> GetHistorialPedidoAsync(int id)
     {
         var pedido = await GetPedidoOrThrowAsync(id);
-        var idsLineas = pedido.Detalle.Select(d => d.Id);
-        return await _auditoria.GetHistorialDocumentoAsync("Pedido", id, "PedidoDetalle", idsLineas);
+        var registros = await _auditoria.GetHistorialDocumentoAsync(
+            "Pedido", id, "PedidoDetalle", pedido.Detalle.Select(d => d.Id));
+
+        return SoloEdicionesDeLinea(
+            registros,
+            "PedidoDetalle",
+            pedido.Detalle.ToDictionary(d => d.Id, d => d.Producto?.Nombre ?? string.Empty));
     }
 
-    /// <summary>Qué cambió en esta nota de venta: ediciones de línea, anulaciones y movimientos de pago.</summary>
+    /// <summary>Lo mismo para una nota de venta: solo las correcciones a sus productos.</summary>
     public async Task<IEnumerable<AuditoriaResponse>> GetHistorialNotaVentaAsync(int id)
     {
         var notaVenta = await GetNotaVentaOrThrowAsync(id);
-        var idsLineas = notaVenta.Detalle.Select(d => d.Id);
-        var idsPagos = notaVenta.Pagos.Select(p => p.Id);
+        var registros = await _auditoria.GetHistorialDocumentoAsync(
+            "NotaVenta", id, "NotaVentaDetalle", notaVenta.Detalle.Select(d => d.Id));
 
-        var historial = (await _auditoria.GetHistorialDocumentoAsync("NotaVenta", id, "NotaVentaDetalle", idsLineas))
-            .ToList();
-
-        // El de arriba ya trajo los cambios de cabecera (Entidad == "NotaVenta");
-        // de esta segunda pasada solo hacen falta los de PagoVenta, para no
-        // repetir la cabecera dos veces.
-        var historialPagos = await _auditoria.GetHistorialDocumentoAsync("NotaVenta", id, "PagoVenta", idsPagos);
-        historial.AddRange(historialPagos.Where(r => r.Entidad == "PagoVenta"));
-
-        return historial.OrderByDescending(r => r.Fecha).ThenByDescending(r => r.Id);
+        return SoloEdicionesDeLinea(
+            registros,
+            "NotaVentaDetalle",
+            notaVenta.Detalle.ToDictionary(d => d.Id, d => d.Producto?.Nombre ?? string.Empty));
     }
+
+    /// <summary>
+    /// Deja pasar solo las ediciones de las líneas de producto y les pone el
+    /// nombre del producto. Se descartan las altas y los cambios de cabecera:
+    /// el historial responde "qué le cambiaron a los productos", no "qué pasó
+    /// con el documento".
+    /// </summary>
+    private static List<AuditoriaResponse> SoloEdicionesDeLinea(
+        IEnumerable<AuditoriaResponse> registros,
+        string entidadLinea,
+        Dictionary<int, string> productoPorLinea) =>
+        registros
+            .Where(r => r.Entidad == entidadLinea && r.Accion == AccionAuditoria.Actualizado)
+            .Select(r =>
+            {
+                r.Descripcion = int.TryParse(r.EntidadId, out var lineaId)
+                                && productoPorLinea.TryGetValue(lineaId, out var producto)
+                    ? producto
+                    : null;
+                return r;
+            })
+            .OrderByDescending(r => r.Fecha)
+            .ThenByDescending(r => r.Id)
+            .ToList();
 
     public async Task AnularPedidoAsync(int id)
     {

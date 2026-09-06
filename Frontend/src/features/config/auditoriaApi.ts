@@ -14,6 +14,8 @@ export interface AuditoriaResponse {
   /** Campo → valor. En una edición solo los que cambiaron; en alta o baja el registro entero. */
   valoresAnteriores: Record<string, unknown> | null
   valoresNuevos: Record<string, unknown> | null
+  /** El producto de la línea editada. Solo lo llena el historial de un documento. */
+  descripcion?: string | null
 }
 
 export interface FiltrosAuditoria {
