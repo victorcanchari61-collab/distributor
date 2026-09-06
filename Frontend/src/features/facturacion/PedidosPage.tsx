@@ -566,6 +566,9 @@ export function PedidosPage() {
         </>
       }
       columns={columns}
+      // 5 íconos por fila (Ver, Historial, Editar, Confirmar, Anular): el
+      // ancho por defecto de Acciones se queda corto y fuerza scroll horizontal.
+      actionsWidth={175}
       rows={pedidos}
       cardIcon={ClipboardList}
       searchPlaceholder="Buscar por número, cliente..."

@@ -692,6 +692,9 @@ export function NotasVentaPage() {
         </>
       }
       columns={columns}
+      // 4 íconos por fila (Ver, Historial, Editar, Anular) más 6 columnas de
+      // datos: el ancho por defecto de Acciones queda muy justo.
+      actionsWidth={150}
       rows={notas}
       cardIcon={ShoppingBag}
       searchPlaceholder="Buscar por número, cliente..."

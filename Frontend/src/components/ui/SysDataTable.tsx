@@ -62,6 +62,13 @@ export interface SysDataTableProps<T> {
   cardIcon?: ComponentType<{ size?: number; className?: string; 'aria-hidden'?: boolean }>
   /** Columna de acciones en la tabla y botones de cada tarjeta en movil. */
   actions?: (row: T) => ReactNode
+  /**
+   * Ancho de la columna de Acciones, en px. El valor por defecto (140) alcanza
+   * para 3-4 íconos; una vista con más botones por fila (ej. Ver, Historial,
+   * Editar, Confirmar, Anular) necesita declarar uno mayor, o esos íconos
+   * fuerzan un scroll horizontal aunque el resto de columnas sean pocas.
+   */
+  actionsWidth?: number
   /** Si se pasa, toda la fila (y la tarjeta en movil) queda clickeable. */
   onRowClick?: (row: T) => void
   /** Oculta el buscador general y los botones de filtros/columnas — para tablas chicas (ej. líneas de un documento) donde solo estorban. */
@@ -172,6 +179,7 @@ export function SysDataTable<T>({
   pageSize = 30,
   cardIcon: CardIcon,
   actions,
+  actionsWidth = ACTIONS_WIDTH,
   onRowClick,
   className,
   toolbar = true,
@@ -356,9 +364,9 @@ export function SysDataTable<T>({
   const colTemplate = useMemo(() => {
     const auto = `${100 / Math.max(1, visible.length)}%`
     const cols: (string | number)[] = visible.map((col) => widths[col.key] ?? auto)
-    if (actions) cols.push(ACTIONS_WIDTH)
+    if (actions) cols.push(actionsWidth)
     return cols
-  }, [visible, widths, actions])
+  }, [visible, widths, actions, actionsWidth])
 
   const onBodyScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget
