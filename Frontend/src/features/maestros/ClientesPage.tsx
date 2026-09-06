@@ -313,12 +313,8 @@ export function ClientesPage() {
       key: 'documento',
       label: 'Documento',
       filterable: false,
-      render: (row) => (
-        <span className="flex items-center gap-2">
-          <span className="font-medium text-ink">{row.documento}</span>
-          <Badge>{row.tipoDoc}</Badge>
-        </span>
-      ),
+      // Solo el número: el tipo tiene su propia columna al lado.
+      render: (row) => <span className="font-medium text-ink">{row.documento}</span>,
     },
     {
       key: 'tipoDoc',
