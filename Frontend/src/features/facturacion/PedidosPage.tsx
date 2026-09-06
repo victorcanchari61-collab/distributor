@@ -666,7 +666,7 @@ export function PedidosPage() {
         title={historialAbierto ? `Historial de ${historialAbierto.numero}` : ''}
         description={historialAbierto ? historialAbierto.cliente : undefined}
         onClose={() => setHistorialAbierto(null)}
-        size="lg"
+        size="xl"
       >
         <HistorialCambios registros={historial} cargando={historialCargando} />
       </Modal>

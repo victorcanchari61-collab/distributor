@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Backend.Dtos.Requests;
 using Backend.Dtos.Responses;
 using Backend.Exceptions;
@@ -187,7 +188,9 @@ public class VentasService : IVentasService
         return SoloEdicionesDeLinea(
             registros,
             "PedidoDetalle",
-            pedido.Detalle.ToDictionary(d => d.Id, d => d.Producto?.Nombre ?? string.Empty));
+            pedido.Detalle.ToDictionary(
+                d => d.Id,
+                d => (Producto: d.Producto?.Nombre ?? string.Empty, Cantidad: d.CantidadPresentacion)));
     }
 
     /// <summary>Lo mismo para una nota de venta: solo las correcciones a sus productos.</summary>
@@ -200,7 +203,9 @@ public class VentasService : IVentasService
         return SoloEdicionesDeLinea(
             registros,
             "NotaVentaDetalle",
-            notaVenta.Detalle.ToDictionary(d => d.Id, d => d.Producto?.Nombre ?? string.Empty));
+            notaVenta.Detalle.ToDictionary(
+                d => d.Id,
+                d => (Producto: d.Producto?.Nombre ?? string.Empty, Cantidad: d.CantidadPresentacion)));
     }
 
     /// <summary>
@@ -212,20 +217,48 @@ public class VentasService : IVentasService
     private static List<AuditoriaResponse> SoloEdicionesDeLinea(
         IEnumerable<AuditoriaResponse> registros,
         string entidadLinea,
-        Dictionary<int, string> productoPorLinea) =>
+        Dictionary<int, (string Producto, decimal Cantidad)> lineas) =>
         registros
             .Where(r => r.Entidad == entidadLinea && r.Accion == AccionAuditoria.Actualizado)
             .Select(r =>
             {
-                r.Descripcion = int.TryParse(r.EntidadId, out var lineaId)
-                                && productoPorLinea.TryGetValue(lineaId, out var producto)
-                    ? producto
-                    : null;
+                if (!int.TryParse(r.EntidadId, out var lineaId) || !lineas.TryGetValue(lineaId, out var linea))
+                {
+                    return r;
+                }
+
+                r.Descripcion = linea.Producto;
+
+                // Al anular una línea solo cambia el flag: la bitácora no
+                // registra cantidad porque la cantidad no se tocó. Pero para
+                // quien lee el historial la línea SÍ pasó de N a 0 — es lo que
+                // deja de pesarse. Se completa aquí para que la columna de
+                // cantidades no quede vacía justo en el caso que más importa.
+                if (r.ValoresNuevos?.TryGetValue("Anulado", out var anulado) == true && EsVerdadero(anulado))
+                {
+                    r.ValoresAnteriores ??= [];
+                    r.ValoresNuevos["CantidadPresentacion"] = 0m;
+                    r.ValoresAnteriores["CantidadPresentacion"] = linea.Cantidad;
+                }
+
                 return r;
             })
             .OrderByDescending(r => r.Fecha)
             .ThenByDescending(r => r.Id)
             .ToList();
+
+    /// <summary>
+    /// Un booleano de la bitácora. Los valores vienen de deserializar JSON a
+    /// `object`, así que un `true` llega como <see cref="JsonElement"/> y no
+    /// como `bool`: compararlo directo contra `true` siempre daría falso.
+    /// </summary>
+    private static bool EsVerdadero(object? valor) => valor switch
+    {
+        bool b => b,
+        JsonElement { ValueKind: JsonValueKind.True } => true,
+        string s => bool.TryParse(s, out var b) && b,
+        _ => false
+    };
 
     public async Task AnularPedidoAsync(int id)
     {
