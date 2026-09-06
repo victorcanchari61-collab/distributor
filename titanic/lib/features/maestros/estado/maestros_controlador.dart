@@ -201,9 +201,6 @@ final marcasProvider = FutureProvider.autoDispose<List<Marca>>(
 final unidadesProvider = FutureProvider.autoDispose<List<UnidadMedida>>(
   (ref) => ref.watch(maestrosApiProvider).unidades(),
 );
-final mercadosProvider = FutureProvider.autoDispose<List<Mercado>>(
-  (ref) => ref.watch(maestrosApiProvider).mercados(),
-);
 
 // --- Productos ---
 

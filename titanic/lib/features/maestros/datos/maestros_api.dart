@@ -143,14 +143,6 @@ class MaestrosApi {
     return datos.map((e) => Marca.desdeJson(e as Map<String, dynamic>)).toList();
   }
 
-  /// GET /api/mercado
-  Future<List<Mercado>> mercados() async {
-    final datos = await _api.get('/mercado') as List;
-    return datos
-        .map((e) => Mercado.desdeJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
   /// GET /api/unidad
   Future<List<UnidadMedida>> unidades() async {
     final datos = await _api.get('/unidad') as List;

@@ -8,7 +8,7 @@ import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/dimensiones.dart';
-import '../datos/catalogo.dart';
+import '../../tms/estado/tms_controlador.dart';
 import '../datos/cliente.dart';
 import '../estado/maestros_controlador.dart';
 
@@ -283,10 +283,8 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
                   habilitado: !_guardando,
                   opciones: [
                     const Opcion<int?>(null, 'Sin mercado'),
-                    for (final m
-                        in ref.watch(mercadosProvider).valueOrNull ??
-                            const <Mercado>[])
-                      if (m.activo) Opcion<int?>(m.id, m.nombre),
+                    for (final m in ref.watch(mercadosActivosProvider))
+                      Opcion<int?>(m.id, m.nombre),
                   ],
                   onCambio: (v) => setState(() => _mercadoId = v),
                 ),
