@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from 'react'
 import {
   ArrowDown,
   ArrowUp,
+  Calendar,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -13,6 +14,7 @@ import {
   Filter,
   GripVertical,
   Plus,
+  RotateCcw,
   Search,
   X,
 } from 'lucide-react'
@@ -1169,6 +1171,49 @@ function FiltersButton<T>({
     valueTo: '',
   })
 
+  // Panel de escritorio: todos los filtros disponibles a la vista, uno por
+  // columna, en vez del flujo "agregar filtro" de a uno que usa movil. Se
+  // arma de nuevo cada vez que se abre, a partir de lo ya aplicado.
+  const [desktopDraft, setDesktopDraft] = useState<Record<string, { value: string; valueTo: string }>>({})
+
+  useEffect(() => {
+    if (!open) return
+    const inicial: Record<string, { value: string; valueTo: string }> = {}
+    for (const f of filters) inicial[f.column] = { value: f.value, valueTo: f.valueTo ?? '' }
+    setDesktopDraft(inicial)
+  }, [open, filters])
+
+  const setDesktopValue = (key: string, campo: 'value' | 'valueTo', valor: string) =>
+    setDesktopDraft((prev) => ({ ...prev, [key]: { ...prev[key], value: prev[key]?.value ?? '', valueTo: prev[key]?.valueTo ?? '', [campo]: valor } }))
+
+  const aplicarDesktop = () => {
+    const nuevos: DataTableFilter[] = []
+    for (const col of filterable) {
+      const d = desktopDraft[col.key]
+      if (!d) continue
+      const tipo: FilterType = col.filterType ?? 'text'
+      if (tipo === 'date') {
+        if (d.value || d.valueTo) {
+          nuevos.push({ id: col.key, column: col.key, operator: 'between', value: d.value, valueTo: d.valueTo })
+        }
+      } else if (d.value?.trim()) {
+        nuevos.push({
+          id: col.key,
+          column: col.key,
+          operator: tipo === 'select' ? 'equals' : 'contains',
+          value: d.value,
+        })
+      }
+    }
+    setFilters(nuevos)
+    onClose()
+  }
+
+  const restablecerDesktop = () => {
+    setDesktopDraft({})
+    setFilters([])
+  }
+
   const draftCol = columns.find((c) => c.key === draft.column)
   const draftType: FilterType = draftCol?.filterType ?? 'text'
 
@@ -1219,7 +1264,76 @@ function FiltersButton<T>({
       </button>
 
       <Modal open={open} title="Filtros" onClose={onClose} size="sm">
-        <div className="flex flex-col gap-4">
+        {/* escritorio: todos los filtros disponibles a la vista, uno por
+            columna, con Restablecer/Aplicar — sin el flujo de a uno de movil */}
+        <div className="hidden flex-col gap-4 sm:flex">
+          <div className="flex flex-col gap-3.5">
+            {filterable.map((col) => {
+              const tipo: FilterType = col.filterType ?? 'text'
+              const d = desktopDraft[col.key] ?? { value: '', valueTo: '' }
+              return (
+                <div key={col.key} className="flex flex-col gap-1">
+                  <p className="text-[11px] font-semibold tracking-wide text-zinc-400 uppercase">
+                    {col.label}
+                  </p>
+
+                  {tipo === 'select' ? (
+                    <select
+                      value={d.value}
+                      onChange={(e) => setDesktopValue(col.key, 'value', e.target.value)}
+                      className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
+                    >
+                      <option value="">Todos</option>
+                      {col.filterOptions?.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : tipo === 'date' ? (
+                    <div className="flex items-center gap-2">
+                      <Calendar size={14} className="shrink-0 text-zinc-400" />
+                      <input
+                        type="date"
+                        value={d.value}
+                        onChange={(e) => setDesktopValue(col.key, 'value', e.target.value)}
+                        className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
+                      />
+                      <span className="text-zinc-400">–</span>
+                      <input
+                        type="date"
+                        value={d.valueTo}
+                        onChange={(e) => setDesktopValue(col.key, 'valueTo', e.target.value)}
+                        className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
+                      />
+                    </div>
+                  ) : (
+                    <input
+                      value={d.value}
+                      onChange={(e) => setDesktopValue(col.key, 'value', e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && aplicarDesktop()}
+                      placeholder={`Buscar ${col.label.toLowerCase()}...`}
+                      className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="flex items-center gap-2 border-t border-line pt-3">
+            <Button type="button" size="sm" variant="secondary" onClick={restablecerDesktop}>
+              <RotateCcw size={13} />
+              Restablecer
+            </Button>
+            <Button type="button" size="sm" onClick={aplicarDesktop} className="flex-1">
+              Aplicar filtros
+            </Button>
+          </div>
+        </div>
+
+        {/* movil: agrega los filtros de a uno, tal como ya funcionaba */}
+        <div className="flex flex-col gap-4 sm:hidden">
           <div className="flex flex-col gap-2">
             <p className="text-[11px] font-semibold tracking-wide text-zinc-400 uppercase">Agregar filtro</p>
 
