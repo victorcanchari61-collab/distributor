@@ -104,6 +104,20 @@ final stockProvider = FutureProvider.autoDispose<List<Stock>>(
       .stock(almacenId: ref.watch(almacenStockProvider)),
 );
 
+/// Lo disponible por producto en UN almacen: producto -> disponible.
+///
+/// Es lo que necesita el buscador de productos al vender: el vendedor tiene
+/// que ver lo que de verdad hay donde se va a despachar, no un total de toda
+/// la empresa que incluye mercaderia de otro deposito.
+///
+/// "Disponible" ya descuenta lo que apartaron los pedidos con reserva: es lo
+/// que se puede prometer sin comprometer dos veces el mismo saco.
+final stockDisponibleProvider = FutureProvider.autoDispose
+    .family<Map<int, double>, int?>((ref, almacenId) async {
+      final filas = await ref.watch(inventarioApiProvider).stock(almacenId: almacenId);
+      return {for (final f in filas) f.productoId: f.disponible};
+    });
+
 final stockFiltradoProvider = Provider.autoDispose<List<Stock>>((ref) {
   final todos = ref.watch(stockProvider).valueOrNull ?? const <Stock>[];
   final texto = ref.watch(busquedaStockProvider).trim().toLowerCase();

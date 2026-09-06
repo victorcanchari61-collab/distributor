@@ -184,10 +184,17 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
 
     // Se eligen VARIOS de una vez, con su unidad, cantidad e importe: antes
     // era un producto por hoja y cargar un documento largo se hacia eterno.
+    // El stock que se muestra es el del almacen desde donde se despacha (por
+    // defecto el principal), no el total de la empresa: prometerle a un
+    // cliente algo que esta en otro deposito es prometer lo que no hay.
+    final stock = await ref.read(stockDisponibleProvider(_almacenId).future);
+    if (!mounted) return;
+
     final elegidos = await mostrarBuscadorProductos(
       context: context,
       productos: activos,
       paraVenta: true,
+      stock: stock,
     );
     if (elegidos == null || elegidos.isEmpty) return;
 

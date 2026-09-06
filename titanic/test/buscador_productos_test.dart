@@ -165,6 +165,27 @@ void main() {
     expect(find.text('yogurt vainilla'), findsOneWidget);
   });
 
+  testWidgets('muestra el stock del almacen que se le pasa', (tester) async {
+    // Lo que ve el vendedor es lo del almacen de despacho: el producto 1 tiene
+    // 12 y el 2 esta en cero, aunque en otro deposito hubiera de sobra.
+    await _abrir(
+      tester,
+      paraVenta: true,
+      leer: () => null,
+      guardar: (_) {},
+      stock: const {1: 12, 2: 0},
+    );
+
+    expect(find.text('12 KG'), findsOneWidget);
+    expect(find.text('0 KG'), findsOneWidget);
+  });
+
+  testWidgets('sin stock declarado no pinta ninguna etiqueta', (tester) async {
+    await _abrir(tester, paraVenta: true, leer: () => null, guardar: (_) {});
+
+    expect(find.textContaining(' KG'), findsNothing);
+  });
+
   testWidgets('en compra no se ofrece una presentacion solo de venta', (tester) async {
     await _abrir(tester, paraVenta: false, leer: () => null, guardar: (_) {});
 
