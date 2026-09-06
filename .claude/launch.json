@@ -15,8 +15,11 @@
     },
     {
       "name": "titanic-web",
-      "runtimeExecutable": "flutter",
-      "runtimeArgs": ["run", "-d", "web-server", "--web-port", "5174", "--web-hostname", "0.0.0.0"],
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd titanic && flutter run -d web-server --web-port 5174 --web-hostname 0.0.0.0"
+      ],
       "port": 5174
     }
   ]

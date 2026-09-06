@@ -146,8 +146,11 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
           final importe = double.tryParse(e.value.importe.replaceAll(',', '.')) ?? 0;
           final producto = porId[e.key];
 
-          // Una fila a medio llenar no se agrega: el backend la rechazaria.
-          if (producto == null || cantidad <= 0 || importe <= 0) return null;
+          // Sin cantidad no hay linea; sin importe si la hay. El precio se
+          // pone despues, al editar la linea: pedirlo aqui, en una fila
+          // estrecha y por cada producto marcado, es justo lo que hacia lenta
+          // la carga masiva que esta hoja viene a resolver.
+          if (producto == null || cantidad <= 0) return null;
 
           return SeleccionProducto(
             producto: producto,
@@ -291,8 +294,6 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                         onPresentacion: (id) =>
                             setState(() => _marcados[p.id]?.presentacionId = id),
                         onCantidad: (v) => setState(() => _marcados[p.id]?.cantidad = v),
-                        etiquetaImporte: widget.paraVenta ? 'Precio' : 'Costo',
-                        onImporte: (v) => setState(() => _marcados[p.id]?.importe = v),
                       );
                     },
                   ),
@@ -339,8 +340,6 @@ class _FilaProducto extends StatelessWidget {
     required this.onAlternar,
     required this.onPresentacion,
     required this.onCantidad,
-    required this.etiquetaImporte,
-    required this.onImporte,
   });
 
   final Producto producto;
@@ -350,8 +349,6 @@ class _FilaProducto extends StatelessWidget {
   final VoidCallback onAlternar;
   final ValueChanged<int> onPresentacion;
   final ValueChanged<String> onCantidad;
-  final String etiquetaImporte;
-  final ValueChanged<String> onImporte;
 
   @override
   Widget build(BuildContext context) {
@@ -420,7 +417,7 @@ class _FilaProducto extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  flex: 3,
+                  flex: 4,
                   child: _CampoUnidad(
                     producto: producto,
                     presentaciones: presentaciones,
@@ -435,15 +432,6 @@ class _FilaProducto extends StatelessWidget {
                     etiqueta: 'Cant.',
                     inicial: marcado!.cantidad,
                     onChanged: onCantidad,
-                  ),
-                ),
-                const SizedBox(width: Dimen.espacio3),
-                Expanded(
-                  flex: 2,
-                  child: _CampoNumero(
-                    etiqueta: etiquetaImporte,
-                    inicial: marcado!.importe,
-                    onChanged: onImporte,
                   ),
                 ),
               ],

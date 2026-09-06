@@ -124,11 +124,9 @@ void main() {
     expect(resultado!.first.cantidad, 1);
   });
 
-  testWidgets('una fila sin importe no se agrega', (tester) async {
+  testWidgets('la hoja no pide precio: solo unidad y cantidad', (tester) async {
     List<SeleccionProducto>? resultado;
 
-    // En una venta el costo de referencia NO se propone: es lo que costo, no
-    // lo que se cobra. La fila queda incompleta hasta que se escriba el precio.
     await _abrir(
       tester,
       paraVenta: true,
@@ -139,19 +137,18 @@ void main() {
     await tester.tap(find.byType(Checkbox).at(0));
     await tester.pumpAndSettle();
 
-    expect(find.text('1 seleccionado'), findsOneWidget);
-    // Marcado pero sin precio: el boton no ofrece agregar nada.
-    expect(find.text('Agregar'), findsOneWidget);
-
-    await tester.enterText(find.widgetWithText(TextField, '').last, '25');
-    await tester.pumpAndSettle();
-
+    // El precio se pone al editar la linea ya agregada, no aqui: pedirlo por
+    // cada producto marcado, en una fila estrecha, es lo que hacia lenta la
+    // carga masiva que esta hoja viene a resolver.
+    expect(find.text('Precio'), findsNothing);
+    expect(find.text('Cant.'), findsOneWidget);
     expect(find.text('Agregar (1)'), findsOneWidget);
 
     await tester.tap(find.text('Agregar (1)'));
     await tester.pumpAndSettle();
 
-    expect(resultado!.single.importe, 25);
+    expect(resultado!.single.producto.nombre, 'arroz caserita');
+    expect(resultado!.single.cantidad, 1);
   });
 
   testWidgets('el buscador filtra por texto', (tester) async {

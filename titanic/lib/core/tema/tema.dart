@@ -117,7 +117,13 @@ class Tema {
         horizontal: Dimen.espacio3,
         vertical: Dimen.espacio3,
       ),
+      // `border` y `disabledBorder` tambien: sin ellos, un campo deshabilitado
+      // cae al subrayado por defecto de Material y aparece como una raya suelta
+      // en medio de un formulario de recuadros. Se ve en cuanto un campo espera
+      // a que se elija algo antes — la unidad hasta que hay producto.
+      border: borde(Colores.linea),
       enabledBorder: borde(Colores.linea),
+      disabledBorder: borde(Colores.linea),
       focusedBorder: borde(Colores.tintaTenue),
       errorBorder: borde(Colores.peligro),
       focusedErrorBorder: borde(Colores.peligro),

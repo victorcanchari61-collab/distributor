@@ -83,17 +83,12 @@ class AppCampoBusqueda<T> extends StatefulWidget {
   State<AppCampoBusqueda<T>> createState() => _AppCampoBusquedaState<T>();
 }
 
-/// Lo que ocupa la etiqueta flotante encima de la caja del campo.
-const double _altoEtiqueta = 18;
-
 class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
   late final TextEditingController _controlador =
       TextEditingController(text: widget.textoElegido ?? '');
   final FocusNode _foco = FocusNode();
 
   String _texto = '';
-  bool _filtrosAbiertos = false;
-  final Map<String, String?> _filtros = {};
 
   /// Lo elegido, para no proponer coincidencias de algo ya resuelto.
   bool _resuelto = false;
@@ -127,27 +122,10 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
     super.dispose();
   }
 
-  /// Las opciones reales de un filtro: lo que aparece entre los registros.
-  List<String> _opcionesDe(FiltroBusqueda<T> filtro) {
-    final vistos = <String>{};
-    for (final item in widget.items) {
-      final v = filtro.valor(item);
-      if (v != null && v.trim().isNotEmpty) vistos.add(v);
-    }
-    final lista = vistos.toList()..sort();
-    return lista;
-  }
-
   List<T> get _coincidencias {
     final texto = _texto.trim().toLowerCase();
-
-    return widget.items.where((item) {
-      for (final f in widget.filtros) {
-        final elegido = _filtros[f.etiqueta];
-        if (elegido != null && f.valor(item) != elegido) return false;
-      }
-      return texto.isEmpty || widget.buscable(item).contains(texto);
-    }).toList();
+    if (texto.isEmpty) return const [];
+    return widget.items.where((item) => widget.buscable(item).contains(texto)).toList();
   }
 
   void _elegir(T item) {
@@ -162,93 +140,42 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
 
   /// Si hay algo que proponer debajo del campo ahora mismo.
   ///
-  /// Solo con algo escrito o con un filtro puesto: al entrar al formulario,
-  /// soltar la lista entera de clientes bajo el campo empujaría el resto de la
-  /// pantalla fuera de la vista sin que nadie lo haya pedido.
-  ///
-  /// NO se exige que el campo tenga el foco: abrir un desplegable de filtro se
-  /// lo quita, así que la lista se esfumaría justo mientras se filtra, que es
-  /// cuando más falta hace verla.
-  bool get _sugiriendo =>
-      !_resuelto && (_texto.trim().isNotEmpty || _filtros.values.any((v) => v != null));
+  /// Solo con algo escrito: al entrar al formulario, soltar la lista entera de
+  /// clientes bajo el campo empujaría el resto de la pantalla fuera de la vista
+  /// sin que nadie lo haya pedido.
+  bool get _sugiriendo => !_resuelto && _texto.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
     final coincidencias = _coincidencias;
-    final hayFiltro = _filtros.values.any((v) => v != null);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _controlador,
-                focusNode: _foco,
-                enabled: widget.habilitado,
-                onChanged: (v) => setState(() {
-                  _texto = v;
-                  // Volver a escribir deshace la elección: si no, el campo
-                  // mostraría un nombre que ya no es el que se guardaría.
-                  _resuelto = false;
-                }),
-                style: const TextStyle(fontSize: 15, color: Colores.tinta),
-                decoration: InputDecoration(
-                  labelText: widget.etiqueta,
-                  hintText: widget.pista,
-                  errorText: widget.error,
-                  prefixIcon: Icon(widget.icono, size: 19, color: Colores.tintaTenue),
-                  suffixIcon: IconButton(
-                    onPressed: widget.habilitado ? () => _abrirHoja(context) : null,
-                    icon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
-                    tooltip: 'Ver la lista completa',
-                  ),
-                  constraints: const BoxConstraints(minHeight: Dimen.campoLg),
-                ),
-              ),
+        TextField(
+          controller: _controlador,
+          focusNode: _foco,
+          enabled: widget.habilitado,
+          onChanged: (v) => setState(() {
+            _texto = v;
+            // Volver a escribir deshace la elección: si no, el campo mostraría
+            // un nombre que ya no es el que se guardaría.
+            _resuelto = false;
+          }),
+          style: const TextStyle(fontSize: 15, color: Colores.tinta),
+          decoration: InputDecoration(
+            labelText: widget.etiqueta,
+            hintText: widget.pista,
+            errorText: widget.error,
+            prefixIcon: Icon(widget.icono, size: 19, color: Colores.tintaTenue),
+            suffixIcon: IconButton(
+              onPressed: widget.habilitado ? () => _abrirHoja(context) : null,
+              icon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
+              tooltip: 'Ver la lista completa',
             ),
-            if (widget.filtros.isNotEmpty) ...[
-              const SizedBox(width: Dimen.espacio2),
-              Padding(
-                /*
-                 * Centrado con la CAJA del campo, no con el campo entero: la
-                 * etiqueta flotante ("Cliente") ocupa arriba y el mensaje de
-                 * error puede aparecer abajo, así que alinear por el centro o
-                 * por el borde dejaría el botón bailando según el estado.
-                 * Medido desde arriba queda quieto: alto de la etiqueta más lo
-                 * que sobra entre la caja y el botón.
-                 */
-                padding: const EdgeInsets.only(top: _altoEtiqueta + (Dimen.campoLg - Dimen.campoMd) / 2),
-                child: BotonFiltrosEnLinea(
-                  activo: _filtrosAbiertos || hayFiltro,
-                  onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
-                ),
-              ),
-            ],
-          ],
-        ),
-
-        if (_filtrosAbiertos && widget.filtros.isNotEmpty) ...[
-          const SizedBox(height: Dimen.espacio2),
-          Wrap(
-            spacing: Dimen.espacio2,
-            runSpacing: Dimen.espacio2,
-            children: [
-              for (final f in widget.filtros)
-                FiltroEnLinea(
-                  etiqueta: f.etiqueta,
-                  valor: _filtros[f.etiqueta],
-                  opciones: _opcionesDe(f),
-                  onChanged: (v) => setState(() {
-                    _filtros[f.etiqueta] = v;
-                    _resuelto = false;
-                  }),
-                ),
-            ],
+            constraints: const BoxConstraints(minHeight: Dimen.campoLg),
           ),
-        ],
+        ),
 
         if (_sugiriendo) ...[
           const SizedBox(height: Dimen.espacio2),
@@ -288,7 +215,7 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
         // Se abre con lo que ya se había escrito y filtrado: pasar a la lista
         // completa no debe obligar a repetir la búsqueda.
         textoInicial: _texto,
-        filtrosIniciales: Map.of(_filtros),
+        filtrosIniciales: const {},
       ),
     );
 

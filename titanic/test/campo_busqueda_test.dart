@@ -65,7 +65,7 @@ void main() {
     expect(find.widgetWithText(TextField, 'Bodega Rojas'), findsOneWidget);
   });
 
-  testWidgets('la lupa abre la lista completa', (tester) async {
+  testWidgets('la lupa abre la lista completa, con sus filtros', (tester) async {
     await _montar(tester);
 
     await tester.tap(find.byIcon(Icons.search));
@@ -73,37 +73,15 @@ void main() {
 
     expect(find.text('3 resultados'), findsOneWidget);
     expect(find.text('Minimarket Lucero'), findsOneWidget);
+
+    // Filtrar es de la hoja, no del campo: junto al campo estorbaba.
+    expect(find.byIcon(Icons.tune), findsOneWidget);
   });
 
-  testWidgets('el boton de filtros los despliega y filtran', (tester) async {
+  testWidgets('el campo no lleva boton de filtros', (tester) async {
     await _montar(tester);
 
-    expect(find.text('Todas · Mercado'), findsNothing);
-
-    await tester.tap(find.byIcon(Icons.tune));
-    await tester.pumpAndSettle();
-
-    // Las opciones salen de los propios registros, no de una lista escrita.
-    await tester.tap(find.text('Todas · Mercado').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Santa Anita').last);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Minimarket Lucero'), findsOneWidget);
-    expect(find.text('Bodega Rojas'), findsNothing);
-  });
-
-  testWidgets('el boton de filtros queda a la altura de la caja del campo', (tester) async {
-    await _montar(tester);
-
-    final campo = tester.getRect(find.byType(TextField));
-    final boton = tester.getRect(find.byIcon(Icons.tune));
-
-    // La caja empieza bajo la etiqueta flotante ("Cliente") y mide campoLg; el
-    // boton tiene que ir centrado con ELLA, no con el campo entero, que es lo
-    // que lo dejaba caido.
-    final centroCaja = campo.top + 18 + 52 / 2;
-    expect((boton.center.dy - centroCaja).abs(), lessThan(2));
+    expect(find.byIcon(Icons.tune), findsNothing);
   });
 
   testWidgets('sin coincidencias lo dice, no se queda en blanco', (tester) async {

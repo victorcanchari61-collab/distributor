@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_lineas_producto.dart';
 import '../../../compartido/widgets/app_panel_producto.dart';
-import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_selector_buscable.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
@@ -16,35 +15,6 @@ import '../../maestros/datos/proveedor.dart';
 import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/orden_compra.dart';
 import '../estado/compras_controlador.dart';
-
-/// Una linea en edicion. Local al formulario: solo se convierte al formato
-/// del backend al guardar.
-class _FilaLinea {
-  _FilaLinea({
-    required this.productoId,
-    required this.producto,
-    this.presentacionId,
-    required this.presentacion,
-    required this.cantidad,
-    required this.costoPresentacion,
-  });
-
-  final int productoId;
-  final String producto;
-  final int? presentacionId;
-  final String presentacion;
-  double cantidad;
-  double costoPresentacion;
-
-  double get subtotal => cantidad * costoPresentacion;
-
-  Map<String, dynamic> aCuerpo() => {
-    'productoId': productoId,
-    'presentacionId': presentacionId,
-    'cantidad': cantidad,
-    'costoPresentacion': costoPresentacion,
-  };
-}
 
 /// Alta y edicion de una orden de compra. Solo se edita mientras esta
 /// Pendiente.
@@ -64,17 +34,45 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
   late String? _proveedorNombre = widget.orden?.proveedor;
   late DateTime? _fechaEsperada = widget.orden?.fechaEsperada;
 
-  late final List<_FilaLinea> _lineas = [
-    for (final l in widget.orden?.detalle ?? const <LineaCompra>[])
-      _FilaLinea(
-        productoId: l.productoId,
-        producto: l.producto,
-        presentacionId: l.presentacionId,
-        presentacion: l.presentacion ?? l.unidadBase,
-        cantidad: l.cantidad,
-        costoPresentacion: l.costoUnitario * l.cantidadPresentacion,
-      ),
-  ];
+  final List<LineaDocumento> _lineas = [];
+
+  /// Las lineas de una orden que ya existe, una vez cargado el catalogo.
+  ///
+  /// Necesitan las presentaciones del producto para poder cambiar de unidad, y
+  /// esas vienen del catalogo, que llega por red: armarlas en initState las
+  /// dejaria sin unidades que ofrecer.
+  bool _lineasPuestas = false;
+
+  void _ponerLineasExistentes(List<Producto> catalogo) {
+    final detalle = widget.orden?.detalle ?? const <LineaCompra>[];
+    if (_lineasPuestas || detalle.isEmpty || catalogo.isEmpty) return;
+    _lineasPuestas = true;
+
+    final porId = {for (final p in catalogo) p.id: p};
+    final nuevas = [
+      for (final l in detalle)
+        LineaDocumento(
+          productoId: l.productoId,
+          producto: l.producto,
+          codigo: l.codigo,
+          unidadBase: l.unidadBase,
+          presentaciones: _presentacionesDe(porId[l.productoId], false),
+          presentacionId: l.presentacionId ?? 0,
+          cantidad: l.cantidad,
+          importe: l.costoUnitario * l.cantidadPresentacion,
+        ),
+    ];
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _lineas.addAll(nuevas));
+    });
+  }
+
+  /// Las presentaciones que valen para este documento.
+  static List<Presentacion> _presentacionesDe(Producto? p, bool venta) =>
+      (p?.presentaciones ?? const <Presentacion>[])
+          .where((pr) => pr.activo && (venta ? pr.esVenta : pr.esCompra))
+          .toList();
 
   bool _guardando = false;
   String? _error;
@@ -115,7 +113,15 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
       'proveedorId': _proveedorId,
       'fechaEsperada': _fechaEsperada?.toIso8601String(),
       'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
-      'detalle': [for (final f in _lineas) f.aCuerpo()],
+      'detalle': [
+        for (final f in _lineas)
+          {
+            'productoId': f.productoId,
+            'presentacionId': f.presentacionId == 0 ? null : f.presentacionId,
+            'cantidad': f.cantidad,
+            'costoPresentacion': f.importe,
+          },
+      ],
     };
 
     try {
@@ -171,13 +177,15 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
     setState(() {
       for (final e in elegidas) {
         _lineas.add(
-          _FilaLinea(
+          LineaDocumento(
             productoId: e.producto.id,
             producto: e.producto.nombre,
-            presentacionId: e.presentacionId == 0 ? null : e.presentacionId,
-            presentacion: e.presentacion,
+            codigo: e.producto.codigo,
+            unidadBase: e.producto.unidadBase,
+            presentaciones: _presentacionesDe(e.producto, false),
+            presentacionId: e.presentacionId,
             cantidad: e.cantidad,
-            costoPresentacion: e.importe,
+            importe: e.importe,
           ),
         );
       }
@@ -185,154 +193,10 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
     });
   }
 
-  Future<void> _editarLinea(_FilaLinea original) async {
-    final productos = ref.read(productosProvider).valueOrNull ?? const <Producto>[];
-    final producto = productos.firstWhere(
-      (p) => p.id == original.productoId,
-      orElse: () => Producto(
-        id: original.productoId,
-        codigo: '',
-        nombre: original.producto,
-        unidadBaseId: 0,
-        unidadBase: '',
-        controlaStock: false,
-        stockMinimo: 0,
-        activo: true,
-        presentaciones: const [],
-      ),
-    );
-    final fila = await _mostrarHojaLinea(producto: producto, existente: original);
-    if (fila != null) {
-      setState(() {
-        final i = _lineas.indexOf(original);
-        _lineas[i] = fila;
-      });
-    }
-  }
-
-  Future<_FilaLinea?> _mostrarHojaLinea({
-    required Producto producto,
-    _FilaLinea? existente,
-  }) {
-    final presentaciones = producto.presentaciones.where((p) => p.esCompra).toList();
-    final cantidadCtrl = TextEditingController(
-      text: existente == null ? '' : formatoNumero(existente.cantidad),
-    );
-    final costoCtrl = TextEditingController(
-      text: existente == null ? '' : formatoNumero(existente.costoPresentacion),
-    );
-    int? presentacionId =
-        existente?.presentacionId ?? (presentaciones.length == 1 ? presentaciones.first.id : null);
-    String? errorCantidad;
-    String? errorCosto;
-    String? errorPresentacion;
-
-    return showModalBottomSheet<_FilaLinea>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            void guardar() {
-              final cantidad = double.tryParse(cantidadCtrl.text.trim().replaceAll(',', '.'));
-              final costo = double.tryParse(costoCtrl.text.trim().replaceAll(',', '.'));
-
-              setSheetState(() {
-                errorPresentacion = presentaciones.isNotEmpty && presentacionId == null
-                    ? 'Elige la presentación.'
-                    : null;
-                errorCantidad = cantidad == null || cantidad <= 0
-                    ? 'Debe ser mayor que cero.'
-                    : null;
-                errorCosto = costo == null || costo <= 0 ? 'Debe ser mayor que cero.' : null;
-              });
-              if (errorPresentacion != null || errorCantidad != null || errorCosto != null) {
-                return;
-              }
-
-              Presentacion? presentacion;
-              for (final p in presentaciones) {
-                if (p.id == presentacionId) presentacion = p;
-              }
-              Navigator.of(context).pop(
-                _FilaLinea(
-                  productoId: producto.id,
-                  producto: producto.nombre,
-                  presentacionId: presentacionId,
-                  presentacion: presentacion?.nombre ?? producto.unidadBase,
-                  cantidad: cantidad!,
-                  costoPresentacion: costo!,
-                ),
-              );
-            }
-
-            return Padding(
-              padding: EdgeInsets.only(
-                left: Dimen.espacio4,
-                right: Dimen.espacio4,
-                top: Dimen.espacio2,
-                bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    producto.nombre,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  if (presentaciones.isNotEmpty) ...[
-                    AppSelector<int>(
-                      valor: presentacionId,
-                      etiqueta: 'Presentación',
-                      icono: Icons.inventory_2_outlined,
-                      error: errorPresentacion,
-                      opciones: [
-                        for (final p in presentaciones)
-                          Opcion(p.id, '${p.nombre} (${formatoNumero(p.factor)} ${producto.unidadBase})'),
-                      ],
-                      onCambio: (v) => setSheetState(() => presentacionId = v),
-                    ),
-                    const SizedBox(height: Dimen.espacio4),
-                  ],
-                  AppCampo(
-                    controlador: cantidadCtrl,
-                    etiqueta: 'Cantidad',
-                    icono: Icons.numbers_outlined,
-                    tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-                    error: errorCantidad,
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  AppCampo(
-                    controlador: costoCtrl,
-                    etiqueta: 'Costo de la presentación',
-                    pista: 'Lo que vale la presentación completa',
-                    icono: Icons.payments_outlined,
-                    tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-                    error: errorCosto,
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  AppBoton(
-                    texto: existente == null ? 'Agregar' : 'Guardar cambios',
-                    onPressed: guardar,
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    _ponerLineasExistentes(ref.watch(productosProvider).valueOrNull ?? const <Producto>[]);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -409,43 +273,6 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
           ),
           const SizedBox(height: Dimen.espacio5),
 
-          Row(
-            children: [
-              const Text(
-                'Productos',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
-              ),
-              const Spacer(),
-              Text(
-                'Total: S/ ${_total.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colores.marca),
-              ),
-            ],
-          ),
-          if (_errorLineas != null) ...[
-            const SizedBox(height: Dimen.espacio1),
-            Text(_errorLineas!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
-          ],
-          const SizedBox(height: Dimen.espacio3),
-
-          for (final fila in _lineas) ...[
-            _TarjetaLinea(
-              fila: fila,
-              onEditar: () => _editarLinea(fila),
-              onEliminar: () => setState(() => _lineas.remove(fila)),
-            ),
-            const SizedBox(height: Dimen.espacio2),
-          ],
-          if (_lineas.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: Dimen.espacio3),
-              child: Text(
-                'Todavía no agregaste productos.',
-                style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
-              ),
-            ),
-          const SizedBox(height: Dimen.espacio2),
-
           AppPanelProducto(
             productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
                 .where((p) => p.activo && p.controlaStock)
@@ -453,6 +280,27 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
             paraVenta: false,
             habilitado: !_guardando,
             onAgregar: _agregarLineas,
+          ),
+          const SizedBox(height: Dimen.espacio5),
+
+          // Lo agregado va DEBAJO del buscador: se lee como lo que acaba de
+          // caer ahi, y el buscador no se aleja segun crece el documento.
+          AppLineasProducto(
+            lineas: _lineas,
+            error: _errorLineas,
+            etiquetaImporte: 'Costo S/',
+            habilitado: !_guardando,
+            onCambio: () => setState(() {}),
+            onEliminar: (l) => setState(() => _lineas.remove(l)),
+          ),
+          const SizedBox(height: Dimen.espacio4),
+
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'Total: S/ ${_total.toStringAsFixed(2)}',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.marca),
+            ),
           ),
           const SizedBox(height: Dimen.espacio6),
 
@@ -476,60 +324,3 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
 
 String _fechaTexto(DateTime f) =>
     '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';
-
-class _TarjetaLinea extends StatelessWidget {
-  const _TarjetaLinea({required this.fila, required this.onEditar, required this.onEliminar});
-
-  final _FilaLinea fila;
-  final VoidCallback onEditar;
-  final VoidCallback onEliminar;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(Dimen.espacio3),
-      decoration: BoxDecoration(
-        color: Colores.superficie,
-        border: Border.all(color: Colores.linea),
-        borderRadius: BorderRadius.circular(Dimen.radioCampo),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  fila.producto,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colores.tinta),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${formatoNumero(fila.cantidad)} ${fila.presentacion} · '
-                  'S/ ${fila.costoPresentacion.toStringAsFixed(2)} c/u',
-                  style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            'S/ ${fila.subtotal.toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colores.tinta),
-          ),
-          IconButton(
-            onPressed: onEditar,
-            tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.edit_outlined, size: 18, color: Colores.marca),
-          ),
-          IconButton(
-            onPressed: onEliminar,
-            tooltip: 'Quitar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
-          ),
-        ],
-      ),
-    );
-  }
-}
