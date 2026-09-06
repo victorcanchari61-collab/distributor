@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 
@@ -23,15 +24,11 @@ class BotonFiltrosEnLinea extends StatelessWidget {
         width: Dimen.campoMd,
         height: Dimen.campoMd,
         decoration: BoxDecoration(
-          color: activo ? Colores.marcaSuave : Colores.superficie,
-          border: Border.all(color: activo ? Colores.marca : Colores.linea),
+          color: activo ? Acento.suave(context) : Colores.superficie,
+          border: Border.all(color: activo ? Acento.de(context) : Colores.linea),
           borderRadius: BorderRadius.circular(Dimen.radioCampo),
         ),
-        child: Icon(
-          Icons.tune,
-          size: 18,
-          color: activo ? Colores.marca : Colores.tintaSuave,
-        ),
+        child: Icon(Icons.tune, size: 18, color: activo ? Acento.de(context) : Colores.tintaSuave),
       ),
     );
   }
@@ -64,7 +61,7 @@ class FiltroEnLinea extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3),
       decoration: BoxDecoration(
         color: Colores.superficie,
-        border: Border.all(color: valor == null ? Colores.linea : Colores.marca),
+        border: Border.all(color: valor == null ? Colores.linea : Acento.de(context)),
         borderRadius: BorderRadius.circular(Dimen.radioCampo),
       ),
       child: DropdownButtonHideUnderline(

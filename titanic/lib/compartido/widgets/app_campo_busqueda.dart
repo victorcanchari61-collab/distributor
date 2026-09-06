@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import 'app_filtros_en_linea.dart';
@@ -84,8 +85,9 @@ class AppCampoBusqueda<T> extends StatefulWidget {
 }
 
 class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
-  late final TextEditingController _controlador =
-      TextEditingController(text: widget.textoElegido ?? '');
+  late final TextEditingController _controlador = TextEditingController(
+    text: widget.textoElegido ?? '',
+  );
   final FocusNode _foco = FocusNode();
 
   String _texto = '';
@@ -200,22 +202,29 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
       return;
     }
 
+    // Igual que el buscador de productos: la hoja cuelga del Navigator y hay
+    // que llevarle el acento de la pantalla que la abrio.
+    final acento = Acento.de(context);
+
     final elegido = await showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _HojaBusqueda<T>(
-        titulo: widget.etiqueta,
-        pista: widget.pista,
-        items: widget.items,
-        titulos: widget.titulo,
-        subtitulos: widget.subtitulo,
-        buscable: widget.buscable,
-        filtros: widget.filtros,
-        // Se abre con lo que ya se había escrito y filtrado: pasar a la lista
-        // completa no debe obligar a repetir la búsqueda.
-        textoInicial: _texto,
-        filtrosIniciales: const {},
+      builder: (_) => Acento(
+        color: acento,
+        child: _HojaBusqueda<T>(
+          titulo: widget.etiqueta,
+          pista: widget.pista,
+          items: widget.items,
+          titulos: widget.titulo,
+          subtitulos: widget.subtitulo,
+          buscable: widget.buscable,
+          filtros: widget.filtros,
+          // Se abre con lo que ya se había escrito y filtrado: pasar a la lista
+          // completa no debe obligar a repetir la búsqueda.
+          textoInicial: _texto,
+          filtrosIniciales: const {},
+        ),
       ),
     );
 
@@ -261,12 +270,7 @@ class _Sugerencias<T> extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 for (final item in items)
-                  _Fila<T>(
-                    item: item,
-                    titulo: titulo,
-                    subtitulo: subtitulo,
-                    onElegir: onElegir,
-                  ),
+                  _Fila<T>(item: item, titulo: titulo, subtitulo: subtitulo, onElegir: onElegir),
                 if (restantes > 0)
                   InkWell(
                     onTap: onVerTodos,
@@ -274,9 +278,9 @@ class _Sugerencias<T> extends StatelessWidget {
                       padding: const EdgeInsets.all(Dimen.espacio3),
                       child: Text(
                         'y $restantes más — ver la lista completa',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Colores.marca,
+                          color: Acento.de(context),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -308,10 +312,7 @@ class _Fila<T> extends StatelessWidget {
     return InkWell(
       onTap: () => onElegir(item),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Dimen.espacio3,
-          vertical: Dimen.espacio3,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3, vertical: Dimen.espacio3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -326,10 +327,7 @@ class _Fila<T> extends StatelessWidget {
             if (sub != null && sub.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  sub,
-                  style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-                ),
+                child: Text(sub, style: const TextStyle(fontSize: 12, color: Colores.tintaSuave)),
               ),
           ],
         ),
@@ -368,8 +366,7 @@ class _HojaBusqueda<T> extends StatefulWidget {
 
 class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
   late String _texto = widget.textoInicial;
-  late final TextEditingController _controlador =
-      TextEditingController(text: widget.textoInicial);
+  late final TextEditingController _controlador = TextEditingController(text: widget.textoInicial);
   late final Map<String, String?> _filtros = Map.of(widget.filtrosIniciales);
   late bool _filtrosAbiertos = _filtros.values.any((v) => v != null);
 
@@ -417,12 +414,7 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Dimen.espacio4,
-                Dimen.espacio3,
-                Dimen.espacio4,
-                0,
-              ),
+              padding: const EdgeInsets.fromLTRB(Dimen.espacio4, Dimen.espacio3, Dimen.espacio4, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

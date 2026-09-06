@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/maestros/datos/producto.dart';
@@ -62,6 +63,11 @@ Future<List<SeleccionProducto>?> mostrarBuscadorProductos({
   bool paraVenta = true,
   Map<int, double>? stock,
 }) {
+  // El acento se captura ANTES de abrir: la hoja cuelga del Navigator, no de
+  // la pantalla, asi que ahi dentro ya no hay de quien heredarlo y saldria
+  // azul aunque se haya abierto desde Compras.
+  final acento = Acento.de(context);
+
   return showModalBottomSheet<List<SeleccionProducto>>(
     context: context,
     backgroundColor: Colores.superficie,
@@ -70,20 +76,15 @@ Future<List<SeleccionProducto>?> mostrarBuscadorProductos({
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
     ),
-    builder: (context) => _HojaBuscadorProductos(
-      productos: productos,
-      paraVenta: paraVenta,
-      stock: stock,
+    builder: (context) => Acento(
+      color: acento,
+      child: _HojaBuscadorProductos(productos: productos, paraVenta: paraVenta, stock: stock),
     ),
   );
 }
 
 class _HojaBuscadorProductos extends StatefulWidget {
-  const _HojaBuscadorProductos({
-    required this.productos,
-    required this.paraVenta,
-    this.stock,
-  });
+  const _HojaBuscadorProductos({required this.productos, required this.paraVenta, this.stock});
 
   final List<Producto> productos;
   final bool paraVenta;
@@ -168,11 +169,7 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
     final visibles = _visibles;
     final listos = _resultado().length;
 
-    final categorias = widget.productos
-        .map((p) => p.categoria)
-        .whereType<String>()
-        .toSet()
-        .toList()
+    final categorias = widget.productos.map((p) => p.categoria).whereType<String>().toSet().toList()
       ..sort();
     final marcas = widget.productos.map((p) => p.marca).whereType<String>().toSet().toList()
       ..sort();
@@ -260,10 +257,10 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                     if (_marcados.isNotEmpty)
                       Text(
                         '${_marcados.length} seleccionado${_marcados.length == 1 ? '' : 's'}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: Colores.marca,
+                          color: Acento.de(context),
                         ),
                       ),
                   ],
@@ -316,9 +313,7 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                   child: AppBoton(
                     texto: listos == 0 ? 'Agregar' : 'Agregar ($listos)',
                     icono: Icons.add,
-                    onPressed: listos == 0
-                        ? null
-                        : () => Navigator.of(context).pop(_resultado()),
+                    onPressed: listos == 0 ? null : () => Navigator.of(context).pop(_resultado()),
                   ),
                 ),
               ],
@@ -362,8 +357,8 @@ class _FilaProducto extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: activo ? Colores.marcaSuave : Colores.superficie,
-        border: Border.all(color: activo ? Colores.marca : Colores.linea),
+        color: activo ? Acento.suave(context) : Colores.superficie,
+        border: Border.all(color: activo ? Acento.de(context) : Colores.linea),
         borderRadius: BorderRadius.circular(Dimen.radioCampo),
       ),
       padding: const EdgeInsets.all(Dimen.espacio3),
@@ -379,7 +374,7 @@ class _FilaProducto extends StatelessWidget {
                 child: Checkbox(
                   value: activo,
                   onChanged: (_) => onAlternar(),
-                  activeColor: Colores.marca,
+                  activeColor: Acento.de(context),
                 ),
               ),
               const SizedBox(width: Dimen.espacio2),
@@ -511,11 +506,7 @@ class _CampoUnidad extends StatelessWidget {
 }
 
 class _CampoNumero extends StatefulWidget {
-  const _CampoNumero({
-    required this.etiqueta,
-    required this.inicial,
-    required this.onChanged,
-  });
+  const _CampoNumero({required this.etiqueta, required this.inicial, required this.onChanged});
 
   final String etiqueta;
   final String inicial;

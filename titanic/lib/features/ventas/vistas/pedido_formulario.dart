@@ -9,6 +9,7 @@ import '../../../compartido/widgets/app_lineas_producto.dart';
 import '../../../compartido/widgets/app_panel_producto.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
+import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../facturacion/datos/lista_precio.dart';
@@ -187,7 +188,6 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
     }
   }
 
-
   /// Agrega las lineas elegidas, vengan del panel o de la hoja multiple.
   void _agregarLineas(List<LineaElegida> elegidas) {
     setState(() {
@@ -216,139 +216,146 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
     _ponerAlmacenPorDefecto(almacenes);
     _ponerLineasExistentes(ref.watch(productosProvider).valueOrNull ?? const <Producto>[]);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _esNuevo ? 'Nuevo pedido' : 'Editar pedido',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+    // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
+    // acento del modulo. Sin esto los componentes compartidos y las hojas que
+    // se abran desde dentro saldrian con el azul de marca.
+    return Acento.modulo(
+      'fact',
+      Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _esNuevo ? 'Nuevo pedido' : 'Editar pedido',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
+          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
         ),
-        bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(Dimen.espacio4),
-        children: [
-          if (_error != null) ...[
-            AppAlerta(_error!),
+        body: ListView(
+          padding: const EdgeInsets.all(Dimen.espacio4),
+          children: [
+            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+
+            campoCliente(
+              clientes: ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[],
+              elegido: _clienteNombre,
+              error: _errorCliente,
+              habilitado: !_guardando,
+              onElegir: (c) => setState(() {
+                _clienteId = c.id;
+                _clienteNombre = c.nombre;
+                _errorCliente = null;
+              }),
+            ),
             const SizedBox(height: Dimen.espacio4),
-          ],
 
-          campoCliente(
-            clientes: ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[],
-            elegido: _clienteNombre,
-            error: _errorCliente,
-            habilitado: !_guardando,
-            onElegir: (c) => setState(() {
-              _clienteId = c.id;
-              _clienteNombre = c.nombre;
-              _errorCliente = null;
-            }),
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppSelector<int?>(
-            valor: _listaPrecioId,
-            etiqueta: 'Lista de precios',
-            icono: Icons.sell_outlined,
-            opciones: [
-              const Opcion<int?>(null, 'Predeterminada'),
-              for (final l in listas) Opcion<int?>(l.id, l.nombre),
-            ],
-            onCambio: (v) => setState(() => _listaPrecioId = v),
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppCampo(
-            controlador: _observacion,
-            etiqueta: 'Observación',
-            icono: Icons.notes_outlined,
-            opcional: true,
-            maxLargo: 250,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppSelector<int>(
-            valor: _almacenReservaId,
-            etiqueta: 'Almacén',
-            icono: Icons.warehouse_outlined,
-            error: _errorAlmacen,
-            opciones: [
-              for (final a in almacenes)
-                Opcion<int>(a.id, a.esPrincipal ? '${a.nombre} (principal)' : a.nombre),
-            ],
-            onCambio: (v) => setState(() => _almacenReservaId = v),
-          ),
-          const SizedBox(height: Dimen.espacio2),
-
-          CheckboxListTile(
-            value: _reservaStock,
-            onChanged: (v) => setState(() => _reservaStock = v ?? false),
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: const Text(
-              'Reservar stock',
-              style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Colores.tinta),
+            AppSelector<int?>(
+              valor: _listaPrecioId,
+              etiqueta: 'Lista de precios',
+              icono: Icons.sell_outlined,
+              opciones: [
+                const Opcion<int?>(null, 'Predeterminada'),
+                for (final l in listas) Opcion<int?>(l.id, l.nombre),
+              ],
+              onCambio: (v) => setState(() => _listaPrecioId = v),
             ),
-            subtitle: const Text(
-              'Aparta el stock de ese almacén mientras el pedido esté pendiente, para que '
-              'no se pueda prometer dos veces. Se libera al confirmar o anular.',
-              style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
-            ),
-          ),
-          const SizedBox(height: Dimen.espacio5),
+            const SizedBox(height: Dimen.espacio4),
 
-          /*
+            AppCampo(
+              controlador: _observacion,
+              etiqueta: 'Observación',
+              icono: Icons.notes_outlined,
+              opcional: true,
+              maxLargo: 250,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppSelector<int>(
+              valor: _almacenReservaId,
+              etiqueta: 'Almacén',
+              icono: Icons.warehouse_outlined,
+              error: _errorAlmacen,
+              opciones: [
+                for (final a in almacenes)
+                  Opcion<int>(a.id, a.esPrincipal ? '${a.nombre} (principal)' : a.nombre),
+              ],
+              onCambio: (v) => setState(() => _almacenReservaId = v),
+            ),
+            const SizedBox(height: Dimen.espacio2),
+
+            CheckboxListTile(
+              value: _reservaStock,
+              onChanged: (v) => setState(() => _reservaStock = v ?? false),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text(
+                'Reservar stock',
+                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Colores.tinta),
+              ),
+              subtitle: const Text(
+                'Aparta el stock de ese almacén mientras el pedido esté pendiente, para que '
+                'no se pueda prometer dos veces. Se libera al confirmar o anular.',
+                style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+              ),
+            ),
+            const SizedBox(height: Dimen.espacio5),
+
+            /*
            * El stock que se ofrece es el del almacen desde donde se despacha
            * (por defecto el principal), no el total de la empresa: prometerle
            * a un cliente algo que esta en otro deposito es prometer lo que no
            * hay.
            */
-          AppPanelProducto(
-            productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
-                .where((p) => p.activo && p.controlaStock)
-                .toList(),
-            paraVenta: true,
-            stock: ref.watch(stockDisponibleProvider(_almacenReservaId)).valueOrNull,
-            habilitado: !_guardando,
-            onAgregar: _agregarLineas,
-          ),
-          const SizedBox(height: Dimen.espacio5),
-
-          // Lo agregado va DEBAJO del buscador: se lee como lo que acaba de
-          // caer ahi, y el buscador no se aleja segun crece el documento.
-          AppLineasProducto(
-            lineas: _lineas,
-            error: _errorLineas,
-            habilitado: !_guardando,
-            disponible: ref.watch(stockDisponibleProvider(_almacenReservaId)).valueOrNull,
-            onCambio: () => setState(() {}),
-            onEliminar: (l) => setState(() => _lineas.remove(l)),
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              'Total: S/ ${_total.toStringAsFixed(2)}',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.marca),
+            AppPanelProducto(
+              productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
+                  .where((p) => p.activo && p.controlaStock)
+                  .toList(),
+              paraVenta: true,
+              stock: ref.watch(stockDisponibleProvider(_almacenReservaId)).valueOrNull,
+              habilitado: !_guardando,
+              onAgregar: _agregarLineas,
             ),
-          ),
-          const SizedBox(height: Dimen.espacio6),
+            const SizedBox(height: Dimen.espacio5),
 
-          AppBoton(
-            texto: _esNuevo ? 'Crear pedido' : 'Guardar cambios',
-            cargando: _guardando,
-            onPressed: _guardar,
-          ),
-          const SizedBox(height: Dimen.espacio3),
-          AppBoton(
-            texto: 'Cancelar',
-            variante: BotonVariante.secundario,
-            onPressed: _guardando ? null : () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(height: Dimen.espacio5),
-        ],
+            // Lo agregado va DEBAJO del buscador: se lee como lo que acaba de
+            // caer ahi, y el buscador no se aleja segun crece el documento.
+            AppLineasProducto(
+              lineas: _lineas,
+              error: _errorLineas,
+              habilitado: !_guardando,
+              disponible: ref.watch(stockDisponibleProvider(_almacenReservaId)).valueOrNull,
+              onCambio: () => setState(() {}),
+              onEliminar: (l) => setState(() => _lineas.remove(l)),
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Total: S/ ${_total.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colores.marca,
+                ),
+              ),
+            ),
+            const SizedBox(height: Dimen.espacio6),
+
+            AppBoton(
+              texto: _esNuevo ? 'Crear pedido' : 'Guardar cambios',
+              cargando: _guardando,
+              onPressed: _guardar,
+            ),
+            const SizedBox(height: Dimen.espacio3),
+            AppBoton(
+              texto: 'Cancelar',
+              variante: BotonVariante.secundario,
+              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+            ),
+            const SizedBox(height: Dimen.espacio5),
+          ],
+        ),
       ),
     );
   }

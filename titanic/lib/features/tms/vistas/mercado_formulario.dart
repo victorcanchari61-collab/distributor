@@ -5,6 +5,7 @@ import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../core/red/excepciones.dart';
+import '../../../core/tema/acento.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/mercado.dart';
 import '../estado/tms_controlador.dart';
@@ -66,9 +67,7 @@ class _MercadoFormularioState extends ConsumerState<MercadoFormulario> {
     };
 
     try {
-      await ref
-          .read(mercadosProvider.notifier)
-          .guardar(id: widget.mercado?.id, cuerpo: cuerpo);
+      await ref.read(mercadosProvider.notifier).guardar(id: widget.mercado?.id, cuerpo: cuerpo);
 
       navegador.pop();
       mensajero.showSnackBar(
@@ -84,66 +83,66 @@ class _MercadoFormularioState extends ConsumerState<MercadoFormulario> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _esNuevo ? 'Nuevo mercado' : 'Editar mercado',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+    // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
+    // acento del modulo. Sin esto los componentes compartidos y las hojas que
+    // se abran desde dentro saldrian con el azul de marca.
+    return Acento.modulo(
+      'tms',
+      Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _esNuevo ? 'Nuevo mercado' : 'Editar mercado',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
+          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
         ),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(Dimen.espacio4),
-        children: [
-          if (_error != null) ...[
-            AppAlerta(_error!),
+        body: ListView(
+          padding: const EdgeInsets.all(Dimen.espacio4),
+          children: [
+            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+
+            AppCampo(
+              controlador: _nombre,
+              etiqueta: 'Nombre',
+              pista: 'Mercado Central, Tienda Norte...',
+              icono: Icons.storefront_outlined,
+              error: _errorNombre,
+              habilitado: !_guardando,
+            ),
             const SizedBox(height: Dimen.espacio4),
+
+            AppCampo(
+              controlador: _direccion,
+              etiqueta: 'Dirección',
+              icono: Icons.location_on_outlined,
+              opcional: true,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppCampo(
+              controlador: _distrito,
+              etiqueta: 'Distrito',
+              icono: Icons.map_outlined,
+              opcional: true,
+              habilitado: !_guardando,
+            ),
+
+            const SizedBox(height: Dimen.espacio2),
+            AppBoton(
+              texto: _esNuevo ? 'Crear mercado' : 'Guardar cambios',
+              cargando: _guardando,
+              onPressed: _guardar,
+            ),
+            const SizedBox(height: Dimen.espacio3),
+            AppBoton(
+              texto: 'Cancelar',
+              variante: BotonVariante.secundario,
+              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+            ),
+            const SizedBox(height: Dimen.espacio5),
           ],
-
-          AppCampo(
-            controlador: _nombre,
-            etiqueta: 'Nombre',
-            pista: 'Mercado Central, Tienda Norte...',
-            icono: Icons.storefront_outlined,
-            error: _errorNombre,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppCampo(
-            controlador: _direccion,
-            etiqueta: 'Dirección',
-            icono: Icons.location_on_outlined,
-            opcional: true,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppCampo(
-            controlador: _distrito,
-            etiqueta: 'Distrito',
-            icono: Icons.map_outlined,
-            opcional: true,
-            habilitado: !_guardando,
-          ),
-
-          const SizedBox(height: Dimen.espacio2),
-          AppBoton(
-            texto: _esNuevo ? 'Crear mercado' : 'Guardar cambios',
-            cargando: _guardando,
-            onPressed: _guardar,
-          ),
-          const SizedBox(height: Dimen.espacio3),
-          AppBoton(
-            texto: 'Cancelar',
-            variante: BotonVariante.secundario,
-            onPressed: _guardando ? null : () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(height: Dimen.espacio5),
-        ],
+        ),
       ),
     );
   }

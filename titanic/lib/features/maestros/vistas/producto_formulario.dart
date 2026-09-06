@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
+import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/catalogo.dart';
@@ -44,23 +45,16 @@ class ProductoFormulario extends ConsumerStatefulWidget {
   final Producto? producto;
 
   @override
-  ConsumerState<ProductoFormulario> createState() =>
-      _ProductoFormularioState();
+  ConsumerState<ProductoFormulario> createState() => _ProductoFormularioState();
 }
 
 class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
     with SingleTickerProviderStateMixin {
   late final _tabController = TabController(length: 2, vsync: this);
 
-  late final _codigo = TextEditingController(
-    text: widget.producto?.codigo ?? '',
-  );
-  late final _nombre = TextEditingController(
-    text: widget.producto?.nombre ?? '',
-  );
-  late final _descripcion = TextEditingController(
-    text: widget.producto?.descripcion ?? '',
-  );
+  late final _codigo = TextEditingController(text: widget.producto?.codigo ?? '');
+  late final _nombre = TextEditingController(text: widget.producto?.nombre ?? '');
+  late final _descripcion = TextEditingController(text: widget.producto?.descripcion ?? '');
   late final _costoReferencia = TextEditingController(
     text: widget.producto?.costoReferencia == null
         ? ''
@@ -159,9 +153,7 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
 
       navegador.pop();
       mensajero.showSnackBar(
-        SnackBar(
-          content: Text(_esNuevo ? 'Producto creado' : 'Producto actualizado'),
-        ),
+        SnackBar(content: Text(_esNuevo ? 'Producto creado' : 'Producto actualizado')),
       );
     } on ApiExcepcion catch (e) {
       setState(() {
@@ -204,9 +196,9 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   Future<void> _agregarPresentacion() async {
     final unidades = ref.read(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
     if (unidades.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Todavía no hay unidades registradas.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Todavía no hay unidades registradas.')));
       return;
     }
     final fila = await _mostrarHojaPresentacion(context, unidades: unidades);
@@ -215,11 +207,7 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
 
   Future<void> _editarPresentacion(_FilaPresentacion original) async {
     final unidades = ref.read(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
-    final fila = await _mostrarHojaPresentacion(
-      context,
-      unidades: unidades,
-      existente: original,
-    );
+    final fila = await _mostrarHojaPresentacion(context, unidades: unidades, existente: original);
     if (fila != null) {
       setState(() {
         final i = _filas.indexOf(original);
@@ -230,67 +218,73 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _esNuevo ? 'Nuevo producto' : 'Editar producto',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+    // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
+    // acento del modulo. Sin esto los componentes compartidos y las hojas que
+    // se abran desde dentro saldrian con el azul de marca.
+    return Acento.modulo(
+      'maestros',
+      Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _esNuevo ? 'Nuevo producto' : 'Editar producto',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: [
+              const Tab(text: 'Datos'),
+              Tab(text: 'Presentaciones (${_filas.length})'),
+            ],
+          ),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            const Tab(text: 'Datos'),
-            Tab(text: 'Presentaciones (${_filas.length})'),
-          ],
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (_error != null)
+        body: SafeArea(
+          child: Column(
+            children: [
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Dimen.espacio4,
+                    Dimen.espacio3,
+                    Dimen.espacio4,
+                    0,
+                  ),
+                  child: AppAlerta(_error!),
+                ),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [_datosTab(), _presentacionesTab()],
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   Dimen.espacio4,
                   Dimen.espacio3,
                   Dimen.espacio4,
-                  0,
+                  Dimen.espacio4,
                 ),
-                child: AppAlerta(_error!),
-              ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [_datosTab(), _presentacionesTab()],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Dimen.espacio4,
-                Dimen.espacio3,
-                Dimen.espacio4,
-                Dimen.espacio4,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: AppBoton(
-                      texto: 'Cancelar',
-                      variante: BotonVariante.secundario,
-                      onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AppBoton(
+                        texto: 'Cancelar',
+                        variante: BotonVariante.secundario,
+                        onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: Dimen.espacio3),
-                  Expanded(
-                    child: AppBoton(
-                      texto: _esNuevo ? 'Crear' : 'Guardar',
-                      cargando: _guardando,
-                      onPressed: _guardar,
+                    const SizedBox(width: Dimen.espacio3),
+                    Expanded(
+                      child: AppBoton(
+                        texto: _esNuevo ? 'Crear' : 'Guardar',
+                        cargando: _guardando,
+                        onPressed: _guardar,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -597,9 +591,7 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
             setSheetState(() {
               errorNombre = nombreCtrl.text.trim().isEmpty ? 'Ingresa un nombre.' : null;
               errorUnidad = unidadId == null ? 'Elige la unidad.' : null;
-              errorFactor = factor == null || factor <= 0
-                  ? 'Debe ser mayor que cero.'
-                  : null;
+              errorFactor = factor == null || factor <= 0 ? 'Debe ser mayor que cero.' : null;
             });
             if (errorNombre != null || errorUnidad != null || errorFactor != null) return;
 
@@ -650,9 +642,7 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
                   etiqueta: 'Unidad',
                   icono: Icons.straighten_outlined,
                   error: errorUnidad,
-                  opciones: [
-                    for (final u in unidades) Opcion(u.id, '${u.nombre} (${u.codigo})'),
-                  ],
+                  opciones: [for (final u in unidades) Opcion(u.id, '${u.nombre} (${u.codigo})')],
                   onCambio: (v) => setSheetState(() => unidadId = v),
                 ),
                 const SizedBox(height: Dimen.espacio4),

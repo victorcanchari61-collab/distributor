@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/auth/estado/auth_controlador.dart';
@@ -42,61 +43,61 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final usuario = ref.watch(authProvider).usuario;
 
-    return Scaffold(
-      drawer: AppDrawer(rutaActual: rutaActual),
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (subtitulo != null)
-              Text(
-                subtitulo!.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.1,
-                  color: acentado ?? Colores.marca,
+    // El acento del modulo baja a TODO lo que cuelga de la pantalla, igual que
+    // el `data-sys` del panel web: asi los componentes compartidos se tinen
+    // solos y ninguna vista tiene que ir pasandoles el color a mano.
+    return Acento(
+      color: acentado ?? Colores.marca,
+      child: Scaffold(
+        drawer: AppDrawer(rutaActual: rutaActual),
+        appBar: AppBar(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (subtitulo != null)
+                Text(
+                  subtitulo!.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                    color: acentado ?? Colores.marca,
+                  ),
                 ),
-              ),
-            Text(
-              titulo,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-        actions: [
-          ...?acciones,
-          const AppAlertasBoton(),
-          // Quien esta conectado va aqui, no en el menu: se ve siempre, sin
-          // tener que abrir el drawer.
-          if (usuario != null)
-            Padding(
-              padding: const EdgeInsets.only(right: Dimen.espacio3),
-              child: Tooltip(
-                message: '${usuario.nombre}\n${usuario.rol}',
-                child: CircleAvatar(
-                  radius: 15,
-                  backgroundColor: Colores.marca,
-                  child: Text(
-                    usuario.inicial,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
+              Text(titulo, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          actions: [
+            ...?acciones,
+            const AppAlertasBoton(),
+            // Quien esta conectado va aqui, no en el menu: se ve siempre, sin
+            // tener que abrir el drawer.
+            if (usuario != null)
+              Padding(
+                padding: const EdgeInsets.only(right: Dimen.espacio3),
+                child: Tooltip(
+                  message: '${usuario.nombre}\n${usuario.rol}',
+                  child: CircleAvatar(
+                    radius: 15,
+                    backgroundColor: Colores.marca,
+                    child: Text(
+                      usuario.inicial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1),
+          ],
+          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
         ),
+        body: child,
+        floatingActionButton: accionFlotante,
       ),
-      body: child,
-      floatingActionButton: accionFlotante,
     );
   }
 }

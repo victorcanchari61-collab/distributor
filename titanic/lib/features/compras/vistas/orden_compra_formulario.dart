@@ -8,6 +8,7 @@ import '../../../compartido/widgets/app_lineas_producto.dart';
 import '../../../compartido/widgets/app_panel_producto.dart';
 import '../../../compartido/widgets/app_selector_buscable.dart';
 import '../../../core/red/excepciones.dart';
+import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../maestros/datos/producto.dart';
@@ -162,7 +163,8 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
       items: activos,
       buscable: (p) => p.buscable,
       pistaBusqueda: 'Buscar por nombre o documento',
-      fila: (p) => Text(p.nombre, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      fila: (p) =>
+          Text(p.nombre, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
     );
     if (elegido != null) {
       setState(() {
@@ -207,126 +209,139 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
   Widget build(BuildContext context) {
     _ponerLineasExistentes(ref.watch(productosProvider).valueOrNull ?? const <Producto>[]);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _esNuevo ? 'Nueva orden de compra' : 'Editar orden de compra',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-        ),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(Dimen.espacio4),
-        children: [
-          if (_error != null) ...[
-            AppAlerta(_error!),
-            const SizedBox(height: Dimen.espacio4),
-          ],
-
-          InkWell(
-            onTap: _elegirProveedor,
-            borderRadius: BorderRadius.circular(Dimen.radioCampo),
-            child: InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Proveedor',
-                errorText: _errorProveedor,
-                prefixIcon: const Icon(Icons.business_outlined, size: 19, color: Colores.tintaTenue),
-                suffixIcon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
-                constraints: const BoxConstraints(minHeight: Dimen.campoLg),
-              ),
-              child: Text(
-                _proveedorNombre ?? 'Toca para elegir',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: _proveedorNombre == null ? Colores.tintaTenue : Colores.tinta,
-                ),
-              ),
-            ),
+    // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
+    // acento del modulo. Sin esto los componentes compartidos y las hojas que
+    // se abran desde dentro saldrian con el azul de marca.
+    return Acento.modulo(
+      'compras',
+      Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _esNuevo ? 'Nueva orden de compra' : 'Editar orden de compra',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: Dimen.espacio4),
+          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(Dimen.espacio4),
+          children: [
+            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
 
-          InkWell(
-            onTap: _elegirFechaEsperada,
-            borderRadius: BorderRadius.circular(Dimen.radioCampo),
-            child: InputDecorator(
-              decoration: const InputDecoration(
-                label: Text.rich(
-                  TextSpan(
-                    text: 'Fecha esperada',
-                    children: [TextSpan(text: ' (opcional)', style: TextStyle(color: Colores.tintaTenue))],
+            InkWell(
+              onTap: _elegirProveedor,
+              borderRadius: BorderRadius.circular(Dimen.radioCampo),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Proveedor',
+                  errorText: _errorProveedor,
+                  prefixIcon: const Icon(
+                    Icons.business_outlined,
+                    size: 19,
+                    color: Colores.tintaTenue,
+                  ),
+                  suffixIcon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
+                  constraints: const BoxConstraints(minHeight: Dimen.campoLg),
+                ),
+                child: Text(
+                  _proveedorNombre ?? 'Toca para elegir',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: _proveedorNombre == null ? Colores.tintaTenue : Colores.tinta,
                   ),
                 ),
-                prefixIcon: Icon(Icons.event_outlined, size: 19, color: Colores.tintaTenue),
-                constraints: BoxConstraints(minHeight: Dimen.campoLg),
               ),
-              child: Text(
-                _fechaEsperada == null ? 'Sin definir' : _fechaTexto(_fechaEsperada!),
-                style: TextStyle(
-                  fontSize: 15,
-                  color: _fechaEsperada == null ? Colores.tintaTenue : Colores.tinta,
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            InkWell(
+              onTap: _elegirFechaEsperada,
+              borderRadius: BorderRadius.circular(Dimen.radioCampo),
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  label: Text.rich(
+                    TextSpan(
+                      text: 'Fecha esperada',
+                      children: [
+                        TextSpan(
+                          text: ' (opcional)',
+                          style: TextStyle(color: Colores.tintaTenue),
+                        ),
+                      ],
+                    ),
+                  ),
+                  prefixIcon: Icon(Icons.event_outlined, size: 19, color: Colores.tintaTenue),
+                  constraints: BoxConstraints(minHeight: Dimen.campoLg),
+                ),
+                child: Text(
+                  _fechaEsperada == null ? 'Sin definir' : _fechaTexto(_fechaEsperada!),
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: _fechaEsperada == null ? Colores.tintaTenue : Colores.tinta,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: Dimen.espacio4),
+            const SizedBox(height: Dimen.espacio4),
 
-          AppCampo(
-            controlador: _observacion,
-            etiqueta: 'Observación',
-            icono: Icons.notes_outlined,
-            opcional: true,
-            maxLargo: 250,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio5),
-
-          AppPanelProducto(
-            productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
-                .where((p) => p.activo && p.controlaStock)
-                .toList(),
-            paraVenta: false,
-            habilitado: !_guardando,
-            onAgregar: _agregarLineas,
-          ),
-          const SizedBox(height: Dimen.espacio5),
-
-          // Lo agregado va DEBAJO del buscador: se lee como lo que acaba de
-          // caer ahi, y el buscador no se aleja segun crece el documento.
-          AppLineasProducto(
-            lineas: _lineas,
-            error: _errorLineas,
-            etiquetaImporte: 'Costo S/',
-            habilitado: !_guardando,
-            onCambio: () => setState(() {}),
-            onEliminar: (l) => setState(() => _lineas.remove(l)),
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              'Total: S/ ${_total.toStringAsFixed(2)}',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.marca),
+            AppCampo(
+              controlador: _observacion,
+              etiqueta: 'Observación',
+              icono: Icons.notes_outlined,
+              opcional: true,
+              maxLargo: 250,
+              habilitado: !_guardando,
             ),
-          ),
-          const SizedBox(height: Dimen.espacio6),
+            const SizedBox(height: Dimen.espacio5),
 
-          AppBoton(
-            texto: _esNuevo ? 'Crear orden' : 'Guardar cambios',
-            cargando: _guardando,
-            onPressed: _guardar,
-          ),
-          const SizedBox(height: Dimen.espacio3),
-          AppBoton(
-            texto: 'Cancelar',
-            variante: BotonVariante.secundario,
-            onPressed: _guardando ? null : () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(height: Dimen.espacio5),
-        ],
+            AppPanelProducto(
+              productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
+                  .where((p) => p.activo && p.controlaStock)
+                  .toList(),
+              paraVenta: false,
+              habilitado: !_guardando,
+              onAgregar: _agregarLineas,
+            ),
+            const SizedBox(height: Dimen.espacio5),
+
+            // Lo agregado va DEBAJO del buscador: se lee como lo que acaba de
+            // caer ahi, y el buscador no se aleja segun crece el documento.
+            AppLineasProducto(
+              lineas: _lineas,
+              error: _errorLineas,
+              etiquetaImporte: 'Costo S/',
+              habilitado: !_guardando,
+              onCambio: () => setState(() {}),
+              onEliminar: (l) => setState(() => _lineas.remove(l)),
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Total: S/ ${_total.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colores.marca,
+                ),
+              ),
+            ),
+            const SizedBox(height: Dimen.espacio6),
+
+            AppBoton(
+              texto: _esNuevo ? 'Crear orden' : 'Guardar cambios',
+              cargando: _guardando,
+              onPressed: _guardar,
+            ),
+            const SizedBox(height: Dimen.espacio3),
+            AppBoton(
+              texto: 'Cancelar',
+              variante: BotonVariante.secundario,
+              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+            ),
+            const SizedBox(height: Dimen.espacio5),
+          ],
+        ),
       ),
     );
   }

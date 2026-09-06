@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 
@@ -33,8 +34,8 @@ class AppTarjetaDato extends StatelessWidget {
   /// Color del modulo, cuando el tono es [DatoTono.modulo].
   final Color? color;
 
-  Color get _color => switch (tono) {
-    DatoTono.modulo => color ?? Colores.marca,
+  Color _colorDe(BuildContext context) => switch (tono) {
+    DatoTono.modulo => color ?? Acento.de(context),
     DatoTono.neutral => Colores.tintaSuave,
     DatoTono.exito => Colores.exito,
     DatoTono.aviso => Colores.advertencia,
@@ -61,7 +62,7 @@ class AppTarjetaDato extends StatelessWidget {
             width: 3,
             height: 42,
             decoration: BoxDecoration(
-              color: _color,
+              color: _colorDe(context),
               borderRadius: BorderRadius.circular(999),
             ),
           ),
@@ -70,10 +71,10 @@ class AppTarjetaDato extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: _color.withValues(alpha: 0.12),
+              color: _colorDe(context).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(Dimen.radioCampo),
             ),
-            child: Icon(icono, size: 17, color: _color),
+            child: Icon(icono, size: 17, color: _colorDe(context)),
           ),
           const SizedBox(width: Dimen.espacio2),
           Expanded(
@@ -105,10 +106,7 @@ class AppTarjetaDato extends StatelessWidget {
                     nota!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      color: Colores.tintaTenue,
-                    ),
+                    style: const TextStyle(fontSize: 10.5, color: Colores.tintaTenue),
                   ),
               ],
             ),

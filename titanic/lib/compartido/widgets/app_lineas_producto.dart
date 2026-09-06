@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/maestros/datos/producto.dart';
@@ -88,7 +89,7 @@ class AppLineasProducto extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.shopping_basket_outlined, size: 18, color: Colores.marca),
+            Icon(Icons.shopping_basket_outlined, size: 18, color: Acento.de(context)),
             const SizedBox(width: Dimen.espacio2),
             const Text(
               'Productos',
@@ -99,7 +100,7 @@ class AppLineasProducto extends StatelessWidget {
               lineas.isEmpty
                   ? 'ninguno todavía'
                   : '${lineas.length} ${lineas.length == 1 ? 'ítem agregado' : 'ítems agregados'}',
-              style: const TextStyle(fontSize: 12.5, color: Colores.marca),
+              style: TextStyle(fontSize: 12.5, color: Acento.de(context)),
             ),
           ],
         ),
@@ -198,16 +199,13 @@ class _TarjetaLineaState extends State<_TarjetaLinea> {
                 width: 22,
                 height: 22,
                 alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: Colores.marcaSuave,
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: Acento.suave(context), shape: BoxShape.circle),
                 child: Text(
                   '${widget.numero}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: Colores.marca,
+                    color: Acento.de(context),
                   ),
                 ),
               ),
@@ -290,10 +288,10 @@ class _TarjetaLineaState extends State<_TarjetaLinea> {
                 children: [
                   TextSpan(
                     text: 'S/ ${linea.subtotal.toStringAsFixed(2)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: Colores.marca,
+                      color: Acento.de(context),
                     ),
                   ),
                 ],
@@ -343,15 +341,9 @@ class _Unidad extends StatelessWidget {
           value: linea.presentacionId,
           isExpanded: true,
           items: [
-            DropdownMenuItem(
-              value: 0,
-              child: Text('${linea.unidadBase}${_texto(1) ?? ''}'),
-            ),
+            DropdownMenuItem(value: 0, child: Text('${linea.unidadBase}${_texto(1) ?? ''}')),
             for (final p in linea.presentaciones.where((p) => !p.esBase))
-              DropdownMenuItem(
-                value: p.id,
-                child: Text('${p.nombre}${_texto(p.factor) ?? ''}'),
-              ),
+              DropdownMenuItem(value: p.id, child: Text('${p.nombre}${_texto(p.factor) ?? ''}')),
           ],
           onChanged: habilitado ? (v) => onCambio(v ?? 0) : null,
           style: const TextStyle(fontSize: 14, color: Colores.tinta),

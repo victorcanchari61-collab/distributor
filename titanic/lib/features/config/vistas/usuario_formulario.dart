@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
+import '../../../core/tema/acento.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
@@ -22,9 +23,7 @@ class UsuarioFormulario extends ConsumerStatefulWidget {
 }
 
 class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
-  late final _nombre = TextEditingController(
-    text: widget.usuario?.nombre ?? '',
-  );
+  late final _nombre = TextEditingController(text: widget.usuario?.nombre ?? '');
   late final _email = TextEditingController(text: widget.usuario?.email ?? '');
   late final _dni = TextEditingController(text: widget.usuario?.dni ?? '');
   final _password = TextEditingController();
@@ -112,15 +111,11 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
     };
 
     try {
-      await ref
-          .read(usuariosProvider.notifier)
-          .guardar(id: widget.usuario?.id, cuerpo: cuerpo);
+      await ref.read(usuariosProvider.notifier).guardar(id: widget.usuario?.id, cuerpo: cuerpo);
 
       navegador.pop();
       mensajero.showSnackBar(
-        SnackBar(
-          content: Text(_esNuevo ? 'Usuario creado' : 'Usuario actualizado'),
-        ),
+        SnackBar(content: Text(_esNuevo ? 'Usuario creado' : 'Usuario actualizado')),
       );
     } on ApiExcepcion catch (e) {
       setState(() {
@@ -134,102 +129,100 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
   Widget build(BuildContext context) {
     final roles = ref.watch(rolesActivosProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _esNuevo ? 'Nuevo usuario' : 'Editar usuario',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+    // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
+    // acento del modulo. Sin esto los componentes compartidos y las hojas que
+    // se abran desde dentro saldrian con el azul de marca.
+    return Acento.modulo(
+      'config',
+      Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _esNuevo ? 'Nuevo usuario' : 'Editar usuario',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
+          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
         ),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(Dimen.espacio4),
-        children: [
-          if (_error != null) ...[
-            AppAlerta(_error!),
-            const SizedBox(height: Dimen.espacio4),
-          ],
+        body: ListView(
+          padding: const EdgeInsets.all(Dimen.espacio4),
+          children: [
+            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
 
-          AppCampo(
-            controlador: _nombre,
-            etiqueta: 'Nombre',
-            icono: Icons.person_outline,
-            error: _errorNombre,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppCampo(
-            controlador: _email,
-            etiqueta: 'Correo',
-            icono: Icons.mail_outline,
-            tipoTeclado: TextInputType.emailAddress,
-            error: _errorEmail,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppCampo(
-            controlador: _dni,
-            etiqueta: 'DNI',
-            icono: Icons.badge_outlined,
-            opcional: true,
-            tipoTeclado: TextInputType.number,
-            formateadores: [FilteringTextInputFormatter.digitsOnly],
-            maxLargo: 8,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppSelector<int>(
-            valor: _rolId,
-            etiqueta: 'Rol',
-            icono: Icons.verified_user_outlined,
-            habilitado: !_guardando,
-            error: _errorRol,
-            opciones: [for (final rol in roles) Opcion(rol.id, rol.nombre)],
-            onCambio: (v) => setState(() => _rolId = v),
-          ),
-          if (roles.isEmpty) ...[
-            const SizedBox(height: Dimen.espacio2),
-            const AppAlerta(
-              'No hay roles activos. Crea uno en Roles antes de dar de alta un usuario.',
+            AppCampo(
+              controlador: _nombre,
+              etiqueta: 'Nombre',
+              icono: Icons.person_outline,
+              error: _errorNombre,
+              habilitado: !_guardando,
             ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppCampo(
+              controlador: _email,
+              etiqueta: 'Correo',
+              icono: Icons.mail_outline,
+              tipoTeclado: TextInputType.emailAddress,
+              error: _errorEmail,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppCampo(
+              controlador: _dni,
+              etiqueta: 'DNI',
+              icono: Icons.badge_outlined,
+              opcional: true,
+              tipoTeclado: TextInputType.number,
+              formateadores: [FilteringTextInputFormatter.digitsOnly],
+              maxLargo: 8,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppSelector<int>(
+              valor: _rolId,
+              etiqueta: 'Rol',
+              icono: Icons.verified_user_outlined,
+              habilitado: !_guardando,
+              error: _errorRol,
+              opciones: [for (final rol in roles) Opcion(rol.id, rol.nombre)],
+              onCambio: (v) => setState(() => _rolId = v),
+            ),
+            if (roles.isEmpty) ...[
+              const SizedBox(height: Dimen.espacio2),
+              const AppAlerta(
+                'No hay roles activos. Crea uno en Roles antes de dar de alta un usuario.',
+              ),
+            ],
+            const SizedBox(height: Dimen.espacio4),
+
+            AppCampo(
+              controlador: _password,
+              etiqueta: _esNuevo ? 'Contraseña' : 'Nueva contraseña',
+              icono: Icons.lock_outline,
+              // Al editar se puede dejar en blanco: cambiar el nombre de alguien
+              // no deberia obligar a reescribir su clave.
+              opcional: !_esNuevo,
+              pista: _esNuevo ? 'Mínimo 6 caracteres' : 'Dejar vacío para no cambiarla',
+              esPassword: true,
+              error: _errorPassword,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio6),
+
+            AppBoton(
+              texto: _esNuevo ? 'Crear usuario' : 'Guardar cambios',
+              cargando: _guardando,
+              onPressed: _guardar,
+            ),
+            const SizedBox(height: Dimen.espacio3),
+            AppBoton(
+              texto: 'Cancelar',
+              variante: BotonVariante.secundario,
+              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+            ),
+            const SizedBox(height: Dimen.espacio5),
           ],
-          const SizedBox(height: Dimen.espacio4),
-
-          AppCampo(
-            controlador: _password,
-            etiqueta: _esNuevo ? 'Contraseña' : 'Nueva contraseña',
-            icono: Icons.lock_outline,
-            // Al editar se puede dejar en blanco: cambiar el nombre de alguien
-            // no deberia obligar a reescribir su clave.
-            opcional: !_esNuevo,
-            pista: _esNuevo
-                ? 'Mínimo 6 caracteres'
-                : 'Dejar vacío para no cambiarla',
-            esPassword: true,
-            error: _errorPassword,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio6),
-
-          AppBoton(
-            texto: _esNuevo ? 'Crear usuario' : 'Guardar cambios',
-            cargando: _guardando,
-            onPressed: _guardar,
-          ),
-          const SizedBox(height: Dimen.espacio3),
-          AppBoton(
-            texto: 'Cancelar',
-            variante: BotonVariante.secundario,
-            onPressed: _guardando ? null : () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(height: Dimen.espacio5),
-        ],
+        ),
       ),
     );
   }

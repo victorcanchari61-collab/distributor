@@ -5,6 +5,7 @@ import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../core/red/excepciones.dart';
+import '../../../core/tema/acento.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
@@ -21,9 +22,7 @@ class RolFormulario extends ConsumerStatefulWidget {
 
 class _RolFormularioState extends ConsumerState<RolFormulario> {
   late final _nombre = TextEditingController(text: widget.rol?.nombre ?? '');
-  late final _descripcion = TextEditingController(
-    text: widget.rol?.descripcion ?? '',
-  );
+  late final _descripcion = TextEditingController(text: widget.rol?.descripcion ?? '');
 
   bool _guardando = false;
   String? _error;
@@ -40,9 +39,7 @@ class _RolFormularioState extends ConsumerState<RolFormulario> {
 
   bool _validar() {
     setState(() {
-      _errorNombre = _nombre.text.trim().isEmpty
-          ? 'Ingresa el nombre del rol.'
-          : null;
+      _errorNombre = _nombre.text.trim().isEmpty ? 'Ingresa el nombre del rol.' : null;
     });
     return _errorNombre == null;
   }
@@ -66,14 +63,10 @@ class _RolFormularioState extends ConsumerState<RolFormulario> {
     };
 
     try {
-      await ref
-          .read(rolesProvider.notifier)
-          .guardar(id: widget.rol?.id, cuerpo: cuerpo);
+      await ref.read(rolesProvider.notifier).guardar(id: widget.rol?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Rol creado' : 'Rol actualizado')),
-      );
+      mensajero.showSnackBar(SnackBar(content: Text(_esNuevo ? 'Rol creado' : 'Rol actualizado')));
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;
@@ -84,65 +77,65 @@ class _RolFormularioState extends ConsumerState<RolFormulario> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _esNuevo ? 'Nuevo rol' : 'Editar rol',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+    // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
+    // acento del modulo. Sin esto los componentes compartidos y las hojas que
+    // se abran desde dentro saldrian con el azul de marca.
+    return Acento.modulo(
+      'config',
+      Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _esNuevo ? 'Nuevo rol' : 'Editar rol',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
+          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
         ),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(Dimen.espacio4),
-        children: [
-          if (_error != null) ...[
-            AppAlerta(_error!),
-            const SizedBox(height: Dimen.espacio4),
-          ],
+        body: ListView(
+          padding: const EdgeInsets.all(Dimen.espacio4),
+          children: [
+            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
 
-          if (widget.rol?.delSistema == true) ...[
-            const AppAlerta(
-              'Es un rol que trae el sistema. Puedes cambiar su descripción, pero conviene no renombrarlo.',
+            if (widget.rol?.delSistema == true) ...[
+              const AppAlerta(
+                'Es un rol que trae el sistema. Puedes cambiar su descripción, pero conviene no renombrarlo.',
+              ),
+              const SizedBox(height: Dimen.espacio4),
+            ],
+
+            AppCampo(
+              controlador: _nombre,
+              etiqueta: 'Nombre',
+              icono: Icons.verified_user_outlined,
+              pista: 'Ej. Vendedor',
+              error: _errorNombre,
+              habilitado: !_guardando,
             ),
             const SizedBox(height: Dimen.espacio4),
+
+            AppCampo(
+              controlador: _descripcion,
+              etiqueta: 'Descripción',
+              icono: Icons.notes_outlined,
+              pista: 'Qué puede hacer quien tenga este rol',
+              opcional: true,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio6),
+
+            AppBoton(
+              texto: _esNuevo ? 'Crear rol' : 'Guardar cambios',
+              cargando: _guardando,
+              onPressed: _guardar,
+            ),
+            const SizedBox(height: Dimen.espacio3),
+            AppBoton(
+              texto: 'Cancelar',
+              variante: BotonVariante.secundario,
+              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+            ),
+            const SizedBox(height: Dimen.espacio5),
           ],
-
-          AppCampo(
-            controlador: _nombre,
-            etiqueta: 'Nombre',
-            icono: Icons.verified_user_outlined,
-            pista: 'Ej. Vendedor',
-            error: _errorNombre,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppCampo(
-            controlador: _descripcion,
-            etiqueta: 'Descripción',
-            icono: Icons.notes_outlined,
-            pista: 'Qué puede hacer quien tenga este rol',
-            opcional: true,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio6),
-
-          AppBoton(
-            texto: _esNuevo ? 'Crear rol' : 'Guardar cambios',
-            cargando: _guardando,
-            onPressed: _guardar,
-          ),
-          const SizedBox(height: Dimen.espacio3),
-          AppBoton(
-            texto: 'Cancelar',
-            variante: BotonVariante.secundario,
-            onPressed: _guardando ? null : () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(height: Dimen.espacio5),
-        ],
+        ),
       ),
     );
   }

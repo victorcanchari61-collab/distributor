@@ -8,6 +8,7 @@ import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_selector_buscable.dart';
 import '../../../core/red/excepciones.dart';
+import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../maestros/datos/producto.dart';
@@ -154,7 +155,9 @@ class _PrestamoFormularioState extends ConsumerState<PrestamoFormulario> {
             void guardar() {
               final cantidad = double.tryParse(cantidadCtrl.text.trim().replaceAll(',', '.'));
               setSheetState(() {
-                errorCantidad = cantidad == null || cantidad <= 0 ? 'Debe ser mayor que cero.' : null;
+                errorCantidad = cantidad == null || cantidad <= 0
+                    ? 'Debe ser mayor que cero.'
+                    : null;
               });
               if (errorCantidad != null) return;
 
@@ -188,7 +191,11 @@ class _PrestamoFormularioState extends ConsumerState<PrestamoFormulario> {
                 children: [
                   Text(
                     producto.nombre,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colores.tinta,
+                    ),
                   ),
                   const SizedBox(height: Dimen.espacio4),
                   if (presentaciones.isNotEmpty) ...[
@@ -198,7 +205,10 @@ class _PrestamoFormularioState extends ConsumerState<PrestamoFormulario> {
                       icono: Icons.inventory_2_outlined,
                       opciones: [
                         for (final p in presentaciones)
-                          Opcion(p.id, '${p.nombre} (${formatoNumero(p.factor)} ${producto.unidadBase})'),
+                          Opcion(
+                            p.id,
+                            '${p.nombre} (${formatoNumero(p.factor)} ${producto.unidadBase})',
+                          ),
                       ],
                       onCambio: (v) => setSheetState(() => presentacionId = v),
                     ),
@@ -238,134 +248,144 @@ class _PrestamoFormularioState extends ConsumerState<PrestamoFormulario> {
   Widget build(BuildContext context) {
     final almacenes = ref.watch(almacenesActivosProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nuevo préstamo', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-        bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(Dimen.espacio4),
-        children: [
-          if (_error != null) ...[
-            AppAlerta(_error!),
+    // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
+    // acento del modulo. Sin esto los componentes compartidos y las hojas que
+    // se abran desde dentro saldrian con el azul de marca.
+    return Acento.modulo(
+      'inv',
+      Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Nuevo préstamo',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
+          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(Dimen.espacio4),
+          children: [
+            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+
+            AppSelector<String>(
+              valor: _tipo,
+              etiqueta: 'Tipo',
+              icono: Icons.handshake_outlined,
+              opciones: const [
+                Opcion(TipoPrestamo.dado, 'Dado (sale mercadería propia)'),
+                Opcion(TipoPrestamo.recibido, 'Recibido (entra de un tercero)'),
+              ],
+              onCambio: (v) => setState(() => _tipo = v ?? TipoPrestamo.dado),
+            ),
             const SizedBox(height: Dimen.espacio4),
-          ],
 
-          AppSelector<String>(
-            valor: _tipo,
-            etiqueta: 'Tipo',
-            icono: Icons.handshake_outlined,
-            opciones: const [
-              Opcion(TipoPrestamo.dado, 'Dado (sale mercadería propia)'),
-              Opcion(TipoPrestamo.recibido, 'Recibido (entra de un tercero)'),
+            AppCampo(
+              controlador: _contraparte,
+              etiqueta: 'Contraparte',
+              pista: 'A quién, o de quién',
+              icono: Icons.person_outline,
+              error: _errorContraparte,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppSelector<int>(
+              valor: _almacenId,
+              etiqueta: 'Almacén',
+              icono: Icons.warehouse_outlined,
+              error: _errorAlmacen,
+              opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
+              onCambio: (v) => setState(() => _almacenId = v),
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppCampo(
+              controlador: _observacion,
+              etiqueta: 'Observación',
+              icono: Icons.notes_outlined,
+              opcional: true,
+              maxLargo: 250,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio5),
+
+            const Text(
+              'Productos',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
+            ),
+            if (_errorLineas != null) ...[
+              const SizedBox(height: Dimen.espacio1),
+              Text(_errorLineas!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
             ],
-            onCambio: (v) => setState(() => _tipo = v ?? TipoPrestamo.dado),
-          ),
-          const SizedBox(height: Dimen.espacio4),
+            const SizedBox(height: Dimen.espacio3),
 
-          AppCampo(
-            controlador: _contraparte,
-            etiqueta: 'Contraparte',
-            pista: 'A quién, o de quién',
-            icono: Icons.person_outline,
-            error: _errorContraparte,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppSelector<int>(
-            valor: _almacenId,
-            etiqueta: 'Almacén',
-            icono: Icons.warehouse_outlined,
-            error: _errorAlmacen,
-            opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
-            onCambio: (v) => setState(() => _almacenId = v),
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppCampo(
-            controlador: _observacion,
-            etiqueta: 'Observación',
-            icono: Icons.notes_outlined,
-            opcional: true,
-            maxLargo: 250,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio5),
-
-          const Text(
-            'Productos',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
-          ),
-          if (_errorLineas != null) ...[
-            const SizedBox(height: Dimen.espacio1),
-            Text(_errorLineas!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
-          ],
-          const SizedBox(height: Dimen.espacio3),
-
-          for (final fila in _lineas) ...[
-            Container(
-              padding: const EdgeInsets.all(Dimen.espacio3),
-              decoration: BoxDecoration(
-                color: Colores.superficie,
-                border: Border.all(color: Colores.linea),
-                borderRadius: BorderRadius.circular(Dimen.radioCampo),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          fila.producto,
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colores.tinta),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${formatoNumero(fila.cantidad)} ${fila.presentacion}',
-                          style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-                        ),
-                      ],
+            for (final fila in _lineas) ...[
+              Container(
+                padding: const EdgeInsets.all(Dimen.espacio3),
+                decoration: BoxDecoration(
+                  color: Colores.superficie,
+                  border: Border.all(color: Colores.linea),
+                  borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            fila.producto,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colores.tinta,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${formatoNumero(fila.cantidad)} ${fila.presentacion}',
+                            style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => setState(() => _lineas.remove(fila)),
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
-                  ),
-                ],
+                    IconButton(
+                      onPressed: () => setState(() => _lineas.remove(fila)),
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(height: Dimen.espacio2),
+            ],
+            if (_lineas.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: Dimen.espacio3),
+                child: Text(
+                  'Todavía no agregaste productos.',
+                  style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
+                ),
+              ),
             const SizedBox(height: Dimen.espacio2),
-          ],
-          if (_lineas.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: Dimen.espacio3),
-              child: Text(
-                'Todavía no agregaste productos.',
-                style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
-              ),
+
+            AppBoton(
+              texto: 'Agregar producto',
+              variante: BotonVariante.secundario,
+              icono: Icons.add,
+              onPressed: _guardando ? null : _agregarLinea,
             ),
-          const SizedBox(height: Dimen.espacio2),
+            const SizedBox(height: Dimen.espacio6),
 
-          AppBoton(
-            texto: 'Agregar producto',
-            variante: BotonVariante.secundario,
-            icono: Icons.add,
-            onPressed: _guardando ? null : _agregarLinea,
-          ),
-          const SizedBox(height: Dimen.espacio6),
-
-          AppBoton(texto: 'Registrar préstamo', cargando: _guardando, onPressed: _guardar),
-          const SizedBox(height: Dimen.espacio3),
-          AppBoton(
-            texto: 'Cancelar',
-            variante: BotonVariante.secundario,
-            onPressed: _guardando ? null : () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(height: Dimen.espacio5),
-        ],
+            AppBoton(texto: 'Registrar préstamo', cargando: _guardando, onPressed: _guardar),
+            const SizedBox(height: Dimen.espacio3),
+            AppBoton(
+              texto: 'Cancelar',
+              variante: BotonVariante.secundario,
+              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+            ),
+            const SizedBox(height: Dimen.espacio5),
+          ],
+        ),
       ),
     );
   }
