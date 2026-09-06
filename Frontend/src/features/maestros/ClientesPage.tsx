@@ -30,8 +30,8 @@ import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { valorDe } from '../../lib/excel'
 import { useRealtime } from '../../lib/realtime'
-import { mercadoApi } from '../tms'
-import type { MercadoResponse } from '../tms'
+import { mercadoApi, rutaApi } from '../tms'
+import type { MercadoResponse, RutaResponse } from '../tms'
 import { clienteApi } from './clienteApi'
 import type { ClienteRequest, ClienteResponse } from './clienteApi'
 
@@ -44,7 +44,7 @@ const VACIO: ClienteRequest = {
   telefono: '',
   email: '',
   diaVisita: '',
-  ruta: '',
+  rutaId: 0,
   mercadoId: 0,
 }
 
@@ -53,6 +53,7 @@ const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DO
 export function ClientesPage() {
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [mercados, setMercados] = useState<MercadoResponse[]>([])
+  const [rutas, setRutas] = useState<RutaResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -69,15 +70,25 @@ export function ClientesPage() {
   const [creandoMercado, setCreandoMercado] = useState(false)
   const [errorMercado, setErrorMercado] = useState('')
 
+  const [nuevaRuta, setNuevaRuta] = useState(false)
+  const [nombreRuta, setNombreRuta] = useState('')
+  const [creandoRuta, setCreandoRuta] = useState(false)
+  const [errorRuta, setErrorRuta] = useState('')
+
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
     setCargando(true)
     setError('')
     try {
-      const [cli, merc] = await Promise.all([clienteApi.getAll(), mercadoApi.getAll()])
+      const [cli, merc, rts] = await Promise.all([
+        clienteApi.getAll(),
+        mercadoApi.getAll(),
+        rutaApi.getAll(),
+      ])
       setClientes(cli)
       setMercados(merc)
+      setRutas(rts)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los clientes.')
     } finally {
@@ -89,7 +100,7 @@ export function ClientesPage() {
     void cargar()
   }, [cargar])
 
-  useRealtime(['clientes', 'mercados'], cargar)
+  useRealtime(['clientes', 'mercados', 'rutas'], cargar)
 
   const abrirNuevo = () => {
     setEditando(null)
@@ -109,7 +120,7 @@ export function ClientesPage() {
       telefono: cliente.telefono ?? '',
       email: cliente.email ?? '',
       diaVisita: cliente.diaVisita ?? '',
-      ruta: cliente.ruta ?? '',
+      rutaId: cliente.rutaId ?? 0,
       mercadoId: cliente.mercadoId ?? 0,
     })
     setErrorForm('')
@@ -154,7 +165,7 @@ export function ClientesPage() {
 
     setGuardando(true)
     try {
-      const cuerpo = { ...form, mercadoId: form.mercadoId || null }
+      const cuerpo = { ...form, mercadoId: form.mercadoId || null, rutaId: form.rutaId || null }
       if (editando) await clienteApi.update(editando.id, { ...cuerpo, activo: editando.activo })
       else await clienteApi.create(cuerpo)
       setAbierto(false)
@@ -188,6 +199,25 @@ export function ClientesPage() {
       setErrorMercado(e instanceof ApiError ? e.message : 'No pudimos crear el mercado.')
     } finally {
       setCreandoMercado(false)
+    }
+  }
+
+  /** Crea la ruta sin salir del formulario y la deja elegida en el cliente. */
+  const crearRutaRapida = async () => {
+    if (!nombreRuta.trim()) return setErrorRuta('Ingresa el nombre.')
+
+    setCreandoRuta(true)
+    setErrorRuta('')
+    try {
+      const creada = await rutaApi.create({ nombre: nombreRuta.trim() })
+      setForm((f) => ({ ...f, rutaId: creada.id }))
+      await cargar()
+      setNombreRuta('')
+      setNuevaRuta(false)
+    } catch (e) {
+      setErrorRuta(e instanceof ApiError ? e.message : 'No pudimos crear la ruta.')
+    } finally {
+      setCreandoRuta(false)
     }
   }
 
@@ -236,7 +266,7 @@ export function ClientesPage() {
   const activos = clientes.filter((c) => c.activo)
   const desactivados = clientes.length - activos.length
   const conRuta = activos.filter((c) => c.ruta).length
-  const rutas = new Set(activos.map((c) => c.ruta).filter(Boolean)).size
+  const rutasDistintas = new Set(activos.map((c) => c.ruta).filter(Boolean)).size
 
   // Opciones del filtro "select" de una columna libre: los valores que de
   // verdad existen en los clientes cargados, sin repetir.
@@ -366,7 +396,7 @@ export function ClientesPage() {
             />
             <StatCard
               label="Rutas"
-              value={String(rutas)}
+              value={String(rutasDistintas)}
               icon={<MapPin size={18} />}
               tono="neutral"
               hint="rutas de reparto distintas"
@@ -442,10 +472,15 @@ export function ClientesPage() {
               onChange={(e) => setForm({ ...form, direccion: e.target.value })}
             />
 
-            <Input
+            <Desplegable
               label="Distrito"
+              optional
               value={form.distrito ?? ''}
-              onChange={(e) => setForm({ ...form, distrito: e.target.value })}
+              onChange={(v) => setForm({ ...form, distrito: String(v) })}
+              options={opcionesDistintas(clientes.map((c) => c.distrito)).map((o) => ({
+                value: o.value,
+                label: o.label,
+              }))}
             />
 
             <Input
@@ -470,10 +505,17 @@ export function ClientesPage() {
               </select>
             </label>
 
-            <Input
+            {/* El + crea la ruta sin salir del formulario. */}
+            <Desplegable
               label="Ruta"
-              value={form.ruta ?? ''}
-              onChange={(e) => setForm({ ...form, ruta: e.target.value })}
+              optional
+              hint={<BotonMas label="Nueva ruta" onClick={() => setNuevaRuta(true)} />}
+              value={form.rutaId ?? 0}
+              onChange={(v) => setForm({ ...form, rutaId: Number(v) })}
+              options={[
+                { value: 0, label: 'Sin ruta' },
+                ...rutas.filter((r) => r.activo).map((r) => ({ value: r.id, label: r.nombre })),
+              ]}
             />
 
             {/* El + crea el mercado sin salir del formulario. */}
@@ -529,6 +571,36 @@ export function ClientesPage() {
           </div>
         </Modal>
 
+        {/* Alta rápida de ruta desde el propio formulario de cliente. */}
+        <Modal
+          open={nuevaRuta}
+          size="sm"
+          title="Nueva ruta"
+          description="Se crea y queda elegida en el cliente que estás dando de alta."
+          onClose={() => setNuevaRuta(false)}
+          footer={
+            <>
+              <Button variant="secondary" size="sm" onClick={() => setNuevaRuta(false)}>
+                Cancelar
+              </Button>
+              <Button size="sm" loading={creandoRuta} onClick={() => void crearRutaRapida()}>
+                Crear
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            {errorRuta && <Alert>{errorRuta}</Alert>}
+
+            <Input
+              label="Nombre"
+              placeholder="Ruta 1, Zona Norte..."
+              value={nombreRuta}
+              onChange={(e) => setNombreRuta(e.target.value)}
+            />
+          </div>
+        </Modal>
+
         <ImportarModal<ClienteRequest>
           open={importando}
           onClose={() => setImportando(false)}
@@ -550,7 +622,8 @@ export function ClientesPage() {
             distrito: valorDe(fila, 'distrito'),
             telefono: valorDe(fila, 'telefono', 'teléfono', 'celular'),
             diaVisita: valorDe(fila, 'dias visita', 'dia visita', 'día de visita'),
-            ruta: valorDe(fila, 'rutas', 'ruta'),
+            // Se resuelve o crea por nombre: el archivo no trae el id de la ruta.
+            rutaNombre: valorDe(fila, 'rutas', 'ruta'),
             // Se resuelve o crea por nombre: el archivo no trae el id del mercado.
             mercadoNombre: valorDe(fila, 'mercado', 'punto de reparto'),
           })}

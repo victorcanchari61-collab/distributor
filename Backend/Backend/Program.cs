@@ -60,6 +60,8 @@ builder.Services.AddScoped<IAlertasService, AlertasService>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IMercadoRepository, MercadoRepository>();
+builder.Services.AddScoped<IRutaRepository, RutaRepository>();
+builder.Services.AddScoped<IUbigeoRepository, UbigeoRepository>();
 builder.Services.AddScoped<IProveedorRepository, ProveedorRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IEmpresaRepository, EmpresaRepository>();
@@ -74,6 +76,8 @@ builder.Services.AddScoped<IFinanzasRepository, FinanzasRepository>();
 
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IMercadoService, MercadoService>();
+builder.Services.AddScoped<IRutaService, RutaService>();
+builder.Services.AddScoped<IUbigeoService, UbigeoService>();
 builder.Services.AddScoped<IProveedorService, ProveedorService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IEmpresaService, EmpresaService>();

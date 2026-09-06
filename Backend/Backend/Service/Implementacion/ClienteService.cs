@@ -12,18 +12,24 @@ public class ClienteService : IClienteService
 {
     private readonly IClienteRepository _repository;
     private readonly IMercadoRepository _mercados;
+    private readonly IRutaRepository _rutas;
+    private readonly IUbigeoRepository _ubigeo;
     private readonly IValidator<CreateClienteRequest> _createValidator;
     private readonly IValidator<UpdateClienteRequest> _updateValidator;
     private readonly INotificador _notificador;
 
     public ClienteService(IClienteRepository repository,
         IMercadoRepository mercados,
+        IRutaRepository rutas,
+        IUbigeoRepository ubigeo,
         IValidator<CreateClienteRequest> createValidator,
         IValidator<UpdateClienteRequest> updateValidator,
         INotificador notificador)
     {
         _repository = repository;
         _mercados = mercados;
+        _rutas = rutas;
+        _ubigeo = ubigeo;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _notificador = notificador;
@@ -54,7 +60,8 @@ public class ClienteService : IClienteService
         }
 
         var cliente = new Cliente();
-        Aplicar(cliente, request, await ResolverMercadoAsync(request));
+        Aplicar(cliente, request, await ResolverMercadoAsync(request), await ResolverRutaAsync(request),
+            await ResolverDistritoAsync(request));
 
         await _repository.AddAsync(cliente);
         var response = MapToResponse(cliente);
@@ -73,7 +80,8 @@ public class ClienteService : IClienteService
             throw new ConflictException("Ya existe un cliente con ese documento");
         }
 
-        Aplicar(cliente, request, await ResolverMercadoAsync(request));
+        Aplicar(cliente, request, await ResolverMercadoAsync(request), await ResolverRutaAsync(request),
+            await ResolverDistritoAsync(request));
         cliente.Activo = request.Activo;
 
         await _repository.UpdateAsync(cliente);
@@ -161,7 +169,8 @@ public class ClienteService : IClienteService
                         continue;
                     }
 
-                    Aplicar(existente, fila, await ResolverMercadoAsync(fila));
+                    Aplicar(existente, fila, await ResolverMercadoAsync(fila), await ResolverRutaAsync(fila),
+                        await ResolverDistritoAsync(fila));
                     existente.Activo = true;
                     await _repository.UpdateAsync(existente);
                     resultado.Actualizados++;
@@ -169,7 +178,8 @@ public class ClienteService : IClienteService
                 }
 
                 var cliente = new Cliente();
-                Aplicar(cliente, fila, await ResolverMercadoAsync(fila));
+                Aplicar(cliente, fila, await ResolverMercadoAsync(fila), await ResolverRutaAsync(fila),
+                    await ResolverDistritoAsync(fila));
                 await _repository.AddAsync(cliente);
                 resultado.Creados++;
             }
@@ -206,11 +216,11 @@ public class ClienteService : IClienteService
         fila.Telefono = Limpiar(fila.Telefono);
         fila.Email = Limpiar(fila.Email);
         fila.DiaVisita = Limpiar(fila.DiaVisita);
-        fila.Ruta = Limpiar(fila.Ruta);
+        fila.RutaNombre = Limpiar(fila.RutaNombre);
         fila.MercadoNombre = Limpiar(fila.MercadoNombre);
     }
 
-    private static void Aplicar(Cliente cliente, ClienteRequestBase request, Mercado? mercado)
+    private static void Aplicar(Cliente cliente, ClienteRequestBase request, Mercado? mercado, Ruta? ruta)
     {
         cliente.Documento = request.Documento.Trim();
         // Si el usuario eligio el tipo se respeta; si no (importacion), se deduce
@@ -224,7 +234,8 @@ public class ClienteService : IClienteService
         cliente.Telefono = Limpiar(request.Telefono);
         cliente.Email = Limpiar(request.Email);
         cliente.DiaVisita = NormalizarDia(request.DiaVisita);
-        cliente.Ruta = Limpiar(request.Ruta);
+        cliente.RutaId = ruta?.Id;
+        cliente.Ruta = ruta;
         cliente.MercadoId = mercado?.Id;
         cliente.Mercado = mercado;
     }
@@ -259,6 +270,38 @@ public class ClienteService : IClienteService
         if (encontrado is not null) return encontrado;
 
         return await _mercados.AddAsync(new Mercado { Nombre = nombre, Activo = true });
+    }
+
+    /// <summary>
+    /// Resuelve la ruta del request: si viene un id, valida que exista y esté
+    /// activa; si no, y viene un nombre (importación), busca una igual sin
+    /// importar mayúsculas o la crea. Sin ninguno de los dos, no hay ruta —
+    /// no es obligatoria.
+    /// </summary>
+    private async Task<Ruta?> ResolverRutaAsync(ClienteRequestBase request)
+    {
+        if (request.RutaId is int id)
+        {
+            var ruta = await _rutas.GetByIdAsync(id)
+                ?? throw new BadRequestException("La ruta indicada no existe");
+
+            if (!ruta.Activo)
+            {
+                throw new BadRequestException("La ruta indicada está desactivada");
+            }
+
+            return ruta;
+        }
+
+        var nombre = Limpiar(request.RutaNombre);
+        if (nombre is null) return null;
+
+        var existentes = await _rutas.GetAllAsync();
+        var encontrada = existentes.FirstOrDefault(
+            r => r.Nombre.Equals(nombre, StringComparison.OrdinalIgnoreCase));
+        if (encontrada is not null) return encontrada;
+
+        return await _rutas.AddAsync(new Ruta { Nombre = nombre, Activo = true });
     }
 
     /// <summary>Texto util o null: recorta y descarta vacios y el literal "NULL".</summary>
@@ -305,7 +348,8 @@ public class ClienteService : IClienteService
             Telefono = cliente.Telefono,
             Email = cliente.Email,
             DiaVisita = cliente.DiaVisita,
-            Ruta = cliente.Ruta,
+            RutaId = cliente.RutaId,
+            Ruta = cliente.Ruta?.Nombre,
             MercadoId = cliente.MercadoId,
             Mercado = cliente.Mercado?.Nombre,
             Activo = cliente.Activo,

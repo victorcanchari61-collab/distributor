@@ -18,7 +18,7 @@ import {
 } from './features/inventario'
 import { OrdenesCompraPage, MisComprasPage, RecepcionesPage } from './features/compras'
 import { ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
-import { MercadosPage } from './features/tms'
+import { MercadosPage, RutasPage } from './features/tms'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
 
@@ -42,6 +42,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'compras.compras': MisComprasPage,
   'compras.recepciones': RecepcionesPage,
   'tms.mercados': MercadosPage,
+  'tms.rutas': RutasPage,
   'finanzas.metodospago': MetodosPagoPage,
   'finanzas.cobrar': CuentasPorCobrarPage,
   'finanzas.pagar': CuentasPorPagarPage,

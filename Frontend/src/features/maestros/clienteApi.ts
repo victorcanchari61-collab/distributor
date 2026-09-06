@@ -12,6 +12,8 @@ export interface ClienteResponse {
   telefono: string | null
   email: string | null
   diaVisita: string | null
+  rutaId: number | null
+  /** Nombre de la ruta de reparto. */
   ruta: string | null
   mercadoId: number | null
   /** Nombre del mercado, zona o punto de reparto. */
@@ -30,7 +32,9 @@ export interface ClienteRequest {
   telefono?: string | null
   email?: string | null
   diaVisita?: string | null
-  ruta?: string | null
+  rutaId?: number | null
+  /** Solo para importación: si no hay rutaId, crea o reutiliza una con este nombre. */
+  rutaNombre?: string | null
   mercadoId?: number | null
   /** Solo para importación: si no hay mercadoId, crea o reutiliza uno con este nombre. */
   mercadoNombre?: string | null

@@ -20,6 +20,10 @@ public class AppDbContext : DbContext
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<Mercado> Mercados => Set<Mercado>();
+    public DbSet<Ruta> Rutas => Set<Ruta>();
+    public DbSet<Departamento> Departamentos => Set<Departamento>();
+    public DbSet<Provincia> Provincias => Set<Provincia>();
+    public DbSet<Distrito> Distritos => Set<Distrito>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Rol> Roles => Set<Rol>();
@@ -169,14 +173,18 @@ public class AppDbContext : DbContext
             entity.Property(c => c.TipoDoc).HasMaxLength(10).IsRequired();
             entity.Property(c => c.Nombre).HasMaxLength(150).IsRequired();
             entity.Property(c => c.Direccion).HasMaxLength(250);
-            entity.Property(c => c.Distrito).HasMaxLength(80);
             entity.Property(c => c.Telefono).HasMaxLength(40);
             entity.Property(c => c.Email).HasMaxLength(100);
             entity.Property(c => c.DiaVisita).HasMaxLength(20);
-            entity.Property(c => c.Ruta).HasMaxLength(20);
 
             entity.HasOne(c => c.Mercado).WithMany()
                 .HasForeignKey(c => c.MercadoId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(c => c.Ruta).WithMany()
+                .HasForeignKey(c => c.RutaId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(c => c.Distrito).WithMany()
+                .HasForeignKey(c => c.DistritoId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Mercado>(entity =>
@@ -186,6 +194,40 @@ public class AppDbContext : DbContext
             entity.Property(m => m.Nombre).HasMaxLength(80).IsRequired();
             entity.Property(m => m.Direccion).HasMaxLength(250);
             entity.Property(m => m.Distrito).HasMaxLength(80);
+        });
+
+        modelBuilder.Entity<Ruta>(entity =>
+        {
+            entity.ToTable("Rutas");
+            entity.HasIndex(r => r.Nombre).IsUnique();
+            entity.Property(r => r.Nombre).HasMaxLength(80).IsRequired();
+        });
+
+        modelBuilder.Entity<Departamento>(entity =>
+        {
+            entity.ToTable("Departamentos");
+            entity.Property(d => d.Codigo).HasMaxLength(2).IsRequired();
+            entity.Property(d => d.Nombre).HasMaxLength(80).IsRequired();
+        });
+
+        modelBuilder.Entity<Provincia>(entity =>
+        {
+            entity.ToTable("Provincias");
+            entity.Property(p => p.Codigo).HasMaxLength(4).IsRequired();
+            entity.Property(p => p.Nombre).HasMaxLength(80).IsRequired();
+
+            entity.HasOne(p => p.Departamento).WithMany()
+                .HasForeignKey(p => p.DepartamentoId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Distrito>(entity =>
+        {
+            entity.ToTable("Distritos");
+            entity.Property(d => d.Codigo).HasMaxLength(6).IsRequired();
+            entity.Property(d => d.Nombre).HasMaxLength(80).IsRequired();
+
+            entity.HasOne(d => d.Provincia).WithMany()
+                .HasForeignKey(d => d.ProvinciaId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Proveedor>(entity =>

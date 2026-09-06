@@ -12,10 +12,10 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
     }
 
     public override async Task<Cliente?> GetByIdAsync(int id) =>
-        await DbSet.Include(c => c.Mercado).FirstOrDefaultAsync(c => c.Id == id);
+        await DbSet.Include(c => c.Mercado).Include(c => c.Ruta).FirstOrDefaultAsync(c => c.Id == id);
 
     public override async Task<IEnumerable<Cliente>> GetAllAsync() =>
-        await DbSet.Include(c => c.Mercado).ToListAsync();
+        await DbSet.Include(c => c.Mercado).Include(c => c.Ruta).ToListAsync();
 
     public async Task<Cliente?> GetByDocumentoAsync(string documento)
     {

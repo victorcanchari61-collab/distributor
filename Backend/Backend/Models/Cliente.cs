@@ -12,7 +12,11 @@ public class Cliente
 
     public string Nombre { get; set; } = string.Empty;
     public string? Direccion { get; set; }
-    public string? Distrito { get; set; }
+
+    /// <summary>Distrito del ubigeo oficial (INEI/RENIEC).</summary>
+    public int? DistritoId { get; set; }
+    public Distrito? Distrito { get; set; }
+
     public string? Telefono { get; set; }
     public string? Email { get; set; }
 
@@ -20,7 +24,8 @@ public class Cliente
     public string? DiaVisita { get; set; }
 
     /// <summary>Ruta de reparto a la que pertenece.</summary>
-    public string? Ruta { get; set; }
+    public int? RutaId { get; set; }
+    public Ruta? Ruta { get; set; }
 
     /// <summary>El mercado, zona o punto de reparto donde está el puesto.</summary>
     public int? MercadoId { get; set; }

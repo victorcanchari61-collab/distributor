@@ -31,7 +31,7 @@ public class ClienteValidator : AbstractValidator<ClienteRequestBase>
         RuleFor(x => x.Distrito).MaximumLength(80);
         RuleFor(x => x.Telefono).MaximumLength(40);
         RuleFor(x => x.DiaVisita).MaximumLength(20);
-        RuleFor(x => x.Ruta).MaximumLength(20);
+        RuleFor(x => x.RutaNombre).MaximumLength(80);
         RuleFor(x => x.Email)
             .EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email))
             .MaximumLength(100);

@@ -7,10 +7,16 @@ public class ClienteResponse
     public string TipoDoc { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;
     public string? Direccion { get; set; }
+    public int? DistritoId { get; set; }
     public string? Distrito { get; set; }
+    public int? ProvinciaId { get; set; }
+    public string? Provincia { get; set; }
+    public int? DepartamentoId { get; set; }
+    public string? Departamento { get; set; }
     public string? Telefono { get; set; }
     public string? Email { get; set; }
     public string? DiaVisita { get; set; }
+    public int? RutaId { get; set; }
     public string? Ruta { get; set; }
     public int? MercadoId { get; set; }
     public string? Mercado { get; set; }
