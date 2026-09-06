@@ -58,8 +58,18 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
           unidadBase: l.unidadBase,
           presentaciones: _presentacionesDe(porId[l.productoId], false),
           presentacionId: l.presentacionId ?? 0,
-          cantidad: l.cantidad,
-          importe: l.costoUnitario * l.cantidadPresentacion,
+          /*
+           * Las dos cifras van en la MISMA unidad: la presentacion.
+           *
+           * Antes se mezclaban — la cantidad venia en unidad base y el costo se
+           * sacaba multiplicando el costo por unidad base por el numero de
+           * presentaciones. Con 2 sacos de 50 kg a S/ 100 el saco, la orden se
+           * abria mostrando 100 de cantidad y S/ 4 de costo. Se notaba poco
+           * porque la linea casi no se tocaba; ahora que se edita en el sitio,
+           * abrir una orden y guardarla la dejaria con otros numeros.
+           */
+          cantidad: l.cantidadPresentacion,
+          importe: l.cantidadPresentacion == 0 ? 0 : l.costoTotal / l.cantidadPresentacion,
         ),
     ];
 

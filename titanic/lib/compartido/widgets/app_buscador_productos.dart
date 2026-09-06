@@ -495,30 +495,17 @@ class _CampoUnidad extends StatelessWidget {
           .map((p) => DropdownMenuItem(value: p.id, child: Text(p.nombre))),
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Unidad', style: TextStyle(fontSize: 11, color: Colores.tintaSuave)),
-        const SizedBox(height: 2),
-        Container(
-          height: Dimen.campoSm,
-          padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3),
-          decoration: BoxDecoration(
-            color: Colores.superficie,
-            border: Border.all(color: Colores.linea),
-            borderRadius: BorderRadius.circular(Dimen.radioCampo),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<int>(
-              value: valor,
-              isExpanded: true,
-              items: opciones,
-              onChanged: (v) => onChanged(v ?? 0),
-              style: const TextStyle(fontSize: 13, color: Colores.tinta),
-            ),
-          ),
+    return _CajaCampo(
+      etiqueta: 'Unidad',
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: valor,
+          isExpanded: true,
+          items: opciones,
+          onChanged: (v) => onChanged(v ?? 0),
+          style: const TextStyle(fontSize: 13, color: Colores.tinta),
         ),
-      ],
+      ),
     );
   }
 }
@@ -549,33 +536,58 @@ class _CampoNumeroState extends State<_CampoNumero> {
 
   @override
   Widget build(BuildContext context) {
+    // La MISMA caja que el desplegable de unidad, no un estilo propio parecido:
+    // van uno al lado del otro y con dos declaraciones separadas basta que se
+    // toque una para que la fila quede descuadrada, que es lo que pasaba.
+    return _CajaCampo(
+      etiqueta: widget.etiqueta,
+      child: Center(
+        child: TextField(
+          controller: _control,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          onChanged: widget.onChanged,
+          textAlignVertical: TextAlignVertical.center,
+          style: const TextStyle(fontSize: 13, color: Colores.tinta),
+          decoration: const InputDecoration(
+            isDense: true,
+            contentPadding: EdgeInsets.zero,
+            filled: false,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Etiqueta chica encima y una caja de la altura del sistema.
+///
+/// La comparten la unidad y los numeros de la fila para que queden a la misma
+/// altura y con el mismo borde sin tener que repetir el estilo en cada uno.
+class _CajaCampo extends StatelessWidget {
+  const _CajaCampo({required this.etiqueta, required this.child});
+
+  final String etiqueta;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.etiqueta, style: const TextStyle(fontSize: 11, color: Colores.tintaSuave)),
+        Text(etiqueta, style: const TextStyle(fontSize: 11, color: Colores.tintaSuave)),
         const SizedBox(height: 2),
-        SizedBox(
+        Container(
           height: Dimen.campoSm,
-          child: TextField(
-            controller: _control,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: widget.onChanged,
-            style: const TextStyle(fontSize: 13, color: Colores.tinta),
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3),
-              filled: true,
-              fillColor: Colores.superficie,
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                borderSide: const BorderSide(color: Colores.linea),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                borderSide: const BorderSide(color: Colores.marca),
-              ),
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3),
+          decoration: BoxDecoration(
+            color: Colores.superficie,
+            border: Border.all(color: Colores.linea),
+            borderRadius: BorderRadius.circular(Dimen.radioCampo),
           ),
+          child: child,
         ),
       ],
     );
