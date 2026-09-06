@@ -4,7 +4,6 @@ import type { ComponentType, ReactNode } from 'react'
 import {
   ArrowDown,
   ArrowUp,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -21,6 +20,7 @@ import {
 import { cn } from './cn'
 import { Modal } from './Modal'
 import { Button } from './Button'
+import { DateRangePicker } from './DateRangePicker'
 
 /**
  * Tabla de listado con columnas movibles y ocultables, orden y busqueda por
@@ -1186,6 +1186,9 @@ function FiltersButton<T>({
   const setDesktopValue = (key: string, campo: 'value' | 'valueTo', valor: string) =>
     setDesktopDraft((prev) => ({ ...prev, [key]: { ...prev[key], value: prev[key]?.value ?? '', valueTo: prev[key]?.valueTo ?? '', [campo]: valor } }))
 
+  const setDesktopRange = (key: string, from: string, to: string) =>
+    setDesktopDraft((prev) => ({ ...prev, [key]: { value: from, valueTo: to } }))
+
   const aplicarDesktop = () => {
     const nuevos: DataTableFilter[] = []
     for (const col of filterable) {
@@ -1291,22 +1294,11 @@ function FiltersButton<T>({
                       ))}
                     </select>
                   ) : tipo === 'date' ? (
-                    <div className="flex items-center gap-2">
-                      <Calendar size={14} className="shrink-0 text-zinc-400" />
-                      <input
-                        type="date"
-                        value={d.value}
-                        onChange={(e) => setDesktopValue(col.key, 'value', e.target.value)}
-                        className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
-                      />
-                      <span className="text-zinc-400">–</span>
-                      <input
-                        type="date"
-                        value={d.valueTo}
-                        onChange={(e) => setDesktopValue(col.key, 'valueTo', e.target.value)}
-                        className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-[13px] outline-none focus:border-zinc-400"
-                      />
-                    </div>
+                    <DateRangePicker
+                      from={d.value}
+                      to={d.valueTo}
+                      onChange={(from, to) => setDesktopRange(col.key, from, to)}
+                    />
                   ) : (
                     <input
                       value={d.value}
