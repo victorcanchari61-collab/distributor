@@ -122,7 +122,6 @@ export function HistorialCambios({ registros, cargando }: HistorialCambiosProps)
       columns={columns}
       rows={registros}
       toolbar={false}
-      pageSize={10}
       empty={
         cargando ? 'Cargando historial...' : 'No se editó ningún producto: está tal cual se registró.'
       }

@@ -37,6 +37,16 @@ import type { DataTableFilter, FilterType } from './dataTableFilters'
 /** Ancho fijo de la columna de acciones: no se redimensiona ni se reparte. */
 const ACTIONS_WIDTH = 140
 
+/**
+ * Filas por pagina en TODO el sistema. Es una regla, no un default suelto:
+ * los listados se ven iguales en todas las pantallas. Una vista solo deberia
+ * pasar `pageSize` si tiene una razon de verdad para salirse de la regla.
+ */
+const PAGE_SIZE = 20
+
+/** Las otras opciones del selector de "por pagina". */
+const PAGE_SIZES = [PAGE_SIZE, 50, 100, 200]
+
 export interface DataTableColumn<T> {
   key: string
   label: string
@@ -205,7 +215,7 @@ export function SysDataTable<T>({
   rowKey = 'id' as keyof T & string,
   searchPlaceholder = 'Buscar...',
   empty = 'No hay registros para mostrar.',
-  pageSize = 30,
+  pageSize = PAGE_SIZE,
   cardIcon: CardIcon,
   actions,
   actionsWidth = ACTIONS_WIDTH,
@@ -892,7 +902,7 @@ export function SysDataTable<T>({
             >
               {/* El tamaño que declara la vista entra en la lista: si no, el
                   select mostraria un valor que no es ninguna de sus opciones. */}
-              {[...new Set([pageSize, 30, 50, 100, 200])]
+              {[...new Set([pageSize, ...PAGE_SIZES])]
                 .sort((a, b) => a - b)
                 .map((n) => (
                   <option key={n} value={n}>
