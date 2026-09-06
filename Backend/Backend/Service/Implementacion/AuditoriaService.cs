@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Backend.Dtos.Requests;
 using Backend.Dtos.Responses;
 using Backend.Models;
 using Backend.Repository.Interfaces;
@@ -22,6 +23,21 @@ public class AuditoriaService : IAuditoriaService
         var registros = await _repository.GetAsync(entidad, accion, usuarioId, desde, hasta);
         return registros.Select(Map);
     }
+
+    public async Task<PaginaResponse<AuditoriaResponse>> ListarAsync(ConsultaTablaRequest consulta)
+    {
+        var (items, total) = await _repository.ListarAsync(consulta);
+
+        return new PaginaResponse<AuditoriaResponse>
+        {
+            Items = items.Select(Map).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public Task<ResumenAuditoriaResponse> GetResumenAsync() => _repository.ResumenAsync();
 
     public Task<IEnumerable<string>> GetEntidadesAsync() => _repository.GetEntidadesAsync();
 

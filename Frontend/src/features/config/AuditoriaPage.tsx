@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Eye, RefreshCw, ScrollText } from 'lucide-react'
 import { Alert, Badge, Button, ListPage, Modal, RowAction, StatCard } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { auditoriaApi } from './auditoriaApi'
-import type { AccionAuditoria, AuditoriaResponse } from './auditoriaApi'
+import type { AccionAuditoria, AuditoriaResponse, ResumenAuditoria } from './auditoriaApi'
 
 function accionBadge(accion: AccionAuditoria) {
   const tono = accion === 'CREADO' ? 'success' : accion === 'ELIMINADO' ? 'danger' : 'warning'
@@ -37,12 +37,24 @@ export function AuditoriaPage() {
 
   const [detalleAbierto, setDetalleAbierto] = useState<AuditoriaResponse | null>(null)
 
-  // Los filtros (entidad, acción, fecha) van en el ícono de filtros de la
-  // tabla, como en todas las vistas: aquí solo se traen los últimos cambios.
-  const cargar = useCallback(async () => {
+  /*
+   * La bitácora crece con CADA cambio del sistema, así que no se trae entera:
+   * la tabla dice qué página necesita y solo esa se pide. Búsqueda, filtros y
+   * orden se resuelven en la base.
+   *
+   * Los contadores de arriba salen de `resumen` y no de las filas cargadas:
+   * contar sobre la página visible diría "20 registros".
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [total, setTotal] = useState(0)
+  const [resumen, setResumen] = useState<ResumenAuditoria | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      setRegistros(await auditoriaApi.getAll())
+      const pagina = await auditoriaApi.listar(q)
+      setRegistros(pagina.items)
+      setTotal(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar la auditoría.')
@@ -51,24 +63,61 @@ export function AuditoriaPage() {
     }
   }, [])
 
+  const cargarResumen = useCallback(async () => {
+    try {
+      setResumen(await auditoriaApi.resumen())
+    } catch {
+      // Los contadores son secundarios: si fallan, la tabla igual sirve.
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarResumen()])
+  }, [consulta, cargarPagina, cargarResumen])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarResumen()
+  }, [cargarResumen])
 
   const columns: DataTableColumn<AuditoriaResponse>[] = [
     {
       key: 'fecha',
       label: 'Fecha',
+      filterType: 'date',
       render: (row) => new Date(row.fecha).toLocaleString('es-PE'),
     },
-    { key: 'usuario', label: 'Usuario' },
-    { key: 'entidad', label: 'Entidad' },
+    {
+      key: 'usuario',
+      label: 'Usuario',
+      filterType: 'select',
+      filterOptions: (resumen?.usuarios ?? []).map((u) => ({ value: u, label: u })),
+    },
+    {
+      key: 'entidad',
+      label: 'Entidad',
+      filterType: 'select',
+      filterOptions: (resumen?.entidades ?? []).map((e) => ({ value: e, label: e })),
+    },
     { key: 'entidadId', label: 'Registro', render: (row) => <Badge>#{row.entidadId}</Badge> },
-    { key: 'accion', label: 'Acción', render: (row) => accionBadge(row.accion) },
+    {
+      key: 'accion',
+      label: 'Acción',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'CREADO', label: 'Creado' },
+        { value: 'ACTUALIZADO', label: 'Actualizado' },
+        { value: 'ELIMINADO', label: 'Eliminado' },
+      ],
+      render: (row) => accionBadge(row.accion),
+    },
     {
       key: 'cambios',
       label: 'Campos',
       align: 'right',
+      // Se cuenta sobre el JSON ya cargado: la base no puede ordenar ni
+      // filtrar por esto, asi que no se ofrece.
+      sortable: false,
+      filterable: false,
       value: (row) => Object.keys(row.valoresNuevos ?? row.valoresAnteriores ?? {}).length,
       render: (row) => String(Object.keys(row.valoresNuevos ?? row.valoresAnteriores ?? {}).length),
     },
@@ -97,22 +146,22 @@ export function AuditoriaPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Registros" value={String(registros.length)} icon={<ScrollText size={18} />} />
+          <StatCard label="Registros" value={String(resumen?.total ?? 0)} icon={<ScrollText size={18} />} />
           <StatCard
             label="Creados"
-            value={String(registros.filter((r) => r.accion === 'CREADO').length)}
+            value={String(resumen?.creados ?? 0)}
             icon={<ScrollText size={18} />}
             tono="success"
           />
           <StatCard
             label="Actualizados"
-            value={String(registros.filter((r) => r.accion === 'ACTUALIZADO').length)}
+            value={String(resumen?.actualizados ?? 0)}
             icon={<ScrollText size={18} />}
             tono="warning"
           />
           <StatCard
             label="Eliminados"
-            value={String(registros.filter((r) => r.accion === 'ELIMINADO').length)}
+            value={String(resumen?.eliminados ?? 0)}
             icon={<ScrollText size={18} />}
             tono="neutral"
           />
@@ -120,10 +169,17 @@ export function AuditoriaPage() {
       }
       columns={columns}
       rows={registros}
+      servidor={{
+        total,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={ScrollText}
       searchPlaceholder="Buscar por usuario, entidad, registro..."
       empty={cargando ? 'Cargando auditoría...' : 'No hay cambios registrados con esos filtros.'}
-      note="Se muestran los últimos 300 cambios. Usa el ícono de filtros de la tabla para acotar por entidad, acción o fecha."
       rowActions={(row) => (
         <RowAction label={`Ver cambios de ${row.entidad} #${row.entidadId}`} tone="view" onClick={() => setDetalleAbierto(row)}>
           <Eye size={15} />

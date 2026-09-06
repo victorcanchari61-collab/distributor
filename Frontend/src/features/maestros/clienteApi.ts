@@ -1,5 +1,6 @@
 import { api } from '../../lib/apiClient'
 import type { ConsultaTabla, ResultadoImportacion } from '../../components/ui'
+import type { PaginaResponse } from '../../lib/paginacion'
 
 export interface ClienteResponse {
   id: number
@@ -50,14 +51,6 @@ export interface ClienteRequest {
 
 export interface UpdateClienteRequest extends ClienteRequest {
   activo: boolean
-}
-
-/** Una página de un listado, con el total tras filtros para saber cuántas hay. */
-export interface PaginaResponse<T> {
-  items: T[]
-  total: number
-  pagina: number
-  porPagina: number
 }
 
 /** Contadores y valores de filtro del listado completo de clientes. */

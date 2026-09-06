@@ -1,4 +1,6 @@
 import { api } from '../../lib/apiClient'
+import type { ConsultaTabla } from '../../components/ui'
+import type { PaginaResponse } from '../../lib/paginacion'
 
 export type AccionAuditoria = 'CREADO' | 'ACTUALIZADO' | 'ELIMINADO'
 
@@ -26,7 +28,23 @@ export interface FiltrosAuditoria {
   hasta?: string
 }
 
+/** Contadores y valores de filtro de toda la bitácora, no de la página visible. */
+export interface ResumenAuditoria {
+  total: number
+  creados: number
+  actualizados: number
+  eliminados: number
+  entidades: string[]
+  usuarios: string[]
+}
+
 export const auditoriaApi = {
+  /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
+  listar: (consulta: ConsultaTabla) =>
+    api.post<PaginaResponse<AuditoriaResponse>>('/auditoria/listar', consulta),
+
+  resumen: () => api.get<ResumenAuditoria>('/auditoria/resumen'),
+
   getAll: (filtros: FiltrosAuditoria = {}) => {
     const q = new URLSearchParams()
     if (filtros.entidad) q.set('entidad', filtros.entidad)
