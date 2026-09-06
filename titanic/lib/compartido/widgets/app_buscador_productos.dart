@@ -5,6 +5,7 @@ import '../../core/tema/dimensiones.dart';
 import '../../features/maestros/datos/producto.dart';
 import 'app_boton.dart';
 import 'app_buscador.dart';
+import 'app_filtros_en_linea.dart';
 import 'app_vacio.dart';
 
 /// Un producto marcado en el buscador, con como se va a cargar la linea.
@@ -218,7 +219,7 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                       ),
                     ),
                     const SizedBox(width: Dimen.espacio2),
-                    _BotonFiltros(
+                    BotonFiltrosEnLinea(
                       activo: _filtrosAbiertos || _categoria != null || _marca != null,
                       onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
                     ),
@@ -230,13 +231,13 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                     spacing: Dimen.espacio2,
                     runSpacing: Dimen.espacio2,
                     children: [
-                      _Filtro(
+                      FiltroEnLinea(
                         etiqueta: 'Categoría',
                         valor: _categoria,
                         opciones: categorias,
                         onChanged: (v) => setState(() => _categoria = v),
                       ),
-                      _Filtro(
+                      FiltroEnLinea(
                         etiqueta: 'Marca',
                         valor: _marca,
                         opciones: marcas,
@@ -589,76 +590,6 @@ class _CampoNumeroState extends State<_CampoNumero> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _BotonFiltros extends StatelessWidget {
-  const _BotonFiltros({required this.activo, required this.onTap});
-
-  final bool activo;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(Dimen.radioCampo),
-      child: Container(
-        width: Dimen.campoMd,
-        height: Dimen.campoMd,
-        decoration: BoxDecoration(
-          color: activo ? Colores.marcaSuave : Colores.superficie,
-          border: Border.all(color: activo ? Colores.marca : Colores.linea),
-          borderRadius: BorderRadius.circular(Dimen.radioCampo),
-        ),
-        child: Icon(
-          Icons.tune,
-          size: 18,
-          color: activo ? Colores.marca : Colores.tintaSuave,
-        ),
-      ),
-    );
-  }
-}
-
-class _Filtro extends StatelessWidget {
-  const _Filtro({
-    required this.etiqueta,
-    required this.valor,
-    required this.opciones,
-    required this.onChanged,
-  });
-
-  final String etiqueta;
-  final String? valor;
-  final List<String> opciones;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    if (opciones.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      height: Dimen.campoSm,
-      padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3),
-      decoration: BoxDecoration(
-        color: Colores.superficie,
-        border: Border.all(color: valor == null ? Colores.linea : Colores.marca),
-        borderRadius: BorderRadius.circular(Dimen.radioCampo),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String?>(
-          value: valor,
-          hint: Text(etiqueta, style: const TextStyle(fontSize: 13, color: Colores.tintaSuave)),
-          items: [
-            DropdownMenuItem(value: null, child: Text('Todas · $etiqueta')),
-            ...opciones.map((o) => DropdownMenuItem(value: o, child: Text(o))),
-          ],
-          onChanged: onChanged,
-          style: const TextStyle(fontSize: 13, color: Colores.tinta),
-        ),
-      ),
     );
   }
 }

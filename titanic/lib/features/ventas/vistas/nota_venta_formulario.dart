@@ -6,8 +6,8 @@ import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_buscador_productos.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_campo_cliente.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_selector_buscable.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
@@ -15,6 +15,7 @@ import '../../facturacion/datos/lista_precio.dart';
 import '../../facturacion/estado/facturacion_controlador.dart';
 import '../../finanzas/datos/metodo_pago.dart';
 import '../../finanzas/estado/finanzas_controlador.dart';
+import '../../inventario/datos/almacen.dart';
 import '../../inventario/estado/inventario_controlador.dart';
 import '../../maestros/datos/cliente.dart';
 import '../../maestros/datos/producto.dart';
@@ -92,12 +93,33 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
   @override
   void initState() {
     super.initState();
-    // El principal por defecto: quien tiene un solo depósito nunca lo elige.
-    final almacenes = ref.read(almacenesActivosProvider);
+  }
+
+  /*
+   * El principal por defecto: quien tiene un solo depósito nunca lo elige.
+   *
+   * NO se hace en initState: los almacenes llegan por red y en ese momento la
+   * lista casi siempre está vacía todavía, así que el campo se quedaba en
+   * blanco para siempre. Se resuelve en el build, la primera vez que la lista
+   * trae algo — y solo esa vez, para no pisar lo que la persona elija después.
+   */
+  bool _almacenPuesto = false;
+
+  void _ponerAlmacenPorDefecto(List<Almacen> almacenes) {
+    if (_almacenPuesto || almacenes.isEmpty) return;
+    _almacenPuesto = true;
+    if (_almacenId != null) return;
+
+    var elegido = almacenes.first.id;
     for (final a in almacenes) {
-      if (a.esPrincipal) _almacenId = a.id;
+      if (a.esPrincipal) elegido = a.id;
     }
-    _almacenId ??= almacenes.isEmpty ? null : almacenes.first.id;
+
+    // En el build no se puede llamar a setState; se agenda para el cuadro
+    // siguiente, que llega antes de que la pantalla se pinte.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _almacenId = elegido);
+    });
   }
 
   @override
@@ -155,25 +177,6 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
       setState(() {
         _guardando = false;
         _error = e.texto;
-      });
-    }
-  }
-
-  Future<void> _elegirCliente() async {
-    final clientes = ref.read(clientesProvider).valueOrNull ?? const <Cliente>[];
-    final activos = clientes.where((c) => c.activo).toList();
-    final elegido = await mostrarSelectorBuscable<Cliente>(
-      context: context,
-      titulo: 'Elige el cliente',
-      items: activos,
-      buscable: (c) => c.buscable,
-      pistaBusqueda: 'Buscar por nombre o documento',
-      fila: (c) => Text(c.nombre, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-    );
-    if (elegido != null) {
-      setState(() {
-        _clienteId = elegido.id;
-        _clienteNombre = elegido.nombre;
       });
     }
   }
@@ -531,6 +534,7 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
   @override
   Widget build(BuildContext context) {
     final almacenes = ref.watch(almacenesActivosProvider);
+    _ponerAlmacenPorDefecto(almacenes);
     final listas = ref.watch(listasPrecioProvider).valueOrNull ?? const <ListaPrecio>[];
 
     return Scaffold(
@@ -546,25 +550,16 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
             const SizedBox(height: Dimen.espacio4),
           ],
 
-          InkWell(
-            onTap: _elegirCliente,
-            borderRadius: BorderRadius.circular(Dimen.radioCampo),
-            child: InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Cliente',
-                errorText: _errorCliente,
-                prefixIcon: const Icon(Icons.contacts_outlined, size: 19, color: Colores.tintaTenue),
-                suffixIcon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
-                constraints: const BoxConstraints(minHeight: Dimen.campoLg),
-              ),
-              child: Text(
-                _clienteNombre ?? 'Toca para elegir',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: _clienteNombre == null ? Colores.tintaTenue : Colores.tinta,
-                ),
-              ),
-            ),
+          campoCliente(
+            clientes: ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[],
+            elegido: _clienteNombre,
+            error: _errorCliente,
+            habilitado: !_guardando,
+            onElegir: (c) => setState(() {
+              _clienteId = c.id;
+              _clienteNombre = c.nombre;
+              _errorCliente = null;
+            }),
           ),
           const SizedBox(height: Dimen.espacio4),
 
