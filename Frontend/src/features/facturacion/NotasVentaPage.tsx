@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Contact, Eye, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, Contact, Eye, History, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AgregarProductoPanel,
   Alert,
@@ -76,6 +76,7 @@ export function NotasVentaPage() {
   const [error, setError] = useState('')
 
   const [detalleAbierto, setDetalleAbierto] = useState<NotaVentaResponse | null>(null)
+  const [historialAbierto, setHistorialAbierto] = useState<NotaVentaResponse | null>(null)
   const [historial, setHistorial] = useState<AuditoriaResponse[]>([])
   const [historialCargando, setHistorialCargando] = useState(false)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
@@ -156,8 +157,8 @@ export function NotasVentaPage() {
     setVista('form')
   }
 
-  const abrirDetalle = (nota: NotaVentaResponse) => {
-    setDetalleAbierto(nota)
+  const abrirHistorial = (nota: NotaVentaResponse) => {
+    setHistorialAbierto(nota)
     setHistorial([])
     setHistorialCargando(true)
     void notaVentaApi
@@ -644,8 +645,11 @@ export function NotasVentaPage() {
       empty={cargando ? 'Cargando notas de venta...' : 'Todavía no hay notas de venta registradas.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => abrirDetalle(row)}>
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
             <Eye size={15} />
+          </RowAction>
+          <RowAction label={`Ver historial de ${row.numero}`} onClick={() => abrirHistorial(row)}>
+            <History size={15} />
           </RowAction>
           <RowAction
             label={`Anular ${row.numero}`}
@@ -706,13 +710,18 @@ export function NotasVentaPage() {
                 {detalleAbierto.observacion}
               </p>
             )}
-
-            <div className="border-t border-line pt-3">
-              <p className="mb-2 text-xs font-semibold text-ink-soft uppercase tracking-wide">Historial de cambios</p>
-              <HistorialCambios registros={historial} cargando={historialCargando} />
-            </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={historialAbierto !== null}
+        title={historialAbierto ? `Historial de ${historialAbierto.numero}` : ''}
+        description={historialAbierto ? historialAbierto.cliente : undefined}
+        onClose={() => setHistorialAbierto(null)}
+        size="lg"
+      >
+        <HistorialCambios registros={historial} cargando={historialCargando} />
       </Modal>
 
       {dialogo}

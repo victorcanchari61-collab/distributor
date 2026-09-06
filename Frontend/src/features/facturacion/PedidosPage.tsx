@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, CheckCircle2, ClipboardList, Contact, Eye, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ClipboardList, Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AgregarProductoPanel,
   Alert,
@@ -67,6 +67,7 @@ export function PedidosPage() {
 
   const [editando, setEditando] = useState<PedidoResponse | null>(null)
   const [detalleAbierto, setDetalleAbierto] = useState<PedidoResponse | null>(null)
+  const [historialAbierto, setHistorialAbierto] = useState<PedidoResponse | null>(null)
   const [historial, setHistorial] = useState<AuditoriaResponse[]>([])
   const [historialCargando, setHistorialCargando] = useState(false)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
@@ -173,8 +174,8 @@ export function PedidosPage() {
     setVista('form')
   }
 
-  const abrirDetalle = (pedido: PedidoResponse) => {
-    setDetalleAbierto(pedido)
+  const abrirHistorial = (pedido: PedidoResponse) => {
+    setHistorialAbierto(pedido)
     setHistorial([])
     setHistorialCargando(true)
     void pedidoApi
@@ -571,8 +572,11 @@ export function PedidosPage() {
       empty={cargando ? 'Cargando pedidos...' : 'Todavía no hay pedidos registrados.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => abrirDetalle(row)}>
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
             <Eye size={15} />
+          </RowAction>
+          <RowAction label={`Ver historial de ${row.numero}`} onClick={() => abrirHistorial(row)}>
+            <History size={15} />
           </RowAction>
           <RowAction
             label={`Editar ${row.numero}`}
@@ -618,7 +622,7 @@ export function PedidosPage() {
 
             {detalleAbierto.detalle.some((l) => l.anulado) && (
               <p className="text-xs text-ink-soft">
-                Se quitaron productos al editar este pedido — quedan solo en el historial de abajo.
+                Se quitaron productos al editar este pedido — quedan solo en "Ver historial".
               </p>
             )}
 
@@ -650,13 +654,18 @@ export function PedidosPage() {
                 {detalleAbierto.observacion}
               </p>
             )}
-
-            <div className="border-t border-line pt-3">
-              <p className="mb-2 text-xs font-semibold text-ink-soft uppercase tracking-wide">Historial de cambios</p>
-              <HistorialCambios registros={historial} cargando={historialCargando} />
-            </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={historialAbierto !== null}
+        title={historialAbierto ? `Historial de ${historialAbierto.numero}` : ''}
+        description={historialAbierto ? historialAbierto.cliente : undefined}
+        onClose={() => setHistorialAbierto(null)}
+        size="lg"
+      >
+        <HistorialCambios registros={historial} cargando={historialCargando} />
       </Modal>
 
       <Modal
