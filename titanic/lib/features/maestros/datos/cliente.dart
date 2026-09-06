@@ -12,7 +12,7 @@ class Cliente {
     this.email,
     this.diaVisita,
     this.ruta,
-    this.mercado,
+    this.puntoReparto,
   });
 
   final int id;
@@ -30,13 +30,16 @@ class Cliente {
   /// Dia en que el vendedor lo visita.
   final String? diaVisita;
   final String? ruta;
-  final String? mercado;
+
+  /// Donde se entrega: no siempre es un mercado — puede ser una tienda, una
+  /// bodega o una empresa.
+  final String? puntoReparto;
 
   final bool activo;
 
   /// Texto contra el que se busca en la lista.
   String get buscable =>
-      '$documento $nombre ${direccion ?? ''} ${distrito ?? ''} ${mercado ?? ''} ${ruta ?? ''}'
+      '$documento $nombre ${direccion ?? ''} ${distrito ?? ''} ${puntoReparto ?? ''} ${ruta ?? ''}'
           .toLowerCase();
 
   factory Cliente.desdeJson(Map<String, dynamic> json) => Cliente(
@@ -50,7 +53,7 @@ class Cliente {
     email: json['email'] as String?,
     diaVisita: json['diaVisita'] as String?,
     ruta: json['ruta'] as String?,
-    mercado: json['mercado'] as String?,
+    puntoReparto: json['puntoReparto'] as String?,
     activo: json['activo'] as bool? ?? true,
   );
 
@@ -64,7 +67,7 @@ class Cliente {
     'email': email,
     'diaVisita': diaVisita,
     'ruta': ruta,
-    'mercado': mercado,
+    'puntoReparto': puntoReparto,
   };
 
   Cliente copiar({
@@ -77,7 +80,7 @@ class Cliente {
     String? email,
     String? diaVisita,
     String? ruta,
-    String? mercado,
+    String? puntoReparto,
     bool? activo,
   }) => Cliente(
     id: id,
@@ -90,7 +93,7 @@ class Cliente {
     email: email ?? this.email,
     diaVisita: diaVisita ?? this.diaVisita,
     ruta: ruta ?? this.ruta,
-    mercado: mercado ?? this.mercado,
+    puntoReparto: puntoReparto ?? this.puntoReparto,
     activo: activo ?? this.activo,
   );
 }

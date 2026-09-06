@@ -16,5 +16,5 @@ public abstract class ClienteRequestBase
     public string? Email { get; set; }
     public string? DiaVisita { get; set; }
     public string? Ruta { get; set; }
-    public string? Mercado { get; set; }
+    public string? PuntoReparto { get; set; }
 }

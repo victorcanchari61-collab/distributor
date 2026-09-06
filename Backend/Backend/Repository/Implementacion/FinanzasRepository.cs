@@ -50,4 +50,55 @@ public class FinanzasRepository : IFinanzasRepository
 
     public async Task<int> ContarUsosMetodoPagoAsync(int metodoPagoId) =>
         await _context.CompraPagos.CountAsync(p => p.MetodoPagoId == metodoPagoId);
+
+    // --- Arqueo de caja ---
+
+    public async Task<decimal> GetCobradoEfectivoAsync(DateTime fecha) =>
+        await _context.PagosVenta
+            .Where(p => !p.Anulado
+                        && p.MetodoPago!.Tipo == TipoMetodoPago.Efectivo
+                        && p.NotaVenta!.Estado == EstadoNotaVenta.Confirmada
+                        && p.Fecha.Date == fecha.Date)
+            .SumAsync(p => (decimal?)p.Monto) ?? 0;
+
+    public async Task<decimal> GetPagadoEfectivoAsync(DateTime fecha) =>
+        await _context.CompraPagos
+            .Where(p => !p.Anulado
+                        && p.MetodoPago!.Tipo == TipoMetodoPago.Efectivo
+                        && p.Compra!.Estado != EstadoCompra.Anulada
+                        && p.Fecha.Date == fecha.Date)
+            .SumAsync(p => (decimal?)p.Monto) ?? 0;
+
+    public async Task<ArqueoCaja?> GetArqueoAsync(DateTime fecha) =>
+        await _context.ArqueosCaja
+            .Include(a => a.Usuario)
+            .FirstOrDefaultAsync(a => a.Fecha.Date == fecha.Date);
+
+    public async Task<IEnumerable<ArqueoCaja>> GetHistorialArqueoAsync() =>
+        await _context.ArqueosCaja
+            .Include(a => a.Usuario)
+            .OrderByDescending(a => a.Fecha)
+            .Take(90)
+            .ToListAsync();
+
+    public async Task<ArqueoCaja> GuardarArqueoAsync(ArqueoCaja arqueo)
+    {
+        var existente = await _context.ArqueosCaja.FirstOrDefaultAsync(a => a.Fecha.Date == arqueo.Fecha.Date);
+        if (existente is null)
+        {
+            await _context.ArqueosCaja.AddAsync(arqueo);
+        }
+        else
+        {
+            existente.MontoEsperado = arqueo.MontoEsperado;
+            existente.MontoContado = arqueo.MontoContado;
+            existente.Observacion = arqueo.Observacion;
+            existente.UsuarioId = arqueo.UsuarioId;
+            existente.FechaCreacion = DateTime.UtcNow;
+            arqueo = existente;
+        }
+
+        await _context.SaveChangesAsync();
+        return arqueo;
+    }
 }

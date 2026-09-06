@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/estado/auth_controlador.dart';
+import '../datos/arqueo_caja.dart';
 import '../datos/finanzas_api.dart';
 import '../datos/metodo_pago.dart';
 
@@ -67,3 +68,39 @@ final metodosPagoActivosProvider = Provider.autoDispose<List<MetodoPago>>(
           .where((m) => m.activo)
           .toList(),
 );
+
+/// Fecha del arqueo diario que se esta consultando o registrando.
+final fechaArqueoProvider = StateProvider.autoDispose<DateTime>(
+  (ref) => DateTime.now(),
+);
+
+/// Resumen de cobros y pagos en efectivo del dia elegido.
+final resumenArqueoProvider = FutureProvider.autoDispose<ArqueoResumen>((ref) {
+  final fecha = ref.watch(fechaArqueoProvider);
+  return ref.watch(finanzasApiProvider).resumenArqueo(fecha);
+});
+
+/// Historial de arqueos ya registrados.
+class HistorialArqueoControlador extends AsyncNotifier<List<ArqueoCaja>> {
+  @override
+  Future<List<ArqueoCaja>> build() =>
+      ref.watch(finanzasApiProvider).historialArqueo();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(finanzasApiProvider).historialArqueo(),
+    );
+  }
+
+  Future<void> registrar(Map<String, dynamic> cuerpo) async {
+    await ref.read(finanzasApiProvider).registrarArqueo(cuerpo);
+    await recargar();
+    ref.invalidate(resumenArqueoProvider);
+  }
+}
+
+final historialArqueoProvider =
+    AsyncNotifierProvider<HistorialArqueoControlador, List<ArqueoCaja>>(
+      HistorialArqueoControlador.new,
+    );

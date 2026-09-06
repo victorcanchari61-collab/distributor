@@ -41,7 +41,7 @@ const VACIO: ClienteRequest = {
   email: '',
   diaVisita: '',
   ruta: '',
-  mercado: '',
+  puntoReparto: '',
 }
 
 const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO']
@@ -97,7 +97,7 @@ export function ClientesPage() {
       email: cliente.email ?? '',
       diaVisita: cliente.diaVisita ?? '',
       ruta: cliente.ruta ?? '',
-      mercado: cliente.mercado ?? '',
+      puntoReparto: cliente.puntoReparto ?? '',
     })
     setErrorForm('')
     setAbierto(true)
@@ -238,7 +238,7 @@ export function ClientesPage() {
       render: (row) => (row.diaVisita ? <Badge tone="sys">{row.diaVisita}</Badge> : '—'),
     },
     { key: 'ruta', label: 'Ruta', align: 'right' },
-    { key: 'mercado', label: 'Mercado', align: 'right' },
+    { key: 'puntoReparto', label: 'Punto de reparto', align: 'right' },
     {
       key: 'fechaCreacion',
       label: 'Fecha de registro',
@@ -311,7 +311,7 @@ export function ClientesPage() {
       columns={columns}
       rows={clientes}
       cardIcon={Contact}
-      searchPlaceholder="Buscar por nombre, documento, mercado..."
+      searchPlaceholder="Buscar por nombre, documento, punto de reparto..."
       empty={cargando ? 'Cargando clientes...' : 'Todavía no hay clientes registrados.'}
       rowActions={(row) => (
         <>
@@ -412,9 +412,11 @@ export function ClientesPage() {
           />
 
           <Input
-            label="Mercado"
-            value={form.mercado ?? ''}
-            onChange={(e) => setForm({ ...form, mercado: e.target.value })}
+            label="Punto de reparto"
+            optional
+            placeholder="Tienda, bodega, empresa..."
+            value={form.puntoReparto ?? ''}
+            onChange={(e) => setForm({ ...form, puntoReparto: e.target.value })}
           />
 
           <Input
@@ -439,7 +441,7 @@ export function ClientesPage() {
           'Telefono',
           'Dias Visita',
           'Rutas',
-          'Mercado',
+          'Punto de reparto',
         ]}
         mapear={(fila) => ({
           documento: valorDe(fila, 'documento', 'dni', 'ruc', 'nro documento'),
@@ -449,7 +451,8 @@ export function ClientesPage() {
           telefono: valorDe(fila, 'telefono', 'teléfono', 'celular'),
           diaVisita: valorDe(fila, 'dias visita', 'dia visita', 'día de visita'),
           ruta: valorDe(fila, 'rutas', 'ruta'),
-          mercado: valorDe(fila, 'mercado'),
+          // "mercado" se acepta por compatibilidad con archivos viejos.
+          puntoReparto: valorDe(fila, 'punto de reparto', 'mercado'),
         })}
         onImportar={clienteApi.importar}
         onListo={() => void cargar()}

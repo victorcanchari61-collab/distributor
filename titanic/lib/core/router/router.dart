@@ -13,6 +13,10 @@ import '../../features/config/vistas/empresas_pagina.dart';
 import '../../features/config/vistas/roles_pagina.dart';
 import '../../features/config/vistas/usuarios_pagina.dart';
 import '../../features/facturacion/vistas/listas_precios_pagina.dart';
+import '../../features/finanzas/vistas/arqueo_diario_pagina.dart';
+import '../../features/finanzas/vistas/cuentas_por_cobrar_pagina.dart';
+import '../../features/finanzas/vistas/cuentas_por_pagar_pagina.dart';
+import '../../features/finanzas/vistas/mis_cobros_pagina.dart';
 import '../../features/finanzas/vistas/metodos_pago_pagina.dart';
 import '../../features/inicio/vistas/inicio_pagina.dart';
 import '../../features/inicio/vistas/pendiente_pagina.dart';
@@ -161,6 +165,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: NotasVentaPagina.ruta,
         builder: (context, estado) => const NotasVentaPagina(),
       ),
+      GoRoute(
+        path: CuentasPorCobrarPagina.ruta,
+        builder: (context, estado) => const CuentasPorCobrarPagina(),
+      ),
+      GoRoute(
+        path: CuentasPorPagarPagina.ruta,
+        builder: (context, estado) => const CuentasPorPagarPagina(),
+      ),
+      GoRoute(
+        path: MisCobrosPagina.ruta,
+        builder: (context, estado) => const MisCobrosPagina(),
+      ),
+      GoRoute(
+        path: ArqueoDiarioPagina.ruta,
+        builder: (context, estado) => const ArqueoDiarioPagina(),
+      ),
 
       for (final grupo in menuGrupos)
         for (final item in grupo.items)
@@ -184,7 +204,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != AccesosPagina.ruta &&
               item.ruta != AuditoriaPagina.ruta &&
               item.ruta != PedidosPagina.ruta &&
-              item.ruta != NotasVentaPagina.ruta)
+              item.ruta != NotasVentaPagina.ruta &&
+              item.ruta != CuentasPorCobrarPagina.ruta &&
+              item.ruta != CuentasPorPagarPagina.ruta &&
+              item.ruta != MisCobrosPagina.ruta &&
+              item.ruta != ArqueoDiarioPagina.ruta)
             GoRoute(
               path: item.ruta,
               builder: (context, estado) => AppShell(

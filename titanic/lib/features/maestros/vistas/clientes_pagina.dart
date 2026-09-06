@@ -37,7 +37,7 @@ class ClientesPagina extends ConsumerWidget {
       visibles: ref.watch(clientesFiltradosProvider),
       busqueda: ref.watch(busquedaClientesProvider),
       onBuscar: (t) => ref.read(busquedaClientesProvider.notifier).state = t,
-      pistaBusqueda: 'Buscar por nombre, documento o mercado',
+      pistaBusqueda: 'Buscar por nombre, documento o punto de reparto',
       onRecargar: () => ref.read(clientesProvider.notifier).recargar(),
       onNuevo: () => _abrirFormulario(context, null),
       iconoVacio: Icons.contacts_outlined,
@@ -229,7 +229,7 @@ class _TarjetaCliente extends StatelessWidget {
             ),
     ),
     CampoDetalle('Ruta', cliente.ruta, enTarjeta: false),
-    CampoDetalle('Mercado', cliente.mercado, enTarjeta: false),
+    CampoDetalle('Punto de reparto', cliente.puntoReparto, enTarjeta: false),
     CampoDetalle(
       'Estado',
       cliente.activo ? 'Activo' : 'Inactivo',

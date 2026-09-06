@@ -156,7 +156,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'finanzas.cobrar', label: 'Cuentas por cobrar', icon: Wallet },
       { id: 'finanzas.pagar', label: 'Cuentas por pagar', icon: CreditCard },
       { id: 'finanzas.miscobros', label: 'Mis cobros', icon: HandCoins },
-      { id: 'finanzas.arqueo', label: 'Arqueo diario', icon: Calculator, pending: true },
+      { id: 'finanzas.arqueo', label: 'Arqueo diario', icon: Calculator },
     ],
   },
   {

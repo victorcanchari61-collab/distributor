@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Backend.Dtos.Requests;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -41,4 +42,36 @@ public class MetodoPagoController : ControllerBase
         await _finanzas.DeleteMetodoPagoAsync(id);
         return NoContent();
     }
+}
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class ArqueoController : ControllerBase
+{
+    private readonly IFinanzasService _finanzas;
+
+    public ArqueoController(IFinanzasService finanzas)
+    {
+        _finanzas = finanzas;
+    }
+
+    private int? UsuarioId =>
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+                     ?? User.FindFirstValue("sub"), out var id)
+            ? id
+            : null;
+
+    /// <summary>Lo cobrado y pagado en efectivo de un día, y su cierre si ya se registró.</summary>
+    [HttpGet("resumen")]
+    public async Task<IActionResult> Resumen([FromQuery] DateTime fecha) =>
+        Ok(await _finanzas.GetResumenArqueoAsync(fecha));
+
+    [HttpGet("historial")]
+    public async Task<IActionResult> Historial() => Ok(await _finanzas.GetHistorialArqueoAsync());
+
+    /// <summary>Registra el cierre de caja del día: reemplaza el que ya hubiera para esa fecha.</summary>
+    [HttpPost]
+    public async Task<IActionResult> Registrar([FromBody] RegistrarArqueoRequest request) =>
+        Ok(await _finanzas.RegistrarArqueoAsync(request, UsuarioId));
 }

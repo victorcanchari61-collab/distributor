@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/estado/auth_controlador.dart';
+import '../datos/cobro.dart';
 import '../datos/nota_venta.dart';
 import '../datos/pedido.dart';
 import '../datos/ventas_api.dart';
@@ -96,4 +97,74 @@ final notasVentaFiltradasProvider = Provider.autoDispose<List<NotaVenta>>((ref) 
   final todas = ref.watch(notasVentaProvider).valueOrNull ?? const <NotaVenta>[];
   final texto = ref.watch(busquedaNotasVentaProvider).trim().toLowerCase();
   return todas.where((n) => texto.isEmpty || n.buscable.contains(texto)).toList();
+});
+
+// --- Cuentas por cobrar ---
+
+final busquedaCuentasPorCobrarProvider = StateProvider.autoDispose<String>((ref) => '');
+
+class CuentasPorCobrarControlador extends AsyncNotifier<List<NotaVenta>> {
+  @override
+  Future<List<NotaVenta>> build() => ref.watch(ventasApiProvider).cuentasPorCobrar();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(ventasApiProvider).cuentasPorCobrar(),
+    );
+  }
+
+  Future<void> registrarPago(int notaVentaId, Map<String, dynamic> cuerpo) async {
+    await ref.read(ventasApiProvider).registrarPagoNotaVenta(notaVentaId, cuerpo);
+    await recargar();
+  }
+
+  Future<void> actualizarPago(
+    int notaVentaId,
+    int pagoId,
+    Map<String, dynamic> cuerpo,
+  ) async {
+    await ref.read(ventasApiProvider).actualizarPagoNotaVenta(notaVentaId, pagoId, cuerpo);
+    await recargar();
+  }
+
+  Future<void> anularPago(int notaVentaId, int pagoId) async {
+    await ref.read(ventasApiProvider).anularPagoNotaVenta(notaVentaId, pagoId);
+    await recargar();
+  }
+}
+
+final cuentasPorCobrarProvider =
+    AsyncNotifierProvider<CuentasPorCobrarControlador, List<NotaVenta>>(
+      CuentasPorCobrarControlador.new,
+    );
+
+final cuentasPorCobrarFiltradasProvider = Provider.autoDispose<List<NotaVenta>>((ref) {
+  final todas = ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
+  final texto = ref.watch(busquedaCuentasPorCobrarProvider).trim().toLowerCase();
+  return todas.where((n) => texto.isEmpty || n.buscable.contains(texto)).toList();
+});
+
+// --- Mis cobros ---
+
+final busquedaMisCobrosProvider = StateProvider.autoDispose<String>((ref) => '');
+
+class MisCobrosControlador extends AsyncNotifier<List<Cobro>> {
+  @override
+  Future<List<Cobro>> build() => ref.watch(ventasApiProvider).misCobros();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => ref.read(ventasApiProvider).misCobros());
+  }
+}
+
+final misCobrosProvider = AsyncNotifierProvider<MisCobrosControlador, List<Cobro>>(
+  MisCobrosControlador.new,
+);
+
+final misCobrosFiltradosProvider = Provider.autoDispose<List<Cobro>>((ref) {
+  final todos = ref.watch(misCobrosProvider).valueOrNull ?? const <Cobro>[];
+  final texto = ref.watch(busquedaMisCobrosProvider).trim().toLowerCase();
+  return todos.where((c) => texto.isEmpty || c.buscable.contains(texto)).toList();
 });

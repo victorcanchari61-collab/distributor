@@ -204,7 +204,7 @@ public class ClienteService : IClienteService
         fila.Email = Limpiar(fila.Email);
         fila.DiaVisita = Limpiar(fila.DiaVisita);
         fila.Ruta = Limpiar(fila.Ruta);
-        fila.Mercado = Limpiar(fila.Mercado);
+        fila.PuntoReparto = Limpiar(fila.PuntoReparto);
     }
 
     private static void Aplicar(Cliente cliente, ClienteRequestBase request)
@@ -222,7 +222,7 @@ public class ClienteService : IClienteService
         cliente.Email = Limpiar(request.Email);
         cliente.DiaVisita = NormalizarDia(request.DiaVisita);
         cliente.Ruta = Limpiar(request.Ruta);
-        cliente.Mercado = Limpiar(request.Mercado);
+        cliente.PuntoReparto = Limpiar(request.PuntoReparto);
     }
 
     /// <summary>Texto util o null: recorta y descarta vacios y el literal "NULL".</summary>
@@ -270,7 +270,7 @@ public class ClienteService : IClienteService
             Email = cliente.Email,
             DiaVisita = cliente.DiaVisita,
             Ruta = cliente.Ruta,
-            Mercado = cliente.Mercado,
+            PuntoReparto = cliente.PuntoReparto,
             Activo = cliente.Activo,
             FechaCreacion = cliente.FechaCreacion
         };

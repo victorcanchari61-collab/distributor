@@ -21,18 +21,27 @@ class PagoVenta {
     required this.metodoPagoId,
     required this.metodoPago,
     required this.monto,
+    required this.fecha,
+    this.usuario,
+    this.anulado = false,
   });
 
   final int id;
   final int metodoPagoId;
   final String metodoPago;
   final double monto;
+  final DateTime fecha;
+  final String? usuario;
+  final bool anulado;
 
   factory PagoVenta.desdeJson(Map<String, dynamic> json) => PagoVenta(
     id: json['id'] as int,
     metodoPagoId: json['metodoPagoId'] as int,
     metodoPago: json['metodoPago'] as String? ?? '',
     monto: (json['monto'] as num?)?.toDouble() ?? 0,
+    fecha: DateTime.parse(json['fecha'] as String),
+    usuario: json['usuario'] as String?,
+    anulado: json['anulado'] as bool? ?? false,
   );
 }
 

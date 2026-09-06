@@ -50,6 +50,7 @@ public class AppDbContext : DbContext
     public DbSet<NotaVentaDetalle> NotaVentaDetalles => Set<NotaVentaDetalle>();
     public DbSet<PagoVenta> PagosVenta => Set<PagoVenta>();
     public DbSet<RegistroAuditoria> RegistrosAuditoria => Set<RegistroAuditoria>();
+    public DbSet<ArqueoCaja> ArqueosCaja => Set<ArqueoCaja>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -172,7 +173,7 @@ public class AppDbContext : DbContext
             entity.Property(c => c.Email).HasMaxLength(100);
             entity.Property(c => c.DiaVisita).HasMaxLength(20);
             entity.Property(c => c.Ruta).HasMaxLength(20);
-            entity.Property(c => c.Mercado).HasMaxLength(80);
+            entity.Property(c => c.PuntoReparto).HasMaxLength(80);
         });
 
         modelBuilder.Entity<Proveedor>(entity =>
@@ -731,6 +732,18 @@ public class AppDbContext : DbContext
             entity.HasData(
                 new MetodoPago { Id = 1, Nombre = "Efectivo", Tipo = TipoMetodoPago.Efectivo, Activo = true }
             );
+        });
+
+        modelBuilder.Entity<ArqueoCaja>(entity =>
+        {
+            entity.ToTable("ArqueoCaja");
+            entity.HasIndex(a => a.Fecha).IsUnique();
+            entity.Property(a => a.MontoEsperado).HasPrecision(18, 4);
+            entity.Property(a => a.MontoContado).HasPrecision(18, 4);
+            entity.Property(a => a.Observacion).HasMaxLength(250);
+
+            entity.HasOne(a => a.Usuario).WithMany()
+                .HasForeignKey(a => a.UsuarioId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 

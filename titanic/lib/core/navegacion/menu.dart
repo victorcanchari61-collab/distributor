@@ -196,21 +196,25 @@ const menuGrupos = <MenuGrupo>[
       ),
       MenuItem(
         id: 'finanzas.cobrar',
+        pendiente: false,
         titulo: 'Cuentas por cobrar',
         icono: Icons.account_balance_wallet_outlined,
       ),
       MenuItem(
         id: 'finanzas.pagar',
+        pendiente: false,
         titulo: 'Cuentas por pagar',
         icono: Icons.credit_card_outlined,
       ),
       MenuItem(
         id: 'finanzas.miscobros',
+        pendiente: false,
         titulo: 'Mis cobros',
         icono: Icons.savings_outlined,
       ),
       MenuItem(
         id: 'finanzas.arqueo',
+        pendiente: false,
         titulo: 'Arqueo diario',
         icono: Icons.calculate_outlined,
       ),

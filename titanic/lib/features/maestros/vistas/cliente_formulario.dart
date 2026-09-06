@@ -49,8 +49,8 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
     text: widget.cliente?.telefono ?? '',
   );
   late final _ruta = TextEditingController(text: widget.cliente?.ruta ?? '');
-  late final _mercado = TextEditingController(
-    text: widget.cliente?.mercado ?? '',
+  late final _puntoReparto = TextEditingController(
+    text: widget.cliente?.puntoReparto ?? '',
   );
 
   late String _tipoDoc = widget.cliente?.tipoDoc.isNotEmpty == true
@@ -74,7 +74,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
       _distrito,
       _telefono,
       _ruta,
-      _mercado,
+      _puntoReparto,
     ]) {
       c.dispose();
     }
@@ -128,7 +128,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
       'telefono': _telefono.text.trim(),
       'diaVisita': _diaVisita,
       'ruta': _ruta.text.trim(),
-      'mercado': _mercado.text.trim(),
+      'puntoReparto': _puntoReparto.text.trim(),
       if (!_esNuevo) 'activo': widget.cliente!.activo,
     };
 
@@ -279,8 +279,8 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
               const SizedBox(width: Dimen.espacio3),
               Expanded(
                 child: AppCampo(
-                  controlador: _mercado,
-                  etiqueta: 'Mercado',
+                  controlador: _puntoReparto,
+                  etiqueta: 'Punto de reparto',
                   icono: Icons.storefront_outlined,
                   opcional: true,
                   habilitado: !_guardando,

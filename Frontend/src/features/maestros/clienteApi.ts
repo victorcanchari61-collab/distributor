@@ -13,7 +13,8 @@ export interface ClienteResponse {
   email: string | null
   diaVisita: string | null
   ruta: string | null
-  mercado: string | null
+  /** Dónde se entrega: no siempre es un mercado — puede ser una tienda, una bodega o una empresa. */
+  puntoReparto: string | null
   activo: boolean
   fechaCreacion: string
 }
@@ -29,7 +30,7 @@ export interface ClienteRequest {
   email?: string | null
   diaVisita?: string | null
   ruta?: string | null
-  mercado?: string | null
+  puntoReparto?: string | null
 }
 
 export interface UpdateClienteRequest extends ClienteRequest {

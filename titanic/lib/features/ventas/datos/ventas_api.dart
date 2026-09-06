@@ -1,4 +1,5 @@
 import '../../../core/red/cliente_api.dart';
+import 'cobro.dart';
 import 'nota_venta.dart';
 import 'pedido.dart';
 
@@ -56,4 +57,38 @@ class VentasApi {
   Future<void> anularNotaVenta(int id) async {
     await _api.patch('/notaventa/$id/anular');
   }
+
+  // --- Cuentas por cobrar / pagos ---
+
+  /// GET /api/notaventa/cuentasporcobrar
+  Future<List<NotaVenta>> cuentasPorCobrar() async {
+    final datos = await _api.get('/notaventa/cuentasporcobrar') as List;
+    return datos.map((e) => NotaVenta.desdeJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// GET /api/notaventa/miscobros
+  Future<List<Cobro>> misCobros() async {
+    final datos = await _api.get('/notaventa/miscobros') as List;
+    return datos.map((e) => Cobro.desdeJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// POST /api/notaventa/{id}/pagos
+  Future<NotaVenta> registrarPagoNotaVenta(int id, Map<String, dynamic> cuerpo) async =>
+      NotaVenta.desdeJson(
+        await _api.post('/notaventa/$id/pagos', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
+
+  /// PUT /api/notaventa/{id}/pagos/{pagoId}
+  Future<NotaVenta> actualizarPagoNotaVenta(
+    int id,
+    int pagoId,
+    Map<String, dynamic> cuerpo,
+  ) async => NotaVenta.desdeJson(
+    await _api.put('/notaventa/$id/pagos/$pagoId', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
+
+  /// DELETE /api/notaventa/{id}/pagos/{pagoId} — anula, no borra.
+  Future<NotaVenta> anularPagoNotaVenta(int id, int pagoId) async => NotaVenta.desdeJson(
+    await _api.delete('/notaventa/$id/pagos/$pagoId') as Map<String, dynamic>,
+  );
 }

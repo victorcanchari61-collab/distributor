@@ -11,4 +11,9 @@ public interface IFinanzasService
     Task<MetodoPagoResponse> CreateMetodoPagoAsync(CreateMetodoPagoRequest request);
     Task<MetodoPagoResponse> UpdateMetodoPagoAsync(int id, UpdateMetodoPagoRequest request);
     Task DeleteMetodoPagoAsync(int id);
+
+    // --- Arqueo de caja ---
+    Task<ArqueoResumenResponse> GetResumenArqueoAsync(DateTime fecha);
+    Task<IEnumerable<ArqueoCajaResponse>> GetHistorialArqueoAsync();
+    Task<ArqueoCajaResponse> RegistrarArqueoAsync(RegistrarArqueoRequest request, int? usuarioId);
 }

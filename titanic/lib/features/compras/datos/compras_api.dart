@@ -62,4 +62,32 @@ class ComprasApi {
   Future<void> anularCompra(int id) async {
     await _api.patch('/compra/$id/anular');
   }
+
+  // --- Cuentas por pagar / pagos ---
+
+  /// GET /api/compra/cuentasporpagar
+  Future<List<Compra>> cuentasPorPagar() async {
+    final datos = await _api.get('/compra/cuentasporpagar') as List;
+    return datos.map((e) => Compra.desdeJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// POST /api/compra/{id}/pagos
+  Future<Compra> registrarPagoCompra(int id, Map<String, dynamic> cuerpo) async =>
+      Compra.desdeJson(
+        await _api.post('/compra/$id/pagos', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
+
+  /// PUT /api/compra/{id}/pagos/{pagoId}
+  Future<Compra> actualizarPagoCompra(
+    int id,
+    int pagoId,
+    Map<String, dynamic> cuerpo,
+  ) async => Compra.desdeJson(
+    await _api.put('/compra/$id/pagos/$pagoId', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
+
+  /// DELETE /api/compra/{id}/pagos/{pagoId} — anula, no borra.
+  Future<Compra> anularPagoCompra(int id, int pagoId) async => Compra.desdeJson(
+    await _api.delete('/compra/$id/pagos/$pagoId') as Map<String, dynamic>,
+  );
 }

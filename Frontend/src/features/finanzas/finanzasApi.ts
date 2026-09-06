@@ -37,3 +37,41 @@ export const metodoPagoApi = {
     api.put<MetodoPagoResponse>(`/metodopago/${id}`, body),
   remove: (id: number) => api.del<void>(`/metodopago/${id}`),
 }
+
+// --- Arqueo de caja ---
+//
+// El cierre de caja de un día: solo importa el efectivo, porque una
+// transferencia o una billetera digital no se cuenta a mano.
+
+export interface ArqueoCajaResponse {
+  id: number
+  fecha: string
+  montoEsperado: number
+  montoContado: number
+  /** montoContado - montoEsperado. Negativo es faltante, positivo es sobrante. */
+  diferencia: number
+  observacion: string | null
+  usuario: string | null
+  fechaCreacion: string
+}
+
+export interface ArqueoResumenResponse {
+  fecha: string
+  cobradoEfectivo: number
+  pagadoEfectivo: number
+  montoEsperado: number
+  /** El cierre ya registrado para este día, si existe. */
+  arqueo: ArqueoCajaResponse | null
+}
+
+export interface RegistrarArqueoRequest {
+  fecha: string
+  montoContado: number
+  observacion?: string | null
+}
+
+export const arqueoApi = {
+  resumen: (fecha: string) => api.get<ArqueoResumenResponse>(`/arqueo/resumen?fecha=${fecha}`),
+  historial: () => api.get<ArqueoCajaResponse[]>('/arqueo/historial'),
+  registrar: (body: RegistrarArqueoRequest) => api.post<ArqueoCajaResponse>('/arqueo', body),
+}

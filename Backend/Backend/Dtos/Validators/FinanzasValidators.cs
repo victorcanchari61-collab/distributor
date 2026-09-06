@@ -32,3 +32,13 @@ public class MetodoPagoValidator<T> : AbstractValidator<T> where T : MetodoPagoR
 public class CreateMetodoPagoRequestValidator : MetodoPagoValidator<CreateMetodoPagoRequest>;
 
 public class UpdateMetodoPagoRequestValidator : MetodoPagoValidator<UpdateMetodoPagoRequest>;
+
+public class RegistrarArqueoRequestValidator : AbstractValidator<RegistrarArqueoRequest>
+{
+    public RegistrarArqueoRequestValidator()
+    {
+        RuleFor(x => x.Fecha).NotEmpty().WithMessage("Indica qué día se arquea");
+        RuleFor(x => x.MontoContado).GreaterThanOrEqualTo(0).WithMessage("El monto contado no puede ser negativo");
+        RuleFor(x => x.Observacion).MaximumLength(250);
+    }
+}

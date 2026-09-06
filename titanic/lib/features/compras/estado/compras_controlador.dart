@@ -131,3 +131,49 @@ final comprasConPendienteProvider = Provider.autoDispose<List<Compra>>((ref) {
       )
       .toList();
 });
+
+// --- Cuentas por pagar ---
+
+final busquedaCuentasPorPagarProvider = StateProvider.autoDispose<String>((ref) => '');
+
+class CuentasPorPagarControlador extends AsyncNotifier<List<Compra>> {
+  @override
+  Future<List<Compra>> build() => ref.watch(comprasApiProvider).cuentasPorPagar();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(comprasApiProvider).cuentasPorPagar(),
+    );
+  }
+
+  Future<void> registrarPago(int compraId, Map<String, dynamic> cuerpo) async {
+    await ref.read(comprasApiProvider).registrarPagoCompra(compraId, cuerpo);
+    await recargar();
+  }
+
+  Future<void> actualizarPago(
+    int compraId,
+    int pagoId,
+    Map<String, dynamic> cuerpo,
+  ) async {
+    await ref.read(comprasApiProvider).actualizarPagoCompra(compraId, pagoId, cuerpo);
+    await recargar();
+  }
+
+  Future<void> anularPago(int compraId, int pagoId) async {
+    await ref.read(comprasApiProvider).anularPagoCompra(compraId, pagoId);
+    await recargar();
+  }
+}
+
+final cuentasPorPagarProvider =
+    AsyncNotifierProvider<CuentasPorPagarControlador, List<Compra>>(
+      CuentasPorPagarControlador.new,
+    );
+
+final cuentasPorPagarFiltradasProvider = Provider.autoDispose<List<Compra>>((ref) {
+  final todas = ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
+  final texto = ref.watch(busquedaCuentasPorPagarProvider).trim().toLowerCase();
+  return todas.where((c) => texto.isEmpty || c.buscable.contains(texto)).toList();
+});

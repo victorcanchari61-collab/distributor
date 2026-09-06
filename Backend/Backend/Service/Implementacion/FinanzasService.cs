@@ -113,6 +113,64 @@ public class FinanzasService : IFinanzasService
         await _notificador.AvisarAsync("metodospago", "eliminado", new { id });
     }
 
+    // -------------------------------------------------------- Arqueo de caja
+
+    public async Task<ArqueoResumenResponse> GetResumenArqueoAsync(DateTime fecha)
+    {
+        var cobrado = await _repository.GetCobradoEfectivoAsync(fecha);
+        var pagado = await _repository.GetPagadoEfectivoAsync(fecha);
+        var arqueo = await _repository.GetArqueoAsync(fecha);
+
+        return new ArqueoResumenResponse
+        {
+            Fecha = fecha.Date,
+            CobradoEfectivo = cobrado,
+            PagadoEfectivo = pagado,
+            MontoEsperado = cobrado - pagado,
+            Arqueo = arqueo is null ? null : MapArqueo(arqueo)
+        };
+    }
+
+    public async Task<IEnumerable<ArqueoCajaResponse>> GetHistorialArqueoAsync()
+    {
+        var historial = await _repository.GetHistorialArqueoAsync();
+        return historial.Select(MapArqueo);
+    }
+
+    public async Task<ArqueoCajaResponse> RegistrarArqueoAsync(RegistrarArqueoRequest request, int? usuarioId)
+    {
+        var cobrado = await _repository.GetCobradoEfectivoAsync(request.Fecha);
+        var pagado = await _repository.GetPagadoEfectivoAsync(request.Fecha);
+
+        var arqueo = new ArqueoCaja
+        {
+            Fecha = request.Fecha.Date,
+            MontoEsperado = cobrado - pagado,
+            MontoContado = request.MontoContado,
+            Observacion = Limpiar(request.Observacion),
+            UsuarioId = usuarioId
+        };
+
+        var guardado = await _repository.GuardarArqueoAsync(arqueo);
+        var conUsuario = await _repository.GetArqueoAsync(guardado.Fecha) ?? guardado;
+
+        var response = MapArqueo(conUsuario);
+        await _notificador.AvisarAsync("arqueo", "registrado", response);
+        return response;
+    }
+
+    private static ArqueoCajaResponse MapArqueo(ArqueoCaja a) => new()
+    {
+        Id = a.Id,
+        Fecha = a.Fecha,
+        MontoEsperado = a.MontoEsperado,
+        MontoContado = a.MontoContado,
+        Diferencia = Math.Round(a.MontoContado - a.MontoEsperado, 2),
+        Observacion = a.Observacion,
+        Usuario = a.Usuario?.Nombre,
+        FechaCreacion = a.FechaCreacion
+    };
+
     // ------------------------------------------------------------ Auxiliares
 
     private async Task<MetodoPago> GetMetodoPagoOrThrowAsync(int id) =>

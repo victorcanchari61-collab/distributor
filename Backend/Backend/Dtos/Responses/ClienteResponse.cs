@@ -12,7 +12,7 @@ public class ClienteResponse
     public string? Email { get; set; }
     public string? DiaVisita { get; set; }
     public string? Ruta { get; set; }
-    public string? Mercado { get; set; }
+    public string? PuntoReparto { get; set; }
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 }
