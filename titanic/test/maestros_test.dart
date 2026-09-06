@@ -54,7 +54,8 @@ Map<String, dynamic> _cliente({
       'email': null,
       'diaVisita': diaVisita,
       'ruta': ruta,
-      'puntoReparto': null,
+      'mercadoId': null,
+      'mercado': null,
       'activo': activo,
     };
 

@@ -229,7 +229,7 @@ class _TarjetaCliente extends StatelessWidget {
             ),
     ),
     CampoDetalle('Ruta', cliente.ruta, enTarjeta: false),
-    CampoDetalle('Punto de reparto', cliente.puntoReparto, enTarjeta: false),
+    CampoDetalle('Mercado', cliente.mercado, enTarjeta: false),
     CampoDetalle(
       'Estado',
       cliente.activo ? 'Activo' : 'Inactivo',

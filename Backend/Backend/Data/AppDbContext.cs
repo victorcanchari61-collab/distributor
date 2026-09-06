@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Cliente> Clientes => Set<Cliente>();
+    public DbSet<Mercado> Mercados => Set<Mercado>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Rol> Roles => Set<Rol>();
@@ -173,7 +174,16 @@ public class AppDbContext : DbContext
             entity.Property(c => c.Email).HasMaxLength(100);
             entity.Property(c => c.DiaVisita).HasMaxLength(20);
             entity.Property(c => c.Ruta).HasMaxLength(20);
-            entity.Property(c => c.PuntoReparto).HasMaxLength(80);
+
+            entity.HasOne(c => c.Mercado).WithMany()
+                .HasForeignKey(c => c.MercadoId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Mercado>(entity =>
+        {
+            entity.ToTable("Mercados");
+            entity.HasIndex(m => m.Nombre).IsUnique();
+            entity.Property(m => m.Nombre).HasMaxLength(80).IsRequired();
         });
 
         modelBuilder.Entity<Proveedor>(entity =>

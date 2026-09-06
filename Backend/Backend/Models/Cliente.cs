@@ -22,11 +22,9 @@ public class Cliente
     /// <summary>Ruta de reparto a la que pertenece.</summary>
     public string? Ruta { get; set; }
 
-    /// <summary>
-    /// Dónde se entrega: no siempre es un mercado — puede ser una tienda, una
-    /// bodega o una empresa.
-    /// </summary>
-    public string? PuntoReparto { get; set; }
+    /// <summary>El mercado, zona o punto de reparto donde está el puesto.</summary>
+    public int? MercadoId { get; set; }
+    public Mercado? Mercado { get; set; }
 
     public bool Activo { get; set; } = true;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;

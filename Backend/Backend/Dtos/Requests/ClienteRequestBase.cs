@@ -16,5 +16,14 @@ public abstract class ClienteRequestBase
     public string? Email { get; set; }
     public string? DiaVisita { get; set; }
     public string? Ruta { get; set; }
-    public string? PuntoReparto { get; set; }
+
+    /// <summary>El mercado, zona o punto de reparto donde está el puesto.</summary>
+    public int? MercadoId { get; set; }
+
+    /// <summary>
+    /// Solo para importación: el nombre del mercado tal cual viene en el
+    /// archivo. Si no existe uno con ese nombre, se crea. Si se manda
+    /// <see cref="MercadoId"/> este campo se ignora.
+    /// </summary>
+    public string? MercadoNombre { get; set; }
 }

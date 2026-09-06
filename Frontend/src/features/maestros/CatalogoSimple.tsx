@@ -30,6 +30,10 @@ export interface CatalogoSimpleProps {
   filas: FilaCatalogo[]
   /** Muestra y edita el campo descripcion. Marcas no lo tienen. */
   conDescripcion?: boolean
+  /** Encabezado de la columna de uso. Por defecto "Productos". */
+  usosEtiqueta?: string
+  /** Palabra en singular para el mensaje de "no se puede eliminar". Por defecto "producto". */
+  usosSingular?: string
   onCrear: (datos: { nombre: string; descripcion?: string | null }) => Promise<unknown>
   onActualizar: (
     id: number,
@@ -51,6 +55,8 @@ export function CatalogoSimple({
   icono,
   filas,
   conDescripcion,
+  usosEtiqueta = 'Productos',
+  usosSingular = 'producto',
   onCrear,
   onActualizar,
   onEliminar,
@@ -131,7 +137,7 @@ export function CatalogoSimple({
       titulo: `Eliminar ${fila.nombre}`,
       mensaje:
         fila.productos > 0
-          ? `La usan ${fila.productos} producto(s), así que no se podrá eliminar. Desactívala en su lugar.`
+          ? `La usan ${fila.productos} ${usosSingular}(s), así que no se podrá eliminar. Desactívala en su lugar.`
           : 'Se borra definitivamente.',
       confirmar: 'Eliminar',
       tono: 'danger',
@@ -158,7 +164,7 @@ export function CatalogoSimple({
           },
         ]
       : []),
-    { key: 'productos', label: 'Productos', align: 'right' as const },
+    { key: 'productos', label: usosEtiqueta, align: 'right' as const },
     {
       key: 'activo',
       label: 'Estado',

@@ -8,6 +8,7 @@ import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/dimensiones.dart';
+import '../datos/catalogo.dart';
 import '../datos/cliente.dart';
 import '../estado/maestros_controlador.dart';
 
@@ -49,14 +50,12 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
     text: widget.cliente?.telefono ?? '',
   );
   late final _ruta = TextEditingController(text: widget.cliente?.ruta ?? '');
-  late final _puntoReparto = TextEditingController(
-    text: widget.cliente?.puntoReparto ?? '',
-  );
 
   late String _tipoDoc = widget.cliente?.tipoDoc.isNotEmpty == true
       ? widget.cliente!.tipoDoc
       : 'DNI';
   late String? _diaVisita = widget.cliente?.diaVisita;
+  late int? _mercadoId = widget.cliente?.mercadoId;
 
   bool _guardando = false;
   String? _error;
@@ -74,7 +73,6 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
       _distrito,
       _telefono,
       _ruta,
-      _puntoReparto,
     ]) {
       c.dispose();
     }
@@ -128,7 +126,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
       'telefono': _telefono.text.trim(),
       'diaVisita': _diaVisita,
       'ruta': _ruta.text.trim(),
-      'puntoReparto': _puntoReparto.text.trim(),
+      'mercadoId': _mercadoId,
       if (!_esNuevo) 'activo': widget.cliente!.activo,
     };
 
@@ -278,12 +276,19 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
               ),
               const SizedBox(width: Dimen.espacio3),
               Expanded(
-                child: AppCampo(
-                  controlador: _puntoReparto,
-                  etiqueta: 'Punto de reparto',
+                child: AppSelector<int?>(
+                  valor: _mercadoId,
+                  etiqueta: 'Mercado',
                   icono: Icons.storefront_outlined,
-                  opcional: true,
                   habilitado: !_guardando,
+                  opciones: [
+                    const Opcion<int?>(null, 'Sin mercado'),
+                    for (final m
+                        in ref.watch(mercadosProvider).valueOrNull ??
+                            const <Mercado>[])
+                      if (m.activo) Opcion<int?>(m.id, m.nombre),
+                  ],
+                  onCambio: (v) => setState(() => _mercadoId = v),
                 ),
               ),
             ],

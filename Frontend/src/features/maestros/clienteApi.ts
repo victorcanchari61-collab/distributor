@@ -13,8 +13,9 @@ export interface ClienteResponse {
   email: string | null
   diaVisita: string | null
   ruta: string | null
-  /** Dónde se entrega: no siempre es un mercado — puede ser una tienda, una bodega o una empresa. */
-  puntoReparto: string | null
+  mercadoId: number | null
+  /** Nombre del mercado, zona o punto de reparto. */
+  mercado: string | null
   activo: boolean
   fechaCreacion: string
 }
@@ -30,7 +31,9 @@ export interface ClienteRequest {
   email?: string | null
   diaVisita?: string | null
   ruta?: string | null
-  puntoReparto?: string | null
+  mercadoId?: number | null
+  /** Solo para importación: si no hay mercadoId, crea o reutiliza uno con este nombre. */
+  mercadoNombre?: string | null
 }
 
 export interface UpdateClienteRequest extends ClienteRequest {
@@ -54,4 +57,25 @@ export const clienteApi = {
   /** POST /api/cliente/importar — alta masiva desde archivo. */
   importar: (filas: ClienteRequest[], actualizarExistentes: boolean) =>
     api.post<ResultadoImportacion>('/cliente/importar', { filas, actualizarExistentes }),
+}
+
+// --- Mercados ---
+//
+// Dónde se entrega: un mercado de abastos, pero también puede ser una zona
+// con tiendas o empresas.
+
+export interface MercadoResponse {
+  id: number
+  nombre: string
+  activo: boolean
+  /** Cuántos clientes ya lo usan. Si hay alguno, no se elimina. */
+  clientes: number
+}
+
+export const mercadoApi = {
+  getAll: () => api.get<MercadoResponse[]>('/mercado'),
+  create: (body: { nombre: string }) => api.post<MercadoResponse>('/mercado', body),
+  update: (id: number, body: { nombre: string; activo: boolean }) =>
+    api.put<MercadoResponse>(`/mercado/${id}`, body),
+  remove: (id: number) => api.del<void>(`/mercado/${id}`),
 }
