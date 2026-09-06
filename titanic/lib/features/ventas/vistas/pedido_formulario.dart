@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_buscador_productos.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_selector_buscable.dart';
@@ -180,19 +181,36 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
 
   Future<void> _agregarLinea() async {
     final productos = ref.read(productosProvider).valueOrNull ?? const <Producto>[];
-    final activos = productos.where((p) => p.activo).toList();
-    final producto = await mostrarSelectorBuscable<Producto>(
-      context: context,
-      titulo: 'Elige el producto',
-      items: activos,
-      buscable: (p) => p.buscable,
-      pistaBusqueda: 'Buscar por código o nombre',
-      fila: (p) => Text('${p.codigo} · ${p.nombre}', style: const TextStyle(fontSize: 14)),
-    );
-    if (producto == null || !mounted) return;
+    final activos = productos.where((p) => p.activo && p.controlaStock).toList();
 
-    final fila = await _mostrarHojaLinea(producto: producto);
-    if (fila != null) setState(() => _lineas.add(fila));
+    // Se eligen VARIOS de una vez, con su unidad, cantidad e importe: antes
+    // era un producto por hoja y cargar un documento largo se hacia eterno.
+    final elegidos = await mostrarBuscadorProductos(
+      context: context,
+      productos: activos,
+      paraVenta: true,
+    );
+    if (elegidos == null || elegidos.isEmpty) return;
+
+    setState(() {
+      for (final e in elegidos) {
+        Presentacion? presentacion;
+        for (final pr in e.producto.presentaciones) {
+          if (pr.id == e.presentacionId) presentacion = pr;
+        }
+
+        _lineas.add(
+          _FilaLinea(
+            productoId: e.producto.id,
+            producto: e.producto.nombre,
+            presentacionId: e.presentacionId == 0 ? null : e.presentacionId,
+            presentacion: presentacion?.nombre ?? e.producto.unidadBase,
+            cantidad: e.cantidad,
+            precioUnitario: e.importe,
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _editarLinea(_FilaLinea original) async {
