@@ -20,6 +20,7 @@ export type {
   DataTableColumn,
   DataTableFilter,
   OperatorId,
+  FilterType,
 } from './SysDataTable'
 export { BuscadorCampo } from './BuscadorCampo'
 export type { BuscadorCampoProps, OpcionBuscador } from './BuscadorCampo'

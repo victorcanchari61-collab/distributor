@@ -216,6 +216,18 @@ export function ClientesPage() {
         </span>
       ),
     },
+    {
+      key: 'tipoDoc',
+      label: 'Tipo de documento',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'DNI', label: 'DNI' },
+        { value: 'RUC', label: 'RUC' },
+        { value: 'CODIGO', label: 'Código' },
+      ],
+      value: (row) => row.tipoDoc,
+      render: (row) => <Badge>{row.tipoDoc}</Badge>,
+    },
     { key: 'nombre', label: 'Nombre' },
     { key: 'direccion', label: 'Dirección' },
     { key: 'distrito', label: 'Distrito' },
@@ -227,10 +239,21 @@ export function ClientesPage() {
     },
     { key: 'ruta', label: 'Ruta', align: 'right' },
     { key: 'mercado', label: 'Mercado', align: 'right' },
-
+    {
+      key: 'fechaCreacion',
+      label: 'Fecha de registro',
+      filterType: 'date',
+      value: (row) => new Date(row.fechaCreacion).getTime(),
+      render: (row) => new Date(row.fechaCreacion).toLocaleDateString('es-PE'),
+    },
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>
