@@ -462,6 +462,9 @@ export function ClientesPage() {
         }
         columns={columns}
         rows={clientes}
+        // 13 filas: las que entran en pantalla sin que la tabla tenga su
+        // propio scroll interno.
+        pageSize={13}
         // Con ~2000 clientes la tabla pide solo la página que muestra: la
         // búsqueda, los filtros y el orden se resuelven en la base.
         servidor={{

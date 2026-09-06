@@ -890,11 +890,15 @@ export function SysDataTable<T>({
               onChange={(e) => setPerPage(Number(e.target.value))}
               className="rounded-md border border-zinc-200 bg-white py-1 pr-6 pl-2 text-[12px] text-zinc-700 outline-none focus:border-[rgb(var(--sys-rgb)/0.6)]"
             >
-              {[30, 50, 100, 200].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
+              {/* El tamaño que declara la vista entra en la lista: si no, el
+                  select mostraria un valor que no es ninguna de sus opciones. */}
+              {[...new Set([pageSize, 30, 50, 100, 200])]
+                .sort((a, b) => a - b)
+                .map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
             </select>
           </label>
         </div>
