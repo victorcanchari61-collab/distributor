@@ -642,6 +642,7 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                   AppBoton(
                     texto: _pagos.isEmpty ? 'Agregar pago' : 'Gestionar pagos',
                     variante: BotonVariante.secundario,
+                    expandido: false,
                     onPressed: _gestionarPagos,
                   ),
                 ],

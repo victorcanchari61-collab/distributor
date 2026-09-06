@@ -467,7 +467,7 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                         ),
                       ),
                       const SizedBox(width: Dimen.espacio3),
-                      AppBoton(texto: 'Agregar', onPressed: agregar),
+                      AppBoton(texto: 'Agregar', expandido: false, onPressed: agregar),
                     ],
                   ),
                   const SizedBox(height: Dimen.espacio4),
@@ -488,6 +488,7 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                       AppBoton(
                         texto: 'Listo',
                         variante: BotonVariante.secundario,
+                        expandido: false,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
@@ -604,6 +605,7 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                   AppBoton(
                     texto: _pagos.isEmpty ? 'Agregar pago' : 'Gestionar pagos',
                     variante: BotonVariante.secundario,
+                    expandido: false,
                     onPressed: _gestionarPagos,
                   ),
                 ],

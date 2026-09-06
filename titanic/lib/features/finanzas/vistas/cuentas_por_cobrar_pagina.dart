@@ -291,7 +291,7 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
                   ),
                 ),
                 const SizedBox(width: Dimen.espacio3),
-                AppBoton(texto: 'Agregar', onPressed: () => _registrar(context, nota!)),
+                AppBoton(texto: 'Agregar', expandido: false, onPressed: () => _registrar(context, nota!)),
               ],
             ),
             const SizedBox(height: Dimen.espacio3),
