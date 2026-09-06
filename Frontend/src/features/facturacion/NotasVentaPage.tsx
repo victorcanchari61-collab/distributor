@@ -29,6 +29,7 @@ import type {
   OpcionBuscador,
 } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { clienteApi, productoApi } from '../maestros'
 import type { ClienteResponse, ProductoResponse } from '../maestros'
@@ -72,6 +73,7 @@ type FilaVenta = LineaProductoNueva
  * recibir, así que no hay una pantalla de despachos aparte.
  */
 export function NotasVentaPage() {
+  const { puede } = usePermisos()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [notas, setNotas] = useState<NotaVentaResponse[]>([])
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
@@ -570,9 +572,11 @@ export function NotasVentaPage() {
                             : `S/ ${totalPagado.toFixed(2)} de S/ ${total.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
                         </span>
                       </div>
-                      <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
-                        {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
-                      </Button>
+                      {puede('fact.notaventa', 'cobrar') && (
+                        <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
+                          {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     <p className="mt-4 text-xs text-ink-soft">
@@ -713,9 +717,11 @@ export function NotasVentaPage() {
       title="Notas de venta"
       description="La venta lista tal cual: nació de confirmar un pedido o se registró directa."
       actions={
-        <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
-          Nueva venta
-        </Button>
+        puede('fact.notaventa', 'crear') ? (
+          <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
+            Nueva venta
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -758,23 +764,27 @@ export function NotasVentaPage() {
           <RowAction label={`Ver historial de ${row.numero}`} onClick={() => abrirHistorial(row)}>
             <History size={15} />
           </RowAction>
-          <RowAction
-            label={`Editar ${row.numero}`}
-            disabled={row.estado !== 'CONFIRMADA'}
-            disabledReason="Ya está anulada"
-            onClick={() => abrirEdicion(row)}
-          >
-            <Pencil size={15} />
-          </RowAction>
-          <RowAction
-            label={`Anular ${row.numero}`}
-            tone="danger"
-            disabled={row.estado !== 'CONFIRMADA'}
-            disabledReason="Ya está anulada"
-            onClick={() => anularNota(row)}
-          >
-            <Undo2 size={15} />
-          </RowAction>
+          {puede('fact.notaventa', 'editar') && (
+            <RowAction
+              label={`Editar ${row.numero}`}
+              disabled={row.estado !== 'CONFIRMADA'}
+              disabledReason="Ya está anulada"
+              onClick={() => abrirEdicion(row)}
+            >
+              <Pencil size={15} />
+            </RowAction>
+          )}
+          {puede('fact.notaventa', 'anular') && (
+            <RowAction
+              label={`Anular ${row.numero}`}
+              tone="danger"
+              disabled={row.estado !== 'CONFIRMADA'}
+              disabledReason="Ya está anulada"
+              onClick={() => anularNota(row)}
+            >
+              <Undo2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >

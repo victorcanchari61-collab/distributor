@@ -32,6 +32,7 @@ import type {
   LineaDocumentoResponse,
   ResumenDocumentos,
 } from './inventarioApi'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
 type FilaTransferencia = LineaProductoNueva
@@ -54,6 +55,7 @@ function estadoDocumentoBadge(row: DocumentoInventarioResponse) {
  * promedia ni se inventa.
  */
 export function TransferenciasPage() {
+  const { puede } = usePermisos()
   const [documentos, setDocumentos] = useState<DocumentoInventarioResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
@@ -300,14 +302,16 @@ export function TransferenciasPage() {
       title="Transferencias"
       description="Mueve mercadería entre tus almacenes. El costo viaja con ella: no se vuelve a declarar."
       actions={
-        <Button
-          size="sm"
-          onClick={abrirNuevo}
-          disabled={!cargando && activos.length < 2}
-          iconRight={<Plus size={15} />}
-        >
-          Nueva transferencia
-        </Button>
+        puede('inv.transferencias', 'crear') ? (
+          <Button
+            size="sm"
+            onClick={abrirNuevo}
+            disabled={!cargando && activos.length < 2}
+            iconRight={<Plus size={15} />}
+          >
+            Nueva transferencia
+          </Button>
+        ) : undefined
       }
       alert={
         error ? (
@@ -363,15 +367,17 @@ export function TransferenciasPage() {
           >
             <Eye size={15} />
           </RowAction>
-          <RowAction
-            label={`Anular ${row.numero}`}
-            tone="danger"
-            disabled={row.estado !== 'CONFIRMADO'}
-            disabledReason="Ya está anulada"
-            onClick={() => anular(row)}
-          >
-            <Undo2 size={15} />
-          </RowAction>
+          {puede('inv.transferencias', 'anular') && (
+            <RowAction
+              label={`Anular ${row.numero}`}
+              tone="danger"
+              disabled={row.estado !== 'CONFIRMADO'}
+              disabledReason="Ya está anulada"
+              onClick={() => anular(row)}
+            >
+              <Undo2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >

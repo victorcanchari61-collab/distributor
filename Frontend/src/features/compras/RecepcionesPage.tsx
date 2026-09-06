@@ -14,6 +14,7 @@ import {
 } from '../../components/ui'
 import type { ColumnaDetalleProducto, ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { almacenApi, recepcionApi } from '../inventario'
 import type {
@@ -39,6 +40,7 @@ function estadoRecepcionBadge(row: DocumentoInventarioResponse) {
  * y el punto de entrada para registrar una nueva sin pasar por Mis compras.
  */
 export function RecepcionesPage() {
+  const { puede } = usePermisos()
   const [recepciones, setRecepciones] = useState<DocumentoInventarioResponse[]>([])
   const [compras, setCompras] = useState<CompraResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
@@ -142,14 +144,16 @@ export function RecepcionesPage() {
       title="Recepciones"
       description="Mercadería que llegó contra una compra. Puede ser total o parcial."
       actions={
-        <Button
-          size="sm"
-          onClick={() => setNuevaAbierta(true)}
-          disabled={!cargando && comprasParaRecibir.length === 0}
-          iconRight={<Plus size={15} />}
-        >
-          Nueva recepción
-        </Button>
+        puede('compras.recepciones', 'crear') ? (
+          <Button
+            size="sm"
+            onClick={() => setNuevaAbierta(true)}
+            disabled={!cargando && comprasParaRecibir.length === 0}
+            iconRight={<Plus size={15} />}
+          >
+            Nueva recepción
+          </Button>
+        ) : undefined
       }
       alert={
         error ? (
@@ -200,15 +204,17 @@ export function RecepcionesPage() {
           >
             <Eye size={15} />
           </RowAction>
-          <RowAction
-            label={`Anular ${row.numero}`}
-            tone="danger"
-            disabled={row.estado !== 'CONFIRMADO'}
-            disabledReason="Ya está anulada"
-            onClick={() => anular(row)}
-          >
-            <Undo2 size={15} />
-          </RowAction>
+          {puede('compras.recepciones', 'anular') && (
+            <RowAction
+              label={`Anular ${row.numero}`}
+              tone="danger"
+              disabled={row.estado !== 'CONFIRMADO'}
+              disabledReason="Ya está anulada"
+              onClick={() => anular(row)}
+            >
+              <Undo2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >

@@ -15,6 +15,7 @@ import {
 } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { compraApi } from '../compras/comprasApi'
 import type { CompraResponse, PagoCompraResponse } from '../compras/comprasApi'
@@ -55,6 +56,7 @@ function saldo(c: CompraResponse) {
  * borra el pago: queda en el historial marcado como anulado.
  */
 export function CuentasPorPagarPage() {
+  const { puede } = usePermisos()
   const [cuentas, setCuentas] = useState<CompraResponse[]>([])
   const [metodosPago, setMetodosPago] = useState<MetodoPagoResponse[]>([])
   const [cargando, setCargando] = useState(true)
@@ -409,15 +411,17 @@ export function CuentasPorPagarPage() {
 
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-ink">Pagos</p>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={editandoClave !== null}
-                onClick={agregarFila}
-              >
-                <Plus size={15} />
-                Agregar pago
-              </Button>
+              {puede('finanzas.pagar', 'cobrar') && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={editandoClave !== null}
+                  onClick={agregarFila}
+                >
+                  <Plus size={15} />
+                  Agregar pago
+                </Button>
+              )}
             </div>
 
             <SysDataTable<FilaPago>
@@ -443,22 +447,26 @@ export function CuentasPorPagarPage() {
                   </>
                 ) : fila.anulado ? null : (
                   <>
-                    <RowAction
-                      label={`Editar pago de S/ ${fila.monto.toFixed(2)}`}
-                      tone="edit"
-                      disabled={editandoClave !== null}
-                      onClick={() => editarFila(fila)}
-                    >
-                      <Pencil size={15} />
-                    </RowAction>
-                    <RowAction
-                      label={`Anular pago de S/ ${fila.monto.toFixed(2)}`}
-                      tone="danger"
-                      disabled={editandoClave !== null}
-                      onClick={() => void anularFila(fila)}
-                    >
-                      <Undo2 size={15} />
-                    </RowAction>
+                    {puede('finanzas.pagar', 'cobrar') && (
+                      <RowAction
+                        label={`Editar pago de S/ ${fila.monto.toFixed(2)}`}
+                        tone="edit"
+                        disabled={editandoClave !== null}
+                        onClick={() => editarFila(fila)}
+                      >
+                        <Pencil size={15} />
+                      </RowAction>
+                    )}
+                    {puede('finanzas.pagar', 'cobrar') && (
+                      <RowAction
+                        label={`Anular pago de S/ ${fila.monto.toFixed(2)}`}
+                        tone="danger"
+                        disabled={editandoClave !== null}
+                        onClick={() => void anularFila(fila)}
+                      >
+                        <Undo2 size={15} />
+                      </RowAction>
+                    )}
                   </>
                 )
               }

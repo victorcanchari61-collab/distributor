@@ -14,6 +14,7 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { metodoPagoApi } from './finanzasApi'
 import type { MetodoPagoResponse, TipoMetodoPago } from './finanzasApi'
@@ -43,6 +44,7 @@ const VACIO = {
  * secas no dice a qué cuenta va la plata.
  */
 export function MetodosPagoPage() {
+  const { puede } = usePermisos()
   const [metodos, setMetodos] = useState<MetodoPagoResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -198,9 +200,11 @@ export function MetodosPagoPage() {
       title="Métodos de pago"
       description="Efectivo, billetera digital, transferencia... el mismo catálogo lo usan compras, cuentas por cobrar y por pagar, mis cobros y el arqueo diario."
       actions={
-        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-          Nuevo método
-        </Button>
+        puede('finanzas.metodospago', 'crear') ? (
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nuevo método
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -213,16 +217,20 @@ export function MetodosPagoPage() {
       empty={cargando ? 'Cargando métodos de pago...' : 'Todavía no hay métodos de pago.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-            <Pencil size={15} />
-          </RowAction>
-          <RowAction
-            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-            tone={row.activo ? 'warning' : 'success'}
-            onClick={() => cambiarEstado(row)}
-          >
-            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-          </RowAction>
+          {puede('finanzas.metodospago', 'editar') && (
+            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+              <Pencil size={15} />
+            </RowAction>
+          )}
+          {puede('finanzas.metodospago', 'editar') && (
+            <RowAction
+              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => cambiarEstado(row)}
+            >
+              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            </RowAction>
+          )}
         </>
       )}
     >

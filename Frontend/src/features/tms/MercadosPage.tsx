@@ -13,6 +13,7 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { mercadoApi } from './mercadoApi'
 import type { MercadoRequest, MercadoResponse } from './mercadoApi'
@@ -25,6 +26,7 @@ const VACIO: MercadoRequest = { nombre: '', direccion: '', distrito: '' }
  * solo se mantiene el catálogo.
  */
 export function MercadosPage() {
+  const { puede } = usePermisos()
   const [mercados, setMercados] = useState<MercadoResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -171,9 +173,11 @@ export function MercadosPage() {
       title="Mercados"
       description="Dónde se entrega: un mercado de abastos, una zona con tiendas o una empresa."
       actions={
-        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-          Nuevo mercado
-        </Button>
+        puede('tms.mercados', 'crear') ? (
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nuevo mercado
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -194,19 +198,25 @@ export function MercadosPage() {
       empty={cargando ? 'Cargando mercados...' : 'Todavía no hay mercados registrados.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-            <Pencil size={15} />
-          </RowAction>
-          <RowAction
-            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-            tone={row.activo ? 'warning' : 'success'}
-            onClick={() => cambiarEstado(row)}
-          >
-            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-          </RowAction>
-          <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-            <Trash2 size={15} />
-          </RowAction>
+          {puede('tms.mercados', 'editar') && (
+            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+              <Pencil size={15} />
+            </RowAction>
+          )}
+          {puede('tms.mercados', 'editar') && (
+            <RowAction
+              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => cambiarEstado(row)}
+            >
+              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            </RowAction>
+          )}
+          {puede('tms.mercados', 'eliminar') && (
+            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
+              <Trash2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >

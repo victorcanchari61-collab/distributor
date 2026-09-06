@@ -30,6 +30,7 @@ import type {
   OpcionBuscador,
 } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { clienteApi, productoApi } from '../maestros'
 import type { ClienteResponse, ProductoResponse } from '../maestros'
@@ -57,6 +58,7 @@ type FilaPedido = LineaProductoNueva
  * nunca lo toca.
  */
 export function PedidosPage() {
+  const { puede } = usePermisos()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [pedidos, setPedidos] = useState<PedidoResponse[]>([])
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
@@ -579,9 +581,11 @@ export function PedidosPage() {
       title="Pedidos"
       description="Lo que pide un cliente. Al confirmarlo nace la nota de venta correspondiente."
       actions={
-        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-          Nuevo pedido
-        </Button>
+        puede('fact.pedidos', 'crear') ? (
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nuevo pedido
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -625,32 +629,38 @@ export function PedidosPage() {
           <RowAction label={`Ver historial de ${row.numero}`} onClick={() => abrirHistorial(row)}>
             <History size={15} />
           </RowAction>
-          <RowAction
-            label={`Editar ${row.numero}`}
-            disabled={row.estado !== 'PENDIENTE'}
-            disabledReason="Solo se edita un pedido pendiente"
-            onClick={() => abrirEdicion(row)}
-          >
-            <Pencil size={15} />
-          </RowAction>
-          <RowAction
-            label={`Confirmar y despachar ${row.numero}`}
-            tone="success"
-            disabled={row.estado !== 'PENDIENTE'}
-            disabledReason={row.estado === 'CONFIRMADO' ? 'Ya fue confirmado' : 'Está anulado'}
-            onClick={() => abrirConfirmar(row)}
-          >
-            <ShoppingBag size={15} />
-          </RowAction>
-          <RowAction
-            label={`Anular ${row.numero}`}
-            tone="danger"
-            disabled={row.estado !== 'PENDIENTE'}
-            disabledReason={row.estado === 'CONFIRMADO' ? 'Ya generó su venta: anula esa' : 'Ya está anulado'}
-            onClick={() => anularPedido(row)}
-          >
-            <Undo2 size={15} />
-          </RowAction>
+          {puede('fact.pedidos', 'editar') && (
+            <RowAction
+              label={`Editar ${row.numero}`}
+              disabled={row.estado !== 'PENDIENTE'}
+              disabledReason="Solo se edita un pedido pendiente"
+              onClick={() => abrirEdicion(row)}
+            >
+              <Pencil size={15} />
+            </RowAction>
+          )}
+          {puede('fact.pedidos', 'confirmar') && (
+            <RowAction
+              label={`Confirmar y despachar ${row.numero}`}
+              tone="success"
+              disabled={row.estado !== 'PENDIENTE'}
+              disabledReason={row.estado === 'CONFIRMADO' ? 'Ya fue confirmado' : 'Está anulado'}
+              onClick={() => abrirConfirmar(row)}
+            >
+              <ShoppingBag size={15} />
+            </RowAction>
+          )}
+          {puede('fact.pedidos', 'anular') && (
+            <RowAction
+              label={`Anular ${row.numero}`}
+              tone="danger"
+              disabled={row.estado !== 'PENDIENTE'}
+              disabledReason={row.estado === 'CONFIRMADO' ? 'Ya generó su venta: anula esa' : 'Ya está anulado'}
+              onClick={() => anularPedido(row)}
+            >
+              <Undo2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >

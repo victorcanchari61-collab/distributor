@@ -15,12 +15,14 @@ import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { almacenApi } from './inventarioApi'
 import type { AlmacenResponse } from './inventarioApi'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { Checkbox } from '../../components/ui'
 
 const VACIO = { codigo: '', nombre: '', direccion: '', esPrincipal: false }
 
 export function AlmacenesPage() {
+  const { puede } = usePermisos()
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -158,9 +160,11 @@ export function AlmacenesPage() {
       title="Almacenes"
       description="Dónde se guarda la mercadería. El principal es donde va todo movimiento sin indicar otro."
       actions={
-        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-          Nuevo almacén
-        </Button>
+        puede('inv.almacenes', 'crear') ? (
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nuevo almacén
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -186,10 +190,12 @@ export function AlmacenesPage() {
       empty={cargando ? 'Cargando almacenes...' : 'Todavía no hay almacenes.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-            <Pencil size={15} />
-          </RowAction>
-          {!row.esPrincipal && (
+          {puede('inv.almacenes', 'editar') && (
+            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+              <Pencil size={15} />
+            </RowAction>
+          )}
+          {!row.esPrincipal && puede('inv.almacenes', 'editar') && (
             <RowAction
               label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
               tone={row.activo ? 'warning' : 'success'}

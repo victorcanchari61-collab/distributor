@@ -32,6 +32,7 @@ import type {
   TipoPrestamo,
   ResumenPrestamos,
 } from './inventarioApi'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
 type FilaPrestamo = LineaProductoNueva
@@ -55,6 +56,7 @@ function estadoPrestamoBadge(estado: PrestamoResponse['estado']) {
  * cero soles mientras está prestado.
  */
 export function PrestamosPage() {
+  const { puede } = usePermisos()
   const [prestamos, setPrestamos] = useState<PrestamoResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
@@ -356,9 +358,11 @@ export function PrestamosPage() {
       title="Préstamos"
       description="Mercadería que sale o entra desde fuera de la empresa: se presta y se espera de vuelta."
       actions={
-        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-          Nuevo préstamo
-        </Button>
+        puede('inv.prestamos', 'crear') ? (
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nuevo préstamo
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -400,15 +404,17 @@ export function PrestamosPage() {
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
             <Eye size={15} />
           </RowAction>
-          <RowAction
-            label={`Registrar devolución de ${row.numero}`}
-            tone="warning"
-            disabled={row.estado !== 'PENDIENTE'}
-            disabledReason="Ya fue devuelto"
-            onClick={() => abrirDevolucion(row)}
-          >
-            <Undo2 size={15} />
-          </RowAction>
+          {puede('inv.prestamos', 'confirmar') && (
+            <RowAction
+              label={`Registrar devolución de ${row.numero}`}
+              tone="warning"
+              disabled={row.estado !== 'PENDIENTE'}
+              disabledReason="Ya fue devuelto"
+              onClick={() => abrirDevolucion(row)}
+            >
+              <Undo2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >

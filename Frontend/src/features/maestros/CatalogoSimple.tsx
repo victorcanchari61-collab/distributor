@@ -13,6 +13,7 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { usePermisos } from '../../lib/permisos'
 
 /** Lo minimo que tiene una fila de catalogo simple. */
 export interface FilaCatalogo {
@@ -62,6 +63,7 @@ export function CatalogoSimple({
   onEliminar,
   onRecargar,
 }: CatalogoSimpleProps) {
+  const { puede } = usePermisos()
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<FilaCatalogo | null>(null)
   const [form, setForm] = useState({ nombre: '', descripcion: '' })
@@ -183,9 +185,11 @@ export function CatalogoSimple({
       title={titulo}
       description={descripcion}
       actions={
-        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-          Nuevo
-        </Button>
+        puede('maestros.productos', 'crear') ? (
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nuevo
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       columns={columns}
@@ -194,19 +198,25 @@ export function CatalogoSimple({
       empty="Todavía no hay registros."
       rowActions={(row) => (
         <>
-          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-            <Pencil size={15} />
-          </RowAction>
-          <RowAction
-            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-            tone={row.activo ? 'warning' : 'success'}
-            onClick={() => cambiarEstado(row)}
-          >
-            <Badge tone={row.activo ? 'warning' : 'success'}>{row.activo ? 'Off' : 'On'}</Badge>
-          </RowAction>
-          <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-            <Trash2 size={15} />
-          </RowAction>
+          {puede('maestros.productos', 'editar') && (
+            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+              <Pencil size={15} />
+            </RowAction>
+          )}
+          {puede('maestros.productos', 'editar') && (
+            <RowAction
+              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => cambiarEstado(row)}
+            >
+              <Badge tone={row.activo ? 'warning' : 'success'}>{row.activo ? 'Off' : 'On'}</Badge>
+            </RowAction>
+          )}
+          {puede('maestros.productos', 'eliminar') && (
+            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
+              <Trash2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >

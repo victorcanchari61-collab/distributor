@@ -1,0 +1,4 @@
+cd /var/www/distributor/Backend/Backend && export ASPNETCORE_ENVIRONMENT=Production && dotnet ef database update
+cd /var/www/distributor/Backend/Backend && dotnet publish -c Release -o /var/www/distributor/publish
+sudo systemctl restart distributor-backend && sudo systemctl status distributor-backend --no-pager
+cd /var/www/distributor/Frontend && npm run build

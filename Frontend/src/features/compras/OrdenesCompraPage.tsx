@@ -39,6 +39,7 @@ import type {
   OpcionBuscador,
 } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { productoApi, proveedorApi } from '../maestros'
 import type { ProductoResponse, ProveedorResponse } from '../maestros'
@@ -68,6 +69,7 @@ type FilaOrden = LineaProductoNueva
  * la orden y hace nacer la Compra correspondiente, visible en "Mis compras".
  */
 export function OrdenesCompraPage() {
+  const { puede } = usePermisos()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [ordenes, setOrdenes] = useState<OrdenCompraResponse[]>([])
   const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
@@ -509,9 +511,11 @@ export function OrdenesCompraPage() {
       title="Órdenes de compra"
       description="Lo que se le pide a un proveedor. Al confirmarla nace la compra correspondiente."
       actions={
-        <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
-          Nueva orden
-        </Button>
+        puede('compras.ordenes', 'crear') ? (
+          <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
+            Nueva orden
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -549,32 +553,38 @@ export function OrdenesCompraPage() {
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
             <Eye size={15} />
           </RowAction>
-          <RowAction
-            label={`Editar ${row.numero}`}
-            disabled={row.estado !== 'PENDIENTE'}
-            disabledReason="Solo se edita una orden pendiente"
-            onClick={() => abrirEdicion(row)}
-          >
-            <Pencil size={15} />
-          </RowAction>
-          <RowAction
-            label={`Confirmar y convertir a compra ${row.numero}`}
-            tone="success"
-            disabled={row.estado !== 'PENDIENTE'}
-            disabledReason={row.estado === 'CONFIRMADA' ? 'Ya fue confirmada' : 'Está anulada'}
-            onClick={() => confirmarOrden(row)}
-          >
-            <ShoppingBag size={15} />
-          </RowAction>
-          <RowAction
-            label={`Anular ${row.numero}`}
-            tone="danger"
-            disabled={row.estado !== 'PENDIENTE'}
-            disabledReason={row.estado === 'CONFIRMADA' ? 'Ya generó su compra: anula esa' : 'Ya está anulada'}
-            onClick={() => anularOrden(row)}
-          >
-            <Undo2 size={15} />
-          </RowAction>
+          {puede('compras.ordenes', 'editar') && (
+            <RowAction
+              label={`Editar ${row.numero}`}
+              disabled={row.estado !== 'PENDIENTE'}
+              disabledReason="Solo se edita una orden pendiente"
+              onClick={() => abrirEdicion(row)}
+            >
+              <Pencil size={15} />
+            </RowAction>
+          )}
+          {puede('compras.ordenes', 'confirmar') && (
+            <RowAction
+              label={`Confirmar y convertir a compra ${row.numero}`}
+              tone="success"
+              disabled={row.estado !== 'PENDIENTE'}
+              disabledReason={row.estado === 'CONFIRMADA' ? 'Ya fue confirmada' : 'Está anulada'}
+              onClick={() => confirmarOrden(row)}
+            >
+              <ShoppingBag size={15} />
+            </RowAction>
+          )}
+          {puede('compras.ordenes', 'anular') && (
+            <RowAction
+              label={`Anular ${row.numero}`}
+              tone="danger"
+              disabled={row.estado !== 'PENDIENTE'}
+              disabledReason={row.estado === 'CONFIRMADA' ? 'Ya generó su compra: anula esa' : 'Ya está anulada'}
+              onClick={() => anularOrden(row)}
+            >
+              <Undo2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >

@@ -13,6 +13,7 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { rutaApi } from './rutaApi'
 import type { RutaRequest, RutaResponse } from './rutaApi'
@@ -24,6 +25,7 @@ const VACIO: RutaRequest = { nombre: '' }
  * Clientes; acá solo se mantiene el catálogo.
  */
 export function RutasPage() {
+  const { puede } = usePermisos()
   const [rutas, setRutas] = useState<RutaResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -151,9 +153,11 @@ export function RutasPage() {
       title="Rutas"
       description="Rutas de reparto a las que pertenece cada cliente."
       actions={
-        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-          Nueva ruta
-        </Button>
+        puede('tms.rutas', 'crear') ? (
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nueva ruta
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -174,19 +178,25 @@ export function RutasPage() {
       empty={cargando ? 'Cargando rutas...' : 'Todavía no hay rutas registradas.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-            <Pencil size={15} />
-          </RowAction>
-          <RowAction
-            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-            tone={row.activo ? 'warning' : 'success'}
-            onClick={() => cambiarEstado(row)}
-          >
-            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-          </RowAction>
-          <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-            <Trash2 size={15} />
-          </RowAction>
+          {puede('tms.rutas', 'editar') && (
+            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+              <Pencil size={15} />
+            </RowAction>
+          )}
+          {puede('tms.rutas', 'editar') && (
+            <RowAction
+              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => cambiarEstado(row)}
+            >
+              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            </RowAction>
+          )}
+          {puede('tms.rutas', 'eliminar') && (
+            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
+              <Trash2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >

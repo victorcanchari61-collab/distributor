@@ -37,6 +37,7 @@ import type {
   ResumenDocumentos,
 } from './inventarioApi'
 import { MotivosTabla } from './MotivosTabla'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
 type Pestana = 'ajustes' | 'motivos'
@@ -60,6 +61,7 @@ function estadoDocumentoBadge(row: DocumentoInventarioResponse) {
  * operación que lo explica.
  */
 export function AjustesPage() {
+  const { puede } = usePermisos()
   const [pestana, setPestana] = useState<Pestana>('ajustes')
   const [documentos, setDocumentos] = useState<DocumentoInventarioResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
@@ -531,9 +533,11 @@ export function AjustesPage() {
       title="Ajustes de inventario"
       description="Carga inicial, mermas, sobrantes y faltantes. Ventas y compras generan su propio movimiento."
       actions={
-        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-          Nuevo ajuste
-        </Button>
+        puede('inv.ajustes', 'crear') ? (
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nuevo ajuste
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -584,15 +588,17 @@ export function AjustesPage() {
           >
             <Eye size={15} />
           </RowAction>
-          <RowAction
-            label={`Anular ${row.numero}`}
-            tone="danger"
-            disabled={row.estado !== 'CONFIRMADO'}
-            disabledReason="Ya está anulado"
-            onClick={() => anular(row)}
-          >
-            <Undo2 size={15} />
-          </RowAction>
+          {puede('inv.ajustes', 'anular') && (
+            <RowAction
+              label={`Anular ${row.numero}`}
+              tone="danger"
+              disabled={row.estado !== 'CONFIRMADO'}
+              disabledReason="Ya está anulado"
+              onClick={() => anular(row)}
+            >
+              <Undo2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >

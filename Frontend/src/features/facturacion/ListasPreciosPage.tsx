@@ -19,9 +19,11 @@ import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse, PrecioResponse } from './listaPrecioApi'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
 export function ListasPreciosPage() {
+  const { puede } = usePermisos()
   const [listas, setListas] = useState<ListaPrecioResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [listaActiva, setListaActiva] = useState<number | null>(null)
@@ -201,31 +203,35 @@ export function ListasPreciosPage() {
         }
         actions={
           <>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setEditando(null)
-                setForm({ nombre: '', descripcion: '' })
-                setErrorForm('')
-                setAbierto(true)
-              }}
-            >
-              <Plus size={15} />
-              Nueva lista
-            </Button>
-            <Button
-              size="sm"
-              disabled={!listaActiva}
-              onClick={() => {
-                setPrecioForm({ productoId: 0, presentacionId: 0, precio: '', cantidadMinima: '1' })
-                setErrorForm('')
-                setPrecioAbierto(true)
-              }}
-              iconRight={<Plus size={15} />}
-            >
-              Agregar precio
-            </Button>
+            {puede('fact.precios', 'crear') && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setEditando(null)
+                  setForm({ nombre: '', descripcion: '' })
+                  setErrorForm('')
+                  setAbierto(true)
+                }}
+              >
+                <Plus size={15} />
+                Nueva lista
+              </Button>
+            )}
+            {puede('fact.precios', 'crear') && (
+              <Button
+                size="sm"
+                disabled={!listaActiva}
+                onClick={() => {
+                  setPrecioForm({ productoId: 0, presentacionId: 0, precio: '', cantidadMinima: '1' })
+                  setErrorForm('')
+                  setPrecioAbierto(true)
+                }}
+                iconRight={<Plus size={15} />}
+              >
+                Agregar precio
+              </Button>
+            )}
           </>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
@@ -262,7 +268,7 @@ export function ListasPreciosPage() {
           ) : undefined
         }
         banner={
-          lista && !lista.esPredeterminada ? (
+          lista && !lista.esPredeterminada && puede('fact.precios', 'editar') ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-panel border border-line bg-white p-4">
               <p className="text-sm text-ink-muted">
                 Los clientes sin lista propia compran con la predeterminada.
@@ -308,6 +314,7 @@ export function ListasPreciosPage() {
         }
         rowActions={(row) => (
           <>
+            {puede('fact.precios', 'editar') && (
             <RowAction
               label={`Editar precio de ${row.producto}`}
               onClick={() => {
@@ -324,6 +331,8 @@ export function ListasPreciosPage() {
             >
               <Pencil size={15} />
             </RowAction>
+            )}
+            {puede('fact.precios', 'eliminar') && (
             <RowAction
               label={`Eliminar precio de ${row.producto}`}
               tone="danger"
@@ -343,6 +352,7 @@ export function ListasPreciosPage() {
             >
               <Trash2 size={15} />
             </RowAction>
+            )}
           </>
         )}
       >

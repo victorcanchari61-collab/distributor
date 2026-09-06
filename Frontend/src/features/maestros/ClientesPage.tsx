@@ -29,6 +29,7 @@ import type { ConsultaTabla, DataTableColumn, TipoDocumento } from '../../compon
 import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { valorDe } from '../../lib/excel'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { ubigeoApi } from '../../lib/ubigeoApi'
 import type { DepartamentoResponse, DistritoResponse, ProvinciaResponse } from '../../lib/ubigeoApi'
@@ -53,6 +54,7 @@ const VACIO: ClienteRequest = {
 const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO']
 
 export function ClientesPage() {
+  const { puede } = usePermisos()
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [mercados, setMercados] = useState<MercadoResponse[]>([])
   const [rutas, setRutas] = useState<RutaResponse[]>([])
@@ -420,13 +422,17 @@ export function ClientesPage() {
         description="Bodegas y puestos a los que se vende. El documento puede ser DNI, RUC o un código interno."
         actions={
           <>
-            <Button variant="secondary" size="sm" onClick={() => setImportando(true)}>
-              <Upload size={15} />
-              Importar
-            </Button>
-            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-              Nuevo cliente
-            </Button>
+            {puede('maestros.clientes', 'importar') && (
+              <Button variant="secondary" size="sm" onClick={() => setImportando(true)}>
+                <Upload size={15} />
+                Importar
+              </Button>
+            )}
+            {puede('maestros.clientes', 'crear') && (
+              <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+                Nuevo cliente
+              </Button>
+            )}
           </>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
@@ -477,19 +483,25 @@ export function ClientesPage() {
         empty={cargando ? 'Cargando clientes...' : 'Todavía no hay clientes registrados.'}
         rowActions={(row) => (
           <>
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-              <Trash2 size={15} />
-            </RowAction>
+            {puede('maestros.clientes', 'editar') && (
+              <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+                <Pencil size={15} />
+              </RowAction>
+            )}
+            {puede('maestros.clientes', 'editar') && (
+              <RowAction
+                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+                tone={row.activo ? 'warning' : 'success'}
+                onClick={() => cambiarEstado(row)}
+              >
+                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+              </RowAction>
+            )}
+            {puede('maestros.clientes', 'eliminar') && (
+              <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
+                <Trash2 size={15} />
+              </RowAction>
+            )}
           </>
         )}
       >

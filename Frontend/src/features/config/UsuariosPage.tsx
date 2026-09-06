@@ -14,6 +14,7 @@ import {
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { rolApi } from './rolApi'
 import type { RolResponse } from './rolApi'
@@ -26,6 +27,7 @@ export type Usuario = UsuarioResponse
 const VACIO = { nombre: '', email: '', password: '', dni: '', rolId: 0 }
 
 export function UsuariosPage() {
+  const { puede } = usePermisos()
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [cargando, setCargando] = useState(true)
   const [roles, setRoles] = useState<RolResponse[]>([])
@@ -208,9 +210,11 @@ export function UsuariosPage() {
       title="Usuarios del sistema"
       description="Quién entra a la plataforma y con qué rol."
       actions={
-        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-          Nuevo usuario
-        </Button>
+        puede('config.usuarios', 'crear') ? (
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nuevo usuario
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -243,16 +247,20 @@ export function UsuariosPage() {
       empty={cargando ? 'Cargando usuarios...' : 'Todavía no hay usuarios registrados.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-            <Pencil size={15} />
-          </RowAction>
-          <RowAction
-            label={`${row.activo ? 'Deshabilitar' : 'Habilitar'} ${row.nombre}`}
-            tone={row.activo ? 'warning' : 'success'}
-            onClick={() => void alternarEstado(row)}
-          >
-            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-          </RowAction>
+          {puede('config.usuarios', 'editar') && (
+            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+              <Pencil size={15} />
+            </RowAction>
+          )}
+          {puede('config.usuarios', 'editar') && (
+            <RowAction
+              label={`${row.activo ? 'Deshabilitar' : 'Habilitar'} ${row.nombre}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => void alternarEstado(row)}
+            >
+              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            </RowAction>
+          )}
         </>
       )}
     >

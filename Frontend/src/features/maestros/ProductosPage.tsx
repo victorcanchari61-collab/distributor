@@ -32,6 +32,7 @@ import {
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { exportarExcel, valorDe } from '../../lib/excel'
+import { usePermisos } from '../../lib/permisos'
 import { CatalogoSimple } from './CatalogoSimple'
 import { CostoReferenciaInput } from './CostoReferenciaInput'
 import { PresentacionesEditor } from './PresentacionesEditor'
@@ -86,6 +87,7 @@ type CatalogoRapido = 'categoria' | 'marca' | 'unidad' | 'unidadContenido' | nul
 const esUnidad = (c: CatalogoRapido) => c === 'unidad' || c === 'unidadContenido'
 
 export function ProductosPage() {
+  const { puede } = usePermisos()
   const [pestana, setPestana] = useState<Pestana>('productos')
 
   const [productos, setProductos] = useState<ProductoResponse[]>([])
@@ -548,15 +550,21 @@ export function ProductosPage() {
         description="Qué se compra y se vende, y en qué presentaciones."
         actions={
           <>
-            <Button variant="secondary" size="sm" onClick={exportarProductos} iconRight={<Download size={15} />}>
-              Exportar
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => setImportando(true)} iconRight={<Upload size={15} />}>
-              Importar
-            </Button>
-            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-              Nuevo producto
-            </Button>
+            {puede('maestros.productos', 'exportar') && (
+              <Button variant="secondary" size="sm" onClick={exportarProductos} iconRight={<Download size={15} />}>
+                Exportar
+              </Button>
+            )}
+            {puede('maestros.productos', 'importar') && (
+              <Button variant="secondary" size="sm" onClick={() => setImportando(true)} iconRight={<Upload size={15} />}>
+                Importar
+              </Button>
+            )}
+            {puede('maestros.productos', 'crear') && (
+              <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+                Nuevo producto
+              </Button>
+            )}
           </>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
@@ -604,19 +612,25 @@ export function ProductosPage() {
         empty={cargando ? 'Cargando productos...' : 'Todavía no hay productos registrados.'}
         rowActions={(row) => (
           <>
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-              <Trash2 size={15} />
-            </RowAction>
+            {puede('maestros.productos', 'editar') && (
+              <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+                <Pencil size={15} />
+              </RowAction>
+            )}
+            {puede('maestros.productos', 'editar') && (
+              <RowAction
+                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+                tone={row.activo ? 'warning' : 'success'}
+                onClick={() => cambiarEstado(row)}
+              >
+                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+              </RowAction>
+            )}
+            {puede('maestros.productos', 'eliminar') && (
+              <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
+                <Trash2 size={15} />
+              </RowAction>
+            )}
           </>
         )}
       >
@@ -949,6 +963,7 @@ function UnidadesTabla({
   unidades: UnidadResponse[]
   onRecargar: () => Promise<void>
 }) {
+  const { puede } = usePermisos()
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<UnidadResponse | null>(null)
   const [form, setForm] = useState({
@@ -1030,9 +1045,11 @@ function UnidadesTabla({
       title="Unidades de medida"
       description="Kilo, unidad, saco, caja. Cuántos kilos trae un saco se define en cada producto."
       actions={
-        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-          Nueva unidad
-        </Button>
+        puede('maestros.productos', 'crear') ? (
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+            Nueva unidad
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       columns={columns}
@@ -1042,13 +1059,16 @@ function UnidadesTabla({
       empty="No hay unidades."
       rowActions={(row) => (
         <>
-          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-            <Pencil size={15} />
-          </RowAction>
-          <RowAction
-            label={`Eliminar ${row.nombre}`}
-            tone="danger"
-            onClick={() =>
+          {puede('maestros.productos', 'editar') && (
+            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+              <Pencil size={15} />
+            </RowAction>
+          )}
+          {puede('maestros.productos', 'eliminar') && (
+            <RowAction
+              label={`Eliminar ${row.nombre}`}
+              tone="danger"
+              onClick={() =>
               confirmar({
                 titulo: `Eliminar ${row.nombre}`,
                 mensaje: 'Solo se puede eliminar si ningún producto la usa.',
@@ -1065,9 +1085,10 @@ function UnidadesTabla({
                 },
               })
             }
-          >
-            <Trash2 size={15} />
-          </RowAction>
+            >
+              <Trash2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >

@@ -24,6 +24,7 @@ import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { empresaApi } from './empresaApi'
 import type { EmpresaRequest, EmpresaResponse } from './empresaApi'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
 const VACIA: EmpresaRequest = {
@@ -42,6 +43,7 @@ const VACIA: EmpresaRequest = {
 }
 
 export function EmpresaPage() {
+  const { puede } = usePermisos()
   const [empresas, setEmpresas] = useState<EmpresaResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -229,9 +231,11 @@ export function EmpresaPage() {
       title="Empresas"
       description="Puedes registrar varias, pero solo una opera el sistema a la vez."
       actions={
-        <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
-          Nueva empresa
-        </Button>
+        puede('config.empresa', 'crear') ? (
+          <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
+            Nueva empresa
+          </Button>
+        ) : undefined
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       banner={
@@ -254,7 +258,7 @@ export function EmpresaPage() {
       empty={cargando ? 'Cargando empresas...' : 'Todavía no hay empresas registradas.'}
       rowActions={(row) => (
         <>
-          {!row.activa && (
+          {!row.activa && puede('config.empresa', 'editar') && (
             <RowAction
               label={`Activar ${row.nombreComercial}`}
               tone="success"
@@ -266,30 +270,36 @@ export function EmpresaPage() {
             </RowAction>
           )}
 
-          <RowAction label={`Editar ${row.nombreComercial}`} onClick={() => abrirEdicion(row)}>
-            <Pencil size={15} />
-          </RowAction>
+          {puede('config.empresa', 'editar') && (
+            <RowAction label={`Editar ${row.nombreComercial}`} onClick={() => abrirEdicion(row)}>
+              <Pencil size={15} />
+            </RowAction>
+          )}
 
           {/* La empresa activa no se deshabilita: primero se activa otra. */}
-          <RowAction
-            label={`${row.habilitada ? 'Deshabilitar' : 'Habilitar'} ${row.nombreComercial}`}
-            tone={row.habilitada ? 'warning' : 'success'}
-            disabled={row.activa}
-            disabledReason="Es la empresa activa: activa otra antes de deshabilitarla"
-            onClick={() => void cambiarHabilitacion(row)}
-          >
-            {row.habilitada ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-          </RowAction>
+          {puede('config.empresa', 'editar') && (
+            <RowAction
+              label={`${row.habilitada ? 'Deshabilitar' : 'Habilitar'} ${row.nombreComercial}`}
+              tone={row.habilitada ? 'warning' : 'success'}
+              disabled={row.activa}
+              disabledReason="Es la empresa activa: activa otra antes de deshabilitarla"
+              onClick={() => void cambiarHabilitacion(row)}
+            >
+              {row.habilitada ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            </RowAction>
+          )}
 
-          <RowAction
-            label={`Eliminar ${row.nombreComercial}`}
-            tone="danger"
-            disabled={row.activa}
-            disabledReason="Es la empresa activa: no se puede eliminar"
-            onClick={() => void eliminar(row)}
-          >
-            <Trash2 size={15} />
-          </RowAction>
+          {puede('config.empresa', 'eliminar') && (
+            <RowAction
+              label={`Eliminar ${row.nombreComercial}`}
+              tone="danger"
+              disabled={row.activa}
+              disabledReason="Es la empresa activa: no se puede eliminar"
+              onClick={() => void eliminar(row)}
+            >
+              <Trash2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
       note="Activa es la empresa con la que opera el sistema; deshabilitada se retira sin borrarla y no se puede activar. La empresa activa no se elimina ni se deshabilita: primero activa otra."

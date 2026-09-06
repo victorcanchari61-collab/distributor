@@ -169,8 +169,11 @@ public class UsuarioService : IUsuarioService
             new Claim(JwtRegisteredClaimNames.Email, usuario.Email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(ClaimTypes.Name, usuario.Nombre),
-            // El claim lleva el NOMBRE del rol: asi [Authorize(Roles = "Administrador")]
-            // sigue funcionando ahora que los roles viven en tabla.
+            // El nombre del rol viaja en el token solo para mostrarlo. Los
+            // permisos NO: si estuvieran aqui, concederle uno a alguien no
+            // surtiria efecto hasta que cerrara sesion — y todo el circuito de
+            // solicitar y aprobar existe para que sirva en el momento.
+            // Quien decide es PermisoService, leyendo de la base.
             new Claim(ClaimTypes.Role, usuario.Rol?.Nombre ?? string.Empty)
         };
 

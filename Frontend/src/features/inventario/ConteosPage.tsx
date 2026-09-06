@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ClipboardCheck, Save, Search } from 'lucide-react'
 import { Alert, Badge, Button, Desplegable, Input, PageHeader, PageSection } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { usePermisos } from '../../lib/permisos'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
 import { almacenApi, ajusteApi, motivoApi, stockApi } from './inventarioApi'
@@ -15,6 +16,7 @@ import type { AlmacenResponse, MotivoResponse, StockResponse } from './inventari
  * un conteo simplemente genera el ajuste por ti.
  */
 export function ConteosPage() {
+  const { puede } = usePermisos()
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [motivos, setMotivos] = useState<MotivoResponse[]>([])
@@ -187,10 +189,12 @@ export function ConteosPage() {
         title="Contar"
         description={`${contadosActivos.length} producto(s) con conteo escrito, de ${visibles.length} mostrados.`}
         actions={
-          <Button size="sm" onClick={() => void registrarConteo()} loading={guardando}>
-            <Save size={15} />
-            Registrar conteo
-          </Button>
+          puede('inv.conteos', 'crear') ? (
+            <Button size="sm" onClick={() => void registrarConteo()} loading={guardando}>
+              <Save size={15} />
+              Registrar conteo
+            </Button>
+          ) : undefined
         }
       >
         <div className="max-h-[28rem] overflow-y-auto rounded-field border border-line">
