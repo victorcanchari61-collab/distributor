@@ -15,6 +15,9 @@ public class LineaVentaResponse
     public decimal Cantidad { get; set; }
     public decimal PrecioUnitario { get; set; }
     public decimal Subtotal { get; set; }
+
+    /// <summary>Solo aplica a líneas de pedido: se quitó al editarlo, sin borrarse.</summary>
+    public bool Anulado { get; set; }
 }
 
 public class PedidoResponse

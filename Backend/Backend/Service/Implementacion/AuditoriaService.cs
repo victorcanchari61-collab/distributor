@@ -25,6 +25,14 @@ public class AuditoriaService : IAuditoriaService
 
     public Task<IEnumerable<string>> GetEntidadesAsync() => _repository.GetEntidadesAsync();
 
+    public async Task<IEnumerable<AuditoriaResponse>> GetHistorialDocumentoAsync(
+        string entidadPrincipal, int id, string entidadDetalle, IEnumerable<int> idsDetalleActuales)
+    {
+        var registros = await _repository.GetHistorialDocumentoAsync(
+            entidadPrincipal, id, entidadDetalle, idsDetalleActuales);
+        return registros.Select(Map);
+    }
+
     private static AuditoriaResponse Map(RegistroAuditoria r) => new()
     {
         Id = r.Id,

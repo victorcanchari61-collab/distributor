@@ -30,6 +30,7 @@ public class VentasService : IVentasService
     private readonly IVentasRepository _repository;
     private readonly IProductoRepository _productos;
     private readonly IInventarioService _inventario;
+    private readonly IAuditoriaService _auditoria;
     private readonly IValidator<CrearPedidoRequest> _pedidoValidator;
     private readonly IValidator<ConfirmarPedidoRequest> _confirmarValidator;
     private readonly IValidator<CrearNotaVentaRequest> _notaVentaValidator;
@@ -40,6 +41,7 @@ public class VentasService : IVentasService
         IVentasRepository repository,
         IProductoRepository productos,
         IInventarioService inventario,
+        IAuditoriaService auditoria,
         IValidator<CrearPedidoRequest> pedidoValidator,
         IValidator<ConfirmarPedidoRequest> confirmarValidator,
         IValidator<CrearNotaVentaRequest> notaVentaValidator,
@@ -49,6 +51,7 @@ public class VentasService : IVentasService
         _repository = repository;
         _productos = productos;
         _inventario = inventario;
+        _auditoria = auditoria;
         _pedidoValidator = pedidoValidator;
         _confirmarValidator = confirmarValidator;
         _notaVentaValidator = notaVentaValidator;
@@ -151,7 +154,9 @@ public class VentasService : IVentasService
             formaPago: FormaPagoVenta.Credito,
             pagos: [],
             observacion: pedido.Observacion,
-            lineas: pedido.Detalle.Select(d => new PedidoDetalle
+            // Una línea anulada al editar el pedido no se despacha: quedó
+            // fuera del total y no debe salir del almacén.
+            lineas: pedido.Detalle.Where(d => !d.Anulado).Select(d => new PedidoDetalle
             {
                 ProductoId = d.ProductoId,
                 PresentacionId = d.PresentacionId,
@@ -166,6 +171,36 @@ public class VentasService : IVentasService
 
         await _notificador.AvisarAsync("pedidos", "confirmado", MapPedido(pedido));
         return notaVenta;
+    }
+
+    /// <summary>Qué cambió en este pedido y sus líneas, para verlo desde el propio documento.</summary>
+    public async Task<IEnumerable<AuditoriaResponse>> GetHistorialPedidoAsync(int id)
+    {
+        var pedido = await GetPedidoOrThrowAsync(id);
+        var idsLineas = pedido.Detalle.Select(d => d.Id);
+        return await _auditoria.GetHistorialDocumentoAsync("Pedido", id, "PedidoDetalle", idsLineas);
+    }
+
+    /// <summary>
+    /// Qué cambió en esta nota de venta: como no se editan cantidades, esto es
+    /// sobre todo anulaciones y movimientos de pago.
+    /// </summary>
+    public async Task<IEnumerable<AuditoriaResponse>> GetHistorialNotaVentaAsync(int id)
+    {
+        var notaVenta = await GetNotaVentaOrThrowAsync(id);
+        var idsLineas = notaVenta.Detalle.Select(d => d.Id);
+        var idsPagos = notaVenta.Pagos.Select(p => p.Id);
+
+        var historial = (await _auditoria.GetHistorialDocumentoAsync("NotaVenta", id, "NotaVentaDetalle", idsLineas))
+            .ToList();
+
+        // El de arriba ya trajo los cambios de cabecera (Entidad == "NotaVenta");
+        // de esta segunda pasada solo hacen falta los de PagoVenta, para no
+        // repetir la cabecera dos veces.
+        var historialPagos = await _auditoria.GetHistorialDocumentoAsync("NotaVenta", id, "PagoVenta", idsPagos);
+        historial.AddRange(historialPagos.Where(r => r.Entidad == "PagoVenta"));
+
+        return historial.OrderByDescending(r => r.Fecha).ThenByDescending(r => r.Id);
     }
 
     public async Task AnularPedidoAsync(int id)
@@ -490,12 +525,14 @@ public class VentasService : IVentasService
 
             lineas.Add(new PedidoDetalle
             {
+                Id = linea.Id ?? 0,
                 PedidoId = pedidoId,
                 ProductoId = producto.Id,
                 PresentacionId = presentacion?.Id,
                 CantidadPresentacion = linea.Cantidad,
                 Cantidad = cantidad,
-                PrecioUnitario = cantidad == 0 ? 0 : Math.Round(linea.PrecioUnitario / factor, 4)
+                PrecioUnitario = cantidad == 0 ? 0 : Math.Round(linea.PrecioUnitario / factor, 4),
+                Anulado = linea.Anulado
             });
         }
 
@@ -534,7 +571,8 @@ public class VentasService : IVentasService
         CantidadPresentacion = d.CantidadPresentacion,
         Cantidad = d.Cantidad,
         PrecioUnitario = d.PrecioUnitario,
-        Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2)
+        Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2),
+        Anulado = d.Anulado
     };
 
     private static LineaVentaResponse MapLinea(NotaVentaDetalle d) => new()
@@ -567,7 +605,9 @@ public class VentasService : IVentasService
         ReservaStock = p.ReservaStock,
         AlmacenId = p.AlmacenId,
         Almacen = p.Almacen?.Nombre,
-        Total = Math.Round(p.Detalle.Sum(d => d.Cantidad * d.PrecioUnitario), 2),
+        // Una línea anulada se sigue mostrando (para no perder su rastro),
+        // pero no suma al total.
+        Total = Math.Round(p.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario), 2),
         Detalle = p.Detalle.Select(MapLinea).ToList()
     };
 

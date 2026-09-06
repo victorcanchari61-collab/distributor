@@ -80,6 +80,13 @@ public class PedidoDetalle
 
     /// <summary>Precio de venta por unidad base.</summary>
     public decimal PrecioUnitario { get; set; }
+
+    /// <summary>
+    /// Se quitó del pedido al editarlo: no cuenta para el total ni se
+    /// transfiere a la NotaVenta al confirmar, pero la fila se conserva (no
+    /// se borra) para no perder su historial de cambios.
+    /// </summary>
+    public bool Anulado { get; set; }
 }
 
 /// <summary>Cómo se paga una venta al contado.</summary>

@@ -16,6 +16,9 @@ public interface IVentasService
 
     Task AnularPedidoAsync(int id);
 
+    /// <summary>Qué cambió en este pedido y sus líneas, para verlo desde el propio documento.</summary>
+    Task<IEnumerable<AuditoriaResponse>> GetHistorialPedidoAsync(int id);
+
     // --- Notas de venta ---
     Task<IEnumerable<NotaVentaResponse>> GetNotasVentaAsync(string? estado = null);
     Task<NotaVentaResponse> GetNotaVentaAsync(int id);
@@ -43,4 +46,7 @@ public interface IVentasService
     /// el cobro. Filtrable por rango de fechas.
     /// </summary>
     Task<IEnumerable<CobroResponse>> GetMisCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta);
+
+    /// <summary>Qué cambió en esta nota de venta: sobre todo anulaciones y movimientos de pago.</summary>
+    Task<IEnumerable<AuditoriaResponse>> GetHistorialNotaVentaAsync(int id);
 }

@@ -1,13 +1,18 @@
 import { api } from '../../lib/apiClient'
+import type { AuditoriaResponse } from '../config'
 
 // --- Comun ---
 
 export interface LineaVentaRequest {
+  /** Solo al editar un pedido: el id de la línea existente. Vacío es una línea nueva. */
+  id?: number | null
   productoId: number
   presentacionId?: number | null
   cantidad: number
   /** Precio de venta de UNA presentación completa: la caja entera, no la unidad. */
   precioUnitario: number
+  /** Solo al editar un pedido: si esta línea existente se quitó (nunca se borra, se anula). */
+  anulado?: boolean
 }
 
 export interface LineaVentaResponse {
@@ -22,6 +27,8 @@ export interface LineaVentaResponse {
   cantidad: number
   precioUnitario: number
   subtotal: number
+  /** Solo aplica a líneas de pedido: se quitó al editarlo, sin borrarse. */
+  anulado: boolean
 }
 
 /** Cómo se paga una venta al cliente. */
@@ -107,6 +114,8 @@ export const pedidoApi = {
   confirmar: (id: number, body: ConfirmarPedidoRequest) =>
     api.patch<PedidoResponse>(`/pedido/${id}/confirmar`, body),
   anular: (id: number) => api.patch<void>(`/pedido/${id}/anular`),
+  /** Qué cambió en este pedido y sus líneas. */
+  historial: (id: number) => api.get<AuditoriaResponse[]>(`/pedido/${id}/historial`),
 }
 
 // --- Notas de venta ---
@@ -172,4 +181,6 @@ export const notaVentaApi = {
     const query = params.toString()
     return api.get<CobroResponse[]>(`/notaventa/miscobros${query ? `?${query}` : ''}`)
   },
+  /** Qué cambió en esta nota de venta: sobre todo anulaciones y movimientos de pago. */
+  historial: (id: number) => api.get<AuditoriaResponse[]>(`/notaventa/${id}/historial`),
 }

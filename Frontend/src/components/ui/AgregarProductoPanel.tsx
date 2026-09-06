@@ -14,6 +14,8 @@ export type { ProductoBuscable }
 export interface LineaProductoNueva {
   /** Identifica la fila en la tabla de abajo — SysDataTable la necesita para no confundir filas. */
   id: string
+  /** Solo al editar un documento existente: el id real de la línea en el servidor. */
+  lineaId?: number
   productoId: number
   /** 0 = unidad base. */
   presentacionId: number

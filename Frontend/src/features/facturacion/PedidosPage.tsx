@@ -9,6 +9,7 @@ import {
   Button,
   Checkbox,
   Desplegable,
+  HistorialCambios,
   Input,
   ListPage,
   Modal,
@@ -36,6 +37,7 @@ import type { AlmacenResponse } from '../inventario'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { pedidoApi } from './ventasApi'
+import type { AuditoriaResponse } from '../config'
 import type { CrearPedidoRequest, LineaVentaResponse, PedidoResponse } from './ventasApi'
 
 function estadoPedidoBadge(estado: PedidoResponse['estado']) {
@@ -65,6 +67,8 @@ export function PedidosPage() {
 
   const [editando, setEditando] = useState<PedidoResponse | null>(null)
   const [detalleAbierto, setDetalleAbierto] = useState<PedidoResponse | null>(null)
+  const [historial, setHistorial] = useState<AuditoriaResponse[]>([])
+  const [historialCargando, setHistorialCargando] = useState(false)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -152,18 +156,32 @@ export function PedidosPage() {
     setReservaStock(pedido.reservaStock)
     setAlmacenReservaId(pedido.almacenId ?? primerAlmacenId)
     setFilas(
-      pedido.detalle.map((l) => ({
-        id: crypto.randomUUID(),
-        productoId: l.productoId,
-        presentacionId: l.presentacionId ?? 0,
-        cantidad: String(l.cantidadPresentacion),
-        costo: String(l.precioUnitario * (l.cantidadPresentacion ? l.cantidad / l.cantidadPresentacion : 1)),
-        lote: '',
-        fechaVencimiento: '',
-      })),
+      pedido.detalle
+        .filter((l) => !l.anulado)
+        .map((l) => ({
+          id: crypto.randomUUID(),
+          lineaId: l.id,
+          productoId: l.productoId,
+          presentacionId: l.presentacionId ?? 0,
+          cantidad: String(l.cantidadPresentacion),
+          costo: String(l.precioUnitario * (l.cantidadPresentacion ? l.cantidad / l.cantidadPresentacion : 1)),
+          lote: '',
+          fechaVencimiento: '',
+        })),
     )
     setErrorForm('')
     setVista('form')
+  }
+
+  const abrirDetalle = (pedido: PedidoResponse) => {
+    setDetalleAbierto(pedido)
+    setHistorial([])
+    setHistorialCargando(true)
+    void pedidoApi
+      .historial(pedido.id)
+      .then(setHistorial)
+      .catch(() => setHistorial([]))
+      .finally(() => setHistorialCargando(false))
   }
 
   const actualizarFila = (id: string, cambio: Partial<FilaPedido>) =>
@@ -186,6 +204,7 @@ export function PedidosPage() {
       reservaStock,
       almacenId: reservaStock ? almacenReservaId : null,
       detalle: validas.map((f) => ({
+        id: f.lineaId ?? null,
         productoId: f.productoId,
         presentacionId: f.presentacionId || null,
         cantidad: Number(f.cantidad),
@@ -552,7 +571,7 @@ export function PedidosPage() {
       empty={cargando ? 'Cargando pedidos...' : 'Todavía no hay pedidos registrados.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => abrirDetalle(row)}>
             <Eye size={15} />
           </RowAction>
           <RowAction
@@ -597,6 +616,12 @@ export function PedidosPage() {
           <div className="flex flex-col gap-3">
             {detalleAbierto.estado !== 'PENDIENTE' && <div>{estadoPedidoBadge(detalleAbierto.estado)}</div>}
 
+            {detalleAbierto.detalle.some((l) => l.anulado) && (
+              <p className="text-xs text-ink-soft">
+                Las líneas anuladas no cuentan para el total. Se conservan solo para el historial.
+              </p>
+            )}
+
             {detalleAbierto.reservaStock && (
               <p className="rounded-field bg-brand-soft px-3 py-2 text-xs font-medium text-brand">
                 Stock reservado en {detalleAbierto.almacen}
@@ -625,6 +650,11 @@ export function PedidosPage() {
                 {detalleAbierto.observacion}
               </p>
             )}
+
+            <div className="border-t border-line pt-3">
+              <p className="mb-2 text-xs font-semibold text-ink-soft uppercase tracking-wide">Historial de cambios</p>
+              <HistorialCambios registros={historial} cargando={historialCargando} />
+            </div>
           </div>
         )}
       </Modal>

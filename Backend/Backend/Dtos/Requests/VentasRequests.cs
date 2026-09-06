@@ -3,6 +3,13 @@ namespace Backend.Dtos.Requests;
 /// <summary>Una línea de un pedido o de una nota de venta.</summary>
 public class LineaVentaRequest
 {
+    /// <summary>
+    /// Solo al editar un pedido: el id de la línea existente que se está
+    /// cambiando. Vacío o 0 es una línea nueva. Una nota de venta no se edita,
+    /// así que ahí este campo no se usa.
+    /// </summary>
+    public int? Id { get; set; }
+
     public int ProductoId { get; set; }
 
     /// <summary>En qué presentación se vende. Vacío significa unidad base.</summary>
@@ -13,6 +20,12 @@ public class LineaVentaRequest
 
     /// <summary>Precio de venta de UNA presentación completa: la caja entera, no la unidad.</summary>
     public decimal PrecioUnitario { get; set; }
+
+    /// <summary>
+    /// Solo al editar un pedido: si esta línea existente se quitó. Nunca se
+    /// borra de la base — queda anulada para conservar su historial.
+    /// </summary>
+    public bool Anulado { get; set; }
 }
 
 /// <summary>Lo que pide un cliente: cabecera + líneas.</summary>

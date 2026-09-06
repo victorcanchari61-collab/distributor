@@ -34,4 +34,19 @@ public class AuditoriaRepository : IAuditoriaRepository
             .Distinct()
             .OrderBy(e => e)
             .ToListAsync();
+
+    public async Task<IEnumerable<RegistroAuditoria>> GetHistorialDocumentoAsync(
+        string entidadPrincipal, int id, string entidadDetalle, IEnumerable<int> idsDetalleActuales)
+    {
+        var idTexto = id.ToString();
+        var idsDetalleTexto = idsDetalleActuales.Select(x => x.ToString()).ToList();
+
+        return await _context.RegistrosAuditoria
+            .Include(r => r.Usuario)
+            .Where(r => (r.Entidad == entidadPrincipal && r.EntidadId == idTexto)
+                        || (r.Entidad == entidadDetalle && idsDetalleTexto.Contains(r.EntidadId)))
+            .OrderByDescending(r => r.Fecha)
+            .ThenByDescending(r => r.Id)
+            .ToListAsync();
+    }
 }

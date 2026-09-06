@@ -55,6 +55,10 @@ public class PedidoController : ControllerBase
         await _ventas.AnularPedidoAsync(id);
         return NoContent();
     }
+
+    /// <summary>Qué cambió en este pedido y sus líneas.</summary>
+    [HttpGet("{id:int}/historial")]
+    public async Task<IActionResult> Historial(int id) => Ok(await _ventas.GetHistorialPedidoAsync(id));
 }
 
 [ApiController]
@@ -120,4 +124,8 @@ public class NotaVentaController : ControllerBase
     [HttpGet("miscobros")]
     public async Task<IActionResult> MisCobros([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
         Ok(await _ventas.GetMisCobrosAsync(UsuarioId, desde, hasta));
+
+    /// <summary>Qué cambió en esta nota de venta: sobre todo anulaciones y movimientos de pago.</summary>
+    [HttpGet("{id:int}/historial")]
+    public async Task<IActionResult> Historial(int id) => Ok(await _ventas.GetHistorialNotaVentaAsync(id));
 }

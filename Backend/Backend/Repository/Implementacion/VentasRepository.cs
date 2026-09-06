@@ -71,14 +71,47 @@ public class VentasRepository : IVentasRepository
         await _context.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Actualiza línea por línea en vez de borrar todo y recrearlo: así una
+    /// edición de cantidad queda en la auditoría como "cantidad: 2 → 5" sobre
+    /// la misma fila, no como un ELIMINADO + CREADO. Una línea que ya no
+    /// viene en la lista nueva tampoco se borra — queda Anulada, para no
+    /// perder su historial (regla del negocio: nunca se elimina, se anula).
+    /// </summary>
     public async Task ReemplazarDetallePedidoAsync(int pedidoId, IEnumerable<PedidoDetalle> detalle)
     {
         var actuales = await _context.PedidoDetalles
             .Where(d => d.PedidoId == pedidoId)
             .ToListAsync();
+        var actualesPorId = actuales.ToDictionary(d => d.Id);
 
-        _context.PedidoDetalles.RemoveRange(actuales);
-        await _context.PedidoDetalles.AddRangeAsync(detalle);
+        var conservadas = new HashSet<int>();
+
+        foreach (var linea in detalle)
+        {
+            if (linea.Id > 0 && actualesPorId.TryGetValue(linea.Id, out var existente))
+            {
+                existente.ProductoId = linea.ProductoId;
+                existente.PresentacionId = linea.PresentacionId;
+                existente.CantidadPresentacion = linea.CantidadPresentacion;
+                existente.Cantidad = linea.Cantidad;
+                existente.PrecioUnitario = linea.PrecioUnitario;
+                existente.Anulado = linea.Anulado;
+                conservadas.Add(existente.Id);
+            }
+            else
+            {
+                linea.PedidoId = pedidoId;
+                linea.Id = 0;
+                await _context.PedidoDetalles.AddAsync(linea);
+            }
+        }
+
+        foreach (var quitada in actuales.Where(d => !conservadas.Contains(d.Id)))
+        {
+            quitada.Anulado = true;
+        }
+
         await _context.SaveChangesAsync();
     }
 
@@ -86,6 +119,7 @@ public class VentasRepository : IVentasRepository
         await _context.PedidoDetalles
             .Where(d => d.Pedido!.Estado == EstadoPedido.Pendiente
                         && d.Pedido.ReservaStock
+                        && !d.Anulado
                         && (almacenId == null || d.Pedido.AlmacenId == almacenId))
             .GroupBy(d => d.ProductoId)
             .Select(g => new { ProductoId = g.Key, Cantidad = g.Sum(d => d.Cantidad) })

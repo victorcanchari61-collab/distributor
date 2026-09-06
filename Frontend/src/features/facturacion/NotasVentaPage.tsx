@@ -8,6 +8,7 @@ import {
   BuscadorModal,
   Button,
   Desplegable,
+  HistorialCambios,
   Input,
   ListPage,
   Modal,
@@ -37,6 +38,7 @@ import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { notaVentaApi } from './ventasApi'
+import type { AuditoriaResponse } from '../config'
 import type { CrearNotaVentaRequest, FormaPagoVenta, LineaVentaResponse, NotaVentaResponse } from './ventasApi'
 
 const FORMAS_PAGO: { value: FormaPagoVenta; label: string }[] = [
@@ -74,6 +76,8 @@ export function NotasVentaPage() {
   const [error, setError] = useState('')
 
   const [detalleAbierto, setDetalleAbierto] = useState<NotaVentaResponse | null>(null)
+  const [historial, setHistorial] = useState<AuditoriaResponse[]>([])
+  const [historialCargando, setHistorialCargando] = useState(false)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [pagosAbierto, setPagosAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
@@ -150,6 +154,17 @@ export function NotasVentaPage() {
     setFilas([])
     setErrorForm('')
     setVista('form')
+  }
+
+  const abrirDetalle = (nota: NotaVentaResponse) => {
+    setDetalleAbierto(nota)
+    setHistorial([])
+    setHistorialCargando(true)
+    void notaVentaApi
+      .historial(nota.id)
+      .then(setHistorial)
+      .catch(() => setHistorial([]))
+      .finally(() => setHistorialCargando(false))
   }
 
   const actualizarFila = (id: string, cambio: Partial<FilaVenta>) =>
@@ -629,7 +644,7 @@ export function NotasVentaPage() {
       empty={cargando ? 'Cargando notas de venta...' : 'Todavía no hay notas de venta registradas.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => abrirDetalle(row)}>
             <Eye size={15} />
           </RowAction>
           <RowAction
@@ -691,6 +706,11 @@ export function NotasVentaPage() {
                 {detalleAbierto.observacion}
               </p>
             )}
+
+            <div className="border-t border-line pt-3">
+              <p className="mb-2 text-xs font-semibold text-ink-soft uppercase tracking-wide">Historial de cambios</p>
+              <HistorialCambios registros={historial} cargando={historialCargando} />
+            </div>
           </div>
         )}
       </Modal>
