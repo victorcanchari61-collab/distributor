@@ -1,4 +1,6 @@
 using Backend.Dtos.Requests;
+using Backend.Filters;
+using Backend.Models;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,12 +20,14 @@ public class UsuarioController : ControllerBase
     }
 
     [HttpGet]
+    [Permiso("config.usuarios", Accion.Ver)]
     public async Task<IActionResult> GetAll()
     {
         return Ok(await _usuarioService.GetAllAsync());
     }
 
     [HttpGet("{id:int}")]
+    [Permiso("config.usuarios", Accion.Ver)]
     public async Task<IActionResult> GetById(int id)
     {
         return Ok(await _usuarioService.GetByIdAsync(id));
@@ -31,7 +35,7 @@ public class UsuarioController : ControllerBase
 
     /// <summary>Alta de usuario desde el panel, ya con sesion iniciada.</summary>
     [HttpPost]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("config.usuarios", Accion.Crear)]
     public async Task<IActionResult> Create([FromBody] CreateUsuarioRequest request)
     {
         var response = await _usuarioService.RegisterAsync(request);
@@ -39,7 +43,7 @@ public class UsuarioController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("config.usuarios", Accion.Editar)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUsuarioRequest request)
     {
         return Ok(await _usuarioService.UpdateAsync(id, request));

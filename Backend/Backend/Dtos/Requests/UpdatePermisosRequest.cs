@@ -1,16 +1,20 @@
 namespace Backend.Dtos.Requests;
 
-/// <summary>Matriz completa de permisos de un rol: reemplaza a la anterior.</summary>
+/// <summary>
+/// Lo que un rol puede hacer, tal cual queda tras editar la matriz de Accesos.
+/// Es un reemplazo completo: lo que no viene en la lista, se retira.
+/// </summary>
 public class UpdatePermisosRequest
 {
     public List<PermisoItem> Permisos { get; set; } = [];
 }
 
+/// <summary>Una accion concedida sobre un submodulo.</summary>
 public class PermisoItem
 {
-    public string Modulo { get; set; } = string.Empty;
-    public bool Ver { get; set; }
-    public bool Crear { get; set; }
-    public bool Editar { get; set; }
-    public bool Eliminar { get; set; }
+    /// <summary>Clave del menu: "fact.pedidos".</summary>
+    public string Submodulo { get; set; } = string.Empty;
+
+    /// <summary>Ver, crear, editar, anular, exportar...</summary>
+    public string Accion { get; set; } = string.Empty;
 }

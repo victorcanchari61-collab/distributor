@@ -1,4 +1,6 @@
 using Backend.Dtos.Requests;
+using Backend.Filters;
+using Backend.Models;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,12 +20,15 @@ public class CategoriaController : ControllerBase
     }
 
     [HttpGet]
+    [Permiso("maestros.productos", Accion.Ver)]
     public async Task<IActionResult> GetAll() => Ok(await _catalogo.GetCategoriasAsync());
 
     [HttpGet("{id:int}")]
+    [Permiso("maestros.productos", Accion.Ver)]
     public async Task<IActionResult> GetById(int id) => Ok(await _catalogo.GetCategoriaAsync(id));
 
     [HttpPost]
+    [Permiso("maestros.productos", Accion.Crear)]
     public async Task<IActionResult> Create([FromBody] CreateCategoriaRequest request)
     {
         var response = await _catalogo.CreateCategoriaAsync(request);
@@ -31,11 +36,12 @@ public class CategoriaController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Permiso("maestros.productos", Accion.Editar)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateCategoriaRequest request) =>
         Ok(await _catalogo.UpdateCategoriaAsync(id, request));
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("maestros.productos", Accion.Eliminar)]
     public async Task<IActionResult> Delete(int id)
     {
         await _catalogo.DeleteCategoriaAsync(id);
@@ -56,12 +62,15 @@ public class MarcaController : ControllerBase
     }
 
     [HttpGet]
+    [Permiso("maestros.productos", Accion.Ver)]
     public async Task<IActionResult> GetAll() => Ok(await _catalogo.GetMarcasAsync());
 
     [HttpGet("{id:int}")]
+    [Permiso("maestros.productos", Accion.Ver)]
     public async Task<IActionResult> GetById(int id) => Ok(await _catalogo.GetMarcaAsync(id));
 
     [HttpPost]
+    [Permiso("maestros.productos", Accion.Crear)]
     public async Task<IActionResult> Create([FromBody] CreateMarcaRequest request)
     {
         var response = await _catalogo.CreateMarcaAsync(request);
@@ -69,11 +78,12 @@ public class MarcaController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Permiso("maestros.productos", Accion.Editar)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateMarcaRequest request) =>
         Ok(await _catalogo.UpdateMarcaAsync(id, request));
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("maestros.productos", Accion.Eliminar)]
     public async Task<IActionResult> Delete(int id)
     {
         await _catalogo.DeleteMarcaAsync(id);
@@ -94,13 +104,15 @@ public class UnidadMedidaController : ControllerBase
     }
 
     [HttpGet]
+    [Permiso("maestros.productos", Accion.Ver)]
     public async Task<IActionResult> GetAll() => Ok(await _catalogo.GetUnidadesAsync());
 
     [HttpGet("{id:int}")]
+    [Permiso("maestros.productos", Accion.Ver)]
     public async Task<IActionResult> GetById(int id) => Ok(await _catalogo.GetUnidadAsync(id));
 
     [HttpPost]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("maestros.productos", Accion.Crear)]
     public async Task<IActionResult> Create([FromBody] CreateUnidadMedidaRequest request)
     {
         var response = await _catalogo.CreateUnidadAsync(request);
@@ -108,12 +120,12 @@ public class UnidadMedidaController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("maestros.productos", Accion.Editar)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUnidadMedidaRequest request) =>
         Ok(await _catalogo.UpdateUnidadAsync(id, request));
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("maestros.productos", Accion.Eliminar)]
     public async Task<IActionResult> Delete(int id)
     {
         await _catalogo.DeleteUnidadAsync(id);

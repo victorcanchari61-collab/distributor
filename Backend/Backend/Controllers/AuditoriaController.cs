@@ -1,4 +1,6 @@
 using Backend.Dtos.Requests;
+using Backend.Filters;
+using Backend.Models;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +20,7 @@ public class AuditoriaController : ControllerBase
     }
 
     [HttpGet]
+    [Permiso("config.auditoria", Accion.Ver)]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? entidad,
         [FromQuery] string? accion,
@@ -32,13 +35,16 @@ public class AuditoriaController : ControllerBase
     /// codificación propia y a mantenerla en los dos lados.
     /// </summary>
     [HttpPost("listar")]
+    [Permiso("config.auditoria", Accion.Ver)]
     public async Task<IActionResult> Listar([FromBody] ConsultaTablaRequest consulta) =>
         Ok(await _auditoria.ListarAsync(consulta));
 
     /// <summary>Contadores y valores de filtro de toda la bitácora.</summary>
     [HttpGet("resumen")]
+    [Permiso("config.auditoria", Accion.Ver)]
     public async Task<IActionResult> Resumen() => Ok(await _auditoria.GetResumenAsync());
 
     [HttpGet("entidades")]
+    [Permiso("config.auditoria", Accion.Ver)]
     public async Task<IActionResult> GetEntidades() => Ok(await _auditoria.GetEntidadesAsync());
 }

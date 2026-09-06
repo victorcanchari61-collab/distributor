@@ -1,4 +1,6 @@
 using Backend.Dtos.Requests;
+using Backend.Filters;
+using Backend.Models;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,12 +20,15 @@ public class ListaPrecioController : ControllerBase
     }
 
     [HttpGet]
+    [Permiso("fact.precios", Accion.Ver)]
     public async Task<IActionResult> GetAll() => Ok(await _listaService.GetAllAsync());
 
     [HttpGet("{id:int}")]
+    [Permiso("fact.precios", Accion.Ver)]
     public async Task<IActionResult> GetById(int id) => Ok(await _listaService.GetByIdAsync(id));
 
     [HttpPost]
+    [Permiso("fact.precios", Accion.Crear)]
     public async Task<IActionResult> Create([FromBody] CreateListaPrecioRequest request)
     {
         var response = await _listaService.CreateAsync(request);
@@ -31,17 +36,18 @@ public class ListaPrecioController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Permiso("fact.precios", Accion.Editar)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateListaPrecioRequest request) =>
         Ok(await _listaService.UpdateAsync(id, request));
 
     /// <summary>La lista que se aplica al cliente que no tiene una propia.</summary>
     [HttpPatch("{id:int}/predeterminada")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("fact.precios", Accion.Editar)]
     public async Task<IActionResult> Predeterminada(int id) =>
         Ok(await _listaService.MarcarPredeterminadaAsync(id));
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("fact.precios", Accion.Eliminar)]
     public async Task<IActionResult> Delete(int id)
     {
         await _listaService.DeleteAsync(id);
@@ -51,6 +57,7 @@ public class ListaPrecioController : ControllerBase
     // --- Precios ---
 
     [HttpGet("{id:int}/precios")]
+    [Permiso("fact.precios", Accion.Ver)]
     public async Task<IActionResult> GetPrecios(int id) =>
         Ok(await _listaService.GetPreciosAsync(id));
 
@@ -59,11 +66,13 @@ public class ListaPrecioController : ControllerBase
     /// actualiza el precio existente en vez de duplicarlo.
     /// </summary>
     [HttpPut("{id:int}/precios")]
+    [Permiso("fact.precios", Accion.Editar)]
     public async Task<IActionResult> GuardarPrecios(
         int id, [FromBody] GuardarPreciosRequest request) =>
         Ok(await _listaService.GuardarPreciosAsync(id, request));
 
     [HttpDelete("precios/{precioId:int}")]
+    [Permiso("fact.precios", Accion.Eliminar)]
     public async Task<IActionResult> EliminarPrecio(int precioId)
     {
         await _listaService.EliminarPrecioAsync(precioId);
@@ -75,6 +84,7 @@ public class ListaPrecioController : ControllerBase
     /// volumen: 12 sacos toman el precio "desde 10".
     /// </summary>
     [HttpGet("{id:int}/resolver")]
+    [Permiso("fact.precios", Accion.Ver)]
     public async Task<IActionResult> Resolver(
         int id, [FromQuery] int presentacionId, [FromQuery] decimal cantidad = 1m)
     {

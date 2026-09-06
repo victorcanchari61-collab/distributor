@@ -1,4 +1,6 @@
 using Backend.Dtos.Requests;
+using Backend.Filters;
+using Backend.Models;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,19 +20,21 @@ public class ProveedorController : ControllerBase
     }
 
     [HttpGet]
+    [Permiso("maestros.proveedores", Accion.Ver)]
     public async Task<IActionResult> GetAll()
     {
         return Ok(await _proveedorService.GetAllAsync());
     }
 
     [HttpGet("{id:int}")]
+    [Permiso("maestros.proveedores", Accion.Ver)]
     public async Task<IActionResult> GetById(int id)
     {
         return Ok(await _proveedorService.GetByIdAsync(id));
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("maestros.proveedores", Accion.Crear)]
     public async Task<IActionResult> Create([FromBody] CreateProveedorRequest request)
     {
         var response = await _proveedorService.CreateAsync(request);
@@ -38,7 +42,7 @@ public class ProveedorController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("maestros.proveedores", Accion.Editar)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateProveedorRequest request)
     {
         return Ok(await _proveedorService.UpdateAsync(id, request));
@@ -46,7 +50,7 @@ public class ProveedorController : ControllerBase
 
     /// <summary>Alta masiva desde archivo. Informa que paso con cada fila.</summary>
     [HttpPost("importar")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("maestros.proveedores", Accion.Importar)]
     public async Task<IActionResult> Importar([FromBody] ImportarProveedoresRequest request)
     {
         return Ok(await _proveedorService.ImportarAsync(request));
@@ -54,7 +58,7 @@ public class ProveedorController : ControllerBase
 
     /// <summary>Activa el registro.</summary>
     [HttpPatch("{id:int}/activar")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("maestros.proveedores", Accion.Editar)]
     public async Task<IActionResult> Activar(int id)
     {
         return Ok(await _proveedorService.CambiarEstadoAsync(id, true));
@@ -62,14 +66,14 @@ public class ProveedorController : ControllerBase
 
     /// <summary>Desactiva sin borrar: deja de usarse pero conserva su historial.</summary>
     [HttpPatch("{id:int}/desactivar")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("maestros.proveedores", Accion.Editar)]
     public async Task<IActionResult> Desactivar(int id)
     {
         return Ok(await _proveedorService.CambiarEstadoAsync(id, false));
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("maestros.proveedores", Accion.Eliminar)]
     public async Task<IActionResult> Delete(int id)
     {
         await _proveedorService.DeleteAsync(id);

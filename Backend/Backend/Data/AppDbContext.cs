@@ -111,10 +111,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<RolPermiso>(entity =>
         {
             entity.ToTable("RolPermisos");
-            entity.Property(p => p.Modulo).HasMaxLength(40).IsRequired();
+            entity.Property(p => p.Submodulo).HasMaxLength(60).IsRequired();
+            entity.Property(p => p.Accion).HasMaxLength(20).IsRequired();
 
-            // Un rol tiene como mucho una fila por modulo.
-            entity.HasIndex(p => new { p.RolId, p.Modulo }).IsUnique();
+            // Una fila por accion concedida: que exista ES el permiso.
+            entity.HasIndex(p => new { p.RolId, p.Submodulo, p.Accion }).IsUnique();
 
             entity.HasOne(p => p.Rol)
                 .WithMany(r => r.Permisos)

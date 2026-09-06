@@ -28,16 +28,19 @@ public class RolService : IRolService
     private readonly IValidator<CreateRolRequest> _createValidator;
     private readonly IValidator<UpdateRolRequest> _updateValidator;
     private readonly INotificador _notificador;
+    private readonly IPermisoService _permisos;
 
     public RolService(IRolRepository repository,
         IValidator<CreateRolRequest> createValidator,
         IValidator<UpdateRolRequest> updateValidator,
-        INotificador notificador)
+        INotificador notificador,
+        IPermisoService permisos)
     {
         _repository = repository;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _notificador = notificador;
+        _permisos = permisos;
     }
 
     public async Task<IEnumerable<RolResponse>> GetAllAsync()
@@ -106,23 +109,29 @@ public class RolService : IRolService
     {
         await GetOrThrowAsync(id);
 
-        var permisos = request.Permisos.Select(p => new RolPermiso
-        {
-            RolId = id,
-            Modulo = p.Modulo,
-            Ver = p.Ver,
-            // Cualquier permiso implica poder ver: sin Ver el modulo no se abre.
-            Crear = p.Crear,
-            Editar = p.Editar,
-            Eliminar = p.Eliminar
-        }).ToList();
+        // Solo entra lo que el catalogo reconoce: un submodulo mal escrito o
+        // una accion que ese submodulo no admite no deben llegar a la base.
+        var pedidos = request.Permisos
+            .Where(p => CatalogoPermisos.EsValido(p.Submodulo, p.Accion))
+            .Select(p => (p.Submodulo, p.Accion))
+            .ToHashSet();
 
-        foreach (var permiso in permisos.Where(p => p.Crear || p.Editar || p.Eliminar))
+        // Cualquier accion implica poder ver: sin Ver, la pantalla no se abre
+        // y el permiso quedaria concedido pero inalcanzable.
+        foreach (var (submodulo, _) in pedidos.ToList())
         {
-            permiso.Ver = true;
+            pedidos.Add((submodulo, Accion.Ver));
         }
 
+        var permisos = pedidos
+            .Select(p => new RolPermiso { RolId = id, Submodulo = p.Item1, Accion = p.Item2 })
+            .ToList();
+
         await _repository.ReemplazarPermisosAsync(id, permisos);
+
+        // Sin esto el cambio no se notaria hasta que venciera la caché, y quien
+        // acaba de configurar el rol creeria que no se guardo.
+        _permisos.OlvidarRol(id);
 
         var actualizado = await _repository.GetConPermisosAsync(id);
         var response = MapToResponse(actualizado!, await _repository.ContarUsuariosAsync(id));
@@ -172,11 +181,8 @@ public class RolService : IRolService
             Usuarios = usuarios ?? rol.Usuarios.Count,
             Permisos = rol.Permisos.Select(p => new RolPermisoResponse
             {
-                Modulo = p.Modulo,
-                Ver = p.Ver,
-                Crear = p.Crear,
-                Editar = p.Editar,
-                Eliminar = p.Eliminar
+                Submodulo = p.Submodulo,
+                Accion = p.Accion,
             }).ToList()
         };
     }

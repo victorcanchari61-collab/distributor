@@ -43,10 +43,9 @@ public class RolRepository : Repository<Rol>, IRolRepository
         var actuales = await Context.RolPermisos.Where(p => p.RolId == rolId).ToListAsync();
         Context.RolPermisos.RemoveRange(actuales);
 
-        // Solo se guardan los modulos con algun permiso concedido: la ausencia
-        // de fila significa "sin acceso", y asi la tabla no se llena de ceros.
-        await Context.RolPermisos.AddRangeAsync(
-            permisos.Where(p => p.Ver || p.Crear || p.Editar || p.Eliminar));
+        // Que exista la fila ES el permiso: la ausencia significa "sin acceso",
+        // asi la tabla no se llena de filas en cero.
+        await Context.RolPermisos.AddRangeAsync(permisos);
 
         await Context.SaveChangesAsync();
         await transaction.CommitAsync();

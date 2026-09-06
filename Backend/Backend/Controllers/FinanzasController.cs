@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using Backend.Dtos.Requests;
+using Backend.Filters;
+using Backend.Models;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,12 +21,15 @@ public class MetodoPagoController : ControllerBase
     }
 
     [HttpGet]
+    [Permiso("finanzas.metodospago", Accion.Ver)]
     public async Task<IActionResult> GetAll() => Ok(await _finanzas.GetMetodosPagoAsync());
 
     [HttpGet("{id:int}")]
+    [Permiso("finanzas.metodospago", Accion.Ver)]
     public async Task<IActionResult> GetById(int id) => Ok(await _finanzas.GetMetodoPagoAsync(id));
 
     [HttpPost]
+    [Permiso("finanzas.metodospago", Accion.Crear)]
     public async Task<IActionResult> Create([FromBody] CreateMetodoPagoRequest request)
     {
         var response = await _finanzas.CreateMetodoPagoAsync(request);
@@ -32,11 +37,12 @@ public class MetodoPagoController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Permiso("finanzas.metodospago", Accion.Editar)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateMetodoPagoRequest request) =>
         Ok(await _finanzas.UpdateMetodoPagoAsync(id, request));
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("finanzas.metodospago", Accion.Eliminar)]
     public async Task<IActionResult> Delete(int id)
     {
         await _finanzas.DeleteMetodoPagoAsync(id);
@@ -64,19 +70,23 @@ public class ArqueoController : ControllerBase
 
     /// <summary>Lo cobrado y pagado en efectivo de un día, y su cierre si ya se registró.</summary>
     [HttpGet("resumen")]
+    [Permiso("finanzas.arqueo", Accion.Ver)]
     public async Task<IActionResult> Resumen([FromQuery] DateTime fecha) =>
         Ok(await _finanzas.GetResumenArqueoAsync(fecha));
 
     [HttpGet("historial")]
+    [Permiso("finanzas.arqueo", Accion.Ver)]
     public async Task<IActionResult> Historial() => Ok(await _finanzas.GetHistorialArqueoAsync());
 
     /// <summary>Una página del historial de cierres, con búsqueda y filtros en la base.</summary>
     [HttpPost("listar")]
+    [Permiso("finanzas.arqueo", Accion.Ver)]
     public async Task<IActionResult> ListarArqueos([FromBody] ConsultaTablaRequest consulta) =>
         Ok(await _finanzas.ListarArqueosAsync(consulta));
 
     /// <summary>Registra el cierre de caja del día: reemplaza el que ya hubiera para esa fecha.</summary>
     [HttpPost]
+    [Permiso("finanzas.arqueo", Accion.Crear)]
     public async Task<IActionResult> Registrar([FromBody] RegistrarArqueoRequest request) =>
         Ok(await _finanzas.RegistrarArqueoAsync(request, UsuarioId));
 }

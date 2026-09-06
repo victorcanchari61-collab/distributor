@@ -1,12 +1,16 @@
 import { api } from '../../lib/apiClient'
 
+/**
+ * Un permiso concedido: una accion sobre un submodulo.
+ *
+ * Antes era un modulo entero con cuatro banderas, y por eso no se podia dejar
+ * a alguien ver Inventario sin dejarle tambien tocar los ajustes de stock.
+ */
 export interface RolPermisoResponse {
-  /** Clave del modulo, la misma del menu: maestros, compras, inv, fact... */
-  modulo: string
-  ver: boolean
-  crear: boolean
-  editar: boolean
-  eliminar: boolean
+  /** Clave del submodulo, la misma del menu: inv.ajustes, fact.notaventa... */
+  submodulo: string
+  /** ver, crear, editar, anular, eliminar, exportar, importar, confirmar, cobrar. */
+  accion: string
 }
 
 export interface RolResponse {

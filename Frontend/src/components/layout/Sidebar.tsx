@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, PanelLeftClose, PanelLeftOpen, EyeOff, X } from 'lucide-react'
 import { cn, Logo } from '../ui'
 import { NAV_GROUPS } from './navigation'
 import type { NavGroup } from './navigation'
+import { usePermisos } from '../../lib/permisos'
 
 export interface SidebarProps {
   active: string
@@ -29,6 +30,23 @@ export function Sidebar({
   oculto,
   onOcultar,
 }: SidebarProps) {
+  const { puedeVer, cargando } = usePermisos()
+
+  /*
+   * El menu solo muestra lo que este usuario puede abrir, y un grupo entero
+   * desaparece si no le queda ningun submodulo: un modulo que al desplegarse
+   * aparece vacio no informa de nada, solo hace ver el sistema roto.
+   *
+   * Mientras los permisos cargan no se pinta nada en vez de pintarlo todo: si
+   * no, el menu completo parpadearia un instante para quien no lo tiene.
+   */
+  const grupos = useMemo(() => {
+    if (cargando) return []
+    return NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => puedeVer(i.id)) })).filter(
+      (g) => g.items.length > 0,
+    )
+  }, [cargando, puedeVer])
+
   // Empieza abierto el grupo que contiene la vista activa.
   const [open, setOpen] = useState<string[]>(() => {
     const group = NAV_GROUPS.find((g) => g.items.some((i) => i.id === active))
@@ -94,7 +112,7 @@ export function Sidebar({
 
         {/* navegacion */}
         <nav className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto p-2">
-          {NAV_GROUPS.map((group) => (
+          {grupos.map((group) => (
             <NavGroupBlock
               key={group.id}
               group={group}

@@ -1,9 +1,18 @@
 namespace Backend.Models;
 
 /// <summary>
-/// Lo que un rol puede hacer en un modulo. El modulo se guarda con la misma
-/// clave que usa el menu del frontend (maestros, compras, inv, fact, tms, dms,
-/// rrhh, config), asi la matriz de la pantalla Accesos calza sin traducciones.
+/// Una cosa que un rol puede hacer: una accion sobre un submodulo.
+///
+/// Antes era una fila por MODULO con cuatro banderas (ver/crear/editar/
+/// eliminar). Eso no alcanzaba: dentro de Facturacion no es lo mismo emitir
+/// una nota de venta que anularla, y acciones como exportar o importar no
+/// existian.
+///
+/// El modulo NO se guarda: sale del prefijo de <see cref="Submodulo"/>
+/// ("fact.pedidos" es de "fact"). Guardarlo aparte permitiria estados
+/// contradictorios, como negar Facturacion y a la vez permitir Pedidos.
+///
+/// La combinacion valida la define <see cref="CatalogoPermisos"/>.
 /// </summary>
 public class RolPermiso
 {
@@ -11,10 +20,9 @@ public class RolPermiso
     public int RolId { get; set; }
     public Rol? Rol { get; set; }
 
-    public string Modulo { get; set; } = string.Empty;
+    /// <summary>Clave del menu: "fact.pedidos", "inv.ajustes".</summary>
+    public string Submodulo { get; set; } = string.Empty;
 
-    public bool Ver { get; set; }
-    public bool Crear { get; set; }
-    public bool Editar { get; set; }
-    public bool Eliminar { get; set; }
+    /// <summary>Ver, crear, editar, anular... Ver <see cref="Accion"/>.</summary>
+    public string Accion { get; set; } = string.Empty;
 }

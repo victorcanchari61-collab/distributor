@@ -23,9 +23,9 @@ public class RolResponse
 
 public class RolPermisoResponse
 {
-    public string Modulo { get; set; } = string.Empty;
-    public bool Ver { get; set; }
-    public bool Crear { get; set; }
-    public bool Editar { get; set; }
-    public bool Eliminar { get; set; }
+    /// <summary>Clave del menú: "fact.pedidos".</summary>
+    public string Submodulo { get; set; } = string.Empty;
+
+    /// <summary>Ver, crear, editar, anular, exportar...</summary>
+    public string Accion { get; set; } = string.Empty;
 }

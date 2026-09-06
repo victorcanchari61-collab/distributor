@@ -82,6 +82,10 @@ builder.Services.AddScoped<IProveedorService, ProveedorService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IEmpresaService, EmpresaService>();
 builder.Services.AddScoped<IRolService, RolService>();
+// La caché de permisos es del proceso y se comparte entre requests; el
+// servicio en cambio es por request, porque lee con el DbContext de turno.
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IPermisoService, PermisoService>();
 builder.Services.AddScoped<ICatalogoService, CatalogoService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IListaPrecioService, ListaPrecioService>();

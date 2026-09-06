@@ -1,4 +1,6 @@
 using Backend.Dtos.Requests;
+using Backend.Filters;
+using Backend.Models;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +20,7 @@ public class EmpresaController : ControllerBase
     }
 
     [HttpGet]
+    [Permiso("config.empresa", Accion.Ver)]
     public async Task<IActionResult> GetAll()
     {
         return Ok(await _empresaService.GetAllAsync());
@@ -25,19 +28,21 @@ public class EmpresaController : ControllerBase
 
     /// <summary>Empresa con la que opera el sistema.</summary>
     [HttpGet("activa")]
+    [Permiso("config.empresa", Accion.Ver)]
     public async Task<IActionResult> GetActiva()
     {
         return Ok(await _empresaService.GetActivaAsync());
     }
 
     [HttpGet("{id:int}")]
+    [Permiso("config.empresa", Accion.Ver)]
     public async Task<IActionResult> GetById(int id)
     {
         return Ok(await _empresaService.GetByIdAsync(id));
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("config.empresa", Accion.Editar)]
     public async Task<IActionResult> Create([FromBody] CreateEmpresaRequest request)
     {
         var response = await _empresaService.CreateAsync(request);
@@ -45,7 +50,7 @@ public class EmpresaController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("config.empresa", Accion.Editar)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateEmpresaRequest request)
     {
         return Ok(await _empresaService.UpdateAsync(id, request));
@@ -53,7 +58,7 @@ public class EmpresaController : ControllerBase
 
     /// <summary>Activa una empresa y desactiva la que lo estuviera.</summary>
     [HttpPatch("{id:int}/activar")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("config.empresa", Accion.Editar)]
     public async Task<IActionResult> Activar(int id)
     {
         return Ok(await _empresaService.ActivarAsync(id));
@@ -61,7 +66,7 @@ public class EmpresaController : ControllerBase
 
     /// <summary>Retira una empresa sin eliminarla.</summary>
     [HttpPatch("{id:int}/deshabilitar")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("config.empresa", Accion.Editar)]
     public async Task<IActionResult> Deshabilitar(int id)
     {
         return Ok(await _empresaService.CambiarHabilitacionAsync(id, false));
@@ -69,14 +74,14 @@ public class EmpresaController : ControllerBase
 
     /// <summary>Vuelve a poner disponible una empresa retirada.</summary>
     [HttpPatch("{id:int}/habilitar")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("config.empresa", Accion.Editar)]
     public async Task<IActionResult> Habilitar(int id)
     {
         return Ok(await _empresaService.CambiarHabilitacionAsync(id, true));
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Permiso("config.empresa", Accion.Editar)]
     public async Task<IActionResult> Delete(int id)
     {
         await _empresaService.DeleteAsync(id);
