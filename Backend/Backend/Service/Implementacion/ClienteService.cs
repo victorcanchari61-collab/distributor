@@ -212,7 +212,7 @@ public class ClienteService : IClienteService
         fila.Documento = fila.Documento?.Trim() ?? string.Empty;
         fila.Nombre = fila.Nombre?.Trim() ?? string.Empty;
         fila.Direccion = Limpiar(fila.Direccion);
-        fila.Distrito = Limpiar(fila.Distrito);
+        fila.DistritoNombre = Limpiar(fila.DistritoNombre);
         fila.Telefono = Limpiar(fila.Telefono);
         fila.Email = Limpiar(fila.Email);
         fila.DiaVisita = Limpiar(fila.DiaVisita);
@@ -220,7 +220,8 @@ public class ClienteService : IClienteService
         fila.MercadoNombre = Limpiar(fila.MercadoNombre);
     }
 
-    private static void Aplicar(Cliente cliente, ClienteRequestBase request, Mercado? mercado, Ruta? ruta)
+    private static void Aplicar(Cliente cliente, ClienteRequestBase request, Mercado? mercado, Ruta? ruta,
+        Distrito? distrito)
     {
         cliente.Documento = request.Documento.Trim();
         // Si el usuario eligio el tipo se respeta; si no (importacion), se deduce
@@ -230,7 +231,8 @@ public class ClienteService : IClienteService
             : request.TipoDoc.Trim().ToUpperInvariant();
         cliente.Nombre = request.Nombre.Trim();
         cliente.Direccion = Limpiar(request.Direccion);
-        cliente.Distrito = Limpiar(request.Distrito);
+        cliente.DistritoId = distrito?.Id;
+        cliente.Distrito = distrito;
         cliente.Telefono = Limpiar(request.Telefono);
         cliente.Email = Limpiar(request.Email);
         cliente.DiaVisita = NormalizarDia(request.DiaVisita);
@@ -304,6 +306,29 @@ public class ClienteService : IClienteService
         return await _rutas.AddAsync(new Ruta { Nombre = nombre, Activo = true });
     }
 
+    /// <summary>
+    /// Resuelve el distrito del request contra el ubigeo oficial: si viene un
+    /// id, valida que exista; si no, y viene un nombre (importación), busca
+    /// uno igual sin importar mayúsculas — a diferencia de mercado y ruta, no
+    /// se crea uno nuevo, porque el catálogo es fijo (INEI/RENIEC). Sin
+    /// ninguno de los dos, o si el nombre no coincide con ninguno, no hay
+    /// distrito — no es obligatorio.
+    /// </summary>
+    private async Task<Distrito?> ResolverDistritoAsync(ClienteRequestBase request)
+    {
+        if (request.DistritoId is int id)
+        {
+            return await _ubigeo.GetDistritoByIdAsync(id)
+                ?? throw new BadRequestException("El distrito indicado no existe");
+        }
+
+        var nombre = Limpiar(request.DistritoNombre);
+        if (nombre is null) return null;
+
+        var existentes = await _ubigeo.GetDistritosAsync(null);
+        return existentes.FirstOrDefault(d => d.Nombre.Equals(nombre, StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>Texto util o null: recorta y descarta vacios y el literal "NULL".</summary>
     private static string? Limpiar(string? texto)
     {
@@ -344,7 +369,12 @@ public class ClienteService : IClienteService
             TipoDoc = cliente.TipoDoc,
             Nombre = cliente.Nombre,
             Direccion = cliente.Direccion,
-            Distrito = cliente.Distrito,
+            DistritoId = cliente.DistritoId,
+            Distrito = cliente.Distrito?.Nombre,
+            ProvinciaId = cliente.Distrito?.ProvinciaId,
+            Provincia = cliente.Distrito?.Provincia?.Nombre,
+            DepartamentoId = cliente.Distrito?.Provincia?.DepartamentoId,
+            Departamento = cliente.Distrito?.Provincia?.Departamento?.Nombre,
             Telefono = cliente.Telefono,
             Email = cliente.Email,
             DiaVisita = cliente.DiaVisita,

@@ -8,7 +8,13 @@ export interface ClienteResponse {
   tipoDoc: string
   nombre: string
   direccion: string | null
+  distritoId: number | null
+  /** Nombre del distrito, del ubigeo oficial. */
   distrito: string | null
+  provinciaId: number | null
+  provincia: string | null
+  departamentoId: number | null
+  departamento: string | null
   telefono: string | null
   email: string | null
   diaVisita: string | null
@@ -28,7 +34,9 @@ export interface ClienteRequest {
   tipoDoc?: string
   nombre: string
   direccion?: string | null
-  distrito?: string | null
+  distritoId?: number | null
+  /** Solo para importación: se busca por nombre en el ubigeo oficial (no se crea uno nuevo). */
+  distritoNombre?: string | null
   telefono?: string | null
   email?: string | null
   diaVisita?: string | null

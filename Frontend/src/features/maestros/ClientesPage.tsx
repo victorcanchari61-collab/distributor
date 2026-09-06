@@ -30,6 +30,8 @@ import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { valorDe } from '../../lib/excel'
 import { useRealtime } from '../../lib/realtime'
+import { ubigeoApi } from '../../lib/ubigeoApi'
+import type { DepartamentoResponse, DistritoResponse, ProvinciaResponse } from '../../lib/ubigeoApi'
 import { mercadoApi, rutaApi } from '../tms'
 import type { MercadoResponse, RutaResponse } from '../tms'
 import { clienteApi } from './clienteApi'
@@ -40,7 +42,7 @@ const VACIO: ClienteRequest = {
   tipoDoc: 'DNI',
   nombre: '',
   direccion: '',
-  distrito: '',
+  distritoId: 0,
   telefono: '',
   email: '',
   diaVisita: '',
@@ -54,6 +56,9 @@ export function ClientesPage() {
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [mercados, setMercados] = useState<MercadoResponse[]>([])
   const [rutas, setRutas] = useState<RutaResponse[]>([])
+  const [departamentos, setDepartamentos] = useState<DepartamentoResponse[]>([])
+  const [provincias, setProvincias] = useState<ProvinciaResponse[]>([])
+  const [distritos, setDistritos] = useState<DistritoResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -61,6 +66,10 @@ export function ClientesPage() {
   const [importando, setImportando] = useState(false)
   const [editando, setEditando] = useState<ClienteResponse | null>(null)
   const [form, setForm] = useState<ClienteRequest>(VACIO)
+  // Solo para encadenar los selects del formulario: lo unico que se manda es
+  // form.distritoId, pero para mostrar provincias/distritos hay que saber que
+  // departamento y provincia se eligieron primero.
+  const [ubigeoSel, setUbigeoSel] = useState({ departamentoId: 0, provinciaId: 0 })
   const [guardando, setGuardando] = useState(false)
   const [consultando, setConsultando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -81,14 +90,20 @@ export function ClientesPage() {
     setCargando(true)
     setError('')
     try {
-      const [cli, merc, rts] = await Promise.all([
+      const [cli, merc, rts, deps, provs, dists] = await Promise.all([
         clienteApi.getAll(),
         mercadoApi.getAll(),
         rutaApi.getAll(),
+        ubigeoApi.departamentos(),
+        ubigeoApi.provincias(),
+        ubigeoApi.distritos(),
       ])
       setClientes(cli)
       setMercados(merc)
       setRutas(rts)
+      setDepartamentos(deps)
+      setProvincias(provs)
+      setDistritos(dists)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los clientes.')
     } finally {
@@ -105,6 +120,7 @@ export function ClientesPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setForm(VACIO)
+    setUbigeoSel({ departamentoId: 0, provinciaId: 0 })
     setErrorForm('')
     setAbierto(true)
   }
@@ -116,12 +132,16 @@ export function ClientesPage() {
       tipoDoc: cliente.tipoDoc,
       nombre: cliente.nombre,
       direccion: cliente.direccion ?? '',
-      distrito: cliente.distrito ?? '',
+      distritoId: cliente.distritoId ?? 0,
       telefono: cliente.telefono ?? '',
       email: cliente.email ?? '',
       diaVisita: cliente.diaVisita ?? '',
       rutaId: cliente.rutaId ?? 0,
       mercadoId: cliente.mercadoId ?? 0,
+    })
+    setUbigeoSel({
+      departamentoId: cliente.departamentoId ?? 0,
+      provinciaId: cliente.provinciaId ?? 0,
     })
     setErrorForm('')
     setAbierto(true)
@@ -134,11 +154,19 @@ export function ClientesPage() {
     try {
       if (tipo === 'RUC') {
         const datos = await consultaApi.ruc(documento)
+        // El distrito de SUNAT es texto libre: se intenta calzar contra el
+        // ubigeo oficial por nombre; si no hay uno igual, se deja sin elegir.
+        const encontrado = datos.distrito
+          ? distritos.find((d) => d.nombre.toLowerCase() === datos.distrito!.trim().toLowerCase())
+          : undefined
+        if (encontrado) {
+          setUbigeoSel({ departamentoId: encontrado.departamentoId, provinciaId: encontrado.provinciaId })
+        }
         setForm((prev) => ({
           ...prev,
           nombre: datos.razonSocial,
           direccion: datos.direccion ?? prev.direccion,
-          distrito: datos.distrito ?? prev.distrito,
+          distritoId: encontrado ? encontrado.id : prev.distritoId,
         }))
       } else if (tipo === 'DNI') {
         const datos = await consultaApi.dni(documento)
@@ -165,7 +193,12 @@ export function ClientesPage() {
 
     setGuardando(true)
     try {
-      const cuerpo = { ...form, mercadoId: form.mercadoId || null, rutaId: form.rutaId || null }
+      const cuerpo = {
+        ...form,
+        mercadoId: form.mercadoId || null,
+        rutaId: form.rutaId || null,
+        distritoId: form.distritoId || null,
+      }
       if (editando) await clienteApi.update(editando.id, { ...cuerpo, activo: editando.activo })
       else await clienteApi.create(cuerpo)
       setAbierto(false)
@@ -473,14 +506,48 @@ export function ClientesPage() {
             />
 
             <Desplegable
+              label="Departamento"
+              optional
+              value={ubigeoSel.departamentoId}
+              onChange={(v) => {
+                setUbigeoSel({ departamentoId: Number(v), provinciaId: 0 })
+                setForm((f) => ({ ...f, distritoId: 0 }))
+              }}
+              options={[
+                { value: 0, label: 'Elegir' },
+                ...departamentos.map((d) => ({ value: d.id, label: d.nombre })),
+              ]}
+            />
+
+            <Desplegable
+              label="Provincia"
+              optional
+              disabled={!ubigeoSel.departamentoId}
+              value={ubigeoSel.provinciaId}
+              onChange={(v) => {
+                setUbigeoSel((s) => ({ ...s, provinciaId: Number(v) }))
+                setForm((f) => ({ ...f, distritoId: 0 }))
+              }}
+              options={[
+                { value: 0, label: 'Elegir' },
+                ...provincias
+                  .filter((p) => p.departamentoId === ubigeoSel.departamentoId)
+                  .map((p) => ({ value: p.id, label: p.nombre })),
+              ]}
+            />
+
+            <Desplegable
               label="Distrito"
               optional
-              value={form.distrito ?? ''}
-              onChange={(v) => setForm({ ...form, distrito: String(v) })}
-              options={opcionesDistintas(clientes.map((c) => c.distrito)).map((o) => ({
-                value: o.value,
-                label: o.label,
-              }))}
+              disabled={!ubigeoSel.provinciaId}
+              value={form.distritoId ?? 0}
+              onChange={(v) => setForm({ ...form, distritoId: Number(v) })}
+              options={[
+                { value: 0, label: 'Elegir' },
+                ...distritos
+                  .filter((d) => d.provinciaId === ubigeoSel.provinciaId)
+                  .map((d) => ({ value: d.id, label: d.nombre })),
+              ]}
             />
 
             <Input
@@ -619,7 +686,8 @@ export function ClientesPage() {
             documento: valorDe(fila, 'documento', 'dni', 'ruc', 'nro documento'),
             nombre: valorDe(fila, 'nombre', 'razon social', 'cliente'),
             direccion: valorDe(fila, 'direccion', 'dirección'),
-            distrito: valorDe(fila, 'distrito'),
+            // Se busca por nombre en el ubigeo oficial: el archivo no trae el id.
+            distritoNombre: valorDe(fila, 'distrito'),
             telefono: valorDe(fila, 'telefono', 'teléfono', 'celular'),
             diaVisita: valorDe(fila, 'dias visita', 'dia visita', 'día de visita'),
             // Se resuelve o crea por nombre: el archivo no trae el id de la ruta.

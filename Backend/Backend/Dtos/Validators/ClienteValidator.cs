@@ -28,7 +28,7 @@ public class ClienteValidator : AbstractValidator<ClienteRequestBase>
 
         RuleFor(x => x.Nombre).NotEmpty().WithMessage("Falta el nombre").MaximumLength(150);
         RuleFor(x => x.Direccion).MaximumLength(250);
-        RuleFor(x => x.Distrito).MaximumLength(80);
+        RuleFor(x => x.DistritoNombre).MaximumLength(80);
         RuleFor(x => x.Telefono).MaximumLength(40);
         RuleFor(x => x.DiaVisita).MaximumLength(20);
         RuleFor(x => x.RutaNombre).MaximumLength(80);
