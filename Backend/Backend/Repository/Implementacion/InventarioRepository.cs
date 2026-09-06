@@ -162,6 +162,33 @@ public class InventarioRepository : IInventarioRepository
 
     public async Task AddCapaAsync(CapaCosto capa) => await _context.CapasCosto.AddAsync(capa);
 
+    public async Task<ResumenStockResponse> ResumenStockAsync(int? almacenId)
+    {
+        var capas = _context.CapasCosto
+            .Where(c => c.CantidadDisponible > 0 && (almacenId == null || c.AlmacenId == almacenId));
+
+        // Por producto: cuanto queda. De ahi salen los dos contadores.
+        var porProducto = await capas
+            .GroupBy(c => c.ProductoId)
+            .Select(g => new { ProductoId = g.Key, Stock = g.Sum(c => c.CantidadDisponible) })
+            .ToListAsync();
+
+        var minimos = await _context.Productos
+            .Where(p => p.ControlaStock && p.StockMinimo > 0)
+            .Select(p => new { p.Id, p.StockMinimo })
+            .ToListAsync();
+
+        var stockPorProducto = porProducto.ToDictionary(x => x.ProductoId, x => x.Stock);
+
+        return new ResumenStockResponse
+        {
+            ConStock = porProducto.Count(x => x.Stock > 0),
+            // Un producto sin capas tambien esta bajo el minimo: tiene cero.
+            BajoMinimo = minimos.Count(m => stockPorProducto.GetValueOrDefault(m.Id) <= m.StockMinimo),
+            Valorizado = await capas.SumAsync(c => (decimal?)(c.CantidadDisponible * c.CostoUnitario)) ?? 0m,
+        };
+    }
+
     public async Task<Dictionary<int, ResumenStock>> GetResumenAsync(
         IEnumerable<int> productoIds, int? almacenId = null)
     {

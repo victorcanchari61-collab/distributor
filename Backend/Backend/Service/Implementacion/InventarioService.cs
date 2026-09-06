@@ -342,6 +342,60 @@ public class InventarioService : IInventarioService
         });
     }
 
+    /// <summary>
+    /// Una página del stock. Los agregados (stock, valorizado, reservado) se
+    /// piden SOLO para los productos de la página: eso es lo que evita recorrer
+    /// el catálogo entero en cada carga.
+    /// </summary>
+    public async Task<PaginaResponse<StockResponse>> ListarStockAsync(
+        ConsultaTablaRequest consulta, int? almacenId)
+    {
+        var (productos, total) = await _productos.ListarConStockAsync(consulta, almacenId);
+
+        var resumen = await _repository.GetResumenAsync(productos.Select(p => p.Id), almacenId);
+        var almacen = almacenId is int id ? await _repository.GetAlmacenAsync(id) : null;
+        var reservado = await _ventas.GetReservadoPorProductoAsync(almacenId);
+
+        return new PaginaResponse<StockResponse>
+        {
+            Items = productos.Select(p => MapStock(p, resumen.GetValueOrDefault(p.Id),
+                                                  reservado.GetValueOrDefault(p.Id),
+                                                  almacenId, almacen?.Nombre)).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public Task<ResumenStockResponse> GetResumenStockAsync(int? almacenId) =>
+        _repository.ResumenStockAsync(almacenId);
+
+    private static StockResponse MapStock(
+        Producto p, ResumenStock? r, decimal reservado, int? almacenId, string? almacen)
+    {
+        var stock = r?.Stock ?? 0;
+
+        return new StockResponse
+        {
+            ProductoId = p.Id,
+            Codigo = p.Codigo,
+            Producto = p.Nombre,
+            Categoria = p.Categoria?.Nombre,
+            Marca = p.Marca?.Nombre,
+            UnidadBase = p.UnidadBase?.Codigo ?? string.Empty,
+            AlmacenId = almacenId ?? 0,
+            Almacen = almacen ?? "Todos",
+            Stock = stock,
+            Reservado = reservado,
+            Disponible = stock - reservado,
+            StockMinimo = p.StockMinimo,
+            BajoMinimo = p.StockMinimo > 0 && stock <= p.StockMinimo,
+            CostoActual = r?.CostoMin,
+            CostoUltimo = r?.CostoMax,
+            Valorizado = r?.Valorizado ?? 0,
+        };
+    }
+
     public async Task<StockResponse> GetStockProductoAsync(int productoId, int? almacenId)
     {
         var producto = await _productos.GetConDetalleAsync(productoId)

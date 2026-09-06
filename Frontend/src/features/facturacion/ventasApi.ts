@@ -114,6 +114,14 @@ export interface ResumenPedidos {
   confirmados: number
 }
 
+/** Totales de las cuentas pendientes, calculados sobre todas y no una página. */
+export interface ResumenCuentas {
+  cuentas: number
+  totalPendiente: number
+  totalFacturado: number
+  totalCubierto: number
+}
+
 /** Totales de los cobros de un usuario, sobre todo el rango y no una página. */
 export interface ResumenCobros {
   validos: number
@@ -199,6 +207,13 @@ export const notaVentaApi = {
   /** Corrige una venta ya confirmada: el stock se ajusta solo, según la diferencia. */
   update: (id: number, body: CrearNotaVentaRequest) => api.put<NotaVentaResponse>(`/notaventa/${id}`, body),
   anular: (id: number) => api.patch<void>(`/notaventa/${id}/anular`),
+  /** Una página de las cuentas por cobrar, con el saldo resuelto en el servidor. */
+  listarCuentasPorCobrar: (consulta: ConsultaTabla) =>
+    api.post<PaginaResponse<NotaVentaResponse>>('/notaventa/cuentasporcobrar/listar', consulta),
+
+  resumenCuentasPorCobrar: () =>
+    api.get<ResumenCuentas>('/notaventa/cuentasporcobrar/resumen'),
+
   /** Notas a crédito con saldo pendiente: la base de "Cuentas por cobrar". */
   cuentasPorCobrar: () => api.get<NotaVentaResponse[]>('/notaventa/cuentasporcobrar'),
   /** Registra un abono contra el saldo pendiente de la nota. */

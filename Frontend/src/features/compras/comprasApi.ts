@@ -1,6 +1,7 @@
 import { api } from '../../lib/apiClient'
 import type { ConsultaTabla } from '../../components/ui'
 import type { PaginaResponse } from '../../lib/paginacion'
+import type { ResumenCuentas } from '../facturacion/ventasApi'
 
 // --- Comun ---
 
@@ -158,6 +159,12 @@ export const compraApi = {
     api.post<PaginaResponse<CompraResponse>>('/compra/listar', consulta),
 
   resumen: () => api.get<ResumenCompras>('/compra/resumen'),
+
+  /** Una página de las cuentas por pagar, con el saldo resuelto en el servidor. */
+  listarCuentasPorPagar: (consulta: ConsultaTabla) =>
+    api.post<PaginaResponse<CompraResponse>>('/compra/cuentasporpagar/listar', consulta),
+
+  resumenCuentasPorPagar: () => api.get<ResumenCuentas>('/compra/cuentasporpagar/resumen'),
 
   /** Las compras que todavía esperan mercadería, sin paginar: son pocas. */
   abiertas: () => api.get<CompraResponse[]>('/compra/abiertas'),

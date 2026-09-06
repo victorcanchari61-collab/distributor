@@ -236,6 +236,83 @@ public class ComprasRepository : IComprasRepository
         Recibidas = await _context.Compras.CountAsync(c => c.Estado == EstadoCompra.RecibidaTotal),
     };
 
+    /// <summary>
+    /// Las compras a credito que todavia deben algo. El saldo no es una
+    /// columna: sale del detalle menos los pagos vigentes, asi que va como
+    /// subconsulta para que la base resuelva el "debe algo".
+    /// </summary>
+    private IQueryable<Compra> CuentasPorPagarBase() =>
+        ComprasConDetalle()
+            .Where(c => c.Estado != EstadoCompra.Anulada
+                        && c.FormaPago == FormaPagoCompra.Credito
+                        && c.Detalle.Sum(d => d.Cantidad * d.CostoUnitario)
+                           > c.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto))
+            .AsNoTracking();
+
+    public async Task<(List<Compra> Items, int Total)> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta)
+    {
+        var query = CuentasPorPagarBase();
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(c =>
+                EF.Functions.Like(c.Numero, $"%{texto}%")
+                || (c.Proveedor != null && EF.Functions.Like(c.Proveedor.Nombre, $"%{texto}%"))
+                || (c.Proveedor != null && EF.Functions.Like(c.Proveedor.Documento, $"%{texto}%")));
+        }
+
+        if (consulta.ValorDe("numero") is string numero)
+            query = query.Where(c => EF.Functions.Like(c.Numero, $"%{numero}%"));
+
+        if (consulta.ValorDe("proveedor") is string proveedor)
+            query = query.Where(c => c.Proveedor != null && EF.Functions.Like(c.Proveedor.Nombre, $"%{proveedor}%"));
+
+        var (desde, hasta) = consulta.RangoFechas("fecha");
+        if (desde is not null) query = query.Where(c => c.Fecha >= desde);
+        if (hasta is not null) query = query.Where(c => c.Fecha <= hasta);
+
+        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
+
+        query = consulta.Orden switch
+        {
+            "numero" => desc ? query.OrderByDescending(c => c.Numero).ThenByDescending(c => c.Id)
+                             : query.OrderBy(c => c.Numero).ThenBy(c => c.Id),
+            "proveedor" => desc ? query.OrderByDescending(c => c.Proveedor!.Nombre).ThenByDescending(c => c.Id)
+                                : query.OrderBy(c => c.Proveedor!.Nombre).ThenBy(c => c.Id),
+            "saldo" => desc
+                ? query.OrderByDescending(c => c.Detalle.Sum(d => d.Cantidad * d.CostoUnitario)
+                        - c.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto)).ThenByDescending(c => c.Id)
+                : query.OrderBy(c => c.Detalle.Sum(d => d.Cantidad * d.CostoUnitario)
+                        - c.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto)).ThenBy(c => c.Id),
+            _ => desc ? query.OrderByDescending(c => c.Fecha).ThenByDescending(c => c.Id)
+                      : query.OrderBy(c => c.Fecha).ThenBy(c => c.Id),
+        };
+
+        return await query.PaginarAsync(consulta);
+    }
+
+    public async Task<ResumenCuentasResponse> ResumenCuentasPorPagarAsync()
+    {
+        var cuentas = CuentasPorPagarBase();
+
+        var facturado = await cuentas
+            .SelectMany(c => c.Detalle)
+            .SumAsync(d => (decimal?)(d.Cantidad * d.CostoUnitario)) ?? 0m;
+
+        var cubierto = await cuentas
+            .SelectMany(c => c.Pagos).Where(p => !p.Anulado)
+            .SumAsync(p => (decimal?)p.Monto) ?? 0m;
+
+        return new ResumenCuentasResponse
+        {
+            Cuentas = await cuentas.CountAsync(),
+            TotalFacturado = facturado,
+            TotalCubierto = cubierto,
+            TotalPendiente = facturado - cubierto,
+        };
+    }
+
     public async Task<List<Compra>> GetComprasAbiertasAsync() =>
         await ComprasConDetalle()
             .Where(c => c.Estado == EstadoCompra.Pendiente || c.Estado == EstadoCompra.RecibidaParcial)

@@ -61,6 +61,9 @@ public interface IInventarioRepository
     Task<List<CapaCosto>> GetCapasDeMovimientoAsync(int movimientoId);
     Task AddCapaAsync(CapaCosto capa);
 
+    /// <summary>Totales del stock de todo el catálogo, resueltos con agregados.</summary>
+    Task<Dtos.Responses.ResumenStockResponse> ResumenStockAsync(int? almacenId);
+
     /// <summary>Stock y costos de varios productos, para pintar listados.</summary>
     Task<Dictionary<int, ResumenStock>> GetResumenAsync(
         IEnumerable<int> productoIds, int? almacenId = null);

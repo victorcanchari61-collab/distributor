@@ -1,4 +1,6 @@
 import { api } from '../../lib/apiClient'
+import type { ConsultaTabla } from '../../components/ui'
+import type { PaginaResponse } from '../../lib/paginacion'
 import type { ResultadoImportacion } from '../../components/ui'
 
 // --- Catalogos de apoyo ---
@@ -125,7 +127,22 @@ export interface ProductoImportRequest {
   precioMayorista?: number | null
 }
 
+/** Contadores y valores de filtro del catálogo completo. */
+export interface ResumenProductos {
+  activos: number
+  desactivados: number
+  presentaciones: number
+  categorias: string[]
+  marcas: string[]
+}
+
 export const productoApi = {
+  /** Una página del catálogo, resuelta en el servidor. */
+  listar: (consulta: ConsultaTabla) =>
+    api.post<PaginaResponse<ProductoResponse>>('/producto/listar', consulta),
+
+  resumen: () => api.get<ResumenProductos>('/producto/resumen'),
+
   getAll: () => api.get<ProductoResponse[]>('/producto'),
   getById: (id: number) => api.get<ProductoResponse>(`/producto/${id}`),
   create: (body: CreateProductoRequest) => api.post<ProductoResponse>('/producto', body),

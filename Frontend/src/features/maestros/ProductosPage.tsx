@@ -29,7 +29,7 @@ import {
   Tabs,
   useConfirmacion,
 } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { exportarExcel, valorDe } from '../../lib/excel'
 import { CatalogoSimple } from './CatalogoSimple'
@@ -43,6 +43,7 @@ import type {
   ProductoImportRequest,
   ProductoResponse,
   UnidadResponse,
+  ResumenProductos,
 } from './productoApi'
 import { useRealtime } from '../../lib/realtime'
 
@@ -115,19 +116,21 @@ export function ProductosPage() {
 
   const { confirmar, dialogo } = useConfirmacion()
 
-  const cargar = useCallback(async () => {
+  /*
+   * El catalogo puede llegar a miles de productos: la tabla pide solo su
+   * pagina. Los contadores salen del resumen — contarlos sobre las filas
+   * cargadas diria "20 productos activos".
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenProductos | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      const [p, c, m, u] = await Promise.all([
-        productoApi.getAll(),
-        categoriaApi.getAll(),
-        marcaApi.getAll(),
-        unidadApi.getAll(),
-      ])
-      setProductos(p)
-      setCategorias(c)
-      setMarcas(m)
-      setUnidades(u)
+      const pagina = await productoApi.listar(q)
+      setProductos(pagina.items)
+      setTotalRegistros(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar el catálogo.')
@@ -136,9 +139,31 @@ export function ProductosPage() {
     }
   }, [])
 
+  /** Catalogos del formulario y contadores: no cambian al paginar. */
+  const cargarApoyo = useCallback(async () => {
+    try {
+      const [res, c, m, u] = await Promise.all([
+        productoApi.resumen(),
+        categoriaApi.getAll(),
+        marcaApi.getAll(),
+        unidadApi.getAll(),
+      ])
+      setResumen(res)
+      setCategorias(c)
+      setMarcas(m)
+      setUnidades(u)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarApoyo()])
+  }, [consulta, cargarPagina, cargarApoyo])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarApoyo()
+  }, [cargarApoyo])
 
   useRealtime(['productos', 'categorias', 'marcas', 'unidades'], cargar)
 
@@ -470,7 +495,7 @@ export function ProductosPage() {
       active={pestana}
       onChange={(id) => setPestana(id as Pestana)}
       items={[
-        { id: 'productos', label: 'Productos', icon: <Package size={15} />, badge: productos.length },
+        { id: 'productos', label: 'Productos', icon: <Package size={15} />, badge: (resumen?.activos ?? 0) + (resumen?.desactivados ?? 0) },
         { id: 'categorias', label: 'Categorías', icon: <Boxes size={15} />, badge: categorias.length },
         { id: 'marcas', label: 'Marcas', icon: <Tags size={15} />, badge: marcas.length },
         { id: 'unidades', label: 'Unidades', icon: <Ruler size={15} />, badge: unidades.length },
@@ -539,18 +564,18 @@ export function ProductosPage() {
           <>
             <StatCard
               label="Productos activos"
-              value={String(activos.length)}
+              value={String(resumen?.activos ?? 0)}
               icon={<Package size={18} />}
             />
             <StatCard
               label="Desactivados"
-              value={String(productos.length - activos.length)}
+              value={String(resumen?.desactivados ?? 0)}
               icon={<ShieldOff size={18} />}
               tono={productos.length > activos.length ? 'warning' : 'neutral'}
             />
             <StatCard
               label="Presentaciones"
-              value={String(productos.reduce((n, p) => n + p.presentaciones.length, 0))}
+              value={String(resumen?.presentaciones ?? 0)}
               icon={<PackageCheck size={18} />}
               tono="success"
               hint="formas de comprar y vender"
@@ -566,6 +591,14 @@ export function ProductosPage() {
         }
         columns={columns}
         rows={productos}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
         cardIcon={Package}
         searchPlaceholder="Buscar por código, nombre, marca..."
         empty={cargando ? 'Cargando productos...' : 'Todavía no hay productos registrados.'}

@@ -1,3 +1,5 @@
+using Backend.Dtos.Requests;
+using Backend.Dtos.Responses;
 using Backend.Models;
 
 namespace Backend.Repository.Interfaces;
@@ -6,6 +8,19 @@ public interface IProductoRepository
 {
     /// <summary>Productos con categoria, marca, unidad y presentaciones.</summary>
     Task<IEnumerable<Producto>> GetAllConDetalleAsync();
+
+    /// <summary>Una página del catálogo, buscada, filtrada y ordenada en la base.</summary>
+    Task<(List<Producto> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>
+    /// Una página de los productos que controlan stock, para la pantalla de
+    /// Stock. Va aparte de <see cref="ListarAsync"/> porque esa incluye los
+    /// que no manejan inventario.
+    /// </summary>
+    Task<(List<Producto> Items, int Total)> ListarConStockAsync(ConsultaTablaRequest consulta, int? almacenId);
+
+    /// <summary>Contadores y valores de filtro del catálogo completo.</summary>
+    Task<ResumenProductosResponse> ResumenAsync();
 
     Task<Producto?> GetConDetalleAsync(int id);
 

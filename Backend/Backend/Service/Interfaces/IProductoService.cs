@@ -5,7 +5,17 @@ namespace Backend.Service.Interfaces;
 
 public interface IProductoService
 {
+    /// <summary>
+    /// Todo el catálogo, sin paginar. Lo usan los buscadores de producto de
+    /// otras pantallas, que filtran en memoria mientras se escribe.
+    /// </summary>
     Task<IEnumerable<ProductoResponse>> GetAllAsync();
+
+    /// <summary>Una página del catálogo, resuelta en la base.</summary>
+    Task<PaginaResponse<ProductoResponse>> ListarAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Contadores y valores de filtro del catálogo completo.</summary>
+    Task<ResumenProductosResponse> GetResumenAsync();
     Task<ProductoResponse> GetByIdAsync(int id);
     Task<ProductoResponse> CreateAsync(CreateProductoRequest request);
     Task<ProductoResponse> UpdateAsync(int id, UpdateProductoRequest request);

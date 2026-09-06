@@ -32,6 +32,12 @@ public interface IInventarioService
 
     // --- Kardex ---
 
+    /// <summary>Una página del stock, con los agregados solo de esa página.</summary>
+    Task<PaginaResponse<StockResponse>> ListarStockAsync(ConsultaTablaRequest consulta, int? almacenId);
+
+    /// <summary>Totales del stock de todo el catálogo.</summary>
+    Task<ResumenStockResponse> GetResumenStockAsync(int? almacenId);
+
     /// <summary>Una página de documentos de inventario de una familia.</summary>
     Task<PaginaResponse<DocumentoInventarioResponse>> ListarDocumentosAsync(
         ConsultaTablaRequest consulta, string? familia);

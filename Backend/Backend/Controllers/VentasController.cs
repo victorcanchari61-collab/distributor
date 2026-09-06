@@ -105,6 +105,16 @@ public class NotaVentaController : ControllerBase
     public async Task<IActionResult> Resumen() => Ok(await _ventas.GetResumenNotasVentaAsync());
 
     /// <summary>Notas de venta a crédito con saldo pendiente: base de "Cuentas por cobrar".</summary>
+    /// <summary>Una página de las cuentas por cobrar.</summary>
+    [HttpPost("cuentasporcobrar/listar")]
+    public async Task<IActionResult> ListarCuentasPorCobrar([FromBody] ConsultaTablaRequest consulta) =>
+        Ok(await _ventas.ListarCuentasPorCobrarAsync(consulta));
+
+    /// <summary>Totales de todas las cuentas por cobrar.</summary>
+    [HttpGet("cuentasporcobrar/resumen")]
+    public async Task<IActionResult> ResumenCuentasPorCobrar() =>
+        Ok(await _ventas.GetResumenCuentasPorCobrarAsync());
+
     [HttpGet("cuentasporcobrar")]
     public async Task<IActionResult> CuentasPorCobrar() => Ok(await _ventas.GetCuentasPorCobrarAsync());
 

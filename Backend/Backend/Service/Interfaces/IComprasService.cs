@@ -17,6 +17,12 @@ public interface IComprasService
     /// <summary>Contadores del listado completo de compras.</summary>
     Task<ResumenComprasResponse> GetResumenComprasAsync();
 
+    /// <summary>Una página de las cuentas por pagar, con el saldo resuelto en la base.</summary>
+    Task<PaginaResponse<CompraResponse>> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Totales de todas las cuentas por pagar.</summary>
+    Task<ResumenCuentasResponse> GetResumenCuentasPorPagarAsync();
+
     /// <summary>Las compras que todavía esperan mercadería, sin paginar.</summary>
     Task<IEnumerable<CompraResponse>> GetComprasAbiertasAsync();
 

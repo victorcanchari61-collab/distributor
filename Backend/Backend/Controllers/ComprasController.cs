@@ -104,6 +104,16 @@ public class CompraController : ControllerBase
     public async Task<IActionResult> Abiertas() => Ok(await _compras.GetComprasAbiertasAsync());
 
     /// <summary>Compras a crédito con saldo pendiente: base de "Cuentas por pagar".</summary>
+    /// <summary>Una página de las cuentas por pagar.</summary>
+    [HttpPost("cuentasporpagar/listar")]
+    public async Task<IActionResult> ListarCuentasPorPagar([FromBody] ConsultaTablaRequest consulta) =>
+        Ok(await _compras.ListarCuentasPorPagarAsync(consulta));
+
+    /// <summary>Totales de todas las cuentas por pagar.</summary>
+    [HttpGet("cuentasporpagar/resumen")]
+    public async Task<IActionResult> ResumenCuentasPorPagar() =>
+        Ok(await _compras.GetResumenCuentasPorPagarAsync());
+
     [HttpGet("cuentasporpagar")]
     public async Task<IActionResult> CuentasPorPagar() => Ok(await _compras.GetCuentasPorPagarAsync());
 

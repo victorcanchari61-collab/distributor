@@ -116,6 +116,17 @@ public class InventarioController : ControllerBase
     [HttpGet("lotes")]
     public async Task<IActionResult> Lotes() => Ok(await _inventario.GetLotesAsync());
 
+    /// <summary>Una página del stock, con búsqueda, filtros y orden en la base.</summary>
+    [HttpPost("stock/listar")]
+    public async Task<IActionResult> ListarStock(
+        [FromBody] ConsultaTablaRequest consulta, [FromQuery] int? almacenId) =>
+        Ok(await _inventario.ListarStockAsync(consulta, almacenId));
+
+    /// <summary>Totales del stock de todo el catálogo.</summary>
+    [HttpGet("stock/resumen")]
+    public async Task<IActionResult> ResumenStock([FromQuery] int? almacenId) =>
+        Ok(await _inventario.GetResumenStockAsync(almacenId));
+
     /// <summary>Una página de documentos de una familia (ajustes, transferencias, recepciones).</summary>
     [HttpPost("documentos/listar")]
     public async Task<IActionResult> ListarDocumentos(

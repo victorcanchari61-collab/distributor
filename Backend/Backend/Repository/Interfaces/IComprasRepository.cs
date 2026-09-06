@@ -43,6 +43,15 @@ public interface IComprasRepository
     Task<ResumenComprasResponse> ResumenComprasAsync();
 
     /// <summary>
+    /// Una página de las compras a crédito con saldo pendiente. El saldo se
+    /// calcula en la base: detalle menos pagos vigentes.
+    /// </summary>
+    Task<(List<Compra> Items, int Total)> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Totales de todas las cuentas por pagar, no de una página.</summary>
+    Task<ResumenCuentasResponse> ResumenCuentasPorPagarAsync();
+
+    /// <summary>
     /// Las compras que todavía esperan mercadería. Va sin paginar a propósito:
     /// alimenta el selector del modal de recepción, que necesita verlas todas,
     /// y por definición son pocas — una compra deja la lista al recibirse.

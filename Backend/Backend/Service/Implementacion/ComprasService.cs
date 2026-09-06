@@ -462,6 +462,22 @@ public class ComprasService : IComprasService
         return actualizada;
     }
 
+    public async Task<PaginaResponse<CompraResponse>> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta)
+    {
+        var (items, total) = await _repository.ListarCuentasPorPagarAsync(consulta);
+
+        return new PaginaResponse<CompraResponse>
+        {
+            Items = items.Select(MapCompra).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public Task<ResumenCuentasResponse> GetResumenCuentasPorPagarAsync() =>
+        _repository.ResumenCuentasPorPagarAsync();
+
     public async Task<IEnumerable<CompraResponse>> GetCuentasPorPagarAsync()
     {
         var compras = await _repository.GetComprasAsync();

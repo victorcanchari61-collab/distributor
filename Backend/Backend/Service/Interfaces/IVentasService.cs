@@ -56,6 +56,12 @@ public interface IVentasService
     /// <summary>Quita un pago registrado por error: su monto vuelve al saldo pendiente.</summary>
     Task<NotaVentaResponse> AnularPagoAsync(int id, int pagoId);
 
+    /// <summary>Una página de las cuentas por cobrar, con el saldo resuelto en la base.</summary>
+    Task<PaginaResponse<NotaVentaResponse>> ListarCuentasPorCobrarAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Totales de todas las cuentas por cobrar.</summary>
+    Task<ResumenCuentasResponse> GetResumenCuentasPorCobrarAsync();
+
     /// <summary>Notas de venta con saldo pendiente de cobro: base de "Cuentas por cobrar".</summary>
     Task<IEnumerable<NotaVentaResponse>> GetCuentasPorCobrarAsync();
 

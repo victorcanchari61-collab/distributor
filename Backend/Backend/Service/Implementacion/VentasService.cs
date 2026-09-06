@@ -546,6 +546,23 @@ public class VentasService : IVentasService
         return actualizada;
     }
 
+    public async Task<PaginaResponse<NotaVentaResponse>> ListarCuentasPorCobrarAsync(
+        ConsultaTablaRequest consulta)
+    {
+        var (items, total) = await _repository.ListarCuentasPorCobrarAsync(consulta);
+
+        return new PaginaResponse<NotaVentaResponse>
+        {
+            Items = items.Select(MapNotaVenta).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public Task<ResumenCuentasResponse> GetResumenCuentasPorCobrarAsync() =>
+        _repository.ResumenCuentasPorCobrarAsync();
+
     public async Task<IEnumerable<NotaVentaResponse>> GetCuentasPorCobrarAsync()
     {
         var notas = await _repository.GetNotasVentaAsync(EstadoNotaVenta.Confirmada);

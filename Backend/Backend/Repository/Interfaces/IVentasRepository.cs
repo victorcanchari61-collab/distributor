@@ -59,6 +59,16 @@ public interface IVentasRepository
     Task<(List<PagoVenta> Items, int Total)> ListarCobrosAsync(
         ConsultaTablaRequest consulta, int? usuarioId, DateTime? desde, DateTime? hasta);
 
+    /// <summary>
+    /// Una página de las notas a crédito con saldo pendiente. El saldo se
+    /// calcula en la base (detalle menos pagos vigentes): traerlas todas para
+    /// filtrarlas en memoria era justamente lo que se quería evitar.
+    /// </summary>
+    Task<(List<NotaVenta> Items, int Total)> ListarCuentasPorCobrarAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Totales de todas las cuentas por cobrar, no de una página.</summary>
+    Task<ResumenCuentasResponse> ResumenCuentasPorCobrarAsync();
+
     /// <summary>Totales de esos cobros, sobre todo el rango y no sobre una página.</summary>
     Task<ResumenCobrosResponse> ResumenCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta);
 

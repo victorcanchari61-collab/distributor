@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, Boxes, Layers, PackageSearch, Warehouse } from 'lucide-react'
 import { Alert, ListaDesplegable, ListPage, StatCard, Tabs } from '../../components/ui'
-import type { DataTableColumn, TabItem } from '../../components/ui'
+import type { ConsultaTabla, DataTableColumn, TabItem } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { almacenApi, stockApi } from './inventarioApi'
-import type { AlmacenResponse, StockResponse } from './inventarioApi'
+import type { AlmacenResponse, ResumenStock, StockResponse } from './inventarioApi'
 import { useRealtime } from '../../lib/realtime'
 
 /**
@@ -29,27 +29,56 @@ export function StockPage() {
     void almacenApi.getAll().then(setAlmacenes)
   }, [])
 
-  const cargar = useCallback(async () => {
-    setCargando(true)
+  /*
+   * El stock es una fila por producto y almacen: con miles de productos son
+   * miles de filas. La tabla pide su pagina y el servidor calcula los
+   * agregados solo de esos productos.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenStock | null>(null)
+
+  const cargarPagina = useCallback(
+    async (q: ConsultaTabla) => {
+      setCargando(true)
+      try {
+        const pagina = await stockApi.listar(q, almacenId || undefined)
+        setStock(pagina.items)
+        setTotalRegistros(pagina.total)
+        setError('')
+      } catch (e) {
+        setError(e instanceof ApiError ? e.message : 'No pudimos cargar el stock.')
+      } finally {
+        setCargando(false)
+      }
+    },
+    [almacenId],
+  )
+
+  const cargarResumen = useCallback(async () => {
     try {
-      setStock(await stockApi.getAll(almacenId || undefined))
-      setError('')
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos cargar el stock.')
-    } finally {
-      setCargando(false)
+      setResumen(await stockApi.resumenTotales(almacenId || undefined))
+    } catch {
+      // Los totales de arriba son secundarios: la tabla igual sirve.
     }
   }, [almacenId])
 
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarResumen()])
+  }, [consulta, cargarPagina, cargarResumen])
+
+  // Cambiar de almacen es cambiar el listado entero: se vuelve a pedir.
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarResumen()
+    if (consulta) void cargarPagina({ ...consulta, pagina: 1 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [almacenId])
 
   useRealtime('stock', cargar)
 
-  const conStock = stock.filter((s) => s.stock > 0)
-  const bajoMinimo = stock.filter((s) => s.bajoMinimo)
-  const valorTotal = stock.reduce((n, s) => n + s.valorizado, 0)
+  const conStock = resumen?.conStock ?? 0
+  const bajoMinimo = resumen?.bajoMinimo ?? 0
+  const valorTotal = resumen?.valorizado ?? 0
   const almacenActivo = almacenes.find((a) => a.id === almacenId)
 
   const tabs: TabItem[] = [
@@ -159,15 +188,15 @@ export function StockPage() {
           <>
             <StatCard
               label="Productos con stock"
-              value={String(conStock.length)}
+              value={String(conStock)}
               icon={<Boxes size={18} />}
             />
             <StatCard
               label="Bajo el mínimo"
-              value={String(bajoMinimo.length)}
+              value={String(bajoMinimo)}
               icon={<AlertTriangle size={18} />}
-              tono={bajoMinimo.length > 0 ? 'warning' : 'neutral'}
-              hint={bajoMinimo.length > 0 ? 'reponer pronto' : 'todo en orden'}
+              tono={bajoMinimo > 0 ? 'warning' : 'neutral'}
+              hint={bajoMinimo > 0 ? 'reponer pronto' : 'todo en orden'}
             />
             <StatCard
               label="Valor del inventario"
@@ -180,6 +209,14 @@ export function StockPage() {
         }
         columns={columns}
         rows={stock}
+        servidor={{
+          total: totalRegistros,
+          cargando,
+          onConsulta: (q) => {
+            setConsulta(q)
+            void cargarPagina(q)
+          },
+        }}
         cardIcon={PackageSearch}
         searchPlaceholder="Buscar por código, producto, categoría..."
         empty={

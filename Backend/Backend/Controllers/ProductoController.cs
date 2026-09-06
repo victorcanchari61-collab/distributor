@@ -20,6 +20,15 @@ public class ProductoController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll() => Ok(await _productoService.GetAllAsync());
 
+    /// <summary>Una página del catálogo, con búsqueda, filtros y orden en la base.</summary>
+    [HttpPost("listar")]
+    public async Task<IActionResult> Listar([FromBody] ConsultaTablaRequest consulta) =>
+        Ok(await _productoService.ListarAsync(consulta));
+
+    /// <summary>Contadores y valores de filtro del catálogo completo.</summary>
+    [HttpGet("resumen")]
+    public async Task<IActionResult> Resumen() => Ok(await _productoService.GetResumenAsync());
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id) =>
         Ok(await _productoService.GetByIdAsync(id));

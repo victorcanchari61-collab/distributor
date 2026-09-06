@@ -119,7 +119,24 @@ export const loteApi = {
   getAll: () => api.get<LoteResponse[]>('/inventario/lotes'),
 }
 
+/** Totales del stock de todo el catálogo, no de la página visible. */
+export interface ResumenStock {
+  conStock: number
+  bajoMinimo: number
+  valorizado: number
+}
+
 export const stockApi = {
+  /** Una página del stock, resuelta en el servidor. */
+  listar: (consulta: ConsultaTabla, almacenId?: number) =>
+    api.post<PaginaResponse<StockResponse>>(
+      `/inventario/stock/listar${almacenId ? `?almacenId=${almacenId}` : ''}`,
+      consulta,
+    ),
+
+  resumenTotales: (almacenId?: number) =>
+    api.get<ResumenStock>(`/inventario/stock/resumen${almacenId ? `?almacenId=${almacenId}` : ''}`),
+
   getAll: (almacenId?: number) =>
     api.get<StockResponse[]>(`/inventario/stock${almacenId ? `?almacenId=${almacenId}` : ''}`),
   getProducto: (productoId: number, almacenId?: number) =>

@@ -57,6 +57,21 @@ public class ProductoService : IProductoService
         return productos.Select(MapToResponse);
     }
 
+    public async Task<PaginaResponse<ProductoResponse>> ListarAsync(ConsultaTablaRequest consulta)
+    {
+        var (items, total) = await _repository.ListarAsync(consulta);
+
+        return new PaginaResponse<ProductoResponse>
+        {
+            Items = items.Select(MapToResponse).ToList(),
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public Task<ResumenProductosResponse> GetResumenAsync() => _repository.ResumenAsync();
+
     public async Task<ProductoResponse> GetByIdAsync(int id) =>
         MapToResponse(await GetOrThrowAsync(id));
 

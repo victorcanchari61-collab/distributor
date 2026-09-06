@@ -13,11 +13,11 @@ import {
   SysDataTable,
   useConfirmacion,
 } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
 import { notaVentaApi } from '../facturacion/ventasApi'
-import type { NotaVentaResponse, PagoVentaResponse } from '../facturacion/ventasApi'
+import type { NotaVentaResponse, PagoVentaResponse, ResumenCuentas } from '../facturacion/ventasApi'
 import { metodoPagoApi } from './finanzasApi'
 import type { MetodoPagoResponse, TipoMetodoPago } from './finanzasApi'
 
@@ -74,15 +74,21 @@ export function CuentasPorCobrarPage() {
 
   const { confirmar, dialogo } = useConfirmacion()
 
-  const cargar = useCallback(async () => {
+  /*
+   * Las cuentas pendientes se acumulan mientras no se cobren: la tabla pide su
+   * pagina y el saldo lo calcula la base. Los totales de arriba salen del
+   * resumen — sumar las 20 filas visibles daria una deuda equivocada.
+   */
+  const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [resumen, setResumen] = useState<ResumenCuentas | null>(null)
+
+  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
-      const [ctas, metodos] = await Promise.all([
-        notaVentaApi.cuentasPorCobrar(),
-        metodoPagoApi.getAll(),
-      ])
-      setCuentas(ctas)
-      setMetodosPago(metodos.filter((m) => m.activo))
+      const pagina = await notaVentaApi.listarCuentasPorCobrar(q)
+      setCuentas(pagina.items)
+      setTotalRegistros(pagina.total)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las cuentas por cobrar.')
@@ -91,19 +97,49 @@ export function CuentasPorCobrarPage() {
     }
   }, [])
 
+  const cargarApoyo = useCallback(async () => {
+    try {
+      const [res, metodos] = await Promise.all([
+        notaVentaApi.resumenCuentasPorCobrar(),
+        metodoPagoApi.getAll(),
+      ])
+      setResumen(res)
+      setMetodosPago(metodos.filter((m) => m.activo))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
+    }
+  }, [])
+
+  const cargar = useCallback(async () => {
+    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarApoyo()])
+  }, [consulta, cargarPagina, cargarApoyo])
+
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    void cargarApoyo()
+  }, [cargarApoyo])
 
   useRealtime(['notasventa'], cargar)
 
-  // Trae la lista fresca y, con ella, la cuenta que se está gestionando: si ya
-  // no aparece (se saldó por completo) el modal se cierra solo.
-  const refrescar = useCallback(async (id: number) => {
-    const lista = await notaVentaApi.cuentasPorCobrar()
-    setCuentas(lista)
-    setGestionando(lista.find((n) => n.id === id) ?? null)
-  }, [])
+  /*
+   * Refresca lo que se ve tras registrar un pago.
+   *
+   * La cuenta que se esta gestionando se pide por id y NO se busca en la
+   * lista: con paginacion solo estaria si cayo en la pagina visible, y el
+   * modal se cerraria por error creyendo que se saldo.
+   */
+  const refrescar = useCallback(
+    async (id: number) => {
+      await Promise.all([
+        consulta ? cargarPagina(consulta) : Promise.resolve(),
+        cargarApoyo(),
+      ])
+
+      const nota = await notaVentaApi.getById(id)
+      // Saldada por completo: ya no es una cuenta pendiente, el modal se cierra.
+      setGestionando(nota.total - nota.totalPagado > 0 ? nota : null)
+    },
+    [consulta, cargarPagina, cargarApoyo],
+  )
 
   const cancelarEdicion = () => {
     setEditandoClave(null)
@@ -295,9 +331,9 @@ export function CuentasPorCobrarPage() {
     },
   ]
 
-  const totalPendiente = cuentas.reduce((n, c) => n + saldo(c), 0)
-  const totalFacturado = cuentas.reduce((n, c) => n + c.total, 0)
-  const totalCobradoDeEstas = cuentas.reduce((n, c) => n + c.totalPagado, 0)
+  const totalPendiente = resumen?.totalPendiente ?? 0
+  const totalFacturado = resumen?.totalFacturado ?? 0
+  const totalCobradoDeEstas = resumen?.totalCubierto ?? 0
   const diasDesde = (fecha: string) =>
     Math.max(0, Math.floor((Date.now() - new Date(fecha).getTime()) / 86_400_000))
   const diasMasAntigua = cuentas.length ? Math.max(...cuentas.map((c) => diasDesde(c.fecha))) : 0
@@ -310,7 +346,7 @@ export function CuentasPorCobrarPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Cuentas pendientes" value={String(cuentas.length)} icon={<Wallet size={18} />} />
+          <StatCard label="Cuentas pendientes" value={String(resumen?.cuentas ?? 0)} icon={<Wallet size={18} />} />
           <StatCard
             label="Por cobrar"
             value={`S/ ${totalPendiente.toFixed(2)}`}
@@ -338,6 +374,14 @@ export function CuentasPorCobrarPage() {
       }
       columns={columns}
       rows={cuentas}
+      servidor={{
+        total: totalRegistros,
+        cargando,
+        onConsulta: (q) => {
+          setConsulta(q)
+          void cargarPagina(q)
+        },
+      }}
       cardIcon={Wallet}
       searchPlaceholder="Buscar por número, cliente..."
       empty={cargando ? 'Cargando cuentas por cobrar...' : 'No hay cuentas pendientes de cobro.'}

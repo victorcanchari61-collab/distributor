@@ -322,6 +322,87 @@ public class VentasRepository : IVentasRepository
         };
     }
 
+    /*
+     * Las notas a credito que todavia deben algo.
+     *
+     * El saldo NO es una columna: es la suma del detalle vigente menos la de
+     * los pagos no anulados. Se expresa como subconsultas para que el filtro
+     * "debe algo" lo resuelva la base y no haya que traerse todo.
+     */
+    private IQueryable<NotaVenta> CuentasPorCobrarBase() =>
+        NotasVentaConDetalle()
+            .Where(n => n.Estado == EstadoNotaVenta.Confirmada
+                        && n.FormaPago == FormaPagoVenta.Credito
+                        && n.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario)
+                           > n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto))
+            .AsNoTracking();
+
+    public async Task<(List<NotaVenta> Items, int Total)> ListarCuentasPorCobrarAsync(
+        ConsultaTablaRequest consulta)
+    {
+        var query = CuentasPorCobrarBase();
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(n =>
+                EF.Functions.Like(n.Numero, $"%{texto}%")
+                || (n.Cliente != null && EF.Functions.Like(n.Cliente.Nombre, $"%{texto}%"))
+                || (n.Cliente != null && EF.Functions.Like(n.Cliente.Documento, $"%{texto}%")));
+        }
+
+        if (consulta.ValorDe("numero") is string numero)
+            query = query.Where(n => EF.Functions.Like(n.Numero, $"%{numero}%"));
+
+        if (consulta.ValorDe("cliente") is string cliente)
+            query = query.Where(n => n.Cliente != null && EF.Functions.Like(n.Cliente.Nombre, $"%{cliente}%"));
+
+        var (desde, hasta) = consulta.RangoFechas("fecha");
+        if (desde is not null) query = query.Where(n => n.Fecha >= desde);
+        if (hasta is not null) query = query.Where(n => n.Fecha <= hasta);
+
+        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
+
+        query = consulta.Orden switch
+        {
+            "numero" => desc ? query.OrderByDescending(n => n.Numero).ThenByDescending(n => n.Id)
+                             : query.OrderBy(n => n.Numero).ThenBy(n => n.Id),
+            "cliente" => desc ? query.OrderByDescending(n => n.Cliente!.Nombre).ThenByDescending(n => n.Id)
+                              : query.OrderBy(n => n.Cliente!.Nombre).ThenBy(n => n.Id),
+            "saldo" => desc
+                ? query.OrderByDescending(n => n.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario)
+                        - n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto)).ThenByDescending(n => n.Id)
+                : query.OrderBy(n => n.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario)
+                        - n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto)).ThenBy(n => n.Id),
+            // Por defecto la mas vieja primero: es la que lleva mas tiempo sin cobrarse.
+            _ => desc ? query.OrderByDescending(n => n.Fecha).ThenByDescending(n => n.Id)
+                      : query.OrderBy(n => n.Fecha).ThenBy(n => n.Id),
+        };
+
+        return await query.PaginarAsync(consulta);
+    }
+
+    public async Task<ResumenCuentasResponse> ResumenCuentasPorCobrarAsync()
+    {
+        var cuentas = CuentasPorCobrarBase();
+
+        var facturado = await cuentas
+            .SelectMany(n => n.Detalle).Where(d => !d.Anulado)
+            .SumAsync(d => (decimal?)(d.Cantidad * d.PrecioUnitario)) ?? 0m;
+
+        var cubierto = await cuentas
+            .SelectMany(n => n.Pagos).Where(p => !p.Anulado)
+            .SumAsync(p => (decimal?)p.Monto) ?? 0m;
+
+        return new ResumenCuentasResponse
+        {
+            Cuentas = await cuentas.CountAsync(),
+            TotalFacturado = facturado,
+            TotalCubierto = cubierto,
+            TotalPendiente = facturado - cubierto,
+        };
+    }
+
     /// <summary>Los cobros de un usuario en un rango, sin ordenar ni paginar.</summary>
     private IQueryable<PagoVenta> CobrosBase(int? usuarioId, DateTime? desde, DateTime? hasta) =>
         _context.PagosVenta
