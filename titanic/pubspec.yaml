@@ -39,6 +39,13 @@ dependencies:
   http: ^1.6.0
   flutter_secure_storage: ^10.0.0
 
+  # Para las fotos de vehiculos y conductores: deja elegir de la galeria o
+  # tomarla con la camara, que es como se hace estando junto al camion.
+  image_picker: ^1.1.2
+
+  # Para decir el tipo de la imagen al subirla en multipart.
+  http_parser: ^4.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

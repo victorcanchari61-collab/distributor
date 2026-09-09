@@ -15,6 +15,12 @@ export default defineConfig({
         target: 'http://127.0.0.1:5220',
         changeOrigin: true,
       },
+      // Las fotos de flota y conductores: el backend las sirve desde su raíz
+      // ("/uploads/..."), no bajo "/api", así que necesitan su propia entrada.
+      '/uploads': {
+        target: 'http://127.0.0.1:5220',
+        changeOrigin: true,
+      },
       // ws: true porque SignalR sube la conexión a WebSocket.
       '/hubs': {
         // 127.0.0.1 y no localhost: en Windows, localhost prueba primero IPv6 y
