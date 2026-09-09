@@ -67,6 +67,7 @@ export function MisCobrosPage() {
     {
       key: 'fecha',
       label: 'Fecha',
+      filterType: 'date',
       value: (row) => new Date(row.fecha).getTime(),
       render: (row) => new Date(row.fecha).toLocaleString('es-PE'),
     },
@@ -77,6 +78,9 @@ export function MisCobrosPage() {
       key: 'monto',
       label: 'Monto',
       align: 'right',
+      // Sin control numerico en el panel, buscar "9" contra "S/ 9.00" no
+      // encuentra lo que la persona espera.
+      filterable: false,
       value: (row) => row.monto,
       render: (row) =>
         row.anulado ? (

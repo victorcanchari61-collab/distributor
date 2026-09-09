@@ -214,18 +214,43 @@ export function CuentasPorPagarPage() {
   const columns: DataTableColumn<CompraResponse>[] = [
     { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
     { key: 'proveedor', label: 'Proveedor' },
-    { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
     {
+      key: 'fecha',
+      label: 'Fecha',
+      filterType: 'date',
+      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+    },
+    {
+      // Esta consulta se resuelve en el servidor y no acepta filtro por
+      // estado, asi que ofrecerlo prometeria algo que no pasaria nada.
       key: 'estado',
       label: 'Estado',
+      filterable: false,
       render: (row) => <Badge tone="success">{row.estado === 'RECIBIDA_TOTAL' ? 'Recibida' : 'Vigente'}</Badge>,
     },
-    { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
-    { key: 'totalPagado', label: 'Pagado', align: 'right', render: (row) => `S/ ${row.totalPagado.toFixed(2)}` },
+    /*
+     * Los importes no entran al panel: el unico control disponible es un
+     * buscador de texto, y "9" contra "S/ 9.00" no encuentra lo esperado.
+     */
+    {
+      key: 'total',
+      label: 'Total',
+      align: 'right',
+      filterable: false,
+      render: (row) => `S/ ${row.total.toFixed(2)}`,
+    },
+    {
+      key: 'totalPagado',
+      label: 'Pagado',
+      align: 'right',
+      filterable: false,
+      render: (row) => `S/ ${row.totalPagado.toFixed(2)}`,
+    },
     {
       key: 'saldo',
       label: 'Saldo',
       align: 'right',
+      filterable: false,
       value: (row) => saldo(row),
       render: (row) => <span className="font-semibold text-amber-600">S/ {saldo(row).toFixed(2)}</span>,
     },

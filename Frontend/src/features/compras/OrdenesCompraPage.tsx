@@ -367,16 +367,36 @@ export function OrdenesCompraPage() {
   const columns: DataTableColumn<OrdenCompraResponse>[] = [
     { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
     { key: 'proveedor', label: 'Proveedor' },
-    { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
+    {
+      key: 'fecha',
+      label: 'Fecha',
+      filterType: 'date',
+      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+    },
     {
       key: 'fechaEsperada',
       label: 'Fecha esperada',
+      filterType: 'date',
       render: (row) => (row.fechaEsperada ? new Date(row.fechaEsperada).toLocaleDateString('es-PE') : '—'),
     },
-    { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
+    {
+      key: 'total',
+      label: 'Total',
+      align: 'right',
+      // Sin control numerico en el panel, buscar "9" contra "S/ 9.00" no
+      // encuentra lo que la persona espera.
+      filterable: false,
+      render: (row) => `S/ ${row.total.toFixed(2)}`,
+    },
     {
       key: 'estado',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'PENDIENTE', label: 'Pendiente' },
+        { value: 'CONFIRMADA', label: 'Confirmada' },
+        { value: 'ANULADA', label: 'Anulada' },
+      ],
       render: (row) => estadoOrdenBadge(row.estado),
     },
   ]

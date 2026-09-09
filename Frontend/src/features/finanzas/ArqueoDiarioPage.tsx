@@ -255,22 +255,27 @@ export function ArqueoDiarioPage() {
     const columns: DataTableColumn<ArqueoCajaResponse>[] = [
       { key: 'fecha', label: 'Fecha', filterType: 'date', render: (row) => fechaCorta(row.fecha) },
       { key: 'usuario', label: 'Usuario' },
+      // Los importes quedan fuera del panel: solo hay buscador de texto y "9"
+      // contra "S/ 9.00" no encuentra lo que la persona espera.
       {
         key: 'totalEfectivoReal',
         label: 'Efectivo real',
         align: 'right',
+        filterable: false,
         render: (row) => soles(row.totalEfectivoReal),
       },
       {
         key: 'totalDigitalReal',
         label: 'Digital real',
         align: 'right',
+        filterable: false,
         render: (row) => soles(row.totalDigitalReal),
       },
       {
         key: 'faltante',
         label: 'Faltante',
         align: 'right',
+        filterable: false,
         value: (row) => row.faltante,
         render: (row) =>
           row.faltante > 0 ? (
@@ -283,6 +288,7 @@ export function ArqueoDiarioPage() {
         key: 'sobrante',
         label: 'Sobrante',
         align: 'right',
+        filterable: false,
         value: (row) => row.sobrante,
         render: (row) =>
           row.sobrante > 0 ? (

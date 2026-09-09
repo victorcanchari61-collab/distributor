@@ -122,14 +122,35 @@ export function RecepcionesPage() {
 
   const columns: DataTableColumn<DocumentoInventarioResponse>[] = [
     { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
-    { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
+    {
+      key: 'fecha',
+      label: 'Fecha',
+      filterType: 'date',
+      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+    },
     { key: 'compra', label: 'Compra', render: (row) => row.compra ?? '—' },
     { key: 'almacen', label: 'Almacén' },
-    { key: 'lineas', label: 'Productos', align: 'right' },
-    { key: 'total', label: 'Valor', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
+    /*
+     * Ni el conteo de productos ni el valor entran al panel: el unico control
+     * es un buscador de texto, y "9" contra "S/ 9.00" no encuentra lo que la
+     * persona espera.
+     */
+    { key: 'lineas', label: 'Productos', align: 'right', filterable: false },
+    {
+      key: 'total',
+      label: 'Valor',
+      align: 'right',
+      filterable: false,
+      render: (row) => `S/ ${row.total.toFixed(2)}`,
+    },
     {
       key: 'estado',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'CONFIRMADO', label: 'Confirmada' },
+        { value: 'ANULADO', label: 'Anulada' },
+      ],
       render: (row) => estadoRecepcionBadge(row),
     },
   ]

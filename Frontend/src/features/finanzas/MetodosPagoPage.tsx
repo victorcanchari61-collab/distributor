@@ -162,6 +162,10 @@ export function MetodosPagoPage() {
     {
       key: 'tipo',
       label: 'Tipo',
+      filterType: 'select',
+      filterOptions: TIPOS,
+      // El filtro compara contra el valor crudo, no contra la etiqueta del Badge.
+      value: (row) => row.tipo,
       render: (row) => <Badge>{TIPOS.find((t) => t.value === row.tipo)?.label ?? row.tipo}</Badge>,
     },
     {
@@ -187,6 +191,12 @@ export function MetodosPagoPage() {
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select',
+      // Las opciones son las etiquetas porque `value` ya expone la fila asi.
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>

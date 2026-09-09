@@ -464,11 +464,31 @@ export function MisComprasPage() {
       value: (row) => textoComprobante(row),
       render: (row) => textoComprobante(row),
     },
-    { key: 'fecha', label: 'Fecha', render: (row) => new Date(row.fecha).toLocaleDateString('es-PE') },
-    { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
+    {
+      key: 'fecha',
+      label: 'Fecha',
+      filterType: 'date',
+      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+    },
+    {
+      key: 'total',
+      label: 'Total',
+      align: 'right',
+      // Sin control numerico en el panel, buscar "9" contra "S/ 9.00" no
+      // encuentra lo que la persona espera.
+      filterable: false,
+      render: (row) => `S/ ${row.total.toFixed(2)}`,
+    },
     {
       key: 'estado',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'PENDIENTE', label: 'Pendiente' },
+        { value: 'RECIBIDA_PARCIAL', label: 'Recibida parcial' },
+        { value: 'RECIBIDA_TOTAL', label: 'Recibida' },
+        { value: 'ANULADA', label: 'Anulada' },
+      ],
       render: (row) => estadoCompraBadge(row.estado),
     },
   ]
