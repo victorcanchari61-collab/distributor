@@ -76,6 +76,7 @@ builder.Services.AddScoped<IFinanzasRepository, FinanzasRepository>();
 
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IMercadoService, MercadoService>();
+builder.Services.AddScoped<IFlotaService, FlotaService>();
 builder.Services.AddScoped<IRutaService, RutaService>();
 builder.Services.AddScoped<IUbigeoService, UbigeoService>();
 builder.Services.AddScoped<IProveedorService, ProveedorService>();
@@ -151,6 +152,16 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("Frontend");
+
+/*
+ * Las fotos de vehiculos y conductores se sirven como archivos estaticos desde
+ * wwwroot. Van ANTES de la autenticacion a proposito: son imagenes que el
+ * navegador pide en una etiqueta <img>, y ahi no puede mandar la cabecera del
+ * token. Lo que hay dentro son fotos de camiones y carnets de la propia
+ * empresa, con nombre aleatorio: no adivinable, y sin nada que proteger mas
+ * alla de eso.
+ */
+app.UseStaticFiles();
 
 app.UseMiddleware<ExceptionMiddleware>();
 

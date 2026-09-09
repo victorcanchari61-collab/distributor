@@ -24,17 +24,20 @@ public class AlertasService : IAlertasService
     private readonly IInventarioRepository _inventarioRepo;
     private readonly IComprasRepository _compras;
     private readonly IVentasRepository _ventas;
+    private readonly IFlotaService _flota;
 
     public AlertasService(
         IInventarioService inventario,
         IInventarioRepository inventarioRepo,
         IComprasRepository compras,
-        IVentasRepository ventas)
+        IVentasRepository ventas,
+        IFlotaService flota)
     {
         _inventario = inventario;
         _inventarioRepo = inventarioRepo;
         _compras = compras;
         _ventas = ventas;
+        _flota = flota;
     }
 
     public async Task<IEnumerable<AlertaResponse>> GetAsync()
@@ -48,6 +51,8 @@ public class AlertasService : IAlertasService
         alertas.AddRange(await CreditosPendientesAsync(ahora));
         alertas.AddRange(await ReservasVencidasAsync(ahora));
         alertas.AddRange(await StockRepuestoAsync(ahora));
+        alertas.AddRange(await DocumentosVehiculoAsync());
+        alertas.AddRange(await LicenciasConductorAsync());
 
         return alertas
             .OrderBy(a => Peso(a.Severidad))
@@ -61,6 +66,83 @@ public class AlertasService : IAlertasService
         SeveridadAlerta.Advertencia => 1,
         _ => 2
     };
+
+    /// <summary>
+    /// SOAT, revisión técnica y permiso a punto de vencer o ya vencidos.
+    ///
+    /// Solo de los vehículos activos: uno dado de baja no sale a repartir, y
+    /// avisar de su SOAT es ruido que tapa el del camión que sí sale mañana.
+    ///
+    /// Vencido es crítico y no advertencia porque no es un trámite pendiente:
+    /// es que esa unidad no puede circular hoy.
+    /// </summary>
+    private async Task<List<AlertaResponse>> DocumentosVehiculoAsync()
+    {
+        var vehiculos = await _flota.GetVehiculosAsync();
+
+        return vehiculos
+            .Where(v => v.Activo)
+            .SelectMany(v => v.Vencimientos
+                .Where(d => d.Estado is EstadoVencimiento.Vencido or EstadoVencimiento.PorVencer)
+                .Select(d => new AlertaResponse
+                {
+                    Id = $"vehiculo-{v.Id}-{d.Nombre}",
+                    Tipo = TipoAlerta.DocumentoVehiculo,
+                    Severidad = d.Estado == EstadoVencimiento.Vencido
+                        ? SeveridadAlerta.Critica
+                        : SeveridadAlerta.Advertencia,
+                    Titulo = d.Estado == EstadoVencimiento.Vencido
+                        ? $"{d.Nombre} vencido: {v.Placa}"
+                        : $"{d.Nombre} por vencer: {v.Placa}",
+                    Detalle = Plazo(d)
+                              + (v.Conductor != null ? $" · {v.Conductor}" : string.Empty),
+                    Ruta = "tms.flota",
+                    Fecha = d.Vence,
+                }))
+            .OrderBy(a => a.Fecha)
+            .Take(20)
+            .ToList();
+    }
+
+    /// <summary>Licencias de conducir vencidas o a punto de vencer.</summary>
+    private async Task<List<AlertaResponse>> LicenciasConductorAsync()
+    {
+        var conductores = await _flota.GetConductoresAsync();
+
+        return conductores
+            .Where(c => c.Activo)
+            .SelectMany(c => c.Vencimientos
+                .Where(d => d.Estado is EstadoVencimiento.Vencido or EstadoVencimiento.PorVencer)
+                .Select(d => new AlertaResponse
+                {
+                    Id = $"conductor-{c.Id}-{d.Nombre}",
+                    Tipo = TipoAlerta.LicenciaConductor,
+                    Severidad = d.Estado == EstadoVencimiento.Vencido
+                        ? SeveridadAlerta.Critica
+                        : SeveridadAlerta.Advertencia,
+                    Titulo = d.Estado == EstadoVencimiento.Vencido
+                        ? $"Licencia vencida: {c.Nombre}"
+                        : $"Licencia por vencer: {c.Nombre}",
+                    Detalle = Plazo(d)
+                              + (c.LicenciaCategoria != null
+                                  ? $" · categoría {c.LicenciaCategoria}"
+                                  : string.Empty),
+                    Ruta = "tms.conductores",
+                    Fecha = d.Vence,
+                }))
+            .OrderBy(a => a.Fecha)
+            .Take(20)
+            .ToList();
+    }
+
+    /// <summary>"vence en 12 días" o "venció hace 3 días", que es lo accionable.</summary>
+    private static string Plazo(VencimientoResponse d)
+    {
+        var dias = d.DiasRestantes ?? 0;
+        if (dias < 0) return $"venció hace {-dias} día{(dias == -1 ? "" : "s")}";
+        if (dias == 0) return "vence hoy";
+        return $"vence en {dias} día{(dias == 1 ? "" : "s")}";
+    }
 
     private async Task<List<AlertaResponse>> StockBajoAsync()
     {

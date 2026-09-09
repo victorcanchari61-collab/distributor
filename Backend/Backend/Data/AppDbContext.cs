@@ -21,6 +21,9 @@ public class AppDbContext : DbContext
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<Mercado> Mercados => Set<Mercado>();
     public DbSet<Ruta> Rutas => Set<Ruta>();
+    public DbSet<TipoVehiculo> TiposVehiculo => Set<TipoVehiculo>();
+    public DbSet<Vehiculo> Vehiculos => Set<Vehiculo>();
+    public DbSet<Conductor> Conductores => Set<Conductor>();
     public DbSet<Departamento> Departamentos => Set<Departamento>();
     public DbSet<Provincia> Provincias => Set<Provincia>();
     public DbSet<Distrito> Distritos => Set<Distrito>();
@@ -247,6 +250,61 @@ public class AppDbContext : DbContext
             entity.Property(m => m.Nombre).HasMaxLength(80).IsRequired();
             entity.Property(m => m.Direccion).HasMaxLength(250);
             entity.Property(m => m.Distrito).HasMaxLength(80);
+        });
+
+        modelBuilder.Entity<TipoVehiculo>(entity =>
+        {
+            entity.ToTable("TiposVehiculo");
+            entity.HasIndex(t => t.Nombre).IsUnique();
+            entity.Property(t => t.Nombre).HasMaxLength(60).IsRequired();
+            entity.Property(t => t.Descripcion).HasMaxLength(250);
+            entity.Property(t => t.CapacidadKgReferencia).HasPrecision(12, 2);
+        });
+
+        modelBuilder.Entity<Vehiculo>(entity =>
+        {
+            entity.ToTable("Vehiculos");
+
+            // La placa identifica al vehiculo: dos filas con la misma placa son
+            // el mismo camion cargado dos veces, y el reparto no sabria cual es.
+            entity.HasIndex(v => v.Placa).IsUnique();
+            entity.Property(v => v.Placa).HasMaxLength(20).IsRequired();
+
+            entity.Property(v => v.Marca).HasMaxLength(60);
+            entity.Property(v => v.Modelo).HasMaxLength(60);
+            entity.Property(v => v.Color).HasMaxLength(40);
+            entity.Property(v => v.SoatNumero).HasMaxLength(60);
+            entity.Property(v => v.Foto).HasMaxLength(250);
+            entity.Property(v => v.Observacion).HasMaxLength(300);
+            entity.Property(v => v.CapacidadKg).HasPrecision(12, 2);
+
+            // Restrict: no se borra un tipo que tenga vehiculos detras, igual
+            // que no se borra un rol con usuarios.
+            entity.HasOne(v => v.TipoVehiculo)
+                .WithMany(t => t.Vehiculos)
+                .HasForeignKey(v => v.TipoVehiculoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // SetNull: si el conductor se da de baja, el vehiculo sigue ahi sin
+            // conductor habitual — no desaparece con la persona.
+            entity.HasOne(v => v.Conductor)
+                .WithMany(c => c.Vehiculos)
+                .HasForeignKey(v => v.ConductorId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Conductor>(entity =>
+        {
+            entity.ToTable("Conductores");
+            entity.HasIndex(c => c.Documento).IsUnique();
+            entity.Property(c => c.Nombre).HasMaxLength(120).IsRequired();
+            entity.Property(c => c.Documento).HasMaxLength(20).IsRequired();
+            entity.Property(c => c.Telefono).HasMaxLength(30);
+            entity.Property(c => c.Direccion).HasMaxLength(250);
+            entity.Property(c => c.LicenciaNumero).HasMaxLength(40);
+            entity.Property(c => c.LicenciaCategoria).HasMaxLength(20);
+            entity.Property(c => c.Foto).HasMaxLength(250);
+            entity.Property(c => c.Observacion).HasMaxLength(300);
         });
 
         modelBuilder.Entity<Ruta>(entity =>

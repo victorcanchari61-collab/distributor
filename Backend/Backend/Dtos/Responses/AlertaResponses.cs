@@ -19,6 +19,12 @@ public static class TipoAlerta
 
     /// <summary>Entró mercadería nueva o se repuso stock: para que ventas sepa que ya puede ofrecerlo.</summary>
     public const string StockRepuesto = "STOCK_REPUESTO";
+
+    /// <summary>SOAT, revisión técnica o permiso de un vehículo.</summary>
+    public const string DocumentoVehiculo = "DOCUMENTO_VEHICULO";
+
+    /// <summary>Licencia de conducir de un conductor.</summary>
+    public const string LicenciaConductor = "LICENCIA_CONDUCTOR";
 }
 
 /// <summary>
