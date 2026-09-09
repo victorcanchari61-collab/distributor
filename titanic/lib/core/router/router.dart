@@ -31,6 +31,8 @@ import '../../features/inventario/vistas/transferencias_pagina.dart';
 import '../../features/maestros/vistas/clientes_pagina.dart';
 import '../../features/maestros/vistas/productos_pagina.dart';
 import '../../features/maestros/vistas/proveedores_pagina.dart';
+import '../../features/tms/vistas/conductores_pagina.dart';
+import '../../features/tms/vistas/flota_pagina.dart';
 import '../../features/tms/vistas/mercados_pagina.dart';
 import '../../features/tms/vistas/rutas_pagina.dart';
 import '../../features/ventas/vistas/notas_venta_pagina.dart';
@@ -191,6 +193,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RutasPagina.ruta,
         builder: (context, estado) => const RutasPagina(),
       ),
+      GoRoute(
+        path: FlotaPagina.ruta,
+        builder: (context, estado) => const FlotaPagina(),
+      ),
+      GoRoute(
+        path: ConductoresPagina.ruta,
+        builder: (context, estado) => const ConductoresPagina(),
+      ),
 
       for (final grupo in menuGrupos)
         for (final item in grupo.items)
@@ -220,7 +230,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != MisCobrosPagina.ruta &&
               item.ruta != ArqueoDiarioPagina.ruta &&
               item.ruta != MercadosPagina.ruta &&
-              item.ruta != RutasPagina.ruta)
+              item.ruta != RutasPagina.ruta &&
+              item.ruta != FlotaPagina.ruta &&
+              item.ruta != ConductoresPagina.ruta)
             GoRoute(
               path: item.ruta,
               builder: (context, estado) => AppShell(

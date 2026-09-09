@@ -239,11 +239,13 @@ const menuGrupos = <MenuGrupo>[
       ),
       MenuItem(
         id: 'tms.flota',
+        pendiente: false,
         titulo: 'Flota',
         icono: Icons.local_shipping_outlined,
       ),
       MenuItem(
         id: 'tms.conductores',
+        pendiente: false,
         titulo: 'Conductores',
         icono: Icons.badge_outlined,
       ),
