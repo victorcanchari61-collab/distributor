@@ -40,11 +40,4 @@ public class RutaController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] UpdateRutaRequest request) =>
         Ok(await _rutas.UpdateAsync(id, request));
 
-    [HttpDelete("{id:int}")]
-    [Permiso("tms.rutas", Accion.Eliminar)]
-    public async Task<IActionResult> Delete(int id)
-    {
-        await _rutas.DeleteAsync(id);
-        return NoContent();
-    }
 }

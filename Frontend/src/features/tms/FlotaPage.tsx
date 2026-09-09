@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   AlertTriangle,
   CalendarClock,
+  Eye,
   Pencil,
   Plus,
   ShieldCheck,
-  Trash2,
+  ShieldOff,
   Truck,
   Wrench,
 } from 'lucide-react'
@@ -27,7 +28,7 @@ import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { BadgeEstadoDocumentos, CampoFoto } from './CampoFoto'
-import { conductorApi, tipoVehiculoApi, vehiculoApi } from './flotaApi'
+import { conductorApi, tipoVehiculoApi, urlImagen, vehiculoApi } from './flotaApi'
 import type {
   ConductorResponse,
   ResumenFlotaResponse,
@@ -93,6 +94,7 @@ export function FlotaPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
+  const [detalle, setDetalle] = useState<VehiculoResponse | null>(null)
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<VehiculoResponse | null>(null)
   const [form, setForm] = useState<FormVehiculo>(VACIO)
@@ -206,19 +208,45 @@ export function FlotaPage() {
     }
   }
 
-  const eliminar = (v: VehiculoResponse) =>
+  /*
+   * Un vehiculo no se borra: se da de baja.
+   *
+   * Detras de una placa hay reparto, kardex y documentos; borrar la fila
+   * dejaria todo eso apuntando a un vehiculo que ya no existe. Ademas la baja
+   * casi siempre es temporal — el camion esta en el taller — y un borrado no
+   * se deshace.
+   */
+  const cambiarEstado = (v: VehiculoResponse) =>
     confirmar({
-      titulo: `Eliminar ${v.placa}`,
-      mensaje: 'Se borra definitivamente. Si solo va a dejar de circular, desactívalo.',
-      confirmar: 'Eliminar',
-      tono: 'danger',
+      titulo: `${v.activo ? 'Desactivar' : 'Activar'} ${v.placa}`,
+      mensaje: v.activo
+        ? 'Deja de ofrecerse para repartir y sale de las alertas de documentos. Su historial se conserva.'
+        : 'Vuelve a estar disponible para el reparto.',
+      confirmar: v.activo ? 'Desactivar' : 'Activar',
+      tono: v.activo ? 'warning' : 'pregunta',
       accion: async () => {
         setError('')
         try {
-          await vehiculoApi.remove(v.id)
+          await vehiculoApi.update(v.id, {
+            placa: v.placa,
+            tipoVehiculoId: v.tipoVehiculoId,
+            marca: v.marca,
+            modelo: v.modelo,
+            anio: v.anio,
+            color: v.color,
+            capacidadKg: v.capacidadKg,
+            soatNumero: v.soatNumero,
+            soatVence: v.soatVence,
+            revisionTecnicaVence: v.revisionTecnicaVence,
+            permisoCirculacionVence: v.permisoCirculacionVence,
+            foto: v.foto,
+            conductorId: v.conductorId,
+            observacion: v.observacion,
+            activo: !v.activo,
+          })
           await cargar()
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el vehículo.')
+          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })
@@ -367,19 +395,99 @@ export function FlotaPage() {
         empty={cargando ? 'Cargando flota...' : 'Todavía no hay vehículos registrados.'}
         rowActions={(row) => (
           <>
+            <RowAction label={`Ver ${row.placa}`} onClick={() => setDetalle(row)}>
+              <Eye size={15} />
+            </RowAction>
             {puede('tms.flota', 'editar') && (
               <RowAction label={`Editar ${row.placa}`} onClick={() => abrirEdicion(row)}>
                 <Pencil size={15} />
               </RowAction>
             )}
-            {puede('tms.flota', 'eliminar') && (
-              <RowAction label={`Eliminar ${row.placa}`} tone="danger" onClick={() => eliminar(row)}>
-                <Trash2 size={15} />
+            {puede('tms.flota', 'editar') && (
+              <RowAction
+                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.placa}`}
+                tone={row.activo ? 'warning' : 'success'}
+                onClick={() => cambiarEstado(row)}
+              >
+                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
               </RowAction>
             )}
           </>
         )}
       >
+        {/*
+          La ficha, en solo lectura. Antes lo unico que habia era Editar, asi
+          que para mirar los vencimientos de un camion habia que abrir el
+          formulario — con el riesgo de guardar algo sin querer.
+        */}
+        <Modal
+          open={detalle !== null}
+          size="lg"
+          title={detalle ? `Vehículo ${detalle.placa}` : ''}
+          onClose={() => setDetalle(null)}
+          footer={
+            <Button variant="secondary" size="sm" onClick={() => setDetalle(null)}>
+              Cerrar
+            </Button>
+          }
+        >
+          {detalle && (
+            <div className="flex flex-col gap-4">
+              {detalle.foto && (
+                <img
+                  src={urlImagen(detalle.foto)}
+                  alt={`Foto de ${detalle.placa}`}
+                  className="max-h-56 w-full rounded-panel object-cover"
+                />
+              )}
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <Dato etiqueta="Tipo" valor={detalle.tipoVehiculo} />
+                <Dato etiqueta="Marca" valor={detalle.marca} />
+                <Dato etiqueta="Modelo" valor={detalle.modelo} />
+                <Dato etiqueta="Año" valor={detalle.anio ? String(detalle.anio) : null} />
+                <Dato etiqueta="Color" valor={detalle.color} />
+                <Dato
+                  etiqueta="Capacidad"
+                  valor={detalle.capacidadKg ? `${detalle.capacidadKg} kg` : null}
+                />
+                <Dato etiqueta="Conductor" valor={detalle.conductor} />
+                <Dato etiqueta="N° de SOAT" valor={detalle.soatNumero} />
+                <Dato etiqueta="Estado" valor={detalle.activo ? 'Activo' : 'Inactivo'} />
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                  Documentos
+                </p>
+                <div className="rounded-panel border border-line">
+                  {detalle.vencimientos.map((v) => (
+                    <div
+                      key={v.nombre}
+                      className="flex items-center justify-between gap-3 border-b border-line px-3 py-2 last:border-b-0"
+                    >
+                      <span className="text-sm text-ink">{v.nombre}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm text-ink-muted tabular-nums">
+                          {v.vence ? new Date(v.vence).toLocaleDateString('es-PE') : '—'}
+                        </span>
+                        <BadgeEstadoDocumentos estado={v.estado} />
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {detalle.observacion && (
+                <p className="text-sm text-ink-soft">
+                  <span className="font-semibold text-ink-muted">Observación: </span>
+                  {detalle.observacion}
+                </p>
+              )}
+            </div>
+          )}
+        </Modal>
+
         <Modal
           open={abierto}
           size="lg"
@@ -615,23 +723,26 @@ function TiposVehiculoTabla({
     }
   }
 
-  const eliminar = (t: TipoVehiculoResponse) =>
+  const cambiarEstado = (t: TipoVehiculoResponse) =>
     confirmar({
-      titulo: `Eliminar ${t.nombre}`,
-      mensaje:
-        t.vehiculos > 0
-          ? `Lo usan ${t.vehiculos} vehículo(s), así que no se podrá eliminar. Desactívalo en su lugar.`
-          : 'Se borra definitivamente.',
-      confirmar: 'Eliminar',
-      tono: 'danger',
+      titulo: `${t.activo ? 'Desactivar' : 'Activar'} ${t.nombre}`,
+      mensaje: t.activo
+        ? 'Deja de ofrecerse al dar de alta vehículos. Los que ya lo usan lo conservan.'
+        : 'Vuelve a estar disponible para vehículos nuevos.',
+      confirmar: t.activo ? 'Desactivar' : 'Activar',
+      tono: t.activo ? 'warning' : 'pregunta',
       accion: async () => {
         setError('')
         try {
-          await tipoVehiculoApi.remove(t.id)
+          await tipoVehiculoApi.update(t.id, {
+            nombre: t.nombre,
+            descripcion: t.descripcion,
+            capacidadKgReferencia: t.capacidadKgReferencia,
+            activo: !t.activo,
+          })
           await onRecargar()
         } catch (e) {
-          // El 409 de "está en uso" trae el motivo escrito: se muestra tal cual.
-          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el tipo.')
+          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })
@@ -697,9 +808,13 @@ function TiposVehiculoTabla({
               <Pencil size={15} />
             </RowAction>
           )}
-          {puede('tms.flota', 'eliminar') && (
-            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-              <Trash2 size={15} />
+          {puede('tms.flota', 'editar') && (
+            <RowAction
+              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => cambiarEstado(row)}
+            >
+              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
             </RowAction>
           )}
         </>
@@ -761,5 +876,17 @@ function TiposVehiculoTabla({
 
       {dialogo}
     </ListPage>
+  )
+}
+
+/** Una etiqueta con su valor en la ficha; "—" cuando no hay dato. */
+function Dato({ etiqueta, valor }: { etiqueta: string; valor?: string | null }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">
+        {etiqueta}
+      </span>
+      <span className="text-sm text-ink">{valor || '—'}</span>
+    </div>
   )
 }

@@ -41,13 +41,6 @@ public class TipoVehiculoController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] TipoVehiculoRequest request) =>
         Ok(await _flota.ActualizarTipoAsync(id, request));
 
-    [HttpDelete("{id:int}")]
-    [Permiso("tms.flota", Accion.Eliminar)]
-    public async Task<IActionResult> Delete(int id)
-    {
-        await _flota.EliminarTipoAsync(id);
-        return NoContent();
-    }
 }
 
 /// <summary>Los vehículos de reparto.</summary>
@@ -88,13 +81,6 @@ public class VehiculoController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] VehiculoRequest request) =>
         Ok(await _flota.ActualizarVehiculoAsync(id, request));
 
-    [HttpDelete("{id:int}")]
-    [Permiso("tms.flota", Accion.Eliminar)]
-    public async Task<IActionResult> Delete(int id)
-    {
-        await _flota.EliminarVehiculoAsync(id);
-        return NoContent();
-    }
 }
 
 /// <summary>Quienes conducen.</summary>
@@ -135,11 +121,4 @@ public class ConductorController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] ConductorRequest request) =>
         Ok(await _flota.ActualizarConductorAsync(id, request));
 
-    [HttpDelete("{id:int}")]
-    [Permiso("tms.conductores", Accion.Eliminar)]
-    public async Task<IActionResult> Delete(int id)
-    {
-        await _flota.EliminarConductorAsync(id);
-        return NoContent();
-    }
 }

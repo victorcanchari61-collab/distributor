@@ -63,6 +63,15 @@ public static class CatalogoPermisos
     private static readonly string[] Catalogo =
         [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Eliminar];
 
+    /// <summary>
+    /// Un catálogo que solo se desactiva.
+    ///
+    /// Para lo que tiene historial detrás: borrarlo dejaría documentos
+    /// apuntando a un registro que ya no existe.
+    /// </summary>
+    private static readonly string[] CatalogoSinBorrado =
+        [Accion.Ver, Accion.Crear, Accion.Editar];
+
     /// <summary>Un catálogo grande, con carga masiva desde archivo.</summary>
     private static readonly string[] CatalogoImportable =
         [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Eliminar, Accion.Exportar, Accion.Importar];
@@ -112,10 +121,17 @@ public static class CatalogoPermisos
             ["finanzas.arqueo"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Eliminar, Accion.Cobrar, Accion.Exportar],
 
             // --- TMS ---
-            ["tms.mercados"] = Catalogo,
-            ["tms.rutas"] = Catalogo,
-            ["tms.flota"] = Catalogo,
-            ["tms.conductores"] = Catalogo,
+            /*
+             * TMS no declara "eliminar" a proposito: detras de un mercado, una
+             * ruta, un vehiculo o un conductor hay clientes, repartos e
+             * historial. Se desactivan, que ademas es lo que suele hacer falta
+             * — el camion esta en el taller, el conductor de vacaciones — y a
+             * diferencia de un borrado se puede deshacer.
+             */
+            ["tms.mercados"] = CatalogoSinBorrado,
+            ["tms.rutas"] = CatalogoSinBorrado,
+            ["tms.flota"] = CatalogoSinBorrado,
+            ["tms.conductores"] = CatalogoSinBorrado,
             ["tms.tracking"] = Consulta,
 
             // --- DMS ---

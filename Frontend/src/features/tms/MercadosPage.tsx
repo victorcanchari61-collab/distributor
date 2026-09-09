@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Plus, ShieldCheck, ShieldOff, Store, Trash2 } from 'lucide-react'
+import { Eye, Pencil, Plus, ShieldCheck, ShieldOff, Store } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -31,6 +31,7 @@ export function MercadosPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
+  const [detalle, setDetalle] = useState<MercadoResponse | null>(null)
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<MercadoResponse | null>(null)
   const [form, setForm] = useState<MercadoRequest>(VACIO)
@@ -117,26 +118,6 @@ export function MercadosPage() {
       },
     })
 
-  const eliminar = (m: MercadoResponse) =>
-    confirmar({
-      titulo: `Eliminar ${m.nombre}`,
-      mensaje:
-        m.clientes > 0
-          ? `Lo usan ${m.clientes} cliente(s), así que no se podrá eliminar. Desactívalo en su lugar.`
-          : 'Se borra definitivamente.',
-      confirmar: 'Eliminar',
-      tono: 'danger',
-      accion: async () => {
-        setError('')
-        try {
-          await mercadoApi.remove(m.id)
-          await cargar()
-        } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el mercado.')
-        }
-      },
-    })
-
   const columns: DataTableColumn<MercadoResponse>[] = [
     { key: 'nombre', label: 'Nombre' },
     {
@@ -199,6 +180,10 @@ export function MercadosPage() {
       empty={cargando ? 'Cargando mercados...' : 'Todavía no hay mercados registrados.'}
       rowActions={(row) => (
         <>
+          {/* Sin permiso: quien llega a la pantalla ya puede leer la ficha. */}
+          <RowAction label={`Ver ${row.nombre}`} onClick={() => setDetalle(row)}>
+            <Eye size={15} />
+          </RowAction>
           {puede('tms.mercados', 'editar') && (
             <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
               <Pencil size={15} />
@@ -213,14 +198,35 @@ export function MercadosPage() {
               {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
             </RowAction>
           )}
-          {puede('tms.mercados', 'eliminar') && (
-            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-              <Trash2 size={15} />
-            </RowAction>
-          )}
         </>
       )}
     >
+      {/*
+        La ficha, en solo lectura. Antes la unica forma de mirarla era abrir el
+        formulario de edicion, con el riesgo de guardar algo sin querer.
+      */}
+      <Modal
+        open={detalle !== null}
+        size="sm"
+        title={detalle ? `Mercado ${detalle.nombre}` : ''}
+        onClose={() => setDetalle(null)}
+        footer={
+          <Button variant="secondary" size="sm" onClick={() => setDetalle(null)}>
+            Cerrar
+          </Button>
+        }
+      >
+        {detalle && (
+          <div className="grid grid-cols-2 gap-3">
+            <Dato etiqueta="Nombre" valor={detalle.nombre} />
+            <Dato etiqueta="Dirección" valor={detalle.direccion} />
+            <Dato etiqueta="Distrito" valor={detalle.distrito} />
+            <Dato etiqueta="Clientes" valor={String(detalle.clientes)} />
+            <Dato etiqueta="Estado" valor={detalle.activo ? 'Activo' : 'Inactivo'} />
+          </div>
+        )}
+      </Modal>
+
       <Modal
         open={abierto}
         size="sm"
@@ -265,5 +271,17 @@ export function MercadosPage() {
 
       {dialogo}
     </ListPage>
+  )
+}
+
+/** Una etiqueta con su valor en la ficha; "—" cuando no hay dato. */
+function Dato({ etiqueta, valor }: { etiqueta: string; valor?: string | null }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">
+        {etiqueta}
+      </span>
+      <span className="text-sm text-ink">{valor || '—'}</span>
+    </div>
   )
 }

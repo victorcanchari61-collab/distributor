@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, CalendarClock, IdCard, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import {
+  AlertTriangle,
+  CalendarClock,
+  Eye,
+  IdCard,
+  Pencil,
+  Plus,
+  ShieldCheck,
+  ShieldOff,
+} from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -16,7 +25,7 @@ import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { BadgeEstadoDocumentos, CampoFoto } from './CampoFoto'
-import { conductorApi } from './flotaApi'
+import { conductorApi, urlImagen } from './flotaApi'
 import type { ConductorResponse, ResumenConductoresResponse } from './flotaApi'
 
 interface FormConductor {
@@ -60,6 +69,7 @@ export function ConductoresPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
+  const [detalle, setDetalle] = useState<ConductorResponse | null>(null)
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<ConductorResponse | null>(null)
   const [form, setForm] = useState<FormConductor>(VACIO)
@@ -155,22 +165,43 @@ export function ConductoresPage() {
     }
   }
 
-  const eliminar = (c: ConductorResponse) =>
+  /*
+   * Un conductor no se borra: se da de baja.
+   *
+   * Detras de un nombre hay repartos e historial de entregas; borrar la fila
+   * dejaria todo eso apuntando a alguien que ya no existe. Ademas la baja casi
+   * siempre es temporal — vacaciones, licencia vencida — y un borrado no se
+   * deshace.
+   */
+  const cambiarEstado = (c: ConductorResponse) =>
     confirmar({
-      titulo: `Eliminar ${c.nombre}`,
-      mensaje:
-        c.vehiculos.length > 0
-          ? `Conduce ${c.vehiculos.join(', ')}. Si ya no trabaja aquí, desactívalo en su lugar.`
-          : 'Se borra definitivamente.',
-      confirmar: 'Eliminar',
-      tono: 'danger',
+      titulo: `${c.activo ? 'Desactivar' : 'Activar'} ${c.nombre}`,
+      mensaje: c.activo
+        ? c.vehiculos.length > 0
+          ? `Conduce ${c.vehiculos.join(', ')}. Deja de ofrecerse para repartir; su historial se conserva.`
+          : 'Deja de ofrecerse para repartir. Su historial se conserva.'
+        : 'Vuelve a estar disponible para el reparto.',
+      confirmar: c.activo ? 'Desactivar' : 'Activar',
+      tono: c.activo ? 'warning' : 'pregunta',
       accion: async () => {
         setError('')
         try {
-          await conductorApi.remove(c.id)
+          await conductorApi.update(c.id, {
+            nombre: c.nombre,
+            documento: c.documento,
+            telefono: c.telefono,
+            direccion: c.direccion,
+            licenciaNumero: c.licenciaNumero,
+            licenciaCategoria: c.licenciaCategoria,
+            licenciaVence: c.licenciaVence,
+            foto: c.foto,
+            fechaIngreso: c.fechaIngreso,
+            observacion: c.observacion,
+            activo: !c.activo,
+          })
           await cargar()
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el conductor.')
+          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })
@@ -297,19 +328,120 @@ export function ConductoresPage() {
       empty={cargando ? 'Cargando conductores...' : 'Todavía no hay conductores registrados.'}
       rowActions={(row) => (
         <>
+          {/* Sin permiso: quien llega a la pantalla ya puede leer la ficha. */}
+          <RowAction label={`Ver ${row.nombre}`} onClick={() => setDetalle(row)}>
+            <Eye size={15} />
+          </RowAction>
           {puede('tms.conductores', 'editar') && (
             <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
               <Pencil size={15} />
             </RowAction>
           )}
-          {puede('tms.conductores', 'eliminar') && (
-            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-              <Trash2 size={15} />
+          {puede('tms.conductores', 'editar') && (
+            <RowAction
+              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => cambiarEstado(row)}
+            >
+              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
             </RowAction>
           )}
         </>
       )}
     >
+      {/*
+        La ficha, en solo lectura. Antes lo unico que habia era Editar, asi que
+        para mirar la licencia de alguien habia que abrir el formulario — con el
+        riesgo de guardar algo sin querer.
+      */}
+      <Modal
+        open={detalle !== null}
+        size="lg"
+        title={detalle ? detalle.nombre : ''}
+        onClose={() => setDetalle(null)}
+        footer={
+          <Button variant="secondary" size="sm" onClick={() => setDetalle(null)}>
+            Cerrar
+          </Button>
+        }
+      >
+        {detalle && (
+          <div className="flex flex-col gap-4">
+            {detalle.foto && (
+              <img
+                src={urlImagen(detalle.foto)}
+                alt={`Foto de ${detalle.nombre}`}
+                className="max-h-56 w-full rounded-panel object-cover"
+              />
+            )}
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <Dato etiqueta="Nombre" valor={detalle.nombre} />
+              <Dato etiqueta="Documento" valor={detalle.documento} />
+              <Dato etiqueta="Teléfono" valor={detalle.telefono} />
+              <Dato etiqueta="Dirección" valor={detalle.direccion} />
+              <Dato etiqueta="Licencia (número)" valor={detalle.licenciaNumero} />
+              <Dato etiqueta="Categoría" valor={detalle.licenciaCategoria} />
+              <Dato
+                etiqueta="Fecha de ingreso"
+                valor={
+                  detalle.fechaIngreso
+                    ? new Date(detalle.fechaIngreso).toLocaleDateString('es-PE')
+                    : null
+                }
+              />
+              <Dato etiqueta="Estado" valor={detalle.activo ? 'Activo' : 'Inactivo'} />
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                Vehículos asignados
+              </p>
+              {detalle.vehiculos.length ? (
+                <span className="flex flex-wrap gap-1">
+                  {detalle.vehiculos.map((placa) => (
+                    <Badge key={placa} tone="sys">
+                      {placa}
+                    </Badge>
+                  ))}
+                </span>
+              ) : (
+                <span className="text-sm text-ink-soft">Sin asignar</span>
+              )}
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                Licencia
+              </p>
+              <div className="rounded-panel border border-line">
+                {detalle.vencimientos.map((v) => (
+                  <div
+                    key={v.nombre}
+                    className="flex items-center justify-between gap-3 border-b border-line px-3 py-2 last:border-b-0"
+                  >
+                    <span className="text-sm text-ink">{v.nombre}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm text-ink-muted tabular-nums">
+                        {v.vence ? new Date(v.vence).toLocaleDateString('es-PE') : '—'}
+                      </span>
+                      <BadgeEstadoDocumentos estado={v.estado} />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {detalle.observacion && (
+              <p className="text-sm text-ink-soft">
+                <span className="font-semibold text-ink-muted">Observación: </span>
+                {detalle.observacion}
+              </p>
+            )}
+          </div>
+        )}
+      </Modal>
+
       <Modal
         open={abierto}
         size="lg"
@@ -428,5 +560,17 @@ export function ConductoresPage() {
 
       {dialogo}
     </ListPage>
+  )
+}
+
+/** Una etiqueta con su valor en la ficha; "—" cuando no hay dato. */
+function Dato({ etiqueta, valor }: { etiqueta: string; valor?: string | null }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">
+        {etiqueta}
+      </span>
+      <span className="text-sm text-ink">{valor || '—'}</span>
+    </div>
   )
 }

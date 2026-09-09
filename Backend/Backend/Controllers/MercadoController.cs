@@ -40,11 +40,4 @@ public class MercadoController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] UpdateMercadoRequest request) =>
         Ok(await _mercados.UpdateAsync(id, request));
 
-    [HttpDelete("{id:int}")]
-    [Permiso("tms.mercados", Accion.Eliminar)]
-    public async Task<IActionResult> Delete(int id)
-    {
-        await _mercados.DeleteAsync(id);
-        return NoContent();
-    }
 }
