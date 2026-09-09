@@ -946,3 +946,120 @@ class _HojaGastoState extends State<_HojaGasto> {
     );
   }
 }
+
+/// Un cobro digital del sistema con su casilla de confirmación.
+///
+/// Cliente, documento, método y monto no se editan: salen del cobro. Lo unico
+/// que aporta la persona es si llegó y el N° de operación.
+class _FilaConfirmacion extends StatelessWidget {
+  const _FilaConfirmacion({
+    required this.cobro,
+    required this.marcado,
+    required this.onMarcar,
+    required this.habilitado,
+    this.operacion,
+  });
+
+  final CobroDelDia cobro;
+  final bool marcado;
+  final ValueChanged<bool> onMarcar;
+  final bool habilitado;
+  final TextEditingController? operacion;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Dimen.espacio2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 32,
+                child: Checkbox(
+                  value: marcado,
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  onChanged: habilitado
+                      ? (v) => onMarcar(v ?? false)
+                      : null,
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            cobro.cliente.isEmpty
+                                ? 'Sin cliente'
+                                : cobro.cliente,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: marcado
+                                  ? Colores.tinta
+                                  : Colores.tintaTenue,
+                            ),
+                          ),
+                        ),
+                        if (cobro.esDeudaAnterior) ...[
+                          const SizedBox(width: Dimen.espacio2),
+                          const AppEtiqueta(
+                            'Deuda anterior',
+                            tono: EtiquetaTono.aviso,
+                          ),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      '${cobro.documento} · ${cobro.metodoPago}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Colores.tintaSuave,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: Dimen.espacio2),
+              Text(
+                formatoSoles(cobro.monto),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: marcado ? Colores.tinta : Colores.tintaTenue,
+                ),
+              ),
+            ],
+          ),
+          // El numero solo sirve si el cobro se da por recibido: sin marcar no
+          // hay nada que rastrear en el banco.
+          if (marcado && operacion != null)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 32,
+                top: Dimen.espacio2,
+              ),
+              child: AppCampo(
+                controlador: operacion!,
+                etiqueta: 'N° de operación',
+                icono: Icons.confirmation_number_outlined,
+                opcional: true,
+                maxLargo: 50,
+                habilitado: habilitado,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
