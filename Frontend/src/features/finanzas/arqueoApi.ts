@@ -59,6 +59,7 @@ export interface CobroDelDiaResponse {
   cliente: string
   /** El documento al que se aplicó: NV-000012. */
   documento: string
+  metodoPagoId: number
   metodoPago: string
   /** EFECTIVO, BILLETERA_DIGITAL, TRANSFERENCIA... */
   tipoMetodo: string
@@ -77,6 +78,8 @@ export interface ArqueoGastoResponse {
 
 export interface ArqueoPagoDigitalResponse {
   id: number
+  /** El cobro del sistema que esta línea confirma. */
+  pagoVentaId: number | null
   clienteId: number | null
   cliente: string | null
   metodoPagoId: number
@@ -147,6 +150,8 @@ export interface ArqueoGastoRequest {
 }
 
 export interface ArqueoPagoDigitalRequest {
+  /** El cobro del sistema que se confirma como recibido. */
+  pagoVentaId?: number | null
   clienteId?: number | null
   metodoPagoId: number
   numeroOperacion?: string | null

@@ -117,6 +117,7 @@ class CobroDelDia {
     required this.fecha,
     required this.cliente,
     required this.documento,
+    required this.metodoPagoId,
     required this.metodoPago,
     required this.tipoMetodo,
     required this.monto,
@@ -130,6 +131,7 @@ class CobroDelDia {
   /// El documento al que se aplico: NV-000012.
   final String documento;
 
+  final int metodoPagoId;
   final String metodoPago;
   final String tipoMetodo;
   final double monto;
@@ -142,6 +144,7 @@ class CobroDelDia {
     fecha: DateTime.parse(json['fecha'] as String),
     cliente: json['cliente'] as String? ?? '',
     documento: json['documento'] as String? ?? '',
+    metodoPagoId: json['metodoPagoId'] as int? ?? 0,
     metodoPago: json['metodoPago'] as String? ?? '',
     tipoMetodo: json['tipoMetodo'] as String? ?? '',
     monto: _num(json['monto']),
@@ -179,12 +182,17 @@ class ArqueoPagoDigital {
     required this.metodoPagoId,
     required this.metodoPago,
     required this.monto,
+    this.pagoVentaId,
     this.clienteId,
     this.cliente,
     this.numeroOperacion,
   });
 
   final int id;
+
+  /// El cobro del sistema que esta linea confirma.
+  final int? pagoVentaId;
+
   final int? clienteId;
   final String? cliente;
   final int metodoPagoId;
@@ -195,6 +203,7 @@ class ArqueoPagoDigital {
   factory ArqueoPagoDigital.desdeJson(Map<String, dynamic> json) =>
       ArqueoPagoDigital(
         id: json['id'] as int? ?? 0,
+        pagoVentaId: json['pagoVentaId'] as int?,
         clienteId: json['clienteId'] as int?,
         cliente: json['cliente'] as String?,
         metodoPagoId: json['metodoPagoId'] as int? ?? 0,

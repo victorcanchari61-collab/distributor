@@ -79,6 +79,8 @@ public class CobroDelDiaResponse
     /// <summary>El documento al que se aplicó: NV-000012.</summary>
     public string Documento { get; set; } = string.Empty;
 
+    public int MetodoPagoId { get; set; }
+
     public string MetodoPago { get; set; } = string.Empty;
 
     /// <summary>EFECTIVO, BILLETERA, TRANSFERENCIA...</summary>

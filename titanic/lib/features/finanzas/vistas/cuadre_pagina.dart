@@ -5,19 +5,14 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
-import '../../../compartido/widgets/app_campo_cliente.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
-import '../../maestros/datos/cliente.dart';
-import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/arqueo.dart';
-import '../datos/metodo_pago.dart';
 import '../estado/arqueo_controlador.dart';
-import '../estado/finanzas_controlador.dart';
 import 'arqueo_pagina.dart';
 
 /// Un gasto de la ruta mientras se está escribiendo el cuadre.
@@ -33,25 +28,6 @@ class _Gasto {
   final String motivo;
   final double monto;
   final String? descripcion;
-}
-
-/// Un pago digital declarado mientras se está escribiendo el cuadre.
-class _PagoDigital {
-  const _PagoDigital({
-    required this.metodoPagoId,
-    required this.metodo,
-    required this.monto,
-    this.clienteId,
-    this.cliente,
-    this.numeroOperacion,
-  });
-
-  final int? clienteId;
-  final String? cliente;
-  final int metodoPagoId;
-  final String metodo;
-  final String? numeroOperacion;
-  final double monto;
 }
 
 /// El cuadre de una persona en un día.
@@ -75,7 +51,17 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
   final _observacion = TextEditingController();
 
   final _gastos = <_Gasto>[];
-  final _pagos = <_PagoDigital>[];
+
+  /// Los pagoId de los cobros digitales que la persona confirma haber recibido.
+  final _confirmados = <int>{};
+
+  /// N° de operación por cobro, para rastrearlo luego en el banco.
+  final _operaciones = <int, TextEditingController>{};
+
+  /// Lo que el cuadre guardado confirmó y ya no está entre los cobros del día:
+  /// el cobro se anuló despues de cuadrar. Se muestra en solo lectura para que
+  /// no desaparezca del cuadre sin explicación.
+  final _confirmadosSinCobro = <ArqueoPagoDigital>[];
 
   /// Lo declarado solo se copia a los campos una vez: si se volviera a copiar
   /// en cada build, cada tecleo se perderia al recargar el detalle.
@@ -91,13 +77,20 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
     _billetes.dispose();
     _monedas.dispose();
     _observacion.dispose();
+    for (final c in _operaciones.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
   double get _billetesNum => _aNumero(_billetes.text);
   double get _monedasNum => _aNumero(_monedas.text);
   double get _totalGastos => _gastos.fold(0, (n, g) => n + g.monto);
-  double get _totalDigital => _pagos.fold(0, (n, p) => n + p.monto);
+
+  /// Lo digital que se declara: solo los cobros marcados como recibidos.
+  double _totalDigital(DetalleCuadre detalle) => detalle.digital
+      .where((c) => _confirmados.contains(c.pagoId))
+      .fold(0.0, (n, c) => n + c.monto);
 
   static double _aNumero(String texto) =>
       double.tryParse(texto.trim().replaceAll(',', '.')) ?? 0;
@@ -106,8 +99,17 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
     if (_precargado) return;
     _precargado = true;
 
+    for (final c in detalle.digital) {
+      _operaciones[c.pagoId] = TextEditingController();
+    }
+
     final arqueo = detalle.arqueo;
-    if (arqueo == null) return;
+    if (arqueo == null) {
+      // Lo normal es que el cobro si llegara: se marcan todos y desmarcar es
+      // señalar la excepción.
+      _confirmados.addAll(detalle.digital.map((c) => c.pagoId));
+      return;
+    }
 
     _billetes.text = arqueo.billetes == 0 ? '' : formatoNumero(arqueo.billetes);
     _monedas.text = arqueo.monedas == 0 ? '' : formatoNumero(arqueo.monedas);
@@ -125,19 +127,17 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
           ),
       ]);
 
-    _pagos
-      ..clear()
-      ..addAll([
-        for (final p in arqueo.pagosDigitales)
-          _PagoDigital(
-            clienteId: p.clienteId,
-            cliente: p.cliente,
-            metodoPagoId: p.metodoPagoId,
-            metodo: p.metodoPago,
-            numeroOperacion: p.numeroOperacion,
-            monto: p.monto,
-          ),
-      ]);
+    for (final p in arqueo.pagosDigitales) {
+      final campo = p.pagoVentaId == null ? null : _operaciones[p.pagoVentaId];
+      if (campo == null) {
+        // El cobro que esta linea confirmaba ya no está en el día, o venía de
+        // un cuadre viejo tecleado a mano: no hay casilla que marcar.
+        _confirmadosSinCobro.add(p);
+        continue;
+      }
+      _confirmados.add(p.pagoVentaId!);
+      campo.text = p.numeroOperacion ?? '';
+    }
   }
 
   Future<void> _agregarGasto() async {
@@ -166,42 +166,12 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
     if (gasto != null) setState(() => _gastos.add(gasto));
   }
 
-  Future<void> _agregarPago() async {
-    // Solo los que no son efectivo: un pago digital declarado con método
-    // "efectivo" cuadraria contra el lado equivocado.
-    final metodos = ref
-        .read(metodosPagoActivosProvider)
-        .where((m) => m.tipo != TipoMetodoPago.efectivo)
-        .toList();
-
-    if (metodos.isEmpty) {
-      setState(
-        () => _error =
-            'No hay métodos de pago digitales activos. Actívalos en Métodos de pago.',
-      );
-      return;
-    }
-
-    final clientes =
-        ref.read(clientesProvider).valueOrNull ?? const <Cliente>[];
-
-    final pago = await showModalBottomSheet<_PagoDigital>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colores.superficie,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      builder: (_) => _HojaPagoDigital(metodos: metodos, clientes: clientes),
-    );
-
-    if (pago != null) setState(() => _pagos.add(pago));
+  String? _operacionDe(int pagoId) {
+    final texto = _operaciones[pagoId]?.text.trim() ?? '';
+    return texto.isEmpty ? null : texto;
   }
 
-  Future<void> _guardar() async {
+  Future<void> _guardar(DetalleCuadre detalle) async {
     FocusScope.of(context).unfocus();
     setState(() {
       _guardando = true;
@@ -228,14 +198,18 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
               'descripcion': g.descripcion,
             },
         ],
+        // Una linea por cobro confirmado: el cliente ya viaja en el cobro, asi
+        // que no se manda otra vez.
         'pagosDigitales': [
-          for (final p in _pagos)
-            {
-              'clienteId': p.clienteId,
-              'metodoPagoId': p.metodoPagoId,
-              'numeroOperacion': p.numeroOperacion,
-              'monto': p.monto,
-            },
+          for (final c in detalle.digital)
+            if (_confirmados.contains(c.pagoId))
+              {
+                'pagoVentaId': c.pagoId,
+                'clienteId': null,
+                'metodoPagoId': c.metodoPagoId,
+                'numeroOperacion': _operacionDe(c.pagoId),
+                'monto': c.monto,
+              },
         ],
       });
 
@@ -299,8 +273,9 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
     final color = Acento.de(context);
 
     final efectivoReal = _billetesNum + _monedasNum + _totalGastos;
+    final totalDigital = _totalDigital(detalle);
     final difEfectivo = efectivoReal - detalle.efectivoSistema;
-    final difBancos = _totalDigital - detalle.bancosSistema;
+    final difBancos = totalDigital - detalle.bancosSistema;
 
     // Los faltantes de cada lado se suman sin dejar que un sobrante compense,
     // igual que en el backend: un Yape que no llegó es dinero perdido aunque
@@ -436,14 +411,29 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
         ),
         const SizedBox(height: Dimen.espacio4),
 
+        // El sistema ya sabe qué cobró: aqui solo se confirma cobro a cobro si
+        // el dinero llegó de verdad. Tecleado a mano no compararia nada.
         _Seccion(
           titulo: 'Cobros digitales',
-          nota: 'Lo que el sistema ya tiene registrado',
+          nota: 'Desmarca el que no haya llegado',
           hijos: [
             if (detalle.digital.isEmpty)
               const _Vacio('No hay cobros digitales ese día.')
             else
-              for (final c in detalle.digital) _FilaCobro(cobro: c),
+              for (final c in detalle.digital)
+                _FilaConfirmacion(
+                  cobro: c,
+                  marcado: _confirmados.contains(c.pagoId),
+                  operacion: _operaciones[c.pagoId],
+                  habilitado: !_guardando,
+                  onMarcar: (v) => setState(() {
+                    if (v) {
+                      _confirmados.add(c.pagoId);
+                    } else {
+                      _confirmados.remove(c.pagoId);
+                    }
+                  }),
+                ),
             const Divider(height: Dimen.espacio5),
             _FilaTotal(
               etiqueta: 'Total del sistema',
@@ -454,44 +444,36 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
         ),
         const SizedBox(height: Dimen.espacio4),
 
-        _Seccion(
-          titulo: 'Pagos digitales que declara',
-          hijos: [
-            if (_pagos.isEmpty)
-              const _Vacio('No declaró pagos digitales.')
-            else
-              for (final (i, p) in _pagos.indexed)
+        // Cobros anulados después de cuadrar: siguen en el cuadre guardado
+        // aunque ya no estén en el día, y sin mostrarlos desaparecerian sin
+        // explicación. No se pueden confirmar ni suman al total.
+        if (_confirmadosSinCobro.isNotEmpty) ...[
+          _Seccion(
+            titulo: 'Confirmados de un cobro que ya no existe',
+            nota: 'El cobro se anuló después de cuadrar. Solo informativo.',
+            hijos: [
+              for (final p in _confirmadosSinCobro)
                 _FilaLinea(
-                  titulo: p.metodo,
+                  titulo: p.cliente ?? p.metodoPago,
                   detalle: [
-                    if (p.cliente != null) p.cliente!,
+                    if (p.cliente != null) p.metodoPago,
                     if (p.numeroOperacion != null &&
                         p.numeroOperacion!.isNotEmpty)
                       'Op. ${p.numeroOperacion}',
                   ].join(' · '),
                   monto: p.monto,
-                  onQuitar: _guardando
-                      ? null
-                      : () => setState(() => _pagos.removeAt(i)),
                 ),
-            const SizedBox(height: Dimen.espacio2),
-            AppBoton(
-              texto: 'Agregar pago digital',
-              variante: BotonVariante.secundario,
-              tam: BotonTam.md,
-              icono: Icons.add,
-              onPressed: _guardando ? null : _agregarPago,
-            ),
-          ],
-        ),
-        const SizedBox(height: Dimen.espacio4),
+            ],
+          ),
+          const SizedBox(height: Dimen.espacio4),
+        ],
 
         _Seccion(
           titulo: 'Digital',
           hijos: [
             _FilaTotal(
-              etiqueta: 'Lo que declara',
-              valor: _totalDigital,
+              etiqueta: 'Total digital real',
+              valor: totalDigital,
               color: color,
             ),
             _FilaTotal(
@@ -541,7 +523,7 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
         AppBoton(
           texto: detalle.arqueo == null ? 'Guardar cuadre' : 'Corregir cuadre',
           cargando: _guardando,
-          onPressed: _guardar,
+          onPressed: () => _guardar(detalle),
         ),
         const SizedBox(height: Dimen.espacio3),
         AppBoton(
@@ -799,12 +781,13 @@ class _FilaLinea extends StatelessWidget {
               color: Colores.tinta,
             ),
           ),
-          IconButton(
-            onPressed: onQuitar,
-            tooltip: 'Quitar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.close, size: 18, color: Colores.peligro),
-          ),
+          if (onQuitar != null)
+            IconButton(
+              onPressed: onQuitar,
+              tooltip: 'Quitar',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.close, size: 18, color: Colores.peligro),
+            ),
         ],
       ),
     );
@@ -954,134 +937,6 @@ class _HojaGastoState extends State<_HojaGasto> {
             icono: Icons.notes_outlined,
             opcional: true,
             maxLargo: 200,
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppBoton(texto: 'Agregar', onPressed: _agregar),
-        ],
-      ),
-    );
-  }
-}
-
-/// Alta de un pago digital declarado.
-class _HojaPagoDigital extends StatefulWidget {
-  const _HojaPagoDigital({required this.metodos, required this.clientes});
-
-  final List<MetodoPago> metodos;
-  final List<Cliente> clientes;
-
-  @override
-  State<_HojaPagoDigital> createState() => _HojaPagoDigitalState();
-}
-
-class _HojaPagoDigitalState extends State<_HojaPagoDigital> {
-  final _numeroOperacion = TextEditingController();
-  final _monto = TextEditingController();
-
-  int? _clienteId;
-  String? _clienteNombre;
-  int? _metodoId;
-
-  String? _errorMetodo;
-  String? _errorMonto;
-
-  @override
-  void dispose() {
-    _numeroOperacion.dispose();
-    _monto.dispose();
-    super.dispose();
-  }
-
-  void _agregar() {
-    final monto = double.tryParse(_monto.text.trim().replaceAll(',', '.'));
-    setState(() {
-      _errorMetodo = _metodoId == null ? 'Elige el método de pago.' : null;
-      _errorMonto = monto == null || monto <= 0
-          ? 'Ingresa un monto mayor a 0.'
-          : null;
-    });
-    if (_errorMetodo != null || _errorMonto != null) return;
-
-    final metodo = widget.metodos.firstWhere((m) => m.id == _metodoId);
-    Navigator.of(context).pop(
-      _PagoDigital(
-        clienteId: _clienteId,
-        cliente: _clienteNombre,
-        metodoPagoId: metodo.id,
-        metodo: metodo.nombre,
-        numeroOperacion: _numeroOperacion.text.trim().isEmpty
-            ? null
-            : _numeroOperacion.text.trim(),
-        monto: monto!,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: Dimen.espacio4,
-        right: Dimen.espacio4,
-        top: Dimen.espacio2,
-        bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Pago digital declarado',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Colores.tinta,
-            ),
-          ),
-          const SizedBox(height: Dimen.espacio4),
-
-          // El cliente es opcional: en la ruta a veces llega un Yape suelto que
-          // todavía no se sabe a quién aplicar, y exigirlo impediría declararlo.
-          campoCliente(
-            clientes: widget.clientes,
-            elegido: _clienteNombre,
-            onElegir: (c) => setState(() {
-              _clienteId = c.id;
-              _clienteNombre = c.nombre;
-            }),
-          ),
-          const SizedBox(height: Dimen.espacio3),
-
-          AppSelector<int>(
-            valor: _metodoId,
-            etiqueta: 'Método de pago',
-            icono: Icons.account_balance_outlined,
-            error: _errorMetodo,
-            opciones: [for (final m in widget.metodos) Opcion(m.id, m.nombre)],
-            onCambio: (v) => setState(() {
-              _metodoId = v;
-              _errorMetodo = null;
-            }),
-          ),
-          const SizedBox(height: Dimen.espacio3),
-
-          AppCampo(
-            controlador: _numeroOperacion,
-            etiqueta: 'N° de operación',
-            icono: Icons.confirmation_number_outlined,
-            opcional: true,
-            maxLargo: 50,
-          ),
-          const SizedBox(height: Dimen.espacio3),
-
-          AppCampo(
-            controlador: _monto,
-            etiqueta: 'Monto',
-            pista: '0.00',
-            icono: Icons.calculate_outlined,
-            tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-            error: _errorMonto,
           ),
           const SizedBox(height: Dimen.espacio4),
 
