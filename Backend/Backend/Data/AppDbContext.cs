@@ -971,6 +971,11 @@ public class AppDbContext : DbContext
 
             entity.HasOne(p => p.MetodoPago).WithMany()
                 .HasForeignKey(p => p.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
+
+            // SetNull: si el cobro se borra, la linea del cuadre sigue ahi como
+            // rastro de lo que se declaro ese dia.
+            entity.HasOne(p => p.PagoVenta).WithMany()
+                .HasForeignKey(p => p.PagoVentaId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 

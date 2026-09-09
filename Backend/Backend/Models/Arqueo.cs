@@ -142,11 +142,16 @@ public class ArqueoGasto
 }
 
 /// <summary>
-/// Un pago digital que la persona declara haber recibido.
+/// Un cobro digital confirmado al cuadrar.
+///
+/// No se teclea: el sistema ya sabe qué cobró esa persona ese día, así que lo
+/// que se hace es recorrer esos cobros y marcar cuáles llegaron de verdad.
+/// Pedirle que los escriba de nuevo sería pedirle que los invente, y entonces
+/// el cuadre no compara nada.
 ///
 /// Lleva el número de operación porque es lo único que permite después
-/// encontrarlo en el estado de cuenta del banco; sin él, un Yape declarado y no
-/// recibido no se puede rastrear.
+/// encontrarlo en el estado de cuenta del banco; sin él, un Yape que la
+/// persona da por recibido y nunca llegó no se puede rastrear.
 /// </summary>
 public class ArqueoPagoDigital
 {
@@ -154,6 +159,15 @@ public class ArqueoPagoDigital
 
     public int ArqueoCajaId { get; set; }
     public ArqueoCaja? ArqueoCaja { get; set; }
+
+    /// <summary>
+    /// El cobro del sistema que esta línea confirma.
+    ///
+    /// Nulo solo si ese cobro se borró después: la línea del cuadre se
+    /// conserva igual, porque es el rastro de lo que se declaró aquel día.
+    /// </summary>
+    public int? PagoVentaId { get; set; }
+    public PagoVenta? PagoVenta { get; set; }
 
     /// <summary>De quién vino. Nulo si no se supo identificar al cliente.</summary>
     public int? ClienteId { get; set; }

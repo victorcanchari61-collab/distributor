@@ -13,7 +13,7 @@ import '../../features/config/vistas/empresas_pagina.dart';
 import '../../features/config/vistas/roles_pagina.dart';
 import '../../features/config/vistas/usuarios_pagina.dart';
 import '../../features/facturacion/vistas/listas_precios_pagina.dart';
-import '../../features/finanzas/vistas/arqueo_diario_pagina.dart';
+import '../../features/finanzas/vistas/arqueo_pagina.dart';
 import '../../features/finanzas/vistas/cuentas_por_cobrar_pagina.dart';
 import '../../features/finanzas/vistas/cuentas_por_pagar_pagina.dart';
 import '../../features/finanzas/vistas/mis_cobros_pagina.dart';
@@ -182,8 +182,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, estado) => const MisCobrosPagina(),
       ),
       GoRoute(
-        path: ArqueoDiarioPagina.ruta,
-        builder: (context, estado) => const ArqueoDiarioPagina(),
+        path: ArqueoPagina.ruta,
+        builder: (context, estado) => const ArqueoPagina(),
       ),
       GoRoute(
         path: MercadosPagina.ruta,
@@ -228,7 +228,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != CuentasPorCobrarPagina.ruta &&
               item.ruta != CuentasPorPagarPagina.ruta &&
               item.ruta != MisCobrosPagina.ruta &&
-              item.ruta != ArqueoDiarioPagina.ruta &&
+              item.ruta != ArqueoPagina.ruta &&
               item.ruta != MercadosPagina.ruta &&
               item.ruta != RutasPagina.ruta &&
               item.ruta != FlotaPagina.ruta &&

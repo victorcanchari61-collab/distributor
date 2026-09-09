@@ -41,7 +41,9 @@ class FinanzasApi {
   /// GET /api/arqueo/cuadres?desde=&hasta=
   Future<List<CuadrePendiente>> cuadres(DateTime desde, DateTime hasta) async {
     final datos =
-        await _api.get('/arqueo/cuadres?desde=${_dia(desde)}&hasta=${_dia(hasta)}')
+        await _api.get(
+              '/arqueo/cuadres?desde=${_dia(desde)}&hasta=${_dia(hasta)}',
+            )
             as List;
     return datos
         .map((e) => CuadrePendiente.desdeJson(e as Map<String, dynamic>))
@@ -51,7 +53,9 @@ class FinanzasApi {
   /// GET /api/arqueo/detalle?fecha=&usuarioId=
   Future<DetalleCuadre> detalleCuadre(DateTime fecha, int usuarioId) async =>
       DetalleCuadre.desdeJson(
-        await _api.get('/arqueo/detalle?fecha=${_dia(fecha)}&usuarioId=$usuarioId')
+        await _api.get(
+              '/arqueo/detalle?fecha=${_dia(fecha)}&usuarioId=$usuarioId',
+            )
             as Map<String, dynamic>,
       );
 

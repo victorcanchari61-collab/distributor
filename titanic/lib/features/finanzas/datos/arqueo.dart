@@ -1,5 +1,5 @@
-/// Modelos del cuadre de caja del reparto: calcan los DTOs del backend
-/// (ArqueoResponses.cs / ArqueoRequests.cs).
+// Modelos del cuadre de caja del reparto: calcan los DTOs del backend
+// (ArqueoResponses.cs / ArqueoRequests.cs).
 
 /// En que estado esta el cuadre de una persona en un dia.
 class EstadoCuadre {

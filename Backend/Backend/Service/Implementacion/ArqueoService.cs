@@ -347,6 +347,7 @@ public class ArqueoService : IArqueoService
         {
             arqueo.PagosDigitales.Add(new ArqueoPagoDigital
             {
+                PagoVentaId = p.PagoVentaId,
                 ClienteId = p.ClienteId,
                 MetodoPagoId = p.MetodoPagoId,
                 NumeroOperacion = p.NumeroOperacion?.Trim(),
@@ -623,6 +624,7 @@ public class ArqueoService : IArqueoService
             PagosDigitales = a.PagosDigitales.Select(p => new ArqueoPagoDigitalResponse
             {
                 Id = p.Id,
+                PagoVentaId = p.PagoVentaId,
                 ClienteId = p.ClienteId,
                 Cliente = p.Cliente?.Nombre,
                 MetodoPagoId = p.MetodoPagoId,

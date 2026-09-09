@@ -15,9 +15,17 @@ public class ArqueoGastoRequest
     public string? Descripcion { get; set; }
 }
 
-/// <summary>Un pago digital que la persona declara haber recibido.</summary>
+/// <summary>
+/// Un cobro digital que la persona confirma haber recibido.
+///
+/// Se manda uno por cada cobro marcado en la pantalla, no pagos inventados: el
+/// importe y el cliente salen del cobro que ya tiene el sistema.
+/// </summary>
 public class ArqueoPagoDigitalRequest
 {
+    /// <summary>El cobro del sistema que se está confirmando.</summary>
+    public int? PagoVentaId { get; set; }
+
     public int? ClienteId { get; set; }
     public int MetodoPagoId { get; set; }
     public string? NumeroOperacion { get; set; }

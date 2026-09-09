@@ -128,6 +128,10 @@ public class ArqueoGastoResponse
 public class ArqueoPagoDigitalResponse
 {
     public int Id { get; set; }
+
+    /// <summary>El cobro del sistema que esta línea confirma.</summary>
+    public int? PagoVentaId { get; set; }
+
     public int? ClienteId { get; set; }
     public string? Cliente { get; set; }
     public int MetodoPagoId { get; set; }

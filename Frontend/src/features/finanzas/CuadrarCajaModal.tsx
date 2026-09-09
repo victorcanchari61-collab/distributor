@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Banknote, Coins, History, Plus, Smartphone, Trash2 } from 'lucide-react'
+import { Banknote, History, Plus, Smartphone, Trash2 } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -587,5 +587,3 @@ function Totales({ filas }: { filas: FilaTotal[] }) {
     </div>
   )
 }
-
-export { Coins }
