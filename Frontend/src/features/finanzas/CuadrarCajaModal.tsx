@@ -570,28 +570,36 @@ interface FilaTotal {
   diferencia?: boolean
 }
 
+/**
+ * Los tres importes del cuadre, en una sola fila.
+ *
+ * Apilados ocupaban tres renglones para decir una cosa: lo que trajo, lo que
+ * debía traer y en cuánto se aparta. Puestos uno junto a otro se leen como la
+ * resta que son, y el modal deja de crecer hacia abajo justo donde hay que
+ * mirar las dos pestañas.
+ *
+ * En pantalla estrecha vuelven a apilarse: tres cifras en una fila de móvil se
+ * cortan y dejan de leerse.
+ */
 function Totales({ filas }: { filas: FilaTotal[] }) {
   return (
-    <div className="rounded-panel border border-line">
+    <div className="grid gap-px overflow-hidden rounded-panel border border-line bg-line sm:grid-cols-3">
       {filas.map((f) => (
-        <div
-          key={f.label}
-          className="flex items-center justify-between gap-3 border-b border-line px-3 py-2 last:border-b-0"
-        >
-          <span className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+        <div key={f.label} className="flex flex-col gap-0.5 bg-surface px-3 py-2">
+          <span className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">
             {f.label}
           </span>
           <span
             className={
               f.diferencia
                 ? f.valor === 0
-                  ? 'text-sm font-bold text-emerald-600 tabular-nums'
+                  ? 'text-base font-bold text-emerald-600 tabular-nums'
                   : f.valor > 0
-                    ? 'text-sm font-bold text-ink-muted tabular-nums'
-                    : 'text-sm font-bold text-red-600 tabular-nums'
+                    ? 'text-base font-bold text-ink-muted tabular-nums'
+                    : 'text-base font-bold text-red-600 tabular-nums'
                 : f.fuerte
-                  ? 'text-sm font-bold text-ink tabular-nums'
-                  : 'text-sm text-ink-muted tabular-nums'
+                  ? 'text-base font-bold text-ink tabular-nums'
+                  : 'text-base text-ink-muted tabular-nums'
             }
           >
             {f.diferencia && f.valor > 0 ? '+' : ''}
