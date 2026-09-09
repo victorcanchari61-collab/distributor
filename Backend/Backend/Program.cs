@@ -94,6 +94,7 @@ builder.Services.AddScoped<IInventarioService, InventarioService>();
 builder.Services.AddScoped<IComprasService, ComprasService>();
 builder.Services.AddScoped<IVentasService, VentasService>();
 builder.Services.AddScoped<IFinanzasService, FinanzasService>();
+builder.Services.AddScoped<IArqueoService, ArqueoService>();
 
 // Consulta de RUC y DNI: se llama al proveedor desde el backend para no
 // exponer el token en el navegador.

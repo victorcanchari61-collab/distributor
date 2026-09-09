@@ -109,7 +109,7 @@ public static class CatalogoPermisos
             ["finanzas.cobrar"] = [Accion.Ver, Accion.Cobrar, Accion.Exportar],
             ["finanzas.pagar"] = [Accion.Ver, Accion.Cobrar, Accion.Exportar],
             ["finanzas.miscobros"] = Consulta,
-            ["finanzas.arqueo"] = [Accion.Ver, Accion.Crear, Accion.Exportar],
+            ["finanzas.arqueo"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Eliminar, Accion.Cobrar, Accion.Exportar],
 
             // --- TMS ---
             ["tms.mercados"] = Catalogo,

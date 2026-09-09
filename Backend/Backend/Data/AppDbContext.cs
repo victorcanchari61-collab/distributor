@@ -61,6 +61,9 @@ public class AppDbContext : DbContext
     public DbSet<PagoVenta> PagosVenta => Set<PagoVenta>();
     public DbSet<RegistroAuditoria> RegistrosAuditoria => Set<RegistroAuditoria>();
     public DbSet<ArqueoCaja> ArqueosCaja => Set<ArqueoCaja>();
+    public DbSet<ArqueoGasto> ArqueoGastos => Set<ArqueoGasto>();
+    public DbSet<ArqueoPagoDigital> ArqueoPagosDigitales => Set<ArqueoPagoDigital>();
+    public DbSet<MotivoGasto> MotivosGasto => Set<MotivoGasto>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -899,16 +902,75 @@ public class AppDbContext : DbContext
             );
         });
 
+        modelBuilder.Entity<MotivoGasto>(entity =>
+        {
+            entity.ToTable("MotivosGasto");
+            entity.HasIndex(m => m.Nombre).IsUnique();
+            entity.Property(m => m.Nombre).HasMaxLength(60).IsRequired();
+            entity.Property(m => m.Descripcion).HasMaxLength(250);
+
+            // Los de siempre vienen sembrados: son los que aparecen en la
+            // planilla de ruta de cualquier distribuidora, y sin ellos el
+            // primer cuadre no tendria en que clasificar nada.
+            entity.HasData(
+                new MotivoGasto { Id = 1, Nombre = "Pasaje", Activo = true, FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new MotivoGasto { Id = 2, Nombre = "Combustible", Activo = true, FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new MotivoGasto { Id = 3, Nombre = "Menú", Activo = true, FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new MotivoGasto { Id = 4, Nombre = "Peaje", Activo = true, FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new MotivoGasto { Id = 5, Nombre = "Otro", Descripcion = "Cualquier gasto que no encaje en los demás. Conviene detallarlo.", Activo = true, FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) });
+        });
+
         modelBuilder.Entity<ArqueoCaja>(entity =>
         {
             entity.ToTable("ArqueoCaja");
-            entity.HasIndex(a => a.Fecha).IsUnique();
-            entity.Property(a => a.MontoEsperado).HasPrecision(18, 4);
-            entity.Property(a => a.MontoContado).HasPrecision(18, 4);
-            entity.Property(a => a.Observacion).HasMaxLength(250);
 
+            // Uno por persona y dia: volver a cuadrar el mismo dia corrige el
+            // anterior en vez de dejar dos cierres compitiendo.
+            entity.HasIndex(a => new { a.Fecha, a.UsuarioId }).IsUnique();
+
+            entity.Property(a => a.Billetes).HasPrecision(18, 4);
+            entity.Property(a => a.Monedas).HasPrecision(18, 4);
+            entity.Property(a => a.EfectivoSistema).HasPrecision(18, 4);
+            entity.Property(a => a.BancosSistema).HasPrecision(18, 4);
+            entity.Property(a => a.Observacion).HasMaxLength(250);
+            entity.Property(a => a.Estado).HasMaxLength(20).IsRequired();
+
+            // Restrict y no SetNull: el cuadre es DE esa persona, y sin ella no
+            // significa nada. Un usuario con cuadres se desactiva, no se borra.
             entity.HasOne(a => a.Usuario).WithMany()
-                .HasForeignKey(a => a.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(a => a.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne<Usuario>().WithMany()
+                .HasForeignKey(a => a.RegistradoPorId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ArqueoGasto>(entity =>
+        {
+            entity.ToTable("ArqueoGastos");
+            entity.Property(g => g.Monto).HasPrecision(18, 4);
+            entity.Property(g => g.Descripcion).HasMaxLength(250);
+
+            entity.HasOne(g => g.ArqueoCaja).WithMany(a => a.Gastos)
+                .HasForeignKey(g => g.ArqueoCajaId).OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(g => g.MotivoGasto).WithMany()
+                .HasForeignKey(g => g.MotivoGastoId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ArqueoPagoDigital>(entity =>
+        {
+            entity.ToTable("ArqueoPagosDigitales");
+            entity.Property(p => p.Monto).HasPrecision(18, 4);
+            entity.Property(p => p.NumeroOperacion).HasMaxLength(60);
+
+            entity.HasOne(p => p.ArqueoCaja).WithMany(a => a.PagosDigitales)
+                .HasForeignKey(p => p.ArqueoCajaId).OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.Cliente).WithMany()
+                .HasForeignKey(p => p.ClienteId).OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(p => p.MetodoPago).WithMany()
+                .HasForeignKey(p => p.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 

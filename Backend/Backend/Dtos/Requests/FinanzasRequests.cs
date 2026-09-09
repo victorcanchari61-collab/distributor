@@ -25,9 +25,3 @@ public class UpdateMetodoPagoRequest : MetodoPagoRequestBase
 }
 
 /// <summary>Cierra la caja de un día: cuánto se contó de verdad.</summary>
-public class RegistrarArqueoRequest
-{
-    public DateTime Fecha { get; set; }
-    public decimal MontoContado { get; set; }
-    public string? Observacion { get; set; }
-}

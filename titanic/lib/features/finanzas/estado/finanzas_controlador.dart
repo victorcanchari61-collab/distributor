@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/estado/auth_controlador.dart';
-import '../datos/arqueo_caja.dart';
 import '../datos/finanzas_api.dart';
 import '../datos/metodo_pago.dart';
 
