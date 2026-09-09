@@ -92,6 +92,15 @@ export interface SysDataTableProps<T> {
   rows: T[]
   /** Si se pasa, la tabla trabaja contra el backend en vez de en memoria. */
   servidor?: SysDataTableServidor
+  /**
+   * Avisa de la consulta actual SIN ceder el filtrado.
+   *
+   * Es para la tabla que filtra en memoria pero cuyo conjunto de datos depende
+   * de un filtro — un rango de fechas que decide qué se trae. Así ese filtro
+   * vive en el panel con los demás, en vez de en un bloque aparte encima de la
+   * tabla, y la vista sigue sin tener que reimplementar búsqueda y orden.
+   */
+  onConsulta?: (consulta: ConsultaTabla) => void
   /** Propiedad que identifica cada fila. */
   rowKey?: keyof T & string
   searchPlaceholder?: string
@@ -220,6 +229,7 @@ export function SysDataTable<T>({
   actions,
   actionsWidth = ACTIONS_WIDTH,
   servidor,
+  onConsulta,
   onRowClick,
   className,
   toolbar = true,
@@ -397,14 +407,14 @@ export function SysDataTable<T>({
    * normalmente la pasa como funcion inline, que cambia en cada render — si
    * estuviera en la lista, el efecto se repetiria sin parar.
    */
-  const onConsultaRef = useRef(servidor?.onConsulta)
-  onConsultaRef.current = servidor?.onConsulta
+  const onConsultaRef = useRef(servidor?.onConsulta ?? onConsulta)
+  onConsultaRef.current = servidor?.onConsulta ?? onConsulta
 
   // Firma de lo que se escribe a mano, para distinguirlo de un clic.
   const textoRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!enServidor) return
+    if (!enServidor && !onConsulta) return
 
     const pedir = () =>
       onConsultaRef.current?.({
@@ -439,7 +449,7 @@ export function SysDataTable<T>({
 
     const id = setTimeout(pedir, tecleo ? 300 : 0)
     return () => clearTimeout(id)
-  }, [enServidor, page, perPage, search, columnSearch, filters, sort])
+  }, [enServidor, onConsulta, page, perPage, search, columnSearch, filters, sort])
 
   // Contra el servidor el total lo dice el backend, y las filas que llegaron
   // YA son la pagina: recortarlas otra vez dejaria la tabla vacia.

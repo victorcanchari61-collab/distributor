@@ -21,7 +21,6 @@ import {
   ListPage,
   Modal,
   PageHeader,
-  PageSection,
   RowAction,
   StatCard,
   Tabs,
@@ -107,17 +106,40 @@ export function ArqueoDiarioPage() {
   const [cuadrando, setCuadrando] = useState<Cuadrando | null>(null)
   const { confirmar, dialogo } = useConfirmacion()
 
-  const cargarCuadres = useCallback(async () => {
+  const cargarCuadres = useCallback(async (inicio: string, fin: string) => {
     setCargandoCuadres(true)
     try {
-      setCuadres(await arqueoApi.cuadres(desde, hasta))
+      setCuadres(await arqueoApi.cuadres(inicio, fin))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los cobros del período.')
     } finally {
       setCargandoCuadres(false)
     }
-  }, [desde, hasta])
+  }, [])
+
+  /*
+   * El rango sale del filtro de Fecha del panel, no de un bloque aparte: los
+   * filtros de una tabla se ponen todos en el mismo sitio, y tener la fecha
+   * fuera obligaba a buscarla en un lado y el resto en otro.
+   *
+   * Es el unico filtro que viaja al backend, porque decide QUE dias se traen;
+   * usuario y estado se aplican sobre lo ya traido.
+   */
+  const aplicarConsultaCuadres = useCallback(
+    (q: ConsultaTabla) => {
+      const fecha = q.filtros.find((f) => f.columna === 'fecha')
+      const inicio = fecha?.valor || desplazarDias(-1)
+      const fin = fecha?.valorHasta || fecha?.valor || desplazarDias(0)
+
+      if (inicio === desde && fin === hasta) return
+
+      setDesde(inicio)
+      setHasta(fin)
+      void cargarCuadres(inicio, fin)
+    },
+    [cargarCuadres, desde, hasta],
+  )
 
   const cargarRegistrados = useCallback(async (q: ConsultaTabla) => {
     setCargandoRegistrados(true)
@@ -144,14 +166,15 @@ export function ArqueoDiarioPage() {
 
   const recargarTodo = useCallback(async () => {
     await Promise.all([
-      cargarCuadres(),
+      cargarCuadres(desde, hasta),
       consulta ? cargarRegistrados(consulta) : Promise.resolve(),
       cargarApoyo(),
     ])
-  }, [cargarCuadres, cargarRegistrados, cargarApoyo, consulta])
+  }, [cargarCuadres, cargarRegistrados, cargarApoyo, consulta, desde, hasta])
 
+  // La primera carga usa el rango por defecto; a partir de ahi manda el filtro.
   useEffect(() => {
-    void cargarCuadres()
+    void cargarCuadres(desplazarDias(-1), desplazarDias(0))
   }, [cargarCuadres])
 
   useEffect(() => {
@@ -351,20 +374,49 @@ export function ArqueoDiarioPage() {
   const efectivoPeriodo = cuadres.reduce((s, c) => s + c.efectivo, 0)
 
   const columns: DataTableColumn<CuadrePendienteResponse>[] = [
-    { key: 'fecha', label: 'Fecha', render: (row) => fechaCorta(row.fecha) },
+    {
+      key: 'fecha',
+      label: 'Fecha',
+      filterType: 'date',
+      // El filtro de rango compara en epoch, no en texto: sin esto la tabla
+      // descartaba en memoria filas que el servidor sí había traído y salía
+      // "sin registros" con datos cargados.
+      value: (row) => new Date(row.fecha).getTime(),
+      render: (row) => fechaCorta(row.fecha),
+    },
     { key: 'usuario', label: 'Usuario' },
-    { key: 'efectivo', label: 'Efectivo', align: 'right', render: (row) => soles(row.efectivo) },
-    { key: 'bancos', label: 'Bancos', align: 'right', render: (row) => soles(row.bancos) },
+    /*
+     * Los importes no entran al panel de filtros: el unico control que hay es
+     * un buscador de texto, y "9" contra "S/ 9.00" no encuentra lo que la
+     * persona espera. Para acotar por dinero esta el rango de fechas y el
+     * estado, que es como se busca de verdad ("quien no cuadro esta semana").
+     */
+    {
+      key: 'efectivo',
+      label: 'Efectivo',
+      align: 'right',
+      filterable: false,
+      render: (row) => soles(row.efectivo),
+    },
+    {
+      key: 'bancos',
+      label: 'Bancos',
+      align: 'right',
+      filterable: false,
+      render: (row) => soles(row.bancos),
+    },
     {
       key: 'total',
       label: 'Total',
       align: 'right',
+      filterable: false,
       render: (row) => <span className="font-semibold">{soles(row.total)}</span>,
     },
     {
       key: 'diferenciaEfectivo',
       label: 'Diferencia Efectivo',
       align: 'right',
+      filterable: false,
       value: (row) => row.diferenciaEfectivo ?? 0,
       render: (row) =>
         row.diferenciaEfectivo == null ? (
@@ -387,6 +439,14 @@ export function ArqueoDiarioPage() {
     {
       key: 'estado',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'pendiente', label: 'Pendiente' },
+        { value: 'cuadrado', label: 'Cuadrado' },
+        { value: 'conDiferencia', label: 'Con diferencia' },
+        { value: 'anulado', label: 'Anulado' },
+      ],
+      value: (row) => ETIQUETA_ESTADO[row.estado],
       render: (row) => <Badge tone={TONO_ESTADO[row.estado]}>{ETIQUETA_ESTADO[row.estado]}</Badge>,
     },
   ]
@@ -422,34 +482,16 @@ export function ArqueoDiarioPage() {
             />
           </>
         }
-        banner={
-          <PageSection title="Período a revisar">
-            <div className="flex flex-wrap items-end gap-3">
-              <Input
-                label="Fecha Inicio"
-                type="date"
-                value={desde}
-                onChange={(e) => setDesde(e.target.value)}
-                className="max-w-[200px]"
-              />
-              <Input
-                label="Fecha Fin"
-                type="date"
-                value={hasta}
-                onChange={(e) => setHasta(e.target.value)}
-                className="max-w-[200px]"
-              />
-              <Button size="sm" loading={cargandoCuadres} onClick={() => void cargarCuadres()}>
-                Cargar cobros
-              </Button>
-            </div>
-          </PageSection>
-        }
         columns={columns}
         rows={cuadres}
+        onConsulta={aplicarConsultaCuadres}
         cardIcon={Calculator}
         searchPlaceholder="Buscar por usuario..."
-        empty={cargandoCuadres ? 'Cargando cobros...' : 'Nadie cobró nada en este período.'}
+        empty={
+          cargandoCuadres
+            ? 'Cargando cobros...'
+            : 'Nadie cobró nada en este período. Cambia el rango en Filtros.'
+        }
         rowActions={(row) =>
           puede('finanzas.arqueo', row.arqueoId ? 'editar' : 'crear') ? (
             <Button
