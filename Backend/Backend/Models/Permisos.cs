@@ -117,7 +117,6 @@ public static class CatalogoPermisos
             ["tms.flota"] = Catalogo,
             ["tms.conductores"] = Catalogo,
             ["tms.tracking"] = Consulta,
-            ["tms.liquidacion"] = Documento,
 
             // --- DMS ---
             ["dms.visitas"] = Documento,

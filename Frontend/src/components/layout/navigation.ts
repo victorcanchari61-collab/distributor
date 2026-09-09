@@ -170,7 +170,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'tms.flota', label: 'Flota', icon: Truck },
       { id: 'tms.conductores', label: 'Conductores', icon: IdCard },
       { id: 'tms.tracking', label: 'Tracking', icon: MapPinned, pending: true },
-      { id: 'tms.liquidacion', label: 'Liquidación de reparto', icon: Banknote, pending: true },
     ],
   },
   {

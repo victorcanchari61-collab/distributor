@@ -254,11 +254,6 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Tracking',
         icono: Icons.my_location_outlined,
       ),
-      MenuItem(
-        id: 'tms.liquidacion',
-        titulo: 'Liquidación de reparto',
-        icono: Icons.payments_outlined,
-      ),
     ],
   ),
   MenuGrupo(
