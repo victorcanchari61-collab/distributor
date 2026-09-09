@@ -27,5 +27,4 @@ export const mercadoApi = {
   create: (body: MercadoRequest) => api.post<MercadoResponse>('/mercado', body),
   update: (id: number, body: MercadoRequest & { activo: boolean }) =>
     api.put<MercadoResponse>(`/mercado/${id}`, body),
-  remove: (id: number) => api.del<void>(`/mercado/${id}`),
 }

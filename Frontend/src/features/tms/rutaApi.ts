@@ -17,5 +17,4 @@ export const rutaApi = {
   create: (body: RutaRequest) => api.post<RutaResponse>('/ruta', body),
   update: (id: number, body: RutaRequest & { activo: boolean }) =>
     api.put<RutaResponse>(`/ruta/${id}`, body),
-  remove: (id: number) => api.del<void>(`/ruta/${id}`),
 }

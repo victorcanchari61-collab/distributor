@@ -131,7 +131,6 @@ export const tipoVehiculoApi = {
   create: (body: TipoVehiculoRequest) => api.post<TipoVehiculoResponse>('/tipovehiculo', body),
   update: (id: number, body: TipoVehiculoRequest) =>
     api.put<TipoVehiculoResponse>(`/tipovehiculo/${id}`, body),
-  remove: (id: number) => api.del<void>(`/tipovehiculo/${id}`),
 }
 
 export const vehiculoApi = {
@@ -139,7 +138,6 @@ export const vehiculoApi = {
   resumen: () => api.get<ResumenFlotaResponse>('/vehiculo/resumen'),
   create: (body: VehiculoRequest) => api.post<VehiculoResponse>('/vehiculo', body),
   update: (id: number, body: VehiculoRequest) => api.put<VehiculoResponse>(`/vehiculo/${id}`, body),
-  remove: (id: number) => api.del<void>(`/vehiculo/${id}`),
 }
 
 export const conductorApi = {
@@ -148,7 +146,6 @@ export const conductorApi = {
   create: (body: ConductorRequest) => api.post<ConductorResponse>('/conductor', body),
   update: (id: number, body: ConductorRequest) =>
     api.put<ConductorResponse>(`/conductor/${id}`, body),
-  remove: (id: number) => api.del<void>(`/conductor/${id}`),
 }
 
 export type CarpetaImagen = 'vehiculos' | 'conductores'

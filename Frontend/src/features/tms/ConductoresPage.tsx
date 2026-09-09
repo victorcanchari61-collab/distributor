@@ -329,7 +329,7 @@ export function ConductoresPage() {
       rowActions={(row) => (
         <>
           {/* Sin permiso: quien llega a la pantalla ya puede leer la ficha. */}
-          <RowAction label={`Ver ${row.nombre}`} onClick={() => setDetalle(row)}>
+          <RowAction tone="view" label={`Ver ${row.nombre}`} onClick={() => setDetalle(row)}>
             <Eye size={15} />
           </RowAction>
           {puede('tms.conductores', 'editar') && (

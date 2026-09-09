@@ -769,7 +769,7 @@ export function NotasVentaPage() {
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
             <Eye size={15} />
           </RowAction>
-          <RowAction label={`Ver historial de ${row.numero}`} onClick={() => abrirHistorial(row)}>
+          <RowAction tone="view" label={`Ver historial de ${row.numero}`} onClick={() => abrirHistorial(row)}>
             <History size={15} />
           </RowAction>
           {puede('fact.notaventa', 'editar') && (

@@ -395,7 +395,7 @@ export function FlotaPage() {
         empty={cargando ? 'Cargando flota...' : 'Todavía no hay vehículos registrados.'}
         rowActions={(row) => (
           <>
-            <RowAction label={`Ver ${row.placa}`} onClick={() => setDetalle(row)}>
+            <RowAction tone="view" label={`Ver ${row.placa}`} onClick={() => setDetalle(row)}>
               <Eye size={15} />
             </RowAction>
             {puede('tms.flota', 'editar') && (
