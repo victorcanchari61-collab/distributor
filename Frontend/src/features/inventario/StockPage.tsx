@@ -98,10 +98,15 @@ export function StockPage() {
       label: 'Categoría',
       render: (row) => row.categoria ?? <span className="text-ink-soft">—</span>,
     },
+    /*
+     * Cantidades e importes no entran al panel: el unico control es un
+     * buscador de texto, y "9" contra "S/ 9.00" no encuentra lo esperado.
+     */
     {
       key: 'stock',
       label: 'Stock',
       align: 'right',
+      filterable: false,
       render: (row) => (
         <span className={row.bajoMinimo ? 'font-semibold text-amber-600' : ''}>
           {row.bajoMinimo && <AlertTriangle size={12} className="mr-1 inline" />}
@@ -113,6 +118,7 @@ export function StockPage() {
       key: 'disponible',
       label: 'Disponible',
       align: 'right',
+      filterable: false,
       render: (row) =>
         row.reservado > 0 ? (
           <span>
@@ -129,6 +135,7 @@ export function StockPage() {
       key: 'costoActual',
       label: 'Costo',
       align: 'right',
+      filterable: false,
       value: (row) => String(row.costoActual ?? ''),
       render: (row) =>
         row.costoActual == null ? (
@@ -144,11 +151,13 @@ export function StockPage() {
       key: 'valorizado',
       label: 'Valorizado',
       align: 'right',
+      filterable: false,
       render: (row) => `S/ ${row.valorizado.toFixed(2)}`,
     },
     {
       key: 'capas',
       label: 'Capas',
+      filterable: false,
       value: (row) => String(row.capas.length),
       render: (row) =>
         row.capas.length === 0 ? (

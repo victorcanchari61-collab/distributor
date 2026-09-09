@@ -166,10 +166,16 @@ export function CatalogoSimple({
           },
         ]
       : []),
-    { key: 'productos', label: usosEtiqueta, align: 'right' as const },
+    // Un contador no se busca por texto: no hay control numerico en el panel.
+    { key: 'productos', label: usosEtiqueta, align: 'right' as const, filterable: false },
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select' as const,
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row: FilaCatalogo) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row: FilaCatalogo) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>

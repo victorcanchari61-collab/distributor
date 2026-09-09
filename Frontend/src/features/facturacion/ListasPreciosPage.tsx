@@ -151,6 +151,9 @@ export function ListasPreciosPage() {
       key: 'cantidadMinima',
       label: 'Desde',
       align: 'right',
+      // Cantidades e importes no entran al panel: el unico control es un
+      // buscador de texto, y "9" contra "S/ 9.00" no encuentra lo esperado.
+      filterable: false,
       render: (row) =>
         row.cantidadMinima > 1 ? (
           <Badge tone="warning">{row.cantidadMinima}+</Badge>
@@ -162,12 +165,14 @@ export function ListasPreciosPage() {
       key: 'precio',
       label: 'Precio',
       align: 'right',
+      filterable: false,
       render: (row) => <span className="font-semibold text-ink">S/ {row.precio.toFixed(2)}</span>,
     },
     {
       key: 'precioUnidadBase',
       label: 'Equivale a',
       align: 'right',
+      filterable: false,
       // La columna que hace visible el negocio: el saco sale mas barato por
       // kilo que el kilo suelto.
       render: (row) => (

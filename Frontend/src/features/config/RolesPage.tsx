@@ -132,11 +132,14 @@ export function RolesPage() {
       ),
     },
     { key: 'descripcion', label: 'Qué puede hacer' },
-    { key: 'usuarios', label: 'Usuarios', align: 'right', value: (row) => row.usuarios },
+    // Contadores: no hay control numerico en el panel, y buscarlos por texto
+    // no encuentra lo que la persona espera.
+    { key: 'usuarios', label: 'Usuarios', align: 'right', filterable: false, value: (row) => row.usuarios },
     {
       key: 'modulos',
       label: 'Pantallas',
       align: 'right',
+      filterable: false,
       value: (row) => modulosDe(row),
       // Se cuentan pantallas y no modulos porque desde que los permisos son por
       // submodulo un rol puede tener media Facturacion: "1 de 9 modulos" decia
@@ -146,6 +149,11 @@ export function RolesPage() {
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>

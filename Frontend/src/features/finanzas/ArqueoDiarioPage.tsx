@@ -727,10 +727,16 @@ function MotivosGastoTabla({
       label: 'Descripción',
       render: (row) => row.descripcion ?? <span className="text-ink-soft">—</span>,
     },
-    { key: 'usos', label: 'En uso', align: 'right' },
+    // Un contador no se busca por texto: no hay control numerico en el panel.
+    { key: 'usos', label: 'En uso', align: 'right', filterable: false },
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>

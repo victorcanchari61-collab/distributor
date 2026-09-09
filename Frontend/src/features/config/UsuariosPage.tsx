@@ -190,11 +190,19 @@ export function UsuariosPage() {
     {
       key: 'rol',
       label: 'Rol',
+      // Sale del catalogo de roles ya cargado, no de una lista fija.
+      filterType: 'select',
+      filterOptions: roles.map((r) => ({ value: r.nombre, label: r.nombre })),
       render: (row) => <Badge tone="sys">{row.rol}</Badge>,
     },
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>

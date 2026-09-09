@@ -149,7 +149,8 @@ export function MercadosPage() {
       label: 'Distrito',
       render: (row) => row.distrito ?? <span className="text-ink-soft">—</span>,
     },
-    { key: 'clientes', label: 'Clientes', align: 'right' },
+    // Un contador no se busca por texto: no hay control numerico en el panel.
+    { key: 'clientes', label: 'Clientes', align: 'right', filterable: false },
     {
       key: 'activo',
       label: 'Estado',

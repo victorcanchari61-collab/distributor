@@ -129,7 +129,8 @@ export function RutasPage() {
 
   const columns: DataTableColumn<RutaResponse>[] = [
     { key: 'nombre', label: 'Nombre' },
-    { key: 'clientes', label: 'Clientes', align: 'right' },
+    // Un contador no se busca por texto: no hay control numerico en el panel.
+    { key: 'clientes', label: 'Clientes', align: 'right', filterable: false },
     {
       key: 'activo',
       label: 'Estado',

@@ -225,7 +225,13 @@ export function FlotaPage() {
 
   const columns: DataTableColumn<VehiculoResponse>[] = [
     { key: 'placa', label: 'Placa', render: (row) => <Badge tone="sys">{row.placa}</Badge> },
-    { key: 'tipoVehiculo', label: 'Tipo' },
+    {
+      key: 'tipoVehiculo',
+      label: 'Tipo',
+      // Sale del catalogo de la otra pestana, no de una lista fija.
+      filterType: 'select',
+      filterOptions: tipos.map((t) => ({ value: t.nombre, label: t.nombre })),
+    },
     {
       key: 'marca',
       label: 'Marca / modelo',
@@ -241,6 +247,8 @@ export function FlotaPage() {
       key: 'capacidadKg',
       label: 'Capacidad',
       align: 'right',
+      // Una cantidad no se busca por texto: no hay control numerico en el panel.
+      filterable: false,
       render: (row) =>
         row.capacidadKg == null ? (
           <span className="text-ink-soft">—</span>
@@ -276,6 +284,11 @@ export function FlotaPage() {
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>
@@ -634,6 +647,8 @@ function TiposVehiculoTabla({
       key: 'capacidadKgReferencia',
       label: 'Capacidad ref.',
       align: 'right',
+      // Una cantidad no se busca por texto: no hay control numerico en el panel.
+      filterable: false,
       render: (row) =>
         row.capacidadKgReferencia == null ? (
           <span className="text-ink-soft">—</span>
@@ -641,10 +656,15 @@ function TiposVehiculoTabla({
           `${row.capacidadKgReferencia} kg`
         ),
     },
-    { key: 'vehiculos', label: 'Vehículos', align: 'right' },
+    { key: 'vehiculos', label: 'Vehículos', align: 'right', filterable: false },
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>

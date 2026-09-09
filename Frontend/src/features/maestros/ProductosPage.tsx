@@ -421,11 +421,17 @@ export function ProductosPage() {
     {
       key: 'categoria',
       label: 'Categoría',
+      // El servidor compara el nombre exacto, asi que se elige de la lista
+      // real en vez de teclearlo.
+      filterType: 'select',
+      filterOptions: categorias.map((c) => ({ value: c.nombre, label: c.nombre })),
       render: (row) => row.categoria ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'marca',
       label: 'Marca',
+      filterType: 'select',
+      filterOptions: marcas.map((m) => ({ value: m.nombre, label: m.nombre })),
       render: (row) => row.marca ?? <span className="text-ink-soft">—</span>,
     },
     {
@@ -447,6 +453,9 @@ export function ProductosPage() {
       key: 'costoReferencia',
       label: 'Costo ref.',
       align: 'right',
+      // Sin control numerico en el panel, buscar "9" contra "S/ 9.00" no
+      // encuentra lo que la persona espera.
+      filterable: false,
       render: (row) =>
         row.costoReferencia == null ? (
           <span className="text-ink-soft">—</span>
@@ -482,6 +491,11 @@ export function ProductosPage() {
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>
@@ -1019,17 +1033,38 @@ function UnidadesTabla({
   const columns: DataTableColumn<UnidadResponse>[] = [
     { key: 'codigo', label: 'Código', render: (row) => <Badge>{row.codigo}</Badge> },
     { key: 'nombre', label: 'Nombre' },
-    { key: 'tipo', label: 'Tipo', render: (row) => <Badge tone="sys">{row.tipo}</Badge> },
+    {
+      key: 'tipo',
+      label: 'Tipo',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'CONTEO', label: 'CONTEO' },
+        { value: 'PESO', label: 'PESO' },
+        { value: 'VOLUMEN', label: 'VOLUMEN' },
+      ],
+      render: (row) => <Badge tone="sys">{row.tipo}</Badge>,
+    },
     {
       key: 'fraccionable',
       label: 'Admite decimales',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Sí', label: 'Sí' },
+        { value: 'No', label: 'No' },
+      ],
       value: (row) => (row.fraccionable ? 'Sí' : 'No'),
       render: (row) => (row.fraccionable ? 'Sí' : <span className="text-ink-soft">No</span>),
     },
-    { key: 'usos', label: 'En uso', align: 'right' },
+    // Un contador no se busca por texto: no hay control numerico en el panel.
+    { key: 'usos', label: 'En uso', align: 'right', filterable: false },
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>

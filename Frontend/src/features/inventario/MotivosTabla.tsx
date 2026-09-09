@@ -135,17 +135,38 @@ export function MotivosTabla({
   const columns: DataTableColumn<MotivoResponse>[] = [
     { key: 'nombre', label: 'Nombre' },
     { key: 'codigo', label: 'Código', render: (row) => <Badge>{row.codigo}</Badge> },
-    { key: 'tipo', label: 'Tipo', render: columnaTipo },
+    {
+      key: 'tipo',
+      label: 'Tipo',
+      filterType: 'select',
+      // El Badge dice Ingreso/Salida, pero la fila guarda ENTRADA/SALIDA.
+      filterOptions: [
+        { value: 'ENTRADA', label: 'Ingreso' },
+        { value: 'SALIDA', label: 'Salida' },
+      ],
+      render: columnaTipo,
+    },
     {
       key: 'pideCosto',
       label: 'Pide costo',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Sí', label: 'Sí' },
+        { value: 'No', label: 'No' },
+      ],
       value: (row) => (row.pideCosto ? 'Sí' : 'No'),
       render: (row) => (row.pideCosto ? 'Sí' : <span className="text-ink-soft">No</span>),
     },
-    { key: 'movimientos', label: 'Movimientos', align: 'right' },
+    // Un contador no se busca por texto: no hay control numerico en el panel.
+    { key: 'movimientos', label: 'Movimientos', align: 'right', filterable: false },
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>

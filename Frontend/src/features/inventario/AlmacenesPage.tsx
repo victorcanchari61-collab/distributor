@@ -135,16 +135,26 @@ export function AlmacenesPage() {
       label: 'Dirección',
       render: (row) => row.direccion ?? <span className="text-ink-soft">—</span>,
     },
-    { key: 'productos', label: 'Productos', align: 'right' },
+    /*
+     * Cantidades e importes no entran al panel: el unico control es un
+     * buscador de texto, y "9" contra "S/ 9.00" no encuentra lo esperado.
+     */
+    { key: 'productos', label: 'Productos', align: 'right', filterable: false },
     {
       key: 'valorizado',
       label: 'Valorizado',
       align: 'right',
+      filterable: false,
       render: (row) => `S/ ${row.valorizado.toFixed(2)}`,
     },
     {
       key: 'activo',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
       value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
       render: (row) => (
         <Badge tone={row.activo ? 'success' : 'neutral'}>

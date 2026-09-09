@@ -60,12 +60,20 @@ export function LotesVencimientosPage() {
     {
       key: 'fechaVencimiento',
       label: 'Vence',
+      filterType: 'date',
+      // La tabla filtra en memoria y el rango compara en epoch. Los lotes sin
+      // fecha quedan en 0, que es justo lo que se quiere: no caen en ningun rango.
+      value: (row) => (row.fechaVencimiento ? new Date(row.fechaVencimiento).getTime() : 0),
       render: (row) =>
         row.fechaVencimiento ? new Date(row.fechaVencimiento).toLocaleDateString('es-PE') : '—',
     },
     {
       key: 'diasParaVencer',
       label: 'Estado',
+      // No es un enum: son tramos calculados sobre los dias que faltan, y el
+      // valor de la columna es ese numero porque es lo que ordena. Para acotar
+      // por vencimiento esta el rango de la columna Vence.
+      filterable: false,
       value: (row) => row.diasParaVencer ?? 0,
       render: (row) => {
         const dias = row.diasParaVencer
@@ -75,16 +83,22 @@ export function LotesVencimientosPage() {
         return <Badge tone="success">Vigente</Badge>
       },
     },
+    /*
+     * Ni el stock ni el valorizado entran al panel: el unico control es un
+     * buscador de texto, y "9" contra "S/ 9.00" no encuentra lo esperado.
+     */
     {
       key: 'cantidadDisponible',
       label: 'Stock',
       align: 'right',
+      filterable: false,
       render: (row) => `${row.cantidadDisponible} ${row.unidadBase}`,
     },
     {
       key: 'valor',
       label: 'Valorizado',
       align: 'right',
+      filterable: false,
       render: (row) => `S/ ${row.valor.toFixed(2)}`,
     },
   ]

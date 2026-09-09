@@ -409,7 +409,15 @@ export function PedidosPage() {
       filterType: 'date',
       render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
     },
-    { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
+    {
+      key: 'total',
+      label: 'Total',
+      align: 'right',
+      // Sin control numerico en el panel, buscar "9" contra "S/ 9.00" no
+      // encuentra lo que la persona espera.
+      filterable: false,
+      render: (row) => `S/ ${row.total.toFixed(2)}`,
+    },
     {
       key: 'estado',
       label: 'Estado',

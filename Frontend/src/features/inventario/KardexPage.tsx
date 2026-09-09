@@ -134,11 +134,16 @@ export function KardexPage() {
     },
     { key: 'producto', label: 'Producto', sortable: false },
     { key: 'almacen', label: 'Almacén', sortable: false },
+    /*
+     * Cantidades e importes no entran al panel: el unico control es un
+     * buscador de texto, y "9" contra "S/ 9.00" no encuentra lo esperado.
+     */
     {
       key: 'cantidadPresentacion',
       sortable: false,
       label: 'Cantidad',
       align: 'right',
+      filterable: false,
       render: (row) =>
         row.presentacion ? `${row.cantidadPresentacion} ${row.presentacion}` : `${row.cantidad}`,
     },
@@ -147,6 +152,7 @@ export function KardexPage() {
       sortable: false,
       label: 'En unidad base',
       align: 'right',
+      filterable: false,
       render: (row) => (
         <span className={row.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-amber-600'}>
           {row.tipo === 'ENTRADA' ? '+' : '−'}
@@ -159,6 +165,7 @@ export function KardexPage() {
       sortable: false,
       label: 'Costo',
       align: 'right',
+      filterable: false,
       render: (row) => `S/ ${row.costoTotal.toFixed(2)}`,
     },
     {
@@ -166,6 +173,7 @@ export function KardexPage() {
       sortable: false,
       label: 'Saldo',
       align: 'right',
+      filterable: false,
       render: (row) => (
         <span className="font-semibold text-ink">
           {row.saldo} {row.unidadBase}
