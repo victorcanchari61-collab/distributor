@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { cn } from './cn'
@@ -93,6 +93,32 @@ export function DateRangePicker({ from, to, onChange, placeholder = 'Selecciona 
     setOpen(true)
   }
 
+  /*
+   * Si no cabe debajo, se coloca encima del campo.
+   *
+   * El calendario se anclaba siempre bajo el campo, y dentro de un modal el
+   * campo suele quedar a media pantalla: el panel se salía por abajo y se veía
+   * cortado justo por los días, que es lo único que hay que tocar. Se corrige
+   * despues de montarlo porque hasta entonces no se sabe cuanto mide.
+   */
+  useLayoutEffect(() => {
+    if (!open || !pos) return
+
+    const panel = ref.current?.getBoundingClientRect()
+    const campo = triggerRef.current?.getBoundingClientRect()
+    if (!panel || !campo) return
+
+    const margen = 12
+    const cabeDebajo = pos.top + panel.height <= window.innerHeight - margen
+    if (cabeDebajo) return
+
+    // Encima si hay sitio; si tampoco, pegado al borde y que scrollee.
+    const arriba = campo.top - panel.height - 6
+    const top = arriba >= margen ? arriba : Math.max(margen, window.innerHeight - panel.height - margen)
+
+    if (Math.abs(top - pos.top) > 1) setPos({ ...pos, top })
+  }, [open, pos, ref])
+
   const elegir = (iso: string) => {
     if (!from || (from && to)) {
       onChange(iso, '')
@@ -145,8 +171,13 @@ export function DateRangePicker({ from, to, onChange, placeholder = 'Selecciona 
           <div
             ref={ref}
             data-floating-panel
-            style={{ top: pos.top, left: pos.left, width: pos.width }}
-            className="fixed z-[60] flex overflow-hidden rounded-xl bg-white shadow-xl shadow-zinc-900/20 ring-1 ring-zinc-200"
+            style={{
+              top: pos.top,
+              left: pos.left,
+              width: pos.width,
+              maxHeight: 'calc(100vh - 24px)',
+            }}
+            className="fixed z-[60] flex overflow-auto rounded-xl bg-white shadow-xl shadow-zinc-900/20 ring-1 ring-zinc-200"
           >
             {/* atajos */}
             <div className="hidden w-36 shrink-0 flex-col gap-0.5 border-r border-zinc-100 p-2 sm:flex">
