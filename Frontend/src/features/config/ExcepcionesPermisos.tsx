@@ -125,11 +125,18 @@ export function ExcepcionesPermisos() {
     {
       key: 'accion',
       label: 'Acción',
+      filterType: 'select',
+      // Las opciones son las claves crudas de la fila; la etiqueta es la del render.
+      filterOptions: Object.entries(ACCION_LABEL).map(([value, label]) => ({ value, label })),
       render: (p) => ACCION_LABEL[p.accion] ?? p.accion,
     },
     {
       key: 'alcance',
       label: 'Alcance',
+      filterType: 'select',
+      // El alcance viaja como numero, asi que se compara contra la etiqueta
+      // que `value` expone.
+      filterOptions: Object.values(ALCANCE_LABEL).map((label) => ({ value: label, label })),
       value: (p) => ALCANCE_LABEL[p.alcance],
       render: (p) => (
         <span className="inline-flex items-center gap-1.5">
@@ -146,6 +153,13 @@ export function ExcepcionesPermisos() {
     {
       key: 'estado',
       label: 'Estado',
+      filterType: 'select',
+      // El Badge distingue por que termino (retirado, usado, vencido), pero la
+      // fila solo guarda si sigue vigente: eso es lo que se puede filtrar.
+      filterOptions: [
+        { value: 'Vigente', label: 'Vigente' },
+        { value: 'Terminado', label: 'Terminado' },
+      ],
       value: (p) => (p.vigente ? 'Vigente' : 'Terminado'),
       render: (p) => {
         // Vale mas decir POR QUE ya no sirve que un "inactivo" que obliga a
@@ -164,6 +178,10 @@ export function ExcepcionesPermisos() {
     {
       key: 'fechaOtorgado',
       label: 'Concedido',
+      filterType: 'date',
+      // La tabla filtra en memoria y el rango compara en epoch: sin esto se
+      // descartarian filas ya cargadas y saldria "sin registros".
+      value: (p) => new Date(p.fechaOtorgado).getTime(),
       render: (p) => new Date(p.fechaOtorgado).toLocaleDateString('es-PE'),
     },
   ]

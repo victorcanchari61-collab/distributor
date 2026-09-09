@@ -331,6 +331,11 @@ export function PrestamosPage() {
     {
       key: 'tipo',
       label: 'Tipo',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'DADO', label: 'Prestado' },
+        { value: 'RECIBIDO', label: 'Recibido' },
+      ],
       render: (row) => (
         <Badge tone={row.tipo === 'DADO' ? 'warning' : 'success'}>
           {row.tipo === 'DADO' ? 'Prestado' : 'Recibido'}
@@ -342,12 +347,26 @@ export function PrestamosPage() {
     {
       key: 'fecha',
       label: 'Fecha',
+      filterType: 'date',
       render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
     },
-    { key: 'total', label: 'Valor', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
+    {
+      key: 'total',
+      label: 'Valor',
+      align: 'right',
+      // Sin control numerico en el panel, buscar "9" contra "S/ 9.00" no
+      // encuentra lo que la persona espera.
+      filterable: false,
+      render: (row) => `S/ ${row.total.toFixed(2)}`,
+    },
     {
       key: 'estado',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'PENDIENTE', label: 'Pendiente' },
+        { value: 'DEVUELTO', label: 'Devuelto' },
+      ],
       render: (row) => estadoPrestamoBadge(row.estado),
     },
   ]

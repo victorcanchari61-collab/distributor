@@ -213,6 +213,14 @@ export function EmpresaPage() {
     {
       key: 'activa',
       label: 'Estado',
+      filterType: 'select',
+      // Son tres estados derivados de dos banderas; se comparan contra la
+      // etiqueta que `value` expone.
+      filterOptions: [
+        { value: 'Activa', label: 'Activa' },
+        { value: 'Disponible', label: 'Disponible' },
+        { value: 'Deshabilitada', label: 'Deshabilitada' },
+      ],
       value: (row) => (row.activa ? 'Activa' : row.habilitada ? 'Disponible' : 'Deshabilitada'),
       render: (row) =>
         row.activa ? (

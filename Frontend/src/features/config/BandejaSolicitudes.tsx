@@ -90,6 +90,9 @@ export function BandejaSolicitudes() {
     {
       key: 'accion',
       label: 'Acción',
+      filterType: 'select',
+      // Las opciones son las claves crudas de la fila; la etiqueta es la del render.
+      filterOptions: Object.entries(ACCION_LABEL).map(([value, label]) => ({ value, label })),
       render: (s) => ACCION_LABEL[s.accion] ?? s.accion,
     },
     {
@@ -101,11 +104,23 @@ export function BandejaSolicitudes() {
     {
       key: 'fechaSolicitud',
       label: 'Cuándo',
+      filterType: 'date',
+      // La tabla filtra en memoria y el rango compara en epoch: sin esto se
+      // descartarian filas ya cargadas y saldria "sin registros".
+      value: (s) => new Date(s.fechaSolicitud).getTime(),
       render: (s) => new Date(s.fechaSolicitud).toLocaleString('es-PE'),
     },
     {
       key: 'estado',
       label: 'Estado',
+      filterType: 'select',
+      // El estado viaja como numero, asi que se compara contra la etiqueta
+      // que `value` expone.
+      filterOptions: [
+        { value: 'Pendiente', label: 'Pendiente' },
+        { value: 'Aprobada', label: 'Aprobada' },
+        { value: 'Rechazada', label: 'Rechazada' },
+      ],
       value: (s) =>
         s.estado === ESTADO_SOLICITUD.pendiente
           ? 'Pendiente'
