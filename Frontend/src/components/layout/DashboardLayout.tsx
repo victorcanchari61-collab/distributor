@@ -10,6 +10,8 @@ export interface DashboardLayoutProps {
   onSelect: (id: string) => void
   userName: string
   userEmail: string
+  userFoto: string | null
+  onPerfil: () => void
   onLogout: () => void
   children: ReactNode
 }
@@ -26,6 +28,8 @@ export function DashboardLayout({
   onSelect,
   userName,
   userEmail,
+  userFoto,
+  onPerfil,
   onLogout,
   children,
 }: DashboardLayoutProps) {
@@ -62,8 +66,10 @@ export function DashboardLayout({
           onMostrarSider={() => setOculto(false)}
           userName={userName}
           userEmail={userEmail}
+          userFoto={userFoto}
           onOpenMenu={() => setMobileOpen(true)}
           onNavigate={onSelect}
+          onPerfil={onPerfil}
           onLogout={onLogout}
         />
 

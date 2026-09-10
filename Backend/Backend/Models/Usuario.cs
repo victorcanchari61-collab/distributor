@@ -8,6 +8,15 @@ public class Usuario
 
     /// <summary>DNI del empleado. Se llena consultando RENIEC.</summary>
     public string? Dni { get; set; }
+
+    public string? Telefono { get; set; }
+
+    /// <summary>
+    /// Foto de perfil. Se guarda la ruta relativa que sirve el backend, no el
+    /// archivo: una imagen dentro de la fila hincharia cada listado.
+    /// </summary>
+    public string? Foto { get; set; }
+
     public string PasswordHash { get; set; } = string.Empty;
 
     /// <summary>Rol asignado. Antes era un enum; ahora vive en la tabla Roles.</summary>

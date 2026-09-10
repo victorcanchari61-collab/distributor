@@ -141,6 +141,20 @@ class AuthControlador extends Notifier<AuthEstado> {
     state = const AuthEstado(estado: EstadoSesion.invitado);
   }
 
+  /// Refresca el usuario tras editar el perfil: la barra superior tiene que
+  /// mostrar el nombre y la foto nuevos sin obligar a cerrar sesion.
+  Future<void> actualizarUsuario(Usuario usuario) async {
+    try {
+      final token = await _sesion.token();
+      if (token != null) {
+        await _sesion.guardar(token: token, usuario: usuario.aJson());
+      }
+    } catch (e) {
+      debugPrint('No se pudo guardar el perfil actualizado: $e');
+    }
+    state = state.copiar(usuario: usuario);
+  }
+
   void limpiarError() => state = state.copiar(limpiarError: true);
 }
 

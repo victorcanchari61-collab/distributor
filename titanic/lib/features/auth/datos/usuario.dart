@@ -8,12 +8,18 @@ class Usuario {
     required this.rol,
     required this.activo,
     this.dni,
+    this.telefono,
+    this.foto,
   });
 
   final int id;
   final String nombre;
   final String email;
   final String? dni;
+  final String? telefono;
+
+  /// Ruta relativa de la foto de perfil, si tiene.
+  final String? foto;
 
   /// Id de la tabla Roles.
   final int rolId;
@@ -34,6 +40,8 @@ class Usuario {
     nombre: json['nombre'] as String? ?? '',
     email: json['email'] as String? ?? '',
     dni: json['dni'] as String?,
+    telefono: json['telefono'] as String?,
+    foto: json['foto'] as String?,
     rolId: json['rolId'] as int? ?? 0,
     rol: json['rol'] as String? ?? '',
     activo: json['activo'] as bool? ?? true,
@@ -44,6 +52,8 @@ class Usuario {
     'nombre': nombre,
     'email': email,
     'dni': dni,
+    'telefono': telefono,
+    'foto': foto,
     'rolId': rolId,
     'rol': rol,
     'activo': activo,

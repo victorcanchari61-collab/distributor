@@ -16,6 +16,17 @@ export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY)
 }
 
+/**
+ * Reescribe el usuario guardado tras editar el perfil.
+ *
+ * Va al mismo almacen donde este la sesion: con "recordarme" es localStorage y
+ * sin el, sessionStorage. Si no hubiera token no hay sesion que actualizar.
+ */
+export function updateUsuario(usuario: unknown) {
+  const store = localStorage.getItem(TOKEN_KEY) ? localStorage : sessionStorage
+  store.setItem(USER_KEY, JSON.stringify(usuario))
+}
+
 export function getUsuario<T>(): T | null {
   const raw = localStorage.getItem(USER_KEY) ?? sessionStorage.getItem(USER_KEY)
   if (!raw) return null

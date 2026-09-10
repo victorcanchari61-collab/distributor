@@ -148,7 +148,7 @@ export const conductorApi = {
     api.put<ConductorResponse>(`/conductor/${id}`, body),
 }
 
-export type CarpetaImagen = 'vehiculos' | 'conductores'
+export type CarpetaImagen = 'vehiculos' | 'conductores' | 'usuarios'
 
 /**
  * Sube la imagen y devuelve dónde quedó.

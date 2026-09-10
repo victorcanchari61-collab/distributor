@@ -31,6 +31,7 @@ import '../../features/inventario/vistas/transferencias_pagina.dart';
 import '../../features/maestros/vistas/clientes_pagina.dart';
 import '../../features/maestros/vistas/productos_pagina.dart';
 import '../../features/maestros/vistas/proveedores_pagina.dart';
+import '../../features/perfil/vistas/perfil_pagina.dart';
 import '../../features/tms/vistas/conductores_pagina.dart';
 import '../../features/tms/vistas/flota_pagina.dart';
 import '../../features/tms/vistas/mercados_pagina.dart';
@@ -200,6 +201,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: ConductoresPagina.ruta,
         builder: (context, estado) => const ConductoresPagina(),
+      ),
+
+      // Mi perfil no es una vista del menu: se llega desde el avatar de la
+      // barra superior o desde el propio drawer.
+      GoRoute(
+        path: PerfilPagina.ruta,
+        builder: (context, estado) => const PerfilPagina(),
       ),
 
       for (final grupo in menuGrupos)

@@ -21,6 +21,8 @@ public class UsuarioService : IUsuarioService
     private readonly IValidator<LoginRequest> _loginValidator;
     private readonly IValidator<CreateUsuarioRequest> _createValidator;
     private readonly IValidator<UpdateUsuarioRequest> _updateValidator;
+    private readonly IValidator<ActualizarPerfilRequest> _perfilValidator;
+    private readonly IValidator<CambiarPasswordRequest> _passwordValidator;
     private readonly INotificador _notificador;
 
     public UsuarioService(IUsuarioRepository repository,
@@ -29,6 +31,8 @@ public class UsuarioService : IUsuarioService
         IValidator<LoginRequest> loginValidator,
         IValidator<CreateUsuarioRequest> createValidator,
         IValidator<UpdateUsuarioRequest> updateValidator,
+        IValidator<ActualizarPerfilRequest> perfilValidator,
+        IValidator<CambiarPasswordRequest> passwordValidator,
         INotificador notificador)
     {
         _repository = repository;
@@ -37,6 +41,8 @@ public class UsuarioService : IUsuarioService
         _loginValidator = loginValidator;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
+        _perfilValidator = perfilValidator;
+        _passwordValidator = passwordValidator;
         _notificador = notificador;
     }
 
@@ -158,6 +164,58 @@ public class UsuarioService : IUsuarioService
         return response;
     }
 
+    public async Task<UsuarioResponse> GetPerfilAsync(int usuarioId)
+    {
+        var usuario = await _repository.GetByIdConRolAsync(usuarioId)
+            ?? throw new NotFoundException($"No existe el usuario {usuarioId}");
+
+        return MapToResponse(usuario);
+    }
+
+    public async Task<UsuarioResponse> UpdatePerfilAsync(int usuarioId, ActualizarPerfilRequest request)
+    {
+        await _perfilValidator.ValidateAndThrowAsync(request);
+
+        var usuario = await _repository.GetByIdConRolAsync(usuarioId)
+            ?? throw new NotFoundException($"No existe el usuario {usuarioId}");
+
+        var otro = await _repository.GetByEmailAsync(request.Email);
+        if (otro is not null && otro.Id != usuarioId)
+        {
+            throw new ConflictException("Ya existe un usuario con ese email");
+        }
+
+        usuario.Nombre = request.Nombre;
+        usuario.Email = request.Email;
+        usuario.Dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni;
+        usuario.Telefono = string.IsNullOrWhiteSpace(request.Telefono) ? null : request.Telefono;
+        usuario.Foto = string.IsNullOrWhiteSpace(request.Foto) ? null : request.Foto;
+
+        await _repository.UpdateAsync(usuario);
+        var response = MapToResponse(usuario);
+        await _notificador.AvisarAsync("usuarios", "actualizado", response);
+        return response;
+    }
+
+    public async Task CambiarPasswordAsync(int usuarioId, CambiarPasswordRequest request)
+    {
+        await _passwordValidator.ValidateAndThrowAsync(request);
+
+        var usuario = await _repository.GetByIdConRolAsync(usuarioId)
+            ?? throw new NotFoundException($"No existe el usuario {usuarioId}");
+
+        // Sin verificar la actual, quien dejara una sesion abierta en una
+        // computadora ajena podria cambiarla y quedarse con la cuenta.
+        if (_passwordHasher.VerifyHashedPassword(usuario, usuario.PasswordHash, request.PasswordActual) ==
+            PasswordVerificationResult.Failed)
+        {
+            throw new BadRequestException("La contraseña actual no es correcta");
+        }
+
+        usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.PasswordNueva);
+        await _repository.UpdateAsync(usuario);
+    }
+
     private string GenerateToken(Usuario usuario)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
@@ -195,6 +253,8 @@ public class UsuarioService : IUsuarioService
             Nombre = usuario.Nombre,
             Email = usuario.Email,
             Dni = usuario.Dni,
+            Telefono = usuario.Telefono,
+            Foto = usuario.Foto,
             RolId = usuario.RolId,
             Rol = usuario.Rol?.Nombre ?? string.Empty,
             Activo = usuario.Activo,

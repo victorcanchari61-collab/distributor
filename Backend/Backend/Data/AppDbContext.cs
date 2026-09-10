@@ -189,6 +189,8 @@ public class AppDbContext : DbContext
             entity.Property(u => u.Email).HasMaxLength(100).IsRequired();
             entity.Property(u => u.PasswordHash).HasMaxLength(256).IsRequired();
             entity.Property(u => u.Dni).HasMaxLength(8);
+            entity.Property(u => u.Telefono).HasMaxLength(20);
+            entity.Property(u => u.Foto).HasMaxLength(250);
 
             // Restrict: no se borra un rol que tenga usuarios detras.
             entity.HasOne(u => u.Rol)

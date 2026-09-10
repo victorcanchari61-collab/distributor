@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ShieldOff } from 'lucide-react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { DashboardLayout, NAV_GROUPS, navIdFromPath, navPath, resolveNav } from './components/layout'
@@ -7,6 +7,7 @@ import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, AuditoriaPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
 import { SolicitudPermisoModal } from './features/config/SolicitudPermisoModal'
 import { solicitudApi } from './features/config/solicitudApi'
+import { MiPerfilPage } from './features/perfil'
 import { Button } from './components/ui'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
 import { ArqueoDiarioPage, CuentasPorCobrarPage, CuentasPorPagarPage, MetodosPagoPage, MisCobrosPage } from './features/finanzas'
@@ -69,6 +70,16 @@ function App() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Mi Perfil avisa por aqui cuando guarda: la barra superior tiene que mostrar
+  // el nombre y la foto nuevos sin obligar a recargar la pagina.
+  useEffect(() => {
+    const alActualizar = (e: Event) => {
+      setUsuario((e as CustomEvent<UsuarioResponse>).detail)
+    }
+    window.addEventListener('perfil:actualizado', alActualizar)
+    return () => window.removeEventListener('perfil:actualizado', alActualizar)
+  }, [])
+
   if (!usuario) {
     return (
       <LoginPage
@@ -93,6 +104,8 @@ function App() {
       onSelect={(id) => navigate(navPath(id))}
       userName={usuario.nombre}
       userEmail={usuario.email}
+      userFoto={usuario.foto}
+      onPerfil={() => navigate('/perfil')}
       onLogout={() => {
         clearSession()
         setUsuario(null)
@@ -101,6 +114,8 @@ function App() {
     >
       <Routes>
         <Route path="/" element={<Inicio />} />
+        {/* Ruta propia y fuera del filtro de permisos: es de todos, no de un modulo. */}
+        <Route path="/perfil" element={<MiPerfilPage />} />
         <Route path="/:modulo/:vista" element={<Vista />} />
         <Route path="*" element={<Inicio />} />
       </Routes>

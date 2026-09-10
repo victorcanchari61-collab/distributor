@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/auth/estado/auth_controlador.dart';
+import '../../features/perfil/vistas/perfil_pagina.dart';
+import '../../features/tms/datos/flota_api.dart';
 import 'app_alertas_boton.dart';
 import 'app_drawer.dart';
 
@@ -72,22 +75,31 @@ class AppShell extends ConsumerWidget {
             ...?acciones,
             const AppAlertasBoton(),
             // Quien esta conectado va aqui, no en el menu: se ve siempre, sin
-            // tener que abrir el drawer.
+            // tener que abrir el drawer. Tocar el avatar abre Mi perfil.
             if (usuario != null)
               Padding(
                 padding: const EdgeInsets.only(right: Dimen.espacio3),
                 child: Tooltip(
                   message: '${usuario.nombre}\n${usuario.rol}',
-                  child: CircleAvatar(
-                    radius: 15,
-                    backgroundColor: Colores.marca,
-                    child: Text(
-                      usuario.inicial,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => context.go(PerfilPagina.ruta),
+                    child: CircleAvatar(
+                      radius: 15,
+                      backgroundColor: Colores.marca,
+                      backgroundImage: usuario.foto == null
+                          ? null
+                          : NetworkImage(ArchivoApi.url(usuario.foto!)),
+                      child: usuario.foto == null
+                          ? Text(
+                              usuario.inicial,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                 ),

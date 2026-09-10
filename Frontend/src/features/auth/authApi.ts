@@ -5,6 +5,9 @@ export interface UsuarioResponse {
   nombre: string
   email: string
   dni: string | null
+  telefono: string | null
+  /** Ruta relativa de la foto de perfil, si tiene. */
+  foto: string | null
   rolId: number
   /** Nombre del rol, ya resuelto por el backend. */
   rol: string

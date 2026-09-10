@@ -5,6 +5,8 @@ export interface UsuarioResponse {
   nombre: string
   email: string
   dni: string | null
+  telefono: string | null
+  foto: string | null
   rolId: number
   /** Nombre del rol, resuelto por el backend. */
   rol: string

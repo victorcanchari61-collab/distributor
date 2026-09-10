@@ -4,6 +4,7 @@ import { cn } from '../ui'
 import { alertaApi } from '../../lib/alertasApi'
 import type { AlertaResponse } from '../../lib/alertasApi'
 import { useRealtime } from '../../lib/realtime'
+import { urlImagen } from '../../features/tms/flotaApi'
 
 export interface TopbarProps {
   /** El sider esta oculto: se muestra el boton para traerlo de vuelta. */
@@ -11,9 +12,13 @@ export interface TopbarProps {
   onMostrarSider: () => void
   userName: string
   userEmail: string
+  /** Ruta de la foto de perfil, o null si no tiene. */
+  userFoto: string | null
   onOpenMenu: () => void
   /** Navega a una vista del menú por su id ("inv.stock"), al tocar una alerta. */
   onNavigate: (id: string) => void
+  /** Abre Mi Perfil al tocar el nombre o el avatar. */
+  onPerfil: () => void
   onLogout: () => void
 }
 
@@ -22,8 +27,10 @@ export function Topbar({
   onMostrarSider,
   userName,
   userEmail,
+  userFoto,
   onOpenMenu,
   onNavigate,
+  onPerfil,
   onLogout,
 }: TopbarProps) {
   const [alertas, setAlertas] = useState<AlertaResponse[]>([])
@@ -185,17 +192,25 @@ export function Topbar({
         )}
       </div>
 
-      <div className="flex items-center gap-2 border-l border-line pl-3">
-        <span className="hidden text-right sm:block">
-          <span className="block text-sm leading-tight font-semibold text-ink">{userName}</span>
-          <span className="block text-[11px] text-ink-muted">{userEmail}</span>
-        </span>
-        <span
-          aria-hidden="true"
-          className="inline-flex size-9 items-center justify-center rounded-full bg-[rgb(var(--sys-rgb))] text-sm font-bold text-[var(--sys-on)]"
+      <div className="flex items-center gap-1 border-l border-line pl-3">
+        <button
+          type="button"
+          onClick={onPerfil}
+          title="Mi perfil"
+          className="flex cursor-pointer items-center gap-2 rounded-lg p-1 pr-2 transition-colors hover:bg-surface-alt"
         >
-          {userName.charAt(0).toUpperCase()}
-        </span>
+          <span className="hidden text-right sm:block">
+            <span className="block text-sm leading-tight font-semibold text-ink">{userName}</span>
+            <span className="block text-[11px] text-ink-muted">{userEmail}</span>
+          </span>
+          <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[rgb(var(--sys-rgb))] text-sm font-bold text-[var(--sys-on)]">
+            {userFoto ? (
+              <img src={urlImagen(userFoto)} alt={userName} className="size-full object-cover" />
+            ) : (
+              userName.charAt(0).toUpperCase()
+            )}
+          </span>
+        </button>
         <button
           type="button"
           onClick={onLogout}

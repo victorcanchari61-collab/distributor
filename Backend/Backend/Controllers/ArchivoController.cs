@@ -93,6 +93,7 @@ public class ArchivoController : ControllerBase
     {
         "vehiculos" => "vehiculos",
         "conductores" => "conductores",
+        "usuarios" => "usuarios",
         _ => "general",
     };
 }
