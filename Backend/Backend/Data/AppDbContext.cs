@@ -32,6 +32,7 @@ public class AppDbContext : DbContext
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<RolPermiso> RolPermisos => Set<RolPermiso>();
     public DbSet<UsuarioPermiso> UsuarioPermisos => Set<UsuarioPermiso>();
+    public DbSet<Despacho> Despachos => Set<Despacho>();
     public DbSet<RolAlcance> RolAlcances => Set<RolAlcance>();
     public DbSet<UsuarioAlcance> UsuarioAlcances => Set<UsuarioAlcance>();
     public DbSet<SolicitudPermiso> SolicitudesPermiso => Set<SolicitudPermiso>();
@@ -116,6 +117,40 @@ public class AppDbContext : DbContext
                     DelSistema = true,
                     FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 });
+        });
+
+        modelBuilder.Entity<Despacho>(entity =>
+        {
+            entity.ToTable("Despachos");
+            entity.HasIndex(d => d.Numero).IsUnique();
+            entity.Property(d => d.Numero).HasMaxLength(20).IsRequired();
+            entity.Property(d => d.Estado).HasMaxLength(20).IsRequired();
+            entity.Property(d => d.Observacion).HasMaxLength(250);
+
+            // Restrict en los tres: un despacho es historial del reparto, y
+            // borrar la ruta, el camion o el conductor lo dejaria sin decir
+            // quien salio ni por donde.
+            entity.HasOne(d => d.Ruta).WithMany()
+                .HasForeignKey(d => d.RutaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Vehiculo).WithMany()
+                .HasForeignKey(d => d.VehiculoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Conductor).WithMany()
+                .HasForeignKey(d => d.ConductorId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Usuario).WithMany()
+                .HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DespachoDetalle>(entity =>
+        {
+            entity.ToTable("DespachoDetalles");
+
+            // El mismo pedido no puede ir dos veces en el mismo camion.
+            entity.HasIndex(d => new { d.DespachoId, d.PedidoId }).IsUnique();
+
+            entity.HasOne(d => d.Despacho).WithMany(x => x!.Detalle)
+                .HasForeignKey(d => d.DespachoId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(d => d.Pedido).WithMany()
+                .HasForeignKey(d => d.PedidoId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<RolAlcance>(entity =>
