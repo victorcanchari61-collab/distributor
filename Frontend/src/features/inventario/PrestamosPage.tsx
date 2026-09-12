@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Eye, HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
+  AccionPdf,
   AgregarProductoPanel,
   Alert,
   Badge,
@@ -423,6 +424,9 @@ export function PrestamosPage() {
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
             <Eye size={15} />
           </RowAction>
+          {puede('inv.prestamos', 'exportar') && (
+            <AccionPdf documento="prestamos" id={row.id} numero={row.numero} />
+          )}
           {puede('inv.prestamos', 'confirmar') && (
             <RowAction
               label={`Registrar devolución de ${row.numero}`}

@@ -42,6 +42,34 @@ public class PdfController(IPdfService pdf) : ControllerBase
     public async Task<IActionResult> Compra(int id, [FromQuery] string? formato) =>
         Archivo(await pdf.CompraAsync(id, Formato(formato)));
 
+    /*
+     * Los cuatro documentos de inventario viven en la misma tabla y comparten
+     * numeración de id, pero cada uno pide el permiso de SU submódulo. Por eso
+     * hay una ruta por tipo en vez de una sola con el id: con una ruta única no
+     * habría forma de saber qué permiso exigir antes de leer el documento, y el
+     * servicio comprueba además que el id sea del tipo que la ruta promete.
+     */
+
+    [HttpGet("api/inventario/ajustes/{id:int}/pdf")]
+    [Permiso("inv.ajustes", Accion.Exportar)]
+    public async Task<IActionResult> Ajuste(int id, [FromQuery] string? formato) =>
+        Archivo(await pdf.AjusteAsync(id, Formato(formato)));
+
+    [HttpGet("api/inventario/transferencias/{id:int}/pdf")]
+    [Permiso("inv.transferencias", Accion.Exportar)]
+    public async Task<IActionResult> Transferencia(int id, [FromQuery] string? formato) =>
+        Archivo(await pdf.TransferenciaAsync(id, Formato(formato)));
+
+    [HttpGet("api/inventario/recepciones/{id:int}/pdf")]
+    [Permiso("compras.recepciones", Accion.Exportar)]
+    public async Task<IActionResult> Recepcion(int id, [FromQuery] string? formato) =>
+        Archivo(await pdf.RecepcionAsync(id, Formato(formato)));
+
+    [HttpGet("api/inventario/prestamos/{id:int}/pdf")]
+    [Permiso("inv.prestamos", Accion.Exportar)]
+    public async Task<IActionResult> Prestamo(int id, [FromQuery] string? formato) =>
+        Archivo(await pdf.PrestamoAsync(id, Formato(formato)));
+
     /// <summary>
     /// <c>?formato=ticket</c> para el rollo de 80 mm; cualquier otra cosa, A4.
     ///

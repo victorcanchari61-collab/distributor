@@ -15,7 +15,15 @@ enum DocumentoPdf {
   pedido('pedido', 'Pedido'),
   notaVenta('notaventa', 'Nota de venta'),
   ordenCompra('ordencompra', 'Orden de compra'),
-  compra('compra', 'Compra');
+  compra('compra', 'Compra'),
+
+  // Los de inventario cuelgan de /inventario: comparten tabla y numeracion de
+  // id, asi que cada tipo necesita su ruta para que el backend sepa que
+  // permiso exigir antes de leer el documento.
+  ajuste('inventario/ajustes', 'Ajuste'),
+  transferencia('inventario/transferencias', 'Transferencia'),
+  recepcion('inventario/recepciones', 'Recepción'),
+  prestamo('inventario/prestamos', 'Préstamo');
 
   const DocumentoPdf(this.ruta, this.nombre);
 
@@ -100,9 +108,8 @@ class _HojaPdfState extends State<_HojaPdf> {
       final limpio = widget.numero.replaceAll(RegExp(r'[^A-Za-z0-9]'), '-');
       final sufijo = formato == 'ticket' ? '-ticket' : '';
       final carpeta = await getTemporaryDirectory();
-      final archivo = File(
-        '${carpeta.path}/${widget.documento.ruta}-$limpio$sufijo.pdf',
-      );
+      final tipo = widget.documento.ruta.split('/').last;
+      final archivo = File('${carpeta.path}/$tipo-$limpio$sufijo.pdf');
       await archivo.writeAsBytes(bytes);
 
       if (!mounted) return;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Eye, PackageCheck, Plus, Undo2 } from 'lucide-react'
 import {
+  AccionPdf,
   Alert,
   Badge,
   Button,
@@ -225,6 +226,9 @@ export function RecepcionesPage() {
           >
             <Eye size={15} />
           </RowAction>
+          {puede('compras.recepciones', 'exportar') && (
+            <AccionPdf documento="recepciones" id={row.id} numero={row.numero} />
+          )}
           {puede('compras.recepciones', 'anular') && (
             <RowAction
               label={`Anular ${row.numero}`}

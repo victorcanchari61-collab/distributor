@@ -1,4 +1,5 @@
 using Backend.Dtos.Responses;
+using Backend.Models;
 using Backend.Repository.Interfaces;
 using Backend.Service.Interfaces;
 using Backend.Service.Pdf;
@@ -18,6 +19,7 @@ namespace Backend.Service.Implementacion;
 public class PdfService(
     IVentasService ventas,
     IComprasService compras,
+    IInventarioService inventario,
     IEmpresaService empresas,
     IClienteRepository clientes,
     IProveedorRepository proveedores) : IPdfService
@@ -187,6 +189,159 @@ public class PdfService(
 
         return (Generar(doc, formato), Nombre("compra", compra.Numero, formato));
     }
+
+    // --- Inventario: mercadería que se mueve y alguien tiene que firmar ---
+
+    public async Task<(byte[], string)> AjusteAsync(int id, FormatoPdf formato)
+    {
+        var ajuste = await DocumentoDeTipo(id, TipoDocumentoInventario.Ajuste, "ajuste");
+
+        var doc = Base(ajuste, await empresas.GetActivaAsync()) with
+        {
+            Titulo = "AJUSTE DE INVENTARIO",
+            // Un ajuste no va dirigido a nadie: lo que hay que ver arriba es
+            // POR QUE se movio el stock, que es lo que se autoriza.
+            EtiquetaParte = "Motivo",
+            ParteNombre = ajuste.Motivo,
+            Datos = [new DatoImprimible("Almacén", ajuste.Almacen)],
+        };
+
+        return (Generar(doc, formato), Nombre("ajuste", ajuste.Numero, formato));
+    }
+
+    public async Task<(byte[], string)> TransferenciaAsync(int id, FormatoPdf formato)
+    {
+        var envio = await DocumentoDeTipo(id, TipoDocumentoInventario.Transferencia, "transferencia");
+
+        var doc = Base(envio, await empresas.GetActivaAsync()) with
+        {
+            Titulo = "TRANSFERENCIA",
+            EtiquetaParte = "Almacén destino",
+            ParteNombre = envio.AlmacenDestino ?? "—",
+            Datos = [new DatoImprimible("Almacén origen", envio.Almacen)],
+            /*
+             * Solo las lineas de SALIDA.
+             *
+             * Una transferencia guarda cada producto dos veces — sale de un
+             * almacen y entra en el otro — y sin este filtro el papel diria el
+             * doble de lo que de verdad viaja en la camioneta.
+             */
+            Lineas =
+            [
+                .. envio.Detalle
+                    .Where(l => l.Tipo == TipoMovimiento.Salida)
+                    .Select(LineaInventario),
+            ],
+        };
+
+        return (Generar(doc, formato), Nombre("transferencia", envio.Numero, formato));
+    }
+
+    public async Task<(byte[], string)> RecepcionAsync(int id, FormatoPdf formato)
+    {
+        var recepcion = await DocumentoDeTipo(id, TipoDocumentoInventario.Recepcion, "recepción");
+
+        var datos = new List<DatoImprimible> { new("Almacén", recepcion.Almacen) };
+
+        // Quien firma que la mercaderia llego necesita saber de QUIEN vino, y
+        // el proveedor no viaja en el documento de inventario: esta en la
+        // compra que lo origino.
+        string parte = recepcion.Compra ?? "—";
+        if (recepcion.CompraId is { } compraId)
+        {
+            var compra = await compras.GetCompraAsync(compraId);
+            parte = compra.Proveedor;
+            datos.Insert(0, new DatoImprimible("Compra", compra.Numero));
+        }
+
+        var doc = Base(recepcion, await empresas.GetActivaAsync()) with
+        {
+            Titulo = "RECEPCIÓN",
+            EtiquetaParte = "Proveedor",
+            ParteNombre = parte,
+            Datos = datos,
+        };
+
+        return (Generar(doc, formato), Nombre("recepcion", recepcion.Numero, formato));
+    }
+
+    public async Task<(byte[], string)> PrestamoAsync(int id, FormatoPdf formato)
+    {
+        var prestamo = await inventario.GetPrestamoAsync(id);
+        var empresa = await empresas.GetActivaAsync();
+
+        var dado = prestamo.Tipo == "DADO";
+
+        var doc = new DocumentoImprimible
+        {
+            Titulo = dado ? "PRÉSTAMO ENTREGADO" : "PRÉSTAMO RECIBIDO",
+            Numero = prestamo.Numero,
+            Fecha = prestamo.Fecha,
+            // Un prestamo no se anula: se devuelve. El estado va como un dato
+            // mas, que es lo que de verdad se consulta en el papel.
+            EtiquetaParte = dado ? "Prestado a" : "Recibido de",
+            ParteNombre = prestamo.Contraparte,
+            Datos =
+            [
+                new DatoImprimible("Almacén", prestamo.Almacen),
+                new DatoImprimible("Estado", prestamo.Estado == "DEVUELTO" ? "Devuelto" : "Pendiente"),
+            ],
+            EtiquetaImporte = "Costo",
+            Lineas =
+            [
+                .. prestamo.Detalle.Select(l => new LineaImprimible(
+                    l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.CostoUnitario, l.CostoTotal)),
+            ],
+            Total = prestamo.Total,
+            Observacion = prestamo.Observacion,
+            Usuario = prestamo.Usuario,
+            Empresa = empresa,
+        };
+
+        return (Generar(doc, formato), Nombre("prestamo", prestamo.Numero, formato));
+    }
+
+    /// <summary>
+    /// Lo común de un documento de inventario, que cada tipo completa.
+    ///
+    /// Los cuatro comparten forma en el backend, así que lo único que cambia
+    /// es el título y a quién va dirigido.
+    /// </summary>
+    private static DocumentoImprimible Base(DocumentoInventarioResponse d, EmpresaResponse empresa) =>
+        new()
+        {
+            Titulo = d.Tipo,
+            Numero = d.Numero,
+            Fecha = d.Fecha,
+            Anulado = d.Estado == "ANULADO",
+            EtiquetaParte = "Almacén",
+            ParteNombre = d.Almacen,
+            EtiquetaImporte = "Costo",
+            Lineas = [.. d.Detalle.Select(LineaInventario)],
+            Total = d.Total,
+            Observacion = d.Observacion,
+            Usuario = d.Usuario,
+            Empresa = empresa,
+        };
+
+    /// <summary>
+    /// Trae el documento y comprueba que sea del tipo que promete la ruta.
+    ///
+    /// Los cuatro viven en la misma tabla y comparten numeración de id, así
+    /// que sin esto se podría pedir un ajuste por la ruta de transferencias y
+    /// el permiso que se exigiría sería el equivocado.
+    /// </summary>
+    private async Task<DocumentoInventarioResponse> DocumentoDeTipo(int id, string tipo, string nombre)
+    {
+        var doc = await inventario.GetDocumentoAsync(id);
+        if (doc.Tipo != tipo)
+            throw new KeyNotFoundException($"El documento {id} no es una {nombre}.");
+
+        return doc;
+    }
+
+    private static LineaImprimible LineaInventario(LineaDocumentoResponse l) =>
+        new(l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.CostoUnitario, l.CostoTotal);
 
     private static LineaImprimible Linea(LineaVentaResponse l) =>
         new(l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.PrecioUnitario, l.Subtotal);

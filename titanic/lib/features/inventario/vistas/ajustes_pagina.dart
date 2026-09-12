@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
+import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_shell.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_vacio.dart';
@@ -277,6 +278,17 @@ class _TarjetaAjuste extends StatelessWidget {
         contenidoExtra: _lineas,
       ),
       acciones: [
+        IconButton(
+          onPressed: () => mostrarOpcionesPdf(
+            context,
+            documento: DocumentoPdf.ajuste,
+            id: doc.id,
+            numero: doc.numero,
+          ),
+          tooltip: 'PDF',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+        ),
         if (onAnular != null)
           IconButton(
             onPressed: onAnular,

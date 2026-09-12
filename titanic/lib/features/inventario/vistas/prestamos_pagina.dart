@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -120,6 +121,17 @@ class _TarjetaPrestamo extends StatelessWidget {
       campos: [CampoDetalle('Contraparte', prestamo.contraparte), ..._campos],
       onTap: () => _abrirDetalle(context),
       acciones: [
+        IconButton(
+          onPressed: () => mostrarOpcionesPdf(
+            context,
+            documento: DocumentoPdf.prestamo,
+            id: prestamo.id,
+            numero: prestamo.numero,
+          ),
+          tooltip: 'PDF',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+        ),
         if (onDevolver != null)
           IconButton(
             onPressed: onDevolver,

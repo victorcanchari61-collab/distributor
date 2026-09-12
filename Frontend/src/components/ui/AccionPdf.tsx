@@ -8,7 +8,15 @@ import { cn } from './cn'
 import { ApiError, guardarArchivo, obtenerArchivo } from '../../lib/apiClient'
 
 /** Los documentos que se pueden imprimir, con la ruta que los sirve. */
-export type DocumentoPdf = 'pedido' | 'notaventa' | 'ordencompra' | 'compra'
+export type DocumentoPdf =
+  | 'pedido'
+  | 'notaventa'
+  | 'ordencompra'
+  | 'compra'
+  | 'ajustes'
+  | 'transferencias'
+  | 'recepciones'
+  | 'prestamos'
 
 type Formato = 'a4' | 'ticket'
 
@@ -17,7 +25,21 @@ const TITULOS: Record<DocumentoPdf, string> = {
   notaventa: 'Nota de venta',
   ordencompra: 'Orden de compra',
   compra: 'Compra',
+  ajustes: 'Ajuste',
+  transferencias: 'Transferencia',
+  recepciones: 'Recepción',
+  prestamos: 'Préstamo',
 }
+
+/*
+ * Los de inventario cuelgan de /inventario porque comparten tabla y numeracion
+ * de id: cada tipo necesita su propia ruta para que el backend sepa que
+ * permiso exigir antes de leer el documento.
+ */
+const INVENTARIO: DocumentoPdf[] = ['ajustes', 'transferencias', 'recepciones', 'prestamos']
+
+const rutaDe = (documento: DocumentoPdf) =>
+  INVENTARIO.includes(documento) ? `/inventario/${documento}` : `/${documento}`
 
 export interface AccionPdfProps {
   documento: DocumentoPdf
@@ -83,7 +105,7 @@ function VisorPdf({
       try {
         const query = formato === 'ticket' ? '?formato=ticket' : ''
         const archivo = await obtenerArchivo(
-          `/${documento}/${id}/pdf${query}`,
+          `${rutaDe(documento)}/${id}/pdf${query}`,
           `${documento}-${numero}.pdf`,
         )
         if (!vivo) return

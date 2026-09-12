@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, ClipboardCheck, Eye, ListChecks, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
+  AccionPdf,
   AgregarProductoPanel,
   Alert,
   Badge,
@@ -604,6 +605,9 @@ export function AjustesPage() {
           >
             <Eye size={15} />
           </RowAction>
+          {puede('inv.ajustes', 'exportar') && (
+            <AccionPdf documento="ajustes" id={row.id} numero={row.numero} />
+          )}
           {puede('inv.ajustes', 'anular') && (
             <RowAction
               label={`Anular ${row.numero}`}
