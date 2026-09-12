@@ -10,6 +10,7 @@ import {
   RowAction,
   StatCard,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -23,6 +24,7 @@ const VACIO = { codigo: '', nombre: '', direccion: '', esPrincipal: false }
 
 export function AlmacenesPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -86,6 +88,7 @@ export function AlmacenesPage() {
       }
       setAbierto(false)
       await cargar()
+      toast.exito(editando ? 'Almacén actualizado' : 'Almacén creado')
     } catch (e) {
       setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el almacén.')
     } finally {
@@ -112,6 +115,7 @@ export function AlmacenesPage() {
             activo: !a.activo,
           })
           await cargar()
+          toast.exito(`${a.nombre} ${a.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }

@@ -11,6 +11,7 @@ import {
   RowAction,
   StatCard,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -45,6 +46,7 @@ const VACIO = {
  */
 export function MetodosPagoPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [metodos, setMetodos] = useState<MetodoPagoResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -123,6 +125,7 @@ export function MetodosPagoPage() {
       }
       setAbierto(false)
       await cargar()
+      toast.exito(editando ? 'Método actualizado' : 'Método creado')
     } catch (e) {
       setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el método de pago.')
     } finally {
@@ -151,6 +154,7 @@ export function MetodosPagoPage() {
             activo: !m.activo,
           })
           await cargar()
+          toast.exito(`${m.nombre} ${m.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }

@@ -10,6 +10,7 @@ import {
   RowAction,
   StatCard,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -27,6 +28,7 @@ const VACIO: MercadoRequest = { nombre: '', direccion: '', distrito: '' }
  */
 export function MercadosPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [mercados, setMercados] = useState<MercadoResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -87,6 +89,7 @@ export function MercadosPage() {
       else await mercadoApi.create(cuerpo)
       setAbierto(false)
       await cargar()
+      toast.exito(editando ? 'Mercado actualizado' : 'Mercado creado')
     } catch (e) {
       setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el mercado.')
     } finally {
@@ -112,6 +115,7 @@ export function MercadosPage() {
             activo: !m.activo,
           })
           await cargar()
+          toast.exito(`${m.nombre} ${m.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }

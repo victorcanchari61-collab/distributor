@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, Inbox, RotateCcw, Save, ShieldCheck, ShieldPlus, Users } from 'lucide-react'
-import { Alert, Badge, Button, cn, PageHeader, PageSection, Tabs } from '../../components/ui'
+import { Alert, Badge, Button, cn, PageHeader, PageSection, Tabs, useToast } from '../../components/ui'
 import { ExcepcionesPermisos } from './ExcepcionesPermisos'
 import { BandejaSolicitudes } from './BandejaSolicitudes'
 import { ESTADO_SOLICITUD, solicitudApi } from './solicitudApi'
@@ -42,6 +42,7 @@ const clave = (submodulo: string, accion: string) => `${submodulo}:${accion}`
  * estuviera exigiendo.
  */
 export function AccesosPage() {
+  const toast = useToast()
   const [roles, setRoles] = useState<RolResponse[]>([])
   const [catalogo, setCatalogo] = useState<SubmoduloCatalogo[]>([])
   const [rolId, setRolId] = useState<number | null>(null)
@@ -197,6 +198,7 @@ export function AccesosPage() {
       })
       await rolApi.updatePermisos(rol.id, permisos)
       await cargar()
+      toast.exito(`Accesos de ${rol.nombre} guardados`)
       setSucio(false)
       setOk('Accesos guardados.')
     } catch (e) {

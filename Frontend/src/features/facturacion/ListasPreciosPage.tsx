@@ -12,6 +12,7 @@ import {
   StatCard,
   Tabs,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -24,6 +25,7 @@ import { useRealtime } from '../../lib/realtime'
 
 export function ListasPreciosPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [listas, setListas] = useState<ListaPrecioResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [listaActiva, setListaActiva] = useState<number | null>(null)
@@ -113,6 +115,7 @@ export function ListasPreciosPage() {
           // pantalla queda mirando a una lista que ya no existe.
           setListaActiva(null)
           await cargar()
+          toast.exito(`${l.nombre} eliminada`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos eliminar la lista.')
         }
@@ -140,6 +143,7 @@ export function ListasPreciosPage() {
       }
       setAbierto(false)
       await cargar()
+      toast.exito('Lista creada')
     } catch (e) {
       setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar la lista.')
     } finally {
@@ -164,6 +168,7 @@ export function ListasPreciosPage() {
       setPrecioAbierto(false)
       await cargarPrecios(listaActiva)
       await cargar()
+      toast.exito('Precios guardados')
     } catch (e) {
       setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el precio.')
     } finally {
@@ -361,6 +366,7 @@ export function ListasPreciosPage() {
                     accion: async () => {
                       await listaPrecioApi.predeterminada(lista.id)
                       await cargar()
+                      toast.exito(`${lista.nombre} es la predeterminada`)
                     },
                   })
                 }
@@ -422,6 +428,7 @@ export function ListasPreciosPage() {
                     await listaPrecioApi.eliminarPrecio(row.id)
                     if (listaActiva) await cargarPrecios(listaActiva)
                     await cargar()
+                    toast.exito('Precio quitado')
                   },
                 })
               }

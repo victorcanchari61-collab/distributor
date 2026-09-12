@@ -22,6 +22,7 @@ import {
   RowAction,
   StatCard,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn, TipoDocumento } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -48,6 +49,7 @@ const VACIO: ProveedorRequest = {
 
 export function ProveedoresPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -148,6 +150,7 @@ export function ProveedoresPage() {
       else await proveedorApi.create(form)
       setAbierto(false)
       await cargar()
+      toast.exito(editando ? 'Proveedor actualizado' : 'Proveedor creado')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -177,6 +180,7 @@ export function ProveedoresPage() {
         try {
           await proveedorApi.remove(proveedor.id)
           await cargar()
+          toast.exito(`${proveedor.nombre} eliminado`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el proveedor.')
         }
@@ -196,6 +200,7 @@ export function ProveedoresPage() {
         try {
           await (proveedor.activo ? proveedorApi.desactivar(proveedor.id) : proveedorApi.activar(proveedor.id))
           await cargar()
+          toast.exito(`${proveedor.nombre} ${proveedor.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }

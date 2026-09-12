@@ -22,6 +22,7 @@ import {
   StatCard,
   Tabs,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -84,6 +85,7 @@ const fechaOpcional = (texto: string) => texto.trim() || null
 
 export function FlotaPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [pestana, setPestana] = useState<Pestana>('vehiculos')
 
   const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
@@ -195,6 +197,7 @@ export function FlotaPage() {
 
       setAbierto(false)
       await cargar()
+      toast.exito(editando ? 'Vehículo actualizado' : 'Vehículo creado')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -245,6 +248,7 @@ export function FlotaPage() {
             activo: !v.activo,
           })
           await cargar()
+          toast.exito(`${v.placa} ${v.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }

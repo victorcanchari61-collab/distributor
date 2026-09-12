@@ -31,6 +31,7 @@ import {
   SysDataTable,
   TablaProductosDetalle,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
@@ -71,6 +72,7 @@ type FilaOrden = LineaProductoNueva
  */
 export function OrdenesCompraPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [ordenes, setOrdenes] = useState<OrdenCompraResponse[]>([])
   const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
@@ -214,6 +216,7 @@ export function OrdenesCompraPage() {
       }
       setVista('lista')
       await cargar()
+      toast.exito(editando ? 'Orden actualizada' : 'Orden creada')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -238,6 +241,7 @@ export function OrdenesCompraPage() {
         try {
           await ordenCompraApi.confirmar(orden.id)
           await cargar()
+          toast.exito(`${orden.numero} confirmada: se creó la compra.`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos confirmar la orden.')
         }
@@ -255,6 +259,7 @@ export function OrdenesCompraPage() {
         try {
           await ordenCompraApi.anular(orden.id)
           await cargar()
+          toast.exito(`${orden.numero} anulada`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos anular la orden.')
         }

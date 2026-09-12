@@ -19,6 +19,7 @@ import {
   RowAction,
   StatCard,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -63,6 +64,8 @@ const textoOpcional = (texto: string) => texto.trim() || null
 
 export function ConductoresPage() {
   const { puede } = usePermisos()
+
+  const toast = useToast()
 
   const [conductores, setConductores] = useState<ConductorResponse[]>([])
   const [resumen, setResumen] = useState<ResumenConductoresResponse | null>(null)
@@ -152,6 +155,7 @@ export function ConductoresPage() {
 
       setAbierto(false)
       await cargar()
+      toast.exito(editando ? 'Conductor actualizado' : 'Conductor creado')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -200,6 +204,7 @@ export function ConductoresPage() {
             activo: !c.activo,
           })
           await cargar()
+          toast.exito(`${c.nombre} ${c.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }

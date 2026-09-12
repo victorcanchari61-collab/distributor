@@ -16,6 +16,7 @@ import {
   SysDataTable,
   TablaProductosDetalle,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
@@ -57,6 +58,7 @@ function estadoDocumentoBadge(row: DocumentoInventarioResponse) {
  */
 export function TransferenciasPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [documentos, setDocumentos] = useState<DocumentoInventarioResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
@@ -179,6 +181,7 @@ export function TransferenciasPage() {
       })
       setAbierto(false)
       await cargar()
+      toast.exito('Transferencia registrada')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -264,6 +267,7 @@ export function TransferenciasPage() {
         try {
           await transferenciaApi.anular(doc.id)
           await cargar()
+          toast.exito(`${doc.numero} anulada`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos anular la transferencia.')
         }

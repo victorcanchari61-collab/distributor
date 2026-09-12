@@ -10,6 +10,7 @@ import {
   SysDataTable,
   cn,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { resolveNav } from '../../components/layout'
@@ -54,6 +55,7 @@ const nombrePantalla = (submodulo: string) => resolveNav(submodulo).item?.label 
  * un documento concreto y se gasta), por un tiempo, o para siempre.
  */
 export function ExcepcionesPermisos() {
+  const toast = useToast()
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
   const [catalogo, setCatalogo] = useState<SubmoduloCatalogo[]>([])
   const [usuarioId, setUsuarioId] = useState<number | null>(null)
@@ -108,6 +110,7 @@ export function ExcepcionesPermisos() {
         try {
           await permisoApi.revocar(p.id)
           await cargar()
+          toast.exito('Permiso retirado')
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos retirar el permiso.')
         }
@@ -250,6 +253,7 @@ export function ExcepcionesPermisos() {
           onConcedido={async () => {
             setAbierto(false)
             await cargar()
+            toast.exito('Permiso concedido')
           }}
           usuarioId={usuarioId}
         />

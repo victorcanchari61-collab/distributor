@@ -20,6 +20,7 @@ import {
   SysDataTable,
   TablaProductosDetalle,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
@@ -105,6 +106,7 @@ type FilaCompra = LineaProductoNueva
  */
 export function MisComprasPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [compras, setCompras] = useState<CompraResponse[]>([])
   const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
@@ -317,6 +319,7 @@ export function MisComprasPage() {
       }
       setVista('lista')
       await cargar()
+      toast.exito(editando ? 'Compra actualizada' : 'Compra registrada')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -341,6 +344,7 @@ export function MisComprasPage() {
         try {
           await compraApi.anular(compra.id)
           await cargar()
+          toast.exito(`${compra.numero} anulada`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos anular la compra.')
         }

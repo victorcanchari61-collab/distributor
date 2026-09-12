@@ -13,6 +13,7 @@ import {
   RowAction,
   StatCard,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -49,6 +50,7 @@ interface FilaDevolucion {
  */
 export function DevolucionesPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [devoluciones, setDevoluciones] = useState<DevolucionResponse[]>([])
   const [resumen, setResumen] = useState<ResumenDevoluciones | null>(null)
@@ -187,6 +189,7 @@ export function DevolucionesPage() {
       })
       setVista('lista')
       await cargar()
+      toast.exito('Devolución registrada: falta que la aprueben.')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -211,6 +214,7 @@ export function DevolucionesPage() {
         try {
           await devolucionApi.aprobar(d.id)
           await cargar()
+          toast.exito(`${d.numero} aprobada`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos aprobar la devolución.')
         }
@@ -231,6 +235,7 @@ export function DevolucionesPage() {
       setRechazando(null)
       setMotivoRechazo('')
       await cargar()
+      toast.exito('Devolución rechazada')
     } catch (e) {
       setErrorForm(e instanceof ApiError ? e.message : 'No pudimos rechazar la devolución.')
     } finally {

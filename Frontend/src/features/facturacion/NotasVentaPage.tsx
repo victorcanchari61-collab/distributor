@@ -322,6 +322,7 @@ export function NotasVentaPage() {
       }
       setVista('lista')
       await cargar()
+      toast.exito(editando ? 'Venta actualizada' : 'Venta registrada')
     } catch (e) {
       // El de arriba tambien: el formulario es largo y el pie no se ve.
       fallar(
@@ -347,6 +348,7 @@ export function NotasVentaPage() {
         try {
           await notaVentaApi.anular(nota.id)
           await cargar()
+          toast.exito(`${nota.numero} anulada`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos anular la venta.')
         }

@@ -12,6 +12,7 @@ import {
   StatCard,
   SysDataTable,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -61,6 +62,7 @@ function saldo(n: NotaVentaResponse) {
  */
 export function CuentasPorCobrarPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [cuentas, setCuentas] = useState<NotaVentaResponse[]>([])
   const [metodosPago, setMetodosPago] = useState<MetodoPagoResponse[]>([])
   const [cargando, setCargando] = useState(true)
@@ -185,6 +187,7 @@ export function CuentasPorCobrarPage() {
           await notaVentaApi.anularPago(gestionando.id, pago.id)
           await refrescar(gestionando.id)
           await cargar()
+          toast.exito('Pago anulado')
         } catch (e) {
           setErrorForm(e instanceof ApiError ? e.message : 'No pudimos anular el pago.')
         }
@@ -207,6 +210,7 @@ export function CuentasPorCobrarPage() {
       }
       await refrescar(gestionando.id)
       await cargar()
+      toast.exito(editandoClave === NUEVA ? 'Pago registrado' : 'Pago actualizado')
       cancelarEdicion()
     } catch (e) {
       setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el pago.')

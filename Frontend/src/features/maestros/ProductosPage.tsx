@@ -28,6 +28,7 @@ import {
   StatCard,
   Tabs,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -88,6 +89,7 @@ const esUnidad = (c: CatalogoRapido) => c === 'unidad' || c === 'unidadContenido
 
 export function ProductosPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [pestana, setPestana] = useState<Pestana>('productos')
 
   const [productos, setProductos] = useState<ProductoResponse[]>([])
@@ -302,6 +304,7 @@ export function ProductosPage() {
 
       setAbierto(false)
       await cargar()
+      toast.exito(editando ? 'Producto actualizado' : 'Producto creado')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -351,6 +354,7 @@ export function ProductosPage() {
       }
 
       await cargar()
+      toast.exito('Unidad creada')
       setFormRapido({ nombre: '', codigo: '', tipo: 'CONTEO' })
       setCrearRapido(null)
     } catch (e) {
@@ -375,6 +379,7 @@ export function ProductosPage() {
             ? productoApi.desactivar(producto.id)
             : productoApi.activar(producto.id))
           await cargar()
+          toast.exito(`${producto.nombre} ${producto.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
@@ -409,6 +414,7 @@ export function ProductosPage() {
         try {
           await productoApi.remove(producto.id)
           await cargar()
+          toast.exito(`${producto.nombre} eliminado`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el producto.')
         }

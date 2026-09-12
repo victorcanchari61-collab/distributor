@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { CalendarClock, Check, Inbox, Infinity as InfinityIcon, X, Zap } from 'lucide-react'
-import { Alert, Badge, Button, Modal, PageSection, SysDataTable, cn } from '../../components/ui'
+import { Alert, Badge, Button, Modal, PageSection, SysDataTable, cn, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { resolveNav } from '../../components/layout'
 import { ApiError } from '../../lib/apiClient'
@@ -41,6 +41,7 @@ const nombrePantalla = (submodulo: string) => resolveNav(submodulo).item?.label 
  * la señal de que el rol está mal repartido.
  */
 export function BandejaSolicitudes() {
+  const toast = useToast()
   const [solicitudes, setSolicitudes] = useState<SolicitudPermisoResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -70,6 +71,7 @@ export function BandejaSolicitudes() {
     try {
       await solicitudApi.rechazar(s.id)
       await cargar()
+      toast.exito('Solicitud rechazada')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos rechazar la solicitud.')
     }
@@ -190,6 +192,7 @@ export function BandejaSolicitudes() {
           onAprobado={async () => {
             setAprobando(null)
             await cargar()
+            toast.exito('Solicitud aprobada')
           }}
         />
       )}

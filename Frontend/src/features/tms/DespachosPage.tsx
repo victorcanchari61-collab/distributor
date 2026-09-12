@@ -14,6 +14,7 @@ import {
   RowAction,
   StatCard,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -49,6 +50,7 @@ function estadoBadge(estado: DespachoResponse['estado']) {
  */
 export function DespachosPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [despachos, setDespachos] = useState<DespachoResponse[]>([])
   const [resumen, setResumen] = useState<ResumenDespachos | null>(null)
@@ -207,6 +209,7 @@ export function DespachosPage() {
       }
       setVista('lista')
       await cargar()
+      toast.exito(editando ? 'Despacho actualizado' : 'Despacho creado')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -231,6 +234,7 @@ export function DespachosPage() {
         try {
           await despachoApi.anular(d.id)
           await cargar()
+          toast.exito(`${d.numero} anulado`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos anular el despacho.')
         }

@@ -24,6 +24,7 @@ import {
   RowAction,
   StatCard,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn, TipoDocumento } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -58,6 +59,7 @@ const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DO
 
 export function ClientesPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [mercados, setMercados] = useState<MercadoResponse[]>([])
   const [rutas, setRutas] = useState<RutaResponse[]>([])
@@ -241,6 +243,7 @@ export function ClientesPage() {
       else await clienteApi.create(cuerpo)
       setAbierto(false)
       await cargar()
+      toast.exito(editando ? 'Cliente actualizado' : 'Cliente creado')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -264,6 +267,7 @@ export function ClientesPage() {
       const creado = await mercadoApi.create({ nombre: nombreMercado.trim() })
       setForm((f) => ({ ...f, mercadoId: creado.id }))
       await cargar()
+      toast.exito('Mercado creado')
       setNombreMercado('')
       setNuevoMercado(false)
     } catch (e) {
@@ -283,6 +287,7 @@ export function ClientesPage() {
       const creada = await rutaApi.create({ nombre: nombreRuta.trim() })
       setForm((f) => ({ ...f, rutaId: creada.id }))
       await cargar()
+      toast.exito('Ruta creada')
       setNombreRuta('')
       setNuevaRuta(false)
     } catch (e) {
@@ -308,6 +313,7 @@ export function ClientesPage() {
         try {
           await clienteApi.remove(cliente.id)
           await cargar()
+          toast.exito(`${cliente.nombre} eliminado`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el cliente.')
         }
@@ -327,6 +333,7 @@ export function ClientesPage() {
         try {
           await (cliente.activo ? clienteApi.desactivar(cliente.id) : clienteApi.activar(cliente.id))
           await cargar()
+          toast.exito(`${cliente.nombre} ${cliente.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }

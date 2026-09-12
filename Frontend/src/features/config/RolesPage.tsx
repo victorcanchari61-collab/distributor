@@ -9,6 +9,7 @@ import {
   Modal,
   RowAction,
   StatCard,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { NAV_GROUPS } from '../../components/layout'
@@ -20,6 +21,7 @@ import { useRealtime } from '../../lib/realtime'
 
 export function RolesPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [roles, setRoles] = useState<RolResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -79,6 +81,7 @@ export function RolesPage() {
       }
       setAbierto(false)
       await cargar()
+      toast.exito(editando ? 'Rol actualizado' : 'Rol creado')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -101,6 +104,7 @@ export function RolesPage() {
         activo: !rol.activo,
       })
       await cargar()
+      toast.exito(`${rol.nombre} ${rol.activo ? 'desactivado' : 'activado'}`)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado del rol.')
     }
@@ -111,6 +115,7 @@ export function RolesPage() {
     try {
       await rolApi.remove(rol.id)
       await cargar()
+      toast.exito(`${rol.nombre} eliminado`)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el rol.')
     }

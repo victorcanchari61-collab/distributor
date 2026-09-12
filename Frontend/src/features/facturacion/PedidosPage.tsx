@@ -22,6 +22,7 @@ import {
   SysDataTable,
   TablaProductosDetalle,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
@@ -60,6 +61,7 @@ type FilaPedido = LineaProductoNueva
  */
 export function PedidosPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [pedidos, setPedidos] = useState<PedidoResponse[]>([])
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
@@ -251,6 +253,7 @@ export function PedidosPage() {
       }
       setVista('lista')
       await cargar()
+      toast.exito(editando ? 'Pedido actualizado' : 'Pedido creado')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError ? (e.errors.length ? e.errors.join(' ') : e.message) : 'No pudimos guardar el pedido.',
@@ -271,6 +274,7 @@ export function PedidosPage() {
         try {
           await pedidoApi.anular(pedido.id)
           await cargar()
+          toast.exito(`${pedido.numero} anulado`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos anular el pedido.')
         }
@@ -293,6 +297,7 @@ export function PedidosPage() {
       await pedidoApi.confirmar(confirmando.id, { almacenId: confAlmacenId })
       setConfirmando(null)
       await cargar()
+      toast.exito('Pedido convertido: ya es una venta.')
     } catch (e) {
       setConfError(
         e instanceof ApiError ? (e.errors.length ? e.errors.join(' ') : e.message) : 'No pudimos confirmar el pedido.',

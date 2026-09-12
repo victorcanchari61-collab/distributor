@@ -10,6 +10,7 @@ import {
   RowAction,
   StatCard,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -26,6 +27,7 @@ const VACIO: RutaRequest = { nombre: '' }
  */
 export function RutasPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [rutas, setRutas] = useState<RutaResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -82,6 +84,7 @@ export function RutasPage() {
       else await rutaApi.create(cuerpo)
       setAbierto(false)
       await cargar()
+      toast.exito(editando ? 'Ruta actualizada' : 'Ruta creada')
     } catch (e) {
       setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar la ruta.')
     } finally {
@@ -102,6 +105,7 @@ export function RutasPage() {
         try {
           await rutaApi.update(r.id, { nombre: r.nombre, activo: !r.activo })
           await cargar()
+          toast.exito(`${r.nombre} ${r.activo ? 'desactivada' : 'activada'}`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }

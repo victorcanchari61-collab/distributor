@@ -18,6 +18,7 @@ import {
   ListPage,
   Modal,
   RowAction,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -44,6 +45,7 @@ const VACIA: EmpresaRequest = {
 
 export function EmpresaPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [empresas, setEmpresas] = useState<EmpresaResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -140,6 +142,7 @@ export function EmpresaPage() {
       else await empresaApi.create(form)
       setAbierto(false)
       await cargar()
+      toast.exito(editando ? 'Empresa actualizada' : 'Empresa creada')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -158,6 +161,7 @@ export function EmpresaPage() {
     try {
       await empresaApi.activar(empresa.id)
       await cargar()
+      toast.exito(`${empresa.nombreComercial} está activa`)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos activar la empresa.')
     }
@@ -170,6 +174,7 @@ export function EmpresaPage() {
         ? empresaApi.deshabilitar(empresa.id)
         : empresaApi.habilitar(empresa.id))
       await cargar()
+      toast.exito(`${empresa.nombreComercial} ${empresa.habilitada ? 'deshabilitada' : 'habilitada'}`)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado de la empresa.')
     }
@@ -180,6 +185,7 @@ export function EmpresaPage() {
     try {
       await empresaApi.remove(empresa.id)
       await cargar()
+      toast.exito('Empresa eliminada')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos eliminar la empresa.')
     }

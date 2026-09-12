@@ -19,6 +19,7 @@ import {
   TablaProductosDetalle,
   Tabs,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
@@ -63,6 +64,7 @@ function estadoDocumentoBadge(row: DocumentoInventarioResponse) {
  */
 export function AjustesPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [pestana, setPestana] = useState<Pestana>('ajustes')
   const [documentos, setDocumentos] = useState<DocumentoInventarioResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
@@ -197,6 +199,7 @@ export function AjustesPage() {
       })
       setVista('lista')
       await cargar()
+      toast.exito('Ajuste registrado')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -343,6 +346,7 @@ export function AjustesPage() {
         try {
           await ajusteApi.anular(doc.id)
           await cargar()
+          toast.exito(`${doc.numero} anulado`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos anular el documento.')
         }

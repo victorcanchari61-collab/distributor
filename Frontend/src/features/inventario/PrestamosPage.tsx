@@ -15,6 +15,7 @@ import {
   StatCard,
   SysDataTable,
   TablaProductosDetalle,
+  useToast,
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
@@ -58,6 +59,7 @@ function estadoPrestamoBadge(estado: PrestamoResponse['estado']) {
  */
 export function PrestamosPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [prestamos, setPrestamos] = useState<PrestamoResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
@@ -184,6 +186,7 @@ export function PrestamosPage() {
       })
       setAbierto(false)
       await cargar()
+      toast.exito('Préstamo registrado')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError
@@ -224,6 +227,7 @@ export function PrestamosPage() {
       await prestamoApi.devolver(devolucionAbierta.id, detalle)
       setDevolucionAbierta(null)
       await cargar()
+      toast.exito('Devolución registrada')
     } catch (e) {
       setErrorForm(
         e instanceof ApiError

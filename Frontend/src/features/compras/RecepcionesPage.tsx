@@ -12,6 +12,7 @@ import {
   StatCard,
   TablaProductosDetalle,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { ColumnaDetalleProducto, ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -42,6 +43,7 @@ function estadoRecepcionBadge(row: DocumentoInventarioResponse) {
  */
 export function RecepcionesPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [recepciones, setRecepciones] = useState<DocumentoInventarioResponse[]>([])
   const [compras, setCompras] = useState<CompraResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
@@ -115,6 +117,7 @@ export function RecepcionesPage() {
         try {
           await recepcionApi.anular(doc.id)
           await cargar()
+          toast.exito(`${doc.numero} anulada`)
         } catch (e) {
           setError(e instanceof ApiError ? e.message : 'No pudimos anular la recepción.')
         }
