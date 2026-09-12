@@ -88,6 +88,37 @@ export function ListasPreciosPage() {
   const lista = listas.find((l) => l.id === listaActiva) ?? null
   const producto = productos.find((p) => p.id === precioForm.productoId)
 
+  /**
+   * Borra la lista abierta.
+   *
+   * El aviso dice de antemano lo que el backend va a rechazar — la
+   * predeterminada, o una con precios cargados — para no hacer pulsar un botón
+   * que va a fallar. La regla vive en el servidor de todas formas; esto solo
+   * evita el viaje.
+   */
+  const eliminarLista = (l: ListaPrecioResponse) =>
+    confirmar({
+      titulo: `Eliminar ${l.nombre}`,
+      mensaje:
+        l.precios > 0
+          ? `Tiene ${l.precios} precio(s) cargado(s), así que no se podrá eliminar: desactívala o vacíala primero.`
+          : 'Se borra la lista. No afecta a los documentos ya emitidos con ella.',
+      confirmar: 'Eliminar',
+      tono: 'danger',
+      accion: async () => {
+        setError('')
+        try {
+          await listaPrecioApi.remove(l.id)
+          // Al desaparecer la pestaña abierta hay que mover el foco, o la
+          // pantalla queda mirando a una lista que ya no existe.
+          setListaActiva(null)
+          await cargar()
+        } catch (e) {
+          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar la lista.')
+        }
+      },
+    })
+
   const guardarLista = async () => {
     if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre de la lista.')
 
@@ -208,6 +239,46 @@ export function ListasPreciosPage() {
         }
         actions={
           <>
+            {/*
+              Las acciones de la LISTA van aqui y no en la tabla: la tabla son
+              los precios de dentro, y las listas son las pestañas de arriba.
+              Actuan sobre la que este abierta, que es la que se esta viendo.
+            */}
+            {lista && puede('fact.precios', 'editar') && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setEditando(lista)
+                  setForm({ nombre: lista.nombre, descripcion: lista.descripcion ?? '' })
+                  setErrorForm('')
+                  setAbierto(true)
+                }}
+                iconRight={<Pencil size={15} />}
+              >
+                Editar lista
+              </Button>
+            )}
+
+            {lista && puede('fact.precios', 'eliminar') && (
+              <Button
+                variant="secondary"
+                size="sm"
+                // La predeterminada no se borra: dejaria sin precio a todo
+                // cliente que no tenga lista propia.
+                disabled={lista.esPredeterminada}
+                title={
+                  lista.esPredeterminada
+                    ? 'Es la predeterminada: marca otra antes de eliminarla'
+                    : undefined
+                }
+                onClick={() => eliminarLista(lista)}
+                iconRight={<Trash2 size={15} />}
+              >
+                Eliminar lista
+              </Button>
+            )}
+
             {puede('fact.precios', 'crear') && (
               <Button
                 variant="secondary"
