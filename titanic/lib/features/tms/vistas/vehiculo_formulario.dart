@@ -13,6 +13,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../datos/flota.dart';
 import '../estado/tms_controlador.dart';
 import 'campo_foto.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de un vehiculo.
 class VehiculoFormulario extends ConsumerStatefulWidget {
@@ -102,7 +103,7 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       // La placa va tal cual: el backend la normaliza a mayusculas y es el
@@ -131,9 +132,7 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario> {
       );
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Vehículo creado' : 'Vehículo actualizado')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Vehículo creado' : 'Vehículo actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

@@ -9,6 +9,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/mercado.dart';
 import '../estado/tms_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de un mercado.
 class MercadoFormulario extends ConsumerStatefulWidget {
@@ -57,7 +58,7 @@ class _MercadoFormularioState extends ConsumerState<MercadoFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'nombre': _nombre.text.trim(),
@@ -70,9 +71,7 @@ class _MercadoFormularioState extends ConsumerState<MercadoFormulario> {
       await ref.read(mercadosProvider.notifier).guardar(id: widget.mercado?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Mercado creado' : 'Mercado actualizado')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Mercado creado' : 'Mercado actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

@@ -14,6 +14,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../../inventario/estado/inventario_controlador.dart';
 import '../datos/compra.dart';
 import '../estado/compras_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 class _FilaRecepcion {
   _FilaRecepcion({required this.detalle})
@@ -124,7 +125,7 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'compraId': _compra!.id,
@@ -145,7 +146,7 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
       await ref.read(recepcionesProvider.notifier).crear(cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(const SnackBar(content: Text('Recepción registrada')));
+      mensajero.mostrar('Recepción registrada');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

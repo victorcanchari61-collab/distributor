@@ -15,6 +15,7 @@ import '../../maestros/datos/producto.dart';
 import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/motivo.dart';
 import '../estado/inventario_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 class _FilaLineaAjuste {
   _FilaLineaAjuste({
@@ -104,7 +105,7 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     final flete = double.tryParse(_flete.text.trim().replaceAll(',', '.')) ?? 0;
 
     final cuerpo = <String, dynamic>{
@@ -118,7 +119,7 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
     try {
       await ref.read(ajustesProvider.notifier).crear(cuerpo);
       navegador.pop();
-      mensajero.showSnackBar(const SnackBar(content: Text('Ajuste registrado')));
+      mensajero.mostrar('Ajuste registrado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

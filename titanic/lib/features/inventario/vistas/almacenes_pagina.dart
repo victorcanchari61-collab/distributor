@@ -17,6 +17,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/almacen.dart';
 import '../estado/inventario_controlador.dart';
 import 'almacen_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de almacenes.
 class AlmacenesPagina extends ConsumerWidget {
@@ -132,21 +133,15 @@ class AlmacenesPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     try {
       await ref.read(almacenesProvider.notifier).cambiarEstado(almacen);
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            almacen.activo
+      mensajero.mostrar(almacen.activo
                 ? '${almacen.nombre} desactivado'
-                : '${almacen.nombre} activado',
-          ),
-        ),
-      );
+                : '${almacen.nombre} activado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

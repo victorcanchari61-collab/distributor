@@ -11,6 +11,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de un usuario.
 class UsuarioFormulario extends ConsumerStatefulWidget {
@@ -95,7 +96,7 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'nombre': _nombre.text.trim(),
@@ -114,9 +115,7 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
       await ref.read(usuariosProvider.notifier).guardar(id: widget.usuario?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Usuario creado' : 'Usuario actualizado')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Usuario creado' : 'Usuario actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

@@ -10,6 +10,7 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/motivo.dart';
 import '../estado/inventario_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Hoja para crear o editar un motivo manual de ajuste.
 Future<void> mostrarFormularioMotivo(
@@ -51,7 +52,7 @@ Future<void> mostrarFormularioMotivo(
             });
 
             final navegador = Navigator.of(context);
-            final mensajero = ScaffoldMessenger.of(context);
+            final mensajero = Aviso.de(context);
             final cuerpo = <String, dynamic>{
               'codigo': codigoCtrl.text.trim(),
               'nombre': nombreCtrl.text.trim(),
@@ -64,9 +65,7 @@ Future<void> mostrarFormularioMotivo(
                   .read(motivosProvider.notifier)
                   .guardar(id: motivo?.id, cuerpo: cuerpo);
               navegador.pop();
-              mensajero.showSnackBar(
-                SnackBar(content: Text(esNuevo ? 'Motivo creado' : 'Motivo actualizado')),
-              );
+              mensajero.mostrar(esNuevo ? 'Motivo creado' : 'Motivo actualizado');
             } on ApiExcepcion catch (e) {
               setSheetState(() {
                 guardando = false;

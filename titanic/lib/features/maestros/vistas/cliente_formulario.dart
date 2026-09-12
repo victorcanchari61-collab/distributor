@@ -13,6 +13,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../../tms/estado/tms_controlador.dart';
 import '../datos/cliente.dart';
 import '../estado/maestros_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 const _dias = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
 
@@ -98,7 +99,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'documento': _documento.text.trim(),
@@ -117,9 +118,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
       await ref.read(clientesProvider.notifier).guardar(id: widget.cliente?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Cliente creado' : 'Cliente actualizado')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Cliente creado' : 'Cliente actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

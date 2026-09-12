@@ -21,6 +21,8 @@ import {
   SysDataTable,
   TablaProductosDetalle,
   useConfirmacion,
+  useToast,
+  cn,
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
@@ -94,6 +96,9 @@ export function NotasVentaPage() {
   const [pagosAbierto, setPagosAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
+  // Que campo quedo mal: el aviso dice QUE pasa y esto marca DONDE.
+  const [errorPagos, setErrorPagos] = useState('')
+  const toast = useToast()
 
   const [clienteId, setClienteId] = useState(0)
   const [almacenId, setAlmacenId] = useState(0)
@@ -258,26 +263,36 @@ export function NotasVentaPage() {
 
   const quitarPago = (i: number) => setPagos((prev) => prev.filter((_, idx) => idx !== i))
 
+  /** Un fallo de validacion: aviso arriba y, si toca, el campo en rojo. */
+  const fallar = (mensaje: string, campo?: 'pagos') => {
+    setErrorForm(mensaje)
+    setErrorPagos(campo === 'pagos' ? mensaje : '')
+    toast.error(mensaje)
+  }
+
   const guardar = async () => {
-    if (!clienteId) return setErrorForm('Elige el cliente.')
-    if (!almacenId) return setErrorForm('Elige el almacén.')
+    setErrorPagos('')
+    if (!clienteId) return fallar('Elige el cliente.')
+    if (!almacenId) return fallar('Elige el almacén.')
 
     const validas = filas.filter((f) => f.productoId && f.cantidad && f.costo)
-    if (validas.length === 0) return setErrorForm('Agrega al menos un producto con su precio.')
+    if (validas.length === 0) return fallar('Agrega al menos un producto con su precio.')
 
     // Al editar no se tocan los pagos: eso ya tiene su propio flujo
     // ("Gestionar pagos" desde Ver detalle), así que ni se valida ni se envía.
     if (!editando && totalPagado > total + 0.001) {
-      return setErrorForm(
+      return fallar(
         `Los pagos suman S/ ${totalPagado.toFixed(2)}, más que el total de la venta (S/ ${total.toFixed(2)}).`,
+        'pagos',
       )
     }
 
     // Al contado el dinero entra ahora. Sin esto quedaba una venta cobrada que
     // nadie pagó y que, por no ser a crédito, tampoco salía en cuentas por cobrar.
     if (!editando && formaPago === 'CONTADO' && totalPagado < total - 0.001) {
-      return setErrorForm(
+      return fallar(
         `Una venta al contado se cobra completa: faltan S/ ${(total - totalPagado).toFixed(2)} por registrar.`,
+        'pagos',
       )
     }
 
@@ -308,7 +323,8 @@ export function NotasVentaPage() {
       setVista('lista')
       await cargar()
     } catch (e) {
-      setErrorForm(
+      // El de arriba tambien: el formulario es largo y el pie no se ve.
+      fallar(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -492,8 +508,6 @@ export function NotasVentaPage() {
           }
         />
 
-        {errorForm && <Alert>{errorForm}</Alert>}
-
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:items-start">
           <PageSection
             title="Productos"
@@ -580,21 +594,33 @@ export function NotasVentaPage() {
                   />
 
                   {formaPago === 'CONTADO' ? (
-                    <div className="mt-4 flex items-center justify-between gap-3 rounded-field border border-line px-3 py-2.5">
-                      <div>
-                        <span className="ui-label block">Pagos</span>
-                        <span className="text-xs text-ink-soft">
-                          {pagos.length === 0
-                            ? 'Sin registrar'
-                            : `S/ ${totalPagado.toFixed(2)} de S/ ${total.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
-                        </span>
+                    <>
+                      <div
+                        className={cn(
+                          'mt-4 flex items-center justify-between gap-3 rounded-field border px-3 py-2.5',
+                          errorPagos ? 'border-red-600 bg-red-50' : 'border-line',
+                        )}
+                      >
+                        <div>
+                          <span className="ui-label block">
+                            Pagos
+                            <span className="ml-1 text-red-600">*</span>
+                          </span>
+                          <span className={cn('text-xs', errorPagos ? 'text-red-700' : 'text-ink-soft')}>
+                            {pagos.length === 0
+                              ? 'Sin registrar'
+                              : `S/ ${totalPagado.toFixed(2)} de S/ ${total.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
+                          </span>
+                        </div>
+                        {puede('fact.notaventa', 'cobrar') && (
+                          <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
+                            {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
+                          </Button>
+                        )}
                       </div>
-                      {puede('fact.notaventa', 'cobrar') && (
-                        <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
-                          {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
-                        </Button>
-                      )}
-                    </div>
+
+                      {errorPagos && <p className="mt-1.5 text-xs text-red-600">{errorPagos}</p>}
+                    </>
                   ) : (
                     <p className="mt-4 text-xs text-ink-soft">
                       Al crédito no se registra pago ahora — queda pendiente de cobro.

@@ -14,6 +14,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../datos/arqueo.dart';
 import '../estado/arqueo_controlador.dart';
 import 'arqueo_pagina.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Un gasto de la ruta mientras se está escribiendo el cuadre.
 class _Gasto {
@@ -178,7 +179,7 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
       _error = null;
     });
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     final navegador = Navigator.of(context);
 
     try {
@@ -214,15 +215,9 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
       });
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            arqueo.faltante > 0
+      mensajero.mostrar(arqueo.faltante > 0
                 ? 'Cuadre guardado. Queda una deuda de ${formatoSoles(arqueo.faltante)}.'
-                : 'Cuadre guardado',
-          ),
-        ),
-      );
+                : 'Cuadre guardado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

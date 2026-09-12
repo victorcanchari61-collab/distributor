@@ -14,6 +14,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/ruta.dart';
 import '../estado/tms_controlador.dart';
 import 'ruta_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de rutas de reparto. Lo elige cada cliente en Maestros → Clientes.
 class RutasPagina extends ConsumerWidget {
@@ -82,16 +83,12 @@ class RutasPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(rutasProvider.notifier).cambiarEstado(ruta);
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(ruta.activo ? '${ruta.nombre} desactivada' : '${ruta.nombre} activada'),
-        ),
-      );
+      mensajero.mostrar(ruta.activo ? '${ruta.nombre} desactivada' : '${ruta.nombre} activada');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 

@@ -14,6 +14,7 @@ import '../datos/catalogo.dart';
 import '../datos/maestros_api.dart';
 import '../datos/producto.dart';
 import '../estado/maestros_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Una presentacion en edicion dentro del formulario. `id` null cuando aun no
 /// se guarda: es lo que distingue "agregar" de "actualizar" al sincronizar.
@@ -124,7 +125,7 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     final api = ref.read(maestrosApiProvider);
 
     final cuerpo = <String, dynamic>{
@@ -152,9 +153,7 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
       await ref.read(productosProvider.notifier).recargar();
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Producto creado' : 'Producto actualizado')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Producto creado' : 'Producto actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;
@@ -196,9 +195,7 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   Future<void> _agregarPresentacion() async {
     final unidades = ref.read(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
     if (unidades.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Todavía no hay unidades registradas.')));
+      Aviso.de(context).mostrar('Todavía no hay unidades registradas.');
       return;
     }
     final fila = await _mostrarHojaPresentacion(context, unidades: unidades);

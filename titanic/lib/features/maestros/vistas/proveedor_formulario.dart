@@ -11,6 +11,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/proveedor.dart';
 import '../estado/maestros_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de un proveedor.
 class ProveedorFormulario extends ConsumerStatefulWidget {
@@ -85,7 +86,7 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'documento': _documento.text.trim(),
@@ -105,9 +106,7 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
           .guardar(id: widget.proveedor?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Proveedor creado' : 'Proveedor actualizado')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Proveedor creado' : 'Proveedor actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

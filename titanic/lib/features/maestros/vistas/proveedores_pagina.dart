@@ -16,6 +16,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/proveedor.dart';
 import '../estado/maestros_controlador.dart';
 import 'proveedor_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de proveedores.
 class ProveedoresPagina extends ConsumerWidget {
@@ -160,21 +161,15 @@ class ProveedoresPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     try {
       await ref.read(proveedoresProvider.notifier).cambiarEstado(proveedor);
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            proveedor.activo
+      mensajero.mostrar(proveedor.activo
                 ? '${proveedor.nombre} desactivado'
-                : '${proveedor.nombre} activado',
-          ),
-        ),
-      );
+                : '${proveedor.nombre} activado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

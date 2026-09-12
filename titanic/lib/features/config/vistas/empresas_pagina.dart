@@ -14,6 +14,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
 import 'empresa_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Datos de la empresa con la que opera el sistema.
 class EmpresasPagina extends ConsumerWidget {
@@ -69,15 +70,13 @@ class EmpresasPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     try {
       await ref.read(empresasProvider.notifier).activar(empresa);
-      mensajero.showSnackBar(
-        SnackBar(content: Text('${empresa.nombreComercial} está activa')),
-      );
+      mensajero.mostrar('${empresa.nombreComercial} está activa');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 
@@ -86,16 +85,10 @@ class EmpresasPagina extends ConsumerWidget {
     WidgetRef ref,
     Empresa empresa,
   ) async {
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     if (empresa.activa && empresa.habilitada) {
-      mensajero.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No se puede retirar la empresa activa. Activa otra primero.',
-          ),
-        ),
-      );
+      mensajero.mostrar('No se puede retirar la empresa activa. Activa otra primero.');
       return;
     }
 
@@ -113,17 +106,11 @@ class EmpresasPagina extends ConsumerWidget {
 
     try {
       await ref.read(empresasProvider.notifier).cambiarHabilitacion(empresa);
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            empresa.habilitada
+      mensajero.mostrar(empresa.habilitada
                 ? '${empresa.nombreComercial} retirada'
-                : '${empresa.nombreComercial} habilitada',
-          ),
-        ),
-      );
+                : '${empresa.nombreComercial} habilitada');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

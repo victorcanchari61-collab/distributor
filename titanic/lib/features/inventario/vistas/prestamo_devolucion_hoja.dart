@@ -10,6 +10,7 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/prestamo.dart';
 import '../estado/inventario_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Hoja para registrar una devolucion, total o parcial, de un prestamo.
 Future<void> mostrarHojaDevolucion(
@@ -57,13 +58,13 @@ Future<void> mostrarHojaDevolucion(
             });
 
             final navegador = Navigator.of(context);
-            final mensajero = ScaffoldMessenger.of(context);
+            final mensajero = Aviso.de(context);
             try {
               await ref
                   .read(prestamosProvider.notifier)
                   .devolver(prestamo.id, {'detalle': lineas});
               navegador.pop();
-              mensajero.showSnackBar(const SnackBar(content: Text('Devolución registrada')));
+              mensajero.mostrar('Devolución registrada');
             } on ApiExcepcion catch (e) {
               setSheetState(() {
                 guardando = false;

@@ -9,6 +9,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/ruta.dart';
 import '../estado/tms_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de una ruta.
 class RutaFormulario extends ConsumerStatefulWidget {
@@ -53,7 +54,7 @@ class _RutaFormularioState extends ConsumerState<RutaFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'nombre': _nombre.text.trim(),
@@ -64,9 +65,7 @@ class _RutaFormularioState extends ConsumerState<RutaFormulario> {
       await ref.read(rutasProvider.notifier).guardar(id: widget.ruta?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Ruta creada' : 'Ruta actualizada')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Ruta creada' : 'Ruta actualizada');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

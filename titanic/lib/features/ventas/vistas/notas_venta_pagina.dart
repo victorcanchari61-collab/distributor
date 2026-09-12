@@ -15,6 +15,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/nota_venta.dart';
 import '../estado/ventas_controlador.dart';
 import 'nota_venta_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de notas de venta: la venta lista tal cual, nacida de confirmar un
 /// pedido o registrada directa. El stock ya salió al momento de crearla.
@@ -92,12 +93,12 @@ class NotasVentaPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(notasVentaProvider.notifier).anular(nota.id);
-      mensajero.showSnackBar(SnackBar(content: Text('${nota.numero} anulada')));
+      mensajero.mostrar('${nota.numero} anulada');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

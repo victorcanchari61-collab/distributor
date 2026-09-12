@@ -21,6 +21,7 @@ import '../../inventario/estado/inventario_controlador.dart';
 import '../datos/pedido.dart';
 import '../estado/ventas_controlador.dart';
 import 'pedido_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de pedidos: lo que pidio un cliente, antes de que exista una
 /// venta firme.
@@ -191,14 +192,12 @@ class PedidosPagina extends ConsumerWidget {
 
     if (confirmado != true || almacenId == null || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(pedidosProvider.notifier).confirmar(pedido.id, {'almacenId': almacenId});
-      mensajero.showSnackBar(
-        SnackBar(content: Text('${pedido.numero} confirmado: se creó la nota de venta.')),
-      );
+      mensajero.mostrar('${pedido.numero} confirmado: se creó la nota de venta.');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 
@@ -212,12 +211,12 @@ class PedidosPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(pedidosProvider.notifier).anular(pedido.id);
-      mensajero.showSnackBar(SnackBar(content: Text('${pedido.numero} anulado')));
+      mensajero.mostrar('${pedido.numero} anulado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

@@ -16,6 +16,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/documento_inventario.dart';
 import '../estado/inventario_controlador.dart';
 import 'transferencia_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de transferencias entre almacenes propios.
 class TransferenciasPagina extends ConsumerWidget {
@@ -86,12 +87,12 @@ class TransferenciasPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(transferenciasProvider.notifier).anular(doc.id);
-      mensajero.showSnackBar(SnackBar(content: Text('${doc.numero} anulada')));
+      mensajero.mostrar('${doc.numero} anulada');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

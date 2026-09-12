@@ -16,6 +16,7 @@ import '../datos/arqueo.dart';
 import '../estado/arqueo_controlador.dart';
 import 'cuadre_pagina.dart';
 import 'deudas_arqueo_pagina.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Cómo se pinta cada estado del cuadre.
 ///
@@ -154,12 +155,12 @@ class ArqueoPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(cuadresProvider.notifier).anular(cuadre.arqueoId!);
-      mensajero.showSnackBar(const SnackBar(content: Text('Cuadre anulado')));
+      mensajero.mostrar('Cuadre anulado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

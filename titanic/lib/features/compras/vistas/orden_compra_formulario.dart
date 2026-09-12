@@ -16,6 +16,7 @@ import '../../maestros/datos/proveedor.dart';
 import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/orden_compra.dart';
 import '../estado/compras_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de una orden de compra. Solo se edita mientras esta
 /// Pendiente.
@@ -118,7 +119,7 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'proveedorId': _proveedorId,
@@ -143,9 +144,7 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
       }
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Orden creada' : 'Orden actualizada')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Orden creada' : 'Orden actualizada');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

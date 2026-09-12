@@ -15,6 +15,7 @@ import '../datos/flota.dart';
 import '../estado/tms_controlador.dart';
 import 'conductor_formulario.dart';
 import 'flota_pagina.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Quienes conducen.
 ///
@@ -107,7 +108,7 @@ class ConductoresPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       // El PUT reemplaza el registro entero, asi que se reenvia lo que ya
       // tenia: mandar solo `activo` vaciaria el resto de la ficha.
@@ -127,17 +128,11 @@ class ConductoresPagina extends ConsumerWidget {
           'activo': !conductor.activo,
         },
       );
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            conductor.activo
+      mensajero.mostrar(conductor.activo
                 ? '${conductor.nombre} desactivado'
-                : '${conductor.nombre} activado',
-          ),
-        ),
-      );
+                : '${conductor.nombre} activado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 

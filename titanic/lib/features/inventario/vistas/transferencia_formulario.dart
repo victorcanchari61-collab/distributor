@@ -14,6 +14,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../../maestros/datos/producto.dart';
 import '../../maestros/estado/maestros_controlador.dart';
 import '../estado/inventario_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 class _FilaLineaTransferencia {
   _FilaLineaTransferencia({
@@ -86,7 +87,7 @@ class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulari
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'almacenOrigenId': _origenId,
@@ -98,7 +99,7 @@ class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulari
     try {
       await ref.read(transferenciasProvider.notifier).crear(cuerpo);
       navegador.pop();
-      mensajero.showSnackBar(const SnackBar(content: Text('Transferencia registrada')));
+      mensajero.mostrar('Transferencia registrada');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

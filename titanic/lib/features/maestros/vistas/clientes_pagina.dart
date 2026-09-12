@@ -16,6 +16,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/cliente.dart';
 import '../estado/maestros_controlador.dart';
 import 'cliente_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de clientes.
 class ClientesPagina extends ConsumerWidget {
@@ -178,21 +179,15 @@ class ClientesPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     try {
       await ref.read(clientesProvider.notifier).cambiarEstado(cliente);
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            cliente.activo
+      mensajero.mostrar(cliente.activo
                 ? '${cliente.nombre} desactivado'
-                : '${cliente.nombre} activado',
-          ),
-        ),
-      );
+                : '${cliente.nombre} activado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

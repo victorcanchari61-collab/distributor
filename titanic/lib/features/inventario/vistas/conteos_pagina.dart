@@ -17,6 +17,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../datos/motivo.dart';
 import '../datos/stock.dart';
 import '../estado/inventario_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Conteo ciclico: cuentas fisicamente lo que hay y el sistema arma los
 /// ajustes de SOBRANTE/FALTANTE por la diferencia. No es un documento propio,
@@ -112,7 +113,7 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
       return;
     }
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     try {
       if (sobrantes.isNotEmpty) {
@@ -144,7 +145,7 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
           c.clear();
         }
       });
-      mensajero.showSnackBar(const SnackBar(content: Text('Conteo registrado')));
+      mensajero.mostrar('Conteo registrado');
       ref.invalidate(stockConteoProvider);
     } on ApiExcepcion catch (e) {
       setState(() {

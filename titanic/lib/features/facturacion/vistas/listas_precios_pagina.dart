@@ -17,6 +17,7 @@ import '../datos/lista_precio.dart';
 import '../estado/facturacion_controlador.dart';
 import 'lista_formulario.dart';
 import 'precio_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listas de precios: catalogo de a cuanto se vende cada presentacion, con
 /// escalones por volumen. En pestañas, una por lista.
@@ -150,12 +151,12 @@ class ListasPreciosPagina extends ConsumerWidget {
   }
 
   Future<void> _marcarPredeterminada(BuildContext context, WidgetRef ref, ListaPrecio lista) async {
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(listasPrecioProvider.notifier).marcarPredeterminada(lista.id);
-      mensajero.showSnackBar(SnackBar(content: Text('${lista.nombre} es ahora la predeterminada')));
+      mensajero.mostrar('${lista.nombre} es ahora la predeterminada');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 
@@ -197,14 +198,14 @@ class ListasPreciosPagina extends ConsumerWidget {
       nuevo.aCuerpo(),
     ];
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(facturacionApiProvider).guardarPrecios(lista.id, arreglo);
       ref.invalidate(preciosListaActivaProvider);
       await ref.read(listasPrecioProvider.notifier).recargar();
-      mensajero.showSnackBar(const SnackBar(content: Text('Precio guardado')));
+      mensajero.mostrar('Precio guardado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 
@@ -218,14 +219,14 @@ class ListasPreciosPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(facturacionApiProvider).eliminarPrecio(precio.id);
       ref.invalidate(preciosListaActivaProvider);
       await ref.read(listasPrecioProvider.notifier).recargar();
-      mensajero.showSnackBar(const SnackBar(content: Text('Precio eliminado')));
+      mensajero.mostrar('Precio eliminado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

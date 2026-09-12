@@ -14,6 +14,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
 import 'usuario_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Quien entra a la plataforma y con que rol.
 class UsuariosPagina extends ConsumerWidget {
@@ -67,21 +68,15 @@ class UsuariosPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     try {
       await ref.read(usuariosProvider.notifier).cambiarEstado(usuario);
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            usuario.activo
+      mensajero.mostrar(usuario.activo
                 ? '${usuario.nombre} desactivado'
-                : '${usuario.nombre} activado',
-          ),
-        ),
-      );
+                : '${usuario.nombre} activado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

@@ -9,6 +9,7 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../maestros/datos/producto.dart';
 import '../datos/lista_precio.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Lo que junta el formulario: listo para mandarse en un PUT de precios.
 class NuevoPrecio {
@@ -56,9 +57,7 @@ Future<NuevoPrecio?> mostrarFormularioPrecio(
   final presentaciones = producto.presentaciones.where((p) => p.esVenta && p.activo).toList();
   if (presentaciones.isEmpty) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Este producto no tiene presentaciones de venta.')),
-      );
+      Aviso.de(context).mostrar('Este producto no tiene presentaciones de venta.');
     }
     return null;
   }

@@ -14,6 +14,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/mercado.dart';
 import '../estado/tms_controlador.dart';
 import 'mercado_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de mercados: dónde se entrega, un mercado de abastos, una zona
 /// con tiendas o una empresa. Lo elige cada cliente en Maestros → Clientes.
@@ -83,18 +84,12 @@ class MercadosPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(mercadosProvider.notifier).cambiarEstado(mercado);
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            mercado.activo ? '${mercado.nombre} desactivado' : '${mercado.nombre} activado',
-          ),
-        ),
-      );
+      mensajero.mostrar(mercado.activo ? '${mercado.nombre} desactivado' : '${mercado.nombre} activado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 

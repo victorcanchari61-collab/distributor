@@ -18,6 +18,7 @@ import '../datos/flota_api.dart';
 import '../estado/tms_controlador.dart';
 import 'tipos_vehiculo_pagina.dart';
 import 'vehiculo_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Cómo se pinta cada estado de documento.
 ///
@@ -131,7 +132,7 @@ class FlotaPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       // El PUT reemplaza el registro entero, asi que se reenvia lo que ya
       // tenia: mandar solo `activo` vaciaria el resto de la ficha.
@@ -155,17 +156,11 @@ class FlotaPagina extends ConsumerWidget {
           'activo': !vehiculo.activo,
         },
       );
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            vehiculo.activo
+      mensajero.mostrar(vehiculo.activo
                 ? '${vehiculo.placa} desactivado'
-                : '${vehiculo.placa} activado',
-          ),
-        ),
-      );
+                : '${vehiculo.placa} activado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 

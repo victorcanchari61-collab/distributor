@@ -12,6 +12,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../../auth/estado/auth_controlador.dart';
 import '../../tms/vistas/campo_foto.dart';
 import '../estado/perfil_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Mi perfil: los datos personales y la contrasena de quien tiene la sesion.
 ///
@@ -124,9 +125,7 @@ class _PerfilPaginaState extends ConsumerState<PerfilPagina> {
         _guardando = false;
         _ok = 'Tus datos se guardaron.';
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Perfil actualizado')));
+      Aviso.de(context).mostrar('Perfil actualizado');
     } on ApiExcepcion catch (e) {
       if (!mounted) return;
       setState(() {

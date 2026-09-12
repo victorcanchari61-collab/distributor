@@ -23,6 +23,7 @@ import '../../maestros/datos/producto.dart';
 import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/nota_venta.dart';
 import '../estado/ventas_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 class _FilaPago {
   _FilaPago({required this.metodoPagoId, required this.metodoPago, required this.monto});
@@ -140,7 +141,7 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'clienteId': _clienteId,
@@ -166,7 +167,7 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
       await ref.read(notasVentaProvider.notifier).crear(cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(const SnackBar(content: Text('Venta registrada')));
+      mensajero.mostrar('Venta registrada');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

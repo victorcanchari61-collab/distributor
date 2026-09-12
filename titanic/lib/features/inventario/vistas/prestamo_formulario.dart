@@ -15,6 +15,7 @@ import '../../maestros/datos/producto.dart';
 import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/prestamo.dart';
 import '../estado/inventario_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 class _FilaLineaPrestamo {
   _FilaLineaPrestamo({
@@ -92,7 +93,7 @@ class _PrestamoFormularioState extends ConsumerState<PrestamoFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'tipo': _tipo,
@@ -105,7 +106,7 @@ class _PrestamoFormularioState extends ConsumerState<PrestamoFormulario> {
     try {
       await ref.read(prestamosProvider.notifier).crear(cuerpo);
       navegador.pop();
-      mensajero.showSnackBar(const SnackBar(content: Text('Préstamo registrado')));
+      mensajero.mostrar('Préstamo registrado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

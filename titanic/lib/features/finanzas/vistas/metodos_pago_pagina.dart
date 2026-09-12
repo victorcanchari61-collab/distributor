@@ -15,6 +15,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/metodo_pago.dart';
 import '../estado/finanzas_controlador.dart';
 import 'metodo_pago_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de metodos de pago: efectivo, billetera digital, transferencia...
 /// el mismo catalogo lo usan Compras, Cuentas por cobrar y por pagar, Mis
@@ -82,21 +83,15 @@ class MetodosPagoPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     try {
       await ref.read(metodosPagoProvider.notifier).cambiarEstado(metodo);
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            metodo.activo
+      mensajero.mostrar(metodo.activo
                 ? '${metodo.nombre} desactivado'
-                : '${metodo.nombre} activado',
-          ),
-        ),
-      );
+                : '${metodo.nombre} activado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

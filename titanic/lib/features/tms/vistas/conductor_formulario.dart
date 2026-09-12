@@ -11,6 +11,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../datos/flota.dart';
 import '../estado/tms_controlador.dart';
 import 'campo_foto.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edición de un conductor.
 class ConductorFormulario extends ConsumerStatefulWidget {
@@ -81,7 +82,7 @@ class _ConductorFormularioState extends ConsumerState<ConductorFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     try {
       await ref
@@ -104,9 +105,7 @@ class _ConductorFormularioState extends ConsumerState<ConductorFormulario> {
           );
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Conductor creado' : 'Conductor actualizado')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Conductor creado' : 'Conductor actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

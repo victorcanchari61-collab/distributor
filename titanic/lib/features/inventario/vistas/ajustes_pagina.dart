@@ -21,6 +21,7 @@ import '../datos/motivo.dart';
 import '../estado/inventario_controlador.dart';
 import 'ajuste_formulario.dart';
 import 'motivo_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Ajustes de inventario y sus motivos, en pestañas: no son dos modulos, son
 /// las dos caras del mismo concepto (el documento y las razones posibles).
@@ -158,12 +159,12 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
     );
     if (!ok || !mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(ajustesProvider.notifier).anular(doc.id);
-      mensajero.showSnackBar(SnackBar(content: Text('${doc.numero} anulado')));
+      mensajero.mostrar('${doc.numero} anulado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 

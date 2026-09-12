@@ -20,6 +20,7 @@ import '../datos/compra.dart';
 import '../estado/compras_controlador.dart';
 import 'compra_formulario.dart';
 import 'recepcion_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de compras: directas o nacidas de confirmar una orden.
 class MisComprasPagina extends ConsumerWidget {
@@ -138,12 +139,12 @@ class MisComprasPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(comprasProvider.notifier).anular(compra.id);
-      mensajero.showSnackBar(SnackBar(content: Text('${compra.numero} anulada')));
+      mensajero.mostrar('${compra.numero} anulada');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

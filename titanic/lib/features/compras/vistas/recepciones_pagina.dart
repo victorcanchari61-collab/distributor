@@ -17,6 +17,7 @@ import '../../inventario/datos/documento_inventario.dart';
 import '../../inventario/estado/inventario_controlador.dart';
 import '../estado/compras_controlador.dart';
 import 'recepcion_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de recepciones: mercaderia que ya llego contra una compra.
 class RecepcionesPagina extends ConsumerWidget {
@@ -91,12 +92,12 @@ class RecepcionesPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(recepcionesProvider.notifier).anular(doc.id);
-      mensajero.showSnackBar(SnackBar(content: Text('${doc.numero} anulada')));
+      mensajero.mostrar('${doc.numero} anulada');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

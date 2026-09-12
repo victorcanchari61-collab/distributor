@@ -18,6 +18,7 @@ import '../datos/catalogo.dart';
 import '../datos/producto.dart';
 import '../estado/maestros_controlador.dart';
 import 'producto_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de productos.
 class ProductosPagina extends ConsumerWidget {
@@ -177,21 +178,15 @@ class ProductosPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     try {
       await ref.read(productosProvider.notifier).cambiarEstado(producto);
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            producto.activo
+      mensajero.mostrar(producto.activo
                 ? '${producto.nombre} desactivado'
-                : '${producto.nombre} activado',
-          ),
-        ),
-      );
+                : '${producto.nombre} activado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

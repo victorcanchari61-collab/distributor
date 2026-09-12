@@ -10,6 +10,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de la empresa.
 class EmpresaFormulario extends ConsumerStatefulWidget {
@@ -138,7 +139,7 @@ class _EmpresaFormularioState extends ConsumerState<EmpresaFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'ruc': _ruc.text.trim(),
@@ -161,9 +162,7 @@ class _EmpresaFormularioState extends ConsumerState<EmpresaFormulario> {
       await ref.read(empresasProvider.notifier).guardar(id: widget.empresa?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Empresa creada' : 'Empresa actualizada')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Empresa creada' : 'Empresa actualizada');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

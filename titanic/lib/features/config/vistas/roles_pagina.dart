@@ -14,6 +14,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
 import 'rol_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Roles que se pueden asignar a un usuario.
 class RolesPagina extends ConsumerWidget {
@@ -56,16 +57,12 @@ class RolesPagina extends ConsumerWidget {
     WidgetRef ref,
     Rol rol,
   ) async {
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     // El rol protegido es el que sostiene el sistema: se avisa aqui en vez de
     // dejar que el backend responda un error despues de la confirmacion.
     if (rol.protegido && rol.activo) {
-      mensajero.showSnackBar(
-        const SnackBar(
-          content: Text('El rol Administrador no se puede desactivar.'),
-        ),
-      );
+      mensajero.mostrar('El rol Administrador no se puede desactivar.');
       return;
     }
 
@@ -82,15 +79,9 @@ class RolesPagina extends ConsumerWidget {
 
     try {
       await ref.read(rolesProvider.notifier).cambiarEstado(rol);
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            rol.activo ? '${rol.nombre} desactivado' : '${rol.nombre} activado',
-          ),
-        ),
-      );
+      mensajero.mostrar(rol.activo ? '${rol.nombre} desactivado' : '${rol.nombre} activado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

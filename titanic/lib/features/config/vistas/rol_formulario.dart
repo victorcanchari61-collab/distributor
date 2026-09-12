@@ -9,6 +9,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de un rol.
 class RolFormulario extends ConsumerStatefulWidget {
@@ -54,7 +55,7 @@ class _RolFormularioState extends ConsumerState<RolFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'nombre': _nombre.text.trim(),
@@ -66,7 +67,7 @@ class _RolFormularioState extends ConsumerState<RolFormulario> {
       await ref.read(rolesProvider.notifier).guardar(id: widget.rol?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(SnackBar(content: Text(_esNuevo ? 'Rol creado' : 'Rol actualizado')));
+      mensajero.mostrar(_esNuevo ? 'Rol creado' : 'Rol actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

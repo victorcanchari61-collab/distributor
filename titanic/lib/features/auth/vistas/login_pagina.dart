@@ -8,6 +8,7 @@ import '../../../compartido/widgets/app_logo.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../estado/auth_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 class LoginPagina extends ConsumerStatefulWidget {
   const LoginPagina({super.key});
@@ -139,13 +140,7 @@ class _LoginPaginaState extends ConsumerState<LoginPagina> {
                     habilitado: !auth.enviando,
                     ayuda: TextButton(
                       onPressed: () =>
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Pide a tu administrador que la restablezca.',
-                              ),
-                            ),
-                          ),
+                          Aviso.de(context).mostrar('Pide a tu administrador que la restablezca.'),
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: const Size(0, 0),

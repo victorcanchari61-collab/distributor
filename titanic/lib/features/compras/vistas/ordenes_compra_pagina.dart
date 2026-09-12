@@ -19,6 +19,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/orden_compra.dart';
 import '../estado/compras_controlador.dart';
 import 'orden_compra_formulario.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de ordenes de compra: lo que se le pide a un proveedor. Al
 /// confirmarse nace una Compra.
@@ -129,14 +130,12 @@ class OrdenesCompraPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(ordenesCompraProvider.notifier).confirmar(orden.id);
-      mensajero.showSnackBar(
-        SnackBar(content: Text('${orden.numero} confirmada: se creó la compra.')),
-      );
+      mensajero.mostrar('${orden.numero} confirmada: se creó la compra.');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 
@@ -150,12 +149,12 @@ class OrdenesCompraPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(ordenesCompraProvider.notifier).anular(orden.id);
-      mensajero.showSnackBar(SnackBar(content: Text('${orden.numero} anulada')));
+      mensajero.mostrar('${orden.numero} anulada');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

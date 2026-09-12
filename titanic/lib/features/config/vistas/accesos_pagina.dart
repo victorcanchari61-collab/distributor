@@ -11,6 +11,7 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Como se nombra cada accion en pantalla, y en que orden se lee.
 ///
@@ -155,7 +156,7 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina> {
       _error = null;
     });
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(rolesProvider.notifier).guardarPermisos(rol.id, [
         for (final clave in _marcas)
@@ -171,9 +172,7 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina> {
         // La matriz se vuelve a sembrar con lo que respondio el backend.
         _rolCargado = null;
       });
-      mensajero.showSnackBar(
-        SnackBar(content: Text('Accesos de ${rol.nombre} guardados')),
-      );
+      mensajero.mostrar('Accesos de ${rol.nombre} guardados');
     } on ApiExcepcion catch (e) {
       if (!mounted) return;
       setState(() {

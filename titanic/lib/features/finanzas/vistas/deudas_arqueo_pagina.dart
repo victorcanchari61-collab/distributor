@@ -14,6 +14,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../datos/arqueo.dart';
 import '../estado/arqueo_controlador.dart';
 import 'arqueo_pagina.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Lo que debe cada persona por los faltantes de sus cuadres.
 ///
@@ -91,12 +92,12 @@ class DeudasArqueoPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       await ref.read(deudasProvider.notifier).saldar(arqueo.id);
-      mensajero.showSnackBar(const SnackBar(content: Text('Faltante saldado')));
+      mensajero.mostrar('Faltante saldado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 }

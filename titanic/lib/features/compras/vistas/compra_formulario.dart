@@ -19,6 +19,7 @@ import '../../maestros/datos/proveedor.dart';
 import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/compra.dart';
 import '../estado/compras_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 class _FilaPago {
   _FilaPago({required this.metodoPagoId, required this.metodoPago, required this.monto});
@@ -140,7 +141,7 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'proveedorId': _proveedorId,
@@ -171,9 +172,7 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
       }
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Compra registrada' : 'Compra actualizada')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Compra registrada' : 'Compra actualizada');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

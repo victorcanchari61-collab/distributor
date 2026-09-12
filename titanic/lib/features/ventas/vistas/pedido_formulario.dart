@@ -21,6 +21,7 @@ import '../../maestros/datos/producto.dart';
 import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/pedido.dart';
 import '../estado/ventas_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de un pedido. Solo se edita mientras esta Pendiente.
 class PedidoFormulario extends ConsumerStatefulWidget {
@@ -150,7 +151,7 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'clienteId': _clienteId,
@@ -177,9 +178,7 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
       }
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Pedido creado' : 'Pedido actualizado')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Pedido creado' : 'Pedido actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

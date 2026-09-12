@@ -10,6 +10,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/metodo_pago.dart';
 import '../estado/finanzas_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de un metodo de pago.
 class MetodoPagoFormulario extends ConsumerStatefulWidget {
@@ -70,7 +71,7 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'nombre': _nombre.text.trim(),
@@ -88,9 +89,7 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
       await ref.read(metodosPagoProvider.notifier).guardar(id: widget.metodo?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Método de pago creado' : 'Método de pago actualizado')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Método de pago creado' : 'Método de pago actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

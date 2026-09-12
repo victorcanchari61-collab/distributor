@@ -16,6 +16,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../datos/flota.dart';
 import '../estado/tms_controlador.dart';
 import 'flota_pagina.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Los tipos de vehículo: camión, furgoneta, moto.
 ///
@@ -110,7 +111,7 @@ class TiposVehiculoPagina extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
     try {
       // El PUT reemplaza el registro entero, asi que se reenvia lo que ya
       // tenia: mandar solo `activo` vaciaria el nombre y la descripcion.
@@ -123,15 +124,9 @@ class TiposVehiculoPagina extends ConsumerWidget {
           'activo': !tipo.activo,
         },
       );
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(
-            tipo.activo ? '${tipo.nombre} desactivado' : '${tipo.nombre} activado',
-          ),
-        ),
-      );
+      mensajero.mostrar(tipo.activo ? '${tipo.nombre} desactivado' : '${tipo.nombre} activado');
     } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
+      mensajero.error(e.texto);
     }
   }
 
@@ -276,7 +271,7 @@ class _HojaTipoState extends ConsumerState<_HojaTipo> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     try {
       await ref
@@ -296,9 +291,7 @@ class _HojaTipoState extends ConsumerState<_HojaTipo> {
           );
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(widget.tipo == null ? 'Tipo creado' : 'Tipo actualizado')),
-      );
+      mensajero.mostrar(widget.tipo == null ? 'Tipo creado' : 'Tipo actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;

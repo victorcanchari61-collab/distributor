@@ -10,6 +10,7 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/almacen.dart';
 import '../estado/inventario_controlador.dart';
+import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de un almacen.
 class AlmacenFormulario extends ConsumerStatefulWidget {
@@ -62,7 +63,7 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
     });
 
     final navegador = Navigator.of(context);
-    final mensajero = ScaffoldMessenger.of(context);
+    final mensajero = Aviso.de(context);
 
     final cuerpo = <String, dynamic>{
       'codigo': _codigo.text.trim(),
@@ -76,9 +77,7 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
       await ref.read(almacenesProvider.notifier).guardar(id: widget.almacen?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.showSnackBar(
-        SnackBar(content: Text(_esNuevo ? 'Almacén creado' : 'Almacén actualizado')),
-      );
+      mensajero.mostrar(_esNuevo ? 'Almacén creado' : 'Almacén actualizado');
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;
