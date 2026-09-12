@@ -534,6 +534,13 @@ public class InventarioRepository : IInventarioRepository
             .ThenBy(m => m.Id)
             .ToListAsync();
 
+    public async Task<MovimientoInventario?> GetMovimientoDeVentaAsync(int notaVentaDetalleId) =>
+        await _context.Movimientos
+            .Where(m => m.NotaVentaDetalleId == notaVentaDetalleId
+                        && m.Tipo == TipoMovimiento.Salida)
+            .OrderBy(m => m.Id)
+            .FirstOrDefaultAsync();
+
     public async Task<List<ConsumoCapa>> GetConsumosAsync(int movimientoId) =>
         await _context.Consumos
             .Include(c => c.Capa)

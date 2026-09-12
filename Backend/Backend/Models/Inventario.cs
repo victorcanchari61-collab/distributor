@@ -48,6 +48,9 @@ public static class Motivos
     public const int DevolucionPrestamoDado = 15;
     public const int PrestamoRecibido = 16;
     public const int DevolucionPrestamoRecibido = 17;
+
+    /// <summary>Mercadería que el cliente devuelve de una venta.</summary>
+    public const int DevolucionCliente = 18;
 }
 
 /// <summary>
@@ -114,6 +117,9 @@ public static class TipoDocumentoInventario
 
     /// <summary>Mercadería que sale por una venta. AlmacenId es de donde sale.</summary>
     public const string NotaVenta = "NOTA_VENTA";
+
+    /// <summary>Lo que un cliente devuelve de una venta.</summary>
+    public const string DevolucionCliente = "DEVOLUCION_CLIENTE";
 }
 
 /// <summary>

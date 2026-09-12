@@ -140,7 +140,9 @@ public static class CatalogoPermisos
             // Una lista de trabajo, no un documento: no se crea ni se anula
             // una visita, se mira a quien toca y se le toma el pedido.
             ["dms.visitas"] = Consulta,
-            ["dms.devoluciones"] = Documento,
+            // Confirmar es aprobar o rechazar: va aparte de crear para poder
+            // separar quien la recibe de quien la acepta.
+            ["dms.devoluciones"] = DocumentoConfirmable,
             ["dms.evidencias"] = Consulta,
 
             // --- RR. HH. ---

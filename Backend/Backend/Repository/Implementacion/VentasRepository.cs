@@ -269,6 +269,7 @@ public class VentasRepository : IVentasRepository
             .Include(n => n.Almacen)
             .Include(n => n.Usuario)
             .Include(n => n.Pagos).ThenInclude(p => p.MetodoPago)
+            .Include(n => n.Devoluciones).ThenInclude(d => d.Detalle)
             .Include(n => n.Pagos).ThenInclude(p => p.Usuario)
             .Include(n => n.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(n => n.Detalle).ThenInclude(d => d.Presentacion);
@@ -375,9 +376,14 @@ public class VentasRepository : IVentasRepository
      */
     private IQueryable<NotaVenta> CuentasPorCobrarBase() =>
         NotasVentaConDetalle()
+            // Lo vendido MENOS lo devuelto y aprobado: si el cliente trajo de
+            // vuelta la mercaderia, ya no la debe.
             .Where(n => n.Estado == EstadoNotaVenta.Confirmada
                         && n.FormaPago == FormaPagoVenta.Credito
                         && n.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario)
+                           - n.Devoluciones
+                               .Where(v => v.Estado == EstadoDevolucion.Aprobada)
+                               .Sum(v => v.Detalle.Sum(l => l.Cantidad * l.PrecioUnitario))
                            > n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto))
             .AsNoTracking();
 

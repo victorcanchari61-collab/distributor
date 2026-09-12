@@ -33,6 +33,7 @@ public class AppDbContext : DbContext
     public DbSet<RolPermiso> RolPermisos => Set<RolPermiso>();
     public DbSet<UsuarioPermiso> UsuarioPermisos => Set<UsuarioPermiso>();
     public DbSet<Despacho> Despachos => Set<Despacho>();
+    public DbSet<Devolucion> Devoluciones => Set<Devolucion>();
     public DbSet<RolAlcance> RolAlcances => Set<RolAlcance>();
     public DbSet<UsuarioAlcance> UsuarioAlcances => Set<UsuarioAlcance>();
     public DbSet<SolicitudPermiso> SolicitudesPermiso => Set<SolicitudPermiso>();
@@ -117,6 +118,44 @@ public class AppDbContext : DbContext
                     DelSistema = true,
                     FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 });
+        });
+
+        modelBuilder.Entity<Devolucion>(entity =>
+        {
+            entity.ToTable("Devoluciones");
+            entity.HasIndex(d => d.Numero).IsUnique();
+            entity.Property(d => d.Numero).HasMaxLength(20).IsRequired();
+            entity.Property(d => d.Estado).HasMaxLength(20).IsRequired();
+            entity.Property(d => d.Motivo).HasMaxLength(120);
+            entity.Property(d => d.Observacion).HasMaxLength(250);
+            entity.Property(d => d.MotivoRechazo).HasMaxLength(250);
+
+            // Restrict en la venta: una devolucion sin su venta no significa
+            // nada — no se sabria que se devolvio ni a que precio.
+            entity.HasOne(d => d.NotaVenta).WithMany(n => n!.Devoluciones)
+                .HasForeignKey(d => d.NotaVentaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Almacen).WithMany()
+                .HasForeignKey(d => d.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.DocumentoInventario).WithMany()
+                .HasForeignKey(d => d.DocumentoInventarioId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.Usuario).WithMany()
+                .HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(d => d.AprobadoPor).WithMany()
+                .HasForeignKey(d => d.AprobadoPorId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DevolucionDetalle>(entity =>
+        {
+            entity.ToTable("DevolucionDetalles");
+            entity.Property(d => d.CantidadPresentacion).HasPrecision(18, 4);
+            entity.Property(d => d.Cantidad).HasPrecision(18, 4);
+            entity.Property(d => d.PrecioUnitario).HasPrecision(18, 4);
+
+            entity.HasOne(d => d.Devolucion).WithMany(x => x!.Detalle)
+                .HasForeignKey(d => d.DevolucionId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(d => d.NotaVentaDetalle).WithMany()
+                .HasForeignKey(d => d.NotaVentaDetalleId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Despacho>(entity =>
@@ -649,7 +688,8 @@ public class AppDbContext : DbContext
                 Motivo(Motivos.VentaAnulada, "VENTA_ANULADA", "Venta anulada", TipoMovimiento.Entrada, sistema: true),
                 Motivo(Motivos.DevolucionProveedor, "DEV_PROVEEDOR", "Devolución a proveedor", TipoMovimiento.Salida, sistema: true),
                 Motivo(Motivos.TransferenciaSalida, "TRANSF_SALIDA", "Transferencia — salida", TipoMovimiento.Salida, sistema: true),
-                Motivo(Motivos.TransferenciaIngreso, "TRANSF_INGRESO", "Transferencia — ingreso", TipoMovimiento.Entrada, sistema: true));
+                Motivo(Motivos.TransferenciaIngreso, "TRANSF_INGRESO", "Transferencia — ingreso", TipoMovimiento.Entrada, sistema: true),
+                Motivo(Motivos.DevolucionCliente, "DEV_CLIENTE", "Devolución de cliente", TipoMovimiento.Entrada, sistema: true));
         });
 
         modelBuilder.Entity<DocumentoInventario>(entity =>

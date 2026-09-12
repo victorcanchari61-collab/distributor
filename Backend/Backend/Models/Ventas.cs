@@ -159,6 +159,15 @@ public class NotaVenta
 
     /// <summary>Con qué se pagó. Puede ser más de uno — un pago mixto.</summary>
     public List<PagoVenta> Pagos { get; set; } = [];
+
+    /// <summary>
+    /// Lo que el cliente devolvió de esta venta.
+    ///
+    /// Hace falta aquí porque la deuda es lo vendido MENOS lo devuelto menos
+    /// lo pagado: sin esta relación, una devolución aprobada no bajaría el
+    /// saldo y el cliente seguiría debiendo mercadería que ya trajo.
+    /// </summary>
+    public ICollection<Devolucion> Devoluciones { get; set; } = [];
 }
 
 public static class EstadoNotaVenta

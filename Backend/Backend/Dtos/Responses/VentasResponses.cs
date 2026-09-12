@@ -121,4 +121,12 @@ public class NotaVentaResponse
 
     /// <summary>Suma de Pagos. Si es menor que Total, falta esa diferencia por cobrar.</summary>
     public decimal TotalPagado { get; set; }
+
+    /// <summary>
+    /// Lo devuelto y aprobado de esta venta.
+    ///
+    /// La deuda real es Total − TotalDevuelto − TotalPagado: si sale negativa,
+    /// el cliente tiene saldo a favor.
+    /// </summary>
+    public decimal TotalDevuelto { get; set; }
 }

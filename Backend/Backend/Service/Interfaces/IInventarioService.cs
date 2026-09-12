@@ -116,4 +116,14 @@ public interface IInventarioService
     /// antiguas primero, igual que cualquier otra salida.
     /// </summary>
     Task<DocumentoInventarioResponse> CrearSalidaVentaAsync(NotaVenta notaVenta, int? usuarioId);
+
+    /// <summary>
+    /// Repone la mercadería que un cliente devuelve de una venta.
+    ///
+    /// Vuelve a las MISMAS capas de costo de las que salió: reponer al costo
+    /// de hoy inventaría utilidad. Lo que no reingresa entra igual y sale en
+    /// el acto como merma, para que el rastro quede.
+    /// </summary>
+    Task<DocumentoInventarioResponse> CrearDevolucionClienteAsync(
+        Devolucion devolucion, int? usuarioId);
 }

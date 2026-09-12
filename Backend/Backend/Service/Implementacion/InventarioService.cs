@@ -1223,7 +1223,173 @@ public class InventarioService : IInventarioService
         return creado;
     }
 
+
+    public async Task<DocumentoInventarioResponse> CrearDevolucionClienteAsync(
+        Devolucion devolucion, int? usuarioId)
+    {
+        var almacen = await GetAlmacenOrThrowAsync(devolucion.AlmacenId);
+        var entrada = await GetMotivoOrThrowAsync(Motivos.DevolucionCliente);
+        var merma = await GetMotivoOrThrowAsync(Motivos.Merma);
+        var fecha = DateTime.UtcNow;
+
+        var documento = new DocumentoInventario
+        {
+            Numero = await _repository.SiguienteNumeroAsync(TipoDocumentoInventario.DevolucionCliente),
+            Tipo = TipoDocumentoInventario.DevolucionCliente,
+            AlmacenId = almacen.Id,
+            MotivoId = entrada.Id,
+            NotaVentaId = devolucion.NotaVentaId,
+            Fecha = fecha,
+            Estado = EstadoDocumento.Confirmado,
+            Observacion = $"Devolución {devolucion.Numero}",
+            UsuarioId = usuarioId
+        };
+
+        await using var transaccion = await _repository.IniciarTransaccionAsync();
+
+        await _repository.AddDocumentoAsync(documento);
+        await _repository.GuardarAsync();
+
+        foreach (var linea in devolucion.Detalle)
+        {
+            var venta = linea.NotaVentaDetalle
+                ?? throw new BadRequestException("La línea devuelta no tiene su línea de venta.");
+
+            var producto = await _productos.GetConDetalleAsync(venta.ProductoId)
+                ?? throw new BadRequestException($"No existe el producto {venta.ProductoId}");
+
+            var movimiento = new MovimientoInventario
+            {
+                DocumentoId = documento.Id,
+                ProductoId = producto.Id,
+                AlmacenId = almacen.Id,
+                MotivoId = entrada.Id,
+                Tipo = TipoMovimiento.Entrada,
+                PresentacionId = venta.PresentacionId,
+                CantidadPresentacion = linea.CantidadPresentacion,
+                Cantidad = linea.Cantidad,
+                Fecha = fecha,
+                NotaVentaDetalleId = venta.Id
+            };
+
+            await _repository.AddDocumentoMovimientoAsync(movimiento);
+            await _repository.GuardarAsync();
+
+            var repuesto = await ReponerDeLaVentaAsync(movimiento, venta, linea.Cantidad, almacen.Id);
+
+            movimiento.CostoUnitario = linea.Cantidad > 0 ? repuesto / linea.Cantidad : 0m;
+            movimiento.CostoTotal = repuesto;
+            await _repository.GuardarAsync();
+
+            if (linea.ReingresaStock) continue;
+
+            /*
+             * Lo dañado entra y sale en el acto.
+             *
+             * Podria no entrar nunca, pero entonces la mercaderia se esfumaria
+             * del sistema: no habria forma de responder cuanto se perdio por
+             * devoluciones en mal estado. Asi queda una entrada y una merma.
+             */
+            var baja = new MovimientoInventario
+            {
+                DocumentoId = documento.Id,
+                ProductoId = producto.Id,
+                AlmacenId = almacen.Id,
+                MotivoId = merma.Id,
+                Tipo = TipoMovimiento.Salida,
+                PresentacionId = venta.PresentacionId,
+                CantidadPresentacion = linea.CantidadPresentacion,
+                Cantidad = linea.Cantidad,
+                Fecha = fecha,
+                NotaVentaDetalleId = venta.Id
+            };
+
+            await _repository.AddDocumentoMovimientoAsync(baja);
+            await _repository.GuardarAsync();
+
+            await ConsumirAsync(baja, producto, almacen.Id, linea.Cantidad);
+        }
+
+        await transaccion.CommitAsync();
+
+        var creado = await GetDocumentoAsync(documento.Id);
+        await _notificador.AvisarAsync("stock", "cambio", new { almacenId = almacen.Id });
+        await _notificador.AvisarAsync("kardex", "cambio", new { almacenId = almacen.Id });
+        return creado;
+    }
+
+    /// <summary>
+    /// Devuelve la mercadería a las capas de las que salió esa venta.
+    ///
+    /// Se reparte proporcionalmente entre los consumos de aquella salida: si
+    /// la venta se llevó 6 de una capa y 4 de otra, devolver 5 repone 3 y 2.
+    /// Si ya no se encuentra el movimiento original — datos viejos —, entra
+    /// como capa nueva al costo al que se vendió, que es lo más cercano que
+    /// se puede saber.
+    /// </summary>
+    private async Task<decimal> ReponerDeLaVentaAsync(
+        MovimientoInventario movimiento, NotaVentaDetalle venta, decimal cantidad, int almacenId)
+    {
+        var salida = await _repository.GetMovimientoDeVentaAsync(venta.Id);
+        var consumos = salida is null
+            ? []
+            : await _repository.GetConsumosAsync(salida.Id);
+
+        var total = consumos.Sum(c => c.Cantidad);
+        if (total <= 0)
+        {
+            var capa = new CapaCosto
+            {
+                ProductoId = venta.ProductoId,
+                AlmacenId = almacenId,
+                MovimientoId = movimiento.Id,
+                CantidadInicial = cantidad,
+                CantidadDisponible = cantidad,
+                CostoUnitario = venta.PrecioUnitario,
+                Origen = OrigenCapa.Devolucion,
+                Fecha = movimiento.Fecha
+            };
+
+            await _repository.AddCapaAsync(capa);
+            await _repository.GuardarAsync();
+            return cantidad * venta.PrecioUnitario;
+        }
+
+        var repuesto = 0m;
+        var restante = cantidad;
+
+        foreach (var consumo in consumos)
+        {
+            if (restante <= 0) break;
+
+            var parte = Math.Min(restante, Math.Round(cantidad * (consumo.Cantidad / total), 4));
+            if (parte <= 0) continue;
+
+            var capa = await _repository.GetCapaAsync(consumo.CapaId);
+            if (capa is null) continue;
+
+            capa.CantidadDisponible += parte;
+            repuesto += parte * capa.CostoUnitario;
+            restante -= parte;
+        }
+
+        // El redondeo puede dejar una miga: va a la ultima capa tocada.
+        if (restante > 0 && consumos.Count > 0)
+        {
+            var capa = await _repository.GetCapaAsync(consumos[^1].CapaId);
+            if (capa is not null)
+            {
+                capa.CantidadDisponible += restante;
+                repuesto += restante * capa.CostoUnitario;
+            }
+        }
+
+        await _repository.GuardarAsync();
+        return repuesto;
+    }
+
     // ------------------------------------------------------------ Auxiliares
+
 
     /// <summary>
     /// Descuenta de las capas mas antiguas hasta cubrir la cantidad, dejando

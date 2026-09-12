@@ -927,7 +927,13 @@ public class VentasService : IVentasService
         Total = Math.Round(n.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario), 2),
         Detalle = n.Detalle.Select(MapLinea).ToList(),
         Pagos = n.Pagos.Select(MapPago).ToList(),
-        TotalPagado = Math.Round(n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2)
+        TotalPagado = Math.Round(n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2),
+        // Solo lo aprobado: una devolucion pendiente todavia no le descuenta
+        // nada al cliente.
+        TotalDevuelto = Math.Round(
+            n.Devoluciones
+                .Where(d => d.Estado == EstadoDevolucion.Aprobada)
+                .Sum(d => d.Detalle.Sum(l => l.Cantidad * l.PrecioUnitario)), 2)
     };
 
     private static PagoVentaResponse MapPago(PagoVenta p) => new()

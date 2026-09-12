@@ -116,6 +116,14 @@ public interface IInventarioRepository
         int? productoId, int? almacenId, DateTime? desde, DateTime? hasta);
 
     Task<List<ConsumoCapa>> GetConsumosAsync(int movimientoId);
+
+    /// <summary>
+    /// El movimiento de salida que generó una línea de venta.
+    ///
+    /// Es el punto de partida de una devolución: de sus consumos salen las
+    /// capas de costo a las que hay que reponer la mercadería.
+    /// </summary>
+    Task<MovimientoInventario?> GetMovimientoDeVentaAsync(int notaVentaDetalleId);
     Task AddConsumoAsync(ConsumoCapa consumo);
 
     /// <summary>Capas con stock que además tienen fecha de vencimiento, la más próxima primero.</summary>
