@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, Eye, Package, Pencil, Plus, Truck, Undo2 } from 'lucide-react'
 import {
+  AccionPdf,
   Alert,
   Badge,
   Button,
@@ -451,6 +452,10 @@ export function DespachosPage() {
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalle(row)}>
             <Eye size={15} />
           </RowAction>
+          {/* Los papeles de la carga: dos copias por hoja, para el repartidor. */}
+          {puede('tms.despachos', 'exportar') && (
+            <AccionPdf documento="despacho" id={row.id} numero={row.numero} />
+          )}
           {puede('tms.despachos', 'editar') && (
             <RowAction
               label={`Editar ${row.numero}`}

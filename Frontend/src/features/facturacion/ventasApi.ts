@@ -1,4 +1,4 @@
-import { api } from '../../lib/apiClient'
+import { api, guardarArchivo, obtenerArchivo } from '../../lib/apiClient'
 import type { AuditoriaResponse } from '../config'
 import type { ConsultaTabla } from '../../components/ui'
 import type { PaginaResponse } from '../../lib/paginacion'
@@ -259,4 +259,19 @@ export const notaVentaApi = {
   },
   /** Qué cambió en esta nota de venta: sobre todo anulaciones y movimientos de pago. */
   historial: (id: number) => api.get<AuditoriaResponse[]>(`/notaventa/${id}/historial`),
+}
+
+/**
+ * Baja varios pedidos en un archivo, dos copias por hoja.
+ *
+ * Un archivo y no uno por pedido: el caso real es sacar los papeles de toda
+ * una carga, y con veinte archivos hay que abrirlos de uno en uno para
+ * imprimir.
+ */
+export async function descargarPedidosLote(ids: number[]): Promise<void> {
+  const archivo = await obtenerArchivo(
+    `/pedido/pdf/lote?ids=${ids.join(',')}`,
+    `pedidos-${ids.length}.pdf`,
+  )
+  guardarArchivo(archivo.blob, archivo.nombre)
 }

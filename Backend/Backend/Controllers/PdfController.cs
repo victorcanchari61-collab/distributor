@@ -42,6 +42,30 @@ public class PdfController(IPdfService pdf) : ControllerBase
     public async Task<IActionResult> Compra(int id, [FromQuery] string? formato) =>
         Archivo(await pdf.CompraAsync(id, Formato(formato)));
 
+    /// <summary>
+    /// Varios pedidos de golpe, dos copias por hoja.
+    ///
+    /// Los ids van por query y no en el cuerpo porque esto se abre como un
+    /// enlace: un GET se puede pegar en el navegador y volver a pedir.
+    /// </summary>
+    [HttpGet("api/pedido/pdf/lote")]
+    [Permiso("fact.pedidos", Accion.Exportar)]
+    public async Task<IActionResult> PedidosLote([FromQuery] string ids)
+    {
+        var lista = (ids ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(x => int.TryParse(x, out var id) ? id : 0)
+            .Where(id => id > 0)
+            .ToList();
+
+        return Archivo(await pdf.PedidosLoteAsync(lista));
+    }
+
+    /// <summary>Los pedidos de un despacho: los papeles que se lleva el repartidor.</summary>
+    [HttpGet("api/despacho/{id:int}/pdf")]
+    [Permiso("tms.despachos", Accion.Exportar)]
+    public async Task<IActionResult> Despacho(int id) => Archivo(await pdf.DespachoAsync(id));
+
     /*
      * Los cuatro documentos de inventario viven en la misma tabla y comparten
      * numeración de id, pero cada uno pide el permiso de SU submódulo. Por eso

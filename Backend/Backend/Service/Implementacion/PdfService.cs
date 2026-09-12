@@ -21,11 +21,25 @@ public class PdfService(
     IVentasService ventas,
     IComprasService compras,
     IInventarioService inventario,
+    IDespachoService despachos,
     IEmpresaService empresas,
     IClienteRepository clientes,
     IProveedorRepository proveedores) : IPdfService
 {
     public async Task<(byte[], string)> PedidoAsync(int id, FormatoPdf formato)
+    {
+        var doc = await ArmarPedidoAsync(id);
+        return (Generar(doc, formato), Nombre("pedido", doc.Numero, formato));
+    }
+
+    /// <summary>
+    /// El pedido listo para dibujar.
+    ///
+    /// Está aparte porque lo usan dos caminos: el pedido suelto y el lote de
+    /// dos copias por hoja. Si cada uno lo armara por su cuenta, un cambio en
+    /// la cabecera saldría en un papel y no en el otro.
+    /// </summary>
+    private async Task<DocumentoImprimible> ArmarPedidoAsync(int id)
     {
         var pedido = await ventas.GetPedidoAsync(id);
         var cliente = await clientes.GetByIdAsync(pedido.ClienteId);
@@ -63,7 +77,7 @@ public class PdfService(
             Empresa = empresa,
         };
 
-        return (Generar(doc, formato), Nombre("pedido", pedido.Numero, formato));
+        return doc;
     }
 
     public async Task<(byte[], string)> NotaVentaAsync(int id, FormatoPdf formato)
@@ -191,6 +205,36 @@ public class PdfService(
         };
 
         return (Generar(doc, formato), Nombre("compra", compra.Numero, formato));
+    }
+
+    public async Task<(byte[], string)> PedidosLoteAsync(IReadOnlyList<int> ids)
+    {
+        if (ids.Count == 0) throw new BadRequestException("Elige al menos un pedido");
+
+        var docs = new List<DocumentoImprimible>();
+        foreach (var id in ids.Distinct())
+        {
+            docs.Add(await ArmarPedidoAsync(id));
+        }
+
+        var contenido = new PedidosLoteA4(docs).GeneratePdf();
+        return (contenido, $"pedidos-{docs.Count}.pdf");
+    }
+
+    public async Task<(byte[], string)> DespachoAsync(int id)
+    {
+        var despacho = await despachos.GetAsync(id);
+
+        var docs = new List<DocumentoImprimible>();
+        foreach (var pedido in despacho.Detalle)
+        {
+            docs.Add(await ArmarPedidoAsync(pedido.PedidoId));
+        }
+
+        if (docs.Count == 0) throw new BadRequestException("Este despacho no tiene pedidos");
+
+        var contenido = new PedidosLoteA4(docs).GeneratePdf();
+        return (contenido, Nombre("despacho", despacho.Numero, FormatoPdf.A4));
     }
 
     // --- Inventario: mercadería que se mueve y alguien tiene que firmar ---

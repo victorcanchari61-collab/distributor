@@ -17,6 +17,7 @@ export type DocumentoPdf =
   | 'transferencias'
   | 'recepciones'
   | 'prestamos'
+  | 'despacho'
 
 type Formato = 'a4' | 'ticket'
 
@@ -29,6 +30,7 @@ const TITULOS: Record<DocumentoPdf, string> = {
   transferencias: 'Transferencia',
   recepciones: 'Recepción',
   prestamos: 'Préstamo',
+  despacho: 'Despacho',
 }
 
 /*
@@ -37,6 +39,15 @@ const TITULOS: Record<DocumentoPdf, string> = {
  * permiso exigir antes de leer el documento.
  */
 const INVENTARIO: DocumentoPdf[] = ['ajustes', 'transferencias', 'recepciones', 'prestamos']
+
+/*
+ * Documentos que solo existen en hoja.
+ *
+ * El despacho son los pedidos de la carga, dos copias por hoja apaisada: en un
+ * rollo de 80 mm no se puede cortar por la mitad, asi que ofrecer "ticket"
+ * seria ofrecer algo que no existe.
+ */
+const SOLO_A4: DocumentoPdf[] = ['despacho']
 
 const rutaDe = (documento: DocumentoPdf) =>
   INVENTARIO.includes(documento) ? `/inventario/${documento}` : `/${documento}`
@@ -94,6 +105,7 @@ function VisorPdf({
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const marco = useRef<HTMLIFrameElement>(null)
+  const soloA4 = SOLO_A4.includes(documento)
 
   useEffect(() => {
     let vivo = true
@@ -178,14 +190,16 @@ function VisorPdf({
       }
     >
       <div className="flex flex-col gap-3">
-        <div className="flex gap-1.5">
-          <Pestana activa={formato === 'a4'} onClick={() => setFormato('a4')}>
-            A4
-          </Pestana>
-          <Pestana activa={formato === 'ticket'} onClick={() => setFormato('ticket')}>
-            Ticket 80 mm
-          </Pestana>
-        </div>
+        {!soloA4 && (
+          <div className="flex gap-1.5">
+            <Pestana activa={formato === 'a4'} onClick={() => setFormato('a4')}>
+              A4
+            </Pestana>
+            <Pestana activa={formato === 'ticket'} onClick={() => setFormato('ticket')}>
+              Ticket 80 mm
+            </Pestana>
+          </div>
+        )}
 
         {error && <Alert>{error}</Alert>}
 

@@ -26,6 +26,17 @@ public interface IPdfService
     Task<(byte[] Contenido, string Nombre)> OrdenCompraAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> CompraAsync(int id, FormatoPdf formato);
 
+    /// <summary>
+    /// Varios pedidos en un archivo, dos copias por hoja.
+    ///
+    /// No lleva formato: son siempre hojas A4 apaisadas partidas en dos. Un
+    /// lote en ticket no tendría sentido — el rollo no se corta por la mitad.
+    /// </summary>
+    Task<(byte[] Contenido, string Nombre)> PedidosLoteAsync(IReadOnlyList<int> ids);
+
+    /// <summary>Los pedidos de un despacho, listos para dárselos al repartidor.</summary>
+    Task<(byte[] Contenido, string Nombre)> DespachoAsync(int id);
+
     Task<(byte[] Contenido, string Nombre)> AjusteAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> TransferenciaAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> RecepcionAsync(int id, FormatoPdf formato);

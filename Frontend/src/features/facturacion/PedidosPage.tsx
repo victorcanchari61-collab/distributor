@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, CheckCircle2, ClipboardList, Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, FileDown, CheckCircle2, ClipboardList, Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -39,7 +39,7 @@ import { almacenApi, stockApi } from '../inventario'
 import type { AlmacenResponse } from '../inventario'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
-import { pedidoApi } from './ventasApi'
+import { descargarPedidosLote, pedidoApi } from './ventasApi'
 import type { AuditoriaResponse } from '../config'
 import type { CrearPedidoRequest, LineaVentaResponse, PedidoResponse, ResumenPedidos } from './ventasApi'
 
@@ -92,7 +92,22 @@ export function PedidosPage() {
   const [confGuardando, setConfGuardando] = useState(false)
   const [confError, setConfError] = useState('')
 
+  const [bajandoLote, setBajandoLote] = useState(false)
+
   const { confirmar, dialogo } = useConfirmacion()
+
+  /** Baja en un archivo los pedidos que la tabla está mostrando. */
+  const bajarLote = async () => {
+    setError('')
+    setBajandoLote(true)
+    try {
+      await descargarPedidosLote(pedidos.map((p) => p.id))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos generar el archivo.')
+    } finally {
+      setBajandoLote(false)
+    }
+  }
 
   /*
    * Los pedidos se acumulan con la operacion, asi que la tabla pide solo la
@@ -603,11 +618,28 @@ export function PedidosPage() {
       title="Pedidos"
       description="Lo que pide un cliente. Al convertirlo nace su nota de venta."
       actions={
-        puede('fact.pedidos', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo pedido
-          </Button>
-        ) : undefined
+        <>
+          {/*
+            Baja los pedidos de la vista actual: lo que se ve es lo que sale, y
+            asi los filtros de la tabla sirven tambien para elegir el lote.
+          */}
+          {puede('fact.pedidos', 'exportar') && pedidos.length > 0 && (
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={bajandoLote}
+              onClick={() => void bajarLote()}
+              iconRight={<FileDown size={15} />}
+            >
+              Descargar {pedidos.length}
+            </Button>
+          )}
+          {puede('fact.pedidos', 'crear') && (
+            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+              Nuevo pedido
+            </Button>
+          )}
+        </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
