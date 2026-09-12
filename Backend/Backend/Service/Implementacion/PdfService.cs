@@ -207,20 +207,6 @@ public class PdfService(
         return (Generar(doc, formato), Nombre("compra", compra.Numero, formato));
     }
 
-    public async Task<(byte[], string)> PedidosLoteAsync(IReadOnlyList<int> ids)
-    {
-        if (ids.Count == 0) throw new BadRequestException("Elige al menos un pedido");
-
-        var docs = new List<DocumentoImprimible>();
-        foreach (var id in ids.Distinct())
-        {
-            docs.Add(await ArmarPedidoAsync(id));
-        }
-
-        var contenido = new PedidosLoteA4(docs).GeneratePdf();
-        return (contenido, $"pedidos-{docs.Count}.pdf");
-    }
-
     public async Task<(byte[], string)> DespachoAsync(int id)
     {
         var despacho = await despachos.GetAsync(id);
