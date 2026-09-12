@@ -29,7 +29,23 @@ public class PdfService(
     public async Task<(byte[], string)> PedidoAsync(int id, FormatoPdf formato)
     {
         var doc = await ArmarPedidoAsync(id);
-        return (Generar(doc, formato), Nombre("pedido", doc.Numero, formato));
+
+        /*
+         * En hoja, un pedido sale con las dos copias — la misma maqueta que el
+         * lote de un despacho.
+         *
+         * No es solo por uniformidad: el papel del pedido se entrega y se
+         * pierde, y cuando hay que reponerlo se necesitan otra vez los dos, el
+         * del cliente y el que vuelve firmado. Sacar uno solo obligaria a
+         * imprimir dos veces y recortar.
+         *
+         * El ticket se queda como esta: un rollo no se corta por la mitad.
+         */
+        var contenido = formato == FormatoPdf.Ticket
+            ? Generar(doc, formato)
+            : new PedidosLoteA4([doc]).GeneratePdf();
+
+        return (contenido, Nombre("pedido", doc.Numero, formato));
     }
 
     /// <summary>
