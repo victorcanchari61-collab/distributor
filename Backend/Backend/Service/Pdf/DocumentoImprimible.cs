@@ -57,6 +57,17 @@ public sealed record DocumentoImprimible
     /// <summary>"Precio" en una venta, "Costo" en una compra.</summary>
     public required string EtiquetaImporte { get; init; }
 
+    /// <summary>
+    /// Si la tabla lleva la columna del código del producto.
+    ///
+    /// El pedido no la lleva: lo firma el cliente en su puesto del mercado, y
+    /// el código es nuestro — a él no le dice nada y le come el ancho de la
+    /// descripción, que es lo único que sí reconoce. En los demás documentos
+    /// sí está, porque los lee gente de la casa o el proveedor, que trabajan
+    /// con ese código.
+    /// </summary>
+    public bool MostrarCodigo { get; init; } = true;
+
     public IReadOnlyList<LineaImprimible> Lineas { get; init; } = [];
     public decimal Total { get; init; }
 

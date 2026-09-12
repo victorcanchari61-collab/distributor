@@ -57,6 +57,9 @@ public class PdfService(
             ParteTelefono = cliente?.Telefono,
             Datos = datos,
             EtiquetaImporte = "Precio",
+            // El pedido lo firma el cliente en su puesto: el codigo interno del
+            // producto no le dice nada y le quita ancho a la descripcion.
+            MostrarCodigo = false,
             // Una linea quitada al editar el pedido se conserva marcada, no se
             // borra. En el papel no pinta nada: se pidio lo que queda.
             Lineas = [.. pedido.Detalle.Where(l => !l.Anulado).Select(Linea)],

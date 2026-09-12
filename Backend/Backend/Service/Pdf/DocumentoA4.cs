@@ -22,7 +22,10 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
         {
             page.Size(PageSizes.A4);
             page.Margin(1.2f, Unit.Centimetre);
-            page.DefaultTextStyle(x => x.FontSize(8.5f).FontColor(Colores.Texto));
+            // Semibold de base, no normal: la letra fina de 8 pt se pierde al
+            // fotocopiar el documento o al mandarlo por foto, que es como
+            // circula de verdad.
+            page.DefaultTextStyle(x => x.FontSize(9).SemiBold().FontColor(Colores.Texto));
 
             page.Header().Element(Cabecera);
             page.Content().PaddingVertical(8).Element(Contenido);
@@ -61,7 +64,7 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
                         .Text($"R.U.C. {doc.Empresa.Ruc}").FontSize(9).SemiBold();
 
                     caja.Item().BorderTop(1).BorderColor(Colores.Linea)
-                        .Background(Colores.Cabecera).Padding(4).AlignCenter()
+                        .Padding(4).AlignCenter()
                         .Text(doc.Titulo).FontSize(9.5f).Bold().FontColor(Colores.Fuerte);
 
                     caja.Item().BorderTop(1).BorderColor(Colores.Linea).Padding(4)
@@ -124,8 +127,8 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
             foreach (var dato in datos)
                 col.Item().PaddingVertical(1).Row(fila =>
                 {
-                    fila.ConstantItem(78).Text(dato.Etiqueta)
-                        .FontSize(7.5f).SemiBold().FontColor(Colores.Fuerte);
+                    fila.ConstantItem(80).Text(dato.Etiqueta)
+                        .FontSize(8).Bold().FontColor(Colores.Fuerte);
                     fila.ConstantItem(8).Text(":").FontColor(Colores.Suave);
                     fila.RelativeItem().Text(dato.Valor).FontSize(8);
                 });
@@ -144,26 +147,30 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
     private void Tabla(IContainer container) =>
         container.Border(1).BorderColor(Colores.Linea).Table(tabla =>
         {
+            // La descripción va antes que la cantidad: primero qué es y luego
+            // cuánto, que es el orden en que se lee una línea en voz alta al
+            // despachar. Además es la única columna que crece, y puesta entre
+            // números los partiría en dos bloques.
             tabla.ColumnsDefinition(cols =>
             {
                 cols.ConstantColumn(28);   // ítem
-                cols.ConstantColumn(62);   // código
+                if (doc.MostrarCodigo) cols.ConstantColumn(62);
+                cols.RelativeColumn();     // descripción
                 cols.ConstantColumn(48);   // cantidad
                 cols.ConstantColumn(64);   // unidad
-                cols.RelativeColumn();     // descripción
                 cols.ConstantColumn(56);   // precio unitario
-                cols.ConstantColumn(64);   // importe
+                cols.ConstantColumn(68);   // subtotal
             });
 
             tabla.Header(cab =>
             {
                 cab.Cell().Element(Encabezado).Text("ÍTEM");
-                cab.Cell().Element(Encabezado).Text("CÓDIGO");
+                if (doc.MostrarCodigo) cab.Cell().Element(Encabezado).Text("CÓDIGO");
+                cab.Cell().Element(Encabezado).Text("DESCRIPCIÓN");
                 cab.Cell().Element(Encabezado).AlignRight().Text("CANT.");
                 cab.Cell().Element(Encabezado).Text("UNIDAD");
-                cab.Cell().Element(Encabezado).Text("DESCRIPCIÓN");
                 cab.Cell().Element(Encabezado).AlignRight().Text("P. UNI.");
-                cab.Cell().Element(Encabezado).AlignRight().Text("IMPORTE");
+                cab.Cell().Element(Encabezado).AlignRight().Text("SUB TOTAL");
             });
 
             var numero = 0;
@@ -171,24 +178,26 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
             {
                 numero++;
                 tabla.Cell().Element(Celda).Text($"{numero}").FontColor(Colores.Suave);
-                tabla.Cell().Element(Celda).Text(linea.Codigo);
+                if (doc.MostrarCodigo) tabla.Cell().Element(Celda).Text(linea.Codigo);
+                tabla.Cell().Element(Celda).Text(linea.Producto);
                 tabla.Cell().Element(Celda).AlignRight().Text(Textos.Cantidad(linea.Cantidad));
                 // La presentación manda sobre la unidad base: si se vendió por
                 // cajas, "3 UND" diría otra cosa que lo que salió del almacén.
                 tabla.Cell().Element(Celda).Text(linea.Presentacion ?? linea.Unidad);
-                tabla.Cell().Element(Celda).Text(linea.Producto);
                 tabla.Cell().Element(Celda).AlignRight().Text(linea.PrecioUnitario.ToString("N2"));
                 tabla.Cell().Element(Celda).AlignRight().Text(linea.Importe.ToString("N2"));
             }
         });
 
     private static IContainer Encabezado(IContainer container) =>
-        container.Background(Colores.Cabecera).BorderBottom(1).BorderColor(Colores.Linea)
+        container.BorderBottom(1).BorderRight(1).BorderColor(Colores.Linea)
             .PaddingVertical(4).PaddingHorizontal(4)
-            .DefaultTextStyle(x => x.SemiBold().FontSize(7.5f).FontColor(Colores.Fuerte));
+            .DefaultTextStyle(x => x.Bold().FontSize(8).FontColor(Colores.Fuerte));
 
+    // Rejilla completa, con las verticales: sin ellas, en una linea de dos
+    // renglones no se sabe a que columna pertenece cada numero.
     private static IContainer Celda(IContainer container) =>
-        container.BorderBottom(1).BorderColor(Colores.LineaSuave)
+        container.BorderBottom(1).BorderRight(1).BorderColor(Colores.LineaSuave)
             .PaddingVertical(3).PaddingHorizontal(4);
 
     private void EnLetras(IContainer container) =>
@@ -240,10 +249,10 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
         bool destacado = false,
         bool tenue = false)
     {
-        var fila = container.BorderBottom(1).BorderColor(Colores.LineaSuave);
-        if (destacado) fila = fila.Background(Colores.Cabecera);
-
-        fila.PaddingVertical(3).PaddingHorizontal(6).Row(row =>
+        // Sin fondos: en el papel un gris de relleno se ensucia al fotocopiar y
+        // compite con la propia cifra. Lo que destaca el total es el cuerpo de
+        // la letra, no un recuadro detras.
+        container.BorderBottom(1).BorderColor(Colores.LineaSuave).PaddingVertical(3).PaddingHorizontal(6).Row(row =>
         {
             var rotuloTexto = row.RelativeItem().Text(rotulo)
                 .FontSize(destacado ? 9 : 8)

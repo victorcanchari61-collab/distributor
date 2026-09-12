@@ -12,14 +12,23 @@ namespace Backend.Service.Pdf;
 /// </summary>
 public static class Colores
 {
-    public const string Fuerte = "#111827";
-    public const string Texto = "#374151";
-    public const string Suave = "#6B7280";
+    /*
+     * Negro puro en TODO el texto, sin escala de grises.
+     *
+     * Un gris medio se ve bien en pantalla y se pierde en el papel: la
+     * impresora de oficina lo saca lavado y la termica de la camioneta, que no
+     * tiene medias tintas, directamente lo convierte en nada o en un punteado.
+     * Un documento que se entrega a un cliente tiene que leerse tambien cuando
+     * se fotocopia o se manda por WhatsApp.
+     */
+    public const string Fuerte = "#000000";
+    public const string Texto = "#000000";
+    public const string Suave = "#000000";
 
-    public const string Linea = "#9CA3AF";
-    public const string LineaSuave = "#E5E7EB";
-    public const string Cabecera = "#F3F4F6";
-    public const string Fondo = "#F9FAFB";
+    public const string Linea = "#000000";
+    public const string LineaSuave = "#000000";
+    public const string Cabecera = "#E5E7EB";
+    public const string Fondo = "#F3F4F6";
 
     /// <summary>Lo anulado sí va en rojo: es lo único que no puede pasar inadvertido.</summary>
     public const string Anulado = "#B91C1C";

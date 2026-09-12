@@ -28,7 +28,7 @@ public sealed class DocumentoTicket(DocumentoImprimible doc) : IDocument
 
             // Todo en negro puro y sin grises finos: la térmica no tiene medias
             // tintas, un gris claro sale como nada.
-            page.DefaultTextStyle(x => x.FontSize(8).FontColor(Colores.Fuerte));
+            page.DefaultTextStyle(x => x.FontSize(8).SemiBold().FontColor(Colores.Fuerte));
 
             page.Content().Element(Contenido);
         });
