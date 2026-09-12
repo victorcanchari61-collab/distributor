@@ -133,8 +133,8 @@ export const NAV_GROUPS: NavGroup[] = [
     // comprobantes electronicos quedan reservados, junto a Series y Parametros
     // en Configuracion, para cuando el cliente decida facturar.
     items: [
-      { id: 'fact.pedidos', label: 'Pedidos', icon: ClipboardList, pending: true },
-      { id: 'fact.notaventa', label: 'Notas de venta', icon: FileText, pending: true },
+      { id: 'fact.pedidos', label: 'Pedidos', icon: ClipboardList },
+      { id: 'fact.notaventa', label: 'Notas de venta', icon: FileText },
       { id: 'fact.precios', label: 'Listas de precios', icon: Banknote },
       { id: 'fact.comprobantes', label: 'Comprobantes', icon: Receipt, pending: true, hidden: true },
       {

@@ -93,6 +93,13 @@ builder.Services.AddScoped<IListaPrecioService, ListaPrecioService>();
 builder.Services.AddScoped<IInventarioService, InventarioService>();
 builder.Services.AddScoped<IComprasService, ComprasService>();
 builder.Services.AddScoped<IVentasService, VentasService>();
+builder.Services.AddScoped<IPdfService, PdfService>();
+
+// QuestPDF es gratuito por debajo del millon de dolares de facturacion anual;
+// la libreria exige declarar bajo que licencia se usa o se niega a generar
+// nada. Si el negocio supera ese umbral, hay que comprar licencia y cambiar
+// esta linea — queda aqui a la vista y no escondida en el servicio.
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 builder.Services.AddScoped<IFinanzasService, FinanzasService>();
 builder.Services.AddScoped<IArqueoService, ArqueoService>();
 

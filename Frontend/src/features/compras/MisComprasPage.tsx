@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, Building2, Eye, PackageCheck, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
+  AccionPdf,
   AgregarProductoPanel,
   Alert,
   Badge,
@@ -817,6 +818,9 @@ export function MisComprasPage() {
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
             <Eye size={15} />
           </RowAction>
+          {puede('compras.compras', 'exportar') && (
+            <AccionPdf documento="compra" id={row.id} numero={row.numero} />
+          )}
           {puede('compras.compras', 'editar') && (
             <RowAction
               label={`Editar ${row.numero}`}

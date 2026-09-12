@@ -84,4 +84,49 @@ class ClienteApi {
 
     return datos;
   }
+
+  /// Trae un archivo de la API — hoy, los PDF de los documentos.
+  ///
+  /// Va aparte de `_enviar` porque aquello descodifica la respuesta como JSON
+  /// y aqui llega un binario. El error si sigue siendo JSON, asi que se lee
+  /// igual que siempre y sale como ApiExcepcion.
+  Future<List<int>> archivo(String ruta) async {
+    final url = Uri.parse('${Entorno.apiUrl}$ruta');
+    final cabeceras = <String, String>{};
+
+    final token = await _sesion.token();
+    if (token != null) cabeceras['Authorization'] = 'Bearer $token';
+
+    http.Response respuesta;
+    try {
+      respuesta = await _http
+          .get(url, headers: cabeceras)
+          .timeout(Entorno.timeout);
+    } catch (_) {
+      throw ApiExcepcion(
+        'No pudimos conectar con el servidor.\n${Entorno.apiUrl}',
+      );
+    }
+
+    if (respuesta.statusCode >= 400) {
+      final mapa = _errorDe(respuesta.body);
+      throw ApiExcepcion(
+        mapa['message'] as String? ?? 'Error ${respuesta.statusCode}',
+        codigo: mapa['statusCode'] as int? ?? respuesta.statusCode,
+      );
+    }
+
+    return respuesta.bodyBytes;
+  }
+
+  /// El cuerpo de un error, o vacio si no vino en JSON.
+  Map<String, dynamic> _errorDe(String cuerpo) {
+    if (cuerpo.isEmpty) return const {};
+    try {
+      final datos = jsonDecode(cuerpo);
+      return datos is Map<String, dynamic> ? datos : const {};
+    } catch (_) {
+      return const {};
+    }
+  }
 }

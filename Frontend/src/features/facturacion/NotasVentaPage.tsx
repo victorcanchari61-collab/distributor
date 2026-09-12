@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
+  AccionPdf,
   AgregarProductoPanel,
   Alert,
   Badge,
@@ -772,6 +773,9 @@ export function NotasVentaPage() {
           <RowAction tone="view" label={`Ver historial de ${row.numero}`} onClick={() => abrirHistorial(row)}>
             <History size={15} />
           </RowAction>
+          {puede('fact.notaventa', 'exportar') && (
+            <AccionPdf documento="notaventa" id={row.id} numero={row.numero} />
+          )}
           {puede('fact.notaventa', 'editar') && (
             <RowAction
               label={`Editar ${row.numero}`}

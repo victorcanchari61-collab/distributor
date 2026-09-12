@@ -108,6 +108,65 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   return data as T
 }
 
+/**
+ * Baja un archivo que sirve la API — hoy, los PDF de los documentos.
+ *
+ * No usa apiFetch porque aquello lee la respuesta como JSON y aquí llega un
+ * binario. Y no puede ser un enlace normal: el endpoint pide el token, y un
+ * `<a href>` no manda cabeceras, así que hay que traer el archivo y entregarlo
+ * desde memoria.
+ *
+ * El error sí viene en JSON: si falla, el cuerpo es el mismo problema de
+ * siempre y se levanta como ApiError, incluido el 403 que abre el modal de
+ * pedir permiso.
+ */
+export async function descargarArchivo(path: string, nombrePorDefecto: string): Promise<void> {
+  const headers = new Headers()
+  const token = getToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, { headers })
+  } catch {
+    throw new ApiError('No pudimos conectar con el servidor. Revisa tu conexión.', 0)
+  }
+
+  if (!response.ok) {
+    const problem = (await response.json().catch(() => ({}))) as ApiErrorBody
+    const permiso =
+      response.status === 403 && problem.submodulo && problem.accion
+        ? { submodulo: problem.submodulo, accion: problem.accion }
+        : undefined
+
+    if (permiso && permiso.accion !== 'ver') avisarPermisoNegado?.(permiso)
+
+    throw new ApiError(
+      problem.message ?? `Error ${response.status}`,
+      problem.statusCode ?? response.status,
+      problem.errors ?? [],
+      permiso,
+    )
+  }
+
+  // El backend ya eligió el nombre del archivo, con el número del documento
+  // dentro; el de aquí solo cubre el caso de que no venga la cabecera.
+  const disposicion = response.headers.get('Content-Disposition') ?? ''
+  const nombre = /filename="?([^";]+)"?/i.exec(disposicion)?.[1] ?? nombrePorDefecto
+
+  const url = URL.createObjectURL(await response.blob())
+  try {
+    const enlace = document.createElement('a')
+    enlace.href = url
+    enlace.download = nombre
+    enlace.click()
+  } finally {
+    // Sin esto el archivo se queda en memoria hasta recargar la página, y
+    // quien imprime veinte documentos seguidos los acumula todos.
+    URL.revokeObjectURL(url)
+  }
+}
+
 export const api = {
   get: <T>(path: string, options?: RequestOptions) => apiFetch<T>(path, { ...options, method: 'GET' }),
   post: <T>(path: string, body?: unknown, options?: RequestOptions) =>

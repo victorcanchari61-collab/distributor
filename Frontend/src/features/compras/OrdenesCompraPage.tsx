@@ -12,6 +12,7 @@ import {
   Undo2,
 } from 'lucide-react'
 import {
+  AccionPdf,
   AgregarProductoPanel,
   Alert,
   Badge,
@@ -573,6 +574,9 @@ export function OrdenesCompraPage() {
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
             <Eye size={15} />
           </RowAction>
+          {puede('compras.ordenes', 'exportar') && (
+            <AccionPdf documento="ordencompra" id={row.id} numero={row.numero} />
+          )}
           {puede('compras.ordenes', 'editar') && (
             <RowAction
               label={`Editar ${row.numero}`}
