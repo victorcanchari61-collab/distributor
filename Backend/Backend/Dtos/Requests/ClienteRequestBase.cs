@@ -37,6 +37,9 @@ public abstract class ClienteRequestBase
     /// </summary>
     public string? RutaNombre { get; set; }
 
+    /// <summary>Quién atiende al cliente. Cualquier usuario, no solo los del rol Vendedor.</summary>
+    public int? VendedorId { get; set; }
+
     /// <summary>El mercado, zona o punto de reparto donde está el puesto.</summary>
     public int? MercadoId { get; set; }
 

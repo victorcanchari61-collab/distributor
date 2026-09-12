@@ -246,6 +246,12 @@ public class AppDbContext : DbContext
 
             entity.HasOne(c => c.Distrito).WithMany()
                 .HasForeignKey(c => c.DistritoId).OnDelete(DeleteBehavior.Restrict);
+
+            // Restrict como los demas: borrar al usuario dejaria clientes
+            // apuntando a alguien que ya no existe. Si se va de la empresa se
+            // desactiva, y sus clientes se reasignan a mano.
+            entity.HasOne(c => c.Vendedor).WithMany()
+                .HasForeignKey(c => c.VendedorId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Mercado>(entity =>

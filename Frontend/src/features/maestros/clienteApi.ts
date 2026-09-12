@@ -25,6 +25,9 @@ export interface ClienteResponse {
   mercadoId: number | null
   /** Nombre del mercado, zona o punto de reparto. */
   mercado: string | null
+  vendedorId: number | null
+  /** Nombre de quien atiende al cliente. */
+  vendedor: string | null
   activo: boolean
   fechaCreacion: string
 }
@@ -47,6 +50,8 @@ export interface ClienteRequest {
   mercadoId?: number | null
   /** Solo para importación: si no hay mercadoId, crea o reutiliza uno con este nombre. */
   mercadoNombre?: string | null
+  /** Quién atiende al cliente. Cualquier usuario, no solo los del rol Vendedor. */
+  vendedorId?: number | null
 }
 
 export interface UpdateClienteRequest extends ClienteRequest {

@@ -20,6 +20,8 @@ public class ClienteResponse
     public string? Ruta { get; set; }
     public int? MercadoId { get; set; }
     public string? Mercado { get; set; }
+    public int? VendedorId { get; set; }
+    public string? Vendedor { get; set; }
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 }

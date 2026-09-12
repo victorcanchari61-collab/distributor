@@ -31,6 +31,17 @@ public class Cliente
     public int? MercadoId { get; set; }
     public Mercado? Mercado { get; set; }
 
+    /// <summary>
+    /// Quién atiende a este cliente.
+    ///
+    /// Es un Usuario cualquiera y no se limita a los del rol Vendedor a
+    /// propósito: en una distribuidora chica al cliente lo atiende quien toca
+    /// — el dueño, el que reparte, la persona del mostrador — y amarrarlo a un
+    /// rol obligaría a inventar roles para poder asignar a alguien.
+    /// </summary>
+    public int? VendedorId { get; set; }
+    public Usuario? Vendedor { get; set; }
+
     public bool Activo { get; set; } = true;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }

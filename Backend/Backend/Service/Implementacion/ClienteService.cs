@@ -14,6 +14,7 @@ public class ClienteService : IClienteService
     private readonly IMercadoRepository _mercados;
     private readonly IRutaRepository _rutas;
     private readonly IUbigeoRepository _ubigeo;
+    private readonly IUsuarioRepository _usuarios;
     private readonly IValidator<CreateClienteRequest> _createValidator;
     private readonly IValidator<UpdateClienteRequest> _updateValidator;
     private readonly INotificador _notificador;
@@ -22,6 +23,7 @@ public class ClienteService : IClienteService
         IMercadoRepository mercados,
         IRutaRepository rutas,
         IUbigeoRepository ubigeo,
+        IUsuarioRepository usuarios,
         IValidator<CreateClienteRequest> createValidator,
         IValidator<UpdateClienteRequest> updateValidator,
         INotificador notificador)
@@ -30,6 +32,7 @@ public class ClienteService : IClienteService
         _mercados = mercados;
         _rutas = rutas;
         _ubigeo = ubigeo;
+        _usuarios = usuarios;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _notificador = notificador;
@@ -76,7 +79,7 @@ public class ClienteService : IClienteService
 
         var cliente = new Cliente();
         Aplicar(cliente, request, await ResolverMercadoAsync(request), await ResolverRutaAsync(request),
-            await ResolverDistritoAsync(request));
+            await ResolverDistritoAsync(request), await ResolverVendedorAsync(request));
 
         await _repository.AddAsync(cliente);
         var response = MapToResponse(cliente);
@@ -96,7 +99,7 @@ public class ClienteService : IClienteService
         }
 
         Aplicar(cliente, request, await ResolverMercadoAsync(request), await ResolverRutaAsync(request),
-            await ResolverDistritoAsync(request));
+            await ResolverDistritoAsync(request), await ResolverVendedorAsync(request));
         cliente.Activo = request.Activo;
 
         await _repository.UpdateAsync(cliente);
@@ -185,7 +188,7 @@ public class ClienteService : IClienteService
                     }
 
                     Aplicar(existente, fila, await ResolverMercadoAsync(fila), await ResolverRutaAsync(fila),
-                        await ResolverDistritoAsync(fila));
+                        await ResolverDistritoAsync(fila), await ResolverVendedorAsync(fila));
                     existente.Activo = true;
                     await _repository.UpdateAsync(existente);
                     resultado.Actualizados++;
@@ -194,7 +197,7 @@ public class ClienteService : IClienteService
 
                 var cliente = new Cliente();
                 Aplicar(cliente, fila, await ResolverMercadoAsync(fila), await ResolverRutaAsync(fila),
-                    await ResolverDistritoAsync(fila));
+                    await ResolverDistritoAsync(fila), await ResolverVendedorAsync(fila));
                 await _repository.AddAsync(cliente);
                 resultado.Creados++;
             }
@@ -236,7 +239,7 @@ public class ClienteService : IClienteService
     }
 
     private static void Aplicar(Cliente cliente, ClienteRequestBase request, Mercado? mercado, Ruta? ruta,
-        Distrito? distrito)
+        Distrito? distrito, Usuario? vendedor)
     {
         cliente.Documento = request.Documento.Trim();
         // Si el usuario eligio el tipo se respeta; si no (importacion), se deduce
@@ -255,6 +258,32 @@ public class ClienteService : IClienteService
         cliente.Ruta = ruta;
         cliente.MercadoId = mercado?.Id;
         cliente.Mercado = mercado;
+        // El 0 del formulario significa "sin asignar": se guarda como nulo.
+        cliente.VendedorId = vendedor?.Id;
+        cliente.Vendedor = vendedor;
+    }
+
+    /// <summary>
+    /// Resuelve el vendedor: cualquier usuario activo, no solo los del rol
+    /// Vendedor.
+    ///
+    /// Se comprueba que exista antes de guardar para que un id inventado
+    /// devuelva un mensaje claro y no un error de base de datos.
+    /// </summary>
+    private async Task<Usuario?> ResolverVendedorAsync(ClienteRequestBase request)
+    {
+        // 0 es "sin asignar": es lo que manda el formulario cuando se deja vacío.
+        if (request.VendedorId is not > 0) return null;
+
+        var usuario = await _usuarios.GetByIdAsync(request.VendedorId.Value)
+            ?? throw new BadRequestException("El vendedor indicado no existe");
+
+        if (!usuario.Activo)
+        {
+            throw new BadRequestException("El vendedor indicado está desactivado");
+        }
+
+        return usuario;
     }
 
     /// <summary>
@@ -397,6 +426,8 @@ public class ClienteService : IClienteService
             Ruta = cliente.Ruta?.Nombre,
             MercadoId = cliente.MercadoId,
             Mercado = cliente.Mercado?.Nombre,
+            VendedorId = cliente.VendedorId,
+            Vendedor = cliente.Vendedor?.Nombre,
             Activo = cliente.Activo,
             FechaCreacion = cliente.FechaCreacion
         };

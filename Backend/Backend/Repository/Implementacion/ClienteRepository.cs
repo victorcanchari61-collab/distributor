@@ -14,12 +14,12 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
     }
 
     public override async Task<Cliente?> GetByIdAsync(int id) =>
-        await DbSet.Include(c => c.Mercado).Include(c => c.Ruta)
+        await DbSet.Include(c => c.Mercado).Include(c => c.Ruta).Include(c => c.Vendedor)
             .Include(c => c.Distrito!).ThenInclude(d => d.Provincia!).ThenInclude(p => p.Departamento)
             .FirstOrDefaultAsync(c => c.Id == id);
 
     public override async Task<IEnumerable<Cliente>> GetAllAsync() =>
-        await DbSet.Include(c => c.Mercado).Include(c => c.Ruta)
+        await DbSet.Include(c => c.Mercado).Include(c => c.Ruta).Include(c => c.Vendedor)
             .Include(c => c.Distrito!).ThenInclude(d => d.Provincia!).ThenInclude(p => p.Departamento)
             .ToListAsync();
 
@@ -46,6 +46,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
         var query = DbSet
             .Include(c => c.Mercado)
             .Include(c => c.Ruta)
+            .Include(c => c.Vendedor)
             .Include(c => c.Distrito!).ThenInclude(d => d.Provincia!).ThenInclude(p => p.Departamento)
             .AsNoTracking()
             .AsQueryable();

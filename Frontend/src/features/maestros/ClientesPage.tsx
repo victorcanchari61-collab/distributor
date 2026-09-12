@@ -35,6 +35,8 @@ import { ubigeoApi } from '../../lib/ubigeoApi'
 import type { DepartamentoResponse, DistritoResponse, ProvinciaResponse } from '../../lib/ubigeoApi'
 import { mercadoApi, rutaApi } from '../tms'
 import type { MercadoResponse, RutaResponse } from '../tms'
+import { usuarioApi } from '../config/usuarioApi'
+import type { UsuarioResponse } from '../config/usuarioApi'
 import { clienteApi } from './clienteApi'
 import type { ClienteRequest, ClienteResponse, ResumenClientes } from './clienteApi'
 
@@ -49,6 +51,7 @@ const VACIO: ClienteRequest = {
   diaVisita: '',
   rutaId: 0,
   mercadoId: 0,
+  vendedorId: 0,
 }
 
 const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO']
@@ -58,6 +61,7 @@ export function ClientesPage() {
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [mercados, setMercados] = useState<MercadoResponse[]>([])
   const [rutas, setRutas] = useState<RutaResponse[]>([])
+  const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
   const [departamentos, setDepartamentos] = useState<DepartamentoResponse[]>([])
   const [provincias, setProvincias] = useState<ProvinciaResponse[]>([])
   const [distritos, setDistritos] = useState<DistritoResponse[]>([])
@@ -118,10 +122,11 @@ export function ClientesPage() {
   /** Todo lo que no cambia al paginar: catálogos del formulario y el resumen. */
   const cargarApoyo = useCallback(async () => {
     try {
-      const [res, merc, rts, deps, provs, dists] = await Promise.all([
+      const [res, merc, rts, usrs, deps, provs, dists] = await Promise.all([
         clienteApi.resumen(),
         mercadoApi.getAll(),
         rutaApi.getAll(),
+        usuarioApi.getAll(),
         ubigeoApi.departamentos(),
         ubigeoApi.provincias(),
         ubigeoApi.distritos(),
@@ -129,6 +134,7 @@ export function ClientesPage() {
       setResumen(res)
       setMercados(merc)
       setRutas(rts)
+      setUsuarios(usrs)
       setDepartamentos(deps)
       setProvincias(provs)
       setDistritos(dists)
@@ -169,6 +175,7 @@ export function ClientesPage() {
       diaVisita: cliente.diaVisita ?? '',
       rutaId: cliente.rutaId ?? 0,
       mercadoId: cliente.mercadoId ?? 0,
+      vendedorId: cliente.vendedorId ?? 0,
     })
     setUbigeoSel({
       departamentoId: cliente.departamentoId ?? 0,
@@ -392,6 +399,13 @@ export function ClientesPage() {
       align: 'right',
       filterType: 'select',
       filterOptions: opcionesDistintas(resumen?.mercados),
+    },
+    {
+      key: 'vendedor',
+      label: 'Vendedor',
+      filterType: 'select',
+      filterOptions: usuarios.map((u) => ({ value: u.nombre, label: u.nombre })),
+      render: (row) => row.vendedor ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'fechaCreacion',
@@ -621,6 +635,24 @@ export function ClientesPage() {
               options={[
                 { value: 0, label: 'Sin ruta' },
                 ...rutas.filter((r) => r.activo).map((r) => ({ value: r.id, label: r.nombre })),
+              ]}
+            />
+
+            {/*
+              Cualquier usuario, no solo los del rol Vendedor: en una
+              distribuidora chica al cliente lo atiende quien toca — el dueño,
+              el que reparte — y filtrar por rol obligaria a inventar roles
+              para poder asignar a alguien.
+            */}
+            <Desplegable
+              label="Vendedor"
+              optional
+              placeholder="Sin asignar"
+              value={form.vendedorId ?? 0}
+              onChange={(v) => setForm({ ...form, vendedorId: Number(v) })}
+              options={[
+                { value: 0, label: 'Sin asignar' },
+                ...usuarios.filter((u) => u.activo).map((u) => ({ value: u.id, label: u.nombre })),
               ]}
             />
 
