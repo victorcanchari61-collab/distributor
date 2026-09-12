@@ -602,21 +602,14 @@ export function ClientesPage() {
               onChange={(e) => setForm({ ...form, telefono: e.target.value })}
             />
 
-            <label className="block">
-              <span className="ui-label mb-1.5">Día de visita</span>
-              <select
-                value={form.diaVisita ?? ''}
-                onChange={(e) => setForm({ ...form, diaVisita: e.target.value })}
-                className="h-[var(--height-field-md)] w-full cursor-pointer rounded-field border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-ink-soft"
-              >
-                <option value="">Sin definir</option>
-                {DIAS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Desplegable
+              label="Día de visita"
+              optional
+              placeholder="Sin definir"
+              value={form.diaVisita ?? ''}
+              onChange={(v) => setForm({ ...form, diaVisita: String(v) })}
+              options={DIAS.map((d) => ({ value: d, label: d }))}
+            />
 
             {/* El + crea la ruta sin salir del formulario. */}
             <Desplegable
