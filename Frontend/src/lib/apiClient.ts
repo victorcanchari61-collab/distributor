@@ -120,7 +120,10 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
  * siempre y se levanta como ApiError, incluido el 403 que abre el modal de
  * pedir permiso.
  */
-export async function descargarArchivo(path: string, nombrePorDefecto: string): Promise<void> {
+export async function obtenerArchivo(
+  path: string,
+  nombrePorDefecto: string,
+): Promise<{ blob: Blob; nombre: string }> {
   const headers = new Headers()
   const token = getToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
@@ -154,7 +157,12 @@ export async function descargarArchivo(path: string, nombrePorDefecto: string): 
   const disposicion = response.headers.get('Content-Disposition') ?? ''
   const nombre = /filename="?([^";]+)"?/i.exec(disposicion)?.[1] ?? nombrePorDefecto
 
-  const url = URL.createObjectURL(await response.blob())
+  return { blob: await response.blob(), nombre }
+}
+
+/** Guarda en el disco un archivo ya traído con {@link obtenerArchivo}. */
+export function guardarArchivo(blob: Blob, nombre: string): void {
+  const url = URL.createObjectURL(blob)
   try {
     const enlace = document.createElement('a')
     enlace.href = url

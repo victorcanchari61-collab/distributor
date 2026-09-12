@@ -103,8 +103,10 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
             new("HORA", doc.Fecha.ToString("HH:mm")),
         };
         // Lo propio de cada documento — almacén, forma de pago, orden — se
-        // reparte a la derecha, que es la columna que sobra sitio.
-        derecha.AddRange(doc.Datos);
+        // reparte a la derecha, que es la columna donde sobra sitio. Las
+        // etiquetas se igualan en mayúsculas: mezcladas con las de arriba, la
+        // rejilla parece dos tablas pegadas en vez de una.
+        derecha.AddRange(doc.Datos.Select(d => d with { Etiqueta = d.Etiqueta.ToUpperInvariant() }));
         if (doc.Usuario is { Length: > 0 } usuario)
             derecha.Insert(0, new DatoImprimible("VENDEDOR", usuario));
 
