@@ -267,11 +267,6 @@ const menuGrupos = <MenuGrupo>[
         icono: Icons.storefront_outlined,
       ),
       MenuItem(
-        id: 'dms.cobranzas',
-        titulo: 'Cobranzas',
-        icono: Icons.account_balance_wallet_outlined,
-      ),
-      MenuItem(
         id: 'dms.devoluciones',
         titulo: 'Devoluciones',
         icono: Icons.undo,

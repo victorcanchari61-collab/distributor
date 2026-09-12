@@ -139,7 +139,6 @@ public static class CatalogoPermisos
 
             // --- DMS ---
             ["dms.visitas"] = Documento,
-            ["dms.cobranzas"] = [Accion.Ver, Accion.Cobrar, Accion.Exportar],
             ["dms.devoluciones"] = Documento,
             ["dms.evidencias"] = Consulta,
 

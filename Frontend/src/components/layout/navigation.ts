@@ -181,7 +181,6 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: Store,
     items: [
       { id: 'dms.visitas', label: 'Visitas', icon: Store, pending: true },
-      { id: 'dms.cobranzas', label: 'Cobranzas', icon: Wallet, pending: true },
       { id: 'dms.devoluciones', label: 'Devoluciones', icon: Undo2, pending: true },
       { id: 'dms.evidencias', label: 'Evidencias', icon: ClipboardCheck, pending: true },
     ],
