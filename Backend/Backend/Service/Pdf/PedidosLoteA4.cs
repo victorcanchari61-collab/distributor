@@ -18,6 +18,15 @@ namespace Backend.Service.Pdf;
 /// </summary>
 public sealed class PedidosLoteA4(IReadOnlyList<DocumentoImprimible> pedidos) : IDocument
 {
+    /// <summary>
+    /// Alto mínimo de la tabla, en milímetros.
+    ///
+    /// Es lo que queda de la media hoja apaisada después de la cabecera, la
+    /// rejilla de datos y el pie. Fijarlo aquí es lo que hace que todas las
+    /// copias salgan con la misma geometría.
+    /// </summary>
+    private const float TablaMm = 120;
+
     public void Compose(IDocumentContainer container)
     {
         foreach (var pedido in pedidos)
@@ -53,7 +62,22 @@ public sealed class PedidosLoteA4(IReadOnlyList<DocumentoImprimible> pedidos) : 
 
             col.Item().Element(c => Cabecera(c, doc));
             col.Item().PaddingTop(4).Element(c => Datos(c, doc));
-            col.Item().PaddingTop(4).Element(c => Tabla(c, doc));
+
+            /*
+             * Alto MINIMO, no fijo ni estirado.
+             *
+             * Minimo, para que un pedido de tres lineas y otro de catorce
+             * tengan el marco del mismo alto y el "SON" y la caja del total
+             * caigan siempre en el mismo sitio: si no, las dos mitades de la
+             * hoja quedan descuadradas y el corte por el medio no sirve.
+             *
+             * Y minimo y no fijo porque un pedido mas largo tiene que poder
+             * seguir en otra hoja en vez de quedarse sin sitio. Estirarlo al
+             * total disponible tampoco vale: se come el hueco del pie y manda
+             * los totales a la pagina siguiente.
+             */
+            col.Item().PaddingTop(4).MinHeight(TablaMm, Unit.Millimetre).Element(c => Tabla(c, doc));
+
             col.Item().PaddingTop(3).Element(c => Cierre(c, doc));
         });
     }

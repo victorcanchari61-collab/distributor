@@ -17,6 +17,12 @@ namespace Backend.Service.Pdf;
 /// </summary>
 public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
 {
+    /// <summary>
+    /// Alto mínimo de la tabla, en milímetros: lo que queda de la hoja tras la
+    /// cabecera, la rejilla de datos y el bloque de totales.
+    /// </summary>
+    private const float TablaMm = 140;
+
     public void Compose(IDocumentContainer container) =>
         container.Page(page =>
         {
@@ -142,7 +148,15 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
     private void Contenido(IContainer container) =>
         container.Column(col =>
         {
-            col.Item().Element(Tabla);
+            /*
+             * Alto minimo: el importe en letras y los totales caen siempre a
+             * la misma altura, tenga el documento tres lineas o treinta.
+             *
+             * Minimo y no fijo para que un documento largo pueda seguir en la
+             * hoja siguiente en lugar de quedarse sin sitio.
+             */
+            col.Item().MinHeight(TablaMm, Unit.Millimetre).Element(Tabla);
+
             col.Item().PaddingTop(6).Element(EnLetras);
             col.Item().PaddingTop(6).Element(Cierre);
         });
