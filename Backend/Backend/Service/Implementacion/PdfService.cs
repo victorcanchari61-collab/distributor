@@ -31,19 +31,17 @@ public class PdfService(
         var doc = await ArmarPedidoAsync(id);
 
         /*
-         * En hoja, un pedido sale con las dos copias — la misma maqueta que el
-         * lote de un despacho.
+         * Tres formatos, no dos: la hoja de siempre, el ticket, y la hoja con
+         * las dos copias.
          *
-         * No es solo por uniformidad: el papel del pedido se entrega y se
-         * pierde, y cuando hay que reponerlo se necesitan otra vez los dos, el
-         * del cliente y el que vuelve firmado. Sacar uno solo obligaria a
-         * imprimir dos veces y recortar.
-         *
-         * El ticket se queda como esta: un rollo no se corta por la mitad.
+         * El de dos copias NO reemplaza al normal — se suma. El papel del
+         * pedido se entrega y se pierde, y para reponerlo hacen falta otra vez
+         * los dos, el del cliente y el que vuelve firmado; pero para archivar
+         * o consultar sigue sirviendo la hoja simple.
          */
-        var contenido = formato == FormatoPdf.Ticket
-            ? Generar(doc, formato)
-            : new PedidosLoteA4([doc]).GeneratePdf();
+        var contenido = formato == FormatoPdf.Copias
+            ? new PedidosLoteA4([doc]).GeneratePdf()
+            : Generar(doc, formato);
 
         return (contenido, Nombre("pedido", doc.Numero, formato));
     }
@@ -413,7 +411,12 @@ public class PdfService(
     private static string Nombre(string tipo, string numero, FormatoPdf formato)
     {
         var limpio = string.Concat(numero.Select(c => char.IsLetterOrDigit(c) ? c : '-'));
-        var sufijo = formato == FormatoPdf.Ticket ? "-ticket" : "";
+        var sufijo = formato switch
+        {
+            FormatoPdf.Ticket => "-ticket",
+            FormatoPdf.Copias => "-copias",
+            _ => "",
+        };
         return $"{tipo}-{limpio}{sufijo}.pdf";
     }
 }

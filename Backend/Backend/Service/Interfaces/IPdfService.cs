@@ -8,6 +8,13 @@ public enum FormatoPdf
 
     /// <summary>Rollo térmico de 80 mm, el del reparto.</summary>
     Ticket,
+
+    /// <summary>
+    /// Hoja apaisada con las dos copias, original y copia, para cortar por el
+    /// medio. Solo aplica a los pedidos: es el papel que se entrega y que hay
+    /// que reponer cuando el repartidor lo pierde.
+    /// </summary>
+    Copias,
 }
 
 /// <summary>

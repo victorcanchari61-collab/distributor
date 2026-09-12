@@ -19,7 +19,7 @@ export type DocumentoPdf =
   | 'prestamos'
   | 'despacho'
 
-type Formato = 'a4' | 'ticket'
+type Formato = 'a4' | 'ticket' | 'copias'
 
 const TITULOS: Record<DocumentoPdf, string> = {
   pedido: 'Pedido',
@@ -48,6 +48,15 @@ const INVENTARIO: DocumentoPdf[] = ['ajustes', 'transferencias', 'recepciones', 
  * seria ofrecer algo que no existe.
  */
 const SOLO_A4: DocumentoPdf[] = ['despacho']
+
+/*
+ * Documentos que además tienen hoja de dos copias.
+ *
+ * Solo el pedido: es el papel que se entrega en mano y que el repartidor
+ * pierde, así que hay que poder reponer los dos — el del cliente y el que
+ * vuelve firmado — sin imprimir dos veces y recortar.
+ */
+const CON_COPIAS: DocumentoPdf[] = ['pedido']
 
 const rutaDe = (documento: DocumentoPdf) =>
   INVENTARIO.includes(documento) ? `/inventario/${documento}` : `/${documento}`
@@ -106,6 +115,7 @@ function VisorPdf({
   const [error, setError] = useState('')
   const marco = useRef<HTMLIFrameElement>(null)
   const soloA4 = SOLO_A4.includes(documento)
+  const conCopias = CON_COPIAS.includes(documento)
 
   useEffect(() => {
     let vivo = true
@@ -115,7 +125,7 @@ function VisorPdf({
       setCargando(true)
       setError('')
       try {
-        const query = formato === 'ticket' ? '?formato=ticket' : ''
+        const query = formato === 'a4' ? '' : `?formato=${formato}`
         const archivo = await obtenerArchivo(
           `${rutaDe(documento)}/${id}/pdf${query}`,
           `${documento}-${numero}.pdf`,
@@ -195,6 +205,11 @@ function VisorPdf({
             <Pestana activa={formato === 'a4'} onClick={() => setFormato('a4')}>
               A4
             </Pestana>
+            {conCopias && (
+              <Pestana activa={formato === 'copias'} onClick={() => setFormato('copias')}>
+                Dos copias
+              </Pestana>
+            )}
             <Pestana activa={formato === 'ticket'} onClick={() => setFormato('ticket')}>
               Ticket 80 mm
             </Pestana>

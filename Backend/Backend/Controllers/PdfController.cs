@@ -82,10 +82,12 @@ public class PdfController(IPdfService pdf) : ControllerBase
     /// documento para leer, y negarse a imprimirlo por una letra ayudaría poco
     /// a quien está despachando.
     /// </summary>
-    private static FormatoPdf Formato(string? formato) =>
-        string.Equals(formato, "ticket", StringComparison.OrdinalIgnoreCase)
-            ? FormatoPdf.Ticket
-            : FormatoPdf.A4;
+    private static FormatoPdf Formato(string? formato) => formato?.ToLowerInvariant() switch
+    {
+        "ticket" => FormatoPdf.Ticket,
+        "copias" => FormatoPdf.Copias,
+        _ => FormatoPdf.A4,
+    };
 
     private IActionResult Archivo((byte[] Contenido, string Nombre) archivo) =>
         File(archivo.Contenido, "application/pdf", archivo.Nombre);
