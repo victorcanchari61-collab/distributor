@@ -569,6 +569,7 @@ export function OrdenesCompraPage() {
       cardIcon={ClipboardList}
       searchPlaceholder="Buscar por número, proveedor..."
       empty={cargando ? 'Cargando órdenes...' : 'Todavía no hay órdenes de compra registradas.'}
+      actionsWidth={180}
       rowActions={(row) => (
         <>
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>

@@ -752,7 +752,7 @@ export function NotasVentaPage() {
       columns={columns}
       // 4 íconos por fila (Ver, Historial, Editar, Anular) más 6 columnas de
       // datos: el ancho por defecto de Acciones queda muy justo.
-      actionsWidth={150}
+      actionsWidth={180}
       rows={notas}
       servidor={{
         total: totalRegistros,

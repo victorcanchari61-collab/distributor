@@ -617,7 +617,7 @@ export function PedidosPage() {
       columns={columns}
       // 5 íconos por fila (Ver, Historial, Editar, Confirmar, Anular): el
       // ancho por defecto de Acciones se queda corto y fuerza scroll horizontal.
-      actionsWidth={175}
+      actionsWidth={205}
       rows={pedidos}
       servidor={{
         total: totalRegistros,

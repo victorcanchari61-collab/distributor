@@ -492,8 +492,17 @@ export function SysDataTable<T>({
   }, [])
 
   // Anchos de columna: los arrastrados mandan; el resto se reparte por igual.
+  /*
+   * El reparto del ancho.
+   *
+   * Las columnas automaticas se reparten lo que queda DESPUES de descontar la
+   * de Acciones. Antes se repartian el 100% y la de Acciones se sumaba encima
+   * en pixeles, asi que la tabla medía siempre mas que su contenedor y
+   * aparecia un scroll horizontal aunque hubiera cuatro columnas.
+   */
   const colTemplate = useMemo(() => {
-    const auto = `${100 / Math.max(1, visible.length)}%`
+    const reservado = actions ? `${actionsWidth}px` : '0px'
+    const auto = `calc((100% - ${reservado}) / ${Math.max(1, visible.length)})`
     const cols: (string | number)[] = visible.map((col) => widths[col.key] ?? auto)
     if (actions) cols.push(actionsWidth)
     return cols

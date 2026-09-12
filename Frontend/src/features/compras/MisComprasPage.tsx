@@ -813,6 +813,7 @@ export function MisComprasPage() {
       cardIcon={ShoppingBag}
       searchPlaceholder="Buscar por número, proveedor..."
       empty={cargando ? 'Cargando compras...' : 'Todavía no hay compras registradas.'}
+      actionsWidth={180}
       rowActions={(row) => (
         <>
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
