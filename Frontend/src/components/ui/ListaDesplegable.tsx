@@ -213,7 +213,11 @@ export function ListaDesplegable({
             style={{ top: pos.top, left: pos.left, width: pos.ancho }}
             className={cn(
               'fixed z-50 max-w-[calc(100vw-2rem)] origin-top overflow-hidden',
-              'rounded-panel bg-white shadow-xl shadow-zinc-900/20 ring-1 ring-zinc-200',
+              // rounded-field y no rounded-panel: los 20px del panel son para
+              // un modal grande, y en una lista de 200 px dejan un marco vacio
+              // alrededor de la unica fila. Ademas asi el menu tiene el mismo
+              // radio que el campo del que sale.
+              'rounded-field bg-white shadow-xl shadow-zinc-900/20 ring-1 ring-zinc-200',
               'transition-all duration-150',
               visible ? 'translate-y-0 scale-100 opacity-100' : '-translate-y-1 scale-95 opacity-0',
             )}
