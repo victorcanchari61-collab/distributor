@@ -273,6 +273,14 @@ export function NotasVentaPage() {
       )
     }
 
+    // Al contado el dinero entra ahora. Sin esto quedaba una venta cobrada que
+    // nadie pagó y que, por no ser a crédito, tampoco salía en cuentas por cobrar.
+    if (!editando && formaPago === 'CONTADO' && totalPagado < total - 0.001) {
+      return setErrorForm(
+        `Una venta al contado se cobra completa: faltan S/ ${(total - totalPagado).toFixed(2)} por registrar.`,
+      )
+    }
+
     const body: CrearNotaVentaRequest = {
       clienteId,
       almacenId,

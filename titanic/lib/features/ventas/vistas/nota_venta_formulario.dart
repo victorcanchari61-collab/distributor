@@ -113,8 +113,15 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
       _errorCliente = _clienteId == null ? 'Elige el cliente.' : null;
       _errorAlmacen = _almacenId == null ? 'Elige el almacén.' : null;
       _errorLineas = _lineas.isEmpty ? 'Agrega al menos un producto.' : null;
-      _errorPagos = _formaPago == FormaPagoVenta.contado && _totalPagado > _total + 0.001
+      // Al contado el dinero entra ahora: ni de menos (quedaria una venta
+      // cobrada que nadie pago y que, por no ser a credito, tampoco sale en
+      // cuentas por cobrar) ni de mas.
+      _errorPagos = _formaPago != FormaPagoVenta.contado
+          ? null
+          : _totalPagado > _total + 0.001
           ? 'Lo pagado (S/ ${_totalPagado.toStringAsFixed(2)}) no puede superar el total.'
+          : _totalPagado < _total - 0.001
+          ? 'Una venta al contado se cobra completa: faltan S/ ${(_total - _totalPagado).toStringAsFixed(2)}.'
           : null;
     });
     return _errorCliente == null &&
