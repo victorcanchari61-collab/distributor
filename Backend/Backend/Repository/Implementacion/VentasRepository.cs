@@ -54,6 +54,8 @@ public class VentasRepository : IVentasRepository
             .Include(p => p.ListaPrecio)
             .Include(p => p.Almacen)
             .Include(p => p.Usuario)
+            // Para saber si ya se convirtio, y a que venta.
+            .Include(p => p.Ventas)
             .Include(p => p.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(p => p.Detalle).ThenInclude(d => d.Presentacion);
 

@@ -43,6 +43,10 @@ public class PedidoResponse
     public int? AlmacenId { get; set; }
     public string? Almacen { get; set; }
 
+    /// <summary>La venta vigente que salió de este pedido, si ya se convirtió.</summary>
+    public int? NotaVentaId { get; set; }
+    public string? NotaVentaNumero { get; set; }
+
     public decimal Total { get; set; }
     public List<LineaVentaResponse> Detalle { get; set; } = [];
 }

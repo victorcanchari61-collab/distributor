@@ -61,7 +61,12 @@ public class PedidoController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] CrearPedidoRequest request) =>
         Ok(await _ventas.ActualizarPedidoAsync(id, request));
 
-    /// <summary>Se despacha: cierra el pedido y crea la NotaVenta, que descuenta el stock.</summary>
+    /// <summary>
+    /// Convierte el pedido en venta: crea la NotaVenta, que descuenta el stock.
+    ///
+    /// No se puede dos veces mientras esa venta siga viva; si se anula, el
+    /// pedido vuelve a quedar disponible.
+    /// </summary>
     [HttpPatch("{id:int}/confirmar")]
     [Permiso("fact.pedidos", Accion.Confirmar)]
     public async Task<IActionResult> Confirmar(int id, [FromBody] ConfirmarPedidoRequest request) =>

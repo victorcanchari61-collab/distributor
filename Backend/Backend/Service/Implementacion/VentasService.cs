@@ -201,9 +201,23 @@ public class VentasService : IVentasService
 
         var pedido = await GetPedidoOrThrowAsync(id);
 
-        if (pedido.Estado != EstadoPedido.Pendiente)
+        if (pedido.Estado == EstadoPedido.Anulado)
         {
-            throw new BadRequestException("Este pedido ya fue confirmado o anulado.");
+            throw new BadRequestException("Este pedido está anulado.");
+        }
+
+        /*
+         * La regla es la venta viva, no el estado.
+         *
+         * Se mira si ya existe una nota de venta sin anular en vez de "esta
+         * confirmado": asi, cuando se anula la venta, el pedido vuelve a poder
+         * convertirse sin que haya que acordarse de tocar ningun estado a
+         * mano. El estado pasa a ser el reflejo de esto, no su origen.
+         */
+        if (VentaVigente(pedido) is NotaVenta vigente)
+        {
+            throw new BadRequestException(
+                $"Este pedido ya se convirtió en la venta {vigente.Numero}. Anúlala si necesitas rehacerla.");
         }
 
         // Un pedido no lleva pagos: la nota que nace al confirmarlo queda a
@@ -460,6 +474,21 @@ public class VentasService : IVentasService
 
         notaVenta.Estado = EstadoNotaVenta.Anulada;
         await _repository.UpdateNotaVentaAsync(notaVenta);
+
+        // El pedido del que salio vuelve a quedar disponible: sin esto se
+        // quedaria marcado como convertido para siempre y el cliente no
+        // tendria forma de recibir su mercaderia.
+        if (notaVenta.PedidoId is int pedidoId)
+        {
+            var pedido = await _repository.GetPedidoAsync(pedidoId);
+            if (pedido is not null && pedido.Estado == EstadoPedido.Confirmado)
+            {
+                pedido.Estado = EstadoPedido.Pendiente;
+                await _repository.UpdatePedidoAsync(pedido);
+                await _notificador.AvisarAsync("pedidos", "reabierto", MapPedido(pedido));
+            }
+        }
+
         await _notificador.AvisarAsync("notasventa", "anulada", MapNotaVenta(notaVenta));
     }
 
@@ -846,6 +875,15 @@ public class VentasService : IVentasService
         Anulado = d.Anulado
     };
 
+    /// <summary>
+    /// La venta viva de un pedido: la que nació de él y no está anulada.
+    ///
+    /// No puede haber dos — es lo que impide convertir el mismo pedido dos
+    /// veces —, pero sí puede haber varias anuladas detrás.
+    /// </summary>
+    private static NotaVenta? VentaVigente(Pedido p) =>
+        p.Ventas.FirstOrDefault(v => v.Estado != EstadoNotaVenta.Anulada);
+
     private static PedidoResponse MapPedido(Pedido p) => new()
     {
         Id = p.Id,
@@ -859,6 +897,8 @@ public class VentasService : IVentasService
         Observacion = p.Observacion,
         Usuario = p.Usuario?.Nombre,
         ReservaStock = p.ReservaStock,
+        NotaVentaId = VentaVigente(p)?.Id,
+        NotaVentaNumero = VentaVigente(p)?.Numero,
         AlmacenId = p.AlmacenId,
         Almacen = p.Almacen?.Nombre,
         // Una línea anulada se sigue mostrando (para no perder su rastro),

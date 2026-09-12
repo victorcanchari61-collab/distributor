@@ -420,6 +420,19 @@ export function PedidosPage() {
       render: (row) => `S/ ${row.total.toFixed(2)}`,
     },
     {
+      // El otro lado del vinculo: la nota de venta ya muestra de que pedido
+      // salio, y aqui se ve en que venta termino.
+      key: 'notaVentaNumero',
+      label: 'Venta',
+      filterable: false,
+      render: (row) =>
+        row.notaVentaNumero ? (
+          <Badge tone="success">{row.notaVentaNumero}</Badge>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
       key: 'estado',
       label: 'Estado',
       filterType: 'select',
@@ -588,7 +601,7 @@ export function PedidosPage() {
     <ListPage
       icon={<ClipboardList size={20} />}
       title="Pedidos"
-      description="Lo que pide un cliente. Al confirmarlo nace la nota de venta correspondiente."
+      description="Lo que pide un cliente. Al convertirlo nace su nota de venta."
       actions={
         puede('fact.pedidos', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
@@ -653,10 +666,15 @@ export function PedidosPage() {
           )}
           {puede('fact.pedidos', 'confirmar') && (
             <RowAction
-              label={`Confirmar y despachar ${row.numero}`}
+              label={`Convertir ${row.numero} en venta`}
               tone="success"
               disabled={row.estado !== 'PENDIENTE'}
-              disabledReason={row.estado === 'CONFIRMADO' ? 'Ya fue confirmado' : 'Está anulado'}
+              // El motivo nombra la venta: "ya fue convertido" deja buscandola.
+              disabledReason={
+                row.notaVentaNumero
+                  ? `Ya es la venta ${row.notaVentaNumero}. Anúlala para rehacerla.`
+                  : 'Está anulado'
+              }
               onClick={() => abrirConfirmar(row)}
             >
               <ShoppingBag size={15} />
@@ -717,6 +735,13 @@ export function PedidosPage() {
 
             <ResumenDocumento total={detalleAbierto.total} />
 
+            {detalleAbierto.notaVentaNumero && (
+              <p className="text-sm text-ink-soft">
+                <span className="font-semibold text-ink-muted">Nota de venta: </span>
+                {detalleAbierto.notaVentaNumero}
+              </p>
+            )}
+
             {detalleAbierto.observacion && (
               <p className="text-sm text-ink-soft">
                 <span className="font-semibold text-ink-muted">Observación: </span>
@@ -741,15 +766,15 @@ export function PedidosPage() {
         open={confirmando !== null}
         onClose={() => setConfirmando(null)}
         size="sm"
-        title={confirmando ? `Confirmar ${confirmando.numero}` : ''}
-        description="Elige de dónde sale la mercadería. El stock se descuenta al confirmar."
+        title={confirmando ? `Convertir ${confirmando.numero} en venta` : ''}
+        description="Elige de dónde sale la mercadería. Nace la nota de venta y el stock se descuenta en ese momento."
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setConfirmando(null)}>
               Cancelar
             </Button>
             <Button size="sm" loading={confGuardando} onClick={() => void confirmarDespacho()}>
-              Confirmar y despachar
+              Convertir en venta
             </Button>
           </>
         }

@@ -6,7 +6,7 @@ public static class EstadoPedido
     /// <summary>Recién registrado: el cliente todavía no se lo confirmó. Se puede editar o anular.</summary>
     public const string Pendiente = "PENDIENTE";
 
-    /// <summary>Se despachó: ya no se edita; generó su NotaVenta.</summary>
+    /// <summary>Ya se convirtió en venta: no se edita mientras esa venta siga vigente.</summary>
     public const string Confirmado = "CONFIRMADO";
 
     public const string Anulado = "ANULADO";
@@ -36,6 +36,16 @@ public class Pedido
     public DateTime Fecha { get; set; } = DateTime.UtcNow;
     public string Estado { get; set; } = EstadoPedido.Pendiente;
     public string? Observacion { get; set; }
+
+    /// <summary>
+    /// Las ventas que nacieron de este pedido.
+    ///
+    /// Es una lista y no una sola porque una venta anulada devuelve el pedido
+    /// a pendiente y se puede volver a convertir: entonces quedan dos, la
+    /// anulada y la buena. La vigente es la que no está anulada, y no puede
+    /// haber dos a la vez — eso es justo lo que impide convertir dos veces.
+    /// </summary>
+    public ICollection<NotaVenta> Ventas { get; set; } = [];
 
     /// <summary>
     /// Si aparta stock de <see cref="AlmacenId"/> mientras el pedido siga

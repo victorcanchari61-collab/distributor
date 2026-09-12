@@ -86,6 +86,9 @@ export interface PedidoResponse {
   reservaStock: boolean
   almacenId: number | null
   almacen: string | null
+  /** La venta vigente que salió de este pedido, si ya se convirtió. */
+  notaVentaId: number | null
+  notaVentaNumero: string | null
   total: number
   detalle: LineaVentaResponse[]
 }
