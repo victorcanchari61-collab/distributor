@@ -712,6 +712,27 @@ public class VentasService : IVentasService
             throw new BadRequestException("El almacén está desactivado");
         }
 
+        var forma = string.IsNullOrWhiteSpace(formaPago) ? FormaPagoVenta.Contado : formaPago;
+        var total = Math.Round(lineas.Sum(l => l.Cantidad * l.PrecioUnitario), 2);
+        var cobrado = Math.Round(pagos.Sum(p => p.Monto), 2);
+
+        // Al contado significa que el dinero entra ahora: sin esto se guardaba
+        // una venta cobrada que en realidad nadie pagó, y como no es a credito
+        // tampoco aparecia en cuentas por cobrar — la deuda desaparecia.
+        if (forma == FormaPagoVenta.Contado && cobrado != total)
+        {
+            throw new BadRequestException(cobrado < total
+                ? $"Una venta al contado se cobra completa: faltan S/ {total - cobrado:N2} por registrar."
+                : $"Los pagos (S/ {cobrado:N2}) superan el total de la venta (S/ {total:N2}).");
+        }
+
+        // A credito el adelanto es opcional, pero nunca mayor que la venta.
+        if (forma == FormaPagoVenta.Credito && cobrado > total)
+        {
+            throw new BadRequestException(
+                $"El adelanto (S/ {cobrado:N2}) supera el total de la venta (S/ {total:N2}).");
+        }
+
         var notaVenta = new NotaVenta
         {
             Numero = await _repository.SiguienteNumeroNotaVentaAsync(),
@@ -720,7 +741,7 @@ public class VentasService : IVentasService
             AlmacenId = almacenId,
             Fecha = DateTime.UtcNow,
             Estado = EstadoNotaVenta.Confirmada,
-            FormaPago = string.IsNullOrWhiteSpace(formaPago) ? FormaPagoVenta.Contado : formaPago,
+            FormaPago = forma,
             Observacion = Limpiar(observacion),
             UsuarioId = usuarioId,
             Detalle = lineas.Select(l => new NotaVentaDetalle

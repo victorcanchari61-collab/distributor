@@ -42,7 +42,7 @@
   --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 
   /* --- Radios y sombras --- */
-  --radius-field: 10px;
+  --radius-field: 6px;
   --radius-panel: 20px;
   --shadow-panel: 0 18px 45px -18px rgb(15 23 42 / 0.25);
 
