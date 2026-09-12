@@ -249,11 +249,6 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Conductores',
         icono: Icons.badge_outlined,
       ),
-      MenuItem(
-        id: 'tms.tracking',
-        titulo: 'Tracking',
-        icono: Icons.my_location_outlined,
-      ),
     ],
   ),
   MenuGrupo(

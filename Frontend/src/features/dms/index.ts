@@ -1,0 +1,3 @@
+export { VisitasPage } from './VisitasPage'
+export { visitaApi } from './visitaApi'
+export type { ConsultaVisitas, ResumenVisitas, VisitaResponse } from './visitaApi'

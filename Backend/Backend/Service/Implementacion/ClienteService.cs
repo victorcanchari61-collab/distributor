@@ -284,7 +284,7 @@ public class ClienteService : IClienteService
         cliente.Distrito = distrito;
         cliente.Telefono = Limpiar(request.Telefono);
         cliente.Email = Limpiar(request.Email);
-        cliente.DiaVisita = NormalizarDia(request.DiaVisita);
+        cliente.DiaVisita = DiaSemana.Normalizar(request.DiaVisita);
         cliente.RutaId = ruta?.Id;
         cliente.Ruta = ruta;
         cliente.MercadoId = mercado?.Id;
@@ -410,23 +410,6 @@ public class ClienteService : IClienteService
         var limpio = texto?.Trim();
         if (string.IsNullOrEmpty(limpio)) return null;
         return limpio.Equals("NULL", StringComparison.OrdinalIgnoreCase) ? null : limpio;
-    }
-
-    /// <summary>
-    /// El dia de visita viene como MARTES, Martes o MIÉRCOLES segun quien lo
-    /// escribio. Se guarda siempre en mayusculas y sin tilde, para poder
-    /// agrupar por dia sin sorpresas.
-    /// </summary>
-    private static string? NormalizarDia(string? dia)
-    {
-        var limpio = Limpiar(dia);
-        if (limpio is null) return null;
-
-        var mayus = limpio.ToUpperInvariant()
-            .Replace('Á', 'A').Replace('É', 'E').Replace('Í', 'I')
-            .Replace('Ó', 'O').Replace('Ú', 'U');
-
-        return mayus;
     }
 
     private async Task<Cliente> GetOrThrowAsync(int id)

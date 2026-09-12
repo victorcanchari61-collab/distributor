@@ -135,10 +135,11 @@ public static class CatalogoPermisos
             // Un despacho no se borra: se anula, y sus pedidos vuelven a
             // quedar libres para otro camion.
             ["tms.despachos"] = Documento,
-            ["tms.tracking"] = Consulta,
 
             // --- DMS ---
-            ["dms.visitas"] = Documento,
+            // Una lista de trabajo, no un documento: no se crea ni se anula
+            // una visita, se mira a quien toca y se le toma el pedido.
+            ["dms.visitas"] = Consulta,
             ["dms.devoluciones"] = Documento,
             ["dms.evidencias"] = Consulta,
 

@@ -19,7 +19,6 @@ import {
   IdCard,
   Landmark,
   LayoutGrid,
-  MapPinned,
   Package,
   PackageCheck,
   PackageOpen,
@@ -171,7 +170,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'tms.flota', label: 'Flota', icon: Truck },
       { id: 'tms.conductores', label: 'Conductores', icon: IdCard },
       { id: 'tms.despachos', label: 'Despachos', icon: PackageOpen },
-      { id: 'tms.tracking', label: 'Tracking', icon: MapPinned, pending: true },
     ],
   },
   {
@@ -180,7 +178,7 @@ export const NAV_GROUPS: NavGroup[] = [
     sys: 'dms',
     icon: Store,
     items: [
-      { id: 'dms.visitas', label: 'Visitas', icon: Store, pending: true },
+      { id: 'dms.visitas', label: 'Visitas', icon: Store },
       { id: 'dms.devoluciones', label: 'Devoluciones', icon: Undo2, pending: true },
       { id: 'dms.evidencias', label: 'Evidencias', icon: ClipboardCheck, pending: true },
     ],

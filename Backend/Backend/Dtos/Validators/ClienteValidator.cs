@@ -1,4 +1,5 @@
 using Backend.Dtos.Requests;
+using Backend.Models;
 using FluentValidation;
 
 namespace Backend.Dtos.Validators;
@@ -30,7 +31,11 @@ public class ClienteValidator : AbstractValidator<ClienteRequestBase>
         RuleFor(x => x.Direccion).MaximumLength(250);
         RuleFor(x => x.DistritoNombre).MaximumLength(80);
         RuleFor(x => x.Telefono).MaximumLength(40);
-        RuleFor(x => x.DiaVisita).MaximumLength(20);
+        // Lista cerrada: antes era texto libre, y un "LUNESS" se guardaba sin
+        // protestar para luego no aparecer nunca en las visitas del día.
+        RuleFor(x => x.DiaVisita)
+            .Must(d => string.IsNullOrWhiteSpace(d) || DiaSemana.EsValido(DiaSemana.Normalizar(d)!))
+            .WithMessage("El día de visita no es un día de la semana válido");
         RuleFor(x => x.RutaNombre).MaximumLength(80);
         RuleFor(x => x.Email)
             .EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email))
