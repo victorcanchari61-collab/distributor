@@ -271,9 +271,6 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
     private void Pie(IContainer container) =>
         container.PaddingTop(4).Column(col =>
         {
-            if (!string.IsNullOrWhiteSpace(doc.Aviso))
-                col.Item().PaddingBottom(2).Text(doc.Aviso).FontSize(6.5f).FontColor(Colores.Suave);
-
             col.Item().Row(row =>
             {
                 row.RelativeItem().Text($"Emitido el {DateTime.Now:dd/MM/yyyy HH:mm}")

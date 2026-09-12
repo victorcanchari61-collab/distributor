@@ -22,16 +22,6 @@ public class PdfService(
     IClienteRepository clientes,
     IProveedorRepository proveedores) : IPdfService
 {
-    /// <summary>
-    /// Lo que hay que decir en un papel que no es comprobante de pago.
-    ///
-    /// Ante SUNAT solo lo son la factura y la boleta. Quien recibe una nota de
-    /// venta tiene derecho a saber que no le sirve para sustentar gasto, y
-    /// enterarse por el propio papel y no al presentarlo.
-    /// </summary>
-    private const string AvisoNoTributario =
-        "Este documento no es un comprobante de pago electrónico. No sustenta crédito fiscal ni gasto ante SUNAT.";
-
     public async Task<(byte[], string)> PedidoAsync(int id, FormatoPdf formato)
     {
         var pedido = await ventas.GetPedidoAsync(id);
@@ -67,7 +57,6 @@ public class PdfService(
             Observacion = pedido.Observacion,
             Usuario = pedido.Usuario,
             Empresa = empresa,
-            Aviso = AvisoNoTributario,
         };
 
         return (Generar(doc, formato), Nombre("pedido", pedido.Numero, formato));
@@ -108,7 +97,6 @@ public class PdfService(
             Observacion = venta.Observacion,
             Usuario = venta.Usuario,
             Empresa = empresa,
-            Aviso = AvisoNoTributario,
         };
 
         return (Generar(doc, formato), Nombre("nota-venta", venta.Numero, formato));
@@ -146,8 +134,6 @@ public class PdfService(
             Observacion = orden.Observacion,
             Usuario = orden.Usuario,
             Empresa = empresa,
-            // Una orden de compra la emitimos nosotros hacia el proveedor: no
-            // pretende ser comprobante de nada, el aviso sobraria.
         };
 
         return (Generar(doc, formato), Nombre("orden-compra", orden.Numero, formato));

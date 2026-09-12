@@ -81,11 +81,4 @@ public sealed record DocumentoImprimible
     public string? Usuario { get; init; }
 
     public required EmpresaResponse Empresa { get; init; }
-
-    /// <summary>
-    /// La advertencia del pie. Una nota de venta NO es comprobante de pago
-    /// ante SUNAT — lo son la factura y la boleta — y quien recibe el papel
-    /// tiene que poder saberlo sin preguntar.
-    /// </summary>
-    public string? Aviso { get; init; }
 }

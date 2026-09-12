@@ -153,9 +153,6 @@ public sealed class DocumentoTicket(DocumentoImprimible doc) : IDocument
             col.Item().PaddingTop(4).AlignCenter()
                 .Text($"SON: {MontoEnLetras.Soles(doc.Total)}").FontSize(6.5f);
 
-            if (!string.IsNullOrWhiteSpace(doc.Aviso))
-                col.Item().PaddingTop(5).AlignCenter().Text(doc.Aviso).FontSize(6.5f);
-
             if (doc.Usuario is { Length: > 0 } usuario)
                 col.Item().PaddingTop(3).AlignCenter().Text($"Atendido por {usuario}").FontSize(6.5f);
         });
