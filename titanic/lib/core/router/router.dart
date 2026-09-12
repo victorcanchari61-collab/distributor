@@ -39,12 +39,17 @@ import '../../features/tms/vistas/rutas_pagina.dart';
 import '../../features/ventas/vistas/notas_venta_pagina.dart';
 import '../../features/ventas/vistas/pedidos_pagina.dart';
 import '../navegacion/menu.dart';
+import '../permisos/puerta_permiso.dart';
 import 'puerta_sesion.dart';
 
 /// Rutas de la app.
 ///
 /// La raiz la resuelve PuertaSesion segun el estado de la sesion, y el
 /// `redirect` protege el resto: sin sesion, cualquier ruta vuelve a la raiz.
+///
+/// Y cada pantalla del menu pasa por `PuertaPermiso`: la sesion dice QUIEN eres,
+/// el permiso dice a QUE puedes entrar. Sin eso, una ruta escrita a mano o
+/// pegada por chat entraria igual aunque el menu la esconda.
 ///
 /// Las rutas de los modulos se generan desde el menu: agregar una entrada en
 /// `menu.dart` crea su ruta sin tocar este archivo.
@@ -80,127 +85,127 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Pantallas ya construidas.
       GoRoute(
         path: ClientesPagina.ruta,
-        builder: (context, estado) => const ClientesPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: ClientesPagina()),
       ),
       GoRoute(
         path: ProveedoresPagina.ruta,
-        builder: (context, estado) => const ProveedoresPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: ProveedoresPagina()),
       ),
       GoRoute(
         path: ProductosPagina.ruta,
-        builder: (context, estado) => const ProductosPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: ProductosPagina()),
       ),
       GoRoute(
         path: AlmacenesPagina.ruta,
-        builder: (context, estado) => const AlmacenesPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: AlmacenesPagina()),
       ),
       GoRoute(
         path: StockPagina.ruta,
-        builder: (context, estado) => const StockPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: StockPagina()),
       ),
       GoRoute(
         path: KardexPagina.ruta,
-        builder: (context, estado) => const KardexPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: KardexPagina()),
       ),
       GoRoute(
         path: LotesPagina.ruta,
-        builder: (context, estado) => const LotesPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: LotesPagina()),
       ),
       GoRoute(
         path: UsuariosPagina.ruta,
-        builder: (context, estado) => const UsuariosPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: UsuariosPagina()),
       ),
       GoRoute(
         path: RolesPagina.ruta,
-        builder: (context, estado) => const RolesPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: RolesPagina()),
       ),
       GoRoute(
         path: EmpresasPagina.ruta,
-        builder: (context, estado) => const EmpresasPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: EmpresasPagina()),
       ),
       GoRoute(
         path: MetodosPagoPagina.ruta,
-        builder: (context, estado) => const MetodosPagoPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: MetodosPagoPagina()),
       ),
       GoRoute(
         path: OrdenesCompraPagina.ruta,
-        builder: (context, estado) => const OrdenesCompraPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: OrdenesCompraPagina()),
       ),
       GoRoute(
         path: MisComprasPagina.ruta,
-        builder: (context, estado) => const MisComprasPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: MisComprasPagina()),
       ),
       GoRoute(
         path: RecepcionesPagina.ruta,
-        builder: (context, estado) => const RecepcionesPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: RecepcionesPagina()),
       ),
       GoRoute(
         path: AjustesPagina.ruta,
-        builder: (context, estado) => const AjustesPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: AjustesPagina()),
       ),
       GoRoute(
         path: TransferenciasPagina.ruta,
-        builder: (context, estado) => const TransferenciasPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: TransferenciasPagina()),
       ),
       GoRoute(
         path: PrestamosPagina.ruta,
-        builder: (context, estado) => const PrestamosPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: PrestamosPagina()),
       ),
       GoRoute(
         path: ConteosPagina.ruta,
-        builder: (context, estado) => const ConteosPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: ConteosPagina()),
       ),
       GoRoute(
         path: ListasPreciosPagina.ruta,
-        builder: (context, estado) => const ListasPreciosPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: ListasPreciosPagina()),
       ),
       GoRoute(
         path: AccesosPagina.ruta,
-        builder: (context, estado) => const AccesosPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: AccesosPagina()),
       ),
       GoRoute(
         path: AuditoriaPagina.ruta,
-        builder: (context, estado) => const AuditoriaPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: AuditoriaPagina()),
       ),
       GoRoute(
         path: PedidosPagina.ruta,
-        builder: (context, estado) => const PedidosPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: PedidosPagina()),
       ),
       GoRoute(
         path: NotasVentaPagina.ruta,
-        builder: (context, estado) => const NotasVentaPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: NotasVentaPagina()),
       ),
       GoRoute(
         path: CuentasPorCobrarPagina.ruta,
-        builder: (context, estado) => const CuentasPorCobrarPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: CuentasPorCobrarPagina()),
       ),
       GoRoute(
         path: CuentasPorPagarPagina.ruta,
-        builder: (context, estado) => const CuentasPorPagarPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: CuentasPorPagarPagina()),
       ),
       GoRoute(
         path: MisCobrosPagina.ruta,
-        builder: (context, estado) => const MisCobrosPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: MisCobrosPagina()),
       ),
       GoRoute(
         path: ArqueoPagina.ruta,
-        builder: (context, estado) => const ArqueoPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: ArqueoPagina()),
       ),
       GoRoute(
         path: MercadosPagina.ruta,
-        builder: (context, estado) => const MercadosPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: MercadosPagina()),
       ),
       GoRoute(
         path: RutasPagina.ruta,
-        builder: (context, estado) => const RutasPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: RutasPagina()),
       ),
       GoRoute(
         path: FlotaPagina.ruta,
-        builder: (context, estado) => const FlotaPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: FlotaPagina()),
       ),
       GoRoute(
         path: ConductoresPagina.ruta,
-        builder: (context, estado) => const ConductoresPagina(),
+        builder: (context, estado) => const PuertaPermiso(child: ConductoresPagina()),
       ),
 
       // Mi perfil no es una vista del menu: se llega desde el avatar de la

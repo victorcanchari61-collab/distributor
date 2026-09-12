@@ -39,45 +39,62 @@ class Usuario {
   );
 }
 
-/// Cuanto puede hacer un rol en un modulo del sistema.
+/// Una accion concedida sobre un submodulo: "fact.pedidos" + "anular".
+///
+/// La existencia de la fila ES el permiso, por eso no hay banderas: antes un
+/// permiso era un modulo con ver/crear/editar/eliminar y marcar "Inventario:
+/// editar" concedia de golpe ajustes, transferencias y prestamos.
 class RolPermiso {
-  const RolPermiso({
-    required this.modulo,
-    required this.ver,
-    required this.crear,
-    required this.editar,
-    required this.eliminar,
-  });
+  const RolPermiso({required this.submodulo, required this.accion});
 
-  final String modulo;
-  final bool ver;
-  final bool crear;
-  final bool editar;
-  final bool eliminar;
+  /// Clave del menu: 'fact.pedidos'.
+  final String submodulo;
 
-  RolPermiso copiar({bool? ver, bool? crear, bool? editar, bool? eliminar}) => RolPermiso(
-    modulo: modulo,
-    ver: ver ?? this.ver,
-    crear: crear ?? this.crear,
-    editar: editar ?? this.editar,
-    eliminar: eliminar ?? this.eliminar,
-  );
+  /// ver, crear, editar, anular, eliminar, exportar, importar, confirmar, cobrar.
+  final String accion;
 
-  Map<String, dynamic> aCuerpo() => {
-    'modulo': modulo,
-    'ver': ver,
-    'crear': crear,
-    'editar': editar,
-    'eliminar': eliminar,
-  };
+  /// Como lo guarda el backend, y como se marca en la matriz de Accesos.
+  String get clave => '$submodulo:$accion';
+
+  Map<String, dynamic> aCuerpo() => {'submodulo': submodulo, 'accion': accion};
 
   factory RolPermiso.desdeJson(Map<String, dynamic> json) => RolPermiso(
-    modulo: json['modulo'] as String? ?? '',
-    ver: json['ver'] as bool? ?? false,
-    crear: json['crear'] as bool? ?? false,
-    editar: json['editar'] as bool? ?? false,
-    eliminar: json['eliminar'] as bool? ?? false,
+    submodulo: json['submodulo'] as String? ?? '',
+    accion: json['accion'] as String? ?? '',
   );
+}
+
+/// Un submodulo del sistema y las acciones que admite.
+///
+/// Viene de GET /api/permiso/catalogo y es lo que dibuja la matriz de Accesos.
+/// La app no lleva su propia lista a proposito: si la copiara, un submodulo
+/// nuevo quedaria invisible en la configuracion aunque el backend ya lo
+/// estuviera exigiendo.
+class SubmoduloCatalogo {
+  const SubmoduloCatalogo({
+    required this.submodulo,
+    required this.modulo,
+    required this.acciones,
+  });
+
+  /// Clave del menu: 'fact.pedidos'.
+  final String submodulo;
+
+  /// Modulo al que pertenece: el prefijo de la clave, ya resuelto por el backend.
+  final String modulo;
+
+  /// Solo las que tienen sentido aqui: la auditoria no se crea, el kardex no
+  /// se anula.
+  final List<String> acciones;
+
+  factory SubmoduloCatalogo.desdeJson(Map<String, dynamic> json) =>
+      SubmoduloCatalogo(
+        submodulo: json['submodulo'] as String? ?? '',
+        modulo: json['modulo'] as String? ?? '',
+        acciones: [
+          for (final a in json['acciones'] as List? ?? const []) a as String,
+        ],
+      );
 }
 
 class Rol {

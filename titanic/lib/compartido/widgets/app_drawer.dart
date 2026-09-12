@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/navegacion/menu.dart';
+import '../../core/permisos/permisos.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/auth/estado/auth_controlador.dart';
@@ -25,6 +26,25 @@ class AppDrawer extends ConsumerStatefulWidget {
 }
 
 class _AppDrawerState extends ConsumerState<AppDrawer> {
+  /// Los modulos con al menos un submodulo permitido, ya recortados.
+  ///
+  /// Mientras los permisos cargan no se pinta ninguno, en vez de pintarlos
+  /// todos: si no, el menu completo parpadearia un instante para quien no lo
+  /// tiene.
+  List<MenuGrupo> _visibles(WidgetRef ref) {
+    if (ref.watch(misPermisosProvider).valueOrNull == null) return const [];
+
+    final grupos = <MenuGrupo>[];
+    for (final g in menuGrupos) {
+      final items = g.items.where((i) => puedeVer(ref, i.id)).toList();
+      if (items.isEmpty) continue;
+      grupos.add(
+        MenuGrupo(id: g.id, titulo: g.titulo, icono: g.icono, items: items),
+      );
+    }
+    return grupos;
+  }
+
   /// Modulo desplegado. Solo uno a la vez: con todos abiertos habria que
   /// desplazar mucho para llegar al final.
   late String? _abierto =
@@ -69,7 +89,18 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
                     endIndent: Dimen.espacio4,
                   ),
 
-                  for (final grupo in menuGrupos)
+                  /*
+                   * Solo lo que esta persona puede abrir, y un modulo entero
+                   * desaparece si no le queda ningun submodulo: un modulo que
+                   * al desplegarse sale vacio no informa de nada, solo hace
+                   * ver la app como si estuviera rota.
+                   *
+                   * Esconder es comodidad, no seguridad — el backend rechaza
+                   * igual —, pero sin esto un vendedor ve Configuracion,
+                   * Accesos y Auditoria y se topa con errores en vez de con
+                   * una app que no le ofrece lo que no le toca.
+                   */
+                  for (final grupo in _visibles(ref))
                     _Grupo(
                       grupo: grupo,
                       abierto: _abierto == grupo.id,

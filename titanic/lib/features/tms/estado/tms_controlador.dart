@@ -40,11 +40,6 @@ class MercadosControlador extends AsyncNotifier<List<Mercado>> {
     });
     await recargar();
   }
-
-  Future<void> eliminar(int id) async {
-    await ref.read(tmsApiProvider).eliminarMercado(id);
-    await recargar();
-  }
 }
 
 final mercadosProvider = AsyncNotifierProvider<MercadosControlador, List<Mercado>>(
@@ -93,11 +88,6 @@ class RutasControlador extends AsyncNotifier<List<Ruta>> {
     });
     await recargar();
   }
-
-  Future<void> eliminar(int id) async {
-    await ref.read(tmsApiProvider).eliminarRuta(id);
-    await recargar();
-  }
 }
 
 final rutasProvider = AsyncNotifierProvider<RutasControlador, List<Ruta>>(
@@ -143,11 +133,6 @@ class VehiculosControlador extends AsyncNotifier<List<Vehiculo>> {
     }
     await recargar();
   }
-
-  Future<void> eliminar(int id) async {
-    await ref.read(flotaApiProvider).eliminarVehiculo(id);
-    await recargar();
-  }
 }
 
 final vehiculosProvider = AsyncNotifierProvider<VehiculosControlador, List<Vehiculo>>(
@@ -161,8 +146,8 @@ final vehiculosFiltradosProvider = Provider.autoDispose<List<Vehiculo>>((ref) {
 });
 
 final resumenFlotaProvider = FutureProvider.autoDispose<ResumenFlota>((ref) {
-  // Se ata al listado: tras guardar o borrar, los totales se rehacen solos en
-  // vez de quedarse contando lo de antes.
+  // Se ata al listado: tras guardar o cambiar un estado, los totales se
+  // rehacen solos en vez de quedarse contando lo de antes.
   ref.watch(vehiculosProvider);
   return ref.watch(flotaApiProvider).resumenFlota();
 });
@@ -184,11 +169,6 @@ class TiposVehiculoControlador extends AsyncNotifier<List<TipoVehiculo>> {
     } else {
       await api.actualizarTipo(id, cuerpo);
     }
-    await recargar();
-  }
-
-  Future<void> eliminar(int id) async {
-    await ref.read(flotaApiProvider).eliminarTipo(id);
     await recargar();
   }
 }
@@ -222,11 +202,6 @@ class ConductoresControlador extends AsyncNotifier<List<Conductor>> {
     } else {
       await api.actualizarConductor(id, cuerpo);
     }
-    await recargar();
-  }
-
-  Future<void> eliminar(int id) async {
-    await ref.read(flotaApiProvider).eliminarConductor(id);
     await recargar();
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_confirmacion.dart';
+import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
@@ -57,9 +58,9 @@ class MercadosPagina extends ConsumerWidget {
       fila: (context, mercado) => _TarjetaMercado(
         mercado: mercado,
         color: color,
+        onVer: () => _verDetalle(context, mercado, color),
         onEditar: () => _abrirFormulario(context, mercado),
         onEstado: () => _cambiarEstado(context, ref, mercado),
-        onEliminar: () => _eliminar(context, ref, mercado),
       ),
     );
   }
@@ -97,42 +98,52 @@ class MercadosPagina extends ConsumerWidget {
     }
   }
 
-  Future<void> _eliminar(BuildContext context, WidgetRef ref, Mercado mercado) async {
-    final ok = await confirmarAccion(
+  /// Ficha de solo lectura.
+  ///
+  /// Existe para poder consultar un mercado sin entrar al formulario, donde un
+  /// toque de mas guarda cambios que nadie queria hacer.
+  Future<void> _verDetalle(BuildContext context, Mercado mercado, Color color) {
+    return mostrarDetalle(
       context,
-      titulo: 'Eliminar ${mercado.nombre}',
-      mensaje: mercado.clientes > 0
-          ? 'Lo usan ${mercado.clientes} cliente(s), así que no se podrá eliminar. Desactívalo en su lugar.'
-          : 'Se borra definitivamente.',
-      textoConfirmar: 'Eliminar',
-      tono: ConfirmTono.peligro,
+      icono: Icons.storefront_outlined,
+      color: color,
+      titulo: mercado.nombre,
+      subtitulo: mercado.direccion,
+      insignia: _insigniaEstado(mercado.activo),
+      campos: [
+        CampoDetalle('Nombre', mercado.nombre),
+        CampoDetalle('Dirección', mercado.direccion),
+        CampoDetalle('Distrito', mercado.distrito),
+        CampoDetalle('Clientes', '${mercado.clientes}'),
+        CampoDetalle(
+          'Estado',
+          mercado.activo ? 'Activo' : 'Inactivo',
+          widget: _insigniaEstado(mercado.activo),
+        ),
+      ],
     );
-    if (!ok || !context.mounted) return;
-
-    final mensajero = ScaffoldMessenger.of(context);
-    try {
-      await ref.read(mercadosProvider.notifier).eliminar(mercado.id);
-      mensajero.showSnackBar(SnackBar(content: Text('${mercado.nombre} eliminado')));
-    } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
-    }
   }
 }
+
+AppEtiqueta _insigniaEstado(bool activo) => AppEtiqueta(
+  activo ? 'Activo' : 'Inactivo',
+  tono: activo ? EtiquetaTono.exito : EtiquetaTono.aviso,
+);
 
 class _TarjetaMercado extends StatelessWidget {
   const _TarjetaMercado({
     required this.mercado,
     required this.color,
+    required this.onVer,
     required this.onEditar,
     required this.onEstado,
-    required this.onEliminar,
   });
 
   final Mercado mercado;
   final Color color;
+  final VoidCallback onVer;
   final VoidCallback onEditar;
   final VoidCallback onEstado;
-  final VoidCallback onEliminar;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Dirección', mercado.direccion),
@@ -141,10 +152,7 @@ class _TarjetaMercado extends StatelessWidget {
     CampoDetalle(
       'Estado',
       mercado.activo ? 'Activo' : 'Inactivo',
-      widget: AppEtiqueta(
-        mercado.activo ? 'Activo' : 'Inactivo',
-        tono: mercado.activo ? EtiquetaTono.exito : EtiquetaTono.aviso,
-      ),
+      widget: _insigniaEstado(mercado.activo),
     ),
   ];
 
@@ -155,8 +163,18 @@ class _TarjetaMercado extends StatelessWidget {
       color: color,
       titulo: mercado.nombre,
       campos: _campos,
-      onTap: onEditar,
+      onTap: onVer,
       acciones: [
+        IconButton(
+          onPressed: onVer,
+          tooltip: 'Ver detalle',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(
+            Icons.visibility_outlined,
+            size: 18,
+            color: Colores.tintaSuave,
+          ),
+        ),
         IconButton(
           onPressed: onEditar,
           tooltip: 'Editar',
@@ -172,12 +190,6 @@ class _TarjetaMercado extends StatelessWidget {
             size: 18,
             color: mercado.activo ? Colores.advertencia : Colores.exito,
           ),
-        ),
-        IconButton(
-          onPressed: onEliminar,
-          tooltip: 'Eliminar',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
         ),
       ],
     );

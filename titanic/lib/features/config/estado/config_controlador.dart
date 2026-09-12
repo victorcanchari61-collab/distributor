@@ -13,6 +13,15 @@ final busquedaUsuariosProvider = StateProvider.autoDispose((ref) => '');
 final busquedaRolesProvider = StateProvider.autoDispose((ref) => '');
 final busquedaEmpresasProvider = StateProvider.autoDispose((ref) => '');
 
+// --- Permisos ---
+
+/// El catalogo de submodulos y sus acciones, tal como lo declara el backend.
+///
+/// Se pide una vez y no cambia en caliente: es la forma del sistema, no datos.
+final catalogoPermisosProvider = FutureProvider<List<SubmoduloCatalogo>>(
+  (ref) => ref.watch(configApiProvider).catalogoPermisos(),
+);
+
 // --- Usuarios ---
 
 class UsuariosControlador extends AsyncNotifier<List<Usuario>> {
@@ -92,10 +101,11 @@ class RolesControlador extends AsyncNotifier<List<Rol>> {
     await recargar();
   }
 
+  /// Reemplaza los permisos del rol por los de la matriz.
   Future<void> guardarPermisos(int rolId, List<RolPermiso> permisos) async {
-    await ref
-        .read(configApiProvider)
-        .actualizarPermisos(rolId, [for (final p in permisos) p.aCuerpo()]);
+    await ref.read(configApiProvider).actualizarPermisos(rolId, [
+      for (final p in permisos) p.aCuerpo(),
+    ]);
     await recargar();
   }
 }

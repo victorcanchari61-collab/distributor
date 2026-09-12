@@ -9,6 +9,7 @@ import 'package:titanic/features/auth/estado/auth_controlador.dart';
 import 'package:titanic/features/config/datos/config_api.dart';
 import 'package:titanic/features/config/datos/config_modelos.dart';
 import 'package:titanic/features/config/estado/config_controlador.dart';
+import 'package:titanic/features/config/vistas/accesos_pagina.dart';
 import 'package:titanic/features/config/vistas/empresas_pagina.dart';
 import 'package:titanic/features/config/vistas/roles_pagina.dart';
 import 'package:titanic/features/config/vistas/usuarios_pagina.dart';
@@ -36,6 +37,41 @@ class _ApiFalso extends ConfigApi {
 
   /// Cuerpos enviados en la ultima escritura, para comprobar el formulario.
   Map<String, dynamic>? ultimoUsuario;
+
+  /// Permisos enviados al guardar la matriz de Accesos.
+  List<Map<String, dynamic>>? ultimosPermisos;
+
+  /// Un recorte del catalogo real: basta para probar las reglas.
+  @override
+  Future<List<SubmoduloCatalogo>> catalogoPermisos() async => [
+    SubmoduloCatalogo.desdeJson({
+      'submodulo': 'maestros.clientes',
+      'modulo': 'maestros',
+      'acciones': [
+        'ver',
+        'crear',
+        'editar',
+        'eliminar',
+        'exportar',
+        'importar',
+      ],
+    }),
+    // Una consulta: ni se crea ni se anula, asi que esas casillas no existen.
+    SubmoduloCatalogo.desdeJson({
+      'submodulo': 'inv.kardex',
+      'modulo': 'inv',
+      'acciones': ['ver', 'exportar'],
+    }),
+  ];
+
+  @override
+  Future<Rol> actualizarPermisos(
+    int id,
+    List<Map<String, dynamic>> permisos,
+  ) async {
+    ultimosPermisos = permisos;
+    return (await roles()).last;
+  }
 
   @override
   Future<List<Usuario>> usuarios() async => [
@@ -82,6 +118,10 @@ class _ApiFalso extends ConfigApi {
       'delSistema': false,
       'protegido': false,
       'usuarios': 4,
+      'permisos': [
+        {'submodulo': 'maestros.clientes', 'accion': 'ver'},
+        {'submodulo': 'maestros.clientes', 'accion': 'crear'},
+      ],
     }),
   ];
 
@@ -188,5 +228,39 @@ void main() {
 
     // Ya es la activa: solo quedan editar y retirar.
     expect(find.byIcon(Icons.check_circle_outline), findsNothing);
+  });
+
+  testWidgets('el rol protegido avisa que tiene todo concedido', (
+    tester,
+  ) async {
+    await _montar(tester, const AccesosPagina());
+
+    expect(find.textContaining('tiene todo concedido siempre'), findsOneWidget);
+  });
+
+  testWidgets('quitar Ver retira las demas acciones de la pantalla', (
+    tester,
+  ) async {
+    final api = await _montar(tester, const AccesosPagina());
+
+    await tester.tap(find.text('Vendedor'));
+    await tester.pumpAndSettle();
+
+    // Modulo y luego pantalla: en el telefono la matriz se recorre en dos pasos.
+    await tester.tap(find.text('Maestros'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clientes'));
+    await tester.pumpAndSettle();
+
+    // El kardex no se crea ni se anula: esas casillas no se pintan.
+    expect(find.text('Anular'), findsNothing);
+
+    await tester.tap(find.text('Ver'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    // Sin Ver, "crear" se fue con ella en vez de quedar concedido e inalcanzable.
+    expect(api.ultimosPermisos, isEmpty);
   });
 }

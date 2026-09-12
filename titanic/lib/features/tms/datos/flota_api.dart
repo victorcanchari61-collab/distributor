@@ -35,9 +35,6 @@ class FlotaApi {
         await _api.put('/tipovehiculo/$id', cuerpo: cuerpo) as Map<String, dynamic>,
       );
 
-  /// DELETE /api/tipovehiculo/{id}
-  Future<void> eliminarTipo(int id) => _api.delete('/tipovehiculo/$id');
-
   // --- Vehículos ---
 
   /// GET /api/vehiculo
@@ -60,9 +57,6 @@ class FlotaApi {
         await _api.put('/vehiculo/$id', cuerpo: cuerpo) as Map<String, dynamic>,
       );
 
-  /// DELETE /api/vehiculo/{id}
-  Future<void> eliminarVehiculo(int id) => _api.delete('/vehiculo/$id');
-
   // --- Conductores ---
 
   /// GET /api/conductor
@@ -84,9 +78,6 @@ class FlotaApi {
       Conductor.desdeJson(
         await _api.put('/conductor/$id', cuerpo: cuerpo) as Map<String, dynamic>,
       );
-
-  /// DELETE /api/conductor/{id}
-  Future<void> eliminarConductor(int id) => _api.delete('/conductor/$id');
 }
 
 /// Subida de fotos y resolución de sus URLs.

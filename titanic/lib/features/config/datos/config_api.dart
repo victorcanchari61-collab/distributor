@@ -51,12 +51,30 @@ class ConfigApi {
         await _api.put('/rol/$id', cuerpo: cuerpo) as Map<String, dynamic>,
       );
 
-  /// PUT /api/rol/{id}/permisos. Manda la matriz completa del rol.
-  Future<Rol> actualizarPermisos(int id, List<Map<String, dynamic>> permisos) async =>
-      Rol.desdeJson(
-        await _api.put('/rol/$id/permisos', cuerpo: {'permisos': permisos})
-            as Map<String, dynamic>,
-      );
+  /// PUT /api/rol/{id}/permisos
+  ///
+  /// Reemplazo completo: cada item es {submodulo, accion} y lo que no va en la
+  /// lista se retira.
+  Future<Rol> actualizarPermisos(
+    int id,
+    List<Map<String, dynamic>> permisos,
+  ) async => Rol.desdeJson(
+    await _api.put('/rol/$id/permisos', cuerpo: {'permisos': permisos})
+        as Map<String, dynamic>,
+  );
+
+  // --- Permisos ---
+
+  /// GET /api/permiso/catalogo
+  ///
+  /// Que submodulos hay y que acciones admite cada uno. La matriz de Accesos
+  /// saca de aqui sus columnas en vez de traer una lista propia.
+  Future<List<SubmoduloCatalogo>> catalogoPermisos() async {
+    final datos = await _api.get('/permiso/catalogo') as List;
+    return datos
+        .map((e) => SubmoduloCatalogo.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
 
   // --- Consultas a SUNAT ---
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_confirmacion.dart';
+import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
@@ -56,9 +57,9 @@ class RutasPagina extends ConsumerWidget {
       fila: (context, ruta) => _TarjetaRuta(
         ruta: ruta,
         color: color,
+        onVer: () => _verDetalle(context, ruta, color),
         onEditar: () => _abrirFormulario(context, ruta),
         onEstado: () => _cambiarEstado(context, ref, ruta),
-        onEliminar: () => _eliminar(context, ref, ruta),
       ),
     );
   }
@@ -94,52 +95,56 @@ class RutasPagina extends ConsumerWidget {
     }
   }
 
-  Future<void> _eliminar(BuildContext context, WidgetRef ref, Ruta ruta) async {
-    final ok = await confirmarAccion(
+  /// Ficha de solo lectura.
+  ///
+  /// Existe para poder consultar una ruta sin entrar al formulario, donde un
+  /// toque de mas guarda cambios que nadie queria hacer.
+  Future<void> _verDetalle(BuildContext context, Ruta ruta, Color color) {
+    return mostrarDetalle(
       context,
-      titulo: 'Eliminar ${ruta.nombre}',
-      mensaje: ruta.clientes > 0
-          ? 'La usan ${ruta.clientes} cliente(s), así que no se podrá eliminar. Desactívala en su lugar.'
-          : 'Se borra definitivamente.',
-      textoConfirmar: 'Eliminar',
-      tono: ConfirmTono.peligro,
+      icono: Icons.route_outlined,
+      color: color,
+      titulo: ruta.nombre,
+      insignia: _insigniaEstado(ruta.activo),
+      campos: [
+        CampoDetalle('Nombre', ruta.nombre),
+        CampoDetalle('Clientes', '${ruta.clientes}'),
+        CampoDetalle(
+          'Estado',
+          ruta.activo ? 'Activo' : 'Inactivo',
+          widget: _insigniaEstado(ruta.activo),
+        ),
+      ],
     );
-    if (!ok || !context.mounted) return;
-
-    final mensajero = ScaffoldMessenger.of(context);
-    try {
-      await ref.read(rutasProvider.notifier).eliminar(ruta.id);
-      mensajero.showSnackBar(SnackBar(content: Text('${ruta.nombre} eliminada')));
-    } on ApiExcepcion catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
-    }
   }
 }
+
+AppEtiqueta _insigniaEstado(bool activo) => AppEtiqueta(
+  activo ? 'Activo' : 'Inactivo',
+  tono: activo ? EtiquetaTono.exito : EtiquetaTono.aviso,
+);
 
 class _TarjetaRuta extends StatelessWidget {
   const _TarjetaRuta({
     required this.ruta,
     required this.color,
+    required this.onVer,
     required this.onEditar,
     required this.onEstado,
-    required this.onEliminar,
   });
 
   final Ruta ruta;
   final Color color;
+  final VoidCallback onVer;
   final VoidCallback onEditar;
   final VoidCallback onEstado;
-  final VoidCallback onEliminar;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Clientes', '${ruta.clientes}'),
     CampoDetalle(
       'Estado',
       ruta.activo ? 'Activo' : 'Inactivo',
-      widget: AppEtiqueta(
-        ruta.activo ? 'Activo' : 'Inactivo',
-        tono: ruta.activo ? EtiquetaTono.exito : EtiquetaTono.aviso,
-      ),
+      widget: _insigniaEstado(ruta.activo),
     ),
   ];
 
@@ -150,8 +155,18 @@ class _TarjetaRuta extends StatelessWidget {
       color: color,
       titulo: ruta.nombre,
       campos: _campos,
-      onTap: onEditar,
+      onTap: onVer,
       acciones: [
+        IconButton(
+          onPressed: onVer,
+          tooltip: 'Ver detalle',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(
+            Icons.visibility_outlined,
+            size: 18,
+            color: Colores.tintaSuave,
+          ),
+        ),
         IconButton(
           onPressed: onEditar,
           tooltip: 'Editar',
@@ -167,12 +182,6 @@ class _TarjetaRuta extends StatelessWidget {
             size: 18,
             color: ruta.activo ? Colores.advertencia : Colores.exito,
           ),
-        ),
-        IconButton(
-          onPressed: onEliminar,
-          tooltip: 'Eliminar',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
         ),
       ],
     );

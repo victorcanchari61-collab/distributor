@@ -6,7 +6,7 @@ import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
-import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_vacio.dart';
 import '../../../core/red/excepciones.dart';
@@ -15,6 +15,7 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/flota.dart';
 import '../estado/tms_controlador.dart';
+import 'flota_pagina.dart';
 
 /// Los tipos de vehículo: camión, furgoneta, moto.
 ///
@@ -68,8 +69,9 @@ class TiposVehiculoPagina extends ConsumerWidget {
                     separatorBuilder: (_, _) => const SizedBox(height: Dimen.espacio3),
                     itemBuilder: (_, i) => _Tarjeta(
                       tipo: tipos[i],
+                      onVer: () => _verDetalle(context, tipos[i]),
                       onEditar: () => _abrirHoja(context, ref, tipos[i]),
-                      onEliminar: () => _eliminar(context, ref, tipos[i]),
+                      onEstado: () => _cambiarEstado(context, ref, tipos[i]),
                     ),
                   ),
                 ),
@@ -91,35 +93,92 @@ class TiposVehiculoPagina extends ConsumerWidget {
     );
   }
 
-  Future<void> _eliminar(BuildContext context, WidgetRef ref, TipoVehiculo tipo) async {
+  Future<void> _cambiarEstado(
+    BuildContext context,
+    WidgetRef ref,
+    TipoVehiculo tipo,
+  ) async {
     final ok = await confirmarAccion(
       context,
-      titulo: 'Eliminar ${tipo.nombre}',
-      mensaje: tipo.vehiculos > 0
-          ? 'Hay ${tipo.vehiculos} vehículo(s) de este tipo, así que no se podrá eliminar. '
-                'Desactívalo en su lugar.'
-          : 'Se borra definitivamente.',
-      textoConfirmar: 'Eliminar',
-      tono: ConfirmTono.peligro,
+      titulo: '${tipo.activo ? 'Desactivar' : 'Activar'} ${tipo.nombre}',
+      mensaje: tipo.activo
+          ? 'Deja de ofrecerse al dar de alta vehículos nuevos. Los '
+                '${tipo.vehiculos} que ya son de este tipo lo conservan.'
+          : 'Vuelve a estar disponible para elegirse.',
+      textoConfirmar: tipo.activo ? 'Desactivar' : 'Activar',
+      tono: tipo.activo ? ConfirmTono.aviso : ConfirmTono.pregunta,
     );
     if (!ok || !context.mounted) return;
 
     final mensajero = ScaffoldMessenger.of(context);
     try {
-      await ref.read(tiposVehiculoProvider.notifier).eliminar(tipo.id);
-      mensajero.showSnackBar(SnackBar(content: Text('${tipo.nombre} eliminado')));
+      // El PUT reemplaza el registro entero, asi que se reenvia lo que ya
+      // tenia: mandar solo `activo` vaciaria el nombre y la descripcion.
+      await ref.read(tiposVehiculoProvider.notifier).guardar(
+        id: tipo.id,
+        cuerpo: {
+          'nombre': tipo.nombre,
+          'descripcion': tipo.descripcion,
+          'capacidadKgReferencia': tipo.capacidadKgReferencia,
+          'activo': !tipo.activo,
+        },
+      );
+      mensajero.showSnackBar(
+        SnackBar(
+          content: Text(
+            tipo.activo ? '${tipo.nombre} desactivado' : '${tipo.nombre} activado',
+          ),
+        ),
+      );
     } on ApiExcepcion catch (e) {
       mensajero.showSnackBar(SnackBar(content: Text(e.texto)));
     }
   }
+
+  /// Ficha de solo lectura.
+  ///
+  /// Existe para poder consultar el tipo sin abrir la hoja de edicion, donde
+  /// un toque de mas guarda cambios que nadie queria hacer.
+  Future<void> _verDetalle(BuildContext context, TipoVehiculo tipo) {
+    return mostrarDetalle(
+      context,
+      icono: Icons.category_outlined,
+      color: Acento.de(context),
+      titulo: tipo.nombre,
+      subtitulo: tipo.descripcion,
+      insignia: insigniaActivo(tipo.activo),
+      campos: [
+        CampoDetalle('Nombre', tipo.nombre),
+        CampoDetalle('Descripción', tipo.descripcion),
+        CampoDetalle(
+          'Capacidad de referencia',
+          tipo.capacidadKgReferencia == null
+              ? null
+              : '${formatoNumero(tipo.capacidadKgReferencia!)} kg',
+        ),
+        CampoDetalle('Vehículos', '${tipo.vehiculos}'),
+        CampoDetalle(
+          'Estado',
+          tipo.activo ? 'Activo' : 'Inactivo',
+          widget: insigniaActivo(tipo.activo),
+        ),
+      ],
+    );
+  }
 }
 
 class _Tarjeta extends StatelessWidget {
-  const _Tarjeta({required this.tipo, required this.onEditar, required this.onEliminar});
+  const _Tarjeta({
+    required this.tipo,
+    required this.onVer,
+    required this.onEditar,
+    required this.onEstado,
+  });
 
   final TipoVehiculo tipo;
+  final VoidCallback onVer;
   final VoidCallback onEditar;
-  final VoidCallback onEliminar;
+  final VoidCallback onEstado;
 
   @override
   Widget build(BuildContext context) {
@@ -138,14 +197,21 @@ class _Tarjeta extends StatelessWidget {
         CampoDetalle(
           'Estado',
           tipo.activo ? 'Activo' : 'Inactivo',
-          widget: AppEtiqueta(
-            tipo.activo ? 'Activo' : 'Inactivo',
-            tono: tipo.activo ? EtiquetaTono.exito : EtiquetaTono.aviso,
-          ),
+          widget: insigniaActivo(tipo.activo),
         ),
       ],
-      onTap: onEditar,
+      onTap: onVer,
       acciones: [
+        IconButton(
+          onPressed: onVer,
+          tooltip: 'Ver detalle',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(
+            Icons.visibility_outlined,
+            size: 18,
+            color: Colores.tintaSuave,
+          ),
+        ),
         IconButton(
           onPressed: onEditar,
           tooltip: 'Editar',
@@ -153,10 +219,14 @@ class _Tarjeta extends StatelessWidget {
           icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
         ),
         IconButton(
-          onPressed: onEliminar,
-          tooltip: 'Eliminar',
+          onPressed: onEstado,
+          tooltip: tipo.activo ? 'Desactivar' : 'Activar',
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
+          icon: Icon(
+            tipo.activo ? Icons.block : Icons.check_circle_outline,
+            size: 18,
+            color: tipo.activo ? Colores.advertencia : Colores.exito,
+          ),
         ),
       ],
     );
