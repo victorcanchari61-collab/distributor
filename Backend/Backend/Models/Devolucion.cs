@@ -43,10 +43,12 @@ public class Devolucion
     public string? Observacion { get; set; }
 
     /// <summary>
-    /// A qué almacén vuelve la mercadería.
+    /// A qué almacén vuelve la mercadería: siempre el de la venta.
     ///
-    /// Se pide aparte y no se hereda de la venta: lo que sale del camión suele
-    /// volver al depósito que tenga sitio, no necesariamente al que despachó.
+    /// No se elige. La reposición devuelve cada unidad a la MISMA capa de
+    /// costo de la que salió, y esa capa vive en el almacén que despachó:
+    /// mandarla a otro dejaría el movimiento en un almacén y el stock real en
+    /// el otro.
     /// </summary>
     public int AlmacenId { get; set; }
     public Almacen? Almacen { get; set; }

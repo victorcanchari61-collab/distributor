@@ -18,9 +18,6 @@ public class DevolucionRequest
 {
     public int NotaVentaId { get; set; }
 
-    /// <summary>A qué almacén vuelve la mercadería.</summary>
-    public int AlmacenId { get; set; }
-
     public string? Motivo { get; set; }
     public string? Observacion { get; set; }
 

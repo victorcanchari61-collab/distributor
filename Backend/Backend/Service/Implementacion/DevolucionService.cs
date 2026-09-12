@@ -118,11 +118,6 @@ public class DevolucionService : IDevolucionService
             throw new BadRequestException("Esta venta está anulada: no hay nada que devolver.");
         }
 
-        if (!await _context.Almacenes.AnyAsync(a => a.Id == request.AlmacenId))
-        {
-            throw new BadRequestException("Elige el almacén al que vuelve la mercadería");
-        }
-
         var lineas = request.Detalle.Where(l => l.Cantidad > 0).ToList();
         if (lineas.Count == 0)
         {
@@ -135,7 +130,7 @@ public class DevolucionService : IDevolucionService
         {
             Numero = await SiguienteNumeroAsync(),
             NotaVentaId = nota.Id,
-            AlmacenId = request.AlmacenId,
+            AlmacenId = nota.AlmacenId,
             Motivo = Limpiar(request.Motivo),
             Observacion = Limpiar(request.Observacion),
             UsuarioId = usuarioId,
