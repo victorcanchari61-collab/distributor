@@ -42,10 +42,11 @@ import { metodoPagoApi } from '../finanzas'
 import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
-import { notaVentaApi } from './ventasApi'
+import { devolucionVentaApi, notaVentaApi } from './ventasApi'
 import type { AuditoriaResponse } from '../config'
 import type {
   CrearNotaVentaRequest,
+  DevolucionDeVenta,
   FormaPagoVenta,
   LineaVentaResponse,
   NotaVentaResponse,
@@ -59,6 +60,12 @@ const FORMAS_PAGO: { value: FormaPagoVenta; label: string }[] = [
 
 function estadoNotaVentaBadge(estado: NotaVentaResponse['estado']) {
   return <Badge tone={estado === 'ANULADA' ? 'danger' : 'success'}>{estado === 'ANULADA' ? 'Anulada' : 'Confirmada'}</Badge>
+}
+
+function estadoDevolucionBadge(estado: DevolucionDeVenta['estado']) {
+  if (estado === 'APROBADA') return <Badge tone="success">Aprobada</Badge>
+  if (estado === 'RECHAZADA') return <Badge tone="danger">Rechazada</Badge>
+  return <Badge tone="warning">Por aprobar</Badge>
 }
 
 const TIPOS_METODO_PAGO: { value: TipoMetodoPago; label: string }[] = [
@@ -89,6 +96,8 @@ export function NotasVentaPage() {
 
   const [editando, setEditando] = useState<NotaVentaResponse | null>(null)
   const [detalleAbierto, setDetalleAbierto] = useState<NotaVentaResponse | null>(null)
+  const [rechazando, setRechazando] = useState<DevolucionDeVenta | null>(null)
+  const [motivoRechazo, setMotivoRechazo] = useState('')
   const [historialAbierto, setHistorialAbierto] = useState<NotaVentaResponse | null>(null)
   const [historial, setHistorial] = useState<AuditoriaResponse[]>([])
   const [historialCargando, setHistorialCargando] = useState(false)
@@ -262,6 +271,44 @@ export function NotasVentaPage() {
   }
 
   const quitarPago = (i: number) => setPagos((prev) => prev.filter((_, idx) => idx !== i))
+
+  /** Recarga la venta abierta: tras resolver una devolución cambian sus totales. */
+  const refrescarDetalle = async (id: number) => {
+    const fresca = await notaVentaApi.getById(id)
+    setDetalleAbierto(fresca)
+    await cargar()
+  }
+
+  const aprobarDevolucion = (d: DevolucionDeVenta) =>
+    confirmar({
+      titulo: `Aprobar ${d.numero}`,
+      mensaje:
+        'La mercadería entra al stock y la venta baja de importe, así que el cliente deja de deberla. No se puede deshacer.',
+      confirmar: 'Aprobar',
+      tono: 'pregunta',
+      accion: async () => {
+        if (!detalleAbierto) return
+        await devolucionVentaApi.aprobar(d.id)
+        await refrescarDetalle(detalleAbierto.id)
+        toast.exito(`${d.numero} aprobada`)
+      },
+    })
+
+  const rechazarDevolucion = async () => {
+    if (!rechazando || !detalleAbierto) return
+    if (!motivoRechazo.trim()) return fallar('Di por qué se rechaza.')
+
+    try {
+      await devolucionVentaApi.rechazar(rechazando.id, motivoRechazo.trim())
+      const numero = rechazando.numero
+      setRechazando(null)
+      setMotivoRechazo('')
+      await refrescarDetalle(detalleAbierto.id)
+      toast.exito(`${numero} rechazada`)
+    } catch (e) {
+      fallar(e instanceof ApiError ? e.message : 'No pudimos rechazar la devolución.')
+    }
+  }
 
   /** Un fallo de validacion: aviso arriba y, si toca, el campo en rojo. */
   const fallar = (mensaje: string, campo?: 'pagos') => {
@@ -499,7 +546,7 @@ export function NotasVentaPage() {
           title={editando ? `Editar ${editando.numero}` : 'Nueva venta directa'}
           description={
             editando
-              ? 'El stock se ajusta solo con la diferencia. Los pagos no se tocan aquí: usa "Gestionar pagos" desde Ver detalle.'
+              ? 'Lo que le quites queda como devolución y no baja nada hasta que la aprueben. Los pagos no se tocan aquí: usa "Gestionar pagos" desde Ver detalle.'
               : 'Sin pasar por un pedido primero. El stock sale del almacén elegido al momento de registrarla.'
           }
           actions={
@@ -877,6 +924,52 @@ export function NotasVentaPage() {
               total={detalleAbierto.total}
             />
 
+            {detalleAbierto.devoluciones.length > 0 && (
+              <div className="flex flex-col gap-2 rounded-field border border-line p-3">
+                <span className="ui-label">Devuelto por el cliente</span>
+
+                {detalleAbierto.devoluciones.map((d) => (
+                  <div key={d.id} className="flex flex-col gap-1.5 border-t border-line pt-2 first:border-0 first:pt-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-ink">{d.numero}</span>
+                      {estadoDevolucionBadge(d.estado)}
+                    </div>
+
+                    {d.detalle.map((l) => (
+                      <div key={l.notaVentaDetalleId} className="flex justify-between gap-3 text-xs text-ink-soft">
+                        <span className="truncate">
+                          {l.producto} · {l.cantidad} {l.unidad}
+                        </span>
+                        <span className="shrink-0">S/ {l.importe.toFixed(2)}</span>
+                      </div>
+                    ))}
+
+                    <div className="flex justify-between text-xs">
+                      <span className="text-ink-muted">
+                        {d.estado === 'RECHAZADA' && d.motivoRechazo
+                          ? `Rechazada: ${d.motivoRechazo}`
+                          : d.estado === 'APROBADA'
+                            ? `Aprobada por ${d.aprobadoPor ?? '—'}`
+                            : 'Espera aprobación: todavía no baja el stock ni la deuda.'}
+                      </span>
+                      <span className="font-semibold text-ink">S/ {d.total.toFixed(2)}</span>
+                    </div>
+
+                    {d.estado === 'SOLICITADA' && puede('fact.notaventa', 'confirmar') && (
+                      <div className="flex gap-2 pt-1">
+                        <Button size="sm" onClick={() => aprobarDevolucion(d)}>
+                          Aprobar
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => setRechazando(d)}>
+                          Rechazar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {detalleAbierto.pedidoNumero && (
               <p className="text-sm text-ink-soft">
                 <span className="font-semibold text-ink-muted">Pedido: </span>
@@ -891,6 +984,41 @@ export function NotasVentaPage() {
             )}
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={rechazando !== null}
+        size="sm"
+        title={rechazando ? `Rechazar ${rechazando.numero}` : ''}
+        description="No entra nada al stock y la venta queda como está. Di por qué."
+        onClose={() => {
+          setRechazando(null)
+          setMotivoRechazo('')
+        }}
+        footer={
+          <>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setRechazando(null)
+                setMotivoRechazo('')
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={rechazarDevolucion}>
+              Rechazar
+            </Button>
+          </>
+        }
+      >
+        <Input
+          label="Motivo"
+          placeholder="La mercadería no llegó, el cliente se retractó..."
+          value={motivoRechazo}
+          onChange={(e) => setMotivoRechazo(e.target.value)}
+        />
       </Modal>
 
       <Modal

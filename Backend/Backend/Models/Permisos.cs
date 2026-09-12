@@ -109,7 +109,9 @@ public static class CatalogoPermisos
 
             // --- Facturación ---
             ["fact.pedidos"] = DocumentoConfirmable,
-            ["fact.notaventa"] = [.. Documento, Accion.Cobrar],
+            // Confirmar aqui es aprobar la devolucion que nace al editarla:
+            // asi quien edita la venta no se aprueba solo lo que quito.
+            ["fact.notaventa"] = [.. Documento, Accion.Cobrar, Accion.Confirmar],
             ["fact.precios"] = Catalogo,
             ["fact.comprobantes"] = Documento,
 
@@ -140,9 +142,6 @@ public static class CatalogoPermisos
             // Una lista de trabajo, no un documento: no se crea ni se anula
             // una visita, se mira a quien toca y se le toma el pedido.
             ["dms.visitas"] = Consulta,
-            // Confirmar es aprobar o rechazar: va aparte de crear para poder
-            // separar quien la recibe de quien la acepta.
-            ["dms.devoluciones"] = DocumentoConfirmable,
             ["dms.evidencias"] = Consulta,
 
             // --- RR. HH. ---

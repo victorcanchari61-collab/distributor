@@ -129,4 +129,42 @@ public class NotaVentaResponse
     /// el cliente tiene saldo a favor.
     /// </summary>
     public decimal TotalDevuelto { get; set; }
+
+    /// <summary>
+    /// Las devoluciones de esta venta, con su estado.
+    ///
+    /// Viajan con la venta porque es el unico sitio donde se ven: no se
+    /// registran a mano en ninguna pantalla, nacen de editar esta venta y aqui
+    /// mismo se aprueban o se rechazan.
+    /// </summary>
+    public List<DevolucionDeVentaResponse> Devoluciones { get; set; } = [];
+}
+
+/// <summary>Una devolucion vista desde su venta: lo justo para resolverla.</summary>
+public class DevolucionDeVentaResponse
+{
+    public int Id { get; set; }
+    public string Numero { get; set; } = string.Empty;
+    public DateTime Fecha { get; set; }
+
+    /// <summary>SOLICITADA, APROBADA o RECHAZADA.</summary>
+    public string Estado { get; set; } = string.Empty;
+
+    public string? Motivo { get; set; }
+    public string? MotivoRechazo { get; set; }
+    public string? Usuario { get; set; }
+    public string? AprobadoPor { get; set; }
+
+    public decimal Total { get; set; }
+    public List<LineaDevueltaResponse> Detalle { get; set; } = [];
+}
+
+/// <summary>Una linea devuelta: que producto y cuanto.</summary>
+public class LineaDevueltaResponse
+{
+    public int NotaVentaDetalleId { get; set; }
+    public string Producto { get; set; } = string.Empty;
+    public decimal Cantidad { get; set; }
+    public string Unidad { get; set; } = string.Empty;
+    public decimal Importe { get; set; }
 }

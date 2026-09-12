@@ -182,6 +182,40 @@ export interface NotaVentaResponse {
   pagos: PagoVentaResponse[]
   /** Suma de pagos. Si es menor que total, falta esa diferencia por cobrar. */
   totalPagado: number
+  /** Lo devuelto y APROBADO. La deuda real es total − totalDevuelto − totalPagado. */
+  totalDevuelto: number
+  /** Lo que el cliente devolvió, con su estado. Nacen de editar esta venta. */
+  devoluciones: DevolucionDeVenta[]
+}
+
+export type EstadoDevolucion = 'SOLICITADA' | 'APROBADA' | 'RECHAZADA'
+
+/** Una línea devuelta: qué producto y cuánto. */
+export interface LineaDevuelta {
+  notaVentaDetalleId: number
+  producto: string
+  cantidad: number
+  unidad: string
+  importe: number
+}
+
+/**
+ * Lo que se quitó de la venta al editarla.
+ *
+ * No se registra a mano en ninguna pantalla: sale de bajarle cantidad a una
+ * línea, y hasta que alguien la aprueba no mueve stock ni baja la deuda.
+ */
+export interface DevolucionDeVenta {
+  id: number
+  numero: string
+  fecha: string
+  estado: EstadoDevolucion
+  motivo: string | null
+  motivoRechazo: string | null
+  usuario: string | null
+  aprobadoPor: string | null
+  total: number
+  detalle: LineaDevuelta[]
 }
 
 export interface CrearNotaVentaRequest {
@@ -194,6 +228,13 @@ export interface CrearNotaVentaRequest {
   pagos?: PagoVentaRequest[]
   observacion?: string | null
   detalle: LineaVentaRequest[]
+}
+
+/** Las devoluciones que nacieron de editar una venta: solo se resuelven. */
+export const devolucionVentaApi = {
+  aprobar: (id: number) => api.patch<unknown>(`/devolucion/${id}/aprobar`),
+  rechazar: (id: number, motivo: string) =>
+    api.patch<unknown>(`/devolucion/${id}/rechazar`, { motivo }),
 }
 
 export const notaVentaApi = {

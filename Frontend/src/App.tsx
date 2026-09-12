@@ -24,7 +24,7 @@ import {
 import { OrdenesCompraPage, MisComprasPage, RecepcionesPage } from './features/compras'
 import { ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
 import { ConductoresPage, DespachosPage, FlotaPage, MercadosPage, RutasPage } from './features/tms'
-import { DevolucionesPage, VisitasPage } from './features/dms'
+import { VisitasPage } from './features/dms'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
 import { PermisosProvider, usePermisos } from './lib/permisos'
@@ -54,7 +54,6 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'tms.conductores': ConductoresPage,
   'tms.despachos': DespachosPage,
   'dms.visitas': VisitasPage,
-  'dms.devoluciones': DevolucionesPage,
   'finanzas.metodospago': MetodosPagoPage,
   'finanzas.cobrar': CuentasPorCobrarPage,
   'finanzas.pagar': CuentasPorPagarPage,

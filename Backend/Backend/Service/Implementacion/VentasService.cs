@@ -39,6 +39,7 @@ public class VentasService : IVentasService
     private readonly IPermisoService _permisos;
     private readonly IUsuarioActual _usuarioActual;
     private readonly INotificador _notificador;
+    private readonly IDevolucionService _devoluciones;
 
     public VentasService(
         IVentasRepository repository,
@@ -51,7 +52,8 @@ public class VentasService : IVentasService
         IValidator<PagoVentaRequest> pagoValidator,
         IPermisoService permisos,
         IUsuarioActual usuarioActual,
-        INotificador notificador)
+        INotificador notificador,
+        IDevolucionService devoluciones)
     {
         _repository = repository;
         _productos = productos;
@@ -64,6 +66,7 @@ public class VentasService : IVentasService
         _permisos = permisos;
         _usuarioActual = usuarioActual;
         _notificador = notificador;
+        _devoluciones = devoluciones;
     }
 
     /*
@@ -399,6 +402,17 @@ public class VentasService : IVentasService
             throw new BadRequestException("El almacén está desactivado");
         }
 
+        /*
+         * Quitar mercaderia de una venta ya hecha es una devolucion.
+         *
+         * El cliente se llevo lo que dice el documento: si ahora trae una caja
+         * de vuelta, eso no se corrige borrandolo del papel —quedaria como si
+         * nunca hubiera salido— sino registrando lo que devolvio. Y como una
+         * devolucion necesita aprobacion, la venta NO baja aqui: se guarda la
+         * solicitud y todo se aplica al aprobarla.
+         */
+        var devueltas = RecortesAsync(notaVenta, request.Detalle);
+
         var lineas = await ResolverLineasAsync(request.Detalle);
         var nuevoTotal = Math.Round(lineas.Where(l => !l.Anulado).Sum(l => l.Cantidad * l.PrecioUnitario), 2);
         var pagado = Math.Round(notaVenta.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2);
@@ -408,6 +422,26 @@ public class VentasService : IVentasService
             throw new BadRequestException(
                 $"El nuevo total (S/ {nuevoTotal}) queda por debajo de lo ya cobrado (S/ {pagado}). "
                 + "Anula o corrige el pago primero.");
+        }
+
+        /*
+         * La devolucion se registra ANTES de tocar nada.
+         *
+         * Aqui es donde se comprueba que no se devuelva mas de lo que queda de
+         * cada linea. Si eso falla mas abajo, la venta ya se habria quedado sin
+         * su salida de stock anulada a medias: de este lado, un tope pasado
+         * corta la edicion entera sin haber movido un solo registro.
+         */
+        if (devueltas.Count > 0)
+        {
+            await _devoluciones.CrearAsync(
+                new DevolucionRequest
+                {
+                    NotaVentaId = id,
+                    Motivo = "Quitado al editar la venta",
+                    Detalle = devueltas,
+                },
+                usuarioId);
         }
 
         // Se devuelve el stock que había salido con las cantidades anteriores:
@@ -784,6 +818,53 @@ public class VentasService : IVentasService
     /// Cada línea: resuelve el producto y la presentación, y convierte la
     /// cantidad a unidad base — igual que hace Compras al registrar una línea.
     /// </summary>
+    /// <summary>
+    /// Lo que la edicion quiere quitarle a la venta, y que en vez de quitarse
+    /// se registra como devolucion.
+    ///
+    /// Devuelve las bajas de cantidad y las lineas que se anulan, Y DEJA EL
+    /// REQUEST COMO ESTABA: la venta guarda lo que el cliente se llevo, que es
+    /// lo que dice el documento que firmo, hasta que alguien apruebe la
+    /// devolucion. Lo que sube de cantidad o se agrega se aplica normal — eso
+    /// es vender mas, no devolver.
+    /// </summary>
+    private static List<LineaDevolucionRequest> RecortesAsync(
+        NotaVenta notaVenta, List<LineaVentaRequest> detalle)
+    {
+        var previas = notaVenta.Detalle
+            .Where(d => !d.Anulado)
+            .ToDictionary(d => d.Id);
+
+        var recortes = new List<LineaDevolucionRequest>();
+
+        foreach (var linea in detalle)
+        {
+            if (linea.Id is not int lineaId) continue;
+            if (!previas.TryGetValue(lineaId, out var antes)) continue;
+
+            var pedida = linea.Anulado ? 0m : linea.Cantidad;
+            var recorte = antes.CantidadPresentacion - pedida;
+            if (recorte <= 0.0001m) continue;
+
+            recortes.Add(new LineaDevolucionRequest
+            {
+                NotaVentaDetalleId = antes.Id,
+                Cantidad = recorte,
+                // Vuelve al stock: quien edita la venta no dice en que estado
+                // llego la mercaderia. Si esta rota, se da de baja despues por
+                // un ajuste, que es donde se explica el motivo.
+                ReingresaStock = true,
+            });
+
+            // La linea se queda como estaba. La devolucion, al aprobarse, es
+            // la que baja la cantidad y el importe.
+            linea.Cantidad = antes.CantidadPresentacion;
+            linea.Anulado = false;
+        }
+
+        return recortes;
+    }
+
     private async Task<List<PedidoDetalle>> ResolverLineasAsync(
         List<LineaVentaRequest> detalle, int pedidoId = 0)
     {
@@ -954,7 +1035,34 @@ public class VentasService : IVentasService
         TotalDevuelto = Math.Round(
             n.Devoluciones
                 .Where(d => d.Estado == EstadoDevolucion.Aprobada)
-                .Sum(d => d.Detalle.Sum(l => l.Cantidad * l.PrecioUnitario)), 2)
+                .Sum(d => d.Detalle.Sum(l => l.Cantidad * l.PrecioUnitario)), 2),
+        Devoluciones = n.Devoluciones
+            .OrderByDescending(d => d.Id)
+            .Select(d => new DevolucionDeVentaResponse
+            {
+                Id = d.Id,
+                Numero = d.Numero,
+                Fecha = d.Fecha,
+                Estado = d.Estado,
+                Motivo = d.Motivo,
+                MotivoRechazo = d.MotivoRechazo,
+                Usuario = d.Usuario?.Nombre,
+                AprobadoPor = d.AprobadoPor?.Nombre,
+                Total = Math.Round(d.Detalle.Sum(l => l.Cantidad * l.PrecioUnitario), 2),
+                Detalle = d.Detalle
+                    .Select(l => new LineaDevueltaResponse
+                    {
+                        NotaVentaDetalleId = l.NotaVentaDetalleId,
+                        Producto = l.NotaVentaDetalle?.Producto?.Nombre ?? string.Empty,
+                        Cantidad = l.CantidadPresentacion,
+                        Unidad = l.NotaVentaDetalle?.Presentacion?.Nombre
+                            ?? l.NotaVentaDetalle?.Producto?.UnidadBase?.Codigo
+                            ?? string.Empty,
+                        Importe = Math.Round(l.Cantidad * l.PrecioUnitario, 2),
+                    })
+                    .ToList(),
+            })
+            .ToList()
     };
 
     private static PagoVentaResponse MapPago(PagoVenta p) => new()

@@ -262,11 +262,6 @@ const menuGrupos = <MenuGrupo>[
         icono: Icons.storefront_outlined,
       ),
       MenuItem(
-        id: 'dms.devoluciones',
-        titulo: 'Devoluciones',
-        icono: Icons.undo,
-      ),
-      MenuItem(
         id: 'dms.evidencias',
         titulo: 'Evidencias',
         icono: Icons.fact_check_outlined,

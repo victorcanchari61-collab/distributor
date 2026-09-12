@@ -8,7 +8,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Controllers;
 
-/// <summary>Devoluciones de cliente: nacen de una nota de venta y se aprueban.</summary>
+/// <summary>
+/// Devoluciones de cliente.
+///
+/// No se registran a mano: nacen de editar la nota de venta quitandole
+/// cantidad. Aqui solo se consultan y se resuelven, y por eso van con el
+/// permiso de la nota de venta y no con uno propio.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
@@ -27,46 +33,40 @@ public class DevolucionController : ControllerBase
             : null;
 
     [HttpGet]
-    [Permiso("dms.devoluciones", Accion.Ver)]
+    [Permiso("fact.notaventa", Accion.Ver)]
     public async Task<IActionResult> GetAll([FromQuery] string? estado) =>
         Ok(await _devoluciones.GetAllAsync(estado));
 
     [HttpGet("resumen")]
-    [Permiso("dms.devoluciones", Accion.Ver)]
+    [Permiso("fact.notaventa", Accion.Ver)]
     public async Task<IActionResult> Resumen() => Ok(await _devoluciones.GetResumenAsync());
 
     [HttpGet("{id:int}")]
-    [Permiso("dms.devoluciones", Accion.Ver)]
+    [Permiso("fact.notaventa", Accion.Ver)]
     public async Task<IActionResult> GetById(int id) => Ok(await _devoluciones.GetAsync(id));
 
     /// <summary>Lo que todavía se puede devolver de una venta.</summary>
     [HttpGet("devolvible/{notaVentaId:int}")]
-    [Permiso("dms.devoluciones", Accion.Ver)]
+    [Permiso("fact.notaventa", Accion.Ver)]
     public async Task<IActionResult> Devolvible(int notaVentaId) =>
         Ok(await _devoluciones.DevolvibleAsync(notaVentaId));
 
-    [HttpPost]
-    [Permiso("dms.devoluciones", Accion.Crear)]
-    public async Task<IActionResult> Create([FromBody] DevolucionRequest request)
-    {
-        var creada = await _devoluciones.CrearAsync(request, UsuarioId);
-        return CreatedAtAction(nameof(GetById), new { id = creada.Id }, creada);
-    }
 
     /*
      * Aprobar y rechazar piden "confirmar", no "editar".
      *
-     * Quien registra una devolucion en la calle no deberia poder aprobarsela:
-     * son dos permisos distintos justamente para poder separar las dos manos.
+     * Quien edita la venta —y con eso pide la devolucion— no deberia poder
+     * aprobarsela: son dos permisos distintos justamente para separar las dos
+     * manos.
      */
 
     [HttpPatch("{id:int}/aprobar")]
-    [Permiso("dms.devoluciones", Accion.Confirmar)]
+    [Permiso("fact.notaventa", Accion.Confirmar)]
     public async Task<IActionResult> Aprobar(int id) =>
         Ok(await _devoluciones.AprobarAsync(id, UsuarioId));
 
     [HttpPatch("{id:int}/rechazar")]
-    [Permiso("dms.devoluciones", Accion.Confirmar)]
+    [Permiso("fact.notaventa", Accion.Confirmar)]
     public async Task<IActionResult> Rechazar(int id, [FromBody] RechazarDevolucionRequest request) =>
         Ok(await _devoluciones.RechazarAsync(id, request.Motivo, UsuarioId));
 }
