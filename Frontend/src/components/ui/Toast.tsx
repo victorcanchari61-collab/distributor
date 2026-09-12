@@ -70,7 +70,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
       <div
         data-sys={sys}
-        className="pointer-events-none fixed inset-x-0 top-20 z-[200] flex flex-col items-center gap-2 px-4"
+        className="pointer-events-none fixed top-20 right-4 z-[200] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2"
       >
         {avisos.map((a) => (
           <Tarjeta key={a.id} aviso={a} onClose={() => cerrar(a.id)} />
@@ -98,8 +98,8 @@ function Tarjeta({ aviso, onClose }: { aviso: Aviso; onClose: () => void }) {
       role="alert"
       style={error ? undefined : { backgroundColor: 'rgb(var(--sys-rgb))' }}
       className={cn(
-        'pointer-events-auto flex w-full max-w-md items-start gap-2 rounded-field p-3 text-sm text-white shadow-panel transition-all duration-200',
-        visible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0',
+        'pointer-events-auto flex w-full items-start gap-2 rounded-field p-3 text-sm text-white shadow-panel transition-all duration-200',
+        visible ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0',
         error && 'bg-red-600',
       )}
     >
