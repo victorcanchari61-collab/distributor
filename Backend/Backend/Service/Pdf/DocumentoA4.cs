@@ -93,8 +93,11 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
         var izquierda = new List<DatoImprimible>
         {
             new(doc.EtiquetaParte.ToUpperInvariant(), doc.ParteNombre),
-            new("RUC/DNI", doc.ParteDocumento ?? "—"),
         };
+        // Solo si de verdad hay documento. Un ajuste no tiene RUC de nadie, y
+        // un "RUC/DNI: —" en su cabecera hace buscar un dato que no existe.
+        if (!string.IsNullOrWhiteSpace(doc.ParteDocumento))
+            izquierda.Add(new DatoImprimible("RUC/DNI", doc.ParteDocumento));
         if (!string.IsNullOrWhiteSpace(doc.ParteDireccion))
             izquierda.Add(new DatoImprimible("DIRECCIÓN", doc.ParteDireccion));
         if (!string.IsNullOrWhiteSpace(doc.ParteTelefono))
@@ -111,7 +114,7 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
         // rejilla parece dos tablas pegadas en vez de una.
         derecha.AddRange(doc.Datos.Select(d => d with { Etiqueta = d.Etiqueta.ToUpperInvariant() }));
         if (doc.Usuario is { Length: > 0 } usuario)
-            derecha.Insert(0, new DatoImprimible("VENDEDOR", usuario));
+            derecha.Insert(0, new DatoImprimible(doc.EtiquetaUsuario, usuario));
 
         container.Border(1).BorderColor(Colores.Linea).Padding(6).Row(row =>
         {

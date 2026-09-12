@@ -80,5 +80,14 @@ public sealed record DocumentoImprimible
     public string? Observacion { get; init; }
     public string? Usuario { get; init; }
 
+    /// <summary>
+    /// Cómo se llama en el papel quien registró el documento.
+    ///
+    /// "VENDEDOR" en una venta, donde esa persona es la que atendió y a quien
+    /// se le reclama. En un ajuste o una transferencia no hay vendedor ninguno:
+    /// hay quien lo registró, y llamarlo vendedor es decir algo falso.
+    /// </summary>
+    public string EtiquetaUsuario { get; init; } = "REGISTRÓ";
+
     public required EmpresaResponse Empresa { get; init; }
 }

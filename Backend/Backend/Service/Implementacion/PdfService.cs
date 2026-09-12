@@ -1,4 +1,5 @@
 using Backend.Dtos.Responses;
+using Backend.Exceptions;
 using Backend.Models;
 using Backend.Repository.Interfaces;
 using Backend.Service.Interfaces;
@@ -58,6 +59,7 @@ public class PdfService(
             Total = pedido.Total,
             Observacion = pedido.Observacion,
             Usuario = pedido.Usuario,
+            EtiquetaUsuario = "VENDEDOR",
             Empresa = empresa,
         };
 
@@ -98,6 +100,7 @@ public class PdfService(
             TotalPagado = venta.TotalPagado,
             Observacion = venta.Observacion,
             Usuario = venta.Usuario,
+            EtiquetaUsuario = "VENDEDOR",
             Empresa = empresa,
         };
 
@@ -335,7 +338,7 @@ public class PdfService(
     {
         var doc = await inventario.GetDocumentoAsync(id);
         if (doc.Tipo != tipo)
-            throw new KeyNotFoundException($"El documento {id} no es una {nombre}.");
+            throw new NotFoundException($"El documento {id} no es una {nombre}.");
 
         return doc;
     }
