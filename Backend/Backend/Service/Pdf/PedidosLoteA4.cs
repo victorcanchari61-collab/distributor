@@ -25,7 +25,7 @@ public sealed class PedidosLoteA4(IReadOnlyList<DocumentoImprimible> pedidos) : 
     /// rejilla de datos y el pie. Fijarlo aquí es lo que hace que todas las
     /// copias salgan con la misma geometría.
     /// </summary>
-    private const float TablaMm = 140;
+    private const float TablaMm = 134;
 
     public void Compose(IDocumentContainer container)
     {
