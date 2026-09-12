@@ -39,9 +39,14 @@ public class PdfService(
          * los dos, el del cliente y el que vuelve firmado; pero para archivar
          * o consultar sigue sirviendo la hoja simple.
          */
-        var contenido = formato == FormatoPdf.Copias
-            ? new PedidosLoteA4([doc]).GeneratePdf()
-            : Generar(doc, formato);
+        var contenido = formato switch
+        {
+            FormatoPdf.Copias => new PedidosLoteA4([doc]).GeneratePdf(),
+            FormatoPdf.Ticket => Generar(doc, formato),
+            // La hoja vertical del pedido usa el mismo dibujo que la de dos
+            // copias, no la maqueta generica: son el mismo documento.
+            _ => new PedidoA4(doc).GeneratePdf(),
+        };
 
         return (contenido, Nombre("pedido", doc.Numero, formato));
     }
