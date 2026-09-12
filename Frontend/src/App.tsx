@@ -23,7 +23,7 @@ import {
 } from './features/inventario'
 import { OrdenesCompraPage, MisComprasPage, RecepcionesPage } from './features/compras'
 import { ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
-import { ConductoresPage, FlotaPage, MercadosPage, RutasPage } from './features/tms'
+import { ConductoresPage, DespachosPage, FlotaPage, MercadosPage, RutasPage } from './features/tms'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
 import { PermisosProvider, usePermisos } from './lib/permisos'
@@ -51,6 +51,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'tms.rutas': RutasPage,
   'tms.flota': FlotaPage,
   'tms.conductores': ConductoresPage,
+  'tms.despachos': DespachosPage,
   'finanzas.metodospago': MetodosPagoPage,
   'finanzas.cobrar': CuentasPorCobrarPage,
   'finanzas.pagar': CuentasPorPagarPage,

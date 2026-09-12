@@ -19,3 +19,12 @@ export type {
 export { RutasPage } from './RutasPage'
 export { rutaApi } from './rutaApi'
 export type { RutaRequest, RutaResponse } from './rutaApi'
+export { DespachosPage } from './DespachosPage'
+export { despachoApi } from './despachoApi'
+export type {
+  DespachoPedidoResponse,
+  DespachoRequest,
+  DespachoResponse,
+  EstadoDespacho,
+  ResumenDespachos,
+} from './despachoApi'
