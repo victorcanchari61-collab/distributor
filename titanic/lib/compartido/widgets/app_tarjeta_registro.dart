@@ -83,6 +83,7 @@ class AppTarjetaRegistro extends StatelessWidget {
     required this.titulo,
     required this.campos,
     this.insignia,
+    this.estado,
     this.acciones,
     this.onTap,
   });
@@ -93,8 +94,16 @@ class AppTarjetaRegistro extends StatelessWidget {
   /// Lo que identifica al registro: el documento en clientes y proveedores.
   final String titulo;
 
-  /// Etiqueta junto al titulo, por ejemplo el tipo de documento.
+  /// Etiqueta junto al titulo cuando IDENTIFICA al registro: el codigo del
+  /// producto, el tipo de documento del cliente. Un estado no va aqui.
   final Widget? insignia;
+
+  /// El estado del registro, que se pinta como una fila mas al final.
+  ///
+  /// Separado de [insignia] a proposito: pegado al numero del documento
+  /// competia con el, y el estado es un dato del registro como la fecha o el
+  /// proveedor, no parte de su nombre.
+  final Widget? estado;
 
   final List<CampoDetalle> campos;
 
@@ -144,6 +153,7 @@ class AppTarjetaRegistro extends StatelessWidget {
             ),
             const SizedBox(height: Dimen.espacio2),
             for (final campo in visibles) FilaDato(campo),
+            if (estado != null) FilaDato(CampoDetalle('Estado', null, widget: estado)),
           ],
         ),
       ),

@@ -99,7 +99,7 @@ class _TarjetaCuentaPagar extends StatelessWidget {
       icono: Icons.credit_card_outlined,
       color: color,
       titulo: compra.numero,
-      insignia: const AppEtiqueta('Vigente', tono: EtiquetaTono.exito),
+      estado: const AppEtiqueta('Vigente', tono: EtiquetaTono.exito),
       campos: [
         CampoDetalle('Proveedor', compra.proveedor),
         CampoDetalle('Fecha', _fecha(compra.fecha)),

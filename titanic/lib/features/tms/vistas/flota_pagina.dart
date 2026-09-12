@@ -179,7 +179,7 @@ class FlotaPagina extends ConsumerWidget {
       subtitulo: vehiculo.descripcion.isEmpty
           ? vehiculo.tipoVehiculo
           : vehiculo.descripcion,
-      insignia: AppEtiqueta(estado.texto, tono: estado.tono),
+      estado: AppEtiqueta(estado.texto, tono: estado.tono),
       campos: [
         CampoDetalle('Placa', vehiculo.placa),
         CampoDetalle('Tipo', vehiculo.tipoVehiculo),

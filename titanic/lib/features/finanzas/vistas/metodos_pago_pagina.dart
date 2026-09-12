@@ -161,7 +161,7 @@ class _TarjetaMetodoPago extends StatelessWidget {
       color: color,
       titulo: metodo.nombre,
       subtitulo: TipoMetodoPago.etiqueta(metodo.tipo),
-      insignia: !metodo.activo
+      estado: !metodo.activo
           ? const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso)
           : null,
       campos: _campos,

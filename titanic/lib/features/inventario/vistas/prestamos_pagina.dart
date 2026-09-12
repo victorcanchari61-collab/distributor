@@ -150,7 +150,7 @@ class _TarjetaPrestamo extends StatelessWidget {
       color: color,
       titulo: prestamo.numero,
       subtitulo: prestamo.contraparte,
-      insignia: AppEtiqueta(
+      estado: AppEtiqueta(
         prestamo.estado == EstadoPrestamo.pendiente ? 'Pendiente' : 'Devuelto',
         tono: prestamo.estado == EstadoPrestamo.pendiente ? EtiquetaTono.aviso : EtiquetaTono.exito,
       ),

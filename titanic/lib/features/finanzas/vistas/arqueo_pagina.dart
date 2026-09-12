@@ -243,7 +243,7 @@ class _TarjetaCuadre extends StatelessWidget {
       icono: Icons.person_outline,
       color: color,
       titulo: cuadre.usuario,
-      insignia: AppEtiqueta(
+      estado: AppEtiqueta(
         EstadoCuadre.etiqueta(cuadre.estado),
         tono: tonoEstadoCuadre(cuadre.estado),
       ),

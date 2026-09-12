@@ -180,7 +180,7 @@ class _TarjetaEmpresa extends StatelessWidget {
             ? empresa.razonSocial
             : empresa.nombreComercial,
         subtitulo: 'RUC ${empresa.ruc}',
-        insignia: empresa.activa
+        estado: empresa.activa
             ? const AppEtiqueta('Activa', tono: EtiquetaTono.exito)
             : null,
         campos: _campos,

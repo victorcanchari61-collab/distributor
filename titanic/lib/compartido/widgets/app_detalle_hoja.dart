@@ -16,6 +16,8 @@ Future<void> mostrarDetalle(
   required String titulo,
   String? subtitulo,
   Widget? insignia,
+  /// El estado, que va como una fila mas al final y no pegado al titulo.
+  Widget? estado,
   required List<CampoDetalle> campos,
   List<Widget> acciones = const [],
   /// Contenido libre despues de los campos, como las tarjetas de producto de
@@ -113,6 +115,8 @@ Future<void> mostrarDetalle(
                 ),
                 children: [
                   for (final campo in campos) FilaDato(campo),
+                  if (estado != null)
+                    FilaDato(CampoDetalle('Estado', null, widget: estado)),
                   if (contenidoExtra.isNotEmpty) ...[
                     const SizedBox(height: Dimen.espacio2),
                     for (final w in contenidoExtra) ...[

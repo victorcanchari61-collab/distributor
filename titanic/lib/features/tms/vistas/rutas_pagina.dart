@@ -102,7 +102,7 @@ class RutasPagina extends ConsumerWidget {
       icono: Icons.route_outlined,
       color: color,
       titulo: ruta.nombre,
-      insignia: _insigniaEstado(ruta.activo),
+      estado: _insigniaEstado(ruta.activo),
       campos: [
         CampoDetalle('Nombre', ruta.nombre),
         CampoDetalle('Clientes', '${ruta.clientes}'),

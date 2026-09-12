@@ -125,7 +125,7 @@ class _TarjetaUsuario extends StatelessWidget {
         color: color,
         titulo: usuario.nombre,
         subtitulo: usuario.email,
-        insignia: usuario.activo
+        estado: usuario.activo
             ? null
             : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
         campos: _campos,

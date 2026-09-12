@@ -104,7 +104,7 @@ class MercadosPagina extends ConsumerWidget {
       color: color,
       titulo: mercado.nombre,
       subtitulo: mercado.direccion,
-      insignia: _insigniaEstado(mercado.activo),
+      estado: _insigniaEstado(mercado.activo),
       campos: [
         CampoDetalle('Nombre', mercado.nombre),
         CampoDetalle('Dirección', mercado.direccion),

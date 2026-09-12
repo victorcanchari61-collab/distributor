@@ -141,7 +141,7 @@ class TiposVehiculoPagina extends ConsumerWidget {
       color: Acento.de(context),
       titulo: tipo.nombre,
       subtitulo: tipo.descripcion,
-      insignia: insigniaActivo(tipo.activo),
+      estado: insigniaActivo(tipo.activo),
       campos: [
         CampoDetalle('Nombre', tipo.nombre),
         CampoDetalle('Descripción', tipo.descripcion),

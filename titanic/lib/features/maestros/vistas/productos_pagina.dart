@@ -275,7 +275,7 @@ class _TarjetaProducto extends StatelessWidget {
       color: color,
       titulo: producto.nombre,
       subtitulo: producto.codigo,
-      insignia: producto.activo
+      estado: producto.activo
           ? null
           : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
       campos: _campos,

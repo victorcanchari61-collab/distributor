@@ -273,7 +273,7 @@ class _TarjetaCliente extends StatelessWidget {
       color: color,
       titulo: cliente.nombre,
       subtitulo: '${cliente.tipoDoc} ${cliente.documento}',
-      insignia: cliente.activo
+      estado: cliente.activo
           ? null
           : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
       campos: _campos,

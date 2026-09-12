@@ -73,7 +73,7 @@ class _TarjetaCobro extends StatelessWidget {
       icono: Icons.savings_outlined,
       color: color,
       titulo: cobro.notaVentaNumero,
-      insignia: AppEtiqueta(
+      estado: AppEtiqueta(
         cobro.anulado ? 'Anulado' : 'Válido',
         tono: cobro.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,
       ),

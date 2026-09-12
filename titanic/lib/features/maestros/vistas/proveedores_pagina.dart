@@ -260,7 +260,7 @@ class _TarjetaProveedor extends StatelessWidget {
           ? proveedor.nombreComercial!
           : proveedor.nombre,
       subtitulo: '${proveedor.tipoDoc} ${proveedor.documento}',
-      insignia: proveedor.activo
+      estado: proveedor.activo
           ? null
           : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
       campos: _campos,

@@ -144,7 +144,7 @@ class _TarjetaRecepcion extends StatelessWidget {
       icono: Icons.move_to_inbox_outlined,
       color: color,
       titulo: doc.numero,
-      insignia: AppEtiqueta(
+      estado: AppEtiqueta(
         doc.anulado ? 'Anulada' : 'Confirmada',
         tono: doc.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,
       ),
@@ -155,7 +155,7 @@ class _TarjetaRecepcion extends StatelessWidget {
         color: color,
         titulo: doc.numero,
         subtitulo: doc.almacen,
-        insignia: AppEtiqueta(
+        estado: AppEtiqueta(
           doc.anulado ? 'Anulada' : 'Confirmada',
           tono: doc.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,
         ),

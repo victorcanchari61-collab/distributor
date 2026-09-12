@@ -229,7 +229,7 @@ class _TarjetaCompra extends StatelessWidget {
       icono: Icons.shopping_bag_outlined,
       color: color,
       titulo: compra.numero,
-      insignia: AppEtiqueta(_etiquetaEstadoCompra(compra.estado), tono: _tonoEstadoCompra(compra.estado)),
+      estado: AppEtiqueta(_etiquetaEstadoCompra(compra.estado), tono: _tonoEstadoCompra(compra.estado)),
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
@@ -276,7 +276,7 @@ class _TarjetaCompra extends StatelessWidget {
       color: color,
       titulo: compra.numero,
       subtitulo: compra.proveedor,
-      insignia: AppEtiqueta(_etiquetaEstadoCompra(compra.estado), tono: _tonoEstadoCompra(compra.estado)),
+      estado: AppEtiqueta(_etiquetaEstadoCompra(compra.estado), tono: _tonoEstadoCompra(compra.estado)),
       campos: [
         ..._campos,
         for (final pago in compra.pagos)

@@ -278,7 +278,7 @@ class _TarjetaPedido extends StatelessWidget {
       icono: Icons.list_alt_outlined,
       color: color,
       titulo: pedido.numero,
-      insignia: AppEtiqueta(_etiquetaEstadoPedido(pedido.estado), tono: _tonoEstadoPedido(pedido.estado)),
+      estado: AppEtiqueta(_etiquetaEstadoPedido(pedido.estado), tono: _tonoEstadoPedido(pedido.estado)),
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
@@ -325,7 +325,7 @@ class _TarjetaPedido extends StatelessWidget {
       color: color,
       titulo: pedido.numero,
       subtitulo: pedido.cliente,
-      insignia: AppEtiqueta(_etiquetaEstadoPedido(pedido.estado), tono: _tonoEstadoPedido(pedido.estado)),
+      estado: AppEtiqueta(_etiquetaEstadoPedido(pedido.estado), tono: _tonoEstadoPedido(pedido.estado)),
       campos: _campos,
       contenidoExtra: _lineas,
       acciones: [

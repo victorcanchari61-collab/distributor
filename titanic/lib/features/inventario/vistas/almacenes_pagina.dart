@@ -214,11 +214,12 @@ class _TarjetaAlmacen extends StatelessWidget {
       color: color,
       titulo: almacen.nombre,
       subtitulo: almacen.codigo,
-      insignia: !almacen.activo
-          ? const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso)
-          : almacen.esPrincipal
+      insignia: almacen.esPrincipal
           ? AppEtiqueta('Principal', tono: EtiquetaTono.modulo, color: color)
           : null,
+      estado: almacen.activo
+          ? const AppEtiqueta('Activo', tono: EtiquetaTono.exito)
+          : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
       campos: _campos,
       acciones: [
         if (!almacen.esPrincipal)

@@ -137,7 +137,7 @@ class _TarjetaTransferencia extends StatelessWidget {
       icono: Icons.local_shipping_outlined,
       color: color,
       titulo: doc.numero,
-      insignia: AppEtiqueta(
+      estado: AppEtiqueta(
         doc.anulado ? 'Anulada' : 'Confirmada',
         tono: doc.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,
       ),

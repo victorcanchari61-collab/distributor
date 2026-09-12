@@ -150,7 +150,7 @@ class ConductoresPagina extends ConsumerWidget {
       color: color,
       titulo: conductor.nombre,
       subtitulo: conductor.documento,
-      insignia: AppEtiqueta(estado.texto, tono: estado.tono),
+      estado: AppEtiqueta(estado.texto, tono: estado.tono),
       campos: [
         CampoDetalle('Nombre', conductor.nombre),
         CampoDetalle('Documento', conductor.documento),

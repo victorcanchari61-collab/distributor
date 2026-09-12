@@ -152,7 +152,7 @@ class _TarjetaNotaVenta extends StatelessWidget {
       icono: Icons.shopping_bag_outlined,
       color: color,
       titulo: nota.numero,
-      insignia: AppEtiqueta(
+      estado: AppEtiqueta(
         nota.estado == EstadoNotaVenta.anulada ? 'Anulada' : 'Confirmada',
         tono: nota.estado == EstadoNotaVenta.anulada ? EtiquetaTono.peligro : EtiquetaTono.exito,
       ),
@@ -188,7 +188,7 @@ class _TarjetaNotaVenta extends StatelessWidget {
       color: color,
       titulo: nota.numero,
       subtitulo: nota.cliente,
-      insignia: AppEtiqueta(
+      estado: AppEtiqueta(
         nota.estado == EstadoNotaVenta.anulada ? 'Anulada' : 'Confirmada',
         tono: nota.estado == EstadoNotaVenta.anulada ? EtiquetaTono.peligro : EtiquetaTono.exito,
       ),

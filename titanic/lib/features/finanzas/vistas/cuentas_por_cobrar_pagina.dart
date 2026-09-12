@@ -99,7 +99,7 @@ class _TarjetaCuentaCobrar extends StatelessWidget {
       icono: Icons.account_balance_wallet_outlined,
       color: color,
       titulo: nota.numero,
-      insignia: const AppEtiqueta('Vigente', tono: EtiquetaTono.exito),
+      estado: const AppEtiqueta('Vigente', tono: EtiquetaTono.exito),
       campos: [
         CampoDetalle('Cliente', nota.cliente),
         CampoDetalle('Fecha', _fecha(nota.fecha)),

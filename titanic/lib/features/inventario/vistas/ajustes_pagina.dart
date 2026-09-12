@@ -264,7 +264,7 @@ class _TarjetaAjuste extends StatelessWidget {
       icono: Icons.fact_check_outlined,
       color: color,
       titulo: doc.numero,
-      insignia: AppEtiqueta(
+      estado: AppEtiqueta(
         doc.anulado ? 'Anulado' : 'Confirmado',
         tono: doc.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,
       ),

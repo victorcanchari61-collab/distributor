@@ -220,7 +220,7 @@ class _TarjetaOrden extends StatelessWidget {
       icono: Icons.list_alt_outlined,
       color: color,
       titulo: orden.numero,
-      insignia: AppEtiqueta(
+      estado: AppEtiqueta(
         _etiquetaEstadoOrden(orden.estado),
         tono: _tonoEstadoOrden(orden.estado),
       ),
@@ -270,7 +270,7 @@ class _TarjetaOrden extends StatelessWidget {
       color: color,
       titulo: orden.numero,
       subtitulo: orden.proveedor,
-      insignia: AppEtiqueta(
+      estado: AppEtiqueta(
         _etiquetaEstadoOrden(orden.estado),
         tono: _tonoEstadoOrden(orden.estado),
       ),
