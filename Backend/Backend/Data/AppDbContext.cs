@@ -32,6 +32,8 @@ public class AppDbContext : DbContext
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<RolPermiso> RolPermisos => Set<RolPermiso>();
     public DbSet<UsuarioPermiso> UsuarioPermisos => Set<UsuarioPermiso>();
+    public DbSet<RolAlcance> RolAlcances => Set<RolAlcance>();
+    public DbSet<UsuarioAlcance> UsuarioAlcances => Set<UsuarioAlcance>();
     public DbSet<SolicitudPermiso> SolicitudesPermiso => Set<SolicitudPermiso>();
     public DbSet<Categoria> Categorias => Set<Categoria>();
     public DbSet<Marca> Marcas => Set<Marca>();
@@ -114,6 +116,38 @@ public class AppDbContext : DbContext
                     DelSistema = true,
                     FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 });
+        });
+
+        modelBuilder.Entity<RolAlcance>(entity =>
+        {
+            entity.ToTable("RolAlcances");
+            entity.Property(a => a.Submodulo).HasMaxLength(60).IsRequired();
+            entity.Property(a => a.Alcance).HasMaxLength(20).IsRequired();
+
+            // Un alcance por submodulo: dos filas para el mismo serian dos
+            // respuestas distintas a la misma pregunta.
+            entity.HasIndex(a => new { a.RolId, a.Submodulo }).IsUnique();
+
+            entity.HasOne(a => a.Rol).WithMany()
+                .HasForeignKey(a => a.RolId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UsuarioAlcance>(entity =>
+        {
+            entity.ToTable("UsuarioAlcances");
+            entity.Property(a => a.Submodulo).HasMaxLength(60).IsRequired();
+            entity.Property(a => a.Alcance).HasMaxLength(20).IsRequired();
+
+            entity.HasIndex(a => new { a.UsuarioId, a.Submodulo }).IsUnique();
+
+            entity.HasOne(a => a.Usuario).WithMany()
+                .HasForeignKey(a => a.UsuarioId).OnDelete(DeleteBehavior.Cascade);
+
+            // Restrict en quien lo concedio: es un dato de auditoria, y
+            // borrarlo con el usuario dejaria sin respuesta a "quien le dio
+            // esto".
+            entity.HasOne(a => a.ConcedidoPor).WithMany()
+                .HasForeignKey(a => a.ConcedidoPorId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<RolPermiso>(entity =>

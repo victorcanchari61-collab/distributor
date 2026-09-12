@@ -40,6 +40,64 @@ public class PermisoController : ControllerBase
             acciones = par.Value,
         }));
 
+    /*
+     * El alcance: no que PUEDE hacer, sino sobre QUE FILAS.
+     *
+     * Va en este controlador y no en uno propio porque se configura en la
+     * misma pantalla y responde a la misma pregunta — quien ve que — solo que
+     * a nivel de datos en vez de a nivel de boton.
+     */
+
+    /// <summary>Los submódulos que admiten alcance y los niveles que existen.</summary>
+    [HttpGet("alcances/catalogo")]
+    public IActionResult CatalogoAlcances() => Ok(new
+    {
+        submodulos = AlcanceDatos.Submodulos,
+        niveles = AlcanceDatos.Todas,
+    });
+
+    /// <summary>El alcance de quien pregunta, para que su pantalla se adapte.</summary>
+    [HttpGet("alcances/mios")]
+    public async Task<IActionResult> MisAlcances()
+    {
+        if (UsuarioId is not int usuarioId) return Unauthorized();
+        return Ok(await _permisos.MisAlcancesAsync(usuarioId));
+    }
+
+    [HttpGet("alcances/rol/{rolId:int}")]
+    [Permiso("config.accesos", Accion.Ver)]
+    public async Task<IActionResult> AlcancesDeRol(int rolId) =>
+        Ok(await _permisos.AlcancesDeRolAsync(rolId));
+
+    [HttpPut("alcances/rol/{rolId:int}")]
+    [Permiso("config.accesos", Accion.Editar)]
+    public async Task<IActionResult> GuardarAlcancesRol(
+        int rolId, [FromBody] Dictionary<string, string> alcances)
+    {
+        await _permisos.GuardarAlcancesRolAsync(rolId, alcances);
+        return NoContent();
+    }
+
+    [HttpGet("alcances/usuario/{usuarioId:int}")]
+    [Permiso("config.accesos", Accion.Ver)]
+    public async Task<IActionResult> AlcancesDeUsuario(int usuarioId) =>
+        Ok(await _permisos.AlcancesDeUsuarioAsync(usuarioId));
+
+    [HttpPut("alcances/usuario/{usuarioId:int}")]
+    [Permiso("config.accesos", Accion.Editar)]
+    public async Task<IActionResult> GuardarAlcancesUsuario(
+        int usuarioId, [FromBody] Dictionary<string, string> alcances)
+    {
+        await _permisos.GuardarAlcancesUsuarioAsync(usuarioId, alcances, UsuarioId);
+        return NoContent();
+    }
+
+    /// <summary>Quién pregunta, del token.</summary>
+    private int? UsuarioId =>
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"), out var id)
+            ? id
+            : null;
+
     /// <summary>
     /// Los permisos de quien pregunta, como "submodulo:accion".
     ///

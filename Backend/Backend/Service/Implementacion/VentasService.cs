@@ -36,6 +36,8 @@ public class VentasService : IVentasService
     private readonly IValidator<ConfirmarPedidoRequest> _confirmarValidator;
     private readonly IValidator<CrearNotaVentaRequest> _notaVentaValidator;
     private readonly IValidator<PagoVentaRequest> _pagoValidator;
+    private readonly IPermisoService _permisos;
+    private readonly IUsuarioActual _usuarioActual;
     private readonly INotificador _notificador;
 
     public VentasService(
@@ -47,6 +49,8 @@ public class VentasService : IVentasService
         IValidator<ConfirmarPedidoRequest> confirmarValidator,
         IValidator<CrearNotaVentaRequest> notaVentaValidator,
         IValidator<PagoVentaRequest> pagoValidator,
+        IPermisoService permisos,
+        IUsuarioActual usuarioActual,
         INotificador notificador)
     {
         _repository = repository;
@@ -57,14 +61,38 @@ public class VentasService : IVentasService
         _confirmarValidator = confirmarValidator;
         _notaVentaValidator = notaVentaValidator;
         _pagoValidator = pagoValidator;
+        _permisos = permisos;
+        _usuarioActual = usuarioActual;
         _notificador = notificador;
+    }
+
+    /*
+     * Hasta donde llega lo que ve quien esta pidiendo.
+     *
+     * Se resuelve en cada llamada y no se guarda: es una consulta corta y
+     * cachearla por instancia haria que un cambio de alcance no surtiera
+     * efecto hasta la siguiente peticion, que es justo el problema que se
+     * evito con los permisos.
+     */
+    private async Task<AlcanceFiltro?> AlcancePedidosAsync() => await AlcanceAsync("fact.pedidos");
+
+    private async Task<AlcanceFiltro?> AlcanceVentasAsync() => await AlcanceAsync("fact.notaventa");
+
+    private async Task<AlcanceFiltro?> AlcanceAsync(string submodulo)
+    {
+        // Sin usuario en el token no hay a quien acotar. Ocurre en las llamadas
+        // internas del propio sistema, que no pasan por un controlador.
+        if (_usuarioActual.Id is not int id) return null;
+
+        var alcance = await _permisos.AlcanceAsync(id, submodulo);
+        return new AlcanceFiltro(alcance, id);
     }
 
     // --------------------------------------------------------------- Pedidos
 
     public async Task<IEnumerable<PedidoResponse>> GetPedidosAsync(string? estado = null)
     {
-        var pedidos = await _repository.GetPedidosAsync(estado);
+        var pedidos = await _repository.GetPedidosAsync(estado, await AlcancePedidosAsync());
         return pedidos.Select(MapPedido);
     }
 
@@ -73,7 +101,7 @@ public class VentasService : IVentasService
 
     public async Task<PaginaResponse<PedidoResponse>> ListarPedidosAsync(ConsultaTablaRequest consulta)
     {
-        var (items, total) = await _repository.ListarPedidosAsync(consulta);
+        var (items, total) = await _repository.ListarPedidosAsync(consulta, await AlcancePedidosAsync());
 
         return new PaginaResponse<PedidoResponse>
         {
@@ -84,11 +112,12 @@ public class VentasService : IVentasService
         };
     }
 
-    public Task<ResumenPedidosResponse> GetResumenPedidosAsync() => _repository.ResumenPedidosAsync();
+    public async Task<ResumenPedidosResponse> GetResumenPedidosAsync() =>
+        await _repository.ResumenPedidosAsync(await AlcancePedidosAsync());
 
     public async Task<PaginaResponse<NotaVentaResponse>> ListarNotasVentaAsync(ConsultaTablaRequest consulta)
     {
-        var (items, total) = await _repository.ListarNotasVentaAsync(consulta);
+        var (items, total) = await _repository.ListarNotasVentaAsync(consulta, await AlcanceVentasAsync());
 
         return new PaginaResponse<NotaVentaResponse>
         {
@@ -99,8 +128,8 @@ public class VentasService : IVentasService
         };
     }
 
-    public Task<ResumenNotasVentaResponse> GetResumenNotasVentaAsync() =>
-        _repository.ResumenNotasVentaAsync();
+    public async Task<ResumenNotasVentaResponse> GetResumenNotasVentaAsync() =>
+        await _repository.ResumenNotasVentaAsync(await AlcanceVentasAsync());
 
     public async Task<PedidoResponse> CrearPedidoAsync(CrearPedidoRequest request, int? usuarioId)
     {
@@ -310,7 +339,7 @@ public class VentasService : IVentasService
 
     public async Task<IEnumerable<NotaVentaResponse>> GetNotasVentaAsync(string? estado = null)
     {
-        var notas = await _repository.GetNotasVentaAsync(estado);
+        var notas = await _repository.GetNotasVentaAsync(estado, await AlcanceVentasAsync());
         return notas.Select(MapNotaVenta);
     }
 
@@ -765,12 +794,21 @@ public class VentasService : IVentasService
         }
     }
 
+    /*
+     * Todo acceso a UN pedido pasa por aqui — verlo, editarlo, confirmarlo,
+     * anularlo — y por eso el alcance se aplica en este punto y no en cada
+     * metodo: asi no queda ninguna puerta sin cerrar, y la que se abra manana
+     * tampoco.
+     *
+     * Fuera de alcance responde "no existe" y no "no puedes": decir que existe
+     * un pedido que no se puede ver ya es contar algo de un cliente ajeno.
+     */
     private async Task<Pedido> GetPedidoOrThrowAsync(int id) =>
-        await _repository.GetPedidoAsync(id)
+        await _repository.GetPedidoAsync(id, await AlcancePedidosAsync())
         ?? throw new NotFoundException($"No existe el pedido {id}");
 
     private async Task<NotaVenta> GetNotaVentaOrThrowAsync(int id) =>
-        await _repository.GetNotaVentaAsync(id)
+        await _repository.GetNotaVentaAsync(id, await AlcanceVentasAsync())
         ?? throw new NotFoundException($"No existe la nota de venta {id}");
 
     private static string? Limpiar(string? texto) =>

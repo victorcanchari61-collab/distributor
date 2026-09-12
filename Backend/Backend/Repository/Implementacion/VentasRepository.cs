@@ -57,11 +57,43 @@ public class VentasRepository : IVentasRepository
             .Include(p => p.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(p => p.Detalle).ThenInclude(d => d.Presentacion);
 
-    public async Task<Pedido?> GetPedidoAsync(int id) =>
-        await PedidosConDetalle().FirstOrDefaultAsync(p => p.Id == id);
 
-    public async Task<IEnumerable<Pedido>> GetPedidosAsync(string? estado = null) =>
-        await PedidosConDetalle()
+    /*
+     * El recorte por alcance.
+     *
+     * Va aqui, dentro de la consulta, y no despues en memoria: filtrar las
+     * filas ya paginadas daria paginas a medias y un total que no cuadra con
+     * lo que se ve.
+     *
+     * "Mis clientes" incluye ADEMAS lo que registro la persona: si toma un
+     * pedido de un cliente que no es suyo y no lo incluyera, lo perderia de
+     * vista al guardarlo y no podria ni corregirlo ni anularlo.
+     */
+    private static IQueryable<Pedido> Acotar(IQueryable<Pedido> query, AlcanceFiltro? alcance)
+    {
+        if (alcance is null || alcance.SinRestriccion) return query;
+
+        return alcance.SoloPropios
+            ? query.Where(p => p.UsuarioId == alcance.UsuarioId)
+            : query.Where(p => p.UsuarioId == alcance.UsuarioId
+                               || (p.Cliente != null && p.Cliente.VendedorId == alcance.UsuarioId));
+    }
+
+    private static IQueryable<NotaVenta> Acotar(IQueryable<NotaVenta> query, AlcanceFiltro? alcance)
+    {
+        if (alcance is null || alcance.SinRestriccion) return query;
+
+        return alcance.SoloPropios
+            ? query.Where(n => n.UsuarioId == alcance.UsuarioId)
+            : query.Where(n => n.UsuarioId == alcance.UsuarioId
+                               || (n.Cliente != null && n.Cliente.VendedorId == alcance.UsuarioId));
+    }
+
+    public async Task<Pedido?> GetPedidoAsync(int id, AlcanceFiltro? alcance = null) =>
+        await Acotar(PedidosConDetalle(), alcance).FirstOrDefaultAsync(p => p.Id == id);
+
+    public async Task<IEnumerable<Pedido>> GetPedidosAsync(string? estado = null, AlcanceFiltro? alcance = null) =>
+        await Acotar(PedidosConDetalle(), alcance)
             .Where(p => estado == null || p.Estado == estado)
             .OrderByDescending(p => p.Fecha)
             .ThenByDescending(p => p.Id)
@@ -74,9 +106,10 @@ public class VentasRepository : IVentasRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<(List<Pedido> Items, int Total)> ListarPedidosAsync(ConsultaTablaRequest consulta)
+    public async Task<(List<Pedido> Items, int Total)> ListarPedidosAsync(
+        ConsultaTablaRequest consulta, AlcanceFiltro? alcance = null)
     {
-        var query = PedidosConDetalle().AsNoTracking().AsQueryable();
+        var query = Acotar(PedidosConDetalle().AsNoTracking().AsQueryable(), alcance);
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
@@ -134,12 +167,19 @@ public class VentasRepository : IVentasRepository
         return await query.PaginarAsync(consulta);
     }
 
-    public async Task<ResumenPedidosResponse> ResumenPedidosAsync() => new()
+    // Los contadores se acotan igual que la lista: si no, arriba diria "40
+    // pedidos" y abajo se verian tres, y el numero pareceria un error.
+    public async Task<ResumenPedidosResponse> ResumenPedidosAsync(AlcanceFiltro? alcance = null)
     {
-        Total = await _context.Pedidos.CountAsync(),
-        Pendientes = await _context.Pedidos.CountAsync(p => p.Estado == EstadoPedido.Pendiente),
-        Confirmados = await _context.Pedidos.CountAsync(p => p.Estado == EstadoPedido.Confirmado),
-    };
+        var pedidos = Acotar(_context.Pedidos.AsNoTracking(), alcance);
+
+        return new ResumenPedidosResponse
+        {
+            Total = await pedidos.CountAsync(),
+            Pendientes = await pedidos.CountAsync(p => p.Estado == EstadoPedido.Pendiente),
+            Confirmados = await pedidos.CountAsync(p => p.Estado == EstadoPedido.Confirmado),
+        };
+    }
 
     /// <summary>
     /// Actualiza línea por línea en vez de borrar todo y recrearlo: así una
@@ -231,11 +271,11 @@ public class VentasRepository : IVentasRepository
             .Include(n => n.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(n => n.Detalle).ThenInclude(d => d.Presentacion);
 
-    public async Task<NotaVenta?> GetNotaVentaAsync(int id) =>
-        await NotasVentaConDetalle().FirstOrDefaultAsync(n => n.Id == id);
+    public async Task<NotaVenta?> GetNotaVentaAsync(int id, AlcanceFiltro? alcance = null) =>
+        await Acotar(NotasVentaConDetalle(), alcance).FirstOrDefaultAsync(n => n.Id == id);
 
-    public async Task<IEnumerable<NotaVenta>> GetNotasVentaAsync(string? estado = null) =>
-        await NotasVentaConDetalle()
+    public async Task<IEnumerable<NotaVenta>> GetNotasVentaAsync(string? estado = null, AlcanceFiltro? alcance = null) =>
+        await Acotar(NotasVentaConDetalle(), alcance)
             .Where(n => estado == null || n.Estado == estado)
             .OrderByDescending(n => n.Fecha)
             .ThenByDescending(n => n.Id)
@@ -248,9 +288,10 @@ public class VentasRepository : IVentasRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<(List<NotaVenta> Items, int Total)> ListarNotasVentaAsync(ConsultaTablaRequest consulta)
+    public async Task<(List<NotaVenta> Items, int Total)> ListarNotasVentaAsync(
+        ConsultaTablaRequest consulta, AlcanceFiltro? alcance = null)
     {
-        var query = NotasVentaConDetalle().AsNoTracking().AsQueryable();
+        var query = Acotar(NotasVentaConDetalle().AsNoTracking().AsQueryable(), alcance);
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
@@ -307,13 +348,14 @@ public class VentasRepository : IVentasRepository
         return await query.PaginarAsync(consulta);
     }
 
-    public async Task<ResumenNotasVentaResponse> ResumenNotasVentaAsync()
+    public async Task<ResumenNotasVentaResponse> ResumenNotasVentaAsync(AlcanceFiltro? alcance = null)
     {
-        var confirmadas = _context.NotasVenta.Where(n => n.Estado == EstadoNotaVenta.Confirmada);
+        var notas = Acotar(_context.NotasVenta.AsNoTracking(), alcance);
+        var confirmadas = notas.Where(n => n.Estado == EstadoNotaVenta.Confirmada);
 
         return new ResumenNotasVentaResponse
         {
-            Total = await _context.NotasVenta.CountAsync(),
+            Total = await notas.CountAsync(),
             Confirmadas = await confirmadas.CountAsync(),
             TotalVendido = await confirmadas
                 .SelectMany(n => n.Detalle)

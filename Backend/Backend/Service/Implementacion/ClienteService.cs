@@ -17,6 +17,8 @@ public class ClienteService : IClienteService
     private readonly IUsuarioRepository _usuarios;
     private readonly IValidator<CreateClienteRequest> _createValidator;
     private readonly IValidator<UpdateClienteRequest> _updateValidator;
+    private readonly IPermisoService _permisos;
+    private readonly IUsuarioActual _usuarioActual;
     private readonly INotificador _notificador;
 
     public ClienteService(IClienteRepository repository,
@@ -26,6 +28,8 @@ public class ClienteService : IClienteService
         IUsuarioRepository usuarios,
         IValidator<CreateClienteRequest> createValidator,
         IValidator<UpdateClienteRequest> updateValidator,
+        IPermisoService permisos,
+        IUsuarioActual usuarioActual,
         INotificador notificador)
     {
         _repository = repository;
@@ -35,7 +39,31 @@ public class ClienteService : IClienteService
         _usuarios = usuarios;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
+        _permisos = permisos;
+        _usuarioActual = usuarioActual;
         _notificador = notificador;
+    }
+
+    /*
+     * El alcance en Clientes limita lo que se TOCA, no lo que se ve: el padron
+     * completo hace falta para no dar de alta por segunda vez a alguien que ya
+     * existe a nombre de otro vendedor.
+     *
+     * Se comprueba sobre el cliente ya guardado y no sobre el request: si no,
+     * bastaria con mandar otro VendedorId para apropiarse de un cliente ajeno
+     * y editarlo en la misma llamada.
+     */
+    private async Task ExigirAlcanceAsync(Cliente cliente)
+    {
+        if (_usuarioActual.Id is not int id) return;
+
+        var alcance = await _permisos.AlcanceAsync(id, "maestros.clientes");
+        if (alcance == AlcanceDatos.Todos) return;
+
+        if (cliente.VendedorId != id)
+        {
+            throw new ForbiddenException("Solo puedes modificar los clientes que tienes asignados");
+        }
     }
 
     public async Task<IEnumerable<ClienteResponse>> GetAllAsync()
@@ -92,6 +120,7 @@ public class ClienteService : IClienteService
         await _updateValidator.ValidateAndThrowAsync(request);
 
         var cliente = await GetOrThrowAsync(id);
+        await ExigirAlcanceAsync(cliente);
 
         if (await _repository.ExistsByDocumentoAsync(request.Documento, id))
         {
@@ -111,6 +140,7 @@ public class ClienteService : IClienteService
     public async Task<ClienteResponse> CambiarEstadoAsync(int id, bool activo)
     {
         var cliente = await GetOrThrowAsync(id);
+        await ExigirAlcanceAsync(cliente);
 
         if (cliente.Activo != activo)
         {
@@ -125,6 +155,7 @@ public class ClienteService : IClienteService
     public async Task DeleteAsync(int id)
     {
         var cliente = await GetOrThrowAsync(id);
+        await ExigirAlcanceAsync(cliente);
         await _repository.DeleteAsync(cliente);
         await _notificador.AvisarAsync("clientes", "eliminado", new { id });
     }

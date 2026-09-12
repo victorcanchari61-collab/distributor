@@ -251,6 +251,123 @@ public class PermisoService : IPermisoService
 
     private record UsuarioMinimo(int RolId, bool EsAdministrador);
 
+    public async Task<string> AlcanceAsync(int usuarioId, string submodulo)
+    {
+        var usuario = await UsuarioAsync(usuarioId);
+        // Sin usuario activo no hay nada que acotar: quien no entra, no ve.
+        // El administrador no se restringe nunca, igual que con los permisos.
+        if (usuario is null || usuario.EsAdministrador) return AlcanceDatos.Todos;
+
+        // Lo de la persona manda sobre lo del rol: es el supervisor que es del
+        // rol Vendedor pero si tiene que ver todo.
+        var propio = await _context.UsuarioAlcances
+            .AsNoTracking()
+            .Where(a => a.UsuarioId == usuarioId && a.Submodulo == submodulo)
+            .Select(a => a.Alcance)
+            .FirstOrDefaultAsync();
+        if (propio is not null) return propio;
+
+        var delRol = await _context.RolAlcances
+            .AsNoTracking()
+            .Where(a => a.RolId == usuario.RolId && a.Submodulo == submodulo)
+            .Select(a => a.Alcance)
+            .FirstOrDefaultAsync();
+
+        // Sin configurar es "todos": el sistema funcionaba asi antes de que
+        // esto existiera, y un alcance restrictivo por defecto habria dejado a
+        // todo el mundo sin ver nada al desplegar.
+        return delRol ?? AlcanceDatos.Todos;
+    }
+
+    public async Task<IReadOnlyDictionary<string, string>> MisAlcancesAsync(int usuarioId)
+    {
+        var resultado = new Dictionary<string, string>();
+        foreach (var submodulo in AlcanceDatos.Submodulos)
+        {
+            resultado[submodulo] = await AlcanceAsync(usuarioId, submodulo);
+        }
+        return resultado;
+    }
+
+    public async Task<IReadOnlyDictionary<string, string>> AlcancesDeRolAsync(int rolId) =>
+        await _context.RolAlcances
+            .AsNoTracking()
+            .Where(a => a.RolId == rolId)
+            .ToDictionaryAsync(a => a.Submodulo, a => a.Alcance);
+
+    public async Task GuardarAlcancesRolAsync(int rolId, IReadOnlyDictionary<string, string> alcances)
+    {
+        Validar(alcances);
+
+        var actuales = await _context.RolAlcances.Where(a => a.RolId == rolId).ToListAsync();
+        _context.RolAlcances.RemoveRange(actuales);
+
+        foreach (var (submodulo, alcance) in alcances)
+        {
+            // "todos" es la ausencia de restriccion: no se guarda, asi la tabla
+            // contiene solo lo que de verdad limita algo.
+            if (alcance == AlcanceDatos.Todos) continue;
+
+            _context.RolAlcances.Add(new RolAlcance
+            {
+                RolId = rolId,
+                Submodulo = submodulo,
+                Alcance = alcance,
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        await _notificador.AvisarAsync("permisos", "alcances", new { rolId });
+    }
+
+    public async Task<IReadOnlyDictionary<string, string>> AlcancesDeUsuarioAsync(int usuarioId) =>
+        await _context.UsuarioAlcances
+            .AsNoTracking()
+            .Where(a => a.UsuarioId == usuarioId)
+            .ToDictionaryAsync(a => a.Submodulo, a => a.Alcance);
+
+    public async Task GuardarAlcancesUsuarioAsync(
+        int usuarioId, IReadOnlyDictionary<string, string> alcances, int? concedidoPorId)
+    {
+        Validar(alcances);
+
+        var actuales = await _context.UsuarioAlcances.Where(a => a.UsuarioId == usuarioId).ToListAsync();
+        _context.UsuarioAlcances.RemoveRange(actuales);
+
+        foreach (var (submodulo, alcance) in alcances)
+        {
+            _context.UsuarioAlcances.Add(new UsuarioAlcance
+            {
+                UsuarioId = usuarioId,
+                Submodulo = submodulo,
+                Alcance = alcance,
+                ConcedidoPorId = concedidoPorId,
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        await _notificador.AvisarAsync("permisos", "alcances", new { usuarioId });
+    }
+
+    /// <summary>
+    /// Que lo que llega exista de verdad.
+    ///
+    /// Sin esto se guardaria un submodulo mal escrito o un alcance inventado,
+    /// y quedaria ahi sin efecto: la pantalla mostraria una restriccion que el
+    /// backend nunca aplica.
+    /// </summary>
+    private static void Validar(IReadOnlyDictionary<string, string> alcances)
+    {
+        foreach (var (submodulo, alcance) in alcances)
+        {
+            if (!AlcanceDatos.Submodulos.Contains(submodulo))
+                throw new BadRequestException($"El submódulo {submodulo} no admite alcance");
+
+            if (!AlcanceDatos.EsValido(alcance))
+                throw new BadRequestException($"El alcance {alcance} no existe");
+        }
+    }
+
     private async Task<UsuarioMinimo?> UsuarioAsync(int usuarioId) =>
         await _context.Usuarios
             .AsNoTracking()

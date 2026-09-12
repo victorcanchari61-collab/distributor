@@ -13,15 +13,15 @@ public interface IVentasRepository
     // --- Pedidos ---
     Task<string> SiguienteNumeroPedidoAsync();
     Task<Pedido> AddPedidoAsync(Pedido pedido);
-    Task<Pedido?> GetPedidoAsync(int id);
-    Task<IEnumerable<Pedido>> GetPedidosAsync(string? estado = null);
+    Task<Pedido?> GetPedidoAsync(int id, AlcanceFiltro? alcance = null);
+    Task<IEnumerable<Pedido>> GetPedidosAsync(string? estado = null, AlcanceFiltro? alcance = null);
     Task UpdatePedidoAsync(Pedido pedido);
 
     /// <summary>Una página del listado de pedidos, buscada, filtrada y ordenada en la base.</summary>
-    Task<(List<Pedido> Items, int Total)> ListarPedidosAsync(ConsultaTablaRequest consulta);
+    Task<(List<Pedido> Items, int Total)> ListarPedidosAsync(ConsultaTablaRequest consulta, AlcanceFiltro? alcance = null);
 
     /// <summary>Contadores del listado completo de pedidos.</summary>
-    Task<ResumenPedidosResponse> ResumenPedidosAsync();
+    Task<ResumenPedidosResponse> ResumenPedidosAsync(AlcanceFiltro? alcance = null);
 
     /// <summary>
     /// Reemplaza las líneas de un pedido Pendiente: se borran las actuales y
@@ -41,15 +41,15 @@ public interface IVentasRepository
     // --- Notas de venta ---
     Task<string> SiguienteNumeroNotaVentaAsync();
     Task<NotaVenta> AddNotaVentaAsync(NotaVenta notaVenta);
-    Task<NotaVenta?> GetNotaVentaAsync(int id);
-    Task<IEnumerable<NotaVenta>> GetNotasVentaAsync(string? estado = null);
+    Task<NotaVenta?> GetNotaVentaAsync(int id, AlcanceFiltro? alcance = null);
+    Task<IEnumerable<NotaVenta>> GetNotasVentaAsync(string? estado = null, AlcanceFiltro? alcance = null);
     Task UpdateNotaVentaAsync(NotaVenta notaVenta);
 
     /// <summary>Una página del listado de notas de venta.</summary>
-    Task<(List<NotaVenta> Items, int Total)> ListarNotasVentaAsync(ConsultaTablaRequest consulta);
+    Task<(List<NotaVenta> Items, int Total)> ListarNotasVentaAsync(ConsultaTablaRequest consulta, AlcanceFiltro? alcance = null);
 
     /// <summary>Contadores del listado completo de notas de venta.</summary>
-    Task<ResumenNotasVentaResponse> ResumenNotasVentaAsync();
+    Task<ResumenNotasVentaResponse> ResumenNotasVentaAsync(AlcanceFiltro? alcance = null);
 
     /// <summary>
     /// Una página de los cobros de un usuario. Va directo contra los pagos y

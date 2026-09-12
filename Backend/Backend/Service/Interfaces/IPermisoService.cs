@@ -46,6 +46,30 @@ public interface IPermisoService
     Task<bool> PuedeAsync(int usuarioId, string submodulo, string accion);
 
     /// <summary>
+    /// Hasta dónde llega lo que esa persona ve en ese submódulo.
+    ///
+    /// Devuelve siempre un valor: sin nada configurado, <see cref="AlcanceDatos.Todos"/>.
+    /// La excepción del usuario manda sobre lo del rol.
+    /// </summary>
+    Task<string> AlcanceAsync(int usuarioId, string submodulo);
+
+    /// <summary>Los alcances de una persona, ya resueltos: submódulo → alcance.</summary>
+    Task<IReadOnlyDictionary<string, string>> MisAlcancesAsync(int usuarioId);
+
+    /// <summary>Lo configurado en un rol. Lo que no aparece es "todos".</summary>
+    Task<IReadOnlyDictionary<string, string>> AlcancesDeRolAsync(int rolId);
+
+    /// <summary>Reemplaza los alcances del rol por los indicados.</summary>
+    Task GuardarAlcancesRolAsync(int rolId, IReadOnlyDictionary<string, string> alcances);
+
+    /// <summary>La excepción propia de una persona, que manda sobre su rol.</summary>
+    Task<IReadOnlyDictionary<string, string>> AlcancesDeUsuarioAsync(int usuarioId);
+
+    /// <summary>Reemplaza las excepciones de alcance de una persona.</summary>
+    Task GuardarAlcancesUsuarioAsync(
+        int usuarioId, IReadOnlyDictionary<string, string> alcances, int? concedidoPorId);
+
+    /// <summary>
     /// Gasta una excepción de un solo uso.
     ///
     /// Se llama cuando la operación ya salió bien: si se gastara al autorizar,

@@ -94,6 +94,7 @@ builder.Services.AddScoped<IInventarioService, InventarioService>();
 builder.Services.AddScoped<IComprasService, ComprasService>();
 builder.Services.AddScoped<IVentasService, VentasService>();
 builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddScoped<IUsuarioActual, UsuarioActual>();
 
 // QuestPDF es gratuito por debajo del millon de dolares de facturacion anual;
 // la libreria exige declarar bajo que licencia se usa o se niega a generar
