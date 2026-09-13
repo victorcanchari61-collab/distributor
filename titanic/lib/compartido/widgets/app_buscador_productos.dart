@@ -32,11 +32,16 @@ class SeleccionProducto {
 }
 
 /// Un numero sin decimales de mas: 12 en vez de 12.0.
-String _texto2(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
+String _texto2(double v) =>
+    v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
 
 /// Estado de una fila mientras la hoja esta abierta.
 class _Marcado {
-  _Marcado({required this.presentacionId, required this.cantidad, required this.importe});
+  _Marcado({
+    required this.presentacionId,
+    required this.cantidad,
+    required this.importe,
+  });
 
   int presentacionId;
   String cantidad;
@@ -75,17 +80,27 @@ Future<List<SeleccionProducto>?> mostrarBuscadorProductos({
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     builder: (context) => Acento(
       color: acento,
-      child: _HojaBuscadorProductos(productos: productos, paraVenta: paraVenta, stock: stock),
+      child: _HojaBuscadorProductos(
+        productos: productos,
+        paraVenta: paraVenta,
+        stock: stock,
+      ),
     ),
   );
 }
 
 class _HojaBuscadorProductos extends StatefulWidget {
-  const _HojaBuscadorProductos({required this.productos, required this.paraVenta, this.stock});
+  const _HojaBuscadorProductos({
+    required this.productos,
+    required this.paraVenta,
+    this.stock,
+  });
 
   final List<Producto> productos;
   final bool paraVenta;
@@ -136,7 +151,11 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
         final sugerido = !widget.paraVenta && p.costoReferencia != null
             ? _texto2(p.costoReferencia!)
             : '';
-        _marcados[p.id] = _Marcado(presentacionId: 0, cantidad: '1', importe: sugerido);
+        _marcados[p.id] = _Marcado(
+          presentacionId: 0,
+          cantidad: '1',
+          importe: sugerido,
+        );
       }
     });
   }
@@ -147,8 +166,10 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
 
     return _marcados.entries
         .map((e) {
-          final cantidad = double.tryParse(e.value.cantidad.replaceAll(',', '.')) ?? 0;
-          final importe = double.tryParse(e.value.importe.replaceAll(',', '.')) ?? 0;
+          final cantidad =
+              double.tryParse(e.value.cantidad.replaceAll(',', '.')) ?? 0;
+          final importe =
+              double.tryParse(e.value.importe.replaceAll(',', '.')) ?? 0;
           final producto = porId[e.key];
 
           // Sin cantidad no hay linea; sin importe si la hay. El precio se
@@ -173,10 +194,20 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
     final visibles = _visibles;
     final listos = _resultado().length;
 
-    final categorias = widget.productos.map((p) => p.categoria).whereType<String>().toSet().toList()
-      ..sort();
-    final marcas = widget.productos.map((p) => p.marca).whereType<String>().toSet().toList()
-      ..sort();
+    final categorias =
+        widget.productos
+            .map((p) => p.categoria)
+            .whereType<String>()
+            .toSet()
+            .toList()
+          ..sort();
+    final marcas =
+        widget.productos
+            .map((p) => p.marca)
+            .whereType<String>()
+            .toSet()
+            .toList()
+          ..sort();
 
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.88,
@@ -228,7 +259,9 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                       children: [
                         BotonFiltrosEnLinea(
                           activo: _filtrosAbiertos || _activos > 0,
-                          onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+                          onTap: () => setState(
+                            () => _filtrosAbiertos = !_filtrosAbiertos,
+                          ),
                         ),
                         // Cuantos filtros hay puestos, para no tener que abrir
                         // el panel solo para comprobarlo.
@@ -237,7 +270,10 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                             top: -4,
                             right: -4,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
                               decoration: BoxDecoration(
                                 color: Acento.de(context),
                                 borderRadius: BorderRadius.circular(999),
@@ -277,8 +313,10 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                                   const Opcion('', 'Todas'),
                                   for (final c in categorias) Opcion(c, c),
                                 ],
-                                onCambio: (v) =>
-                                    setState(() => _categoria = (v ?? '').isEmpty ? null : v),
+                                onCambio: (v) => setState(
+                                  () =>
+                                      _categoria = (v ?? '').isEmpty ? null : v,
+                                ),
                               ),
                             ),
                             const SizedBox(width: Dimen.espacio3),
@@ -290,8 +328,9 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                                   const Opcion('', 'Todas'),
                                   for (final m in marcas) Opcion(m, m),
                                 ],
-                                onCambio: (v) =>
-                                    setState(() => _marca = (v ?? '').isEmpty ? null : v),
+                                onCambio: (v) => setState(
+                                  () => _marca = (v ?? '').isEmpty ? null : v,
+                                ),
                               ),
                             ),
                           ],
@@ -304,7 +343,10 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                                 _categoria = null;
                                 _marca = null;
                               }),
-                              icon: const Icon(Icons.filter_alt_off_outlined, size: 16),
+                              icon: const Icon(
+                                Icons.filter_alt_off_outlined,
+                                size: 16,
+                              ),
                               label: const Text('Limpiar filtros'),
                             ),
                           ),
@@ -318,7 +360,10 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                   children: [
                     Text(
                       '${visibles.length} producto${visibles.length == 1 ? '' : 's'}',
-                      style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colores.tintaSuave,
+                      ),
                     ),
                     if (_marcados.isNotEmpty)
                       Text(
@@ -345,7 +390,8 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                 : ListView.separated(
                     padding: const EdgeInsets.all(Dimen.espacio3),
                     itemCount: visibles.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: Dimen.espacio2),
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: Dimen.espacio2),
                     itemBuilder: (context, i) {
                       final p = visibles[i];
                       return _FilaProducto(
@@ -354,9 +400,11 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                         presentaciones: _presentacionesDe(p),
                         stock: widget.stock?[p.id],
                         onAlternar: () => _alternar(p),
-                        onPresentacion: (id) =>
-                            setState(() => _marcados[p.id]?.presentacionId = id),
-                        onCantidad: (v) => setState(() => _marcados[p.id]?.cantidad = v),
+                        onPresentacion: (id) => setState(
+                          () => _marcados[p.id]?.presentacionId = id,
+                        ),
+                        onCantidad: (v) =>
+                            setState(() => _marcados[p.id]?.cantidad = v),
                       );
                     },
                   ),
@@ -379,7 +427,9 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                   child: AppBoton(
                     texto: listos == 0 ? 'Agregar' : 'Agregar ($listos)',
                     icono: Icons.add,
-                    onPressed: listos == 0 ? null : () => Navigator.of(context).pop(_resultado()),
+                    onPressed: listos == 0
+                        ? null
+                        : () => Navigator.of(context).pop(_resultado()),
                   ),
                 ),
               ],
@@ -464,13 +514,17 @@ class _FilaProducto extends StatelessWidget {
                         detalle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colores.tintaSuave,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              if (stock != null) _EtiquetaStock(stock: stock!, unidad: producto.unidadBase),
+              if (stock != null)
+                _EtiquetaStock(stock: stock!, unidad: producto.unidadBase),
             ],
           ),
           if (activo) ...[
@@ -513,10 +567,15 @@ class _EtiquetaStock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hay = stock > 0;
-    final texto = stock == stock.roundToDouble() ? stock.toStringAsFixed(0) : stock.toString();
+    final texto = stock == stock.roundToDouble()
+        ? stock.toStringAsFixed(0)
+        : stock.toString();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio2, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Dimen.espacio2,
+        vertical: 3,
+      ),
       decoration: BoxDecoration(
         color: hay ? Colores.exitoSuave : Colores.peligroSuave,
         borderRadius: BorderRadius.circular(999),
@@ -562,6 +621,7 @@ class _CampoUnidad extends StatelessWidget {
         child: DropdownButton<int>(
           value: valor,
           isExpanded: true,
+          isDense: true,
           items: opciones,
           onChanged: (v) => onChanged(v ?? 0),
           style: const TextStyle(fontSize: 13, color: Colores.tinta),
@@ -572,7 +632,11 @@ class _CampoUnidad extends StatelessWidget {
 }
 
 class _CampoNumero extends StatefulWidget {
-  const _CampoNumero({required this.etiqueta, required this.inicial, required this.onChanged});
+  const _CampoNumero({
+    required this.etiqueta,
+    required this.inicial,
+    required this.onChanged,
+  });
 
   final String etiqueta;
   final String inicial;
@@ -583,7 +647,9 @@ class _CampoNumero extends StatefulWidget {
 }
 
 class _CampoNumeroState extends State<_CampoNumero> {
-  late final TextEditingController _control = TextEditingController(text: widget.inicial);
+  late final TextEditingController _control = TextEditingController(
+    text: widget.inicial,
+  );
 
   @override
   void dispose() {
@@ -598,7 +664,8 @@ class _CampoNumeroState extends State<_CampoNumero> {
     // toque una para que la fila quede descuadrada, que es lo que pasaba.
     return _CajaCampo(
       etiqueta: widget.etiqueta,
-      child: Center(
+      child: Align(
+        alignment: Alignment.centerLeft,
         child: TextField(
           controller: _control,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -631,22 +698,39 @@ class _CajaCampo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(etiqueta, style: const TextStyle(fontSize: 11, color: Colores.tintaSuave)),
-        const SizedBox(height: 2),
-        Container(
-          height: Dimen.campoSm,
-          padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3),
-          decoration: BoxDecoration(
-            color: Colores.superficie,
-            border: Border.all(color: Colores.linea),
-            borderRadius: BorderRadius.circular(Dimen.radioCampo),
+    // La etiqueta va recortando el borde, no encima: asi el campo ocupa una
+    // sola altura y la fila marcada no crece de mas dentro de la lista.
+    return SizedBox(
+      height: Dimen.campoMd + 6,
+      child: InputDecorator(
+        isEmpty: false,
+        decoration: InputDecoration(
+          labelText: etiqueta,
+          isDense: true,
+          filled: true,
+          fillColor: Colores.superficie,
+          // Sin padding vertical: la altura la fija la caja, no el contenido,
+          // que es lo que hacia que el desplegable saliera mas alto que la
+          // cantidad estando uno al lado del otro.
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: Dimen.espacio3,
           ),
-          child: child,
+          labelStyle: const TextStyle(fontSize: 13, color: Colores.tintaSuave),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(Dimen.radioCampo),
+            borderSide: const BorderSide(color: Colores.linea),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(Dimen.radioCampo),
+            borderSide: const BorderSide(color: Colores.linea),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(Dimen.radioCampo),
+            borderSide: BorderSide(color: Acento.de(context)),
+          ),
         ),
-      ],
+        child: child,
+      ),
     );
   }
 }

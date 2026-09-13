@@ -41,7 +41,13 @@ builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
-        policy.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://distributor.test")
+        policy.WithOrigins(
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://distributor.test",
+            // La app movil servida en web para revisar su diseno sin emulador.
+            "http://127.0.0.1:5180",
+            "http://localhost:5180")
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
