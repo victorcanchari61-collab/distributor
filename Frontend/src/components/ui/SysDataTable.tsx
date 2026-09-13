@@ -954,9 +954,12 @@ export function SysDataTable<T>({
               >
                 {head && (
                   <div className="mb-2.5 flex items-start justify-between gap-2">
-                    <div className="flex min-w-0 flex-col gap-1">
+                    {/* La etiqueta al costado y no encima: en la tarjeta cada
+                        dato es una fila de "nombre — valor", y la cabecera no
+                        tiene por que leerse distinto del resto. */}
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                       {head.etiquetaEnTarjeta && (
-                        <span className="text-[12px] text-zinc-500">{head.label}</span>
+                        <span className="shrink-0 text-[12px] text-zinc-500">{head.label}</span>
                       )}
                       <div className="flex min-w-0 items-center gap-2">
                         {CardIcon && (
