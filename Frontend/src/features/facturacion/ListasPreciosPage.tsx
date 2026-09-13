@@ -727,7 +727,9 @@ export function ListasPreciosPage() {
               onClick={() => {
                 const p = productos.find((x) => x.id === row.productoId)
                 cambiarProductoMasivo(row.productoId)
-                toast.error(p ? '' : 'El producto de este precio está desactivado.')
+                // Solo se avisa si hay algo que avisar: el aviso salia igual
+                // con el producto activo, en rojo y sin texto.
+                if (!p) toast.error('El producto de este precio está desactivado.')
                 setPrecioAbierto(true)
               }}
             >
@@ -885,19 +887,6 @@ export function ListasPreciosPage() {
                 )}
               />
             )}
-
-            {producto && filasPrecio.length > 0 && (
-              <p className="text-xs text-ink-soft">
-                <span className="font-medium">Desde</span> es a partir de cuántas se cobra ese
-                precio: deja 1 para el precio normal y agrega un tramo (+) para el precio por
-                volumen. La columna{' '}
-                <span className="font-medium">por {producto.unidadBase}</span> sirve para comprobar
-                la escalera: el saco tiene que salir más barato por {producto.unidadBase} que el{' '}
-                {producto.unidadBase} suelto. La fila que dejes sin precio no se guarda, y si ya
-                tenía uno se borra de la lista.
-              </p>
-            )}
-
           </div>
         </Modal>
 
