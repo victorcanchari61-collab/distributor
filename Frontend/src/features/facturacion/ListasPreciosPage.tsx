@@ -46,6 +46,18 @@ export function ListasPreciosPage() {
     cantidadMinima: '1',
   })
 
+  /*
+   * Precios de TODAS las presentaciones del producto, de una sentada.
+   *
+   * Un producto de abarrotes se vende en siete formas —el kilo, cinco bolsas
+   * y el saco— y cargarlas de a una era abrir el modal siete veces. El
+   * backend ya aceptaba una lista en un solo PUT; lo que faltaba era la
+   * pantalla. Se guarda por presentacion: { [presentacionId]: "4.50" }.
+   */
+  const [preciosMasivos, setPreciosMasivos] = useState<Record<number, string>>({})
+  /** Para llenar toda la columna de golpe a partir del costo. */
+  const [margenObjetivo, setMargenObjetivo] = useState('')
+
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
   const { confirmar, dialogo } = useConfirmacion()
@@ -151,26 +163,83 @@ export function ListasPreciosPage() {
     }
   }
 
+  /** Las presentaciones que se pueden vender, que son a las que se les pone precio. */
+  const vendibles = (producto?.presentaciones ?? []).filter((p) => p.esVenta && p.activo)
+
+  /** Lo ya cargado en esta lista para el producto abierto, por presentación. */
+  const preciosCargados = new Map(
+    precios
+      .filter((x) => x.cantidadMinima === 1 && vendibles.some((v) => v.id === x.presentacionId))
+      .map((x) => [x.presentacionId, x.precio]),
+  )
+
+  /** Abre el modal con lo que ya tiene cargado ese producto. */
+  const cambiarProductoMasivo = (productoId: number) => {
+    const elegido = productos.find((p) => p.id === productoId)
+    const yaTiene: Record<number, string> = {}
+
+    for (const pres of elegido?.presentaciones ?? []) {
+      const cargado = precios.find(
+        (x) => x.presentacionId === pres.id && x.cantidadMinima === 1,
+      )
+      if (cargado) yaTiene[pres.id] = String(cargado.precio)
+    }
+
+    setPrecioForm({ ...precioForm, productoId, presentacionId: 0 })
+    setPreciosMasivos(yaTiene)
+    setMargenObjetivo('')
+    setErrorForm('')
+  }
+
+  /** Llena toda la columna a partir del costo: precio = costo / (1 - margen). */
+  const llenarPorMargen = () => {
+    const margen = Number(margenObjetivo)
+    if (!producto?.costoReferencia) {
+      return setErrorForm('Este producto no tiene costo de referencia: no hay de dónde calcular.')
+    }
+    if (!margen || margen <= 0 || margen >= 100) {
+      return setErrorForm('El margen va entre 1 y 99.')
+    }
+
+    const lleno: Record<number, string> = {}
+    for (const pres of vendibles) {
+      const costo = producto.costoReferencia * pres.factor
+      lleno[pres.id] = (costo / (1 - margen / 100)).toFixed(2)
+    }
+    setPreciosMasivos(lleno)
+    setErrorForm('')
+  }
+
   const guardarPrecio = async () => {
     if (!listaActiva) return
-    if (!precioForm.presentacionId) return setErrorForm('Elige la presentación.')
-    if (!precioForm.precio) return setErrorForm('Ingresa el precio.')
+    if (!precioForm.productoId) return setErrorForm('Elige el producto.')
+
+    const aGuardar = vendibles
+      .filter((pres) => {
+        const valor = Number(preciosMasivos[pres.id])
+        return valor > 0
+      })
+      .map((pres) => ({
+        presentacionId: pres.id,
+        precio: Number(preciosMasivos[pres.id]),
+        cantidadMinima: 1,
+      }))
+
+    if (aGuardar.length === 0) return setErrorForm('Pon al menos un precio.')
 
     setGuardando(true)
     try {
-      await listaPrecioApi.guardarPrecios(listaActiva, [
-        {
-          presentacionId: precioForm.presentacionId,
-          precio: Number(precioForm.precio),
-          cantidadMinima: Number(precioForm.cantidadMinima || 1),
-        },
-      ])
+      // Una sola llamada para todas: el backend actualiza la que ya existía
+      // y crea la que no, sin duplicar.
+      await listaPrecioApi.guardarPrecios(listaActiva, aGuardar)
       setPrecioAbierto(false)
       await cargarPrecios(listaActiva)
       await cargar()
-      toast.exito('Precios guardados')
+      toast.exito(
+        aGuardar.length === 1 ? 'Precio guardado' : `${aGuardar.length} precios guardados`,
+      )
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el precio.')
+      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar los precios.')
     } finally {
       setGuardando(false)
     }
@@ -305,6 +374,8 @@ export function ListasPreciosPage() {
                 disabled={!listaActiva}
                 onClick={() => {
                   setPrecioForm({ productoId: 0, presentacionId: 0, precio: '', cantidadMinima: '1' })
+                  setPreciosMasivos({})
+                  setMargenObjetivo('')
                   setErrorForm('')
                   setPrecioAbierto(true)
                 }}
@@ -398,15 +469,10 @@ export function ListasPreciosPage() {
           <>
             {puede('fact.precios', 'editar') && (
             <RowAction
-              label={`Editar precio de ${row.producto}`}
+              label={`Editar precios de ${row.producto}`}
               onClick={() => {
                 const p = productos.find((x) => x.id === row.productoId)
-                setPrecioForm({
-                  productoId: row.productoId,
-                  presentacionId: row.presentacionId,
-                  precio: String(row.precio),
-                  cantidadMinima: String(row.cantidadMinima),
-                })
+                cambiarProductoMasivo(row.productoId)
                 setErrorForm(p ? '' : 'El producto de este precio está desactivado.')
                 setPrecioAbierto(true)
               }}
@@ -474,12 +540,12 @@ export function ListasPreciosPage() {
           </div>
         </Modal>
 
-        {/* Alta y edicion de un precio */}
+        {/* Precios del producto: todas sus presentaciones de una sentada */}
         <Modal
           open={precioAbierto}
-          size="sm"
-          title="Precio de una presentación"
-          description="Elige el producto y en qué presentación se vende a ese precio."
+          size="xl"
+          title="Precios del producto"
+          description="Elige el producto y pon el precio de cada forma en que lo vendes."
           onClose={() => setPrecioAbierto(false)}
           footer={
             <>
@@ -487,7 +553,7 @@ export function ListasPreciosPage() {
                 Cancelar
               </Button>
               <Button size="sm" loading={guardando} onClick={() => void guardarPrecio()}>
-                Guardar precio
+                Guardar precios
               </Button>
             </>
           }
@@ -495,114 +561,142 @@ export function ListasPreciosPage() {
           <div className="flex flex-col gap-4">
             {errorForm && <Alert>{errorForm}</Alert>}
 
-            <Select
-              label="Producto"
-              value={precioForm.productoId}
-              onChange={(e) =>
-                setPrecioForm({
-                  ...precioForm,
-                  productoId: Number(e.target.value),
-                  presentacionId: 0,
-                })
-              }
-            >
-              <option value={0}>Elige un producto</option>
-              {productos.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.codigo} — {p.nombre}
-                </option>
-              ))}
-            </Select>
-
-            <Select
-              label="Presentación"
-              value={precioForm.presentacionId}
-              disabled={!producto}
-              onChange={(e) =>
-                setPrecioForm({ ...precioForm, presentacionId: Number(e.target.value) })
-              }
-            >
-              <option value={0}>Elige la presentación</option>
-              {producto?.presentaciones
-                .filter((p) => p.esVenta && p.activo)
-                .map((p) => (
+            <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+              <Select
+                label="Producto"
+                value={precioForm.productoId}
+                onChange={(e) => cambiarProductoMasivo(Number(e.target.value))}
+              >
+                <option value={0}>Elige un producto</option>
+                {productos.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.nombre} — {p.factor} {producto.unidadBase}
+                    {p.codigo} — {p.nombre}
                   </option>
                 ))}
-            </Select>
+              </Select>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input
-                label="Precio"
-                type="number"
-                step="0.01"
-                placeholder="195.00"
-                value={precioForm.precio}
-                onChange={(e) => setPrecioForm({ ...precioForm, precio: e.target.value })}
-              />
-              <Input
-                label="Desde"
-                type="number"
-                step="1"
-                min={1}
-                hint={<span className="text-xs text-ink-soft">cantidad mínima</span>}
-                value={precioForm.cantidadMinima}
-                onChange={(e) => setPrecioForm({ ...precioForm, cantidadMinima: e.target.value })}
-              />
+              {producto?.costoReferencia != null && (
+                <div className="flex items-end gap-2">
+                  <Input
+                    label="Margen"
+                    type="number"
+                    min="1"
+                    max="99"
+                    placeholder="25"
+                    className="w-24"
+                    value={margenObjetivo}
+                    onChange={(e) => setMargenObjetivo(e.target.value)}
+                  />
+                  <Button
+                    variant="secondary"
+                    onClick={llenarPorMargen}
+                    disabled={!margenObjetivo}
+                  >
+                    Llenar %
+                  </Button>
+                </div>
+              )}
             </div>
 
-            {/* Costo y margen en vivo: para no poner un precio que no deja ganancia. */}
-            {producto && precioForm.presentacionId > 0 && precioForm.precio && (() => {
-              const presentacion = producto.presentaciones.find(
-                (p) => p.id === precioForm.presentacionId,
-              )
-              const factor = presentacion?.factor ?? 1
-              const precio = Number(precioForm.precio)
-              const precioPorUnidad = precio / factor
-              const costoRef = producto.costoReferencia
-              const costoPresentacion = costoRef != null ? costoRef * factor : null
-              const margen =
-                costoPresentacion != null && precio > 0
-                  ? ((precio - costoPresentacion) / precio) * 100
-                  : null
+            {!producto ? (
+              <p className="py-10 text-center text-sm text-ink-soft">
+                Elige un producto para ver sus presentaciones.
+              </p>
+            ) : vendibles.length === 0 ? (
+              <p className="py-10 text-center text-sm text-ink-soft">
+                Este producto no tiene ninguna presentación marcada como se vende.
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-field border border-line">
+                <table className="w-full text-sm">
+                  <thead className="bg-surface-alt text-xs uppercase tracking-wide text-ink-soft">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold">Presentación</th>
+                      <th className="px-3 py-2 text-right font-semibold">Equivale</th>
+                      <th className="px-3 py-2 text-right font-semibold">Costo</th>
+                      <th className="px-3 py-2 text-right font-semibold">Precio</th>
+                      <th className="px-3 py-2 text-right font-semibold">Margen</th>
+                      <th className="px-3 py-2 text-right font-semibold">
+                        Por {producto.unidadBase}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {vendibles.map((pres) => {
+                      const precio = Number(preciosMasivos[pres.id]) || 0
+                      const costo =
+                        producto.costoReferencia != null
+                          ? producto.costoReferencia * pres.factor
+                          : null
+                      const margen =
+                        costo != null && precio > 0 ? ((precio - costo) / precio) * 100 : null
+                      const porBase = precio > 0 ? precio / pres.factor : null
 
-              return (
-                <div className="flex flex-col gap-1.5 rounded-field bg-slate-50 px-3 py-2 text-xs text-ink-muted">
-                  <p>
-                    Equivale a{' '}
-                    <span className="font-semibold text-ink">S/ {precioPorUnidad.toFixed(4)}</span>{' '}
-                    por {producto.unidadBase}.
-                  </p>
-                  {costoPresentacion != null ? (
-                    <p>
-                      Costo de referencia:{' '}
-                      <span className="font-semibold text-ink">S/ {costoPresentacion.toFixed(2)}</span>
-                      {margen != null && (
-                        <>
-                          {' '}· Margen:{' '}
-                          <span
-                            className={
-                              margen < 0
-                                ? 'font-semibold text-red-600'
-                                : margen < 15
-                                  ? 'font-semibold text-amber-600'
-                                  : 'font-semibold text-emerald-600'
-                            }
-                          >
-                            {margen.toFixed(1)}%
-                          </span>
-                        </>
-                      )}
-                    </p>
-                  ) : (
-                    <p className="text-amber-600">
-                      Este producto no tiene costo de referencia: no se puede calcular el margen.
-                    </p>
-                  )}
-                </div>
-              )
-            })()}
+                      return (
+                        <tr key={pres.id} className="bg-surface">
+                          <td className="px-3 py-2">
+                            <span className="flex items-center gap-2">
+                              <span className="font-medium text-ink">{pres.nombre}</span>
+                              {preciosCargados.has(pres.id) && <Badge>ya tenía</Badge>}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-right text-ink-soft">
+                            {pres.factor} {producto.unidadBase}
+                          </td>
+                          <td className="px-3 py-2 text-right text-ink-soft">
+                            {costo != null ? `S/ ${costo.toFixed(2)}` : '—'}
+                          </td>
+                          <td className="px-3 py-2">
+                            <Input
+                              size="sm"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              value={preciosMasivos[pres.id] ?? ''}
+                              onChange={(e) =>
+                                setPreciosMasivos((prev) => ({
+                                  ...prev,
+                                  [pres.id]: e.target.value,
+                                }))
+                              }
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            {margen != null ? (
+                              <span
+                                className={
+                                  margen < 0
+                                    ? 'font-semibold text-red-600'
+                                    : margen < 15
+                                      ? 'font-semibold text-amber-600'
+                                      : 'font-semibold text-emerald-600'
+                                }
+                              >
+                                {margen.toFixed(1)}%
+                              </span>
+                            ) : (
+                              <span className="text-ink-soft">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right text-ink-soft">
+                            {porBase != null ? `S/ ${porBase.toFixed(4)}` : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {producto && vendibles.length > 0 && (
+              <p className="text-xs text-ink-soft">
+                La columna <span className="font-medium">por {producto.unidadBase}</span> sirve para
+                comprobar la escalera: el saco tiene que salir más barato por {producto.unidadBase}{' '}
+                que el {producto.unidadBase} suelto. Las filas que dejes vacías no se guardan.
+              </p>
+            )}
           </div>
         </Modal>
 
