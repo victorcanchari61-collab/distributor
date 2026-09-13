@@ -660,7 +660,7 @@ export function NotasVentaPage() {
         const precio = Number(fila.costo) || 0
         return precio > 0 && factor > 0 ? (
           <span className="font-medium text-ink">
-            S/ {Number((precio / factor).toFixed(4))} × {producto?.unidadBase}
+            S/ {(precio / factor).toFixed(2)} × {producto?.unidadBase}
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
