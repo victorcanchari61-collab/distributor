@@ -274,11 +274,20 @@ export function ListasPreciosPage() {
   const escribirMargen = (fila: FilaPrecio, valor: string) => {
     const costo = costoDe(presentacionDe(fila.presentacionId)?.factor ?? 0)
     const margen = Number(valor)
-    const calculable = costo != null && valor !== '' && margen < 100
+
+    // Borrar el margen es dejarlo en cero: el precio baja al costo. Antes se
+    // quedaba el precio del margen anterior y las dos columnas se
+    // contradecian. Para dejar la fila sin precio se vacia la de precio.
+    if (valor === '') {
+      return actualizarFila(fila.clave, {
+        margen: '',
+        ...(costo != null ? { precio: costo.toFixed(2) } : {}),
+      })
+    }
 
     actualizarFila(fila.clave, {
       margen: valor,
-      ...(calculable ? { precio: precioPorMargen(costo, margen) } : {}),
+      ...(costo != null && margen < 100 ? { precio: precioPorMargen(costo, margen) } : {}),
     })
   }
 
