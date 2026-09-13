@@ -862,6 +862,43 @@ public class VentasService : IVentasService
             linea.Anulado = false;
         }
 
+        /*
+         * Quitar la fila entera es lo mismo que bajarla a cero.
+         *
+         * El formulario no manda la linea borrada: simplemente deja de venir.
+         * Sin esto se perdia sin dejar devolucion, y como la venta si bajaba de
+         * importe, chocaba con lo ya cobrado — que fue justo lo que se vio.
+         */
+        var enviadas = detalle
+            .Where(l => l.Id is int)
+            .Select(l => l.Id!.Value)
+            .ToHashSet();
+
+        foreach (var antes in previas.Values.Where(d => !enviadas.Contains(d.Id)))
+        {
+            recortes.Add(new LineaDevolucionRequest
+            {
+                NotaVentaDetalleId = antes.Id,
+                Cantidad = antes.CantidadPresentacion,
+                ReingresaStock = true,
+            });
+
+            // Vuelve al request tal como estaba: la quita la devolucion al
+            // aprobarse, no esta edicion.
+            var factor = antes.CantidadPresentacion > 0
+                ? antes.Cantidad / antes.CantidadPresentacion
+                : 1m;
+
+            detalle.Add(new LineaVentaRequest
+            {
+                Id = antes.Id,
+                ProductoId = antes.ProductoId,
+                PresentacionId = antes.PresentacionId,
+                Cantidad = antes.CantidadPresentacion,
+                PrecioUnitario = antes.PrecioUnitario * factor,
+            });
+        }
+
         return recortes;
     }
 

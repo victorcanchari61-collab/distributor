@@ -272,6 +272,20 @@ export function NotasVentaPage() {
 
   const quitarPago = (i: number) => setPagos((prev) => prev.filter((_, idx) => idx !== i))
 
+  const anularPago = (nota: NotaVentaResponse, pagoId: number, monto: number) =>
+    confirmar({
+      titulo: `Anular pago de S/ ${monto.toFixed(2)}`,
+      mensaje:
+        'Deja de contar como cobrado y el cliente vuelve a deber esa parte. El pago no se borra: queda anulado en el historial.',
+      confirmar: 'Anular pago',
+      tono: 'warning',
+      accion: async () => {
+        await notaVentaApi.anularPago(nota.id, pagoId)
+        await refrescarDetalle(nota.id)
+        toast.exito('Pago anulado')
+      },
+    })
+
   /** Recarga la venta abierta: tras resolver una devolución cambian sus totales. */
   const refrescarDetalle = async (id: number) => {
     const fresca = await notaVentaApi.getById(id)
@@ -546,7 +560,7 @@ export function NotasVentaPage() {
           title={editando ? `Editar ${editando.numero}` : 'Nueva venta directa'}
           description={
             editando
-              ? 'Lo que le quites queda como devolución y no baja nada hasta que la aprueben. Los pagos no se tocan aquí: usa "Gestionar pagos" desde Ver detalle.'
+              ? 'Lo que le quites queda como devolución y no baja nada hasta que la aprueben. Los pagos no se tocan aquí: se anulan desde Ver detalle.'
               : 'Sin pasar por un pedido primero. El stock sale del almacén elegido al momento de registrarla.'
           }
           actions={
@@ -626,7 +640,7 @@ export function NotasVentaPage() {
                   Forma de pago: <span className="font-medium text-ink">
                     {FORMAS_PAGO.find((f) => f.value === formaPago)?.label ?? formaPago}
                   </span>
-                  . Los pagos se gestionan desde "Ver detalle" → Gestionar pagos.
+                  . Los pagos se anulan desde "Ver detalle".
                 </p>
               ) : (
                 <>
@@ -923,6 +937,40 @@ export function NotasVentaPage() {
               pagos={detalleAbierto.pagos.map((p) => ({ id: p.id, label: p.metodoPago, monto: p.monto }))}
               total={detalleAbierto.total}
             />
+
+            {detalleAbierto.pagos.some((p) => !p.anulado) &&
+              detalleAbierto.estado !== 'ANULADA' &&
+              puede('fact.notaventa', 'cobrar') && (
+                <div className="flex flex-col gap-2 rounded-field border border-line p-3">
+                  <span className="ui-label">Pagos</span>
+
+                  {detalleAbierto.pagos
+                    .filter((p) => !p.anulado)
+                    .map((p) => (
+                      <div key={p.id} className="flex items-center justify-between gap-3">
+                        <span className="flex min-w-0 flex-col">
+                          <span className="truncate text-sm text-ink">{p.metodoPago}</span>
+                          <span className="text-xs text-ink-soft">
+                            {new Date(p.fecha).toLocaleDateString('es-PE')}
+                            {p.usuario ? ` · ${p.usuario}` : ''}
+                          </span>
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className="text-sm font-semibold text-ink">
+                            S/ {p.monto.toFixed(2)}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => anularPago(detalleAbierto, p.id, p.monto)}
+                          >
+                            Anular
+                          </Button>
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              )}
 
             {detalleAbierto.devoluciones.length > 0 && (
               <div className="flex flex-col gap-2 rounded-field border border-line p-3">

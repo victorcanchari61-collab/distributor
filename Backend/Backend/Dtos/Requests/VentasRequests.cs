@@ -4,9 +4,12 @@ namespace Backend.Dtos.Requests;
 public class LineaVentaRequest
 {
     /// <summary>
-    /// Solo al editar un pedido: el id de la línea existente que se está
-    /// cambiando. Vacío o 0 es una línea nueva. Una nota de venta no se edita,
-    /// así que ahí este campo no se usa.
+    /// El id de la línea existente que se está cambiando. Vacío o 0 es una
+    /// línea nueva.
+    ///
+    /// En una nota de venta es además lo que ata la línea a su devolución: por
+    /// él se sabe que bajó de cantidad, y una línea que deja de venir es una
+    /// que se devuelve entera.
     /// </summary>
     public int? Id { get; set; }
 
