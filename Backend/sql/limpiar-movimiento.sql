@@ -13,9 +13,10 @@
  * kardex...), recién después el producto mismo — no se puede borrar lo que
  * algo más todavía señala.
  *
- * Se desactivan las llaves foráneas porque TRUNCATE no admite el orden que sí
- * permitiría DELETE, y se vuelven a activar al final. Reinicia además los
- * correlativos: la próxima compra vuelve a ser la 1.
+ * Tolera tablas que no existen (bases con migraciones más viejas o más
+ * nuevas que el local, como la del VPS): TRUNCATE_SI_EXISTE mira
+ * information_schema antes de vaciar cada una, en vez de reventar en la
+ * primera tabla que falte.
  *
  * Uso:
  *   mysql -u root distributor < Backend/sql/limpiar-movimiento.sql
@@ -25,44 +26,66 @@
 
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP PROCEDURE IF EXISTS truncate_si_existe;
+
+DELIMITER $$
+CREATE PROCEDURE truncate_si_existe(IN nombre_tabla VARCHAR(128))
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = DATABASE() AND table_name = nombre_tabla
+  ) THEN
+    SET @sql = CONCAT('TRUNCATE TABLE `', nombre_tabla, '`');
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+    SELECT CONCAT('vaciada: ', nombre_tabla) AS resultado;
+  ELSE
+    SELECT CONCAT('no existe, se saltó: ', nombre_tabla) AS resultado;
+  END IF;
+END$$
+DELIMITER ;
+
 -- --- Inventario: kardex, costos y documentos ---
-TRUNCATE TABLE consumoscapa;
-TRUNCATE TABLE capascosto;
-TRUNCATE TABLE movimientosinventario;
-TRUNCATE TABLE documentosinventario;
+CALL truncate_si_existe('consumoscapa');
+CALL truncate_si_existe('capascosto');
+CALL truncate_si_existe('movimientosinventario');
+CALL truncate_si_existe('documentosinventario');
 
 -- --- Compras y cuentas por pagar ---
-TRUNCATE TABLE comprapago;
-TRUNCATE TABLE compradetalle;
-TRUNCATE TABLE compras;
-TRUNCATE TABLE ordencompradetalle;
-TRUNCATE TABLE ordenescompra;
+CALL truncate_si_existe('comprapago');
+CALL truncate_si_existe('compradetalle');
+CALL truncate_si_existe('compras');
+CALL truncate_si_existe('ordencompradetalle');
+CALL truncate_si_existe('ordenescompra');
 
 -- --- Ventas, devoluciones y cuentas por cobrar ---
-TRUNCATE TABLE devoluciondetalles;
-TRUNCATE TABLE devoluciones;
-TRUNCATE TABLE pagoventa;
-TRUNCATE TABLE notaventadetalle;
-TRUNCATE TABLE notasventa;
-TRUNCATE TABLE pedidodetalle;
-TRUNCATE TABLE pedidos;
+CALL truncate_si_existe('devoluciondetalles');
+CALL truncate_si_existe('devoluciones');
+CALL truncate_si_existe('pagoventa');
+CALL truncate_si_existe('notaventadetalle');
+CALL truncate_si_existe('notasventa');
+CALL truncate_si_existe('pedidodetalle');
+CALL truncate_si_existe('pedidos');
 
 -- --- Préstamos y despachos ---
-TRUNCATE TABLE prestamodetalle;
-TRUNCATE TABLE prestamos;
-TRUNCATE TABLE despachodetalles;
-TRUNCATE TABLE despachos;
+CALL truncate_si_existe('prestamodetalle');
+CALL truncate_si_existe('prestamos');
+CALL truncate_si_existe('despachodetalles');
+CALL truncate_si_existe('despachos');
 
 -- --- Caja del día ---
-TRUNCATE TABLE arqueogastos;
-TRUNCATE TABLE arqueopagosdigitales;
-TRUNCATE TABLE arqueocaja;
+CALL truncate_si_existe('arqueogastos');
+CALL truncate_si_existe('arqueopagosdigitales');
+CALL truncate_si_existe('arqueocaja');
 
 -- --- Catálogo: productos, presentaciones y listas de precios ---
-TRUNCATE TABLE precios;
-TRUNCATE TABLE listasprecio;
-TRUNCATE TABLE productopresentaciones;
-TRUNCATE TABLE productos;
+CALL truncate_si_existe('precios');
+CALL truncate_si_existe('listasprecio');
+CALL truncate_si_existe('productopresentaciones');
+CALL truncate_si_existe('productos');
+
+DROP PROCEDURE truncate_si_existe;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
