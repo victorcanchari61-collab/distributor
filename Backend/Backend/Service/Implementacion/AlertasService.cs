@@ -1,3 +1,4 @@
+using System.Globalization;
 using Backend.Dtos.Responses;
 using Backend.Models;
 using Backend.Repository.Interfaces;
@@ -158,11 +159,21 @@ public class AlertasService : IAlertasService
                 Tipo = TipoAlerta.StockBajo,
                 Severidad = s.Stock <= 0 ? SeveridadAlerta.Critica : SeveridadAlerta.Advertencia,
                 Titulo = s.Stock <= 0 ? $"Sin stock: {s.Producto}" : $"Stock bajo: {s.Producto}",
-                Detalle = $"{s.Stock} {s.UnidadBase} disponibles, mínimo {s.StockMinimo}",
+                Detalle = $"{Cantidad(s.Stock)} {s.UnidadBase} disponibles, mínimo {Cantidad(s.StockMinimo)}",
                 Ruta = "inv.stock"
             })
             .ToList();
     }
+
+    /// <summary>
+    /// Una cantidad como se dice, no como se guarda.
+    ///
+    /// La base guarda decimal(18,4) y eso salia crudo en el aviso —"1250,0000
+    /// KG"—, que se lee como un error de sistema. Los ceros de la derecha no
+    /// dicen nada: un saco entero es 1, no 1.0000.
+    /// </summary>
+    private static string Cantidad(decimal valor) =>
+        valor.ToString("0.####", CultureInfo.InvariantCulture);
 
     private async Task<List<AlertaResponse>> LotesPorVencerAsync(DateTime ahora)
     {
@@ -178,7 +189,7 @@ public class AlertasService : IAlertasService
                 Tipo = TipoAlerta.LotePorVencer,
                 Severidad = l.DiasParaVencer < 0 ? SeveridadAlerta.Critica : SeveridadAlerta.Advertencia,
                 Titulo = l.DiasParaVencer < 0 ? $"Vencido: {l.Producto}" : $"Por vencer: {l.Producto}",
-                Detalle = $"{l.CantidadDisponible} {l.UnidadBase} en {l.Almacen}"
+                Detalle = $"{Cantidad(l.CantidadDisponible)} {l.UnidadBase} en {l.Almacen}"
                           + (l.Lote != null ? $" · lote {l.Lote}" : "")
                           + (l.DiasParaVencer < 0
                               ? $" · venció hace {-l.DiasParaVencer.Value} días"
@@ -286,7 +297,7 @@ public class AlertasService : IAlertasService
                     Tipo = TipoAlerta.StockRepuesto,
                     Severidad = SeveridadAlerta.Info,
                     Titulo = esNuevo ? $"Nuevo producto: {producto.Nombre}" : $"Llegó stock: {producto.Nombre}",
-                    Detalle = $"{cantidad} {producto.UnidadBase?.Codigo} en {almacen.Nombre}",
+                    Detalle = $"{Cantidad(cantidad)} {producto.UnidadBase?.Codigo} en {almacen.Nombre}",
                     Ruta = "inv.stock",
                     Fecha = g.Max(m => m.Fecha)
                 };

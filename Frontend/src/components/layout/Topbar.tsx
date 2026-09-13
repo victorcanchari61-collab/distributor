@@ -135,7 +135,15 @@ export function Topbar({
         </button>
 
         {abierto && (
-          <div className="absolute top-full right-0 z-30 mt-2 w-80 rounded-panel border border-line bg-white shadow-panel sm:w-96">
+          /*
+            En el movil se sale de la pantalla.
+            El panel colgaba de la campana con un ancho fijo, y la campana no
+            esta pegada al borde —tiene el perfil y el salir a su derecha—,
+            asi que a 375px arrancaba en -72 y se comia el inicio de cada
+            alerta. Ahi va suelto de la campana, pegado a los dos bordes;
+            desde sm vuelve a colgar de ella.
+          */
+          <div className="fixed inset-x-3 top-16 z-30 rounded-panel border border-line bg-white shadow-panel sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:mt-2 sm:w-96">
             <div className="border-b border-line px-4 py-3">
               <h3 className="text-sm font-bold text-ink">Alertas</h3>
               <p className="text-xs text-ink-soft">
