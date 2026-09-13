@@ -298,6 +298,21 @@ export function ProductosPage() {
       })),
   ]
 
+  /*
+   * De que presentacion es el costo de referencia.
+   *
+   * Manda lo marcado en la columna "Se compra" de la pestaña Presentaciones:
+   * ahi es donde se declara como entra la mercaderia, y tener un segundo
+   * sitio para decir lo mismo solo daba lugar a que se contradijeran. La
+   * eleccion a mano (presentacionCosto) solo pesa cuando hay VARIAS formas de
+   * comprar y hay que desempatar.
+   */
+  const comprables = presentacionesDelForm.filter((p) => p.esCompra && p.activo)
+  const presentacionDelCosto =
+    comprables.find((p) => p.id === presentacionCosto)?.id ??
+    comprables[0]?.id ??
+    0
+
   const guardar = async () => {
     setErrorForm('')
 
@@ -829,8 +844,19 @@ export function ProductosPage() {
                   />
                 </div>
 
+                {/*
+                  Se pregunta por lo MAS CHICO QUE SE VENDE, no por la "unidad
+                  base".
+                  
+                  Es el mismo dato —el sistema guarda el stock en esa medida—
+                  pero esa es una decision suya, no del que carga el producto.
+                  Quien vende sabe que despacha kilos sueltos o latas enteras;
+                  no tiene por que saber que eso se llama unidad base ni por
+                  que el saco no puede serlo (3 kg serian 0.06 sacos y todo el
+                  kardex saldria en fracciones de saco).
+                */}
                 <Desplegable
-                  label="Unidad base"
+                  label="Lo más chico que vendes"
                   value={form.unidadBaseId}
                   hint={<BotonMas label="Nueva unidad" onClick={() => setCrearRapido('unidad')} />}
                   onChange={(v) => setForm({ ...form, unidadBaseId: Number(v) })}
@@ -840,6 +866,14 @@ export function ProductosPage() {
                     detalle: u.codigo,
                   }))}
                 />
+
+                <p className="-mt-2 text-xs text-ink-soft">
+                  Si abres el envase y despachas por peso, es el{' '}
+                  <span className="font-medium text-ink-muted">kilo</span>. Si lo vendes sellado y
+                  entero, es la <span className="font-medium text-ink-muted">unidad</span> (la lata,
+                  el sobre, la botella). El stock se cuenta así; el saco y la caja se agregan
+                  después en Presentaciones.
+                </p>
 
                 {/* Cambiarla no reescribe el pasado: lo que ya se movió se
                     contó en la unidad anterior y no hay forma de convertirlo. */}
@@ -851,7 +885,17 @@ export function ProductosPage() {
                   </p>
                 )}
 
-                {/* Contenido del envase: informativo, para comparar precio por litro. */}
+                {/*
+                  Contenido del envase: informativo, para comparar precio por
+                  litro o por gramo entre dos presentaciones parecidas. No
+                  interviene en el stock.
+                */}
+                <p className="text-xs text-ink-soft">
+                  <span className="font-medium text-ink-muted">Contenido</span> — solo para lo que
+                  se vende sellado: cuánto trae adentro cada uno. El sobre de ajinomoto trae 30 G,
+                  la botella 900 ML. Si vendes por peso suelto, déjalo vacío.
+                </p>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input
                     label="Contenido"
@@ -905,7 +949,7 @@ export function ProductosPage() {
                 <CostoReferenciaInput
                   valor={form.costoReferencia}
                   onChange={(v) => setForm({ ...form, costoReferencia: v })}
-                  presentacionId={presentacionCosto}
+                  presentacionId={presentacionDelCosto}
                   onPresentacion={setPresentacionCosto}
                   presentaciones={presentacionesDelForm}
                   unidadBase={unidadBase || 'unidad base'}

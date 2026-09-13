@@ -61,7 +61,10 @@ export function CostoReferenciaInput({
     <div className="flex flex-col gap-1.5">
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
-          label="Costo de referencia"
+          // La etiqueta dice de que presentacion es el numero, en vez de
+          // dejarlo a la imaginacion: "S/ 170" a secas no se sabe si es el
+          // saco o el kilo.
+          label={`Costo de referencia${elegida ? ` — un ${elegida.nombre}` : ''}`}
           optional
           type="number"
           step="0.01"
@@ -71,17 +74,28 @@ export function CostoReferenciaInput({
           disabled={disabled}
         />
 
-        <Desplegable
-          label="Se compra por"
-          value={presentacionId}
-          onChange={(v) => cambiarPresentacion(Number(v))}
-          disabled={disabled || compras.length === 0}
-          options={compras.map((p) => ({
-            value: p.id,
-            label: p.nombre,
-            detalle: `${p.factor} ${unidadBase}`,
-          }))}
-        />
+        {/*
+          El selector SOLO aparece si de verdad hay algo que elegir.
+          
+          Antes decia "Se compra por" y repetia la columna "Se compra" de la
+          pestaña Presentaciones, que es donde eso se declara de verdad — dos
+          sitios para el mismo dato, y podian contradecirse. Ahora las opciones
+          salen de esa misma columna y esto es solo una pregunta de seguimiento
+          sobre el costo: cuando se compra de una sola forma, ni se muestra.
+        */}
+        {compras.length > 1 && (
+          <Desplegable
+            label="Ese costo es de"
+            value={presentacionId}
+            onChange={(v) => cambiarPresentacion(Number(v))}
+            disabled={disabled}
+            options={compras.map((p) => ({
+              value: p.id,
+              label: p.nombre,
+              detalle: `${p.factor} ${unidadBase}`,
+            }))}
+          />
+        )}
       </div>
 
       {valor && Number(valor) > 0 && (
