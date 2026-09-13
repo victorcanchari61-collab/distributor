@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { PackageCheck } from 'lucide-react'
+import { ClipboardList, PackageCheck } from 'lucide-react'
 import {
-  Alert,
   Badge,
   BuscadorCampo,
   BuscadorModal,
@@ -9,12 +8,15 @@ import {
   Desplegable,
   Input,
   Modal,
+  SysDataTable,
+  Tabs,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import type { AlmacenResponse, CrearRecepcionRequest } from '../inventario'
 import { recepcionApi } from '../inventario'
-import type { CompraResponse } from './comprasApi'
+import type { CompraDetalleResponse, CompraResponse } from './comprasApi'
 
 export interface NuevaRecepcionModalProps {
   open: boolean
@@ -27,11 +29,17 @@ export interface NuevaRecepcionModalProps {
   onCreada: () => void
 }
 
+type Pestana = 'datos' | 'lineas'
+
 /**
  * Registrar que llegó mercadería de una compra, total o parcialmente.
  *
  * Es más chico que el formulario de una orden/compra: no arma líneas nuevas,
  * solo dice cuánto de lo YA pactado llegó ahora. Por eso sí cabe en un modal.
+ *
+ * Va en dos pestañas por lo mismo que el formulario de producto: de un tirón
+ * había que bajar por encima del almacén y la observación para llegar a las
+ * líneas, que es lo único que se toca en cada recepción.
  */
 export function NuevaRecepcionModal({
   open,
@@ -41,7 +49,9 @@ export function NuevaRecepcionModal({
   almacenes,
   onCreada,
 }: NuevaRecepcionModalProps) {
+  const toast = useToast()
   const [compra, setCompra] = useState<CompraResponse | null>(compraFija ?? null)
+  const [pestana, setPestana] = useState<Pestana>('datos')
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [almacenId, setAlmacenId] = useState(0)
   const [observacion, setObservacion] = useState('')
@@ -49,24 +59,26 @@ export function NuevaRecepcionModal({
   const [lotes, setLotes] = useState<Record<number, string>>({})
   const [vencimientos, setVencimientos] = useState<Record<number, string>>({})
   const [guardando, setGuardando] = useState(false)
-  const [error, setError] = useState('')
+
+  /** Lo que todavía no llega: es lo único que se puede recibir. */
+  const pendientes: CompraDetalleResponse[] =
+    compra?.detalle.filter((d) => d.cantidadPendiente > 0) ?? []
+
+  const llenarPendiente = (detalle: CompraDetalleResponse[]) =>
+    Object.fromEntries(
+      detalle.filter((d) => d.cantidadPendiente > 0).map((d) => [d.id, String(d.cantidadPendiente)]),
+    )
 
   useEffect(() => {
     if (!open) return
     const inicial = compraFija ?? null
     setCompra(inicial)
+    // Con la compra ya elegida lo que importa son las líneas; sin elegir, lo
+    // primero es elegirla.
+    setPestana(inicial ? 'lineas' : 'datos')
     setAlmacenId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
     setObservacion('')
-    setError('')
-    setCantidades(
-      inicial
-        ? Object.fromEntries(
-            inicial.detalle
-              .filter((d) => d.cantidadPendiente > 0)
-              .map((d) => [d.id, String(d.cantidadPendiente)]),
-          )
-        : {},
-    )
+    setCantidades(inicial ? llenarPendiente(inicial.detalle) : {})
     setLotes({})
     setVencimientos({})
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,18 +86,15 @@ export function NuevaRecepcionModal({
 
   const elegirCompra = (c: CompraResponse) => {
     setCompra(c)
-    setCantidades(
-      Object.fromEntries(
-        c.detalle.filter((d) => d.cantidadPendiente > 0).map((d) => [d.id, String(d.cantidadPendiente)]),
-      ),
-    )
+    setCantidades(llenarPendiente(c.detalle))
     setLotes({})
     setVencimientos({})
+    setPestana('lineas')
   }
 
   const guardar = async () => {
-    if (!compra) return setError('Elige la compra.')
-    if (!almacenId) return setError('Elige el almacén.')
+    if (!compra) return toast.error('Elige la compra.')
+    if (!almacenId) return toast.error('Elige el almacén.')
 
     const detalle = compra.detalle
       .map((d) => ({
@@ -96,7 +105,10 @@ export function NuevaRecepcionModal({
       }))
       .filter((l) => l.cantidad > 0)
 
-    if (detalle.length === 0) return setError('Indica cuánto llegó.')
+    if (detalle.length === 0) {
+      setPestana('lineas')
+      return toast.error('Indica cuánto llegó.')
+    }
 
     const body: CrearRecepcionRequest = {
       compraId: compra.id,
@@ -106,14 +118,18 @@ export function NuevaRecepcionModal({
     }
 
     setGuardando(true)
-    setError('')
     try {
       await recepcionApi.create(body)
       onClose()
       onCreada()
+      toast.exito('Recepción registrada')
     } catch (e) {
-      setError(
-        e instanceof ApiError ? (e.errors.length ? e.errors.join(' ') : e.message) : 'No pudimos registrar la recepción.',
+      toast.error(
+        e instanceof ApiError
+          ? e.errors.length
+            ? e.errors.join(' ')
+            : e.message
+          : 'No pudimos registrar la recepción.',
       )
     } finally {
       setGuardando(false)
@@ -142,10 +158,110 @@ export function NuevaRecepcionModal({
     { key: 'total', label: 'Total', align: 'right', render: (row) => `S/ ${row.total.toFixed(2)}` },
   ]
 
+  /*
+   * Las líneas que llegan, en la misma tabla que el resto del sistema.
+   *
+   * Antes era una lista de tarjetas con los inputs adentro: cada producto
+   * ocupaba tres renglones y no se podían comparar lo pactado, lo ya recibido
+   * y lo que llega ahora sin ir tarjeta por tarjeta.
+   */
+  const columnasLineas: DataTableColumn<CompraDetalleResponse>[] = [
+    {
+      key: 'producto',
+      label: 'Producto',
+      width: 220,
+      render: (d) => (
+        <span className="flex flex-col">
+          <span className="text-sm font-medium text-ink">{d.producto}</span>
+          <span className="text-xs text-ink-soft">{d.codigo}</span>
+        </span>
+      ),
+    },
+    {
+      key: 'cantidad',
+      label: 'Pactado',
+      align: 'right',
+      width: 110,
+      render: (d) => (
+        <span className="text-sm text-ink-soft">
+          {d.cantidad} {d.unidadBase}
+        </span>
+      ),
+    },
+    {
+      key: 'cantidadRecibida',
+      label: 'Ya recibido',
+      align: 'right',
+      width: 110,
+      render: (d) =>
+        d.cantidadRecibida > 0 ? (
+          <span className="text-sm text-ink-soft">
+            {d.cantidadRecibida} {d.unidadBase}
+          </span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
+      key: 'cantidadPendiente',
+      label: 'Pendiente',
+      align: 'right',
+      width: 110,
+      render: (d) => (
+        <span className="text-sm font-medium text-ink">
+          {d.cantidadPendiente} {d.unidadBase}
+        </span>
+      ),
+    },
+    {
+      key: 'llego',
+      label: 'Llegó ahora',
+      width: 130,
+      render: (d) => (
+        <Input
+          size="sm"
+          type="number"
+          step="0.0001"
+          min={0}
+          max={d.cantidadPendiente}
+          value={cantidades[d.id] ?? ''}
+          onChange={(e) => setCantidades({ ...cantidades, [d.id]: e.target.value })}
+        />
+      ),
+    },
+    {
+      key: 'lote',
+      label: 'Lote',
+      width: 140,
+      render: (d) => (
+        <Input
+          size="sm"
+          placeholder="Opcional"
+          value={lotes[d.id] ?? ''}
+          onChange={(e) => setLotes({ ...lotes, [d.id]: e.target.value })}
+        />
+      ),
+    },
+    {
+      key: 'vencimiento',
+      label: 'Vencimiento',
+      width: 160,
+      render: (d) => (
+        <Input
+          size="sm"
+          type="date"
+          value={vencimientos[d.id] ?? ''}
+          onChange={(e) => setVencimientos({ ...vencimientos, [d.id]: e.target.value })}
+        />
+      ),
+    },
+  ]
+
   return (
     <>
       <Modal
         open={open}
+        size="2xl"
         title="Nueva recepción"
         description="Cuánto de lo pactado llegó ahora. Puede ser parcial."
         onClose={onClose}
@@ -161,90 +277,79 @@ export function NuevaRecepcionModal({
         }
       >
         <div className="flex flex-col gap-4">
-          {error && <Alert>{error}</Alert>}
+          <Tabs
+            active={pestana}
+            onChange={(id) => setPestana(id as Pestana)}
+            items={[
+              { id: 'datos', label: 'Datos', icon: <ClipboardList size={14} /> },
+              {
+                id: 'lineas',
+                label: 'Qué llegó',
+                icon: <PackageCheck size={14} />,
+                badge: pendientes.length,
+              },
+            ]}
+          />
 
-          {compraFija ? (
-            <div>
-              <span className="ui-label mb-1.5 block">Compra</span>
-              <div className="flex items-center gap-2 rounded-field border border-line px-3 py-2 text-sm">
-                <Badge>{compraFija.numero}</Badge>
-                <span className="text-ink">{compraFija.proveedor}</span>
+          {pestana === 'datos' ? (
+            <div className="flex flex-col gap-4">
+              {compraFija ? (
+                <div>
+                  <span className="ui-label mb-1.5 block">Compra</span>
+                  <div className="flex items-center gap-2 rounded-field border border-line px-3 py-2 text-sm">
+                    <Badge>{compraFija.numero}</Badge>
+                    <span className="text-ink">{compraFija.proveedor}</span>
+                  </div>
+                </div>
+              ) : (
+                <BuscadorCampo
+                  label="Compra"
+                  value={compra}
+                  onChange={(c) => c && elegirCompra(c)}
+                  opciones={opcionesCompra}
+                  placeholder="Buscar compra..."
+                  vacio="Ninguna compra coincide"
+                  onAvanzado={() => setBuscadorAbierto(true)}
+                  avanzadoLabel="Búsqueda avanzada de compras"
+                />
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Desplegable
+                  label="Almacén de destino"
+                  value={almacenId}
+                  onChange={(v) => setAlmacenId(Number(v))}
+                  options={almacenes
+                    .filter((a) => a.activo)
+                    .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
+                />
+
+                <Input
+                  label="Observación"
+                  optional
+                  placeholder="Guía de remisión, referencia..."
+                  value={observacion}
+                  onChange={(e) => setObservacion(e.target.value)}
+                />
               </div>
             </div>
+          ) : !compra ? (
+            <p className="py-10 text-center text-sm text-ink-soft">
+              Elige primero la compra en la pestaña Datos.
+            </p>
           ) : (
-            <BuscadorCampo
-              label="Compra"
-              value={compra}
-              onChange={(c) => c && elegirCompra(c)}
-              opciones={opcionesCompra}
-              placeholder="Buscar compra..."
-              vacio="Ninguna compra coincide"
-              onAvanzado={() => setBuscadorAbierto(true)}
-              avanzadoLabel="Búsqueda avanzada de compras"
-            />
-          )}
-
-          <Desplegable
-            label="Almacén de destino"
-            value={almacenId}
-            onChange={(v) => setAlmacenId(Number(v))}
-            options={almacenes
-              .filter((a) => a.activo)
-              .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
-          />
-
-          <Input
-            label="Observación"
-            optional
-            placeholder="Guía de remisión, referencia..."
-            value={observacion}
-            onChange={(e) => setObservacion(e.target.value)}
-          />
-
-          {compra && (
             <>
-              <hr className="border-line" />
-              <p className="text-sm font-semibold text-ink">Qué llegó</p>
-              <ul className="flex flex-col gap-2">
-                {compra.detalle
-                  .filter((d) => d.cantidadPendiente > 0)
-                  .map((d) => (
-                    <li key={d.id} className="rounded-field border border-line p-3">
-                      <div className="grid grid-cols-[1fr_8rem] items-end gap-2">
-                        <div>
-                          <p className="text-sm font-medium text-ink">{d.producto}</p>
-                          <p className="text-xs text-ink-soft">
-                            Pendiente: {d.cantidadPendiente} {d.unidadBase} de {d.cantidad}
-                          </p>
-                        </div>
-                        <Input
-                          label={`Llegó (${d.unidadBase})`}
-                          type="number"
-                          step="0.0001"
-                          max={d.cantidadPendiente}
-                          value={cantidades[d.id] ?? ''}
-                          onChange={(e) => setCantidades({ ...cantidades, [d.id]: e.target.value })}
-                        />
-                      </div>
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <Input
-                          label="Lote"
-                          optional
-                          placeholder="Opcional"
-                          value={lotes[d.id] ?? ''}
-                          onChange={(e) => setLotes({ ...lotes, [d.id]: e.target.value })}
-                        />
-                        <Input
-                          label="Vencimiento"
-                          optional
-                          type="date"
-                          value={vencimientos[d.id] ?? ''}
-                          onChange={(e) => setVencimientos({ ...vencimientos, [d.id]: e.target.value })}
-                        />
-                      </div>
-                    </li>
-                  ))}
-              </ul>
+              <SysDataTable<CompraDetalleResponse>
+                columns={columnasLineas}
+                rows={pendientes}
+                rowKey="id"
+                toolbar={false}
+                empty="Esta compra ya llegó completa: no queda nada por recibir."
+              />
+              <p className="text-xs text-ink-soft">
+                Viene lleno con lo que falta. Si llegó menos, corrige la cantidad y la compra
+                queda como recibida parcial. Lo que dejes en cero no se recibe.
+              </p>
             </>
           )}
         </div>
