@@ -207,7 +207,7 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
         });
 
     private static IContainer Encabezado(IContainer container) =>
-        container.BorderBottom(1).BorderRight(1).BorderColor(Colores.Linea)
+        container.BorderBottom(1).BorderRight(0.5f).BorderColor(Colores.Linea)
             .PaddingVertical(4).PaddingHorizontal(4)
             .DefaultTextStyle(x => x.Bold().FontSize(8).FontColor(Colores.Fuerte));
 
@@ -222,7 +222,7 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
      * aire de su padding.
      */
     private static IContainer Celda(IContainer container) =>
-        container.BorderRight(1).BorderColor(Colores.Linea).PaddingVertical(3).PaddingHorizontal(4);
+        container.BorderRight(0.5f).BorderColor(Colores.Linea).PaddingVertical(3).PaddingHorizontal(4);
 
     private void EnLetras(IContainer container) =>
         container.Border(1).BorderColor(Colores.Linea).Padding(5).Text(txt =>
