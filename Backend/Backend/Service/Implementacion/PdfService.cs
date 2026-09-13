@@ -64,7 +64,18 @@ public class PdfService(
         var cliente = await clientes.GetByIdAsync(pedido.ClienteId);
         var empresa = await empresas.GetActivaAsync();
 
-        var datos = new List<DatoImprimible>();
+        /*
+         * La condicion va primero.
+         *
+         * Es lo que el repartidor mira al llegar: si deja la mercaderia solo
+         * contra el dinero o si va fiada. Con el papel en la mano no hay
+         * sistema que consultar, asi que si no esta impreso no existe.
+         */
+        var datos = new List<DatoImprimible>
+        {
+            new("Condición de pago", pedido.CondicionPago == "CREDITO" ? "CRÉDITO" : "CONTADO"),
+        };
+
         if (pedido.ListaPrecio is { Length: > 0 } lista)
             datos.Add(new DatoImprimible("Lista de precios", lista));
         if (pedido.Almacen is { Length: > 0 } almacen)

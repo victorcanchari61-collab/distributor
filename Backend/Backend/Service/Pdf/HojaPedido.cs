@@ -150,13 +150,14 @@ public static class HojaPedido
         });
 
     private static IContainer Encabezado(IContainer container, float e) =>
-        container.BorderBottom(1).BorderRight(1).BorderColor(Colores.Linea)
+        container.BorderBottom(1).BorderColor(Colores.Linea)
             .PaddingVertical(2).PaddingHorizontal(2)
             .DefaultTextStyle(x => x.Bold().FontSize(6.5f * e).FontColor(Colores.Fuerte));
 
+    // Sin rejilla: ver DocumentoA4. En esta hoja pesa mas todavia, porque son
+    // dos copias por pagina y el doble de lineas.
     private static IContainer Celda(IContainer container) =>
-        container.BorderBottom(1).BorderRight(1).BorderColor(Colores.LineaSuave)
-            .PaddingVertical(1).PaddingHorizontal(2);
+        container.PaddingVertical(1).PaddingHorizontal(2);
 
     private static void Cierre(IContainer container, DocumentoImprimible doc, float e) =>
         container.Column(col =>
