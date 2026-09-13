@@ -18,6 +18,17 @@ import { useRealtime } from '../../lib/realtime'
  * Es solo lectura. Lo alimentan los ajustes hoy, y mañana las compras y
  * ventas: todos escriben aquí por el mismo camino.
  */
+/**
+ * Una cifra que puede no venir.
+ *
+ * Existe porque un backend viejo —o un campo agregado despues— dejaba la
+ * pantalla en blanco entera: `undefined.toFixed()` revienta el render y React
+ * desmonta el arbol. Un guion se lee y no tumba nada.
+ */
+function cifra(valor: number | null | undefined, decimales = 2) {
+  return typeof valor === 'number' ? `S/ ${valor.toFixed(decimales)}` : '—'
+}
+
 export function KardexPage() {
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [almacenId, setAlmacenId] = useState(0)
@@ -167,7 +178,7 @@ export function KardexPage() {
       align: 'right',
       filterable: false,
       render: (row) => (
-        <span className="text-ink-soft">S/ {row.costoUnitario.toFixed(4)}</span>
+        <span className="text-ink-soft">{cifra(row.costoUnitario, 4)}</span>
       ),
     },
     {
@@ -176,7 +187,7 @@ export function KardexPage() {
       label: 'Costo',
       align: 'right',
       filterable: false,
-      render: (row) => `S/ ${row.costoTotal.toFixed(2)}`,
+      render: (row) => cifra(row.costoTotal),
     },
     /*
      * El libro de verdad: con cuanto llegaba, cuanto movio, con cuanto quedo.
@@ -192,7 +203,7 @@ export function KardexPage() {
       filterable: false,
       render: (row) => (
         <span className="text-ink-soft">
-          {row.saldoAnterior} {row.unidadBase}
+          {row.saldoAnterior ?? '—'} {row.unidadBase}
         </span>
       ),
     },
@@ -215,7 +226,7 @@ export function KardexPage() {
       align: 'right',
       filterable: false,
       render: (row) => (
-        <span className="font-medium text-ink">S/ {row.valorizado.toFixed(2)}</span>
+        <span className="font-medium text-ink">{cifra(row.valorizado)}</span>
       ),
     },
   ]
