@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Building2, Eye, PackageCheck, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, Building2, Check, Eye, PackageCheck, Pencil, Plus, ShoppingBag, Trash2, Undo2, X } from 'lucide-react'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -59,6 +59,23 @@ const FORMAS_PAGO: { value: FormaPagoCompra; label: string }[] = [
   { value: 'CONTADO', label: 'Contado' },
   { value: 'CREDITO', label: 'Crédito' },
 ]
+
+/** Como se nombra cada tipo de metodo en la tabla de pagos. */
+const NOTA_TIPO: Record<TipoMetodoPago, string> = {
+  EFECTIVO: 'Efectivo',
+  BILLETERA_DIGITAL: 'Billetera digital',
+  TRANSFERENCIA: 'Transferencia',
+}
+
+/** La fila del modal de pagos que todavía no existe. */
+const NUEVA_FILA = -1
+
+/** Una fila de la tabla de pagos del formulario. */
+interface FilaPagoCompra {
+  clave: number
+  metodoPagoId: number
+  monto: string
+}
 
 const TIPOS_METODO_PAGO: { value: TipoMetodoPago; label: string }[] = [
   { value: 'EFECTIVO', label: 'Efectivo' },
@@ -261,24 +278,134 @@ export function MisComprasPage() {
    * agregar un producto. Nunca deja que lo pagado supere el total: no tiene
    * sentido pagar más de lo que cuesta la compra.
    */
-  const agregarPago = () => {
-    if (!pagoMetodoId || !pagoMonto || Number(pagoMonto) <= 0) return
+  /**
+   * Que fila del modal de pagos se esta editando: el indice del pago, o
+   * NUEVA_FILA para la que todavia no existe. Null es que no se edita ninguna.
+   *
+   * Mismo trato que en Cuentas por pagar: la tabla ES el formulario.
+   */
+  const [filaPago, setFilaPago] = useState<number | null>(null)
 
-    if (totalPagado + Number(pagoMonto) > total + 0.001) {
-      setErrorForm(
-        `Ese pago deja lo pagado en S/ ${(totalPagado + Number(pagoMonto)).toFixed(2)}, más que el total de la compra (S/ ${total.toFixed(2)}).`,
-      )
-      return
-    }
-
+  const abrirFilaPago = () => {
+    setFilaPago(NUEVA_FILA)
+    setPagoTipo('')
+    setPagoMetodoId(0)
+    setPagoMonto('')
     setErrorForm('')
-    setPagos((prev) => [...prev, { metodoPagoId: pagoMetodoId, monto: pagoMonto }])
+  }
+
+  const editarFilaPago = (i: number) => {
+    const pago = pagos[i]
+    setFilaPago(i)
+    setPagoTipo(metodosPago.find((m) => m.id === pago.metodoPagoId)?.tipo ?? '')
+    setPagoMetodoId(pago.metodoPagoId)
+    setPagoMonto(String(pago.monto))
+    setErrorForm('')
+  }
+
+  const cerrarFilaPago = () => {
+    setFilaPago(null)
     setPagoTipo('')
     setPagoMetodoId(0)
     setPagoMonto('')
   }
 
+  /** Guarda la fila en edicion: la nueva se agrega, una existente se reemplaza. */
+  const guardarFilaPago = () => {
+    if (!pagoMetodoId) return setErrorForm('Elige el método de pago.')
+
+    const monto = Number(pagoMonto)
+    if (!monto || monto <= 0) return setErrorForm('Pon cuánto se pagó.')
+
+    // Lo ya cargado sin contar la fila que se esta editando.
+    const otros = pagos.reduce(
+      (suma, pago, i) => (i === filaPago ? suma : suma + (Number(pago.monto) || 0)),
+      0,
+    )
+
+    if (otros + monto > total + 0.001) {
+      return setErrorForm(
+        `Ese pago deja lo pagado en S/ ${(otros + monto).toFixed(2)}, más que el total de la compra (S/ ${total.toFixed(2)}).`,
+      )
+    }
+
+    setPagos((prev) =>
+      filaPago === NUEVA_FILA
+        ? [...prev, { metodoPagoId: pagoMetodoId, monto: pagoMonto }]
+        : prev.map((pago, i) =>
+            i === filaPago ? { metodoPagoId: pagoMetodoId, monto: pagoMonto } : pago,
+          ),
+    )
+    setErrorForm('')
+    cerrarFilaPago()
+  }
+
   const quitarPago = (i: number) => setPagos((prev) => prev.filter((_, idx) => idx !== i))
+
+  /** Filas del modal de pagos: las cargadas, más la nueva mientras se escribe. */
+  const filasPago: FilaPagoCompra[] = [
+    ...pagos.map((pago, i) => ({ clave: i, metodoPagoId: pago.metodoPagoId, monto: String(pago.monto) })),
+    ...(filaPago === NUEVA_FILA ? [{ clave: NUEVA_FILA, metodoPagoId: 0, monto: '' }] : []),
+  ]
+
+  const columnasPagos: DataTableColumn<FilaPagoCompra>[] = [
+    {
+      key: 'tipo',
+      label: 'Tipo de pago',
+      render: (fila) => {
+        if (fila.clave === filaPago) {
+          return (
+            <Desplegable
+              value={pagoTipo}
+              onChange={(v) => {
+                setPagoTipo(v as TipoMetodoPago)
+                setPagoMetodoId(0)
+              }}
+              placeholder="Elige el tipo"
+              options={TIPOS_METODO_PAGO}
+            />
+          )
+        }
+        const tipo = metodosPago.find((m) => m.id === fila.metodoPagoId)?.tipo
+        return tipo ? <Badge tone="sys">{NOTA_TIPO[tipo]}</Badge> : <span className="text-ink-soft">—</span>
+      },
+    },
+    {
+      key: 'metodo',
+      label: 'Método',
+      render: (fila) =>
+        fila.clave === filaPago ? (
+          <Desplegable
+            value={pagoMetodoId}
+            onChange={(v) => setPagoMetodoId(Number(v))}
+            placeholder={pagoTipo ? 'Elige el método' : 'Elige el tipo primero'}
+            disabled={!pagoTipo}
+            options={metodosPago
+              .filter((m) => m.tipo === pagoTipo)
+              .map((m) => ({ value: m.id, label: m.nombre }))}
+          />
+        ) : (
+          (metodosPago.find((m) => m.id === fila.metodoPagoId)?.nombre ?? '—')
+        ),
+    },
+    {
+      key: 'monto',
+      label: 'Monto',
+      align: 'right',
+      render: (fila) =>
+        fila.clave === filaPago ? (
+          <Input
+            type="number"
+            step="0.01"
+            placeholder="0.00"
+            value={pagoMonto}
+            onChange={(e) => setPagoMonto(e.target.value)}
+          />
+        ) : (
+          `S/ ${(Number(fila.monto) || 0).toFixed(2)}`
+        ),
+    },
+  ]
 
   const guardar = async () => {
     if (!proveedorId) return setErrorForm('Elige el proveedor.')
@@ -684,83 +811,73 @@ export function MisComprasPage() {
 
         <Modal
           open={pagosAbierto}
-          onClose={() => setPagosAbierto(false)}
-          size="sm"
+          onClose={() => {
+            cerrarFilaPago()
+            setPagosAbierto(false)
+          }}
+          size="lg"
           title="Pagos"
-          description="Reparte el total entre uno o varios métodos."
+          description={`Reparte S/ ${total.toFixed(2)} entre uno o varios métodos.`}
           footer={
-            <Button size="sm" onClick={() => setPagosAbierto(false)}>
-              Listo
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  cerrarFilaPago()
+                  setPagosAbierto(false)
+                }}
+              >
+                Listo
+              </Button>
+              <Button size="sm" disabled={filaPago !== null} onClick={abrirFilaPago}>
+                <Plus size={15} />
+                Agregar pago
+              </Button>
+            </>
           }
         >
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {errorForm && <Alert>{errorForm}</Alert>}
 
-            {/* Primero el tipo, para no buscar el método entre los 11 juntos:
-                elegido el tipo, el método solo lista los que le corresponden. */}
-            <Desplegable
-              label="Tipo"
-              value={pagoTipo}
-              onChange={(v) => {
-                setPagoTipo(v as TipoMetodoPago)
-                setPagoMetodoId(0)
-              }}
-              placeholder="Elige el tipo"
-              options={TIPOS_METODO_PAGO}
+            <SysDataTable<FilaPagoCompra>
+              columns={columnasPagos}
+              rows={filasPago}
+              rowKey="clave"
+              toolbar={false}
+              empty="Todavía no hay pagos registrados."
+              actions={(fila) =>
+                fila.clave === filaPago ? (
+                  <>
+                    <RowAction label="Guardar pago" tone="success" onClick={guardarFilaPago}>
+                      <Check size={15} />
+                    </RowAction>
+                    <RowAction label="Cancelar" tone="danger" onClick={cerrarFilaPago}>
+                      <X size={15} />
+                    </RowAction>
+                  </>
+                ) : (
+                  <>
+                    <RowAction
+                      label="Editar pago"
+                      tone="edit"
+                      disabled={filaPago !== null}
+                      onClick={() => editarFilaPago(fila.clave)}
+                    >
+                      <Pencil size={15} />
+                    </RowAction>
+                    <RowAction
+                      label="Quitar pago"
+                      tone="danger"
+                      disabled={filaPago !== null}
+                      onClick={() => quitarPago(fila.clave)}
+                    >
+                      <Trash2 size={15} />
+                    </RowAction>
+                  </>
+                )
+              }
             />
-
-            <div className="flex gap-2">
-              <div className="min-w-0 flex-1">
-                <Desplegable
-                  value={pagoMetodoId}
-                  onChange={(v) => setPagoMetodoId(Number(v))}
-                  placeholder={pagoTipo ? 'Método' : 'Elige el tipo primero'}
-                  disabled={!pagoTipo}
-                  options={metodosPago
-                    .filter((m) => m.tipo === pagoTipo)
-                    .map((m) => ({ value: m.id, label: m.nombre }))}
-                />
-              </div>
-              <div className="w-28 shrink-0">
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="Monto"
-                  value={pagoMonto}
-                  onChange={(e) => setPagoMonto(e.target.value)}
-                />
-              </div>
-              <Button type="button" size="sm" variant="secondary" onClick={agregarPago}>
-                <Plus size={15} />
-              </Button>
-            </div>
-
-            {pagos.length === 0 ? (
-              <p className="text-sm text-ink-soft">Todavía no hay pagos registrados.</p>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                {pagos.map((p, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between rounded-field border border-line px-3 py-1.5 text-sm"
-                  >
-                    <span>{metodosPago.find((m) => m.id === p.metodoPagoId)?.nombre ?? '—'}</span>
-                    <span className="flex items-center gap-2">
-                      S/ {(Number(p.monto) || 0).toFixed(2)}
-                      <button
-                        type="button"
-                        onClick={() => quitarPago(i)}
-                        aria-label="Quitar pago"
-                        className="text-ink-soft transition-colors hover:text-red-600"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
 
             <div className="flex items-center justify-between border-t border-line pt-3 text-sm font-semibold">
               <span>Pagado</span>
