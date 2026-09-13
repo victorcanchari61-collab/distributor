@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './const_glob'
-import { getToken } from './authStorage'
+import { clearSession, getToken } from './authStorage'
 
 /** La acción que el servidor negó, tal como la nombra el catálogo de permisos. */
 export interface PermisoNegado {
@@ -45,6 +45,29 @@ let avisarPermisoNegado: ((permiso: PermisoNegado) => void) | null = null
 
 export function alNegarPermiso(callback: ((permiso: PermisoNegado) => void) | null) {
   avisarPermisoNegado = callback
+}
+
+/*
+ * Sesion vencida.
+ *
+ * El token dura unos dias y al caducar TODAS las pantallas empiezan a decir
+ * "Error 401" sin explicar nada: la de perfil se ve vacia, el stock sin
+ * filas, y parece que el sistema se rompio. Como el token ya no sirve, lo
+ * unico que queda es soltar la sesion y mandar a entrar de nuevo. Se hace
+ * aqui, una vez, porque el 401 puede caer en cualquiera de las decenas de
+ * llamadas.
+ */
+let sesionVencida = false
+
+function avisarSesionVencida() {
+  // Una sola vez: una pantalla dispara cinco llamadas y las cinco fallan.
+  if (sesionVencida) return
+  sesionVencida = true
+
+  clearSession()
+  // Recarga entera y a la raiz: sin sesion, App muestra el login. Recargar
+  // ademas tira el estado a medio cargar de la pantalla que fallo.
+  window.location.assign('/')
 }
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
@@ -96,6 +119,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
      * pantalla se pide desde la propia pantalla bloqueada.
      */
     if (permiso && permiso.accion !== 'ver') avisarPermisoNegado?.(permiso)
+    if (response.status === 401) avisarSesionVencida()
 
     throw new ApiError(
       problem.message ?? `Error ${response.status}`,
@@ -143,6 +167,7 @@ export async function obtenerArchivo(
         : undefined
 
     if (permiso && permiso.accion !== 'ver') avisarPermisoNegado?.(permiso)
+    if (response.status === 401) avisarSesionVencida()
 
     throw new ApiError(
       problem.message ?? `Error ${response.status}`,
