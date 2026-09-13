@@ -83,10 +83,10 @@ type Pestana = 'productos' | 'categorias' | 'marcas' | 'unidades'
 type PestanaForm = 'datos' | 'presentaciones'
 
 /** Que catalogo se esta creando sin salir del formulario. */
-type CatalogoRapido = 'categoria' | 'marca' | 'unidad' | 'unidadContenido' | null
+type CatalogoRapido = 'categoria' | 'marca' | 'unidad' | null
 
 /** Las dos altas de unidad piden los mismos campos; cambia dónde queda elegida. */
-const esUnidad = (c: CatalogoRapido) => c === 'unidad' || c === 'unidadContenido'
+const esUnidad = (c: CatalogoRapido) => c === 'unidad'
 
 export function ProductosPage() {
   const { puede } = usePermisos()
@@ -337,6 +337,9 @@ export function ProductosPage() {
       categoriaId: form.categoriaId || null,
       marcaId: form.marcaId || null,
       unidadBaseId: form.unidadBaseId,
+      // El contenido ya no se edita en el formulario, pero se reenvía tal
+      // como estaba: quitar el campo de pantalla no debe borrar el dato de
+      // los productos que ya lo tenían cargado.
       contenido: form.contenido ? Number(form.contenido) : null,
       contenidoUnidadId: form.contenido ? form.contenidoUnidadId || null : null,
       costoReferencia: form.costoReferencia ? Number(form.costoReferencia) : null,
@@ -449,11 +452,7 @@ export function ProductosPage() {
         })
 
         // Queda elegida en el campo desde el que se abrió el +.
-        setForm((f) =>
-          crearRapido === 'unidadContenido'
-            ? { ...f, contenidoUnidadId: creada.id }
-            : { ...f, unidadBaseId: creada.id },
-        )
+        setForm((f) => ({ ...f, unidadBaseId: creada.id }))
       }
 
       await cargar()
@@ -547,16 +546,6 @@ export function ProductosPage() {
       key: 'unidadBase',
       label: 'Unidad base',
       render: (row) => <Badge>{row.unidadBase}</Badge>,
-    },
-    {
-      key: 'contenido',
-      label: 'Contenido',
-      render: (row) =>
-        row.contenido ? (
-          `${row.contenido} ${row.contenidoUnidad ?? ''}`
-        ) : (
-          <span className="text-ink-soft">—</span>
-        ),
     },
     {
       key: 'costoReferencia',
@@ -844,6 +833,40 @@ export function ProductosPage() {
                   />
                 </div>
 
+                <Input
+                  label="Stock mínimo"
+                  optional
+                  type="number"
+                  step="0.0001"
+                  hint={
+                    <span className="text-xs text-ink-soft">en {unidadBase || 'unidad base'}</span>
+                  }
+                  value={form.stockMinimo}
+                  onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
+                />
+
+                <hr className="border-line" />
+
+                {/* Se escribe como lo cobra el proveedor y se guarda por unidad
+                    base, igual que los precios de venta. */}
+                <CostoReferenciaInput
+                  valor={form.costoReferencia}
+                  onChange={(v) => setForm({ ...form, costoReferencia: v })}
+                  presentacionId={presentacionDelCosto}
+                  onPresentacion={setPresentacionCosto}
+                  presentaciones={presentacionesDelForm}
+                  unidadBase={unidadBase || 'unidad base'}
+                  disabled={guardando}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {/*
+                  La base va como PRIMERA FILA de la misma tabla, no en una
+                  caja aparte: es una forma de vender mas y se lee en las
+                  mismas columnas que las otras. Lo unico suyo es que no se
+                  borra, su factor es 1 y siempre se vende por ella.
+                */}
                 {/*
                   Se pregunta por lo MAS CHICO QUE SE VENDE, no por la "unidad
                   base".
@@ -885,85 +908,6 @@ export function ProductosPage() {
                   </p>
                 )}
 
-                {/*
-                  Contenido del envase: informativo, para comparar precio por
-                  litro o por gramo entre dos presentaciones parecidas. No
-                  interviene en el stock.
-                */}
-                <p className="text-xs text-ink-soft">
-                  <span className="font-medium text-ink-muted">Contenido</span> — solo para lo que
-                  se vende sellado: cuánto trae adentro cada uno. El sobre de ajinomoto trae 30 G,
-                  la botella 900 ML. Si vendes por peso suelto, déjalo vacío.
-                </p>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Input
-                    label="Contenido"
-                    optional
-                    type="number"
-                    step="0.0001"
-                    placeholder="900"
-                    value={form.contenido}
-                    onChange={(e) => setForm({ ...form, contenido: e.target.value })}
-                  />
-                  <Desplegable
-                    label="Unidad"
-                    optional
-                    hint={
-                      <BotonMas
-                        label="Nueva unidad"
-                        onClick={() => setCrearRapido('unidadContenido')}
-                      />
-                    }
-                    value={form.contenidoUnidadId}
-                    disabled={!form.contenido}
-                    placeholder="—"
-                    onChange={(v) => setForm({ ...form, contenidoUnidadId: Number(v) })}
-                    options={[
-                      { value: 0, label: '—' },
-                      ...unidadesActivas.map((u) => ({
-                        value: u.id,
-                        label: u.nombre,
-                        detalle: u.codigo,
-                      })),
-                    ]}
-                  />
-                </div>
-
-                <Input
-                  label="Stock mínimo"
-                  optional
-                  type="number"
-                  step="0.0001"
-                  hint={
-                    <span className="text-xs text-ink-soft">en {unidadBase || 'unidad base'}</span>
-                  }
-                  value={form.stockMinimo}
-                  onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
-                />
-
-                <hr className="border-line" />
-
-                {/* Se escribe como lo cobra el proveedor y se guarda por unidad
-                    base, igual que los precios de venta. */}
-                <CostoReferenciaInput
-                  valor={form.costoReferencia}
-                  onChange={(v) => setForm({ ...form, costoReferencia: v })}
-                  presentacionId={presentacionDelCosto}
-                  onPresentacion={setPresentacionCosto}
-                  presentaciones={presentacionesDelForm}
-                  unidadBase={unidadBase || 'unidad base'}
-                  disabled={guardando}
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {/*
-                  La base va como PRIMERA FILA de la misma tabla, no en una
-                  caja aparte: es una forma de vender mas y se lee en las
-                  mismas columnas que las otras. Lo unico suyo es que no se
-                  borra, su factor es 1 y siempre se vende por ella.
-                */}
                 <PresentacionesEditor
                   filas={[filaBase, ...presentaciones]}
                   unidades={unidades}
