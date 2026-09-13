@@ -16,7 +16,6 @@ import {
 import {
   Alert,
   Badge,
-  Checkbox,
   BotonMas,
   Button,
   Desplegable,
@@ -241,6 +240,19 @@ export function ProductosPage() {
    * salian las marcadas como de compra, asi que la caja tampoco figuraba si no
    * se habia marcado esa casilla.
    */
+  /** La unidad base como fila de la tabla de presentaciones. */
+  const filaBase: FilaPresentacion = {
+    clave: '__base__',
+    esBase: true,
+    id: editando?.presentaciones.find((p) => p.esBase)?.id,
+    unidadId: form.unidadBaseId,
+    nombre: unidades.find((u) => u.id === form.unidadBaseId)?.nombre ?? 'Unidad base',
+    factor: 1,
+    esCompra: baseSeCompra,
+    esVenta: true,
+    activo: true,
+  }
+
   const presentacionesDelForm: PresentacionResponse[] = [
     // La base siempre se puede elegir: es la unidad del producto. Al editar
     // se usa su id REAL (no 0): presentacionCosto puede traer justo ese id
@@ -903,32 +915,20 @@ export function ProductosPage() {
             ) : (
               <div className="flex flex-col gap-4">
                 {/*
-                  La base no se borra ni cambia de factor —la crea el backend—
-                  pero SI se dice si se compra por ella: el camanejo entra por
-                  saco y nunca por kilo suelto, y sin esta casilla "Se compra
-                  por" ofrecia el kilo igual.
+                  La base va como PRIMERA FILA de la misma tabla, no en una
+                  caja aparte: es una forma de vender mas y se lee en las
+                  mismas columnas que las otras. Lo unico suyo es que no se
+                  borra, su factor es 1 y siempre se vende por ella.
                 */}
-                <div className="flex items-center justify-between gap-3 rounded-field bg-slate-50 px-3 py-2.5">
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm text-ink">
-                      {unidades.find((u) => u.id === form.unidadBaseId)?.nombre ?? 'Unidad base'}
-                    </span>
-                    <Badge>1 {unidadBase} · base</Badge>
-                  </span>
-
-                  <Checkbox
-                    label="Se compra así"
-                    checked={baseSeCompra}
-                    onChange={(e) => setBaseSeCompra(e.target.checked)}
-                    disabled={guardando}
-                  />
-                </div>
-
                 <PresentacionesEditor
-                  filas={presentaciones}
+                  filas={[filaBase, ...presentaciones]}
                   unidades={unidades}
                   unidadBase={unidadBase}
-                  onChange={setPresentaciones}
+                  onChange={(filas) => {
+                    const base = filas.find((f) => f.esBase)
+                    if (base) setBaseSeCompra(base.esCompra)
+                    setPresentaciones(filas.filter((f) => !f.esBase))
+                  }}
                   disabled={guardando}
                   costoReferenciaBase={form.costoReferencia ? Number(form.costoReferencia) : null}
                 />

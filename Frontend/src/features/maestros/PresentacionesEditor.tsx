@@ -65,49 +65,66 @@ export function PresentacionesEditor({
     {
       key: 'nombre',
       label: 'Nombre',
-      render: (fila) => (
-        <Input
-          size="sm"
-          placeholder="Saco 50 kg"
-          value={fila.nombre}
-          onChange={(e) => actualizar(filas.indexOf(fila), { nombre: e.target.value })}
-          disabled={disabled}
-        />
-      ),
+      render: (fila) =>
+        // La base se muestra, no se escribe: su nombre y su unidad salen de
+        // la unidad base, que se elige arriba en la pestaña Datos.
+        fila.esBase ? (
+          <span className="flex items-center gap-2">
+            <span className="text-sm font-medium text-ink">{fila.nombre}</span>
+            <Badge tone="neutral">base</Badge>
+          </span>
+        ) : (
+          <Input
+            size="sm"
+            placeholder="Saco 50 kg"
+            value={fila.nombre}
+            onChange={(e) => actualizar(filas.indexOf(fila), { nombre: e.target.value })}
+            disabled={disabled}
+          />
+        ),
     },
     {
       key: 'unidad',
       label: 'Unidad',
-      render: (fila) => (
+      render: (fila) =>
+        fila.esBase ? (
+          <span className="text-sm text-ink-soft">{unidadBase}</span>
+        ) : (
         <Desplegable
           value={fila.unidadId}
           onChange={(v) => actualizar(filas.indexOf(fila), { unidadId: Number(v) })}
           disabled={disabled}
           options={activas.map((u) => ({ value: u.id, label: u.codigo, nota: u.nombre }))}
         />
-      ),
+        ),
     },
     {
       key: 'factor',
       label: 'Factor',
       align: 'right',
       value: (fila) => fila.factor,
-      render: (fila) => (
-        <Input
-          size="sm"
-          type="number"
-          min={0}
-          step="0.0001"
-          value={fila.factor || ''}
-          onChange={(e) => actualizar(filas.indexOf(fila), { factor: Number(e.target.value) })}
-          disabled={disabled}
-        />
-      ),
+      render: (fila) =>
+        // El factor de la base es 1 por definicion: es la referencia contra
+        // la que se miden las demas.
+        fila.esBase ? (
+          <span className="text-sm text-ink-soft">1</span>
+        ) : (
+          <Input
+            size="sm"
+            type="number"
+            min={0}
+            step="0.0001"
+            value={fila.factor || ''}
+            onChange={(e) => actualizar(filas.indexOf(fila), { factor: Number(e.target.value) })}
+            disabled={disabled}
+          />
+        ),
     },
     {
       key: 'equivalencia',
       label: 'Equivalencia',
       render: (fila) => {
+        if (fila.esBase) return <Badge tone="neutral">1 {unidadBase}</Badge>
         const unidad = activas.find((u) => u.id === fila.unidadId)
         return (
           // La equivalencia escrita evita el error clasico de poner el
@@ -164,7 +181,9 @@ export function PresentacionesEditor({
           label=""
           checked={fila.esVenta}
           onChange={(e) => actualizar(filas.indexOf(fila), { esVenta: e.target.checked })}
-          disabled={disabled}
+          // Por la unidad base siempre se puede vender: es la medida en la
+          // que se lleva el stock.
+          disabled={disabled || fila.esBase}
         />
       ),
     },
@@ -192,16 +211,19 @@ export function PresentacionesEditor({
         rowKey="clave"
         toolbar={false}
         empty={`Solo se venderá por ${unidadBase || 'la unidad base'}. Agrega una presentación si además vendes por saco, caja o bolsa.`}
-        actions={(fila) => (
-          <RowAction
-            label={`Quitar ${fila.nombre || 'presentación'}`}
-            tone="danger"
-            disabled={disabled}
-            onClick={() => quitar(fila.clave)}
-          >
-            <Trash2 size={15} />
-          </RowAction>
-        )}
+        actions={(fila) =>
+          // La base no se borra: la crea el backend con el producto.
+          fila.esBase ? null : (
+            <RowAction
+              label={`Quitar ${fila.nombre || 'presentación'}`}
+              tone="danger"
+              disabled={disabled}
+              onClick={() => quitar(fila.clave)}
+            >
+              <Trash2 size={15} />
+            </RowAction>
+          )
+        }
       />
     </div>
   )
