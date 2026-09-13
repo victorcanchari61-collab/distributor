@@ -81,6 +81,8 @@ export interface PedidoResponse {
   listaPrecio: string | null
   fecha: string
   estado: EstadoPedido
+  /** En qué quedaron con el cliente: si se cobra al entregar o va fiado. */
+  condicionPago: FormaPagoVenta
   observacion: string | null
   usuario: string | null
   reservaStock: boolean
@@ -98,6 +100,8 @@ export interface CrearPedidoRequest {
   listaPrecioId?: number | null
   fecha?: string | null
   observacion?: string | null
+  /** CONTADO o CREDITO: lo acordado con el cliente. Vacío usa CONTADO. */
+  condicionPago?: FormaPagoVenta | null
   /** Si aparta stock de almacenId mientras el pedido siga Pendiente. */
   reservaStock: boolean
   /** Requerido cuando reservaStock es true. */

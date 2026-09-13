@@ -36,6 +36,9 @@ public class PedidoResponse
     /// <summary>PENDIENTE, CONFIRMADO o ANULADO.</summary>
     public string Estado { get; set; } = string.Empty;
 
+    /// <summary>CONTADO o CREDITO: lo que se acordó con el cliente.</summary>
+    public string CondicionPago { get; set; } = string.Empty;
+
     public string? Observacion { get; set; }
     public string? Usuario { get; set; }
 

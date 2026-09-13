@@ -150,6 +150,7 @@ public class VentasService : IVentasService
             ListaPrecioId = request.ListaPrecioId,
             Fecha = request.Fecha ?? DateTime.UtcNow,
             Estado = EstadoPedido.Pendiente,
+            CondicionPago = Limpiar(request.CondicionPago) ?? FormaPagoVenta.Contado,
             Observacion = Limpiar(request.Observacion),
             ReservaStock = request.ReservaStock,
             AlmacenId = request.ReservaStock ? request.AlmacenId : null,
@@ -185,6 +186,7 @@ public class VentasService : IVentasService
         pedido.ClienteId = request.ClienteId;
         pedido.ListaPrecioId = request.ListaPrecioId;
         pedido.Fecha = request.Fecha ?? pedido.Fecha;
+        pedido.CondicionPago = Limpiar(request.CondicionPago) ?? FormaPagoVenta.Contado;
         pedido.Observacion = Limpiar(request.Observacion);
         pedido.ReservaStock = request.ReservaStock;
         pedido.AlmacenId = request.ReservaStock ? request.AlmacenId : null;
@@ -1033,6 +1035,7 @@ public class VentasService : IVentasService
         ListaPrecio = p.ListaPrecio?.Nombre,
         Fecha = p.Fecha,
         Estado = p.Estado,
+        CondicionPago = p.CondicionPago,
         Observacion = p.Observacion,
         Usuario = p.Usuario?.Nombre,
         ReservaStock = p.ReservaStock,

@@ -18,6 +18,11 @@ public class CrearPedidoRequestValidator : AbstractValidator<CrearPedidoRequest>
 {
     public CrearPedidoRequestValidator()
     {
+        // Lo mismo que en la venta: o es una de las dos, o no es nada.
+        RuleFor(x => x.CondicionPago)
+            .Must(f => string.IsNullOrWhiteSpace(f) || FormaPagoVenta.Todas.Contains(f))
+            .WithMessage("La condición de pago debe ser CONTADO o CREDITO");
+
         RuleFor(x => x.ClienteId).GreaterThan(0).WithMessage("Elige el cliente");
         RuleFor(x => x.Observacion).MaximumLength(250);
         RuleFor(x => x.AlmacenId)

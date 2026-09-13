@@ -39,6 +39,9 @@ public class CrearPedidoRequest
     public DateTime? Fecha { get; set; }
     public string? Observacion { get; set; }
 
+    /// <summary>CONTADO o CREDITO: en qué quedaron con el cliente. Vacío usa CONTADO.</summary>
+    public string? CondicionPago { get; set; }
+
     /// <summary>Si aparta stock de <see cref="AlmacenId"/> mientras esté Pendiente.</summary>
     public bool ReservaStock { get; set; }
 

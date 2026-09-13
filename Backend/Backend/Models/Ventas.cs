@@ -35,6 +35,16 @@ public class Pedido
 
     public DateTime Fecha { get; set; } = DateTime.UtcNow;
     public string Estado { get; set; } = EstadoPedido.Pendiente;
+
+    /// <summary>
+    /// En qué quedaron el vendedor y el cliente: CONTADO o CREDITO.
+    ///
+    /// Viaja con el pedido para que el repartidor sepa, al llegar, si deja la
+    /// mercadería solo contra el dinero o si va fiada. No mueve plata por sí
+    /// sola —el cobro se registra al entregar—: es el acuerdo, escrito.
+    /// </summary>
+    public string CondicionPago { get; set; } = FormaPagoVenta.Contado;
+
     public string? Observacion { get; set; }
 
     /// <summary>

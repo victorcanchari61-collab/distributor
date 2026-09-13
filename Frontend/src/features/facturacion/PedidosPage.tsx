@@ -42,7 +42,7 @@ import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { pedidoApi } from './ventasApi'
 import type { AuditoriaResponse } from '../config'
-import type { CrearPedidoRequest, LineaVentaResponse, PedidoResponse, ResumenPedidos } from './ventasApi'
+import type { CrearPedidoRequest, FormaPagoVenta, LineaVentaResponse, PedidoResponse, ResumenPedidos } from './ventasApi'
 
 function estadoPedidoBadge(estado: PedidoResponse['estado']) {
   const tono = estado === 'CONFIRMADO' ? 'success' : estado === 'ANULADO' ? 'danger' : 'warning'
@@ -81,6 +81,8 @@ export function PedidosPage() {
 
   const [clienteId, setClienteId] = useState(0)
   const [listaPrecioId, setListaPrecioId] = useState(0)
+  /* Lo que el vendedor acordo con el cliente: lo lee el repartidor. */
+  const [condicionPago, setCondicionPago] = useState<FormaPagoVenta>('CONTADO')
   const [observacion, setObservacion] = useState('')
   const [reservaStock, setReservaStock] = useState(false)
   const [almacenReservaId, setAlmacenReservaId] = useState(0)
@@ -170,6 +172,7 @@ export function PedidosPage() {
     setEditando(null)
     setClienteId(0)
     setListaPrecioId(0)
+    setCondicionPago('CONTADO')
     setObservacion('')
     setReservaStock(false)
     setAlmacenReservaId(primerAlmacenId)
@@ -181,6 +184,7 @@ export function PedidosPage() {
     setEditando(pedido)
     setClienteId(pedido.clienteId)
     setListaPrecioId(pedido.listaPrecioId ?? 0)
+    setCondicionPago(pedido.condicionPago)
     setObservacion(pedido.observacion ?? '')
     setReservaStock(pedido.reservaStock)
     setAlmacenReservaId(pedido.almacenId ?? primerAlmacenId)
@@ -267,6 +271,7 @@ export function PedidosPage() {
     const body: CrearPedidoRequest = {
       clienteId,
       listaPrecioId: listaPrecioId || null,
+      condicionPago,
       observacion: observacion.trim() || null,
       reservaStock,
       almacenId: reservaStock ? almacenReservaId : null,
@@ -513,6 +518,26 @@ export function PedidosPage() {
         ),
     },
     {
+      /*
+       * Lo que el repartidor necesita ver de un vistazo antes de salir: a
+       * cuales hay que cobrarles al entregar.
+       */
+      key: 'condicionPago',
+      label: 'Condición',
+      width: 120,
+      filterType: 'select',
+      filterOptions: [
+        { value: 'CONTADO', label: 'Contado' },
+        { value: 'CREDITO', label: 'Crédito' },
+      ],
+      render: (row) =>
+        row.condicionPago === 'CREDITO' ? (
+          <Badge tone="warning">Crédito</Badge>
+        ) : (
+          <Badge tone="success">Contado</Badge>
+        ),
+    },
+    {
       key: 'estado',
       label: 'Estado',
       filterType: 'select',
@@ -602,6 +627,23 @@ export function PedidosPage() {
                 onChange={(v) => setListaPrecioId(Number(v))}
                 placeholder="Predeterminada"
                 options={listas.map((l) => ({ value: l.id, label: l.nombre }))}
+              />
+
+              {/*
+                Lo que se acordo, no lo que se cobro.
+                El repartidor llega con el pedido y tiene que saber si deja la
+                mercaderia solo contra el dinero o si va fiada; el cobro se
+                registra despues, al entregar.
+              */}
+              <Desplegable
+                className="mt-4"
+                label="Condición de pago"
+                value={condicionPago}
+                onChange={(v) => setCondicionPago(v as FormaPagoVenta)}
+                options={[
+                  { value: 'CONTADO', label: 'Contado', nota: 'se cobra al entregar' },
+                  { value: 'CREDITO', label: 'Crédito', nota: 'se deja fiado' },
+                ]}
               />
 
               <Input
@@ -788,7 +830,14 @@ export function PedidosPage() {
       >
         {detalleAbierto && (
           <div className="flex flex-col gap-3">
-            {detalleAbierto.estado !== 'PENDIENTE' && <div>{estadoPedidoBadge(detalleAbierto.estado)}</div>}
+            <div className="flex flex-wrap items-center gap-2">
+              {detalleAbierto.estado !== 'PENDIENTE' && estadoPedidoBadge(detalleAbierto.estado)}
+              {detalleAbierto.condicionPago === 'CREDITO' ? (
+                <Badge tone="warning">Crédito · se deja fiado</Badge>
+              ) : (
+                <Badge tone="success">Contado · se cobra al entregar</Badge>
+              )}
+            </div>
 
             {detalleAbierto.detalle.some((l) => l.anulado) && (
               <p className="text-xs text-ink-soft">
