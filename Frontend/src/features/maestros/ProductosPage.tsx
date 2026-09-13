@@ -40,6 +40,7 @@ import { PresentacionesEditor } from './PresentacionesEditor'
 import type { FilaPresentacion } from './PresentacionesEditor'
 import { categoriaApi, marcaApi, productoApi, unidadApi } from './productoApi'
 import type {
+  PresentacionResponse,
   CategoriaResponse,
   MarcaResponse,
   ProductoImportRequest,
@@ -226,6 +227,50 @@ export function ProductosPage() {
     setPestanaForm('datos')
     setAbierto(true)
   }
+
+  /*
+   * Las presentaciones tal como estan en el formulario, no las guardadas.
+   *
+   * "Se compra por" leia las de la base de datos: una caja recien agregada en
+   * la otra pestaña no aparecia hasta guardar y volver a entrar, y encima solo
+   * salian las marcadas como de compra, asi que la caja tampoco figuraba si no
+   * se habia marcado esa casilla.
+   */
+  const presentacionesDelForm: PresentacionResponse[] = [
+    // La base siempre se puede elegir: es la unidad del producto.
+    {
+      id: 0,
+      productoId: editando?.id ?? 0,
+      esBase: true,
+      unidadId: form.unidadBaseId,
+      unidad: unidadBase,
+      nombre: unidades.find((u) => u.id === form.unidadBaseId)?.nombre ?? 'Unidad base',
+      factor: 1,
+      esCompra: true,
+      esVenta: true,
+      predeterminadaVenta: false,
+      predeterminadaCompra: false,
+      codigoBarras: null,
+      activo: true,
+    },
+    ...presentaciones
+      .filter((fila) => !fila.esBase && fila.activo !== false && fila.nombre.trim() && fila.factor > 0)
+      .map((fila) => ({
+        id: fila.id ?? 0,
+        productoId: editando?.id ?? 0,
+        esBase: false,
+        unidadId: fila.unidadId,
+        unidad: unidades.find((u) => u.id === fila.unidadId)?.codigo ?? '',
+        nombre: fila.nombre,
+        factor: fila.factor,
+        esCompra: true,
+        esVenta: fila.esVenta,
+        predeterminadaVenta: false,
+        predeterminadaCompra: false,
+        codigoBarras: fila.codigoBarras ?? null,
+        activo: true,
+      })),
+  ]
 
   const guardar = async () => {
     setErrorForm('')
@@ -819,7 +864,7 @@ export function ProductosPage() {
                   onChange={(v) => setForm({ ...form, costoReferencia: v })}
                   presentacionId={presentacionCosto}
                   onPresentacion={setPresentacionCosto}
-                  presentaciones={editando?.presentaciones ?? []}
+                  presentaciones={presentacionesDelForm}
                   unidadBase={unidadBase || 'unidad base'}
                   disabled={guardando}
                 />
