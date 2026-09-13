@@ -833,20 +833,6 @@ export function ProductosPage() {
                   />
                 </div>
 
-                <Input
-                  label="Stock mínimo"
-                  optional
-                  type="number"
-                  step="0.0001"
-                  hint={
-                    <span className="text-xs text-ink-soft">en {unidadBase || 'unidad base'}</span>
-                  }
-                  value={form.stockMinimo}
-                  onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
-                />
-
-                <hr className="border-line" />
-
                 {/* Se escribe como lo cobra el proveedor y se guarda por unidad
                     base, igual que los precios de venta. */}
                 <CostoReferenciaInput
@@ -857,6 +843,22 @@ export function ProductosPage() {
                   presentaciones={presentacionesDelForm}
                   unidadBase={unidadBase || 'unidad base'}
                   disabled={guardando}
+                />
+
+                <hr className="border-line" />
+
+                {/* Lo ultimo: es un aviso de reposicion, no un dato del
+                    producto, y casi siempre se deja vacio al darlo de alta. */}
+                <Input
+                  label="Stock mínimo"
+                  optional
+                  type="number"
+                  step="0.0001"
+                  hint={
+                    <span className="text-xs text-ink-soft">en {unidadBase || 'unidad base'}</span>
+                  }
+                  value={form.stockMinimo}
+                  onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
                 />
               </div>
             ) : (
