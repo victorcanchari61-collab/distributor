@@ -242,6 +242,17 @@ export function ListasPreciosPage() {
     setErrorForm('')
   }
 
+  /**
+   * Precio que deja el margen pedido, redondeado al centimo de ARRIBA.
+   *
+   * El kilo de camanejo cuesta 3.40 y al 25% daria 4.5333, que no se puede
+   * cobrar. Al redondear al mas cercano quedaba 4.53, o sea 24.9%: un pelo
+   * MENOS de lo pedido, y encima distinto del margen que salia en el saco.
+   * Subiendo el centimo el margen nunca queda por debajo del que se escribio.
+   */
+  const precioPorMargen = (costo: number, margen: number) =>
+    (Math.ceil((costo / (1 - margen / 100)) * 100) / 100).toFixed(2)
+
   /** Costo de una presentacion: el de la unidad base por su factor. */
   const costoDe = (factor: number) =>
     producto?.costoReferencia != null ? producto.costoReferencia * factor : null
@@ -267,7 +278,7 @@ export function ListasPreciosPage() {
 
     actualizarFila(fila.clave, {
       margen: valor,
-      ...(calculable ? { precio: (costo / (1 - margen / 100)).toFixed(2) } : {}),
+      ...(calculable ? { precio: precioPorMargen(costo, margen) } : {}),
     })
   }
 
@@ -313,7 +324,7 @@ export function ListasPreciosPage() {
       prev.map((f) => {
         const costo = costoDe(presentacionDe(f.presentacionId)?.factor ?? 0)
         if (costo == null) return f
-        return { ...f, precio: (costo / (1 - margen / 100)).toFixed(2), margen: margen.toFixed(1) }
+        return { ...f, precio: precioPorMargen(costo, margen), margen: margen.toFixed(1) }
       }),
     )
     setErrorForm('')
