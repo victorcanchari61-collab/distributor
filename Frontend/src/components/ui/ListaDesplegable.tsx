@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown, Search, X } from 'lucide-react'
 import { cn } from './cn'
+import { FIELD_HEIGHT } from './Input'
+import type { FieldSize } from './Input'
 
 export interface ItemLista {
   id: string | number
@@ -29,6 +31,9 @@ export interface ListaDesplegableProps {
    * campo: para elegir dentro de un formulario, con la altura de un Input.
    */
   variante?: 'pastilla' | 'campo'
+
+  /** Alto del campo, igual que en un Input. Solo aplica a la variante campo. */
+  size?: FieldSize
 
   /** Item elegido: se marca con un check y se cierra el panel al elegir. */
   seleccionado?: string | number
@@ -66,6 +71,7 @@ export function ListaDesplegable({
   titulo,
   vacio = 'Sin elementos',
   variante = 'pastilla',
+  size = 'md',
   seleccionado,
   deshabilitado,
   error,
@@ -185,7 +191,9 @@ export function ListaDesplegable({
         className={cn(
           'flex items-center transition-colors duration-150 disabled:opacity-50',
           variante === 'campo' &&
-            'h-[var(--height-field-md)] w-full justify-between gap-2 rounded-field border bg-surface px-3 text-left text-sm text-ink',
+            'w-full justify-between gap-2 rounded-field border bg-surface px-3 text-left text-ink',
+          variante === 'campo' && FIELD_HEIGHT[size],
+          variante === 'campo' && (size === 'sm' ? 'text-[13px]' : 'text-sm'),
           variante === 'campo' &&
             (error ? 'border-red-600' : abierto ? 'border-ink-soft' : 'border-line'),
 

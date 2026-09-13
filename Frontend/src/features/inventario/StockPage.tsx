@@ -134,16 +134,6 @@ export function StockPage() {
   const columns: DataTableColumn<StockResponse>[] = [
     { key: 'codigo', label: 'Código' },
     { key: 'producto', label: 'Producto' },
-    {
-      key: 'categoria',
-      label: 'Categoría',
-      render: (row) => row.categoria ?? <span className="text-ink-soft">—</span>,
-    },
-    {
-      key: 'marca',
-      label: 'Marca',
-      render: (row) => row.marca ?? <span className="text-ink-soft">—</span>,
-    },
     /*
      * Cantidades e importes no entran al panel: el unico control es un
      * buscador de texto, y "9" contra "S/ 9.00" no encuentra lo esperado.
@@ -165,6 +155,7 @@ export function StockPage() {
         const opciones = presentacionesDe(row.productoId)
         return opciones.length > 1 ? (
           <Desplegable
+            size="sm"
             value={unidadDe(row.productoId)}
             onChange={(v) => setUnidades((prev) => ({ ...prev, [row.productoId]: Number(v) }))}
             options={opciones.map((x) => ({
@@ -361,6 +352,16 @@ export function StockPage() {
       align: 'right',
       filterable: false,
       render: (row) => `S/ ${row.valorizado.toFixed(2)}`,
+    },
+    {
+      key: 'categoria',
+      label: 'Categoría',
+      render: (row) => row.categoria ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'marca',
+      label: 'Marca',
+      render: (row) => row.marca ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'capas',

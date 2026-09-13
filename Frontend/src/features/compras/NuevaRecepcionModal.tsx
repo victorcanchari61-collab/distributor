@@ -303,6 +303,7 @@ export function NuevaRecepcionModal({
               />
               {opciones.length > 1 ? (
                 <Desplegable
+                  size="sm"
                   value={unidades[d.id] ?? d.presentacionId ?? 0}
                   onChange={(v) => setUnidades({ ...unidades, [d.id]: Number(v) })}
                   options={opciones.map((x) => ({

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { ListaDesplegable } from './ListaDesplegable'
 import { cn } from './cn'
+import type { FieldSize } from './Input'
 
 export interface OpcionDesplegable {
   value: number | string
@@ -23,6 +24,8 @@ export interface DesplegableProps {
   hint?: ReactNode
   error?: string
   disabled?: boolean
+  /** Alto del campo, igual que en un Input. En una celda de tabla, 'sm'. */
+  size?: FieldSize
   className?: string
 }
 
@@ -44,6 +47,7 @@ export function Desplegable({
   hint,
   error,
   disabled,
+  size = 'md',
   className,
 }: DesplegableProps) {
   const elegida = options.find((o) => o.value === value)
@@ -66,6 +70,7 @@ export function Desplegable({
 
       <ListaDesplegable
         variante="campo"
+        size={size}
         resumen={elegida?.label ?? placeholder}
         seleccionado={value}
         deshabilitado={disabled}
