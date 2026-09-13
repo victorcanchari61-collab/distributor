@@ -375,7 +375,7 @@ export function ListasPreciosPage() {
       render: (fila) => {
         const costo = costoDe(presentacionDe(fila.presentacionId)?.factor ?? 0)
         return (
-          <span className="text-sm text-ink-soft">
+          <span className="text-sm font-medium text-ink">
             {costo != null ? `S/ ${costo.toFixed(2)}` : '—'}
           </span>
         )
@@ -421,7 +421,7 @@ export function ListasPreciosPage() {
         const precio = Number(fila.precio) || 0
         const factor = presentacionDe(fila.presentacionId)?.factor ?? 0
         return (
-          <span className="text-sm text-ink-soft">
+          <span className="text-sm font-medium text-ink">
             {precio > 0 && factor > 0 ? `S/ ${(precio / factor).toFixed(4)}` : '—'}
           </span>
         )
