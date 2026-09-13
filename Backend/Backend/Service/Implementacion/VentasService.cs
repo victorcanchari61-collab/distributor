@@ -242,6 +242,7 @@ public class VentasService : IVentasService
                 PresentacionId = d.PresentacionId,
                 CantidadPresentacion = d.CantidadPresentacion,
                 Cantidad = d.Cantidad,
+                PrecioPresentacion = d.PrecioPresentacion,
                 PrecioUnitario = d.PrecioUnitario
             }).ToList(),
             usuarioId: usuarioId);
@@ -416,7 +417,7 @@ public class VentasService : IVentasService
         var devueltas = RecortesAsync(notaVenta, request.Detalle);
 
         var lineas = await ResolverLineasAsync(request.Detalle);
-        var nuevoTotal = Math.Round(lineas.Where(l => !l.Anulado).Sum(l => l.Cantidad * l.PrecioUnitario), 2);
+        var nuevoTotal = Math.Round(lineas.Where(l => !l.Anulado).Sum(l => l.CantidadPresentacion * l.PrecioPresentacion), 2);
         var pagado = Math.Round(notaVenta.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2);
 
         if (nuevoTotal < pagado - 0.001m)
@@ -465,6 +466,7 @@ public class VentasService : IVentasService
             PresentacionId = l.PresentacionId,
             CantidadPresentacion = l.CantidadPresentacion,
             Cantidad = l.Cantidad,
+            PrecioPresentacion = l.PrecioPresentacion,
             PrecioUnitario = l.PrecioUnitario,
             Anulado = l.Anulado
         }));
@@ -544,7 +546,7 @@ public class VentasService : IVentasService
             throw new BadRequestException("Esta nota de venta está anulada: no se le pueden registrar pagos.");
         }
 
-        var total = Math.Round(notaVenta.Detalle.Sum(d => d.Cantidad * d.PrecioUnitario), 2);
+        var total = Math.Round(notaVenta.Detalle.Sum(d => d.CantidadPresentacion * d.PrecioPresentacion), 2);
         var pagado = Math.Round(notaVenta.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2);
         var saldo = total - pagado;
 
@@ -591,7 +593,7 @@ public class VentasService : IVentasService
             throw new BadRequestException("Este pago está anulado: no se puede editar.");
         }
 
-        var total = Math.Round(notaVenta.Detalle.Sum(d => d.Cantidad * d.PrecioUnitario), 2);
+        var total = Math.Round(notaVenta.Detalle.Sum(d => d.CantidadPresentacion * d.PrecioPresentacion), 2);
         var pagadoSinEste = Math.Round(
             notaVenta.Pagos.Where(p => p.Id != pagoId && !p.Anulado).Sum(p => p.Monto), 2);
 
@@ -749,7 +751,7 @@ public class VentasService : IVentasService
         }
 
         var forma = string.IsNullOrWhiteSpace(formaPago) ? FormaPagoVenta.Contado : formaPago;
-        var total = Math.Round(lineas.Sum(l => l.Cantidad * l.PrecioUnitario), 2);
+        var total = Math.Round(lineas.Sum(l => l.CantidadPresentacion * l.PrecioPresentacion), 2);
         var cobrado = Math.Round(pagos.Sum(p => p.Monto), 2);
 
         // Al contado significa que el dinero entra ahora: sin esto se guardaba
@@ -786,6 +788,7 @@ public class VentasService : IVentasService
                 PresentacionId = l.PresentacionId,
                 CantidadPresentacion = l.CantidadPresentacion,
                 Cantidad = l.Cantidad,
+                PrecioPresentacion = l.PrecioPresentacion,
                 PrecioUnitario = l.PrecioUnitario
             }).ToList(),
             Pagos = pagos.Select(p => new PagoVenta
@@ -897,7 +900,7 @@ public class VentasService : IVentasService
                 ProductoId = antes.ProductoId,
                 PresentacionId = antes.PresentacionId,
                 Cantidad = antes.CantidadPresentacion,
-                PrecioUnitario = antes.PrecioUnitario * factor,
+                PrecioUnitario = antes.PrecioPresentacion,
             });
         }
 
@@ -947,6 +950,15 @@ public class VentasService : IVentasService
                 PresentacionId = presentacion?.Id,
                 CantidadPresentacion = linea.Cantidad,
                 Cantidad = cantidad,
+                /*
+                 * Lo que se pacto, tal cual: S/ 212.50 el saco.
+                 *
+                 * Antes solo se guardaba el precio por unidad base y al volver
+                 * a la pantalla habia que multiplicarlo por el factor; como la
+                 * division redondea, 13.60 el saco de 3 kilos volvia como
+                 * 13.5999. Ahora el de base se deriva de este y no al reves.
+                 */
+                PrecioPresentacion = linea.PrecioUnitario,
                 PrecioUnitario = cantidad == 0 ? 0 : Math.Round(linea.PrecioUnitario / factor, 4),
                 Anulado = linea.Anulado
             });
@@ -996,7 +1008,8 @@ public class VentasService : IVentasService
         CantidadPresentacion = d.CantidadPresentacion,
         Cantidad = d.Cantidad,
         PrecioUnitario = d.PrecioUnitario,
-        Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2),
+        PrecioPresentacion = d.PrecioPresentacion,
+        Subtotal = Math.Round(d.CantidadPresentacion * d.PrecioPresentacion, 2),
         Anulado = d.Anulado
     };
 
@@ -1012,7 +1025,8 @@ public class VentasService : IVentasService
         CantidadPresentacion = d.CantidadPresentacion,
         Cantidad = d.Cantidad,
         PrecioUnitario = d.PrecioUnitario,
-        Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2),
+        PrecioPresentacion = d.PrecioPresentacion,
+        Subtotal = Math.Round(d.CantidadPresentacion * d.PrecioPresentacion, 2),
         Anulado = d.Anulado
     };
 
@@ -1045,7 +1059,7 @@ public class VentasService : IVentasService
         Almacen = p.Almacen?.Nombre,
         // Una línea anulada se sigue mostrando (para no perder su rastro),
         // pero no suma al total.
-        Total = Math.Round(p.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario), 2),
+        Total = Math.Round(p.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion), 2),
         Detalle = p.Detalle.Select(MapLinea).ToList()
     };
 
@@ -1066,7 +1080,7 @@ public class VentasService : IVentasService
         Usuario = n.Usuario?.Nombre,
         // Una línea anulada se sigue mostrando (para no perder su rastro),
         // pero no suma al total.
-        Total = Math.Round(n.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario), 2),
+        Total = Math.Round(n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion), 2),
         Detalle = n.Detalle.Select(MapLinea).ToList(),
         Pagos = n.Pagos.Select(MapPago).ToList(),
         TotalPagado = Math.Round(n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2),

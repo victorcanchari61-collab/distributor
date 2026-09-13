@@ -181,10 +181,9 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
                 row.ConstantItem(62).BorderRight(Linea).BorderColor(Colores.Linea);
             row.RelativeItem().BorderRight(Linea).BorderColor(Colores.Linea);
             row.ConstantItem(48).BorderRight(Linea).BorderColor(Colores.Linea);
-            row.ConstantItem(64).BorderRight(Linea).BorderColor(Colores.Linea);
-            row.ConstantItem(56).BorderRight(Linea).BorderColor(Colores.Linea);
+            row.ConstantItem(72).BorderRight(Linea).BorderColor(Colores.Linea);
             // La ultima no lleva: su vertical es el marco.
-            row.ConstantItem(68);
+            row.ConstantItem(78);
         });
 
     private void Tabla(IContainer container) =>
@@ -201,11 +200,10 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
             {
                 cols.ConstantColumn(28);   // ítem
                 if (doc.MostrarCodigo) cols.ConstantColumn(62);
-                cols.RelativeColumn();     // descripción
+                cols.RelativeColumn();     // descripción y presentación
                 cols.ConstantColumn(48);   // cantidad
-                cols.ConstantColumn(64);   // unidad
-                cols.ConstantColumn(56);   // precio unitario
-                cols.ConstantColumn(68);   // subtotal
+                cols.ConstantColumn(72);   // precio unitario
+                cols.ConstantColumn(78);   // subtotal
             });
 
             tabla.Header(cab =>
@@ -214,7 +212,6 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
                 if (doc.MostrarCodigo) cab.Cell().Element(Encabezado).Text("CÓDIGO");
                 cab.Cell().Element(Encabezado).Text("DESCRIPCIÓN");
                 cab.Cell().Element(Encabezado).AlignRight().Text("CANT.");
-                cab.Cell().Element(Encabezado).Text("UNIDAD");
                 cab.Cell().Element(Encabezado).AlignRight().Text("P. UNI.");
                 cab.Cell().Element(Encabezado).AlignRight().Text("SUB TOTAL");
             });
@@ -225,11 +222,22 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
                 numero++;
                 tabla.Cell().Element(Celda).Text($"{numero}").FontColor(Colores.Suave);
                 if (doc.MostrarCodigo) tabla.Cell().Element(Celda).Text(linea.Codigo);
-                tabla.Cell().Element(Celda).Text(linea.Producto);
+                /*
+                 * La presentación va pegada al nombre y no en su columna.
+                 *
+                 * Es parte de qué se vendió —"Atún Cama, media caja de 24"— y
+                 * aparte obligaba a leer dos sitios; además en una columna
+                 * angosta se partía en dos renglones. La presentación manda
+                 * sobre la unidad base: si se vendió por cajas, "72 UND" dice
+                 * otra cosa que lo que se acordó.
+                 */
+                tabla.Cell().Element(Celda).Text(txt =>
+                {
+                    txt.Span(linea.Producto);
+                    if ((linea.Presentacion ?? linea.Unidad) is { Length: > 0 } presentacion)
+                        txt.Span($"   {presentacion}").FontColor(Colores.Suave);
+                });
                 tabla.Cell().Element(Celda).AlignRight().Text(Textos.Cantidad(linea.Cantidad));
-                // La presentación manda sobre la unidad base: si se vendió por
-                // cajas, "3 UND" diría otra cosa que lo que salió del almacén.
-                tabla.Cell().Element(Celda).Text(linea.Presentacion ?? linea.Unidad);
                 tabla.Cell().Element(Celda).AlignRight().Text(linea.PrecioUnitario.ToString("N2"));
                 tabla.Cell().Element(Celda).AlignRight().Text(linea.Importe.ToString("N2"));
             }

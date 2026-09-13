@@ -942,6 +942,7 @@ public class AppDbContext : DbContext
             entity.Property(d => d.CantidadPresentacion).HasPrecision(18, 4);
             entity.Property(d => d.Cantidad).HasPrecision(18, 4);
             entity.Property(d => d.PrecioUnitario).HasPrecision(18, 4);
+            entity.Property(d => d.PrecioPresentacion).HasPrecision(18, 4);
 
             entity.HasOne(d => d.Pedido).WithMany(p => p.Detalle)
                 .HasForeignKey(d => d.PedidoId).OnDelete(DeleteBehavior.Cascade);
@@ -978,6 +979,7 @@ public class AppDbContext : DbContext
             entity.Property(d => d.CantidadPresentacion).HasPrecision(18, 4);
             entity.Property(d => d.Cantidad).HasPrecision(18, 4);
             entity.Property(d => d.PrecioUnitario).HasPrecision(18, 4);
+            entity.Property(d => d.PrecioPresentacion).HasPrecision(18, 4);
 
             entity.HasOne(d => d.NotaVenta).WithMany(n => n.Detalle)
                 .HasForeignKey(d => d.NotaVentaId).OnDelete(DeleteBehavior.Cascade);

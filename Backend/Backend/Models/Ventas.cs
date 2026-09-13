@@ -98,6 +98,16 @@ public class PedidoDetalle
     /// <summary>En unidad base.</summary>
     public decimal Cantidad { get; set; }
 
+    /// <summary>
+    /// Lo que se acordó por cada presentación: S/ 212.50 el saco.
+    ///
+    /// Es el precio de verdad, el que se habló con el cliente y el que se
+    /// imprime. <see cref="PrecioUnitario"/> sale de dividirlo entre el factor
+    /// y sirve para el margen y los reportes, pero no para reconstruir este:
+    /// 13.60 entre 3 kilos son 4.5333, y multiplicar de vuelta da 13.5999.
+    /// </summary>
+    public decimal PrecioPresentacion { get; set; }
+
     /// <summary>Precio de venta por unidad base.</summary>
     public decimal PrecioUnitario { get; set; }
 
@@ -232,6 +242,16 @@ public class NotaVentaDetalle
 
     /// <summary>En unidad base.</summary>
     public decimal Cantidad { get; set; }
+
+    /// <summary>
+    /// Lo que se acordó por cada presentación: S/ 212.50 el saco.
+    ///
+    /// Es el precio de verdad, el que se habló con el cliente y el que se
+    /// imprime. <see cref="PrecioUnitario"/> sale de dividirlo entre el factor
+    /// y sirve para el margen y los reportes, pero no para reconstruir este:
+    /// 13.60 entre 3 kilos son 4.5333, y multiplicar de vuelta da 13.5999.
+    /// </summary>
+    public decimal PrecioPresentacion { get; set; }
 
     /// <summary>Precio de venta por unidad base.</summary>
     public decimal PrecioUnitario { get; set; }

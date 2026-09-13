@@ -13,7 +13,13 @@ public class LineaVentaResponse
     public decimal CantidadPresentacion { get; set; }
 
     public decimal Cantidad { get; set; }
+
+    /// <summary>Precio por unidad base: derivado, para margenes y reportes.</summary>
     public decimal PrecioUnitario { get; set; }
+
+    /// <summary>Lo que se acordó por cada presentación: S/ 212.50 el saco.</summary>
+    public decimal PrecioPresentacion { get; set; }
+
     public decimal Subtotal { get; set; }
 
     /// <summary>Solo aplica a líneas de pedido: se quitó al editarlo, sin borrarse.</summary>

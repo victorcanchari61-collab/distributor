@@ -177,7 +177,8 @@ public class PdfService(
             Lineas =
             [
                 .. orden.Detalle.Select(l => new LineaImprimible(
-                    l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.CostoUnitario, l.CostoTotal)),
+                    l.Codigo, l.Producto, l.Presentacion, l.CantidadPresentacion,
+                    l.Presentacion ?? l.UnidadBase, CostoPorPresentacion(l), l.CostoTotal)),
             ],
             Total = orden.Total,
             Observacion = orden.Observacion,
@@ -224,7 +225,8 @@ public class PdfService(
             Lineas =
             [
                 .. compra.Detalle.Select(l => new LineaImprimible(
-                    l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.CostoUnitario, l.CostoTotal)),
+                    l.Codigo, l.Producto, l.Presentacion, l.CantidadPresentacion,
+                    l.Presentacion ?? l.UnidadBase, CostoPorPresentacion(l), l.CostoTotal)),
             ],
             Total = compra.Total,
             Pagos = [.. compra.Pagos.Where(p => !p.Anulado).Select(p => new PagoImprimible(p.MetodoPago, p.Monto))],
@@ -403,11 +405,34 @@ public class PdfService(
         return doc;
     }
 
+    /*
+     * Lo que costo cada saco, sacado del total de la linea.
+     *
+     * La compra guarda el costo por unidad base y no el pactado —eso solo se
+     * arreglo en ventas—, asi que aqui se deduce dividiendo el importe entre
+     * las presentaciones: da el mismo numero sin arrastrar el redondeo de la
+     * division por el factor.
+     */
+    private static decimal CostoPorPresentacion(LineaCompraResponse l) =>
+        l.CantidadPresentacion == 0 ? 0 : Math.Round(l.CostoTotal / l.CantidadPresentacion, 2);
+
+    private static decimal CostoPorPresentacion(CompraDetalleResponse l) =>
+        l.CantidadPresentacion == 0 ? 0 : Math.Round(l.CostoTotal / l.CantidadPresentacion, 2);
+
     private static LineaImprimible LineaInventario(LineaDocumentoResponse l) =>
         new(l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.CostoUnitario, l.CostoTotal);
 
+    /*
+     * La linea, tal como se vendio.
+     *
+     * Con la cantidad y el precio de la PRESENTACION, no los de unidad base:
+     * el cliente pidio un saco a 212.50, y "50 · 4.25" no lo reconoce nadie.
+     * La unidad base sigue guardada para el stock y los margenes, pero el
+     * papel es del cliente.
+     */
     private static LineaImprimible Linea(LineaVentaResponse l) =>
-        new(l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.PrecioUnitario, l.Subtotal);
+        new(l.Codigo, l.Producto, l.Presentacion, l.CantidadPresentacion,
+            l.Presentacion ?? l.UnidadBase, l.PrecioPresentacion, l.Subtotal);
 
     private static byte[] Generar(DocumentoImprimible doc, FormatoPdf formato)
     {

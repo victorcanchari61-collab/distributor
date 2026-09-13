@@ -243,7 +243,9 @@ export function NotasVentaPage() {
           productoId: l.productoId,
           presentacionId: l.presentacionId ?? 0,
           cantidad: String(l.cantidadPresentacion),
-          costo: String(l.precioUnitario * (l.cantidadPresentacion ? l.cantidad / l.cantidadPresentacion : 1)),
+          // El precio pactado, tal cual se guardo: multiplicar el de unidad
+          // base por el factor devolvia 13.5999 donde se habia puesto 13.60.
+          costo: String(l.precioPresentacion),
           lote: '',
           fechaVencimiento: '',
         })),
@@ -1112,7 +1114,13 @@ export function NotasVentaPage() {
               grupos={[
                 [
                   { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
-                  { key: 'precio', label: 'Precio', render: (l) => `S/ ${l.precioUnitario.toFixed(2)}` },
+                  // El pactado por presentacion, que es el que se cobro y el
+                  // que sale en el papel; el de unidad base es derivado.
+                  {
+                    key: 'precio',
+                    label: 'Precio',
+                    render: (l) => `S/ ${l.precioPresentacion.toFixed(2)}`,
+                  },
                   { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.subtotal.toFixed(2)}` },
                 ] satisfies ColumnaDetalleProducto<LineaVentaResponse>[],
               ]}

@@ -186,7 +186,15 @@ public static class HojaPedido
                 tabla.Cell().Element(Celda).AlignCenter().Text($"{numero}").FontSize(6.5f * e);
                 tabla.Cell().Element(Celda).AlignCenter()
                     .Text(Textos.Cantidad(linea.Cantidad)).FontSize(6.5f * e);
-                tabla.Cell().Element(Celda).Text(linea.Producto).FontSize(6.5f * e).Bold();
+                // La presentacion va pegada al nombre y no en su propia
+                // columna: es parte de que se esta vendiendo —"Camanejo
+                // Nacional, saco de 50"— y separada obliga a leer dos sitios.
+                tabla.Cell().Element(Celda).Text(txt =>
+                {
+                    txt.Span(linea.Producto).FontSize(6.5f * e).Bold();
+                    if (linea.Presentacion is { Length: > 0 } presentacion)
+                        txt.Span($"   {presentacion}").FontSize(6.5f * e);
+                });
                 tabla.Cell().Element(Celda).AlignRight()
                     .Text(linea.PrecioUnitario.ToString("N2")).FontSize(6.5f * e);
                 tabla.Cell().Element(Celda).AlignRight()

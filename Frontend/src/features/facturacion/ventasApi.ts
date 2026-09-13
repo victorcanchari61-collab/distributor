@@ -27,7 +27,10 @@ export interface LineaVentaResponse {
   presentacion: string | null
   cantidadPresentacion: number
   cantidad: number
+  /** Precio por unidad base: derivado, para márgenes y reportes. */
   precioUnitario: number
+  /** Lo que se acordó por cada presentación: S/ 212.50 el saco. */
+  precioPresentacion: number
   subtotal: number
   /** Solo aplica a líneas de pedido: se quitó al editarlo, sin borrarse. */
   anulado: boolean
