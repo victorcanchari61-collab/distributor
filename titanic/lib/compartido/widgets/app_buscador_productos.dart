@@ -6,6 +6,7 @@ import '../../core/tema/dimensiones.dart';
 import '../../features/maestros/datos/producto.dart';
 import 'app_boton.dart';
 import 'app_buscador.dart';
+import 'app_selector.dart';
 import 'app_filtros_en_linea.dart';
 import 'app_vacio.dart';
 
@@ -105,6 +106,9 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
   /// Lo marcado, por id de producto. Se conserva aunque el filtro lo esconda:
   /// buscar otra cosa no deberia perder lo que ya se eligio.
   final Map<int, _Marcado> _marcados = {};
+
+  /// Cuantos filtros hay puestos, para la insignia del boton.
+  int get _activos => (_categoria != null ? 1 : 0) + (_marca != null ? 1 : 0);
 
   List<Producto> get _visibles {
     final texto = _texto.trim().toLowerCase();
@@ -219,31 +223,93 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                       ),
                     ),
                     const SizedBox(width: Dimen.espacio2),
-                    BotonFiltrosEnLinea(
-                      activo: _filtrosAbiertos || _categoria != null || _marca != null,
-                      onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        BotonFiltrosEnLinea(
+                          activo: _filtrosAbiertos || _activos > 0,
+                          onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+                        ),
+                        // Cuantos filtros hay puestos, para no tener que abrir
+                        // el panel solo para comprobarlo.
+                        if (_activos > 0)
+                          Positioned(
+                            top: -4,
+                            right: -4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Acento.de(context),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '$_activos',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
                 if (_filtrosAbiertos) ...[
                   const SizedBox(height: Dimen.espacio3),
-                  Wrap(
-                    spacing: Dimen.espacio2,
-                    runSpacing: Dimen.espacio2,
-                    children: [
-                      FiltroEnLinea(
-                        etiqueta: 'Categoría',
-                        valor: _categoria,
-                        opciones: categorias,
-                        onChanged: (v) => setState(() => _categoria = v),
-                      ),
-                      FiltroEnLinea(
-                        etiqueta: 'Marca',
-                        valor: _marca,
-                        opciones: marcas,
-                        onChanged: (v) => setState(() => _marca = v),
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.all(Dimen.espacio3),
+                    decoration: BoxDecoration(
+                      color: Colores.fondo,
+                      border: Border.all(color: Colores.linea),
+                      borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AppSelector<String>(
+                                etiqueta: 'Categoría',
+                                valor: _categoria ?? '',
+                                opciones: [
+                                  const Opcion('', 'Todas'),
+                                  for (final c in categorias) Opcion(c, c),
+                                ],
+                                onCambio: (v) =>
+                                    setState(() => _categoria = (v ?? '').isEmpty ? null : v),
+                              ),
+                            ),
+                            const SizedBox(width: Dimen.espacio3),
+                            Expanded(
+                              child: AppSelector<String>(
+                                etiqueta: 'Marca',
+                                valor: _marca ?? '',
+                                opciones: [
+                                  const Opcion('', 'Todas'),
+                                  for (final m in marcas) Opcion(m, m),
+                                ],
+                                onCambio: (v) =>
+                                    setState(() => _marca = (v ?? '').isEmpty ? null : v),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_activos > 0)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: () => setState(() {
+                                _categoria = null;
+                                _marca = null;
+                              }),
+                              icon: const Icon(Icons.filter_alt_off_outlined, size: 16),
+                              label: const Text('Limpiar filtros'),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ],
                 const SizedBox(height: Dimen.espacio3),

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Package, RotateCcw, Search, X } from 'lucide-react'
+import { Package, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react'
 import { Badge } from './Badge'
+import { cn } from './cn'
 import { Button } from './Button'
 import { Desplegable } from './Desplegable'
 import { Input } from './Input'
@@ -66,6 +67,14 @@ function opcionesDe(productos: ProductoBuscable[], campo: 'categoria' | 'marca')
  */
 export function BuscadorProductoModal({ open, onClose, productos, stock, onAgregar }: BuscadorProductoModalProps) {
   const [filtros, setFiltros] = useState(FILTROS_VACIOS)
+  /*
+   * Los filtros salen plegados.
+   *
+   * Son cuatro controles y la lista es a lo que se viene: desplegados le
+   * comian media pantalla al buscador. El boton lleva cuantos hay puestos,
+   * para no tener que abrirlo solo para comprobarlo.
+   */
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   /** Marcados: { [productoId]: true } */
   const [marcados, setMarcados] = useState<Record<number, true>>({})
   /** Unidad elegida por fila: { [productoId]: presentacionId } — 0 = unidad base. */
@@ -107,6 +116,8 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
   }, [productos, filtros, stock])
 
   const filtrosActivos = Object.values(filtros).filter(Boolean).length
+  /** Los del panel: el texto no cuenta, que ya se ve escrito en el buscador. */
+  const filtrosSinTexto = filtrosActivos - (filtros.texto ? 1 : 0)
 
   const presentacionesDe = (producto: ProductoBuscable) => producto.presentaciones.filter((p) => p.activo)
 
@@ -161,10 +172,6 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
       size="lg"
       footer={
         <>
-          <span className="mr-auto text-xs text-ink-soft">
-            {resultados.length} producto{resultados.length === 1 ? '' : 's'}
-            {filtrosActivos > 0 && ` · ${filtrosActivos} filtro(s) activo(s)`}
-          </span>
           <Button variant="secondary" size="sm" onClick={onClose}>
             Cerrar
           </Button>
@@ -176,62 +183,102 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
     >
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="relative">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
               <Search size={15} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-soft" />
               <input
                 autoFocus
                 type="text"
                 value={filtros.texto}
                 onChange={(e) => setFiltro({ texto: e.target.value })}
-                placeholder="Nombre o código..."
+                placeholder="Nombre, código, marca..."
                 className="h-[var(--height-field-md)] w-full rounded-field border border-line bg-surface pr-3 pl-9 text-sm text-ink outline-none placeholder:text-ink-soft focus:border-ink-soft"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Desplegable
-                value={filtros.stockEstado}
-                onChange={(v) => setFiltro({ stockEstado: String(v) })}
-                placeholder="Todo el stock"
-                options={[{ value: '', label: 'Todo el stock' }, ...ESTADO_STOCK_OPTIONS]}
-              />
-              <Input
-                type="number"
-                min="0"
-                placeholder="Stock hasta"
-                value={filtros.stockHasta}
-                onChange={(e) => setFiltro({ stockHasta: e.target.value })}
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Desplegable
-              value={filtros.categoria}
-              onChange={(v) => setFiltro({ categoria: String(v) })}
-              placeholder="Todas las categorías"
-              options={[
-                { value: '', label: 'Todas las categorías' },
-                ...categorias.map((c) => ({ value: c, label: c })),
-              ]}
-            />
-            <Desplegable
-              value={filtros.marca}
-              onChange={(v) => setFiltro({ marca: String(v) })}
-              placeholder="Todas las marcas"
-              options={[{ value: '', label: 'Todas las marcas' }, ...marcas.map((m) => ({ value: m, label: m }))]}
-            />
-          </div>
-
-          {filtrosActivos > 0 && (
             <button
               type="button"
-              onClick={() => setFiltros(FILTROS_VACIOS)}
-              className="inline-flex items-center gap-1.5 self-start text-xs font-semibold text-[rgb(var(--sys-rgb))] transition-colors hover:text-[rgb(var(--sys-dark-rgb))]"
+              onClick={() => setFiltrosAbiertos((v) => !v)}
+              aria-label="Filtros"
+              className={cn(
+                'relative flex h-[var(--height-field-md)] w-[var(--height-field-md)] shrink-0 items-center justify-center rounded-field border transition-colors',
+                filtrosAbiertos || filtrosSinTexto > 0
+                  ? 'border-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.08)] text-[rgb(var(--sys-rgb))]'
+                  : 'border-line bg-surface text-ink-soft hover:text-ink',
+              )}
             >
-              <RotateCcw size={13} /> Limpiar filtros
+              <SlidersHorizontal size={16} />
+              {filtrosSinTexto > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[rgb(var(--sys-rgb))] px-1 text-[10px] font-bold text-white">
+                  {filtrosSinTexto}
+                </span>
+              )}
             </button>
+          </div>
+
+          {filtrosAbiertos && (
+            <div className="flex flex-col gap-3 rounded-field border border-line bg-surface-alt p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Desplegable
+                  label="Categoría"
+                  value={filtros.categoria}
+                  onChange={(v) => setFiltro({ categoria: String(v) })}
+                  placeholder="Todas las categorías"
+                  options={[
+                    { value: '', label: 'Todas las categorías' },
+                    ...categorias.map((c) => ({ value: c, label: c })),
+                  ]}
+                />
+                <Desplegable
+                  label="Marca"
+                  value={filtros.marca}
+                  onChange={(v) => setFiltro({ marca: String(v) })}
+                  placeholder="Todas las marcas"
+                  options={[{ value: '', label: 'Todas las marcas' }, ...marcas.map((m) => ({ value: m, label: m }))]}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Desplegable
+                  label="Stock"
+                  value={filtros.stockEstado}
+                  onChange={(v) => setFiltro({ stockEstado: String(v) })}
+                  placeholder="Todo el stock"
+                  options={[{ value: '', label: 'Todo el stock' }, ...ESTADO_STOCK_OPTIONS]}
+                />
+                <Input
+                  label="Stock hasta"
+                  type="number"
+                  min="0"
+                  placeholder="N"
+                  value={filtros.stockHasta}
+                  onChange={(e) => setFiltro({ stockHasta: e.target.value })}
+                />
+              </div>
+
+              {filtrosSinTexto > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFiltros({ ...FILTROS_VACIOS, texto: filtros.texto })}
+                  className="inline-flex items-center gap-1.5 self-end text-xs font-semibold text-[rgb(var(--sys-rgb))] transition-colors hover:text-[rgb(var(--sys-dark-rgb))]"
+                >
+                  <RotateCcw size={13} /> Limpiar filtros
+                </button>
+              )}
+            </div>
           )}
+
+          {/* Cuantos hay y cuantos llevas marcados, justo sobre la lista. */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-ink-soft">
+              {resultados.length} producto{resultados.length === 1 ? '' : 's'}
+            </span>
+            {seleccionados.length > 0 && (
+              <span className="text-xs font-semibold text-[rgb(var(--sys-rgb))]">
+                {seleccionados.length} seleccionado{seleccionados.length === 1 ? '' : 's'}
+              </span>
+            )}
+          </div>
 
           {seleccionados.length > 0 && (
             <div className="max-h-28 overflow-y-auto rounded-field bg-[rgb(var(--sys-rgb)/0.08)] p-3">
