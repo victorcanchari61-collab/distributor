@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, Boxes, Layers, PackageSearch, Warehouse } from 'lucide-react'
-import { Alert, ListaDesplegable, ListPage, StatCard, Tabs } from '../../components/ui'
+import { Alert, Desplegable, ListaDesplegable, ListPage, StatCard, Tabs } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn, TabItem } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { almacenApi, stockApi } from './inventarioApi'
 import type { AlmacenResponse, ResumenStock, StockResponse } from './inventarioApi'
 import { useRealtime } from '../../lib/realtime'
+import { productoApi } from '../maestros'
+import type { ProductoResponse } from '../maestros'
 
 /**
  * Cuánto hay y a qué costo, por almacén.
@@ -28,6 +30,45 @@ export function StockPage() {
   useEffect(() => {
     void almacenApi.getAll().then(setAlmacenes)
   }, [])
+
+  /*
+   * En que unidad se lee el stock de cada producto.
+   *
+   * "1250 KG" no le dice nada a nadie en el almacen: lo que se cuenta son 25
+   * sacos. Cada fila elige su unidad y arranca en la de COMPRA, que es como
+   * entra la mercaderia y como se piensa al reponer. Se guarda por producto:
+   * { [productoId]: presentacionId }.
+   */
+  const [productos, setProductos] = useState<ProductoResponse[]>([])
+  const [unidades, setUnidades] = useState<Record<number, number>>({})
+
+  useEffect(() => {
+    void productoApi.getAll().then(setProductos).catch(() => setProductos([]))
+  }, [])
+
+  const presentacionesDe = (productoId: number) =>
+    productos.find((p) => p.id === productoId)?.presentaciones.filter((x) => x.activo) ?? []
+
+  /** La de compra: la marcada por defecto, si no la primera que se compra. */
+  const unidadPorDefecto = (productoId: number) => {
+    const suyas = presentacionesDe(productoId)
+    const compra =
+      suyas.find((x) => x.predeterminadaCompra && x.esCompra) ?? suyas.find((x) => x.esCompra)
+    return compra?.id ?? suyas.find((x) => x.esBase)?.id ?? 0
+  }
+
+  const unidadDe = (productoId: number) => unidades[productoId] ?? unidadPorDefecto(productoId)
+
+  const factorDe = (productoId: number) =>
+    presentacionesDe(productoId).find((x) => x.id === unidadDe(productoId))?.factor ?? 1
+
+  const nombreUnidad = (row: StockResponse) =>
+    presentacionesDe(row.productoId).find((x) => x.id === unidadDe(row.productoId))?.nombre
+    ?? row.unidadBase
+
+  /** Una cantidad en unidad base, dicha en la unidad elegida de esa fila. */
+  const enUnidad = (row: StockResponse, base: number) =>
+    Number((base / factorDe(row.productoId)).toFixed(4))
 
   /*
    * El stock es una fila por producto y almacen: con miles de productos son
@@ -112,12 +153,33 @@ export function StockPage() {
       label: 'Stock',
       align: 'right',
       filterable: false,
-      render: (row) => (
-        <span className={row.bajoMinimo ? 'font-semibold text-amber-600' : ''}>
-          {row.bajoMinimo && <AlertTriangle size={12} className="mr-1 inline" />}
-          {row.stock} {row.unidadBase}
-        </span>
-      ),
+      width: 210,
+      render: (row) => {
+        const opciones = presentacionesDe(row.productoId)
+        return (
+          <span className="flex items-center justify-end gap-2">
+            <span className={row.bajoMinimo ? 'font-semibold text-amber-600' : 'font-medium'}>
+              {row.bajoMinimo && <AlertTriangle size={12} className="mr-1 inline" />}
+              {enUnidad(row, row.stock)}
+            </span>
+            {opciones.length > 1 ? (
+              <Desplegable
+                value={unidadDe(row.productoId)}
+                onChange={(v) =>
+                  setUnidades((prev) => ({ ...prev, [row.productoId]: Number(v) }))
+                }
+                options={opciones.map((x) => ({
+                  value: x.id,
+                  label: x.nombre,
+                  detalle: `${x.factor} ${row.unidadBase}`,
+                }))}
+              />
+            ) : (
+              <span className="text-ink-soft">{row.unidadBase}</span>
+            )}
+          </span>
+        )
+      },
     },
     {
       /*
@@ -135,7 +197,7 @@ export function StockPage() {
       render: (row) =>
         row.reservado > 0 ? (
           <span className="font-medium text-ink">
-            {row.reservado} {row.unidadBase}
+            {enUnidad(row, row.reservado)} {nombreUnidad(row)}
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
@@ -149,7 +211,7 @@ export function StockPage() {
       value: (row) => row.disponible,
       render: (row) => (
         <span className={row.reservado > 0 ? 'font-medium text-ink' : 'text-ink-soft'}>
-          {row.disponible} {row.unidadBase}
+          {enUnidad(row, row.disponible)} {nombreUnidad(row)}
         </span>
       ),
     },
@@ -162,7 +224,7 @@ export function StockPage() {
       render: (row) =>
         row.stockMinimo > 0 ? (
           <span className="text-ink-soft">
-            {row.stockMinimo} {row.unidadBase}
+            {enUnidad(row, row.stockMinimo)} {nombreUnidad(row)}
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
@@ -182,7 +244,7 @@ export function StockPage() {
         const falta = row.stockMinimo - row.stock
         return falta > 0 ? (
           <span className="font-semibold text-amber-600">
-            {falta.toFixed(2).replace(/\.?0+$/, '')} {row.unidadBase}
+            {enUnidad(row, falta)} {nombreUnidad(row)}
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
@@ -204,7 +266,7 @@ export function StockPage() {
       render: (row) =>
         row.enTransito > 0 ? (
           <span className="font-medium text-sky-600">
-            {row.enTransito} {row.unidadBase}
+            {enUnidad(row, row.enTransito)} {nombreUnidad(row)}
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
@@ -268,15 +330,20 @@ export function StockPage() {
       align: 'right',
       filterable: false,
       value: (row) => String(row.costoActual ?? ''),
-      render: (row) =>
-        row.costoActual == null ? (
+      // Sigue a la unidad de la fila: leyendo en sacos, el costo del saco. Un
+      // costo por kilo al lado de un stock en sacos se compara mal.
+      render: (row) => {
+        const factor = factorDe(row.productoId)
+        return row.costoActual == null ? (
           <span className="text-ink-soft">—</span>
         ) : (
           <span>
-            S/ {row.costoActual}
-            {row.costoUltimo !== row.costoActual && ` – ${row.costoUltimo}`}
+            S/ {Number((row.costoActual * factor).toFixed(4))}
+            {row.costoUltimo !== row.costoActual &&
+              ` – ${Number(((row.costoUltimo ?? 0) * factor).toFixed(4))}`}
           </span>
-        ),
+        )
+      },
     },
     {
       key: 'valorizado',
