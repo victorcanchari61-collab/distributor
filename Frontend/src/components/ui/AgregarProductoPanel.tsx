@@ -164,10 +164,21 @@ export function AgregarProductoPanel({
       <Input label="Descripción" disabled value={producto ? producto.descripcion || producto.nombre : ''} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {/*
+          El stock, en la unidad que se eligio abajo.
+          Decia "1250 KG" con la linea armada en sacos: para saber si alcanzan
+          los 3 sacos que se estan vendiendo habia que dividir a mano.
+        */}
         <Input
           label="Stock"
           disabled
-          value={producto && stockActual != null ? `${stockActual} ${producto.unidadBase}` : ''}
+          value={
+            producto && stockActual != null
+              ? `${Number((stockActual / factor).toFixed(4))} ${
+                  presentacionElegida?.nombre ?? producto.unidadBase
+                }`
+              : ''
+          }
         />
 
         <Desplegable

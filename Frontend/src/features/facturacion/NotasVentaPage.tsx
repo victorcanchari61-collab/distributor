@@ -561,6 +561,13 @@ export function NotasVentaPage() {
       },
     })
 
+
+  /** A cuántas unidades base equivale la presentación de esa línea. */
+  const factorDeFila = (fila: { productoId: number; presentacionId: number }) =>
+    productos
+      .find((p) => p.id === fila.productoId)
+      ?.presentaciones.find((x) => x.id === fila.presentacionId)?.factor ?? 1
+
   const columnasFilas: DataTableColumn<FilaVenta>[] = [
     {
       key: 'producto',
@@ -627,6 +634,34 @@ export function NotasVentaPage() {
           onChange={(e) => actualizarFila(fila.id, { costo: e.target.value })}
         />
       ),
+    },
+    {
+      /*
+       * Lo que sale la unidad base.
+       *
+       * El precio de la fila es el de la presentacion —S/ 226.67 el saco—, y
+       * asi no se puede comparar una linea en sacos contra otra en kilos ni
+       * ver si el descuento por volumen quedo al derecho.
+       */
+      key: 'precioUnitario',
+      label: 'P. unit.',
+      align: 'right',
+      value: (fila) => {
+        const factor = factorDeFila(fila)
+        return factor > 0 ? (Number(fila.costo) || 0) / factor : 0
+      },
+      render: (fila) => {
+        const producto = productos.find((p) => p.id === fila.productoId)
+        const factor = factorDeFila(fila)
+        const precio = Number(fila.costo) || 0
+        return precio > 0 && factor > 0 ? (
+          <span className="text-ink-soft">
+            S/ {Number((precio / factor).toFixed(4))} × {producto?.unidadBase}
+          </span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        )
+      },
     },
     {
       key: 'subtotal',
