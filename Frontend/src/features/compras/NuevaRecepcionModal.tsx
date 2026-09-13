@@ -64,9 +64,32 @@ export function NuevaRecepcionModal({
   const pendientes: CompraDetalleResponse[] =
     compra?.detalle.filter((d) => d.cantidadPendiente > 0) ?? []
 
+  /*
+   * Se compró por saco: se recibe por saco.
+   *
+   * La compra guarda todo en unidad base —50 sacos son 2500 KG— y esta
+   * pantalla mostraba ese número, que no es el que cuenta el que descarga el
+   * camión. El factor sale de la propia línea: cuántas unidades base es cada
+   * presentación. Se muestra en presentación y se manda en unidad base, que es
+   * lo que el backend espera.
+   */
+  const factorDe = (d: CompraDetalleResponse) =>
+    d.cantidadPresentacion > 0 ? d.cantidad / d.cantidadPresentacion : 1
+
+  const unidadDe = (d: CompraDetalleResponse) => d.presentacion ?? d.unidadBase
+
+  /** Un número en unidad base, dicho en presentaciones. */
+  const enPresentacion = (d: CompraDetalleResponse, base: number) => {
+    const valor = base / factorDe(d)
+    // Sin decimales de mas: 3 sacos son 3, no 3.0000.
+    return Number(valor.toFixed(4))
+  }
+
   const llenarPendiente = (detalle: CompraDetalleResponse[]) =>
     Object.fromEntries(
-      detalle.filter((d) => d.cantidadPendiente > 0).map((d) => [d.id, String(d.cantidadPendiente)]),
+      detalle
+        .filter((d) => d.cantidadPendiente > 0)
+        .map((d) => [d.id, String(enPresentacion(d, d.cantidadPendiente))]),
     )
 
   useEffect(() => {
@@ -99,7 +122,9 @@ export function NuevaRecepcionModal({
     const detalle = compra.detalle
       .map((d) => ({
         compraDetalleId: d.id,
-        cantidad: Number(cantidades[d.id] || 0),
+        // De vuelta a unidad base: es como la compra tiene pactadas sus
+        // cantidades y como el almacen lleva el stock.
+        cantidad: Number(cantidades[d.id] || 0) * factorDe(d),
         lote: lotes[d.id]?.trim() || null,
         fechaVencimiento: vencimientos[d.id] || null,
       }))
@@ -181,10 +206,17 @@ export function NuevaRecepcionModal({
       key: 'cantidad',
       label: 'Pactado',
       align: 'right',
-      width: 110,
+      width: 130,
       render: (d) => (
-        <span className="text-sm text-ink-soft">
-          {d.cantidad} {d.unidadBase}
+        <span className="flex flex-col items-end">
+          <span className="text-sm text-ink-soft">
+            {d.cantidadPresentacion} {unidadDe(d)}
+          </span>
+          {d.presentacion && (
+            <span className="text-xs text-ink-soft">
+              {d.cantidad} {d.unidadBase}
+            </span>
+          )}
         </span>
       ),
     },
@@ -192,11 +224,11 @@ export function NuevaRecepcionModal({
       key: 'cantidadRecibida',
       label: 'Ya recibido',
       align: 'right',
-      width: 110,
+      width: 120,
       render: (d) =>
         d.cantidadRecibida > 0 ? (
           <span className="text-sm text-ink-soft">
-            {d.cantidadRecibida} {d.unidadBase}
+            {enPresentacion(d, d.cantidadRecibida)} {unidadDe(d)}
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
@@ -206,28 +238,42 @@ export function NuevaRecepcionModal({
       key: 'cantidadPendiente',
       label: 'Pendiente',
       align: 'right',
-      width: 110,
+      width: 120,
       render: (d) => (
         <span className="text-sm font-medium text-ink">
-          {d.cantidadPendiente} {d.unidadBase}
+          {enPresentacion(d, d.cantidadPendiente)} {unidadDe(d)}
         </span>
       ),
     },
     {
+      /* Se escribe en lo que se compro: sacos, cajas. No en kilos. */
       key: 'llego',
       label: 'Llegó ahora',
-      width: 130,
-      render: (d) => (
-        <Input
-          size="sm"
-          type="number"
-          step="0.0001"
-          min={0}
-          max={d.cantidadPendiente}
-          value={cantidades[d.id] ?? ''}
-          onChange={(e) => setCantidades({ ...cantidades, [d.id]: e.target.value })}
-        />
-      ),
+      width: 190,
+      render: (d) => {
+        const enBase = (Number(cantidades[d.id]) || 0) * factorDe(d)
+        return (
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <Input
+                size="sm"
+                type="number"
+                step="0.0001"
+                min={0}
+                max={enPresentacion(d, d.cantidadPendiente)}
+                value={cantidades[d.id] ?? ''}
+                onChange={(e) => setCantidades({ ...cantidades, [d.id]: e.target.value })}
+              />
+              <span className="text-xs whitespace-nowrap text-ink-soft">{unidadDe(d)}</span>
+            </div>
+            {d.presentacion && enBase > 0 && (
+              <span className="text-xs text-ink-soft">
+                = {Number(enBase.toFixed(4))} {d.unidadBase}
+              </span>
+            )}
+          </div>
+        )
+      },
     },
     {
       key: 'lote',

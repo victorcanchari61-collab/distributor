@@ -121,6 +121,17 @@ type FilaCompra = LineaProductoNueva
  *
  * Crear una compra directa es una vista completa, igual que una orden.
  */
+/**
+ * Una cantidad en unidad base, dicha en la presentación con la que se compró.
+ *
+ * La compra guarda todo en unidad base —50 sacos son 2500 KG— y ese número no
+ * es el que cuenta nadie en el almacén. El factor sale de la propia línea.
+ */
+function enPresentacionCompra(l: CompraDetalleResponse, base: number) {
+  const factor = l.cantidadPresentacion > 0 ? l.cantidad / l.cantidadPresentacion : 1
+  return Number((base / factor).toFixed(4))
+}
+
 export function MisComprasPage() {
   const { puede } = usePermisos()
   const toast = useToast()
@@ -1004,15 +1015,17 @@ export function MisComprasPage() {
                   { key: 'subtotal', label: 'Subtotal', render: (l) => `S/ ${l.costoTotal.toFixed(2)}` },
                 ] satisfies ColumnaDetalleProducto<CompraDetalleResponse>[],
                 [
+                  /* En lo que se compro, igual que la fila de arriba: si la
+                     compra fue de 50 sacos, lo recibido se cuenta en sacos. */
                   {
                     key: 'recibido',
                     label: 'Recibido',
-                    render: (l) => `${l.cantidadRecibida} ${l.unidadBase}`,
+                    render: (l) => `${enPresentacionCompra(l, l.cantidadRecibida)} ${l.presentacion ?? l.unidadBase}`,
                   },
                   {
                     key: 'pendiente',
                     label: 'Pendiente',
-                    render: (l) => `${l.cantidadPendiente} ${l.unidadBase}`,
+                    render: (l) => `${enPresentacionCompra(l, l.cantidadPendiente)} ${l.presentacion ?? l.unidadBase}`,
                   },
                 ] satisfies ColumnaDetalleProducto<CompraDetalleResponse>[],
               ]}
