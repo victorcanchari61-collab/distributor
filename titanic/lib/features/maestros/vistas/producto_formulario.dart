@@ -372,16 +372,27 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
           valor: _unidadBaseId,
           etiqueta: 'Unidad base',
           icono: Icons.straighten_outlined,
-          habilitado: _esNuevo && !_guardando,
+          habilitado: !_guardando,
           error: _errorUnidad,
           opciones: [for (final u in unidades) Opcion(u.id, '${u.nombre} (${u.codigo})')],
           onCambio: (v) => setState(() => _unidadBaseId = v),
         ),
-        if (!_esNuevo) ...[
-          const SizedBox(height: Dimen.espacio1),
-          const Text(
-            'No se puede cambiar después de crear el producto.',
-            style: TextStyle(fontSize: 11.5, color: Colores.tintaTenue),
+        // Cambiarla no reescribe el pasado: lo que ya se movio se conto en la
+        // unidad anterior y de UND a KG no hay factor que convierta.
+        if (!_esNuevo && _unidadBaseId != widget.producto?.unidadBaseId) ...[
+          const SizedBox(height: Dimen.espacio2),
+          Container(
+            padding: const EdgeInsets.all(Dimen.espacio3),
+            decoration: BoxDecoration(
+              color: Colores.advertencia.withValues(alpha: 0.08),
+              border: Border.all(color: Colores.advertencia.withValues(alpha: 0.4)),
+              borderRadius: BorderRadius.circular(Dimen.radioCampo),
+            ),
+            child: const Text(
+              'Lo ya registrado (stock, kardex y costos) se queda como está: '
+              'se contó en la unidad anterior y no se convierte.',
+              style: TextStyle(fontSize: 11.5, color: Colores.advertencia),
+            ),
           ),
         ],
         const SizedBox(height: Dimen.espacio4),

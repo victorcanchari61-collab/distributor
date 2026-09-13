@@ -164,15 +164,36 @@ public class ProductoService : IProductoService
             throw new ConflictException("Ya existe un producto con ese código");
         }
 
-        // Cambiar la unidad base volveria mentira todo factor ya guardado: un
-        // saco de 50 dejaria de ser 50 kilos.
+        await ValidarReferenciasAsync(request);
+
+        /*
+         * Cambiar la unidad base NO reescribe lo ya registrado.
+         *
+         * Las cantidades del kardex, del stock y de las capas de costo se
+         * quedan tal cual: son las que se contaron en su momento y no hay
+         * forma de convertir unidades que miden cosas distintas —de UND a KG
+         * no hay factor—. Lo que si se arrastra es la presentacion base, que
+         * ES la unidad base con otro nombre: si no, el producto quedaria
+         * midiendo en kilos y vendiendose en unidades.
+         *
+         * Se permite porque equivocarse de unidad al crear un producto es
+         * comun y crear otro producto para corregirlo parte su historial en
+         * dos. El aviso de que lo anterior no se convierte va en el formulario.
+         */
         if (request.UnidadBaseId != producto.UnidadBaseId)
         {
-            throw new BadRequestException(
-                "La unidad base no se puede cambiar. Crea un producto nuevo si la medida es distinta.");
-        }
+            var nuevaBase = await _catalogo.GetUnidadAsync(request.UnidadBaseId)
+                ?? throw new BadRequestException("La unidad base indicada no existe");
 
-        await ValidarReferenciasAsync(request);
+            var baseVigente = producto.Presentaciones.FirstOrDefault(x => x.Factor == 1m);
+            if (baseVigente is not null)
+            {
+                baseVigente.UnidadId = nuevaBase.Id;
+                baseVigente.Nombre = nuevaBase.Nombre;
+            }
+
+            producto.UnidadBaseId = request.UnidadBaseId;
+        }
 
         producto.Codigo = codigo;
         producto.Nombre = request.Nombre.Trim();

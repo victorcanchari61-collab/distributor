@@ -744,14 +744,7 @@ export function ProductosPage() {
                 <Desplegable
                   label="Unidad base"
                   value={form.unidadBaseId}
-                  disabled={Boolean(editando)}
-                  hint={
-                    editando ? (
-                      <span className="text-xs text-ink-soft">No se puede cambiar</span>
-                    ) : (
-                      <BotonMas label="Nueva unidad" onClick={() => setCrearRapido('unidad')} />
-                    )
-                  }
+                  hint={<BotonMas label="Nueva unidad" onClick={() => setCrearRapido('unidad')} />}
                   onChange={(v) => setForm({ ...form, unidadBaseId: Number(v) })}
                   options={unidadesActivas.map((u) => ({
                     value: u.id,
@@ -759,6 +752,16 @@ export function ProductosPage() {
                     detalle: u.codigo,
                   }))}
                 />
+
+                {/* Cambiarla no reescribe el pasado: lo que ya se movió se
+                    contó en la unidad anterior y no hay forma de convertirlo. */}
+                {editando && form.unidadBaseId !== editando.unidadBaseId && (
+                  <p className="rounded-field border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800">
+                    Lo ya registrado (stock, kardex y costos) se queda como está: se contó en{' '}
+                    {editando.unidadBase} y no se convierte. Los factores de las presentaciones
+                    pasan a leerse en la unidad nueva.
+                  </p>
+                )}
 
                 {/* Contenido del envase: informativo, para comparar precio por litro. */}
                 <div className="grid gap-4 sm:grid-cols-2">
