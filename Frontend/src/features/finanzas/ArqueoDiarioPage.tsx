@@ -25,6 +25,7 @@ import {
   StatCard,
   Tabs,
   useConfirmacion,
+  useToast,
 } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -655,26 +656,24 @@ function MotivosGastoTabla({
   const [editando, setEditando] = useState<MotivoGastoResponse | null>(null)
   const [form, setForm] = useState({ nombre: '', descripcion: '', activo: true })
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
+  const toast = useToast()
   const [error, setError] = useState('')
   const { confirmar, dialogo } = useConfirmacion()
 
   const abrirNuevo = () => {
     setEditando(null)
     setForm({ nombre: '', descripcion: '', activo: true })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const abrirEdicion = (motivo: MotivoGastoResponse) => {
     setEditando(motivo)
     setForm({ nombre: motivo.nombre, descripcion: motivo.descripcion ?? '', activo: motivo.activo })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const guardar = async () => {
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre del motivo.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre del motivo.')
 
     setGuardando(true)
     try {
@@ -689,7 +688,7 @@ function MotivosGastoTabla({
       setAbierto(false)
       await onRecargar()
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el motivo.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos guardar el motivo.')
     } finally {
       setGuardando(false)
     }
@@ -791,7 +790,6 @@ function MotivosGastoTabla({
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
 
           <Input
             label="Nombre"

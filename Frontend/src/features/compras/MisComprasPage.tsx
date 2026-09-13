@@ -139,7 +139,6 @@ export function MisComprasPage() {
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [pagosAbierto, setPagosAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const [proveedorId, setProveedorId] = useState(0)
   const [fecha, setFecha] = useState('')
@@ -234,7 +233,6 @@ export function MisComprasPage() {
     setPagoMonto('')
     setObservacion('')
     setFilas([])
-    setErrorForm('')
     setVista('form')
   }
 
@@ -262,7 +260,6 @@ export function MisComprasPage() {
         fechaVencimiento: '',
       })),
     )
-    setErrorForm('')
     setVista('form')
   }
 
@@ -291,7 +288,6 @@ export function MisComprasPage() {
     setPagoTipo('')
     setPagoMetodoId(0)
     setPagoMonto('')
-    setErrorForm('')
   }
 
   const editarFilaPago = (i: number) => {
@@ -300,7 +296,6 @@ export function MisComprasPage() {
     setPagoTipo(metodosPago.find((m) => m.id === pago.metodoPagoId)?.tipo ?? '')
     setPagoMetodoId(pago.metodoPagoId)
     setPagoMonto(String(pago.monto))
-    setErrorForm('')
   }
 
   const cerrarFilaPago = () => {
@@ -312,10 +307,10 @@ export function MisComprasPage() {
 
   /** Guarda la fila en edicion: la nueva se agrega, una existente se reemplaza. */
   const guardarFilaPago = () => {
-    if (!pagoMetodoId) return setErrorForm('Elige el método de pago.')
+    if (!pagoMetodoId) return toast.error('Elige el método de pago.')
 
     const monto = Number(pagoMonto)
-    if (!monto || monto <= 0) return setErrorForm('Pon cuánto se pagó.')
+    if (!monto || monto <= 0) return toast.error('Pon cuánto se pagó.')
 
     // Lo ya cargado sin contar la fila que se esta editando.
     const otros = pagos.reduce(
@@ -324,7 +319,7 @@ export function MisComprasPage() {
     )
 
     if (otros + monto > total + 0.001) {
-      return setErrorForm(
+      return toast.error(
         `Ese pago deja lo pagado en S/ ${(otros + monto).toFixed(2)}, más que el total de la compra (S/ ${total.toFixed(2)}).`,
       )
     }
@@ -336,7 +331,6 @@ export function MisComprasPage() {
             i === filaPago ? { metodoPagoId: pagoMetodoId, monto: pagoMonto } : pago,
           ),
     )
-    setErrorForm('')
     cerrarFilaPago()
   }
 
@@ -408,13 +402,13 @@ export function MisComprasPage() {
   ]
 
   const guardar = async () => {
-    if (!proveedorId) return setErrorForm('Elige el proveedor.')
+    if (!proveedorId) return toast.error('Elige el proveedor.')
 
     const validas = filas.filter((f) => f.productoId && f.cantidad && f.costo)
-    if (validas.length === 0) return setErrorForm('Agrega al menos un producto con su costo.')
+    if (validas.length === 0) return toast.error('Agrega al menos un producto con su costo.')
 
     if (totalPagado > total + 0.001) {
-      return setErrorForm(
+      return toast.error(
         `Los pagos suman S/ ${totalPagado.toFixed(2)}, más que el total de la compra (S/ ${total.toFixed(2)}).`,
       )
     }
@@ -437,7 +431,6 @@ export function MisComprasPage() {
     }
 
     setGuardando(true)
-    setErrorForm('')
     try {
       if (editando) {
         await compraApi.update(editando.id, body)
@@ -448,7 +441,7 @@ export function MisComprasPage() {
       await cargar()
       toast.exito(editando ? 'Compra actualizada' : 'Compra registrada')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -644,7 +637,6 @@ export function MisComprasPage() {
           }
         />
 
-        {errorForm && <Alert>{errorForm}</Alert>}
 
         {/* Productos a la izquierda porque es lo que más espacio pide (buscador
             y tabla); los datos de la compra y el total van en una columna
@@ -838,7 +830,6 @@ export function MisComprasPage() {
           }
         >
           <div className="flex flex-col gap-3">
-            {errorForm && <Alert>{errorForm}</Alert>}
 
             <SysDataTable<FilaPagoCompra>
               columns={columnasPagos}

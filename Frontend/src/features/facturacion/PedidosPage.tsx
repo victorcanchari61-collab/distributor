@@ -78,7 +78,6 @@ export function PedidosPage() {
   const [historialCargando, setHistorialCargando] = useState(false)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const [clienteId, setClienteId] = useState(0)
   const [listaPrecioId, setListaPrecioId] = useState(0)
@@ -175,7 +174,6 @@ export function PedidosPage() {
     setReservaStock(false)
     setAlmacenReservaId(primerAlmacenId)
     setFilas([])
-    setErrorForm('')
     setVista('form')
   }
 
@@ -200,7 +198,6 @@ export function PedidosPage() {
           fechaVencimiento: '',
         })),
     )
-    setErrorForm('')
     setVista('form')
   }
 
@@ -222,11 +219,11 @@ export function PedidosPage() {
   const total = filas.reduce((n, f) => n + (Number(f.cantidad) || 0) * (Number(f.costo) || 0), 0)
 
   const guardar = async () => {
-    if (!clienteId) return setErrorForm('Elige el cliente.')
+    if (!clienteId) return toast.error('Elige el cliente.')
 
     const validas = filas.filter((f) => f.productoId && f.cantidad && f.costo)
-    if (validas.length === 0) return setErrorForm('Agrega al menos un producto con su precio.')
-    if (reservaStock && !almacenReservaId) return setErrorForm('Elige el almacén para reservar el stock.')
+    if (validas.length === 0) return toast.error('Agrega al menos un producto con su precio.')
+    if (reservaStock && !almacenReservaId) return toast.error('Elige el almacén para reservar el stock.')
 
     const body: CrearPedidoRequest = {
       clienteId,
@@ -244,7 +241,6 @@ export function PedidosPage() {
     }
 
     setGuardando(true)
-    setErrorForm('')
     try {
       if (editando) {
         await pedidoApi.update(editando.id, body)
@@ -255,7 +251,7 @@ export function PedidosPage() {
       await cargar()
       toast.exito(editando ? 'Pedido actualizado' : 'Pedido creado')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError ? (e.errors.length ? e.errors.join(' ') : e.message) : 'No pudimos guardar el pedido.',
       )
     } finally {
@@ -465,7 +461,6 @@ export function PedidosPage() {
           }
         />
 
-        {errorForm && <Alert>{errorForm}</Alert>}
 
         {/* Mismo layout que Mis compras / Nueva venta: Productos a la
             izquierda porque es lo que más espacio pide (buscador y tabla);

@@ -54,7 +54,6 @@ export function EmpresaPage() {
   const [abierto, setAbierto] = useState(false)
   const [form, setForm] = useState<EmpresaRequest>(VACIA)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
   const [consultando, setConsultando] = useState(false)
   const [avisoSunat, setAvisoSunat] = useState('')
 
@@ -79,7 +78,6 @@ export function EmpresaPage() {
   const abrirNueva = () => {
     setEditando(null)
     setForm({ ...VACIA, activa: empresas.length === 0 })
-    setErrorForm('')
     setAvisoSunat('')
     setAbierto(true)
   }
@@ -87,7 +85,6 @@ export function EmpresaPage() {
   /** Trae de SUNAT los datos de la empresa y llena el formulario. */
   const consultarRuc = async (ruc: string) => {
     setConsultando(true)
-    setErrorForm('')
     setAvisoSunat('')
     try {
       const datos = await consultaApi.ruc(ruc)
@@ -107,7 +104,7 @@ export function EmpresaPage() {
       const partes = [datos.estado, datos.condicion].filter(Boolean)
       setAvisoSunat(partes.length ? `SUNAT: ${partes.join(' · ')}` : '')
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos consultar el RUC.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos consultar el RUC.')
     } finally {
       setConsultando(false)
     }
@@ -129,14 +126,12 @@ export function EmpresaPage() {
       representanteLegal: empresa.representanteLegal ?? '',
       activa: empresa.activa,
     })
-    setErrorForm('')
     setAvisoSunat('')
     setAbierto(true)
   }
 
   const guardar = async () => {
     setGuardando(true)
-    setErrorForm('')
     try {
       if (editando) await empresaApi.update(editando.id, form)
       else await empresaApi.create(form)
@@ -144,7 +139,7 @@ export function EmpresaPage() {
       await cargar()
       toast.exito(editando ? 'Empresa actualizada' : 'Empresa creada')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -335,12 +330,6 @@ export function EmpresaPage() {
         }
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {errorForm && (
-            <div className="sm:col-span-2">
-              <Alert>{errorForm}</Alert>
-            </div>
-          )}
-
           {avisoSunat && (
             <p className="rounded-field border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 sm:col-span-2">
               {avisoSunat}

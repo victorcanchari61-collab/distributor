@@ -10,6 +10,7 @@ import {
   Modal,
   RowAction,
   StatCard,
+  useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -36,7 +37,7 @@ export function UsuariosPage() {
   const [editando, setEditando] = useState<Usuario | null>(null)
   const [form, setForm] = useState(VACIO)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
+  const toast = useToast()
   const [error, setError] = useState('')
   const [consultando, setConsultando] = useState(false)
 
@@ -76,7 +77,6 @@ export function UsuariosPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setForm({ ...VACIO, rolId: roles[0]?.id ?? 0 })
-    setErrorForm('')
     setAbierto(true)
   }
 
@@ -89,14 +89,12 @@ export function UsuariosPage() {
       dni: usuario.dni ?? '',
       rolId: usuario.rolId,
     })
-    setErrorForm('')
     setAbierto(true)
   }
 
   /** Trae de RENIEC el nombre de la persona y llena el campo Nombre. */
   const consultarDni = async (dni: string) => {
     setConsultando(true)
-    setErrorForm('')
     try {
       const datos = await consultaApi.dni(dni)
       setForm((prev) => ({
@@ -107,20 +105,19 @@ export function UsuariosPage() {
           .trim(),
       }))
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos consultar el DNI.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos consultar el DNI.')
     } finally {
       setConsultando(false)
     }
   }
 
   const guardar = async () => {
-    setErrorForm('')
 
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre del usuario.')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setErrorForm('El correo no es válido.')
-    if (!form.rolId) return setErrorForm('Selecciona un rol.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre del usuario.')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return toast.error('El correo no es válido.')
+    if (!form.rolId) return toast.error('Selecciona un rol.')
     if (!editando && form.password.length < 6) {
-      return setErrorForm('La contraseña debe tener al menos 6 caracteres.')
+      return toast.error('La contraseña debe tener al menos 6 caracteres.')
     }
 
     setGuardando(true)
@@ -149,7 +146,7 @@ export function UsuariosPage() {
       await cargarUsuarios()
       await cargarRoles()
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -294,7 +291,6 @@ export function UsuariosPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
 
           {/* Un usuario es una persona: siempre DNI. */}
           <DocumentoInput

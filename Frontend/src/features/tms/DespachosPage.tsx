@@ -65,7 +65,6 @@ export function DespachosPage() {
   const [detalle, setDetalle] = useState<DespachoResponse | null>(null)
   const [editando, setEditando] = useState<DespachoResponse | null>(null)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const [fecha, setFecha] = useState(hoy())
   const [rutaId, setRutaId] = useState(0)
@@ -143,7 +142,7 @@ export function DespachosPage() {
         setElegidos((prev) => prev.filter((id) => lista.some((p) => p.pedidoId === id)))
       })
       .catch((e) => {
-        if (vivo) setErrorForm(e instanceof ApiError ? e.message : 'No pudimos cargar los pedidos.')
+        if (vivo) toast.error(e instanceof ApiError ? e.message : 'No pudimos cargar los pedidos.')
       })
       .finally(() => {
         if (vivo) setCargandoPedidos(false)
@@ -163,7 +162,6 @@ export function DespachosPage() {
     setConductorTocado(false)
     setObservacion('')
     setElegidos([])
-    setErrorForm('')
     setVista('form')
   }
 
@@ -177,7 +175,6 @@ export function DespachosPage() {
     setConductorTocado(true)
     setObservacion(d.observacion ?? '')
     setElegidos(d.detalle.map((p) => p.pedidoId))
-    setErrorForm('')
     setVista('form')
   }
 
@@ -187,10 +184,10 @@ export function DespachosPage() {
     )
 
   const guardar = async () => {
-    if (!rutaId) return setErrorForm('Elige la ruta.')
-    if (!vehiculoId) return setErrorForm('Elige el vehículo.')
-    if (!conductorId) return setErrorForm('Elige el conductor.')
-    if (elegidos.length === 0) return setErrorForm('Marca al menos un pedido para cargar.')
+    if (!rutaId) return toast.error('Elige la ruta.')
+    if (!vehiculoId) return toast.error('Elige el vehículo.')
+    if (!conductorId) return toast.error('Elige el conductor.')
+    if (elegidos.length === 0) return toast.error('Marca al menos un pedido para cargar.')
 
     const body = {
       fecha,
@@ -202,7 +199,6 @@ export function DespachosPage() {
     }
 
     setGuardando(true)
-    setErrorForm('')
     try {
       if (editando) {
         await despachoApi.update(editando.id, body)
@@ -213,7 +209,7 @@ export function DespachosPage() {
       await cargar()
       toast.exito(editando ? 'Despacho actualizado' : 'Despacho creado')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -305,7 +301,6 @@ export function DespachosPage() {
           }
         />
 
-        {errorForm && <Alert>{errorForm}</Alert>}
 
         <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
           <PageSection title="Pedidos" description="Los pendientes de los clientes de esa ruta.">

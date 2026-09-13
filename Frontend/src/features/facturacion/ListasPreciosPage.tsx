@@ -78,7 +78,6 @@ export function ListasPreciosPage() {
   const [margenObjetivo, setMargenObjetivo] = useState('')
 
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
@@ -154,7 +153,7 @@ export function ListasPreciosPage() {
     })
 
   const guardarLista = async () => {
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre de la lista.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre de la lista.')
 
     setGuardando(true)
     try {
@@ -176,7 +175,7 @@ export function ListasPreciosPage() {
       await cargar()
       toast.exito('Lista creada')
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar la lista.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos guardar la lista.')
     } finally {
       setGuardando(false)
     }
@@ -235,7 +234,6 @@ export function ListasPreciosPage() {
     setPrecioForm({ productoId })
     setFilasPrecio(filas)
     setMargenObjetivo('')
-    setErrorForm('')
   }
 
   /**
@@ -319,10 +317,10 @@ export function ListasPreciosPage() {
   const llenarPorMargen = () => {
     const margen = Number(margenObjetivo)
     if (!producto?.costoReferencia) {
-      return setErrorForm('Este producto no tiene costo de referencia: no hay de dónde calcular.')
+      return toast.error('Este producto no tiene costo de referencia: no hay de dónde calcular.')
     }
     if (!margen || margen <= 0 || margen >= 100) {
-      return setErrorForm('El margen va entre 1 y 99.')
+      return toast.error('El margen va entre 1 y 99.')
     }
 
     setFilasPrecio((prev) =>
@@ -335,7 +333,6 @@ export function ListasPreciosPage() {
         return { ...f, precio: precioPorMargen(costo, margen), margen: margen.toFixed(1) }
       }),
     )
-    setErrorForm('')
   }
 
   /*
@@ -450,19 +447,19 @@ export function ListasPreciosPage() {
 
   const guardarPrecio = async () => {
     if (!listaActiva) return
-    if (!precioForm.productoId) return setErrorForm('Elige el producto.')
+    if (!precioForm.productoId) return toast.error('Elige el producto.')
 
     const conPrecio = filasPrecio.filter((f) => Number(f.precio) > 0)
 
     if (conPrecio.some((f) => !Number(f.desde) || Number(f.desde) < 1)) {
-      return setErrorForm('El "desde" de cada precio empieza en 1.')
+      return toast.error('El "desde" de cada precio empieza en 1.')
     }
 
     // Dos tramos con el mismo "desde" dejarian a la venta sin saber cual
     // cobrar, y el backend se quedaria con el ultimo sin avisar.
     const claves = conPrecio.map((f) => `${f.presentacionId}-${Number(f.desde)}`)
     if (new Set(claves).size !== claves.length) {
-      return setErrorForm('Hay dos precios de la misma presentación con el mismo "desde".')
+      return toast.error('Hay dos precios de la misma presentación con el mismo "desde".')
     }
 
     const aGuardar = conPrecio.map((f) => ({
@@ -471,7 +468,7 @@ export function ListasPreciosPage() {
       cantidadMinima: Number(f.desde),
     }))
 
-    if (aGuardar.length === 0) return setErrorForm('Pon al menos un precio.')
+    if (aGuardar.length === 0) return toast.error('Pon al menos un precio.')
 
     /*
      * Los tramos que se quitaron de la tabla.
@@ -499,7 +496,7 @@ export function ListasPreciosPage() {
         aGuardar.length === 1 ? 'Precio guardado' : `${aGuardar.length} precios guardados`,
       )
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar los precios.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos guardar los precios.')
     } finally {
       setGuardando(false)
     }
@@ -585,7 +582,6 @@ export function ListasPreciosPage() {
                 onClick={() => {
                   setEditando(lista)
                   setForm({ nombre: lista.nombre, descripcion: lista.descripcion ?? '' })
-                  setErrorForm('')
                   setAbierto(true)
                 }}
                 iconRight={<Pencil size={15} />}
@@ -620,7 +616,6 @@ export function ListasPreciosPage() {
                 onClick={() => {
                   setEditando(null)
                   setForm({ nombre: '', descripcion: '' })
-                  setErrorForm('')
                   setAbierto(true)
                 }}
               >
@@ -636,7 +631,6 @@ export function ListasPreciosPage() {
                   setPrecioForm({ productoId: 0 })
                   setFilasPrecio([])
                   setMargenObjetivo('')
-                  setErrorForm('')
                   setPrecioAbierto(true)
                 }}
                 iconRight={<Plus size={15} />}
@@ -733,7 +727,7 @@ export function ListasPreciosPage() {
               onClick={() => {
                 const p = productos.find((x) => x.id === row.productoId)
                 cambiarProductoMasivo(row.productoId)
-                setErrorForm(p ? '' : 'El producto de este precio está desactivado.')
+                toast.error(p ? '' : 'El producto de este precio está desactivado.')
                 setPrecioAbierto(true)
               }}
             >
@@ -784,7 +778,6 @@ export function ListasPreciosPage() {
           }
         >
           <div className="flex flex-col gap-4">
-            {errorForm && <Alert>{errorForm}</Alert>}
             <Input
               label="Nombre"
               placeholder="Mayorista"
@@ -819,7 +812,6 @@ export function ListasPreciosPage() {
           }
         >
           <div className="flex flex-col gap-4">
-            {errorForm && <Alert>{errorForm}</Alert>}
 
             <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
               <Select

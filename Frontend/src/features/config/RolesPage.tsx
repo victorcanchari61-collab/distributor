@@ -30,7 +30,6 @@ export function RolesPage() {
   const [editando, setEditando] = useState<RolResponse | null>(null)
   const [form, setForm] = useState({ nombre: '', descripcion: '' })
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -53,20 +52,17 @@ export function RolesPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setForm({ nombre: '', descripcion: '' })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const abrirEdicion = (rol: RolResponse) => {
     setEditando(rol)
     setForm({ nombre: rol.nombre, descripcion: rol.descripcion ?? '' })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const guardar = async () => {
-    setErrorForm('')
-    if (!form.nombre.trim()) return setErrorForm('Ponle un nombre al rol.')
+    if (!form.nombre.trim()) return toast.error('Ponle un nombre al rol.')
 
     setGuardando(true)
     try {
@@ -83,7 +79,7 @@ export function RolesPage() {
       await cargar()
       toast.exito(editando ? 'Rol actualizado' : 'Rol creado')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -263,7 +259,6 @@ export function RolesPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
 
           <Input
             label="Nombre del rol"

@@ -55,7 +55,6 @@ export function MetodosPagoPage() {
   const [editando, setEditando] = useState<MetodoPagoResponse | null>(null)
   const [form, setForm] = useState(VACIO)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -80,7 +79,6 @@ export function MetodosPagoPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setForm(VACIO)
-    setErrorForm('')
     setAbierto(true)
   }
 
@@ -94,15 +92,14 @@ export function MetodosPagoPage() {
       cci: m.cci ?? '',
       titular: m.titular ?? '',
     })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const guardar = async () => {
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre.')
-    if (form.tipo === 'TRANSFERENCIA' && !form.banco.trim()) return setErrorForm('Indica el banco.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre.')
+    if (form.tipo === 'TRANSFERENCIA' && !form.banco.trim()) return toast.error('Indica el banco.')
     if (form.tipo !== 'EFECTIVO' && !form.numeroCuenta.trim()) {
-      return setErrorForm(
+      return toast.error(
         form.tipo === 'TRANSFERENCIA' ? 'Indica el número de cuenta.' : 'Indica el número de celular.',
       )
     }
@@ -127,7 +124,7 @@ export function MetodosPagoPage() {
       await cargar()
       toast.exito(editando ? 'Método actualizado' : 'Método creado')
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el método de pago.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos guardar el método de pago.')
     } finally {
       setGuardando(false)
     }
@@ -265,7 +262,6 @@ export function MetodosPagoPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
 
           <Desplegable
             label="Tipo"

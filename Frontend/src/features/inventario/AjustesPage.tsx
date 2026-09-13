@@ -77,7 +77,6 @@ export function AjustesPage() {
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [detalleAbierto, setDetalleAbierto] = useState<DocumentoInventarioResponse | null>(null)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const [cabecera, setCabecera] = useState({
     almacenId: 0,
@@ -162,7 +161,6 @@ export function AjustesPage() {
       flete: '',
     })
     setFilas([])
-    setErrorForm('')
     setVista('form')
   }
 
@@ -174,14 +172,13 @@ export function AjustesPage() {
   const total = filas.reduce((n, f) => n + (Number(f.cantidad) || 0) * (Number(f.costo) || 0), 0)
 
   const guardar = async () => {
-    if (!cabecera.almacenId) return setErrorForm('Elige el almacén.')
-    if (!cabecera.motivoId) return setErrorForm('Elige el motivo.')
+    if (!cabecera.almacenId) return toast.error('Elige el almacén.')
+    if (!cabecera.motivoId) return toast.error('Elige el motivo.')
 
     const validas = filas.filter((f) => f.productoId && f.cantidad)
-    if (validas.length === 0) return setErrorForm('Agrega al menos un producto.')
+    if (validas.length === 0) return toast.error('Agrega al menos un producto.')
 
     setGuardando(true)
-    setErrorForm('')
     try {
       await ajusteApi.create({
         almacenId: cabecera.almacenId,
@@ -201,7 +198,7 @@ export function AjustesPage() {
       await cargar()
       toast.exito('Ajuste registrado')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -436,7 +433,6 @@ export function AjustesPage() {
           }
         />
 
-        {errorForm && <Alert>{errorForm}</Alert>}
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:items-start">
           <PageSection

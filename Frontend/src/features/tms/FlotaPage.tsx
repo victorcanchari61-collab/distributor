@@ -102,7 +102,6 @@ export function FlotaPage() {
   const [form, setForm] = useState<FormVehiculo>(VACIO)
   const [guardando, setGuardando] = useState(false)
   const [subiendoFoto, setSubiendoFoto] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -140,7 +139,6 @@ export function FlotaPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setForm({ ...VACIO, tipoVehiculoId: tiposActivos[0]?.id ?? 0 })
-    setErrorForm('')
     setAbierto(true)
   }
 
@@ -163,16 +161,14 @@ export function FlotaPage() {
       observacion: v.observacion ?? '',
       activo: v.activo,
     })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const guardar = async () => {
-    if (!form.placa.trim()) return setErrorForm('Ingresa la placa.')
-    if (!form.tipoVehiculoId) return setErrorForm('Elige el tipo de vehículo.')
+    if (!form.placa.trim()) return toast.error('Ingresa la placa.')
+    if (!form.tipoVehiculoId) return toast.error('Elige el tipo de vehículo.')
 
     setGuardando(true)
-    setErrorForm('')
     try {
       const cuerpo = {
         placa: form.placa.trim().toUpperCase(),
@@ -199,7 +195,7 @@ export function FlotaPage() {
       await cargar()
       toast.exito(editando ? 'Vehículo actualizado' : 'Vehículo creado')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -514,7 +510,6 @@ export function FlotaPage() {
           }
         >
           <div className="flex flex-col gap-4">
-            {errorForm && <Alert>{errorForm}</Alert>}
 
             <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
               <Input
@@ -680,14 +675,13 @@ function TiposVehiculoTabla({
     activo: true,
   })
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
+  const toast = useToast()
   const [error, setError] = useState('')
   const { confirmar, dialogo } = useConfirmacion()
 
   const abrirNuevo = () => {
     setEditando(null)
     setForm({ nombre: '', descripcion: '', capacidadKgReferencia: '', activo: true })
-    setErrorForm('')
     setAbierto(true)
   }
 
@@ -700,15 +694,13 @@ function TiposVehiculoTabla({
         t.capacidadKgReferencia != null ? String(t.capacidadKgReferencia) : '',
       activo: t.activo,
     })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const guardar = async () => {
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre.')
 
     setGuardando(true)
-    setErrorForm('')
     try {
       const cuerpo = {
         nombre: form.nombre.trim(),
@@ -721,7 +713,7 @@ function TiposVehiculoTabla({
       setAbierto(false)
       await onRecargar()
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el tipo.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos guardar el tipo.')
     } finally {
       setGuardando(false)
     }
@@ -841,7 +833,6 @@ function TiposVehiculoTabla({
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
 
           <Input
             label="Nombre"

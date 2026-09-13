@@ -74,7 +74,6 @@ export function CuentasPorCobrarPage() {
   const [metodoPagoId, setMetodoPagoId] = useState(0)
   const [monto, setMonto] = useState('')
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -150,7 +149,6 @@ export function CuentasPorCobrarPage() {
     setTipo('')
     setMetodoPagoId(0)
     setMonto('')
-    setErrorForm('')
   }
 
   const abrirGestion = (n: NotaVentaResponse) => {
@@ -163,7 +161,6 @@ export function CuentasPorCobrarPage() {
     setTipo('')
     setMetodoPagoId(0)
     setMonto('')
-    setErrorForm('')
   }
 
   const editarFila = (pago: FilaPago) => {
@@ -171,7 +168,6 @@ export function CuentasPorCobrarPage() {
     setTipo(metodosPago.find((m) => m.id === pago.metodoPagoId)?.tipo ?? '')
     setMetodoPagoId(pago.metodoPagoId)
     setMonto(String(pago.monto))
-    setErrorForm('')
   }
 
   const anularFila = (pago: FilaPago) =>
@@ -182,26 +178,24 @@ export function CuentasPorCobrarPage() {
       tono: 'danger',
       accion: async () => {
         if (!gestionando) return
-        setErrorForm('')
         try {
           await notaVentaApi.anularPago(gestionando.id, pago.id)
           await refrescar(gestionando.id)
           await cargar()
           toast.exito('Pago anulado')
         } catch (e) {
-          setErrorForm(e instanceof ApiError ? e.message : 'No pudimos anular el pago.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos anular el pago.')
         }
       },
     })
 
   const guardarFila = async () => {
     if (!gestionando || !editandoClave) return
-    if (!metodoPagoId) return setErrorForm('Elige el método de pago.')
+    if (!metodoPagoId) return toast.error('Elige el método de pago.')
     const valor = Number(monto)
-    if (!valor || valor <= 0) return setErrorForm('Ingresa el monto.')
+    if (!valor || valor <= 0) return toast.error('Ingresa el monto.')
 
     setGuardando(true)
-    setErrorForm('')
     try {
       if (editandoClave === NUEVA) {
         await notaVentaApi.registrarPago(gestionando.id, { metodoPagoId, monto: valor })
@@ -213,7 +207,7 @@ export function CuentasPorCobrarPage() {
       toast.exito(editandoClave === NUEVA ? 'Pago registrado' : 'Pago actualizado')
       cancelarEdicion()
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el pago.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos guardar el pago.')
     } finally {
       setGuardando(false)
     }
@@ -448,7 +442,6 @@ export function CuentasPorCobrarPage() {
       >
         {gestionando && (
           <div className="flex flex-col gap-3">
-            {errorForm && <Alert>{errorForm}</Alert>}
 
             <p className="text-sm font-semibold text-ink">Pagos</p>
 

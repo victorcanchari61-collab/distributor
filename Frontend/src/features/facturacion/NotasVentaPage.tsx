@@ -122,7 +122,6 @@ export function NotasVentaPage() {
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [pagosAbierto, setPagosAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
   // Que campo quedo mal: el aviso dice QUE pasa y esto marca DONDE.
   const [errorPagos, setErrorPagos] = useState('')
   const toast = useToast()
@@ -221,7 +220,6 @@ export function NotasVentaPage() {
     setPagoMonto('')
     setObservacion('')
     setFilas([])
-    setErrorForm('')
     setVista('form')
   }
 
@@ -250,7 +248,6 @@ export function NotasVentaPage() {
           fechaVencimiento: '',
         })),
     )
-    setErrorForm('')
     setVista('form')
   }
 
@@ -285,7 +282,6 @@ export function NotasVentaPage() {
     setPagoTipo('')
     setPagoMetodoId(0)
     setPagoMonto('')
-    setErrorForm('')
   }
 
   const editarFilaPago = (i: number) => {
@@ -294,7 +290,6 @@ export function NotasVentaPage() {
     setPagoTipo(metodosPago.find((m) => m.id === pago.metodoPagoId)?.tipo ?? '')
     setPagoMetodoId(pago.metodoPagoId)
     setPagoMonto(String(pago.monto))
-    setErrorForm('')
   }
 
   const cerrarFilaPago = () => {
@@ -306,10 +301,10 @@ export function NotasVentaPage() {
 
   /** Guarda la fila en edicion: la nueva se agrega, una existente se reemplaza. */
   const guardarFilaPago = () => {
-    if (!pagoMetodoId) return setErrorForm('Elige el método de pago.')
+    if (!pagoMetodoId) return toast.error('Elige el método de pago.')
 
     const monto = Number(pagoMonto)
-    if (!monto || monto <= 0) return setErrorForm('Pon cuánto se pagó.')
+    if (!monto || monto <= 0) return toast.error('Pon cuánto se pagó.')
 
     // Lo ya cargado sin contar la fila que se esta editando.
     const otros = pagos.reduce(
@@ -318,7 +313,7 @@ export function NotasVentaPage() {
     )
 
     if (otros + monto > total + 0.001) {
-      return setErrorForm(
+      return toast.error(
         `Ese pago deja lo pagado en S/ ${(otros + monto).toFixed(2)}, más que el total de la venta (S/ ${total.toFixed(2)}).`,
       )
     }
@@ -328,7 +323,6 @@ export function NotasVentaPage() {
         ? [...prev, { metodoPagoId: pagoMetodoId, monto: pagoMonto }]
         : prev.map((p, i) => (i === filaPago ? { metodoPagoId: pagoMetodoId, monto: pagoMonto } : p)),
     )
-    setErrorForm('')
     cerrarFilaPago()
   }
 
@@ -374,7 +368,7 @@ export function NotasVentaPage() {
 
   /** Un fallo de validacion: aviso arriba y, si toca, el campo en rojo. */
   const fallar = (mensaje: string, campo?: 'pagos') => {
-    setErrorForm(mensaje)
+    toast.error(mensaje)
     setErrorPagos(campo === 'pagos' ? mensaje : '')
     toast.error(mensaje)
   }
@@ -487,7 +481,6 @@ export function NotasVentaPage() {
     }
 
     setGuardando(true)
-    setErrorForm('')
     try {
       if (editando) {
         await notaVentaApi.update(editando.id, body)
@@ -874,7 +867,6 @@ export function NotasVentaPage() {
           }
         >
           <div className="flex flex-col gap-3">
-            {errorForm && <Alert>{errorForm}</Alert>}
 
             <SysDataTable<FilaPagoVenta>
               columns={columnasPagos}

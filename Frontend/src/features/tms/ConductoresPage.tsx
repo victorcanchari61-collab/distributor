@@ -78,7 +78,6 @@ export function ConductoresPage() {
   const [form, setForm] = useState<FormConductor>(VACIO)
   const [guardando, setGuardando] = useState(false)
   const [subiendoFoto, setSubiendoFoto] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -106,7 +105,6 @@ export function ConductoresPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setForm(VACIO)
-    setErrorForm('')
     setAbierto(true)
   }
 
@@ -125,16 +123,14 @@ export function ConductoresPage() {
       observacion: c.observacion ?? '',
       activo: c.activo,
     })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const guardar = async () => {
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre.')
-    if (!form.documento.trim()) return setErrorForm('Ingresa el documento.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre.')
+    if (!form.documento.trim()) return toast.error('Ingresa el documento.')
 
     setGuardando(true)
-    setErrorForm('')
     try {
       const cuerpo = {
         nombre: form.nombre.trim(),
@@ -157,7 +153,7 @@ export function ConductoresPage() {
       await cargar()
       toast.exito(editando ? 'Conductor actualizado' : 'Conductor creado')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -469,7 +465,6 @@ export function ConductoresPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
 
           <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
             <Input

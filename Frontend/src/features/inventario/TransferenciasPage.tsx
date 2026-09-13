@@ -69,7 +69,6 @@ export function TransferenciasPage() {
   const [abierto, setAbierto] = useState(false)
   const [detalleAbierto, setDetalleAbierto] = useState<DocumentoInventarioResponse | null>(null)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const [cabecera, setCabecera] = useState({
     almacenOrigenId: 0,
@@ -149,7 +148,6 @@ export function TransferenciasPage() {
       observacion: '',
     })
     setFilas([])
-    setErrorForm('')
     setAbierto(true)
   }
 
@@ -157,17 +155,16 @@ export function TransferenciasPage() {
     setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
 
   const guardar = async () => {
-    if (!cabecera.almacenOrigenId) return setErrorForm('Elige el almacén de origen.')
-    if (!cabecera.almacenDestinoId) return setErrorForm('Elige el almacén de destino.')
+    if (!cabecera.almacenOrigenId) return toast.error('Elige el almacén de origen.')
+    if (!cabecera.almacenDestinoId) return toast.error('Elige el almacén de destino.')
     if (cabecera.almacenOrigenId === cabecera.almacenDestinoId) {
-      return setErrorForm('El origen y el destino no pueden ser el mismo almacén.')
+      return toast.error('El origen y el destino no pueden ser el mismo almacén.')
     }
 
     const validas = filas.filter((f) => f.productoId && f.cantidad)
-    if (validas.length === 0) return setErrorForm('Agrega al menos un producto.')
+    if (validas.length === 0) return toast.error('Agrega al menos un producto.')
 
     setGuardando(true)
-    setErrorForm('')
     try {
       await transferenciaApi.create({
         almacenOrigenId: cabecera.almacenOrigenId,
@@ -183,7 +180,7 @@ export function TransferenciasPage() {
       await cargar()
       toast.exito('Transferencia registrada')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -424,7 +421,6 @@ export function TransferenciasPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Desplegable

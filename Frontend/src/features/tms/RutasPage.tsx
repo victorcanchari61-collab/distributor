@@ -37,7 +37,6 @@ export function RutasPage() {
   const [editando, setEditando] = useState<RutaResponse | null>(null)
   const [form, setForm] = useState<RutaRequest>(VACIO)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -62,22 +61,19 @@ export function RutasPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setForm(VACIO)
-    setErrorForm('')
     setAbierto(true)
   }
 
   const abrirEdicion = (r: RutaResponse) => {
     setEditando(r)
     setForm({ nombre: r.nombre })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const guardar = async () => {
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre.')
 
     setGuardando(true)
-    setErrorForm('')
     try {
       const cuerpo = { nombre: form.nombre.trim() }
       if (editando) await rutaApi.update(editando.id, { ...cuerpo, activo: editando.activo })
@@ -86,7 +82,7 @@ export function RutasPage() {
       await cargar()
       toast.exito(editando ? 'Ruta actualizada' : 'Ruta creada')
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar la ruta.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos guardar la ruta.')
     } finally {
       setGuardando(false)
     }
@@ -226,7 +222,6 @@ export function RutasPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
 
           <Input
             label="Nombre"

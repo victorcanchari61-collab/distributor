@@ -72,7 +72,6 @@ export function PrestamosPage() {
   const [devolucionAbierta, setDevolucionAbierta] = useState<PrestamoResponse | null>(null)
   const [cantidadesDevolucion, setCantidadesDevolucion] = useState<Record<number, string>>({})
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const [cabecera, setCabecera] = useState({
     tipo: 'DADO' as TipoPrestamo,
@@ -152,7 +151,6 @@ export function PrestamosPage() {
       observacion: '',
     })
     setFilas([])
-    setErrorForm('')
     setAbierto(true)
   }
 
@@ -161,15 +159,14 @@ export function PrestamosPage() {
 
   const guardar = async () => {
     if (!cabecera.contraparte.trim()) {
-      return setErrorForm('Indica a quién le prestas o quién te presta.')
+      return toast.error('Indica a quién le prestas o quién te presta.')
     }
-    if (!cabecera.almacenId) return setErrorForm('Elige el almacén.')
+    if (!cabecera.almacenId) return toast.error('Elige el almacén.')
 
     const validas = filas.filter((f) => f.productoId && f.cantidad)
-    if (validas.length === 0) return setErrorForm('Agrega al menos un producto.')
+    if (validas.length === 0) return toast.error('Agrega al menos un producto.')
 
     setGuardando(true)
-    setErrorForm('')
     try {
       await prestamoApi.create({
         tipo: cabecera.tipo,
@@ -188,7 +185,7 @@ export function PrestamosPage() {
       await cargar()
       toast.exito('Préstamo registrado')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -206,7 +203,6 @@ export function PrestamosPage() {
     setCantidadesDevolucion(
       Object.fromEntries(p.detalle.map((d) => [d.id, String(d.cantidadPendiente)])),
     )
-    setErrorForm('')
   }
 
   const registrarDevolucion = async () => {
@@ -219,17 +215,16 @@ export function PrestamosPage() {
       }))
       .filter((l) => l.cantidad > 0)
 
-    if (detalle.length === 0) return setErrorForm('Indica cuánto se devuelve.')
+    if (detalle.length === 0) return toast.error('Indica cuánto se devuelve.')
 
     setGuardando(true)
-    setErrorForm('')
     try {
       await prestamoApi.devolver(devolucionAbierta.id, detalle)
       setDevolucionAbierta(null)
       await cargar()
       toast.exito('Devolución registrada')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -463,7 +458,6 @@ export function PrestamosPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Desplegable
@@ -614,7 +608,6 @@ export function PrestamosPage() {
       >
         {devolucionAbierta && (
           <div className="flex flex-col gap-3">
-            {errorForm && <Alert>{errorForm}</Alert>}
 
             {devolucionAbierta.detalle
               .filter((d) => d.cantidadPendiente > 0)

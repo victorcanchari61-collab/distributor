@@ -38,7 +38,6 @@ export function MercadosPage() {
   const [editando, setEditando] = useState<MercadoResponse | null>(null)
   const [form, setForm] = useState<MercadoRequest>(VACIO)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -63,22 +62,19 @@ export function MercadosPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setForm(VACIO)
-    setErrorForm('')
     setAbierto(true)
   }
 
   const abrirEdicion = (m: MercadoResponse) => {
     setEditando(m)
     setForm({ nombre: m.nombre, direccion: m.direccion ?? '', distrito: m.distrito ?? '' })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const guardar = async () => {
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre.')
 
     setGuardando(true)
-    setErrorForm('')
     try {
       const cuerpo = {
         nombre: form.nombre.trim(),
@@ -91,7 +87,7 @@ export function MercadosPage() {
       await cargar()
       toast.exito(editando ? 'Mercado actualizado' : 'Mercado creado')
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el mercado.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos guardar el mercado.')
     } finally {
       setGuardando(false)
     }
@@ -248,7 +244,6 @@ export function MercadosPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
 
           <Input
             label="Nombre"

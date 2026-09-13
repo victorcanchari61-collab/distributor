@@ -53,7 +53,6 @@ export function DevolucionesPage() {
 
   const [detalle, setDetalle] = useState<DevolucionResponse | null>(null)
 
-  const [errorForm, setErrorForm] = useState('')
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -101,7 +100,7 @@ export function DevolucionesPage() {
 
   const rechazar = async () => {
     if (!rechazando) return
-    if (!motivoRechazo.trim()) return setErrorForm('Di por qué se rechaza.')
+    if (!motivoRechazo.trim()) return toast.error('Di por qué se rechaza.')
 
     setRechazandoGuardando(true)
     try {
@@ -111,7 +110,7 @@ export function DevolucionesPage() {
       await cargar()
       toast.exito('Devolución rechazada')
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos rechazar la devolución.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos rechazar la devolución.')
     } finally {
       setRechazandoGuardando(false)
     }
@@ -217,7 +216,6 @@ export function DevolucionesPage() {
               onClick={() => {
                 setRechazando(row)
                 setMotivoRechazo('')
-                setErrorForm('')
               }}
             >
               <X size={15} />
@@ -295,7 +293,6 @@ export function DevolucionesPage() {
         }
       >
         <div className="flex flex-col gap-3">
-          {errorForm && <Alert>{errorForm}</Alert>}
           <Input
             label="Motivo del rechazo"
             placeholder="El cliente no trajo la mercadería"

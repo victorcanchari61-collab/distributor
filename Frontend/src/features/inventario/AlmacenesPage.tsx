@@ -33,7 +33,6 @@ export function AlmacenesPage() {
   const [editando, setEditando] = useState<AlmacenResponse | null>(null)
   const [form, setForm] = useState(VACIO)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -58,20 +57,18 @@ export function AlmacenesPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setForm(VACIO)
-    setErrorForm('')
     setAbierto(true)
   }
 
   const abrirEdicion = (a: AlmacenResponse) => {
     setEditando(a)
     setForm({ codigo: a.codigo, nombre: a.nombre, direccion: a.direccion ?? '', esPrincipal: a.esPrincipal })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const guardar = async () => {
-    if (!form.codigo.trim()) return setErrorForm('Ingresa el código.')
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre.')
+    if (!form.codigo.trim()) return toast.error('Ingresa el código.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre.')
 
     setGuardando(true)
     try {
@@ -90,7 +87,7 @@ export function AlmacenesPage() {
       await cargar()
       toast.exito(editando ? 'Almacén actualizado' : 'Almacén creado')
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar el almacén.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos guardar el almacén.')
     } finally {
       setGuardando(false)
     }
@@ -238,7 +235,6 @@ export function AlmacenesPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
           <Input
             label="Código"
             placeholder="ALM-02"

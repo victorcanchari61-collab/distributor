@@ -84,7 +84,6 @@ export function OrdenesCompraPage() {
   const [detalleAbierto, setDetalleAbierto] = useState<OrdenCompraResponse | null>(null)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const [proveedorId, setProveedorId] = useState(0)
   const [fechaEsperada, setFechaEsperada] = useState('')
@@ -152,7 +151,6 @@ export function OrdenesCompraPage() {
     setFechaEsperada('')
     setObservacion('')
     setFilas([])
-    setErrorForm('')
     setVista('form')
   }
 
@@ -178,7 +176,6 @@ export function OrdenesCompraPage() {
         }
       }),
     )
-    setErrorForm('')
     setVista('form')
   }
 
@@ -189,10 +186,10 @@ export function OrdenesCompraPage() {
   const total = filas.reduce((n, f) => n + (Number(f.cantidad) || 0) * (Number(f.costo) || 0), 0)
 
   const guardar = async () => {
-    if (!proveedorId) return setErrorForm('Elige el proveedor.')
+    if (!proveedorId) return toast.error('Elige el proveedor.')
 
     const validas = filas.filter((f) => f.productoId && f.cantidad && f.costo)
-    if (validas.length === 0) return setErrorForm('Agrega al menos un producto con su costo.')
+    if (validas.length === 0) return toast.error('Agrega al menos un producto con su costo.')
 
     const body: CrearOrdenCompraRequest = {
       proveedorId,
@@ -207,7 +204,6 @@ export function OrdenesCompraPage() {
     }
 
     setGuardando(true)
-    setErrorForm('')
     try {
       if (editando) {
         await ordenCompraApi.update(editando.id, body)
@@ -218,7 +214,7 @@ export function OrdenesCompraPage() {
       await cargar()
       toast.exito(editando ? 'Orden actualizada' : 'Orden creada')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -422,7 +418,6 @@ export function OrdenesCompraPage() {
           }
         />
 
-        {errorForm && <Alert>{errorForm}</Alert>}
 
         {/* Mismo layout que Mis compras: Productos a la izquierda porque es lo
             que más espacio pide (buscador y tabla); los datos de la orden y

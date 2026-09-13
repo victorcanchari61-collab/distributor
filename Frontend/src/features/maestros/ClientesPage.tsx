@@ -80,7 +80,6 @@ export function ClientesPage() {
   const [ubigeoSel, setUbigeoSel] = useState({ departamentoId: 0, provinciaId: 0 })
   const [guardando, setGuardando] = useState(false)
   const [consultando, setConsultando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
 
   const [nuevoMercado, setNuevoMercado] = useState(false)
   const [nombreMercado, setNombreMercado] = useState('')
@@ -160,7 +159,6 @@ export function ClientesPage() {
     setEditando(null)
     setForm(VACIO)
     setUbigeoSel({ departamentoId: 0, provinciaId: 0 })
-    setErrorForm('')
     setAbierto(true)
   }
 
@@ -183,14 +181,12 @@ export function ClientesPage() {
       departamentoId: cliente.departamentoId ?? 0,
       provinciaId: cliente.provinciaId ?? 0,
     })
-    setErrorForm('')
     setAbierto(true)
   }
 
   /** Con 8 u 11 dígitos se puede traer el nombre de RENIEC o SUNAT. */
   const consultarDocumento = async (documento: string, tipo: TipoDocumento) => {
     setConsultando(true)
-    setErrorForm('')
     try {
       if (tipo === 'RUC') {
         const datos = await consultaApi.ruc(documento)
@@ -218,18 +214,17 @@ export function ClientesPage() {
         }))
       }
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos consultar el documento.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos consultar el documento.')
     } finally {
       setConsultando(false)
     }
   }
 
   const guardar = async () => {
-    setErrorForm('')
     if (!/^[0-9]{3,15}$/.test(form.documento)) {
-      return setErrorForm('El documento debe tener entre 3 y 15 dígitos.')
+      return toast.error('El documento debe tener entre 3 y 15 dígitos.')
     }
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre del cliente.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre del cliente.')
 
     setGuardando(true)
     try {
@@ -245,7 +240,7 @@ export function ClientesPage() {
       await cargar()
       toast.exito(editando ? 'Cliente actualizado' : 'Cliente creado')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -543,12 +538,6 @@ export function ClientesPage() {
           }
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {errorForm && (
-              <div className="sm:col-span-2">
-                <Alert>{errorForm}</Alert>
-              </div>
-            )}
-
             <DocumentoInput
               className="sm:col-span-2"
               tipo={(form.tipoDoc as TipoDocumento) ?? 'DNI'}

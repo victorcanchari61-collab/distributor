@@ -60,7 +60,6 @@ export function ProveedoresPage() {
   const [form, setForm] = useState<ProveedorRequest>(VACIO)
   const [guardando, setGuardando] = useState(false)
   const [consultando, setConsultando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
@@ -84,7 +83,6 @@ export function ProveedoresPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setForm(VACIO)
-    setErrorForm('')
     setAbierto(true)
   }
 
@@ -103,13 +101,11 @@ export function ProveedoresPage() {
       email: proveedor.email ?? '',
       rubro: proveedor.rubro ?? '',
     })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const consultarDocumento = async (documento: string, tipo: TipoDocumento) => {
     setConsultando(true)
-    setErrorForm('')
     try {
       if (tipo === 'RUC') {
         const datos = await consultaApi.ruc(documento)
@@ -131,18 +127,17 @@ export function ProveedoresPage() {
         }))
       }
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos consultar el documento.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos consultar el documento.')
     } finally {
       setConsultando(false)
     }
   }
 
   const guardar = async () => {
-    setErrorForm('')
     if (!/^[0-9]{3,15}$/.test(form.documento)) {
-      return setErrorForm('El documento debe tener entre 3 y 15 dígitos.')
+      return toast.error('El documento debe tener entre 3 y 15 dígitos.')
     }
-    if (!form.nombre.trim()) return setErrorForm('Ingresa la razón social.')
+    if (!form.nombre.trim()) return toast.error('Ingresa la razón social.')
 
     setGuardando(true)
     try {
@@ -152,7 +147,7 @@ export function ProveedoresPage() {
       await cargar()
       toast.exito(editando ? 'Proveedor actualizado' : 'Proveedor creado')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -342,12 +337,6 @@ export function ProveedoresPage() {
         }
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {errorForm && (
-            <div className="sm:col-span-2">
-              <Alert>{errorForm}</Alert>
-            </div>
-          )}
-
           <DocumentoInput
             className="sm:col-span-2"
             tipo={(form.tipoDoc as TipoDocumento) ?? 'RUC'}

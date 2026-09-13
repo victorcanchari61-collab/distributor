@@ -107,7 +107,6 @@ export function ProductosPage() {
   const [form, setForm] = useState(VACIO)
   const [presentaciones, setPresentaciones] = useState<FilaPresentacion[]>([])
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
   const [pestanaForm, setPestanaForm] = useState<PestanaForm>('datos')
 
   // En que presentacion se escribe el costo de referencia: el saco, la caja.
@@ -185,7 +184,6 @@ export function ProductosPage() {
     setPresentaciones([])
     setPresentacionCosto(0)
     setBaseSeCompra(true)
-    setErrorForm('')
     setPestanaForm('datos')
     setAbierto(true)
   }
@@ -227,7 +225,6 @@ export function ProductosPage() {
           activo: p.activo,
         })),
     )
-    setErrorForm('')
     setPestanaForm('datos')
     setAbierto(true)
   }
@@ -314,21 +311,20 @@ export function ProductosPage() {
     0
 
   const guardar = async () => {
-    setErrorForm('')
 
-    if (!form.codigo.trim()) return setErrorForm('Ingresa el código del producto.')
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre.')
-    if (!form.unidadBaseId) return setErrorForm('Elige la unidad base.')
+    if (!form.codigo.trim()) return toast.error('Ingresa el código del producto.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre.')
+    if (!form.unidadBaseId) return toast.error('Elige la unidad base.')
 
     const sinFactor = presentaciones.find((p) => !p.factor || p.factor <= 0)
     if (sinFactor) {
-      return setErrorForm(
+      return toast.error(
         `La presentación "${sinFactor.nombre || 'sin nombre'}" necesita un factor mayor que cero.`,
       )
     }
 
     const sinNombre = presentaciones.find((p) => !p.nombre.trim())
-    if (sinNombre) return setErrorForm('Cada presentación necesita un nombre.')
+    if (sinNombre) return toast.error('Cada presentación necesita un nombre.')
 
     const base = {
       codigo: form.codigo.trim(),
@@ -412,7 +408,7 @@ export function ProductosPage() {
       await cargar()
       toast.exito(editando ? 'Producto actualizado' : 'Producto creado')
     } catch (e) {
-      setErrorForm(
+      toast.error(
         e instanceof ApiError
           ? e.errors.length
             ? e.errors.join(' ')
@@ -763,7 +759,6 @@ export function ProductosPage() {
           }
         >
           <div className="flex flex-col gap-4">
-            {errorForm && <Alert>{errorForm}</Alert>}
 
             {/* Dos pestañas: los datos de la ficha y como se compra y se vende.
                 En un solo bloque el formulario obligaba a hacer scroll para
@@ -1091,14 +1086,13 @@ function UnidadesTabla({
     fraccionable: false,
   })
   const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
+  const toast = useToast()
   const [error, setError] = useState('')
   const { confirmar, dialogo } = useConfirmacion()
 
   const abrirNuevo = () => {
     setEditando(null)
     setForm({ codigo: '', nombre: '', tipo: 'CONTEO', fraccionable: false })
-    setErrorForm('')
     setAbierto(true)
   }
 
@@ -1110,13 +1104,12 @@ function UnidadesTabla({
       tipo: unidad.tipo,
       fraccionable: unidad.fraccionable,
     })
-    setErrorForm('')
     setAbierto(true)
   }
 
   const guardar = async () => {
-    if (!form.codigo.trim()) return setErrorForm('Ingresa el código.')
-    if (!form.nombre.trim()) return setErrorForm('Ingresa el nombre.')
+    if (!form.codigo.trim()) return toast.error('Ingresa el código.')
+    if (!form.nombre.trim()) return toast.error('Ingresa el nombre.')
 
     setGuardando(true)
     try {
@@ -1128,7 +1121,7 @@ function UnidadesTabla({
       setAbierto(false)
       await onRecargar()
     } catch (e) {
-      setErrorForm(e instanceof ApiError ? e.message : 'No pudimos guardar la unidad.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos guardar la unidad.')
     } finally {
       setGuardando(false)
     }
@@ -1249,7 +1242,6 @@ function UnidadesTabla({
         }
       >
         <div className="flex flex-col gap-4">
-          {errorForm && <Alert>{errorForm}</Alert>}
 
           <div className="grid gap-4 sm:grid-cols-[8rem_1fr]">
             <Input
