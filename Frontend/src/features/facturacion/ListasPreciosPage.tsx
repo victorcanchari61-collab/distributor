@@ -10,6 +10,7 @@ import {
   RowAction,
   Select,
   StatCard,
+  SysDataTable,
   Tabs,
   useConfirmacion,
   useToast,
@@ -17,7 +18,7 @@ import {
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
-import type { ProductoResponse } from '../maestros'
+import type { PresentacionResponse, ProductoResponse } from '../maestros'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse, PrecioResponse } from './listaPrecioApi'
 import { usePermisos } from '../../lib/permisos'
@@ -55,6 +56,15 @@ export function ListasPreciosPage() {
    * pantalla. Se guarda por presentacion: { [presentacionId]: "4.50" }.
    */
   const [preciosMasivos, setPreciosMasivos] = useState<Record<number, string>>({})
+  /*
+   * El margen tambien se escribe, no solo se lee.
+   *
+   * Muchas veces el precio no se decide: se decide cuanto se quiere ganar y
+   * el precio sale de ahi. Por eso las dos columnas se editan y cada una
+   * recalcula la otra; se guardan las dos para que el numero tecleado quede
+   * tal cual y no baile por el redondeo.
+   */
+  const [margenesMasivos, setMargenesMasivos] = useState<Record<number, string>>({})
   /** Para llenar toda la columna de golpe a partir del costo. */
   const [margenObjetivo, setMargenObjetivo] = useState('')
 
@@ -187,8 +197,40 @@ export function ListasPreciosPage() {
 
     setPrecioForm({ ...precioForm, productoId, presentacionId: 0 })
     setPreciosMasivos(yaTiene)
+    setMargenesMasivos({})
     setMargenObjetivo('')
     setErrorForm('')
+  }
+
+  /** Costo de una presentacion: el de la unidad base por su factor. */
+  const costoDe = (factor: number) =>
+    producto?.costoReferencia != null ? producto.costoReferencia * factor : null
+
+  /** Escriben el precio: el margen de esa fila se recalcula solo. */
+  const escribirPrecio = (presentacionId: number, factor: number, valor: string) => {
+    setPreciosMasivos((prev) => ({ ...prev, [presentacionId]: valor }))
+
+    const costo = costoDe(factor)
+    const precio = Number(valor)
+    setMargenesMasivos((prev) => ({
+      ...prev,
+      [presentacionId]:
+        costo != null && precio > 0 ? (((precio - costo) / precio) * 100).toFixed(1) : '',
+    }))
+  }
+
+  /** Escriben el margen: el precio de esa fila se recalcula solo. */
+  const escribirMargen = (presentacionId: number, factor: number, valor: string) => {
+    setMargenesMasivos((prev) => ({ ...prev, [presentacionId]: valor }))
+
+    const costo = costoDe(factor)
+    const margen = Number(valor)
+    if (costo == null || !valor || margen >= 100) return
+
+    setPreciosMasivos((prev) => ({
+      ...prev,
+      [presentacionId]: (costo / (1 - margen / 100)).toFixed(2),
+    }))
   }
 
   /** Llena toda la columna a partir del costo: precio = costo / (1 - margen). */
@@ -202,13 +244,101 @@ export function ListasPreciosPage() {
     }
 
     const lleno: Record<number, string> = {}
+    const margenes: Record<number, string> = {}
     for (const pres of vendibles) {
       const costo = producto.costoReferencia * pres.factor
       lleno[pres.id] = (costo / (1 - margen / 100)).toFixed(2)
+      margenes[pres.id] = margen.toFixed(1)
     }
     setPreciosMasivos(lleno)
+    setMargenesMasivos(margenes)
     setErrorForm('')
   }
+
+  /*
+   * Columnas de la tabla de precios del producto.
+   *
+   * Misma tabla que el editor de presentaciones del formulario de producto
+   * (SysDataTable), para que se lea igual en los dos sitios.
+   */
+  const columnasPrecios: DataTableColumn<PresentacionResponse>[] = [
+    {
+      key: 'nombre',
+      label: 'Presentación',
+      render: (pres) => (
+        <span className="flex items-center gap-2">
+          <span className="text-sm font-medium text-ink">{pres.nombre}</span>
+          {preciosCargados.has(pres.id) && <Badge tone="neutral">ya tenía</Badge>}
+        </span>
+      ),
+    },
+    {
+      key: 'equivale',
+      label: 'Equivale',
+      render: (pres) => (
+        <Badge tone="sys">
+          {pres.factor} {producto?.unidadBase}
+        </Badge>
+      ),
+    },
+    {
+      key: 'costo',
+      label: 'Costo',
+      align: 'right',
+      render: (pres) => {
+        const costo = costoDe(pres.factor)
+        return (
+          <span className="text-sm text-ink-soft">
+            {costo != null ? `S/ ${costo.toFixed(2)}` : '—'}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'precio',
+      label: 'Precio',
+      render: (pres) => (
+        <Input
+          size="sm"
+          type="number"
+          step="0.01"
+          min={0}
+          placeholder="0.00"
+          value={preciosMasivos[pres.id] ?? ''}
+          onChange={(e) => escribirPrecio(pres.id, pres.factor, e.target.value)}
+        />
+      ),
+    },
+    {
+      key: 'margen',
+      label: 'Margen %',
+      render: (pres) => (
+        <Input
+          size="sm"
+          type="number"
+          step="0.1"
+          max={99}
+          placeholder="—"
+          disabled={producto?.costoReferencia == null}
+          value={margenesMasivos[pres.id] ?? ''}
+          onChange={(e) => escribirMargen(pres.id, pres.factor, e.target.value)}
+        />
+      ),
+    },
+    {
+      key: 'porBase',
+      label: `Por ${producto?.unidadBase ?? 'unidad'}`,
+      align: 'right',
+      render: (pres) => {
+        const precio = Number(preciosMasivos[pres.id]) || 0
+        return (
+          <span className="text-sm text-ink-soft">
+            {precio > 0 ? `S/ ${(precio / pres.factor).toFixed(4)}` : '—'}
+          </span>
+        )
+      },
+    },
+  ]
 
   const guardarPrecio = async () => {
     if (!listaActiva) return
@@ -375,6 +505,7 @@ export function ListasPreciosPage() {
                 onClick={() => {
                   setPrecioForm({ productoId: 0, presentacionId: 0, precio: '', cantidadMinima: '1' })
                   setPreciosMasivos({})
+                  setMargenesMasivos({})
                   setMargenObjetivo('')
                   setErrorForm('')
                   setPrecioAbierto(true)
@@ -602,92 +733,14 @@ export function ListasPreciosPage() {
               <p className="py-10 text-center text-sm text-ink-soft">
                 Elige un producto para ver sus presentaciones.
               </p>
-            ) : vendibles.length === 0 ? (
-              <p className="py-10 text-center text-sm text-ink-soft">
-                Este producto no tiene ninguna presentación marcada como se vende.
-              </p>
             ) : (
-              <div className="overflow-x-auto rounded-field border border-line">
-                <table className="w-full text-sm">
-                  <thead className="bg-surface-alt text-xs uppercase tracking-wide text-ink-soft">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold">Presentación</th>
-                      <th className="px-3 py-2 text-right font-semibold">Equivale</th>
-                      <th className="px-3 py-2 text-right font-semibold">Costo</th>
-                      <th className="px-3 py-2 text-right font-semibold">Precio</th>
-                      <th className="px-3 py-2 text-right font-semibold">Margen</th>
-                      <th className="px-3 py-2 text-right font-semibold">
-                        Por {producto.unidadBase}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {vendibles.map((pres) => {
-                      const precio = Number(preciosMasivos[pres.id]) || 0
-                      const costo =
-                        producto.costoReferencia != null
-                          ? producto.costoReferencia * pres.factor
-                          : null
-                      const margen =
-                        costo != null && precio > 0 ? ((precio - costo) / precio) * 100 : null
-                      const porBase = precio > 0 ? precio / pres.factor : null
-
-                      return (
-                        <tr key={pres.id} className="bg-surface">
-                          <td className="px-3 py-2">
-                            <span className="flex items-center gap-2">
-                              <span className="font-medium text-ink">{pres.nombre}</span>
-                              {preciosCargados.has(pres.id) && <Badge>ya tenía</Badge>}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-right text-ink-soft">
-                            {pres.factor} {producto.unidadBase}
-                          </td>
-                          <td className="px-3 py-2 text-right text-ink-soft">
-                            {costo != null ? `S/ ${costo.toFixed(2)}` : '—'}
-                          </td>
-                          <td className="px-3 py-2">
-                            <Input
-                              size="sm"
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00"
-                              value={preciosMasivos[pres.id] ?? ''}
-                              onChange={(e) =>
-                                setPreciosMasivos((prev) => ({
-                                  ...prev,
-                                  [pres.id]: e.target.value,
-                                }))
-                              }
-                            />
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            {margen != null ? (
-                              <span
-                                className={
-                                  margen < 0
-                                    ? 'font-semibold text-red-600'
-                                    : margen < 15
-                                      ? 'font-semibold text-amber-600'
-                                      : 'font-semibold text-emerald-600'
-                                }
-                              >
-                                {margen.toFixed(1)}%
-                              </span>
-                            ) : (
-                              <span className="text-ink-soft">—</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-right text-ink-soft">
-                            {porBase != null ? `S/ ${porBase.toFixed(4)}` : '—'}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <SysDataTable<PresentacionResponse>
+                columns={columnasPrecios}
+                rows={vendibles}
+                rowKey="id"
+                toolbar={false}
+                empty="Este producto no tiene ninguna presentación marcada como se vende."
+              />
             )}
 
             {producto && vendibles.length > 0 && (
