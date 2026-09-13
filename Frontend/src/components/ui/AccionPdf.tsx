@@ -3,6 +3,7 @@ import { Download, FileText, Printer } from 'lucide-react'
 import { Alert } from './Alert'
 import { Button } from './Button'
 import { Modal } from './Modal'
+import { VisorPdfMovil } from './VisorPdfMovil'
 import { RowAction } from './RowAction'
 import { cn } from './cn'
 import { ApiError, guardarArchivo, obtenerArchivo } from '../../lib/apiClient'
@@ -114,6 +115,26 @@ function VisorPdf({
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const marco = useRef<HTMLIFrameElement>(null)
+
+  /*
+   * En el telefono el PDF no va en un <iframe>: ningun navegador movil lo
+   * dibuja ahi. Se pinta con pdf.js sobre un canvas, y si eso tambien falla
+   * quedan los botones de descargar y abrir en el visor del sistema.
+   */
+  const [esMovil, setEsMovil] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches,
+  )
+  const [visorFallo, setVisorFallo] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const sincronizar = () => setEsMovil(mq.matches)
+    mq.addEventListener('change', sincronizar)
+    return () => mq.removeEventListener('change', sincronizar)
+  }, [])
+
+  // Al cambiar de documento o de formato se reintenta dibujar.
+  useEffect(() => setVisorFallo(false), [documento, id, formato])
   const soloA4 = SOLO_A4.includes(documento)
   const conCopias = CON_COPIAS.includes(documento)
 
@@ -224,13 +245,28 @@ function VisorPdf({
               Generando el documento...
             </div>
           )}
-          {url && !error && (
+          {url && !error && !esMovil && (
             <iframe
               ref={marco}
               src={url}
               title={`${TITULOS[documento]} ${numero}`}
               className="h-full w-full"
             />
+          )}
+
+          {url && !error && esMovil && !visorFallo && (
+            <VisorPdfMovil url={url} onError={() => setVisorFallo(true)} />
+          )}
+
+          {url && !error && esMovil && visorFallo && (
+            <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+              <p className="text-sm text-ink-soft">
+                No pudimos dibujar el documento aquí. Ábrelo con el visor del teléfono.
+              </p>
+              <Button size="sm" onClick={() => blob && guardarArchivo(blob, nombre)}>
+                Descargar
+              </Button>
+            </div>
           )}
         </div>
       </div>
