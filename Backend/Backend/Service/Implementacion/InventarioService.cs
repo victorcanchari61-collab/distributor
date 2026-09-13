@@ -311,36 +311,25 @@ public class InventarioService : IInventarioService
             .Where(p => p.ControlaStock)
             .ToList();
 
-        var resumen = await _repository.GetResumenAsync(productos.Select(p => p.Id), almacenId);
+        var ids = productos.Select(p => p.Id).ToList();
+        var resumen = await _repository.GetResumenAsync(ids, almacenId);
         var almacen = almacenId is int id ? await _repository.GetAlmacenAsync(id) : null;
         var reservado = await _ventas.GetReservadoPorProductoAsync(almacenId);
+        var actividad = await _repository.GetActividadAsync(ids, almacenId, DiasDeRitmo);
+        var transito = await _compras.GetEnTransitoPorProductoAsync();
 
-        return productos.Select(p =>
-        {
-            var r = resumen.GetValueOrDefault(p.Id);
-            var stock = r?.Stock ?? 0;
-            var res = reservado.GetValueOrDefault(p.Id);
-            return new StockResponse
-            {
-                ProductoId = p.Id,
-                Codigo = p.Codigo,
-                Producto = p.Nombre,
-                Categoria = p.Categoria?.Nombre,
-                Marca = p.Marca?.Nombre,
-                UnidadBase = p.UnidadBase?.Codigo ?? string.Empty,
-                AlmacenId = almacenId ?? 0,
-                Almacen = almacen?.Nombre ?? "Todos",
-                Stock = stock,
-                Reservado = res,
-                Disponible = stock - res,
-                StockMinimo = p.StockMinimo,
-                BajoMinimo = p.StockMinimo > 0 && stock <= p.StockMinimo,
-                CostoActual = r?.CostoMin,
-                CostoUltimo = r?.CostoMax,
-                Valorizado = r?.Valorizado ?? 0
-            };
-        });
+        return productos.Select(p => MapStock(
+            p, resumen.GetValueOrDefault(p.Id), reservado.GetValueOrDefault(p.Id),
+            almacenId, almacen?.Nombre,
+            actividad.GetValueOrDefault(p.Id), transito.GetValueOrDefault(p.Id)));
     }
+
+    /// <summary>
+    /// Cuántos días de ventas se miran para calcular el ritmo. Un mes: menos
+    /// que eso y una semana floja dispara el número, más y no refleja la
+    /// temporada en la que se está.
+    /// </summary>
+    private const int DiasDeRitmo = 30;
 
     /// <summary>
     /// Una página del stock. Los agregados (stock, valorizado, reservado) se
@@ -352,15 +341,20 @@ public class InventarioService : IInventarioService
     {
         var (productos, total) = await _productos.ListarConStockAsync(consulta, almacenId);
 
-        var resumen = await _repository.GetResumenAsync(productos.Select(p => p.Id), almacenId);
+        var ids = productos.Select(p => p.Id).ToList();
+        var resumen = await _repository.GetResumenAsync(ids, almacenId);
         var almacen = almacenId is int id ? await _repository.GetAlmacenAsync(id) : null;
         var reservado = await _ventas.GetReservadoPorProductoAsync(almacenId);
+        var actividad = await _repository.GetActividadAsync(ids, almacenId, DiasDeRitmo);
+        var transito = await _compras.GetEnTransitoPorProductoAsync();
 
         return new PaginaResponse<StockResponse>
         {
             Items = productos.Select(p => MapStock(p, resumen.GetValueOrDefault(p.Id),
                                                   reservado.GetValueOrDefault(p.Id),
-                                                  almacenId, almacen?.Nombre)).ToList(),
+                                                  almacenId, almacen?.Nombre,
+                                                  actividad.GetValueOrDefault(p.Id),
+                                                  transito.GetValueOrDefault(p.Id))).ToList(),
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,
@@ -371,9 +365,20 @@ public class InventarioService : IInventarioService
         _repository.ResumenStockAsync(almacenId);
 
     private static StockResponse MapStock(
-        Producto p, ResumenStock? r, decimal reservado, int? almacenId, string? almacen)
+        Producto p, ResumenStock? r, decimal reservado, int? almacenId, string? almacen,
+        ActividadStock? actividad = null, decimal enTransito = 0)
     {
         var stock = r?.Stock ?? 0;
+
+        /*
+         * Para cuantos dias alcanza.
+         *
+         * Es el stock dividido entre lo que se vende al dia, sacado del ultimo
+         * mes. Sin ventas en ese mes no hay ritmo que proyectar y se devuelve
+         * null: decir "alcanza para infinito" seria peor que no decir nada.
+         */
+        var porDia = (actividad?.VendidoReciente ?? 0) / DiasDeRitmo;
+        int? diasStock = porDia > 0 ? (int)Math.Floor(stock / porDia) : null;
 
         return new StockResponse
         {
@@ -393,6 +398,10 @@ public class InventarioService : IInventarioService
             CostoActual = r?.CostoMin,
             CostoUltimo = r?.CostoMax,
             Valorizado = r?.Valorizado ?? 0,
+            EnTransito = enTransito,
+            UltimaEntrada = actividad?.UltimaEntrada,
+            UltimaSalida = actividad?.UltimaSalida,
+            DiasStock = diasStock,
         };
     }
 

@@ -6,6 +6,14 @@ namespace Backend.Repository.Interfaces;
 /// <summary>Lo que se muestra de un producto sin abrir sus capas.</summary>
 public record ResumenStock(decimal Stock, decimal Valorizado, decimal CostoMin, decimal CostoMax);
 
+/// <summary>
+/// Como se ha movido un producto: cuando entro por ultima vez, cuando salio, y
+/// cuanto salio por venta en los ultimos dias. Lo ultimo es lo que deja decir
+/// "te alcanza para 12 dias" en vez de solo cuanto queda.
+/// </summary>
+public record ActividadStock(
+    DateTime? UltimaEntrada, DateTime? UltimaSalida, decimal VendidoReciente);
+
 public interface IInventarioRepository
 {
     /// <summary>
@@ -67,6 +75,10 @@ public interface IInventarioRepository
     /// <summary>Stock y costos de varios productos, para pintar listados.</summary>
     Task<Dictionary<int, ResumenStock>> GetResumenAsync(
         IEnumerable<int> productoIds, int? almacenId = null);
+
+    /// <summary>Ultimo movimiento y salida por venta de varios productos.</summary>
+    Task<Dictionary<int, ActividadStock>> GetActividadAsync(
+        IEnumerable<int> productoIds, int? almacenId, int dias);
 
     // --- Documentos y movimientos ---
 

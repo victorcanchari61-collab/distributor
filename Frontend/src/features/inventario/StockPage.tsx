@@ -98,6 +98,11 @@ export function StockPage() {
       label: 'Categoría',
       render: (row) => row.categoria ?? <span className="text-ink-soft">—</span>,
     },
+    {
+      key: 'marca',
+      label: 'Marca',
+      render: (row) => row.marca ?? <span className="text-ink-soft">—</span>,
+    },
     /*
      * Cantidades e importes no entran al panel: el unico control es un
      * buscador de texto, y "9" contra "S/ 9.00" no encuentra lo esperado.
@@ -115,20 +120,146 @@ export function StockPage() {
       ),
     },
     {
+      /*
+       * Lo que apartan los pedidos pendientes con reserva.
+       *
+       * Iba escrito chiquito dentro de Disponible, asi que no se podia
+       * ordenar por el ni se veia de un vistazo quien tiene mercaderia
+       * comprometida.
+       */
+      key: 'reservado',
+      label: 'Reservado',
+      align: 'right',
+      filterable: false,
+      value: (row) => row.reservado,
+      render: (row) =>
+        row.reservado > 0 ? (
+          <span className="font-medium text-ink">
+            {row.reservado} {row.unidadBase}
+          </span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
       key: 'disponible',
       label: 'Disponible',
       align: 'right',
       filterable: false,
+      value: (row) => row.disponible,
+      render: (row) => (
+        <span className={row.reservado > 0 ? 'font-medium text-ink' : 'text-ink-soft'}>
+          {row.disponible} {row.unidadBase}
+        </span>
+      ),
+    },
+    {
+      key: 'stockMinimo',
+      label: 'Mínimo',
+      align: 'right',
+      filterable: false,
+      value: (row) => row.stockMinimo,
       render: (row) =>
-        row.reservado > 0 ? (
-          <span>
-            {row.disponible} {row.unidadBase}
-            <span className="ml-1.5 text-xs text-ink-soft">
-              ({row.reservado} reservado)
-            </span>
+        row.stockMinimo > 0 ? (
+          <span className="text-ink-soft">
+            {row.stockMinimo} {row.unidadBase}
           </span>
         ) : (
-          <span className="text-ink-soft">{row.disponible} {row.unidadBase}</span>
+          <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
+      /*
+       * Cuanto pedir. El triangulo ambar ya avisaba que falta reponer, pero
+       * no cuanto, que es lo que se necesita para armar la compra.
+       */
+      key: 'reponer',
+      label: 'Falta reponer',
+      align: 'right',
+      filterable: false,
+      value: (row) => Math.max(0, row.stockMinimo - row.stock),
+      render: (row) => {
+        const falta = row.stockMinimo - row.stock
+        return falta > 0 ? (
+          <span className="font-semibold text-amber-600">
+            {falta.toFixed(2).replace(/\.?0+$/, '')} {row.unidadBase}
+          </span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        )
+      },
+    },
+    {
+      /*
+       * Lo comprado que no ha llegado.
+       *
+       * Sin esto se vuelve a comprar lo que ya viene en camino, que es como
+       * termina el almacen con el doble de lo que necesita.
+       */
+      key: 'enTransito',
+      label: 'En camino',
+      align: 'right',
+      filterable: false,
+      value: (row) => row.enTransito,
+      render: (row) =>
+        row.enTransito > 0 ? (
+          <span className="font-medium text-sky-600">
+            {row.enTransito} {row.unidadBase}
+          </span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
+      /* Para cuantos dias alcanza al ritmo al que se vendio el ultimo mes. */
+      key: 'diasStock',
+      label: 'Días',
+      align: 'right',
+      filterable: false,
+      value: (row) => row.diasStock ?? -1,
+      render: (row) =>
+        row.diasStock == null ? (
+          <span className="text-ink-soft">—</span>
+        ) : (
+          <span
+            className={
+              row.diasStock <= 7
+                ? 'font-semibold text-red-600'
+                : row.diasStock <= 15
+                  ? 'font-semibold text-amber-600'
+                  : 'text-ink-soft'
+            }
+          >
+            {row.diasStock} d
+          </span>
+        ),
+    },
+    {
+      key: 'ultimaSalida',
+      label: 'Última salida',
+      filterable: false,
+      value: (row) => row.ultimaSalida ?? '',
+      render: (row) =>
+        row.ultimaSalida ? (
+          <span className="text-ink-soft">
+            {new Date(row.ultimaSalida).toLocaleDateString('es-PE')}
+          </span>
+        ) : (
+          <span className="text-ink-soft">Nunca</span>
+        ),
+    },
+    {
+      key: 'ultimaEntrada',
+      label: 'Última entrada',
+      filterable: false,
+      value: (row) => row.ultimaEntrada ?? '',
+      render: (row) =>
+        row.ultimaEntrada ? (
+          <span className="text-ink-soft">
+            {new Date(row.ultimaEntrada).toLocaleDateString('es-PE')}
+          </span>
+        ) : (
+          <span className="text-ink-soft">Nunca</span>
         ),
     },
     {

@@ -32,6 +32,9 @@ public interface IComprasRepository
     // --- Compras ---
     Task<string> SiguienteNumeroCompraAsync();
     Task<Compra> AddCompraAsync(Compra compra);
+    /// <summary>Lo comprado que todavía no llega, por producto y en unidad base.</summary>
+    Task<Dictionary<int, decimal>> GetEnTransitoPorProductoAsync();
+
     Task<Compra?> GetCompraAsync(int id);
     Task<IEnumerable<Compra>> GetComprasAsync(string? estado = null);
     Task UpdateCompraAsync(Compra compra);

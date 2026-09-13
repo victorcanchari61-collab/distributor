@@ -214,6 +214,41 @@ public class InventarioRepository : IInventarioRepository
             f => new ResumenStock(f.Stock, f.Valorizado, f.CostoMin, f.CostoMax));
     }
 
+    public async Task<Dictionary<int, ActividadStock>> GetActividadAsync(
+        IEnumerable<int> productoIds, int? almacenId, int dias)
+    {
+        var ids = productoIds.ToList();
+        var desde = DateTime.UtcNow.AddDays(-dias);
+
+        var filas = await _context.Movimientos
+            .Where(m => ids.Contains(m.ProductoId)
+                        && (almacenId == null || m.AlmacenId == almacenId))
+            .GroupBy(m => m.ProductoId)
+            .Select(g => new
+            {
+                ProductoId = g.Key,
+                // Agregados con condicion adentro y no un Where antes del
+                // Max/Sum: asi es como SQL los sabe hacer de una pasada, y es
+                // lo que EF traduce sin rendirse.
+                UltimaEntrada = g.Max(m => m.Tipo == TipoMovimiento.Entrada
+                    ? (DateTime?)m.Fecha
+                    : null),
+                UltimaSalida = g.Max(m => m.Tipo == TipoMovimiento.Salida
+                    ? (DateTime?)m.Fecha
+                    : null),
+                // Solo lo que salio POR VENTA: un traslado entre almacenes o un
+                // ajuste no dicen nada de cuanto dura el stock.
+                Vendido = g.Sum(m => m.MotivoId == Motivos.Venta && m.Fecha >= desde
+                    ? m.Cantidad
+                    : 0)
+            })
+            .ToListAsync();
+
+        return filas.ToDictionary(
+            f => f.ProductoId,
+            f => new ActividadStock(f.UltimaEntrada, f.UltimaSalida, f.Vendido));
+    }
+
     // ------------------------------------------------- Documentos y kardex
 
     public async Task<string> SiguienteNumeroAsync(string tipo)

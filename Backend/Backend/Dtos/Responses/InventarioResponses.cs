@@ -68,6 +68,18 @@ public class StockResponse
     public decimal? CostoUltimo { get; set; }
     public decimal Valorizado { get; set; }
 
+    /// <summary>Comprado y todavía sin llegar. Del negocio, no de un almacén.</summary>
+    public decimal EnTransito { get; set; }
+
+    public DateTime? UltimaEntrada { get; set; }
+    public DateTime? UltimaSalida { get; set; }
+
+    /// <summary>
+    /// Para cuántos días alcanza al ritmo al que se ha vendido el último mes.
+    /// Null si no se vendió nada: sin ventas no hay ritmo que proyectar.
+    /// </summary>
+    public int? DiasStock { get; set; }
+
     public List<CapaResponse> Capas { get; set; } = [];
 }
 

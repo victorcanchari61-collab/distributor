@@ -83,6 +83,12 @@ export interface StockResponse {
   costoActual: number | null
   costoUltimo: number | null
   valorizado: number
+  /** Comprado y todavía sin llegar. Del negocio entero, no de un almacén. */
+  enTransito: number
+  ultimaEntrada: string | null
+  ultimaSalida: string | null
+  /** Para cuántos días alcanza al ritmo del último mes. Null si no se vendió. */
+  diasStock: number | null
   capas: CapaResponse[]
 }
 

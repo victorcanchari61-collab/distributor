@@ -171,6 +171,27 @@ public class ComprasRepository : IComprasRepository
             .Include(c => c.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(c => c.Detalle).ThenInclude(d => d.Presentacion);
 
+    /*
+     * Lo que ya se compro y no ha llegado.
+     *
+     * No se puede partir por almacen: la compra no elige almacen, lo elige la
+     * recepcion cuando la mercaderia llega. Asi que esta cifra es del negocio
+     * entero, y con eso alcanza para lo que sirve: no volver a comprar algo
+     * que ya viene en camino.
+     */
+    public async Task<Dictionary<int, decimal>> GetEnTransitoPorProductoAsync() =>
+        await _context.CompraDetalles
+            .Where(d => (d.Compra!.Estado == EstadoCompra.Pendiente
+                         || d.Compra.Estado == EstadoCompra.RecibidaParcial)
+                        && d.Cantidad > d.CantidadRecibida)
+            .GroupBy(d => d.ProductoId)
+            .Select(g => new
+            {
+                ProductoId = g.Key,
+                Cantidad = g.Sum(d => d.Cantidad - d.CantidadRecibida)
+            })
+            .ToDictionaryAsync(x => x.ProductoId, x => x.Cantidad);
+
     public async Task<Compra?> GetCompraAsync(int id) =>
         await ComprasConDetalle().FirstOrDefaultAsync(c => c.Id == id);
 
