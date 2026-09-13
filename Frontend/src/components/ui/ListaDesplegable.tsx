@@ -107,9 +107,16 @@ export function ListaDesplegable({
       if (!boton) return
 
       const r = boton.getBoundingClientRect()
-      // De campo, el panel mide lo mismo que el campo: se lee como su
-      // continuacion y no como una ventana suelta.
-      const ancho = variante === 'campo' ? r.width : 260
+      /*
+       * De campo, el panel mide lo mismo que el campo: se lee como su
+       * continuacion y no como una ventana suelta.
+       *
+       * Con un minimo, eso si: metido en una celda de tabla el campo puede
+       * quedar en 120 px, y entonces el menu salia tan angosto que todas las
+       * opciones se leian iguales — "Transferencia ...", "Transferencia ..." —
+       * y no habia forma de elegir. El campo sigue truncando; el menu, no.
+       */
+      const ancho = variante === 'campo' ? Math.max(r.width, 240) : 260
       // Alto real del panel: la lista no pasa de max-h-[16rem] y el titulo
       // ocupa 33px. Estimarlo de mas hacia que se abriera hacia arriba sin
       // necesidad, tapando lo que hay encima del campo.
