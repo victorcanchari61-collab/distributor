@@ -11,6 +11,9 @@ public record ResumenStock(decimal Stock, decimal Valorizado, decimal CostoMin, 
 /// cuanto salio por venta en los ultimos dias. Lo ultimo es lo que deja decir
 /// "te alcanza para 12 dias" en vez de solo cuanto queda.
 /// </summary>
+/// <summary>Con cuánto —y por cuánto— entra un producto a una página del kardex.</summary>
+public record SaldoKardex(decimal Cantidad, decimal Valor);
+
 public record ActividadStock(
     DateTime? UltimaEntrada, DateTime? UltimaSalida, decimal VendidoReciente);
 
@@ -118,7 +121,7 @@ public interface IInventarioRepository
     /// lo que dejaron los movimientos anteriores a esta página. Sin eso, la
     /// página 2 arrancaría el saldo desde cero.
     /// </summary>
-    Task<(List<MovimientoInventario> Items, int Total, Dictionary<(int Producto, int Almacen), decimal> Aperturas)>
+    Task<(List<MovimientoInventario> Items, int Total, Dictionary<(int Producto, int Almacen), SaldoKardex> Aperturas)>
         ListarKardexAsync(Dtos.Requests.ConsultaTablaRequest consulta, int? almacenId);
 
     /// <summary>Cuántas entradas y salidas hay en todo el kardex del almacén.</summary>

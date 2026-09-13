@@ -143,8 +143,18 @@ public class KardexResponse
     public decimal CostoUnitario { get; set; }
     public decimal CostoTotal { get; set; }
 
+    /// <summary>Stock con el que llegaba el producto a este movimiento.</summary>
+    public decimal SaldoAnterior { get; set; }
+
     /// <summary>Stock que quedó después de este movimiento.</summary>
     public decimal Saldo { get; set; }
+
+    /// <summary>Cuánto valía ese stock antes y después, al costo con el que entró cada capa.</summary>
+    public decimal ValorizadoAnterior { get; set; }
+    public decimal Valorizado { get; set; }
+
+    /// <summary>Valorizado entre saldo: lo que cuesta en promedio cada unidad que queda.</summary>
+    public decimal? CostoPromedio { get; set; }
 
     public bool Anulado { get; set; }
 }

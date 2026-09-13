@@ -161,12 +161,40 @@ export function KardexPage() {
       ),
     },
     {
+      key: 'costoUnitario',
+      sortable: false,
+      label: 'Costo unit.',
+      align: 'right',
+      filterable: false,
+      render: (row) => (
+        <span className="text-ink-soft">S/ {row.costoUnitario.toFixed(4)}</span>
+      ),
+    },
+    {
       key: 'costoTotal',
       sortable: false,
       label: 'Costo',
       align: 'right',
       filterable: false,
       render: (row) => `S/ ${row.costoTotal.toFixed(2)}`,
+    },
+    /*
+     * El libro de verdad: con cuanto llegaba, cuanto movio, con cuanto quedo.
+     * Sin el saldo anterior no se puede comprobar una fila sola —habia que
+     * mirar la de arriba— y si la pagina empieza a la mitad del historial no
+     * habia con que empezar.
+     */
+    {
+      key: 'saldoAnterior',
+      sortable: false,
+      label: 'Saldo anterior',
+      align: 'right',
+      filterable: false,
+      render: (row) => (
+        <span className="text-ink-soft">
+          {row.saldoAnterior} {row.unidadBase}
+        </span>
+      ),
     },
     {
       key: 'saldo',
@@ -178,6 +206,29 @@ export function KardexPage() {
         <span className="font-semibold text-ink">
           {row.saldo} {row.unidadBase}
         </span>
+      ),
+    },
+    {
+      key: 'costoPromedio',
+      sortable: false,
+      label: 'Costo prom.',
+      align: 'right',
+      filterable: false,
+      render: (row) =>
+        row.costoPromedio == null ? (
+          <span className="text-ink-soft">—</span>
+        ) : (
+          <span className="text-ink-soft">S/ {row.costoPromedio.toFixed(4)}</span>
+        ),
+    },
+    {
+      key: 'valorizado',
+      sortable: false,
+      label: 'Valorizado',
+      align: 'right',
+      filterable: false,
+      render: (row) => (
+        <span className="font-medium text-ink">S/ {row.valorizado.toFixed(2)}</span>
       ),
     },
   ]

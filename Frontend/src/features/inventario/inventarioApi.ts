@@ -168,7 +168,14 @@ export interface KardexResponse {
   cantidad: number
   costoUnitario: number
   costoTotal: number
+  /** Stock con el que llegaba el producto a este movimiento. */
+  saldoAnterior: number
   saldo: number
+  /** Cuánto valía ese stock antes y después, al costo de cada capa. */
+  valorizadoAnterior: number
+  valorizado: number
+  /** Valorizado entre saldo: lo que cuesta en promedio cada unidad que queda. */
+  costoPromedio: number | null
   anulado: boolean
 }
 

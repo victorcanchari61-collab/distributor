@@ -454,7 +454,7 @@ public class InventarioRepository : IInventarioRepository
             .Where(m => almacenId == null || m.AlmacenId == almacenId)
             .AsNoTracking();
 
-    public async Task<(List<MovimientoInventario> Items, int Total, Dictionary<(int Producto, int Almacen), decimal> Aperturas)>
+    public async Task<(List<MovimientoInventario> Items, int Total, Dictionary<(int Producto, int Almacen), SaldoKardex> Aperturas)>
         ListarKardexAsync(ConsultaTablaRequest consulta, int? almacenId)
     {
         var query = KardexBase(almacenId)
@@ -520,7 +520,7 @@ public class InventarioRepository : IInventarioRepository
             .Take(consulta.PorPaginaSegura)
             .ToListAsync();
 
-        var aperturas = new Dictionary<(int, int), decimal>();
+        var aperturas = new Dictionary<(int, int), SaldoKardex>();
         if (items.Count > 0)
         {
             // Saldo con el que entra la pagina: todo lo anterior al movimiento
@@ -536,12 +536,17 @@ public class InventarioRepository : IInventarioRepository
                     g.Key.ProductoId,
                     g.Key.AlmacenId,
                     Saldo = g.Sum(m => m.Tipo == TipoMovimiento.Entrada ? m.Cantidad : -m.Cantidad),
+                    // Lo mismo en plata: entra por lo que costo, sale por lo
+                    // que costaba la capa que se consumio.
+                    Valor = g.Sum(m => m.Tipo == TipoMovimiento.Entrada
+                        ? m.CostoTotal
+                        : -m.CostoTotal),
                 })
                 .ToListAsync();
 
             foreach (var p in previos)
             {
-                aperturas[(p.ProductoId, p.AlmacenId)] = p.Saldo;
+                aperturas[(p.ProductoId, p.AlmacenId)] = new SaldoKardex(p.Saldo, p.Valor);
             }
         }
 

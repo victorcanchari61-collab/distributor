@@ -475,23 +475,24 @@ public class InventarioService : IInventarioService
     {
         var (items, total, aperturas) = await _repository.ListarKardexAsync(consulta, almacenId);
 
-        var saldos = new Dictionary<(int, int), decimal>(aperturas);
-        var porId = new Dictionary<int, decimal>();
+        var saldos = new Dictionary<(int, int), SaldoKardex>(aperturas);
+        var porId = new Dictionary<int, (SaldoKardex Antes, SaldoKardex Despues)>();
 
         // Siempre de lo mas viejo a lo mas nuevo: es el unico orden en el que
         // un acumulado tiene sentido, sin importar como se pidio la pagina.
         foreach (var m in items.OrderBy(m => m.Fecha).ThenBy(m => m.Id))
         {
             var clave = (m.ProductoId, m.AlmacenId);
-            var saldo = saldos.GetValueOrDefault(clave)
-                        + (m.Tipo == TipoMovimiento.Entrada ? m.Cantidad : -m.Cantidad);
-            saldos[clave] = saldo;
-            porId[m.Id] = saldo;
+            var antes = saldos.GetValueOrDefault(clave, new SaldoKardex(0, 0));
+            var despues = Aplicar(antes, m);
+
+            saldos[clave] = despues;
+            porId[m.Id] = (antes, despues);
         }
 
         return new PaginaResponse<KardexResponse>
         {
-            Items = items.Select(m => MapKardex(m, porId[m.Id])).ToList(),
+            Items = items.Select(m => MapKardex(m, porId[m.Id].Antes, porId[m.Id].Despues)).ToList(),
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,
@@ -504,7 +505,20 @@ public class InventarioService : IInventarioService
         return new ResumenKardexResponse { Entradas = entradas, Salidas = salidas };
     }
 
-    private static KardexResponse MapKardex(MovimientoInventario m, decimal saldo) => new()
+    /*
+     * El saldo despues de un movimiento, en cantidad y en plata.
+     *
+     * Una entrada suma lo que costo; una salida resta lo que costaba la capa
+     * que se consumio —no el precio al que se vendio—, que es lo que deja que
+     * el valorizado del kardex cuadre con el del stock.
+     */
+    private static SaldoKardex Aplicar(SaldoKardex antes, MovimientoInventario m) =>
+        m.Tipo == TipoMovimiento.Entrada
+            ? new SaldoKardex(antes.Cantidad + m.Cantidad, antes.Valor + m.CostoTotal)
+            : new SaldoKardex(antes.Cantidad - m.Cantidad, antes.Valor - m.CostoTotal);
+
+    private static KardexResponse MapKardex(
+        MovimientoInventario m, SaldoKardex antes, SaldoKardex despues) => new()
     {
         Id = m.Id,
         Fecha = m.Fecha,
@@ -520,7 +534,15 @@ public class InventarioService : IInventarioService
         Cantidad = m.Cantidad,
         CostoUnitario = m.CostoUnitario,
         CostoTotal = m.CostoTotal,
-        Saldo = saldo,
+        SaldoAnterior = antes.Cantidad,
+        Saldo = despues.Cantidad,
+        ValorizadoAnterior = Math.Round(antes.Valor, 2),
+        Valorizado = Math.Round(despues.Valor, 2),
+        // Sin stock no hay promedio que sacar: dividir por cero diria cualquier
+        // cosa y se lee como un costo real.
+        CostoPromedio = despues.Cantidad > 0
+            ? Math.Round(despues.Valor / despues.Cantidad, 4)
+            : null,
         Anulado = m.Documento?.Estado == EstadoDocumento.Anulado,
     };
 
@@ -531,15 +553,15 @@ public class InventarioService : IInventarioService
 
         // El saldo se acumula por producto y almacen: mezclar dos productos en
         // una sola columna daria un numero sin sentido.
-        var saldos = new Dictionary<(int, int), decimal>();
+        var saldos = new Dictionary<(int, int), SaldoKardex>();
         var respuesta = new List<KardexResponse>();
 
         foreach (var m in movimientos)
         {
             var clave = (m.ProductoId, m.AlmacenId);
-            var saldo = saldos.GetValueOrDefault(clave);
-            saldo += m.Tipo == TipoMovimiento.Entrada ? m.Cantidad : -m.Cantidad;
-            saldos[clave] = saldo;
+            var antes = saldos.GetValueOrDefault(clave, new SaldoKardex(0, 0));
+            var despues = Aplicar(antes, m);
+            saldos[clave] = despues;
 
             respuesta.Add(new KardexResponse
             {
@@ -557,7 +579,13 @@ public class InventarioService : IInventarioService
                 Cantidad = m.Cantidad,
                 CostoUnitario = m.CostoUnitario,
                 CostoTotal = m.CostoTotal,
-                Saldo = saldo,
+                SaldoAnterior = antes.Cantidad,
+                Saldo = despues.Cantidad,
+                ValorizadoAnterior = Math.Round(antes.Valor, 2),
+                Valorizado = Math.Round(despues.Valor, 2),
+                CostoPromedio = despues.Cantidad > 0
+                    ? Math.Round(despues.Valor / despues.Cantidad, 4)
+                    : null,
                 Anulado = m.Documento?.Estado == EstadoDocumento.Anulado
             });
         }
