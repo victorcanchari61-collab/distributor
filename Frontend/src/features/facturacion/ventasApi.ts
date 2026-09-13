@@ -182,7 +182,7 @@ export interface NotaVentaResponse {
   pagos: PagoVentaResponse[]
   /** Suma de pagos. Si es menor que total, falta esa diferencia por cobrar. */
   totalPagado: number
-  /** Lo devuelto y APROBADO. La deuda real es total − totalDevuelto − totalPagado. */
+  /** Lo devuelto y aprobado. No se resta de total: el detalle ya viene descontado. */
   totalDevuelto: number
   /** Lo que el cliente devolvió, con su estado. Nacen de editar esta venta. */
   devoluciones: DevolucionDeVenta[]

@@ -1067,8 +1067,9 @@ public class VentasService : IVentasService
         Detalle = n.Detalle.Select(MapLinea).ToList(),
         Pagos = n.Pagos.Select(MapPago).ToList(),
         TotalPagado = Math.Round(n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2),
-        // Solo lo aprobado: una devolucion pendiente todavia no le descuenta
-        // nada al cliente.
+        // Historico: lo que el cliente trajo de vuelta. Ya NO se le resta al
+        // total —el detalle viene descontado al aprobarse—, esta para poder
+        // decir cuanto se devolvio de esta venta.
         TotalDevuelto = Math.Round(
             n.Devoluciones
                 .Where(d => d.Estado == EstadoDevolucion.Aprobada)

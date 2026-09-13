@@ -382,14 +382,12 @@ public class VentasRepository : IVentasRepository
      */
     private IQueryable<NotaVenta> CuentasPorCobrarBase() =>
         NotasVentaConDetalle()
-            // Lo vendido MENOS lo devuelto y aprobado: si el cliente trajo de
-            // vuelta la mercaderia, ya no la debe.
+            // El detalle ya trae descontado lo devuelto: al aprobar una
+            // devolucion se le baja la cantidad a la linea, asi que restarlo
+            // otra vez aqui seria restarlo dos veces.
             .Where(n => n.Estado == EstadoNotaVenta.Confirmada
                         && n.FormaPago == FormaPagoVenta.Credito
                         && n.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario)
-                           - n.Devoluciones
-                               .Where(v => v.Estado == EstadoDevolucion.Aprobada)
-                               .Sum(v => v.Detalle.Sum(l => l.Cantidad * l.PrecioUnitario))
                            > n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto))
             .AsNoTracking();
 

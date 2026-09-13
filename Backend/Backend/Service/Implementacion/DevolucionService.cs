@@ -195,6 +195,34 @@ public class DevolucionService : IDevolucionService
         devolucion.ResueltaEn = DateTime.UtcNow;
         devolucion.DocumentoInventarioId = documento.Id;
 
+        /*
+         * Aprobada, la venta se queda con lo que el cliente NO devolvio.
+         *
+         * Es el momento en que la devolucion deja de ser una intencion: la
+         * mercaderia ya volvio. Si la linea siguiera diciendo lo que salio,
+         * la venta mostraria un producto que el cliente ya no tiene, y al
+         * editarla otra vez el sistema creeria que aun hay algo que devolver.
+         * Lo vendido originalmente no se pierde: vive en esta devolucion.
+         */
+        foreach (var linea in devolucion.Detalle)
+        {
+            var venta = linea.NotaVentaDetalle;
+            if (venta is null) continue;
+
+            var factor = venta.CantidadPresentacion > 0
+                ? venta.Cantidad / venta.CantidadPresentacion
+                : 1m;
+
+            venta.Cantidad = Math.Max(0m, venta.Cantidad - linea.Cantidad);
+            venta.CantidadPresentacion = factor > 0
+                ? Math.Round(venta.Cantidad / factor, 4)
+                : 0m;
+
+            // Sin nada, la linea se anula en vez de borrarse: asi queda el
+            // rastro de que ese producto estuvo en la venta.
+            if (venta.Cantidad <= 0.0001m) venta.Anulado = true;
+        }
+
         await _context.SaveChangesAsync();
 
         var aprobada = Map(await BuscarAsync(id));
@@ -253,7 +281,9 @@ public class DevolucionService : IDevolucionService
     private async Task<Dictionary<int, decimal>> DevueltasAsync(int notaVentaId) =>
         await _context.Devoluciones
             .AsNoTracking()
-            .Where(d => d.NotaVentaId == notaVentaId && d.Estado != EstadoDevolucion.Rechazada)
+            // Solo lo que espera aprobacion: lo aprobado ya se le descontó a
+            // la linea de la venta, asi que contarlo aqui lo restaria dos veces.
+            .Where(d => d.NotaVentaId == notaVentaId && d.Estado == EstadoDevolucion.Solicitada)
             .SelectMany(d => d.Detalle)
             .GroupBy(l => l.NotaVentaDetalleId)
             .ToDictionaryAsync(g => g.Key, g => g.Sum(l => l.Cantidad));

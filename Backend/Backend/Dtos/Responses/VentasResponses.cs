@@ -123,10 +123,11 @@ public class NotaVentaResponse
     public decimal TotalPagado { get; set; }
 
     /// <summary>
-    /// Lo devuelto y aprobado de esta venta.
+    /// Lo que el cliente trajo de vuelta de esta venta, ya aprobado.
     ///
-    /// La deuda real es Total − TotalDevuelto − TotalPagado: si sale negativa,
-    /// el cliente tiene saldo a favor.
+    /// NO se le resta a Total: al aprobar la devolución se le baja la cantidad
+    /// a la línea, así que Total ya viene descontado. Esto es para poder decir
+    /// cuánto se devolvió, y la deuda sigue siendo Total − TotalPagado.
     /// </summary>
     public decimal TotalDevuelto { get; set; }
 
