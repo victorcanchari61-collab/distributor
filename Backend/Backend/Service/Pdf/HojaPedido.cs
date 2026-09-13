@@ -72,15 +72,29 @@ public static class HojaPedido
                     emisor.Item().Text($"Dirección: {direccion}").FontSize(6.5f * e);
             });
 
-            row.ConstantItem(150 * e).Border(1).BorderColor(Colores.Linea).Padding(4).Column(caja =>
+            /*
+             * Tres bandas: RUC, que documento es, y su numero.
+             *
+             * Es lo primero que se busca con el papel en la mano, y separado en
+             * bandas se encuentra de un golpe de vista en vez de leer una linea
+             * corrida. Sin fondo gris: un relleno se ensucia al fotocopiar y en
+             * la termica sale como una mancha.
+             */
+            row.ConstantItem(150 * e).Border(Linea).BorderColor(Colores.Linea).Column(caja =>
             {
-                caja.Item().Text($"RUC: {doc.Empresa.Ruc}").FontSize(7 * e).SemiBold();
-                caja.Item().PaddingTop(3).Text($"{doc.Titulo} #: {doc.Numero}").FontSize(8 * e).Bold();
+                caja.Item().Padding(3).AlignCenter()
+                    .Text($"R.U.C. {doc.Empresa.Ruc}").FontSize(7 * e).SemiBold();
+
+                caja.Item().BorderTop(Linea).BorderColor(Colores.Linea).Padding(3).AlignCenter()
+                    .Text(doc.Titulo).FontSize(8 * e).Bold().FontColor(Colores.Fuerte);
+
+                caja.Item().BorderTop(Linea).BorderColor(Colores.Linea).Padding(3).AlignCenter()
+                    .Text(doc.Numero).FontSize(9 * e).Bold();
             });
         });
 
     private static void Datos(IContainer container, DocumentoImprimible doc, float e) =>
-        container.Border(1).BorderColor(Colores.Linea).Padding(4).Row(row =>
+        container.Border(Linea).BorderColor(Colores.Linea).Padding(4).Row(row =>
         {
             row.RelativeItem().Column(izq =>
             {
@@ -113,8 +127,26 @@ public static class HojaPedido
             txt.Span(valor ?? "—").FontSize(6.5f * e);
         });
 
+    /*
+     * Un solo grosor para todo el papel.
+     *
+     * Con el recuadro a 1 y las verticales a 0.5 —o al reves— unas lineas se
+     * ven mas negras que otras y el documento parece mal impreso. Todas del
+     * mismo trazo: la tabla se lee igual y no hay ninguna que cante.
+     */
+    private const float Linea = 0.75f;
+
+    /// <summary>
+    /// Renglones minimos de la tabla.
+    ///
+    /// El papel se llena hasta abajo aunque el pedido traiga tres productos:
+    /// asi las verticales llegan al final y el que recibe ve donde termina el
+    /// documento —y si le agregaron algo a mano despues.
+    /// </summary>
+    private const int RenglonesMinimos = 12;
+
     private static void Tabla(IContainer container, DocumentoImprimible doc, float e) =>
-        container.Border(1).BorderColor(Colores.Linea).Table(tabla =>
+        container.Border(Linea).BorderColor(Colores.Linea).Table(tabla =>
         {
             tabla.ColumnsDefinition(cols =>
             {
@@ -147,22 +179,31 @@ public static class HojaPedido
                 tabla.Cell().Element(Celda).AlignRight()
                     .Text(linea.Importe.ToString("N2")).FontSize(6.5f * e);
             }
+
+            // Lo que falta para llegar abajo, en blanco.
+            for (var i = doc.Lineas.Count; i < RenglonesMinimos; i++)
+            {
+                for (var columna = 0; columna < 5; columna++)
+                {
+                    tabla.Cell().Element(Celda).Text(" ").FontSize(6.5f * e);
+                }
+            }
         });
 
     private static IContainer Encabezado(IContainer container, float e) =>
-        container.BorderBottom(1).BorderRight(0.5f).BorderColor(Colores.Linea)
+        container.BorderBottom(Linea).BorderRight(Linea).BorderColor(Colores.Linea)
             .PaddingVertical(2).PaddingHorizontal(2)
             .DefaultTextStyle(x => x.Bold().FontSize(6.5f * e).FontColor(Colores.Fuerte));
 
     // Verticales si, horizontales no: ver DocumentoA4. En esta hoja pesa mas
     // todavia, porque son dos copias por pagina y el doble de lineas.
     private static IContainer Celda(IContainer container) =>
-        container.BorderRight(0.5f).BorderColor(Colores.Linea).PaddingVertical(1).PaddingHorizontal(2);
+        container.BorderRight(Linea).BorderColor(Colores.Linea).PaddingVertical(1).PaddingHorizontal(2);
 
     private static void Cierre(IContainer container, DocumentoImprimible doc, float e) =>
         container.Column(col =>
         {
-            col.Item().Border(1).BorderColor(Colores.Linea).Padding(3).Text(txt =>
+            col.Item().Border(Linea).BorderColor(Colores.Linea).Padding(3).Text(txt =>
             {
                 txt.Span("SON: ").FontSize(6.5f * e).Bold().FontColor(Colores.Fuerte);
                 txt.Span(MontoEnLetras.Soles(doc.Total)).FontSize(6.5f * e);
@@ -176,7 +217,7 @@ public static class HojaPedido
                     obs.Item().Text(doc.Observacion ?? string.Empty).FontSize(6.5f * e);
                 });
 
-                row.ConstantItem(150 * e).Border(1).BorderColor(Colores.Linea).Padding(3).Row(caja =>
+                row.ConstantItem(150 * e).Border(Linea).BorderColor(Colores.Linea).Padding(3).Row(caja =>
                 {
                     caja.RelativeItem().Text("Total a Pagar:")
                         .FontSize(7 * e).Bold().FontColor(Colores.Fuerte);

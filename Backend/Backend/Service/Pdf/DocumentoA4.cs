@@ -161,8 +161,23 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
             col.Item().PaddingTop(6).Element(Cierre);
         });
 
+    /*
+     * Un solo grosor para todas las lineas del papel.
+     *
+     * Con el recuadro a 1 y las verticales a 0.5 —o al reves— unas se ven mas
+     * negras que otras y el documento parece mal impreso.
+     */
+    private const float Linea = 0.75f;
+
+    /// <summary>
+    /// Renglones minimos de la tabla: el papel se llena hasta abajo aunque el
+    /// documento traiga tres productos, para que las verticales lleguen al
+    /// final y se vea donde termina.
+    /// </summary>
+    private const int RenglonesMinimos = 16;
+
     private void Tabla(IContainer container) =>
-        container.Border(1).BorderColor(Colores.Linea).Table(tabla =>
+        container.Border(Linea).BorderColor(Colores.Linea).Table(tabla =>
         {
             // La descripción va antes que la cantidad: primero qué es y luego
             // cuánto, que es el orden en que se lee una línea en voz alta al
@@ -204,10 +219,20 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
                 tabla.Cell().Element(Celda).AlignRight().Text(linea.PrecioUnitario.ToString("N2"));
                 tabla.Cell().Element(Celda).AlignRight().Text(linea.Importe.ToString("N2"));
             }
+
+            // Lo que falta para llegar abajo, en blanco.
+            var columnas = doc.MostrarCodigo ? 7 : 6;
+            for (var i = doc.Lineas.Count; i < RenglonesMinimos; i++)
+            {
+                for (var columna = 0; columna < columnas; columna++)
+                {
+                    tabla.Cell().Element(Celda).Text(" ");
+                }
+            }
         });
 
     private static IContainer Encabezado(IContainer container) =>
-        container.BorderBottom(1).BorderRight(0.5f).BorderColor(Colores.Linea)
+        container.BorderBottom(Linea).BorderRight(Linea).BorderColor(Colores.Linea)
             .PaddingVertical(4).PaddingHorizontal(4)
             .DefaultTextStyle(x => x.Bold().FontSize(8).FontColor(Colores.Fuerte));
 
@@ -222,7 +247,7 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
      * aire de su padding.
      */
     private static IContainer Celda(IContainer container) =>
-        container.BorderRight(0.5f).BorderColor(Colores.Linea).PaddingVertical(3).PaddingHorizontal(4);
+        container.BorderRight(Linea).BorderColor(Colores.Linea).PaddingVertical(3).PaddingHorizontal(4);
 
     private void EnLetras(IContainer container) =>
         container.Border(1).BorderColor(Colores.Linea).Padding(5).Text(txt =>
