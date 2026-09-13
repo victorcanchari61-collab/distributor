@@ -63,6 +63,16 @@ export interface DataTableColumn<T> {
   render?: (row: T) => ReactNode
 
   /**
+   * En la tarjeta del movil, la cabecera lleva su etiqueta encima.
+   *
+   * Por defecto no: en un listado la primera columna es el nombre de la cosa
+   * —el cliente, el documento— y ponerle "Producto:" delante sobra. Hace
+   * falta cuando la cabecera es un campo que se edita, porque ahi si es un
+   * dato mas y el resto de la tarjeta si los rotula.
+   */
+  etiquetaEnTarjeta?: boolean
+
+  /**
    * Ancho de arranque en pixeles. Sin esto todas las columnas se reparten el
    * espacio por igual, que sobra en las cortas —una equivalencia, un costo— y
    * falta en las largas. El usuario sigue pudiendo arrastrar el borde, y el
@@ -944,19 +954,24 @@ export function SysDataTable<T>({
               >
                 {head && (
                   <div className="mb-2.5 flex items-start justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      {CardIcon && (
-                        <CardIcon
-                          size={16}
-                          className="shrink-0 text-[rgb(var(--sys-rgb))]"
-                          aria-hidden={true}
-                        />
+                    <div className="flex min-w-0 flex-col gap-1">
+                      {head.etiquetaEnTarjeta && (
+                        <span className="text-[12px] text-zinc-500">{head.label}</span>
                       )}
-                      <p className="truncate text-sm font-semibold text-zinc-900">
-                        {head.render
-                          ? head.render(row)
-                          : (((row as Row)[head.key] as ReactNode) ?? null)}
-                      </p>
+                      <div className="flex min-w-0 items-center gap-2">
+                        {CardIcon && (
+                          <CardIcon
+                            size={16}
+                            className="shrink-0 text-[rgb(var(--sys-rgb))]"
+                            aria-hidden={true}
+                          />
+                        )}
+                        <p className="truncate text-sm font-semibold text-zinc-900">
+                          {head.render
+                            ? head.render(row)
+                            : (((row as Row)[head.key] as ReactNode) ?? null)}
+                        </p>
+                      </div>
                     </div>
                     {actions && (
                       <div className="flex shrink-0 items-center gap-1">{actions(row)}</div>

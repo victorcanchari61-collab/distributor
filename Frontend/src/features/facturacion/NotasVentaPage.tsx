@@ -604,6 +604,9 @@ export function NotasVentaPage() {
     {
       key: 'producto',
       label: 'Producto',
+      // La cabecera de la tarjeta es un desplegable, no el nombre de la fila:
+      // sin su etiqueta es el unico dato sin rotular de la tarjeta.
+      etiquetaEnTarjeta: true,
       value: (fila) => productos.find((p) => p.id === fila.productoId)?.nombre ?? '',
       render: (fila) => (
         <Desplegable
