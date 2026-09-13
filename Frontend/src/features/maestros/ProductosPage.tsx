@@ -863,6 +863,17 @@ export function ProductosPage() {
                     onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
                   />
                 </div>
+
+                {/* Ancho completo y al final: es texto libre, y lo de arriba
+                    son los datos con los que se busca y se calcula. */}
+                <Input
+                  label="Descripción"
+                  optional
+                  maxLength={500}
+                  placeholder="Saco de 50 kg, grano entero. Proveedor del norte."
+                  value={form.descripcion}
+                  onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                />
               </div>
             ) : (
               <div className="flex flex-col gap-4">
