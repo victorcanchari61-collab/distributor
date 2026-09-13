@@ -325,18 +325,24 @@ export function PedidosPage() {
 
   const abrirConfirmar = (pedido: PedidoResponse) => {
     setConfirmando(pedido)
-    setConfAlmacenId(0)
+    // Un pedido con reserva ya aparto la mercaderia de un almacen concreto:
+    // de ahi sale, y preguntarlo otra vez invita a elegir otro y dejar la
+    // reserva colgada en el primero.
+    setConfAlmacenId(pedido.reservaStock ? (pedido.almacenId ?? 0) : 0)
     setConfError('')
   }
 
   const confirmarDespacho = async () => {
     if (!confirmando) return
-    if (!confAlmacenId) return setConfError('Elige el almacén.')
+    // Con reserva el almacen viene del pedido; sin ella hay que elegirlo.
+    if (!confirmando.reservaStock && !confAlmacenId) return setConfError('Elige el almacén.')
 
     setConfGuardando(true)
     setConfError('')
     try {
-      await pedidoApi.confirmar(confirmando.id, { almacenId: confAlmacenId })
+      await pedidoApi.confirmar(confirmando.id, {
+        almacenId: confirmando.reservaStock ? null : confAlmacenId,
+      })
       setConfirmando(null)
       await cargar()
       toast.exito('Pedido convertido: ya es una venta.')
@@ -356,6 +362,36 @@ export function PedidosPage() {
       .find((p) => p.id === fila.productoId)
       ?.presentaciones.find((x) => x.id === fila.presentacionId)?.factor ?? 1
 
+
+  /** El selector de presentacion de una linea: se usa en dos sitios. */
+  const presentacionDeFila = (fila: { id: string; productoId: number; presentacionId: number }) => {
+    const producto = productos.find((p) => p.id === fila.productoId)
+    const disponibles = producto?.presentaciones.filter((p) => p.esVenta && p.activo) ?? []
+
+    return (
+      <Desplegable
+        value={fila.presentacionId}
+        onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
+        placeholder={producto?.unidadBase ?? 'Elegir'}
+        disabled={!producto}
+        options={
+          producto
+            ? [
+                { value: 0, label: producto.unidadBase, nota: 'unidad base' },
+                ...disponibles
+                  .filter((p) => !p.esBase)
+                  .map((p) => ({
+                    value: p.id,
+                    label: p.nombre,
+                    detalle: `${p.factor} ${producto.unidadBase}`,
+                  })),
+              ]
+            : []
+        }
+      />
+    )
+  }
+
   const columnasFilas: DataTableColumn<FilaPedido>[] = [
     {
       key: 'producto',
@@ -373,28 +409,7 @@ export function PedidosPage() {
       key: 'presentacion',
       label: 'Presentación',
       width: 190,
-      render: (fila) => {
-        const producto = productos.find((p) => p.id === fila.productoId)
-        const disponibles = producto?.presentaciones.filter((p) => p.esVenta && p.activo) ?? []
-        return (
-          <Desplegable
-            value={fila.presentacionId}
-            onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
-            placeholder={producto?.unidadBase ?? 'Elegir'}
-            disabled={!producto}
-            options={
-              producto
-                ? [
-                    { value: 0, label: producto.unidadBase, nota: 'unidad base' },
-                    ...disponibles
-                      .filter((p) => !p.esBase)
-                      .map((p) => ({ value: p.id, label: p.nombre, detalle: `${p.factor} ${producto.unidadBase}` })),
-                  ]
-                : []
-            }
-          />
-        )
-      },
+      render: presentacionDeFila,
     },
     {
       key: 'cantidad',
@@ -907,7 +922,11 @@ export function PedidosPage() {
         onClose={() => setConfirmando(null)}
         size="sm"
         title={confirmando ? `Convertir ${confirmando.numero} en venta` : ''}
-        description="Elige de dónde sale la mercadería. Nace la nota de venta y el stock se descuenta en ese momento."
+        description={
+          confirmando?.reservaStock
+            ? 'Sale del almacén donde está reservada. Nace la nota de venta y el stock se descuenta en ese momento.'
+            : 'Elige de dónde sale la mercadería. Nace la nota de venta y el stock se descuenta en ese momento.'
+        }
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setConfirmando(null)}>
@@ -922,13 +941,23 @@ export function PedidosPage() {
         <div className="flex flex-col gap-4">
           {confError && <Alert>{confError}</Alert>}
 
-          <Desplegable
-            label="Almacén"
-            value={confAlmacenId}
-            onChange={(v) => setConfAlmacenId(Number(v))}
-            placeholder="Elige el almacén"
-            options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
-          />
+          {confirmando?.reservaStock ? (
+            <div>
+              <span className="ui-label mb-1.5 block">Almacén</span>
+              <div className="flex items-center gap-2 rounded-field border border-line px-3 py-2 text-sm">
+                <span className="text-ink">{confirmando.almacen}</span>
+                <Badge tone="sys">stock reservado</Badge>
+              </div>
+            </div>
+          ) : (
+            <Desplegable
+              label="Almacén"
+              value={confAlmacenId}
+              onChange={(v) => setConfAlmacenId(Number(v))}
+              placeholder="Elige el almacén"
+              options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
+            />
+          )}
 
           <p className="text-xs text-ink-soft">
             La nota de venta que nace queda a crédito, pendiente de cobro — un pedido no registra pagos.

@@ -60,7 +60,14 @@ public class CrearPedidoRequest
 /// </remarks>
 public class ConfirmarPedidoRequest
 {
-    public int AlmacenId { get; set; }
+    /// <summary>
+    /// De dónde sale la mercadería.
+    ///
+    /// Opcional cuando el pedido reservó stock: ahí ya está apartada en un
+    /// almacén concreto y sale de ese. Mandar otro dejaría la reserva colgada
+    /// en el primero y descontaría de donde nadie aparto nada.
+    /// </summary>
+    public int? AlmacenId { get; set; }
 }
 
 /// <summary>Un pago parcial: un método del catálogo y cuánto se pagó con él.</summary>

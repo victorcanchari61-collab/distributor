@@ -570,6 +570,36 @@ export function NotasVentaPage() {
       .find((p) => p.id === fila.productoId)
       ?.presentaciones.find((x) => x.id === fila.presentacionId)?.factor ?? 1
 
+
+  /** El selector de presentacion de una linea: se usa en dos sitios. */
+  const presentacionDeFila = (fila: { id: string; productoId: number; presentacionId: number }) => {
+    const producto = productos.find((p) => p.id === fila.productoId)
+    const disponibles = producto?.presentaciones.filter((p) => p.esVenta && p.activo) ?? []
+
+    return (
+      <Desplegable
+        value={fila.presentacionId}
+        onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
+        placeholder={producto?.unidadBase ?? 'Elegir'}
+        disabled={!producto}
+        options={
+          producto
+            ? [
+                { value: 0, label: producto.unidadBase, nota: 'unidad base' },
+                ...disponibles
+                  .filter((p) => !p.esBase)
+                  .map((p) => ({
+                    value: p.id,
+                    label: p.nombre,
+                    detalle: `${p.factor} ${producto.unidadBase}`,
+                  })),
+              ]
+            : []
+        }
+      />
+    )
+  }
+
   const columnasFilas: DataTableColumn<FilaVenta>[] = [
     {
       key: 'producto',
@@ -587,28 +617,7 @@ export function NotasVentaPage() {
       key: 'presentacion',
       label: 'Presentación',
       width: 190,
-      render: (fila) => {
-        const producto = productos.find((p) => p.id === fila.productoId)
-        const disponibles = producto?.presentaciones.filter((p) => p.esVenta && p.activo) ?? []
-        return (
-          <Desplegable
-            value={fila.presentacionId}
-            onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
-            placeholder={producto?.unidadBase ?? 'Elegir'}
-            disabled={!producto}
-            options={
-              producto
-                ? [
-                    { value: 0, label: producto.unidadBase, nota: 'unidad base' },
-                    ...disponibles
-                      .filter((p) => !p.esBase)
-                      .map((p) => ({ value: p.id, label: p.nombre, detalle: `${p.factor} ${producto.unidadBase}` })),
-                  ]
-                : []
-            }
-          />
-        )
-      },
+      render: presentacionDeFila,
     },
     {
       key: 'cantidad',

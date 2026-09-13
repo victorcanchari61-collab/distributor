@@ -61,6 +61,7 @@ export interface DataTableColumn<T> {
   /** Escape hatch: valor a usar para buscar, ordenar y filtrar. */
   value?: (row: T) => string | number
   render?: (row: T) => ReactNode
+
   /**
    * Ancho de arranque en pixeles. Sin esto todas las columnas se reparten el
    * espacio por igual, que sobra en las cortas —una equivalencia, un costo— y

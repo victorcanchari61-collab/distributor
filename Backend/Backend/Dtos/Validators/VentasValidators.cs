@@ -47,7 +47,11 @@ public class ConfirmarPedidoRequestValidator : AbstractValidator<ConfirmarPedido
 {
     public ConfirmarPedidoRequestValidator()
     {
-        RuleFor(x => x.AlmacenId).GreaterThan(0).WithMessage("Elige el almacén");
+        // Vacio se admite: el servicio usa el almacen de la reserva. Si viene,
+        // tiene que ser uno de verdad.
+        RuleFor(x => x.AlmacenId)
+            .GreaterThan(0).When(x => x.AlmacenId.HasValue)
+            .WithMessage("Elige el almacén");
     }
 }
 

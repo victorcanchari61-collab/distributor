@@ -227,9 +227,21 @@ public class VentasService : IVentasService
 
         // Un pedido no lleva pagos: la nota que nace al confirmarlo queda a
         // crédito, pendiente de cobro, hasta que se registre uno.
+        /*
+         * De donde sale: el de la reserva manda.
+         *
+         * Si el pedido aparto stock, la mercaderia ya esta comprometida en ese
+         * almacen; descontar de otro dejaria la reserva viva en el primero y
+         * el stock del segundo en negativo. Sin reserva, se pide al confirmar.
+         */
+        var almacenId = pedido.ReservaStock && pedido.AlmacenId is int reservado
+            ? reservado
+            : request.AlmacenId
+              ?? throw new BadRequestException("Elige el almacén del que sale la mercadería.");
+
         var notaVenta = await CrearNotaVentaInternaAsync(
             clienteId: pedido.ClienteId,
-            almacenId: request.AlmacenId,
+            almacenId: almacenId,
             pedidoId: pedido.Id,
             formaPago: FormaPagoVenta.Credito,
             pagos: [],

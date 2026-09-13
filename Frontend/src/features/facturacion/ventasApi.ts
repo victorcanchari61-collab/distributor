@@ -114,7 +114,8 @@ export interface CrearPedidoRequest {
 
 /** Un pedido no lleva pagos: la nota que nace al confirmarlo queda a crédito. */
 export interface ConfirmarPedidoRequest {
-  almacenId: number
+  /** De dónde sale. Se omite cuando el pedido reservó: sale del almacén de la reserva. */
+  almacenId?: number | null
 }
 
 /** Contadores del listado completo de pedidos, no de la página visible. */
