@@ -107,7 +107,11 @@ export function CostoReferenciaInput({
         <p className="rounded-field bg-slate-50 px-3 py-2 text-xs text-ink-muted">
           Equivale a{' '}
           <span className="font-semibold text-ink">
-            S/ {Number(valor).toFixed(4)} por {unidadBase}
+            {/* Dos decimales, que es como se cobra. Los cuatro solo cuando
+                el centimo se come el numero: el sobre de 30 g sale a
+                S/ 0.0025 el gramo y "S/ 0.00" no dice nada. */}
+            S/ {Number(valor) < 0.01 ? Number(valor).toFixed(4) : Number(valor).toFixed(2)} por{' '}
+            {unidadBase}
           </span>
           . Es lo que sueles pagar; el costo real lo fija cada entrada al almacén.
         </p>

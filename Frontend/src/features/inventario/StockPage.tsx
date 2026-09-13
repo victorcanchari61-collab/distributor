@@ -339,9 +339,9 @@ export function StockPage() {
           <span className="text-ink-soft">—</span>
         ) : (
           <span>
-            S/ {Number((row.costoActual * factor).toFixed(4))}
+            S/ {(row.costoActual * factor).toFixed(2)}
             {row.costoUltimo !== row.costoActual &&
-              ` – ${Number(((row.costoUltimo ?? 0) * factor).toFixed(4))}`}
+              ` – ${((row.costoUltimo ?? 0) * factor).toFixed(2)}`}
           </span>
         )
       },
