@@ -58,12 +58,8 @@ export function ListasPreciosPage() {
   const [form, setForm] = useState({ nombre: '', descripcion: '' })
 
   const [precioAbierto, setPrecioAbierto] = useState(false)
-  const [precioForm, setPrecioForm] = useState({
-    productoId: 0,
-    presentacionId: 0,
-    precio: '',
-    cantidadMinima: '1',
-  })
+  /** Producto abierto en el modal de precios. */
+  const [precioForm, setPrecioForm] = useState({ productoId: 0 })
 
   /*
    * Precios de TODAS las presentaciones del producto, de una sentada.
@@ -236,7 +232,7 @@ export function ListasPreciosPage() {
       }
     }
 
-    setPrecioForm({ ...precioForm, productoId, presentacionId: 0 })
+    setPrecioForm({ productoId })
     setFilasPrecio(filas)
     setMargenObjetivo('')
     setErrorForm('')
@@ -332,7 +328,10 @@ export function ListasPreciosPage() {
     setFilasPrecio((prev) =>
       prev.map((f) => {
         const costo = costoDe(presentacionDe(f.presentacionId)?.factor ?? 0)
-        if (costo == null) return f
+        // Los tramos por volumen quedan como estan: son un descuento puesto a
+        // mano y llenarlos con el mismo margen los dejaria al precio normal,
+        // que es justo lo contrario de para lo que existen.
+        if (costo == null || Number(f.desde) > 1) return f
         return { ...f, precio: precioPorMargen(costo, margen), margen: margen.toFixed(1) }
       }),
     )
@@ -478,9 +477,11 @@ export function ListasPreciosPage() {
      * Los tramos que se quitaron de la tabla.
      *
      * El PUT solo crea y actualiza, asi que borrar la fila en pantalla no
-     * bastaba: el precio viejo seguia en la lista y se seguia cobrando.
+     * bastaba: el precio viejo seguia en la lista y se seguia cobrando. Vale
+     * igual para la fila que se deja sin precio: si tenia uno guardado, se
+     * borra.
      */
-    const vivos = new Set(filasPrecio.map((f) => f.id).filter((id) => id != null))
+    const vivos = new Set(conPrecio.map((f) => f.id).filter((id) => id != null))
     const aBorrar = precios.filter(
       (x) => x.productoId === precioForm.productoId && !vivos.has(x.id),
     )
@@ -632,7 +633,7 @@ export function ListasPreciosPage() {
                 size="sm"
                 disabled={!listaActiva}
                 onClick={() => {
-                  setPrecioForm({ productoId: 0, presentacionId: 0, precio: '', cantidadMinima: '1' })
+                  setPrecioForm({ productoId: 0 })
                   setFilasPrecio([])
                   setMargenObjetivo('')
                   setErrorForm('')
@@ -900,7 +901,8 @@ export function ListasPreciosPage() {
                 volumen. La columna{' '}
                 <span className="font-medium">por {producto.unidadBase}</span> sirve para comprobar
                 la escalera: el saco tiene que salir más barato por {producto.unidadBase} que el{' '}
-                {producto.unidadBase} suelto. Las filas que dejes vacías no se guardan.
+                {producto.unidadBase} suelto. La fila que dejes sin precio no se guarda, y si ya
+                tenía uno se borra de la lista.
               </p>
             )}
 
