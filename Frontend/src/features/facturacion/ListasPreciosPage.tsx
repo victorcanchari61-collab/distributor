@@ -782,7 +782,7 @@ export function ListasPreciosPage() {
         {/* Precios del producto: todas sus presentaciones de una sentada */}
         <Modal
           open={precioAbierto}
-          size="xl"
+          size="2xl"
           title="Precios del producto"
           description="Elige el producto y pon el precio de cada forma en que lo vendes."
           onClose={() => setPrecioAbierto(false)}

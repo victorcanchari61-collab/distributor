@@ -84,7 +84,7 @@ export function Sidebar({
         className={cn(
           'fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-white',
           'transition-[width,transform] duration-200',
-          collapsed ? 'w-[72px]' : 'w-64',
+          collapsed ? 'w-[72px]' : 'w-56',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
           // Oculto se sale de pantalla deslizandose; el topbar deja un boton
           // para traerlo de vuelta.

@@ -58,7 +58,7 @@ export function DashboardLayout({
       <div
         className={cn(
           'flex min-h-screen flex-col transition-[padding] duration-200',
-          oculto ? 'lg:pl-0' : collapsed ? 'lg:pl-[72px]' : 'lg:pl-64',
+          oculto ? 'lg:pl-0' : collapsed ? 'lg:pl-[72px]' : 'lg:pl-56',
         )}
       >
         <Topbar
