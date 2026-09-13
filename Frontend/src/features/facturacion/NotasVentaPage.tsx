@@ -438,6 +438,37 @@ export function NotasVentaPage() {
     },
   ]
 
+
+  /*
+   * La lista con la que se cobra.
+   *
+   * Vacio en el formulario significa "la predeterminada", que es la que el
+   * backend aplica a un cliente sin lista propia: para resolver precios hay
+   * que resolver ese vacio a un id de verdad.
+   */
+  const listaEfectiva = listaPrecioId || listas.find((l) => l.esPredeterminada)?.id || 0
+
+  /** Precio de una presentacion por esa cantidad, segun la lista elegida. */
+  const precioDeLista = async (presentacionId: number, cantidad: number) => {
+    if (!listaEfectiva) return null
+    const precio = await listaPrecioApi.resolver(listaEfectiva, presentacionId, cantidad)
+    return precio?.precio ?? null
+  }
+
+
+  /*
+   * Elegir al cliente trae su lista.
+   *
+   * El mayorista tiene la suya guardada en su ficha: sin esto habia que
+   * acordarse de cambiarla a mano en cada pedido, y basta olvidarlo una vez
+   * para cobrarle precio de menudeo. Si el cliente no tiene lista propia se
+   * vuelve a "la predeterminada", no se queda la del cliente anterior.
+   */
+  const elegirCliente = (id: number) => {
+    setClienteId(id)
+    setListaPrecioId(clientes.find((c) => c.id === id)?.listaPrecioId ?? 0)
+  }
+
   const guardar = async () => {
     setErrorPagos('')
     if (!clienteId) return fallar('Elige el cliente.')
@@ -445,6 +476,14 @@ export function NotasVentaPage() {
 
     const validas = filas.filter((f) => f.productoId && f.cantidad && f.costo)
     if (validas.length === 0) return fallar('Agrega al menos un producto con su precio.')
+
+    // Una linea sin precio se caia de la venta sin decir nada: el documento se
+    // guardaba con un producto menos y nadie se enteraba.
+    const sinPrecio = filas.find((f) => f.productoId && !Number(f.costo))
+    if (sinPrecio) {
+      const nombre = productos.find((p) => p.id === sinPrecio.productoId)?.nombre ?? 'Un producto'
+      return fallar(`${nombre} no tiene precio. Ponlo o quita la línea.`)
+    }
 
     // Al editar no se tocan los pagos: eso ya tiene su propio flujo
     // ("Gestionar pagos" desde Ver detalle), así que ni se valida ni se envía.
@@ -686,6 +725,7 @@ export function NotasVentaPage() {
               productos={productos}
               stock={stockMap}
               costoLabel="Precio de venta"
+              resolverPrecio={precioDeLista}
               onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
             />
 
@@ -714,7 +754,7 @@ export function NotasVentaPage() {
               <BuscadorCampo
                 label="Cliente"
                 value={clienteId || null}
-                onChange={(id) => setClienteId(id ?? 0)}
+                onChange={(id) => elegirCliente(id ?? 0)}
                 opciones={opcionesCliente}
                 placeholder="Buscar cliente..."
                 vacio="Ningún cliente coincide"
@@ -835,7 +875,7 @@ export function NotasVentaPage() {
           rows={clientes}
           cardIcon={Contact}
           searchPlaceholder="Buscar cliente..."
-          onSeleccionar={(c) => setClienteId(c.id)}
+          onSeleccionar={(c) => elegirCliente(c.id)}
         />
 
         <Modal

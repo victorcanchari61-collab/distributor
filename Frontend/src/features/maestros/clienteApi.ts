@@ -28,6 +28,9 @@ export interface ClienteResponse {
   vendedorId: number | null
   /** Nombre de quien atiende al cliente. */
   vendedor: string | null
+  /** Lista con la que se le cobra. Vacía usa la predeterminada. */
+  listaPrecioId: number | null
+  listaPrecio: string | null
   activo: boolean
   fechaCreacion: string
 }
@@ -52,6 +55,8 @@ export interface ClienteRequest {
   mercadoNombre?: string | null
   /** Quién atiende al cliente. Cualquier usuario, no solo los del rol Vendedor. */
   vendedorId?: number | null
+  /** Lista con la que se le cobra. Vacía usa la predeterminada. */
+  listaPrecioId?: number | null
 }
 
 export interface UpdateClienteRequest extends ClienteRequest {

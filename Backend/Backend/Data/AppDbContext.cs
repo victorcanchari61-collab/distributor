@@ -360,6 +360,11 @@ public class AppDbContext : DbContext
             // desactiva, y sus clientes se reasignan a mano.
             entity.HasOne(c => c.Vendedor).WithMany()
                 .HasForeignKey(c => c.VendedorId).OnDelete(DeleteBehavior.Restrict);
+
+            // Restrict igual: una lista con clientes colgados no se borra de
+            // golpe, se desactiva y se reasigna.
+            entity.HasOne(c => c.ListaPrecio).WithMany()
+                .HasForeignKey(c => c.ListaPrecioId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Mercado>(entity =>

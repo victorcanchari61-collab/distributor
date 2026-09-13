@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { BuscadorCampo } from './BuscadorCampo'
 import type { OpcionBuscador } from './BuscadorCampo'
@@ -34,6 +34,15 @@ export interface AgregarProductoPanelProps {
   costoLabel?: string
   /** Solo para entradas con seguimiento de vencimiento (ajustes, recepciones). */
   pideLote?: boolean
+  /**
+   * De dónde sale el precio, cuando lo pone una lista y no el que carga.
+   *
+   * Recibe la presentación real (nunca 0: la unidad base tiene su propia
+   * presentación) y la cantidad, porque el precio depende de cuánto se lleva
+   * —el tramo "desde 5 sacos" es más barato—. Devuelve el precio de UNA
+   * presentación, o null si esa forma de vender no tiene precio cargado.
+   */
+  resolverPrecio?: (presentacionId: number, cantidad: number) => Promise<number | null>
   onAgregar: (linea: LineaProductoNueva) => void
 }
 
@@ -59,10 +68,14 @@ export function AgregarProductoPanel({
   pideCosto = true,
   costoLabel = 'Precio',
   pideLote = false,
+  resolverPrecio,
   onAgregar,
 }: AgregarProductoPanelProps) {
   const [linea, setLinea] = useState(VACIO)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
+  /** Qué dijo la lista: para avisar cuando no hay precio o cuando se cambió. */
+  const [precioLista, setPrecioLista] = useState<number | null>(null)
+  const [buscandoPrecio, setBuscandoPrecio] = useState(false)
 
   const producto = productos.find((p) => p.id === linea.productoId)
   const presentaciones = producto?.presentaciones.filter((p) => p.activo) ?? []
@@ -77,6 +90,41 @@ export function AgregarProductoPanel({
   }))
 
   const elegir = (id: number) => setLinea({ ...VACIO, productoId: id })
+
+  /*
+   * El precio se pide a la lista, no se teclea.
+   *
+   * Se vuelve a pedir cuando cambia la cantidad y no solo al elegir el
+   * producto: el tramo por volumen depende de cuanto se lleva, asi que
+   * resolver una sola vez dejaria el descuento de 5 sacos sin aplicarse
+   * nunca. Queda editable: un precio especial a un cliente sigue siendo
+   * cosa de todos los dias.
+   */
+  const presentacionReal =
+    linea.presentacionId || presentaciones.find((x) => x.esBase)?.id || 0
+
+  useEffect(() => {
+    if (!resolverPrecio || !producto || !presentacionReal) return
+
+    const cantidad = Number(linea.cantidad) || 1
+    let vigente = true
+    setBuscandoPrecio(true)
+
+    void resolverPrecio(presentacionReal, cantidad)
+      .then((precio) => {
+        if (!vigente) return
+        setPrecioLista(precio)
+        // Solo escribe el precio: si el que carga ya lo piso a mano, se
+        // respeta lo que puso.
+        setLinea((l) => (precio == null ? l : { ...l, costo: String(precio) }))
+      })
+      .finally(() => vigente && setBuscandoPrecio(false))
+
+    return () => {
+      vigente = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [producto?.id, presentacionReal, linea.cantidad])
 
   const agregar = () => {
     if (!producto || !linea.cantidad) return
@@ -94,6 +142,7 @@ export function AgregarProductoPanel({
     // Vuelve a cero: el siguiente producto se busca de nuevo, no se
     // arrastra nada de la línea anterior.
     setLinea(VACIO)
+    setPrecioLista(null)
   }
 
   return (
@@ -160,6 +209,23 @@ export function AgregarProductoPanel({
             placeholder={producto?.costoReferencia ? String(producto.costoReferencia * factor) : '0.00'}
             value={linea.costo}
             onChange={(e) => setLinea({ ...linea, costo: e.target.value })}
+            hint={
+              resolverPrecio && producto ? (
+                buscandoPrecio ? (
+                  <span className="text-xs text-ink-soft">Buscando en la lista...</span>
+                ) : precioLista == null ? (
+                  // Sin precio cargado la venta saldria en cero sin que nadie
+                  // chille: mejor decirlo aqui, antes de agregar la linea.
+                  <span className="text-xs font-medium text-amber-600">Sin precio en la lista</span>
+                ) : Number(linea.costo) !== precioLista ? (
+                  <span className="text-xs font-medium text-amber-600">
+                    Lista: S/ {precioLista.toFixed(2)}
+                  </span>
+                ) : (
+                  <span className="text-xs text-ink-soft">De la lista</span>
+                )
+              ) : undefined
+            }
           />
         )}
       </div>

@@ -37,6 +37,8 @@ import type { DepartamentoResponse, DistritoResponse, ProvinciaResponse } from '
 import { mercadoApi, rutaApi } from '../tms'
 import type { MercadoResponse, RutaResponse } from '../tms'
 import { usuarioApi } from '../config/usuarioApi'
+import { listaPrecioApi } from '../facturacion'
+import type { ListaPrecioResponse } from '../facturacion'
 import type { UsuarioResponse } from '../config/usuarioApi'
 import { clienteApi } from './clienteApi'
 import type { ClienteRequest, ClienteResponse, ResumenClientes } from './clienteApi'
@@ -53,6 +55,7 @@ const VACIO: ClienteRequest = {
   rutaId: 0,
   mercadoId: 0,
   vendedorId: 0,
+  listaPrecioId: 0,
 }
 
 const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO']
@@ -64,6 +67,7 @@ export function ClientesPage() {
   const [mercados, setMercados] = useState<MercadoResponse[]>([])
   const [rutas, setRutas] = useState<RutaResponse[]>([])
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
+  const [listasPrecio, setListasPrecio] = useState<ListaPrecioResponse[]>([])
   const [departamentos, setDepartamentos] = useState<DepartamentoResponse[]>([])
   const [provincias, setProvincias] = useState<ProvinciaResponse[]>([])
   const [distritos, setDistritos] = useState<DistritoResponse[]>([])
@@ -123,11 +127,12 @@ export function ClientesPage() {
   /** Todo lo que no cambia al paginar: catálogos del formulario y el resumen. */
   const cargarApoyo = useCallback(async () => {
     try {
-      const [res, merc, rts, usrs, deps, provs, dists] = await Promise.all([
+      const [res, merc, rts, usrs, listas, deps, provs, dists] = await Promise.all([
         clienteApi.resumen(),
         mercadoApi.getAll(),
         rutaApi.getAll(),
         usuarioApi.getAll(),
+        listaPrecioApi.getAll(),
         ubigeoApi.departamentos(),
         ubigeoApi.provincias(),
         ubigeoApi.distritos(),
@@ -136,6 +141,7 @@ export function ClientesPage() {
       setMercados(merc)
       setRutas(rts)
       setUsuarios(usrs)
+      setListasPrecio(listas)
       setDepartamentos(deps)
       setProvincias(provs)
       setDistritos(dists)
@@ -176,6 +182,7 @@ export function ClientesPage() {
       rutaId: cliente.rutaId ?? 0,
       mercadoId: cliente.mercadoId ?? 0,
       vendedorId: cliente.vendedorId ?? 0,
+      listaPrecioId: cliente.listaPrecioId ?? 0,
     })
     setUbigeoSel({
       departamentoId: cliente.departamentoId ?? 0,
@@ -649,6 +656,25 @@ export function ClientesPage() {
               options={[
                 { value: 0, label: 'Sin asignar' },
                 ...usuarios.filter((u) => u.activo).map((u) => ({ value: u.id, label: u.nombre })),
+              ]}
+            />
+
+            {/*
+              Con que lista se le cobra.
+              Vacio deja al cliente siguiendo a la predeterminada: si mañana
+              cambia cual es, este cliente cambia con ella.
+            */}
+            <Desplegable
+              label="Lista de precios"
+              optional
+              placeholder="La predeterminada"
+              value={form.listaPrecioId ?? 0}
+              onChange={(v) => setForm({ ...form, listaPrecioId: Number(v) })}
+              options={[
+                { value: 0, label: 'La predeterminada' },
+                ...listasPrecio
+                  .filter((l) => l.activo)
+                  .map((l) => ({ value: l.id, label: l.nombre })),
               ]}
             />
 

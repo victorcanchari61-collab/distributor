@@ -21,6 +21,9 @@ public class ClienteResponse
     public int? MercadoId { get; set; }
     public string? Mercado { get; set; }
     public int? VendedorId { get; set; }
+
+    public int? ListaPrecioId { get; set; }
+    public string? ListaPrecio { get; set; }
     public string? Vendedor { get; set; }
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }

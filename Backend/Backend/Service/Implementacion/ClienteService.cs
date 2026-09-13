@@ -15,6 +15,7 @@ public class ClienteService : IClienteService
     private readonly IRutaRepository _rutas;
     private readonly IUbigeoRepository _ubigeo;
     private readonly IUsuarioRepository _usuarios;
+    private readonly IListaPrecioRepository _listas;
     private readonly IValidator<CreateClienteRequest> _createValidator;
     private readonly IValidator<UpdateClienteRequest> _updateValidator;
     private readonly IPermisoService _permisos;
@@ -26,6 +27,7 @@ public class ClienteService : IClienteService
         IRutaRepository rutas,
         IUbigeoRepository ubigeo,
         IUsuarioRepository usuarios,
+        IListaPrecioRepository listas,
         IValidator<CreateClienteRequest> createValidator,
         IValidator<UpdateClienteRequest> updateValidator,
         IPermisoService permisos,
@@ -37,6 +39,7 @@ public class ClienteService : IClienteService
         _rutas = rutas;
         _ubigeo = ubigeo;
         _usuarios = usuarios;
+        _listas = listas;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _permisos = permisos;
@@ -107,7 +110,7 @@ public class ClienteService : IClienteService
 
         var cliente = new Cliente();
         Aplicar(cliente, request, await ResolverMercadoAsync(request), await ResolverRutaAsync(request),
-            await ResolverDistritoAsync(request), await ResolverVendedorAsync(request));
+            await ResolverDistritoAsync(request), await ResolverVendedorAsync(request), await ResolverListaAsync(request));
 
         await _repository.AddAsync(cliente);
         var response = MapToResponse(cliente);
@@ -128,7 +131,7 @@ public class ClienteService : IClienteService
         }
 
         Aplicar(cliente, request, await ResolverMercadoAsync(request), await ResolverRutaAsync(request),
-            await ResolverDistritoAsync(request), await ResolverVendedorAsync(request));
+            await ResolverDistritoAsync(request), await ResolverVendedorAsync(request), await ResolverListaAsync(request));
         cliente.Activo = request.Activo;
 
         await _repository.UpdateAsync(cliente);
@@ -219,7 +222,7 @@ public class ClienteService : IClienteService
                     }
 
                     Aplicar(existente, fila, await ResolverMercadoAsync(fila), await ResolverRutaAsync(fila),
-                        await ResolverDistritoAsync(fila), await ResolverVendedorAsync(fila));
+                        await ResolverDistritoAsync(fila), await ResolverVendedorAsync(fila), await ResolverListaAsync(fila));
                     existente.Activo = true;
                     await _repository.UpdateAsync(existente);
                     resultado.Actualizados++;
@@ -228,7 +231,7 @@ public class ClienteService : IClienteService
 
                 var cliente = new Cliente();
                 Aplicar(cliente, fila, await ResolverMercadoAsync(fila), await ResolverRutaAsync(fila),
-                    await ResolverDistritoAsync(fila), await ResolverVendedorAsync(fila));
+                    await ResolverDistritoAsync(fila), await ResolverVendedorAsync(fila), await ResolverListaAsync(fila));
                 await _repository.AddAsync(cliente);
                 resultado.Creados++;
             }
@@ -270,7 +273,7 @@ public class ClienteService : IClienteService
     }
 
     private static void Aplicar(Cliente cliente, ClienteRequestBase request, Mercado? mercado, Ruta? ruta,
-        Distrito? distrito, Usuario? vendedor)
+        Distrito? distrito, Usuario? vendedor, ListaPrecio? lista)
     {
         cliente.Documento = request.Documento.Trim();
         // Si el usuario eligio el tipo se respeta; si no (importacion), se deduce
@@ -292,6 +295,30 @@ public class ClienteService : IClienteService
         // El 0 del formulario significa "sin asignar": se guarda como nulo.
         cliente.VendedorId = vendedor?.Id;
         cliente.Vendedor = vendedor;
+        cliente.ListaPrecioId = lista?.Id;
+        cliente.ListaPrecio = lista;
+    }
+
+    /// <summary>
+    /// La lista con la que se le cobra a ese cliente.
+    ///
+    /// Vacío o 0 es "la predeterminada", que ya resuelve la venta: se guarda
+    /// nulo en vez de fijar un id, para que el cliente siga a la
+    /// predeterminada si mañana cambia.
+    /// </summary>
+    private async Task<ListaPrecio?> ResolverListaAsync(ClienteRequestBase request)
+    {
+        if (request.ListaPrecioId is not > 0) return null;
+
+        var lista = await _listas.GetAsync(request.ListaPrecioId.Value)
+            ?? throw new BadRequestException("La lista de precios indicada no existe");
+
+        if (!lista.Activo)
+        {
+            throw new BadRequestException($"La lista '{lista.Nombre}' está desactivada");
+        }
+
+        return lista;
     }
 
     /// <summary>
@@ -442,6 +469,8 @@ public class ClienteService : IClienteService
             Mercado = cliente.Mercado?.Nombre,
             VendedorId = cliente.VendedorId,
             Vendedor = cliente.Vendedor?.Nombre,
+            ListaPrecioId = cliente.ListaPrecioId,
+            ListaPrecio = cliente.ListaPrecio?.Nombre,
             Activo = cliente.Activo,
             FechaCreacion = cliente.FechaCreacion
         };

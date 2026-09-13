@@ -40,6 +40,9 @@ public abstract class ClienteRequestBase
     /// <summary>Quién atiende al cliente. Cualquier usuario, no solo los del rol Vendedor.</summary>
     public int? VendedorId { get; set; }
 
+    /// <summary>Lista de precios con la que se le cobra. Vacío usa la predeterminada.</summary>
+    public int? ListaPrecioId { get; set; }
+
     /// <summary>El mercado, zona o punto de reparto donde está el puesto.</summary>
     public int? MercadoId { get; set; }
 

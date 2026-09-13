@@ -1,4 +1,4 @@
-import { api } from '../../lib/apiClient'
+import { ApiError, api } from '../../lib/apiClient'
 
 export interface ListaPrecioResponse {
   id: number
@@ -53,4 +53,21 @@ export const listaPrecioApi = {
     api.put<PrecioResponse[]>(`/listaprecio/${id}/precios`, { precios }),
 
   eliminarPrecio: (precioId: number) => api.del<void>(`/listaprecio/precios/${precioId}`),
+
+  /**
+   * Qué precio corresponde a esa presentación por esa cantidad.
+   *
+   * La cantidad importa: el servidor elige el tramo más alto que alcanza, así
+   * que 5 sacos pueden costar menos por saco que 4. Devuelve null cuando esa
+   * presentación no tiene precio en la lista (el endpoint responde 404).
+   */
+  resolver: (id: number, presentacionId: number, cantidad: number) =>
+    api
+      .get<PrecioResponse>(
+        `/listaprecio/${id}/resolver?presentacionId=${presentacionId}&cantidad=${cantidad}`,
+      )
+      .catch((e) => {
+        if (e instanceof ApiError && e.statusCode === 404) return null
+        throw e
+      }),
 }

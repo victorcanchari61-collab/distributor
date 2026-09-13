@@ -42,6 +42,16 @@ public class Cliente
     public int? VendedorId { get; set; }
     public Usuario? Vendedor { get; set; }
 
+    /// <summary>
+    /// Con qué lista se le cobra.
+    ///
+    /// Vacío usa la predeterminada. Existe porque elegir "Mayorista" a mano en
+    /// cada pedido no se sostiene: basta que alguien se olvide una vez para
+    /// que el mayorista pague precio de menudeo.
+    /// </summary>
+    public int? ListaPrecioId { get; set; }
+    public ListaPrecio? ListaPrecio { get; set; }
+
     public bool Activo { get; set; } = true;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }
