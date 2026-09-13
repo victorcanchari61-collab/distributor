@@ -209,19 +209,6 @@ export function KardexPage() {
       ),
     },
     {
-      key: 'costoPromedio',
-      sortable: false,
-      label: 'Costo prom.',
-      align: 'right',
-      filterable: false,
-      render: (row) =>
-        row.costoPromedio == null ? (
-          <span className="text-ink-soft">—</span>
-        ) : (
-          <span className="text-ink-soft">S/ {row.costoPromedio.toFixed(4)}</span>
-        ),
-    },
-    {
       key: 'valorizado',
       sortable: false,
       label: 'Valorizado',

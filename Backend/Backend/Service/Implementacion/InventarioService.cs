@@ -538,11 +538,6 @@ public class InventarioService : IInventarioService
         Saldo = despues.Cantidad,
         ValorizadoAnterior = Math.Round(antes.Valor, 2),
         Valorizado = Math.Round(despues.Valor, 2),
-        // Sin stock no hay promedio que sacar: dividir por cero diria cualquier
-        // cosa y se lee como un costo real.
-        CostoPromedio = despues.Cantidad > 0
-            ? Math.Round(despues.Valor / despues.Cantidad, 4)
-            : null,
         Anulado = m.Documento?.Estado == EstadoDocumento.Anulado,
     };
 
@@ -583,9 +578,6 @@ public class InventarioService : IInventarioService
                 Saldo = despues.Cantidad,
                 ValorizadoAnterior = Math.Round(antes.Valor, 2),
                 Valorizado = Math.Round(despues.Valor, 2),
-                CostoPromedio = despues.Cantidad > 0
-                    ? Math.Round(despues.Valor / despues.Cantidad, 4)
-                    : null,
                 Anulado = m.Documento?.Estado == EstadoDocumento.Anulado
             });
         }

@@ -153,9 +153,6 @@ public class KardexResponse
     public decimal ValorizadoAnterior { get; set; }
     public decimal Valorizado { get; set; }
 
-    /// <summary>Valorizado entre saldo: lo que cuesta en promedio cada unidad que queda.</summary>
-    public decimal? CostoPromedio { get; set; }
-
     public bool Anulado { get; set; }
 }
 
