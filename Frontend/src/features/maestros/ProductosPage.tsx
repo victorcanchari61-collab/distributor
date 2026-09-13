@@ -749,7 +749,7 @@ export function ProductosPage() {
         <Modal
           open={abierto}
           title={editando ? `Editar ${editando.nombre}` : 'Nuevo producto'}
-          size="xl"
+          size="2xl"
           onClose={() => setAbierto(false)}
           footer={
             <>
