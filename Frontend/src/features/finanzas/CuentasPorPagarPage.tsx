@@ -430,20 +430,15 @@ export function CuentasPorPagarPage() {
         size="2xl"
         footer={
           <>
+            <Button variant="secondary" size="sm" onClick={() => setGestionando(null)}>
+              Cerrar
+            </Button>
             {puede('finanzas.pagar', 'cobrar') && (
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={editandoClave !== null}
-                onClick={agregarFila}
-              >
+              <Button size="sm" disabled={editandoClave !== null} onClick={agregarFila}>
                 <Plus size={15} />
                 Agregar pago
               </Button>
             )}
-            <Button variant="secondary" size="sm" onClick={() => setGestionando(null)}>
-              Cerrar
-            </Button>
           </>
         }
       >
