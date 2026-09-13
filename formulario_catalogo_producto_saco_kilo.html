@@ -1,0 +1,187 @@
+<div style="background: var(--surface-2); border-radius: 12px; border: 0.5px solid var(--border); padding: 1.25rem 1.5rem; max-width: 640px;">
+  <h3 style="font-size: 16px; font-weight: 500; margin: 0 0 4px;">Nuevo producto</h3>
+  <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 1rem;">Compra por saco, venta por saco completo o en bolsas por kilo</p>
+
+  <div style="display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; margin-bottom: 12px;">
+    <div>
+      <label style="font-size: 13px; color: var(--text-secondary); display:block; margin-bottom:4px;">Nombre del producto</label>
+      <input type="text" placeholder="Arroz extra" style="width:100%;">
+    </div>
+    <div>
+      <label style="font-size: 13px; color: var(--text-secondary); display:block; margin-bottom:4px;">SKU / código</label>
+      <input type="text" placeholder="ARZ-001" style="width:100%;">
+    </div>
+  </div>
+
+  <div style="border-top: 0.5px solid var(--border); margin: 12px 0; padding-top: 12px;">
+    <p style="font-size: 13px; font-weight: 500; margin: 0 0 8px;"><i class="ti ti-shopping-cart" style="font-size:15px; vertical-align:-2px; margin-right:6px;" aria-hidden="true"></i>Unidad de compra</p>
+    <div style="display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr); gap: 12px;">
+      <div>
+        <label style="font-size: 12px; color: var(--text-muted); display:block; margin-bottom:4px;">Peso por saco (kg)</label>
+        <input id="pesoSaco" type="number" value="50" step="0.5" style="width:100%;">
+      </div>
+      <div>
+        <label style="font-size: 12px; color: var(--text-muted); display:block; margin-bottom:4px;">Costo por saco</label>
+        <input id="costoSaco" type="number" value="180" step="0.1" style="width:100%;">
+      </div>
+      <div>
+        <label style="font-size: 12px; color: var(--text-muted); display:block; margin-bottom:4px;">Costo por kg</label>
+        <input id="costoKg" type="text" readonly style="width:100%; background: var(--surface-1); color: var(--text-secondary);">
+      </div>
+    </div>
+  </div>
+
+  <div style="border-top: 0.5px solid var(--border); margin: 12px 0; padding-top: 12px;">
+    <p style="font-size: 13px; font-weight: 500; margin: 0 0 8px;"><i class="ti ti-box" style="font-size:15px; vertical-align:-2px; margin-right:6px;" aria-hidden="true"></i>Venta por saco completo</p>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
+        <input type="checkbox" id="vendeSacoCheck" checked style="width:auto;"> Habilitar venta por saco entero
+      </label>
+    </div>
+    <div id="sacoVentaWrap" style="display:grid; grid-template-columns: 70px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr); gap:10px; align-items:center; margin-top:10px;">
+      <span style="font-size:13px; font-weight:500;" id="sacoLabel">50 kg</span>
+      <div>
+        <label style="font-size:11px; color:var(--text-muted); display:block;">Precio venta (saco)</label>
+        <input id="precioSaco" type="number" value="200" step="0.5" style="width:100%; height:32px;">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--text-muted); display:block;">Margen</label>
+        <input id="margenSaco" type="text" readonly style="width:100%; height:32px; background:var(--surface-1); color:var(--text-secondary);">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--text-muted); display:block;">Precio equiv. x kg</label>
+        <input id="equivKgSaco" type="text" readonly style="width:100%; height:32px; background:var(--surface-1); color:var(--text-secondary);">
+      </div>
+    </div>
+  </div>
+
+  <div style="border-top: 0.5px solid var(--border); margin: 12px 0; padding-top: 12px;">
+    <p style="font-size: 13px; font-weight: 500; margin: 0 0 8px;"><i class="ti ti-package" style="font-size:15px; vertical-align:-2px; margin-right:6px;" aria-hidden="true"></i>Venta fraccionada (bolsas por kilo)</p>
+    <div id="bolsasWrap"></div>
+  </div>
+
+  <div style="border-top: 0.5px solid var(--border); margin: 12px 0 0; padding-top: 12px; background: var(--surface-1); border-radius: var(--radius); padding: 12px;">
+    <p style="font-size: 13px; font-weight: 500; margin: 0 0 6px;"><i class="ti ti-calculator" style="font-size:15px; vertical-align:-2px; margin-right:6px;" aria-hidden="true"></i>Simulador de venta</p>
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom: 8px; flex-wrap: wrap;">
+      <span style="font-size:13px; color: var(--text-secondary);">Vender</span>
+      <input id="simCant" type="number" value="2" min="1" style="width:60px;">
+      <select id="simUnidad" style="width:150px;"></select>
+    </div>
+    <p style="font-size: 14px; margin: 0;">Total: <span id="simTotalKg" style="font-weight:500;">0</span> kg — Consumo del saco: <span id="simPctSaco" style="font-weight:500;">0%</span> — Costo: <span id="simCosto" style="font-weight:500;">S/ 0.00</span></p>
+  </div>
+</div>
+
+<script>
+const presentaciones = [3,5,7,10];
+const wrap = document.getElementById('bolsasWrap');
+const simUnidad = document.getElementById('simUnidad');
+const vendeSacoCheck = document.getElementById('vendeSacoCheck');
+const sacoVentaWrap = document.getElementById('sacoVentaWrap');
+
+presentaciones.forEach(kg => {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid; grid-template-columns: 70px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr); gap:10px; align-items:center; margin-bottom:8px;';
+  row.innerHTML = `
+    <span style="font-size:13px; font-weight:500;">${kg} kg</span>
+    <div>
+      <label style="font-size:11px; color:var(--text-muted); display:block;">Precio venta</label>
+      <input type="number" class="precioVenta" data-kg="${kg}" value="${(kg*4.5).toFixed(1)}" step="0.1" style="width:100%; height:32px;">
+    </div>
+    <div>
+      <label style="font-size:11px; color:var(--text-muted); display:block;">Margen</label>
+      <input type="text" class="margen" data-kg="${kg}" readonly style="width:100%; height:32px; background:var(--surface-1); color:var(--text-secondary);">
+    </div>
+    <div>
+      <label style="font-size:11px; color:var(--text-muted); display:block;">Bolsas por saco</label>
+      <input type="text" class="bolsasPorSaco" data-kg="${kg}" readonly style="width:100%; height:32px; background:var(--surface-1); color:var(--text-secondary);">
+    </div>
+  `;
+  wrap.appendChild(row);
+});
+
+function rebuildSimOptions() {
+  const pesoSaco = parseFloat(document.getElementById('pesoSaco').value) || 0;
+  const prevValue = simUnidad.value;
+  simUnidad.innerHTML = '';
+  if (vendeSacoCheck.checked) {
+    const opt = document.createElement('option');
+    opt.value = 'saco';
+    opt.textContent = 'saco(s) de ' + pesoSaco + ' kg';
+    simUnidad.appendChild(opt);
+  }
+  presentaciones.forEach(kg => {
+    const opt = document.createElement('option');
+    opt.value = kg;
+    opt.textContent = 'bolsa(s) de ' + kg + ' kg';
+    simUnidad.appendChild(opt);
+  });
+  if ([...simUnidad.options].some(o => o.value === prevValue)) simUnidad.value = prevValue;
+}
+
+function recalc() {
+  const pesoSaco = parseFloat(document.getElementById('pesoSaco').value) || 0;
+  const costoSaco = parseFloat(document.getElementById('costoSaco').value) || 0;
+  const costoKg = pesoSaco > 0 ? costoSaco / pesoSaco : 0;
+  document.getElementById('costoKg').value = 'S/ ' + costoKg.toFixed(2);
+  document.getElementById('sacoLabel').textContent = pesoSaco + ' kg';
+
+  sacoVentaWrap.style.opacity = vendeSacoCheck.checked ? '1' : '0.4';
+  sacoVentaWrap.style.pointerEvents = vendeSacoCheck.checked ? 'auto' : 'none';
+
+  const precioSaco = parseFloat(document.getElementById('precioSaco').value) || 0;
+  const margenSaco = costoSaco > 0 ? ((precioSaco - costoSaco) / precioSaco * 100) : 0;
+  document.getElementById('margenSaco').value = (isFinite(margenSaco) ? margenSaco.toFixed(1) : '0') + '%';
+  document.getElementById('equivKgSaco').value = pesoSaco > 0 ? 'S/ ' + (precioSaco / pesoSaco).toFixed(2) : 'S/ 0.00';
+
+  document.querySelectorAll('.precioVenta').forEach(inp => {
+    const kg = parseFloat(inp.dataset.kg);
+    const precio = parseFloat(inp.value) || 0;
+    const costoBolsa = costoKg * kg;
+    const margen = costoBolsa > 0 ? ((precio - costoBolsa) / precio * 100) : 0;
+    document.querySelector(`.margen[data-kg="${kg}"]`).value = (isFinite(margen) ? margen.toFixed(1) : '0') + '%';
+    const bolsasPorSaco = kg > 0 ? (pesoSaco / kg) : 0;
+    document.querySelector(`.bolsasPorSaco[data-kg="${kg}"]`).value = bolsasPorSaco.toFixed(2);
+  });
+
+  rebuildSimOptions();
+  simulate();
+}
+
+function simulate() {
+  const cant = parseFloat(document.getElementById('simCant').value) || 0;
+  const unidad = simUnidad.value;
+  const pesoSaco = parseFloat(document.getElementById('pesoSaco').value) || 0;
+
+  let kgUnidad = 0;
+  let precioUnidad = 0;
+
+  if (unidad === 'saco') {
+    kgUnidad = pesoSaco;
+    precioUnidad = parseFloat(document.getElementById('precioSaco').value) || 0;
+  } else {
+    kgUnidad = parseFloat(unidad) || 0;
+    const precioInput = document.querySelector(`.precioVenta[data-kg="${kgUnidad}"]`);
+    precioUnidad = precioInput ? (parseFloat(precioInput.value) || 0) : 0;
+  }
+
+  const totalKg = cant * kgUnidad;
+  const pct = pesoSaco > 0 ? (totalKg / pesoSaco * 100) : 0;
+  const costoTotal = cant * precioUnidad;
+
+  document.getElementById('simTotalKg').textContent = totalKg.toFixed(1);
+  document.getElementById('simPctSaco').textContent = pct.toFixed(1) + '%';
+  document.getElementById('simCosto').textContent = 'S/ ' + costoTotal.toFixed(2);
+}
+
+document.getElementById('pesoSaco').addEventListener('input', recalc);
+document.getElementById('costoSaco').addEventListener('input', recalc);
+document.getElementById('precioSaco').addEventListener('input', recalc);
+document.getElementById('simCant').addEventListener('input', simulate);
+simUnidad.addEventListener('change', simulate);
+vendeSacoCheck.addEventListener('change', recalc);
+document.addEventListener('input', e => {
+  if (e.target.classList.contains('precioVenta')) recalc();
+});
+
+recalc();
+</script>
