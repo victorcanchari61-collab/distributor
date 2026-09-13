@@ -436,7 +436,7 @@ export function PedidosPage() {
         const factor = factorDeFila(fila)
         const precio = Number(fila.costo) || 0
         return precio > 0 && factor > 0 ? (
-          <span className="text-ink-soft">
+          <span className="font-medium text-ink">
             S/ {Number((precio / factor).toFixed(4))} × {producto?.unidadBase}
           </span>
         ) : (
