@@ -251,17 +251,6 @@ export function NuevaRecepcionModal({
       ),
     },
     {
-      key: 'cantidad',
-      label: 'Pactado',
-      align: 'right',
-      width: 130,
-      render: (d) => (
-        <span className="text-sm text-ink-soft">
-          {d.cantidadPresentacion} {d.presentacion ?? d.unidadBase}
-        </span>
-      ),
-    },
-    {
       key: 'cantidadRecibida',
       label: 'Ya recibido',
       align: 'right',
