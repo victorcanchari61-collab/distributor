@@ -18,11 +18,29 @@ import {
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
-import type { PresentacionResponse, ProductoResponse } from '../maestros'
+import type { ProductoResponse } from '../maestros'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse, PrecioResponse } from './listaPrecioApi'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
+
+/**
+ * Una linea de la tabla de precios del modal.
+ *
+ * `desde` es la cantidad minima a partir de la cual rige ese precio: es la
+ * regla que hace que una lista Mayorista tenga sentido —el saco de camanejo a
+ * un precio, y desde 5 sacos a otro mas bajo—. Los numeros viajan como texto
+ * porque son inputs a medio escribir.
+ */
+interface FilaPrecio {
+  clave: string
+  /** Id del precio guardado del que salio la fila; ausente si es nueva. */
+  id?: number
+  presentacionId: number
+  desde: string
+  precio: string
+  margen: string
+}
 
 export function ListasPreciosPage() {
   const { puede } = usePermisos()
@@ -53,18 +71,13 @@ export function ListasPreciosPage() {
    * Un producto de abarrotes se vende en siete formas —el kilo, cinco bolsas
    * y el saco— y cargarlas de a una era abrir el modal siete veces. El
    * backend ya aceptaba una lista en un solo PUT; lo que faltaba era la
-   * pantalla. Se guarda por presentacion: { [presentacionId]: "4.50" }.
-   */
-  const [preciosMasivos, setPreciosMasivos] = useState<Record<number, string>>({})
-  /*
-   * El margen tambien se escribe, no solo se lee.
+   * pantalla.
    *
-   * Muchas veces el precio no se decide: se decide cuanto se quiere ganar y
-   * el precio sale de ahi. Por eso las dos columnas se editan y cada una
-   * recalcula la otra; se guardan las dos para que el numero tecleado quede
-   * tal cual y no baile por el redondeo.
+   * Es una lista y no un diccionario por presentacion porque una misma
+   * presentacion puede tener varios tramos: el saco suelto a un precio y
+   * desde 5 sacos a otro.
    */
-  const [margenesMasivos, setMargenesMasivos] = useState<Record<number, string>>({})
+  const [filasPrecio, setFilasPrecio] = useState<FilaPrecio[]>([])
   /** Para llenar toda la columna de golpe a partir del costo. */
   const [margenObjetivo, setMargenObjetivo] = useState('')
 
@@ -176,28 +189,54 @@ export function ListasPreciosPage() {
   /** Las presentaciones que se pueden vender, que son a las que se les pone precio. */
   const vendibles = (producto?.presentaciones ?? []).filter((p) => p.esVenta && p.activo)
 
-  /** Lo ya cargado en esta lista para el producto abierto, por presentación. */
-  const preciosCargados = new Map(
+  const presentacionDe = (id: number) => vendibles.find((p) => p.id === id)
+
+  /** Lo ya cargado en esta lista para el producto abierto: "presentacion-desde". */
+  const preciosCargados = new Set(
     precios
-      .filter((x) => x.cantidadMinima === 1 && vendibles.some((v) => v.id === x.presentacionId))
-      .map((x) => [x.presentacionId, x.precio]),
+      .filter((x) => vendibles.some((v) => v.id === x.presentacionId))
+      .map((x) => `${x.presentacionId}-${x.cantidadMinima}`),
   )
 
-  /** Abre el modal con lo que ya tiene cargado ese producto. */
+  /** Abre el modal con lo que ya tiene cargado ese producto, tramos incluidos. */
   const cambiarProductoMasivo = (productoId: number) => {
     const elegido = productos.find((p) => p.id === productoId)
-    const yaTiene: Record<number, string> = {}
+    const filas: FilaPrecio[] = []
 
     for (const pres of elegido?.presentaciones ?? []) {
-      const cargado = precios.find(
-        (x) => x.presentacionId === pres.id && x.cantidadMinima === 1,
-      )
-      if (cargado) yaTiene[pres.id] = String(cargado.precio)
+      if (!pres.esVenta || !pres.activo) continue
+
+      // Los ya cargados salen tal cual, y el de "desde 1" siempre esta
+      // aunque todavia no tenga precio: es el renglon normal de esa forma
+      // de vender.
+      const suyos = precios
+        .filter((x) => x.presentacionId === pres.id)
+        .sort((a, b) => a.cantidadMinima - b.cantidadMinima)
+
+      if (!suyos.some((x) => x.cantidadMinima === 1)) {
+        filas.push({
+          clave: crypto.randomUUID(),
+          presentacionId: pres.id,
+          desde: '1',
+          precio: '',
+          margen: '',
+        })
+      }
+
+      for (const x of suyos) {
+        filas.push({
+          clave: crypto.randomUUID(),
+          id: x.id,
+          presentacionId: pres.id,
+          desde: String(x.cantidadMinima),
+          precio: String(x.precio),
+          margen: '',
+        })
+      }
     }
 
     setPrecioForm({ ...precioForm, productoId, presentacionId: 0 })
-    setPreciosMasivos(yaTiene)
-    setMargenesMasivos({})
+    setFilasPrecio(filas)
     setMargenObjetivo('')
     setErrorForm('')
   }
@@ -206,32 +245,58 @@ export function ListasPreciosPage() {
   const costoDe = (factor: number) =>
     producto?.costoReferencia != null ? producto.costoReferencia * factor : null
 
-  /** Escriben el precio: el margen de esa fila se recalcula solo. */
-  const escribirPrecio = (presentacionId: number, factor: number, valor: string) => {
-    setPreciosMasivos((prev) => ({ ...prev, [presentacionId]: valor }))
+  const actualizarFila = (clave: string, cambio: Partial<FilaPrecio>) =>
+    setFilasPrecio((prev) => prev.map((f) => (f.clave === clave ? { ...f, ...cambio } : f)))
 
-    const costo = costoDe(factor)
+  /** Escriben el precio: el margen de esa fila se recalcula solo. */
+  const escribirPrecio = (fila: FilaPrecio, valor: string) => {
+    const costo = costoDe(presentacionDe(fila.presentacionId)?.factor ?? 0)
     const precio = Number(valor)
-    setMargenesMasivos((prev) => ({
-      ...prev,
-      [presentacionId]:
-        costo != null && precio > 0 ? (((precio - costo) / precio) * 100).toFixed(1) : '',
-    }))
+    actualizarFila(fila.clave, {
+      precio: valor,
+      margen: costo != null && precio > 0 ? (((precio - costo) / precio) * 100).toFixed(1) : '',
+    })
   }
 
   /** Escriben el margen: el precio de esa fila se recalcula solo. */
-  const escribirMargen = (presentacionId: number, factor: number, valor: string) => {
-    setMargenesMasivos((prev) => ({ ...prev, [presentacionId]: valor }))
-
-    const costo = costoDe(factor)
+  const escribirMargen = (fila: FilaPrecio, valor: string) => {
+    const costo = costoDe(presentacionDe(fila.presentacionId)?.factor ?? 0)
     const margen = Number(valor)
-    if (costo == null || !valor || margen >= 100) return
+    const calculable = costo != null && valor !== '' && margen < 100
 
-    setPreciosMasivos((prev) => ({
-      ...prev,
-      [presentacionId]: (costo / (1 - margen / 100)).toFixed(2),
-    }))
+    actualizarFila(fila.clave, {
+      margen: valor,
+      ...(calculable ? { precio: (costo / (1 - margen / 100)).toFixed(2) } : {}),
+    })
   }
+
+  /**
+   * Otro tramo de la misma presentacion.
+   *
+   * Es la escalera por volumen: el saco suelto va a un precio y desde 5 sacos
+   * a otro mas bajo. El backend ya la resolvia (ResolverPrecioAsync toma el
+   * tramo mas alto que la cantidad alcance); lo que faltaba era poder
+   * cargarla.
+   */
+  const agregarTramo = (fila: FilaPrecio) =>
+    setFilasPrecio((prev) => {
+      const hermanas = prev.filter((f) => f.presentacionId === fila.presentacionId)
+      const ultimo = Math.max(...hermanas.map((f) => Number(f.desde) || 1))
+      const nueva: FilaPrecio = {
+        clave: crypto.randomUUID(),
+        presentacionId: fila.presentacionId,
+        desde: String(ultimo + 1),
+        precio: '',
+        margen: '',
+      }
+
+      // Va pegada a las de su presentacion, no al final de la tabla.
+      const ultimaHermana = prev.map((f) => f.presentacionId).lastIndexOf(fila.presentacionId)
+      return [...prev.slice(0, ultimaHermana + 1), nueva, ...prev.slice(ultimaHermana + 1)]
+    })
+
+  const quitarTramo = (clave: string) =>
+    setFilasPrecio((prev) => prev.filter((f) => f.clave !== clave))
 
   /** Llena toda la columna a partir del costo: precio = costo / (1 - margen). */
   const llenarPorMargen = () => {
@@ -243,15 +308,13 @@ export function ListasPreciosPage() {
       return setErrorForm('El margen va entre 1 y 99.')
     }
 
-    const lleno: Record<number, string> = {}
-    const margenes: Record<number, string> = {}
-    for (const pres of vendibles) {
-      const costo = producto.costoReferencia * pres.factor
-      lleno[pres.id] = (costo / (1 - margen / 100)).toFixed(2)
-      margenes[pres.id] = margen.toFixed(1)
-    }
-    setPreciosMasivos(lleno)
-    setMargenesMasivos(margenes)
+    setFilasPrecio((prev) =>
+      prev.map((f) => {
+        const costo = costoDe(presentacionDe(f.presentacionId)?.factor ?? 0)
+        if (costo == null) return f
+        return { ...f, precio: (costo / (1 - margen / 100)).toFixed(2), margen: margen.toFixed(1) }
+      }),
+    )
     setErrorForm('')
   }
 
@@ -261,25 +324,51 @@ export function ListasPreciosPage() {
    * Misma tabla que el editor de presentaciones del formulario de producto
    * (SysDataTable), para que se lea igual en los dos sitios.
    */
-  const columnasPrecios: DataTableColumn<PresentacionResponse>[] = [
+  const columnasPrecios: DataTableColumn<FilaPrecio>[] = [
     {
       key: 'nombre',
       label: 'Presentación',
       width: 200,
-      render: (pres) => (
-        <span className="flex items-center gap-2">
-          <span className="text-sm font-medium text-ink">{pres.nombre}</span>
-          {preciosCargados.has(pres.id) && <Badge tone="neutral">ya tenía</Badge>}
-        </span>
+      render: (fila) => {
+        const pres = presentacionDe(fila.presentacionId)
+        return (
+          <span className="flex items-center gap-2">
+            <span className="text-sm font-medium text-ink">{pres?.nombre}</span>
+            {preciosCargados.has(`${fila.presentacionId}-${Number(fila.desde) || 1}`) && (
+              <Badge tone="neutral">ya tenía</Badge>
+            )}
+          </span>
+        )
+      },
+    },
+    {
+      /*
+       * La regla del precio: desde cuantas se cobra asi.
+       *
+       * Es lo que separa una lista Mayorista de la general — el saco de
+       * camanejo a un precio, pero desde 5 sacos a otro.
+       */
+      key: 'desde',
+      label: 'Desde',
+      width: 90,
+      render: (fila) => (
+        <Input
+          size="sm"
+          type="number"
+          min={1}
+          step="1"
+          value={fila.desde}
+          onChange={(e) => actualizarFila(fila.clave, { desde: e.target.value })}
+        />
       ),
     },
     {
       key: 'equivale',
       label: 'Equivale',
       width: 110,
-      render: (pres) => (
+      render: (fila) => (
         <Badge tone="sys">
-          {pres.factor} {producto?.unidadBase}
+          {presentacionDe(fila.presentacionId)?.factor} {producto?.unidadBase}
         </Badge>
       ),
     },
@@ -288,8 +377,8 @@ export function ListasPreciosPage() {
       label: 'Costo',
       align: 'right',
       width: 100,
-      render: (pres) => {
-        const costo = costoDe(pres.factor)
+      render: (fila) => {
+        const costo = costoDe(presentacionDe(fila.presentacionId)?.factor ?? 0)
         return (
           <span className="text-sm text-ink-soft">
             {costo != null ? `S/ ${costo.toFixed(2)}` : '—'}
@@ -300,22 +389,22 @@ export function ListasPreciosPage() {
     {
       key: 'precio',
       label: 'Precio',
-      render: (pres) => (
+      render: (fila) => (
         <Input
           size="sm"
           type="number"
           step="0.01"
           min={0}
           placeholder="0.00"
-          value={preciosMasivos[pres.id] ?? ''}
-          onChange={(e) => escribirPrecio(pres.id, pres.factor, e.target.value)}
+          value={fila.precio}
+          onChange={(e) => escribirPrecio(fila, e.target.value)}
         />
       ),
     },
     {
       key: 'margen',
       label: 'Margen %',
-      render: (pres) => (
+      render: (fila) => (
         <Input
           size="sm"
           type="number"
@@ -323,8 +412,8 @@ export function ListasPreciosPage() {
           max={99}
           placeholder="—"
           disabled={producto?.costoReferencia == null}
-          value={margenesMasivos[pres.id] ?? ''}
-          onChange={(e) => escribirMargen(pres.id, pres.factor, e.target.value)}
+          value={fila.margen}
+          onChange={(e) => escribirMargen(fila, e.target.value)}
         />
       ),
     },
@@ -332,11 +421,13 @@ export function ListasPreciosPage() {
       key: 'porBase',
       label: `Por ${producto?.unidadBase ?? 'unidad'}`,
       align: 'right',
-      render: (pres) => {
-        const precio = Number(preciosMasivos[pres.id]) || 0
+      width: 110,
+      render: (fila) => {
+        const precio = Number(fila.precio) || 0
+        const factor = presentacionDe(fila.presentacionId)?.factor ?? 0
         return (
           <span className="text-sm text-ink-soft">
-            {precio > 0 ? `S/ ${(precio / pres.factor).toFixed(4)}` : '—'}
+            {precio > 0 && factor > 0 ? `S/ ${(precio / factor).toFixed(4)}` : '—'}
           </span>
         )
       },
@@ -347,24 +438,44 @@ export function ListasPreciosPage() {
     if (!listaActiva) return
     if (!precioForm.productoId) return setErrorForm('Elige el producto.')
 
-    const aGuardar = vendibles
-      .filter((pres) => {
-        const valor = Number(preciosMasivos[pres.id])
-        return valor > 0
-      })
-      .map((pres) => ({
-        presentacionId: pres.id,
-        precio: Number(preciosMasivos[pres.id]),
-        cantidadMinima: 1,
-      }))
+    const conPrecio = filasPrecio.filter((f) => Number(f.precio) > 0)
+
+    if (conPrecio.some((f) => !Number(f.desde) || Number(f.desde) < 1)) {
+      return setErrorForm('El "desde" de cada precio empieza en 1.')
+    }
+
+    // Dos tramos con el mismo "desde" dejarian a la venta sin saber cual
+    // cobrar, y el backend se quedaria con el ultimo sin avisar.
+    const claves = conPrecio.map((f) => `${f.presentacionId}-${Number(f.desde)}`)
+    if (new Set(claves).size !== claves.length) {
+      return setErrorForm('Hay dos precios de la misma presentación con el mismo "desde".')
+    }
+
+    const aGuardar = conPrecio.map((f) => ({
+      presentacionId: f.presentacionId,
+      precio: Number(f.precio),
+      cantidadMinima: Number(f.desde),
+    }))
 
     if (aGuardar.length === 0) return setErrorForm('Pon al menos un precio.')
+
+    /*
+     * Los tramos que se quitaron de la tabla.
+     *
+     * El PUT solo crea y actualiza, asi que borrar la fila en pantalla no
+     * bastaba: el precio viejo seguia en la lista y se seguia cobrando.
+     */
+    const vivos = new Set(filasPrecio.map((f) => f.id).filter((id) => id != null))
+    const aBorrar = precios.filter(
+      (x) => x.productoId === precioForm.productoId && !vivos.has(x.id),
+    )
 
     setGuardando(true)
     try {
       // Una sola llamada para todas: el backend actualiza la que ya existía
       // y crea la que no, sin duplicar.
       await listaPrecioApi.guardarPrecios(listaActiva, aGuardar)
+      for (const x of aBorrar) await listaPrecioApi.eliminarPrecio(x.id)
       setPrecioAbierto(false)
       await cargarPrecios(listaActiva)
       await cargar()
@@ -507,8 +618,7 @@ export function ListasPreciosPage() {
                 disabled={!listaActiva}
                 onClick={() => {
                   setPrecioForm({ productoId: 0, presentacionId: 0, precio: '', cantidadMinima: '1' })
-                  setPreciosMasivos({})
-                  setMargenesMasivos({})
+                  setFilasPrecio([])
                   setMargenObjetivo('')
                   setErrorForm('')
                   setPrecioAbierto(true)
@@ -737,22 +847,48 @@ export function ListasPreciosPage() {
                 Elige un producto para ver sus presentaciones.
               </p>
             ) : (
-              <SysDataTable<PresentacionResponse>
+              <SysDataTable<FilaPrecio>
                 columns={columnasPrecios}
-                rows={vendibles}
-                rowKey="id"
+                rows={filasPrecio}
+                rowKey="clave"
                 toolbar={false}
                 empty="Este producto no tiene ninguna presentación marcada como se vende."
+                actionsWidth={96}
+                actions={(fila) => (
+                  <>
+                    <RowAction
+                      label={`Agregar un tramo de ${presentacionDe(fila.presentacionId)?.nombre}`}
+                      onClick={() => agregarTramo(fila)}
+                    >
+                      <Plus size={15} />
+                    </RowAction>
+                    {/* El renglon de "desde 1" es el precio normal: no se quita. */}
+                    {filasPrecio.filter((f) => f.presentacionId === fila.presentacionId).length >
+                      1 && (
+                      <RowAction
+                        label="Quitar este tramo"
+                        tone="danger"
+                        onClick={() => quitarTramo(fila.clave)}
+                      >
+                        <Trash2 size={15} />
+                      </RowAction>
+                    )}
+                  </>
+                )}
               />
             )}
 
-            {producto && vendibles.length > 0 && (
+            {producto && filasPrecio.length > 0 && (
               <p className="text-xs text-ink-soft">
-                La columna <span className="font-medium">por {producto.unidadBase}</span> sirve para
-                comprobar la escalera: el saco tiene que salir más barato por {producto.unidadBase}{' '}
-                que el {producto.unidadBase} suelto. Las filas que dejes vacías no se guardan.
+                <span className="font-medium">Desde</span> es a partir de cuántas se cobra ese
+                precio: deja 1 para el precio normal y agrega un tramo (+) para el precio por
+                volumen. La columna{' '}
+                <span className="font-medium">por {producto.unidadBase}</span> sirve para comprobar
+                la escalera: el saco tiene que salir más barato por {producto.unidadBase} que el{' '}
+                {producto.unidadBase} suelto. Las filas que dejes vacías no se guardan.
               </p>
             )}
+
           </div>
         </Modal>
 
