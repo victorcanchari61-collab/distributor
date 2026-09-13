@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Package, RotateCcw, Search, SlidersHorizontal } from 'lucide-react'
 import { cn } from './cn'
 import { Button } from './Button'
@@ -57,6 +58,33 @@ const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 function opcionesDe(productos: ProductoBuscable[], campo: 'categoria' | 'marca') {
   const valores = new Set(productos.map((p) => p[campo]).filter((v): v is string => Boolean(v)))
   return [...valores].sort((a, b) => a.localeCompare(b, 'es'))
+}
+
+/**
+ * Un campo con la etiqueta recortando su borde, como en la app movil.
+ *
+ * El Input y el Desplegable del sistema ponen la etiqueta ENCIMA, que en un
+ * formulario esta bien pero dentro de una fila de lista suma una linea de alto
+ * a cada producto marcado. Aqui la etiqueta se monta sobre el borde y el campo
+ * ocupa una sola altura.
+ */
+function CampoConLabel({
+  label,
+  className,
+  children,
+}: {
+  label: string
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <div className={cn('relative', className)}>
+      <span className="absolute -top-2 left-2.5 z-10 bg-surface px-1 text-[11px] font-medium text-ink-soft">
+        {label}
+      </span>
+      {children}
+    </div>
+  )
 }
 
 /**
@@ -280,7 +308,7 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
             <p className="text-sm text-ink-soft">Ningún producto coincide con la búsqueda.</p>
           </div>
         ) : (
-          <div className="max-h-[22rem] divide-y divide-line overflow-y-auto overflow-x-hidden rounded-field border border-line">
+          <div className="flex max-h-[22rem] flex-col gap-2 overflow-y-auto overflow-x-hidden p-0.5">
             {resultados.map((p) => {
               const cantidadStock = stock?.[p.id]
               const marcado = Boolean(marcados[p.id])
@@ -291,10 +319,10 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
                   key={p.id}
                   onClick={() => alternar(p)}
                   className={cn(
-                    'cursor-pointer px-3 py-2.5 transition-colors',
+                    'cursor-pointer rounded-field border px-3 py-2.5 transition-colors',
                     marcado
-                      ? 'bg-[rgb(var(--sys-rgb)/0.08)]'
-                      : 'hover:bg-[rgb(var(--sys-rgb)/0.05)]',
+                      ? 'border-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.06)]'
+                      : 'border-line bg-surface hover:border-line-strong',
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -340,9 +368,8 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
                       className="mt-2.5 flex items-end gap-2 pl-7"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="min-w-0 flex-1">
+                      <CampoConLabel label="Unidad" className="min-w-0 flex-1">
                         <Desplegable
-                          label="Unidad"
                           value={unidades[p.id] ?? 0}
                           onChange={(v) => setUnidades((prev) => ({ ...prev, [p.id]: Number(v) }))}
                           options={[
@@ -352,12 +379,10 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
                               .map((pr) => ({ value: pr.id, label: pr.nombre })),
                           ]}
                         />
-                      </div>
+                      </CampoConLabel>
 
-                      <div className="w-24 shrink-0">
+                      <CampoConLabel label="Cant." className="w-24 shrink-0">
                         <Input
-                          label="Cant."
-                          size="sm"
                           type="number"
                           min="0"
                           step="0.0001"
@@ -365,7 +390,7 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
                           onChange={(e) => setCantidad(p, e.target.value)}
                           aria-label={`Cantidad de ${p.nombre}`}
                         />
-                      </div>
+                      </CampoConLabel>
                     </div>
                   )}
                 </div>
