@@ -16,6 +16,7 @@ import {
 import {
   Alert,
   Badge,
+  Checkbox,
   BotonMas,
   Button,
   Desplegable,
@@ -112,6 +113,8 @@ export function ProductosPage() {
 
   // En que presentacion se escribe el costo de referencia: el saco, la caja.
   const [presentacionCosto, setPresentacionCosto] = useState(0)
+  /** Si el producto se compra por su unidad base o solo por bulto. */
+  const [baseSeCompra, setBaseSeCompra] = useState(true)
 
   // Alta rapida desde el formulario: que catalogo se esta creando.
   const [crearRapido, setCrearRapido] = useState<CatalogoRapido>(null)
@@ -182,6 +185,7 @@ export function ProductosPage() {
     setForm({ ...VACIO, unidadBaseId: unidadesActivas[0]?.id ?? 0 })
     setPresentaciones([])
     setPresentacionCosto(0)
+    setBaseSeCompra(true)
     setErrorForm('')
     setPestanaForm('datos')
     setAbierto(true)
@@ -208,7 +212,8 @@ export function ProductosPage() {
       producto.presentaciones.find((p) => p.esCompra) ??
       producto.presentaciones[0]
     setPresentacionCosto(compra?.id ?? 0)
-    // La base no se edita aquí: la maneja el backend.
+    setBaseSeCompra(producto.presentaciones.find((p) => p.esBase)?.esCompra ?? true)
+    // El factor de la base no se edita aquí: lo maneja el backend.
     setPresentaciones(
       producto.presentaciones
         .filter((p) => !p.esBase)
@@ -250,7 +255,10 @@ export function ProductosPage() {
       unidad: unidadBase,
       nombre: unidades.find((u) => u.id === form.unidadBaseId)?.nombre ?? 'Unidad base',
       factor: 1,
-      esCompra: true,
+      // Un producto nuevo se compra por su unidad base hasta que se diga otra
+      // cosa; al editar manda lo que ya esta guardado — hay negocios donde la
+      // base NO se compra (el camanejo entra por saco, nunca por kilo suelto).
+      esCompra: baseSeCompra,
       esVenta: true,
       predeterminadaVenta: false,
       predeterminadaCompra: false,
@@ -267,7 +275,9 @@ export function ProductosPage() {
         unidad: unidades.find((u) => u.id === fila.unidadId)?.codigo ?? '',
         nombre: fila.nombre,
         factor: fila.factor,
-        esCompra: true,
+        // Lo que diga su casilla: si las bolsas las arma el propio negocio no
+        // se compran, y no tienen por que aparecer en "Se compra por".
+        esCompra: fila.esCompra,
         esVenta: fila.esVenta,
         predeterminadaVenta: false,
         predeterminadaCompra: false,
@@ -328,6 +338,23 @@ export function ProductosPage() {
           } else {
             await productoApi.agregarPresentacion(editando.id, cuerpo)
           }
+        }
+
+        /*
+         * La base va aparte: no esta en la tabla de presentaciones —no se
+         * borra ni cambia de factor— pero su casilla "Se compra asi" si se
+         * edita, y sin esto el cambio se perdia al guardar.
+         */
+        const filaBase = editando.presentaciones.find((p) => p.esBase)
+        if (filaBase && filaBase.esCompra !== baseSeCompra) {
+          await productoApi.actualizarPresentacion(filaBase.id, {
+            unidadId: filaBase.unidadId,
+            nombre: filaBase.nombre,
+            factor: filaBase.factor,
+            esCompra: baseSeCompra,
+            esVenta: filaBase.esVenta,
+            activo: filaBase.activo,
+          })
         }
 
         // Las que se quitaron en pantalla se borran en el servidor.
@@ -875,12 +902,26 @@ export function ProductosPage() {
               </div>
             ) : (
               <div className="flex flex-col gap-4">
-                {/* La base se muestra pero no se edita: la crea el backend. */}
+                {/*
+                  La base no se borra ni cambia de factor —la crea el backend—
+                  pero SI se dice si se compra por ella: el camanejo entra por
+                  saco y nunca por kilo suelto, y sin esta casilla "Se compra
+                  por" ofrecia el kilo igual.
+                */}
                 <div className="flex items-center justify-between gap-3 rounded-field bg-slate-50 px-3 py-2.5">
-                  <span className="text-sm text-ink">
-                    {unidades.find((u) => u.id === form.unidadBaseId)?.nombre ?? 'Unidad base'}
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm text-ink">
+                      {unidades.find((u) => u.id === form.unidadBaseId)?.nombre ?? 'Unidad base'}
+                    </span>
+                    <Badge>1 {unidadBase} · base</Badge>
                   </span>
-                  <Badge>1 {unidadBase} · base</Badge>
+
+                  <Checkbox
+                    label="Se compra así"
+                    checked={baseSeCompra}
+                    onChange={(e) => setBaseSeCompra(e.target.checked)}
+                    disabled={guardando}
+                  />
                 </div>
 
                 <PresentacionesEditor
