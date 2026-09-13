@@ -14,6 +14,8 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { productoApi } from '../maestros'
+import type { ProductoResponse } from '../maestros'
 import type { AlmacenResponse, CrearRecepcionRequest } from '../inventario'
 import { recepcionApi } from '../inventario'
 import type { CompraDetalleResponse, CompraResponse } from './comprasApi'
@@ -56,6 +58,15 @@ export function NuevaRecepcionModal({
   const [almacenId, setAlmacenId] = useState(0)
   const [observacion, setObservacion] = useState('')
   const [cantidades, setCantidades] = useState<Record<number, string>>({})
+  /*
+   * En que se recibe cada linea: { [compraDetalleId]: presentacionId }.
+   *
+   * Se compro por saco pero no siempre llega por saco: a veces el proveedor
+   * manda dos sacos y el resto suelto. Por eso cada linea elige su unidad y
+   * arranca en la de la compra, que es lo normal.
+   */
+  const [unidades, setUnidades] = useState<Record<number, number>>({})
+  const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [lotes, setLotes] = useState<Record<number, string>>({})
   const [vencimientos, setVencimientos] = useState<Record<number, string>>({})
   const [guardando, setGuardando] = useState(false)
@@ -73,24 +84,59 @@ export function NuevaRecepcionModal({
    * presentación. Se muestra en presentación y se manda en unidad base, que es
    * lo que el backend espera.
    */
-  const factorDe = (d: CompraDetalleResponse) =>
-    d.cantidadPresentacion > 0 ? d.cantidad / d.cantidadPresentacion : 1
+  /** Las formas de recibir ese producto: su unidad base y sus presentaciones. */
+  const presentacionesDe = (d: CompraDetalleResponse) =>
+    productos.find((p) => p.id === d.productoId)?.presentaciones.filter((x) => x.activo) ?? []
 
-  const unidadDe = (d: CompraDetalleResponse) => d.presentacion ?? d.unidadBase
+  /** Cuántas unidades base es una presentación. Sin elegir, la de la compra. */
+  const factorDe = (d: CompraDetalleResponse, presentacionId?: number) => {
+    const elegida = presentacionId ?? unidades[d.id] ?? d.presentacionId ?? 0
+    const encontrada = presentacionesDe(d).find((x) => x.id === elegida)
+    if (encontrada) return encontrada.factor
 
-  /** Un número en unidad base, dicho en presentaciones. */
-  const enPresentacion = (d: CompraDetalleResponse, base: number) => {
-    const valor = base / factorDe(d)
-    // Sin decimales de mas: 3 sacos son 3, no 3.0000.
-    return Number(valor.toFixed(4))
+    // Sin catalogo cargado todavia: el factor de la compra sale de la linea.
+    return d.cantidadPresentacion > 0 ? d.cantidad / d.cantidadPresentacion : 1
   }
+
+  const unidadDe = (d: CompraDetalleResponse, presentacionId?: number) => {
+    const elegida = presentacionId ?? unidades[d.id] ?? d.presentacionId ?? 0
+    return presentacionesDe(d).find((x) => x.id === elegida)?.nombre
+      ?? d.presentacion
+      ?? d.unidadBase
+  }
+
+  /** Un número en unidad base, dicho en la presentación de la compra. */
+  const enPresentacionCompra = (d: CompraDetalleResponse, base: number) => {
+    const factor = d.cantidadPresentacion > 0 ? d.cantidad / d.cantidadPresentacion : 1
+    // Sin decimales de mas: 3 sacos son 3, no 3.0000.
+    return Number((base / factor).toFixed(4))
+  }
+
+  /** Un número en unidad base, dicho en la unidad elegida para recibir. */
+  const enUnidadElegida = (d: CompraDetalleResponse, base: number) =>
+    Number((base / factorDe(d)).toFixed(4))
 
   const llenarPendiente = (detalle: CompraDetalleResponse[]) =>
     Object.fromEntries(
       detalle
         .filter((d) => d.cantidadPendiente > 0)
-        .map((d) => [d.id, String(enPresentacion(d, d.cantidadPendiente))]),
+        .map((d) => [d.id, String(enPresentacionCompra(d, d.cantidadPendiente))]),
     )
+
+  const unidadesDeCompra = (detalle: CompraDetalleResponse[]) =>
+    Object.fromEntries(
+      detalle.filter((d) => d.cantidadPendiente > 0).map((d) => [d.id, d.presentacionId ?? 0]),
+    )
+
+  /*
+   * El catalogo se pide una vez por apertura: hace falta para ofrecer las
+   * otras presentaciones del producto, que la linea de la compra no trae.
+   */
+  useEffect(() => {
+    if (!open || productos.length > 0) return
+    void productoApi.getAll().then(setProductos).catch(() => setProductos([]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -102,6 +148,7 @@ export function NuevaRecepcionModal({
     setAlmacenId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
     setObservacion('')
     setCantidades(inicial ? llenarPendiente(inicial.detalle) : {})
+    setUnidades(inicial ? unidadesDeCompra(inicial.detalle) : {})
     setLotes({})
     setVencimientos({})
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,6 +157,7 @@ export function NuevaRecepcionModal({
   const elegirCompra = (c: CompraResponse) => {
     setCompra(c)
     setCantidades(llenarPendiente(c.detalle))
+    setUnidades(unidadesDeCompra(c.detalle))
     setLotes({})
     setVencimientos({})
     setPestana('lineas')
@@ -208,15 +256,8 @@ export function NuevaRecepcionModal({
       align: 'right',
       width: 130,
       render: (d) => (
-        <span className="flex flex-col items-end">
-          <span className="text-sm text-ink-soft">
-            {d.cantidadPresentacion} {unidadDe(d)}
-          </span>
-          {d.presentacion && (
-            <span className="text-xs text-ink-soft">
-              {d.cantidad} {d.unidadBase}
-            </span>
-          )}
+        <span className="text-sm text-ink-soft">
+          {d.cantidadPresentacion} {d.presentacion ?? d.unidadBase}
         </span>
       ),
     },
@@ -228,7 +269,7 @@ export function NuevaRecepcionModal({
       render: (d) =>
         d.cantidadRecibida > 0 ? (
           <span className="text-sm text-ink-soft">
-            {enPresentacion(d, d.cantidadRecibida)} {unidadDe(d)}
+            {enPresentacionCompra(d, d.cantidadRecibida)} {d.presentacion ?? d.unidadBase}
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
@@ -241,17 +282,24 @@ export function NuevaRecepcionModal({
       width: 120,
       render: (d) => (
         <span className="text-sm font-medium text-ink">
-          {enPresentacion(d, d.cantidadPendiente)} {unidadDe(d)}
+          {enPresentacionCompra(d, d.cantidadPendiente)} {d.presentacion ?? d.unidadBase}
         </span>
       ),
     },
     {
-      /* Se escribe en lo que se compro: sacos, cajas. No en kilos. */
+      /*
+       * Se escribe en lo que llego, que no siempre es lo que se compro: dos
+       * sacos enteros y el resto suelto se registra eligiendo la unidad de
+       * cada linea.
+       */
       key: 'llego',
       label: 'Llegó ahora',
-      width: 190,
+      width: 260,
       render: (d) => {
+        const opciones = presentacionesDe(d)
         const enBase = (Number(cantidades[d.id]) || 0) * factorDe(d)
+        const distintaALaCompra = (unidades[d.id] ?? d.presentacionId ?? 0) !== (d.presentacionId ?? 0)
+
         return (
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
@@ -260,13 +308,27 @@ export function NuevaRecepcionModal({
                 type="number"
                 step="0.0001"
                 min={0}
-                max={enPresentacion(d, d.cantidadPendiente)}
+                max={enUnidadElegida(d, d.cantidadPendiente)}
                 value={cantidades[d.id] ?? ''}
                 onChange={(e) => setCantidades({ ...cantidades, [d.id]: e.target.value })}
               />
-              <span className="text-xs whitespace-nowrap text-ink-soft">{unidadDe(d)}</span>
+              {opciones.length > 1 ? (
+                <Desplegable
+                  value={unidades[d.id] ?? d.presentacionId ?? 0}
+                  onChange={(v) => setUnidades({ ...unidades, [d.id]: Number(v) })}
+                  options={opciones.map((x) => ({
+                    value: x.id,
+                    label: x.nombre,
+                    detalle: `${x.factor} ${d.unidadBase}`,
+                  }))}
+                />
+              ) : (
+                <span className="text-xs whitespace-nowrap text-ink-soft">{unidadDe(d)}</span>
+              )}
             </div>
-            {d.presentacion && enBase > 0 && (
+            {/* La equivalencia solo cuando hace falta comprobarla: al recibir
+                en otra unidad que la de la compra. */}
+            {distintaALaCompra && enBase > 0 && (
               <span className="text-xs text-ink-soft">
                 = {Number(enBase.toFixed(4))} {d.unidadBase}
               </span>
