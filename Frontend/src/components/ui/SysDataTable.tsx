@@ -61,6 +61,13 @@ export interface DataTableColumn<T> {
   /** Escape hatch: valor a usar para buscar, ordenar y filtrar. */
   value?: (row: T) => string | number
   render?: (row: T) => ReactNode
+  /**
+   * Ancho de arranque en pixeles. Sin esto todas las columnas se reparten el
+   * espacio por igual, que sobra en las cortas —una equivalencia, un costo— y
+   * falta en las largas. El usuario sigue pudiendo arrastrar el borde, y el
+   * doble clic vuelve a este ancho.
+   */
+  width?: number
 }
 
 /** Lo que la tabla está pidiendo: el espejo de su estado, para mandarlo al backend. */
@@ -501,9 +508,16 @@ export function SysDataTable<T>({
    * aparecia un scroll horizontal aunque hubiera cuatro columnas.
    */
   const colTemplate = useMemo(() => {
-    const reservado = actions ? `${actionsWidth}px` : '0px'
-    const auto = `calc((100% - ${reservado}) / ${Math.max(1, visible.length)})`
-    const cols: (string | number)[] = visible.map((col) => widths[col.key] ?? auto)
+    // Las que tienen ancho propio —fijado en la columna o arrastrado por el
+    // usuario— salen del reparto: lo que ocupan se descuenta antes de dividir
+    // el resto entre las que quedan.
+    const fijas = visible.map((col) => widths[col.key] ?? col.width ?? null)
+    const px = fijas.reduce<number>((suma, ancho) => suma + (ancho ?? 0), 0)
+    const sueltas = fijas.filter((ancho) => ancho === null).length
+
+    const reservado = `${px + (actions ? actionsWidth : 0)}px`
+    const auto = `calc((100% - ${reservado}) / ${Math.max(1, sueltas)})`
+    const cols: (string | number)[] = fijas.map((ancho) => ancho ?? auto)
     if (actions) cols.push(actionsWidth)
     return cols
   }, [visible, widths, actions, actionsWidth])

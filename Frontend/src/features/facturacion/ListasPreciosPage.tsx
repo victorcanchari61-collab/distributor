@@ -265,6 +265,7 @@ export function ListasPreciosPage() {
     {
       key: 'nombre',
       label: 'Presentación',
+      width: 200,
       render: (pres) => (
         <span className="flex items-center gap-2">
           <span className="text-sm font-medium text-ink">{pres.nombre}</span>
@@ -275,6 +276,7 @@ export function ListasPreciosPage() {
     {
       key: 'equivale',
       label: 'Equivale',
+      width: 110,
       render: (pres) => (
         <Badge tone="sys">
           {pres.factor} {producto?.unidadBase}
@@ -285,6 +287,7 @@ export function ListasPreciosPage() {
       key: 'costo',
       label: 'Costo',
       align: 'right',
+      width: 100,
       render: (pres) => {
         const costo = costoDe(pres.factor)
         return (
