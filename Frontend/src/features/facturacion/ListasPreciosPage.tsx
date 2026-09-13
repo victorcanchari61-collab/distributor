@@ -191,13 +191,6 @@ export function ListasPreciosPage() {
 
   const presentacionDe = (id: number) => vendibles.find((p) => p.id === id)
 
-  /** Lo ya cargado en esta lista para el producto abierto: "presentacion-desde". */
-  const preciosCargados = new Set(
-    precios
-      .filter((x) => vendibles.some((v) => v.id === x.presentacionId))
-      .map((x) => `${x.presentacionId}-${x.cantidadMinima}`),
-  )
-
   /** Abre el modal con lo que ya tiene cargado ese producto, tramos incluidos. */
   const cambiarProductoMasivo = (productoId: number) => {
     const elegido = productos.find((p) => p.id === productoId)
@@ -224,13 +217,21 @@ export function ListasPreciosPage() {
       }
 
       for (const x of suyos) {
+        // El margen de lo ya guardado no viene del backend: se saca del
+        // costo, igual que cuando se teclea el precio a mano. Sin esto la
+        // columna salia vacia al editar y parecia rota.
+        const costo = elegido?.costoReferencia != null ? elegido.costoReferencia * pres.factor : null
+
         filas.push({
           clave: crypto.randomUUID(),
           id: x.id,
           presentacionId: pres.id,
           desde: String(x.cantidadMinima),
           precio: String(x.precio),
-          margen: '',
+          margen:
+            costo != null && x.precio > 0
+              ? (((x.precio - costo) / x.precio) * 100).toFixed(1)
+              : '',
         })
       }
     }
@@ -329,17 +330,11 @@ export function ListasPreciosPage() {
       key: 'nombre',
       label: 'Presentación',
       width: 200,
-      render: (fila) => {
-        const pres = presentacionDe(fila.presentacionId)
-        return (
-          <span className="flex items-center gap-2">
-            <span className="text-sm font-medium text-ink">{pres?.nombre}</span>
-            {preciosCargados.has(`${fila.presentacionId}-${Number(fila.desde) || 1}`) && (
-              <Badge tone="neutral">ya tenía</Badge>
-            )}
-          </span>
-        )
-      },
+      render: (fila) => (
+        <span className="text-sm font-medium text-ink">
+          {presentacionDe(fila.presentacionId)?.nombre}
+        </span>
+      ),
     },
     {
       /*
