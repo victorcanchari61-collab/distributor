@@ -169,15 +169,29 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
      */
     private const float Linea = 0.75f;
 
-    /// <summary>
-    /// Renglones minimos de la tabla: el papel se llena hasta abajo aunque el
-    /// documento traiga tres productos, para que las verticales lleguen al
-    /// final y se vea donde termina.
-    /// </summary>
-    private const int RenglonesMinimos = 16;
+    /*
+     * El marco y las verticales, a todo el alto: ver HojaPedido. Las columnas
+     * son las mismas que declara la tabla, en el mismo orden.
+     */
+    private void Marco(IContainer container) =>
+        container.Border(Linea).BorderColor(Colores.Linea).ExtendVertical().Row(row =>
+        {
+            row.ConstantItem(28).BorderRight(Linea).BorderColor(Colores.Linea);
+            if (doc.MostrarCodigo)
+                row.ConstantItem(62).BorderRight(Linea).BorderColor(Colores.Linea);
+            row.RelativeItem().BorderRight(Linea).BorderColor(Colores.Linea);
+            row.ConstantItem(48).BorderRight(Linea).BorderColor(Colores.Linea);
+            row.ConstantItem(64).BorderRight(Linea).BorderColor(Colores.Linea);
+            row.ConstantItem(56).BorderRight(Linea).BorderColor(Colores.Linea);
+            // La ultima no lleva: su vertical es el marco.
+            row.ConstantItem(68);
+        });
 
     private void Tabla(IContainer container) =>
-        container.Border(Linea).BorderColor(Colores.Linea).Table(tabla =>
+        container.Layers(capas =>
+        {
+            capas.Layer().Element(Marco);
+            capas.PrimaryLayer().Table(tabla =>
         {
             // La descripción va antes que la cantidad: primero qué es y luego
             // cuánto, que es el orden en que se lee una línea en voz alta al
@@ -220,19 +234,11 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
                 tabla.Cell().Element(Celda).AlignRight().Text(linea.Importe.ToString("N2"));
             }
 
-            // Lo que falta para llegar abajo, en blanco.
-            var columnas = doc.MostrarCodigo ? 7 : 6;
-            for (var i = doc.Lineas.Count; i < RenglonesMinimos; i++)
-            {
-                for (var columna = 0; columna < columnas; columna++)
-                {
-                    tabla.Cell().Element(Celda).Text(" ");
-                }
-            }
+        });
         });
 
     private static IContainer Encabezado(IContainer container) =>
-        container.BorderBottom(Linea).BorderRight(Linea).BorderColor(Colores.Linea)
+        container.BorderBottom(Linea).BorderColor(Colores.Linea)
             .PaddingVertical(4).PaddingHorizontal(4)
             .DefaultTextStyle(x => x.Bold().FontSize(8).FontColor(Colores.Fuerte));
 
@@ -247,7 +253,7 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
      * aire de su padding.
      */
     private static IContainer Celda(IContainer container) =>
-        container.BorderRight(Linea).BorderColor(Colores.Linea).PaddingVertical(3).PaddingHorizontal(4);
+        container.PaddingVertical(3).PaddingHorizontal(4);
 
     private void EnLetras(IContainer container) =>
         container.Border(1).BorderColor(Colores.Linea).Padding(5).Text(txt =>

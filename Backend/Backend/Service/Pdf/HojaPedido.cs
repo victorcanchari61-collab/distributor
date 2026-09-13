@@ -136,17 +136,30 @@ public static class HojaPedido
      */
     private const float Linea = 0.75f;
 
-    /// <summary>
-    /// Renglones minimos de la tabla.
-    ///
-    /// El papel se llena hasta abajo aunque el pedido traiga tres productos:
-    /// asi las verticales llegan al final y el que recibe ve donde termina el
-    /// documento —y si le agregaron algo a mano despues.
-    /// </summary>
-    private const int RenglonesMinimos = 12;
+    /*
+     * El marco y las verticales, a todo el alto.
+     *
+     * Iban en cada celda, asi que se acababan donde se acababa la ultima fila
+     * y el resto del recuadro quedaba vacio. Aqui van como fondo: se estiran
+     * hasta el borde de abajo haya tres lineas o catorce, que es como se ve un
+     * comprobante impreso.
+     */
+    private static void Marco(IContainer container, float e) =>
+        container.Border(Linea).BorderColor(Colores.Linea).ExtendVertical().Row(row =>
+        {
+            row.ConstantItem(24 * e).BorderRight(Linea).BorderColor(Colores.Linea);
+            row.ConstantItem(44 * e).BorderRight(Linea).BorderColor(Colores.Linea);
+            row.RelativeItem().BorderRight(Linea).BorderColor(Colores.Linea);
+            row.ConstantItem(46 * e).BorderRight(Linea).BorderColor(Colores.Linea);
+            // La ultima no lleva: su vertical es el marco.
+            row.ConstantItem(50 * e);
+        });
 
     private static void Tabla(IContainer container, DocumentoImprimible doc, float e) =>
-        container.Border(Linea).BorderColor(Colores.Linea).Table(tabla =>
+        container.Layers(capas =>
+        {
+            capas.Layer().Element(c => Marco(c, e));
+            capas.PrimaryLayer().Table(tabla =>
         {
             tabla.ColumnsDefinition(cols =>
             {
@@ -180,25 +193,18 @@ public static class HojaPedido
                     .Text(linea.Importe.ToString("N2")).FontSize(6.5f * e);
             }
 
-            // Lo que falta para llegar abajo, en blanco.
-            for (var i = doc.Lineas.Count; i < RenglonesMinimos; i++)
-            {
-                for (var columna = 0; columna < 5; columna++)
-                {
-                    tabla.Cell().Element(Celda).Text(" ").FontSize(6.5f * e);
-                }
-            }
+        });
         });
 
     private static IContainer Encabezado(IContainer container, float e) =>
-        container.BorderBottom(Linea).BorderRight(Linea).BorderColor(Colores.Linea)
+        container.BorderBottom(Linea).BorderColor(Colores.Linea)
             .PaddingVertical(2).PaddingHorizontal(2)
             .DefaultTextStyle(x => x.Bold().FontSize(6.5f * e).FontColor(Colores.Fuerte));
 
     // Verticales si, horizontales no: ver DocumentoA4. En esta hoja pesa mas
     // todavia, porque son dos copias por pagina y el doble de lineas.
     private static IContainer Celda(IContainer container) =>
-        container.BorderRight(Linea).BorderColor(Colores.Linea).PaddingVertical(1).PaddingHorizontal(2);
+        container.PaddingVertical(1).PaddingHorizontal(2);
 
     private static void Cierre(IContainer container, DocumentoImprimible doc, float e) =>
         container.Column(col =>
