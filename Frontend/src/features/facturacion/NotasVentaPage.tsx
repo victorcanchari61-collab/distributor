@@ -48,6 +48,7 @@ import type {
   CrearNotaVentaRequest,
   DevolucionDeVenta,
   FormaPagoVenta,
+  LineaDevuelta,
   LineaVentaResponse,
   NotaVentaResponse,
   ResumenNotasVenta,
@@ -983,14 +984,22 @@ export function NotasVentaPage() {
                       {estadoDevolucionBadge(d.estado)}
                     </div>
 
-                    {d.detalle.map((l) => (
-                      <div key={l.notaVentaDetalleId} className="flex justify-between gap-3 text-xs text-ink-soft">
-                        <span className="truncate">
-                          {l.producto} · {l.cantidad} {l.unidad}
-                        </span>
-                        <span className="shrink-0">S/ {l.importe.toFixed(2)}</span>
-                      </div>
-                    ))}
+                    <TablaProductosDetalle<LineaDevuelta>
+                      filas={d.detalle}
+                      rowKey={(l) => l.notaVentaDetalleId}
+                      titulo={(l) => l.producto}
+                      subtitulo={(l) => l.unidad}
+                      grupos={[
+                        [
+                          { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidad}` },
+                          {
+                            key: 'importe',
+                            label: 'Importe',
+                            render: (l) => `S/ ${l.importe.toFixed(2)}`,
+                          },
+                        ] satisfies ColumnaDetalleProducto<LineaDevuelta>[],
+                      ]}
+                    />
 
                     <div className="flex justify-between text-xs">
                       <span className="text-ink-muted">

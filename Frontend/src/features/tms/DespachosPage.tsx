@@ -13,10 +13,11 @@ import {
   PageSection,
   RowAction,
   StatCard,
+  TablaProductosDetalle,
   useConfirmacion,
   useToast,
 } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { ColumnaDetalleProducto, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
@@ -499,30 +500,24 @@ export function DespachosPage() {
       >
         {detalle && (
           <div className="flex flex-col gap-3">
-            {detalle.detalle.map((p) => (
-              <div
-                key={p.pedidoId}
-                className="flex items-start justify-between gap-3 rounded-field border border-line p-3"
-              >
-                <span className="flex min-w-0 flex-col">
-                  <span className="flex items-center gap-2">
-                    <Badge>{p.numero}</Badge>
-                    <span className="truncate text-sm font-semibold text-ink">{p.cliente}</span>
-                  </span>
-                  <span className="truncate text-xs text-ink-soft">
-                    {[p.mercado, p.direccion].filter(Boolean).join(' — ') || 'Sin dirección'}
-                  </span>
-                </span>
-                <span className="flex flex-col items-end">
-                  <span className="text-sm font-semibold text-ink">S/ {p.total.toFixed(2)}</span>
-                  {p.notaVentaNumero ? (
-                    <Badge tone="success">{p.notaVentaNumero}</Badge>
-                  ) : (
-                    <span className="text-xs text-ink-soft">sin entregar</span>
-                  )}
-                </span>
-              </div>
-            ))}
+            <TablaProductosDetalle<DespachoPedidoResponse>
+              filas={detalle.detalle}
+              rowKey={(p) => p.pedidoId}
+              titulo={(p) => p.cliente}
+              subtitulo={(p) =>
+                `${p.numero} · ${[p.mercado, p.direccion].filter(Boolean).join(' — ') || 'Sin dirección'}`
+              }
+              grupos={[
+                [
+                  { key: 'total', label: 'Total', render: (p) => `S/ ${p.total.toFixed(2)}` },
+                  {
+                    key: 'entrega',
+                    label: 'Entrega',
+                    render: (p) => p.notaVentaNumero ?? 'Sin entregar',
+                  },
+                ] satisfies ColumnaDetalleProducto<DespachoPedidoResponse>[],
+              ]}
+            />
 
             {detalle.observacion && (
               <p className="text-sm text-ink-soft">

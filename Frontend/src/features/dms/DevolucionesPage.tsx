@@ -7,17 +7,23 @@ import {
   Input,
   ListPage,
   Modal,
+  ResumenDocumento,
   RowAction,
   StatCard,
+  TablaProductosDetalle,
   useConfirmacion,
   useToast,
 } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { ColumnaDetalleProducto, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { devolucionApi } from './devolucionApi'
-import type { DevolucionResponse, ResumenDevoluciones } from './devolucionApi'
+import type {
+  DevolucionResponse,
+  LineaDevolucionResponse,
+  ResumenDevoluciones,
+} from './devolucionApi'
 
 function estadoBadge(estado: DevolucionResponse['estado']) {
   if (estado === 'APROBADA') return <Badge tone="success">Aprobada</Badge>
@@ -229,26 +235,26 @@ export function DevolucionesPage() {
       >
         {detalle && (
           <div className="flex flex-col gap-3">
-            {detalle.detalle.map((l) => (
-              <div
-                key={l.id}
-                className="flex items-start justify-between gap-3 rounded-field border border-line p-3"
-              >
-                <span className="flex min-w-0 flex-col">
-                  <span className="truncate text-sm font-semibold text-ink">{l.producto}</span>
-                  <span className="text-xs text-ink-soft">
-                    {l.cantidadPresentacion} {l.presentacion ?? l.unidadBase} ·{' '}
-                    {l.reingresaStock ? 'vuelve al stock' : 'dada de baja como merma'}
-                  </span>
-                </span>
-                <span className="text-sm font-semibold text-ink">S/ {l.importe.toFixed(2)}</span>
-              </div>
-            ))}
+            <TablaProductosDetalle<LineaDevolucionResponse>
+              filas={detalle.detalle}
+              rowKey={(l) => l.id}
+              titulo={(l) => l.producto}
+              subtitulo={(l) => `${l.codigo} · ${l.presentacion ?? l.unidadBase}`}
+              grupos={[
+                [
+                  { key: 'cant', label: 'Cant.', render: (l) => `${l.cantidadPresentacion}` },
+                  { key: 'precio', label: 'Precio', render: (l) => `S/ ${l.precioUnitario.toFixed(2)}` },
+                  { key: 'importe', label: 'Importe', render: (l) => `S/ ${l.importe.toFixed(2)}` },
+                  {
+                    key: 'destino',
+                    label: 'Destino',
+                    render: (l) => (l.reingresaStock ? 'Vuelve al stock' : 'Merma'),
+                  },
+                ] satisfies ColumnaDetalleProducto<LineaDevolucionResponse>[],
+              ]}
+            />
 
-            <div className="flex justify-between border-t border-line pt-3 text-sm">
-              <span className="font-semibold text-ink-muted">Total</span>
-              <span className="font-semibold text-ink">S/ {detalle.total.toFixed(2)}</span>
-            </div>
+            <ResumenDocumento total={detalle.total} />
 
             {detalle.motivo && (
               <p className="text-sm text-ink-soft">
