@@ -1,5 +1,6 @@
 export { VisitasPage } from './VisitasPage'
 export { visitaApi } from './visitaApi'
 export type { ConsultaVisitas, ResumenVisitas, VisitaResponse } from './visitaApi'
+export { DevolucionesPage } from './DevolucionesPage'
 export { devolucionApi } from './devolucionApi'
 export type { DevolucionResponse, EstadoDevolucion } from './devolucionApi'

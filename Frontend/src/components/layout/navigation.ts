@@ -34,6 +34,7 @@ import {
   ShoppingCart,
   Sliders,
   Store,
+  Undo2,
   Truck,
   UserCog,
   Users,
@@ -178,6 +179,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: Store,
     items: [
       { id: 'dms.visitas', label: 'Visitas', icon: Store },
+      { id: 'dms.devoluciones', label: 'Devoluciones', icon: Undo2 },
       { id: 'dms.evidencias', label: 'Evidencias', icon: ClipboardCheck, pending: true },
     ],
   },

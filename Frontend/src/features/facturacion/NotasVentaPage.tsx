@@ -955,7 +955,7 @@ export function NotasVentaPage() {
                       <span className="font-semibold text-ink">S/ {d.total.toFixed(2)}</span>
                     </div>
 
-                    {d.estado === 'SOLICITADA' && puede('fact.notaventa', 'confirmar') && (
+                    {d.estado === 'SOLICITADA' && puede('dms.devoluciones', 'confirmar') && (
                       <div className="flex gap-2 pt-1">
                         <Button size="sm" onClick={() => aprobarDevolucion(d)}>
                           Aprobar

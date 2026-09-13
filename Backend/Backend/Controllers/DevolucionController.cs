@@ -12,8 +12,8 @@ namespace Backend.Controllers;
 /// Devoluciones de cliente.
 ///
 /// No se registran a mano: nacen de editar la nota de venta quitandole
-/// cantidad. Aqui solo se consultan y se resuelven, y por eso van con el
-/// permiso de la nota de venta y no con uno propio.
+/// cantidad. Aqui solo se consultan y se resuelven, desde su pantalla o desde
+/// el detalle de la venta que las origino.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -33,21 +33,21 @@ public class DevolucionController : ControllerBase
             : null;
 
     [HttpGet]
-    [Permiso("fact.notaventa", Accion.Ver)]
+    [Permiso("dms.devoluciones", Accion.Ver)]
     public async Task<IActionResult> GetAll([FromQuery] string? estado) =>
         Ok(await _devoluciones.GetAllAsync(estado));
 
     [HttpGet("resumen")]
-    [Permiso("fact.notaventa", Accion.Ver)]
+    [Permiso("dms.devoluciones", Accion.Ver)]
     public async Task<IActionResult> Resumen() => Ok(await _devoluciones.GetResumenAsync());
 
     [HttpGet("{id:int}")]
-    [Permiso("fact.notaventa", Accion.Ver)]
+    [Permiso("dms.devoluciones", Accion.Ver)]
     public async Task<IActionResult> GetById(int id) => Ok(await _devoluciones.GetAsync(id));
 
     /// <summary>Lo que todavía se puede devolver de una venta.</summary>
     [HttpGet("devolvible/{notaVentaId:int}")]
-    [Permiso("fact.notaventa", Accion.Ver)]
+    [Permiso("dms.devoluciones", Accion.Ver)]
     public async Task<IActionResult> Devolvible(int notaVentaId) =>
         Ok(await _devoluciones.DevolvibleAsync(notaVentaId));
 
@@ -61,12 +61,12 @@ public class DevolucionController : ControllerBase
      */
 
     [HttpPatch("{id:int}/aprobar")]
-    [Permiso("fact.notaventa", Accion.Confirmar)]
+    [Permiso("dms.devoluciones", Accion.Confirmar)]
     public async Task<IActionResult> Aprobar(int id) =>
         Ok(await _devoluciones.AprobarAsync(id, UsuarioId));
 
     [HttpPatch("{id:int}/rechazar")]
-    [Permiso("fact.notaventa", Accion.Confirmar)]
+    [Permiso("dms.devoluciones", Accion.Confirmar)]
     public async Task<IActionResult> Rechazar(int id, [FromBody] RechazarDevolucionRequest request) =>
         Ok(await _devoluciones.RechazarAsync(id, request.Motivo, UsuarioId));
 }
