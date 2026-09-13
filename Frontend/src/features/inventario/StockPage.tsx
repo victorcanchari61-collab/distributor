@@ -149,37 +149,47 @@ export function StockPage() {
      * buscador de texto, y "9" contra "S/ 9.00" no encuentra lo esperado.
      */
     {
+      /*
+       * En que se lee la fila.
+       *
+       * Columna propia y no pegada al numero: el select ahogaba la cifra, que
+       * es lo que se viene a mirar. Manda sobre todas las cantidades de la
+       * fila, asi que no hace falta repetir la unidad en cada una.
+       */
+      key: 'unidad',
+      label: 'Unidad',
+      filterable: false,
+      width: 170,
+      value: (row) => nombreUnidad(row),
+      render: (row) => {
+        const opciones = presentacionesDe(row.productoId)
+        return opciones.length > 1 ? (
+          <Desplegable
+            value={unidadDe(row.productoId)}
+            onChange={(v) => setUnidades((prev) => ({ ...prev, [row.productoId]: Number(v) }))}
+            options={opciones.map((x) => ({
+              value: x.id,
+              label: x.nombre,
+              detalle: `${x.factor} ${row.unidadBase}`,
+            }))}
+          />
+        ) : (
+          <span className="text-sm text-ink-soft">{row.unidadBase}</span>
+        )
+      },
+    },
+    {
       key: 'stock',
       label: 'Stock',
       align: 'right',
       filterable: false,
-      width: 210,
-      render: (row) => {
-        const opciones = presentacionesDe(row.productoId)
-        return (
-          <span className="flex items-center justify-end gap-2">
-            <span className={row.bajoMinimo ? 'font-semibold text-amber-600' : 'font-medium'}>
-              {row.bajoMinimo && <AlertTriangle size={12} className="mr-1 inline" />}
-              {enUnidad(row, row.stock)}
-            </span>
-            {opciones.length > 1 ? (
-              <Desplegable
-                value={unidadDe(row.productoId)}
-                onChange={(v) =>
-                  setUnidades((prev) => ({ ...prev, [row.productoId]: Number(v) }))
-                }
-                options={opciones.map((x) => ({
-                  value: x.id,
-                  label: x.nombre,
-                  detalle: `${x.factor} ${row.unidadBase}`,
-                }))}
-              />
-            ) : (
-              <span className="text-ink-soft">{row.unidadBase}</span>
-            )}
-          </span>
-        )
-      },
+      width: 110,
+      render: (row) => (
+        <span className={row.bajoMinimo ? 'font-semibold text-amber-600' : 'font-medium text-ink'}>
+          {row.bajoMinimo && <AlertTriangle size={12} className="mr-1 inline" />}
+          {enUnidad(row, row.stock)}
+        </span>
+      ),
     },
     {
       /*
@@ -197,7 +207,7 @@ export function StockPage() {
       render: (row) =>
         row.reservado > 0 ? (
           <span className="font-medium text-ink">
-            {enUnidad(row, row.reservado)} {nombreUnidad(row)}
+            {enUnidad(row, row.reservado)}
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
@@ -211,7 +221,7 @@ export function StockPage() {
       value: (row) => row.disponible,
       render: (row) => (
         <span className={row.reservado > 0 ? 'font-medium text-ink' : 'text-ink-soft'}>
-          {enUnidad(row, row.disponible)} {nombreUnidad(row)}
+          {enUnidad(row, row.disponible)}
         </span>
       ),
     },
@@ -224,7 +234,7 @@ export function StockPage() {
       render: (row) =>
         row.stockMinimo > 0 ? (
           <span className="text-ink-soft">
-            {enUnidad(row, row.stockMinimo)} {nombreUnidad(row)}
+            {enUnidad(row, row.stockMinimo)}
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
@@ -244,7 +254,7 @@ export function StockPage() {
         const falta = row.stockMinimo - row.stock
         return falta > 0 ? (
           <span className="font-semibold text-amber-600">
-            {enUnidad(row, falta)} {nombreUnidad(row)}
+            {enUnidad(row, falta)}
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
@@ -266,7 +276,7 @@ export function StockPage() {
       render: (row) =>
         row.enTransito > 0 ? (
           <span className="font-medium text-sky-600">
-            {enUnidad(row, row.enTransito)} {nombreUnidad(row)}
+            {enUnidad(row, row.enTransito)}
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
