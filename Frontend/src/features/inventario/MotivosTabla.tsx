@@ -23,10 +23,13 @@ const VACIO = { codigo: '', nombre: '', tipo: 'ENTRADA' as TipoMovimiento }
 /**
  * Motivos de un ajuste: carga inicial, merma, sobrante...
  *
- * Los motivos DEL SISTEMA (venta, compra, sus anulaciones) no aparecen para
- * editar ni eliminar: los usa cada documento que ya existe en el historial, y
- * cambiarles el signo o el código descuadraría todo lo que mueven. Solo se
- * gestionan aquí los manuales, que es lo único que un ajuste puede usar.
+ * Los motivos DEL SISTEMA (venta, recepción de compra, sus anulaciones) se
+ * listan pero no se tocan: los usa cada documento que ya existe en el
+ * historial, y cambiarles el signo o el código descuadraría todo lo que mueven
+ * —el backend los rechaza en editar, eliminar y en el propio ajuste—. Salen
+ * igual porque aparecen en el kardex y en cada movimiento: esconderlos hacía
+ * parecer que faltaban, y dejaba sin ver cuántos movimientos genera cada uno.
+ * Lo que un ajuste puede elegir son los manuales.
  */
 export function MotivosTabla({
   motivos,
@@ -36,9 +39,11 @@ export function MotivosTabla({
   onRecargar: () => Promise<void>
 }) {
   const { puede } = usePermisos()
-  // Solo manuales: los del sistema (venta, compra, sus anulaciones) no se
-  // listan aqui en absoluto, ni en la tabla ni en el pie.
-  const manuales = motivos.filter((m) => !m.delSistema)
+  // Los manuales primero: son los que se administran. Los del sistema van
+  // detras, para consultarlos.
+  const ordenados = [...motivos].sort(
+    (a, b) => Number(a.delSistema) - Number(b.delSistema) || a.nombre.localeCompare(b.nombre),
+  )
 
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<MotivoResponse | null>(null)
@@ -133,6 +138,28 @@ export function MotivosTabla({
 
   const columns: DataTableColumn<MotivoResponse>[] = [
     { key: 'nombre', label: 'Nombre' },
+    {
+      /*
+       * De donde sale el motivo.
+       *
+       * Es la columna que explica por que unas filas no tienen acciones: el
+       * del sistema lo pone un documento y no se edita ni se borra.
+       */
+      key: 'origen',
+      label: 'Origen',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Manual', label: 'Manual' },
+        { value: 'Sistema', label: 'Sistema' },
+      ],
+      value: (row) => (row.delSistema ? 'Sistema' : 'Manual'),
+      render: (row) =>
+        row.delSistema ? (
+          <Badge tone="neutral">Sistema</Badge>
+        ) : (
+          <Badge tone="sys">Manual</Badge>
+        ),
+    },
     { key: 'codigo', label: 'Código', render: (row) => <Badge>{row.codigo}</Badge> },
     {
       key: 'tipo',
@@ -179,7 +206,7 @@ export function MotivosTabla({
     <ListPage
       icon={<Plus size={20} />}
       title="Motivos"
-      description="Los que puedes elegir al registrar un ajuste. Venta, compra y sus anulaciones los crea su propio documento: no se listan aquí."
+      description="Los manuales son los que eliges al registrar un ajuste. Los del sistema los pone cada documento —venta, recepción de compra, sus anulaciones— y no se tocan."
       actions={
         puede('inv.ajustes', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
@@ -189,10 +216,13 @@ export function MotivosTabla({
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       columns={columns}
-      rows={manuales}
+      rows={ordenados}
       searchPlaceholder="Buscar motivo..."
-      empty="Todavía no hay motivos manuales."
-      rowActions={(row) => (
+      empty="Todavía no hay motivos."
+      rowActions={(row) =>
+        // El del sistema no se edita, ni se desactiva, ni se borra: no hay
+        // accion que ofrecerle.
+        row.delSistema ? null : (
         <>
           {puede('inv.ajustes', 'editar') && (
             <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
@@ -220,7 +250,8 @@ export function MotivosTabla({
             </RowAction>
           )}
         </>
-      )}
+        )
+      }
     >
       <Modal
         open={abierto}
