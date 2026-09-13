@@ -3,6 +3,7 @@ import { CheckCircle2, MapPin, Phone, Plus, Store } from 'lucide-react'
 import { Alert, Badge, ListPage, StatCard } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { hoyLocal } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { rutaApi } from '../tms'
 import type { RutaResponse } from '../tms'
@@ -11,7 +12,7 @@ import type { UsuarioResponse } from '../config/usuarioApi'
 import { visitaApi } from './visitaApi'
 import type { ConsultaVisitas, ResumenVisitas, VisitaResponse } from './visitaApi'
 
-const hoy = () => new Date().toISOString().slice(0, 10)
+const hoy = () => hoyLocal()
 
 /**
  * La fecha que guardó el filtro, como YYYY-MM-DD.

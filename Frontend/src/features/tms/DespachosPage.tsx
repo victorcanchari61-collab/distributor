@@ -20,6 +20,7 @@ import {
 import type { ColumnaDetalleProducto, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
+import { hoyLocal } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { conductorApi, vehiculoApi } from './flotaApi'
 import type { ConductorResponse, VehiculoResponse } from './flotaApi'
@@ -32,7 +33,7 @@ import type {
   ResumenDespachos,
 } from './despachoApi'
 
-const hoy = () => new Date().toISOString().slice(0, 10)
+const hoy = () => hoyLocal()
 
 function estadoBadge(estado: DespachoResponse['estado']) {
   return estado === 'ANULADO' ? (

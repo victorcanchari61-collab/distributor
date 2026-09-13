@@ -29,6 +29,7 @@ import {
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
+import { desplazarDias } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { arqueoApi, motivoGastoApi } from './arqueoApi'
 import type {
@@ -50,11 +51,7 @@ const soloFecha = (iso: string) => iso.slice(0, 10)
 const fechaCorta = (iso: string) =>
   new Date(`${soloFecha(iso)}T00:00:00`).toLocaleDateString('es-PE')
 
-function desplazarDias(dias: number) {
-  const d = new Date()
-  d.setDate(d.getDate() + dias)
-  return d.toISOString().slice(0, 10)
-}
+
 
 const ETIQUETA_ESTADO: Record<EstadoCuadre, string> = {
   pendiente: 'Pendiente',

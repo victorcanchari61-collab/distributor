@@ -143,8 +143,11 @@ public class VisitaService : IVisitaService
     {
         if (clienteIds.Count == 0 || dias.Count == 0) return [];
 
-        var desde = dias.First();
-        var hasta = dias.Last().AddDays(1);
+        // El rango se pide en dias locales, pero la fecha del pedido esta en
+        // UTC: se corre la ventana cinco horas para traer los de la noche, que
+        // en UTC ya figuran al dia siguiente.
+        var desde = dias.First().AddHours(5);
+        var hasta = dias.Last().AddDays(1).AddHours(5);
 
         // Un pedido anulado no cuenta como visita atendida: si se anulo, ese
         // cliente sigue sin pedido y hay que volver.
@@ -159,7 +162,7 @@ public class VisitaService : IVisitaService
         // Si a un cliente se le tomo mas de un pedido ese dia, vale el ultimo:
         // la lista solo necesita saber que ya se le atendio.
         return pedidos
-            .GroupBy(p => (p.ClienteId, p.Fecha.Date))
+            .GroupBy(p => (p.ClienteId, Zona.DiaDe(p.Fecha)))
             .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.Id).First());
     }
 }
