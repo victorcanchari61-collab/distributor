@@ -1,14 +1,17 @@
 /*
- * Deja el sistema en cero SIN tocar el catálogo.
+ * Deja el sistema en cero: borra todo lo registrado operando y también el
+ * catálogo de productos, presentaciones, listas de precios y precios.
  *
- * Borra todo lo que se registró operando —compras, ventas, pedidos,
- * devoluciones, préstamos, despachos, kardex, capas de costo y la caja del
- * día— y conserva lo que costó cargar: productos con sus presentaciones y
- * precios, clientes, proveedores, almacenes, rutas, usuarios y permisos.
+ * Conserva lo que no es "movimiento" ni "catálogo de productos": clientes,
+ * proveedores, almacenes, rutas, usuarios y permisos.
  *
  * Las cuentas por cobrar y por pagar no tienen tabla propia: son las ventas a
  * crédito y las compras a crédito con saldo, así que desaparecen al vaciar
  * esas dos.
+ *
+ * El orden importa: primero lo que referencia a un producto (compras, ventas,
+ * kardex...), recién después el producto mismo — no se puede borrar lo que
+ * algo más todavía señala.
  *
  * Se desactivan las llaves foráneas porque TRUNCATE no admite el orden que sí
  * permitiría DELETE, y se vuelven a activar al final. Reinicia además los
@@ -55,6 +58,12 @@ TRUNCATE TABLE arqueogastos;
 TRUNCATE TABLE arqueopagosdigitales;
 TRUNCATE TABLE arqueocaja;
 
+-- --- Catálogo: productos, presentaciones y listas de precios ---
+TRUNCATE TABLE precios;
+TRUNCATE TABLE listasprecio;
+TRUNCATE TABLE productopresentaciones;
+TRUNCATE TABLE productos;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 /*
@@ -63,6 +72,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 SELECT 'productos' AS catalogo, COUNT(*) AS quedan FROM productos
 UNION ALL SELECT 'presentaciones', COUNT(*) FROM productopresentaciones
 UNION ALL SELECT 'precios', COUNT(*) FROM precios
+UNION ALL SELECT 'listasprecio', COUNT(*) FROM listasprecio
 UNION ALL SELECT 'clientes', COUNT(*) FROM clientes
 UNION ALL SELECT 'proveedores', COUNT(*) FROM proveedores
 UNION ALL SELECT 'almacenes', COUNT(*) FROM almacenes;
