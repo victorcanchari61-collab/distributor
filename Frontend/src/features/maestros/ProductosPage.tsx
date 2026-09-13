@@ -833,33 +833,36 @@ export function ProductosPage() {
                   />
                 </div>
 
-                {/* Se escribe como lo cobra el proveedor y se guarda por unidad
-                    base, igual que los precios de venta. */}
-                <CostoReferenciaInput
-                  valor={form.costoReferencia}
-                  onChange={(v) => setForm({ ...form, costoReferencia: v })}
-                  presentacionId={presentacionDelCosto}
-                  onPresentacion={setPresentacionCosto}
-                  presentaciones={presentacionesDelForm}
-                  unidadBase={unidadBase || 'unidad base'}
-                  disabled={guardando}
-                />
+                {/*
+                  Tercera fila de la misma rejilla: el costo —lo que pagas— y
+                  el stock minimo —cuando avisar—. Cada uno solo ocupaba media
+                  pantalla y dejaba la otra mitad vacia.
+                */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Se escribe como lo cobra el proveedor y se guarda por
+                      unidad base, igual que los precios de venta. */}
+                  <CostoReferenciaInput
+                    valor={form.costoReferencia}
+                    onChange={(v) => setForm({ ...form, costoReferencia: v })}
+                    presentacionId={presentacionDelCosto}
+                    onPresentacion={setPresentacionCosto}
+                    presentaciones={presentacionesDelForm}
+                    unidadBase={unidadBase || 'unidad base'}
+                    disabled={guardando}
+                  />
 
-                <hr className="border-line" />
-
-                {/* Lo ultimo: es un aviso de reposicion, no un dato del
-                    producto, y casi siempre se deja vacio al darlo de alta. */}
-                <Input
-                  label="Stock mínimo"
-                  optional
-                  type="number"
-                  step="0.0001"
-                  hint={
-                    <span className="text-xs text-ink-soft">en {unidadBase || 'unidad base'}</span>
-                  }
-                  value={form.stockMinimo}
-                  onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
-                />
+                  <Input
+                    label="Stock mínimo"
+                    optional
+                    type="number"
+                    step="0.0001"
+                    hint={
+                      <span className="text-xs text-ink-soft">en {unidadBase || 'unidad base'}</span>
+                    }
+                    value={form.stockMinimo}
+                    onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
+                  />
+                </div>
               </div>
             ) : (
               <div className="flex flex-col gap-4">

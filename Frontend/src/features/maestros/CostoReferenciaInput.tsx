@@ -59,7 +59,12 @@ export function CostoReferenciaInput({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/*
+        Apilado, no en dos columnas: el selector casi nunca esta —solo si se
+        compra de varias formas— y una rejilla fija dejaba media fila vacia.
+        Asi el costo entra como un campo mas de la rejilla del formulario.
+      */}
+      <div className="flex flex-col gap-3">
         <Input
           // La etiqueta dice de que presentacion es el numero, en vez de
           // dejarlo a la imaginacion: "S/ 170" a secas no se sabe si es el
