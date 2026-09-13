@@ -365,6 +365,7 @@ export function PedidosPage() {
     {
       key: 'presentacion',
       label: 'Presentación',
+      width: 190,
       render: (fila) => {
         const producto = productos.find((p) => p.id === fila.productoId)
         const disponibles = producto?.presentaciones.filter((p) => p.esVenta && p.activo) ?? []
@@ -392,6 +393,7 @@ export function PedidosPage() {
       key: 'cantidad',
       label: 'Cantidad',
       align: 'right',
+      width: 100,
       value: (fila) => Number(fila.cantidad) || 0,
       render: (fila) => (
         <Input
@@ -406,6 +408,7 @@ export function PedidosPage() {
       key: 'costo',
       label: 'Precio de venta',
       align: 'right',
+      width: 130,
       value: (fila) => Number(fila.costo) || 0,
       render: (fila) => (
         <Input
@@ -427,6 +430,7 @@ export function PedidosPage() {
       key: 'precioUnitario',
       label: 'P. unit.',
       align: 'right',
+      width: 140,
       value: (fila) => {
         const factor = factorDeFila(fila)
         return factor > 0 ? (Number(fila.costo) || 0) / factor : 0
@@ -448,6 +452,7 @@ export function PedidosPage() {
       key: 'subtotal',
       label: 'Subtotal',
       align: 'right',
+      width: 120,
       value: (fila) => (Number(fila.cantidad) || 0) * (Number(fila.costo) || 0),
       render: (fila) => `S/ ${((Number(fila.cantidad) || 0) * (Number(fila.costo) || 0)).toFixed(2)}`,
     },
@@ -560,6 +565,9 @@ export function PedidosPage() {
                 rowKey="id"
                 toolbar={false}
                 empty="Agrega productos con el buscador de arriba."
+                // Una papelera no necesita 140px, que es lo que ocupa la
+                // columna de acciones de un listado con tres botones.
+                actionsWidth={64}
                 actions={(fila) => (
                   <RowAction
                     label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
