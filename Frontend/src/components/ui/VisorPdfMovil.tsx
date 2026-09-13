@@ -30,12 +30,17 @@ export function VisorPdfMovil({ url, onError }: { url: string; onError: () => vo
       try {
         const pdfjs = await import('pdfjs-dist')
 
-        // El worker sale del propio paquete, resuelto por Vite. Si falla, el
-        // catch avisa al llamador en vez de dejar el modal en blanco.
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-          'pdfjs-dist/build/pdf.worker.min.mjs',
-          import.meta.url,
-        ).toString()
+        /*
+         * El worker se sirve como archivo fijo desde la raiz.
+         *
+         * Las formas "de bundler" andan en desarrollo y fallan compiladas:
+         * `new URL('pdfjs-dist/...', import.meta.url)` apunta a un archivo que
+         * no existe en el build, y ?url lo deja suelto como .mjs, que segun el
+         * servidor llega con el tipo equivocado y la carga se queda colgada.
+         * Un estatico en /pdf.worker.min.mjs se comporta igual en los dos
+         * lados; lo copia scripts/copiar-worker-pdf.mjs al instalar.
+         */
+        pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
         const carga = pdfjs.getDocument({ url })
         tarea = carga
@@ -66,9 +71,12 @@ export function VisorPdfMovil({ url, onError }: { url: string; onError: () => vo
           const ctx = lienzo.getContext('2d')
           if (!ctx) continue
 
+          // El lienzo se cuelga del DOM ANTES de dibujar: pdf.js no termina de
+          // pintar sobre un canvas suelto en memoria, y la promesa del render
+          // se quedaba esperando para siempre.
+          caja.appendChild(lienzo)
           await pagina.render({ canvas: lienzo, canvasContext: ctx, viewport: vista }).promise
           if (cancelado) return
-          caja.appendChild(lienzo)
         }
       } catch {
         if (!cancelado) onErrorRef.current()

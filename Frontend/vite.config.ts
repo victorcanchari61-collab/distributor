@@ -2,33 +2,38 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
+/*
+ * A donde van las rutas que el codigo pide relativas.
+ *
+ * Se declara una vez y se usa en dev y en `vite preview`: sin esto, probar el
+ * build de produccion en local no tenia backend y no se podia reproducir nada
+ * de lo que solo falla compilado.
+ */
+const proxy = {
+  '/api': {
+    // 127.0.0.1 y no localhost: en Windows, localhost prueba primero IPv6 y
+    // recien despues cae a IPv4 — ~200 ms perdidos en CADA peticion.
+    target: 'http://127.0.0.1:5220',
+    changeOrigin: true,
+  },
+  // Las fotos de flota y conductores: el backend las sirve desde su raiz
+  // ("/uploads/..."), no bajo "/api", asi que necesitan su propia entrada.
+  '/uploads': {
+    target: 'http://127.0.0.1:5220',
+    changeOrigin: true,
+  },
+  // ws: true porque SignalR sube la conexion a WebSocket.
+  '/hubs': {
+    target: 'http://127.0.0.1:5220',
+    changeOrigin: true,
+    ws: true,
+  },
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  server: {
-    // El código siempre pide rutas relativas ("/api"); en dev este proxy las
-    // manda al backend local, igual que Nginx lo hace en producción.
-    proxy: {
-      '/api': {
-        // 127.0.0.1 y no localhost: en Windows, localhost prueba primero IPv6 y
-        // recién después cae a IPv4 — ~200 ms perdidos en CADA petición.
-        target: 'http://127.0.0.1:5220',
-        changeOrigin: true,
-      },
-      // Las fotos de flota y conductores: el backend las sirve desde su raíz
-      // ("/uploads/..."), no bajo "/api", así que necesitan su propia entrada.
-      '/uploads': {
-        target: 'http://127.0.0.1:5220',
-        changeOrigin: true,
-      },
-      // ws: true porque SignalR sube la conexión a WebSocket.
-      '/hubs': {
-        // 127.0.0.1 y no localhost: en Windows, localhost prueba primero IPv6 y
-        // recién después cae a IPv4 — ~200 ms perdidos en CADA petición.
-        target: 'http://127.0.0.1:5220',
-        changeOrigin: true,
-        ws: true,
-      },
-    },
-  },
+  server: { proxy },
+  // Igual que arriba, para poder abrir el build ya compilado contra el backend.
+  preview: { proxy },
 })
