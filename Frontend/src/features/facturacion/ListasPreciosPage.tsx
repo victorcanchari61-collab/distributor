@@ -433,7 +433,7 @@ export function ListasPreciosPage() {
         const factor = presentacionDe(fila.presentacionId)?.factor ?? 0
         return (
           <span className="text-sm font-medium text-ink">
-            {precio > 0 && factor > 0 ? `S/ ${(precio / factor).toFixed(4)}` : '—'}
+            {precio > 0 && factor > 0 ? `S/ ${(precio / factor).toFixed(2)}` : '—'}
           </span>
         )
       },
