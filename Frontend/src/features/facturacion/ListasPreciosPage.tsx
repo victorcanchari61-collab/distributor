@@ -552,21 +552,57 @@ export function ListasPreciosPage() {
               />
             </div>
 
-            {/* Adelanto del calculo, para detectar el precio puesto al reves. */}
-            {producto && precioForm.presentacionId > 0 && precioForm.precio && (
-              <p className="rounded-field bg-slate-50 px-3 py-2 text-xs text-ink-muted">
-                Equivale a{' '}
-                <span className="font-semibold text-ink">
-                  S/{' '}
-                  {(
-                    Number(precioForm.precio) /
-                    (producto.presentaciones.find((p) => p.id === precioForm.presentacionId)
-                      ?.factor ?? 1)
-                  ).toFixed(4)}
-                </span>{' '}
-                por {producto.unidadBase}.
-              </p>
-            )}
+            {/* Costo y margen en vivo: para no poner un precio que no deja ganancia. */}
+            {producto && precioForm.presentacionId > 0 && precioForm.precio && (() => {
+              const presentacion = producto.presentaciones.find(
+                (p) => p.id === precioForm.presentacionId,
+              )
+              const factor = presentacion?.factor ?? 1
+              const precio = Number(precioForm.precio)
+              const precioPorUnidad = precio / factor
+              const costoRef = producto.costoReferencia
+              const costoPresentacion = costoRef != null ? costoRef * factor : null
+              const margen =
+                costoPresentacion != null && precio > 0
+                  ? ((precio - costoPresentacion) / precio) * 100
+                  : null
+
+              return (
+                <div className="flex flex-col gap-1.5 rounded-field bg-slate-50 px-3 py-2 text-xs text-ink-muted">
+                  <p>
+                    Equivale a{' '}
+                    <span className="font-semibold text-ink">S/ {precioPorUnidad.toFixed(4)}</span>{' '}
+                    por {producto.unidadBase}.
+                  </p>
+                  {costoPresentacion != null ? (
+                    <p>
+                      Costo de referencia:{' '}
+                      <span className="font-semibold text-ink">S/ {costoPresentacion.toFixed(2)}</span>
+                      {margen != null && (
+                        <>
+                          {' '}· Margen:{' '}
+                          <span
+                            className={
+                              margen < 0
+                                ? 'font-semibold text-red-600'
+                                : margen < 15
+                                  ? 'font-semibold text-amber-600'
+                                  : 'font-semibold text-emerald-600'
+                            }
+                          >
+                            {margen.toFixed(1)}%
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  ) : (
+                    <p className="text-amber-600">
+                      Este producto no tiene costo de referencia: no se puede calcular el margen.
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         </Modal>
 

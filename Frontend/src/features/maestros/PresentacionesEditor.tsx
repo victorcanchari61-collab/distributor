@@ -18,6 +18,8 @@ export interface PresentacionesEditorProps {
   unidadBase: string
   onChange: (filas: FilaPresentacion[]) => void
   disabled?: boolean
+  /** Costo de referencia por unidad base, para mostrar cuánto cuesta CADA presentación. */
+  costoReferenciaBase?: number | null
 }
 
 /**
@@ -36,6 +38,7 @@ export function PresentacionesEditor({
   unidadBase,
   onChange,
   disabled,
+  costoReferenciaBase,
 }: PresentacionesEditorProps) {
   const activas = unidades.filter((u) => u.activo)
 
@@ -117,6 +120,30 @@ export function PresentacionesEditor({
         )
       },
     },
+    /*
+     * Costo de CADA presentacion, solo para leer.
+     *
+     * Antes el costo vivia unicamente en la pestaña Datos (por unidad base) y
+     * habia que hacer la cuenta a mano para saber cuanto sale el saco. Aqui se
+     * ve al toque: costo de referencia x factor de la fila.
+     */
+    ...(costoReferenciaBase != null
+      ? [
+          {
+            key: 'costo',
+            label: 'Costo aprox.',
+            align: 'right' as const,
+            render: (fila: FilaPresentacion) =>
+              fila.factor > 0 ? (
+                <span className="text-sm text-ink-soft">
+                  S/ {(costoReferenciaBase * fila.factor).toFixed(2)}
+                </span>
+              ) : (
+                <span className="text-ink-soft">—</span>
+              ),
+          },
+        ]
+      : []),
     {
       key: 'esCompra',
       label: 'Se compra',

@@ -237,9 +237,13 @@ export function ProductosPage() {
    * se habia marcado esa casilla.
    */
   const presentacionesDelForm: PresentacionResponse[] = [
-    // La base siempre se puede elegir: es la unidad del producto.
+    // La base siempre se puede elegir: es la unidad del producto. Al editar
+    // se usa su id REAL (no 0): presentacionCosto puede traer justo ese id
+    // como predeterminada, y si aqui se inventara otro no habria forma de
+    // que "Se compra por" la marcara — se veia vacio aunque hubiera un
+    // costo cargado.
     {
-      id: 0,
+      id: editando?.presentaciones.find((p) => p.esBase)?.id ?? 0,
       productoId: editando?.id ?? 0,
       esBase: true,
       unidadId: form.unidadBaseId,
@@ -885,6 +889,7 @@ export function ProductosPage() {
                   unidadBase={unidadBase}
                   onChange={setPresentaciones}
                   disabled={guardando}
+                  costoReferenciaBase={form.costoReferencia ? Number(form.costoReferencia) : null}
                 />
               </div>
             )}
