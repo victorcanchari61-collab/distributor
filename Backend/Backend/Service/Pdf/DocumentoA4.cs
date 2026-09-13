@@ -207,21 +207,22 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
         });
 
     private static IContainer Encabezado(IContainer container) =>
-        container.BorderBottom(1).BorderColor(Colores.Linea)
+        container.BorderBottom(1).BorderRight(1).BorderColor(Colores.Linea)
             .PaddingVertical(4).PaddingHorizontal(4)
             .DefaultTextStyle(x => x.Bold().FontSize(8).FontColor(Colores.Fuerte));
 
     /*
-     * Sin rejilla.
+     * Verticales si, horizontales no.
      *
-     * Cada celda llevaba su linea abajo y a la derecha, asi que el papel salia
-     * cuadriculado entero: en una impresora de la tienda eso es tinta que se
-     * gasta en dibujar cajas, no en decir cuanto se debe. La tabla se lee por
-     * el orden de las columnas y por el aire entre filas; queda el recuadro de
-     * afuera y la raya bajo el encabezado, que son las dos que sirven.
+     * Cada celda llevaba tambien su linea abajo, asi que cada fila salia
+     * encajonada y el papel entero cuadriculado: tinta gastada en dibujar
+     * cajas, no en decir cuanto se debe. Las verticales se quedan porque
+     * separan columnas —sin ellas, en una linea de dos renglones no se sabe a
+     * que columna pertenece cada numero—; las filas se separan solas con el
+     * aire de su padding.
      */
     private static IContainer Celda(IContainer container) =>
-        container.PaddingVertical(3).PaddingHorizontal(4);
+        container.BorderRight(1).BorderColor(Colores.Linea).PaddingVertical(3).PaddingHorizontal(4);
 
     private void EnLetras(IContainer container) =>
         container.Border(1).BorderColor(Colores.Linea).Padding(5).Text(txt =>
