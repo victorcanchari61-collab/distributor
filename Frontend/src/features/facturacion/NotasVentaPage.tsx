@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -13,8 +13,6 @@ import {
   Input,
   ListPage,
   Modal,
-  PageHeader,
-  PageSection,
   ResumenDocumento,
   RowAction,
   StatCard,
@@ -553,271 +551,6 @@ export function NotasVentaPage() {
     },
   ]
 
-  if (vista === 'form') {
-    return (
-      <div className="space-y-5">
-        <PageHeader
-          icon={<ShoppingBag size={20} />}
-          title={editando ? `Editar ${editando.numero}` : 'Nueva venta directa'}
-          description={
-            editando
-              ? 'Lo que le quites queda como devolución y no baja nada hasta que la aprueben. Los pagos no se tocan aquí: se anulan desde Ver detalle.'
-              : 'Sin pasar por un pedido primero. El stock sale del almacén elegido al momento de registrarla.'
-          }
-          actions={
-            <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
-              <ArrowLeft size={15} />
-              Volver
-            </Button>
-          }
-        />
-
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:items-start">
-          <PageSection
-            title="Productos"
-            description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
-          >
-            <AgregarProductoPanel
-              productos={productos}
-              stock={stockMap}
-              costoLabel="Precio de venta"
-              onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
-            />
-
-            <div className="mt-4">
-              <SysDataTable
-                columns={columnasFilas}
-                rows={filas}
-                rowKey="id"
-                toolbar={false}
-                empty="Agrega productos con el buscador de arriba."
-                actions={(fila) => (
-                  <RowAction
-                    label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
-                    tone="danger"
-                    onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
-                  >
-                    <Trash2 size={15} />
-                  </RowAction>
-                )}
-              />
-            </div>
-          </PageSection>
-
-          <div className="flex flex-col gap-5">
-            <PageSection title="Venta">
-              <BuscadorCampo
-                label="Cliente"
-                value={clienteId || null}
-                onChange={(id) => setClienteId(id ?? 0)}
-                opciones={opcionesCliente}
-                placeholder="Buscar cliente..."
-                vacio="Ningún cliente coincide"
-                onAvanzado={() => setBuscadorAbierto(true)}
-                avanzadoLabel="Búsqueda avanzada de clientes"
-              />
-
-              <Desplegable
-                className="mt-4"
-                label="Almacén"
-                value={almacenId}
-                onChange={(v) => setAlmacenId(Number(v))}
-                placeholder="Elige el almacén"
-                options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
-              />
-
-              <Desplegable
-                className="mt-4"
-                label="Lista de precios"
-                optional
-                value={listaPrecioId}
-                onChange={(v) => setListaPrecioId(Number(v))}
-                placeholder="Predeterminada"
-                options={listas.map((l) => ({ value: l.id, label: l.nombre }))}
-              />
-
-              {editando ? (
-                <p className="mt-4 rounded-field bg-surface-alt px-3 py-2 text-xs text-ink-soft">
-                  Forma de pago: <span className="font-medium text-ink">
-                    {FORMAS_PAGO.find((f) => f.value === formaPago)?.label ?? formaPago}
-                  </span>
-                  . Los pagos se anulan desde "Ver detalle".
-                </p>
-              ) : (
-                <>
-                  <Desplegable
-                    className="mt-4"
-                    label="Forma de pago"
-                    value={formaPago}
-                    onChange={(v) => {
-                      const nueva = v as FormaPagoVenta
-                      setFormaPago(nueva)
-                      if (nueva === 'CREDITO') setPagos([])
-                    }}
-                    options={FORMAS_PAGO}
-                  />
-
-                  {formaPago === 'CONTADO' ? (
-                    <>
-                      <div
-                        className={cn(
-                          'mt-4 flex items-center justify-between gap-3 rounded-field border px-3 py-2.5',
-                          errorPagos ? 'border-red-600 bg-red-50' : 'border-line',
-                        )}
-                      >
-                        <div>
-                          <span className="ui-label block">
-                            Pagos
-                            <span className="ml-1 text-red-600">*</span>
-                          </span>
-                          <span className={cn('text-xs', errorPagos ? 'text-red-700' : 'text-ink-soft')}>
-                            {pagos.length === 0
-                              ? 'Sin registrar'
-                              : `S/ ${totalPagado.toFixed(2)} de S/ ${total.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
-                          </span>
-                        </div>
-                        {puede('fact.notaventa', 'cobrar') && (
-                          <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
-                            {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
-                          </Button>
-                        )}
-                      </div>
-
-                      {errorPagos && <p className="mt-1.5 text-xs text-red-600">{errorPagos}</p>}
-                    </>
-                  ) : (
-                    <p className="mt-4 text-xs text-ink-soft">
-                      Al crédito no se registra pago ahora — queda pendiente de cobro.
-                    </p>
-                  )}
-                </>
-              )}
-
-              <Input
-                className="mt-4"
-                label="Observación"
-                optional
-                placeholder="Referencia..."
-                value={observacion}
-                onChange={(e) => setObservacion(e.target.value)}
-              />
-            </PageSection>
-
-            <PageSection title="Resumen">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-ink-soft uppercase tracking-wide">Total de la venta</span>
-                <span className="text-xl font-bold text-[rgb(var(--sys-rgb))]">S/ {total.toFixed(2)}</span>
-              </div>
-            </PageSection>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
-            Cancelar
-          </Button>
-          <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-            {editando ? 'Guardar cambios' : 'Registrar venta'}
-          </Button>
-        </div>
-
-        <BuscadorModal
-          open={buscadorAbierto}
-          onClose={() => setBuscadorAbierto(false)}
-          title="Elegir cliente"
-          description="Busca por documento, nombre o distrito."
-          columns={columnasCliente}
-          rows={clientes}
-          cardIcon={Contact}
-          searchPlaceholder="Buscar cliente..."
-          onSeleccionar={(c) => setClienteId(c.id)}
-        />
-
-        <Modal
-          open={pagosAbierto}
-          onClose={() => setPagosAbierto(false)}
-          size="sm"
-          title="Pagos"
-          description="Reparte el total entre uno o varios métodos."
-          footer={
-            <Button size="sm" onClick={() => setPagosAbierto(false)}>
-              Listo
-            </Button>
-          }
-        >
-          <div className="flex flex-col gap-4">
-            {errorForm && <Alert>{errorForm}</Alert>}
-
-            <Desplegable
-              label="Tipo"
-              value={pagoTipo}
-              onChange={(v) => {
-                setPagoTipo(v as TipoMetodoPago)
-                setPagoMetodoId(0)
-              }}
-              placeholder="Elige el tipo"
-              options={TIPOS_METODO_PAGO}
-            />
-
-            <div className="flex gap-2">
-              <div className="min-w-0 flex-1">
-                <Desplegable
-                  value={pagoMetodoId}
-                  onChange={(v) => setPagoMetodoId(Number(v))}
-                  placeholder={pagoTipo ? 'Método' : 'Elige el tipo primero'}
-                  disabled={!pagoTipo}
-                  options={metodosPago.filter((m) => m.tipo === pagoTipo).map((m) => ({ value: m.id, label: m.nombre }))}
-                />
-              </div>
-              <div className="w-28 shrink-0">
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="Monto"
-                  value={pagoMonto}
-                  onChange={(e) => setPagoMonto(e.target.value)}
-                />
-              </div>
-              <Button type="button" size="sm" variant="secondary" onClick={agregarPago}>
-                <Plus size={15} />
-              </Button>
-            </div>
-
-            {pagos.length === 0 ? (
-              <p className="text-sm text-ink-soft">Todavía no hay pagos registrados.</p>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                {pagos.map((p, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-field border border-line px-3 py-1.5 text-sm">
-                    <span>{metodosPago.find((m) => m.id === p.metodoPagoId)?.nombre ?? '—'}</span>
-                    <span className="flex items-center gap-2">
-                      S/ {(Number(p.monto) || 0).toFixed(2)}
-                      <button
-                        type="button"
-                        onClick={() => quitarPago(i)}
-                        aria-label="Quitar pago"
-                        className="text-ink-soft transition-colors hover:text-red-600"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between border-t border-line pt-3 text-sm font-semibold">
-              <span>Pagado</span>
-              <span className={totalPagado > total + 0.001 ? 'text-red-600' : 'text-ink'}>
-                S/ {totalPagado.toFixed(2)} de S/ {total.toFixed(2)}
-              </span>
-            </div>
-          </div>
-        </Modal>
-      </div>
-    )
-  }
-
   return (
     <ListPage
       icon={<ShoppingBag size={20} />}
@@ -1089,6 +822,260 @@ export function NotasVentaPage() {
       </Modal>
 
       {dialogo}
+      {/* Nueva venta / edicion: un modal, como el resto de documentos. */}
+      <Modal
+        open={vista === 'form'}
+        size="2xl"
+        title={editando ? `Editar ${editando.numero}` : 'Nueva venta directa'}
+        description={
+          editando
+            ? 'Lo que le quites queda como devolución y no baja nada hasta que la aprueben. Los pagos se anulan desde Ver detalle.'
+            : 'Sin pasar por un pedido primero. El stock sale del almacén elegido al momento de registrarla.'
+        }
+        onClose={() => setVista('lista')}
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+              Cancelar
+            </Button>
+            <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+              {editando ? 'Guardar cambios' : 'Registrar venta'}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <BuscadorCampo
+              label="Cliente"
+              value={clienteId || null}
+              onChange={(id) => setClienteId(id ?? 0)}
+              opciones={opcionesCliente}
+              placeholder="Buscar cliente..."
+              vacio="Ningún cliente coincide"
+              onAvanzado={() => setBuscadorAbierto(true)}
+              avanzadoLabel="Búsqueda avanzada de clientes"
+            />
+
+            <Desplegable
+              label="Almacén"
+              value={almacenId}
+              onChange={(v) => setAlmacenId(Number(v))}
+              placeholder="Elige el almacén"
+              options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
+            />
+
+            <Desplegable
+              label="Lista de precios"
+              optional
+              value={listaPrecioId}
+              onChange={(v) => setListaPrecioId(Number(v))}
+              placeholder="Predeterminada"
+              options={listas.map((l) => ({ value: l.id, label: l.nombre }))}
+            />
+
+            {editando ? (
+              <p className="self-end rounded-field bg-surface-alt px-3 py-2 text-xs text-ink-soft">
+                Forma de pago:{' '}
+                <span className="font-medium text-ink">
+                  {FORMAS_PAGO.find((f) => f.value === formaPago)?.label ?? formaPago}
+                </span>
+                . Los pagos se anulan desde "Ver detalle".
+              </p>
+            ) : (
+              <Desplegable
+                label="Forma de pago"
+                value={formaPago}
+                onChange={(v) => {
+                  const nueva = v as FormaPagoVenta
+                  setFormaPago(nueva)
+                  if (nueva === 'CREDITO') setPagos([])
+                }}
+                options={FORMAS_PAGO}
+              />
+            )}
+          </div>
+
+          {!editando &&
+            (formaPago === 'CONTADO' ? (
+              <div>
+                <div
+                  className={cn(
+                    'flex items-center justify-between gap-3 rounded-field border px-3 py-2.5',
+                    errorPagos ? 'border-red-600 bg-red-50' : 'border-line',
+                  )}
+                >
+                  <div>
+                    <span className="ui-label block">
+                      Pagos
+                      <span className="ml-1 text-red-600">*</span>
+                    </span>
+                    <span className={cn('text-xs', errorPagos ? 'text-red-700' : 'text-ink-soft')}>
+                      {pagos.length === 0
+                        ? 'Sin registrar'
+                        : `S/ ${totalPagado.toFixed(2)} de S/ ${total.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
+                    </span>
+                  </div>
+                  {puede('fact.notaventa', 'cobrar') && (
+                    <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
+                      {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
+                    </Button>
+                  )}
+                </div>
+
+                {errorPagos && <p className="mt-1.5 text-xs text-red-600">{errorPagos}</p>}
+              </div>
+            ) : (
+              <p className="text-xs text-ink-soft">
+                Al crédito no se registra pago ahora — queda pendiente de cobro.
+              </p>
+            ))}
+
+          <Input
+            label="Observación"
+            optional
+            placeholder="Referencia..."
+            value={observacion}
+            onChange={(e) => setObservacion(e.target.value)}
+          />
+
+          <hr className="border-line" />
+
+          <p className="text-sm font-semibold text-ink">Agregar producto</p>
+          <AgregarProductoPanel
+            productos={productos}
+            stock={stockMap}
+            costoLabel="Precio de venta"
+            onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
+          />
+
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-ink">Productos</p>
+            <span className="text-xs text-ink-soft">
+              {filas.length} producto{filas.length === 1 ? '' : 's'} agregado{filas.length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          <SysDataTable
+            columns={columnasFilas}
+            rows={filas}
+            rowKey="id"
+            toolbar={false}
+            empty="Agrega productos con el buscador de arriba."
+            actions={(fila) => (
+              <RowAction
+                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                tone="danger"
+                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+              >
+                <Trash2 size={15} />
+              </RowAction>
+            )}
+          />
+
+          <div className="flex items-center justify-between border-t border-line pt-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+              Total de la venta
+            </span>
+            <span className="text-xl font-bold text-[rgb(var(--sys-rgb))]">S/ {total.toFixed(2)}</span>
+          </div>
+        </div>
+      </Modal>
+
+      <BuscadorModal
+        open={buscadorAbierto}
+        onClose={() => setBuscadorAbierto(false)}
+        title="Elegir cliente"
+        description="Busca por documento, nombre o distrito."
+        columns={columnasCliente}
+        rows={clientes}
+        cardIcon={Contact}
+        searchPlaceholder="Buscar cliente..."
+        onSeleccionar={(c) => setClienteId(c.id)}
+      />
+
+
+      <Modal
+        open={pagosAbierto}
+        onClose={() => setPagosAbierto(false)}
+        size="sm"
+        title="Pagos"
+        description="Reparte el total entre uno o varios métodos."
+        footer={
+          <Button size="sm" onClick={() => setPagosAbierto(false)}>
+            Listo
+          </Button>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          {errorForm && <Alert>{errorForm}</Alert>}
+
+          <Desplegable
+            label="Tipo"
+            value={pagoTipo}
+            onChange={(v) => {
+              setPagoTipo(v as TipoMetodoPago)
+              setPagoMetodoId(0)
+            }}
+            placeholder="Elige el tipo"
+            options={TIPOS_METODO_PAGO}
+          />
+
+          <div className="flex gap-2">
+            <div className="min-w-0 flex-1">
+              <Desplegable
+                value={pagoMetodoId}
+                onChange={(v) => setPagoMetodoId(Number(v))}
+                placeholder={pagoTipo ? 'Método' : 'Elige el tipo primero'}
+                disabled={!pagoTipo}
+                options={metodosPago.filter((m) => m.tipo === pagoTipo).map((m) => ({ value: m.id, label: m.nombre }))}
+              />
+            </div>
+            <div className="w-28 shrink-0">
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="Monto"
+                value={pagoMonto}
+                onChange={(e) => setPagoMonto(e.target.value)}
+              />
+            </div>
+            <Button type="button" size="sm" variant="secondary" onClick={agregarPago}>
+              <Plus size={15} />
+            </Button>
+          </div>
+
+          {pagos.length === 0 ? (
+            <p className="text-sm text-ink-soft">Todavía no hay pagos registrados.</p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {pagos.map((p, i) => (
+                <div key={i} className="flex items-center justify-between rounded-field border border-line px-3 py-1.5 text-sm">
+                  <span>{metodosPago.find((m) => m.id === p.metodoPagoId)?.nombre ?? '—'}</span>
+                  <span className="flex items-center gap-2">
+                    S/ {(Number(p.monto) || 0).toFixed(2)}
+                    <button
+                      type="button"
+                      onClick={() => quitarPago(i)}
+                      aria-label="Quitar pago"
+                      className="text-ink-soft transition-colors hover:text-red-600"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between border-t border-line pt-3 text-sm font-semibold">
+            <span>Pagado</span>
+            <span className={totalPagado > total + 0.001 ? 'text-red-600' : 'text-ink'}>
+              S/ {totalPagado.toFixed(2)} de S/ {total.toFixed(2)}
+            </span>
+          </div>
+        </div>
+      </Modal>
     </ListPage>
   )
 }

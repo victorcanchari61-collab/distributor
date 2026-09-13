@@ -433,29 +433,29 @@ export function CuentasPorCobrarPage() {
         onClose={() => setGestionando(null)}
         size="2xl"
         footer={
-          <Button variant="secondary" size="sm" onClick={() => setGestionando(null)}>
-            Cerrar
-          </Button>
+          <>
+            {puede('finanzas.cobrar', 'cobrar') && (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={editandoClave !== null}
+                onClick={agregarFila}
+              >
+                <Plus size={15} />
+                Agregar pago
+              </Button>
+            )}
+            <Button variant="secondary" size="sm" onClick={() => setGestionando(null)}>
+              Cerrar
+            </Button>
+          </>
         }
       >
         {gestionando && (
           <div className="flex flex-col gap-3">
             {errorForm && <Alert>{errorForm}</Alert>}
 
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-ink">Pagos</p>
-              {puede('finanzas.cobrar', 'cobrar') && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={editandoClave !== null}
-                  onClick={agregarFila}
-                >
-                  <Plus size={15} />
-                  Agregar pago
-                </Button>
-              )}
-            </div>
+            <p className="text-sm font-semibold text-ink">Pagos</p>
 
             <SysDataTable<FilaPago>
               columns={columnasPagos}
