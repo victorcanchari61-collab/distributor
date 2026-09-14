@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaCorta } from '../../lib/fechas'
 import {
   Contact,
   MapPin,
@@ -421,7 +422,7 @@ export function ClientesPage() {
       label: 'Fecha de registro',
       filterType: 'date',
       value: (row) => new Date(row.fechaCreacion).getTime(),
-      render: (row) => new Date(row.fechaCreacion).toLocaleDateString('es-PE'),
+      render: (row) => fechaCorta(row.fechaCreacion),
     },
     {
       key: 'activo',

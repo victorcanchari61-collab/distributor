@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaHora } from '../../lib/fechas'
 import { Eye, RefreshCw, ScrollText } from 'lucide-react'
 import { Alert, Badge, Button, ListPage, Modal, RowAction, StatCard } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
@@ -17,7 +18,7 @@ function formatearValor(valor: unknown): string {
   if (valor === null || valor === undefined || valor === '') return '—'
   if (typeof valor === 'boolean') return valor ? 'Sí' : 'No'
   if (typeof valor === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(valor)) {
-    return new Date(valor).toLocaleString('es-PE')
+    return fechaHora(valor)
   }
   if (typeof valor === 'object') return JSON.stringify(valor)
   return String(valor)
@@ -84,7 +85,7 @@ export function AuditoriaPage() {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
-      render: (row) => new Date(row.fecha).toLocaleString('es-PE'),
+      render: (row) => fechaHora(row.fecha),
     },
     {
       key: 'usuario',
@@ -191,7 +192,7 @@ export function AuditoriaPage() {
         title={detalleAbierto ? `${detalleAbierto.entidad} #${detalleAbierto.entidadId}` : ''}
         description={
           detalleAbierto
-            ? `${new Date(detalleAbierto.fecha).toLocaleString('es-PE')} · ${detalleAbierto.usuario}`
+            ? `${fechaHora(detalleAbierto.fecha)} · ${detalleAbierto.usuario}`
             : undefined
         }
         onClose={() => setDetalleAbierto(null)}

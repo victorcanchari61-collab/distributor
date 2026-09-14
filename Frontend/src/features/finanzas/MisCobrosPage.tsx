@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaHora } from '../../lib/fechas'
 import { Ban, Coins, HandCoins, Wallet } from 'lucide-react'
 import { Alert, Badge, ListPage, StatCard } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
@@ -69,7 +70,7 @@ export function MisCobrosPage() {
       label: 'Fecha',
       filterType: 'date',
       value: (row) => new Date(row.fecha).getTime(),
-      render: (row) => new Date(row.fecha).toLocaleString('es-PE'),
+      render: (row) => fechaHora(row.fecha),
     },
     { key: 'notaVentaNumero', label: 'Nota de venta', render: (row) => <Badge>{row.notaVentaNumero}</Badge> },
     { key: 'cliente', label: 'Cliente' },

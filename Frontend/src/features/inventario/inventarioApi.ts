@@ -158,7 +158,8 @@ export interface KardexResponse {
   fecha: string
   documento: string
   motivo: string
-  tipo: TipoMovimiento
+  /** RESERVA no es un movimiento: aparta mercadería sin sacarla del almacén. */
+  tipo: TipoMovimiento | 'RESERVA'
   productoId: number
   producto: string
   unidadBase: string

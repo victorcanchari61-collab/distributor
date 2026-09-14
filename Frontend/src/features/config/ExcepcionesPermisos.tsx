@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { fechaHora, fechaCorta } from '../../lib/fechas'
 import { Ban, CalendarClock, Infinity as InfinityIcon, Plus, ShieldPlus, Zap } from 'lucide-react'
 import {
   Alert,
@@ -147,7 +148,7 @@ export function ExcepcionesPermisos() {
           {ALCANCE_LABEL[p.alcance]}
           {p.alcance === ALCANCE.temporal && p.expiraEn && (
             <span className="text-xs text-ink-soft">
-              hasta {new Date(p.expiraEn).toLocaleString('es-PE')}
+              hasta {fechaHora(p.expiraEn)}
             </span>
           )}
         </span>
@@ -185,7 +186,7 @@ export function ExcepcionesPermisos() {
       // La tabla filtra en memoria y el rango compara en epoch: sin esto se
       // descartarian filas ya cargadas y saldria "sin registros".
       value: (p) => new Date(p.fechaOtorgado).getTime(),
-      render: (p) => new Date(p.fechaOtorgado).toLocaleDateString('es-PE'),
+      render: (p) => fechaCorta(p.fechaOtorgado),
     },
   ]
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaCorta } from '../../lib/fechas'
 import { Eye, HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
   AccionPdf,
@@ -348,7 +349,7 @@ export function PrestamosPage() {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
-      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+      render: (row) => fechaCorta(row.fecha),
     },
     {
       key: 'total',
@@ -539,7 +540,7 @@ export function PrestamosPage() {
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.contraparte}` : ''}
         description={
           detalleAbierto
-            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')} · ${detalleAbierto.almacen} · ${
+            ? `Emisión ${fechaCorta(detalleAbierto.fecha)} · ${detalleAbierto.almacen} · ${
                 detalleAbierto.tipo === 'DADO' ? 'Prestado' : 'Recibido'
               }`
             : undefined

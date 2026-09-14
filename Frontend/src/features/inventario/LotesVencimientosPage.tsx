@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaCorta } from '../../lib/fechas'
 import { AlertTriangle, CalendarClock, PackageX } from 'lucide-react'
 import { Alert, Badge, ListPage, StatCard } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
@@ -65,7 +66,7 @@ export function LotesVencimientosPage() {
       // fecha quedan en 0, que es justo lo que se quiere: no caen en ningun rango.
       value: (row) => (row.fechaVencimiento ? new Date(row.fechaVencimiento).getTime() : 0),
       render: (row) =>
-        row.fechaVencimiento ? new Date(row.fechaVencimiento).toLocaleDateString('es-PE') : '—',
+        row.fechaVencimiento ? fechaCorta(row.fechaVencimiento) : '—',
     },
     {
       key: 'diasParaVencer',

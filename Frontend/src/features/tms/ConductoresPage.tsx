@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaCorta } from '../../lib/fechas'
 import {
   AlertTriangle,
   CalendarClock,
@@ -387,7 +388,7 @@ export function ConductoresPage() {
                 etiqueta="Fecha de ingreso"
                 valor={
                   detalle.fechaIngreso
-                    ? new Date(detalle.fechaIngreso).toLocaleDateString('es-PE')
+                    ? fechaCorta(detalle.fechaIngreso)
                     : null
                 }
               />
@@ -424,7 +425,7 @@ export function ConductoresPage() {
                     <span className="text-sm text-ink">{v.nombre}</span>
                     <span className="flex items-center gap-2">
                       <span className="text-sm text-ink-muted tabular-nums">
-                        {v.vence ? new Date(v.vence).toLocaleDateString('es-PE') : '—'}
+                        {v.vence ? fechaCorta(v.vence) : '—'}
                       </span>
                       <BadgeEstadoDocumentos estado={v.estado} />
                     </span>

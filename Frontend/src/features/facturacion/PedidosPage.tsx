@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaCorta } from '../../lib/fechas'
 import { ArrowLeft, CheckCircle2, ClipboardList, Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AccionPdf,
@@ -513,7 +514,7 @@ export function PedidosPage() {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
-      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+      render: (row) => fechaCorta(row.fecha),
     },
     {
       key: 'total',
@@ -843,7 +844,7 @@ export function PedidosPage() {
         open={detalleAbierto !== null}
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.cliente}` : ''}
         description={
-          detalleAbierto ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')}` : undefined
+          detalleAbierto ? `Emisión ${fechaCorta(detalleAbierto.fecha)}` : undefined
         }
         onClose={() => setDetalleAbierto(null)}
         size="lg"

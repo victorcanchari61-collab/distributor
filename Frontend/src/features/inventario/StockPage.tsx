@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaCorta } from '../../lib/fechas'
 import { AlertTriangle, Boxes, Layers, PackageSearch, Warehouse } from 'lucide-react'
 import { Alert, Desplegable, ListaDesplegable, ListPage, StatCard, Tabs } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn, TabItem } from '../../components/ui'
@@ -305,7 +306,7 @@ export function StockPage() {
       render: (row) =>
         row.ultimaSalida ? (
           <span className="text-ink-soft">
-            {new Date(row.ultimaSalida).toLocaleDateString('es-PE')}
+            {fechaCorta(row.ultimaSalida)}
           </span>
         ) : (
           <span className="text-ink-soft">Nunca</span>
@@ -319,7 +320,7 @@ export function StockPage() {
       render: (row) =>
         row.ultimaEntrada ? (
           <span className="text-ink-soft">
-            {new Date(row.ultimaEntrada).toLocaleDateString('es-PE')}
+            {fechaCorta(row.ultimaEntrada)}
           </span>
         ) : (
           <span className="text-ink-soft">Nunca</span>
@@ -379,7 +380,7 @@ export function StockPage() {
             items={row.capas.map((c, i) => ({
               id: c.id,
               label: `${i === 0 ? 'Sale primero · ' : ''}${c.cantidadDisponible} ${row.unidadBase}`,
-              nota: new Date(c.fecha).toLocaleDateString('es-PE'),
+              nota: fechaCorta(c.fecha),
               detalle: `S/ ${c.costoUnitario} · S/ ${c.valor.toFixed(2)}`,
             }))}
           />

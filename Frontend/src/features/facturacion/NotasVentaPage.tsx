@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaCorta } from '../../lib/fechas'
 import { ArrowLeft, Check, Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2, X } from 'lucide-react'
 import {
   AccionPdf,
@@ -728,7 +729,7 @@ export function NotasVentaPage() {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
-      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+      render: (row) => fechaCorta(row.fecha),
     },
     {
       key: 'total',
@@ -1101,7 +1102,7 @@ export function NotasVentaPage() {
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.cliente}` : ''}
         description={
           detalleAbierto
-            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')} · ${detalleAbierto.almacen} · ` +
+            ? `Emisión ${fechaCorta(detalleAbierto.fecha)} · ${detalleAbierto.almacen} · ` +
               (FORMAS_PAGO.find((f) => f.value === detalleAbierto.formaPago)?.label ?? detalleAbierto.formaPago)
             : undefined
         }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaHora } from '../../lib/fechas'
 import { CalendarClock, Check, Inbox, Infinity as InfinityIcon, X, Zap } from 'lucide-react'
 import { Alert, Badge, Button, Modal, PageSection, SysDataTable, cn, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
@@ -110,7 +111,7 @@ export function BandejaSolicitudes() {
       // La tabla filtra en memoria y el rango compara en epoch: sin esto se
       // descartarian filas ya cargadas y saldria "sin registros".
       value: (s) => new Date(s.fechaSolicitud).getTime(),
-      render: (s) => new Date(s.fechaSolicitud).toLocaleString('es-PE'),
+      render: (s) => fechaHora(s.fechaSolicitud),
     },
     {
       key: 'estado',

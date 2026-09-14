@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaCorta } from '../../lib/fechas'
 import { Check, Eye, Undo2, X } from 'lucide-react'
 import {
   Alert,
@@ -123,7 +124,7 @@ export function DevolucionesPage() {
       label: 'Fecha',
       filterType: 'date',
       value: (row) => new Date(row.fecha).getTime(),
-      render: (row) => new Date(row.fecha).toLocaleDateString(),
+      render: (row) => fechaCorta(row.fecha),
     },
     { key: 'notaVenta', label: 'Venta' },
     { key: 'cliente', label: 'Cliente' },

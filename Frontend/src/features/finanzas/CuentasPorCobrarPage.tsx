@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaHora, fechaCorta } from '../../lib/fechas'
 import { CalendarClock, Check, CircleCheck, HandCoins, Pencil, Plus, Receipt, Undo2, Wallet, X } from 'lucide-react'
 import {
   Alert,
@@ -220,7 +221,7 @@ export function CuentasPorCobrarPage() {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
-      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+      render: (row) => fechaCorta(row.fecha),
     },
     {
       // La lista solo trae notas confirmadas con saldo, asi que el estado es
@@ -271,7 +272,7 @@ export function CuentasPorCobrarPage() {
     {
       key: 'fecha',
       label: 'Fecha',
-      render: (fila) => (fila.clave === NUEVA ? <span className="text-ink-soft">—</span> : new Date(fila.fecha).toLocaleString('es-PE')),
+      render: (fila) => (fila.clave === NUEVA ? <span className="text-ink-soft">—</span> : fechaHora(fila.fecha)),
     },
     {
       key: 'tipo',

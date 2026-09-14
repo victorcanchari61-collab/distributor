@@ -30,7 +30,7 @@ import {
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
-import { desplazarDias } from '../../lib/fechas'
+import { desplazarDias, fechaCorta } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { arqueoApi, motivoGastoApi } from './arqueoApi'
 import type {
@@ -48,9 +48,6 @@ const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
 /** Solo la parte de fecha: el backend devuelve el día con hora en cero. */
 const soloFecha = (iso: string) => iso.slice(0, 10)
-
-const fechaCorta = (iso: string) =>
-  new Date(`${soloFecha(iso)}T00:00:00`).toLocaleDateString('es-PE')
 
 
 

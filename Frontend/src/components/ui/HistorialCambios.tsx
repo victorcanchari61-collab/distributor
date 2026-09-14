@@ -1,4 +1,5 @@
 import { Badge } from './Badge'
+import { fechaHora } from '../../lib/fechas'
 import { SysDataTable } from './SysDataTable'
 import type { DataTableColumn } from './SysDataTable'
 import type { AuditoriaResponse } from '../../features/config'
@@ -111,7 +112,7 @@ export function HistorialCambios({ registros, cargando }: HistorialCambiosProps)
       value: (r) => new Date(r.fecha).getTime(),
       render: (r) => (
         <span className="text-ink-soft">
-          {new Date(r.fecha).toLocaleString('es-PE')} · {r.usuario}
+          {fechaHora(r.fecha)} · {r.usuario}
         </span>
       ),
     },

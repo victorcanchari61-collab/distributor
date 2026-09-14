@@ -512,33 +512,40 @@ public class InventarioService : IInventarioService
      * que se consumio —no el precio al que se vendio—, que es lo que deja que
      * el valorizado del kardex cuadre con el del stock.
      */
-    private static SaldoKardex Aplicar(SaldoKardex antes, MovimientoInventario m) =>
-        m.Tipo == TipoMovimiento.Entrada
-            ? new SaldoKardex(antes.Cantidad + m.Cantidad, antes.Valor + m.CostoTotal)
-            : new SaldoKardex(antes.Cantidad - m.Cantidad, antes.Valor - m.CostoTotal);
+    private static SaldoKardex Aplicar(SaldoKardex antes, FilaKardex f) =>
+        f.Tipo switch
+        {
+            // Una reserva no mueve nada: aparta. El stock queda igual antes y
+            // despues, y por eso la fila se lee como un aviso y no como un
+            // movimiento.
+            TipoKardex.Reserva => antes,
+            TipoMovimiento.Entrada =>
+                new SaldoKardex(antes.Cantidad + f.Cantidad, antes.Valor + f.CostoTotal),
+            _ => new SaldoKardex(antes.Cantidad - f.Cantidad, antes.Valor - f.CostoTotal),
+        };
 
     private static KardexResponse MapKardex(
-        MovimientoInventario m, SaldoKardex antes, SaldoKardex despues) => new()
+        FilaKardex f, SaldoKardex antes, SaldoKardex despues) => new()
     {
-        Id = m.Id,
-        Fecha = m.Fecha,
-        Documento = m.Documento?.Numero ?? string.Empty,
-        Motivo = m.Motivo?.Nombre ?? string.Empty,
-        Tipo = m.Tipo,
-        ProductoId = m.ProductoId,
-        Producto = m.Producto?.Nombre ?? string.Empty,
-        UnidadBase = m.Producto?.UnidadBase?.Codigo ?? string.Empty,
-        Almacen = m.Almacen?.Nombre ?? string.Empty,
-        Presentacion = m.Presentacion?.Nombre,
-        CantidadPresentacion = m.CantidadPresentacion,
-        Cantidad = m.Cantidad,
-        CostoUnitario = m.CostoUnitario,
-        CostoTotal = m.CostoTotal,
+        Id = f.Id,
+        Fecha = f.Fecha,
+        Documento = f.Documento,
+        Motivo = f.Motivo,
+        Tipo = f.Tipo,
+        ProductoId = f.ProductoId,
+        Producto = f.Producto,
+        UnidadBase = f.UnidadBase,
+        Almacen = f.Almacen,
+        Presentacion = f.Presentacion,
+        CantidadPresentacion = f.CantidadPresentacion,
+        Cantidad = f.Cantidad,
+        CostoUnitario = f.CostoUnitario,
+        CostoTotal = f.CostoTotal,
         SaldoAnterior = antes.Cantidad,
         Saldo = despues.Cantidad,
         ValorizadoAnterior = Math.Round(antes.Valor, 2),
         Valorizado = Math.Round(despues.Valor, 2),
-        Anulado = m.Documento?.Estado == EstadoDocumento.Anulado,
+        Anulado = f.Anulado,
     };
 
     public async Task<IEnumerable<KardexResponse>> GetKardexAsync(
@@ -555,7 +562,11 @@ public class InventarioService : IInventarioService
         {
             var clave = (m.ProductoId, m.AlmacenId);
             var antes = saldos.GetValueOrDefault(clave, new SaldoKardex(0, 0));
-            var despues = Aplicar(antes, m);
+            // Este kardex —el que no pagina— sigue siendo solo de movimientos:
+            // la entrada suma y la salida resta, sin reservas de por medio.
+            var despues = m.Tipo == TipoMovimiento.Entrada
+                ? new SaldoKardex(antes.Cantidad + m.Cantidad, antes.Valor + m.CostoTotal)
+                : new SaldoKardex(antes.Cantidad - m.Cantidad, antes.Valor - m.CostoTotal);
             saldos[clave] = despues;
 
             respuesta.Add(new KardexResponse

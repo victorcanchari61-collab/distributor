@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowDownCircle, ArrowUpCircle, BookOpen, Boxes, Warehouse } from 'lucide-react'
+import { fechaHora } from '../../lib/fechas'
+import { ArrowDownCircle, ArrowUpCircle, BookOpen, Boxes, Lock, Warehouse } from 'lucide-react'
 import { Alert, Badge, ListPage, Tabs } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn, TabItem } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -104,7 +105,7 @@ export function KardexPage() {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
-      render: (row) => new Date(row.fecha).toLocaleString('es-PE'),
+      render: (row) => fechaHora(row.fecha),
     },
     { key: 'documento', label: 'Documento', sortable: false, render: (row) => <Badge>{row.documento}</Badge> },
     {
@@ -118,9 +119,15 @@ export function KardexPage() {
       filterOptions: [
         { value: 'ENTRADA', label: 'Ingreso' },
         { value: 'SALIDA', label: 'Salida' },
+        { value: 'RESERVA', label: 'Reserva' },
       ],
       render: (row) =>
-        row.tipo === 'ENTRADA' ? (
+        row.tipo === 'RESERVA' ? (
+          <Badge tone="sys">
+            <Lock size={13} className="mr-1 inline" />
+            Reserva
+          </Badge>
+        ) : row.tipo === 'ENTRADA' ? (
           <Badge tone="success">
             <ArrowDownCircle size={13} className="mr-1 inline" />
             Ingreso
@@ -165,8 +172,18 @@ export function KardexPage() {
       align: 'right',
       filterable: false,
       render: (row) => (
-        <span className={row.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-amber-600'}>
-          {row.tipo === 'ENTRADA' ? '+' : '−'}
+        // La reserva no suma ni resta: por eso no lleva signo. Solo dice
+        // cuanto quedo comprometido.
+        <span
+          className={
+            row.tipo === 'RESERVA'
+              ? 'text-[rgb(var(--sys-rgb))]'
+              : row.tipo === 'ENTRADA'
+                ? 'text-emerald-600'
+                : 'text-amber-600'
+          }
+        >
+          {row.tipo === 'RESERVA' ? '' : row.tipo === 'ENTRADA' ? '+' : '−'}
           {row.cantidad} {row.unidadBase}
         </span>
       ),
@@ -178,7 +195,9 @@ export function KardexPage() {
       align: 'right',
       filterable: false,
       render: (row) => (
-        <span className="text-ink-soft">{cifra(row.costoUnitario, 4)}</span>
+        <span className="text-ink">
+          {row.tipo === 'RESERVA' ? '—' : cifra(row.costoUnitario, 4)}
+        </span>
       ),
     },
     {
@@ -187,7 +206,7 @@ export function KardexPage() {
       label: 'Costo',
       align: 'right',
       filterable: false,
-      render: (row) => cifra(row.costoTotal),
+      render: (row) => (row.tipo === 'RESERVA' ? '—' : cifra(row.costoTotal)),
     },
     /*
      * El libro de verdad: con cuanto llegaba, cuanto movio, con cuanto quedo.
@@ -198,11 +217,11 @@ export function KardexPage() {
     {
       key: 'saldoAnterior',
       sortable: false,
-      label: 'Saldo anterior',
+      label: 'Stock anterior',
       align: 'right',
       filterable: false,
       render: (row) => (
-        <span className="text-ink-soft">
+        <span className="text-ink">
           {row.saldoAnterior ?? '—'} {row.unidadBase}
         </span>
       ),
@@ -210,7 +229,7 @@ export function KardexPage() {
     {
       key: 'saldo',
       sortable: false,
-      label: 'Saldo',
+      label: 'Stock actual',
       align: 'right',
       filterable: false,
       render: (row) => (

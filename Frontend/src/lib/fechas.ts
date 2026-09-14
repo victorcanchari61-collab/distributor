@@ -24,3 +24,54 @@ export function desplazarDias(dias: number): string {
   d.setDate(d.getDate() + dias)
   return fechaLocal(d)
 }
+
+/*
+ * Una marca de tiempo del servidor, en la hora de aquí.
+ *
+ * El backend guarda en UTC pero la serializa sin la "Z" que lo dice, así que
+ * el navegador la tomaba por hora local y no convertía nada: una venta de las
+ * 6:18 de la tarde salía como 11:18 de la noche. Aquí se le pone la marca que
+ * le falta y el navegador ya hace la cuenta.
+ *
+ * Solo para instantes. Una fecha suelta —"2026-09-13", el día de un
+ * documento— no lleva hora ni zona y se muestra tal cual: tratarla como UTC
+ * la correría al día anterior.
+ */
+export function fechaHora(valor: string): string {
+  return comoInstante(valor).toLocaleString('es-PE')
+}
+
+/** El día de una fecha del servidor, en el calendario de aquí. */
+export function fechaCorta(valor: string): string {
+  return comoInstante(valor).toLocaleDateString('es-PE')
+}
+
+/*
+ * El sistema guarda dos cosas distintas en el mismo tipo de campo.
+ *
+ * Un INSTANTE —cuándo se registró un pago, cuándo salió el stock— se guarda en
+ * UTC: hay que traerlo a la hora de aquí o se ve cinco horas adelantado.
+ *
+ * Un DÍA —la fecha que alguien escribió en el formulario de una compra— se
+ * guarda a las 00:00 sin zona, y es el día que esa persona quiso decir: si se
+ * tratara como UTC se correría al día anterior a las 7 de la tarde.
+ *
+ * Se distinguen por la hora: las 00:00:00 clavadas son un día escrito a mano.
+ * Un instante que caiga justo en ese segundo —las 7 p. m. exactas de aquí— se
+ * leería como día; es un segundo de cada 86 400 y el precio de no tener que
+ * migrar lo ya guardado.
+ */
+function comoInstante(valor: string): Date {
+  const tieneZona = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(valor)
+  const esDiaSuelto = !valor.includes('T') || /T00:00:00(\.0+)?$/.test(valor)
+
+  if (esDiaSuelto && !tieneZona) {
+    // "2026-09-13" a secas lo parsea el navegador como UTC, y en Perú eso es
+    // el día anterior a las 7 de la tarde. Se arma a mano como medianoche de
+    // aquí, que es lo que esa fecha significa.
+    const [anio, mes, dia] = valor.slice(0, 10).split('-').map(Number)
+    return new Date(anio, mes - 1, dia)
+  }
+
+  return new Date(tieneZona ? valor : `${valor}Z`)
+}

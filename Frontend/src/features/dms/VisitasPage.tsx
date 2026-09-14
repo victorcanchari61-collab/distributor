@@ -3,7 +3,7 @@ import { CheckCircle2, MapPin, Phone, Plus, Store } from 'lucide-react'
 import { Alert, Badge, ListPage, StatCard } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { hoyLocal } from '../../lib/fechas'
+import { hoyLocal, fechaCorta } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { rutaApi } from '../tms'
 import type { RutaResponse } from '../tms'
@@ -111,7 +111,7 @@ export function VisitasPage() {
         value: (row) => new Date(row.fecha).getTime(),
         render: (row) => (
           <span className="flex flex-col">
-            <span>{new Date(row.fecha).toLocaleDateString()}</span>
+            <span>{fechaCorta(row.fecha)}</span>
             <span className="text-xs text-ink-soft capitalize">{row.dia.toLowerCase()}</span>
           </span>
         ),

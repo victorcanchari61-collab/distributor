@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaCorta } from '../../lib/fechas'
 import { ArrowRight, Eye, Plus, Trash2, Truck, Undo2 } from 'lucide-react'
 import {
   AccionPdf,
@@ -277,7 +278,7 @@ export function TransferenciasPage() {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
-      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+      render: (row) => fechaCorta(row.fecha),
     },
     {
       key: 'almacen',
@@ -491,7 +492,7 @@ export function TransferenciasPage() {
         title={detalleAbierto?.numero ?? ''}
         description={
           detalleAbierto
-            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')} · ${detalleAbierto.almacen} → ${detalleAbierto.almacenDestino}`
+            ? `Emisión ${fechaCorta(detalleAbierto.fecha)} · ${detalleAbierto.almacen} → ${detalleAbierto.almacenDestino}`
             : undefined
         }
         onClose={() => setDetalleAbierto(null)}

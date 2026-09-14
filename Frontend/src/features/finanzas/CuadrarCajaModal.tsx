@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { fechaCorta } from '../../lib/fechas'
 import { Banknote, History, Plus, Smartphone, Trash2 } from 'lucide-react'
 import { Alert, Badge, Button, Checkbox, Desplegable, Input, Modal, Tabs } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -240,7 +241,7 @@ export function CuadrarCajaModal({
     <Modal
       open={open}
       size="lg"
-      title={`Cuadrar caja — ${usuario} — ${new Date(`${fecha}T00:00:00`).toLocaleDateString('es-PE')}`}
+      title={`Cuadrar caja — ${usuario} — ${fechaCorta(`${fecha}T00:00:00`)}`}
       onClose={onClose}
       footer={
         <>

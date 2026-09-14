@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaCorta } from '../../lib/fechas'
 import {
   ArrowLeft,
   Building2,
@@ -373,13 +374,13 @@ export function OrdenesCompraPage() {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
-      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+      render: (row) => fechaCorta(row.fecha),
     },
     {
       key: 'fechaEsperada',
       label: 'Fecha esperada',
       filterType: 'date',
-      render: (row) => (row.fechaEsperada ? new Date(row.fechaEsperada).toLocaleDateString('es-PE') : '—'),
+      render: (row) => (row.fechaEsperada ? fechaCorta(row.fechaEsperada) : '—'),
     },
     {
       key: 'total',
@@ -618,9 +619,9 @@ export function OrdenesCompraPage() {
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.proveedor}` : ''}
         description={
           detalleAbierto
-            ? `Emisión ${new Date(detalleAbierto.fecha).toLocaleDateString('es-PE')} · Entrega est. ${
+            ? `Emisión ${fechaCorta(detalleAbierto.fecha)} · Entrega est. ${
                 detalleAbierto.fechaEsperada
-                  ? new Date(detalleAbierto.fechaEsperada).toLocaleDateString('es-PE')
+                  ? fechaCorta(detalleAbierto.fechaEsperada)
                   : '—'
               }`
             : undefined

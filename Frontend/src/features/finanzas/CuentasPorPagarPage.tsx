@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fechaHora, fechaCorta } from '../../lib/fechas'
 import { CalendarClock, Check, CircleCheck, CreditCard, HandCoins, Pencil, Plus, Receipt, Undo2, X } from 'lucide-react'
 import {
   Alert,
@@ -216,7 +217,7 @@ export function CuentasPorPagarPage() {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
-      render: (row) => new Date(row.fecha).toLocaleDateString('es-PE'),
+      render: (row) => fechaCorta(row.fecha),
     },
     {
       // Esta consulta se resuelve en el servidor y no acepta filtro por
@@ -267,7 +268,7 @@ export function CuentasPorPagarPage() {
     {
       key: 'fecha',
       label: 'Fecha',
-      render: (fila) => (fila.clave === NUEVA ? <span className="text-ink-soft">—</span> : new Date(fila.fecha).toLocaleString('es-PE')),
+      render: (fila) => (fila.clave === NUEVA ? <span className="text-ink-soft">—</span> : fechaHora(fila.fecha)),
     },
     {
       key: 'tipo',

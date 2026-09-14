@@ -14,6 +14,39 @@ public record ResumenStock(decimal Stock, decimal Valorizado, decimal CostoMin, 
 /// <summary>Con cuánto —y por cuánto— entra un producto a una página del kardex.</summary>
 public record SaldoKardex(decimal Cantidad, decimal Valor);
 
+/// <summary>
+/// Un renglón del kardex, venga de donde venga.
+///
+/// Existe porque el libro ya no es solo la tabla de movimientos: también entra
+/// lo que un pedido reserva, que no mueve stock pero sí compromete mercadería
+/// y hay que poder verlo entre lo demás, en su fecha. Las dos fuentes se
+/// proyectan a esta forma para poder ordenarlas y paginarlas juntas en la
+/// base, que es lo único que mantiene el saldo bien cuando hay varias páginas.
+/// </summary>
+public record FilaKardex(
+    int Id,
+    DateTime Fecha,
+    string Documento,
+    bool Anulado,
+    string Motivo,
+    string Tipo,
+    int ProductoId,
+    string Producto,
+    string UnidadBase,
+    int AlmacenId,
+    string Almacen,
+    string? Presentacion,
+    decimal CantidadPresentacion,
+    decimal Cantidad,
+    decimal CostoUnitario,
+    decimal CostoTotal);
+
+/// <summary>Lo que aparta un pedido sin sacarlo del almacén.</summary>
+public static class TipoKardex
+{
+    public const string Reserva = "RESERVA";
+}
+
 public record ActividadStock(
     DateTime? UltimaEntrada, DateTime? UltimaSalida, decimal VendidoReciente);
 
@@ -121,7 +154,7 @@ public interface IInventarioRepository
     /// lo que dejaron los movimientos anteriores a esta página. Sin eso, la
     /// página 2 arrancaría el saldo desde cero.
     /// </summary>
-    Task<(List<MovimientoInventario> Items, int Total, Dictionary<(int Producto, int Almacen), SaldoKardex> Aperturas)>
+    Task<(List<FilaKardex> Items, int Total, Dictionary<(int Producto, int Almacen), SaldoKardex> Aperturas)>
         ListarKardexAsync(Dtos.Requests.ConsultaTablaRequest consulta, int? almacenId);
 
     /// <summary>Cuántas entradas y salidas hay en todo el kardex del almacén.</summary>

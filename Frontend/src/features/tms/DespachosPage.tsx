@@ -20,7 +20,7 @@ import {
 import type { ColumnaDetalleProducto, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
-import { hoyLocal } from '../../lib/fechas'
+import { hoyLocal, fechaCorta } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { conductorApi, vehiculoApi } from './flotaApi'
 import type { ConductorResponse, VehiculoResponse } from './flotaApi'
@@ -250,7 +250,7 @@ export function DespachosPage() {
       label: 'Fecha',
       filterType: 'date',
       value: (row) => new Date(row.fecha).getTime(),
-      render: (row) => new Date(row.fecha).toLocaleDateString(),
+      render: (row) => fechaCorta(row.fecha),
     },
     { key: 'ruta', label: 'Ruta' },
     { key: 'vehiculo', label: 'Vehículo' },
@@ -489,7 +489,7 @@ export function DespachosPage() {
         title={detalle ? `${detalle.numero} — ${detalle.ruta}` : ''}
         description={
           detalle
-            ? `${detalle.vehiculo} · ${detalle.conductor} · ${new Date(detalle.fecha).toLocaleDateString()}`
+            ? `${detalle.vehiculo} · ${detalle.conductor} · ${fechaCorta(detalle.fecha)}`
             : ''
         }
         onClose={() => setDetalle(null)}
