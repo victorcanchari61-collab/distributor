@@ -454,15 +454,135 @@ public class InventarioRepository : IInventarioRepository
             .Where(m => almacenId == null || m.AlmacenId == almacenId)
             .AsNoTracking();
 
-    /// <summary>
-    /// Los movimientos, dichos como renglones del kardex.
-    ///
-    /// Se proyecta antes de mezclar con las reservas porque en SQL solo se
-    /// pueden unir dos consultas con la misma forma.
-    /// </summary>
-    private IQueryable<FilaKardex> MovimientosKardex(int? almacenId) =>
-        _context.Movimientos
-            .Where(m => almacenId == null || m.AlmacenId == almacenId)
+    /*
+     * El kardex sale de dos sitios: los movimientos y lo que reservan los
+     * pedidos.
+     *
+     * Cada uno se filtra y ordena SOBRE SU TABLA —el motor no sabe ordenar ni
+     * filtrar por los campos de una proyeccion— y recien al final se dicen en
+     * la misma forma, FilaKardex, para poder mezclarlos.
+     */
+    private IQueryable<MovimientoInventario> MovimientosFiltrados(
+        int? almacenId, ConsultaTablaRequest consulta)
+    {
+        var query = _context.Movimientos
+            .AsNoTracking()
+            .Where(m => almacenId == null || m.AlmacenId == almacenId);
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(m =>
+                EF.Functions.Like(m.Producto!.Nombre, $"%{texto}%")
+                || EF.Functions.Like(m.Documento!.Numero, $"%{texto}%")
+                || EF.Functions.Like(m.Motivo!.Nombre, $"%{texto}%")
+                || EF.Functions.Like(m.Almacen!.Nombre, $"%{texto}%"));
+        }
+
+        if (consulta.ValorDe("producto") is string producto)
+            query = query.Where(m => m.Producto!.Nombre == producto);
+
+        if (consulta.ValorDe("motivo") is string motivo)
+            query = query.Where(m => m.Motivo!.Nombre == motivo);
+
+        if (consulta.ValorDe("almacen") is string almacen)
+            query = query.Where(m => m.Almacen!.Nombre == almacen);
+
+        if (consulta.ValorDe("documento") is string documento)
+            query = query.Where(m => EF.Functions.Like(m.Documento!.Numero, $"%{documento}%"));
+
+        // Filtrar por RESERVA no deja ningun movimiento: son de la otra fuente.
+        if (consulta.ValorDe("tipo") is string tipo)
+            query = query.Where(m => m.Tipo == tipo);
+
+        var (desde, hasta) = consulta.RangoFechas("fecha");
+        if (desde is not null) query = query.Where(m => m.Fecha >= desde);
+        if (hasta is not null) query = query.Where(m => m.Fecha <= hasta);
+
+        return query;
+    }
+
+    /*
+     * Lo que un pedido aparta, como un renglon mas del libro.
+     *
+     * No es un movimiento: la mercaderia sigue en el almacen y el saldo no se
+     * toca. Pero esta comprometida, y quien lee el kardex tiene que ver por
+     * que el disponible no cuadra con el stock. Salen los pedidos que pidieron
+     * reserva, incluso los ya convertidos o anulados: es el historial de lo
+     * que paso, no la foto de lo que sigue apartado.
+     */
+    private IQueryable<PedidoDetalle> ReservasFiltradas(
+        int? almacenId, ConsultaTablaRequest consulta)
+    {
+        var query = _context.PedidoDetalles
+            .AsNoTracking()
+            .Where(d => d.Pedido!.ReservaStock
+                        && !d.Anulado
+                        && d.Pedido.AlmacenId != null
+                        && (almacenId == null || d.Pedido.AlmacenId == almacenId));
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(d =>
+                EF.Functions.Like(d.Producto!.Nombre, $"%{texto}%")
+                || EF.Functions.Like(d.Pedido!.Numero, $"%{texto}%")
+                || EF.Functions.Like(d.Pedido.Almacen!.Nombre, $"%{texto}%")
+                || EF.Functions.Like("Reserva de pedido", $"%{texto}%"));
+        }
+
+        if (consulta.ValorDe("producto") is string producto)
+            query = query.Where(d => d.Producto!.Nombre == producto);
+
+        if (consulta.ValorDe("almacen") is string almacen)
+            query = query.Where(d => d.Pedido!.Almacen!.Nombre == almacen);
+
+        if (consulta.ValorDe("documento") is string documento)
+            query = query.Where(d => EF.Functions.Like(d.Pedido!.Numero, $"%{documento}%"));
+
+        // El motivo de una reserva es siempre el mismo, y el tipo tambien: si
+        // piden otro, esta fuente no aporta nada.
+        if (consulta.ValorDe("motivo") is string motivo && motivo != "Reserva de pedido")
+            query = query.Where(d => false);
+
+        if (consulta.ValorDe("tipo") is string tipo && tipo != TipoKardex.Reserva)
+            query = query.Where(d => false);
+
+        var (desde, hasta) = consulta.RangoFechas("fecha");
+        if (desde is not null) query = query.Where(d => d.Pedido!.Fecha >= desde);
+        if (hasta is not null) query = query.Where(d => d.Pedido!.Fecha <= hasta);
+
+        return query;
+    }
+
+    /*
+     * Una pagina del kardex, mezclando las dos fuentes.
+     *
+     * Unirlas en SQL seria lo natural, pero el motor no sabe hacer un UNION de
+     * dos consultas ya proyectadas —y proyectar es justo lo que las vuelve
+     * comparables—. Asi que de cada una se traen las primeras `hasta` filas:
+     * la ventana que la pagina necesita esta contenida ahi, porque ninguna
+     * fuente puede aportar mas de esa cantidad antes del corte.
+     */
+    public async Task<(List<FilaKardex> Items, int Total, Dictionary<(int Producto, int Almacen), SaldoKardex> Aperturas)>
+        ListarKardexAsync(ConsultaTablaRequest consulta, int? almacenId)
+    {
+        var movimientos = MovimientosFiltrados(almacenId, consulta);
+        var reservas = ReservasFiltradas(almacenId, consulta);
+
+        var total = await movimientos.CountAsync() + await reservas.CountAsync();
+
+        // El kardex es un libro cronologico: el unico orden que admite es por
+        // fecha. Ordenar por otra columna partiria la pagina en un tramo no
+        // contiguo y el saldo acumulado dejaria de tener sentido.
+        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
+        var saltar = (consulta.PaginaSegura - 1) * consulta.PorPaginaSegura;
+        var hasta = saltar + consulta.PorPaginaSegura;
+
+        var deMovimientos = await (desc
+                ? movimientos.OrderByDescending(m => m.Fecha).ThenByDescending(m => m.Id)
+                : movimientos.OrderBy(m => m.Fecha).ThenBy(m => m.Id))
+            .Take(hasta)
             .Select(m => new FilaKardex(
                 m.Id,
                 m.Fecha,
@@ -479,25 +599,16 @@ public class InventarioRepository : IInventarioRepository
                 m.CantidadPresentacion,
                 m.Cantidad,
                 m.CostoUnitario,
-                m.CostoTotal));
+                m.CostoTotal))
+            .ToListAsync();
 
-    /*
-     * Lo que un pedido aparta, como un renglon mas del libro.
-     *
-     * No es un movimiento: la mercaderia sigue en el almacen y el saldo no se
-     * toca. Pero esta comprometida, y quien lee el kardex tiene que ver por
-     * que el disponible no cuadra con el stock. Se muestran los pedidos que
-     * pidieron reserva, incluso los ya convertidos o anulados: es el
-     * historial de lo que paso, no la foto de lo que sigue apartado.
-     *
-     * El id va en negativo para no chocar con el de un movimiento: los dos
-     * conviven en la misma lista y la pantalla los distingue por ahi.
-     */
-    private IQueryable<FilaKardex> ReservasKardex(int? almacenId) =>
-        _context.PedidoDetalles
-            .Where(d => d.Pedido!.ReservaStock
-                        && !d.Anulado
-                        && (almacenId == null || d.Pedido.AlmacenId == almacenId))
+        // El id de una reserva va en negativo para no chocar con el de un
+        // movimiento: los dos conviven en la misma lista, y por eso tambien se
+        // ordena por el negativo.
+        var deReservas = await (desc
+                ? reservas.OrderByDescending(d => d.Pedido!.Fecha).ThenByDescending(d => -d.Id)
+                : reservas.OrderBy(d => d.Pedido!.Fecha).ThenBy(d => -d.Id))
+            .Take(hasta)
             .Select(d => new FilaKardex(
                 -d.Id,
                 d.Pedido!.Fecha,
@@ -514,90 +625,39 @@ public class InventarioRepository : IInventarioRepository
                 d.CantidadPresentacion,
                 d.Cantidad,
                 0m,
-                0m));
-
-    public async Task<(List<FilaKardex> Items, int Total, Dictionary<(int Producto, int Almacen), SaldoKardex> Aperturas)>
-        ListarKardexAsync(ConsultaTablaRequest consulta, int? almacenId)
-    {
-        var query = MovimientosKardex(almacenId).Concat(ReservasKardex(almacenId));
-
-        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
-        {
-            var texto = consulta.Buscar.Trim();
-            query = query.Where(f =>
-                EF.Functions.Like(f.Producto, $"%{texto}%")
-                || EF.Functions.Like(f.Documento, $"%{texto}%")
-                || EF.Functions.Like(f.Motivo, $"%{texto}%")
-                || EF.Functions.Like(f.Almacen, $"%{texto}%"));
-        }
-
-        if (consulta.ValorDe("producto") is string producto)
-        {
-            query = query.Where(f => f.Producto == producto);
-        }
-
-        if (consulta.ValorDe("motivo") is string motivo)
-        {
-            query = query.Where(f => f.Motivo == motivo);
-        }
-
-        if (consulta.ValorDe("tipo") is string tipo)
-        {
-            query = query.Where(f => f.Tipo == tipo);
-        }
-
-        if (consulta.ValorDe("almacen") is string almacen)
-        {
-            query = query.Where(f => f.Almacen == almacen);
-        }
-
-        if (consulta.ValorDe("documento") is string documento)
-        {
-            query = query.Where(f => EF.Functions.Like(f.Documento, $"%{documento}%"));
-        }
-
-        var (desde, hasta) = consulta.RangoFechas("fecha");
-        if (desde is not null) query = query.Where(f => f.Fecha >= desde);
-        if (hasta is not null) query = query.Where(f => f.Fecha <= hasta);
-
-        var total = await query.CountAsync();
-
-        // El kardex es un libro cronologico: el unico orden que admite es por
-        // fecha. Ordenar por otra columna partiria la pagina en un tramo no
-        // contiguo y el saldo acumulado dejaria de tener sentido.
-        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
-        query = desc
-            ? query.OrderByDescending(f => f.Fecha).ThenByDescending(f => f.Id)
-            : query.OrderBy(f => f.Fecha).ThenBy(f => f.Id);
-
-        var items = await query
-            .Skip((consulta.PaginaSegura - 1) * consulta.PorPaginaSegura)
-            .Take(consulta.PorPaginaSegura)
+                0m))
             .ToListAsync();
+
+        var mezcla = deMovimientos.Concat(deReservas);
+        var items = (desc
+                ? mezcla.OrderByDescending(f => f.Fecha).ThenByDescending(f => f.Id)
+                : mezcla.OrderBy(f => f.Fecha).ThenBy(f => f.Id))
+            .Skip(saltar)
+            .Take(consulta.PorPaginaSegura)
+            .ToList();
 
         var aperturas = new Dictionary<(int, int), SaldoKardex>();
         if (items.Count > 0)
         {
             // Saldo con el que entra la pagina: todo lo anterior al renglon
             // mas viejo que se va a mostrar, sumado por producto y almacen.
-            // Las reservas no cuentan: no mueven stock.
+            // Solo cuentan los movimientos: una reserva no mueve stock.
             var primera = items.OrderBy(f => f.Fecha).ThenBy(f => f.Id).First();
 
-            var previos = await query
-                .Where(f => f.Tipo != TipoKardex.Reserva)
-                .Where(f => f.Fecha < primera.Fecha
-                            || (f.Fecha == primera.Fecha && f.Id < primera.Id))
-                .GroupBy(f => new { f.ProductoId, f.AlmacenId })
+            var previos = await movimientos
+                .Where(m => m.Fecha < primera.Fecha
+                            || (m.Fecha == primera.Fecha && m.Id < primera.Id))
+                .GroupBy(m => new { m.ProductoId, m.AlmacenId })
                 .Select(g => new
                 {
                     g.Key.ProductoId,
                     g.Key.AlmacenId,
-                    Saldo = g.Sum(f => f.Tipo == TipoMovimiento.Entrada ? f.Cantidad : -f.Cantidad),
+                    Saldo = g.Sum(m => m.Tipo == TipoMovimiento.Entrada ? m.Cantidad : -m.Cantidad),
                     // Lo mismo en plata: entra por lo que costo, sale por lo
                     // que costaba la capa que se consumio.
-                    Valor = g.Sum(f => f.Tipo == TipoMovimiento.Entrada
-                        ? f.CostoTotal
-                        : -f.CostoTotal),
+                    Valor = g.Sum(m => m.Tipo == TipoMovimiento.Entrada
+                        ? m.CostoTotal
+                        : -m.CostoTotal),
                 })
                 .ToListAsync();
 
