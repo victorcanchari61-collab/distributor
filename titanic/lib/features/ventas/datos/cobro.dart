@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 /// Un pago de una nota de venta, aplanado con datos del cliente y la nota
 /// a la que pertenece. Usado en el reporte "Mis cobros".
 class Cobro {
@@ -29,7 +31,7 @@ class Cobro {
 
   factory Cobro.desdeJson(Map<String, dynamic> json) => Cobro(
     id: json['id'] as int,
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     notaVentaId: json['notaVentaId'] as int,
     notaVentaNumero: json['notaVentaNumero'] as String? ?? '',
     clienteId: json['clienteId'] as int,

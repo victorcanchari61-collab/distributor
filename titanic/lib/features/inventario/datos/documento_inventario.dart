@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 /// Una linea de un documento de inventario (recepcion, ajuste, transferencia).
 class LineaDocumento {
   const LineaDocumento({
@@ -121,7 +123,7 @@ class DocumentoInventario {
     id: json['id'] as int,
     numero: json['numero'] as String? ?? '',
     tipo: json['tipo'] as String? ?? '',
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     almacenId: json['almacenId'] as int? ?? 0,
     almacen: json['almacen'] as String? ?? '',
     almacenDestinoId: json['almacenDestinoId'] as int?,

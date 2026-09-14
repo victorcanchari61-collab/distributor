@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 /// Un cambio registrado por el sistema: que entidad, que se le hizo, quien y
 /// cuando. Lo escribe el backend al guardar; aqui solo se lee.
 class RegistroAuditoria {
@@ -39,7 +41,7 @@ class RegistroAuditoria {
 
   factory RegistroAuditoria.desdeJson(Map<String, dynamic> json) => RegistroAuditoria(
     id: json['id'] as int,
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     usuarioId: json['usuarioId'] as int?,
     usuario: json['usuario'] as String? ?? 'Sistema',
     entidad: json['entidad'] as String? ?? '',

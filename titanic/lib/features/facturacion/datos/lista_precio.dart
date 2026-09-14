@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 /// Una lista de precios: catalogo de a cuanto se vende cada presentacion.
 class ListaPrecio {
   const ListaPrecio({
@@ -86,6 +88,6 @@ class Precio {
     precioUnidadBase: (json['precioUnidadBase'] as num?)?.toDouble() ?? 0,
     unidadBase: json['unidadBase'] as String? ?? '',
     activo: json['activo'] as bool? ?? true,
-    fechaActualizacion: DateTime.parse(json['fechaActualizacion'] as String),
+    fechaActualizacion: fechaDeJson(json['fechaActualizacion'] as String),
   );
 }

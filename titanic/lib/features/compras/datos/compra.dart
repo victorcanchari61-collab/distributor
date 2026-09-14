@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 class EstadoCompra {
   const EstadoCompra._();
   static const pendiente = 'PENDIENTE';
@@ -108,7 +110,7 @@ class PagoCompra {
     metodoPagoId: json['metodoPagoId'] as int,
     metodoPago: json['metodoPago'] as String? ?? '',
     monto: (json['monto'] as num?)?.toDouble() ?? 0,
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     usuario: json['usuario'] as String?,
     anulado: json['anulado'] as bool? ?? false,
   );
@@ -179,7 +181,7 @@ class Compra {
     proveedor: json['proveedor'] as String? ?? '',
     ordenCompraId: json['ordenCompraId'] as int?,
     ordenCompraNumero: json['ordenCompraNumero'] as String?,
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     estado: json['estado'] as String? ?? EstadoCompra.pendiente,
     tipoComprobante: json['tipoComprobante'] as String? ?? TipoComprobanteCompra.factura,
     serieComprobante: json['serieComprobante'] as String?,

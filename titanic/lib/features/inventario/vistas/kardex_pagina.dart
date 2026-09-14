@@ -113,29 +113,60 @@ class _TarjetaKardex extends StatelessWidget {
     ),
     CampoDetalle(
       'En unidad base',
-      '${movimiento.esEntrada ? '+' : '−'}${movimiento.cantidad} ${movimiento.unidadBase}',
+      '$_signo${movimiento.cantidad} ${movimiento.unidadBase}',
       widget: Text(
-        '${movimiento.esEntrada ? '+' : '−'}${movimiento.cantidad} ${movimiento.unidadBase}',
+        '$_signo${movimiento.cantidad} ${movimiento.unidadBase}',
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: movimiento.esEntrada ? Colores.exito : Colores.advertencia,
+          color: _color,
         ),
       ),
     ),
-    CampoDetalle('Costo', 'S/ ${movimiento.costoTotal.toStringAsFixed(2)}', enTarjeta: false),
-    CampoDetalle('Saldo', '${movimiento.saldo} ${movimiento.unidadBase}'),
+    // Una reserva no consume ninguna capa: no hay costo que mostrar todavia,
+    // y un S/ 0.00 se leeria como que costo cero.
+    CampoDetalle(
+      'Costo',
+      movimiento.esReserva ? '—' : 'S/ ${movimiento.costoTotal.toStringAsFixed(2)}',
+      enTarjeta: false,
+    ),
+    CampoDetalle('Stock actual', '${movimiento.saldo} ${movimiento.unidadBase}'),
   ];
+
+  /// La reserva no suma ni resta: aparta. Por eso va sin signo.
+  String get _signo => movimiento.esReserva
+      ? ''
+      : movimiento.esEntrada
+      ? '+'
+      : '−';
+
+  Color get _color => movimiento.esReserva
+      ? Colores.marca
+      : movimiento.esEntrada
+      ? Colores.exito
+      : Colores.advertencia;
 
   @override
   Widget build(BuildContext context) {
     return AppTarjetaRegistro(
-      icono: movimiento.esEntrada ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-      color: movimiento.esEntrada ? Colores.exito : Colores.advertencia,
+      icono: movimiento.esReserva
+          ? Icons.lock_outline_rounded
+          : movimiento.esEntrada
+          ? Icons.arrow_downward_rounded
+          : Icons.arrow_upward_rounded,
+      color: _color,
       titulo: movimiento.documento,
       insignia: AppEtiqueta(
-        movimiento.esEntrada ? 'Ingreso' : 'Salida',
-        tono: movimiento.esEntrada ? EtiquetaTono.exito : EtiquetaTono.aviso,
+        movimiento.esReserva
+            ? 'Reserva'
+            : movimiento.esEntrada
+            ? 'Ingreso'
+            : 'Salida',
+        tono: movimiento.esReserva
+            ? EtiquetaTono.modulo
+            : movimiento.esEntrada
+            ? EtiquetaTono.exito
+            : EtiquetaTono.aviso,
       ),
       campos: _campos,
       onTap: () => mostrarDetalle(

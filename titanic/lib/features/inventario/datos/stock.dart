@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 /// Una capa de costo dentro del stock de un producto: lo que entró en
 /// determinado momento y a qué costo, en el orden en que se consume.
 class CapaStock {
@@ -20,7 +22,7 @@ class CapaStock {
     cantidadDisponible: (json['cantidadDisponible'] as num?)?.toDouble() ?? 0,
     costoUnitario: (json['costoUnitario'] as num?)?.toDouble() ?? 0,
     valor: (json['valor'] as num?)?.toDouble() ?? 0,
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
   );
 }
 

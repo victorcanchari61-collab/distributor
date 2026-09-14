@@ -1,4 +1,5 @@
 import 'pedido.dart';
+import '../../../compartido/fechas.dart';
 
 class EstadoNotaVenta {
   const EstadoNotaVenta._();
@@ -39,7 +40,7 @@ class PagoVenta {
     metodoPagoId: json['metodoPagoId'] as int,
     metodoPago: json['metodoPago'] as String? ?? '',
     monto: (json['monto'] as num?)?.toDouble() ?? 0,
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     usuario: json['usuario'] as String?,
     anulado: json['anulado'] as bool? ?? false,
   );
@@ -111,7 +112,7 @@ class NotaVenta {
     pedidoNumero: json['pedidoNumero'] as String?,
     almacenId: json['almacenId'] as int? ?? 0,
     almacen: json['almacen'] as String? ?? '',
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     estado: json['estado'] as String? ?? EstadoNotaVenta.confirmada,
     formaPago: json['formaPago'] as String? ?? FormaPagoVenta.contado,
     observacion: json['observacion'] as String?,

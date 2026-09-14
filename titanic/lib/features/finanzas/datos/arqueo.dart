@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 // Modelos del cuadre de caja del reparto: calcan los DTOs del backend
 // (ArqueoResponses.cs / ArqueoRequests.cs).
 
@@ -96,7 +98,7 @@ class CuadrePendiente {
 
   factory CuadrePendiente.desdeJson(Map<String, dynamic> json) =>
       CuadrePendiente(
-        fecha: DateTime.parse(json['fecha'] as String),
+        fecha: fechaDeJson(json['fecha'] as String),
         usuarioId: json['usuarioId'] as int,
         usuario: json['usuario'] as String? ?? '',
         efectivo: _num(json['efectivo']),
@@ -141,7 +143,7 @@ class CobroDelDia {
 
   factory CobroDelDia.desdeJson(Map<String, dynamic> json) => CobroDelDia(
     pagoId: json['pagoId'] as int? ?? 0,
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     cliente: json['cliente'] as String? ?? '',
     documento: json['documento'] as String? ?? '',
     metodoPagoId: json['metodoPagoId'] as int? ?? 0,
@@ -275,7 +277,7 @@ class ArqueoCaja {
 
   factory ArqueoCaja.desdeJson(Map<String, dynamic> json) => ArqueoCaja(
     id: json['id'] as int,
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     usuarioId: json['usuarioId'] as int? ?? 0,
     usuario: json['usuario'] as String? ?? '',
     billetes: _num(json['billetes']),
@@ -291,11 +293,11 @@ class ArqueoCaja {
     faltanteSaldado: json['faltanteSaldado'] as bool? ?? false,
     fechaSaldado: json['fechaSaldado'] == null
         ? null
-        : DateTime.parse(json['fechaSaldado'] as String),
+        : fechaDeJson(json['fechaSaldado'] as String),
     observacion: json['observacion'] as String?,
     estado: json['estado'] as String? ?? '',
     registradoPor: json['registradoPor'] as String?,
-    fechaCreacion: DateTime.parse(json['fechaCreacion'] as String),
+    fechaCreacion: fechaDeJson(json['fechaCreacion'] as String),
     gastos: [
       for (final g in (json['gastos'] as List? ?? const []))
         ArqueoGasto.desdeJson(g as Map<String, dynamic>),
@@ -337,7 +339,7 @@ class DetalleCuadre {
   final ArqueoCaja? arqueo;
 
   factory DetalleCuadre.desdeJson(Map<String, dynamic> json) => DetalleCuadre(
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     usuarioId: json['usuarioId'] as int? ?? 0,
     usuario: json['usuario'] as String? ?? '',
     efectivoSistema: _num(json['efectivoSistema']),

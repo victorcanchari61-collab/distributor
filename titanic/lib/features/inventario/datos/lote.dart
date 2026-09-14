@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 /// Cuántos días faltan para avisar "por vencer". Espejo de DIAS_ALERTA en el
 /// panel web.
 const diasAlertaVencimiento = 30;
@@ -58,7 +60,7 @@ class Lote {
     lote: json['lote'] as String?,
     fechaVencimiento: json['fechaVencimiento'] == null
         ? null
-        : DateTime.parse(json['fechaVencimiento'] as String),
+        : fechaDeJson(json['fechaVencimiento'] as String),
     diasParaVencer: json['diasParaVencer'] as int?,
     cantidadDisponible: (json['cantidadDisponible'] as num?)?.toDouble() ?? 0,
     costoUnitario: (json['costoUnitario'] as num?)?.toDouble() ?? 0,

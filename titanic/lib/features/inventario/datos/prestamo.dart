@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 class TipoPrestamo {
   const TipoPrestamo._();
 
@@ -118,7 +120,7 @@ class Prestamo {
     contraparte: json['contraparte'] as String? ?? '',
     almacenId: json['almacenId'] as int? ?? 0,
     almacen: json['almacen'] as String? ?? '',
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     estado: json['estado'] as String? ?? EstadoPrestamo.pendiente,
     observacion: json['observacion'] as String?,
     usuario: json['usuario'] as String?,

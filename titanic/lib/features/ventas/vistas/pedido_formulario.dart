@@ -67,7 +67,9 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
           presentaciones: _presentacionesDe(porId[l.productoId], true),
           presentacionId: l.presentacionId ?? 0,
           cantidad: l.cantidadPresentacion,
-          importe: l.precioUnitario,
+          // El precio pactado, tal cual se guardo: el de unidad base por el
+          // factor devolvia 13.5999 donde se habia puesto 13.60.
+          importe: l.precioPresentacion,
         ),
     ];
 

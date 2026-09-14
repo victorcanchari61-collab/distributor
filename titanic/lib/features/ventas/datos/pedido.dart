@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 /// Una linea de un pedido o de una nota de venta.
 class LineaVenta {
   const LineaVenta({
@@ -11,6 +13,7 @@ class LineaVenta {
     required this.cantidadPresentacion,
     required this.cantidad,
     required this.precioUnitario,
+    required this.precioPresentacion,
     required this.subtotal,
   });
 
@@ -26,7 +29,17 @@ class LineaVenta {
 
   /// En unidad base.
   final double cantidad;
+
+  /// Por unidad base: derivado, para margenes y reportes.
   final double precioUnitario;
+
+  /// Lo que se acordó por cada presentación: S/ 212.50 el saco.
+  ///
+  /// Es el precio que se cobra y el que se muestra. El de unidad base sale de
+  /// dividirlo entre el factor, y multiplicarlo de vuelta no lo devuelve:
+  /// 13.60 entre 3 kilos son 4.5333, y por 3 da 13.5999.
+  final double precioPresentacion;
+
   final double subtotal;
 
   factory LineaVenta.desdeJson(Map<String, dynamic> json) => LineaVenta(
@@ -40,6 +53,7 @@ class LineaVenta {
     cantidadPresentacion: (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
     cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0,
     precioUnitario: (json['precioUnitario'] as num?)?.toDouble() ?? 0,
+    precioPresentacion: (json['precioPresentacion'] as num?)?.toDouble() ?? 0,
     subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
   );
 }
@@ -105,7 +119,7 @@ class Pedido {
     cliente: json['cliente'] as String? ?? '',
     listaPrecioId: json['listaPrecioId'] as int?,
     listaPrecio: json['listaPrecio'] as String?,
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     estado: json['estado'] as String? ?? EstadoPedido.pendiente,
     observacion: json['observacion'] as String?,
     usuario: json['usuario'] as String?,

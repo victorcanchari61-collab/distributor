@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 /// Una línea del kardex: lo que entró o salió, con el saldo que dejó.
 class MovimientoKardex {
   const MovimientoKardex({
@@ -49,13 +51,20 @@ class MovimientoKardex {
 
   bool get esEntrada => tipo == 'ENTRADA';
 
+  /// Lo que aparta un pedido: no mueve stock, solo lo compromete.
+  ///
+  /// Se pregunta aparte porque no es ni entrada ni salida: sin esto caia en el
+  /// "todo lo demas es salida" y el kardex mostraba lo contrario de lo que
+  /// paso —mercaderia saliendo cuando en realidad sigue en el almacen.
+  bool get esReserva => tipo == 'RESERVA';
+
   /// Texto contra el que se busca en la lista.
   String get buscable => '$documento $motivo $producto $almacen'.toLowerCase();
 
   factory MovimientoKardex.desdeJson(Map<String, dynamic> json) =>
       MovimientoKardex(
         id: json['id'] as int,
-        fecha: DateTime.parse(json['fecha'] as String),
+        fecha: fechaDeJson(json['fecha'] as String),
         documento: json['documento'] as String? ?? '',
         motivo: json['motivo'] as String? ?? '',
         tipo: json['tipo'] as String? ?? '',

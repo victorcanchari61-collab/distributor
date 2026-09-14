@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 /// En qué situación está un documento respecto a hoy.
 ///
 /// Los valores los manda el backend tal cual. NO se recalculan aquí: la misma
@@ -40,7 +42,7 @@ class Vencimiento {
 
   factory Vencimiento.desdeJson(Map<String, dynamic> json) => Vencimiento(
     nombre: json['nombre'] as String? ?? '',
-    vence: json['vence'] == null ? null : DateTime.parse(json['vence'] as String),
+    vence: json['vence'] == null ? null : fechaDeJson(json['vence'] as String),
     diasRestantes: json['diasRestantes'] as int?,
     estado: json['estado'] as String? ?? EstadoVencimiento.sinFecha,
   );
@@ -151,13 +153,13 @@ class Vehiculo {
     color: json['color'] as String?,
     capacidadKg: (json['capacidadKg'] as num?)?.toDouble(),
     soatNumero: json['soatNumero'] as String?,
-    soatVence: json['soatVence'] == null ? null : DateTime.parse(json['soatVence'] as String),
+    soatVence: json['soatVence'] == null ? null : fechaDeJson(json['soatVence'] as String),
     revisionTecnicaVence: json['revisionTecnicaVence'] == null
         ? null
-        : DateTime.parse(json['revisionTecnicaVence'] as String),
+        : fechaDeJson(json['revisionTecnicaVence'] as String),
     permisoCirculacionVence: json['permisoCirculacionVence'] == null
         ? null
-        : DateTime.parse(json['permisoCirculacionVence'] as String),
+        : fechaDeJson(json['permisoCirculacionVence'] as String),
     foto: json['foto'] as String?,
     conductorId: json['conductorId'] as int?,
     conductor: json['conductor'] as String?,
@@ -224,11 +226,11 @@ class Conductor {
     licenciaCategoria: json['licenciaCategoria'] as String?,
     licenciaVence: json['licenciaVence'] == null
         ? null
-        : DateTime.parse(json['licenciaVence'] as String),
+        : fechaDeJson(json['licenciaVence'] as String),
     foto: json['foto'] as String?,
     fechaIngreso: json['fechaIngreso'] == null
         ? null
-        : DateTime.parse(json['fechaIngreso'] as String),
+        : fechaDeJson(json['fechaIngreso'] as String),
     observacion: json['observacion'] as String?,
     activo: json['activo'] as bool? ?? true,
     vehiculos: ((json['vehiculos'] as List?) ?? const []).map((e) => e as String).toList(),

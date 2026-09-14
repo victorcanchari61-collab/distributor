@@ -1,3 +1,5 @@
+import '../../../compartido/fechas.dart';
+
 /// Una linea de una orden de compra o de una compra directa.
 class LineaCompra {
   const LineaCompra({
@@ -88,10 +90,10 @@ class OrdenCompra {
     numero: json['numero'] as String? ?? '',
     proveedorId: json['proveedorId'] as int,
     proveedor: json['proveedor'] as String? ?? '',
-    fecha: DateTime.parse(json['fecha'] as String),
+    fecha: fechaDeJson(json['fecha'] as String),
     fechaEsperada: json['fechaEsperada'] == null
         ? null
-        : DateTime.parse(json['fechaEsperada'] as String),
+        : fechaDeJson(json['fechaEsperada'] as String),
     estado: json['estado'] as String? ?? EstadoOrdenCompra.pendiente,
     observacion: json['observacion'] as String?,
     usuario: json['usuario'] as String?,
