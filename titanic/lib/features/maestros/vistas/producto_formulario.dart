@@ -344,6 +344,19 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
                 etiqueta: 'Categoría',
                 icono: Icons.category_outlined,
                 habilitado: !_guardando,
+                etiquetaCrear: 'Nueva categoría',
+                onCrear: () => _crearRapido(
+                  titulo: 'Nueva categoría',
+                  etiqueta: 'Nombre',
+                  crear: (nombre, _) async {
+                    final creada = await ref
+                        .read(maestrosApiProvider)
+                        .crearCategoria({'nombre': nombre});
+                    ref.invalidate(categoriasProvider);
+                    return creada.id;
+                  },
+                  elegir: (id) => _categoriaId = id,
+                ),
                 opciones: [
                   const Opcion<int?>(null, 'Sin categoría'),
                   for (final c in categorias) Opcion<int?>(c.id, c.nombre),
@@ -358,6 +371,19 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
                 etiqueta: 'Marca',
                 icono: Icons.sell_outlined,
                 habilitado: !_guardando,
+                etiquetaCrear: 'Nueva marca',
+                onCrear: () => _crearRapido(
+                  titulo: 'Nueva marca',
+                  etiqueta: 'Nombre',
+                  crear: (nombre, _) async {
+                    final creada = await ref
+                        .read(maestrosApiProvider)
+                        .crearMarca({'nombre': nombre});
+                    ref.invalidate(marcasProvider);
+                    return creada.id;
+                  },
+                  elegir: (id) => _marcaId = id,
+                ),
                 opciones: [
                   const Opcion<int?>(null, 'Sin marca'),
                   for (final m in marcas) Opcion<int?>(m.id, m.nombre),
@@ -375,6 +401,25 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
           icono: Icons.straighten_outlined,
           habilitado: !_guardando,
           error: _errorUnidad,
+          etiquetaCrear: 'Nueva unidad',
+          onCrear: () => _crearRapido(
+            titulo: 'Nueva unidad de medida',
+            etiqueta: 'Nombre',
+            conCodigo: true,
+            crear: (nombre, codigo) async {
+              final creada = await ref.read(maestrosApiProvider).crearUnidad({
+                'nombre': nombre,
+                'codigo': codigo,
+                // Conteo y no fraccionable: es lo que vale para casi todo
+                // —sacos, cajas, unidades— y el catalogo deja afinarlo.
+                'tipo': 'CONTEO',
+                'fraccionable': false,
+              });
+              ref.invalidate(unidadesProvider);
+              return creada.id;
+            },
+            elegir: (id) => _unidadBaseId = id,
+          ),
           opciones: [for (final u in unidades) Opcion(u.id, '${u.nombre} (${u.codigo})')],
           onCambio: (v) => setState(() => _unidadBaseId = v),
         ),
@@ -419,6 +464,111 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
         const SizedBox(height: Dimen.espacio5),
       ],
     );
+  }
+
+  /*
+   * Dar de alta un catalogo sin salir del formulario.
+   *
+   * El caso es siempre el mismo: se esta creando un producto y su categoria no
+   * existe todavia. Sin esto hay que abandonar lo escrito, ir al catalogo,
+   * crearla y volver a empezar. Se pide lo minimo —el nombre, y el codigo si
+   * es una unidad— y lo recien creado queda elegido.
+   */
+  Future<void> _crearRapido({
+    required String titulo,
+    required String etiqueta,
+    bool conCodigo = false,
+    required Future<int> Function(String nombre, String codigo) crear,
+    required void Function(int id) elegir,
+  }) async {
+    final nombre = TextEditingController();
+    final codigo = TextEditingController();
+    var guardando = false;
+    String? error;
+
+    final creadoId = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colores.superficie,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      ),
+      builder: (contexto) => StatefulBuilder(
+        builder: (contexto, setHoja) => Padding(
+          padding: EdgeInsets.only(
+            left: Dimen.espacio4,
+            right: Dimen.espacio4,
+            top: Dimen.espacio4,
+            bottom: MediaQuery.of(contexto).viewInsets.bottom + Dimen.espacio4,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                titulo,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: Dimen.espacio4),
+              if (error != null) ...[
+                AppAlerta(error!),
+                const SizedBox(height: Dimen.espacio3),
+              ],
+              AppCampo(
+                controlador: nombre,
+                etiqueta: etiqueta,
+                habilitado: !guardando,
+              ),
+              if (conCodigo) ...[
+                const SizedBox(height: Dimen.espacio3),
+                AppCampo(
+                  controlador: codigo,
+                  etiqueta: 'Código',
+                  pista: 'KG, UND, SAC',
+                  habilitado: !guardando,
+                ),
+              ],
+              const SizedBox(height: Dimen.espacio4),
+              AppBoton(
+                texto: 'Crear',
+                cargando: guardando,
+                onPressed: () async {
+                  if (nombre.text.trim().isEmpty) {
+                    setHoja(() => error = 'Ingresa el nombre.');
+                    return;
+                  }
+                  if (conCodigo && codigo.text.trim().isEmpty) {
+                    setHoja(() => error = 'Ingresa el código.');
+                    return;
+                  }
+
+                  setHoja(() {
+                    guardando = true;
+                    error = null;
+                  });
+
+                  try {
+                    final id = await crear(nombre.text.trim(), codigo.text.trim());
+                    if (contexto.mounted) Navigator.pop(contexto, id);
+                  } on ApiExcepcion catch (e) {
+                    setHoja(() {
+                      guardando = false;
+                      error = e.mensaje;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: Dimen.espacio2),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    nombre.dispose();
+    codigo.dispose();
+
+    if (creadoId != null && mounted) setState(() => elegir(creadoId));
   }
 
   Widget _presentacionesTab() {

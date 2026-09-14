@@ -137,11 +137,23 @@ class MaestrosApi {
         .toList();
   }
 
+  /// POST /api/categoria
+  Future<Categoria> crearCategoria(Map<String, dynamic> cuerpo) async =>
+      Categoria.desdeJson(
+        await _api.post('/categoria', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
+
   /// GET /api/marca
   Future<List<Marca>> marcas() async {
     final datos = await _api.get('/marca') as List;
     return datos.map((e) => Marca.desdeJson(e as Map<String, dynamic>)).toList();
   }
+
+  /// POST /api/marca
+  Future<Marca> crearMarca(Map<String, dynamic> cuerpo) async =>
+      Marca.desdeJson(
+        await _api.post('/marca', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
 
   /// GET /api/unidad
   Future<List<UnidadMedida>> unidades() async {
@@ -150,4 +162,10 @@ class MaestrosApi {
         .map((e) => UnidadMedida.desdeJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// POST /api/unidad
+  Future<UnidadMedida> crearUnidad(Map<String, dynamic> cuerpo) async =>
+      UnidadMedida.desdeJson(
+        await _api.post('/unidad', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
 }
