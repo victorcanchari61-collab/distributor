@@ -65,6 +65,9 @@ export function PresentacionesEditor({
     {
       key: 'nombre',
       label: 'Nombre',
+      // En el movil la cabecera de la tarjeta es este campo, no el nombre de
+      // la fila: sin su etiqueta seria el unico dato sin rotular.
+      etiquetaEnTarjeta: true,
       render: (fila) =>
         // La base se muestra, no se escribe: su nombre y su unidad salen de
         // la unidad base, que se elige arriba en la pestaña Datos.
