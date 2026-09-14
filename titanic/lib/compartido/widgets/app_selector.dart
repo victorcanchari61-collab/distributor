@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 
@@ -81,15 +82,24 @@ class AppSelector<T> extends StatelessWidget {
                   style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
                 ),
               ),
-              InkWell(
+              // Mismo boton que en la web: redondo, con el color del modulo
+              // de fondo y sin efecto al tocarlo. GestureDetector y no InkWell
+              // justamente por eso: el InkWell pinta su onda de tinta.
+              GestureDetector(
                 onTap: habilitado ? onCrear : null,
-                borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: habilitado
+                        ? Acento.de(context).withValues(alpha: 0.12)
+                        : Colores.tintaTenue.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
                   child: Icon(
                     Icons.add_rounded,
-                    size: 15,
-                    color: habilitado ? Colores.marca : Colores.tintaTenue,
+                    size: 14,
+                    color: habilitado ? Acento.de(context) : Colores.tintaTenue,
                     semanticLabel: etiquetaCrear,
                   ),
                 ),
