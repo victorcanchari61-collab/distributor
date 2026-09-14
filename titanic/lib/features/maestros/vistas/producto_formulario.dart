@@ -68,7 +68,6 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   late int? _categoriaId = widget.producto?.categoriaId;
   late int? _marcaId = widget.producto?.marcaId;
   late int? _unidadBaseId = widget.producto?.unidadBaseId;
-  late bool _controlaStock = widget.producto?.controlaStock ?? true;
 
   late final List<_FilaPresentacion> _filas = [
     for (final p in widget.producto?.presentaciones ?? const <Presentacion>[])
@@ -136,8 +135,10 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
       'marcaId': _marcaId,
       'unidadBaseId': _unidadBaseId,
       'costoReferencia': _numero(_costoReferencia.text),
-      'controlaStock': _controlaStock,
-      'stockMinimo': _controlaStock ? (_numero(_stockMinimo.text) ?? 0) : 0,
+      // Todo producto controla stock: el formulario ya no pregunta, igual que
+      // en la web. El campo sigue viajando porque el backend lo espera.
+      'controlaStock': true,
+      'stockMinimo': _numero(_stockMinimo.text) ?? 0,
       if (!_esNuevo) 'activo': widget.producto!.activo,
     };
 
@@ -408,26 +409,13 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
         ),
         const SizedBox(height: Dimen.espacio2),
 
-        SwitchListTile(
-          value: _controlaStock,
-          onChanged: _guardando ? null : (v) => setState(() => _controlaStock = v),
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Controla stock', style: TextStyle(fontSize: 14, color: Colores.tinta)),
-          subtitle: const Text(
-            'Se descuenta en cada salida y avisa cuando llega al mínimo.',
-            style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
-          ),
+        AppCampo(
+          controlador: _stockMinimo,
+          etiqueta: 'Stock mínimo',
+          icono: Icons.warning_amber_outlined,
+          tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+          habilitado: !_guardando,
         ),
-        if (_controlaStock) ...[
-          const SizedBox(height: Dimen.espacio2),
-          AppCampo(
-            controlador: _stockMinimo,
-            etiqueta: 'Stock mínimo',
-            icono: Icons.warning_amber_outlined,
-            tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-            habilitado: !_guardando,
-          ),
-        ],
         const SizedBox(height: Dimen.espacio5),
       ],
     );

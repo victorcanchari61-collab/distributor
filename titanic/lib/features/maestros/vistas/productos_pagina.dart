@@ -221,11 +221,13 @@ class _TarjetaProducto extends StatelessWidget {
           : '${producto.presentaciones.length} presentaciones',
       enTarjeta: false,
     ),
+    // Ya no se dice si controla stock —todos lo hacen— sino desde cuanto
+    // avisa, que es el dato que se consulta.
     CampoDetalle(
-      'Control de stock',
-      producto.controlaStock
-          ? 'Sí · mínimo ${formatoNumero(producto.stockMinimo)} ${producto.unidadBase}'
-          : 'No',
+      'Stock mínimo',
+      producto.stockMinimo > 0
+          ? '${formatoNumero(producto.stockMinimo)} ${producto.unidadBase}'
+          : 'Sin aviso',
       enTarjeta: false,
     ),
     CampoDetalle(
