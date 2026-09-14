@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { idUnico } from '../../lib/ids'
 import { Plus } from 'lucide-react'
 import { BuscadorCampo } from './BuscadorCampo'
 import type { OpcionBuscador } from './BuscadorCampo'
@@ -130,7 +131,7 @@ export function AgregarProductoPanel({
     if (!producto || !linea.cantidad) return
 
     onAgregar({
-      id: crypto.randomUUID(),
+      id: idUnico(),
       productoId: producto.id,
       presentacionId: linea.presentacionId,
       cantidad: linea.cantidad,
@@ -275,7 +276,7 @@ export function AgregarProductoPanel({
         onAgregar={(selecciones) => {
           selecciones.forEach(({ producto, presentacionId, cantidad }) =>
             onAgregar({
-              id: crypto.randomUUID(),
+              id: idUnico(),
               productoId: producto.id,
               presentacionId,
               cantidad: String(cantidad),

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
 import {
   ArrowLeft,
@@ -167,7 +168,7 @@ export function OrdenesCompraPage() {
         const factor = presentacion?.factor ?? 1
 
         return {
-          id: crypto.randomUUID(),
+          id: idUnico(),
           productoId: l.productoId,
           presentacionId: l.presentacionId ?? 0,
           cantidad: String(l.cantidadPresentacion),

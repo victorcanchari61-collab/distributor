@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { idUnico } from '../../lib/ids'
 import { Banknote, Check, Pencil, Plus, Star, Tag, Trash2 } from 'lucide-react'
 import {
   Alert,
@@ -203,7 +204,7 @@ export function ListasPreciosPage() {
 
       if (!suyos.some((x) => x.cantidadMinima === 1)) {
         filas.push({
-          clave: crypto.randomUUID(),
+          clave: idUnico(),
           presentacionId: pres.id,
           desde: '1',
           precio: '',
@@ -218,7 +219,7 @@ export function ListasPreciosPage() {
         const costo = elegido?.costoReferencia != null ? elegido.costoReferencia * pres.factor : null
 
         filas.push({
-          clave: crypto.randomUUID(),
+          clave: idUnico(),
           id: x.id,
           presentacionId: pres.id,
           desde: String(x.cantidadMinima),
@@ -298,7 +299,7 @@ export function ListasPreciosPage() {
       const hermanas = prev.filter((f) => f.presentacionId === fila.presentacionId)
       const ultimo = Math.max(...hermanas.map((f) => Number(f.desde) || 1))
       const nueva: FilaPrecio = {
-        clave: crypto.randomUUID(),
+        clave: idUnico(),
         presentacionId: fila.presentacionId,
         desde: String(ultimo + 1),
         precio: '',

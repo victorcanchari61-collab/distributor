@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
 import { ArrowLeft, CheckCircle2, ClipboardList, Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
@@ -193,7 +194,7 @@ export function PedidosPage() {
       pedido.detalle
         .filter((l) => !l.anulado)
         .map((l) => ({
-          id: crypto.randomUUID(),
+          id: idUnico(),
           lineaId: l.id,
           productoId: l.productoId,
           presentacionId: l.presentacionId ?? 0,

@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react'
+import { idUnico } from '../../lib/ids'
 import { Badge, Button, Checkbox, Desplegable, Input, RowAction, SysDataTable } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import type { PresentacionRequest, UnidadResponse } from './productoApi'
@@ -49,7 +50,7 @@ export function PresentacionesEditor({
     onChange([
       ...filas,
       {
-        clave: crypto.randomUUID(),
+        clave: idUnico(),
         unidadId: activas[0]?.id ?? 0,
         nombre: '',
         factor: 0,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
 import { Banknote, History, Plus, Smartphone, Trash2 } from 'lucide-react'
 import { Alert, Badge, Button, Checkbox, Desplegable, Input, Modal, Tabs } from '../../components/ui'
@@ -92,7 +93,7 @@ export function CuadrarCajaModal({
       setObservacion(a?.observacion ?? '')
       setGastos(
         (a?.gastos ?? []).map((g) => ({
-          clave: crypto.randomUUID(),
+          clave: idUnico(),
           motivoGastoId: g.motivoGastoId,
           monto: String(g.monto),
           descripcion: g.descripcion ?? '',
@@ -171,7 +172,7 @@ export function CuadrarCajaModal({
     setGastos((f) => [
       ...f,
       {
-        clave: crypto.randomUUID(),
+        clave: idUnico(),
         motivoGastoId: motivosActivos[0]?.id ?? 0,
         monto: '',
         descripcion: '',

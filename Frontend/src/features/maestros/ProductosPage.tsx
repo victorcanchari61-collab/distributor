@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { idUnico } from '../../lib/ids'
 import {
   Boxes,
   Download,
@@ -215,7 +216,7 @@ export function ProductosPage() {
       producto.presentaciones
         .filter((p) => !p.esBase)
         .map((p) => ({
-          clave: crypto.randomUUID(),
+          clave: idUnico(),
           id: p.id,
           unidadId: p.unidadId,
           nombre: p.nombre,

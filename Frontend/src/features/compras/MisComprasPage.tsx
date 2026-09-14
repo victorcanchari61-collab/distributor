@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
 import { ArrowLeft, Building2, Check, Eye, PackageCheck, Pencil, Plus, ShoppingBag, Trash2, Undo2, X } from 'lucide-react'
 import {
@@ -263,7 +264,7 @@ export function MisComprasPage() {
     setObservacion(compra.observacion ?? '')
     setFilas(
       compra.detalle.map((l) => ({
-        id: crypto.randomUUID(),
+        id: idUnico(),
         productoId: l.productoId,
         presentacionId: l.presentacionId ?? 0,
         cantidad: String(l.cantidadPresentacion),
