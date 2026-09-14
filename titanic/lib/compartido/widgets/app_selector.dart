@@ -57,32 +57,54 @@ class AppSelector<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final campo = _campo(context);
-    if (onCrear == null) return campo;
+    if (onCrear == null) return _campo(context);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+    /*
+     * El + va arriba, junto a la etiqueta, y no al costado del campo.
+     *
+     * Al costado le comia el ancho justo a lo que hay que leer —el nombre de
+     * la categoria ya salia cortado como "Sin c..."— y en dos columnas el
+     * problema se duplicaba. Arriba no le quita nada: ese renglon esta vacio.
+     */
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(child: campo),
-        const SizedBox(width: Dimen.espacio2),
-        IconButton(
-          onPressed: habilitado ? onCrear : null,
-          tooltip: etiquetaCrear,
-          visualDensity: VisualDensity.compact,
-          style: IconButton.styleFrom(
-            backgroundColor: Colores.marcaSuave,
-            foregroundColor: Colores.marca,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(Dimen.radioCampo),
-            ),
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  etiqueta,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                ),
+              ),
+              InkWell(
+                onTap: habilitado ? onCrear : null,
+                borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Icon(
+                    Icons.add_rounded,
+                    size: 15,
+                    color: habilitado ? Colores.marca : Colores.tintaTenue,
+                    semanticLabel: etiquetaCrear,
+                  ),
+                ),
+              ),
+            ],
           ),
-          icon: const Icon(Icons.add_rounded, size: 20),
         ),
+        // Sin labelText: la etiqueta ya esta arriba y repetirla flotando
+        // dentro del recuadro seria decir dos veces lo mismo.
+        _campo(context, conEtiqueta: false),
       ],
     );
   }
 
-  Widget _campo(BuildContext context) {
+  Widget _campo(BuildContext context, {bool conEtiqueta = true}) {
     return DropdownButtonFormField<T>(
       initialValue: valor,
       // isExpanded: sin esto el texto no cede espacio y el desplegable se
@@ -99,7 +121,7 @@ class AppSelector<T> extends StatelessWidget {
       ),
       style: const TextStyle(fontSize: 15, color: Colores.tinta),
       decoration: InputDecoration(
-        labelText: etiqueta,
+        labelText: conEtiqueta ? etiqueta : null,
         errorText: error,
         prefixIcon: icono == null
             ? null
