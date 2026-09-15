@@ -1,0 +1,1 @@
+export { InicioPage } from './InicioPage'

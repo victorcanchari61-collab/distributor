@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { ShieldOff } from 'lucide-react'
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { DashboardLayout, NAV_GROUPS, navIdFromPath, navPath, resolveNav } from './components/layout'
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { DashboardLayout, navIdFromPath, navPath, resolveNav } from './components/layout'
 import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, AuditoriaPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
 import { SolicitudPermisoModal } from './features/config/SolicitudPermisoModal'
 import { solicitudApi } from './features/config/solicitudApi'
+import { InicioPage } from './features/inicio'
 import { MiPerfilPage } from './features/perfil'
 import { Button } from './components/ui'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
@@ -156,19 +157,18 @@ function Vista() {
 /**
  * A dónde va alguien que entra sin pedir una vista concreta.
  *
- * No a la de siempre: un almacenero no puede ver Clientes, y mandarlo ahi le
- * daria un "no tienes acceso" nada mas entrar, como si el sistema estuviera
- * roto. Va a la primera pantalla que si puede abrir, en el orden del menu.
+ * Antes esto saltaba a la primera pantalla que la persona pudiera abrir, para
+ * no recibir a un almacenero con un "no tienes acceso" nada mas entrar. Ahora
+ * hay una pantalla propia que ademas resuelve lo otro: quien no ve un modulo
+ * no sabe que existe, y quien lo necesita tenia que adivinar el nombre de la
+ * pantalla para pedirla.
  */
 function Inicio() {
-  const { puedeVer, cargando } = usePermisos()
+  const { cargando } = usePermisos()
 
   if (cargando) return null
 
-  const primera = NAV_GROUPS.flatMap((g) => g.items).find((i) => puedeVer(i.id))
-  if (!primera) return <SinAcceso />
-
-  return <Navigate to={navPath(primera.id)} replace />
+  return <InicioPage />
 }
 
 /**
