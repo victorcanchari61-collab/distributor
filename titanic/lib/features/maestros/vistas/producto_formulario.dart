@@ -352,7 +352,10 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
                     final creada = await ref
                         .read(maestrosApiProvider)
                         .crearCategoria({'nombre': nombre});
+                    // Esperar la lista nueva: si se elige lo recien creado antes
+                    // de que llegue, el desplegable no lo encuentra.
                     ref.invalidate(categoriasProvider);
+                    await ref.read(categoriasProvider.future);
                     return creada.id;
                   },
                   elegir: (id) => _categoriaId = id,
@@ -379,7 +382,10 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
                     final creada = await ref
                         .read(maestrosApiProvider)
                         .crearMarca({'nombre': nombre});
+                    // Esperar la lista nueva: si se elige lo recien creado antes
+                    // de que llegue, el desplegable no lo encuentra.
                     ref.invalidate(marcasProvider);
+                    await ref.read(marcasProvider.future);
                     return creada.id;
                   },
                   elegir: (id) => _marcaId = id,
@@ -415,7 +421,10 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
                 'tipo': 'CONTEO',
                 'fraccionable': false,
               });
+              // Esperar la lista nueva: si se elige lo recien creado antes
+              // de que llegue, el desplegable no lo encuentra.
               ref.invalidate(unidadesProvider);
+              await ref.read(unidadesProvider.future);
               return creada.id;
             },
             elegir: (id) => _unidadBaseId = id,

@@ -115,8 +115,19 @@ class AppSelector<T> extends StatelessWidget {
   }
 
   Widget _campo(BuildContext context, {bool conEtiqueta = true}) {
+    /*
+     * Un valor que no esta en la lista revienta el desplegable.
+     *
+     * Pasa al dar de alta algo desde el propio formulario: se elige la marca
+     * recien creada mientras el catalogo todavia trae la lista vieja, y entre
+     * un dibujo y el otro el valor no tiene opcion. Tambien pasa al editar un
+     * registro que apunta a un catalogo desactivado. En los dos casos vale
+     * mas mostrar el campo vacio un instante que tumbar la pantalla.
+     */
+    final elegido = opciones.any((o) => o.valor == valor) ? valor : null;
+
     return DropdownButtonFormField<T>(
-      initialValue: valor,
+      initialValue: elegido,
       // isExpanded: sin esto el texto no cede espacio y el desplegable se
       // desborda en las cajas angostas.
       isExpanded: true,
