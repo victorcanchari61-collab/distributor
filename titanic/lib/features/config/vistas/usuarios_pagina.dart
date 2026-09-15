@@ -5,6 +5,8 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/estado/filtro_estado.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -24,6 +26,7 @@ class UsuariosPagina extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     return AppListaPagina<Usuario>(
       titulo: 'Usuarios',
       ruta: ruta,
@@ -37,12 +40,55 @@ class UsuariosPagina extends ConsumerWidget {
       iconoVacio: Icons.person_outline,
       singular: 'usuario',
       plural: 'usuarios',
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosUsuariosActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, usuario) => _TarjetaUsuario(
         usuario: usuario,
-        color: resolverRuta(ruta).grupo?.color ?? Colores.marca,
+        color: color,
         onEditar: () => _abrirFormulario(context, usuario),
         onEstado: () => _cambiarEstado(context, ref, usuario),
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosUsuariosActivosProvider),
+      onLimpiar: () {
+        ref.read(estadoFiltroProvider.notifier).state =
+            FiltroEstado.activos;
+        ref.read(rolFiltroProvider.notifier).state = null;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
+            titulo: 'Estado',
+            valor: ref.watch(estadoFiltroProvider),
+            opciones: const [
+              OpcionFiltro(FiltroEstado.activos, 'Activos'),
+              OpcionFiltro(FiltroEstado.inactivos, 'Desactivados'),
+              OpcionFiltro(FiltroEstado.todos, 'Todos'),
+            ],
+            onCambio: (v) => ref.read(estadoFiltroProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<int?>(
+            titulo: 'Rol',
+            valor: ref.watch(rolFiltroProvider),
+            opciones: [
+              const OpcionFiltro<int?>(null, 'Todos'),
+              for (final r in ref.watch(rolesActivosProvider))
+                OpcionFiltro<int?>(r.id, r.nombre),
+            ],
+            onCambio: (v) => ref.read(rolFiltroProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

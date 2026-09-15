@@ -5,6 +5,7 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -79,7 +80,51 @@ class StockPagina extends ConsumerWidget {
           nota: 'al costo de compra',
         ),
       ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosStockActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, stock) => _TarjetaStock(stock: stock, color: color),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosStockActivosProvider),
+      onLimpiar: () {
+        ref.read(filtroStockProvider.notifier).state = FiltroStock.todos;
+        ref.read(categoriaStockProvider.notifier).state = null;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroStock>(
+            titulo: 'Situación',
+            valor: ref.watch(filtroStockProvider),
+            opciones: const [
+              OpcionFiltro(FiltroStock.todos, 'Todos'),
+              OpcionFiltro(FiltroStock.bajoMinimo, 'Bajo el mínimo'),
+              OpcionFiltro(FiltroStock.sinStock, 'Sin stock'),
+              OpcionFiltro(FiltroStock.conStock, 'Con stock'),
+            ],
+            onCambio: (v) => ref.read(filtroStockProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Categoría',
+            valor: ref.watch(categoriaStockProvider),
+            opciones: [
+              const OpcionFiltro<String?>(null, 'Todas'),
+              for (final c in ref.watch(categoriasDelStockProvider))
+                OpcionFiltro<String?>(c, c),
+            ],
+            onCambio: (v) =>
+                ref.read(categoriaStockProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 }

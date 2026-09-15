@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import 'app_boton.dart';
@@ -115,6 +116,16 @@ Future<void> mostrarFiltros(
   required VoidCallback onLimpiar,
   int activos = 0,
 }) {
+  /*
+   * El acento se lee ANTES de abrir y se vuelve a declarar dentro.
+   *
+   * La hoja cuelga del Navigator, no de la pantalla que la abrio, asi que por
+   * herencia no ve el acento del modulo y el boton salia con el azul de marca
+   * en todos los listados. Es el mismo motivo por el que los formularios
+   * declaran el suyo.
+   */
+  final acento = Acento.de(context);
+
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colores.superficie,
@@ -125,7 +136,9 @@ Future<void> mostrarFiltros(
         top: Radius.circular(Dimen.radioPanel),
       ),
     ),
-    builder: (context) => ConstrainedBox(
+    builder: (context) => Acento(
+      color: acento,
+      child: ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
@@ -192,8 +205,9 @@ Future<void> mostrarFiltros(
               texto: 'Ver resultados',
               onPressed: () => Navigator.of(context).pop(),
             ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     ),
   );

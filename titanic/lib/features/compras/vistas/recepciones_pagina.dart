@@ -6,6 +6,8 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
+import '../../../compartido/estado/filtro_documento.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
@@ -64,11 +66,42 @@ class RecepcionesPagina extends ConsumerWidget {
           tono: DatoTono.exito,
         ),
       ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosRecepcionesActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, doc) => _TarjetaRecepcion(
         doc: doc,
         color: color,
         onAnular: doc.anulado ? null : () => _anular(context, ref, doc),
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosRecepcionesActivosProvider),
+      onLimpiar: () {
+        ref.read(filtroDocumentoProvider.notifier).state =
+            FiltroDocumento.todos;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroDocumento>(
+            titulo: 'Estado',
+            valor: ref.watch(filtroDocumentoProvider),
+            opciones: const [
+              OpcionFiltro(FiltroDocumento.todos, 'Todos'),
+              OpcionFiltro(FiltroDocumento.vigentes, 'Vigentes'),
+              OpcionFiltro(FiltroDocumento.anulados, 'Anulados'),
+            ],
+            onCambio: (v) =>
+                ref.read(filtroDocumentoProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -65,7 +66,37 @@ class LotesPagina extends ConsumerWidget {
           tono: vencidos > 0 ? DatoTono.peligro : DatoTono.neutral,
         ),
       ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosLotesActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, lote) => _TarjetaLote(lote: lote, color: color),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosLotesActivosProvider),
+      onLimpiar: () {
+        ref.read(filtroLoteProvider.notifier).state = FiltroLote.todos;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroLote>(
+            titulo: 'Vencimiento',
+            valor: ref.watch(filtroLoteProvider),
+            opciones: const [
+              OpcionFiltro(FiltroLote.todos, 'Todos'),
+              OpcionFiltro(FiltroLote.vencidos, 'Vencidos'),
+              OpcionFiltro(FiltroLote.porVencer, 'Por vencer'),
+              OpcionFiltro(FiltroLote.vigentes, 'Vigentes'),
+            ],
+            onCambio: (v) => ref.read(filtroLoteProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 }

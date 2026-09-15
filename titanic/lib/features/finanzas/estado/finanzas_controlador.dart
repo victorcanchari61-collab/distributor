@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/estado/filtro_estado.dart';
 import '../../auth/estado/auth_controlador.dart';
 import '../datos/finanzas_api.dart';
 import '../datos/metodo_pago.dart';
@@ -52,12 +53,31 @@ final metodosPagoProvider =
       MetodosPagoControlador.new,
     );
 
+/// Por donde entra o sale la plata. Null es "todos".
+final tipoMetodoPagoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+final filtrosMetodosPagoActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
+  if (ref.watch(tipoMetodoPagoFiltroProvider) != null) n++;
+  return n;
+});
+
 final metodosPagoFiltradosProvider = Provider.autoDispose<List<MetodoPago>>((
   ref,
 ) {
   final todos = ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[];
   final texto = ref.watch(busquedaMetodosPagoProvider).trim().toLowerCase();
-  return todos.where((m) => texto.isEmpty || m.buscable.contains(texto)).toList();
+  final estado = ref.watch(estadoFiltroProvider);
+  final tipo = ref.watch(tipoMetodoPagoFiltroProvider);
+
+  return todos
+      .where((m) => pasaEstado(m.activo, estado))
+      .where((m) => tipo == null || m.tipo == tipo)
+      .where((m) => texto.isEmpty || m.buscable.contains(texto))
+      .toList();
 });
 
 /// Metodos de pago activos, para los selectores de otros modulos (Compras).

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/estado/filtro_documento.dart';
 import '../../../compartido/estado/filtro_estado.dart';
 import '../../auth/estado/auth_controlador.dart';
 import '../../compras/estado/compras_controlador.dart';
@@ -118,10 +119,51 @@ final stockDisponibleProvider = FutureProvider.autoDispose
       return {for (final f in filas) f.productoId: f.disponible};
     });
 
+/// Que se mira del almacen: todo, lo que falta reponer o lo que no se mueve.
+enum FiltroStock { todos, bajoMinimo, sinStock, conStock }
+
+final filtroStockProvider = StateProvider.autoDispose(
+  (ref) => FiltroStock.todos,
+);
+final categoriaStockProvider = StateProvider.autoDispose<String?>((ref) => null);
+
+final filtrosStockActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(filtroStockProvider) != FiltroStock.todos) n++;
+  if (ref.watch(categoriaStockProvider) != null) n++;
+  return n;
+});
+
+/// Las categorias que de verdad aparecen en el almacen que se esta mirando.
+///
+/// No el catalogo entero: ofrecer rubros que no tienen ni un producto aqui
+/// llena el filtro de opciones que no devuelven nada.
+final categoriasDelStockProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(stockProvider).valueOrNull ?? const <Stock>[];
+  return <String>{
+    for (final s in todos)
+      if (s.categoria != null && s.categoria!.isNotEmpty) s.categoria!,
+  }.toList()..sort();
+});
+
 final stockFiltradoProvider = Provider.autoDispose<List<Stock>>((ref) {
   final todos = ref.watch(stockProvider).valueOrNull ?? const <Stock>[];
   final texto = ref.watch(busquedaStockProvider).trim().toLowerCase();
-  return todos.where((s) => texto.isEmpty || s.buscable.contains(texto)).toList();
+  final filtro = ref.watch(filtroStockProvider);
+  final categoria = ref.watch(categoriaStockProvider);
+
+  return todos
+      .where(
+        (s) => switch (filtro) {
+          FiltroStock.todos => true,
+          FiltroStock.bajoMinimo => s.bajoMinimo,
+          FiltroStock.sinStock => s.stock <= 0,
+          FiltroStock.conStock => s.stock > 0,
+        },
+      )
+      .where((s) => categoria == null || s.categoria == categoria)
+      .where((s) => texto.isEmpty || s.buscable.contains(texto))
+      .toList();
 });
 
 // --- Kardex ---
@@ -136,12 +178,34 @@ final kardexProvider = FutureProvider.autoDispose<List<MovimientoKardex>>(
       .kardex(almacenId: ref.watch(almacenKardexProvider)),
 );
 
+/// Que movimientos se miran. La reserva es su propio caso: no es entrada ni
+/// salida, es mercaderia apartada que todavia no se movio.
+enum FiltroKardex { todos, entradas, salidas, reservas }
+
+final filtroKardexProvider = StateProvider.autoDispose(
+  (ref) => FiltroKardex.todos,
+);
+
+final filtrosKardexActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(filtroKardexProvider) == FiltroKardex.todos ? 0 : 1,
+);
+
 final kardexFiltradoProvider =
     Provider.autoDispose<List<MovimientoKardex>>((ref) {
       final todos =
           ref.watch(kardexProvider).valueOrNull ?? const <MovimientoKardex>[];
       final texto = ref.watch(busquedaKardexProvider).trim().toLowerCase();
+      final filtro = ref.watch(filtroKardexProvider);
+
       return todos
+          .where(
+            (k) => switch (filtro) {
+              FiltroKardex.todos => true,
+              FiltroKardex.entradas => k.esEntrada && !k.esReserva,
+              FiltroKardex.salidas => !k.esEntrada && !k.esReserva,
+              FiltroKardex.reservas => k.esReserva,
+            },
+          )
           .where((k) => texto.isEmpty || k.buscable.contains(texto))
           .toList();
     });
@@ -154,10 +218,32 @@ final lotesProvider = FutureProvider.autoDispose<List<Lote>>(
   (ref) => ref.watch(inventarioApiProvider).lotes(),
 );
 
+/// Que lotes se miran. Lo urgente es lo vencido y lo que esta por vencer: es
+/// mercaderia que hay que rematar o dar de baja antes de que se pierda sola.
+enum FiltroLote { todos, vencidos, porVencer, vigentes }
+
+final filtroLoteProvider = StateProvider.autoDispose((ref) => FiltroLote.todos);
+
+final filtrosLotesActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(filtroLoteProvider) == FiltroLote.todos ? 0 : 1,
+);
+
 final lotesFiltradosProvider = Provider.autoDispose<List<Lote>>((ref) {
   final todos = ref.watch(lotesProvider).valueOrNull ?? const <Lote>[];
   final texto = ref.watch(busquedaLotesProvider).trim().toLowerCase();
-  return todos.where((l) => texto.isEmpty || l.buscable.contains(texto)).toList();
+  final filtro = ref.watch(filtroLoteProvider);
+
+  return todos
+      .where(
+        (l) => switch (filtro) {
+          FiltroLote.todos => true,
+          FiltroLote.vencidos => l.vencido,
+          FiltroLote.porVencer => l.porVencer,
+          FiltroLote.vigentes => !l.vencido && !l.porVencer,
+        },
+      )
+      .where((l) => texto.isEmpty || l.buscable.contains(texto))
+      .toList();
 });
 
 // --- Recepciones ---
@@ -202,8 +288,17 @@ final recepcionesFiltradasProvider = Provider.autoDispose<List<DocumentoInventar
   final todas =
       ref.watch(recepcionesProvider).valueOrNull ?? const <DocumentoInventario>[];
   final texto = ref.watch(busquedaRecepcionesProvider).trim().toLowerCase();
-  return todas.where((d) => texto.isEmpty || d.buscable.contains(texto)).toList();
+  final filtro = ref.watch(filtroDocumentoProvider);
+
+  return todas
+      .where((d) => pasaDocumento(d.anulado, filtro))
+      .where((d) => texto.isEmpty || d.buscable.contains(texto))
+      .toList();
 });
+
+final filtrosRecepcionesActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(filtroDocumentoProvider) == FiltroDocumento.todos ? 0 : 1,
+);
 
 // --- Motivos ---
 
@@ -336,8 +431,17 @@ final transferenciasFiltradasProvider =
       final todos =
           ref.watch(transferenciasProvider).valueOrNull ?? const <DocumentoInventario>[];
       final texto = ref.watch(busquedaTransferenciasProvider).trim().toLowerCase();
-      return todos.where((d) => texto.isEmpty || d.buscable.contains(texto)).toList();
+      final filtro = ref.watch(filtroDocumentoProvider);
+
+      return todos
+          .where((d) => pasaDocumento(d.anulado, filtro))
+          .where((d) => texto.isEmpty || d.buscable.contains(texto))
+          .toList();
     });
+
+final filtrosTransferenciasActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(filtroDocumentoProvider) == FiltroDocumento.todos ? 0 : 1,
+);
 
 // --- Prestamos ---
 
@@ -368,10 +472,49 @@ final prestamosProvider =
       PrestamosControlador.new,
     );
 
+/// De que lado esta el prestamo: lo que salio del almacen o lo que entro.
+enum FiltroPrestamo { todos, prestados, recibidos }
+
+/// Si ya volvio o sigue afuera. Lo pendiente es lo que hay que perseguir.
+enum FiltroDevolucion { todos, pendientes, devueltos }
+
+final filtroPrestamoProvider = StateProvider.autoDispose(
+  (ref) => FiltroPrestamo.todos,
+);
+final filtroDevolucionProvider = StateProvider.autoDispose(
+  (ref) => FiltroDevolucion.todos,
+);
+
+final filtrosPrestamosActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(filtroPrestamoProvider) != FiltroPrestamo.todos) n++;
+  if (ref.watch(filtroDevolucionProvider) != FiltroDevolucion.todos) n++;
+  return n;
+});
+
 final prestamosFiltradosProvider = Provider.autoDispose<List<Prestamo>>((ref) {
   final todos = ref.watch(prestamosProvider).valueOrNull ?? const <Prestamo>[];
   final texto = ref.watch(busquedaPrestamosProvider).trim().toLowerCase();
-  return todos.where((p) => texto.isEmpty || p.buscable.contains(texto)).toList();
+  final lado = ref.watch(filtroPrestamoProvider);
+  final devolucion = ref.watch(filtroDevolucionProvider);
+
+  return todos
+      .where(
+        (p) => switch (lado) {
+          FiltroPrestamo.todos => true,
+          FiltroPrestamo.prestados => p.esDado,
+          FiltroPrestamo.recibidos => !p.esDado,
+        },
+      )
+      .where(
+        (p) => switch (devolucion) {
+          FiltroDevolucion.todos => true,
+          FiltroDevolucion.pendientes => p.estado == EstadoPrestamo.pendiente,
+          FiltroDevolucion.devueltos => p.estado != EstadoPrestamo.pendiente,
+        },
+      )
+      .where((p) => texto.isEmpty || p.buscable.contains(texto))
+      .toList();
 });
 
 // --- Conteos ciclicos ---

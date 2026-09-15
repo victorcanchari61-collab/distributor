@@ -5,6 +5,8 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/estado/filtro_estado.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -24,6 +26,7 @@ class RolesPagina extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     return AppListaPagina<Rol>(
       titulo: 'Roles',
       ruta: ruta,
@@ -37,12 +40,42 @@ class RolesPagina extends ConsumerWidget {
       iconoVacio: Icons.verified_user_outlined,
       singular: 'rol',
       plural: 'roles',
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosRolesActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, rol) => _TarjetaRol(
         rol: rol,
-        color: resolverRuta(ruta).grupo?.color ?? Colores.marca,
+        color: color,
         onEditar: () => _abrirFormulario(context, rol),
         onEstado: () => _cambiarEstado(context, ref, rol),
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosRolesActivosProvider),
+      onLimpiar: () {
+        ref.read(estadoFiltroProvider.notifier).state =
+            FiltroEstado.activos;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
+            titulo: 'Estado',
+            valor: ref.watch(estadoFiltroProvider),
+            opciones: const [
+              OpcionFiltro(FiltroEstado.activos, 'Activos'),
+              OpcionFiltro(FiltroEstado.inactivos, 'Desactivados'),
+              OpcionFiltro(FiltroEstado.todos, 'Todos'),
+            ],
+            onCambio: (v) => ref.read(estadoFiltroProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

@@ -5,6 +5,8 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
+import '../../../compartido/estado/filtro_documento.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
@@ -67,6 +69,11 @@ class NotasVentaPagina extends ConsumerWidget {
           tono: DatoTono.exito,
         ),
       ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosNotasVentaActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, nota) => _TarjetaNotaVenta(
         nota: nota,
         color: color,
@@ -74,6 +81,46 @@ class NotasVentaPagina extends ConsumerWidget {
             ? () => _anular(context, ref, nota)
             : null,
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosNotasVentaActivosProvider),
+      onLimpiar: () {
+        ref.read(filtroDocumentoProvider.notifier).state =
+            FiltroDocumento.todos;
+        ref.read(formaPagoFiltroProvider.notifier).state = null;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroDocumento>(
+            titulo: 'Estado',
+            valor: ref.watch(filtroDocumentoProvider),
+            opciones: const [
+              OpcionFiltro(FiltroDocumento.todos, 'Todos'),
+              OpcionFiltro(FiltroDocumento.vigentes, 'Vigentes'),
+              OpcionFiltro(FiltroDocumento.anulados, 'Anulados'),
+            ],
+            onCambio: (v) =>
+                ref.read(filtroDocumentoProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Forma de pago',
+            valor: ref.watch(formaPagoFiltroProvider),
+            opciones: const [
+              OpcionFiltro<String?>(null, 'Todas'),
+              OpcionFiltro<String?>(FormaPagoVenta.contado, 'Contado'),
+              OpcionFiltro<String?>(FormaPagoVenta.credito, 'Crédito'),
+            ],
+            onCambio: (v) =>
+                ref.read(formaPagoFiltroProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

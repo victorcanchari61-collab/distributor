@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/estado/filtro_estado.dart';
 import '../../auth/estado/auth_controlador.dart';
 import '../datos/config_api.dart';
 import '../datos/config_modelos.dart';
@@ -64,11 +65,27 @@ final usuariosProvider =
       UsuariosControlador.new,
     );
 
+/// Rol por el que se filtra. Null es "todos".
+final rolFiltroProvider = StateProvider.autoDispose<int?>((ref) => null);
+
+final filtrosUsuariosActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
+  if (ref.watch(rolFiltroProvider) != null) n++;
+  return n;
+});
+
 final usuariosFiltradosProvider = Provider.autoDispose<List<Usuario>>((ref) {
   final todos = ref.watch(usuariosProvider).valueOrNull ?? const <Usuario>[];
   final texto = ref.watch(busquedaUsuariosProvider).trim().toLowerCase();
-  if (texto.isEmpty) return todos;
-  return todos.where((u) => u.buscable.contains(texto)).toList();
+  final estado = ref.watch(estadoFiltroProvider);
+  final rolId = ref.watch(rolFiltroProvider);
+
+  return todos
+      .where((u) => pasaEstado(u.activo, estado))
+      .where((u) => rolId == null || u.rolId == rolId)
+      .where((u) => texto.isEmpty || u.buscable.contains(texto))
+      .toList();
 });
 
 // --- Roles ---
@@ -114,11 +131,19 @@ final rolesProvider = AsyncNotifierProvider<RolesControlador, List<Rol>>(
   RolesControlador.new,
 );
 
+final filtrosRolesActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(estadoFiltroProvider) == FiltroEstado.activos ? 0 : 1,
+);
+
 final rolesFiltradosProvider = Provider.autoDispose<List<Rol>>((ref) {
   final todos = ref.watch(rolesProvider).valueOrNull ?? const <Rol>[];
   final texto = ref.watch(busquedaRolesProvider).trim().toLowerCase();
-  if (texto.isEmpty) return todos;
-  return todos.where((r) => r.buscable.contains(texto)).toList();
+  final estado = ref.watch(estadoFiltroProvider);
+
+  return todos
+      .where((r) => pasaEstado(r.activo, estado))
+      .where((r) => texto.isEmpty || r.buscable.contains(texto))
+      .toList();
 });
 
 /// Roles activos, para el selector del formulario de usuario.
@@ -169,9 +194,17 @@ final empresasProvider =
       EmpresasControlador.new,
     );
 
+final filtrosEmpresasActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(estadoFiltroProvider) == FiltroEstado.activos ? 0 : 1,
+);
+
 final empresasFiltradasProvider = Provider.autoDispose<List<Empresa>>((ref) {
   final todas = ref.watch(empresasProvider).valueOrNull ?? const <Empresa>[];
   final texto = ref.watch(busquedaEmpresasProvider).trim().toLowerCase();
-  if (texto.isEmpty) return todas;
-  return todas.where((e) => e.buscable.contains(texto)).toList();
+  final estado = ref.watch(estadoFiltroProvider);
+
+  return todas
+      .where((e) => pasaEstado(e.activa, estado))
+      .where((e) => texto.isEmpty || e.buscable.contains(texto))
+      .toList();
 });

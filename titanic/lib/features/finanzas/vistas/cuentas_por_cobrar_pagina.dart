@@ -6,6 +6,7 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
@@ -58,11 +59,41 @@ class CuentasPorCobrarPagina extends ConsumerWidget {
           tono: totalSaldo > 0 ? DatoTono.aviso : DatoTono.exito,
         ),
       ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosDeudaActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, nota) => _TarjetaCuentaCobrar(
         nota: nota,
         color: color,
         onGestionarPagos: () => _gestionarPagos(context, ref, nota),
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosDeudaActivosProvider),
+      onLimpiar: () {
+        ref.read(filtroDeudaProvider.notifier).state =
+            FiltroDeuda.todas;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroDeuda>(
+            titulo: 'Deuda',
+            valor: ref.watch(filtroDeudaProvider),
+            opciones: const [
+              OpcionFiltro(FiltroDeuda.todas, 'Todas'),
+              OpcionFiltro(FiltroDeuda.conSaldo, 'Con saldo'),
+              OpcionFiltro(FiltroDeuda.pagadas, 'Sin saldo'),
+            ],
+            onCambio: (v) => ref.read(filtroDeudaProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

@@ -5,6 +5,8 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/estado/filtro_estado.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -98,6 +100,11 @@ class FlotaPagina extends ConsumerWidget {
           tono: (resumen?.porVencer ?? 0) > 0 ? DatoTono.aviso : DatoTono.neutral,
         ),
       ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosVehiculosActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, vehiculo) => _TarjetaVehiculo(
         vehiculo: vehiculo,
         color: color,
@@ -105,6 +112,47 @@ class FlotaPagina extends ConsumerWidget {
         onEditar: () => _abrirFormulario(context, vehiculo),
         onEstado: () => _cambiarEstado(context, ref, vehiculo),
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosVehiculosActivosProvider),
+      onLimpiar: () {
+        ref.read(estadoFiltroProvider.notifier).state =
+            FiltroEstado.activos;
+        ref.read(filtroPapelesProvider.notifier).state =
+            FiltroPapeles.todos;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
+            titulo: 'Estado',
+            valor: ref.watch(estadoFiltroProvider),
+            opciones: const [
+              OpcionFiltro(FiltroEstado.activos, 'Activos'),
+              OpcionFiltro(FiltroEstado.inactivos, 'Desactivados'),
+              OpcionFiltro(FiltroEstado.todos, 'Todos'),
+            ],
+            onCambio: (v) => ref.read(estadoFiltroProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroPapeles>(
+            titulo: 'Documentos',
+            valor: ref.watch(filtroPapelesProvider),
+            opciones: const [
+              OpcionFiltro(FiltroPapeles.todos, 'Todos'),
+              OpcionFiltro(FiltroPapeles.vencidos, 'Vencidos'),
+              OpcionFiltro(FiltroPapeles.porVencer, 'Por vencer'),
+              OpcionFiltro(FiltroPapeles.alDia, 'Al día'),
+            ],
+            onCambio: (v) =>
+                ref.read(filtroPapelesProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

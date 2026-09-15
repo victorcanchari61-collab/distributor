@@ -5,6 +5,8 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/estado/filtro_estado.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -52,12 +54,56 @@ class MetodosPagoPagina extends ConsumerWidget {
           color: color,
         ),
       ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosMetodosPagoActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, metodo) => _TarjetaMetodoPago(
         metodo: metodo,
         color: color,
         onEditar: () => _abrirFormulario(context, metodo),
         onEstado: () => _cambiarEstado(context, ref, metodo),
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosMetodosPagoActivosProvider),
+      onLimpiar: () {
+        ref.read(estadoFiltroProvider.notifier).state =
+            FiltroEstado.activos;
+        ref.read(tipoMetodoPagoFiltroProvider.notifier).state = null;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
+            titulo: 'Estado',
+            valor: ref.watch(estadoFiltroProvider),
+            opciones: const [
+              OpcionFiltro(FiltroEstado.activos, 'Activos'),
+              OpcionFiltro(FiltroEstado.inactivos, 'Desactivados'),
+              OpcionFiltro(FiltroEstado.todos, 'Todos'),
+            ],
+            onCambio: (v) => ref.read(estadoFiltroProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Tipo',
+            valor: ref.watch(tipoMetodoPagoFiltroProvider),
+            opciones: [
+              const OpcionFiltro<String?>(null, 'Todos'),
+              for (final t in TipoMetodoPago.todos)
+                OpcionFiltro<String?>(t, TipoMetodoPago.etiqueta(t)),
+            ],
+            onCambio: (v) =>
+                ref.read(tipoMetodoPagoFiltroProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

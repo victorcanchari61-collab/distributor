@@ -6,6 +6,7 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
@@ -58,6 +59,11 @@ class PrestamosPagina extends ConsumerWidget {
           tono: pendientes > 0 ? DatoTono.aviso : DatoTono.neutral,
         ),
       ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosPrestamosActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, prestamo) => _TarjetaPrestamo(
         prestamo: prestamo,
         color: color,
@@ -65,6 +71,47 @@ class PrestamosPagina extends ConsumerWidget {
             ? () => mostrarHojaDevolucion(context, ref, prestamo: prestamo)
             : null,
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosPrestamosActivosProvider),
+      onLimpiar: () {
+        ref.read(filtroPrestamoProvider.notifier).state =
+            FiltroPrestamo.todos;
+        ref.read(filtroDevolucionProvider.notifier).state =
+            FiltroDevolucion.todos;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroPrestamo>(
+            titulo: 'Tipo',
+            valor: ref.watch(filtroPrestamoProvider),
+            opciones: const [
+              OpcionFiltro(FiltroPrestamo.todos, 'Todos'),
+              OpcionFiltro(FiltroPrestamo.prestados, 'Prestados'),
+              OpcionFiltro(FiltroPrestamo.recibidos, 'Recibidos'),
+            ],
+            onCambio: (v) =>
+                ref.read(filtroPrestamoProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroDevolucion>(
+            titulo: 'Devolución',
+            valor: ref.watch(filtroDevolucionProvider),
+            opciones: const [
+              OpcionFiltro(FiltroDevolucion.todos, 'Todas'),
+              OpcionFiltro(FiltroDevolucion.pendientes, 'Sin devolver'),
+              OpcionFiltro(FiltroDevolucion.devueltos, 'Devueltos'),
+            ],
+            onCambio: (v) =>
+                ref.read(filtroDevolucionProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

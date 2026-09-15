@@ -53,15 +53,27 @@ final cuadresFiltradosProvider = Provider.autoDispose<List<CuadrePendiente>>((
   final todos =
       ref.watch(cuadresProvider).valueOrNull ?? const <CuadrePendiente>[];
   final texto = ref.watch(busquedaCuadresProvider).trim().toLowerCase();
-  if (texto.isEmpty) return todos;
+  final estado = ref.watch(estadoCuadreFiltroProvider);
+
   return todos
+      .where((c) => estado == null || c.estado == estado)
       .where(
         (c) =>
+            texto.isEmpty ||
             c.usuario.toLowerCase().contains(texto) ||
             EstadoCuadre.etiqueta(c.estado).toLowerCase().contains(texto),
       )
       .toList();
 });
+
+/// En que quedo la caja del dia. Null es "todas".
+final estadoCuadreFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+final filtrosCuadresActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(estadoCuadreFiltroProvider) == null ? 0 : 1,
+);
 
 /// Que persona y que dia se esta cuadrando.
 typedef ClaveCuadre = ({DateTime fecha, int usuarioId});

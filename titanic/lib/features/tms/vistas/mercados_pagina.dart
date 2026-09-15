@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/estado/filtro_estado.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -56,6 +58,11 @@ class MercadosPagina extends ConsumerWidget {
           icono: Icons.check_circle_outline,
         ),
       ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosMercadosActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, mercado) => _TarjetaMercado(
         mercado: mercado,
         color: color,
@@ -63,6 +70,45 @@ class MercadosPagina extends ConsumerWidget {
         onEditar: () => _abrirFormulario(context, mercado),
         onEstado: () => _cambiarEstado(context, ref, mercado),
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosMercadosActivosProvider),
+      onLimpiar: () {
+        ref.read(estadoFiltroProvider.notifier).state =
+            FiltroEstado.activos;
+        ref.read(distritoMercadoProvider.notifier).state = null;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
+            titulo: 'Estado',
+            valor: ref.watch(estadoFiltroProvider),
+            opciones: const [
+              OpcionFiltro(FiltroEstado.activos, 'Activos'),
+              OpcionFiltro(FiltroEstado.inactivos, 'Desactivados'),
+              OpcionFiltro(FiltroEstado.todos, 'Todos'),
+            ],
+            onCambio: (v) => ref.read(estadoFiltroProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Distrito',
+            valor: ref.watch(distritoMercadoProvider),
+            opciones: [
+              const OpcionFiltro<String?>(null, 'Todos'),
+              for (final d in ref.watch(distritosDeMercadosProvider))
+                OpcionFiltro<String?>(d, d),
+            ],
+            onCambio: (v) =>
+                ref.read(distritoMercadoProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

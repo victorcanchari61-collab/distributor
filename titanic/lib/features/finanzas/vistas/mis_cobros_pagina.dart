@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/estado/filtro_documento.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -56,7 +58,38 @@ class MisCobrosPagina extends ConsumerWidget {
           tono: anulados > 0 ? DatoTono.aviso : DatoTono.neutral,
         ),
       ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosMisCobrosActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, cobro) => _TarjetaCobro(cobro: cobro, color: color),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosMisCobrosActivosProvider),
+      onLimpiar: () {
+        ref.read(filtroDocumentoProvider.notifier).state =
+            FiltroDocumento.todos;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroDocumento>(
+            titulo: 'Estado',
+            valor: ref.watch(filtroDocumentoProvider),
+            opciones: const [
+              OpcionFiltro(FiltroDocumento.todos, 'Todos'),
+              OpcionFiltro(FiltroDocumento.vigentes, 'Vigentes'),
+              OpcionFiltro(FiltroDocumento.anulados, 'Anulados'),
+            ],
+            onCambio: (v) =>
+                ref.read(filtroDocumentoProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 }

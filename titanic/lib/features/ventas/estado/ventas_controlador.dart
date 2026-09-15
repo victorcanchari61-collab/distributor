@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/estado/filtro_documento.dart';
 import '../../auth/estado/auth_controlador.dart';
 import '../datos/cobro.dart';
 import '../datos/nota_venta.dart';
@@ -93,10 +94,30 @@ final notasVentaProvider =
       NotasVentaControlador.new,
     );
 
+/// Contado o credito. Null es "todas": es lo que separa la venta ya cobrada
+/// de la que queda por cobrar, y por eso se filtra aparte del estado.
+final formaPagoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+final filtrosNotasVentaActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(filtroDocumentoProvider) != FiltroDocumento.todos) n++;
+  if (ref.watch(formaPagoFiltroProvider) != null) n++;
+  return n;
+});
+
 final notasVentaFiltradasProvider = Provider.autoDispose<List<NotaVenta>>((ref) {
   final todas = ref.watch(notasVentaProvider).valueOrNull ?? const <NotaVenta>[];
   final texto = ref.watch(busquedaNotasVentaProvider).trim().toLowerCase();
-  return todas.where((n) => texto.isEmpty || n.buscable.contains(texto)).toList();
+  final filtro = ref.watch(filtroDocumentoProvider);
+  final forma = ref.watch(formaPagoFiltroProvider);
+
+  return todas
+      .where((n) => pasaDocumento(n.estado == EstadoNotaVenta.anulada, filtro))
+      .where((n) => forma == null || n.formaPago == forma)
+      .where((n) => texto.isEmpty || n.buscable.contains(texto))
+      .toList();
 });
 
 // --- Cuentas por cobrar ---
@@ -139,10 +160,34 @@ final cuentasPorCobrarProvider =
       CuentasPorCobrarControlador.new,
     );
 
+/// Cuanto queda de una deuda. Lo que ya se cobro entero sigue en la lista
+/// —es el historial—, pero estorba cuando lo que se quiere es salir a cobrar.
+enum FiltroDeuda { todas, conSaldo, pagadas }
+
+final filtroDeudaProvider = StateProvider.autoDispose((ref) => FiltroDeuda.todas);
+
+final filtrosDeudaActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(filtroDeudaProvider) == FiltroDeuda.todas ? 0 : 1,
+);
+
+bool pasaDeuda(double total, double pagado, FiltroDeuda filtro) =>
+    switch (filtro) {
+      FiltroDeuda.todas => true,
+      // Un centimo de tolerancia: los redondeos no deben dejar una deuda
+      // fantasma de S/ 0.001 en la lista de lo que hay que cobrar.
+      FiltroDeuda.conSaldo => total - pagado > 0.01,
+      FiltroDeuda.pagadas => total - pagado <= 0.01,
+    };
+
 final cuentasPorCobrarFiltradasProvider = Provider.autoDispose<List<NotaVenta>>((ref) {
   final todas = ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
   final texto = ref.watch(busquedaCuentasPorCobrarProvider).trim().toLowerCase();
-  return todas.where((n) => texto.isEmpty || n.buscable.contains(texto)).toList();
+  final filtro = ref.watch(filtroDeudaProvider);
+
+  return todas
+      .where((n) => pasaDeuda(n.total, n.totalPagado, filtro))
+      .where((n) => texto.isEmpty || n.buscable.contains(texto))
+      .toList();
 });
 
 // --- Mis cobros ---
@@ -163,8 +208,17 @@ final misCobrosProvider = AsyncNotifierProvider<MisCobrosControlador, List<Cobro
   MisCobrosControlador.new,
 );
 
+final filtrosMisCobrosActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(filtroDocumentoProvider) == FiltroDocumento.todos ? 0 : 1,
+);
+
 final misCobrosFiltradosProvider = Provider.autoDispose<List<Cobro>>((ref) {
   final todos = ref.watch(misCobrosProvider).valueOrNull ?? const <Cobro>[];
   final texto = ref.watch(busquedaMisCobrosProvider).trim().toLowerCase();
-  return todos.where((c) => texto.isEmpty || c.buscable.contains(texto)).toList();
+  final filtro = ref.watch(filtroDocumentoProvider);
+
+  return todos
+      .where((c) => pasaDocumento(c.anulado, filtro))
+      .where((c) => texto.isEmpty || c.buscable.contains(texto))
+      .toList();
 });

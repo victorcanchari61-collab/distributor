@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -121,12 +122,47 @@ class ArqueoPagina extends ConsumerWidget {
           ],
         ),
       ),
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosCuadresActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, cuadre) => _TarjetaCuadre(
         cuadre: cuadre,
         color: color,
         onCuadrar: () => _abrirCuadre(context, cuadre),
         onAnular: () => _anular(context, ref, cuadre),
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosCuadresActivosProvider),
+      onLimpiar: () {
+        ref.read(estadoCuadreFiltroProvider.notifier).state = null;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Estado',
+            valor: ref.watch(estadoCuadreFiltroProvider),
+            opciones: const [
+              OpcionFiltro<String?>(null, 'Todos'),
+              OpcionFiltro<String?>(EstadoCuadre.pendiente, 'Pendiente'),
+              OpcionFiltro<String?>(EstadoCuadre.cuadrado, 'Cuadrado'),
+              OpcionFiltro<String?>(
+                EstadoCuadre.conDiferencia,
+                'Con diferencia',
+              ),
+              OpcionFiltro<String?>(EstadoCuadre.anulado, 'Anulado'),
+            ],
+            onCambio: (v) =>
+                ref.read(estadoCuadreFiltroProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

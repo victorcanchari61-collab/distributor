@@ -5,6 +5,8 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/estado/filtro_estado.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -24,6 +26,7 @@ class EmpresasPagina extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     return AppListaPagina<Empresa>(
       titulo: 'Empresa',
       ruta: ruta,
@@ -38,13 +41,43 @@ class EmpresasPagina extends ConsumerWidget {
       iconoVacio: Icons.domain_outlined,
       singular: 'empresa',
       plural: 'empresas',
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosEmpresasActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, empresa) => _TarjetaEmpresa(
         empresa: empresa,
-        color: resolverRuta(ruta).grupo?.color ?? Colores.marca,
+        color: color,
         onEditar: () => _abrirFormulario(context, empresa),
         onActivar: () => _activar(context, ref, empresa),
         onHabilitacion: () => _cambiarHabilitacion(context, ref, empresa),
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosEmpresasActivosProvider),
+      onLimpiar: () {
+        ref.read(estadoFiltroProvider.notifier).state =
+            FiltroEstado.activos;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
+            titulo: 'Estado',
+            valor: ref.watch(estadoFiltroProvider),
+            opciones: const [
+              OpcionFiltro(FiltroEstado.activos, 'Activas'),
+              OpcionFiltro(FiltroEstado.inactivos, 'Deshabilitadas'),
+              OpcionFiltro(FiltroEstado.todos, 'Todas'),
+            ],
+            onCambio: (v) => ref.read(estadoFiltroProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

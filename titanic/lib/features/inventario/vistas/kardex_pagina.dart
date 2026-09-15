@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -67,7 +68,37 @@ class KardexPagina extends ConsumerWidget {
           tono: DatoTono.aviso,
         ),
       ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosKardexActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
+      ),
       fila: (context, movimiento) => _TarjetaKardex(movimiento: movimiento, color: color),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosKardexActivosProvider),
+      onLimpiar: () {
+        ref.read(filtroKardexProvider.notifier).state = FiltroKardex.todos;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroKardex>(
+            titulo: 'Movimiento',
+            valor: ref.watch(filtroKardexProvider),
+            opciones: const [
+              OpcionFiltro(FiltroKardex.todos, 'Todos'),
+              OpcionFiltro(FiltroKardex.entradas, 'Ingresos'),
+              OpcionFiltro(FiltroKardex.salidas, 'Salidas'),
+              OpcionFiltro(FiltroKardex.reservas, 'Reservas'),
+            ],
+            onCambio: (v) => ref.read(filtroKardexProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 }

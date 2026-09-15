@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/estado/filtro_estado.dart';
 import '../../auth/estado/auth_controlador.dart';
 import '../datos/flota.dart';
 import '../datos/flota_api.dart';
@@ -46,10 +47,34 @@ final mercadosProvider = AsyncNotifierProvider<MercadosControlador, List<Mercado
   MercadosControlador.new,
 );
 
+final filtrosMercadosActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(estadoFiltroProvider) == FiltroEstado.activos ? 0 : 1,
+);
+
+/// Los distritos que de verdad tienen mercados, no la lista entera del país.
+final distritosDeMercadosProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(mercadosProvider).valueOrNull ?? const <Mercado>[];
+  return <String>{
+    for (final m in todos)
+      if (m.distrito != null && m.distrito!.isNotEmpty) m.distrito!,
+  }.toList()..sort();
+});
+
+final distritoMercadoProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
 final mercadosFiltradosProvider = Provider.autoDispose<List<Mercado>>((ref) {
   final todos = ref.watch(mercadosProvider).valueOrNull ?? const <Mercado>[];
   final texto = ref.watch(busquedaMercadosProvider).trim().toLowerCase();
-  return todos.where((m) => texto.isEmpty || m.buscable.contains(texto)).toList();
+  final estado = ref.watch(estadoFiltroProvider);
+  final distrito = ref.watch(distritoMercadoProvider);
+
+  return todos
+      .where((m) => pasaEstado(m.activo, estado))
+      .where((m) => distrito == null || m.distrito == distrito)
+      .where((m) => texto.isEmpty || m.buscable.contains(texto))
+      .toList();
 });
 
 /// Mercados activos, para el selector del formulario de Clientes.
@@ -94,10 +119,19 @@ final rutasProvider = AsyncNotifierProvider<RutasControlador, List<Ruta>>(
   RutasControlador.new,
 );
 
+final filtrosRutasActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(estadoFiltroProvider) == FiltroEstado.activos ? 0 : 1,
+);
+
 final rutasFiltradasProvider = Provider.autoDispose<List<Ruta>>((ref) {
   final todas = ref.watch(rutasProvider).valueOrNull ?? const <Ruta>[];
   final texto = ref.watch(busquedaRutasProvider).trim().toLowerCase();
-  return todas.where((r) => texto.isEmpty || r.buscable.contains(texto)).toList();
+  final estado = ref.watch(estadoFiltroProvider);
+
+  return todas
+      .where((r) => pasaEstado(r.activo, estado))
+      .where((r) => texto.isEmpty || r.buscable.contains(texto))
+      .toList();
 });
 
 /// Rutas activas, para el selector del formulario de Clientes.
@@ -139,10 +173,40 @@ final vehiculosProvider = AsyncNotifierProvider<VehiculosControlador, List<Vehic
   VehiculosControlador.new,
 );
 
+/// Como andan los papeles. Es el filtro que importa de una flota: un camion
+/// con el SOAT vencido no puede salir, por muy activo que este en el sistema.
+enum FiltroPapeles { todos, vencidos, porVencer, alDia }
+
+final filtroPapelesProvider = StateProvider.autoDispose(
+  (ref) => FiltroPapeles.todos,
+);
+
+final filtrosVehiculosActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
+  if (ref.watch(filtroPapelesProvider) != FiltroPapeles.todos) n++;
+  return n;
+});
+
+bool pasaPapeles(String estadoDocumentos, FiltroPapeles filtro) =>
+    switch (filtro) {
+      FiltroPapeles.todos => true,
+      FiltroPapeles.vencidos => estadoDocumentos == EstadoVencimiento.vencido,
+      FiltroPapeles.porVencer => estadoDocumentos == EstadoVencimiento.porVencer,
+      FiltroPapeles.alDia => estadoDocumentos == EstadoVencimiento.alDia,
+    };
+
 final vehiculosFiltradosProvider = Provider.autoDispose<List<Vehiculo>>((ref) {
   final todos = ref.watch(vehiculosProvider).valueOrNull ?? const <Vehiculo>[];
   final texto = ref.watch(busquedaVehiculosProvider).trim().toLowerCase();
-  return todos.where((v) => texto.isEmpty || v.buscable.contains(texto)).toList();
+  final estado = ref.watch(estadoFiltroProvider);
+  final papeles = ref.watch(filtroPapelesProvider);
+
+  return todos
+      .where((v) => pasaEstado(v.activo, estado))
+      .where((v) => pasaPapeles(v.estadoDocumentos, papeles))
+      .where((v) => texto.isEmpty || v.buscable.contains(texto))
+      .toList();
 });
 
 final resumenFlotaProvider = FutureProvider.autoDispose<ResumenFlota>((ref) {
@@ -210,10 +274,24 @@ final conductoresProvider = AsyncNotifierProvider<ConductoresControlador, List<C
   ConductoresControlador.new,
 );
 
+final filtrosConductoresActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
+  if (ref.watch(filtroPapelesProvider) != FiltroPapeles.todos) n++;
+  return n;
+});
+
 final conductoresFiltradosProvider = Provider.autoDispose<List<Conductor>>((ref) {
   final todos = ref.watch(conductoresProvider).valueOrNull ?? const <Conductor>[];
   final texto = ref.watch(busquedaConductoresProvider).trim().toLowerCase();
-  return todos.where((c) => texto.isEmpty || c.buscable.contains(texto)).toList();
+  final estado = ref.watch(estadoFiltroProvider);
+  final papeles = ref.watch(filtroPapelesProvider);
+
+  return todos
+      .where((c) => pasaEstado(c.activo, estado))
+      .where((c) => pasaPapeles(c.estadoDocumentos, papeles))
+      .where((c) => texto.isEmpty || c.buscable.contains(texto))
+      .toList();
 });
 
 /// Conductores activos, para asignarlos a un vehículo.

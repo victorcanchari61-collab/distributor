@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../ventas/estado/ventas_controlador.dart';
 import '../../auth/estado/auth_controlador.dart';
 import '../datos/compra.dart';
 import '../datos/compras_api.dart';
@@ -175,5 +176,10 @@ final cuentasPorPagarProvider =
 final cuentasPorPagarFiltradasProvider = Provider.autoDispose<List<Compra>>((ref) {
   final todas = ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
   final texto = ref.watch(busquedaCuentasPorPagarProvider).trim().toLowerCase();
-  return todas.where((c) => texto.isEmpty || c.buscable.contains(texto)).toList();
+  final filtro = ref.watch(filtroDeudaProvider);
+
+  return todas
+      .where((c) => pasaDeuda(c.total, c.totalPagado, filtro))
+      .where((c) => texto.isEmpty || c.buscable.contains(texto))
+      .toList();
 });
