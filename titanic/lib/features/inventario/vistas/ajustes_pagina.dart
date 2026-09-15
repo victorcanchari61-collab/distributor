@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/formato.dart';
+import '../../../compartido/estado/filtro_documento.dart';
+import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/widgets/app_buscador.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -91,6 +94,103 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
     mostrarFormularioMotivo(context, ref);
   }
 
+  /// Lo que se pregunta de un listado de ajustes: en que quedo y por que fue.
+  Future<void> _filtrosAjustes() {
+    final motivos = ref.read(motivosProvider).valueOrNull ?? const <Motivo>[];
+
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosAjustesActivosProvider),
+      onLimpiar: () {
+        ref.read(filtroDocumentoProvider.notifier).state =
+            FiltroDocumento.todos;
+        ref.read(motivoAjusteFiltroProvider.notifier).state = null;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroDocumento>(
+            titulo: 'Estado',
+            valor: ref.watch(filtroDocumentoProvider),
+            opciones: const [
+              OpcionFiltro(FiltroDocumento.todos, 'Todos'),
+              OpcionFiltro(FiltroDocumento.vigentes, 'Vigentes'),
+              OpcionFiltro(FiltroDocumento.anulados, 'Anulados'),
+            ],
+            onCambio: (v) =>
+                ref.read(filtroDocumentoProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<int?>(
+            titulo: 'Motivo',
+            valor: ref.watch(motivoAjusteFiltroProvider),
+            opciones: [
+              const OpcionFiltro<int?>(null, 'Todos'),
+              for (final m in motivos)
+                OpcionFiltro<int?>(
+                  m.id,
+                  '${m.nombre} (${m.esEntrada ? 'Entrada' : 'Salida'})',
+                ),
+            ],
+            onCambio: (v) =>
+                ref.read(motivoAjusteFiltroProvider.notifier).state = v,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// El catalogo de motivos: de donde sale cada uno y si suma o resta.
+  Future<void> _filtrosMotivos() {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosMotivosActivosProvider),
+      onLimpiar: () {
+        ref.read(origenMotivoProvider.notifier).state = FiltroOrigen.todos;
+        ref.read(tipoMotivoProvider.notifier).state = FiltroMovimiento.todos;
+        ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroOrigen>(
+            titulo: 'Origen',
+            valor: ref.watch(origenMotivoProvider),
+            opciones: const [
+              OpcionFiltro(FiltroOrigen.todos, 'Todos'),
+              OpcionFiltro(FiltroOrigen.manuales, 'Manuales'),
+              OpcionFiltro(FiltroOrigen.delSistema, 'Del sistema'),
+            ],
+            onCambio: (v) => ref.read(origenMotivoProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroMovimiento>(
+            titulo: 'Tipo',
+            valor: ref.watch(tipoMotivoProvider),
+            opciones: const [
+              OpcionFiltro(FiltroMovimiento.todos, 'Todos'),
+              OpcionFiltro(FiltroMovimiento.entradas, 'Entradas'),
+              OpcionFiltro(FiltroMovimiento.salidas, 'Salidas'),
+            ],
+            onCambio: (v) => ref.read(tipoMotivoProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
+            titulo: 'Estado',
+            valor: ref.watch(estadoFiltroProvider),
+            opciones: const [
+              OpcionFiltro(FiltroEstado.activos, 'Activos'),
+              OpcionFiltro(FiltroEstado.inactivos, 'Desactivados'),
+              OpcionFiltro(FiltroEstado.todos, 'Todos'),
+            ],
+            onCambio: (v) => ref.read(estadoFiltroProvider.notifier).state = v,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _tabAjustes(Color color) {
     final estado = ref.watch(ajustesProvider);
     final visibles = ref.watch(ajustesFiltradosProvider);
@@ -100,10 +200,22 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
       children: [
         Padding(
           padding: const EdgeInsets.all(Dimen.espacio4),
-          child: AppBuscador(
-            valor: busqueda,
-            onCambio: (t) => ref.read(busquedaAjustesProvider.notifier).state = t,
-            pista: 'Buscar por número, almacén o motivo',
+          child: Row(
+            children: [
+              Expanded(
+                child: AppBuscador(
+                  valor: busqueda,
+                  onCambio: (t) =>
+                      ref.read(busquedaAjustesProvider.notifier).state = t,
+                  pista: 'Buscar por número, almacén o motivo',
+                ),
+              ),
+              BotonFiltros(
+                activos: ref.watch(filtrosAjustesActivosProvider),
+                color: color,
+                onAbrir: _filtrosAjustes,
+              ),
+            ],
           ),
         ),
         Expanded(
@@ -177,10 +289,22 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
       children: [
         Padding(
           padding: const EdgeInsets.all(Dimen.espacio4),
-          child: AppBuscador(
-            valor: busqueda,
-            onCambio: (t) => ref.read(busquedaMotivosProvider.notifier).state = t,
-            pista: 'Buscar motivo',
+          child: Row(
+            children: [
+              Expanded(
+                child: AppBuscador(
+                  valor: busqueda,
+                  onCambio: (t) =>
+                      ref.read(busquedaMotivosProvider.notifier).state = t,
+                  pista: 'Buscar motivo',
+                ),
+              ),
+              BotonFiltros(
+                activos: ref.watch(filtrosMotivosActivosProvider),
+                color: color,
+                onAbrir: _filtrosMotivos,
+              ),
+            ],
           ),
         ),
         Expanded(

@@ -340,6 +340,27 @@ final motivosDisponiblesProvider = Provider.autoDispose<List<Motivo>>((ref) {
   return todos.where((m) => !m.delSistema && m.activo).toList();
 });
 
+/// De donde sale el motivo: lo puso el usuario o viene con el sistema.
+enum FiltroOrigen { todos, manuales, delSistema }
+
+/// Si suma o resta stock.
+enum FiltroMovimiento { todos, entradas, salidas }
+
+final origenMotivoProvider = StateProvider.autoDispose(
+  (ref) => FiltroOrigen.todos,
+);
+final tipoMotivoProvider = StateProvider.autoDispose(
+  (ref) => FiltroMovimiento.todos,
+);
+
+final filtrosMotivosActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(origenMotivoProvider) != FiltroOrigen.todos) n++;
+  if (ref.watch(tipoMotivoProvider) != FiltroMovimiento.todos) n++;
+  if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
+  return n;
+});
+
 final motivosFiltradosProvider = Provider.autoDispose<List<Motivo>>((ref) {
   final todos = ref.watch(motivosProvider).valueOrNull ?? const <Motivo>[];
   final texto = ref.watch(busquedaMotivosProvider).trim().toLowerCase();
@@ -351,8 +372,32 @@ final motivosFiltradosProvider = Provider.autoDispose<List<Motivo>>((ref) {
    * esconderlos hacia parecer que el kardex inventaba motivos. Van despues de
    * los manuales, que son los que el usuario si administra.
    */
+  final origen = ref.watch(origenMotivoProvider);
+  final tipo = ref.watch(tipoMotivoProvider);
+  final estado = ref.watch(estadoFiltroProvider);
+
   final visibles =
-      todos.where((m) => texto.isEmpty || m.buscable.contains(texto)).toList()
+      todos
+          .where(
+            (m) => switch (origen) {
+              FiltroOrigen.todos => true,
+              FiltroOrigen.manuales => !m.delSistema,
+              FiltroOrigen.delSistema => m.delSistema,
+            },
+          )
+          .where(
+            (m) => switch (tipo) {
+              FiltroMovimiento.todos => true,
+              FiltroMovimiento.entradas => m.esEntrada,
+              FiltroMovimiento.salidas => !m.esEntrada,
+            },
+          )
+          // Los del sistema nunca se desactivan, asi que el filtro de estado
+          // no los toca: si no, pedir "inactivos" los borraria a todos de la
+          // lista sin que el usuario haya hecho nada raro.
+          .where((m) => m.delSistema || pasaEstado(m.activo, estado))
+          .where((m) => texto.isEmpty || m.buscable.contains(texto))
+          .toList()
         ..sort((a, b) {
           final porOrigen = (a.delSistema ? 1 : 0) - (b.delSistema ? 1 : 0);
           return porOrigen != 0 ? porOrigen : a.nombre.compareTo(b.nombre);
@@ -389,10 +434,32 @@ final ajustesProvider =
       AjustesControlador.new,
     );
 
+/// Motivo por el que se filtra el listado de ajustes. Null es "todos".
+///
+/// Es el filtro que se pide de verdad aqui: no se busca "un ajuste", se busca
+/// "las mermas del mes" o "lo que entro por donacion".
+final motivoAjusteFiltroProvider = StateProvider.autoDispose<int?>(
+  (ref) => null,
+);
+
+final filtrosAjustesActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(filtroDocumentoProvider) != FiltroDocumento.todos) n++;
+  if (ref.watch(motivoAjusteFiltroProvider) != null) n++;
+  return n;
+});
+
 final ajustesFiltradosProvider = Provider.autoDispose<List<DocumentoInventario>>((ref) {
   final todos = ref.watch(ajustesProvider).valueOrNull ?? const <DocumentoInventario>[];
   final texto = ref.watch(busquedaAjustesProvider).trim().toLowerCase();
-  return todos.where((d) => texto.isEmpty || d.buscable.contains(texto)).toList();
+  final filtro = ref.watch(filtroDocumentoProvider);
+  final motivoId = ref.watch(motivoAjusteFiltroProvider);
+
+  return todos
+      .where((d) => pasaDocumento(d.anulado, filtro))
+      .where((d) => motivoId == null || d.motivoId == motivoId)
+      .where((d) => texto.isEmpty || d.buscable.contains(texto))
+      .toList();
 });
 
 // --- Transferencias ---
