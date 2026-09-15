@@ -200,7 +200,7 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
                 ? const AppVacio(
                     icono: Icons.fact_check_outlined,
                     titulo: 'Sin motivos',
-                    detalle: 'Los motivos del sistema (venta, compra...) no aparecen aquí.',
+                    detalle: 'Crea los motivos con los que justificas un ajuste.',
                   )
                 : RefreshIndicator(
                     onRefresh: () => ref.read(motivosProvider.notifier).recargar(),
@@ -216,7 +216,9 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
                       itemBuilder: (context, i) => _TarjetaMotivo(
                         motivo: visibles[i],
                         color: color,
-                        onEditar: () => mostrarFormularioMotivo(context, ref, motivo: visibles[i]),
+                        onEditar: visibles[i].delSistema
+                            ? null
+                            : () => mostrarFormularioMotivo(context, ref, motivo: visibles[i]),
                       ),
                     ),
                   ),
@@ -303,11 +305,13 @@ class _TarjetaAjuste extends StatelessWidget {
 }
 
 class _TarjetaMotivo extends StatelessWidget {
-  const _TarjetaMotivo({required this.motivo, required this.color, required this.onEditar});
+  const _TarjetaMotivo({required this.motivo, required this.color, this.onEditar});
 
   final Motivo motivo;
   final Color color;
-  final VoidCallback onEditar;
+
+  /// Null en los del sistema: no hay accion que ofrecerles.
+  final VoidCallback? onEditar;
 
   @override
   Widget build(BuildContext context) {
@@ -317,6 +321,15 @@ class _TarjetaMotivo extends StatelessWidget {
       titulo: motivo.nombre,
       insignia: AppEtiqueta(motivo.esEntrada ? 'Entrada' : 'Salida'),
       campos: [
+        // Explica por que unas tarjetas no tienen acciones.
+        CampoDetalle(
+          'Origen',
+          motivo.delSistema ? 'Sistema' : 'Manual',
+          widget: AppEtiqueta(
+            motivo.delSistema ? 'Sistema' : 'Manual',
+            tono: motivo.delSistema ? EtiquetaTono.neutral : EtiquetaTono.modulo,
+          ),
+        ),
         CampoDetalle('Código', motivo.codigo),
         CampoDetalle('Usos', '${motivo.movimientos}'),
         CampoDetalle(
@@ -330,12 +343,13 @@ class _TarjetaMotivo extends StatelessWidget {
       ],
       onTap: onEditar,
       acciones: [
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+          ),
       ],
     );
   }

@@ -248,10 +248,21 @@ final motivosDisponiblesProvider = Provider.autoDispose<List<Motivo>>((ref) {
 final motivosFiltradosProvider = Provider.autoDispose<List<Motivo>>((ref) {
   final todos = ref.watch(motivosProvider).valueOrNull ?? const <Motivo>[];
   final texto = ref.watch(busquedaMotivosProvider).trim().toLowerCase();
-  return todos
-      .where((m) => !m.delSistema)
-      .where((m) => texto.isEmpty || m.buscable.contains(texto))
-      .toList();
+  /*
+   * Los del sistema tambien se listan, como en la web.
+   *
+   * Recepcion de compra, venta, venta anulada... no se editan ni se borran,
+   * pero se ven: son los que explican la mayoria de las filas del kardex y
+   * esconderlos hacia parecer que el kardex inventaba motivos. Van despues de
+   * los manuales, que son los que el usuario si administra.
+   */
+  final visibles =
+      todos.where((m) => texto.isEmpty || m.buscable.contains(texto)).toList()
+        ..sort((a, b) {
+          final porOrigen = (a.delSistema ? 1 : 0) - (b.delSistema ? 1 : 0);
+          return porOrigen != 0 ? porOrigen : a.nombre.compareTo(b.nombre);
+        });
+  return visibles;
 });
 
 // --- Ajustes ---
