@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../compartido/catalogo_listo.dart';
-import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_lineas_producto.dart';
+import '../../../compartido/widgets/app_panel_producto.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_selector_buscable.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -16,28 +15,6 @@ import '../../maestros/datos/producto.dart';
 import '../../maestros/estado/maestros_controlador.dart';
 import '../estado/inventario_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
-
-class _FilaLineaTransferencia {
-  _FilaLineaTransferencia({
-    required this.productoId,
-    required this.producto,
-    this.presentacionId,
-    required this.presentacion,
-    required this.cantidad,
-  });
-
-  final int productoId;
-  final String producto;
-  final int? presentacionId;
-  final String presentacion;
-  final double cantidad;
-
-  Map<String, dynamic> aCuerpo() => {
-    'productoId': productoId,
-    'presentacionId': presentacionId,
-    'cantidad': cantidad,
-  };
-}
 
 /// Mueve mercaderia entre dos almacenes propios. Sin costo: viaja con la
 /// mercaderia, al costo que ya tenia en el almacen de origen.
@@ -53,7 +30,7 @@ class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulari
 
   int? _origenId;
   int? _destinoId;
-  final List<_FilaLineaTransferencia> _lineas = [];
+  final List<LineaDocumento> _lineas = [];
 
   bool _guardando = false;
   String? _error;
@@ -94,7 +71,14 @@ class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulari
       'almacenOrigenId': _origenId,
       'almacenDestinoId': _destinoId,
       'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
-      'detalle': [for (final f in _lineas) f.aCuerpo()],
+      'detalle': [
+        for (final f in _lineas)
+          {
+            'productoId': f.productoId,
+            'presentacionId': f.presentacionId == 0 ? null : f.presentacionId,
+            'cantidad': f.cantidad,
+          },
+      ],
     };
 
     try {
@@ -109,117 +93,32 @@ class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulari
     }
   }
 
-  Future<void> _agregarLinea() async {
-    final productos = await catalogoListo(
-      context,
-      ref.read(productosProvider.future),
-      queEs: 'los productos',
-    );
-    if (!mounted) return;
-    final activos = productos.where((p) => p.activo).toList();
-    final producto = await mostrarSelectorBuscable<Producto>(
-      context: context,
-      titulo: 'Elige el producto',
-      items: activos,
-      buscable: (p) => p.buscable,
-      pistaBusqueda: 'Buscar por código o nombre',
-      fila: (p) => Text('${p.codigo} · ${p.nombre}', style: const TextStyle(fontSize: 14)),
-    );
-    if (producto == null || !mounted) return;
+  static List<Presentacion> _presentacionesDe(Producto p) =>
+      p.presentaciones.where((pr) => pr.activo && pr.esCompra).toList();
 
-    final presentaciones = producto.presentaciones.where((p) => p.esCompra).toList();
-    final cantidadCtrl = TextEditingController();
-    int? presentacionId = presentaciones.length == 1 ? presentaciones.first.id : null;
-    String? errorCantidad;
-
-    final fila = await showModalBottomSheet<_FilaLineaTransferencia>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            void guardar() {
-              final cantidad = double.tryParse(cantidadCtrl.text.trim().replaceAll(',', '.'));
-              setSheetState(() {
-                errorCantidad = cantidad == null || cantidad <= 0
-                    ? 'Debe ser mayor que cero.'
-                    : null;
-              });
-              if (errorCantidad != null) return;
-
-              Presentacion? presentacion;
-              for (final p in presentaciones) {
-                if (p.id == presentacionId) presentacion = p;
-              }
-              Navigator.of(context).pop(
-                _FilaLineaTransferencia(
-                  productoId: producto.id,
-                  producto: producto.nombre,
-                  presentacionId: presentacionId,
-                  presentacion: presentacion?.nombre ?? producto.unidadBase,
-                  cantidad: cantidad!,
-                ),
-              );
-            }
-
-            return Padding(
-              padding: EdgeInsets.only(
-                left: Dimen.espacio4,
-                right: Dimen.espacio4,
-                top: Dimen.espacio2,
-                bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    producto.nombre,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colores.tinta,
-                    ),
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  if (presentaciones.isNotEmpty) ...[
-                    AppSelector<int>(
-                      valor: presentacionId,
-                      etiqueta: 'Presentación',
-                      icono: Icons.inventory_2_outlined,
-                      opciones: [
-                        for (final p in presentaciones)
-                          Opcion(
-                            p.id,
-                            '${p.nombre} (${formatoNumero(p.factor)} ${producto.unidadBase})',
-                          ),
-                      ],
-                      onCambio: (v) => setSheetState(() => presentacionId = v),
-                    ),
-                    const SizedBox(height: Dimen.espacio4),
-                  ],
-                  AppCampo(
-                    controlador: cantidadCtrl,
-                    etiqueta: 'Cantidad',
-                    icono: Icons.numbers_outlined,
-                    tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-                    error: errorCantidad,
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  AppBoton(texto: 'Agregar', onPressed: guardar),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-    if (fila != null) setState(() => _lineas.add(fila));
+  /*
+   * Lo ultimo agregado va arriba, igual que en compras y ventas.
+   *
+   * Lo que se acaba de poner es lo que hay que revisar, y al final de una
+   * lista larga queda fuera de pantalla.
+   */
+  void _agregarLineas(List<LineaElegida> elegidas) {
+    setState(() {
+      _lineas.insertAll(0, [
+        for (final e in elegidas)
+          LineaDocumento(
+            productoId: e.producto.id,
+            producto: e.producto.nombre,
+            codigo: e.producto.codigo,
+            unidadBase: e.producto.unidadBase,
+            presentaciones: _presentacionesDe(e.producto),
+            presentacionId: e.presentacionId,
+            cantidad: e.cantidad,
+            importe: e.importe,
+          ),
+      ]);
+      _errorLineas = null;
+    });
   }
 
   @override
@@ -284,71 +183,27 @@ class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulari
             ),
             const SizedBox(height: Dimen.espacio5),
 
-            const Text(
-              'Productos',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
+            AppPanelProducto(
+              productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
+                  .where((p) => p.activo && p.controlaStock)
+                  .toList(),
+              cargando: ref.watch(productosProvider).isLoading,
+              paraVenta: false,
+              habilitado: !_guardando,
+              onAgregar: _agregarLineas,
             ),
-            if (_errorLineas != null) ...[
-              const SizedBox(height: Dimen.espacio1),
-              Text(_errorLineas!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
-            ],
-            const SizedBox(height: Dimen.espacio3),
+            const SizedBox(height: Dimen.espacio5),
 
-            for (final fila in _lineas) ...[
-              Container(
-                padding: const EdgeInsets.all(Dimen.espacio3),
-                decoration: BoxDecoration(
-                  color: Colores.superficie,
-                  border: Border.all(color: Colores.linea),
-                  borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            fila.producto,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colores.tinta,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${formatoNumero(fila.cantidad)} ${fila.presentacion}',
-                            style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() => _lineas.remove(fila)),
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: Dimen.espacio2),
-            ],
-            if (_lineas.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: Dimen.espacio3),
-                child: Text(
-                  'Todavía no agregaste productos.',
-                  style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
-                ),
-              ),
-            const SizedBox(height: Dimen.espacio2),
-
-            AppBoton(
-              texto: 'Agregar producto',
-              variante: BotonVariante.secundario,
-              icono: Icons.add,
-              onPressed: (_origenId == null || _guardando) ? null : _agregarLinea,
+            AppLineasProducto(
+              lineas: _lineas,
+              error: _errorLineas,
+              etiquetaImporte: 'Costo S/',
+              habilitado: !_guardando,
+              // Mover de almacen no cambia el costo: la capa viaja con la
+              // mercaderia, asi que no hay ningun importe que teclear.
+              mostrarImporte: false,
+              onCambio: () => setState(() {}),
+              onEliminar: (l) => setState(() => _lineas.remove(l)),
             ),
             const SizedBox(height: Dimen.espacio6),
 
