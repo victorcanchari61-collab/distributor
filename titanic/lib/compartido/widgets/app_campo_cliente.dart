@@ -15,6 +15,7 @@ Widget campoCliente({
   required void Function(Cliente) onElegir,
   String? error,
   bool habilitado = true,
+  bool cargando = false,
 }) {
   // Los desactivados no se ofrecen: no se le vende a un cliente dado de baja,
   // y verlo en la lista solo lleva a elegirlo y toparse con el error al grabar.
@@ -28,6 +29,7 @@ Widget campoCliente({
     textoElegido: elegido,
     error: error,
     habilitado: habilitado,
+    cargando: cargando,
     titulo: (c) => c.nombre,
     subtitulo: (c) {
       // Lo que distingue a dos bodegas con nombre parecido: su documento y

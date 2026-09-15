@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/tema/acento.dart';
@@ -46,6 +47,7 @@ class AppCampoBusqueda<T> extends StatefulWidget {
     this.habilitado = true,
     this.maximoSugerencias = 8,
     this.onBusquedaAmpliada,
+    this.cargando = false,
   });
 
   final String etiqueta;
@@ -67,6 +69,14 @@ class AppCampoBusqueda<T> extends StatefulWidget {
 
   final String? error;
   final bool habilitado;
+
+  /// El catálogo todavía está viniendo del servidor.
+  ///
+  /// Sin esto, "no hay ninguno" y "todavía no llegó ninguno" se veían igual:
+  /// el buscador decía "nada coincide" sobre una lista que ni siquiera había
+  /// terminado de cargar, y el que lo miraba concluía que el cliente no
+  /// existía.
+  final bool cargando;
 
   /// Cuántas coincidencias caen bajo el campo. Más no caben en el teclado
   /// abierto, y a partir de ahí lo que hace falta es afinar la búsqueda.
@@ -102,9 +112,20 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
     _foco.addListener(() => setState(() {}));
   }
 
+  /// Lo que hay para elegir ahora mismo, y si todavia falta por llegar.
+  late final _fuente = ValueNotifier<({List<T> items, bool cargando})>(
+    (items: widget.items, cargando: widget.cargando),
+  );
+
   @override
   void didUpdateWidget(covariant AppCampoBusqueda<T> viejo) {
     super.didUpdateWidget(viejo);
+
+    // La hoja abierta escucha esto: sin ello se queda con la lista que habia
+    // cuando se abrio, que puede ser ninguna.
+    if (widget.items != viejo.items || widget.cargando != viejo.cargando) {
+      _fuente.value = (items: widget.items, cargando: widget.cargando);
+    }
 
     // El formulario puede cambiar la selección por su cuenta — al elegir desde
     // la hoja ampliada, o al vaciarla después de agregar la línea. Si no se
@@ -119,6 +140,7 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
 
   @override
   void dispose() {
+    _fuente.dispose();
     _controlador.dispose();
     _foco.dispose();
     super.dispose();
@@ -215,7 +237,10 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
         child: _HojaBusqueda<T>(
           titulo: widget.etiqueta,
           pista: widget.pista,
-          items: widget.items,
+          // La hoja escucha la fuente en vez de quedarse con la foto del
+          // momento en que se abrió: si se abre mientras el catálogo viene en
+          // camino, se rellena sola al llegar en vez de quedarse vacía.
+          fuente: _fuente,
           titulos: widget.titulo,
           subtitulos: widget.subtitulo,
           buscable: widget.buscable,
@@ -341,7 +366,7 @@ class _HojaBusqueda<T> extends StatefulWidget {
   const _HojaBusqueda({
     required this.titulo,
     required this.pista,
-    required this.items,
+    required this.fuente,
     required this.titulos,
     required this.subtitulos,
     required this.buscable,
@@ -352,7 +377,10 @@ class _HojaBusqueda<T> extends StatefulWidget {
 
   final String titulo;
   final String pista;
-  final List<T> items;
+
+  /// De donde salen los elementos, mientras la hoja esta abierta.
+  final ValueListenable<({List<T> items, bool cargando})> fuente;
+
   final String Function(T) titulos;
   final String? Function(T)? subtitulos;
   final String Function(T) buscable;
@@ -376,9 +404,11 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
     super.dispose();
   }
 
+  List<T> get _items => widget.fuente.value.items;
+
   List<String> _opcionesDe(FiltroBusqueda<T> filtro) {
     final vistos = <String>{};
-    for (final item in widget.items) {
+    for (final item in _items) {
       final v = filtro.valor(item);
       if (v != null && v.trim().isNotEmpty) vistos.add(v);
     }
@@ -388,7 +418,7 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
   List<T> get _visibles {
     final texto = _texto.trim().toLowerCase();
 
-    return widget.items.where((item) {
+    return _items.where((item) {
       for (final f in widget.filtros) {
         final elegido = _filtros[f.etiqueta];
         if (elegido != null && f.valor(item) != elegido) return false;
@@ -399,6 +429,15 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
 
   @override
   Widget build(BuildContext context) {
+    // Repinta sola cuando el catalogo termina de llegar: la hoja puede abrirse
+    // antes que los datos, y hasta ahora se quedaba vacia para siempre.
+    return ValueListenableBuilder(
+      valueListenable: widget.fuente,
+      builder: (context, fuente, _) => _contenido(context, fuente.cargando),
+    );
+  }
+
+  Widget _contenido(BuildContext context, bool cargando) {
     final visibles = _visibles;
 
     return DraggableScrollableSheet(
@@ -497,7 +536,10 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      '${visibles.length} resultado${visibles.length == 1 ? '' : 's'}',
+                      cargando
+                          ? 'Cargando…'
+                          : '${visibles.length} resultado'
+                                '${visibles.length == 1 ? '' : 's'}',
                       style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
                     ),
                   ),
@@ -507,13 +549,19 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
             ),
             Expanded(
               child: visibles.isEmpty
-                  ? const Center(
+                  // Que todavia no haya llegado nada no es que no exista nada.
+                  ? Center(
                       child: Padding(
-                        padding: EdgeInsets.all(Dimen.espacio6),
-                        child: Text(
-                          'Nada coincide con lo que buscaste.',
-                          style: TextStyle(fontSize: 14, color: Colores.tintaSuave),
-                        ),
+                        padding: const EdgeInsets.all(Dimen.espacio6),
+                        child: cargando
+                            ? const CircularProgressIndicator()
+                            : const Text(
+                                'Nada coincide con lo que buscaste.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colores.tintaSuave,
+                                ),
+                              ),
                       ),
                     )
                   : ListView.separated(

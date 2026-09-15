@@ -296,6 +296,7 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
               productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
                   .where((p) => p.activo && p.controlaStock)
                   .toList(),
+              cargando: ref.watch(productosProvider).isLoading,
               paraVenta: false,
               habilitado: !_guardando && _motivoId != null,
               onAgregar: _agregarLineas,

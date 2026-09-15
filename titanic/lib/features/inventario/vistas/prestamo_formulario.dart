@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
@@ -116,7 +117,12 @@ class _PrestamoFormularioState extends ConsumerState<PrestamoFormulario> {
   }
 
   Future<void> _agregarLinea() async {
-    final productos = ref.read(productosProvider).valueOrNull ?? const <Producto>[];
+    final productos = await catalogoListo(
+      context,
+      ref.read(productosProvider.future),
+      queEs: 'los productos',
+    );
+    if (!mounted) return;
     final activos = productos.where((p) => p.activo).toList();
     final producto = await mostrarSelectorBuscable<Producto>(
       context: context,

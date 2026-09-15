@@ -277,6 +277,9 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
 
             campoCliente(
               clientes: ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[],
+              // Mientras el catalogo viene, el buscador lo dice en vez de
+              // afirmar que no hay ningun cliente.
+              cargando: ref.watch(clientesProvider).isLoading,
               elegido: _clienteNombre,
               error: _errorCliente,
               habilitado: !_guardando,
@@ -366,6 +369,7 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
               productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
                   .where((p) => p.activo && p.controlaStock)
                   .toList(),
+              cargando: ref.watch(productosProvider).isLoading,
               paraVenta: true,
               stock: ref.watch(stockDisponibleProvider(_almacenReservaId)).valueOrNull,
               habilitado: !_guardando,

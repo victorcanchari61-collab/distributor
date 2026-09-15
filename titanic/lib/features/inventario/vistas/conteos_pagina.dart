@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
@@ -93,7 +94,14 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
       _error = null;
     });
 
-    final motivos = ref.read(motivosProvider).valueOrNull ?? const <Motivo>[];
+    // El conteo se cierra con dos motivos del sistema: si el catalogo aun
+    // no llego, no se encuentran y el ajuste se arma sin motivo.
+    final motivos = await catalogoListo(
+      context,
+      ref.read(motivosProvider.future),
+      queEs: 'los motivos',
+    );
+    if (!mounted) return;
     Motivo? buscarMotivo(String codigo) {
       for (final m in motivos) {
         if (m.codigo == codigo) return m;

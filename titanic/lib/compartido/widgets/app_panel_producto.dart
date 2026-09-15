@@ -43,6 +43,7 @@ class AppPanelProducto extends StatefulWidget {
   const AppPanelProducto({
     super.key,
     required this.productos,
+    this.cargando = false,
     required this.onAgregar,
     this.paraVenta = true,
     this.stock,
@@ -51,6 +52,9 @@ class AppPanelProducto extends StatefulWidget {
   });
 
   final List<Producto> productos;
+
+  /// El catálogo todavía viene del servidor.
+  final bool cargando;
 
   /// Se llama con una línea (desde el panel) o con varias (desde la hoja).
   final void Function(List<LineaElegida>) onAgregar;
@@ -280,6 +284,7 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
             icono: Icons.inventory_2_outlined,
             pista: 'Escribe el nombre o el código',
             items: widget.productos,
+            cargando: widget.cargando,
             habilitado: widget.habilitado,
             textoElegido: _producto?.nombre,
             titulo: (p) => p.nombre,

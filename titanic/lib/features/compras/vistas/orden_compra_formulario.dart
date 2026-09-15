@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
@@ -154,7 +155,12 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
   }
 
   Future<void> _elegirProveedor() async {
-    final proveedores = ref.read(proveedoresProvider).valueOrNull ?? const <Proveedor>[];
+    final proveedores = await catalogoListo(
+      context,
+      ref.read(proveedoresProvider.future),
+      queEs: 'los proveedores',
+    );
+    if (!mounted) return;
     final activos = proveedores.where((p) => p.activo).toList();
     final elegido = await mostrarSelectorBuscable<Proveedor>(
       context: context,
@@ -304,6 +310,7 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
               productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
                   .where((p) => p.activo && p.controlaStock)
                   .toList(),
+              cargando: ref.watch(productosProvider).isLoading,
               paraVenta: false,
               habilitado: !_guardando,
               onAgregar: _agregarLineas,

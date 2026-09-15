@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
@@ -103,6 +104,11 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
   }
 
   Future<void> _elegirCompra() async {
+    // Esperar a que las compras esten cargadas: leerlas a secas solo
+    // dispara la carga y devuelve una lista vacia, y el selector se abria
+    // diciendo que no habia ninguna compra pendiente.
+    await catalogoListo(context, ref.read(comprasProvider.future), queEs: 'las compras');
+    if (!mounted) return;
     final compras = ref.read(comprasConPendienteProvider);
     final elegida = await mostrarSelectorBuscable<Compra>(
       context: context,

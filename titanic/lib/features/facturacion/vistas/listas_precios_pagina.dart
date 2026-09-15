@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
@@ -11,7 +12,6 @@ import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
-import '../../maestros/datos/producto.dart';
 import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/lista_precio.dart';
 import '../estado/facturacion_controlador.dart';
@@ -161,7 +161,12 @@ class ListasPreciosPagina extends ConsumerWidget {
   }
 
   Future<void> _agregarPrecio(BuildContext context, WidgetRef ref, ListaPrecio lista) async {
-    final productos = ref.read(productosProvider).valueOrNull ?? const <Producto>[];
+    final productos = await catalogoListo(
+      context,
+      ref.read(productosProvider.future),
+      queEs: 'los productos',
+    );
+    if (!context.mounted) return;
     final nuevo = await mostrarFormularioPrecio(context, productos: productos);
     if (nuevo == null || !context.mounted) return;
     await _guardarPrecio(context, ref, lista, nuevo);
@@ -173,7 +178,12 @@ class ListasPreciosPagina extends ConsumerWidget {
     ListaPrecio lista,
     Precio existente,
   ) async {
-    final productos = ref.read(productosProvider).valueOrNull ?? const <Producto>[];
+    final productos = await catalogoListo(
+      context,
+      ref.read(productosProvider.future),
+      queEs: 'los productos',
+    );
+    if (!context.mounted) return;
     final editado = await mostrarFormularioPrecio(context, productos: productos, existente: existente);
     if (editado == null || !context.mounted) return;
     await _guardarPrecio(context, ref, lista, editado, reemplazando: existente);
