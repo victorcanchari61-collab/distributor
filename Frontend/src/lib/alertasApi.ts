@@ -9,6 +9,9 @@ export type TipoAlerta =
   | 'CREDITO_PENDIENTE'
   | 'RESERVA_VENCIDA'
   | 'STOCK_REPUESTO'
+  | 'DOCUMENTO_VEHICULO'
+  | 'LICENCIA_CONDUCTOR'
+  | 'SOLICITUD_ACCESO'
 
 export interface AlertaResponse {
   id: string

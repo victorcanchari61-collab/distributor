@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Bell, LogOut, Menu, PackageCheck, PackageX, PanelLeftOpen, Search } from 'lucide-react'
+import {
+  AlertTriangle,
+  Bell,
+  LockKeyhole,
+  LogOut,
+  Menu,
+  PackageCheck,
+  PackageX,
+  PanelLeftOpen,
+  Search,
+} from 'lucide-react'
 import { cn } from '../ui'
 import { alertaApi } from '../../lib/alertasApi'
 import type { AlertaResponse } from '../../lib/alertasApi'
@@ -49,7 +59,9 @@ export function Topbar({
   }, [cargar])
 
   // Cualquiera de estos módulos puede crear, resolver o vencer una alerta.
-  useRealtime(['stock', 'compras', 'recepciones', 'notasventa', 'pedidos'], cargar)
+  // 'permisos' está porque un acceso pedido desde el móvil es una alerta más:
+  // sin él, el admin no se enteraba hasta recargar la página.
+  useRealtime(['stock', 'compras', 'recepciones', 'notasventa', 'pedidos', 'permisos'], cargar)
 
   useEffect(() => {
     if (!abierto) return
@@ -184,6 +196,8 @@ export function Topbar({
                         <PackageCheck size={14} />
                       ) : a.tipo === 'LOTE_POR_VENCER' ? (
                         <PackageX size={14} />
+                      ) : a.tipo === 'SOLICITUD_ACCESO' ? (
+                        <LockKeyhole size={14} />
                       ) : (
                         <AlertTriangle size={14} />
                       )}

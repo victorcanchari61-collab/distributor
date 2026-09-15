@@ -11,6 +11,7 @@ import '../../features/maestros/estado/maestros_controlador.dart';
 // usa el de TMS con prefijo para no confundirlos.
 import '../../features/tms/estado/tms_controlador.dart' as tms;
 import '../../features/ventas/estado/ventas_controlador.dart';
+import '../../features/alertas/estado/alertas_controlador.dart';
 import '../permisos/permisos.dart';
 
 /// Qué hay que volver a pedir cuando cambia cada módulo.
@@ -73,7 +74,8 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   'empresas': [empresasProvider],
 
   // --- Quién puede hacer qué ---
-  'permisos': [misPermisosProvider, usuariosProvider, rolesProvider],
+  // alertasProvider: un acceso pedido es una alerta mas para quien lo aprueba.
+  'permisos': [misPermisosProvider, usuariosProvider, rolesProvider, alertasProvider],
   'roles': [misPermisosProvider, rolesProvider, usuariosProvider],
   'usuarios': [usuariosProvider],
 };

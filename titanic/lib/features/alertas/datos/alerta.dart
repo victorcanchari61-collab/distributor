@@ -51,4 +51,10 @@ class TipoAlerta {
   static const creditoPendiente = 'CREDITO_PENDIENTE';
   static const reservaVencida = 'RESERVA_VENCIDA';
   static const stockRepuesto = 'STOCK_REPUESTO';
+  static const documentoVehiculo = 'DOCUMENTO_VEHICULO';
+  static const licenciaConductor = 'LICENCIA_CONDUCTOR';
+
+  /// Alguien pidio entrar a una pantalla que su rol no incluye. Solo llega a
+  /// quien puede resolverla.
+  static const solicitudAcceso = 'SOLICITUD_ACCESO';
 }

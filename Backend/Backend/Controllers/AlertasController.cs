@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,5 +18,12 @@ public class AlertasController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _alertas.GetAsync());
+    public async Task<IActionResult> GetAll() => Ok(await _alertas.GetAsync(UsuarioActual()));
+
+    private int? UsuarioActual() =>
+        int.TryParse(
+            User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"),
+            out var id)
+            ? id
+            : null;
 }

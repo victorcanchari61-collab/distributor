@@ -26,22 +26,25 @@ public class AlertasService : IAlertasService
     private readonly IComprasRepository _compras;
     private readonly IVentasRepository _ventas;
     private readonly IFlotaService _flota;
+    private readonly IPermisoService _permisos;
 
     public AlertasService(
         IInventarioService inventario,
         IInventarioRepository inventarioRepo,
         IComprasRepository compras,
         IVentasRepository ventas,
-        IFlotaService flota)
+        IFlotaService flota,
+        IPermisoService permisos)
     {
         _inventario = inventario;
         _inventarioRepo = inventarioRepo;
         _compras = compras;
         _ventas = ventas;
         _flota = flota;
+        _permisos = permisos;
     }
 
-    public async Task<IEnumerable<AlertaResponse>> GetAsync()
+    public async Task<IEnumerable<AlertaResponse>> GetAsync(int? usuarioId = null)
     {
         var alertas = new List<AlertaResponse>();
         var ahora = DateTime.UtcNow;
@@ -54,6 +57,7 @@ public class AlertasService : IAlertasService
         alertas.AddRange(await StockRepuestoAsync(ahora));
         alertas.AddRange(await DocumentosVehiculoAsync());
         alertas.AddRange(await LicenciasConductorAsync());
+        alertas.AddRange(await SolicitudesDeAccesoAsync(usuarioId));
 
         return alertas
             .OrderBy(a => Peso(a.Severidad))
@@ -67,6 +71,45 @@ public class AlertasService : IAlertasService
         SeveridadAlerta.Advertencia => 1,
         _ => 2
     };
+
+    /// <summary>
+    /// Accesos pedidos y todavía sin resolver.
+    ///
+    /// Es la única alerta que no sale del negocio sino de una persona: alguien
+    /// se topó con una pantalla bloqueada y pidió entrar. El APK le contesta
+    /// "un administrador lo verá en su bandeja", pero la bandeja no avisaba
+    /// sola — había que entrar a Config y acordarse de mirar—, así que el que
+    /// pedía se quedaba esperando sin que nadie supiera que estaba esperando.
+    ///
+    /// Solo la ve quien puede abrir esa bandeja: al resto no le sirve de nada
+    /// y además diría quién anda pidiendo qué.
+    /// </summary>
+    private async Task<List<AlertaResponse>> SolicitudesDeAccesoAsync(int? usuarioId)
+    {
+        if (usuarioId is not int id) return [];
+        if (!await _permisos.PuedeAsync(id, "config.accesos", Accion.Ver)) return [];
+
+        var pendientes = await _permisos.SolicitudesAsync(soloPendientes: true);
+        if (pendientes.Count == 0) return [];
+
+        return
+        [
+            .. pendientes.Select(s => new AlertaResponse
+            {
+                Id = $"solicitud-{s.Id}",
+                Tipo = TipoAlerta.SolicitudAcceso,
+                // Advertencia y no crítica: no se cae nada, pero hay alguien
+                // parado sin poder trabajar hasta que se le conteste.
+                Severidad = SeveridadAlerta.Advertencia,
+                Titulo = $"Pide acceso: {s.Usuario?.Nombre ?? "Un usuario"}",
+                Detalle = string.IsNullOrWhiteSpace(s.Motivo)
+                    ? $"{s.Submodulo} · {s.Accion}"
+                    : $"{s.Submodulo} · {s.Accion} · {s.Motivo}",
+                Ruta = "config.accesos",
+                Fecha = s.FechaSolicitud,
+            })
+        ];
+    }
 
     /// <summary>
     /// SOAT, revisión técnica y permiso a punto de vencer o ya vencidos.

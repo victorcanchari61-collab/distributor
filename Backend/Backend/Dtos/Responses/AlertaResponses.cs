@@ -25,6 +25,15 @@ public static class TipoAlerta
 
     /// <summary>Licencia de conducir de un conductor.</summary>
     public const string LicenciaConductor = "LICENCIA_CONDUCTOR";
+
+    /// <summary>
+    /// Alguien pidió entrar a una pantalla que su rol no incluye.
+    ///
+    /// Solo la ve quien puede resolverla. Es la única alerta que nace de una
+    /// persona esperando: hasta que un administrador la mire, ese vendedor
+    /// está parado delante del cliente sin poder hacer su trabajo.
+    /// </summary>
+    public const string SolicitudAcceso = "SOLICITUD_ACCESO";
 }
 
 /// <summary>
