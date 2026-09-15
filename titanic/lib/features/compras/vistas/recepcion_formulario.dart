@@ -18,7 +18,9 @@ import '../../../compartido/widgets/app_aviso.dart';
 
 class _FilaRecepcion {
   _FilaRecepcion({required this.detalle})
-    : cantidadCtrl = TextEditingController(text: formatoNumero(detalle.cantidadPendiente)),
+    : cantidadCtrl = TextEditingController(
+        text: formatoNumero(_enPresentacion(detalle, detalle.cantidadPendiente)),
+      ),
       loteCtrl = TextEditingController();
 
   final CompraDetalle detalle;
@@ -26,7 +28,37 @@ class _FilaRecepcion {
   final TextEditingController loteCtrl;
   DateTime? vencimiento;
 
-  double get cantidad => double.tryParse(cantidadCtrl.text.trim().replaceAll(',', '.')) ?? 0;
+  /*
+   * Se compro por saco: se recibe por saco.
+   *
+   * La compra guarda todo en unidad base —50 sacos son 2500 KG— y este
+   * formulario pedia ese numero, que no es el que cuenta el que descarga el
+   * camion. El factor sale de la propia linea: cuantas unidades base es cada
+   * presentacion.
+   */
+  static double _factor(CompraDetalle d) =>
+      d.cantidadPresentacion > 0 ? d.cantidad / d.cantidadPresentacion : 1;
+
+  /// Un numero en unidad base, dicho en la presentacion de la compra.
+  static double _enPresentacion(CompraDetalle d, double base) {
+    final valor = base / _factor(d);
+    // Sin decimales de mas: 3 sacos son 3, no 3.0000.
+    return double.parse(valor.toStringAsFixed(4));
+  }
+
+  /// Como se escribe y se lee en pantalla.
+  String get unidad => detalle.presentacion ?? detalle.unidadBase;
+
+  double get pendienteEnPresentacion =>
+      _enPresentacion(detalle, detalle.cantidadPendiente);
+
+  /// Lo tecleado, tal cual: en presentaciones.
+  double get cantidad =>
+      double.tryParse(cantidadCtrl.text.trim().replaceAll(',', '.')) ?? 0;
+
+  /// Lo mismo en unidad base, que es como la compra tiene pactadas sus
+  /// cantidades y como el almacen lleva el stock.
+  double get cantidadBase => cantidad * _factor(detalle);
 }
 
 /// Registra que llego mercaderia de una compra, total o parcialmente.
@@ -135,7 +167,8 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
         for (final f in lineas)
           {
             'compraDetalleId': f.detalle.id,
-            'cantidad': f.cantidad,
+            // De vuelta a unidad base: el backend recibe siempre en esa.
+            'cantidad': f.cantidadBase,
             'lote': f.loteCtrl.text.trim().isEmpty ? null : f.loteCtrl.text.trim(),
             'fechaVencimiento': f.vencimiento?.toIso8601String(),
           },
@@ -311,7 +344,8 @@ class _TarjetaFilaRecepcion extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            'Pendiente: ${formatoNumero(d.cantidadPendiente)} ${d.unidadBase}',
+            'Pendiente: ${formatoNumero(fila.pendienteEnPresentacion)} ${fila.unidad}'
+            '${d.presentacion == null ? '' : ' · ${formatoNumero(d.cantidadPendiente)} ${d.unidadBase}'}',
             style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
           ),
           const SizedBox(height: Dimen.espacio3),
@@ -320,7 +354,7 @@ class _TarjetaFilaRecepcion extends StatelessWidget {
               Expanded(
                 child: AppCampo(
                   controlador: fila.cantidadCtrl,
-                  etiqueta: 'Llegó (${d.unidadBase})',
+                  etiqueta: 'Llegó (${fila.unidad})',
                   tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
                 ),
               ),

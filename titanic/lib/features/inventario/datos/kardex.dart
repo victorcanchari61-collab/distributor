@@ -17,7 +17,9 @@ class MovimientoKardex {
     required this.cantidad,
     required this.costoUnitario,
     required this.costoTotal,
+    this.saldoAnterior = 0,
     required this.saldo,
+    this.valorizado = 0,
     required this.anulado,
   });
 
@@ -44,8 +46,14 @@ class MovimientoKardex {
   final double costoUnitario;
   final double costoTotal;
 
+  /// Stock con el que llegaba el producto a este movimiento.
+  final double saldoAnterior;
+
   /// Stock que quedó después de este movimiento.
   final double saldo;
+
+  /// Cuánto valía ese stock después, al costo con el que entró cada capa.
+  final double valorizado;
 
   final bool anulado;
 
@@ -78,7 +86,9 @@ class MovimientoKardex {
         cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0,
         costoUnitario: (json['costoUnitario'] as num?)?.toDouble() ?? 0,
         costoTotal: (json['costoTotal'] as num?)?.toDouble() ?? 0,
+        saldoAnterior: (json['saldoAnterior'] as num?)?.toDouble() ?? 0,
         saldo: (json['saldo'] as num?)?.toDouble() ?? 0,
+        valorizado: (json['valorizado'] as num?)?.toDouble() ?? 0,
         anulado: json['anulado'] as bool? ?? false,
       );
 }

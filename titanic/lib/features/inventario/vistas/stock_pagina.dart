@@ -123,11 +123,66 @@ class _TarjetaStock extends StatelessWidget {
       CampoDetalle('Reservado', '${formatoNumero(stock.reservado)} ${stock.unidadBase}'),
       CampoDetalle('Disponible', '${formatoNumero(stock.disponible)} ${stock.unidadBase}'),
     ],
+    // Cuanto pedir. El triangulo ambar avisa que falta, pero no cuanto, que es
+    // lo que se necesita para armar la compra.
+    if (stock.faltaReponer > 0)
+      CampoDetalle(
+        'Falta reponer',
+        '${formatoNumero(stock.faltaReponer)} ${stock.unidadBase}',
+        widget: Text(
+          '${formatoNumero(stock.faltaReponer)} ${stock.unidadBase}',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: Colores.advertencia,
+          ),
+        ),
+      ),
+
+    // Lo comprado que no ha llegado: sin esto se vuelve a comprar lo que ya
+    // viene en camino, que es como el almacen termina con el doble.
+    if (stock.enTransito > 0)
+      CampoDetalle(
+        'En camino',
+        '${formatoNumero(stock.enTransito)} ${stock.unidadBase}',
+      ),
+
+    // Para cuantos dias alcanza al ritmo de venta del ultimo mes.
+    if (stock.diasStock != null)
+      CampoDetalle(
+        'Días de stock',
+        '${stock.diasStock} d',
+        widget: Text(
+          '${stock.diasStock} d',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: stock.diasStock! <= 7
+                ? Colores.peligro
+                : stock.diasStock! <= 15
+                ? Colores.advertencia
+                : Colores.tintaSuave,
+          ),
+        ),
+      ),
+
     CampoDetalle(
       'Costo actual',
       stock.costoActual == null ? null : 'S/ ${stock.costoActual!.toStringAsFixed(2)}',
     ),
     CampoDetalle('Valorizado', 'S/ ${stock.valorizado.toStringAsFixed(2)}'),
+
+    // Lo que no rota: 200 kilos sin moverse desde julio es plata parada.
+    CampoDetalle(
+      'Última salida',
+      stock.ultimaSalida == null ? 'Nunca' : _fecha(stock.ultimaSalida!),
+      enTarjeta: false,
+    ),
+    CampoDetalle(
+      'Última entrada',
+      stock.ultimaEntrada == null ? 'Nunca' : _fecha(stock.ultimaEntrada!),
+      enTarjeta: false,
+    ),
   ];
 
   List<Widget> get _capas => [

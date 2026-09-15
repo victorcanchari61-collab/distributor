@@ -130,7 +130,19 @@ class _TarjetaKardex extends StatelessWidget {
       movimiento.esReserva ? '—' : 'S/ ${movimiento.costoTotal.toStringAsFixed(2)}',
       enTarjeta: false,
     ),
+    // Con cuanto llegaba y con cuanto quedo: sin el anterior, una fila sola no
+    // se puede comprobar —habia que mirar la de arriba—.
+    CampoDetalle(
+      'Stock anterior',
+      '${movimiento.saldoAnterior} ${movimiento.unidadBase}',
+      enTarjeta: false,
+    ),
     CampoDetalle('Stock actual', '${movimiento.saldo} ${movimiento.unidadBase}'),
+    CampoDetalle(
+      'Valorizado',
+      'S/ ${movimiento.valorizado.toStringAsFixed(2)}',
+      enTarjeta: false,
+    ),
   ];
 
   /// La reserva no suma ni resta: aparta. Por eso va sin signo.

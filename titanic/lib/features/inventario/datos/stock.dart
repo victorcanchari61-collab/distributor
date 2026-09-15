@@ -45,6 +45,10 @@ class Stock {
     this.costoActual,
     this.costoUltimo,
     required this.valorizado,
+    this.enTransito = 0,
+    this.ultimaEntrada,
+    this.ultimaSalida,
+    this.diasStock,
     required this.capas,
   });
 
@@ -73,6 +77,24 @@ class Stock {
   final double? costoActual;
   final double? costoUltimo;
   final double valorizado;
+
+  /// Comprado y todavía sin llegar. Es del negocio, no de un almacén: la
+  /// compra no elige almacén, lo elige la recepción cuando la mercadería llega.
+  final double enTransito;
+
+  final DateTime? ultimaEntrada;
+  final DateTime? ultimaSalida;
+
+  /// Para cuántos días alcanza al ritmo del último mes. Null si no se vendió
+  /// nada: sin ventas no hay ritmo que proyectar.
+  final int? diasStock;
+
+  /// Cuánto falta para llegar al mínimo. Cero si no falta nada.
+  double get faltaReponer {
+    final falta = stockMinimo - stock;
+    return falta > 0 ? falta : 0;
+  }
+
   final List<CapaStock> capas;
 
   /// Texto contra el que se busca en la lista.
@@ -96,6 +118,10 @@ class Stock {
     costoActual: (json['costoActual'] as num?)?.toDouble(),
     costoUltimo: (json['costoUltimo'] as num?)?.toDouble(),
     valorizado: (json['valorizado'] as num?)?.toDouble() ?? 0,
+    enTransito: (json['enTransito'] as num?)?.toDouble() ?? 0,
+    ultimaEntrada: fechaDeJsonOpcional(json['ultimaEntrada']),
+    ultimaSalida: fechaDeJsonOpcional(json['ultimaSalida']),
+    diasStock: json['diasStock'] as int?,
     capas: (json['capas'] as List? ?? const [])
         .map((e) => CapaStock.desdeJson(e as Map<String, dynamic>))
         .toList(),
