@@ -58,6 +58,17 @@ class LineaVenta {
   );
 }
 
+/// En qué quedaron el vendedor y el cliente al tomar el pedido.
+///
+/// Lo lee el repartidor al llegar: si deja la mercadería solo contra el dinero
+/// o si va fiada. No mueve plata por sí sola —el cobro se registra al
+/// entregar—: es el acuerdo, escrito.
+class CondicionPago {
+  const CondicionPago._();
+  static const contado = 'CONTADO';
+  static const credito = 'CREDITO';
+}
+
 class EstadoPedido {
   const EstadoPedido._();
   static const pendiente = 'PENDIENTE';
@@ -76,6 +87,7 @@ class Pedido {
     required this.cliente,
     this.listaPrecioId,
     this.listaPrecio,
+    this.condicionPago = CondicionPago.contado,
     required this.fecha,
     required this.estado,
     this.observacion,
@@ -94,6 +106,9 @@ class Pedido {
 
   final int? listaPrecioId;
   final String? listaPrecio;
+
+  /// CONTADO o CREDITO: lo acordado con el cliente.
+  final String condicionPago;
 
   final DateTime fecha;
 
@@ -118,6 +133,7 @@ class Pedido {
     clienteId: json['clienteId'] as int,
     cliente: json['cliente'] as String? ?? '',
     listaPrecioId: json['listaPrecioId'] as int?,
+    condicionPago: json['condicionPago'] as String? ?? CondicionPago.contado,
     listaPrecio: json['listaPrecio'] as String?,
     fecha: fechaDeJson(json['fecha'] as String),
     estado: json['estado'] as String? ?? EstadoPedido.pendiente,

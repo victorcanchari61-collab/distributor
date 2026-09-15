@@ -124,7 +124,20 @@ class PedidosPagina extends ConsumerWidget {
 
   Future<void> _confirmar(BuildContext context, WidgetRef ref, Pedido pedido) async {
     final almacenes = ref.read(almacenesActivosProvider);
-    int? almacenId = almacenes.length == 1 ? almacenes.first.id : null;
+
+    /*
+     * Con reserva no se pregunta.
+     *
+     * El pedido ya aparto la mercaderia de un almacen concreto: de ahi sale.
+     * Preguntarlo otra vez invita a elegir otro y dejar la reserva colgada en
+     * el primero, descontando de donde nadie aparto nada. El backend tambien
+     * lo ignora en ese caso, pero la pregunta sobra y confunde.
+     */
+    final conReserva = pedido.reservaStock && pedido.almacenId != null;
+
+    int? almacenId = conReserva
+        ? pedido.almacenId
+        : (almacenes.length == 1 ? almacenes.first.id : null);
     String? error;
 
     final confirmado = await showModalBottomSheet<bool>(
@@ -154,23 +167,54 @@ class PedidosPagina extends ConsumerWidget {
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
                   ),
                   const SizedBox(height: Dimen.espacio2),
-                  const Text(
-                    'Elige de dónde sale la mercadería. El stock se descuenta al confirmar. '
-                    'Un pedido no lleva pagos: la venta queda a crédito, pendiente de cobro.',
-                    style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
+                  Text(
+                    conReserva
+                        ? 'Sale del almacén donde está reservada. El stock se descuenta al '
+                              'confirmar. Un pedido no lleva pagos: la venta queda a crédito, '
+                              'pendiente de cobro.'
+                        : 'Elige de dónde sale la mercadería. El stock se descuenta al '
+                              'confirmar. Un pedido no lleva pagos: la venta queda a crédito, '
+                              'pendiente de cobro.',
+                    style: const TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
                   ),
                   const SizedBox(height: Dimen.espacio4),
                   if (error != null) ...[
                     Text(error!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
                     const SizedBox(height: Dimen.espacio2),
                   ],
-                  AppSelector<int>(
-                    valor: almacenId,
-                    etiqueta: 'Almacén',
-                    icono: Icons.warehouse_outlined,
-                    opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
-                    onCambio: (v) => setSheetState(() => almacenId = v),
-                  ),
+                  if (conReserva)
+                    Container(
+                      padding: const EdgeInsets.all(Dimen.espacio3),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colores.linea),
+                        borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.warehouse_outlined,
+                            size: 18,
+                            color: Colores.tintaTenue,
+                          ),
+                          const SizedBox(width: Dimen.espacio2),
+                          Expanded(
+                            child: Text(
+                              pedido.almacen ?? 'Almacén de la reserva',
+                              style: const TextStyle(fontSize: 14, color: Colores.tinta),
+                            ),
+                          ),
+                          const AppEtiqueta('stock reservado', tono: EtiquetaTono.modulo),
+                        ],
+                      ),
+                    )
+                  else
+                    AppSelector<int>(
+                      valor: almacenId,
+                      etiqueta: 'Almacén',
+                      icono: Icons.warehouse_outlined,
+                      opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
+                      onCambio: (v) => setSheetState(() => almacenId = v),
+                    ),
                   const SizedBox(height: Dimen.espacio4),
                   AppBoton(
                     texto: 'Confirmar y despachar',
@@ -194,7 +238,9 @@ class PedidosPagina extends ConsumerWidget {
 
     final mensajero = Aviso.de(context);
     try {
-      await ref.read(pedidosProvider.notifier).confirmar(pedido.id, {'almacenId': almacenId});
+      await ref
+          .read(pedidosProvider.notifier)
+          .confirmar(pedido.id, {'almacenId': conReserva ? null : almacenId});
       mensajero.mostrar('${pedido.numero} confirmado: se creó la nota de venta.');
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);

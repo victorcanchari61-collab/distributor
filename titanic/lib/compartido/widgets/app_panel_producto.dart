@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/tema/colores.dart';
@@ -45,6 +47,7 @@ class AppPanelProducto extends StatefulWidget {
     this.paraVenta = true,
     this.stock,
     this.habilitado = true,
+    this.resolverPrecio,
   });
 
   final List<Producto> productos;
@@ -65,6 +68,16 @@ class AppPanelProducto extends StatefulWidget {
 
   final bool habilitado;
 
+  /// De dónde sale el precio, cuando lo pone una lista y no el vendedor.
+  ///
+  /// Recibe la presentación real y la cantidad, porque el precio depende de
+  /// cuánto se lleva —el tramo "desde 5 sacos" es más barato—. Devuelve null
+  /// si esa forma de vender no tiene precio cargado.
+  ///
+  /// Sin esto el vendedor teclea el precio de memoria, que es como se cobra de
+  /// menos sin que nadie se entere.
+  final Future<double?> Function(int presentacionId, double cantidad)? resolverPrecio;
+
   @override
   State<AppPanelProducto> createState() => _AppPanelProductoState();
 }
@@ -75,8 +88,21 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
   final _cantidad = TextEditingController(text: '1');
   final _importe = TextEditingController(text: '0');
 
+  /// Qué dijo la lista: para avisar cuando no hay precio o cuando se cambió.
+  double? _precioLista;
+  bool _buscandoPrecio = false;
+  bool _sinPrecioEnLista = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // La cantidad manda sobre el tramo: 4 sacos y 5 sacos no valen lo mismo.
+    _cantidad.addListener(_pedirPrecio);
+  }
+
   @override
   void dispose() {
+    _cantidad.removeListener(_pedirPrecio);
     _cantidad.dispose();
     _importe.dispose();
     super.dispose();
@@ -93,6 +119,43 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
         .toList();
   }
 
+  /// La presentación real: 0 en el selector significa la unidad base, que sí
+  /// tiene su propia presentación con precio propio.
+  int get _presentacionReal {
+    if (_presentacionId != 0) return _presentacionId;
+    final base = _producto?.presentaciones.where((p) => p.esBase);
+    return base != null && base.isNotEmpty ? base.first.id : 0;
+  }
+
+  /*
+   * El precio, preguntado a la lista.
+   *
+   * Se vuelve a pedir al cambiar producto, unidad o cantidad, y no solo al
+   * elegir el producto: resolver una sola vez dejaria el descuento por volumen
+   * sin aplicarse nunca. Queda editable —un precio especial a un cliente sigue
+   * siendo cosa de todos los dias— pero ya no se teclea a ciegas.
+   */
+  Future<void> _pedirPrecio() async {
+    final resolver = widget.resolverPrecio;
+    if (resolver == null || _producto == null || _presentacionReal == 0) return;
+
+    final cantidad = _cantidadNum > 0 ? _cantidadNum : 1.0;
+    setState(() => _buscandoPrecio = true);
+
+    try {
+      final precio = await resolver(_presentacionReal, cantidad);
+      if (!mounted) return;
+
+      setState(() {
+        _precioLista = precio;
+        _sinPrecioEnLista = precio == null;
+        if (precio != null) _importe.text = formatoNumero(precio);
+      });
+    } finally {
+      if (mounted) setState(() => _buscandoPrecio = false);
+    }
+  }
+
   void _elegir(Producto producto) {
     setState(() {
       _producto = producto;
@@ -105,7 +168,11 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
       _importe.text = widget.paraVenta
           ? '0'
           : formatoNumero(producto.costoReferencia ?? 0);
+      _precioLista = null;
+      _sinPrecioEnLista = false;
     });
+
+    unawaited(_pedirPrecio());
   }
 
   void _limpiar() {
@@ -114,7 +181,22 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
       _presentacionId = 0;
       _cantidad.text = '1';
       _importe.text = '0';
+      _precioLista = null;
+      _sinPrecioEnLista = false;
     });
+  }
+
+  /// Si lo escrito ya no es lo que dice la lista.
+  bool get _precioPisado =>
+      _precioLista != null && (_importeNum - _precioLista!).abs() > 0.001;
+
+  String? get _avisoPrecio {
+    if (widget.resolverPrecio == null || _producto == null) return null;
+    if (_buscandoPrecio) return 'Buscando en la lista...';
+    if (_sinPrecioEnLista) return 'Sin precio en la lista';
+    if (_precioLista == null) return null;
+    if (_precioPisado) return 'Lista: ${formatoSoles(_precioLista!)}';
+    return 'De la lista';
   }
 
   double get _cantidadNum => double.tryParse(_cantidad.text.replaceAll(',', '.')) ?? 0;
@@ -255,6 +337,23 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
               ),
             ],
           ),
+
+          // Qué dijo la lista. Sin precio cargado la venta saldría en cero sin
+          // que nadie chille: mejor decirlo aquí, antes de agregar la línea.
+          if (_avisoPrecio != null) ...[
+            const SizedBox(height: Dimen.espacio2),
+            Text(
+              _avisoPrecio!,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: _sinPrecioEnLista || _precioPisado
+                    ? Colores.advertencia
+                    : Colores.tintaSuave,
+              ),
+            ),
+          ],
+
           const SizedBox(height: Dimen.espacio4),
 
           AppBoton(

@@ -39,6 +39,7 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
   late int? _clienteId = widget.pedido?.clienteId;
   late String? _clienteNombre = widget.pedido?.cliente;
   late int? _listaPrecioId = widget.pedido?.listaPrecioId;
+  late String _condicionPago = widget.pedido?.condicionPago ?? CondicionPago.contado;
   late bool _reservaStock = widget.pedido?.reservaStock ?? false;
   late int? _almacenReservaId = widget.pedido?.almacenId;
 
@@ -158,6 +159,7 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
     final cuerpo = <String, dynamic>{
       'clienteId': _clienteId,
       'listaPrecioId': _listaPrecioId,
+      'condicionPago': _condicionPago,
       'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
       'reservaStock': _reservaStock,
       'almacenId': _reservaStock ? _almacenReservaId : null,
@@ -210,6 +212,36 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
     });
   }
 
+
+  /*
+   * La lista con la que se cobra.
+   *
+   * Sin elegir es "la predeterminada", que es la que el backend aplica a un
+   * cliente sin lista propia: para pedir precios hay que resolver ese vacio a
+   * un id de verdad.
+   */
+  int? _listaEfectiva(List<ListaPrecio> listas) {
+    if (_listaPrecioId != null) return _listaPrecioId;
+    for (final l in listas) {
+      if (l.esPredeterminada) return l.id;
+    }
+    return null;
+  }
+
+  /// Precio de una presentacion por esa cantidad, segun la lista elegida.
+  Future<double?> _precioDeLista(
+    List<ListaPrecio> listas,
+    int presentacionId,
+    double cantidad,
+  ) async {
+    final lista = _listaEfectiva(listas);
+    if (lista == null) return null;
+
+    return ref
+        .read(facturacionApiProvider)
+        .resolverPrecio(lista, presentacionId, cantidad);
+  }
+
   @override
   Widget build(BuildContext context) {
     final listas = ref.watch(listasPrecioProvider).valueOrNull ?? const <ListaPrecio>[];
@@ -257,6 +289,21 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
                 for (final l in listas) Opcion<int?>(l.id, l.nombre),
               ],
               onCambio: (v) => setState(() => _listaPrecioId = v),
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            // Lo que se acordo, no lo que se cobro: el repartidor llega y tiene
+            // que saber si deja la mercaderia contra el dinero o si va fiada.
+            AppSelector<String>(
+              valor: _condicionPago,
+              etiqueta: 'Condición de pago',
+              icono: Icons.handshake_outlined,
+              habilitado: !_guardando,
+              opciones: const [
+                Opcion(CondicionPago.contado, 'Contado · se cobra al entregar'),
+                Opcion(CondicionPago.credito, 'Crédito · se deja fiado'),
+              ],
+              onCambio: (v) => setState(() => _condicionPago = v ?? CondicionPago.contado),
             ),
             const SizedBox(height: Dimen.espacio4),
 
@@ -314,6 +361,9 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
               paraVenta: true,
               stock: ref.watch(stockDisponibleProvider(_almacenReservaId)).valueOrNull,
               habilitado: !_guardando,
+              // El precio lo pone la lista, no la memoria del vendedor.
+              resolverPrecio: (presentacionId, cantidad) =>
+                  _precioDeLista(listas, presentacionId, cantidad),
               onAgregar: _agregarLineas,
             ),
             const SizedBox(height: Dimen.espacio5),

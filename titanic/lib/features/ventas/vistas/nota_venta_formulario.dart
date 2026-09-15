@@ -381,6 +381,36 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
     if (mounted) setState(() {});
   }
 
+
+  /*
+   * La lista con la que se cobra.
+   *
+   * Sin elegir es "la predeterminada", que es la que el backend aplica a un
+   * cliente sin lista propia: para pedir precios hay que resolver ese vacio a
+   * un id de verdad.
+   */
+  int? _listaEfectiva(List<ListaPrecio> listas) {
+    if (_listaPrecioId != null) return _listaPrecioId;
+    for (final l in listas) {
+      if (l.esPredeterminada) return l.id;
+    }
+    return null;
+  }
+
+  /// Precio de una presentacion por esa cantidad, segun la lista elegida.
+  Future<double?> _precioDeLista(
+    List<ListaPrecio> listas,
+    int presentacionId,
+    double cantidad,
+  ) async {
+    final lista = _listaEfectiva(listas);
+    if (lista == null) return null;
+
+    return ref
+        .read(facturacionApiProvider)
+        .resolverPrecio(lista, presentacionId, cantidad);
+  }
+
   @override
   Widget build(BuildContext context) {
     final almacenes = ref.watch(almacenesActivosProvider);
@@ -463,6 +493,9 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
               paraVenta: true,
               stock: ref.watch(stockDisponibleProvider(_almacenId)).valueOrNull,
               habilitado: !_guardando,
+              // El precio lo pone la lista, no la memoria del vendedor.
+              resolverPrecio: (presentacionId, cantidad) =>
+                  _precioDeLista(listas, presentacionId, cantidad),
               onAgregar: _agregarLineas,
             ),
             const SizedBox(height: Dimen.espacio5),
