@@ -68,6 +68,10 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   ],
   'arqueo': [cuadresProvider, motivosGastoProvider],
 
+  // Los datos de la empresa salen en la cabecera de cada papel: si cambian el
+  // RUC o la direccion, lo que se imprima despues tiene que decir lo nuevo.
+  'empresas': [empresasProvider],
+
   // --- Quién puede hacer qué ---
   'permisos': [misPermisosProvider, usuariosProvider, rolesProvider],
   'roles': [misPermisosProvider, rolesProvider, usuariosProvider],
