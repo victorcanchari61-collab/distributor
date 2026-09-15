@@ -30,6 +30,22 @@ class SolicitudApi {
       'referencia': referencia,
     },
   );
+
+  /// GET /api/permiso/solicitudes/mias — solo las que siguen sin respuesta,
+  /// como claves "submodulo:accion".
+  ///
+  /// Se filtra aquí y no en la pantalla porque lo resuelto no sirve de nada:
+  /// una solicitud aprobada ya se ve como permiso concedido, y una rechazada
+  /// se puede volver a pedir.
+  Future<Set<String>> misPendientes() async {
+    final datos = await _api.get('/permiso/solicitudes/mias') as List;
+
+    return {
+      for (final e in datos.cast<Map<String, dynamic>>())
+        // 0 es pendiente en el backend.
+        if ((e['estado'] as int? ?? 0) == 0) '${e['submodulo']}:${e['accion']}',
+    };
+  }
 }
 
 final solicitudApiProvider = Provider((ref) => SolicitudApi(ref.watch(clienteApiProvider)));

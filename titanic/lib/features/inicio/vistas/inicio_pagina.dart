@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../compartido/widgets/app_shell.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../auth/estado/auth_controlador.dart';
+import 'modulo_hoja.dart';
 
 /// Pantalla tras iniciar sesion: quien entro y accesos a los modulos.
 class InicioPagina extends ConsumerWidget {
@@ -55,7 +55,10 @@ class InicioPagina extends ConsumerWidget {
               for (final grupo in menuGrupos)
                 _TarjetaModulo(
                   grupo: grupo,
-                  onTap: () => context.go(grupo.items.first.ruta),
+                  // Abre el modulo, no su primera vista: saltar a ciegas
+                  // estrellaba contra el candado a quien no puede abrirla, sin
+                  // decirle que mas hay dentro ni como pedirlo.
+                  onTap: () => mostrarModulo(context, grupo),
                 ),
             ],
           ),
