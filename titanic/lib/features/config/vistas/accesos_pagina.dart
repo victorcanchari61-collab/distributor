@@ -11,6 +11,8 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
+import 'excepciones_tab.dart';
+import 'solicitudes_tab.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
 /// Como se nombra cada accion en pantalla, y en que orden se lee.
@@ -66,7 +68,19 @@ class AccesosPagina extends ConsumerStatefulWidget {
   ConsumerState<AccesosPagina> createState() => _AccesosPaginaState();
 }
 
-class _AccesosPaginaState extends ConsumerState<AccesosPagina> {
+class _AccesosPaginaState extends ConsumerState<AccesosPagina>
+    with SingleTickerProviderStateMixin {
+  /*
+   * Tres pestañas porque son tres preguntas distintas.
+   *
+   * "Qué hace este rol" se configura una vez y vale para todos; "qué le falta
+   * a esta persona" se resuelve caso por caso; y la bandeja es lo que otros
+   * están esperando. Todo junto en una sola pantalla obligaba a pasar por la
+   * matriz entera —41 pantallas— para soltar un permiso puntual, y la bandeja
+   * ni siquiera existía aquí: había que ir a una computadora a aprobar.
+   */
+  late final _tabs = TabController(length: 3, vsync: this);
+
   int? _rolId;
 
   /// El rol cuya matriz esta cargada en [_marcas]. Los roles llegan del API
@@ -183,6 +197,12 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina> {
   }
 
   @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final color =
         resolverRuta(AccesosPagina.ruta).grupo?.color ?? Colores.marca;
@@ -202,29 +222,91 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina> {
       _sucio = false;
     }
 
+    // Cuántas esperan respuesta, para el número de la pestaña: sin él, quien
+    // no entra a la bandeja no se entera de que alguien está esperando.
+    final pendientes =
+        (ref.watch(solicitudesProvider).valueOrNull ?? const [])
+            .where((s) => s.pendiente)
+            .length;
+
     return AppShell(
       titulo: 'Accesos',
       subtitulo: resolverRuta(AccesosPagina.ruta).grupo?.titulo,
       acentado: color,
       rutaActual: AccesosPagina.ruta,
-      child: switch ((rol, catalogo)) {
-        (null, _) => const Center(child: CircularProgressIndicator()),
-        (_, AsyncError(:final error)) => Padding(
-          padding: const EdgeInsets.all(Dimen.espacio4),
-          child: AppAlerta(
-            error is ApiExcepcion
-                ? error.texto
-                : 'No pudimos cargar el catálogo de permisos.',
+      child: Column(
+        children: [
+          TabBar(
+            controller: _tabs,
+            labelColor: color,
+            indicatorColor: color,
+            unselectedLabelColor: Colores.tintaSuave,
+            labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            tabs: [
+              const Tab(text: 'Por rol'),
+              const Tab(text: 'Por persona'),
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Solicitudes'),
+                    if (pendientes > 0) ...[
+                      const SizedBox(width: Dimen.espacio2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '$pendientes',
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
-        ),
-        (final Rol elegido, AsyncData(:final value)) => _cuerpo(
-          elegido,
-          value,
-          color,
-          roles,
-        ),
-        _ => const Center(child: CircularProgressIndicator()),
-      },
+          const Divider(height: 1),
+
+          Expanded(
+            child: TabBarView(
+              controller: _tabs,
+              children: [
+                switch ((rol, catalogo)) {
+                  (null, _) => const Center(child: CircularProgressIndicator()),
+                  (_, AsyncError(:final error)) => Padding(
+                    padding: const EdgeInsets.all(Dimen.espacio4),
+                    child: AppAlerta(
+                      error is ApiExcepcion
+                          ? error.texto
+                          : 'No pudimos cargar el catálogo de permisos.',
+                    ),
+                  ),
+                  (final Rol elegido, AsyncData(:final value)) => _cuerpo(
+                    elegido,
+                    value,
+                    color,
+                    roles,
+                  ),
+                  _ => const Center(child: CircularProgressIndicator()),
+                },
+                const ExcepcionesTab(),
+                const SolicitudesTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

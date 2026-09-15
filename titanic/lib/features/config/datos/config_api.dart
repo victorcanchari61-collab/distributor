@@ -1,6 +1,7 @@
 import '../../../core/red/cliente_api.dart';
 import 'auditoria.dart';
 import 'config_modelos.dart';
+import 'permiso_modelos.dart';
 
 /// Llamadas del modulo de configuracion.
 class ConfigApi {
@@ -75,6 +76,51 @@ class ConfigApi {
         .map((e) => SubmoduloCatalogo.desdeJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// GET /api/permiso/solicitudes — la bandeja del admin.
+  Future<List<SolicitudPermiso>> solicitudes() async {
+    final datos = await _api.get('/permiso/solicitudes') as List;
+    return datos
+        .map((e) => SolicitudPermiso.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// POST /api/permiso/solicitudes/{id}/aprobar
+  ///
+  /// El alcance lo elige quien aprueba, no quien pide: casi siempre lo que
+  /// hace falta es una vez —anular ESA nota— y concederlo para siempre por
+  /// comodidad es como se termina con vendedores que pueden anular cualquier
+  /// cosa.
+  Future<void> aprobarSolicitud(
+    int id, {
+    required int alcance,
+    DateTime? expiraEn,
+    String? respuesta,
+  }) => _api.post(
+    '/permiso/solicitudes/$id/aprobar',
+    cuerpo: {
+      'alcance': alcance,
+      'expiraEn': expiraEn?.toIso8601String(),
+      'respuesta': respuesta,
+    },
+  );
+
+  /// POST /api/permiso/solicitudes/{id}/rechazar
+  Future<void> rechazarSolicitud(int id, {String? respuesta}) => _api.post(
+    '/permiso/solicitudes/$id/rechazar',
+    cuerpo: {'respuesta': respuesta},
+  );
+
+  /// GET /api/permiso/usuario/{id} — lo que tiene una persona y su rol no le da.
+  Future<List<UsuarioPermiso>> permisosDe(int usuarioId) async {
+    final datos = await _api.get('/permiso/usuario/$usuarioId') as List;
+    return datos
+        .map((e) => UsuarioPermiso.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// PATCH /api/permiso/{id}/revocar
+  Future<void> revocarPermiso(int id) => _api.patch('/permiso/$id/revocar');
 
   // --- Consultas a SUNAT ---
 

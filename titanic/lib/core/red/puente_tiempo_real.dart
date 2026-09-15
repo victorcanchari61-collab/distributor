@@ -75,7 +75,16 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
 
   // --- Quién puede hacer qué ---
   // alertasProvider: un acceso pedido es una alerta mas para quien lo aprueba.
-  'permisos': [misPermisosProvider, usuariosProvider, rolesProvider, alertasProvider],
+  // solicitudesProvider: alguien pide un permiso desde otro equipo y la
+  // bandeja lo muestra sola; sin esto habria que salir y volver a entrar,
+  // y quien espera al otro lado no sabe cuanto esperar.
+  'permisos': [
+    misPermisosProvider,
+    usuariosProvider,
+    rolesProvider,
+    alertasProvider,
+    solicitudesProvider,
+  ],
   'roles': [misPermisosProvider, rolesProvider, usuariosProvider],
   'usuarios': [usuariosProvider],
 };

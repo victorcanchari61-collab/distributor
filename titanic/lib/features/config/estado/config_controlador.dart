@@ -4,6 +4,7 @@ import '../../../compartido/estado/filtro_estado.dart';
 import '../../auth/estado/auth_controlador.dart';
 import '../datos/config_api.dart';
 import '../datos/config_modelos.dart';
+import '../datos/permiso_modelos.dart';
 
 final configApiProvider = Provider(
   (ref) => ConfigApi(ref.watch(clienteApiProvider)),
@@ -22,6 +23,26 @@ final busquedaEmpresasProvider = StateProvider.autoDispose((ref) => '');
 final catalogoPermisosProvider = FutureProvider<List<SubmoduloCatalogo>>(
   (ref) => ref.watch(configApiProvider).catalogoPermisos(),
 );
+
+/// La bandeja del admin: lo pedido, resuelto o no.
+///
+/// `autoDispose` no: la campanita y esta pantalla miran lo mismo, y el puente
+/// de tiempo real la invalida cuando alguien pide algo desde otro equipo.
+final solicitudesProvider = FutureProvider<List<SolicitudPermiso>>(
+  (ref) => ref.watch(configApiProvider).solicitudes(),
+);
+
+/// Persona elegida en la pestaña de excepciones.
+final usuarioExcepcionesProvider = StateProvider.autoDispose<int?>((ref) => null);
+
+/// Lo que esa persona tiene concedido por fuera de su rol.
+final excepcionesProvider = FutureProvider.autoDispose<List<UsuarioPermiso>>((
+  ref,
+) async {
+  final usuarioId = ref.watch(usuarioExcepcionesProvider);
+  if (usuarioId == null) return const [];
+  return ref.watch(configApiProvider).permisosDe(usuarioId);
+});
 
 // --- Usuarios ---
 
