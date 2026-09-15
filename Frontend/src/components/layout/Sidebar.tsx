@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, EyeOff, X } from 'lucide-react'
+import { ChevronDown, Home, PanelLeftClose, PanelLeftOpen, EyeOff, X } from 'lucide-react'
 import { cn, Logo } from '../ui'
 import { NAV_GROUPS } from './navigation'
 import type { NavGroup } from './navigation'
@@ -112,6 +112,24 @@ export function Sidebar({
 
         {/* navegacion */}
         <nav className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto p-2">
+          {/*
+            Inicio va siempre, no dentro de `grupos`.
+
+            No es de ningún módulo y no hay permiso que lo cubra: es justo la
+            pantalla de quien todavía no tiene ninguno, desde la que se piden.
+            Filtrarlo con el resto lo habría escondido precisamente a quien más
+            lo necesita.
+          */}
+          <div data-sys="brand">
+            <NavButton
+              icon={<Home size={18} />}
+              label="Inicio"
+              active={active === ''}
+              collapsed={collapsed}
+              onClick={() => onSelect('')}
+            />
+          </div>
+
           {grupos.map((group) => (
             <NavGroupBlock
               key={group.id}
