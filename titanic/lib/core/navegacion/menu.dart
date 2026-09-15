@@ -345,6 +345,16 @@ const menuGrupos = <MenuGrupo>[
   ),
 ];
 
+/// Busca la vista por su id ('fact.precios'), que es como la nombra el backend.
+MenuItem? vistaPorId(String id) {
+  for (final grupo in menuGrupos) {
+    for (final item in grupo.items) {
+      if (item.id == id) return item;
+    }
+  }
+  return null;
+}
+
 /// Busca la vista y su modulo a partir de la ruta del navegador.
 ({MenuGrupo? grupo, MenuItem? item}) resolverRuta(String ruta) {
   for (final grupo in menuGrupos) {

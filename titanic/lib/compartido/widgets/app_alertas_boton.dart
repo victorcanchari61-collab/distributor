@@ -2,10 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/navegacion/menu.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/alertas/datos/alerta.dart';
 import '../../features/alertas/estado/alertas_controlador.dart';
+
+/// Como se lee la accion pedida, sin la pantalla al lado.
+const _accionPedida = {
+  'ver': 'entrar',
+  'crear': 'crear',
+  'editar': 'editar',
+  'anular': 'anular',
+  'eliminar': 'eliminar',
+  'exportar': 'exportar',
+  'importar': 'importar',
+  'confirmar': 'confirmar',
+  'cobrar': 'cobrar',
+};
 
 /// Campana de alertas del AppBar: cuenta lo pendiente y abre una hoja con el
 /// detalle. El color avisa la urgencia antes de abrirla — rojo si hay algo
@@ -136,6 +150,22 @@ class _FilaAlerta extends StatelessWidget {
     _ => Colores.exito,
   };
 
+  /*
+   * El acceso pedido llega con los ids del backend —"fact.precios · ver"—,
+   * que es lo unico que el servidor conoce: los nombres de las pantallas
+   * viven en el menu, aqui. Se traducen al leerlos y no antes.
+   */
+  String get _detalle {
+    if (alerta.tipo != TipoAlerta.solicitudAcceso) return alerta.detalle;
+
+    final partes = alerta.detalle.split(' · ');
+    if (partes.length < 2) return alerta.detalle;
+
+    final pantalla = vistaPorId(partes[0])?.titulo ?? partes[0];
+    return [pantalla, _accionPedida[partes[1]] ?? partes[1], ...partes.skip(2)]
+        .join(' · ');
+  }
+
   IconData get _icono => switch (alerta.tipo) {
     TipoAlerta.stockRepuesto => Icons.inventory_2_outlined,
     TipoAlerta.lotePorVencer => Icons.event_busy_outlined,
@@ -175,7 +205,7 @@ class _FilaAlerta extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    alerta.detalle,
+                    _detalle,
                     style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
                   ),
                 ],

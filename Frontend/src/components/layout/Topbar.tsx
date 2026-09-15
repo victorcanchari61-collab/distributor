@@ -14,6 +14,20 @@ import { cn } from '../ui'
 import { alertaApi } from '../../lib/alertasApi'
 import type { AlertaResponse } from '../../lib/alertasApi'
 import { useRealtime } from '../../lib/realtime'
+import { resolveNav } from './navigation'
+
+/** Como se lee la accion pedida, sin la pantalla al lado. */
+const ACCION_PEDIDA: Record<string, string> = {
+  ver: 'entrar',
+  crear: 'crear',
+  editar: 'editar',
+  anular: 'anular',
+  eliminar: 'eliminar',
+  exportar: 'exportar',
+  importar: 'importar',
+  confirmar: 'confirmar',
+  cobrar: 'cobrar',
+}
 import { urlImagen } from '../../features/tms/flotaApi'
 
 export interface TopbarProps {
@@ -78,9 +92,34 @@ export function Topbar({
   const advertencias = alertas.filter((a) => a.severidad === 'ADVERTENCIA').length
   const colorContador = criticas > 0 ? 'bg-red-600' : advertencias > 0 ? 'bg-amber-500' : 'bg-emerald-600'
 
+  /*
+    El acceso pedido llega con los ids del backend —"fact.precios · ver"—,
+    que es lo unico que el servidor conoce: los nombres de las pantallas viven
+    en el menu, aqui. Se traducen al leerlos y no antes.
+  */
+  const detalleDe = (a: AlertaResponse) => {
+    if (a.tipo !== 'SOLICITUD_ACCESO') return a.detalle
+
+    const [submodulo, accion, ...resto] = a.detalle.split(' · ')
+    const pantalla = resolveNav(submodulo).item?.label ?? submodulo
+    return [pantalla, ACCION_PEDIDA[accion] ?? accion, ...resto].join(' · ')
+  }
+
   const irA = (a: AlertaResponse) => {
     setAbierto(false)
-    if (a.ruta) onNavigate(a.ruta)
+    if (!a.ruta) return
+
+    onNavigate(a.ruta)
+
+    /*
+      Accesos abre por la matriz de roles, y el acceso pedido no vive ahi sino
+      en la bandeja: sin esto la alerta dejaba al admin en la pantalla correcta
+      pero en la pestaña equivocada, buscando lo que acababa de tocar.
+
+      Por el hash y no por la ruta porque la pestaña no es una vista del menu:
+      no tiene id ni permiso propio, es un detalle de esta pantalla.
+    */
+    if (a.tipo === 'SOLICITUD_ACCESO') window.location.hash = 'solicitudes'
   }
 
   return (
@@ -204,7 +243,7 @@ export function Topbar({
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold text-ink">{a.titulo}</span>
-                      <span className="block truncate text-xs text-ink-soft">{a.detalle}</span>
+                      <span className="block truncate text-xs text-ink-soft">{detalleDe(a)}</span>
                     </span>
                   </button>
                 ))

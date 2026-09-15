@@ -59,7 +59,25 @@ export function AccesosPage() {
    * resuelve caso por caso. Mezclarlas en una sola pantalla haria que quien
    * viene a soltar una accion puntual tuviera que pasar por la matriz entera.
    */
-  const [pestana, setPestana] = useState('rol')
+  // Se entra por la bandeja cuando la alerta de la campanita manda aqui.
+  const [pestana, setPestana] = useState(() =>
+    window.location.hash === '#solicitudes' ? 'solicitudes' : 'rol',
+  )
+
+  /*
+   * Tambien si ya se estaba en esta pantalla.
+   *
+   * Ahi no hay montaje que lea el hash inicial: el componente sigue vivo y la
+   * alerta no haria nada, que es peor que no llevar a ningun lado —parece que
+   * el clic no funciona—.
+   */
+  useEffect(() => {
+    const alCambiar = () => {
+      if (window.location.hash === '#solicitudes') setPestana('solicitudes')
+    }
+    window.addEventListener('hashchange', alCambiar)
+    return () => window.removeEventListener('hashchange', alCambiar)
+  }, [])
 
   /*
    * Cuantas solicitudes esperan respuesta, para el numero de la pestaña: sin
