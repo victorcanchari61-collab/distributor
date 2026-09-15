@@ -664,14 +664,16 @@ class _CampoNumeroState extends State<_CampoNumero> {
     // toque una para que la fila quede descuadrada, que es lo que pasaba.
     return _CajaCampo(
       etiqueta: widget.etiqueta,
-      child: Align(
-        alignment: Alignment.centerLeft,
+      child: SizedBox(
+        // La altura de una fila de texto, igual que la del desplegable: sin
+        // esto el campo trae el alto suelto de un TextField y desnivela.
+        height: 24,
         child: TextField(
           controller: _control,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           onChanged: widget.onChanged,
           textAlignVertical: TextAlignVertical.center,
-          style: const TextStyle(fontSize: 13, color: Colores.tinta),
+          style: const TextStyle(fontSize: 13, height: 1.2, color: Colores.tinta),
           decoration: const InputDecoration(
             isDense: true,
             contentPadding: EdgeInsets.zero,
@@ -700,20 +702,26 @@ class _CajaCampo extends StatelessWidget {
   Widget build(BuildContext context) {
     // La etiqueta va recortando el borde, no encima: asi el campo ocupa una
     // sola altura y la fila marcada no crece de mas dentro de la lista.
-    return SizedBox(
-      height: Dimen.campoMd + 6,
-      child: InputDecorator(
+    /*
+      La altura la fija el contenido, no una caja recortada.
+      
+      Antes era un SizedBox de alto fijo: el desplegable y el numero no miden
+      lo mismo por dentro, asi que cada uno se acomodaba a su manera dentro
+      del mismo alto y la fila salia desparejo —uno mas abajo que el otro y
+      con el borde a distinta altura—. Con un minimo comun y el mismo padding
+      arriba y abajo, los dos se dibujan iguales por construccion.
+    */
+    return InputDecorator(
         isEmpty: false,
         decoration: InputDecoration(
           labelText: etiqueta,
           isDense: true,
           filled: true,
           fillColor: Colores.superficie,
-          // Sin padding vertical: la altura la fija la caja, no el contenido,
-          // que es lo que hacia que el desplegable saliera mas alto que la
-          // cantidad estando uno al lado del otro.
+          constraints: const BoxConstraints(minHeight: Dimen.campoMd + 6),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: Dimen.espacio3,
+            vertical: Dimen.espacio2,
           ),
           labelStyle: const TextStyle(fontSize: 13, color: Colores.tintaSuave),
           border: OutlineInputBorder(
@@ -730,7 +738,6 @@ class _CajaCampo extends StatelessWidget {
           ),
         ),
         child: child,
-      ),
     );
   }
 }

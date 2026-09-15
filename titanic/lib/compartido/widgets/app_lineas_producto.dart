@@ -61,6 +61,8 @@ class AppLineasProducto extends StatelessWidget {
     this.disponible,
     this.error,
     this.habilitado = true,
+    this.mostrarImporte = true,
+    this.extra,
   });
 
   final List<LineaDocumento> lineas;
@@ -81,6 +83,15 @@ class AppLineasProducto extends StatelessWidget {
 
   final String? error;
   final bool habilitado;
+
+  /// Una salida de almacén no lleva importe: el costo lo pone la capa que se
+  /// consume, no quien registra el ajuste. Sin esto la línea pediría un número
+  /// que nadie sabe y que el backend ignora.
+  final bool mostrarImporte;
+
+  /// Lo que solo unos documentos piden por línea —el lote y el vencimiento de
+  /// una entrada—, debajo de la cantidad.
+  final Widget Function(LineaDocumento)? extra;
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +139,8 @@ class AppLineasProducto extends StatelessWidget {
             etiquetaImporte: etiquetaImporte,
             disponible: disponible?[lineas[i].productoId],
             habilitado: habilitado,
+            mostrarImporte: mostrarImporte,
+            extra: extra?.call(lineas[i]),
             onCambio: onCambio,
             onEliminar: () => onEliminar(lineas[i]),
           ),
@@ -147,6 +160,8 @@ class _TarjetaLinea extends StatefulWidget {
     required this.habilitado,
     required this.onCambio,
     required this.onEliminar,
+    required this.mostrarImporte,
+    this.extra,
   });
 
   final int numero;
@@ -154,6 +169,8 @@ class _TarjetaLinea extends StatefulWidget {
   final String etiquetaImporte;
   final double? disponible;
   final bool habilitado;
+  final bool mostrarImporte;
+  final Widget? extra;
   final VoidCallback onCambio;
   final VoidCallback onEliminar;
 
@@ -263,20 +280,29 @@ class _TarjetaLineaState extends State<_TarjetaLinea> {
                   },
                 ),
               ),
-              const SizedBox(width: Dimen.espacio3),
-              Expanded(
-                child: _Numero(
-                  etiqueta: widget.etiquetaImporte,
-                  controlador: _importe,
-                  habilitado: widget.habilitado,
-                  onCambio: (v) {
-                    setState(() => linea.importe = _numero(v));
-                    widget.onCambio();
-                  },
+              if (widget.mostrarImporte) ...[
+                const SizedBox(width: Dimen.espacio3),
+                Expanded(
+                  child: _Numero(
+                    etiqueta: widget.etiquetaImporte,
+                    controlador: _importe,
+                    habilitado: widget.habilitado,
+                    onCambio: (v) {
+                      setState(() => linea.importe = _numero(v));
+                      widget.onCambio();
+                    },
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
+
+          if (widget.extra != null) ...[
+            const SizedBox(height: Dimen.espacio3),
+            widget.extra!,
+          ],
+
+          if (widget.mostrarImporte) ...[
           const SizedBox(height: Dimen.espacio2),
 
           Align(
@@ -298,6 +324,7 @@ class _TarjetaLineaState extends State<_TarjetaLinea> {
               ),
             ),
           ),
+          ],
         ],
       ),
     );

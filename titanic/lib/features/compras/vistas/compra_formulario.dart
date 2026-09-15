@@ -202,10 +202,19 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
   }
 
   /// Agrega las lineas elegidas, vengan del panel o de la hoja multiple.
+  /*
+   * Lo ultimo agregado va arriba.
+   *
+   * Cargando veinte productos, lo que se acaba de poner es lo que hay que
+   * mirar, y al final de una lista larga queda fuera de pantalla. Arriba cae
+   * justo debajo del buscador, donde ya estan los ojos. insertAll y no un
+   * insert por vuelta: asi los elegidos de una tanda conservan entre si el
+   * orden en que se marcaron.
+   */
   void _agregarLineas(List<LineaElegida> elegidas) {
     setState(() {
-      for (final e in elegidas) {
-        _lineas.add(
+      _lineas.insertAll(0, [
+        for (final e in elegidas)
           LineaDocumento(
             productoId: e.producto.id,
             producto: e.producto.nombre,
@@ -216,8 +225,7 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
             cantidad: e.cantidad,
             importe: e.importe,
           ),
-        );
-      }
+      ]);
       _errorLineas = null;
     });
   }

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_lineas_producto.dart';
+import '../../../compartido/widgets/app_panel_producto.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_selector_buscable.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -17,34 +17,37 @@ import '../datos/motivo.dart';
 import '../estado/inventario_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
-class _FilaLineaAjuste {
-  _FilaLineaAjuste({
-    required this.productoId,
-    required this.producto,
-    this.presentacionId,
-    required this.presentacion,
-    required this.cantidad,
-    this.costoPresentacion,
-    this.lote,
-    this.vencimiento,
+/*
+ * Una linea del ajuste: la misma que compras y ventas, con dos datos mas.
+ *
+ * Hereda de LineaDocumento para poder usar el mismo panel de busqueda y las
+ * mismas tarjetas editables que el resto del sistema —el usuario no tiene por
+ * que aprender dos formas de cargar productos—. Lo unico propio del ajuste es
+ * el lote y el vencimiento, y solo cuando la mercaderia entra.
+ */
+class _LineaAjuste extends LineaDocumento {
+  _LineaAjuste({
+    required super.productoId,
+    required super.producto,
+    required super.codigo,
+    required super.unidadBase,
+    required super.presentaciones,
+    required super.presentacionId,
+    required super.cantidad,
+    required super.importe,
   });
 
-  final int productoId;
-  final String producto;
-  final int? presentacionId;
-  final String presentacion;
-  double cantidad;
-  double? costoPresentacion;
-  String? lote;
+  final lote = TextEditingController();
   DateTime? vencimiento;
 
-  Map<String, dynamic> aCuerpo() => {
+  Map<String, dynamic> aCuerpo({required bool pideCosto}) => {
     'productoId': productoId,
-    'presentacionId': presentacionId,
+    // 0 es la unidad base, que no es ninguna presentacion concreta.
+    'presentacionId': presentacionId == 0 ? null : presentacionId,
     'cantidad': cantidad,
-    'costoPresentacion': costoPresentacion,
-    'lote': lote,
-    'fechaVencimiento': vencimiento?.toIso8601String(),
+    'costoPresentacion': pideCosto ? importe : null,
+    'lote': pideCosto && lote.text.trim().isNotEmpty ? lote.text.trim() : null,
+    'fechaVencimiento': pideCosto ? vencimiento?.toIso8601String() : null,
   };
 }
 
@@ -63,7 +66,7 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
 
   int? _almacenId;
   int? _motivoId;
-  final List<_FilaLineaAjuste> _lineas = [];
+  final List<LineaDocumento> _lineas = [];
 
   bool _guardando = false;
   String? _error;
@@ -107,13 +110,16 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
     final navegador = Navigator.of(context);
     final mensajero = Aviso.de(context);
     final flete = double.tryParse(_flete.text.trim().replaceAll(',', '.')) ?? 0;
+    final pideCosto = _motivo?.pideCosto ?? false;
 
     final cuerpo = <String, dynamic>{
       'almacenId': _almacenId,
       'motivoId': _motivoId,
       'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
       'flete': flete,
-      'detalle': [for (final f in _lineas) f.aCuerpo()],
+      'detalle': [
+        for (final f in _lineas.cast<_LineaAjuste>()) f.aCuerpo(pideCosto: pideCosto),
+      ],
     };
 
     try {
@@ -128,140 +134,84 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
     }
   }
 
-  Future<void> _agregarLinea() async {
-    final productos = ref.read(productosProvider).valueOrNull ?? const <Producto>[];
-    final activos = productos.where((p) => p.activo).toList();
-    final producto = await mostrarSelectorBuscable<Producto>(
-      context: context,
-      titulo: 'Elige el producto',
-      items: activos,
-      buscable: (p) => p.buscable,
-      pistaBusqueda: 'Buscar por código o nombre',
-      fila: (p) => Text('${p.codigo} · ${p.nombre}', style: const TextStyle(fontSize: 14)),
-    );
-    if (producto == null || !mounted) return;
+  static List<Presentacion> _presentacionesDe(Producto p) =>
+      p.presentaciones.where((pr) => pr.activo && pr.esCompra).toList();
 
-    final fila = await _mostrarHojaLinea(producto);
-    if (fila != null) setState(() => _lineas.add(fila));
+  /*
+   * Lo ultimo agregado va arriba.
+   *
+   * Cargando veinte productos, lo que se acaba de poner es lo que hay que
+   * mirar —¿le puse bien la cantidad?—, y al final de una lista larga queda
+   * fuera de pantalla. Arriba cae justo debajo del buscador, donde ya estan
+   * los ojos.
+   */
+  void _agregarLineas(List<LineaElegida> elegidas) {
+    setState(() {
+      _lineas.insertAll(0, [
+        for (final e in elegidas)
+          _LineaAjuste(
+            productoId: e.producto.id,
+            producto: e.producto.nombre,
+            codigo: e.producto.codigo,
+            unidadBase: e.producto.unidadBase,
+            presentaciones: _presentacionesDe(e.producto),
+            presentacionId: e.presentacionId,
+            cantidad: e.cantidad,
+            importe: e.importe,
+          ),
+      ]);
+      _errorLineas = null;
+    });
   }
 
-  Future<_FilaLineaAjuste?> _mostrarHojaLinea(Producto producto) {
-    final pideCosto = _motivo?.pideCosto ?? false;
-    final presentaciones = producto.presentaciones.where((p) => p.esCompra).toList();
-    final cantidadCtrl = TextEditingController();
-    final costoCtrl = TextEditingController();
-    final loteCtrl = TextEditingController();
-    int? presentacionId = presentaciones.length == 1 ? presentaciones.first.id : null;
-    DateTime? vencimiento;
-    String? errorCantidad;
-    String? errorCosto;
-
-    return showModalBottomSheet<_FilaLineaAjuste>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            void guardar() {
-              final cantidad = double.tryParse(cantidadCtrl.text.trim().replaceAll(',', '.'));
-              final costo = double.tryParse(costoCtrl.text.trim().replaceAll(',', '.'));
-
-              setSheetState(() {
-                errorCantidad = cantidad == null || cantidad <= 0
-                    ? 'Debe ser mayor que cero.'
-                    : null;
-                errorCosto = pideCosto && (costo == null || costo <= 0)
-                    ? 'Debe ser mayor que cero.'
-                    : null;
-              });
-              if (errorCantidad != null || errorCosto != null) return;
-
-              Presentacion? presentacion;
-              for (final p in presentaciones) {
-                if (p.id == presentacionId) presentacion = p;
-              }
-              Navigator.of(context).pop(
-                _FilaLineaAjuste(
-                  productoId: producto.id,
-                  producto: producto.nombre,
-                  presentacionId: presentacionId,
-                  presentacion: presentacion?.nombre ?? producto.unidadBase,
-                  cantidad: cantidad!,
-                  costoPresentacion: pideCosto ? costo : null,
-                  lote: pideCosto && loteCtrl.text.trim().isNotEmpty ? loteCtrl.text.trim() : null,
-                  vencimiento: pideCosto ? vencimiento : null,
+  /// Lote y vencimiento: solo de lo que entra, y solo si hace falta.
+  Widget _loteYVencimiento(LineaDocumento linea) {
+    final fila = linea as _LineaAjuste;
+    return Row(
+      children: [
+        Expanded(
+          child: AppCampo(
+            controlador: fila.lote,
+            etiqueta: 'Lote',
+            opcional: true,
+            habilitado: !_guardando,
+          ),
+        ),
+        const SizedBox(width: Dimen.espacio3),
+        Expanded(
+          child: InkWell(
+            onTap: _guardando
+                ? null
+                : () async {
+                    final hoy = DateTime.now();
+                    final elegida = await showDatePicker(
+                      context: context,
+                      initialDate: fila.vencimiento ?? hoy,
+                      firstDate: hoy.subtract(const Duration(days: 365)),
+                      lastDate: hoy.add(const Duration(days: 365 * 10)),
+                    );
+                    if (elegida != null) setState(() => fila.vencimiento = elegida);
+                  },
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Vence',
+                constraints: BoxConstraints(minHeight: Dimen.campoLg),
+              ),
+              child: Text(
+                fila.vencimiento == null
+                    ? 'Sin fecha'
+                    : '${fila.vencimiento!.day.toString().padLeft(2, '0')}/'
+                          '${fila.vencimiento!.month.toString().padLeft(2, '0')}/'
+                          '${fila.vencimiento!.year}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: fila.vencimiento == null ? Colores.tintaSuave : Colores.tinta,
                 ),
-              );
-            }
-
-            return Padding(
-              padding: EdgeInsets.only(
-                left: Dimen.espacio4,
-                right: Dimen.espacio4,
-                top: Dimen.espacio2,
-                bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    producto.nombre,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colores.tinta,
-                    ),
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  if (presentaciones.isNotEmpty) ...[
-                    AppSelector<int>(
-                      valor: presentacionId,
-                      etiqueta: 'Presentación',
-                      icono: Icons.inventory_2_outlined,
-                      opciones: [
-                        for (final p in presentaciones)
-                          Opcion(
-                            p.id,
-                            '${p.nombre} (${formatoNumero(p.factor)} ${producto.unidadBase})',
-                          ),
-                      ],
-                      onCambio: (v) => setSheetState(() => presentacionId = v),
-                    ),
-                    const SizedBox(height: Dimen.espacio4),
-                  ],
-                  AppCampo(
-                    controlador: cantidadCtrl,
-                    etiqueta: 'Cantidad',
-                    icono: Icons.numbers_outlined,
-                    tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-                    error: errorCantidad,
-                  ),
-                  if (pideCosto) ...[
-                    const SizedBox(height: Dimen.espacio4),
-                    AppCampo(
-                      controlador: costoCtrl,
-                      etiqueta: 'Costo de la presentación',
-                      icono: Icons.payments_outlined,
-                      tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-                      error: errorCosto,
-                    ),
-                    const SizedBox(height: Dimen.espacio4),
-                    AppCampo(controlador: loteCtrl, etiqueta: 'Lote', opcional: true),
-                  ],
-                  const SizedBox(height: Dimen.espacio4),
-                  AppBoton(texto: 'Agregar', onPressed: guardar),
-                ],
-              ),
-            );
-          },
-        );
-      },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -342,71 +292,33 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
             ),
             const SizedBox(height: Dimen.espacio5),
 
-            const Text(
-              'Productos',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
+            AppPanelProducto(
+              productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
+                  .where((p) => p.activo && p.controlaStock)
+                  .toList(),
+              paraVenta: false,
+              habilitado: !_guardando && _motivoId != null,
+              onAgregar: _agregarLineas,
             ),
-            if (_errorLineas != null) ...[
-              const SizedBox(height: Dimen.espacio1),
-              Text(_errorLineas!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
-            ],
-            const SizedBox(height: Dimen.espacio3),
-
-            for (final fila in _lineas) ...[
-              Container(
-                padding: const EdgeInsets.all(Dimen.espacio3),
-                decoration: BoxDecoration(
-                  color: Colores.superficie,
-                  border: Border.all(color: Colores.linea),
-                  borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            fila.producto,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colores.tinta,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${formatoNumero(fila.cantidad)} ${fila.presentacion}',
-                            style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() => _lineas.remove(fila)),
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
-                    ),
-                  ],
-                ),
-              ),
+            if (_motivoId == null) ...[
               const SizedBox(height: Dimen.espacio2),
-            ],
-            if (_lineas.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: Dimen.espacio3),
-                child: Text(
-                  'Todavía no agregaste productos.',
-                  style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
-                ),
+              const Text(
+                'Elige primero el motivo: de él depende si la mercadería entra o sale.',
+                style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
               ),
-            const SizedBox(height: Dimen.espacio2),
+            ],
+            const SizedBox(height: Dimen.espacio5),
 
-            AppBoton(
-              texto: 'Agregar producto',
-              variante: BotonVariante.secundario,
-              icono: Icons.add,
-              onPressed: _motivoId == null || _guardando ? null : _agregarLinea,
+            AppLineasProducto(
+              lineas: _lineas,
+              error: _errorLineas,
+              etiquetaImporte: 'Costo S/',
+              habilitado: !_guardando,
+              // Una salida no lleva costo: lo pone la capa que se consume.
+              mostrarImporte: pideCosto,
+              extra: pideCosto ? _loteYVencimiento : null,
+              onCambio: () => setState(() {}),
+              onEliminar: (l) => setState(() => _lineas.remove(l)),
             ),
             const SizedBox(height: Dimen.espacio6),
 
