@@ -95,6 +95,8 @@ public class DespachoService : IDespachoService
         {
             Numero = await SiguienteNumeroAsync(),
             Fecha = (request.Fecha ?? DateTime.UtcNow).Date,
+            PedidosDesde = request.PedidosDesde?.Date,
+            PedidosHasta = request.PedidosHasta?.Date,
             RutaId = request.RutaId,
             VehiculoId = request.VehiculoId,
             ConductorId = request.ConductorId,
@@ -126,6 +128,8 @@ public class DespachoService : IDespachoService
         }
 
         despacho.Fecha = (request.Fecha ?? despacho.Fecha).Date;
+        despacho.PedidosDesde = request.PedidosDesde?.Date;
+        despacho.PedidosHasta = request.PedidosHasta?.Date;
         despacho.RutaId = request.RutaId;
         despacho.VehiculoId = request.VehiculoId;
         despacho.ConductorId = request.ConductorId;
@@ -202,6 +206,12 @@ public class DespachoService : IDespachoService
 
     private async Task ValidarAsync(DespachoRequest request)
     {
+        if (request.PedidosDesde is DateTime desde && request.PedidosHasta is DateTime hasta
+            && desde.Date > hasta.Date)
+        {
+            throw new BadRequestException("El \"desde\" de los pedidos no puede ser después del \"hasta\".");
+        }
+
         if (!await _context.Rutas.AnyAsync(r => r.Id == request.RutaId))
             throw new BadRequestException("Elige la ruta");
 
@@ -284,6 +294,8 @@ public class DespachoService : IDespachoService
             Id = d.Id,
             Numero = d.Numero,
             Fecha = d.Fecha,
+            PedidosDesde = d.PedidosDesde,
+            PedidosHasta = d.PedidosHasta,
             RutaId = d.RutaId,
             Ruta = d.Ruta?.Nombre ?? string.Empty,
             VehiculoId = d.VehiculoId,

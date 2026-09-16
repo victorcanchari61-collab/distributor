@@ -20,7 +20,7 @@ import {
 import type { ColumnaDetalleProducto, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
-import { hoyLocal, fechaCorta } from '../../lib/fechas'
+import { diaLocal, hoyLocal, fechaCorta } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { conductorApi, vehiculoApi } from './flotaApi'
 import type { ConductorResponse, VehiculoResponse } from './flotaApi'
@@ -67,6 +67,18 @@ export function DespachosPage() {
   const [guardando, setGuardando] = useState(false)
 
   const [fecha, setFecha] = useState(hoy())
+
+  /*
+   * De qué días son los pedidos que suben al camión.
+   *
+   * No es la fecha del reparto: lo que sale el lunes se tomó el viernes y se
+   * siguió aumentando el sábado mientras se pesaba. Sin esto la lista traía
+   * mezclados todos los pendientes de la ruta —el que quedó colgado del
+   * miércoles, el de hoy que es para el próximo camión— y había que adivinar
+   * cuáles iban.
+   */
+  const [desde, setDesde] = useState(hoy())
+  const [hasta, setHasta] = useState(hoy())
   const [rutaId, setRutaId] = useState(0)
   const [vehiculoId, setVehiculoId] = useState(0)
   const [conductorId, setConductorId] = useState(0)
@@ -136,10 +148,25 @@ export function DespachosPage() {
       .disponibles(rutaId, editando?.id)
       .then((lista) => {
         if (!vivo) return
-        setDisponibles(lista)
+
+        /*
+         * Al editar, los pedidos propios que ya se entregaron también cuentan.
+         *
+         * "Disponibles" son los pendientes, y uno que el repartidor ya
+         * convirtió en venta deja de serlo. Sin sumarlos aquí desaparecían de
+         * la lista, se desmarcaban solos y al guardar se quitaban del
+         * despacho: el camión perdía justo lo que ya había repartido, y con
+         * eso su detalle por cliente y su cobranza.
+         */
+        const entregados = (editando?.detalle ?? []).filter(
+          (p) => !lista.some((x) => x.pedidoId === p.pedidoId),
+        )
+        const completa = [...lista, ...entregados]
+
+        setDisponibles(completa)
         // Lo que ya no está disponible deja de estar marcado: si no, se
         // enviaría un pedido que otro camión se llevó.
-        setElegidos((prev) => prev.filter((id) => lista.some((p) => p.pedidoId === id)))
+        setElegidos((prev) => prev.filter((id) => completa.some((p) => p.pedidoId === id)))
       })
       .catch((e) => {
         if (vivo) toast.error(e instanceof ApiError ? e.message : 'No pudimos cargar los pedidos.')
@@ -156,6 +183,8 @@ export function DespachosPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setFecha(hoy())
+    setDesde(hoy())
+    setHasta(hoy())
     setRutaId(0)
     setVehiculoId(0)
     setConductorId(0)
@@ -168,6 +197,11 @@ export function DespachosPage() {
   const abrirEdicion = (d: DespachoResponse) => {
     setEditando(d)
     setFecha(d.fecha.slice(0, 10))
+    // Los despachos armados antes de que existiera el rango no lo tienen: se
+    // toma el de sus propios pedidos, para que ninguno quede fuera de la vista.
+    const dias = d.detalle.filter((p) => p.fecha).map((p) => diaLocal(p.fecha)).sort()
+    setDesde(d.pedidosDesde?.slice(0, 10) ?? dias[0] ?? hoy())
+    setHasta(d.pedidosHasta?.slice(0, 10) ?? dias[dias.length - 1] ?? hoy())
     setRutaId(d.rutaId)
     setVehiculoId(d.vehiculoId)
     setConductorId(d.conductorId)
@@ -187,10 +221,13 @@ export function DespachosPage() {
     if (!rutaId) return toast.error('Elige la ruta.')
     if (!vehiculoId) return toast.error('Elige el vehículo.')
     if (!conductorId) return toast.error('Elige el conductor.')
+    if (desde > hasta) return toast.error('El "desde" de los pedidos no puede ser después del "hasta".')
     if (elegidos.length === 0) return toast.error('Marca al menos un pedido para cargar.')
 
     const body = {
       fecha,
+      pedidosDesde: desde,
+      pedidosHasta: hasta,
       rutaId,
       vehiculoId,
       conductorId,
@@ -238,6 +275,36 @@ export function DespachosPage() {
         }
       },
     })
+
+  /*
+   * Los pedidos del rango, y los que ya están marcados aunque caigan fuera.
+   *
+   * Un pedido marcado nunca se esconde: al editar un despacho viejo, o al
+   * achicar el rango, desaparecer de la vista algo que sigue yendo en el camión
+   * es la forma de cargarlo sin saberlo.
+   */
+  const enRango = (p: DespachoPedidoResponse) => {
+    // Un backend sin actualizar no manda la fecha: mejor mostrarlo que romper la pantalla.
+    if (!p.fecha) return true
+    const dia = diaLocal(p.fecha)
+    return dia >= desde && dia <= hasta
+  }
+  const visibles = disponibles.filter((p) => enRango(p) || elegidos.includes(p.pedidoId))
+  const fueraDeRango = disponibles.filter((p) => !enRango(p) && !elegidos.includes(p.pedidoId))
+  const todosMarcados =
+    visibles.length > 0 && visibles.every((p) => elegidos.includes(p.pedidoId))
+
+  /** Lo normal es que suban todos los del rango: marcarlos de a uno es donde se escapa alguno. */
+  const alternarTodos = () =>
+    setElegidos((prev) =>
+      todosMarcados
+        ? prev.filter((id) =>
+            // Los ya entregados se quedan: no se quita del camión lo repartido.
+            visibles.some((p) => p.pedidoId === id && p.notaVentaId != null) ||
+            !visibles.some((p) => p.pedidoId === id),
+          )
+        : [...new Set([...prev, ...visibles.map((p) => p.pedidoId)])],
+    )
 
   const totalElegido = disponibles
     .filter((p) => elegidos.includes(p.pedidoId))
@@ -303,7 +370,39 @@ export function DespachosPage() {
 
 
         <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
-          <PageSection title="Pedidos" description="Los pendientes de los clientes de esa ruta.">
+          <PageSection title="Pedidos" description="Los pendientes de los clientes de esa ruta, tomados entre esas fechas.">
+            <div className="mb-3 grid gap-3 sm:grid-cols-2">
+              <Input
+                label="Pedidos desde"
+                type="date"
+                value={desde}
+                max={hasta}
+                onChange={(e) => setDesde(e.target.value)}
+              />
+              <Input
+                label="Pedidos hasta"
+                type="date"
+                value={hasta}
+                min={desde}
+                onChange={(e) => setHasta(e.target.value)}
+              />
+            </div>
+            <p className="mb-3 text-xs text-ink-soft">
+              Incluye el día en que se pesa: los aumentos de ese día también suben al camión.
+            </p>
+
+            {rutaId > 0 && fueraDeRango.length > 0 && (
+              <div className="mb-3 rounded-field border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                {fueraDeRango.length === 1
+                  ? 'Hay 1 pedido pendiente de esta ruta fuera de esas fechas'
+                  : `Hay ${fueraDeRango.length} pedidos pendientes de esta ruta fuera de esas fechas`}
+                {' '}(del {fechaCorta(fueraDeRango.map((p) => p.fecha).sort()[0])}
+                {fueraDeRango.length > 1 &&
+                  ` al ${fechaCorta(fueraDeRango.map((p) => p.fecha).sort()[fueraDeRango.length - 1])}`}
+                ). No suben al camión; amplía las fechas si deben ir.
+              </div>
+            )}
+
             {!rutaId ? (
               <p className="py-8 text-center text-sm text-ink-soft">
                 Elige primero la ruta para ver sus pedidos.
@@ -314,9 +413,17 @@ export function DespachosPage() {
               <p className="py-8 text-center text-sm text-ink-soft">
                 No hay pedidos pendientes en esta ruta. Puede que ya estén en otro camión.
               </p>
+            ) : visibles.length === 0 ? (
+              <p className="py-8 text-center text-sm text-ink-soft">
+                No hay pedidos de esta ruta entre esas fechas.
+              </p>
             ) : (
               <div className="flex flex-col gap-2">
-                {disponibles.map((p) => (
+                <label className="flex cursor-pointer items-center gap-3 px-3 py-1 text-sm font-semibold text-ink">
+                  <input type="checkbox" checked={todosMarcados} onChange={alternarTodos} />
+                  {todosMarcados ? 'Quitar todos' : `Marcar todos (${visibles.length})`}
+                </label>
+                {visibles.map((p) => (
                   <label
                     key={p.pedidoId}
                     className="flex cursor-pointer items-start gap-3 rounded-field border border-line p-3 transition hover:border-ink-soft"
@@ -325,6 +432,9 @@ export function DespachosPage() {
                       type="checkbox"
                       className="mt-1"
                       checked={elegidos.includes(p.pedidoId)}
+                      // Ya se entregó: no se puede bajar del camión lo que ya se repartió.
+                      disabled={p.notaVentaId != null}
+                      title={p.notaVentaId != null ? 'Ya se entregó: no se puede quitar del despacho' : undefined}
                       onChange={() => alternar(p.pedidoId)}
                     />
                     <span className="flex min-w-0 flex-1 flex-col">

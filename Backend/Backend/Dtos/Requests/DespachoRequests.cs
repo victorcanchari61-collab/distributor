@@ -6,6 +6,13 @@ public class DespachoRequest
     /// <summary>El día del reparto. Vacío es hoy.</summary>
     public DateTime? Fecha { get; set; }
 
+    /// <summary>
+    /// De qué días son los pedidos que se cargan: del viernes al sábado para el
+    /// reparto del lunes. Filtra la lista al armar; no limita qué se guarda.
+    /// </summary>
+    public DateTime? PedidosDesde { get; set; }
+    public DateTime? PedidosHasta { get; set; }
+
     public int RutaId { get; set; }
     public int VehiculoId { get; set; }
 

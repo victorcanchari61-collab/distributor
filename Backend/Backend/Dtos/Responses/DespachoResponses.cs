@@ -34,6 +34,10 @@ public class DespachoResponse
     public string Numero { get; set; } = string.Empty;
     public DateTime Fecha { get; set; }
 
+    /// <summary>De qué días son los pedidos que se cargaron.</summary>
+    public DateTime? PedidosDesde { get; set; }
+    public DateTime? PedidosHasta { get; set; }
+
     public int RutaId { get; set; }
     public string Ruta { get; set; } = string.Empty;
 

@@ -46,6 +46,17 @@ export function fechaCorta(valor: string): string {
   return comoInstante(valor).toLocaleDateString('es-PE')
 }
 
+/**
+ * El día de una fecha del servidor como YYYY-MM-DD, en el calendario de aquí.
+ *
+ * Para comparar contra lo que devuelve un <input type="date">. Recortar el
+ * texto del servidor no sirve: un pedido del viernes a las 9 de la noche viaja
+ * como sábado 02:00 en UTC, y caería en el día equivocado.
+ */
+export function diaLocal(valor: string): string {
+  return fechaLocal(comoInstante(valor))
+}
+
 /*
  * El sistema guarda dos cosas distintas en el mismo tipo de campo.
  *

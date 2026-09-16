@@ -28,6 +28,19 @@ public class Despacho
     /// <summary>El día del reparto, que no tiene por qué ser el de hoy.</summary>
     public DateTime Fecha { get; set; } = DateTime.UtcNow.Date;
 
+    /*
+     * De qué días son los pedidos que carga el camión.
+     *
+     * No es la fecha del reparto: lo que sale el lunes se tomó el viernes y se
+     * siguió aumentando el sábado mientras se pesaba. Sin este rango, al armar
+     * el camión aparecían mezclados todos los pendientes de la ruta —el que
+     * quedó colgado del miércoles, el de hoy que es para el próximo— y había
+     * que adivinar cuáles iban. Se guarda para que al editar el despacho se
+     * vuelva a ver lo mismo.
+     */
+    public DateTime? PedidosDesde { get; set; }
+    public DateTime? PedidosHasta { get; set; }
+
     public int RutaId { get; set; }
     public Ruta? Ruta { get; set; }
 

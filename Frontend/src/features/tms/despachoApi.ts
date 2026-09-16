@@ -8,6 +8,9 @@ export interface DespachoPedidoResponse {
   numero: string
   clienteId: number
   cliente: string
+  clienteDocumento: string | null
+  /** Cuándo se tomó el pedido. */
+  fecha: string
   direccion: string | null
   mercado: string | null
   telefono: string | null
@@ -22,6 +25,9 @@ export interface DespachoResponse {
   id: number
   numero: string
   fecha: string
+  /** De qué días son los pedidos que carga el camión. */
+  pedidosDesde: string | null
+  pedidosHasta: string | null
   rutaId: number
   ruta: string
   vehiculoId: number
@@ -48,6 +54,8 @@ export interface ResumenDespachos {
 
 export interface DespachoRequest {
   fecha?: string | null
+  pedidosDesde?: string | null
+  pedidosHasta?: string | null
   rutaId: number
   vehiculoId: number
   conductorId: number
