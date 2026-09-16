@@ -20,7 +20,7 @@ export type DocumentoPdf =
   | 'prestamos'
   | 'despacho'
 
-type Formato = 'a4' | 'ticket' | 'copias'
+type Formato = 'a4' | 'ticket' | 'copias' | 'clientes'
 
 const TITULOS: Record<DocumentoPdf, string> = {
   pedido: 'Pedido',
@@ -58,6 +58,20 @@ const SOLO_A4: DocumentoPdf[] = ['despacho']
  * vuelve firmado — sin imprimir dos veces y recortar.
  */
 const CON_COPIAS: DocumentoPdf[] = ['pedido']
+
+/*
+ * Reportes que cuelgan del mismo documento.
+ *
+ * Del despacho salen dos papeles distintos: los pedidos para entregar y el
+ * detalle por cliente, que es la hoja con la que se cuadra lo que se cobra.
+ * Van como pestañas del mismo visor porque se sacan juntos, al cargar el camión.
+ */
+const REPORTES: Partial<Record<DocumentoPdf, { formato: Formato; etiqueta: string }[]>> = {
+  despacho: [
+    { formato: 'a4', etiqueta: 'Pedidos' },
+    { formato: 'clientes', etiqueta: 'Detalle por cliente' },
+  ],
+}
 
 const rutaDe = (documento: DocumentoPdf) =>
   INVENTARIO.includes(documento) ? `/inventario/${documento}` : `/${documento}`
@@ -146,9 +160,11 @@ function VisorPdf({
       setCargando(true)
       setError('')
       try {
-        const query = formato === 'a4' ? '' : `?formato=${formato}`
+        // Un reporte propio va en su ruta; un formato del mismo papel, en la query.
+        const sufijo =
+          formato === 'clientes' ? '/clientes' : formato === 'a4' ? '' : `?formato=${formato}`
         const archivo = await obtenerArchivo(
-          `${rutaDe(documento)}/${id}/pdf${query}`,
+          `${rutaDe(documento)}/${id}/pdf${sufijo}`,
           `${documento}-${numero}.pdf`,
         )
         if (!vivo) return
@@ -221,6 +237,16 @@ function VisorPdf({
       }
     >
       <div className="flex flex-col gap-3">
+        {REPORTES[documento] && (
+          <div className="flex gap-1.5">
+            {REPORTES[documento]!.map((r) => (
+              <Pestana key={r.formato} activa={formato === r.formato} onClick={() => setFormato(r.formato)}>
+                {r.etiqueta}
+              </Pestana>
+            ))}
+          </div>
+        )}
+
         {!soloA4 && (
           <div className="flex gap-1.5">
             <Pestana activa={formato === 'a4'} onClick={() => setFormato('a4')}>

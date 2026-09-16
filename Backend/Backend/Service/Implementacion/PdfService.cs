@@ -255,6 +255,15 @@ public class PdfService(
         return (contenido, Nombre("despacho", despacho.Numero, FormatoPdf.A4));
     }
 
+    public async Task<(byte[], string)> DetalleClientesDespachoAsync(int id)
+    {
+        var despacho = await despachos.GetAsync(id);
+        if (despacho.Detalle.Count == 0) throw new BadRequestException("Este despacho no tiene pedidos");
+
+        var contenido = new DetalleClientesA4(despacho).GeneratePdf();
+        return (contenido, Nombre("detalle-clientes", despacho.Numero, FormatoPdf.A4));
+    }
+
     // --- Inventario: mercadería que se mueve y alguien tiene que firmar ---
 
     public async Task<(byte[], string)> AjusteAsync(int id, FormatoPdf formato)

@@ -9,6 +9,12 @@ public class DespachoPedidoResponse
     public int ClienteId { get; set; }
     public string Cliente { get; set; } = string.Empty;
 
+    /// <summary>DNI, RUC o código del cliente: lo que se lee en la hoja de carga.</summary>
+    public string? ClienteDocumento { get; set; }
+
+    /// <summary>Cuándo se tomó el pedido: arma el "del … al …" del reporte.</summary>
+    public DateTime Fecha { get; set; }
+
     /// <summary>Dónde entregarlo: sin esto el papel del reparto no sirve.</summary>
     public string? Direccion { get; set; }
     public string? Mercado { get; set; }

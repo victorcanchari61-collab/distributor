@@ -311,10 +311,22 @@ public class DespachoService : IDespachoService
             Numero = p.Numero,
             ClienteId = p.ClienteId,
             Cliente = p.Cliente?.Nombre ?? string.Empty,
+            ClienteDocumento = p.Cliente?.Documento,
+            Fecha = p.Fecha,
             Direccion = p.Cliente?.Direccion,
             Mercado = p.Cliente?.Mercado?.Nombre,
             Telefono = p.Cliente?.Telefono,
-            Total = lineas.Sum(d => d.Cantidad * d.PrecioUnitario),
+            /*
+             * Con el precio pactado por presentación, no con el derivado por
+             * unidad base.
+             *
+             * El precio por kilo sale de dividir —S/ 13.60 la bolsa de 3 kg son
+             * 4.5333 el kilo— y al volver a multiplicar ya no cierra: un camión
+             * de seis pedidos que suman S/ 1,399.00 salía en S/ 1,398.9997. Es
+             * el mismo total que se le cobra al cliente, así que tiene que ser el
+             * del pedido, céntimo por céntimo.
+             */
+            Total = lineas.Sum(d => d.CantidadPresentacion * d.PrecioPresentacion),
             Lineas = lineas.Count,
             NotaVentaId = venta?.Id,
             NotaVentaNumero = venta?.Numero,
