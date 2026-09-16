@@ -24,6 +24,24 @@ public class AlmacenController : ControllerBase
     [Permiso("inv.almacenes", Accion.Ver)]
     public async Task<IActionResult> GetAll() => Ok(await _inventario.GetAlmacenesAsync());
 
+    /// <summary>
+    /// Los almacenes activos, solo para elegir uno.
+    ///
+    /// Los usa quien vende y quien compra —de dónde sale el pedido, a dónde
+    /// entra la compra— sin tener acceso a la pantalla de Almacenes. Por eso va
+    /// sin lo que esa pantalla muestra: ni el valorizado ni cuántos productos
+    /// tiene cada uno, que es plata y no hace falta para elegir.
+    /// </summary>
+    [HttpGet("opciones")]
+    [PermisoAlguno(
+        "inv.almacenes:ver", "inv.stock:ver", "inv.kardex:ver",
+        "fact.pedidos:ver", "fact.notaventa:ver",
+        "compras.compras:ver", "compras.ordenes:ver", "compras.recepciones:ver")]
+    public async Task<IActionResult> Opciones() =>
+        Ok((await _inventario.GetAlmacenesAsync())
+            .Where(a => a.Activo)
+            .Select(a => new { a.Id, a.Codigo, a.Nombre, a.EsPrincipal, a.Activo }));
+
     [HttpGet("{id:int}")]
     [Permiso("inv.almacenes", Accion.Ver)]
     public async Task<IActionResult> GetById(int id) => Ok(await _inventario.GetAlmacenAsync(id));
@@ -113,6 +131,27 @@ public class InventarioController : ControllerBase
     [Permiso("inv.stock", Accion.Ver)]
     public async Task<IActionResult> Stock([FromQuery] int? almacenId) =>
         Ok(await _inventario.GetStockAsync(almacenId));
+
+    /// <summary>
+    /// Cuánto se puede prometer de cada producto: el stock menos lo reservado.
+    ///
+    /// Es lo único que necesita quien toma un pedido o arma una compra, y se lo
+    /// daba <c>/stock</c>, que además trae costos y valorizado. Detrás de
+    /// <c>inv.stock</c> un vendedor sin Inventario recibía un 403 que nadie
+    /// mostraba, y veía todos los productos con stock 0. Aquí va solo el número,
+    /// sin plata, y lo puede leer cualquiera que venda o compre.
+    /// </summary>
+    [HttpGet("disponible")]
+    [PermisoAlguno(
+        "inv.stock:ver",
+        "fact.pedidos:ver", "fact.notaventa:ver",
+        "compras.compras:ver", "compras.ordenes:ver")]
+    public async Task<IActionResult> Disponible([FromQuery] int? almacenId) =>
+        // Sumado por producto: sin almacén el stock viene una fila por almacén,
+        // y quien pregunta "cuánto hay" quiere el total, no la lista.
+        Ok((await _inventario.GetStockAsync(almacenId))
+            .GroupBy(s => s.ProductoId)
+            .Select(g => new { productoId = g.Key, disponible = g.Sum(s => s.Disponible) }));
 
     /// <summary>Stock y capas de costo de un producto.</summary>
     [HttpGet("stock/{productoId:int}")]

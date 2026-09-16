@@ -1,5 +1,18 @@
+import { useEffect, useRef, useState } from 'react'
 import { Desplegable, Input } from '../../components/ui'
 import type { PresentacionResponse } from './productoApi'
+
+/**
+ * El costo por unidad base, dicho por presentación y limpio.
+ *
+ * Se redondea a 4 decimales porque la multiplicación arrastra basura de coma
+ * flotante —S/ 300 el saco no debe volver como 299.99999999999994—, y
+ * `Number(...)` quita los ceros que sobran: 280 y no 280.0000.
+ */
+function aPresentacion(costoBase: string, factor: number) {
+  if (!costoBase) return ''
+  return String(Number((Number(costoBase) * factor).toFixed(4)))
+}
 
 export interface CostoReferenciaInputProps {
   /** Costo por unidad base, que es como se guarda. */
@@ -37,12 +50,50 @@ export function CostoReferenciaInput({
   const elegida = compras.find((p) => p.id === presentacionId)
   const factor = elegida?.factor ?? 1
 
-  // Lo que se ve en el campo: el costo por presentación, no por unidad base.
-  const enPresentacion = valor ? String(Number(valor) * factor) : ''
+  /*
+    El texto del campo vive aqui, no se re-deriva del valor en cada tecla.
 
-  const escribir = (texto: string) => {
-    if (!texto) return onChange('')
-    onChange(String(Number(texto) / factor))
+    El costo se guarda por unidad base y se muestra por presentacion, asi que
+    cada tecla hacia ida y vuelta: dividir entre 50 al guardar, multiplicar por
+    50 al repintar. En coma flotante eso no siempre cierra —0.56 × 50 da
+    28.000000000000004—, y al escribir "280" el paso intermedio "28" se
+    repintaba con esa basura y reemplazaba lo que se estaba tecleando: el 0
+    final nunca llegaba a escribirse.
+
+    Ahora lo tecleado se queda tal cual. Solo se vuelve a calcular desde el
+    valor cuando el cambio NO vino de aqui: al abrir el formulario, o al
+    elegir otra presentacion.
+  */
+  const [texto, setTexto] = useState(() => aPresentacion(valor, factor))
+  const ultimoValor = useRef(valor)
+  const ultimoFactor = useRef(factor)
+  /** El cambio de presentación lo hizo esta misma caja: el número se conserva. */
+  const cambioPropio = useRef(false)
+
+  useEffect(() => {
+    const vieneDeFuera = valor !== ultimoValor.current || factor !== ultimoFactor.current
+    ultimoValor.current = valor
+    ultimoFactor.current = factor
+
+    if (cambioPropio.current) {
+      cambioPropio.current = false
+      return
+    }
+    // Tambien cuando solo cambia el factor sin que nadie lo tocara aqui: al
+    // editar, las presentaciones pueden llegar despues que el costo, y sin
+    // esto el campo mostraria el costo por kilo en la etiqueta del saco.
+    if (vieneDeFuera) setTexto(aPresentacion(valor, factor))
+  }, [valor, factor])
+
+  const emitir = (costoBase: string) => {
+    // Lo que sale de aqui no debe volver a pintarse encima de lo tecleado.
+    ultimoValor.current = costoBase
+    onChange(costoBase)
+  }
+
+  const escribir = (nuevo: string) => {
+    setTexto(nuevo)
+    emitir(nuevo ? String(Number(nuevo) / factor) : '')
   }
 
   /*
@@ -52,8 +103,10 @@ export function CostoReferenciaInput({
     8500 y parecería un error del sistema.
   */
   const cambiarPresentacion = (id: number) => {
+    if (id === presentacionId) return
     const nuevoFactor = compras.find((p) => p.id === id)?.factor ?? 1
-    if (enPresentacion) onChange(String(Number(enPresentacion) / nuevoFactor))
+    cambioPropio.current = true
+    if (texto) emitir(String(Number(texto) / nuevoFactor))
     onPresentacion(id)
   }
 
@@ -74,7 +127,7 @@ export function CostoReferenciaInput({
           type="number"
           step="0.01"
           placeholder="170.00"
-          value={enPresentacion}
+          value={texto}
           onChange={(e) => escribir(e.target.value)}
           disabled={disabled}
         />

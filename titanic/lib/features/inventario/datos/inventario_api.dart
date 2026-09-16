@@ -21,6 +21,15 @@ class InventarioApi {
     return datos.map((e) => Almacen.desdeJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// GET /api/almacen/opciones — los activos, solo para elegir uno.
+  ///
+  /// Lo lee quien vende o compra sin acceso a la pantalla de Almacenes: sin
+  /// esto un vendedor recibía un 403 y la lista para elegir salía vacía.
+  Future<List<Almacen>> almacenesOpciones() async {
+    final datos = await _api.get('/almacen/opciones') as List;
+    return datos.map((e) => Almacen.desdeJson(e as Map<String, dynamic>)).toList();
+  }
+
   /// POST /api/almacen
   Future<Almacen> crearAlmacen(Map<String, dynamic> cuerpo) async => Almacen.desdeJson(
     await _api.post('/almacen', cuerpo: cuerpo) as Map<String, dynamic>,
@@ -39,6 +48,19 @@ class InventarioApi {
     final query = almacenId == null ? '' : '?almacenId=$almacenId';
     final datos = await _api.get('/inventario/stock$query') as List;
     return datos.map((e) => Stock.desdeJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// GET /api/inventario/disponible — cuánto se puede prometer, sin costos.
+  ///
+  /// Es lo que usan pedidos, ventas y compras. `/inventario/stock` pide el
+  /// permiso de la pantalla de Stock, y un vendedor sin él veía todo en 0.
+  Future<Map<int, double>> disponible({int? almacenId}) async {
+    final query = almacenId == null ? '' : '?almacenId=$almacenId';
+    final datos = await _api.get('/inventario/disponible$query') as List;
+    return {
+      for (final e in datos.cast<Map<String, dynamic>>())
+        e['productoId'] as int: (e['disponible'] as num?)?.toDouble() ?? 0,
+    };
   }
 
   // --- Kardex ---

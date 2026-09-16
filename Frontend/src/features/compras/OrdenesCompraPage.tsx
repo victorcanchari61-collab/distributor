@@ -126,7 +126,7 @@ export function OrdenesCompraPage() {
         productoApi.getAll(),
         // Sin almacenId: no hay uno elegido en una orden todavía, así que se
         // muestra el stock total de la empresa.
-        stockApi.getAll(),
+        stockApi.disponible(),
       ])
       setResumen(res)
       setProveedores(provs.filter((p) => p.activo))

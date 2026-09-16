@@ -37,7 +37,7 @@ import { useRealtime } from '../../lib/realtime'
 import { productoApi, proveedorApi } from '../maestros'
 import type { ProductoResponse, ProveedorResponse } from '../maestros'
 import { almacenApi, stockApi } from '../inventario'
-import type { AlmacenResponse } from '../inventario'
+import type { AlmacenOpcion } from '../inventario'
 import { metodoPagoApi } from '../finanzas'
 import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
 import { compraApi } from './comprasApi'
@@ -141,7 +141,7 @@ export function MisComprasPage() {
   const [compras, setCompras] = useState<CompraResponse[]>([])
   const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
-  const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
+  const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
   const [metodosPago, setMetodosPago] = useState<MetodoPagoResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -204,10 +204,10 @@ export function MisComprasPage() {
         compraApi.abiertas(),
         proveedorApi.getAll(),
         productoApi.getAll(),
-        almacenApi.getAll(),
+        almacenApi.opciones(),
         // Sin almacenId: una compra directa tampoco elige almacén todavía
         // (eso se decide al recibir), así que se muestra el stock total.
-        stockApi.getAll(),
+        stockApi.disponible(),
         metodoPagoApi.getAll(),
       ])
       setResumen(res)

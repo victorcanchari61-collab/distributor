@@ -17,6 +17,7 @@ export {
   recepcionApi,
   loteApi,
 } from './inventarioApi'
+export type { AlmacenOpcion, DisponibleResponse } from './inventarioApi'
 export type {
   ResumenDocumentos,
   ResumenPrestamos,

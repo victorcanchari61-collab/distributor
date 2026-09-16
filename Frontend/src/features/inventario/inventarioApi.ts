@@ -15,6 +15,21 @@ export interface AlmacenResponse {
   valorizado: number
 }
 
+/**
+ * Un almacén para elegirlo en un documento.
+ *
+ * Sin valorizado ni cuántos productos tiene: lo usan ventas y compras, que no
+ * tienen por qué ver cuánta plata hay en cada almacén para decidir de cuál sale
+ * un pedido.
+ */
+export type AlmacenOpcion = Pick<AlmacenResponse, 'id' | 'codigo' | 'nombre' | 'esPrincipal' | 'activo'>
+
+/** Cuánto se puede prometer de un producto: stock menos lo reservado. */
+export interface DisponibleResponse {
+  productoId: number
+  disponible: number
+}
+
 export interface AlmacenRequest {
   codigo: string
   nombre: string
@@ -25,6 +40,11 @@ export interface AlmacenRequest {
 
 export const almacenApi = {
   getAll: () => api.get<AlmacenResponse[]>('/almacen'),
+  /**
+   * Los activos, solo para elegir uno. Lo puede leer quien vende o compra sin
+   * acceso a la pantalla de Almacenes, que es la que pide `getAll`.
+   */
+  opciones: () => api.get<AlmacenOpcion[]>('/almacen/opciones'),
   create: (body: AlmacenRequest) => api.post<AlmacenResponse>('/almacen', body),
   update: (id: number, body: AlmacenRequest & { activo: boolean }) =>
     api.put<AlmacenResponse>(`/almacen/${id}`, body),
@@ -145,6 +165,18 @@ export const stockApi = {
 
   getAll: (almacenId?: number) =>
     api.get<StockResponse[]>(`/inventario/stock${almacenId ? `?almacenId=${almacenId}` : ''}`),
+
+  /**
+   * Solo cuánto se puede prometer, por producto: sin costos.
+   *
+   * Es lo que usan pedidos, ventas y compras. `getAll` pide el permiso de la
+   * pantalla de Stock, y un vendedor sin él recibía un 403 que nadie mostraba:
+   * todos los productos salían con stock 0.
+   */
+  disponible: (almacenId?: number) =>
+    api.get<DisponibleResponse[]>(
+      `/inventario/disponible${almacenId ? `?almacenId=${almacenId}` : ''}`,
+    ),
   getProducto: (productoId: number, almacenId?: number) =>
     api.get<StockResponse>(
       `/inventario/stock/${productoId}${almacenId ? `?almacenId=${almacenId}` : ''}`,

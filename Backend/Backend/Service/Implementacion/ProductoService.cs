@@ -462,6 +462,37 @@ public class ProductoService : IProductoService
         if (!esBase)
         {
             await ValidarUnidadAsync(request.UnidadId);
+
+            /*
+             * Las mismas reglas que al agregar, que aqui faltaban.
+             *
+             * La base de datos no admite dos presentaciones del mismo producto
+             * con el mismo factor, y el 1 siempre es de la base. Al editar no se
+             * comprobaba: cambiar una presentacion a factor 1 —o al de otra—
+             * llegaba hasta el guardado, la restriccion lo rechazaba y salia un
+             * 500 sin explicacion. Ahora se dice que choca y con cual.
+             */
+            if (request.Factor == 1m)
+            {
+                throw new BadRequestException(
+                    "El factor 1 ya lo tiene la presentación base del producto: una " +
+                    "unidad suelta es la base misma, no otra presentación.");
+            }
+
+            if (request.Factor != presentacion.Factor)
+            {
+                var producto = await GetOrThrowAsync(presentacion.ProductoId);
+                var otra = producto.Presentaciones.FirstOrDefault(
+                    p => p.Id != presentacion.Id && p.Factor == request.Factor);
+
+                if (otra is not null)
+                {
+                    throw new ConflictException(
+                        $"«{otra.Nombre}» ya tiene factor {request.Factor:0.####}: " +
+                        "dos presentaciones del mismo producto no pueden equivaler a lo mismo.");
+                }
+            }
+
             presentacion.UnidadId = request.UnidadId;
             presentacion.Factor = request.Factor;
         }

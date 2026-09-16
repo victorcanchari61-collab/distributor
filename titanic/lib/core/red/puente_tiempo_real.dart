@@ -69,7 +69,7 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   'categorias': [categoriasProvider, productosProvider],
   'marcas': [marcasProvider, productosProvider],
   'unidades': [unidadesProvider, productosProvider],
-  'almacenes': [almacenesProvider, stockProvider],
+  'almacenes': [almacenesProvider, almacenesOpcionesProvider, stockProvider],
   'motivos': [motivosProvider, ajustesProvider],
   'metodospago': [metodosPagoProvider],
   'mercados': [tms.mercadosProvider, clientesProvider],

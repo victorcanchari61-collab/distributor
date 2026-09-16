@@ -21,7 +21,7 @@ import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { almacenApi, recepcionApi } from '../inventario'
 import type {
-  AlmacenResponse,
+  AlmacenOpcion,
   DocumentoInventarioResponse,
   LineaDocumentoResponse,
   ResumenDocumentos,
@@ -47,7 +47,7 @@ export function RecepcionesPage() {
   const toast = useToast()
   const [recepciones, setRecepciones] = useState<DocumentoInventarioResponse[]>([])
   const [compras, setCompras] = useState<CompraResponse[]>([])
-  const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
+  const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -86,7 +86,7 @@ export function RecepcionesPage() {
       const [res, abiertas, alms] = await Promise.all([
         recepcionApi.resumen(),
         compraApi.abiertas(),
-        almacenApi.getAll(),
+        almacenApi.opciones(),
       ])
       setResumen(res)
       setCompras(abiertas)

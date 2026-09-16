@@ -37,6 +37,9 @@ class AlmacenesControlador extends AsyncNotifier<List<Almacen>> {
     state = await AsyncValue.guard(
       () => ref.read(inventarioApiProvider).almacenes(),
     );
+    // Los selectores de almacén de pedidos y compras leen su propia lista: si
+    // se crea o desactiva uno, tiene que aparecer o irse también ahí.
+    ref.invalidate(almacenesOpcionesProvider);
   }
 
   Future<void> guardar({int? id, required Map<String, dynamic> cuerpo}) async {
@@ -82,11 +85,20 @@ final almacenesFiltradosProvider = Provider.autoDispose<List<Almacen>>((ref) {
 
 /// Almacenes activos, para los selectores de Stock y Kardex: no tiene sentido
 /// filtrar por uno que ya no recibe movimientos.
+/// Los almacenes activos, para elegir uno.
+///
+/// No sale de [almacenesProvider]: ese pide el permiso de la pantalla de
+/// Almacenes, y quien toma un pedido o recibe una compra no tiene por qué
+/// tenerlo. Colgado de él, un vendedor recibía un 403 y el selector de almacén
+/// salía vacío.
+final almacenesOpcionesProvider = FutureProvider<List<Almacen>>(
+  (ref) => ref.watch(inventarioApiProvider).almacenesOpciones(),
+);
+
 final almacenesActivosProvider = Provider.autoDispose<List<Almacen>>(
-  (ref) =>
-      (ref.watch(almacenesProvider).valueOrNull ?? const <Almacen>[])
-          .where((a) => a.activo)
-          .toList(),
+  (ref) => (ref.watch(almacenesOpcionesProvider).valueOrNull ?? const <Almacen>[])
+      .where((a) => a.activo)
+      .toList(),
 );
 
 // --- Stock ---
@@ -115,8 +127,8 @@ final stockProvider = FutureProvider.autoDispose<List<Stock>>(
 /// que se puede prometer sin comprometer dos veces el mismo saco.
 final stockDisponibleProvider = FutureProvider.autoDispose
     .family<Map<int, double>, int?>((ref, almacenId) async {
-      final filas = await ref.watch(inventarioApiProvider).stock(almacenId: almacenId);
-      return {for (final f in filas) f.productoId: f.disponible};
+      // Solo el numero, sin costos: lo leen pedidos, ventas y compras.
+      return ref.watch(inventarioApiProvider).disponible(almacenId: almacenId);
     });
 
 /// Que se mira del almacen: todo, lo que falta reponer o lo que no se mueve.

@@ -39,7 +39,7 @@ import { useRealtime } from '../../lib/realtime'
 import { clienteApi, productoApi } from '../maestros'
 import type { ClienteResponse, ProductoResponse } from '../maestros'
 import { almacenApi, stockApi } from '../inventario'
-import type { AlmacenResponse } from '../inventario'
+import type { AlmacenOpcion } from '../inventario'
 import { metodoPagoApi } from '../finanzas'
 import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
 import { listaPrecioApi } from './listaPrecioApi'
@@ -108,7 +108,7 @@ export function NotasVentaPage() {
   const [notas, setNotas] = useState<NotaVentaResponse[]>([])
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
-  const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
+  const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
   const [listas, setListas] = useState<ListaPrecioResponse[]>([])
   const [metodosPago, setMetodosPago] = useState<MetodoPagoResponse[]>([])
   const [cargando, setCargando] = useState(true)
@@ -172,7 +172,7 @@ export function NotasVentaPage() {
         notaVentaApi.resumen(),
         clienteApi.getAll(),
         productoApi.getAll(),
-        almacenApi.getAll(),
+        almacenApi.opciones(),
         listaPrecioApi.getAll(),
         metodoPagoApi.getAll(),
       ])
@@ -201,7 +201,7 @@ export function NotasVentaPage() {
   useEffect(() => {
     if (!almacenId) return
     let cancelado = false
-    void stockApi.getAll(almacenId).then((stock) => {
+    void stockApi.disponible(almacenId).then((stock) => {
       if (!cancelado) setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
     })
     return () => {

@@ -39,7 +39,7 @@ import { useRealtime } from '../../lib/realtime'
 import { clienteApi, productoApi } from '../maestros'
 import type { ClienteResponse, ProductoResponse } from '../maestros'
 import { almacenApi, stockApi } from '../inventario'
-import type { AlmacenResponse } from '../inventario'
+import type { AlmacenOpcion } from '../inventario'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { pedidoApi } from './ventasApi'
@@ -68,7 +68,7 @@ export function PedidosPage() {
   const [pedidos, setPedidos] = useState<PedidoResponse[]>([])
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
-  const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
+  const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
   const [listas, setListas] = useState<ListaPrecioResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -129,7 +129,7 @@ export function PedidosPage() {
         pedidoApi.resumen(),
         clienteApi.getAll(),
         productoApi.getAll(),
-        almacenApi.getAll(),
+        almacenApi.opciones(),
         listaPrecioApi.getAll(),
       ])
       setResumen(res)
@@ -157,7 +157,7 @@ export function PedidosPage() {
   useEffect(() => {
     if (!almacenReservaId) return
     let cancelado = false
-    void stockApi.getAll(almacenReservaId).then((stock) => {
+    void stockApi.disponible(almacenReservaId).then((stock) => {
       if (!cancelado) setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
     })
     return () => {
