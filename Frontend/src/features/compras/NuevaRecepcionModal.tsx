@@ -16,7 +16,7 @@ import type { DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
-import type { AlmacenResponse, CrearRecepcionRequest } from '../inventario'
+import type { AlmacenOpcion, CrearRecepcionRequest } from '../inventario'
 import { recepcionApi } from '../inventario'
 import type { CompraDetalleResponse, CompraResponse } from './comprasApi'
 
@@ -27,7 +27,7 @@ export interface NuevaRecepcionModalProps {
   compraFija?: CompraResponse | null
   /** Compras Pendiente o Recibida parcial, para elegir cuando no viene fijada. */
   compras: CompraResponse[]
-  almacenes: AlmacenResponse[]
+  almacenes: AlmacenOpcion[]
   onCreada: () => void
 }
 
