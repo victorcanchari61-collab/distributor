@@ -8,6 +8,7 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -130,8 +131,12 @@ class ArqueoPagina extends ConsumerWidget {
       fila: (context, cuadre) => _TarjetaCuadre(
         cuadre: cuadre,
         color: color,
-        onCuadrar: () => _abrirCuadre(context, cuadre),
-        onAnular: () => _anular(context, ref, cuadre),
+        onCuadrar: puede(ref, 'finanzas.arqueo', Accion.crear)
+            ? () => _abrirCuadre(context, cuadre)
+            : null,
+        onAnular: puede(ref, 'finanzas.arqueo', Accion.anular)
+            ? () => _anular(context, ref, cuadre)
+            : null,
       ),
     );
   }
@@ -262,14 +267,14 @@ class _TarjetaCuadre extends StatelessWidget {
   const _TarjetaCuadre({
     required this.cuadre,
     required this.color,
-    required this.onCuadrar,
-    required this.onAnular,
+    this.onCuadrar,
+    this.onAnular,
   });
 
   final CuadrePendiente cuadre;
   final Color color;
-  final VoidCallback onCuadrar;
-  final VoidCallback onAnular;
+  final VoidCallback? onCuadrar;
+  final VoidCallback? onAnular;
 
   @override
   Widget build(BuildContext context) {
@@ -332,17 +337,18 @@ class _TarjetaCuadre extends StatelessWidget {
       ],
       onTap: onCuadrar,
       acciones: [
-        IconButton(
-          onPressed: onCuadrar,
-          tooltip: cuadre.cuadrado ? 'Corregir' : 'Cuadrar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            cuadre.cuadrado ? Icons.edit_outlined : Icons.fact_check_outlined,
-            size: 18,
-            color: color,
+        if (onCuadrar != null)
+          IconButton(
+            onPressed: onCuadrar,
+            tooltip: cuadre.cuadrado ? 'Corregir' : 'Cuadrar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              cuadre.cuadrado ? Icons.edit_outlined : Icons.fact_check_outlined,
+              size: 18,
+              color: color,
+            ),
           ),
-        ),
-        if (cuadre.cuadrado)
+        if (cuadre.cuadrado && onAnular != null)
           IconButton(
             onPressed: onAnular,
             tooltip: 'Anular',

@@ -11,6 +11,7 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/prestamo.dart';
@@ -40,7 +41,9 @@ class PrestamosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaPrestamosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número, contraparte o almacén',
       onRecargar: () => ref.read(prestamosProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context),
+      onNuevo: puede(ref, 'inv.prestamos', Accion.crear)
+          ? () => _abrirFormulario(context)
+          : null,
       textoNuevo: 'Nuevo préstamo',
       iconoVacio: Icons.handshake_outlined,
       singular: 'préstamo',
@@ -67,7 +70,8 @@ class PrestamosPagina extends ConsumerWidget {
       fila: (context, prestamo) => _TarjetaPrestamo(
         prestamo: prestamo,
         color: color,
-        onDevolver: prestamo.estado == EstadoPrestamo.pendiente
+        onDevolver: puede(ref, 'inv.prestamos', Accion.confirmar) &&
+                prestamo.estado == EstadoPrestamo.pendiente
             ? () => mostrarHojaDevolucion(context, ref, prestamo: prestamo)
             : null,
       ),

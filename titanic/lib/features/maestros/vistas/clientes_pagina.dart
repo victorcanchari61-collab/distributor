@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
@@ -41,7 +42,9 @@ class ClientesPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaClientesProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre, documento o punto de reparto',
       onRecargar: () => ref.read(clientesProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'maestros.clientes', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       iconoVacio: Icons.contacts_outlined,
       singular: 'cliente',
       plural: 'clientes',
@@ -86,8 +89,12 @@ class ClientesPagina extends ConsumerWidget {
       fila: (context, cliente) => _TarjetaCliente(
         cliente: cliente,
         color: color,
-        onEditar: () => _abrirFormulario(context, cliente),
-        onEstado: () => _cambiarEstado(context, ref, cliente),
+        onEditar: puede(ref, 'maestros.clientes', Accion.editar)
+            ? () => _abrirFormulario(context, cliente)
+            : null,
+        onEstado: puede(ref, 'maestros.clientes', Accion.editar)
+            ? () => _cambiarEstado(context, ref, cliente)
+            : null,
       ),
     );
   }
@@ -196,14 +203,14 @@ class _TarjetaCliente extends StatelessWidget {
   const _TarjetaCliente({
     required this.cliente,
     required this.color,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final Cliente cliente;
   final Color color;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   /// Los mismos datos que muestra la tabla del panel web, en el mismo orden.
   /// Los marcados `enTarjeta: false` solo salen en la ficha de detalle: en el
@@ -246,22 +253,24 @@ class _TarjetaCliente extends StatelessWidget {
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEstado,
-          tooltip: cliente.activo ? 'Desactivar' : 'Activar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            cliente.activo ? Icons.block : Icons.check_circle_outline,
-            size: 18,
-            color: cliente.activo ? Colores.advertencia : Colores.exito,
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
-        ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: cliente.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              cliente.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: cliente.activo ? Colores.advertencia : Colores.exito,
+            ),
+          ),
       ],
     );
   }
@@ -278,23 +287,25 @@ class _TarjetaCliente extends StatelessWidget {
           : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
       campos: _campos,
       acciones: [
-        AppBoton(
-          texto: cliente.activo ? 'Desactivar' : 'Activar',
-          variante: BotonVariante.secundario,
-          expandido: true,
-          onPressed: () {
-            Navigator.of(context).pop();
-            onEstado();
-          },
-        ),
-        AppBoton(
-          texto: 'Editar',
-          expandido: true,
-          onPressed: () {
-            Navigator.of(context).pop();
-            onEditar();
-          },
-        ),
+        if (onEstado != null)
+          AppBoton(
+            texto: cliente.activo ? 'Desactivar' : 'Activar',
+            variante: BotonVariante.secundario,
+            expandido: true,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onEstado!();
+            },
+          ),
+        if (onEditar != null)
+          AppBoton(
+            texto: 'Editar',
+            expandido: true,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onEditar!();
+            },
+          ),
       ],
     );
   }

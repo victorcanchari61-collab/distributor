@@ -10,6 +10,7 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -57,7 +58,9 @@ class FlotaPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaVehiculosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por placa, tipo, marca, conductor',
       onRecargar: () => ref.read(vehiculosProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'tms.flota', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       textoNuevo: 'Nuevo vehículo',
       iconoVacio: Icons.local_shipping_outlined,
       singular: 'vehículo',
@@ -109,8 +112,12 @@ class FlotaPagina extends ConsumerWidget {
         vehiculo: vehiculo,
         color: color,
         onVer: () => _verDetalle(context, vehiculo, color),
-        onEditar: () => _abrirFormulario(context, vehiculo),
-        onEstado: () => _cambiarEstado(context, ref, vehiculo),
+        onEditar: puede(ref, 'tms.flota', Accion.editar)
+            ? () => _abrirFormulario(context, vehiculo)
+            : null,
+        onEstado: puede(ref, 'tms.flota', Accion.editar)
+            ? () => _cambiarEstado(context, ref, vehiculo)
+            : null,
       ),
     );
   }
@@ -336,15 +343,15 @@ class _TarjetaVehiculo extends StatelessWidget {
     required this.vehiculo,
     required this.color,
     required this.onVer,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final Vehiculo vehiculo;
   final Color color;
   final VoidCallback onVer;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos {
     final estado = etiquetaEstado(vehiculo.estadoDocumentos);
@@ -398,22 +405,24 @@ class _TarjetaVehiculo extends StatelessWidget {
             color: Colores.tintaSuave,
           ),
         ),
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEstado,
-          tooltip: vehiculo.activo ? 'Desactivar' : 'Activar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            vehiculo.activo ? Icons.block : Icons.check_circle_outline,
-            size: 18,
-            color: vehiculo.activo ? Colores.advertencia : Colores.exito,
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
-        ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: vehiculo.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              vehiculo.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: vehiculo.activo ? Colores.advertencia : Colores.exito,
+            ),
+          ),
       ],
     );
   }

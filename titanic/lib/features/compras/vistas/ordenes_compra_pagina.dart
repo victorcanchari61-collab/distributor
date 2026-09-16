@@ -12,6 +12,7 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -45,7 +46,9 @@ class OrdenesCompraPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaOrdenesCompraProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o proveedor',
       onRecargar: () => ref.read(ordenesCompraProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'compras.ordenes', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       textoNuevo: 'Nueva orden',
       iconoVacio: Icons.list_alt_outlined,
       singular: 'orden de compra',
@@ -78,13 +81,16 @@ class OrdenesCompraPagina extends ConsumerWidget {
       fila: (context, orden) => _TarjetaOrden(
         orden: orden,
         color: color,
-        onEditar: orden.estado == EstadoOrdenCompra.pendiente
+        onEditar: puede(ref, 'compras.ordenes', Accion.editar) &&
+                orden.estado == EstadoOrdenCompra.pendiente
             ? () => _abrirFormulario(context, orden)
             : null,
-        onConfirmar: orden.estado == EstadoOrdenCompra.pendiente
+        onConfirmar: puede(ref, 'compras.ordenes', Accion.confirmar) &&
+                orden.estado == EstadoOrdenCompra.pendiente
             ? () => _confirmar(context, ref, orden)
             : null,
-        onAnular: orden.estado != EstadoOrdenCompra.anulada
+        onAnular: puede(ref, 'compras.ordenes', Accion.anular) &&
+                orden.estado != EstadoOrdenCompra.anulada
             ? () => _anular(context, ref, orden)
             : null,
       ),

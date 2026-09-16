@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
@@ -42,7 +43,9 @@ class ProveedoresPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaProveedoresProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por razon social, documento o rubro',
       onRecargar: () => ref.read(proveedoresProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'maestros.proveedores', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       iconoVacio: Icons.business_outlined,
       singular: 'proveedor',
       plural: 'proveedores',
@@ -87,8 +90,12 @@ class ProveedoresPagina extends ConsumerWidget {
       fila: (context, proveedor) => _TarjetaProveedor(
         proveedor: proveedor,
         color: color,
-        onEditar: () => _abrirFormulario(context, proveedor),
-        onEstado: () => _cambiarEstado(context, ref, proveedor),
+        onEditar: puede(ref, 'maestros.proveedores', Accion.editar)
+            ? () => _abrirFormulario(context, proveedor)
+            : null,
+        onEstado: puede(ref, 'maestros.proveedores', Accion.editar)
+            ? () => _cambiarEstado(context, ref, proveedor)
+            : null,
       ),
     );
   }
@@ -178,14 +185,14 @@ class _TarjetaProveedor extends StatelessWidget {
   const _TarjetaProveedor({
     required this.proveedor,
     required this.color,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final Proveedor proveedor;
   final Color color;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   /// Mismo criterio que en clientes: en la tarjeta solo lo que sirve para
   /// reconocer al proveedor; el resto vive en la ficha de detalle.
@@ -231,22 +238,24 @@ class _TarjetaProveedor extends StatelessWidget {
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEstado,
-          tooltip: proveedor.activo ? 'Desactivar' : 'Activar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            proveedor.activo ? Icons.block : Icons.check_circle_outline,
-            size: 18,
-            color: proveedor.activo ? Colores.advertencia : Colores.exito,
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
-        ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: proveedor.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              proveedor.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: proveedor.activo ? Colores.advertencia : Colores.exito,
+            ),
+          ),
       ],
     );
   }
@@ -265,23 +274,25 @@ class _TarjetaProveedor extends StatelessWidget {
           : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
       campos: _campos,
       acciones: [
-        AppBoton(
-          texto: proveedor.activo ? 'Desactivar' : 'Activar',
-          variante: BotonVariante.secundario,
-          expandido: true,
-          onPressed: () {
-            Navigator.of(context).pop();
-            onEstado();
-          },
-        ),
-        AppBoton(
-          texto: 'Editar',
-          expandido: true,
-          onPressed: () {
-            Navigator.of(context).pop();
-            onEditar();
-          },
-        ),
+        if (onEstado != null)
+          AppBoton(
+            texto: proveedor.activo ? 'Desactivar' : 'Activar',
+            variante: BotonVariante.secundario,
+            expandido: true,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onEstado!();
+            },
+          ),
+        if (onEditar != null)
+          AppBoton(
+            texto: 'Editar',
+            expandido: true,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onEditar!();
+            },
+          ),
       ],
     );
   }

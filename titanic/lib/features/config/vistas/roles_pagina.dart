@@ -9,6 +9,7 @@ import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -36,7 +37,9 @@ class RolesPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaRolesProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre o descripción',
       onRecargar: () => ref.read(rolesProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'config.roles', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       iconoVacio: Icons.verified_user_outlined,
       singular: 'rol',
       plural: 'roles',
@@ -48,8 +51,12 @@ class RolesPagina extends ConsumerWidget {
       fila: (context, rol) => _TarjetaRol(
         rol: rol,
         color: color,
-        onEditar: () => _abrirFormulario(context, rol),
-        onEstado: () => _cambiarEstado(context, ref, rol),
+        onEditar: puede(ref, 'config.roles', Accion.editar)
+            ? () => _abrirFormulario(context, rol)
+            : null,
+        onEstado: puede(ref, 'config.roles', Accion.editar)
+            ? () => _cambiarEstado(context, ref, rol)
+            : null,
       ),
     );
   }
@@ -123,14 +130,14 @@ class _TarjetaRol extends StatelessWidget {
   const _TarjetaRol({
     required this.rol,
     required this.color,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final Rol rol;
   final Color color;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Descripción', rol.descripcion),
@@ -179,40 +186,44 @@ class _TarjetaRol extends StatelessWidget {
             : null,
         campos: _campos,
         acciones: [
-          AppBoton(
-            texto: rol.activo ? 'Desactivar' : 'Activar',
-            variante: BotonVariante.secundario,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEstado();
-            },
-          ),
-          AppBoton(
-            texto: 'Editar',
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar();
-            },
-          ),
+          if (onEstado != null)
+            AppBoton(
+              texto: rol.activo ? 'Desactivar' : 'Activar',
+              variante: BotonVariante.secundario,
+              onPressed: () {
+                Navigator.of(context).pop();
+                onEstado!();
+              },
+            ),
+          if (onEditar != null)
+            AppBoton(
+              texto: 'Editar',
+              onPressed: () {
+                Navigator.of(context).pop();
+                onEditar!();
+              },
+            ),
         ],
       ),
       acciones: [
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEstado,
-          tooltip: rol.activo ? 'Desactivar' : 'Activar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            rol.activo ? Icons.block : Icons.check_circle_outline,
-            size: 18,
-            color: rol.activo ? Colores.advertencia : Colores.exito,
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
-        ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: rol.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              rol.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: rol.activo ? Colores.advertencia : Colores.exito,
+            ),
+          ),
       ],
     );
   }

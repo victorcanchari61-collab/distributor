@@ -11,6 +11,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_shell.dart';
 import '../../../compartido/widgets/app_vacio.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
@@ -248,7 +249,9 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
                     },
                   ),
           ),
-          if (almacenId != null)
+          // Contar lo puede hacer cualquiera que entre; registrarlo no: el
+          // conteo termina en un ajuste que mueve el stock de verdad.
+          if (almacenId != null && puede(ref, 'inv.conteos', Accion.crear))
             Padding(
               padding: const EdgeInsets.all(Dimen.espacio4),
               child: AppBoton(

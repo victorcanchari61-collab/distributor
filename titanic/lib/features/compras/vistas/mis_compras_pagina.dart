@@ -12,6 +12,7 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -47,7 +48,9 @@ class MisComprasPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaComprasProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número, proveedor o comprobante',
       onRecargar: () => ref.read(comprasProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context),
+      onNuevo: puede(ref, 'compras.compras', Accion.crear)
+          ? () => _abrirFormulario(context)
+          : null,
       textoNuevo: 'Nueva compra',
       iconoVacio: Icons.shopping_bag_outlined,
       singular: 'compra',
@@ -80,13 +83,17 @@ class MisComprasPagina extends ConsumerWidget {
       fila: (context, compra) => _TarjetaCompra(
         compra: compra,
         color: color,
-        onEditar: compra.estado == EstadoCompra.pendiente
+        onEditar: puede(ref, 'compras.compras', Accion.editar) &&
+                compra.estado == EstadoCompra.pendiente
             ? () => _abrirFormulario(context, compra)
             : null,
-        onRecibir: compra.detalle.any((d) => d.cantidadPendiente > 0)
+        onRecibir:
+            puede(ref, 'compras.recepciones', Accion.crear) &&
+                compra.detalle.any((d) => d.cantidadPendiente > 0)
             ? () => _recibir(context, compra)
             : null,
-        onAnular: compra.estado == EstadoCompra.pendiente
+        onAnular: puede(ref, 'compras.compras', Accion.anular) &&
+                compra.estado == EstadoCompra.pendiente
             ? () => _anular(context, ref, compra)
             : null,
       ),

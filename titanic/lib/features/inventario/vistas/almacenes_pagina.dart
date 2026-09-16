@@ -10,6 +10,7 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -42,7 +43,9 @@ class AlmacenesPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaAlmacenesProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por código, nombre o dirección',
       onRecargar: () => ref.read(almacenesProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'inv.almacenes', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       iconoVacio: Icons.warehouse_outlined,
       singular: 'almacén',
       plural: 'almacenes',
@@ -81,8 +84,12 @@ class AlmacenesPagina extends ConsumerWidget {
       fila: (context, almacen) => _TarjetaAlmacen(
         almacen: almacen,
         color: color,
-        onEditar: () => _abrirFormulario(context, almacen),
-        onEstado: () => _cambiarEstado(context, ref, almacen),
+        onEditar: puede(ref, 'inv.almacenes', Accion.editar)
+            ? () => _abrirFormulario(context, almacen)
+            : null,
+        onEstado: puede(ref, 'inv.almacenes', Accion.editar)
+            ? () => _cambiarEstado(context, ref, almacen)
+            : null,
       ),
     );
   }
@@ -150,14 +157,14 @@ class _TarjetaAlmacen extends StatelessWidget {
   const _TarjetaAlmacen({
     required this.almacen,
     required this.color,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final Almacen almacen;
   final Color color;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Dirección', almacen.direccion),
@@ -185,24 +192,26 @@ class _TarjetaAlmacen extends StatelessWidget {
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+          ),
         // El principal siempre esta activo: no se ofrece apagarlo.
         if (!almacen.esPrincipal)
-          IconButton(
-            onPressed: onEstado,
-            tooltip: almacen.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              almacen.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: almacen.activo ? Colores.advertencia : Colores.exito,
+          if (onEstado != null)
+            IconButton(
+              onPressed: onEstado,
+              tooltip: almacen.activo ? 'Desactivar' : 'Activar',
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                almacen.activo ? Icons.block : Icons.check_circle_outline,
+                size: 18,
+                color: almacen.activo ? Colores.advertencia : Colores.exito,
+              ),
             ),
-          ),
       ],
     );
   }
@@ -223,23 +232,25 @@ class _TarjetaAlmacen extends StatelessWidget {
       campos: _campos,
       acciones: [
         if (!almacen.esPrincipal)
+          if (onEstado != null)
+            AppBoton(
+              texto: almacen.activo ? 'Desactivar' : 'Activar',
+              variante: BotonVariante.secundario,
+              expandido: true,
+              onPressed: () {
+                Navigator.of(context).pop();
+                onEstado!();
+              },
+            ),
+        if (onEditar != null)
           AppBoton(
-            texto: almacen.activo ? 'Desactivar' : 'Activar',
-            variante: BotonVariante.secundario,
+            texto: 'Editar',
             expandido: true,
             onPressed: () {
               Navigator.of(context).pop();
-              onEstado();
+              onEditar!();
             },
           ),
-        AppBoton(
-          texto: 'Editar',
-          expandido: true,
-          onPressed: () {
-            Navigator.of(context).pop();
-            onEditar();
-          },
-        ),
       ],
     );
   }

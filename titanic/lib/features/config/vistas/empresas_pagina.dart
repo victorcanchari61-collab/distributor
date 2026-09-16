@@ -9,6 +9,7 @@ import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -36,7 +37,9 @@ class EmpresasPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaEmpresasProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por razón social o RUC',
       onRecargar: () => ref.read(empresasProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'config.empresa', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       textoNuevo: 'Nueva',
       iconoVacio: Icons.domain_outlined,
       singular: 'empresa',
@@ -49,9 +52,15 @@ class EmpresasPagina extends ConsumerWidget {
       fila: (context, empresa) => _TarjetaEmpresa(
         empresa: empresa,
         color: color,
-        onEditar: () => _abrirFormulario(context, empresa),
-        onActivar: () => _activar(context, ref, empresa),
-        onHabilitacion: () => _cambiarHabilitacion(context, ref, empresa),
+        onEditar: puede(ref, 'config.empresa', Accion.editar)
+            ? () => _abrirFormulario(context, empresa)
+            : null,
+        onActivar: puede(ref, 'config.empresa', Accion.editar)
+            ? () => _activar(context, ref, empresa)
+            : null,
+        onHabilitacion: puede(ref, 'config.empresa', Accion.eliminar)
+            ? () => _cambiarHabilitacion(context, ref, empresa)
+            : null,
       ),
     );
   }
@@ -152,16 +161,16 @@ class _TarjetaEmpresa extends StatelessWidget {
   const _TarjetaEmpresa({
     required this.empresa,
     required this.color,
-    required this.onEditar,
-    required this.onActivar,
-    required this.onHabilitacion,
+    this.onEditar,
+    this.onActivar,
+    this.onHabilitacion,
   });
 
   final Empresa empresa;
   final Color color;
-  final VoidCallback onEditar;
-  final VoidCallback onActivar;
-  final VoidCallback onHabilitacion;
+  final VoidCallback? onEditar;
+  final VoidCallback? onActivar;
+  final VoidCallback? onHabilitacion;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Razón social', empresa.razonSocial),
@@ -219,52 +228,57 @@ class _TarjetaEmpresa extends StatelessWidget {
         campos: _campos,
         acciones: [
           if (!empresa.activa && empresa.habilitada)
+            if (onActivar != null)
+              AppBoton(
+                texto: 'Activar',
+                variante: BotonVariante.secundario,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onActivar!();
+                },
+              ),
+          if (onEditar != null)
             AppBoton(
-              texto: 'Activar',
-              variante: BotonVariante.secundario,
+              texto: 'Editar',
               onPressed: () {
                 Navigator.of(context).pop();
-                onActivar();
+                onEditar!();
               },
             ),
-          AppBoton(
-            texto: 'Editar',
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar();
-            },
-          ),
         ],
       ),
       acciones: [
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+          ),
         // La empresa activa no ofrece "activar": ya lo esta.
         if (!empresa.activa && empresa.habilitada)
+          if (onActivar != null)
+            IconButton(
+              onPressed: onActivar,
+              tooltip: 'Operar con esta empresa',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(
+                Icons.check_circle_outline,
+                size: 18,
+                color: Colores.exito,
+              ),
+            ),
+        if (onHabilitacion != null)
           IconButton(
-            onPressed: onActivar,
-            tooltip: 'Operar con esta empresa',
+            onPressed: onHabilitacion,
+            tooltip: empresa.habilitada ? 'Retirar' : 'Habilitar',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.check_circle_outline,
+            icon: Icon(
+              empresa.habilitada ? Icons.block : Icons.restore,
               size: 18,
-              color: Colores.exito,
+              color: empresa.habilitada ? Colores.advertencia : Colores.exito,
             ),
           ),
-        IconButton(
-          onPressed: onHabilitacion,
-          tooltip: empresa.habilitada ? 'Retirar' : 'Habilitar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            empresa.habilitada ? Icons.block : Icons.restore,
-            size: 18,
-            color: empresa.habilitada ? Colores.advertencia : Colores.exito,
-          ),
-        ),
       ],
     );
   }

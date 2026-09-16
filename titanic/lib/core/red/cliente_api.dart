@@ -12,6 +12,16 @@ import 'excepciones.dart';
 /// URL, se adjunta el token, se interpreta la respuesta y se convierten los
 /// errores en ApiExcepcion. Las pantallas nunca hablan con http directamente.
 class ClienteApi {
+  /*
+   * A quien avisar cuando el servidor niega un permiso.
+   *
+   * Vive aqui y no en cada pantalla porque el 403 puede llegar de cualquiera
+   * de las treinta y nueve: pedirle a cada una que se acuerde de manejarlo
+   * garantiza que la mitad no lo haga. Lo engancha VigilantePermisos al
+   * arrancar la app.
+   */
+  static void Function(ApiExcepcion)? alNegarPermiso;
+
   ClienteApi({http.Client? cliente, SesionAlmacen? sesion})
     : _http = cliente ?? http.Client(),
       _sesion = sesion ?? SesionAlmacen();
@@ -73,13 +83,18 @@ class ClienteApi {
           ? datos
           : const <String, dynamic>{};
 
-      throw ApiExcepcion(
+      final fallo = ApiExcepcion(
         mapa['message'] as String? ?? 'Error ${respuesta.statusCode}',
         codigo: mapa['statusCode'] as int? ?? respuesta.statusCode,
         errores:
             (mapa['errors'] as List?)?.map((e) => e.toString()).toList() ??
             const [],
+        // Solo los 403 del filtro de permisos traen estos dos.
+        submodulo: mapa['submodulo'] as String?,
+        accion: mapa['accion'] as String?,
       );
+      if (fallo.permisoNegado) alNegarPermiso?.call(fallo);
+      throw fallo;
     }
 
     return datos;
@@ -110,10 +125,14 @@ class ClienteApi {
 
     if (respuesta.statusCode >= 400) {
       final mapa = _errorDe(respuesta.body);
-      throw ApiExcepcion(
+      final fallo = ApiExcepcion(
         mapa['message'] as String? ?? 'Error ${respuesta.statusCode}',
         codigo: mapa['statusCode'] as int? ?? respuesta.statusCode,
+        submodulo: mapa['submodulo'] as String?,
+        accion: mapa['accion'] as String?,
       );
+      if (fallo.permisoNegado) alNegarPermiso?.call(fallo);
+      throw fallo;
     }
 
     return respuesta.bodyBytes;

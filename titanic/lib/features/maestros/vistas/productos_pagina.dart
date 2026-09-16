@@ -10,6 +10,7 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -49,7 +50,9 @@ class ProductosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaProductosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre, código o categoría',
       onRecargar: () => ref.read(productosProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'maestros.productos', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       iconoVacio: Icons.inventory_2_outlined,
       singular: 'producto',
       plural: 'productos',
@@ -94,8 +97,12 @@ class ProductosPagina extends ConsumerWidget {
       fila: (context, producto) => _TarjetaProducto(
         producto: producto,
         color: color,
-        onEditar: () => _abrirFormulario(context, producto),
-        onEstado: () => _cambiarEstado(context, ref, producto),
+        onEditar: puede(ref, 'maestros.productos', Accion.editar)
+            ? () => _abrirFormulario(context, producto)
+            : null,
+        onEstado: puede(ref, 'maestros.productos', Accion.editar)
+            ? () => _cambiarEstado(context, ref, producto)
+            : null,
       ),
     );
   }
@@ -195,14 +202,14 @@ class _TarjetaProducto extends StatelessWidget {
   const _TarjetaProducto({
     required this.producto,
     required this.color,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final Producto producto;
   final Color color;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Marca', producto.marca),
@@ -250,22 +257,24 @@ class _TarjetaProducto extends StatelessWidget {
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEstado,
-          tooltip: producto.activo ? 'Desactivar' : 'Activar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            producto.activo ? Icons.block : Icons.check_circle_outline,
-            size: 18,
-            color: producto.activo ? Colores.advertencia : Colores.exito,
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
-        ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: producto.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              producto.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: producto.activo ? Colores.advertencia : Colores.exito,
+            ),
+          ),
       ],
     );
   }
@@ -282,23 +291,25 @@ class _TarjetaProducto extends StatelessWidget {
           : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
       campos: _campos,
       acciones: [
-        AppBoton(
-          texto: producto.activo ? 'Desactivar' : 'Activar',
-          variante: BotonVariante.secundario,
-          expandido: true,
-          onPressed: () {
-            Navigator.of(context).pop();
-            onEstado();
-          },
-        ),
-        AppBoton(
-          texto: 'Editar',
-          expandido: true,
-          onPressed: () {
-            Navigator.of(context).pop();
-            onEditar();
-          },
-        ),
+        if (onEstado != null)
+          AppBoton(
+            texto: producto.activo ? 'Desactivar' : 'Activar',
+            variante: BotonVariante.secundario,
+            expandido: true,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onEstado!();
+            },
+          ),
+        if (onEditar != null)
+          AppBoton(
+            texto: 'Editar',
+            expandido: true,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onEditar!();
+            },
+          ),
       ],
     );
   }

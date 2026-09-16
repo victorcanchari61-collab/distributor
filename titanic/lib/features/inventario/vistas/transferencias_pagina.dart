@@ -12,6 +12,7 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
@@ -43,7 +44,9 @@ class TransferenciasPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaTransferenciasProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o almacén',
       onRecargar: () => ref.read(transferenciasProvider.notifier).recargar(),
-      onNuevo: almacenesActivos >= 2 ? () => _abrirFormulario(context) : null,
+      onNuevo: puede(ref, 'inv.transferencias', Accion.crear)
+          ? almacenesActivos >= 2 ? () => _abrirFormulario(context) : null
+          : null,
       textoNuevo: 'Nueva transferencia',
       iconoVacio: Icons.local_shipping_outlined,
       singular: 'transferencia',
@@ -73,7 +76,9 @@ class TransferenciasPagina extends ConsumerWidget {
       fila: (context, doc) => _TarjetaTransferencia(
         doc: doc,
         color: color,
-        onAnular: doc.anulado ? null : () => _anular(context, ref, doc),
+        onAnular: doc.anulado || !puede(ref, 'inv.transferencias', Accion.anular)
+            ? null
+            : () => _anular(context, ref, doc),
       ),
     );
   }

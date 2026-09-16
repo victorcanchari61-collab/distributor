@@ -10,6 +10,7 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -41,7 +42,9 @@ class MetodosPagoPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaMetodosPagoProvider.notifier).state = t,
       pistaBusqueda: 'Buscar método de pago',
       onRecargar: () => ref.read(metodosPagoProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'finanzas.metodospago', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       textoNuevo: 'Nuevo método',
       iconoVacio: Icons.payments_outlined,
       singular: 'método de pago',
@@ -62,8 +65,12 @@ class MetodosPagoPagina extends ConsumerWidget {
       fila: (context, metodo) => _TarjetaMetodoPago(
         metodo: metodo,
         color: color,
-        onEditar: () => _abrirFormulario(context, metodo),
-        onEstado: () => _cambiarEstado(context, ref, metodo),
+        onEditar: puede(ref, 'finanzas.metodospago', Accion.editar)
+            ? () => _abrirFormulario(context, metodo)
+            : null,
+        onEstado: puede(ref, 'finanzas.metodospago', Accion.editar)
+            ? () => _cambiarEstado(context, ref, metodo)
+            : null,
       ),
     );
   }
@@ -146,14 +153,14 @@ class _TarjetaMetodoPago extends StatelessWidget {
   const _TarjetaMetodoPago({
     required this.metodo,
     required this.color,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final MetodoPago metodo;
   final Color color;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Banco', metodo.banco),
@@ -180,22 +187,24 @@ class _TarjetaMetodoPago extends StatelessWidget {
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEstado,
-          tooltip: metodo.activo ? 'Desactivar' : 'Activar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            metodo.activo ? Icons.block : Icons.check_circle_outline,
-            size: 18,
-            color: metodo.activo ? Colores.advertencia : Colores.exito,
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
-        ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: metodo.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              metodo.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: metodo.activo ? Colores.advertencia : Colores.exito,
+            ),
+          ),
       ],
     );
   }
@@ -212,23 +221,25 @@ class _TarjetaMetodoPago extends StatelessWidget {
           : null,
       campos: _campos,
       acciones: [
-        AppBoton(
-          texto: metodo.activo ? 'Desactivar' : 'Activar',
-          variante: BotonVariante.secundario,
-          expandido: true,
-          onPressed: () {
-            Navigator.of(context).pop();
-            onEstado();
-          },
-        ),
-        AppBoton(
-          texto: 'Editar',
-          expandido: true,
-          onPressed: () {
-            Navigator.of(context).pop();
-            onEditar();
-          },
-        ),
+        if (onEstado != null)
+          AppBoton(
+            texto: metodo.activo ? 'Desactivar' : 'Activar',
+            variante: BotonVariante.secundario,
+            expandido: true,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onEstado!();
+            },
+          ),
+        if (onEditar != null)
+          AppBoton(
+            texto: 'Editar',
+            expandido: true,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onEditar!();
+            },
+          ),
       ],
     );
   }

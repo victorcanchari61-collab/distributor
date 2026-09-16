@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -64,7 +65,9 @@ class ListasPreciosPagina extends ConsumerWidget {
         await ref.read(listasPrecioProvider.notifier).recargar();
         ref.invalidate(preciosListaActivaProvider);
       },
-      onNuevo: activa == null ? null : () => _agregarPrecio(context, ref, activa!),
+      onNuevo: activa == null || !puede(ref, 'fact.precios', Accion.crear)
+          ? null
+          : () => _agregarPrecio(context, ref, activa!),
       textoNuevo: 'Agregar precio',
       iconoVacio: Icons.payments_outlined,
       singular: 'precio',
@@ -137,8 +140,12 @@ class ListasPreciosPagina extends ConsumerWidget {
       fila: (context, precio) => _TarjetaPrecio(
         precio: precio,
         color: color,
-        onEditar: () => _editarPrecio(context, ref, activa!, precio),
-        onEliminar: () => _eliminarPrecio(context, ref, precio),
+        onEditar: puede(ref, 'fact.precios', Accion.editar)
+            ? () => _editarPrecio(context, ref, activa!, precio)
+            : null,
+        onEliminar: puede(ref, 'fact.precios', Accion.eliminar)
+            ? () => _eliminarPrecio(context, ref, precio)
+            : null,
       ),
     );
   }
@@ -311,14 +318,14 @@ class _TarjetaPrecio extends StatelessWidget {
   const _TarjetaPrecio({
     required this.precio,
     required this.color,
-    required this.onEditar,
-    required this.onEliminar,
+    this.onEditar,
+    this.onEliminar,
   });
 
   final Precio precio;
   final Color color;
-  final VoidCallback onEditar;
-  final VoidCallback onEliminar;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -343,18 +350,20 @@ class _TarjetaPrecio extends StatelessWidget {
       ],
       onTap: onEditar,
       acciones: [
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEliminar,
-          tooltip: 'Eliminar',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
-        ),
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+          ),
+        if (onEliminar != null)
+          IconButton(
+            onPressed: onEliminar,
+            tooltip: 'Eliminar',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
+          ),
       ],
     );
   }

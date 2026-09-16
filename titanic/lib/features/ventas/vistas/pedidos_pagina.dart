@@ -12,6 +12,7 @@ import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -47,7 +48,9 @@ class PedidosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaPedidosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o cliente',
       onRecargar: () => ref.read(pedidosProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'fact.pedidos', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       textoNuevo: 'Nuevo pedido',
       iconoVacio: Icons.list_alt_outlined,
       singular: 'pedido',
@@ -80,13 +83,16 @@ class PedidosPagina extends ConsumerWidget {
       fila: (context, pedido) => _TarjetaPedido(
         pedido: pedido,
         color: color,
-        onEditar: pedido.estado == EstadoPedido.pendiente
+        onEditar: puede(ref, 'fact.pedidos', Accion.editar) &&
+                pedido.estado == EstadoPedido.pendiente
             ? () => _abrirFormulario(context, pedido)
             : null,
-        onConfirmar: pedido.estado == EstadoPedido.pendiente
+        onConfirmar: puede(ref, 'fact.pedidos', Accion.confirmar) &&
+                pedido.estado == EstadoPedido.pendiente
             ? () => _confirmar(context, ref, pedido)
             : null,
-        onAnular: pedido.estado == EstadoPedido.pendiente
+        onAnular: puede(ref, 'fact.pedidos', Accion.anular) &&
+                pedido.estado == EstadoPedido.pendiente
             ? () => _anular(context, ref, pedido)
             : null,
       ),

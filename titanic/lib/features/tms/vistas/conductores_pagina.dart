@@ -9,6 +9,7 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -43,7 +44,9 @@ class ConductoresPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaConductoresProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre, documento, licencia',
       onRecargar: () => ref.read(conductoresProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'tms.conductores', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       textoNuevo: 'Nuevo conductor',
       iconoVacio: Icons.badge_outlined,
       singular: 'conductor',
@@ -82,8 +85,12 @@ class ConductoresPagina extends ConsumerWidget {
         conductor: conductor,
         color: color,
         onVer: () => _verDetalle(context, conductor, color),
-        onEditar: () => _abrirFormulario(context, conductor),
-        onEstado: () => _cambiarEstado(context, ref, conductor),
+        onEditar: puede(ref, 'tms.conductores', Accion.editar)
+            ? () => _abrirFormulario(context, conductor)
+            : null,
+        onEstado: puede(ref, 'tms.conductores', Accion.editar)
+            ? () => _cambiarEstado(context, ref, conductor)
+            : null,
       ),
     );
   }
@@ -236,15 +243,15 @@ class _TarjetaConductor extends StatelessWidget {
     required this.conductor,
     required this.color,
     required this.onVer,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final Conductor conductor;
   final Color color;
   final VoidCallback onVer;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos {
     final licencia = conductor.vencimientos.isEmpty ? null : conductor.vencimientos.first;
@@ -296,22 +303,24 @@ class _TarjetaConductor extends StatelessWidget {
             color: Colores.tintaSuave,
           ),
         ),
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEstado,
-          tooltip: conductor.activo ? 'Desactivar' : 'Activar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            conductor.activo ? Icons.block : Icons.check_circle_outline,
-            size: 18,
-            color: conductor.activo ? Colores.advertencia : Colores.exito,
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
-        ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: conductor.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              conductor.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: conductor.activo ? Colores.advertencia : Colores.exito,
+            ),
+          ),
       ],
     );
   }

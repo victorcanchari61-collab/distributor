@@ -12,6 +12,7 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
@@ -44,7 +45,9 @@ class RecepcionesPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaRecepcionesProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número, almacén o compra',
       onRecargar: () => ref.read(recepcionesProvider.notifier).recargar(),
-      onNuevo: hayPendientes ? () => _abrirFormulario(context) : null,
+      onNuevo: puede(ref, 'compras.recepciones', Accion.crear)
+          ? hayPendientes ? () => _abrirFormulario(context) : null
+          : null,
       textoNuevo: 'Nueva recepción',
       iconoVacio: Icons.move_to_inbox_outlined,
       singular: 'recepción',
@@ -74,7 +77,9 @@ class RecepcionesPagina extends ConsumerWidget {
       fila: (context, doc) => _TarjetaRecepcion(
         doc: doc,
         color: color,
-        onAnular: doc.anulado ? null : () => _anular(context, ref, doc),
+        onAnular: doc.anulado || !puede(ref, 'compras.recepciones', Accion.anular)
+            ? null
+            : () => _anular(context, ref, doc),
       ),
     );
   }

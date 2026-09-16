@@ -9,6 +9,7 @@ import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -36,7 +37,9 @@ class UsuariosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaUsuariosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre, correo o rol',
       onRecargar: () => ref.read(usuariosProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'config.usuarios', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       iconoVacio: Icons.person_outline,
       singular: 'usuario',
       plural: 'usuarios',
@@ -48,8 +51,12 @@ class UsuariosPagina extends ConsumerWidget {
       fila: (context, usuario) => _TarjetaUsuario(
         usuario: usuario,
         color: color,
-        onEditar: () => _abrirFormulario(context, usuario),
-        onEstado: () => _cambiarEstado(context, ref, usuario),
+        onEditar: puede(ref, 'config.usuarios', Accion.editar)
+            ? () => _abrirFormulario(context, usuario)
+            : null,
+        onEstado: puede(ref, 'config.usuarios', Accion.editar)
+            ? () => _cambiarEstado(context, ref, usuario)
+            : null,
       ),
     );
   }
@@ -131,14 +138,14 @@ class _TarjetaUsuario extends StatelessWidget {
   const _TarjetaUsuario({
     required this.usuario,
     required this.color,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final Usuario usuario;
   final Color color;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Correo', usuario.email),
@@ -176,40 +183,44 @@ class _TarjetaUsuario extends StatelessWidget {
             : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
         campos: _campos,
         acciones: [
-          AppBoton(
-            texto: usuario.activo ? 'Desactivar' : 'Activar',
-            variante: BotonVariante.secundario,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEstado();
-            },
-          ),
-          AppBoton(
-            texto: 'Editar',
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar();
-            },
-          ),
+          if (onEstado != null)
+            AppBoton(
+              texto: usuario.activo ? 'Desactivar' : 'Activar',
+              variante: BotonVariante.secundario,
+              onPressed: () {
+                Navigator.of(context).pop();
+                onEstado!();
+              },
+            ),
+          if (onEditar != null)
+            AppBoton(
+              texto: 'Editar',
+              onPressed: () {
+                Navigator.of(context).pop();
+                onEditar!();
+              },
+            ),
         ],
       ),
       acciones: [
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEstado,
-          tooltip: usuario.activo ? 'Desactivar' : 'Activar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            usuario.activo ? Icons.block : Icons.check_circle_outline,
-            size: 18,
-            color: usuario.activo ? Colores.advertencia : Colores.exito,
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
-        ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: usuario.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              usuario.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: usuario.activo ? Colores.advertencia : Colores.exito,
+            ),
+          ),
       ],
     );
   }

@@ -11,6 +11,7 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -67,7 +68,9 @@ class CuentasPorCobrarPagina extends ConsumerWidget {
       fila: (context, nota) => _TarjetaCuentaCobrar(
         nota: nota,
         color: color,
-        onGestionarPagos: () => _gestionarPagos(context, ref, nota),
+        onGestionarPagos: puede(ref, 'finanzas.cobrar', Accion.cobrar)
+            ? () => _gestionarPagos(context, ref, nota)
+            : null,
       ),
     );
   }
@@ -115,12 +118,12 @@ class _TarjetaCuentaCobrar extends StatelessWidget {
   const _TarjetaCuentaCobrar({
     required this.nota,
     required this.color,
-    required this.onGestionarPagos,
+    this.onGestionarPagos,
   });
 
   final NotaVenta nota;
   final Color color;
-  final VoidCallback onGestionarPagos;
+  final VoidCallback? onGestionarPagos;
 
   @override
   Widget build(BuildContext context) {
@@ -150,12 +153,17 @@ class _TarjetaCuentaCobrar extends StatelessWidget {
         ),
       ],
       acciones: [
-        IconButton(
-          onPressed: onGestionarPagos,
-          tooltip: 'Gestionar pagos',
+        if (onGestionarPagos != null)
+          IconButton(
+            onPressed: onGestionarPagos,
+            tooltip: 'Gestionar pagos',
           visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.request_quote_outlined, size: 18, color: Acento.de(context)),
-        ),
+            icon: Icon(
+              Icons.request_quote_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
+          ),
       ],
     );
   }

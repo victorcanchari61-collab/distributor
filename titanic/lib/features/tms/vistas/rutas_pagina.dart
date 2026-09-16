@@ -9,6 +9,7 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -39,7 +40,9 @@ class RutasPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaRutasProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre',
       onRecargar: () => ref.read(rutasProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'tms.rutas', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       textoNuevo: 'Nueva ruta',
       iconoVacio: Icons.route_outlined,
       singular: 'ruta',
@@ -66,8 +69,12 @@ class RutasPagina extends ConsumerWidget {
         ruta: ruta,
         color: color,
         onVer: () => _verDetalle(context, ruta, color),
-        onEditar: () => _abrirFormulario(context, ruta),
-        onEstado: () => _cambiarEstado(context, ref, ruta),
+        onEditar: puede(ref, 'tms.rutas', Accion.editar)
+            ? () => _abrirFormulario(context, ruta)
+            : null,
+        onEstado: puede(ref, 'tms.rutas', Accion.editar)
+            ? () => _cambiarEstado(context, ref, ruta)
+            : null,
       ),
     );
   }
@@ -158,15 +165,15 @@ class _TarjetaRuta extends StatelessWidget {
     required this.ruta,
     required this.color,
     required this.onVer,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final Ruta ruta;
   final Color color;
   final VoidCallback onVer;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Clientes', '${ruta.clientes}'),
@@ -196,22 +203,24 @@ class _TarjetaRuta extends StatelessWidget {
             color: Colores.tintaSuave,
           ),
         ),
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEstado,
-          tooltip: ruta.activo ? 'Desactivar' : 'Activar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            ruta.activo ? Icons.block : Icons.check_circle_outline,
-            size: 18,
-            color: ruta.activo ? Colores.advertencia : Colores.exito,
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
-        ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: ruta.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              ruta.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: ruta.activo ? Colores.advertencia : Colores.exito,
+            ),
+          ),
       ],
     );
   }

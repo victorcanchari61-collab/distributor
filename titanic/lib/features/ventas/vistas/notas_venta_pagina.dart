@@ -11,6 +11,7 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
@@ -44,7 +45,9 @@ class NotasVentaPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaNotasVentaProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o cliente',
       onRecargar: () => ref.read(notasVentaProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context),
+      onNuevo: puede(ref, 'fact.notaventa', Accion.crear)
+          ? () => _abrirFormulario(context)
+          : null,
       textoNuevo: 'Nueva venta',
       iconoVacio: Icons.shopping_bag_outlined,
       singular: 'nota de venta',
@@ -77,7 +80,8 @@ class NotasVentaPagina extends ConsumerWidget {
       fila: (context, nota) => _TarjetaNotaVenta(
         nota: nota,
         color: color,
-        onAnular: nota.estado == EstadoNotaVenta.confirmada
+        onAnular: puede(ref, 'fact.notaventa', Accion.anular) &&
+                nota.estado == EstadoNotaVenta.confirmada
             ? () => _anular(context, ref, nota)
             : null,
       ),

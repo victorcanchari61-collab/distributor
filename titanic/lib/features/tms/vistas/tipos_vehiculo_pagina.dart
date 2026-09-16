@@ -9,6 +9,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_vacio.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -71,8 +72,12 @@ class TiposVehiculoPagina extends ConsumerWidget {
                     itemBuilder: (_, i) => _Tarjeta(
                       tipo: tipos[i],
                       onVer: () => _verDetalle(context, tipos[i]),
-                      onEditar: () => _abrirHoja(context, ref, tipos[i]),
-                      onEstado: () => _cambiarEstado(context, ref, tipos[i]),
+                      onEditar: puede(ref, 'tms.flota', Accion.editar)
+                          ? () => _abrirHoja(context, ref, tipos[i])
+                          : null,
+                      onEstado: puede(ref, 'tms.flota', Accion.editar)
+                          ? () => _cambiarEstado(context, ref, tipos[i])
+                          : null,
                     ),
                   ),
                 ),
@@ -166,14 +171,14 @@ class _Tarjeta extends StatelessWidget {
   const _Tarjeta({
     required this.tipo,
     required this.onVer,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final TipoVehiculo tipo;
   final VoidCallback onVer;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   @override
   Widget build(BuildContext context) {
@@ -207,22 +212,24 @@ class _Tarjeta extends StatelessWidget {
             color: Colores.tintaSuave,
           ),
         ),
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEstado,
-          tooltip: tipo.activo ? 'Desactivar' : 'Activar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            tipo.activo ? Icons.block : Icons.check_circle_outline,
-            size: 18,
-            color: tipo.activo ? Colores.advertencia : Colores.exito,
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
-        ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: tipo.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              tipo.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: tipo.activo ? Colores.advertencia : Colores.exito,
+            ),
+          ),
       ],
     );
   }

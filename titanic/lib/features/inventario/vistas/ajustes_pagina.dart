@@ -14,6 +14,7 @@ import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_shell.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_vacio.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -59,7 +60,8 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
       accionFlotante: AnimatedBuilder(
         animation: _tabs,
         builder: (context, _) => FloatingActionButton.extended(
-          onPressed: () => _tabs.index == 0 ? _nuevoAjuste(context) : _nuevoMotivo(context),
+          onPressed: () =>
+              _tabs.index == 0 ? _nuevoAjuste(context) : _nuevoMotivo(context),
           backgroundColor: color,
           foregroundColor: Colors.white,
           icon: const Icon(Icons.add),
@@ -340,7 +342,9 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
                       itemBuilder: (context, i) => _TarjetaMotivo(
                         motivo: visibles[i],
                         color: color,
-                        onEditar: visibles[i].delSistema
+                        onEditar:
+                            visibles[i].delSistema ||
+                                !puede(ref, 'inv.ajustes', Accion.editar)
                             ? null
                             : () => mostrarFormularioMotivo(context, ref, motivo: visibles[i]),
                       ),

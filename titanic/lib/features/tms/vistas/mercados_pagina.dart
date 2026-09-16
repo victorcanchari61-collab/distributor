@@ -9,6 +9,7 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -40,7 +41,9 @@ class MercadosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaMercadosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre, dirección, distrito',
       onRecargar: () => ref.read(mercadosProvider.notifier).recargar(),
-      onNuevo: () => _abrirFormulario(context, null),
+      onNuevo: puede(ref, 'tms.mercados', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       textoNuevo: 'Nuevo mercado',
       iconoVacio: Icons.storefront_outlined,
       singular: 'mercado',
@@ -67,8 +70,12 @@ class MercadosPagina extends ConsumerWidget {
         mercado: mercado,
         color: color,
         onVer: () => _verDetalle(context, mercado, color),
-        onEditar: () => _abrirFormulario(context, mercado),
-        onEstado: () => _cambiarEstado(context, ref, mercado),
+        onEditar: puede(ref, 'tms.mercados', Accion.editar)
+            ? () => _abrirFormulario(context, mercado)
+            : null,
+        onEstado: puede(ref, 'tms.mercados', Accion.editar)
+            ? () => _cambiarEstado(context, ref, mercado)
+            : null,
       ),
     );
   }
@@ -176,15 +183,15 @@ class _TarjetaMercado extends StatelessWidget {
     required this.mercado,
     required this.color,
     required this.onVer,
-    required this.onEditar,
-    required this.onEstado,
+    this.onEditar,
+    this.onEstado,
   });
 
   final Mercado mercado;
   final Color color;
   final VoidCallback onVer;
-  final VoidCallback onEditar;
-  final VoidCallback onEstado;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Dirección', mercado.direccion),
@@ -216,22 +223,24 @@ class _TarjetaMercado extends StatelessWidget {
             color: Colores.tintaSuave,
           ),
         ),
-        IconButton(
-          onPressed: onEditar,
-          tooltip: 'Editar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
-        ),
-        IconButton(
-          onPressed: onEstado,
-          tooltip: mercado.activo ? 'Desactivar' : 'Activar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            mercado.activo ? Icons.block : Icons.check_circle_outline,
-            size: 18,
-            color: mercado.activo ? Colores.advertencia : Colores.exito,
+        if (onEditar != null)
+          IconButton(
+            onPressed: onEditar,
+            tooltip: 'Editar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
           ),
-        ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: mercado.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              mercado.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: mercado.activo ? Colores.advertencia : Colores.exito,
+            ),
+          ),
       ],
     );
   }
