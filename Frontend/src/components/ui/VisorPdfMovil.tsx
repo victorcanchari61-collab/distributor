@@ -37,10 +37,16 @@ export function VisorPdfMovil({ url, onError }: { url: string; onError: () => vo
          * `new URL('pdfjs-dist/...', import.meta.url)` apunta a un archivo que
          * no existe en el build, y ?url lo deja suelto como .mjs, que segun el
          * servidor llega con el tipo equivocado y la carga se queda colgada.
-         * Un estatico en /pdf.worker.min.mjs se comporta igual en los dos
+         * Un estatico en /pdf.worker.min.js se comporta igual en los dos
          * lados; lo copia scripts/copiar-worker-pdf.mjs al instalar.
+         *
+         * Con extension .js y no .mjs a proposito: pdf.js lo arranca como
+         * worker de modulo, y para eso el navegador exige que el servidor lo
+         * mande con un tipo de JavaScript. Nginx no conoce .mjs y lo servia
+         * como application/octet-stream, asi que en produccion el worker no
+         * cargaba y el visor caia a su respaldo.
          */
-        pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+        pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
         const carga = pdfjs.getDocument({ url })
         tarea = carga
