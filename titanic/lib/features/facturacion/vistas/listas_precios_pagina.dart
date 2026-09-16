@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/formato.dart';
 import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
@@ -17,7 +18,7 @@ import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/lista_precio.dart';
 import '../estado/facturacion_controlador.dart';
 import 'lista_formulario.dart';
-import 'precio_formulario.dart';
+import 'precios_producto_formulario.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listas de precios: catalogo de a cuanto se vende cada presentacion, con
@@ -67,7 +68,7 @@ class ListasPreciosPagina extends ConsumerWidget {
       },
       onNuevo: activa == null || !puede(ref, 'fact.precios', Accion.crear)
           ? null
-          : () => _agregarPrecio(context, ref, activa!),
+          : () => _abrirPrecios(context, ref, activa!),
       textoNuevo: 'Agregar precio',
       iconoVacio: Icons.payments_outlined,
       singular: 'precio',
@@ -81,6 +82,49 @@ class ListasPreciosPagina extends ConsumerWidget {
             onCambio: (id) => ref.read(listaPrecioActivaProvider.notifier).state = id,
             onNueva: () => _nuevaLista(context, ref),
           ),
+          // Las acciones de la LISTA van aqui, junto a sus pestañas, y no en
+          // cada precio: actuan sobre la que esta abierta.
+          if (activa != null &&
+              (puede(ref, 'fact.precios', Accion.editar) ||
+                  puede(ref, 'fact.precios', Accion.eliminar))) ...[
+            const SizedBox(height: Dimen.espacio2),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+              child: Row(
+                children: [
+                  if (puede(ref, 'fact.precios', Accion.editar))
+                    Expanded(
+                      child: AppBoton(
+                        texto: 'Editar lista',
+                        icono: Icons.edit_outlined,
+                        variante: BotonVariante.secundario,
+                        onPressed: () => mostrarFormularioLista(
+                          context,
+                          ref,
+                          lista: activa,
+                        ),
+                      ),
+                    ),
+                  if (puede(ref, 'fact.precios', Accion.editar) &&
+                      puede(ref, 'fact.precios', Accion.eliminar))
+                    const SizedBox(width: Dimen.espacio2),
+                  if (puede(ref, 'fact.precios', Accion.eliminar))
+                    Expanded(
+                      child: AppBoton(
+                        texto: 'Eliminar lista',
+                        icono: Icons.delete_outline,
+                        variante: BotonVariante.secundario,
+                        // La predeterminada no se borra: dejaria sin precio a
+                        // todo cliente que no tenga lista propia.
+                        onPressed: activa.esPredeterminada
+                            ? null
+                            : () => _eliminarLista(context, ref, activa!),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
           if (activa != null && !activa.esPredeterminada) ...[
             const SizedBox(height: Dimen.espacio2),
             Padding(
@@ -141,7 +185,12 @@ class ListasPreciosPagina extends ConsumerWidget {
         precio: precio,
         color: color,
         onEditar: puede(ref, 'fact.precios', Accion.editar)
-            ? () => _editarPrecio(context, ref, activa!, precio)
+            ? () => _abrirPrecios(
+                context,
+                ref,
+                activa!,
+                productoId: precio.productoId,
+              )
             : null,
         onEliminar: puede(ref, 'fact.precios', Accion.eliminar)
             ? () => _eliminarPrecio(context, ref, precio)
@@ -157,6 +206,42 @@ class ListasPreciosPagina extends ConsumerWidget {
     }
   }
 
+  /*
+   * Borra la lista abierta.
+   *
+   * El aviso dice de antemano lo que el backend va a rechazar —una con precios
+   * cargados— para no hacer pulsar un boton que va a fallar. La regla vive en
+   * el servidor igual; esto solo evita el viaje.
+   */
+  Future<void> _eliminarLista(
+    BuildContext context,
+    WidgetRef ref,
+    ListaPrecio lista,
+  ) async {
+    final ok = await confirmarAccion(
+      context,
+      titulo: 'Eliminar ${lista.nombre}',
+      mensaje: lista.precios > 0
+          ? 'Tiene ${lista.precios} precio(s) cargado(s), asi que no se podra '
+                'eliminar: vaciala primero.'
+          : 'Se borra la lista. No afecta a los documentos ya emitidos con ella.',
+      textoConfirmar: 'Eliminar',
+      tono: ConfirmTono.peligro,
+    );
+    if (!ok || !context.mounted) return;
+
+    final mensajero = Aviso.de(context);
+    try {
+      await ref.read(listasPrecioProvider.notifier).eliminar(lista.id);
+      // Al desaparecer la pestaña abierta hay que mover el foco, o la pantalla
+      // queda mirando a una lista que ya no existe.
+      ref.read(listaPrecioActivaProvider.notifier).state = null;
+      mensajero.mostrar('${lista.nombre} eliminada');
+    } on ApiExcepcion catch (e) {
+      mensajero.error(e.texto);
+    }
+  }
+
   Future<void> _marcarPredeterminada(BuildContext context, WidgetRef ref, ListaPrecio lista) async {
     final mensajero = Aviso.de(context);
     try {
@@ -167,63 +252,44 @@ class ListasPreciosPagina extends ConsumerWidget {
     }
   }
 
-  Future<void> _agregarPrecio(BuildContext context, WidgetRef ref, ListaPrecio lista) async {
-    final productos = await catalogoListo(
-      context,
-      ref.read(productosProvider.future),
-      queEs: 'los productos',
-    );
-    if (!context.mounted) return;
-    final nuevo = await mostrarFormularioPrecio(context, productos: productos);
-    if (nuevo == null || !context.mounted) return;
-    await _guardarPrecio(context, ref, lista, nuevo);
-  }
-
-  Future<void> _editarPrecio(
+  /*
+   * Agregar y editar abren el mismo editor, con TODAS las presentaciones del
+   * producto a la vez —el kilo, las bolsas y el saco—, como en la web.
+   *
+   * Antes el telefono cargaba un precio suelto: para poner los siete de un
+   * producto habia que abrir el formulario siete veces, y no habia forma de
+   * ver el margen ni de poner el saco mas barato desde 5 unidades.
+   */
+  Future<void> _abrirPrecios(
     BuildContext context,
     WidgetRef ref,
-    ListaPrecio lista,
-    Precio existente,
-  ) async {
-    final productos = await catalogoListo(
-      context,
-      ref.read(productosProvider.future),
-      queEs: 'los productos',
-    );
-    if (!context.mounted) return;
-    final editado = await mostrarFormularioPrecio(context, productos: productos, existente: existente);
-    if (editado == null || !context.mounted) return;
-    await _guardarPrecio(context, ref, lista, editado, reemplazando: existente);
-  }
-
-  Future<void> _guardarPrecio(
-    BuildContext context,
-    WidgetRef ref,
-    ListaPrecio lista,
-    NuevoPrecio nuevo, {
-    Precio? reemplazando,
+    ListaPrecio lista, {
+    int? productoId,
   }) async {
-    final actuales = ref.read(preciosListaActivaProvider).valueOrNull ?? const <Precio>[];
-    final arreglo = [
-      for (final p in actuales)
-        if (reemplazando == null || p.id != reemplazando.id)
-          {
-            'presentacionId': p.presentacionId,
-            'precio': p.precio,
-            'cantidadMinima': p.cantidadMinima,
-          },
-      nuevo.aCuerpo(),
-    ];
+    // Los precios que ya tiene la lista: el editor los necesita para abrir
+    // los tramos guardados y para saber cuales se quitaron.
+    final precios = await catalogoListo(
+      context,
+      ref.read(preciosListaActivaProvider.future),
+      queEs: 'los precios',
+    );
+    if (!context.mounted) return;
+    await catalogoListo(
+      context,
+      ref.read(productosProvider.future),
+      queEs: 'los productos',
+    );
+    if (!context.mounted) return;
 
-    final mensajero = Aviso.de(context);
-    try {
-      await ref.read(facturacionApiProvider).guardarPrecios(lista.id, arreglo);
-      ref.invalidate(preciosListaActivaProvider);
-      await ref.read(listasPrecioProvider.notifier).recargar();
-      mensajero.mostrar('Precio guardado');
-    } on ApiExcepcion catch (e) {
-      mensajero.error(e.texto);
-    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PreciosProductoFormulario(
+          lista: lista,
+          precios: precios,
+          productoId: productoId,
+        ),
+      ),
+    );
   }
 
   Future<void> _eliminarPrecio(BuildContext context, WidgetRef ref, Precio precio) async {
@@ -341,11 +407,15 @@ class _TarjetaPrecio extends StatelessWidget {
         CampoDetalle('Presentación', precio.presentacion),
         CampoDetalle(
           'Desde',
-          precio.cantidadMinima <= 1 ? 'Precio normal' : '${precio.cantidadMinima}',
+          precio.cantidadMinima <= 1
+              ? 'Precio normal'
+              : '${formatoNumero(precio.cantidadMinima)} a más',
         ),
+        // Dos decimales: es plata, y cuatro solo hacian ruido. Es la columna
+        // que muestra el negocio —el saco sale mas barato por kilo—.
         CampoDetalle(
-          'Por ${precio.unidadBase}',
-          'S/ ${precio.precioUnidadBase.toStringAsFixed(4)}',
+          'Equivale a',
+          'S/ ${precio.precioUnidadBase.toStringAsFixed(2)} × ${precio.unidadBase}',
         ),
       ],
       onTap: onEditar,
