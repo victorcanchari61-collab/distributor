@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/compras/estado/compras_controlador.dart';
+import '../../features/dms/estado/dms_controlador.dart';
 import '../../features/config/estado/config_controlador.dart';
 import '../../features/facturacion/estado/facturacion_controlador.dart';
 import '../../features/finanzas/estado/arqueo_controlador.dart';
@@ -34,7 +35,13 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   'kardex': [kardexProvider, stockProvider, stockDisponibleProvider],
 
   // --- Documentos ---
-  'pedidos': [pedidosProvider, stockDisponibleProvider],
+  // Un pedido nuevo tacha la visita de ese cliente.
+  'pedidos': [
+    pedidosProvider,
+    stockDisponibleProvider,
+    visitasProvider,
+    resumenVisitasProvider,
+  ],
   'notasventa': [
     notasVentaProvider,
     cuentasPorCobrarProvider,
@@ -42,7 +49,12 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     stockProvider,
     kardexProvider,
   ],
-  'devoluciones': [notasVentaProvider, stockProvider, kardexProvider],
+  'devoluciones': [
+    devolucionesProvider,
+    notasVentaProvider,
+    stockProvider,
+    kardexProvider,
+  ],
   'compras': [comprasProvider, cuentasPorPagarProvider],
   'ordenescompra': [ordenesCompraProvider, comprasProvider],
   'recepciones': [recepcionesProvider, comprasProvider, stockProvider, kardexProvider],
@@ -51,7 +63,8 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   'prestamos': [prestamosProvider, stockProvider, kardexProvider],
 
   // --- Catálogos ---
-  'clientes': [clientesProvider],
+  // El dia de visita y la ruta salen del cliente: cambiarlos rehace la lista.
+  'clientes': [clientesProvider, visitasProvider, resumenVisitasProvider],
   'proveedores': [proveedoresProvider],
   'categorias': [categoriasProvider, productosProvider],
   'marcas': [marcasProvider, productosProvider],

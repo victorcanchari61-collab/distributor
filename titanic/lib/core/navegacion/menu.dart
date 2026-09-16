@@ -260,12 +260,13 @@ const menuGrupos = <MenuGrupo>[
         id: 'dms.visitas',
         titulo: 'Visitas',
         icono: Icons.storefront_outlined,
+        pendiente: false,
       ),
       MenuItem(
         id: 'dms.devoluciones',
         titulo: 'Devoluciones',
         icono: Icons.undo,
-        pendiente: true,
+        pendiente: false,
       ),
       MenuItem(
         id: 'dms.evidencias',

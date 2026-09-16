@@ -24,6 +24,8 @@ import '../../features/inventario/vistas/ajustes_pagina.dart';
 import '../../features/inventario/vistas/almacenes_pagina.dart';
 import '../../features/inventario/vistas/conteos_pagina.dart';
 import '../../features/inventario/vistas/kardex_pagina.dart';
+import '../../features/dms/vistas/devoluciones_pagina.dart';
+import '../../features/dms/vistas/visitas_pagina.dart';
 import '../../features/inventario/vistas/lotes_pagina.dart';
 import '../../features/inventario/vistas/prestamos_pagina.dart';
 import '../../features/inventario/vistas/stock_pagina.dart';
@@ -110,6 +112,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: LotesPagina.ruta,
         builder: (context, estado) => const PuertaPermiso(child: LotesPagina()),
+      ),
+      GoRoute(
+        path: VisitasPagina.ruta,
+        builder: (context, estado) => const PuertaPermiso(child: VisitasPagina()),
+      ),
+      GoRoute(
+        path: DevolucionesPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: DevolucionesPagina()),
       ),
       GoRoute(
         path: UsuariosPagina.ruta,
@@ -245,7 +256,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != MercadosPagina.ruta &&
               item.ruta != RutasPagina.ruta &&
               item.ruta != FlotaPagina.ruta &&
-              item.ruta != ConductoresPagina.ruta)
+              item.ruta != ConductoresPagina.ruta &&
+              item.ruta != VisitasPagina.ruta &&
+              item.ruta != DevolucionesPagina.ruta)
             GoRoute(
               path: item.ruta,
               builder: (context, estado) => AppShell(
