@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Download, FileText, Printer } from 'lucide-react'
+import { ClipboardList, Download, FileText, Printer } from 'lucide-react'
 import { Alert } from './Alert'
 import { Button } from './Button'
 import { Modal } from './Modal'
@@ -20,7 +20,7 @@ export type DocumentoPdf =
   | 'prestamos'
   | 'despacho'
 
-type Formato = 'a4' | 'ticket' | 'copias' | 'clientes'
+type Formato = 'a4' | 'ticket' | 'copias'
 
 const TITULOS: Record<DocumentoPdf, string> = {
   pedido: 'Pedido',
@@ -59,28 +59,30 @@ const SOLO_A4: DocumentoPdf[] = ['despacho']
  */
 const CON_COPIAS: DocumentoPdf[] = ['pedido']
 
-/*
- * Reportes que cuelgan del mismo documento.
- *
- * Del despacho salen dos papeles distintos: los pedidos para entregar y el
- * detalle por cliente, que es la hoja con la que se cuadra lo que se cobra.
- * Van como pestañas del mismo visor porque se sacan juntos, al cargar el camión.
- */
-const REPORTES: Partial<Record<DocumentoPdf, { formato: Formato; etiqueta: string }[]>> = {
-  despacho: [
-    { formato: 'a4', etiqueta: 'Pedidos' },
-    { formato: 'clientes', etiqueta: 'Detalle por cliente' },
-  ],
-}
-
 const rutaDe = (documento: DocumentoPdf) =>
   INVENTARIO.includes(documento) ? `/inventario/${documento}` : `/${documento}`
+
+/**
+ * Reportes que salen de un documento, aparte de su PDF.
+ *
+ * Del despacho salen dos papeles distintos: los pedidos para entregar y el
+ * detalle por cliente, con el que se cuadra lo que se cobra. Cada uno lleva su
+ * propio icono en la fila: son para personas distintas y se buscan por
+ * separado, no uno escondido dentro del otro.
+ */
+export type ReportePdf = 'clientes'
+
+const REPORTES: Record<ReportePdf, { titulo: string; icono: React.ReactNode }> = {
+  clientes: { titulo: 'Detalle por cliente', icono: <ClipboardList size={15} /> },
+}
 
 export interface AccionPdfProps {
   documento: DocumentoPdf
   id: number
   /** El número visible — encabeza el visor y nombra el archivo. */
   numero: string
+  /** Si es un reporte del documento y no su PDF propio. */
+  reporte?: ReportePdf
 }
 
 /**
@@ -94,13 +96,17 @@ export interface AccionPdfProps {
  * mismo documento: se compara uno con otro y se imprime el que toque, la hoja
  * A4 para archivar o el ticket de 80 mm para el rollo de la camioneta.
  */
-export function AccionPdf({ documento, id, numero }: AccionPdfProps) {
+export function AccionPdf({ documento, id, numero, reporte }: AccionPdfProps) {
   const [abierto, setAbierto] = useState(false)
 
   return (
     <>
-      <RowAction label={`PDF de ${numero}`} tone="neutral" onClick={() => setAbierto(true)}>
-        <FileText size={15} />
+      <RowAction
+        label={reporte ? `${REPORTES[reporte].titulo} de ${numero}` : `PDF de ${numero}`}
+        tone="neutral"
+        onClick={() => setAbierto(true)}
+      >
+        {reporte ? REPORTES[reporte].icono : <FileText size={15} />}
       </RowAction>
 
       {/* Se monta solo al abrir: si no, cada fila de la tabla pediría su PDF. */}
@@ -109,6 +115,7 @@ export function AccionPdf({ documento, id, numero }: AccionPdfProps) {
           documento={documento}
           id={id}
           numero={numero}
+          reporte={reporte}
           onCerrar={() => setAbierto(false)}
         />
       )}
@@ -120,6 +127,7 @@ function VisorPdf({
   documento,
   id,
   numero,
+  reporte,
   onCerrar,
 }: AccionPdfProps & { onCerrar: () => void }) {
   const [formato, setFormato] = useState<Formato>('a4')
@@ -161,8 +169,7 @@ function VisorPdf({
       setError('')
       try {
         // Un reporte propio va en su ruta; un formato del mismo papel, en la query.
-        const sufijo =
-          formato === 'clientes' ? '/clientes' : formato === 'a4' ? '' : `?formato=${formato}`
+        const sufijo = reporte ? `/${reporte}` : formato === 'a4' ? '' : `?formato=${formato}`
         const archivo = await obtenerArchivo(
           `${rutaDe(documento)}/${id}/pdf${sufijo}`,
           `${documento}-${numero}.pdf`,
@@ -188,7 +195,7 @@ function VisorPdf({
       // acumulan hasta recargar la página.
       if (creada) URL.revokeObjectURL(creada)
     }
-  }, [documento, id, numero, formato])
+  }, [documento, id, numero, formato, reporte])
 
   const imprimir = useCallback(() => {
     // Se imprime el propio visor incrustado. Algunos navegadores no dejan
@@ -208,7 +215,7 @@ function VisorPdf({
     <Modal
       open
       size="lg"
-      title={`${TITULOS[documento]} ${numero}`}
+      title={reporte ? `${REPORTES[reporte].titulo} — ${numero}` : `${TITULOS[documento]} ${numero}`}
       description="Revísalo antes de imprimirlo o guardarlo."
       onClose={onCerrar}
       footer={
@@ -237,17 +244,7 @@ function VisorPdf({
       }
     >
       <div className="flex flex-col gap-3">
-        {REPORTES[documento] && (
-          <div className="flex gap-1.5">
-            {REPORTES[documento]!.map((r) => (
-              <Pestana key={r.formato} activa={formato === r.formato} onClick={() => setFormato(r.formato)}>
-                {r.etiqueta}
-              </Pestana>
-            ))}
-          </div>
-        )}
-
-        {!soloA4 && (
+        {!soloA4 && !reporte && (
           <div className="flex gap-1.5">
             <Pestana activa={formato === 'a4'} onClick={() => setFormato('a4')}>
               A4
@@ -275,7 +272,7 @@ function VisorPdf({
             <iframe
               ref={marco}
               src={url}
-              title={`${TITULOS[documento]} ${numero}`}
+              title={reporte ? `${REPORTES[reporte].titulo} — ${numero}` : `${TITULOS[documento]} ${numero}`}
               className="h-full w-full"
             />
           )}
