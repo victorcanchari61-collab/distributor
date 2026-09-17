@@ -63,7 +63,15 @@ export interface DespachoRequest {
   pedidoIds: number[]
 }
 
+/** Lo que lleva el camión, para recortar el reporte de carga. */
+export interface OpcionesCarga {
+  mercados: { id: number; nombre: string; pedidos: number }[]
+  unidades: { codigo: string; nombre: string; productos: number }[]
+}
+
 export const despachoApi = {
+  opcionesCarga: (id: number) => api.get<OpcionesCarga>(`/despacho/${id}/carga/opciones`),
+
   getAll: (estado?: string) =>
     api.get<DespachoResponse[]>(`/despacho${estado ? `?estado=${estado}` : ''}`),
   getById: (id: number) => api.get<DespachoResponse>(`/despacho/${id}`),

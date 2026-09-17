@@ -13,6 +13,15 @@ public interface IDespachoService
 {
     Task<IEnumerable<DespachoResponse>> GetAllAsync(string? estado = null);
     Task<DespachoResponse> GetAsync(int id);
+
+    /// <summary>
+    /// Los productos del camión, sumados por mercado, producto y presentación.
+    /// Sin lo anulado.
+    /// </summary>
+    Task<List<LineaCargaResponse>> LineasCargaAsync(int id);
+
+    /// <summary>Los mercados y unidades de medida que lleva el camión, para filtrar el reporte.</summary>
+    Task<OpcionesCargaResponse> OpcionesCargaAsync(int id);
     Task<ResumenDespachosResponse> GetResumenAsync();
 
     /// <summary>

@@ -43,7 +43,11 @@ public interface IPdfService
     Task<(byte[] Contenido, string Nombre)> DetalleClientesDespachoAsync(int id);
 
     /// <summary>Qué productos hay que subir al camión, sumados de todos sus pedidos.</summary>
-    Task<(byte[] Contenido, string Nombre)> CargaDespachoAsync(int id);
+    /// <param name="mercados">Ids de mercado; vacío es todos. 0 es "sin mercado".</param>
+    /// <param name="unidades">Códigos de unidad de medida (BOL, SAC); vacío es todas.</param>
+    /// <param name="porMercado">Un bloque por mercado en vez de todo sumado.</param>
+    Task<(byte[] Contenido, string Nombre)> CargaDespachoAsync(
+        int id, IReadOnlyCollection<int>? mercados, IReadOnlyCollection<string>? unidades, bool porMercado);
 
     Task<(byte[] Contenido, string Nombre)> AjusteAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> TransferenciaAsync(int id, FormatoPdf formato);

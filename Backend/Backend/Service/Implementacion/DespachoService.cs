@@ -41,6 +41,94 @@ public class DespachoService : IDespachoService
 
     public async Task<DespachoResponse> GetAsync(int id) => Map(await BuscarAsync(id));
 
+    public async Task<List<LineaCargaResponse>> LineasCargaAsync(int id)
+    {
+        if (!await _context.Despachos.AnyAsync(d => d.Id == id))
+            throw new NotFoundException($"No existe el despacho {id}");
+
+        var lineas = await _context.PedidoDetalles
+            .AsNoTracking()
+            .Where(l => !l.Anulado
+                        && _context.Despachos.Where(d => d.Id == id)
+                            .SelectMany(d => d.Detalle)
+                            .Any(x => x.PedidoId == l.PedidoId))
+            .Select(l => new
+            {
+                MercadoId = l.Pedido!.Cliente!.MercadoId,
+                Mercado = l.Pedido.Cliente.Mercado != null ? l.Pedido.Cliente.Mercado.Nombre : null,
+                l.ProductoId,
+                l.Producto!.Codigo,
+                Producto = l.Producto.Nombre,
+                l.PresentacionId,
+                Presentacion = l.Presentacion != null ? l.Presentacion.Nombre : null,
+                Factor = l.Presentacion != null ? l.Presentacion.Factor : 1m,
+                // Sin presentación se vendió en la unidad base: esa es su unidad.
+                UnidadCodigo = l.Presentacion != null
+                    ? l.Presentacion.Unidad!.Codigo
+                    : l.Producto.UnidadBase!.Codigo,
+                UnidadNombre = l.Presentacion != null
+                    ? l.Presentacion.Unidad!.Nombre
+                    : l.Producto.UnidadBase!.Nombre,
+                UnidadBase = l.Producto.UnidadBase!.Codigo,
+                l.CantidadPresentacion,
+                l.Cantidad,
+            })
+            .ToListAsync();
+
+        return lineas
+            .GroupBy(l => (l.MercadoId, l.ProductoId, l.PresentacionId))
+            .Select(g =>
+            {
+                var l = g.First();
+                return new LineaCargaResponse
+                {
+                    MercadoId = l.MercadoId ?? 0,
+                    Mercado = l.Mercado ?? "Sin mercado",
+                    ProductoId = l.ProductoId,
+                    Codigo = l.Codigo,
+                    Producto = l.Producto,
+                    PresentacionId = l.PresentacionId,
+                    Presentacion = l.Presentacion ?? l.UnidadBase,
+                    Factor = l.Factor,
+                    UnidadCodigo = l.UnidadCodigo,
+                    UnidadNombre = l.UnidadNombre,
+                    UnidadBase = l.UnidadBase,
+                    Cantidad = g.Sum(x => x.CantidadPresentacion),
+                    EnUnidadBase = g.Sum(x => x.Cantidad),
+                };
+            })
+            .ToList();
+    }
+
+    public async Task<OpcionesCargaResponse> OpcionesCargaAsync(int id)
+    {
+        var despacho = await BuscarAsync(id);
+        var lineas = await LineasCargaAsync(id);
+
+        return new OpcionesCargaResponse
+        {
+            Mercados = despacho.Detalle
+                .GroupBy(x => (Id: x.Pedido?.Cliente?.MercadoId ?? 0,
+                               Nombre: x.Pedido?.Cliente?.Mercado?.Nombre ?? "Sin mercado"))
+                .Select(g => new OpcionMercadoCarga { Id = g.Key.Id, Nombre = g.Key.Nombre, Pedidos = g.Count() })
+                // Como número cuando lo es: 1, 7, 8, 11 y no 1, 11, 7, 8.
+                .OrderBy(m => int.TryParse(m.Nombre, out _) ? 0 : 1)
+                .ThenBy(m => int.TryParse(m.Nombre, out var n) ? n : int.MaxValue)
+                .ThenBy(m => m.Nombre)
+                .ToList(),
+            Unidades = lineas
+                .GroupBy(l => (l.UnidadCodigo, l.UnidadNombre))
+                .Select(g => new OpcionUnidadCarga
+                {
+                    Codigo = g.Key.UnidadCodigo,
+                    Nombre = g.Key.UnidadNombre,
+                    Productos = g.Select(l => l.ProductoId).Distinct().Count(),
+                })
+                .OrderBy(u => u.Nombre)
+                .ToList(),
+        };
+    }
+
     public async Task<ResumenDespachosResponse> GetResumenAsync()
     {
         var armados = _context.Despachos.Where(d => d.Estado == EstadoDespacho.Armado);

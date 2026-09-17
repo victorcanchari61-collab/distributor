@@ -6,29 +6,26 @@ using QuestPDF.Infrastructure;
 
 namespace Backend.Service.Pdf;
 
-/// <summary>Un producto en una presentación, sumado de todos los pedidos del camión.</summary>
-public sealed record LineaCarga(
-    string Codigo,
-    string Producto,
-    string Presentacion,
-    decimal Factor,
-    string UnidadBase,
-    decimal Cantidad,
-    decimal EnUnidadBase,
-    int Pedidos);
-
 /// <summary>
 /// Reporte de carga: qué productos hay que subir al camión.
 ///
-/// Suma todos los pedidos del despacho por producto y presentación, sin separar
-/// por cliente: al cargar no importa de quién es cada bolsa, sino cuántas hay
-/// que subir de cada cosa. Al lado va lo mismo en la unidad base —kilos—, que
-/// es lo que se pesa y lo que dice cuántos sacos hay que abrir.
+/// Suma los pedidos por producto y presentación, sin separar por cliente: al
+/// cargar no importa de quién es cada bolsa, sino cuántas hay que subir de cada
+/// cosa. Al lado va lo mismo en la unidad base —kilos—, que es lo que se pesa.
+///
+/// Se puede recortar por mercado y por unidad de medida (solo las bolsas, solo
+/// los sacos), y separar en un bloque por mercado cuando el camión se carga en
+/// el orden en que va a repartir. Lo que se filtró va escrito en la cabecera:
+/// un papel recortado que no lo dice pasa por el total del camión.
 ///
 /// Sale de los pedidos como están AHORA: un aumento o un pedido anulado a
 /// última hora ya se ve al volver a sacarlo.
 /// </summary>
-public sealed class CargaDespachoA4(DespachoResponse despacho, IReadOnlyList<LineaCarga> lineas) : IDocument
+public sealed class CargaDespachoA4(
+    DespachoResponse despacho,
+    IReadOnlyList<LineaCargaResponse> lineas,
+    string? filtros,
+    bool porMercado) : IDocument
 {
     private const float Linea = 0.75f;
 
@@ -42,7 +39,7 @@ public sealed class CargaDespachoA4(DespachoResponse despacho, IReadOnlyList<Lin
             page.DefaultTextStyle(x => x.FontSize(8.5f).SemiBold().FontColor(Colores.Texto));
 
             page.Header().Element(Cabecera);
-            page.Content().PaddingVertical(8).Element(Tabla);
+            page.Content().PaddingVertical(8).Element(Contenido);
             page.Footer().AlignCenter().Text(t =>
             {
                 t.DefaultTextStyle(x => x.FontSize(7.5f));
@@ -67,8 +64,10 @@ public sealed class CargaDespachoA4(DespachoResponse despacho, IReadOnlyList<Lin
                 t.Span($"Despacho {despacho.Numero}");
                 t.Span($"   ·   Vehículo {despacho.Vehiculo}");
                 t.Span($"   ·   Conductor {despacho.Conductor}");
-                t.Span($"   ·   {despacho.Pedidos} pedidos");
             });
+
+            if (filtros is not null)
+                col.Item().PaddingTop(3).Text($"Filtrado: {filtros}").FontSize(8).Bold();
 
             if (despacho.Estado == "ANULADO")
                 col.Item().PaddingTop(6).Background(Colores.AnuladoFondo)
@@ -77,7 +76,58 @@ public sealed class CargaDespachoA4(DespachoResponse despacho, IReadOnlyList<Lin
                     .Bold().FontColor(Colores.Anulado);
         });
 
-    private void Tabla(IContainer container) =>
+    private void Contenido(IContainer container)
+    {
+        if (lineas.Count == 0)
+        {
+            container.Border(Linea).BorderColor(Colores.Linea).Padding(20).AlignCenter()
+                .Text("No hay productos con esos filtros.");
+            return;
+        }
+
+        if (!porMercado)
+        {
+            container.Element(c => Tabla(c, lineas));
+            return;
+        }
+
+        // Un bloque por mercado, en el orden de la ruta.
+        var mercados = lineas
+            .GroupBy(l => (l.MercadoId, l.Mercado))
+            .OrderBy(g => int.TryParse(g.Key.Mercado, out _) ? 0 : 1)
+            .ThenBy(g => int.TryParse(g.Key.Mercado, out var n) ? n : int.MaxValue)
+            .ThenBy(g => g.Key.Mercado);
+
+        container.Column(col =>
+        {
+            var primero = true;
+            foreach (var mercado in mercados)
+            {
+                col.Item().PaddingTop(primero ? 0 : 10).PaddingBottom(3)
+                    .Text($"MERCADO {mercado.Key.Mercado}").FontSize(10).Bold();
+                col.Item().Element(c => Tabla(c, mercado.ToList()));
+                primero = false;
+            }
+        });
+    }
+
+    /// <summary>Una tabla: sumada por producto y presentación, sin importar el mercado.</summary>
+    private static void Tabla(IContainer container, IReadOnlyList<LineaCargaResponse> filas)
+    {
+        var sumadas = filas
+            .GroupBy(l => (l.ProductoId, l.PresentacionId))
+            .Select(g =>
+            {
+                var l = g.First();
+                return (l.Codigo, l.Producto, l.Presentacion, l.Factor, l.UnidadBase,
+                    Cantidad: g.Sum(x => x.Cantidad), EnBase: g.Sum(x => x.EnUnidadBase));
+            })
+            // Por producto, y dentro de cada uno de la presentación más grande a
+            // la más chica: el saco primero, luego las bolsas, al final el suelto.
+            .OrderBy(l => l.Producto, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(l => l.Factor)
+            .ToList();
+
         container.Border(Linea).BorderColor(Colores.Linea).Table(tabla =>
         {
             tabla.ColumnsDefinition(c =>
@@ -87,9 +137,10 @@ public sealed class CargaDespachoA4(DespachoResponse despacho, IReadOnlyList<Lin
                 c.RelativeColumn();    // producto
                 c.ConstantColumn(90);  // presentación
                 c.ConstantColumn(56);  // cantidad
-                c.ConstantColumn(70);  // en unidad base
+                c.ConstantColumn(70);  // equivale
             });
 
+            // Se repite en cada hoja.
             tabla.Header(h =>
             {
                 Encabezado(h.Cell(), "ITEM", derecha: true);
@@ -101,9 +152,7 @@ public sealed class CargaDespachoA4(DespachoResponse despacho, IReadOnlyList<Lin
             });
 
             var item = 0;
-            // Por producto: todas las presentaciones de uno juntas, y bajo ellas
-            // su total en la unidad base, que es lo que se pesa.
-            foreach (var producto in lineas.GroupBy(l => (l.Codigo, l.Producto, l.UnidadBase)))
+            foreach (var producto in sumadas.GroupBy(l => (l.Codigo, l.Producto, l.UnidadBase)))
             {
                 foreach (var l in producto)
                 {
@@ -113,22 +162,23 @@ public sealed class CargaDespachoA4(DespachoResponse despacho, IReadOnlyList<Lin
                     Celda(tabla.Cell(), l.Producto);
                     Celda(tabla.Cell(), l.Presentacion);
                     Celda(tabla.Cell(), Textos.Cantidad(l.Cantidad), derecha: true, fuerte: true);
-                    Celda(tabla.Cell(), $"{Textos.Cantidad(l.EnUnidadBase)} {l.UnidadBase}", derecha: true);
+                    Celda(tabla.Cell(), $"{Textos.Cantidad(l.EnBase)} {l.UnidadBase}", derecha: true);
                 }
 
                 // El total del producto solo cuando va en más de una presentación:
-                // con una sola, repetiría la fila de arriba.
+                // con una sola repetiría la fila de arriba.
                 if (producto.Count() > 1)
                 {
                     tabla.Cell().ColumnSpan(5).PaddingVertical(2).PaddingHorizontal(4).AlignRight()
                         .Text($"Total {producto.Key.Producto}").FontSize(8).Bold();
                     tabla.Cell().BorderTop(Linea).BorderColor(Colores.Linea)
                         .PaddingVertical(2).PaddingHorizontal(4).AlignRight()
-                        .Text($"{Textos.Cantidad(producto.Sum(l => l.EnUnidadBase))} {producto.Key.UnidadBase}")
+                        .Text($"{Textos.Cantidad(producto.Sum(l => l.EnBase))} {producto.Key.UnidadBase}")
                         .FontSize(8).Bold();
                 }
             }
         });
+    }
 
     private static void Encabezado(IContainer celda, string texto, bool derecha = false)
     {

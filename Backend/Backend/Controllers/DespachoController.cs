@@ -40,6 +40,11 @@ public class DespachoController : ControllerBase
     public async Task<IActionResult> GetById(int id) => Ok(await _despachos.GetAsync(id));
 
     /// <summary>Los pedidos que se pueden cargar en esa ruta.</summary>
+    /// <summary>Los mercados y unidades de medida que lleva el camión: las opciones del reporte de carga.</summary>
+    [HttpGet("{id:int}/carga/opciones")]
+    [Permiso("tms.despachos", Accion.Ver)]
+    public async Task<IActionResult> OpcionesCarga(int id) => Ok(await _despachos.OpcionesCargaAsync(id));
+
     [HttpGet("disponibles")]
     [Permiso("tms.despachos", Accion.Ver)]
     public async Task<IActionResult> Disponibles([FromQuery] int rutaId, [FromQuery] int? despachoId) =>

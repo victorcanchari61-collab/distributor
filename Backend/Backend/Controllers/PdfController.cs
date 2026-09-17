@@ -56,8 +56,18 @@ public class PdfController(IPdfService pdf) : ControllerBase
     /// <summary>Qué productos hay que subir al camión.</summary>
     [HttpGet("api/despacho/{id:int}/pdf/carga")]
     [Permiso("tms.despachos", Accion.Exportar)]
-    public async Task<IActionResult> CargaDespacho(int id) =>
-        Archivo(await pdf.CargaDespachoAsync(id));
+    public async Task<IActionResult> CargaDespacho(
+        int id,
+        [FromQuery] string? mercados,
+        [FromQuery] string? unidades,
+        [FromQuery] bool porMercado = false) =>
+        Archivo(await pdf.CargaDespachoAsync(
+            id,
+            // "1,7,11": lo que manda el modal de filtros.
+            mercados?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => int.TryParse(x, out var n) ? n : -1).Where(n => n >= 0).ToList(),
+            unidades?.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+            porMercado));
 
     /*
      * Los cuatro documentos de inventario viven en la misma tabla y comparten

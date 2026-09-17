@@ -64,6 +64,59 @@ public class DespachoResponse
     public List<DespachoPedidoResponse> Detalle { get; set; } = [];
 }
 
+/// <summary>
+/// Un producto en una presentación, sumado de los pedidos de un mercado.
+///
+/// Sale sin filtrar ni agrupar más: el reporte de carga lo recorta por mercado y
+/// por unidad de medida, y lo junta o lo separa por mercado según se pida.
+/// </summary>
+public class LineaCargaResponse
+{
+    /// <summary>0 cuando el cliente no tiene mercado.</summary>
+    public int MercadoId { get; set; }
+    public string Mercado { get; set; } = string.Empty;
+
+    public int ProductoId { get; set; }
+    public string Codigo { get; set; } = string.Empty;
+    public string Producto { get; set; } = string.Empty;
+
+    public int? PresentacionId { get; set; }
+    public string Presentacion { get; set; } = string.Empty;
+
+    /// <summary>Cuántas unidades base trae una presentación: 50 en el saco.</summary>
+    public decimal Factor { get; set; }
+
+    /// <summary>La unidad de medida de la presentación: BOL, SAC, UND, KG.</summary>
+    public string UnidadCodigo { get; set; } = string.Empty;
+    public string UnidadNombre { get; set; } = string.Empty;
+
+    public string UnidadBase { get; set; } = string.Empty;
+
+    public decimal Cantidad { get; set; }
+    public decimal EnUnidadBase { get; set; }
+}
+
+public class OpcionMercadoCarga
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public int Pedidos { get; set; }
+}
+
+public class OpcionUnidadCarga
+{
+    public string Codigo { get; set; } = string.Empty;
+    public string Nombre { get; set; } = string.Empty;
+    public int Productos { get; set; }
+}
+
+/// <summary>Lo que se puede elegir para el reporte de carga: solo lo que ese camión lleva.</summary>
+public class OpcionesCargaResponse
+{
+    public List<OpcionMercadoCarga> Mercados { get; set; } = [];
+    public List<OpcionUnidadCarga> Unidades { get; set; } = [];
+}
+
 public class ResumenDespachosResponse
 {
     public int Total { get; set; }

@@ -124,13 +124,18 @@ export function AccionPdf({ documento, id, numero, reporte }: AccionPdfProps) {
   )
 }
 
-function VisorPdf({
+export function VisorPdf({
   documento,
   id,
   numero,
   reporte,
+  consulta,
   onCerrar,
-}: AccionPdfProps & { onCerrar: () => void }) {
+}: AccionPdfProps & {
+  /** Filtros del reporte, ya armados como query: `mercados=1,2&unidades=BOL`. */
+  consulta?: string
+  onCerrar: () => void
+}) {
   const [formato, setFormato] = useState<Formato>('a4')
   const [url, setUrl] = useState('')
   const [nombre, setNombre] = useState('')
@@ -170,7 +175,9 @@ function VisorPdf({
       setError('')
       try {
         // Un reporte propio va en su ruta; un formato del mismo papel, en la query.
-        const sufijo = reporte ? `/${reporte}` : formato === 'a4' ? '' : `?formato=${formato}`
+        const sufijo = reporte
+          ? `/${reporte}${consulta ? `?${consulta}` : ''}`
+          : formato === 'a4' ? '' : `?formato=${formato}`
         const archivo = await obtenerArchivo(
           `${rutaDe(documento)}/${id}/pdf${sufijo}`,
           `${documento}-${numero}.pdf`,
@@ -196,7 +203,7 @@ function VisorPdf({
       // acumulan hasta recargar la página.
       if (creada) URL.revokeObjectURL(creada)
     }
-  }, [documento, id, numero, formato, reporte])
+  }, [documento, id, numero, formato, reporte, consulta])
 
   const imprimir = useCallback(() => {
     // Se imprime el propio visor incrustado. Algunos navegadores no dejan

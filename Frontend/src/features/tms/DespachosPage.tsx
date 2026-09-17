@@ -27,6 +27,7 @@ import type { ConductorResponse, VehiculoResponse } from './flotaApi'
 import { rutaApi } from './rutaApi'
 import type { RutaResponse } from './rutaApi'
 import { despachoApi } from './despachoApi'
+import { AccionCargaDespacho } from './AccionCargaDespacho'
 import type {
   DespachoPedidoResponse,
   DespachoResponse,
@@ -569,7 +570,7 @@ export function DespachosPage() {
           )}
           {/* Qué productos hay que subir al camión, sumados de todos sus pedidos. */}
           {puede('tms.despachos', 'exportar') && (
-            <AccionPdf documento="despacho" id={row.id} numero={row.numero} reporte="carga" />
+            <AccionCargaDespacho id={row.id} numero={row.numero} />
           )}
           {/* Con qué sale el repartidor y con qué se cuadra la cobranza al volver. */}
           {puede('tms.despachos', 'exportar') && (
