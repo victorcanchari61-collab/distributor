@@ -264,6 +264,46 @@ public class PdfService(
         return (contenido, Nombre("detalle-clientes", despacho.Numero, FormatoPdf.A4));
     }
 
+    public async Task<(byte[], string)> CargaDespachoAsync(int id)
+    {
+        var despacho = await despachos.GetAsync(id);
+        if (despacho.Detalle.Count == 0) throw new BadRequestException("Este despacho no tiene pedidos");
+
+        var todas = new List<LineaVentaResponse>();
+        foreach (var p in despacho.Detalle)
+        {
+            var pedido = await ventas.GetPedidoAsync(p.PedidoId);
+            // Lo anulado no se carga: es lo que se quitó del pedido.
+            todas.AddRange(pedido.Detalle.Where(l => !l.Anulado));
+        }
+
+        var lineas = todas
+            .GroupBy(l => (l.ProductoId, l.PresentacionId))
+            .Select(g =>
+            {
+                var l = g.First();
+                var cantidad = g.Sum(x => x.CantidadPresentacion);
+                var enBase = g.Sum(x => x.Cantidad);
+                return new LineaCarga(
+                    l.Codigo,
+                    l.Producto,
+                    l.Presentacion ?? l.UnidadBase,
+                    cantidad == 0 ? 1 : enBase / cantidad,
+                    l.UnidadBase,
+                    cantidad,
+                    enBase,
+                    g.Count());
+            })
+            // Por producto, y dentro de cada uno de la presentación más grande a
+            // la más chica: el saco primero, luego las bolsas, al final el suelto.
+            .OrderBy(l => l.Producto, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(l => l.Factor)
+            .ToList();
+
+        var contenido = new CargaDespachoA4(despacho, lineas).GeneratePdf();
+        return (contenido, Nombre("carga", despacho.Numero, FormatoPdf.A4));
+    }
+
     // --- Inventario: mercadería que se mueve y alguien tiene que firmar ---
 
     public async Task<(byte[], string)> AjusteAsync(int id, FormatoPdf formato)

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ClipboardList, Download, FileText, Printer } from 'lucide-react'
+import { ClipboardList, Download, FileText, PackageCheck, Printer } from 'lucide-react'
 import { Alert } from './Alert'
 import { Button } from './Button'
 import { Modal } from './Modal'
@@ -70,10 +70,11 @@ const rutaDe = (documento: DocumentoPdf) =>
  * propio icono en la fila: son para personas distintas y se buscan por
  * separado, no uno escondido dentro del otro.
  */
-export type ReportePdf = 'clientes'
+export type ReportePdf = 'clientes' | 'carga'
 
 const REPORTES: Record<ReportePdf, { titulo: string; icono: React.ReactNode }> = {
   clientes: { titulo: 'Detalle por cliente', icono: <ClipboardList size={15} /> },
+  carga: { titulo: 'Reporte de carga', icono: <PackageCheck size={15} /> },
 }
 
 export interface AccionPdfProps {

@@ -53,6 +53,12 @@ public class PdfController(IPdfService pdf) : ControllerBase
     public async Task<IActionResult> DetalleClientesDespacho(int id) =>
         Archivo(await pdf.DetalleClientesDespachoAsync(id));
 
+    /// <summary>Qué productos hay que subir al camión.</summary>
+    [HttpGet("api/despacho/{id:int}/pdf/carga")]
+    [Permiso("tms.despachos", Accion.Exportar)]
+    public async Task<IActionResult> CargaDespacho(int id) =>
+        Archivo(await pdf.CargaDespachoAsync(id));
+
     /*
      * Los cuatro documentos de inventario viven en la misma tabla y comparten
      * numeración de id, pero cada uno pide el permiso de SU submódulo. Por eso

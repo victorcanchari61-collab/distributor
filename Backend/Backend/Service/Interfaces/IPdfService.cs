@@ -42,6 +42,9 @@ public interface IPdfService
     /// </summary>
     Task<(byte[] Contenido, string Nombre)> DetalleClientesDespachoAsync(int id);
 
+    /// <summary>Qué productos hay que subir al camión, sumados de todos sus pedidos.</summary>
+    Task<(byte[] Contenido, string Nombre)> CargaDespachoAsync(int id);
+
     Task<(byte[] Contenido, string Nombre)> AjusteAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> TransferenciaAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> RecepcionAsync(int id, FormatoPdf formato);

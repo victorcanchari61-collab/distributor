@@ -557,7 +557,7 @@ export function DespachosPage() {
       cardIcon={Truck}
       searchPlaceholder="Buscar por número, ruta, placa..."
       empty={cargando ? 'Cargando despachos...' : 'Todavía no hay despachos armados.'}
-      actionsWidth={185}
+      actionsWidth={220}
       rowActions={(row) => (
         <>
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalle(row)}>
@@ -566,6 +566,10 @@ export function DespachosPage() {
           {/* Los papeles de la carga: dos copias por hoja, para el repartidor. */}
           {puede('tms.despachos', 'exportar') && (
             <AccionPdf documento="despacho" id={row.id} numero={row.numero} />
+          )}
+          {/* Qué productos hay que subir al camión, sumados de todos sus pedidos. */}
+          {puede('tms.despachos', 'exportar') && (
+            <AccionPdf documento="despacho" id={row.id} numero={row.numero} reporte="carga" />
           )}
           {/* Con qué sale el repartidor y con qué se cuadra la cobranza al volver. */}
           {puede('tms.despachos', 'exportar') && (
