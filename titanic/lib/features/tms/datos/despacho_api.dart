@@ -1,0 +1,54 @@
+import '../../../core/red/cliente_api.dart';
+import 'despacho.dart';
+
+/// Llamadas del modulo de Despachos.
+class DespachoApi {
+  const DespachoApi(this._api);
+
+  final ClienteApi _api;
+
+  /// GET /api/despacho
+  Future<List<Despacho>> despachos() async {
+    final datos = await _api.get('/despacho') as List;
+    return datos.map((e) => Despacho.desdeJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// GET /api/despacho/resumen
+  Future<ResumenDespachos> resumen() async =>
+      ResumenDespachos.desdeJson(await _api.get('/despacho/resumen') as Map<String, dynamic>);
+
+  /// GET /api/despacho/disponibles
+  ///
+  /// `despachoId` se manda al editar: sin él, los pedidos que ya son de ese
+  /// despacho se verían como tomados y desaparecerían de la pantalla.
+  Future<List<DespachoPedido>> disponibles(int rutaId, {int? despachoId}) async {
+    final query = despachoId != null ? '&despachoId=$despachoId' : '';
+    final datos = await _api.get('/despacho/disponibles?rutaId=$rutaId$query') as List;
+    return datos.map((e) => DespachoPedido.desdeJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// GET /api/despacho/{id}/carga/opciones
+  Future<OpcionesCarga> opcionesCarga(int id) async => OpcionesCarga.desdeJson(
+    await _api.get('/despacho/$id/carga/opciones') as Map<String, dynamic>,
+  );
+
+  /// POST /api/despacho
+  Future<Despacho> crear(Map<String, dynamic> cuerpo) async =>
+      Despacho.desdeJson(await _api.post('/despacho', cuerpo: cuerpo) as Map<String, dynamic>);
+
+  /// PUT /api/despacho/{id}
+  Future<Despacho> actualizar(int id, Map<String, dynamic> cuerpo) async => Despacho.desdeJson(
+    await _api.put('/despacho/$id', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
+
+  /// PATCH /api/despacho/{id}/anular
+  Future<Despacho> anular(int id) async =>
+      Despacho.desdeJson(await _api.patch('/despacho/$id/anular') as Map<String, dynamic>);
+
+  /// GET /api/despacho/{id}/pdf/carga, con los filtros ya armados en la query.
+  Future<List<int>> pdfCarga(int id, String query) =>
+      _api.archivo('/despacho/$id/pdf/carga${query.isEmpty ? '' : '?$query'}');
+
+  /// GET /api/despacho/{id}/pdf/clientes
+  Future<List<int>> pdfClientes(int id) => _api.archivo('/despacho/$id/pdf/clientes');
+}

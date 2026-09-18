@@ -366,6 +366,13 @@ final conductoresActivosProvider = Provider.autoDispose<List<Conductor>>(
       .toList(),
 );
 
+/// Vehículos activos, para elegir el camión de un despacho.
+final vehiculosActivosProvider = Provider.autoDispose<List<Vehiculo>>(
+  (ref) => (ref.watch(vehiculosProvider).valueOrNull ?? const <Vehiculo>[])
+      .where((v) => v.activo)
+      .toList(),
+);
+
 final resumenConductoresProvider = FutureProvider.autoDispose<ResumenConductores>((ref) {
   ref.watch(conductoresProvider);
   return ref.watch(flotaApiProvider).resumenConductores();
