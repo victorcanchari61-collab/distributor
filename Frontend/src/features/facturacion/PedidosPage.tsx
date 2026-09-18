@@ -509,8 +509,16 @@ export function PedidosPage() {
   ]
 
   const columns: DataTableColumn<PedidoResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
-    { key: 'cliente', label: 'Cliente' },
+    // El número se busca con el buscador de arriba, no en el panel.
+    { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
+    {
+      key: 'cliente',
+      label: 'Cliente',
+      filterType: 'select',
+      filterOptions: [...new Set(clientes.map((c) => c.nombre))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
     {
       key: 'fecha',
       label: 'Fecha',
@@ -531,7 +539,11 @@ export function PedidosPage() {
       // salio, y aqui se ve en que venta termino.
       key: 'notaVentaNumero',
       label: 'Venta',
-      filterable: false,
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Convertido', label: 'Convertido' },
+        { value: 'Sin convertir', label: 'Sin convertir' },
+      ],
       render: (row) =>
         row.notaVentaNumero ? (
           <Badge tone="success">{row.notaVentaNumero}</Badge>

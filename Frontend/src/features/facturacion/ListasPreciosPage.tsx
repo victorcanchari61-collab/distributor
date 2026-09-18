@@ -504,10 +504,15 @@ export function ListasPreciosPage() {
   }
 
   const columns: DataTableColumn<PrecioResponse>[] = [
-    { key: 'producto', label: 'Producto' },
+    // El producto se busca con el buscador de arriba, no en el panel.
+    { key: 'producto', label: 'Producto', filterable: false },
     {
       key: 'presentacion',
       label: 'Presentación',
+      filterType: 'select',
+      filterOptions: [...new Set(precios.map((p) => p.presentacion))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((v) => ({ value: v, label: v })),
       render: (row) => <Badge tone="sys">{row.presentacion}</Badge>,
     },
     {

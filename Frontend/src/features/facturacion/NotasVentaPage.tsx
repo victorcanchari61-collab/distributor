@@ -717,14 +717,28 @@ export function NotasVentaPage() {
   ]
 
   const columns: DataTableColumn<NotaVentaResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
-    { key: 'cliente', label: 'Cliente' },
+    // El número se busca con el buscador de arriba, no en el panel.
+    { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
+    {
+      key: 'cliente',
+      label: 'Cliente',
+      filterType: 'select',
+      filterOptions: [...new Set(clientes.map((c) => c.nombre))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
     {
       key: 'pedidoNumero',
-      label: 'Origen',
+      label: 'Pedido de origen',
       sortable: false,
-      filterable: false,
-      render: (row) => (row.pedidoNumero ? row.pedidoNumero : 'Directa'),
+      // El numero del pedido no se busca: solo si vino de uno o fue directa.
+      filterType: 'select',
+      filterOptions: [
+        { value: 'De un pedido', label: 'De un pedido' },
+        { value: 'Directa', label: 'Directa' },
+      ],
+      render: (row) =>
+        row.pedidoNumero ? <Badge>{row.pedidoNumero}</Badge> : <span className="text-ink-soft">Directa</span>,
     },
     {
       key: 'fecha',

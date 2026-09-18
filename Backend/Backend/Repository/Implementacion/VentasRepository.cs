@@ -137,6 +137,15 @@ public class VentasRepository : IVentasRepository
             query = query.Where(p => p.Estado == estado);
         }
 
+        // El filtro viaja con el nombre de la columna: "notaVentaNumero".
+        // No importa cuál, solo si ya nació una venta vigente de este pedido.
+        if (consulta.ValorDe("notaVentaNumero") is string convertido)
+        {
+            query = convertido.Equals("Convertido", StringComparison.OrdinalIgnoreCase)
+                ? query.Where(p => p.Ventas.Any(v => v.Estado != EstadoNotaVenta.Anulada))
+                : query.Where(p => !p.Ventas.Any(v => v.Estado != EstadoNotaVenta.Anulada));
+        }
+
         var (desde, hasta) = consulta.RangoFechas("fecha");
         if (desde is not null) query = query.Where(p => p.Fecha >= desde);
         if (hasta is not null) query = query.Where(p => p.Fecha <= hasta);
@@ -325,6 +334,15 @@ public class VentasRepository : IVentasRepository
         if (consulta.ValorDe("estado") is string estado)
         {
             query = query.Where(n => n.Estado == estado);
+        }
+
+        // El filtro viaja con el nombre de la columna: "pedidoNumero".
+        // "Directa" es la que no viene de confirmar un pedido.
+        if (consulta.ValorDe("pedidoNumero") is string origen)
+        {
+            query = origen.Equals("Directa", StringComparison.OrdinalIgnoreCase)
+                ? query.Where(n => n.PedidoId == null)
+                : query.Where(n => n.PedidoId != null);
         }
 
         var (desde, hasta) = consulta.RangoFechas("fecha");
