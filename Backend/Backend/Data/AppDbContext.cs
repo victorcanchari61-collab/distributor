@@ -475,6 +475,7 @@ public class AppDbContext : DbContext
             entity.Property(p => p.NombreComercial).HasMaxLength(150);
             entity.Property(p => p.Direccion).HasMaxLength(250);
             entity.Property(p => p.Departamento).HasMaxLength(80);
+            entity.Property(p => p.Provincia).HasMaxLength(80);
             entity.Property(p => p.Distrito).HasMaxLength(80);
             entity.Property(p => p.Telefono).HasMaxLength(40);
             entity.Property(p => p.Telefono2).HasMaxLength(40);

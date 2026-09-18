@@ -194,6 +194,7 @@ public partial class ProveedorService : IProveedorService
         fila.NombreComercial = Limpiar(fila.NombreComercial);
         fila.Direccion = Limpiar(fila.Direccion);
         fila.Departamento = Limpiar(fila.Departamento);
+        fila.Provincia = Limpiar(fila.Provincia);
         fila.Distrito = Limpiar(fila.Distrito);
         fila.Telefono = Limpiar(fila.Telefono);
         fila.Telefono2 = Limpiar(fila.Telefono2);
@@ -221,6 +222,7 @@ public partial class ProveedorService : IProveedorService
         proveedor.NombreComercial = Limpiar(request.NombreComercial);
         proveedor.Direccion = Limpiar(request.Direccion);
         proveedor.Departamento = Limpiar(request.Departamento);
+        proveedor.Provincia = Limpiar(request.Provincia);
         proveedor.Distrito = Limpiar(request.Distrito);
         proveedor.Telefono = Limpiar(request.Telefono);
         proveedor.Telefono2 = Limpiar(request.Telefono2);
@@ -265,6 +267,7 @@ public partial class ProveedorService : IProveedorService
             NombreComercial = proveedor.NombreComercial,
             Direccion = proveedor.Direccion,
             Departamento = proveedor.Departamento,
+            Provincia = proveedor.Provincia,
             Distrito = proveedor.Distrito,
             Telefono = proveedor.Telefono,
             Telefono2 = proveedor.Telefono2,

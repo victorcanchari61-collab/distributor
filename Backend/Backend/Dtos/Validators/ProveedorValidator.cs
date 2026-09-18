@@ -28,6 +28,7 @@ public class ProveedorValidator : AbstractValidator<ProveedorRequestBase>
         RuleFor(x => x.NombreComercial).MaximumLength(150);
         RuleFor(x => x.Direccion).MaximumLength(250);
         RuleFor(x => x.Departamento).MaximumLength(80);
+        RuleFor(x => x.Provincia).MaximumLength(80);
         RuleFor(x => x.Distrito).MaximumLength(80);
         RuleFor(x => x.Telefono).MaximumLength(40);
         RuleFor(x => x.Telefono2).MaximumLength(40);

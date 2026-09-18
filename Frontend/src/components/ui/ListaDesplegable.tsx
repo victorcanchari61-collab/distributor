@@ -108,6 +108,15 @@ export function ListaDesplegable({
       return
     }
 
+    /*
+     * Dentro de un modal con scroll (el panel de Filtros, por ejemplo), un
+     * campo cerca del borde inferior "no cabe abajo" para la ventana, pero sí
+     * cabría si el propio panel se desplazara un poco: sin esto se abría
+     * hacia arriba y tapaba los campos de encima, cuando alcanzaba con correr
+     * la pantalla. Se centra el campo primero, y recién con eso se mide.
+     */
+    botonRef.current?.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior })
+
     const colocar = () => {
       const boton = botonRef.current
       if (!boton) return

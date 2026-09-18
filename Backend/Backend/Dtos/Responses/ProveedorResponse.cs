@@ -9,6 +9,7 @@ public class ProveedorResponse
     public string? NombreComercial { get; set; }
     public string? Direccion { get; set; }
     public string? Departamento { get; set; }
+    public string? Provincia { get; set; }
     public string? Distrito { get; set; }
     public string? Telefono { get; set; }
     public string? Telefono2 { get; set; }
