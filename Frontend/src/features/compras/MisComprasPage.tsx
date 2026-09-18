@@ -601,14 +601,19 @@ export function MisComprasPage() {
     },
     {
       key: 'ordenCompraNumero',
-      label: 'Origen',
+      label: 'Orden de compra',
       // El numero de la orden no se busca: solo si vino de una o fue directa.
       filterType: 'select',
       filterOptions: [
         { value: 'De una orden', label: 'De una orden' },
         { value: 'Directa', label: 'Directa' },
       ],
-      render: (row) => (row.ordenCompraNumero ? row.ordenCompraNumero : 'Directa'),
+      render: (row) =>
+        row.ordenCompraNumero ? (
+          <Badge>{row.ordenCompraNumero}</Badge>
+        ) : (
+          <span className="text-ink-soft">Directa</span>
+        ),
     },
     {
       key: 'tipoComprobante',
