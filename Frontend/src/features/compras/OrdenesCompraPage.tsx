@@ -369,8 +369,16 @@ export function OrdenesCompraPage() {
   ]
 
   const columns: DataTableColumn<OrdenCompraResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
-    { key: 'proveedor', label: 'Proveedor' },
+    // Número y proveedor se buscan con el buscador de arriba, no en el panel.
+    { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
+    {
+      key: 'proveedor',
+      label: 'Proveedor',
+      filterType: 'select',
+      filterOptions: [...new Set(proveedores.map((p) => p.nombre))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
     {
       key: 'fecha',
       label: 'Fecha',

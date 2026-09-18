@@ -343,6 +343,10 @@ public class InventarioRepository : IInventarioRepository
         if (consulta.ValorDe("almacen") is string almacen)
             query = query.Where(d => d.Almacen != null && d.Almacen.Nombre == almacen);
 
+        // Solo lo usa Recepciones: los demas documentos no cuelgan de una compra.
+        if (consulta.ValorDe("compra") is string compra)
+            query = query.Where(d => d.Compra != null && d.Compra.Numero == compra);
+
         if (consulta.ValorDe("motivo") is string motivo)
             query = query.Where(d => d.Motivo != null && d.Motivo.Nombre == motivo);
 

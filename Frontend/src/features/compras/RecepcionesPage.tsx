@@ -47,6 +47,10 @@ export function RecepcionesPage() {
   const toast = useToast()
   const [recepciones, setRecepciones] = useState<DocumentoInventarioResponse[]>([])
   const [compras, setCompras] = useState<CompraResponse[]>([])
+  // Aparte de las abiertas (para elegir en "Nueva recepción"), el filtro del
+  // panel necesita TODAS las compras que ya tienen su mercadería recibida
+  // entera: esas ya no salen en `compras` (abiertas) pero siguen en la tabla.
+  const [todasCompras, setTodasCompras] = useState<CompraResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -83,13 +87,15 @@ export function RecepcionesPage() {
 
   const cargarApoyo = useCallback(async () => {
     try {
-      const [res, abiertas, alms] = await Promise.all([
+      const [res, abiertas, todas, alms] = await Promise.all([
         recepcionApi.resumen(),
         compraApi.abiertas(),
+        compraApi.getAll(),
         almacenApi.opciones(),
       ])
       setResumen(res)
       setCompras(abiertas)
+      setTodasCompras(todas)
       setAlmacenes(alms)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
@@ -126,15 +132,27 @@ export function RecepcionesPage() {
     })
 
   const columns: DataTableColumn<DocumentoInventarioResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
+    // El número se busca con el buscador de arriba, no en el panel.
+    { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
       render: (row) => fechaCorta(row.fecha),
     },
-    { key: 'compra', label: 'Compra', render: (row) => row.compra ?? '—' },
-    { key: 'almacen', label: 'Almacén' },
+    {
+      key: 'compra',
+      label: 'Compra',
+      filterType: 'select',
+      filterOptions: todasCompras.map((c) => ({ value: c.numero, label: c.numero })),
+      render: (row) => row.compra ?? '—',
+    },
+    {
+      key: 'almacen',
+      label: 'Almacén',
+      filterType: 'select',
+      filterOptions: almacenes.map((a) => ({ value: a.nombre, label: a.nombre })),
+    },
     /*
      * Ni el conteo de productos ni el valor entran al panel: el unico control
      * es un buscador de texto, y "9" contra "S/ 9.00" no encuentra lo que la

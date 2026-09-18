@@ -589,16 +589,32 @@ export function MisComprasPage() {
   ]
 
   const columns: DataTableColumn<CompraResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
-    { key: 'proveedor', label: 'Proveedor' },
+    // Número y proveedor se buscan con el buscador de arriba, no en el panel.
+    { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
+    {
+      key: 'proveedor',
+      label: 'Proveedor',
+      filterType: 'select',
+      filterOptions: [...new Set(proveedores.map((p) => p.nombre))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
     {
       key: 'ordenCompraNumero',
       label: 'Origen',
+      // El numero de la orden no se busca: solo si vino de una o fue directa.
+      filterType: 'select',
+      filterOptions: [
+        { value: 'De una orden', label: 'De una orden' },
+        { value: 'Directa', label: 'Directa' },
+      ],
       render: (row) => (row.ordenCompraNumero ? row.ordenCompraNumero : 'Directa'),
     },
     {
       key: 'tipoComprobante',
       label: 'Comprobante',
+      filterType: 'select',
+      filterOptions: TIPOS_COMPROBANTE.map((t) => ({ value: t.value, label: t.label })),
       value: (row) => textoComprobante(row),
       render: (row) => textoComprobante(row),
     },

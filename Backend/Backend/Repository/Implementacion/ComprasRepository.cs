@@ -225,6 +225,16 @@ public class ComprasRepository : IComprasRepository
         if (consulta.ValorDe("estado") is string estado)
             query = query.Where(c => c.Estado == estado);
 
+        if (consulta.ValorDe("tipoComprobante") is string tipoComprobante)
+            query = query.Where(c => c.TipoComprobante == tipoComprobante);
+
+        // El filtro viaja con el nombre de la columna: "ordenCompraNumero".
+        // "Directa" es la que no viene de una orden de compra confirmada.
+        if (consulta.ValorDe("ordenCompraNumero") is string origen)
+            query = origen.Equals("Directa", StringComparison.OrdinalIgnoreCase)
+                ? query.Where(c => c.OrdenCompraId == null)
+                : query.Where(c => c.OrdenCompraId != null);
+
         var (desde, hasta) = consulta.RangoFechas("fecha");
         if (desde is not null) query = query.Where(c => c.Fecha >= desde);
         if (hasta is not null) query = query.Where(c => c.Fecha <= hasta);
