@@ -41,6 +41,8 @@ import type {
   MotivoGastoResponse,
 } from './arqueoApi'
 import { CuadrarCajaModal } from './CuadrarCajaModal'
+import { usuarioApi } from '../config/usuarioApi'
+import type { UsuarioResponse } from '../config/usuarioApi'
 
 type Pestana = 'cuadres' | 'registrados' | 'deudas' | 'motivos'
 
@@ -96,6 +98,7 @@ export function ArqueoDiarioPage() {
 
   const [deudas, setDeudas] = useState<DeudaUsuarioResponse[]>([])
   const [motivos, setMotivos] = useState<MotivoGastoResponse[]>([])
+  const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
 
   const [error, setError] = useState('')
   const [cuadrando, setCuadrando] = useState<Cuadrando | null>(null)
@@ -151,9 +154,10 @@ export function ArqueoDiarioPage() {
 
   const cargarApoyo = useCallback(async () => {
     try {
-      const [d, m] = await Promise.all([arqueoApi.deudas(), motivoGastoApi.getAll()])
+      const [d, m, u] = await Promise.all([arqueoApi.deudas(), motivoGastoApi.getAll(), usuarioApi.getAll()])
       setDeudas(d)
       setMotivos(m)
+      setUsuarios(u)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar deudas y motivos.')
     }
@@ -249,7 +253,14 @@ export function ArqueoDiarioPage() {
   if (pestana === 'registrados') {
     const columns: DataTableColumn<ArqueoCajaResponse>[] = [
       { key: 'fecha', label: 'Fecha', filterType: 'date', render: (row) => fechaCorta(row.fecha) },
-      { key: 'usuario', label: 'Usuario' },
+      {
+        key: 'usuario',
+        label: 'Usuario',
+        filterType: 'select',
+        filterOptions: [...new Set(usuarios.map((u) => u.nombre))]
+          .sort((a, b) => a.localeCompare(b, 'es'))
+          .map((n) => ({ value: n, label: n })),
+      },
       // Los importes quedan fuera del panel: solo hay buscador de texto y "9"
       // contra "S/ 9.00" no encuentra lo que la persona espera.
       {
@@ -385,7 +396,14 @@ export function ArqueoDiarioPage() {
       value: (row) => new Date(row.fecha).getTime(),
       render: (row) => fechaCorta(row.fecha),
     },
-    { key: 'usuario', label: 'Usuario' },
+    {
+      key: 'usuario',
+      label: 'Usuario',
+      filterType: 'select',
+      filterOptions: [...new Set(cuadres.map((c) => c.usuario))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
     /*
      * Los importes no entran al panel de filtros: el unico control que hay es
      * un buscador de texto, y "9" contra "S/ 9.00" no encuentra lo que la
@@ -714,10 +732,12 @@ function MotivosGastoTabla({
     })
 
   const columns: DataTableColumn<MotivoGastoResponse>[] = [
-    { key: 'nombre', label: 'Nombre' },
+    // Nombre y descripción se buscan con el buscador de arriba, no en el panel.
+    { key: 'nombre', label: 'Nombre', filterable: false },
     {
       key: 'descripcion',
       label: 'Descripción',
+      filterable: false,
       render: (row) => row.descripcion ?? <span className="text-ink-soft">—</span>,
     },
     // Un contador no se busca por texto: no hay control numerico en el panel.

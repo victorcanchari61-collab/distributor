@@ -7,6 +7,10 @@ import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
 import { notaVentaApi } from '../facturacion/ventasApi'
 import type { CobroResponse, ResumenCobros } from '../facturacion/ventasApi'
+import { clienteApi } from '../maestros'
+import type { ClienteResponse } from '../maestros'
+import { metodoPagoApi } from './finanzasApi'
+import type { MetodoPagoResponse } from './finanzasApi'
 
 /**
  * Los cobros que YO registré: cada pago de una nota de venta, visto desde
@@ -22,6 +26,13 @@ export function MisCobrosPage() {
   const [cobros, setCobros] = useState<CobroResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  const [clientes, setClientes] = useState<ClienteResponse[]>([])
+  const [metodos, setMetodos] = useState<MetodoPagoResponse[]>([])
+
+  useEffect(() => {
+    void clienteApi.getAll().then(setClientes)
+    void metodoPagoApi.getAll().then(setMetodos)
+  }, [])
 
   /*
    * Los cobros se acumulan sin techo: uno por cada pago que registra el
@@ -72,9 +83,27 @@ export function MisCobrosPage() {
       value: (row) => new Date(row.fecha).getTime(),
       render: (row) => fechaHora(row.fecha),
     },
-    { key: 'notaVentaNumero', label: 'Nota de venta', render: (row) => <Badge>{row.notaVentaNumero}</Badge> },
-    { key: 'cliente', label: 'Cliente' },
-    { key: 'metodoPago', label: 'Método' },
+    // El número se busca con el buscador de arriba, no en el panel.
+    {
+      key: 'notaVentaNumero',
+      label: 'Nota de venta',
+      filterable: false,
+      render: (row) => <Badge>{row.notaVentaNumero}</Badge>,
+    },
+    {
+      key: 'cliente',
+      label: 'Cliente',
+      filterType: 'select',
+      filterOptions: [...new Set(clientes.map((c) => c.nombre))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
+    {
+      key: 'metodoPago',
+      label: 'Método',
+      filterType: 'select',
+      filterOptions: metodos.map((m) => ({ value: m.nombre, label: m.nombre })),
+    },
     {
       key: 'monto',
       label: 'Monto',
@@ -93,6 +122,12 @@ export function MisCobrosPage() {
     {
       key: 'anulado',
       label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Válido', label: 'Válido' },
+        { value: 'Anulado', label: 'Anulado' },
+      ],
+      value: (row) => (row.anulado ? 'Anulado' : 'Válido'),
       render: (row) => (row.anulado ? <Badge tone="danger">Anulado</Badge> : <Badge tone="success">Válido</Badge>),
     },
   ]

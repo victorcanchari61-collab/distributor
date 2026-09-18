@@ -507,6 +507,9 @@ public class VentasRepository : IVentasRepository
             query = query.Where(p => p.NotaVenta!.Cliente != null
                                      && EF.Functions.Like(p.NotaVenta.Cliente.Nombre, $"%{cliente}%"));
 
+        if (consulta.ValorDe("anulado") is string anuladoTexto)
+            query = query.Where(p => p.Anulado == anuladoTexto.Equals("Anulado", StringComparison.OrdinalIgnoreCase));
+
         var (fDesde, fHasta) = consulta.RangoFechas("fecha");
         if (fDesde is not null) query = query.Where(p => p.Fecha >= fDesde);
         if (fHasta is not null) query = query.Where(p => p.Fecha <= fHasta);

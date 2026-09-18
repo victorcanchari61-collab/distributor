@@ -159,7 +159,8 @@ export function MetodosPagoPage() {
     })
 
   const columns: DataTableColumn<MetodoPagoResponse>[] = [
-    { key: 'nombre', label: 'Nombre' },
+    // El nombre se busca con el buscador de arriba, no en el panel.
+    { key: 'nombre', label: 'Nombre', filterable: false },
     {
       key: 'tipo',
       label: 'Tipo',
@@ -172,21 +173,29 @@ export function MetodosPagoPage() {
     {
       key: 'banco',
       label: 'Banco',
+      filterType: 'select',
+      filterOptions: [...new Set(metodos.map((m) => m.banco).filter((v): v is string => !!v))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((v) => ({ value: v, label: v })),
       render: (row) => row.banco ?? <span className="text-ink-soft">—</span>,
     },
+    // Número, CCI y titular son datos únicos por método: no aportan como filtro.
     {
       key: 'numeroCuenta',
       label: 'Número',
+      filterable: false,
       render: (row) => row.numeroCuenta ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'cci',
       label: 'CCI',
+      filterable: false,
       render: (row) => row.cci ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'titular',
       label: 'Titular',
+      filterable: false,
       render: (row) => row.titular ?? <span className="text-ink-soft">—</span>,
     },
     {

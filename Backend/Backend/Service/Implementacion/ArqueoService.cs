@@ -399,6 +399,9 @@ public class ArqueoService : IArqueoService
         if (consulta.ValorDe("estado") is string estado)
             query = query.Where(a => a.Estado == estado);
 
+        if (consulta.ValorDe("usuario") is string usuario)
+            query = query.Where(a => a.Usuario != null && a.Usuario.Nombre == usuario);
+
         var (desde, hasta) = consulta.RangoFechas("fecha");
         if (desde is not null) query = query.Where(a => a.Fecha >= desde);
         if (hasta is not null) query = query.Where(a => a.Fecha <= hasta);

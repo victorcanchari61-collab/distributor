@@ -22,6 +22,8 @@ import { useRealtime } from '../../lib/realtime'
 import { compraApi } from '../compras/comprasApi'
 import type { CompraResponse, PagoCompraResponse } from '../compras/comprasApi'
 import type { ResumenCuentas } from '../facturacion/ventasApi'
+import { proveedorApi } from '../maestros'
+import type { ProveedorResponse } from '../maestros'
 import { metodoPagoApi } from './finanzasApi'
 import type { MetodoPagoResponse, TipoMetodoPago } from './finanzasApi'
 
@@ -62,6 +64,7 @@ export function CuentasPorPagarPage() {
   const toast = useToast()
   const [cuentas, setCuentas] = useState<CompraResponse[]>([])
   const [metodosPago, setMetodosPago] = useState<MetodoPagoResponse[]>([])
+  const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -99,12 +102,14 @@ export function CuentasPorPagarPage() {
 
   const cargarApoyo = useCallback(async () => {
     try {
-      const [res, metodos] = await Promise.all([
+      const [res, metodos, provs] = await Promise.all([
         compraApi.resumenCuentasPorPagar(),
         metodoPagoApi.getAll(),
+        proveedorApi.getAll(),
       ])
       setResumen(res)
       setMetodosPago(metodos.filter((m) => m.activo))
+      setProveedores(provs)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
     }
@@ -211,8 +216,16 @@ export function CuentasPorPagarPage() {
   }
 
   const columns: DataTableColumn<CompraResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
-    { key: 'proveedor', label: 'Proveedor' },
+    // El número se busca con el buscador de arriba, no en el panel.
+    { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
+    {
+      key: 'proveedor',
+      label: 'Proveedor',
+      filterType: 'select',
+      filterOptions: [...new Set(proveedores.map((p) => p.nombre))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
     {
       key: 'fecha',
       label: 'Fecha',
