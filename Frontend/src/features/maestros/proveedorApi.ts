@@ -10,6 +10,7 @@ export interface ProveedorResponse {
   nombreComercial: string | null
   direccion: string | null
   departamento: string | null
+  provincia: string | null
   distrito: string | null
   telefono: string | null
   telefono2: string | null
@@ -28,6 +29,7 @@ export interface ProveedorRequest {
   nombreComercial?: string | null
   direccion?: string | null
   departamento?: string | null
+  provincia?: string | null
   distrito?: string | null
   telefono?: string | null
   telefono2?: string | null

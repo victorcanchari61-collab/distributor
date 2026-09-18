@@ -75,32 +75,59 @@ class AppShell extends ConsumerWidget {
             ...?acciones,
             const AppAlertasBoton(),
             // Quien esta conectado va aqui, no en el menu: se ve siempre, sin
-            // tener que abrir el drawer. Tocar el avatar abre Mi perfil.
+            // tener que abrir el drawer. El avatar despliega Ver mi perfil y
+            // Cerrar sesión — antes estaban sueltos al fondo del drawer.
             if (usuario != null)
               Padding(
                 padding: const EdgeInsets.only(right: Dimen.espacio3),
-                child: Tooltip(
-                  message: '${usuario.nombre}\n${usuario.rol}',
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () => context.go(PerfilPagina.ruta),
-                    child: CircleAvatar(
-                      radius: 15,
-                      backgroundColor: Colores.marca,
-                      backgroundImage: usuario.foto == null
-                          ? null
-                          : NetworkImage(ArchivoApi.url(usuario.foto!)),
-                      child: usuario.foto == null
-                          ? Text(
-                              usuario.inicial,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          : null,
+                child: PopupMenuButton<_AccionUsuario>(
+                  tooltip: '${usuario.nombre}\n${usuario.rol}',
+                  position: PopupMenuPosition.under,
+                  onSelected: (accion) {
+                    switch (accion) {
+                      case _AccionUsuario.perfil:
+                        context.go(PerfilPagina.ruta);
+                      case _AccionUsuario.salir:
+                        ref.read(authProvider.notifier).salir();
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _AccionUsuario.perfil,
+                      child: ListTile(
+                        leading: Icon(Icons.person_outline),
+                        title: Text('Ver mi perfil'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
+                    PopupMenuItem(
+                      value: _AccionUsuario.salir,
+                      child: ListTile(
+                        leading: Icon(Icons.logout, color: Colores.peligro),
+                        title: Text(
+                          'Cerrar sesión',
+                          style: TextStyle(color: Colores.peligro),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                  child: CircleAvatar(
+                    radius: 15,
+                    backgroundColor: Colores.marca,
+                    backgroundImage: usuario.foto == null
+                        ? null
+                        : NetworkImage(ArchivoApi.url(usuario.foto!)),
+                    child: usuario.foto == null
+                        ? Text(
+                            usuario.inicial,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : null,
                   ),
                 ),
               ),
@@ -113,3 +140,5 @@ class AppShell extends ConsumerWidget {
     );
   }
 }
+
+enum _AccionUsuario { perfil, salir }

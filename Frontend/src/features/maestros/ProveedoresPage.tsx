@@ -14,6 +14,7 @@ import {
   Alert,
   Badge,
   Button,
+  Desplegable,
   DocumentoInput,
   ImportarModal,
   Input,
@@ -28,6 +29,8 @@ import type { DataTableColumn, TipoDocumento } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { valorDe } from '../../lib/excel'
+import { ubigeoApi } from '../../lib/ubigeoApi'
+import type { DepartamentoResponse, DistritoResponse, ProvinciaResponse } from '../../lib/ubigeoApi'
 import { proveedorApi } from './proveedorApi'
 import type { ProveedorRequest, ProveedorResponse } from './proveedorApi'
 import { usePermisos } from '../../lib/permisos'
@@ -40,6 +43,7 @@ const VACIO: ProveedorRequest = {
   nombreComercial: '',
   direccion: '',
   departamento: '',
+  provincia: '',
   distrito: '',
   telefono: '',
   telefono2: '',
@@ -62,6 +66,14 @@ export function ProveedoresPage() {
   const [consultando, setConsultando] = useState(false)
   const { confirmar, dialogo } = useConfirmacion()
 
+  const [departamentos, setDepartamentos] = useState<DepartamentoResponse[]>([])
+  const [provincias, setProvincias] = useState<ProvinciaResponse[]>([])
+  const [distritos, setDistritos] = useState<DistritoResponse[]>([])
+  // Igual que en Clientes: el ubigeo del proveedor se guarda como nombre
+  // (Proveedor no tiene FK a Distrito), pero se elige en cascada por id para
+  // que Provincia y Distrito solo muestren lo que corresponde.
+  const [ubigeoSel, setUbigeoSel] = useState({ departamentoId: 0, provinciaId: 0 })
+
   const cargar = useCallback(async () => {
     setCargando(true)
     setError('')
@@ -78,12 +90,48 @@ export function ProveedoresPage() {
     void cargar()
   }, [cargar])
 
+  useEffect(() => {
+    void Promise.all([ubigeoApi.departamentos(), ubigeoApi.provincias(), ubigeoApi.distritos()]).then(
+      ([deps, provs, dists]) => {
+        setDepartamentos(deps)
+        setProvincias(provs)
+        setDistritos(dists)
+      },
+    )
+  }, [])
+
   useRealtime('proveedores', cargar)
 
   const abrirNuevo = () => {
     setEditando(null)
     setForm(VACIO)
+    setUbigeoSel({ departamentoId: 0, provinciaId: 0 })
     setAbierto(true)
+  }
+
+  /** El nombre guardado no siempre calza con el ubigeo oficial (texto libre, importado o de SUNAT). */
+  const buscarUbigeo = (departamento?: string | null, provincia?: string | null, distrito?: string | null) => {
+    const dep = departamento
+      ? departamentos.find((d) => d.nombre.toLowerCase() === departamento.trim().toLowerCase())
+      : undefined
+    const prov = provincia
+      ? provincias.find(
+          (p) =>
+            p.nombre.toLowerCase() === provincia.trim().toLowerCase() &&
+            (!dep || p.departamentoId === dep.id),
+        )
+      : undefined
+    const dist = distrito
+      ? distritos.find(
+          (d) =>
+            d.nombre.toLowerCase() === distrito.trim().toLowerCase() &&
+            (!prov || d.provinciaId === prov.id),
+        )
+      : undefined
+    return {
+      departamentoId: dist?.departamentoId ?? prov?.departamentoId ?? dep?.id ?? 0,
+      provinciaId: dist?.provinciaId ?? prov?.id ?? 0,
+    }
   }
 
   const abrirEdicion = (proveedor: ProveedorResponse) => {
@@ -95,12 +143,14 @@ export function ProveedoresPage() {
       nombreComercial: proveedor.nombreComercial ?? '',
       direccion: proveedor.direccion ?? '',
       departamento: proveedor.departamento ?? '',
+      provincia: proveedor.provincia ?? '',
       distrito: proveedor.distrito ?? '',
       telefono: proveedor.telefono ?? '',
       telefono2: proveedor.telefono2 ?? '',
       email: proveedor.email ?? '',
       rubro: proveedor.rubro ?? '',
     })
+    setUbigeoSel(buscarUbigeo(proveedor.departamento, proveedor.provincia, proveedor.distrito))
     setAbierto(true)
   }
 
@@ -109,12 +159,14 @@ export function ProveedoresPage() {
     try {
       if (tipo === 'RUC') {
         const datos = await consultaApi.ruc(documento)
+        setUbigeoSel(buscarUbigeo(datos.departamento, datos.provincia, datos.distrito))
         setForm((prev) => ({
           ...prev,
           nombre: datos.razonSocial,
           nombreComercial: datos.nombreComercial ?? prev.nombreComercial,
           direccion: datos.direccion ?? prev.direccion,
           departamento: datos.departamento ?? prev.departamento,
+          provincia: datos.provincia ?? prev.provincia,
           distrito: datos.distrito ?? prev.distrito,
         }))
       } else if (tipo === 'DNI') {
@@ -209,7 +261,7 @@ export function ProveedoresPage() {
   const rubros = new Set(activos.map((p) => p.rubro).filter(Boolean)).size
 
   /** Los valores que de verdad hay en esa columna, para elegir y no teclear. */
-  const distintos = (campo: 'rubro' | 'direccion' | 'distrito') =>
+  const distintos = (campo: 'rubro' | 'direccion' | 'distrito' | 'departamento' | 'provincia') =>
     [...new Set(proveedores.map((p) => p[campo]?.trim()).filter((v): v is string => !!v))]
       .sort((a, b) => a.localeCompare(b, 'es'))
       .map((v) => ({ value: v, label: v }))
@@ -242,6 +294,8 @@ export function ProveedoresPage() {
     { key: 'rubro', label: 'Rubro', filterType: 'select', filterOptions: distintos('rubro') },
     { key: 'direccion', label: 'Dirección', filterType: 'select', filterOptions: distintos('direccion') },
     { key: 'telefono', label: 'Teléfono', filterable: false },
+    { key: 'departamento', label: 'Departamento', filterType: 'select', filterOptions: distintos('departamento') },
+    { key: 'provincia', label: 'Provincia', filterType: 'select', filterOptions: distintos('provincia') },
     { key: 'distrito', label: 'Distrito', filterType: 'select', filterOptions: distintos('distrito') },
 
     {
@@ -401,16 +455,54 @@ export function ProveedoresPage() {
             onChange={(e) => setForm({ ...form, direccion: e.target.value })}
           />
 
-          <Input
+          <Desplegable
             label="Departamento"
-            value={form.departamento ?? ''}
-            onChange={(e) => setForm({ ...form, departamento: e.target.value })}
+            optional
+            value={ubigeoSel.departamentoId}
+            onChange={(v) => {
+              const dep = departamentos.find((d) => d.id === Number(v))
+              setUbigeoSel({ departamentoId: Number(v), provinciaId: 0 })
+              setForm((f) => ({ ...f, departamento: dep?.nombre ?? '', provincia: '', distrito: '' }))
+            }}
+            options={[
+              { value: 0, label: 'Elegir' },
+              ...departamentos.map((d) => ({ value: d.id, label: d.nombre })),
+            ]}
           />
 
-          <Input
+          <Desplegable
+            label="Provincia"
+            optional
+            disabled={!ubigeoSel.departamentoId}
+            value={ubigeoSel.provinciaId}
+            onChange={(v) => {
+              const prov = provincias.find((p) => p.id === Number(v))
+              setUbigeoSel((s) => ({ ...s, provinciaId: Number(v) }))
+              setForm((f) => ({ ...f, provincia: prov?.nombre ?? '', distrito: '' }))
+            }}
+            options={[
+              { value: 0, label: 'Elegir' },
+              ...provincias
+                .filter((p) => p.departamentoId === ubigeoSel.departamentoId)
+                .map((p) => ({ value: p.id, label: p.nombre })),
+            ]}
+          />
+
+          <Desplegable
             label="Distrito"
-            value={form.distrito ?? ''}
-            onChange={(e) => setForm({ ...form, distrito: e.target.value })}
+            optional
+            disabled={!ubigeoSel.provinciaId}
+            value={distritos.find((d) => d.nombre === form.distrito)?.id ?? 0}
+            onChange={(v) => {
+              const dist = distritos.find((d) => d.id === Number(v))
+              setForm((f) => ({ ...f, distrito: dist?.nombre ?? '' }))
+            }}
+            options={[
+              { value: 0, label: 'Elegir' },
+              ...distritos
+                .filter((d) => d.provinciaId === ubigeoSel.provinciaId)
+                .map((d) => ({ value: d.id, label: d.nombre })),
+            ]}
           />
 
           <Input
@@ -441,6 +533,7 @@ export function ProveedoresPage() {
           'Teléfono 2',
           'Email',
           'Departamento',
+          'Provincia',
           'Distrito',
         ]}
         mapear={(fila) => ({
@@ -454,6 +547,7 @@ export function ProveedoresPage() {
           // separa lo que es correo de lo que no.
           email: valorDe(fila, 'email', 'correo'),
           departamento: valorDe(fila, 'departamento'),
+          provincia: valorDe(fila, 'provincia'),
           distrito: valorDe(fila, 'distrito'),
         })}
         onImportar={proveedorApi.importar}

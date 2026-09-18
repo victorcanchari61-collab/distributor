@@ -6,9 +6,7 @@ import '../../core/navegacion/menu.dart';
 import '../../core/permisos/permisos.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
-import '../../features/auth/estado/auth_controlador.dart';
 import '../../features/inicio/vistas/inicio_pagina.dart';
-import '../../features/perfil/vistas/perfil_pagina.dart';
 import 'app_logo.dart';
 
 /// Menu lateral de la app.
@@ -114,30 +112,9 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
               ),
             ),
 
-            const Divider(height: 1),
-            _ItemSimple(
-              icono: Icons.person_outline,
-              titulo: 'Mi perfil',
-              activo: widget.rutaActual == PerfilPagina.ruta,
-              color: Colores.marca,
-              onTap: () {
-                Navigator.of(context).pop();
-                if (widget.rutaActual != PerfilPagina.ruta) {
-                  context.go(PerfilPagina.ruta);
-                }
-              },
-            ),
-            const Divider(height: 1),
-            _ItemSimple(
-              icono: Icons.logout,
-              titulo: 'Cerrar sesión',
-              activo: false,
-              color: Colores.peligro,
-              onTap: () {
-                Navigator.of(context).pop();
-                ref.read(authProvider.notifier).salir();
-              },
-            ),
+            // Mi perfil y Cerrar sesión ya no van aqui: se accede desde el
+            // avatar de la barra superior, que se ve siempre sin necesidad
+            // de abrir el menu.
             const SizedBox(height: Dimen.espacio2),
           ],
         ),
