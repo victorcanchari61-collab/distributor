@@ -177,11 +177,14 @@ export function UsuariosPage() {
   }
 
   const columns: DataTableColumn<Usuario>[] = [
-    { key: 'nombre', label: 'Nombre' },
-    { key: 'email', label: 'Correo' },
+    // Nombre, correo y DNI son datos únicos por persona: se buscan arriba,
+    // no en el panel.
+    { key: 'nombre', label: 'Nombre', filterable: false },
+    { key: 'email', label: 'Correo', filterable: false },
     {
       key: 'dni',
       label: 'DNI',
+      filterable: false,
       render: (row) => row.dni ?? <span className="text-ink-soft">—</span>,
     },
     {

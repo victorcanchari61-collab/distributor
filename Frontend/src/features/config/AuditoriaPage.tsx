@@ -99,7 +99,8 @@ export function AuditoriaPage() {
       filterType: 'select',
       filterOptions: (resumen?.entidades ?? []).map((e) => ({ value: e, label: e })),
     },
-    { key: 'entidadId', label: 'Registro', render: (row) => <Badge>#{row.entidadId}</Badge> },
+    // El id del registro se busca con el buscador de arriba, no en el panel.
+    { key: 'entidadId', label: 'Registro', filterable: false, render: (row) => <Badge>#{row.entidadId}</Badge> },
     {
       key: 'accion',
       label: 'Acción',

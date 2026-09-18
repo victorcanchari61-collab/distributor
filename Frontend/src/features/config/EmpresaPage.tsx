@@ -189,13 +189,16 @@ export function EmpresaPage() {
   const activa = empresas.find((e) => e.activa)
 
   const columns: DataTableColumn<EmpresaResponse>[] = [
-    { key: 'razonSocial', label: 'Razón social' },
-    { key: 'nombreComercial', label: 'Nombre comercial' },
-    { key: 'ruc', label: 'RUC' },
-    { key: 'telefono', label: 'Teléfono' },
+    // Todos son datos únicos por empresa: no hay nada que agrupar en un
+    // select, y razón social y RUC ya se buscan arriba.
+    { key: 'razonSocial', label: 'Razón social', filterable: false },
+    { key: 'nombreComercial', label: 'Nombre comercial', filterable: false },
+    { key: 'ruc', label: 'RUC', filterable: false },
+    { key: 'telefono', label: 'Teléfono', filterable: false },
     {
       key: 'sitioWeb',
       label: 'Sitio web',
+      filterable: false,
       render: (row) =>
         row.sitioWeb ? (
           <a

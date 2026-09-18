@@ -122,9 +122,11 @@ export function RolesPage() {
     rol.permisos.filter((p) => p.accion === 'ver').length
 
   const columns: DataTableColumn<RolResponse>[] = [
+    // El nombre y la descripción se buscan con el buscador de arriba.
     {
       key: 'nombre',
       label: 'Rol',
+      filterable: false,
       render: (row) => (
         <span className="flex items-center gap-2">
           <span className="font-semibold text-ink">{row.nombre}</span>
@@ -132,7 +134,7 @@ export function RolesPage() {
         </span>
       ),
     },
-    { key: 'descripcion', label: 'Qué puede hacer' },
+    { key: 'descripcion', label: 'Qué puede hacer', filterable: false },
     // Contadores: no hay control numerico en el panel, y buscarlos por texto
     // no encuentra lo que la persona espera.
     { key: 'usuarios', label: 'Usuarios', align: 'right', filterable: false, value: (row) => row.usuarios },
