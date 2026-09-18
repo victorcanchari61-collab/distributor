@@ -209,16 +209,19 @@ export function ConductoresPage() {
     })
 
   const columns: DataTableColumn<ConductorResponse>[] = [
-    { key: 'nombre', label: 'Nombre' },
-    { key: 'documento', label: 'Documento' },
+    // Nombre, documento, teléfono y licencia se buscan arriba, no en el panel.
+    { key: 'nombre', label: 'Nombre', filterable: false },
+    { key: 'documento', label: 'Documento', filterable: false },
     {
       key: 'telefono',
       label: 'Teléfono',
+      filterable: false,
       render: (row) => row.telefono ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'licenciaNumero',
       label: 'Licencia',
+      filterable: false,
       value: (row) => `${row.licenciaNumero ?? ''} ${row.licenciaCategoria ?? ''}`.trim(),
       render: (row) =>
         row.licenciaNumero || row.licenciaCategoria ? (

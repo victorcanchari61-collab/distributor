@@ -312,7 +312,8 @@ export function DespachosPage() {
     .reduce((n, p) => n + p.total, 0)
 
   const columns: DataTableColumn<DespachoResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
+    // El número se busca con el buscador de arriba, no en el panel.
+    { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
       key: 'fecha',
       label: 'Fecha',
@@ -320,9 +321,30 @@ export function DespachosPage() {
       value: (row) => new Date(row.fecha).getTime(),
       render: (row) => fechaCorta(row.fecha),
     },
-    { key: 'ruta', label: 'Ruta' },
-    { key: 'vehiculo', label: 'Vehículo' },
-    { key: 'conductor', label: 'Conductor' },
+    {
+      key: 'ruta',
+      label: 'Ruta',
+      filterType: 'select',
+      filterOptions: [...new Set(rutas.filter((r) => r.activo).map((r) => r.nombre))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
+    {
+      key: 'vehiculo',
+      label: 'Vehículo',
+      filterType: 'select',
+      filterOptions: [...new Set(vehiculos.map((v) => v.placa))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
+    {
+      key: 'conductor',
+      label: 'Conductor',
+      filterType: 'select',
+      filterOptions: [...new Set(conductores.map((c) => c.nombre))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
     {
       key: 'pedidos',
       label: 'Entregas',

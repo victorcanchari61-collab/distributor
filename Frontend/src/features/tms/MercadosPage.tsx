@@ -118,16 +118,27 @@ export function MercadosPage() {
       },
     })
 
+  /** Los valores que de verdad hay en esa columna, para elegir y no teclear. */
+  const distintos = (campo: 'direccion' | 'distrito') =>
+    [...new Set(mercados.map((m) => m[campo]?.trim()).filter((v): v is string => !!v))]
+      .sort((a, b) => a.localeCompare(b, 'es'))
+      .map((v) => ({ value: v, label: v }))
+
   const columns: DataTableColumn<MercadoResponse>[] = [
-    { key: 'nombre', label: 'Nombre' },
+    // El nombre se busca con el buscador de arriba, no en el panel.
+    { key: 'nombre', label: 'Nombre', filterable: false },
     {
       key: 'direccion',
       label: 'Dirección',
+      filterType: 'select',
+      filterOptions: distintos('direccion'),
       render: (row) => row.direccion ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'distrito',
       label: 'Distrito',
+      filterType: 'select',
+      filterOptions: distintos('distrito'),
       render: (row) => row.distrito ?? <span className="text-ink-soft">—</span>,
     },
     // Un contador no se busca por texto: no hay control numerico en el panel.

@@ -253,7 +253,8 @@ export function FlotaPage() {
     })
 
   const columns: DataTableColumn<VehiculoResponse>[] = [
-    { key: 'placa', label: 'Placa', render: (row) => <Badge tone="sys">{row.placa}</Badge> },
+    // La placa se busca con el buscador de arriba, no en el panel.
+    { key: 'placa', label: 'Placa', filterable: false, render: (row) => <Badge tone="sys">{row.placa}</Badge> },
     {
       key: 'tipoVehiculo',
       label: 'Tipo',
@@ -262,15 +263,21 @@ export function FlotaPage() {
       filterOptions: tipos.map((t) => ({ value: t.nombre, label: t.nombre })),
     },
     {
+      // Separada de Modelo: junta las dos en un solo texto no se podia
+      // filtrar por marca sin que el modelo (unico por vehiculo) lo estorbara.
       key: 'marca',
-      label: 'Marca / modelo',
-      value: (row) => `${row.marca ?? ''} ${row.modelo ?? ''}`.trim(),
-      render: (row) =>
-        row.marca || row.modelo ? (
-          [row.marca, row.modelo].filter(Boolean).join(' ')
-        ) : (
-          <span className="text-ink-soft">—</span>
-        ),
+      label: 'Marca',
+      filterType: 'select',
+      filterOptions: [...new Set(vehiculos.map((v) => v.marca).filter((v): v is string => !!v))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((v) => ({ value: v, label: v })),
+      render: (row) => row.marca ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'modelo',
+      label: 'Modelo',
+      filterable: false,
+      render: (row) => row.modelo ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'capacidadKg',
@@ -288,6 +295,10 @@ export function FlotaPage() {
     {
       key: 'conductor',
       label: 'Conductor',
+      filterType: 'select',
+      filterOptions: [...new Set(conductores.map((c) => c.nombre))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
       render: (row) => row.conductor ?? <span className="text-ink-soft">Sin asignar</span>,
     },
     {
@@ -745,10 +756,12 @@ function TiposVehiculoTabla({
     })
 
   const columns: DataTableColumn<TipoVehiculoResponse>[] = [
-    { key: 'nombre', label: 'Nombre' },
+    // Nombre y descripción se buscan con el buscador de arriba, no en el panel.
+    { key: 'nombre', label: 'Nombre', filterable: false },
     {
       key: 'descripcion',
       label: 'Descripción',
+      filterable: false,
       render: (row) => row.descripcion ?? <span className="text-ink-soft">—</span>,
     },
     {

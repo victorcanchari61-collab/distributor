@@ -117,8 +117,10 @@ export function VisitasPage() {
         ),
       },
       {
+        // Se busca con el buscador de arriba, no en el panel.
         key: 'cliente',
         label: 'Cliente',
+        filterable: false,
         render: (row) => (
           <span className="flex flex-col">
             <span className="font-medium text-ink">{row.cliente}</span>
@@ -130,6 +132,11 @@ export function VisitasPage() {
         key: 'mercado',
         label: 'Dónde',
         // Mercado y dirección juntos: es lo que se lee para llegar al puesto.
+        // El filtro compara solo por mercado; la dirección varía por cliente.
+        filterType: 'select',
+        filterOptions: [...new Set(visitas.map((v) => v.mercado).filter((v): v is string => !!v))]
+          .sort((a, b) => a.localeCompare(b, 'es'))
+          .map((v) => ({ value: v, label: v })),
         render: (row) => (
           <span className="flex flex-col">
             <span>{row.mercado ?? '—'}</span>

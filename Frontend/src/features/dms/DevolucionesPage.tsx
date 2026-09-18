@@ -118,7 +118,8 @@ export function DevolucionesPage() {
   }
 
   const columns: DataTableColumn<DevolucionResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
+    // Número y venta se buscan con el buscador de arriba, no en el panel.
+    { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
       key: 'fecha',
       label: 'Fecha',
@@ -126,9 +127,24 @@ export function DevolucionesPage() {
       value: (row) => new Date(row.fecha).getTime(),
       render: (row) => fechaCorta(row.fecha),
     },
-    { key: 'notaVenta', label: 'Venta' },
-    { key: 'cliente', label: 'Cliente' },
-    { key: 'motivo', label: 'Motivo', render: (row) => row.motivo ?? '—' },
+    { key: 'notaVenta', label: 'Venta', filterable: false },
+    {
+      key: 'cliente',
+      label: 'Cliente',
+      filterType: 'select',
+      filterOptions: [...new Set(devoluciones.map((d) => d.cliente))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
+    {
+      key: 'motivo',
+      label: 'Motivo',
+      filterType: 'select',
+      filterOptions: [...new Set(devoluciones.map((d) => d.motivo).filter((v): v is string => !!v))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((v) => ({ value: v, label: v })),
+      render: (row) => row.motivo ?? '—',
+    },
     {
       key: 'total',
       label: 'Importe',
