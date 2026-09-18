@@ -131,6 +131,9 @@ class FlotaPagina extends ConsumerWidget {
             FiltroEstado.activos;
         ref.read(filtroPapelesProvider.notifier).state =
             FiltroPapeles.todos;
+        ref.read(tipoVehiculoFiltroProvider.notifier).state = null;
+        ref.read(marcaVehiculoFiltroProvider.notifier).state = null;
+        ref.read(conductorVehiculoFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -158,6 +161,57 @@ class FlotaPagina extends ConsumerWidget {
             onCambio: (v) =>
                 ref.read(filtroPapelesProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final tipos = ref.watch(tiposVehiculoActivosProvider);
+            if (tipos.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Tipo',
+              valor: ref.watch(tipoVehiculoFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final t in tipos) OpcionFiltro(t.nombre, t.nombre),
+              ],
+              onCambio: (v) =>
+                  ref.read(tipoVehiculoFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final marcas = ref.watch(marcasVehiculoProvider);
+            if (marcas.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Marca',
+              valor: ref.watch(marcaVehiculoFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final m in marcas) OpcionFiltro(m, m),
+              ],
+              onCambio: (v) =>
+                  ref.read(marcaVehiculoFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final conductores = ref.watch(conductoresVehiculoProvider);
+            if (conductores.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Conductor',
+              valor: ref.watch(conductorVehiculoFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final c in conductores) OpcionFiltro(c, c),
+              ],
+              onCambio: (v) =>
+                  ref.read(conductorVehiculoFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

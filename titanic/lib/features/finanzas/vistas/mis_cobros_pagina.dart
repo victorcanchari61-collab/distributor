@@ -74,6 +74,8 @@ class MisCobrosPagina extends ConsumerWidget {
       onLimpiar: () {
         ref.read(filtroDocumentoProvider.notifier).state =
             FiltroDocumento.todos;
+        ref.read(clienteMisCobrosFiltroProvider.notifier).state = null;
+        ref.read(metodoMisCobrosFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -88,6 +90,40 @@ class MisCobrosPagina extends ConsumerWidget {
             onCambio: (v) =>
                 ref.read(filtroDocumentoProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final clientes = ref.watch(clientesMisCobrosProvider);
+            if (clientes.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Cliente',
+              valor: ref.watch(clienteMisCobrosFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final c in clientes) OpcionFiltro(c, c),
+              ],
+              onCambio: (v) =>
+                  ref.read(clienteMisCobrosFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final metodos = ref.watch(metodosMisCobrosProvider);
+            if (metodos.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Método',
+              valor: ref.watch(metodoMisCobrosFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final m in metodos) OpcionFiltro(m, m),
+              ],
+              onCambio: (v) =>
+                  ref.read(metodoMisCobrosFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

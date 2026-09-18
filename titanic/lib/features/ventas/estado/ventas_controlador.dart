@@ -17,6 +17,22 @@ final busquedaPedidosProvider = StateProvider.autoDispose((ref) => '');
 
 /// Filtro por estado. Null es "todos".
 final estadoPedidoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+final clientePedidoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+/// null = todos, true = convertido a venta, false = sin convertir.
+final ventaPedidoFiltroProvider = StateProvider.autoDispose<bool?>(
+  (ref) => null,
+);
+
+final filtrosPedidosActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(estadoPedidoFiltroProvider) != null) n++;
+  if (ref.watch(clientePedidoFiltroProvider) != null) n++;
+  if (ref.watch(ventaPedidoFiltroProvider) != null) n++;
+  return n;
+});
 
 class PedidosControlador extends AsyncNotifier<List<Pedido>> {
   @override
@@ -59,10 +75,21 @@ final pedidosFiltradosProvider = Provider.autoDispose<List<Pedido>>((ref) {
   final todos = ref.watch(pedidosProvider).valueOrNull ?? const <Pedido>[];
   final texto = ref.watch(busquedaPedidosProvider).trim().toLowerCase();
   final estado = ref.watch(estadoPedidoFiltroProvider);
+  final cliente = ref.watch(clientePedidoFiltroProvider);
+  final venta = ref.watch(ventaPedidoFiltroProvider);
   return todos
       .where((p) => estado == null || p.estado == estado)
+      .where((p) => cliente == null || p.cliente == cliente)
+      .where((p) => venta == null || venta == (p.notaVentaNumero != null))
       .where((p) => texto.isEmpty || p.buscable.contains(texto))
       .toList();
+});
+
+/// Clientes que existen en los pedidos, para armar el filtro.
+final clientesPedidoProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(pedidosProvider).valueOrNull ?? const <Pedido>[];
+  final valores = todos.map((p) => p.cliente).toSet().toList()..sort();
+  return valores;
 });
 
 // --- Notas de venta ---
@@ -100,10 +127,21 @@ final formaPagoFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
 
+final clienteNotaVentaFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+/// null = todas, true = de un pedido, false = directa.
+final deUnPedidoFiltroProvider = StateProvider.autoDispose<bool?>(
+  (ref) => null,
+);
+
 final filtrosNotasVentaActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(filtroDocumentoProvider) != FiltroDocumento.todos) n++;
   if (ref.watch(formaPagoFiltroProvider) != null) n++;
+  if (ref.watch(clienteNotaVentaFiltroProvider) != null) n++;
+  if (ref.watch(deUnPedidoFiltroProvider) != null) n++;
   return n;
 });
 
@@ -112,12 +150,23 @@ final notasVentaFiltradasProvider = Provider.autoDispose<List<NotaVenta>>((ref) 
   final texto = ref.watch(busquedaNotasVentaProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroDocumentoProvider);
   final forma = ref.watch(formaPagoFiltroProvider);
+  final cliente = ref.watch(clienteNotaVentaFiltroProvider);
+  final deUnPedido = ref.watch(deUnPedidoFiltroProvider);
 
   return todas
       .where((n) => pasaDocumento(n.estado == EstadoNotaVenta.anulada, filtro))
       .where((n) => forma == null || n.formaPago == forma)
+      .where((n) => cliente == null || n.cliente == cliente)
+      .where((n) => deUnPedido == null || deUnPedido == (n.pedidoId != null))
       .where((n) => texto.isEmpty || n.buscable.contains(texto))
       .toList();
+});
+
+/// Clientes que existen en las notas de venta, para armar el filtro.
+final clientesNotaVentaProvider = Provider.autoDispose<List<String>>((ref) {
+  final todas = ref.watch(notasVentaProvider).valueOrNull ?? const <NotaVenta>[];
+  final valores = todas.map((n) => n.cliente).toSet().toList()..sort();
+  return valores;
 });
 
 // --- Cuentas por cobrar ---
@@ -170,6 +219,9 @@ final filtrosDeudaActivosProvider = Provider.autoDispose(
   (ref) => ref.watch(filtroDeudaProvider) == FiltroDeuda.todas ? 0 : 1,
 );
 
+final clienteCuentasPorCobrarFiltroProvider =
+    StateProvider.autoDispose<String?>((ref) => null);
+
 bool pasaDeuda(double total, double pagado, FiltroDeuda filtro) =>
     switch (filtro) {
       FiltroDeuda.todas => true,
@@ -183,11 +235,22 @@ final cuentasPorCobrarFiltradasProvider = Provider.autoDispose<List<NotaVenta>>(
   final todas = ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
   final texto = ref.watch(busquedaCuentasPorCobrarProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroDeudaProvider);
+  final cliente = ref.watch(clienteCuentasPorCobrarFiltroProvider);
 
   return todas
       .where((n) => pasaDeuda(n.total, n.totalPagado, filtro))
+      .where((n) => cliente == null || n.cliente == cliente)
       .where((n) => texto.isEmpty || n.buscable.contains(texto))
       .toList();
+});
+
+/// Clientes que existen en las cuentas por cobrar.
+final clientesCuentasPorCobrarProvider = Provider.autoDispose<List<String>>((
+  ref,
+) {
+  final todas = ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
+  final valores = todas.map((n) => n.cliente).toSet().toList()..sort();
+  return valores;
 });
 
 // --- Mis cobros ---
@@ -208,17 +271,44 @@ final misCobrosProvider = AsyncNotifierProvider<MisCobrosControlador, List<Cobro
   MisCobrosControlador.new,
 );
 
-final filtrosMisCobrosActivosProvider = Provider.autoDispose(
-  (ref) => ref.watch(filtroDocumentoProvider) == FiltroDocumento.todos ? 0 : 1,
+final clienteMisCobrosFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
 );
+final metodoMisCobrosFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+final filtrosMisCobrosActivosProvider = Provider.autoDispose((ref) {
+  var n = ref.watch(filtroDocumentoProvider) == FiltroDocumento.todos ? 0 : 1;
+  if (ref.watch(clienteMisCobrosFiltroProvider) != null) n++;
+  if (ref.watch(metodoMisCobrosFiltroProvider) != null) n++;
+  return n;
+});
 
 final misCobrosFiltradosProvider = Provider.autoDispose<List<Cobro>>((ref) {
   final todos = ref.watch(misCobrosProvider).valueOrNull ?? const <Cobro>[];
   final texto = ref.watch(busquedaMisCobrosProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroDocumentoProvider);
+  final cliente = ref.watch(clienteMisCobrosFiltroProvider);
+  final metodo = ref.watch(metodoMisCobrosFiltroProvider);
 
   return todos
       .where((c) => pasaDocumento(c.anulado, filtro))
+      .where((c) => cliente == null || c.cliente == cliente)
+      .where((c) => metodo == null || c.metodoPago == metodo)
       .where((c) => texto.isEmpty || c.buscable.contains(texto))
       .toList();
+});
+
+/// Clientes y métodos que existen en los cobros, para armar el filtro.
+final clientesMisCobrosProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(misCobrosProvider).valueOrNull ?? const <Cobro>[];
+  final valores = todos.map((c) => c.cliente).toSet().toList()..sort();
+  return valores;
+});
+
+final metodosMisCobrosProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(misCobrosProvider).valueOrNull ?? const <Cobro>[];
+  final valores = todos.map((c) => c.metodoPago).toSet().toList()..sort();
+  return valores;
 });

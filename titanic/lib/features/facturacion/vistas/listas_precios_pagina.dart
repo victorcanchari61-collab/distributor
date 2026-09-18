@@ -5,6 +5,7 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -73,6 +74,11 @@ class ListasPreciosPagina extends ConsumerWidget {
       iconoVacio: Icons.payments_outlined,
       singular: 'precio',
       plural: 'precios',
+      filtro: BotonFiltros(
+        activos: ref.read(filtrosPreciosActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref, color),
+      ),
       encabezado: Column(
         children: [
           _ListasTabs(
@@ -196,6 +202,35 @@ class ListasPreciosPagina extends ConsumerWidget {
             ? () => _eliminarPrecio(context, ref, precio)
             : null,
       ),
+    );
+  }
+
+  Future<void> _abrirFiltros(BuildContext context, WidgetRef ref, Color color) {
+    return mostrarFiltros(
+      context,
+      activos: ref.read(filtrosPreciosActivosProvider),
+      onLimpiar: () {
+        ref.read(presentacionPrecioFiltroProvider.notifier).state = null;
+      },
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) {
+            final presentaciones = ref.watch(presentacionesDePreciosProvider);
+            if (presentaciones.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Presentación',
+              valor: ref.watch(presentacionPrecioFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final p in presentaciones) OpcionFiltro(p, p),
+              ],
+              onCambio: (v) =>
+                  ref.read(presentacionPrecioFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+      ],
     );
   }
 

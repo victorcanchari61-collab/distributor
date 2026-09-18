@@ -88,6 +88,7 @@ class MercadosPagina extends ConsumerWidget {
         ref.read(estadoFiltroProvider.notifier).state =
             FiltroEstado.activos;
         ref.read(distritoMercadoProvider.notifier).state = null;
+        ref.read(direccionMercadoProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -114,6 +115,23 @@ class MercadosPagina extends ConsumerWidget {
             onCambio: (v) =>
                 ref.read(distritoMercadoProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final direcciones = ref.watch(direccionesDeMercadosProvider);
+            if (direcciones.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Dirección',
+              valor: ref.watch(direccionMercadoProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final d in direcciones) OpcionFiltro(d, d),
+              ],
+              onCambio: (v) =>
+                  ref.read(direccionMercadoProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

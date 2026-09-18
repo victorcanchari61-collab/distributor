@@ -83,6 +83,7 @@ class KardexPagina extends ConsumerWidget {
       activos: ref.read(filtrosKardexActivosProvider),
       onLimpiar: () {
         ref.read(filtroKardexProvider.notifier).state = FiltroKardex.todos;
+        ref.read(motivoKardexFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -97,6 +98,23 @@ class KardexPagina extends ConsumerWidget {
             ],
             onCambio: (v) => ref.read(filtroKardexProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final motivos = ref.watch(motivosDelKardexProvider);
+            if (motivos.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Motivo',
+              valor: ref.watch(motivoKardexFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final m in motivos) OpcionFiltro(m, m),
+              ],
+              onCambio: (v) =>
+                  ref.read(motivoKardexFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

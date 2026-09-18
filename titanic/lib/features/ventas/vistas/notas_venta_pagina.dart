@@ -96,6 +96,8 @@ class NotasVentaPagina extends ConsumerWidget {
         ref.read(filtroDocumentoProvider.notifier).state =
             FiltroDocumento.todos;
         ref.read(formaPagoFiltroProvider.notifier).state = null;
+        ref.read(clienteNotaVentaFiltroProvider.notifier).state = null;
+        ref.read(deUnPedidoFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -122,6 +124,36 @@ class NotasVentaPagina extends ConsumerWidget {
             ],
             onCambio: (v) =>
                 ref.read(formaPagoFiltroProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final clientes = ref.watch(clientesNotaVentaProvider);
+            if (clientes.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Cliente',
+              valor: ref.watch(clienteNotaVentaFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final c in clientes) OpcionFiltro(c, c),
+              ],
+              onCambio: (v) =>
+                  ref.read(clienteNotaVentaFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<bool?>(
+            titulo: 'Pedido de origen',
+            valor: ref.watch(deUnPedidoFiltroProvider),
+            opciones: const [
+              OpcionFiltro(null, 'Todos'),
+              OpcionFiltro(true, 'De un pedido'),
+              OpcionFiltro(false, 'Directa'),
+            ],
+            onCambio: (v) =>
+                ref.read(deUnPedidoFiltroProvider.notifier).state = v,
           ),
         ),
       ],

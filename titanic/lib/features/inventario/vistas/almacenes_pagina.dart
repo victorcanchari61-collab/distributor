@@ -100,6 +100,7 @@ class AlmacenesPagina extends ConsumerWidget {
       activos: ref.read(filtrosAlmacenesActivosProvider),
       onLimpiar: () {
         ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
+        ref.read(direccionAlmacenFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -113,6 +114,23 @@ class AlmacenesPagina extends ConsumerWidget {
             ],
             onCambio: (v) => ref.read(estadoFiltroProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final direcciones = ref.watch(direccionesAlmacenProvider);
+            if (direcciones.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Dirección',
+              valor: ref.watch(direccionAlmacenFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final d in direcciones) OpcionFiltro(d, d),
+              ],
+              onCambio: (v) =>
+                  ref.read(direccionAlmacenFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

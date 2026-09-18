@@ -87,6 +87,7 @@ class PrestamosPagina extends ConsumerWidget {
             FiltroPrestamo.todos;
         ref.read(filtroDevolucionProvider.notifier).state =
             FiltroDevolucion.todos;
+        ref.read(almacenPrestamoFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -114,6 +115,23 @@ class PrestamosPagina extends ConsumerWidget {
             onCambio: (v) =>
                 ref.read(filtroDevolucionProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final almacenes = ref.watch(almacenesActivosProvider);
+            if (almacenes.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Almacén',
+              valor: ref.watch(almacenPrestamoFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final a in almacenes) OpcionFiltro(a.nombre, a.nombre),
+              ],
+              onCambio: (v) =>
+                  ref.read(almacenPrestamoFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

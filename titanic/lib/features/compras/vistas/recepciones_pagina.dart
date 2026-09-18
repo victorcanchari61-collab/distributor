@@ -91,6 +91,8 @@ class RecepcionesPagina extends ConsumerWidget {
       onLimpiar: () {
         ref.read(filtroDocumentoProvider.notifier).state =
             FiltroDocumento.todos;
+        ref.read(almacenRecepcionFiltroProvider.notifier).state = null;
+        ref.read(compraRecepcionFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -105,6 +107,40 @@ class RecepcionesPagina extends ConsumerWidget {
             onCambio: (v) =>
                 ref.read(filtroDocumentoProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final almacenes = ref.watch(almacenesActivosProvider);
+            if (almacenes.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Almacén',
+              valor: ref.watch(almacenRecepcionFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final a in almacenes) OpcionFiltro(a.nombre, a.nombre),
+              ],
+              onCambio: (v) =>
+                  ref.read(almacenRecepcionFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final compras = ref.watch(comprasDeRecepcionesProvider);
+            if (compras.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Compra',
+              valor: ref.watch(compraRecepcionFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final c in compras) OpcionFiltro(c, c),
+              ],
+              onCambio: (v) =>
+                  ref.read(compraRecepcionFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

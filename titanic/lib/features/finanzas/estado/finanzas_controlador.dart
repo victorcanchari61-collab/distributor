@@ -57,11 +57,15 @@ final metodosPagoProvider =
 final tipoMetodoPagoFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
+final bancoMetodoPagoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
 final filtrosMetodosPagoActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
   if (ref.watch(tipoMetodoPagoFiltroProvider) != null) n++;
+  if (ref.watch(bancoMetodoPagoFiltroProvider) != null) n++;
   return n;
 });
 
@@ -72,12 +76,28 @@ final metodosPagoFiltradosProvider = Provider.autoDispose<List<MetodoPago>>((
   final texto = ref.watch(busquedaMetodosPagoProvider).trim().toLowerCase();
   final estado = ref.watch(estadoFiltroProvider);
   final tipo = ref.watch(tipoMetodoPagoFiltroProvider);
+  final banco = ref.watch(bancoMetodoPagoFiltroProvider);
 
   return todos
       .where((m) => pasaEstado(m.activo, estado))
       .where((m) => tipo == null || m.tipo == tipo)
+      .where((m) => banco == null || m.banco == banco)
       .where((m) => texto.isEmpty || m.buscable.contains(texto))
       .toList();
+});
+
+/// Bancos que existen en los datos, para armar el filtro sin listas fijas.
+final bancosMetodoPagoProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[];
+  final valores =
+      todos
+          .map((m) => m.banco)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
 });
 
 /// Metodos de pago activos, para los selectores de otros modulos (Compras).

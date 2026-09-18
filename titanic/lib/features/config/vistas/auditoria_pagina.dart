@@ -27,6 +27,8 @@ class AuditoriaPagina extends ConsumerWidget {
     final actualizados = todos.where((r) => r.accion == AccionAuditoria.actualizado).length;
     final eliminados = todos.where((r) => r.accion == AccionAuditoria.eliminado).length;
     final accionFiltro = ref.watch(accionAuditoriaFiltroProvider);
+    final usuarioFiltro = ref.watch(usuarioAuditoriaFiltroProvider);
+    final entidadFiltro = ref.watch(entidadAuditoriaFiltroProvider);
 
     return AppListaPagina<RegistroAuditoria>(
       titulo: 'Auditoría',
@@ -63,7 +65,9 @@ class AuditoriaPagina extends ConsumerWidget {
         ),
       ],
       filtro: BotonFiltros(
-        activos: accionFiltro == null ? 0 : 1,
+        activos: (accionFiltro == null ? 0 : 1) +
+            (usuarioFiltro == null ? 0 : 1) +
+            (entidadFiltro == null ? 0 : 1),
         color: color,
         onAbrir: () => _abrirFiltros(context, ref),
       ),
@@ -74,8 +78,14 @@ class AuditoriaPagina extends ConsumerWidget {
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
     return mostrarFiltros(
       context,
-      activos: ref.read(accionAuditoriaFiltroProvider) == null ? 0 : 1,
-      onLimpiar: () => ref.read(accionAuditoriaFiltroProvider.notifier).state = null,
+      activos: (ref.read(accionAuditoriaFiltroProvider) == null ? 0 : 1) +
+          (ref.read(usuarioAuditoriaFiltroProvider) == null ? 0 : 1) +
+          (ref.read(entidadAuditoriaFiltroProvider) == null ? 0 : 1),
+      onLimpiar: () {
+        ref.read(accionAuditoriaFiltroProvider.notifier).state = null;
+        ref.read(usuarioAuditoriaFiltroProvider.notifier).state = null;
+        ref.read(entidadAuditoriaFiltroProvider.notifier).state = null;
+      },
       grupos: [
         Consumer(
           builder: (context, ref, _) => GrupoFiltro<String?>(
@@ -89,6 +99,40 @@ class AuditoriaPagina extends ConsumerWidget {
             ],
             onCambio: (v) => ref.read(accionAuditoriaFiltroProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final usuarios = ref.watch(usuariosAuditoriaProvider);
+            if (usuarios.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Usuario',
+              valor: ref.watch(usuarioAuditoriaFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final u in usuarios) OpcionFiltro(u, u),
+              ],
+              onCambio: (v) =>
+                  ref.read(usuarioAuditoriaFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final entidades = ref.watch(entidadesAuditoriaProvider);
+            if (entidades.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Entidad',
+              valor: ref.watch(entidadAuditoriaFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final e in entidades) OpcionFiltro(e, e),
+              ],
+              onCambio: (v) =>
+                  ref.read(entidadAuditoriaFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

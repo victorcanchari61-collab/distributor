@@ -26,9 +26,33 @@ final diaVisitaFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
 final rutaFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+final tipoDocFiltroClienteProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final direccionFiltroClienteProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final distritoFiltroClienteProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final mercadoFiltroClienteProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final vendedorFiltroClienteProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
-/// Filtro propio de proveedores.
+/// Filtros propios de proveedores.
 final rubroFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+final tipoDocFiltroProveedorProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final direccionFiltroProveedorProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final distritoFiltroProveedorProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
 /// Cuantos filtros hay puestos, para el globo del icono de filtros.
 final filtrosClientesActivosProvider = Provider.autoDispose((ref) {
@@ -36,6 +60,11 @@ final filtrosClientesActivosProvider = Provider.autoDispose((ref) {
   if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
   if (ref.watch(diaVisitaFiltroProvider) != null) n++;
   if (ref.watch(rutaFiltroProvider) != null) n++;
+  if (ref.watch(tipoDocFiltroClienteProvider) != null) n++;
+  if (ref.watch(direccionFiltroClienteProvider) != null) n++;
+  if (ref.watch(distritoFiltroClienteProvider) != null) n++;
+  if (ref.watch(mercadoFiltroClienteProvider) != null) n++;
+  if (ref.watch(vendedorFiltroClienteProvider) != null) n++;
   return n;
 });
 
@@ -43,6 +72,9 @@ final filtrosProveedoresActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
   if (ref.watch(rubroFiltroProvider) != null) n++;
+  if (ref.watch(tipoDocFiltroProveedorProvider) != null) n++;
+  if (ref.watch(direccionFiltroProveedorProvider) != null) n++;
+  if (ref.watch(distritoFiltroProveedorProvider) != null) n++;
   return n;
 });
 
@@ -92,11 +124,21 @@ final clientesFiltradosProvider = Provider.autoDispose<List<Cliente>>((ref) {
   final estado = ref.watch(estadoFiltroProvider);
   final dia = ref.watch(diaVisitaFiltroProvider);
   final ruta = ref.watch(rutaFiltroProvider);
+  final tipoDoc = ref.watch(tipoDocFiltroClienteProvider);
+  final direccion = ref.watch(direccionFiltroClienteProvider);
+  final distrito = ref.watch(distritoFiltroClienteProvider);
+  final mercado = ref.watch(mercadoFiltroClienteProvider);
+  final vendedor = ref.watch(vendedorFiltroClienteProvider);
 
   return todos
       .where((c) => pasaEstado(c.activo, estado))
       .where((c) => dia == null || c.diaVisita == dia)
       .where((c) => ruta == null || c.ruta == ruta)
+      .where((c) => tipoDoc == null || c.tipoDoc == tipoDoc)
+      .where((c) => direccion == null || c.direccion == direccion)
+      .where((c) => distrito == null || c.distrito == distrito)
+      .where((c) => mercado == null || c.mercado == mercado)
+      .where((c) => vendedor == null || c.vendedor == vendedor)
       .where((c) => texto.isEmpty || c.buscable.contains(texto))
       .toList();
 });
@@ -118,6 +160,59 @@ final rutasProvider = Provider.autoDispose<List<String>>((ref) {
     return a.compareTo(b);
   });
   return rutas;
+});
+
+/// Direcciones, distritos, mercados y vendedores que existen en los datos.
+final direccionesClienteProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[];
+  final valores =
+      todos
+          .map((c) => c.direccion)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
+});
+
+final distritosClienteProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[];
+  final valores =
+      todos
+          .map((c) => c.distrito)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
+});
+
+final mercadosClienteProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[];
+  final valores =
+      todos
+          .map((c) => c.mercado)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
+});
+
+final vendedoresClienteProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[];
+  final valores =
+      todos
+          .map((c) => c.vendedor)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
 });
 
 /// Listado de proveedores.
@@ -164,10 +259,16 @@ final proveedoresFiltradosProvider = Provider.autoDispose<List<Proveedor>>((
   final texto = ref.watch(busquedaProveedoresProvider).trim().toLowerCase();
   final estado = ref.watch(estadoFiltroProvider);
   final rubro = ref.watch(rubroFiltroProvider);
+  final tipoDoc = ref.watch(tipoDocFiltroProveedorProvider);
+  final direccion = ref.watch(direccionFiltroProveedorProvider);
+  final distrito = ref.watch(distritoFiltroProveedorProvider);
 
   return todos
       .where((p) => pasaEstado(p.activo, estado))
       .where((p) => rubro == null || p.rubro == rubro)
+      .where((p) => tipoDoc == null || p.tipoDoc == tipoDoc)
+      .where((p) => direccion == null || p.direccion == direccion)
+      .where((p) => distrito == null || p.distrito == distrito)
       .where((p) => texto.isEmpty || p.buscable.contains(texto))
       .toList();
 });
@@ -185,6 +286,38 @@ final rubrosProvider = Provider.autoDispose<List<String>>((ref) {
           .toList()
         ..sort();
   return rubros;
+});
+
+/// Direcciones y distritos que existen en los datos, para armar el filtro
+/// sin listas fijas — igual que los rubros.
+final direccionesProveedorProvider = Provider.autoDispose<List<String>>((
+  ref,
+) {
+  final todos =
+      ref.watch(proveedoresProvider).valueOrNull ?? const <Proveedor>[];
+  final valores =
+      todos
+          .map((p) => p.direccion)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
+});
+
+final distritosProveedorProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos =
+      ref.watch(proveedoresProvider).valueOrNull ?? const <Proveedor>[];
+  final valores =
+      todos
+          .map((p) => p.distrito)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
 });
 
 // --- Catalogos de apoyo (categorias, marcas, unidades) ---
@@ -209,12 +342,24 @@ final busquedaProductosProvider = StateProvider.autoDispose((ref) => '');
 /// Filtros propios de productos. Null es "todas".
 final categoriaFiltroProvider = StateProvider.autoDispose<int?>((ref) => null);
 final marcaFiltroProvider = StateProvider.autoDispose<int?>((ref) => null);
+final unidadBaseFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final presentacionUnidadFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+/// null = todos, true = con costo cargado, false = sin costo.
+final conCostoFiltroProvider = StateProvider.autoDispose<bool?>((ref) => null);
 
 final filtrosProductosActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
   if (ref.watch(categoriaFiltroProvider) != null) n++;
   if (ref.watch(marcaFiltroProvider) != null) n++;
+  if (ref.watch(unidadBaseFiltroProvider) != null) n++;
+  if (ref.watch(presentacionUnidadFiltroProvider) != null) n++;
+  if (ref.watch(conCostoFiltroProvider) != null) n++;
   return n;
 });
 
@@ -249,11 +394,52 @@ final productosFiltradosProvider = Provider.autoDispose<List<Producto>>((ref) {
   final estado = ref.watch(estadoFiltroProvider);
   final categoriaId = ref.watch(categoriaFiltroProvider);
   final marcaId = ref.watch(marcaFiltroProvider);
+  final unidadBase = ref.watch(unidadBaseFiltroProvider);
+  final presentacionUnidad = ref.watch(presentacionUnidadFiltroProvider);
+  final conCosto = ref.watch(conCostoFiltroProvider);
 
   return todos
       .where((p) => pasaEstado(p.activo, estado))
       .where((p) => categoriaId == null || p.categoriaId == categoriaId)
       .where((p) => marcaId == null || p.marcaId == marcaId)
+      .where((p) => unidadBase == null || p.unidadBase == unidadBase)
+      .where(
+        (p) =>
+            presentacionUnidad == null ||
+            p.presentaciones.any(
+              (x) => x.activo && x.unidad == presentacionUnidad,
+            ),
+      )
+      .where(
+        (p) =>
+            conCosto == null ||
+            conCosto ==
+                (p.costoReferencia != null && p.costoReferencia! > 0),
+      )
       .where((p) => texto.isEmpty || p.buscable.contains(texto))
       .toList();
 });
+
+/// Unidades base y de presentación que existen en los datos.
+final unidadesBaseProductoProvider = Provider.autoDispose<List<String>>((
+  ref,
+) {
+  final todos = ref.watch(productosProvider).valueOrNull ?? const <Producto>[];
+  final valores = todos.map((p) => p.unidadBase).toSet().toList()..sort();
+  return valores;
+});
+
+final unidadesPresentacionProductoProvider =
+    Provider.autoDispose<List<String>>((ref) {
+      final todos =
+          ref.watch(productosProvider).valueOrNull ?? const <Producto>[];
+      final valores =
+          todos
+              .expand((p) => p.presentaciones)
+              .where((x) => x.activo)
+              .map((x) => x.unidad)
+              .toSet()
+              .toList()
+            ..sort();
+      return valores;
+    });

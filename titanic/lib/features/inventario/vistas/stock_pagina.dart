@@ -96,6 +96,7 @@ class StockPagina extends ConsumerWidget {
       onLimpiar: () {
         ref.read(filtroStockProvider.notifier).state = FiltroStock.todos;
         ref.read(categoriaStockProvider.notifier).state = null;
+        ref.read(marcaStockProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -123,6 +124,22 @@ class StockPagina extends ConsumerWidget {
             onCambio: (v) =>
                 ref.read(categoriaStockProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final marcas = ref.watch(marcasDelStockProvider);
+            if (marcas.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Marca',
+              valor: ref.watch(marcaStockProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final m in marcas) OpcionFiltro(m, m),
+              ],
+              onCambio: (v) => ref.read(marcaStockProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

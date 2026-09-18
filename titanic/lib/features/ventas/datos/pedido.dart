@@ -95,6 +95,7 @@ class Pedido {
     required this.reservaStock,
     this.almacenId,
     this.almacen,
+    this.notaVentaNumero,
     required this.total,
     required this.detalle,
   });
@@ -122,6 +123,9 @@ class Pedido {
   final int? almacenId;
   final String? almacen;
 
+  /// El número de la venta que nació de confirmarlo, si ya se convirtió.
+  final String? notaVentaNumero;
+
   final double total;
   final List<LineaVenta> detalle;
 
@@ -142,6 +146,7 @@ class Pedido {
     reservaStock: json['reservaStock'] as bool? ?? false,
     almacenId: json['almacenId'] as int?,
     almacen: json['almacen'] as String?,
+    notaVentaNumero: json['notaVentaNumero'] as String?,
     total: (json['total'] as num?)?.toDouble() ?? 0,
     detalle: (json['detalle'] as List? ?? const [])
         .map((e) => LineaVenta.desdeJson(e as Map<String, dynamic>))

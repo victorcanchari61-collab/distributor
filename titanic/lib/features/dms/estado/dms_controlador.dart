@@ -29,6 +29,15 @@ final filtroVisitaProvider = StateProvider.autoDispose(
 
 final busquedaVisitasProvider = StateProvider.autoDispose((ref) => '');
 
+/// Vendedor y mercado, en memoria: a diferencia de la ruta, no van al
+/// servidor porque el día ya trae pocas filas.
+final vendedorVisitasFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final mercadoVisitasFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
 final visitasProvider = FutureProvider.autoDispose<List<Visita>>((ref) {
   final dia = ref.watch(diaVisitasProvider);
   return ref
@@ -53,6 +62,8 @@ final filtrosVisitasActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(rutaVisitasProvider) != null) n++;
   if (ref.watch(filtroVisitaProvider) != FiltroVisita.todas) n++;
+  if (ref.watch(vendedorVisitasFiltroProvider) != null) n++;
+  if (ref.watch(mercadoVisitasFiltroProvider) != null) n++;
   return n;
 });
 
@@ -64,6 +75,8 @@ final visitasFiltradasProvider = Provider.autoDispose<List<Visita>>((ref) {
   final todas = ref.watch(visitasProvider).valueOrNull ?? const <Visita>[];
   final texto = ref.watch(busquedaVisitasProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroVisitaProvider);
+  final vendedor = ref.watch(vendedorVisitasFiltroProvider);
+  final mercado = ref.watch(mercadoVisitasFiltroProvider);
 
   return todas
       .where(
@@ -73,12 +86,41 @@ final visitasFiltradasProvider = Provider.autoDispose<List<Visita>>((ref) {
           FiltroVisita.atendidas => v.atendido,
         },
       )
+      .where((v) => vendedor == null || v.vendedor == vendedor)
+      .where((v) => mercado == null || v.mercado == mercado)
       .where((v) => texto.isEmpty || v.buscable.contains(texto))
       .toList()
     ..sort((a, b) {
       if (a.atendido != b.atendido) return a.atendido ? 1 : -1;
       return a.cliente.compareTo(b.cliente);
     });
+});
+
+/// Vendedores y mercados que existen en las visitas del día, para el filtro.
+final vendedoresVisitasProvider = Provider.autoDispose<List<String>>((ref) {
+  final todas = ref.watch(visitasProvider).valueOrNull ?? const <Visita>[];
+  final valores =
+      todas
+          .map((v) => v.vendedor)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
+});
+
+final mercadosVisitasProvider = Provider.autoDispose<List<String>>((ref) {
+  final todas = ref.watch(visitasProvider).valueOrNull ?? const <Visita>[];
+  final valores =
+      todas
+          .map((v) => v.mercado)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
 });
 
 // --- Devoluciones ---
@@ -93,12 +135,22 @@ final filtroDevolucionEstadoProvider = StateProvider.autoDispose(
   (ref) => FiltroEstadoDevolucion.solicitadas,
 );
 
-final filtrosDevolucionesActivosProvider = Provider.autoDispose(
-  (ref) =>
+final clienteDevolucionFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final motivoDevolucionFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+final filtrosDevolucionesActivosProvider = Provider.autoDispose((ref) {
+  var n =
       ref.watch(filtroDevolucionEstadoProvider) == FiltroEstadoDevolucion.solicitadas
       ? 0
-      : 1,
-);
+      : 1;
+  if (ref.watch(clienteDevolucionFiltroProvider) != null) n++;
+  if (ref.watch(motivoDevolucionFiltroProvider) != null) n++;
+  return n;
+});
 
 final devolucionesProvider = FutureProvider<List<Devolucion>>(
   (ref) => ref.watch(dmsApiProvider).devoluciones(),
@@ -117,6 +169,8 @@ final devolucionesFiltradasProvider = Provider.autoDispose<List<Devolucion>>((
       ref.watch(devolucionesProvider).valueOrNull ?? const <Devolucion>[];
   final texto = ref.watch(busquedaDevolucionesProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroDevolucionEstadoProvider);
+  final cliente = ref.watch(clienteDevolucionFiltroProvider);
+  final motivo = ref.watch(motivoDevolucionFiltroProvider);
 
   return todas
       .where(
@@ -128,6 +182,30 @@ final devolucionesFiltradasProvider = Provider.autoDispose<List<Devolucion>>((
           FiltroEstadoDevolucion.rechazadas => d.estado == EstadoDevolucion.rechazada,
         },
       )
+      .where((d) => cliente == null || d.cliente == cliente)
+      .where((d) => motivo == null || d.motivo == motivo)
       .where((d) => texto.isEmpty || d.buscable.contains(texto))
       .toList();
+});
+
+/// Clientes y motivos que existen en las devoluciones, para el filtro.
+final clientesDevolucionProvider = Provider.autoDispose<List<String>>((ref) {
+  final todas =
+      ref.watch(devolucionesProvider).valueOrNull ?? const <Devolucion>[];
+  final valores = todas.map((d) => d.cliente).toSet().toList()..sort();
+  return valores;
+});
+
+final motivosDevolucionProvider = Provider.autoDispose<List<String>>((ref) {
+  final todas =
+      ref.watch(devolucionesProvider).valueOrNull ?? const <Devolucion>[];
+  final valores =
+      todas
+          .map((d) => d.motivo)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
 });

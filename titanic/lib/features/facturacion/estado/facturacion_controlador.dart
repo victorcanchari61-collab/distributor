@@ -55,8 +55,28 @@ final preciosListaActivaProvider = FutureProvider.autoDispose<List<Precio>>((ref
   return ref.watch(facturacionApiProvider).preciosDeLista(listaId);
 });
 
+final presentacionPrecioFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+final filtrosPreciosActivosProvider = Provider.autoDispose(
+  (ref) => ref.watch(presentacionPrecioFiltroProvider) == null ? 0 : 1,
+);
+
 final preciosFiltradosProvider = Provider.autoDispose<List<Precio>>((ref) {
   final todos = ref.watch(preciosListaActivaProvider).valueOrNull ?? const <Precio>[];
   final texto = ref.watch(busquedaPreciosProvider).trim().toLowerCase();
-  return todos.where((p) => texto.isEmpty || p.buscable.contains(texto)).toList();
+  final presentacion = ref.watch(presentacionPrecioFiltroProvider);
+  return todos
+      .where((p) => presentacion == null || p.presentacion == presentacion)
+      .where((p) => texto.isEmpty || p.buscable.contains(texto))
+      .toList();
+});
+
+/// Presentaciones que existen en la lista activa, para armar el filtro.
+final presentacionesDePreciosProvider = Provider.autoDispose<List<String>>((
+  ref,
+) {
+  final todos = ref.watch(preciosListaActivaProvider).valueOrNull ?? const <Precio>[];
+  return <String>{for (final p in todos) p.presentacion}.toList()..sort();
 });

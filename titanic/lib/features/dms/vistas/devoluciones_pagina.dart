@@ -112,6 +112,8 @@ class DevolucionesPagina extends ConsumerWidget {
       onLimpiar: () {
         ref.read(filtroDevolucionEstadoProvider.notifier).state =
             FiltroEstadoDevolucion.solicitadas;
+        ref.read(clienteDevolucionFiltroProvider.notifier).state = null;
+        ref.read(motivoDevolucionFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -127,6 +129,40 @@ class DevolucionesPagina extends ConsumerWidget {
             onCambio: (v) =>
                 ref.read(filtroDevolucionEstadoProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final clientes = ref.watch(clientesDevolucionProvider);
+            if (clientes.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Cliente',
+              valor: ref.watch(clienteDevolucionFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final c in clientes) OpcionFiltro(c, c),
+              ],
+              onCambio: (v) =>
+                  ref.read(clienteDevolucionFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final motivos = ref.watch(motivosDevolucionProvider);
+            if (motivos.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Motivo',
+              valor: ref.watch(motivoDevolucionFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final m in motivos) OpcionFiltro(m, m),
+              ],
+              onCambio: (v) =>
+                  ref.read(motivoDevolucionFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

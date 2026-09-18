@@ -147,6 +147,7 @@ class ArqueoPagina extends ConsumerWidget {
       activos: ref.read(filtrosCuadresActivosProvider),
       onLimpiar: () {
         ref.read(estadoCuadreFiltroProvider.notifier).state = null;
+        ref.read(usuarioCuadreFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -166,6 +167,23 @@ class ArqueoPagina extends ConsumerWidget {
             onCambio: (v) =>
                 ref.read(estadoCuadreFiltroProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final usuarios = ref.watch(usuariosCuadreProvider);
+            if (usuarios.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Usuario',
+              valor: ref.watch(usuarioCuadreFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final u in usuarios) OpcionFiltro(u, u),
+              ],
+              onCambio: (v) =>
+                  ref.read(usuarioCuadreFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

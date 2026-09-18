@@ -18,6 +18,9 @@ final busquedaOrdenesCompraProvider = StateProvider.autoDispose((ref) => '');
 final estadoOrdenCompraFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
+final proveedorOrdenCompraFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
 class OrdenesCompraControlador extends AsyncNotifier<List<OrdenCompra>> {
   @override
@@ -67,10 +70,22 @@ final ordenesCompraFiltradasProvider = Provider.autoDispose<List<OrdenCompra>>((
       ref.watch(ordenesCompraProvider).valueOrNull ?? const <OrdenCompra>[];
   final texto = ref.watch(busquedaOrdenesCompraProvider).trim().toLowerCase();
   final estado = ref.watch(estadoOrdenCompraFiltroProvider);
+  final proveedor = ref.watch(proveedorOrdenCompraFiltroProvider);
   return todas
       .where((o) => estado == null || o.estado == estado)
+      .where((o) => proveedor == null || o.proveedor == proveedor)
       .where((o) => texto.isEmpty || o.buscable.contains(texto))
       .toList();
+});
+
+/// Proveedores que existen en las ordenes, para armar el filtro.
+final proveedoresOrdenCompraProvider = Provider.autoDispose<List<String>>((
+  ref,
+) {
+  final todas =
+      ref.watch(ordenesCompraProvider).valueOrNull ?? const <OrdenCompra>[];
+  final valores = todas.map((o) => o.proveedor).toSet().toList()..sort();
+  return valores;
 });
 
 // --- Compras ---
@@ -81,6 +96,15 @@ final busquedaComprasProvider = StateProvider.autoDispose((ref) => '');
 final estadoCompraFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
+final proveedorCompraFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final tipoComprobanteFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+/// null = todas, true = de una orden, false = directa.
+final deOrdenFiltroProvider = StateProvider.autoDispose<bool?>((ref) => null);
 
 class ComprasControlador extends AsyncNotifier<List<Compra>> {
   @override
@@ -115,10 +139,25 @@ final comprasFiltradasProvider = Provider.autoDispose<List<Compra>>((ref) {
   final todas = ref.watch(comprasProvider).valueOrNull ?? const <Compra>[];
   final texto = ref.watch(busquedaComprasProvider).trim().toLowerCase();
   final estado = ref.watch(estadoCompraFiltroProvider);
+  final proveedor = ref.watch(proveedorCompraFiltroProvider);
+  final tipoComprobante = ref.watch(tipoComprobanteFiltroProvider);
+  final deOrden = ref.watch(deOrdenFiltroProvider);
   return todas
       .where((c) => estado == null || c.estado == estado)
+      .where((c) => proveedor == null || c.proveedor == proveedor)
+      .where(
+        (c) => tipoComprobante == null || c.tipoComprobante == tipoComprobante,
+      )
+      .where((c) => deOrden == null || deOrden == (c.ordenCompraId != null))
       .where((c) => texto.isEmpty || c.buscable.contains(texto))
       .toList();
+});
+
+/// Proveedores que existen en las compras, para armar el filtro.
+final proveedoresCompraProvider = Provider.autoDispose<List<String>>((ref) {
+  final todas = ref.watch(comprasProvider).valueOrNull ?? const <Compra>[];
+  final valores = todas.map((c) => c.proveedor).toSet().toList()..sort();
+  return valores;
 });
 
 /// Compras con algo pendiente de recibir, para el selector de Recepciones.
@@ -136,6 +175,8 @@ final comprasConPendienteProvider = Provider.autoDispose<List<Compra>>((ref) {
 // --- Cuentas por pagar ---
 
 final busquedaCuentasPorPagarProvider = StateProvider.autoDispose<String>((ref) => '');
+final proveedorCuentasPorPagarFiltroProvider =
+    StateProvider.autoDispose<String?>((ref) => null);
 
 class CuentasPorPagarControlador extends AsyncNotifier<List<Compra>> {
   @override
@@ -177,9 +218,20 @@ final cuentasPorPagarFiltradasProvider = Provider.autoDispose<List<Compra>>((ref
   final todas = ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
   final texto = ref.watch(busquedaCuentasPorPagarProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroDeudaProvider);
+  final proveedor = ref.watch(proveedorCuentasPorPagarFiltroProvider);
 
   return todas
       .where((c) => pasaDeuda(c.total, c.totalPagado, filtro))
+      .where((c) => proveedor == null || c.proveedor == proveedor)
       .where((c) => texto.isEmpty || c.buscable.contains(texto))
       .toList();
+});
+
+/// Proveedores que existen en las cuentas por pagar.
+final proveedoresCuentasPorPagarProvider = Provider.autoDispose<List<String>>((
+  ref,
+) {
+  final todas = ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
+  final valores = todas.map((c) => c.proveedor).toSet().toList()..sort();
+  return valores;
 });

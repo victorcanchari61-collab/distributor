@@ -78,10 +78,12 @@ class CuentasPorCobrarPagina extends ConsumerWidget {
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
     return mostrarFiltros(
       context,
-      activos: ref.read(filtrosDeudaActivosProvider),
+      activos: ref.read(filtrosDeudaActivosProvider) +
+          (ref.read(clienteCuentasPorCobrarFiltroProvider) == null ? 0 : 1),
       onLimpiar: () {
         ref.read(filtroDeudaProvider.notifier).state =
             FiltroDeuda.todas;
+        ref.read(clienteCuentasPorCobrarFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -95,6 +97,24 @@ class CuentasPorCobrarPagina extends ConsumerWidget {
             ],
             onCambio: (v) => ref.read(filtroDeudaProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final clientes = ref.watch(clientesCuentasPorCobrarProvider);
+            if (clientes.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Cliente',
+              valor: ref.watch(clienteCuentasPorCobrarFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final c in clientes) OpcionFiltro(c, c),
+              ],
+              onCambio: (v) => ref
+                  .read(clienteCuentasPorCobrarFiltroProvider.notifier)
+                  .state = v,
+            );
+          },
         ),
       ],
     );

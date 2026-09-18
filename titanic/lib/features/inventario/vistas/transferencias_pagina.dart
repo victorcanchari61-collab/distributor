@@ -90,6 +90,8 @@ class TransferenciasPagina extends ConsumerWidget {
       onLimpiar: () {
         ref.read(filtroDocumentoProvider.notifier).state =
             FiltroDocumento.todos;
+        ref.read(deAlmacenTransferenciaFiltroProvider.notifier).state = null;
+        ref.read(aAlmacenTransferenciaFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -104,6 +106,42 @@ class TransferenciasPagina extends ConsumerWidget {
             onCambio: (v) =>
                 ref.read(filtroDocumentoProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final almacenes = ref.watch(almacenesActivosProvider);
+            if (almacenes.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'De',
+              valor: ref.watch(deAlmacenTransferenciaFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final a in almacenes) OpcionFiltro(a.nombre, a.nombre),
+              ],
+              onCambio: (v) => ref
+                  .read(deAlmacenTransferenciaFiltroProvider.notifier)
+                  .state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final almacenes = ref.watch(almacenesActivosProvider);
+            if (almacenes.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'A',
+              valor: ref.watch(aAlmacenTransferenciaFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final a in almacenes) OpcionFiltro(a.nombre, a.nombre),
+              ],
+              onCambio: (v) => ref
+                  .read(aAlmacenTransferenciaFiltroProvider.notifier)
+                  .state = v,
+            );
+          },
         ),
       ],
     );

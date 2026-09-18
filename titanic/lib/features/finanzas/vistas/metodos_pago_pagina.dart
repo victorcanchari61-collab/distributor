@@ -83,6 +83,7 @@ class MetodosPagoPagina extends ConsumerWidget {
         ref.read(estadoFiltroProvider.notifier).state =
             FiltroEstado.activos;
         ref.read(tipoMetodoPagoFiltroProvider.notifier).state = null;
+        ref.read(bancoMetodoPagoFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -109,6 +110,23 @@ class MetodosPagoPagina extends ConsumerWidget {
             onCambio: (v) =>
                 ref.read(tipoMetodoPagoFiltroProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final bancos = ref.watch(bancosMetodoPagoProvider);
+            if (bancos.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Banco',
+              valor: ref.watch(bancoMetodoPagoFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final b in bancos) OpcionFiltro(b, b),
+              ],
+              onCambio: (v) =>
+                  ref.read(bancoMetodoPagoFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

@@ -81,6 +81,8 @@ class LotesPagina extends ConsumerWidget {
       activos: ref.read(filtrosLotesActivosProvider),
       onLimpiar: () {
         ref.read(filtroLoteProvider.notifier).state = FiltroLote.todos;
+        ref.read(productoLoteFiltroProvider.notifier).state = null;
+        ref.read(almacenLoteFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -95,6 +97,40 @@ class LotesPagina extends ConsumerWidget {
             ],
             onCambio: (v) => ref.read(filtroLoteProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final productos = ref.watch(productosDeLotesProvider);
+            if (productos.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Producto',
+              valor: ref.watch(productoLoteFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final p in productos) OpcionFiltro(p, p),
+              ],
+              onCambio: (v) =>
+                  ref.read(productoLoteFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final almacenes = ref.watch(almacenesDeLotesProvider);
+            if (almacenes.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Almacén',
+              valor: ref.watch(almacenLoteFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final a in almacenes) OpcionFiltro(a, a),
+              ],
+              onCambio: (v) =>
+                  ref.read(almacenLoteFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

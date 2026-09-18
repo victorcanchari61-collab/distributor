@@ -103,8 +103,16 @@ class MisComprasPagina extends ConsumerWidget {
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
     return mostrarFiltros(
       context,
-      activos: ref.read(estadoCompraFiltroProvider) == null ? 0 : 1,
-      onLimpiar: () => ref.read(estadoCompraFiltroProvider.notifier).state = null,
+      activos: (ref.read(estadoCompraFiltroProvider) == null ? 0 : 1) +
+          (ref.read(proveedorCompraFiltroProvider) == null ? 0 : 1) +
+          (ref.read(tipoComprobanteFiltroProvider) == null ? 0 : 1) +
+          (ref.read(deOrdenFiltroProvider) == null ? 0 : 1),
+      onLimpiar: () {
+        ref.read(estadoCompraFiltroProvider.notifier).state = null;
+        ref.read(proveedorCompraFiltroProvider.notifier).state = null;
+        ref.read(tipoComprobanteFiltroProvider.notifier).state = null;
+        ref.read(deOrdenFiltroProvider.notifier).state = null;
+      },
       grupos: [
         Consumer(
           builder: (context, ref, _) => GrupoFiltro<String?>(
@@ -118,6 +126,49 @@ class MisComprasPagina extends ConsumerWidget {
               OpcionFiltro(EstadoCompra.anulada, 'Anuladas'),
             ],
             onCambio: (v) => ref.read(estadoCompraFiltroProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final proveedores = ref.watch(proveedoresCompraProvider);
+            if (proveedores.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Proveedor',
+              valor: ref.watch(proveedorCompraFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final p in proveedores) OpcionFiltro(p, p),
+              ],
+              onCambio: (v) =>
+                  ref.read(proveedorCompraFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<bool?>(
+            titulo: 'Origen',
+            valor: ref.watch(deOrdenFiltroProvider),
+            opciones: const [
+              OpcionFiltro(null, 'Todos'),
+              OpcionFiltro(true, 'De una orden'),
+              OpcionFiltro(false, 'Directa'),
+            ],
+            onCambio: (v) => ref.read(deOrdenFiltroProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Comprobante',
+            valor: ref.watch(tipoComprobanteFiltroProvider),
+            opciones: const [
+              OpcionFiltro(null, 'Todos'),
+              OpcionFiltro(TipoComprobanteCompra.factura, 'Factura'),
+              OpcionFiltro(TipoComprobanteCompra.boleta, 'Boleta'),
+              OpcionFiltro(TipoComprobanteCompra.notaVenta, 'Nota de venta'),
+            ],
+            onCambio: (v) =>
+                ref.read(tipoComprobanteFiltroProvider.notifier).state = v,
           ),
         ),
       ],

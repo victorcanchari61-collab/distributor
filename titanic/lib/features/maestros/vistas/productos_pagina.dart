@@ -120,6 +120,9 @@ class ProductosPagina extends ConsumerWidget {
         ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
         ref.read(categoriaFiltroProvider.notifier).state = null;
         ref.read(marcaFiltroProvider.notifier).state = null;
+        ref.read(unidadBaseFiltroProvider.notifier).state = null;
+        ref.read(presentacionUnidadFiltroProvider.notifier).state = null;
+        ref.read(conCostoFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -159,6 +162,53 @@ class ProductosPagina extends ConsumerWidget {
               onCambio: (v) => ref.read(marcaFiltroProvider.notifier).state = v,
             ),
           ),
+        Consumer(
+          builder: (context, ref, _) {
+            final unidades = ref.watch(unidadesBaseProductoProvider);
+            if (unidades.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Unidad base',
+              valor: ref.watch(unidadBaseFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final u in unidades) OpcionFiltro(u, u),
+              ],
+              onCambio: (v) =>
+                  ref.read(unidadBaseFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final unidades = ref.watch(unidadesPresentacionProductoProvider);
+            if (unidades.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Presentaciones',
+              valor: ref.watch(presentacionUnidadFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final u in unidades) OpcionFiltro(u, 'Se vende en $u'),
+              ],
+              onCambio: (v) => ref
+                  .read(presentacionUnidadFiltroProvider.notifier)
+                  .state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<bool?>(
+            titulo: 'Costo referencial',
+            valor: ref.watch(conCostoFiltroProvider),
+            opciones: const [
+              OpcionFiltro(null, 'Todos'),
+              OpcionFiltro(true, 'Con costo'),
+              OpcionFiltro(false, 'Sin costo'),
+            ],
+            onCambio: (v) => ref.read(conCostoFiltroProvider.notifier).state = v,
+          ),
+        ),
       ],
     );
   }

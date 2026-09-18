@@ -112,6 +112,8 @@ class VisitasPagina extends ConsumerWidget {
       onLimpiar: () {
         ref.read(rutaVisitasProvider.notifier).state = null;
         ref.read(filtroVisitaProvider.notifier).state = FiltroVisita.todas;
+        ref.read(vendedorVisitasFiltroProvider.notifier).state = null;
+        ref.read(mercadoVisitasFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -137,6 +139,40 @@ class VisitasPagina extends ConsumerWidget {
             ],
             onCambio: (v) => ref.read(rutaVisitasProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final vendedores = ref.watch(vendedoresVisitasProvider);
+            if (vendedores.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Vendedor',
+              valor: ref.watch(vendedorVisitasFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final v in vendedores) OpcionFiltro(v, v),
+              ],
+              onCambio: (v) =>
+                  ref.read(vendedorVisitasFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final mercados = ref.watch(mercadosVisitasProvider);
+            if (mercados.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Dónde',
+              valor: ref.watch(mercadoVisitasFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final m in mercados) OpcionFiltro(m, m),
+              ],
+              onCambio: (v) =>
+                  ref.read(mercadoVisitasFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

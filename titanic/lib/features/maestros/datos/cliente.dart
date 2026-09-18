@@ -20,6 +20,8 @@ class Cliente {
     this.ruta,
     this.mercadoId,
     this.mercado,
+    this.vendedorId,
+    this.vendedor,
   });
 
   final int id;
@@ -59,6 +61,12 @@ class Cliente {
   /// Nombre del mercado, solo para mostrar: no se envia al guardar.
   final String? mercado;
 
+  /// Vendedor a cargo, referencia al catalogo de usuarios.
+  final int? vendedorId;
+
+  /// Nombre del vendedor, solo para mostrar: no se envia al guardar.
+  final String? vendedor;
+
   final bool activo;
 
   /// Texto contra el que se busca en la lista.
@@ -85,6 +93,8 @@ class Cliente {
     ruta: json['ruta'] as String?,
     mercadoId: json['mercadoId'] as int?,
     mercado: json['mercado'] as String?,
+    vendedorId: json['vendedorId'] as int?,
+    vendedor: json['vendedor'] as String?,
     activo: json['activo'] as bool? ?? true,
   );
 

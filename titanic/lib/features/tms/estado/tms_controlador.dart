@@ -47,9 +47,12 @@ final mercadosProvider = AsyncNotifierProvider<MercadosControlador, List<Mercado
   MercadosControlador.new,
 );
 
-final filtrosMercadosActivosProvider = Provider.autoDispose(
-  (ref) => ref.watch(estadoFiltroProvider) == FiltroEstado.activos ? 0 : 1,
-);
+final filtrosMercadosActivosProvider = Provider.autoDispose((ref) {
+  var n = ref.watch(estadoFiltroProvider) == FiltroEstado.activos ? 0 : 1;
+  if (ref.watch(distritoMercadoProvider) != null) n++;
+  if (ref.watch(direccionMercadoProvider) != null) n++;
+  return n;
+});
 
 /// Los distritos que de verdad tienen mercados, no la lista entera del país.
 final distritosDeMercadosProvider = Provider.autoDispose<List<String>>((ref) {
@@ -63,16 +66,32 @@ final distritosDeMercadosProvider = Provider.autoDispose<List<String>>((ref) {
 final distritoMercadoProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
+final direccionMercadoProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+/// Las direcciones que de verdad tienen mercados, no una lista fija.
+final direccionesDeMercadosProvider = Provider.autoDispose<List<String>>((
+  ref,
+) {
+  final todos = ref.watch(mercadosProvider).valueOrNull ?? const <Mercado>[];
+  return <String>{
+    for (final m in todos)
+      if (m.direccion != null && m.direccion!.isNotEmpty) m.direccion!,
+  }.toList()..sort();
+});
 
 final mercadosFiltradosProvider = Provider.autoDispose<List<Mercado>>((ref) {
   final todos = ref.watch(mercadosProvider).valueOrNull ?? const <Mercado>[];
   final texto = ref.watch(busquedaMercadosProvider).trim().toLowerCase();
   final estado = ref.watch(estadoFiltroProvider);
   final distrito = ref.watch(distritoMercadoProvider);
+  final direccion = ref.watch(direccionMercadoProvider);
 
   return todos
       .where((m) => pasaEstado(m.activo, estado))
       .where((m) => distrito == null || m.distrito == distrito)
+      .where((m) => direccion == null || m.direccion == direccion)
       .where((m) => texto.isEmpty || m.buscable.contains(texto))
       .toList();
 });
@@ -181,10 +200,23 @@ final filtroPapelesProvider = StateProvider.autoDispose(
   (ref) => FiltroPapeles.todos,
 );
 
+final tipoVehiculoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final marcaVehiculoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final conductorVehiculoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
 final filtrosVehiculosActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
   if (ref.watch(filtroPapelesProvider) != FiltroPapeles.todos) n++;
+  if (ref.watch(tipoVehiculoFiltroProvider) != null) n++;
+  if (ref.watch(marcaVehiculoFiltroProvider) != null) n++;
+  if (ref.watch(conductorVehiculoFiltroProvider) != null) n++;
   return n;
 });
 
@@ -201,12 +233,45 @@ final vehiculosFiltradosProvider = Provider.autoDispose<List<Vehiculo>>((ref) {
   final texto = ref.watch(busquedaVehiculosProvider).trim().toLowerCase();
   final estado = ref.watch(estadoFiltroProvider);
   final papeles = ref.watch(filtroPapelesProvider);
+  final tipo = ref.watch(tipoVehiculoFiltroProvider);
+  final marca = ref.watch(marcaVehiculoFiltroProvider);
+  final conductor = ref.watch(conductorVehiculoFiltroProvider);
 
   return todos
       .where((v) => pasaEstado(v.activo, estado))
       .where((v) => pasaPapeles(v.estadoDocumentos, papeles))
+      .where((v) => tipo == null || v.tipoVehiculo == tipo)
+      .where((v) => marca == null || v.marca == marca)
+      .where((v) => conductor == null || v.conductor == conductor)
       .where((v) => texto.isEmpty || v.buscable.contains(texto))
       .toList();
+});
+
+/// Marcas y conductores que existen en la flota, para armar el filtro.
+final marcasVehiculoProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(vehiculosProvider).valueOrNull ?? const <Vehiculo>[];
+  final valores =
+      todos
+          .map((v) => v.marca)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
+});
+
+final conductoresVehiculoProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(vehiculosProvider).valueOrNull ?? const <Vehiculo>[];
+  final valores =
+      todos
+          .map((v) => v.conductor)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
 });
 
 final resumenFlotaProvider = FutureProvider.autoDispose<ResumenFlota>((ref) {

@@ -107,6 +107,9 @@ class ProveedoresPagina extends ConsumerWidget {
       onLimpiar: () {
         ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
         ref.read(rubroFiltroProvider.notifier).state = null;
+        ref.read(tipoDocFiltroProveedorProvider.notifier).state = null;
+        ref.read(direccionFiltroProveedorProvider.notifier).state = null;
+        ref.read(distritoFiltroProveedorProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -122,6 +125,20 @@ class ProveedoresPagina extends ConsumerWidget {
           ),
         ),
         Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Tipo de documento',
+            valor: ref.watch(tipoDocFiltroProveedorProvider),
+            opciones: const [
+              OpcionFiltro(null, 'Todos'),
+              OpcionFiltro('RUC', 'RUC'),
+              OpcionFiltro('DNI', 'DNI'),
+              OpcionFiltro('CODIGO', 'Código'),
+            ],
+            onCambio: (v) =>
+                ref.read(tipoDocFiltroProveedorProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
           builder: (context, ref, _) {
             final rubros = ref.watch(rubrosProvider);
             if (rubros.isEmpty) return const SizedBox.shrink();
@@ -134,6 +151,40 @@ class ProveedoresPagina extends ConsumerWidget {
                 for (final r in rubros) OpcionFiltro(r, r),
               ],
               onCambio: (v) => ref.read(rubroFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final direcciones = ref.watch(direccionesProveedorProvider);
+            if (direcciones.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Dirección',
+              valor: ref.watch(direccionFiltroProveedorProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final d in direcciones) OpcionFiltro(d, d),
+              ],
+              onCambio: (v) =>
+                  ref.read(direccionFiltroProveedorProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final distritos = ref.watch(distritosProveedorProvider);
+            if (distritos.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Distrito',
+              valor: ref.watch(distritoFiltroProveedorProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final d in distritos) OpcionFiltro(d, d),
+              ],
+              onCambio: (v) =>
+                  ref.read(distritoFiltroProveedorProvider.notifier).state = v,
             );
           },
         ),

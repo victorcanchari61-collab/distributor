@@ -24,6 +24,7 @@ final busquedaAlmacenesProvider = StateProvider.autoDispose((ref) => '');
 final filtrosAlmacenesActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
+  if (ref.watch(direccionAlmacenFiltroProvider) != null) n++;
   return n;
 });
 
@@ -72,15 +73,30 @@ final almacenesProvider =
       AlmacenesControlador.new,
     );
 
+final direccionAlmacenFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
 final almacenesFiltradosProvider = Provider.autoDispose<List<Almacen>>((ref) {
   final todos = ref.watch(almacenesProvider).valueOrNull ?? const <Almacen>[];
   final texto = ref.watch(busquedaAlmacenesProvider).trim().toLowerCase();
   final estado = ref.watch(estadoFiltroProvider);
+  final direccion = ref.watch(direccionAlmacenFiltroProvider);
 
   return todos
       .where((a) => pasaEstado(a.activo, estado))
+      .where((a) => direccion == null || a.direccion == direccion)
       .where((a) => texto.isEmpty || a.buscable.contains(texto))
       .toList();
+});
+
+/// Direcciones que existen en los almacenes, para armar el filtro.
+final direccionesAlmacenProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(almacenesProvider).valueOrNull ?? const <Almacen>[];
+  return <String>{
+    for (final a in todos)
+      if (a.direccion != null && a.direccion!.isNotEmpty) a.direccion!,
+  }.toList()..sort();
 });
 
 /// Almacenes activos, para los selectores de Stock y Kardex: no tiene sentido
@@ -138,11 +154,13 @@ final filtroStockProvider = StateProvider.autoDispose(
   (ref) => FiltroStock.todos,
 );
 final categoriaStockProvider = StateProvider.autoDispose<String?>((ref) => null);
+final marcaStockProvider = StateProvider.autoDispose<String?>((ref) => null);
 
 final filtrosStockActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(filtroStockProvider) != FiltroStock.todos) n++;
   if (ref.watch(categoriaStockProvider) != null) n++;
+  if (ref.watch(marcaStockProvider) != null) n++;
   return n;
 });
 
@@ -158,11 +176,20 @@ final categoriasDelStockProvider = Provider.autoDispose<List<String>>((ref) {
   }.toList()..sort();
 });
 
+final marcasDelStockProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(stockProvider).valueOrNull ?? const <Stock>[];
+  return <String>{
+    for (final s in todos)
+      if (s.marca != null && s.marca!.isNotEmpty) s.marca!,
+  }.toList()..sort();
+});
+
 final stockFiltradoProvider = Provider.autoDispose<List<Stock>>((ref) {
   final todos = ref.watch(stockProvider).valueOrNull ?? const <Stock>[];
   final texto = ref.watch(busquedaStockProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroStockProvider);
   final categoria = ref.watch(categoriaStockProvider);
+  final marca = ref.watch(marcaStockProvider);
 
   return todos
       .where(
@@ -174,6 +201,7 @@ final stockFiltradoProvider = Provider.autoDispose<List<Stock>>((ref) {
         },
       )
       .where((s) => categoria == null || s.categoria == categoria)
+      .where((s) => marca == null || s.marca == marca)
       .where((s) => texto.isEmpty || s.buscable.contains(texto))
       .toList();
 });
@@ -197,10 +225,22 @@ enum FiltroKardex { todos, entradas, salidas, reservas }
 final filtroKardexProvider = StateProvider.autoDispose(
   (ref) => FiltroKardex.todos,
 );
-
-final filtrosKardexActivosProvider = Provider.autoDispose(
-  (ref) => ref.watch(filtroKardexProvider) == FiltroKardex.todos ? 0 : 1,
+final motivoKardexFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
 );
+
+final filtrosKardexActivosProvider = Provider.autoDispose((ref) {
+  var n = ref.watch(filtroKardexProvider) == FiltroKardex.todos ? 0 : 1;
+  if (ref.watch(motivoKardexFiltroProvider) != null) n++;
+  return n;
+});
+
+/// Motivos que existen en lo ya traído, para armar el filtro sin listas fijas.
+final motivosDelKardexProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos =
+      ref.watch(kardexProvider).valueOrNull ?? const <MovimientoKardex>[];
+  return <String>{for (final k in todos) k.motivo}.toList()..sort();
+});
 
 final kardexFiltradoProvider =
     Provider.autoDispose<List<MovimientoKardex>>((ref) {
@@ -208,6 +248,7 @@ final kardexFiltradoProvider =
           ref.watch(kardexProvider).valueOrNull ?? const <MovimientoKardex>[];
       final texto = ref.watch(busquedaKardexProvider).trim().toLowerCase();
       final filtro = ref.watch(filtroKardexProvider);
+      final motivo = ref.watch(motivoKardexFiltroProvider);
 
       return todos
           .where(
@@ -218,6 +259,7 @@ final kardexFiltradoProvider =
               FiltroKardex.reservas => k.esReserva,
             },
           )
+          .where((k) => motivo == null || k.motivo == motivo)
           .where((k) => texto.isEmpty || k.buscable.contains(texto))
           .toList();
     });
@@ -235,15 +277,37 @@ final lotesProvider = FutureProvider.autoDispose<List<Lote>>(
 enum FiltroLote { todos, vencidos, porVencer, vigentes }
 
 final filtroLoteProvider = StateProvider.autoDispose((ref) => FiltroLote.todos);
-
-final filtrosLotesActivosProvider = Provider.autoDispose(
-  (ref) => ref.watch(filtroLoteProvider) == FiltroLote.todos ? 0 : 1,
+final productoLoteFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
 );
+final almacenLoteFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+final filtrosLotesActivosProvider = Provider.autoDispose((ref) {
+  var n = ref.watch(filtroLoteProvider) == FiltroLote.todos ? 0 : 1;
+  if (ref.watch(productoLoteFiltroProvider) != null) n++;
+  if (ref.watch(almacenLoteFiltroProvider) != null) n++;
+  return n;
+});
+
+/// Productos y almacenes que existen en los lotes, para armar el filtro.
+final productosDeLotesProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(lotesProvider).valueOrNull ?? const <Lote>[];
+  return <String>{for (final l in todos) l.producto}.toList()..sort();
+});
+
+final almacenesDeLotesProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(lotesProvider).valueOrNull ?? const <Lote>[];
+  return <String>{for (final l in todos) l.almacen}.toList()..sort();
+});
 
 final lotesFiltradosProvider = Provider.autoDispose<List<Lote>>((ref) {
   final todos = ref.watch(lotesProvider).valueOrNull ?? const <Lote>[];
   final texto = ref.watch(busquedaLotesProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroLoteProvider);
+  final producto = ref.watch(productoLoteFiltroProvider);
+  final almacen = ref.watch(almacenLoteFiltroProvider);
 
   return todos
       .where(
@@ -254,6 +318,8 @@ final lotesFiltradosProvider = Provider.autoDispose<List<Lote>>((ref) {
           FiltroLote.vigentes => !l.vencido && !l.porVencer,
         },
       )
+      .where((l) => producto == null || l.producto == producto)
+      .where((l) => almacen == null || l.almacen == almacen)
       .where((l) => texto.isEmpty || l.buscable.contains(texto))
       .toList();
 });
@@ -294,6 +360,13 @@ final recepcionesProvider =
       RecepcionesControlador.new,
     );
 
+final almacenRecepcionFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final compraRecepcionFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
 final recepcionesFiltradasProvider = Provider.autoDispose<List<DocumentoInventario>>((
   ref,
 ) {
@@ -301,16 +374,33 @@ final recepcionesFiltradasProvider = Provider.autoDispose<List<DocumentoInventar
       ref.watch(recepcionesProvider).valueOrNull ?? const <DocumentoInventario>[];
   final texto = ref.watch(busquedaRecepcionesProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroDocumentoProvider);
+  final almacen = ref.watch(almacenRecepcionFiltroProvider);
+  final compra = ref.watch(compraRecepcionFiltroProvider);
 
   return todas
       .where((d) => pasaDocumento(d.anulado, filtro))
+      .where((d) => almacen == null || d.almacen == almacen)
+      .where((d) => compra == null || d.compra == compra)
       .where((d) => texto.isEmpty || d.buscable.contains(texto))
       .toList();
 });
 
-final filtrosRecepcionesActivosProvider = Provider.autoDispose(
-  (ref) => ref.watch(filtroDocumentoProvider) == FiltroDocumento.todos ? 0 : 1,
-);
+final filtrosRecepcionesActivosProvider = Provider.autoDispose((ref) {
+  var n = ref.watch(filtroDocumentoProvider) == FiltroDocumento.todos ? 0 : 1;
+  if (ref.watch(almacenRecepcionFiltroProvider) != null) n++;
+  if (ref.watch(compraRecepcionFiltroProvider) != null) n++;
+  return n;
+});
+
+/// Compras que existen en las recepciones, para armar el filtro.
+final comprasDeRecepcionesProvider = Provider.autoDispose<List<String>>((ref) {
+  final todas =
+      ref.watch(recepcionesProvider).valueOrNull ?? const <DocumentoInventario>[];
+  return <String>{
+    for (final d in todas)
+      if (d.compra != null && d.compra!.isNotEmpty) d.compra!,
+  }.toList()..sort();
+});
 
 // --- Motivos ---
 
@@ -453,11 +543,15 @@ final ajustesProvider =
 final motivoAjusteFiltroProvider = StateProvider.autoDispose<int?>(
   (ref) => null,
 );
+final almacenAjusteFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
 final filtrosAjustesActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(filtroDocumentoProvider) != FiltroDocumento.todos) n++;
   if (ref.watch(motivoAjusteFiltroProvider) != null) n++;
+  if (ref.watch(almacenAjusteFiltroProvider) != null) n++;
   return n;
 });
 
@@ -466,10 +560,12 @@ final ajustesFiltradosProvider = Provider.autoDispose<List<DocumentoInventario>>
   final texto = ref.watch(busquedaAjustesProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroDocumentoProvider);
   final motivoId = ref.watch(motivoAjusteFiltroProvider);
+  final almacen = ref.watch(almacenAjusteFiltroProvider);
 
   return todos
       .where((d) => pasaDocumento(d.anulado, filtro))
       .where((d) => motivoId == null || d.motivoId == motivoId)
+      .where((d) => almacen == null || d.almacen == almacen)
       .where((d) => texto.isEmpty || d.buscable.contains(texto))
       .toList();
 });
@@ -505,22 +601,36 @@ final transferenciasProvider =
       TransferenciasControlador.new,
     );
 
+final deAlmacenTransferenciaFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final aAlmacenTransferenciaFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
 final transferenciasFiltradasProvider =
     Provider.autoDispose<List<DocumentoInventario>>((ref) {
       final todos =
           ref.watch(transferenciasProvider).valueOrNull ?? const <DocumentoInventario>[];
       final texto = ref.watch(busquedaTransferenciasProvider).trim().toLowerCase();
       final filtro = ref.watch(filtroDocumentoProvider);
+      final de = ref.watch(deAlmacenTransferenciaFiltroProvider);
+      final a = ref.watch(aAlmacenTransferenciaFiltroProvider);
 
       return todos
           .where((d) => pasaDocumento(d.anulado, filtro))
+          .where((d) => de == null || d.almacen == de)
+          .where((d) => a == null || d.almacenDestino == a)
           .where((d) => texto.isEmpty || d.buscable.contains(texto))
           .toList();
     });
 
-final filtrosTransferenciasActivosProvider = Provider.autoDispose(
-  (ref) => ref.watch(filtroDocumentoProvider) == FiltroDocumento.todos ? 0 : 1,
-);
+final filtrosTransferenciasActivosProvider = Provider.autoDispose((ref) {
+  var n = ref.watch(filtroDocumentoProvider) == FiltroDocumento.todos ? 0 : 1;
+  if (ref.watch(deAlmacenTransferenciaFiltroProvider) != null) n++;
+  if (ref.watch(aAlmacenTransferenciaFiltroProvider) != null) n++;
+  return n;
+});
 
 // --- Prestamos ---
 
@@ -563,11 +673,15 @@ final filtroPrestamoProvider = StateProvider.autoDispose(
 final filtroDevolucionProvider = StateProvider.autoDispose(
   (ref) => FiltroDevolucion.todos,
 );
+final almacenPrestamoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
 final filtrosPrestamosActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(filtroPrestamoProvider) != FiltroPrestamo.todos) n++;
   if (ref.watch(filtroDevolucionProvider) != FiltroDevolucion.todos) n++;
+  if (ref.watch(almacenPrestamoFiltroProvider) != null) n++;
   return n;
 });
 
@@ -576,6 +690,7 @@ final prestamosFiltradosProvider = Provider.autoDispose<List<Prestamo>>((ref) {
   final texto = ref.watch(busquedaPrestamosProvider).trim().toLowerCase();
   final lado = ref.watch(filtroPrestamoProvider);
   final devolucion = ref.watch(filtroDevolucionProvider);
+  final almacen = ref.watch(almacenPrestamoFiltroProvider);
 
   return todos
       .where(
@@ -592,6 +707,7 @@ final prestamosFiltradosProvider = Provider.autoDispose<List<Prestamo>>((ref) {
           FiltroDevolucion.devueltos => p.estado != EstadoPrestamo.pendiente,
         },
       )
+      .where((p) => almacen == null || p.almacen == almacen)
       .where((p) => texto.isEmpty || p.buscable.contains(texto))
       .toList();
 });

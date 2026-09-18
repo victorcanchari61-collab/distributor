@@ -54,9 +54,11 @@ final cuadresFiltradosProvider = Provider.autoDispose<List<CuadrePendiente>>((
       ref.watch(cuadresProvider).valueOrNull ?? const <CuadrePendiente>[];
   final texto = ref.watch(busquedaCuadresProvider).trim().toLowerCase();
   final estado = ref.watch(estadoCuadreFiltroProvider);
+  final usuario = ref.watch(usuarioCuadreFiltroProvider);
 
   return todos
       .where((c) => estado == null || c.estado == estado)
+      .where((c) => usuario == null || c.usuario == usuario)
       .where(
         (c) =>
             texto.isEmpty ||
@@ -70,10 +72,23 @@ final cuadresFiltradosProvider = Provider.autoDispose<List<CuadrePendiente>>((
 final estadoCuadreFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
-
-final filtrosCuadresActivosProvider = Provider.autoDispose(
-  (ref) => ref.watch(estadoCuadreFiltroProvider) == null ? 0 : 1,
+final usuarioCuadreFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
 );
+
+final filtrosCuadresActivosProvider = Provider.autoDispose((ref) {
+  var n = ref.watch(estadoCuadreFiltroProvider) == null ? 0 : 1;
+  if (ref.watch(usuarioCuadreFiltroProvider) != null) n++;
+  return n;
+});
+
+/// Usuarios que existen en los cuadres del período, para armar el filtro.
+final usuariosCuadreProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos =
+      ref.watch(cuadresProvider).valueOrNull ?? const <CuadrePendiente>[];
+  final valores = todos.map((c) => c.usuario).toSet().toList()..sort();
+  return valores;
+});
 
 /// Que persona y que dia se esta cuadrando.
 typedef ClaveCuadre = ({DateTime fecha, int usuarioId});

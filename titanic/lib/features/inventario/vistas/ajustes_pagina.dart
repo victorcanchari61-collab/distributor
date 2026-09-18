@@ -107,6 +107,7 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
         ref.read(filtroDocumentoProvider.notifier).state =
             FiltroDocumento.todos;
         ref.read(motivoAjusteFiltroProvider.notifier).state = null;
+        ref.read(almacenAjusteFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -137,6 +138,23 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
             onCambio: (v) =>
                 ref.read(motivoAjusteFiltroProvider.notifier).state = v,
           ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final almacenes = ref.watch(almacenesActivosProvider);
+            if (almacenes.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Almacén',
+              valor: ref.watch(almacenAjusteFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final a in almacenes) OpcionFiltro(a.nombre, a.nombre),
+              ],
+              onCambio: (v) =>
+                  ref.read(almacenAjusteFiltroProvider.notifier).state = v,
+            );
+          },
         ),
       ],
     );

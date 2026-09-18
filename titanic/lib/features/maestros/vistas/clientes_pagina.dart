@@ -109,6 +109,11 @@ class ClientesPagina extends ConsumerWidget {
         ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
         ref.read(diaVisitaFiltroProvider.notifier).state = null;
         ref.read(rutaFiltroProvider.notifier).state = null;
+        ref.read(tipoDocFiltroClienteProvider.notifier).state = null;
+        ref.read(direccionFiltroClienteProvider.notifier).state = null;
+        ref.read(distritoFiltroClienteProvider.notifier).state = null;
+        ref.read(mercadoFiltroClienteProvider.notifier).state = null;
+        ref.read(vendedorFiltroClienteProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -155,6 +160,88 @@ class ClientesPagina extends ConsumerWidget {
                 for (final r in rutas) OpcionFiltro(r, r),
               ],
               onCambio: (v) => ref.read(rutaFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Tipo de documento',
+            valor: ref.watch(tipoDocFiltroClienteProvider),
+            opciones: const [
+              OpcionFiltro(null, 'Todos'),
+              OpcionFiltro('DNI', 'DNI'),
+              OpcionFiltro('RUC', 'RUC'),
+              OpcionFiltro('CODIGO', 'Código'),
+            ],
+            onCambio: (v) =>
+                ref.read(tipoDocFiltroClienteProvider.notifier).state = v,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final mercados = ref.watch(mercadosClienteProvider);
+            if (mercados.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Mercado',
+              valor: ref.watch(mercadoFiltroClienteProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final m in mercados) OpcionFiltro(m, m),
+              ],
+              onCambio: (v) =>
+                  ref.read(mercadoFiltroClienteProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final vendedores = ref.watch(vendedoresClienteProvider);
+            if (vendedores.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Vendedor',
+              valor: ref.watch(vendedorFiltroClienteProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final v in vendedores) OpcionFiltro(v, v),
+              ],
+              onCambio: (v) =>
+                  ref.read(vendedorFiltroClienteProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final direcciones = ref.watch(direccionesClienteProvider);
+            if (direcciones.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Dirección',
+              valor: ref.watch(direccionFiltroClienteProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final d in direcciones) OpcionFiltro(d, d),
+              ],
+              onCambio: (v) =>
+                  ref.read(direccionFiltroClienteProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final distritos = ref.watch(distritosClienteProvider);
+            if (distritos.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Distrito',
+              valor: ref.watch(distritoFiltroClienteProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final d in distritos) OpcionFiltro(d, d),
+              ],
+              onCambio: (v) =>
+                  ref.read(distritoFiltroClienteProvider.notifier).state = v,
             );
           },
         ),
