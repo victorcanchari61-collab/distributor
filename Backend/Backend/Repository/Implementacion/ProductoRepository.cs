@@ -60,6 +60,18 @@ public class ProductoRepository : IProductoRepository
         if (consulta.ValorDe("marca") is string marca)
             query = query.Where(p => p.Marca != null && p.Marca.Nombre == marca);
 
+        if (consulta.ValorDe("unidadBase") is string unidadBase)
+            query = query.Where(p => p.UnidadBase != null && p.UnidadBase.Codigo == unidadBase);
+
+        // Los que se venden en esa unidad: "Bolsa" deja los que tienen alguna bolsa.
+        if (consulta.ValorDe("presentaciones") is string enUnidad)
+            query = query.Where(p => p.Presentaciones.Any(x => x.Activo && x.Unidad != null && x.Unidad.Codigo == enUnidad));
+
+        if (consulta.ValorDe("costoReferencia") is string costo)
+            query = costo.Equals("Sin costo", StringComparison.OrdinalIgnoreCase)
+                ? query.Where(p => p.CostoReferencia == null || p.CostoReferencia == 0)
+                : query.Where(p => p.CostoReferencia != null && p.CostoReferencia > 0);
+
         // En pantalla el estado se lee "Activo" / "Inactivo", no true/false.
         if (consulta.ValorDe("activo") is string activo)
             query = query.Where(p => p.Activo == activo.Equals("Activo", StringComparison.OrdinalIgnoreCase));

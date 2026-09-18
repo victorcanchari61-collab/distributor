@@ -521,8 +521,8 @@ export function ProductosPage() {
     })
 
   const columns: DataTableColumn<ProductoResponse>[] = [
-    { key: 'codigo', label: 'Código' },
-    { key: 'nombre', label: 'Nombre' },
+    { key: 'codigo', label: 'Código', filterable: false },
+    { key: 'nombre', label: 'Nombre', filterable: false },
     {
       key: 'categoria',
       label: 'Categoría',
@@ -542,15 +542,20 @@ export function ProductosPage() {
     {
       key: 'unidadBase',
       label: 'Unidad base',
+      filterType: 'select',
+      filterOptions: unidadesActivas.map((u) => ({ value: u.codigo, label: u.nombre })),
       render: (row) => <Badge>{row.unidadBase}</Badge>,
     },
     {
       key: 'costoReferencia',
       label: 'Costo ref.',
       align: 'right',
-      // Sin control numerico en el panel, buscar "9" contra "S/ 9.00" no
-      // encuentra lo que la persona espera.
-      filterable: false,
+      // No se busca un precio: se separan los que aún no tienen costo cargado.
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Con costo', label: 'Con costo' },
+        { value: 'Sin costo', label: 'Sin costo' },
+      ],
       render: (row) =>
         row.costoReferencia == null ? (
           <span className="text-ink-soft">—</span>
@@ -564,6 +569,9 @@ export function ProductosPage() {
     {
       key: 'presentaciones',
       label: 'Presentaciones',
+      // Se filtra por la unidad en que se vende: los que tienen alguna bolsa, algún saco.
+      filterType: 'select',
+      filterOptions: unidadesActivas.map((u) => ({ value: u.codigo, label: `Se vende en ${u.nombre}` })),
       value: (row) => row.presentaciones.map((p) => p.nombre).join(' '),
       // Una lista desplegable en vez de una pila de pastillas: con cuatro o
       // cinco presentaciones la fila crecia y la tabla se volvia ilegible.

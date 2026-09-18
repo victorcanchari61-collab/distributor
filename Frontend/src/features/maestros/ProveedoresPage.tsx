@@ -208,23 +208,41 @@ export function ProveedoresPage() {
   const conRuc = activos.filter((p) => p.tipoDoc === 'RUC').length
   const rubros = new Set(activos.map((p) => p.rubro).filter(Boolean)).size
 
+  /** Los valores que de verdad hay en esa columna, para elegir y no teclear. */
+  const distintos = (campo: 'rubro' | 'direccion' | 'distrito') =>
+    [...new Set(proveedores.map((p) => p[campo]?.trim()).filter((v): v is string => !!v))]
+      .sort((a, b) => a.localeCompare(b, 'es'))
+      .map((v) => ({ value: v, label: v }))
+
   const columns: DataTableColumn<ProveedorResponse>[] = [
     {
       key: 'documento',
       label: 'Documento',
+      filterable: false,
       render: (row) => (
         <span className="flex items-center gap-2">
           <span className="font-medium text-ink">{row.documento}</span>
-          <Badge>{row.tipoDoc}</Badge>
         </span>
       ),
     },
-    { key: 'nombre', label: 'Razón social' },
-    { key: 'nombreComercial', label: 'Nombre comercial' },
-    { key: 'rubro', label: 'Rubro' },
-    { key: 'direccion', label: 'Dirección' },
-    { key: 'telefono', label: 'Teléfono' },
-    { key: 'distrito', label: 'Distrito' },
+    {
+      key: 'tipoDoc',
+      label: 'Tipo de documento',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'RUC', label: 'RUC' },
+        { value: 'DNI', label: 'DNI' },
+        { value: 'CODIGO', label: 'Código' },
+      ],
+      render: (row) => <Badge>{row.tipoDoc}</Badge>,
+    },
+    // Nombres y teléfonos se encuentran con el buscador de arriba, no en el panel.
+    { key: 'nombre', label: 'Razón social', filterable: false },
+    { key: 'nombreComercial', label: 'Nombre comercial', filterable: false },
+    { key: 'rubro', label: 'Rubro', filterType: 'select', filterOptions: distintos('rubro') },
+    { key: 'direccion', label: 'Dirección', filterType: 'select', filterOptions: distintos('direccion') },
+    { key: 'telefono', label: 'Teléfono', filterable: false },
+    { key: 'distrito', label: 'Distrito', filterType: 'select', filterOptions: distintos('distrito') },
 
     {
       key: 'activo',
