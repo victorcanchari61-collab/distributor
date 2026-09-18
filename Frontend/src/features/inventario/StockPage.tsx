@@ -133,8 +133,9 @@ export function StockPage() {
   ]
 
   const columns: DataTableColumn<StockResponse>[] = [
-    { key: 'codigo', label: 'Código' },
-    { key: 'producto', label: 'Producto' },
+    // Código y producto se buscan con el buscador de arriba, no en el panel.
+    { key: 'codigo', label: 'Código', filterable: false },
+    { key: 'producto', label: 'Producto', filterable: false },
     /*
      * Cantidades e importes no entran al panel: el unico control es un
      * buscador de texto, y "9" contra "S/ 9.00" no encuentra lo esperado.
@@ -230,6 +231,24 @@ export function StockPage() {
           </span>
         ) : (
           <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
+      // Aparte del triángulo ámbar en Stock: acá se puede aislar de un
+      // vistazo solo lo que hay que reponer, sin leer fila por fila.
+      key: 'bajoMinimo',
+      label: '¿Bajo mínimo?',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Si', label: 'Sí' },
+        { value: 'No', label: 'No' },
+      ],
+      value: (row) => (row.bajoMinimo ? 'Si' : 'No'),
+      render: (row) =>
+        row.bajoMinimo ? (
+          <span className="font-semibold text-amber-600">Sí</span>
+        ) : (
+          <span className="text-ink-soft">No</span>
         ),
     },
     {
@@ -357,11 +376,19 @@ export function StockPage() {
     {
       key: 'categoria',
       label: 'Categoría',
+      filterType: 'select',
+      filterOptions: [...new Set(productos.map((p) => p.categoria).filter((v): v is string => !!v))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((v) => ({ value: v, label: v })),
       render: (row) => row.categoria ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'marca',
       label: 'Marca',
+      filterType: 'select',
+      filterOptions: [...new Set(productos.map((p) => p.marca).filter((v): v is string => !!v))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((v) => ({ value: v, label: v })),
       render: (row) => row.marca ?? <span className="text-ink-soft">—</span>,
     },
     {

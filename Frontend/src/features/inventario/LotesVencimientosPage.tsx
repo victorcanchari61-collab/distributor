@@ -45,10 +45,18 @@ export function LotesVencimientosPage() {
   const vencidos = lotes.filter((l) => (l.diasParaVencer ?? 1) < 0)
   const porVencer = lotes.filter((l) => (l.diasParaVencer ?? Infinity) >= 0 && l.diasParaVencer! <= DIAS_ALERTA)
 
+  /** Los valores que de verdad hay en esa columna, para elegir y no teclear. */
+  const distintos = (campo: 'producto' | 'almacen') =>
+    [...new Set(lotes.map((l) => l[campo]?.trim()).filter((v): v is string => !!v))]
+      .sort((a, b) => a.localeCompare(b, 'es'))
+      .map((v) => ({ value: v, label: v }))
+
   const columns: DataTableColumn<LoteResponse>[] = [
     {
       key: 'producto',
       label: 'Producto',
+      filterType: 'select',
+      filterOptions: distintos('producto'),
       render: (row) => (
         <span>
           <span className="font-medium text-ink">{row.producto}</span>
@@ -56,8 +64,14 @@ export function LotesVencimientosPage() {
         </span>
       ),
     },
-    { key: 'almacen', label: 'Almacén' },
-    { key: 'lote', label: 'Lote', render: (row) => row.lote ?? '—' },
+    {
+      key: 'almacen',
+      label: 'Almacén',
+      filterType: 'select',
+      filterOptions: distintos('almacen'),
+    },
+    // El código del lote casi no se repite: se busca con el buscador de arriba.
+    { key: 'lote', label: 'Lote', filterable: false, render: (row) => row.lote ?? '—' },
     {
       key: 'fechaVencimiento',
       label: 'Vence',

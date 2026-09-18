@@ -4,8 +4,8 @@ import { ArrowDownCircle, ArrowUpCircle, BookOpen, Boxes, Lock, Warehouse } from
 import { Alert, Badge, ListPage, Tabs } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn, TabItem } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { almacenApi, kardexApi } from './inventarioApi'
-import type { AlmacenResponse, KardexResponse, ResumenKardex } from './inventarioApi'
+import { almacenApi, kardexApi, motivoApi } from './inventarioApi'
+import type { AlmacenResponse, KardexResponse, MotivoResponse, ResumenKardex } from './inventarioApi'
 import { useRealtime } from '../../lib/realtime'
 
 /**
@@ -33,6 +33,7 @@ function cifra(valor: number | null | undefined, decimales = 2) {
 export function KardexPage() {
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [almacenId, setAlmacenId] = useState(0)
+  const [motivos, setMotivos] = useState<MotivoResponse[]>([])
 
   const [kardex, setKardex] = useState<KardexResponse[]>([])
   const [cargando, setCargando] = useState(true)
@@ -40,6 +41,7 @@ export function KardexPage() {
 
   useEffect(() => {
     void almacenApi.getAll().then(setAlmacenes)
+    void motivoApi.getAll().then(setMotivos)
   }, [])
 
   /*
@@ -143,6 +145,8 @@ export function KardexPage() {
       key: 'motivo',
       sortable: false,
       label: 'Motivo',
+      filterType: 'select',
+      filterOptions: motivos.map((m) => ({ value: m.nombre, label: m.nombre })),
       render: (row) => (
         <span className="flex items-center gap-1.5">
           {row.motivo}
@@ -151,7 +155,8 @@ export function KardexPage() {
       ),
     },
     { key: 'producto', label: 'Producto', sortable: false },
-    { key: 'almacen', label: 'Almacén', sortable: false },
+    // El almacén ya se elige con la pestaña de arriba, no aquí de nuevo.
+    { key: 'almacen', label: 'Almacén', sortable: false, filterable: false },
     /*
      * Cantidades e importes no entran al panel: el unico control es un
      * buscador de texto, y "9" contra "S/ 9.00" no encuentra lo esperado.

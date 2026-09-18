@@ -119,10 +119,18 @@ export function AlmacenesPage() {
       },
     })
 
+  /** Los valores que de verdad hay en esa columna, para elegir y no teclear. */
+  const distintos = (campo: 'direccion') =>
+    [...new Set(almacenes.map((a) => a[campo]?.trim()).filter((v): v is string => !!v))]
+      .sort((a, b) => a.localeCompare(b, 'es'))
+      .map((v) => ({ value: v, label: v }))
+
   const columns: DataTableColumn<AlmacenResponse>[] = [
+    // Nombre y código se buscan con el buscador de arriba, no en el panel.
     {
       key: 'nombre',
       label: 'Nombre',
+      filterable: false,
       render: (row) => (
         <span className="flex items-center gap-2">
           {row.nombre}
@@ -130,10 +138,12 @@ export function AlmacenesPage() {
         </span>
       ),
     },
-    { key: 'codigo', label: 'Código', render: (row) => <Badge>{row.codigo}</Badge> },
+    { key: 'codigo', label: 'Código', filterable: false, render: (row) => <Badge>{row.codigo}</Badge> },
     {
       key: 'direccion',
       label: 'Dirección',
+      filterType: 'select',
+      filterOptions: distintos('direccion'),
       render: (row) => row.direccion ?? <span className="text-ink-soft">—</span>,
     },
     /*

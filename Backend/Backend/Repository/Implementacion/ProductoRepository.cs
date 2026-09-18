@@ -121,6 +121,9 @@ public class ProductoRepository : IProductoRepository
         if (consulta.ValorDe("categoria") is string categoria)
             query = query.Where(p => p.Categoria != null && p.Categoria.Nombre == categoria);
 
+        if (consulta.ValorDe("marca") is string marca)
+            query = query.Where(p => p.Marca != null && p.Marca.Nombre == marca);
+
         // El stock de un producto es la suma de sus capas con saldo. No es una
         // columna, asi que ordenar o filtrar por el va como subconsulta.
         var capas = _context.CapasCosto

@@ -328,7 +328,8 @@ export function PrestamosPage() {
   ]
 
   const columns: DataTableColumn<PrestamoResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
+    // Número y contraparte se buscan con el buscador de arriba, no en el panel.
+    { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
       key: 'tipo',
       label: 'Tipo',
@@ -343,8 +344,13 @@ export function PrestamosPage() {
         </Badge>
       ),
     },
-    { key: 'contraparte', label: 'Contraparte' },
-    { key: 'almacen', label: 'Almacén' },
+    { key: 'contraparte', label: 'Contraparte', filterable: false },
+    {
+      key: 'almacen',
+      label: 'Almacén',
+      filterType: 'select',
+      filterOptions: almacenes.map((a) => ({ value: a.nombre, label: a.nombre })),
+    },
     {
       key: 'fecha',
       label: 'Fecha',

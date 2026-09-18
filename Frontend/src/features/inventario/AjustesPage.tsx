@@ -352,17 +352,25 @@ export function AjustesPage() {
     })
 
   const columns: DataTableColumn<DocumentoInventarioResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
+    // El número se busca con el buscador de arriba, no en el panel.
+    { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
       render: (row) => fechaCorta(row.fecha),
     },
-    { key: 'almacen', label: 'Almacén' },
+    {
+      key: 'almacen',
+      label: 'Almacén',
+      filterType: 'select',
+      filterOptions: almacenes.map((a) => ({ value: a.nombre, label: a.nombre })),
+    },
     {
       key: 'motivo',
       label: 'Motivo',
+      filterType: 'select',
+      filterOptions: motivos.map((m) => ({ value: m.nombre, label: m.nombre })),
       render: (row) => (
         <Badge tone={row.motivoTipo === 'ENTRADA' ? 'success' : 'warning'}>{row.motivo}</Badge>
       ),

@@ -273,19 +273,32 @@ export function TransferenciasPage() {
     })
 
   const columns: DataTableColumn<DocumentoInventarioResponse>[] = [
-    { key: 'numero', label: 'Número', render: (row) => <Badge>{row.numero}</Badge> },
+    // El número se busca con el buscador de arriba, no en el panel.
+    { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',
       render: (row) => fechaCorta(row.fecha),
     },
+    /*
+     * "De" y "A" van separados, cada uno con su propio filtro: uno solo con
+     * flecha no deja elegir "lo que salió de tal almacén" sin importar a
+     * dónde, ni al revés.
+     */
     {
       key: 'almacen',
-      label: 'De → A',
+      label: 'De',
+      filterType: 'select',
+      filterOptions: almacenes.map((a) => ({ value: a.nombre, label: a.nombre })),
+    },
+    {
+      key: 'almacenDestino',
+      label: 'A',
+      filterType: 'select',
+      filterOptions: almacenes.map((a) => ({ value: a.nombre, label: a.nombre })),
       render: (row) => (
         <span className="flex items-center gap-1.5">
-          {row.almacen}
           <ArrowRight size={13} className="text-ink-soft" />
           {row.almacenDestino}
         </span>
