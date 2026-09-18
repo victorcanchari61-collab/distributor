@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ClipboardCheck, Save, Search } from 'lucide-react'
-import { Alert, Badge, Button, Desplegable, Input, PageHeader, PageSection } from '../../components/ui'
+import { useCallback, useEffect, useState } from 'react'
+import { ClipboardCheck, Save } from 'lucide-react'
+import { Alert, Badge, Button, Input, ListPage, StatCard } from '../../components/ui'
+import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { productoApi } from '../maestros'
@@ -22,7 +23,6 @@ export function ConteosPage() {
   const [motivos, setMotivos] = useState<MotivoResponse[]>([])
   const [stock, setStock] = useState<StockResponse[]>([])
   const [almacenId, setAlmacenId] = useState(0)
-  const [busqueda, setBusqueda] = useState('')
   const [contados, setContados] = useState<Record<number, string>>({})
 
   const [cargando, setCargando] = useState(true)
@@ -72,14 +72,6 @@ export function ConteosPage() {
 
   const motivoSobrante = motivos.find((m) => m.codigo === 'SOBRANTE')
   const motivoFaltante = motivos.find((m) => m.codigo === 'FALTANTE')
-
-  const visibles = useMemo(() => {
-    const term = busqueda.trim().toLowerCase()
-    if (!term) return stock
-    return stock.filter(
-      (s) => s.producto.toLowerCase().includes(term) || s.codigo.toLowerCase().includes(term),
-    )
-  }, [stock, busqueda])
 
   const contadosActivos = stock.filter((s) => (contados[s.productoId] ?? '').trim() !== '')
 
@@ -149,111 +141,146 @@ export function ConteosPage() {
     }
   }
 
+  /*
+   * Qué almacén contar vive como un filtro más, no como un control aparte:
+   * al elegirlo acá se vuelve a pedir el stock de ESE almacén al servidor
+   * (es un catálogo por almacén, no una columna más de la fila).
+   */
+  const alElegirAlmacen = (consulta: ConsultaTabla) => {
+    const nombre = consulta.filtros.find((f) => f.columna === 'almacen')?.valor
+    const elegido = nombre ? almacenes.find((a) => a.nombre === nombre) : undefined
+    const principal = almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0
+    const nuevoId = elegido?.id ?? principal
+    if (nuevoId && nuevoId !== almacenId) setAlmacenId(nuevoId)
+  }
+
+  const columns: DataTableColumn<StockResponse>[] = [
+    // El producto se busca con el buscador de arriba, no en el panel.
+    {
+      key: 'producto',
+      label: 'Producto',
+      filterable: false,
+      render: (row) => (
+        <span>
+          <span className="font-medium text-ink">{row.producto}</span>
+          <span className="ml-2 text-xs text-ink-soft">{row.codigo}</span>
+        </span>
+      ),
+    },
+    {
+      key: 'almacen',
+      label: 'Almacén',
+      filterType: 'select',
+      filterOptions: almacenes.filter((a) => a.activo).map((a) => ({ value: a.nombre, label: a.nombre })),
+    },
+    {
+      key: 'categoria',
+      label: 'Categoría',
+      filterType: 'select',
+      filterOptions: [...new Set(stock.map((s) => s.categoria).filter((v): v is string => !!v))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((v) => ({ value: v, label: v })),
+      render: (row) => row.categoria ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'marca',
+      label: 'Marca',
+      filterType: 'select',
+      filterOptions: [...new Set(stock.map((s) => s.marca).filter((v): v is string => !!v))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((v) => ({ value: v, label: v })),
+      render: (row) => row.marca ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'stock',
+      label: 'Teórico',
+      align: 'right',
+      filterable: false,
+      render: (row) => (
+        <span className="text-ink-soft">
+          {row.stock} {row.unidadBase}
+        </span>
+      ),
+    },
+    {
+      // Lo tecleado no es un dato guardado: es transitorio, así que no
+      // ordena ni filtra, solo se busca cuando se escribe (para eso entra
+      // igual al buscador general, vía `value`).
+      key: 'contado',
+      label: 'Contado',
+      align: 'right',
+      sortable: false,
+      filterable: false,
+      value: (row) => contados[row.productoId] ?? '',
+      render: (row) => (
+        <Input
+          type="number"
+          step="0.0001"
+          value={contados[row.productoId] ?? ''}
+          onChange={(e) => setContados({ ...contados, [row.productoId]: e.target.value })}
+        />
+      ),
+    },
+    {
+      key: 'diferencia',
+      label: 'Diferencia',
+      align: 'right',
+      sortable: false,
+      filterable: false,
+      render: (row) => {
+        const texto = contados[row.productoId] ?? ''
+        const diferencia = texto.trim() !== '' ? Number(texto) - row.stock : null
+        if (diferencia == null) return <span className="text-ink-soft">—</span>
+        if (diferencia === 0) return <Badge tone="neutral">Sin diferencia</Badge>
+        return diferencia > 0 ? (
+          <Badge tone="success">+{diferencia}</Badge>
+        ) : (
+          <Badge tone="danger">{diferencia}</Badge>
+        )
+      },
+    },
+  ]
+
   return (
-    <div className="space-y-5">
-      <PageHeader
-        icon={<ClipboardCheck size={20} />}
-        title="Conteos cíclicos"
-        description="Cuánto hay en el sistema contra cuánto hay en el anaquel. La diferencia se registra sola como ajuste."
-      />
-
-      {error && <Alert>{error}</Alert>}
-      {resultado && (
-        <div className="rounded-field border border-emerald-600 bg-emerald-50 p-3 text-sm text-emerald-700">
-          {resultado}
-        </div>
-      )}
-
-      <PageSection title="Qué contar">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Desplegable
-            label="Almacén"
-            value={almacenId}
-            onChange={(v) => setAlmacenId(Number(v))}
-            options={almacenes
-              .filter((a) => a.activo)
-              .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
+    <ListPage
+      icon={<ClipboardCheck size={20} />}
+      title="Conteos cíclicos"
+      description="Cuánto hay en el sistema contra cuánto hay en el anaquel. La diferencia se registra sola como ajuste."
+      actions={
+        puede('inv.conteos', 'crear') ? (
+          <Button size="sm" onClick={() => void registrarConteo()} loading={guardando}>
+            <Save size={15} />
+            Registrar conteo
+          </Button>
+        ) : undefined
+      }
+      alert={
+        error ? (
+          <Alert>{error}</Alert>
+        ) : resultado ? (
+          <div className="rounded-field border border-emerald-600 bg-emerald-50 p-3 text-sm text-emerald-700">
+            {resultado}
+          </div>
+        ) : undefined
+      }
+      stats={
+        <>
+          <StatCard label="Productos en el almacén" value={String(stock.length)} icon={<ClipboardCheck size={18} />} />
+          <StatCard
+            label="Con conteo escrito"
+            value={String(contadosActivos.length)}
+            icon={<Save size={18} />}
+            tono="success"
           />
-          <Input
-            label="Buscar producto"
-            optional
-            placeholder="Nombre o código..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            icon={<Search size={15} />}
-          />
-        </div>
-      </PageSection>
-
-      <PageSection
-        title="Contar"
-        description={`${contadosActivos.length} producto(s) con conteo escrito, de ${visibles.length} mostrados.`}
-        actions={
-          puede('inv.conteos', 'crear') ? (
-            <Button size="sm" onClick={() => void registrarConteo()} loading={guardando}>
-              <Save size={15} />
-              Registrar conteo
-            </Button>
-          ) : undefined
-        }
-      >
-        <div className="max-h-[28rem] overflow-y-auto rounded-field border border-line">
-          <table className="w-full min-w-[32rem] border-collapse text-sm">
-            <thead>
-              <tr className="sticky top-0 border-b border-line bg-surface-soft text-left text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
-                <th className="px-3 py-2 font-semibold">Producto</th>
-                <th className="w-28 px-3 py-2 text-right font-semibold">Teórico</th>
-                <th className="w-28 px-3 py-2 text-right font-semibold">Contado</th>
-                <th className="w-32 px-3 py-2 text-right font-semibold">Diferencia</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {visibles.map((s) => {
-                const texto = contados[s.productoId] ?? ''
-                const diferencia = texto.trim() !== '' ? Number(texto) - s.stock : null
-
-                return (
-                  <tr key={s.productoId} className="align-middle">
-                    <td className="px-3 py-2">
-                      <span className="font-medium text-ink">{s.producto}</span>
-                      <span className="ml-2 text-xs text-ink-soft">{s.codigo}</span>
-                    </td>
-                    <td className="px-3 py-2 text-right text-ink-soft">
-                      {s.stock} {s.unidadBase}
-                    </td>
-                    <td className="p-2">
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        value={texto}
-                        onChange={(e) => setContados({ ...contados, [s.productoId]: e.target.value })}
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      {diferencia == null ? (
-                        <span className="text-ink-soft">—</span>
-                      ) : diferencia === 0 ? (
-                        <Badge tone="neutral">Sin diferencia</Badge>
-                      ) : diferencia > 0 ? (
-                        <Badge tone="success">+{diferencia}</Badge>
-                      ) : (
-                        <Badge tone="danger">{diferencia}</Badge>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-              {!cargandoStock && visibles.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-3 py-6 text-center text-sm text-ink-soft">
-                    {cargando ? 'Cargando...' : 'No hay productos que controlen stock en este almacén.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </PageSection>
-    </div>
+        </>
+      }
+      columns={columns}
+      rows={stock}
+      rowKey="productoId"
+      onConsulta={alElegirAlmacen}
+      cardIcon={ClipboardCheck}
+      searchPlaceholder="Buscar por producto o código..."
+      empty={cargando || cargandoStock ? 'Cargando...' : 'No hay productos que controlen stock en este almacén.'}
+    />
   )
 }
