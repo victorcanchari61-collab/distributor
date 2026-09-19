@@ -94,6 +94,9 @@ export interface PedidoResponse {
   /** La venta vigente que salió de este pedido, si ya se convirtió. */
   notaVentaId: number | null
   notaVentaNumero: string | null
+  /** Por qué no se entregó, si el repartidor lo marcó así. El pedido sigue Pendiente. */
+  noEntregadoMotivo: string | null
+  noEntregadoObservacion: string | null
   total: number
   detalle: LineaVentaResponse[]
 }
@@ -116,6 +119,27 @@ export interface CrearPedidoRequest {
 export interface ConfirmarPedidoRequest {
   /** De dónde sale. Se omite cuando el pedido reservó: sale del almacén de la reserva. */
   almacenId?: number | null
+  /**
+   * Lo que de verdad se entregó cuando no fue todo. Solo van las líneas que
+   * cambian: una que no aparece se entregó completa.
+   */
+  lineas?: LineaEntregaRequest[]
+}
+
+/** Cuánto de una línea se entregó, y por qué no fue todo. */
+export interface LineaEntregaRequest {
+  pedidoDetalleId: number
+  /** En unidad base: 9 cajas de 12 y 5 sueltas son 113. Cero quita el producto de la venta. */
+  cantidad: number
+  /** Obligatorio cuando se entrega menos de lo pedido. */
+  motivoId?: number | null
+  observacion?: string | null
+}
+
+/** El pedido entero no se entregó. */
+export interface NoEntregadoRequest {
+  motivoId: number
+  observacion?: string | null
 }
 
 /** Contadores del listado completo de pedidos, no de la página visible. */
@@ -161,6 +185,10 @@ export const pedidoApi = {
   update: (id: number, body: CrearPedidoRequest) => api.put<PedidoResponse>(`/pedido/${id}`, body),
   confirmar: (id: number, body: ConfirmarPedidoRequest) =>
     api.patch<PedidoResponse>(`/pedido/${id}/confirmar`, body),
+  /** El pedido entero no se entregó: no crea venta, deja la novedad con su motivo. */
+  noEntregado: (id: number, body: NoEntregadoRequest) =>
+    api.post<PedidoResponse>(`/pedido/${id}/noentregado`, body),
+  quitarNoEntregado: (id: number) => api.del<PedidoResponse>(`/pedido/${id}/noentregado`),
   anular: (id: number) => api.patch<void>(`/pedido/${id}/anular`),
   /** Qué cambió en este pedido y sus líneas. */
   historial: (id: number) => api.get<AuditoriaResponse[]>(`/pedido/${id}/historial`),

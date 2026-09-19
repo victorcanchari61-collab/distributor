@@ -72,6 +72,20 @@ public class PedidoController : ControllerBase
     public async Task<IActionResult> Confirmar(int id, [FromBody] ConfirmarPedidoRequest request) =>
         Ok(await _ventas.ConfirmarPedidoAsync(id, request, UsuarioId));
 
+    /// <summary>
+    /// El pedido entero no se entregó. No crea venta ni mueve stock: deja la
+    /// novedad con su motivo y el pedido sigue Pendiente.
+    /// </summary>
+    [HttpPost("{id:int}/noentregado")]
+    [Permiso("fact.pedidos", Accion.Confirmar)]
+    public async Task<IActionResult> NoEntregado(int id, [FromBody] NoEntregadoRequest request) =>
+        Ok(await _ventas.MarcarNoEntregadoAsync(id, request, UsuarioId));
+
+    [HttpDelete("{id:int}/noentregado")]
+    [Permiso("fact.pedidos", Accion.Confirmar)]
+    public async Task<IActionResult> QuitarNoEntregado(int id) =>
+        Ok(await _ventas.DeshacerNoEntregadoAsync(id));
+
     [HttpPatch("{id:int}/anular")]
     [Permiso("fact.pedidos", Accion.Anular)]
     public async Task<IActionResult> Anular(int id)

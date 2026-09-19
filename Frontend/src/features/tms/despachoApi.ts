@@ -19,6 +19,11 @@ export interface DespachoPedidoResponse {
   /** La venta, si el repartidor ya lo convirtió. */
   notaVentaId: number | null
   notaVentaNumero: string | null
+  /** Por qué no se entregó, si se marcó entero como no entregado en este camión. */
+  noEntregadoMotivo: string | null
+  noEntregadoObservacion: string | null
+  /** En cuántos productos se entregó menos de lo pedido. */
+  lineasConNovedad: number
 }
 
 export interface DespachoResponse {
@@ -42,6 +47,8 @@ export interface DespachoResponse {
   total: number
   /** Cuántos de esos pedidos ya se convirtieron en venta. */
   entregados: number
+  /** Cuántos pedidos se marcaron como no entregados. */
+  noEntregados: number
   detalle: DespachoPedidoResponse[]
 }
 

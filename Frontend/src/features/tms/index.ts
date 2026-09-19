@@ -28,3 +28,6 @@ export type {
   EstadoDespacho,
   ResumenDespachos,
 } from './despachoApi'
+export { MotivosNovedadPage } from './MotivosNovedadPage'
+export { motivoNovedadApi } from './motivoNovedadApi'
+export type { MotivoNovedadOpcion, MotivoNovedadRequest, MotivoNovedadResponse } from './motivoNovedadApi'

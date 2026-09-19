@@ -68,6 +68,32 @@ public class ConfirmarPedidoRequest
     /// en el primero y descontaría de donde nadie aparto nada.
     /// </summary>
     public int? AlmacenId { get; set; }
+
+    /// <summary>
+    /// Lo que de verdad se entregó, cuando no fue todo lo pedido.
+    ///
+    /// Solo van las líneas que cambian: una que no aparece se entregó completa.
+    /// La venta lleva —y cobra— únicamente lo entregado, y cada recorte queda
+    /// registrado como novedad con su motivo.
+    /// </summary>
+    public List<LineaEntregaRequest> Lineas { get; set; } = [];
+}
+
+/// <summary>Cuánto de una línea del pedido se entregó, y por qué no fue todo.</summary>
+public class LineaEntregaRequest
+{
+    public int PedidoDetalleId { get; set; }
+
+    /// <summary>
+    /// Lo entregado, en unidad base: 9 cajas de 12 y 5 sueltas son 113. Cero
+    /// quita el producto de la venta. Más de lo pedido no vale: eso es otro pedido.
+    /// </summary>
+    public decimal Cantidad { get; set; }
+
+    /// <summary>Obligatorio cuando se entrega menos de lo pedido.</summary>
+    public int? MotivoId { get; set; }
+
+    public string? Observacion { get; set; }
 }
 
 /// <summary>Un pago parcial: un método del catálogo y cuánto se pagó con él.</summary>

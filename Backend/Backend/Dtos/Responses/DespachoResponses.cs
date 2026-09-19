@@ -26,6 +26,16 @@ public class DespachoPedidoResponse
     /// <summary>La venta, si el repartidor ya lo convirtió.</summary>
     public int? NotaVentaId { get; set; }
     public string? NotaVentaNumero { get; set; }
+
+    /// <summary>
+    /// Por qué no se entregó, si el pedido se marcó como no entregado en este
+    /// camión. Vacío mientras no se haya marcado o si después se entregó.
+    /// </summary>
+    public string? NoEntregadoMotivo { get; set; }
+    public string? NoEntregadoObservacion { get; set; }
+
+    /// <summary>En cuántos productos se entregó menos de lo pedido.</summary>
+    public int LineasConNovedad { get; set; }
 }
 
 public class DespachoResponse
@@ -60,6 +70,9 @@ public class DespachoResponse
 
     /// <summary>Cuántos de esos pedidos ya se convirtieron en venta.</summary>
     public int Entregados { get; set; }
+
+    /// <summary>Cuántos pedidos se marcaron como no entregados.</summary>
+    public int NoEntregados { get; set; }
 
     public List<DespachoPedidoResponse> Detalle { get; set; } = [];
 }

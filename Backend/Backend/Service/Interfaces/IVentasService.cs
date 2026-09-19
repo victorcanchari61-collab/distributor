@@ -20,6 +20,15 @@ public interface IVentasService
     /// <summary>Se despacha: el pedido se cierra y nace la NotaVenta, que descuenta el stock.</summary>
     Task<NotaVentaResponse> ConfirmarPedidoAsync(int id, ConfirmarPedidoRequest request, int? usuarioId);
 
+    /// <summary>
+    /// El pedido entero no se entregó (no había nadie, no quiso recibirlo). No
+    /// nace ninguna venta y el pedido sigue Pendiente; queda la novedad con su motivo.
+    /// </summary>
+    Task<PedidoResponse> MarcarNoEntregadoAsync(int id, NoEntregadoRequest request, int? usuarioId);
+
+    /// <summary>Quita la marca de no entregado: se puso por error o se volvió a intentar.</summary>
+    Task<PedidoResponse> DeshacerNoEntregadoAsync(int id);
+
     Task AnularPedidoAsync(int id);
 
     /// <summary>Qué cambió en este pedido y sus líneas, para verlo desde el propio documento.</summary>

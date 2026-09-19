@@ -52,6 +52,22 @@ public class ConfirmarPedidoRequestValidator : AbstractValidator<ConfirmarPedido
         RuleFor(x => x.AlmacenId)
             .GreaterThan(0).When(x => x.AlmacenId.HasValue)
             .WithMessage("Elige el almacén");
+
+        RuleForEach(x => x.Lineas).ChildRules(l =>
+        {
+            l.RuleFor(x => x.PedidoDetalleId).GreaterThan(0).WithMessage("Línea inválida");
+            l.RuleFor(x => x.Cantidad).GreaterThanOrEqualTo(0).WithMessage("La cantidad no puede ser negativa");
+            l.RuleFor(x => x.Observacion).MaximumLength(250).WithMessage("La observación es muy larga (máx. 250)");
+        });
+    }
+}
+
+public class NoEntregadoRequestValidator : AbstractValidator<NoEntregadoRequest>
+{
+    public NoEntregadoRequestValidator()
+    {
+        RuleFor(x => x.MotivoId).GreaterThan(0).WithMessage("Elige el motivo por el que no se entregó");
+        RuleFor(x => x.Observacion).MaximumLength(250).WithMessage("La observación es muy larga (máx. 250)");
     }
 }
 

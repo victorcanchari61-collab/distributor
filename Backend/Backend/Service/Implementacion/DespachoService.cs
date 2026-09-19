@@ -29,17 +29,77 @@ public class DespachoService : IDespachoService
             .Include(d => d.Detalle).ThenInclude(x => x.Pedido!).ThenInclude(p => p.Detalle)
             .Include(d => d.Detalle).ThenInclude(x => x.Pedido!).ThenInclude(p => p.Ventas);
 
-    public async Task<IEnumerable<DespachoResponse>> GetAllAsync(string? estado = null) =>
-        (await Completos()
-            .AsNoTracking()
-            .Where(d => estado == null || d.Estado == estado)
-            .OrderByDescending(d => d.Fecha)
-            .ThenByDescending(d => d.Id)
-            .Take(300)
-            .ToListAsync())
-        .Select(Map);
+    public async Task<IEnumerable<DespachoResponse>> GetAllAsync(string? estado = null)
+    {
+        var despachos = (await Completos()
+                .AsNoTracking()
+                .Where(d => estado == null || d.Estado == estado)
+                .OrderByDescending(d => d.Fecha)
+                .ThenByDescending(d => d.Id)
+                .Take(300)
+                .ToListAsync())
+            .Select(Map)
+            .ToList();
 
-    public async Task<DespachoResponse> GetAsync(int id) => Map(await BuscarAsync(id));
+        await AnotarNovedadesAsync(despachos);
+        return despachos;
+    }
+
+    public async Task<DespachoResponse> GetAsync(int id)
+    {
+        var despacho = Map(await BuscarAsync(id));
+        await AnotarNovedadesAsync([despacho]);
+        return despacho;
+    }
+
+    /// <summary>
+    /// Suma a cada pedido lo que no se entregó: el motivo si se marcó entero
+    /// como no entregado, y cuántos productos se recortaron si se entregó en
+    /// parte. Sale de una sola consulta para todos los despachos de la lista.
+    /// </summary>
+    private async Task AnotarNovedadesAsync(List<DespachoResponse> despachos)
+    {
+        var ids = despachos.Select(d => d.Id).ToList();
+        if (ids.Count == 0) return;
+
+        var novedades = await _context.NovedadesEntrega
+            .AsNoTracking()
+            .Where(n => n.DespachoId != null && ids.Contains(n.DespachoId.Value)
+                        && n.Estado != EstadoNovedad.Anulada)
+            .Select(n => new
+            {
+                DespachoId = n.DespachoId!.Value,
+                n.PedidoId,
+                n.Tipo,
+                Motivo = n.Motivo!.Nombre,
+                n.Observacion,
+            })
+            .ToListAsync();
+
+        var porPedido = novedades.ToLookup(n => (n.DespachoId, n.PedidoId));
+
+        foreach (var despacho in despachos)
+        {
+            foreach (var pedido in despacho.Detalle)
+            {
+                var propias = porPedido[(despacho.Id, pedido.PedidoId)].ToList();
+
+                // Ya se entregó (hay venta): una marca vieja de "no entregado"
+                // no puede seguir apareciendo. Ventas la anula al confirmar,
+                // esto es por si quedó alguna suelta.
+                if (pedido.NotaVentaId is null)
+                {
+                    var entero = propias.FirstOrDefault(n => n.Tipo == TipoNovedad.Pedido);
+                    pedido.NoEntregadoMotivo = entero?.Motivo;
+                    pedido.NoEntregadoObservacion = entero?.Observacion;
+                }
+
+                pedido.LineasConNovedad = propias.Count(n => n.Tipo == TipoNovedad.Linea);
+            }
+
+            despacho.NoEntregados = despacho.Detalle.Count(p => p.NoEntregadoMotivo is not null);
+        }
+    }
 
     public async Task<List<LineaCargaResponse>> LineasCargaAsync(int id)
     {

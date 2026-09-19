@@ -56,6 +56,13 @@ public class PedidoResponse
     public int? NotaVentaId { get; set; }
     public string? NotaVentaNumero { get; set; }
 
+    /// <summary>
+    /// Por qué no se entregó, si el repartidor lo marcó como no entregado.
+    /// El pedido sigue Pendiente: puede reintentarse o anularse.
+    /// </summary>
+    public string? NoEntregadoMotivo { get; set; }
+    public string? NoEntregadoObservacion { get; set; }
+
     public decimal Total { get; set; }
     public List<LineaVentaResponse> Detalle { get; set; } = [];
 }

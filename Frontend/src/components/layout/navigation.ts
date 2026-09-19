@@ -22,6 +22,7 @@ import {
   Package,
   PackageCheck,
   PackageOpen,
+  PackageX,
   PackagePlus,
   PackageSearch,
   Receipt,
@@ -170,6 +171,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'tms.flota', label: 'Flota', icon: Truck },
       { id: 'tms.conductores', label: 'Conductores', icon: IdCard },
       { id: 'tms.despachos', label: 'Despachos', icon: PackageOpen },
+      { id: 'tms.motivos', label: 'Motivos de novedad', icon: PackageX },
     ],
   },
   {

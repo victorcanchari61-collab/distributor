@@ -68,6 +68,8 @@ public class AppDbContext : DbContext
     public DbSet<ArqueoGasto> ArqueoGastos => Set<ArqueoGasto>();
     public DbSet<ArqueoPagoDigital> ArqueoPagosDigitales => Set<ArqueoPagoDigital>();
     public DbSet<MotivoGasto> MotivosGasto => Set<MotivoGasto>();
+    public DbSet<MotivoNovedad> MotivosNovedad => Set<MotivoNovedad>();
+    public DbSet<NovedadEntrega> NovedadesEntrega => Set<NovedadEntrega>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -77,6 +79,7 @@ public class AppDbContext : DbContext
         ConfigurarInventario(modelBuilder);
         ConfigurarCompras(modelBuilder);
         ConfigurarVentas(modelBuilder);
+        ConfigurarNovedades(modelBuilder);
         ConfigurarFinanzas(modelBuilder);
         ConfigurarAuditoria(modelBuilder);
 
@@ -1002,6 +1005,55 @@ public class AppDbContext : DbContext
                 .HasForeignKey(p => p.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(p => p.Usuario).WithMany()
                 .HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+    }
+
+    private static void ConfigurarNovedades(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<MotivoNovedad>(entity =>
+        {
+            entity.ToTable("MotivosNovedad");
+            entity.HasIndex(m => m.Nombre).IsUnique();
+            entity.Property(m => m.Nombre).HasMaxLength(60).IsRequired();
+            entity.Property(m => m.Descripcion).HasMaxLength(250);
+
+            // Sin datos sembrados: los motivos los pone el dueño, cada
+            // negocio pierde entregas por razones distintas.
+        });
+
+        modelBuilder.Entity<NovedadEntrega>(entity =>
+        {
+            entity.ToTable("NovedadesEntrega");
+            entity.Property(n => n.Tipo).HasMaxLength(10).IsRequired();
+            entity.Property(n => n.Estado).HasMaxLength(15).IsRequired();
+            entity.Property(n => n.Observacion).HasMaxLength(250);
+            entity.Property(n => n.ObservacionVerificacion).HasMaxLength(250);
+            entity.Property(n => n.CantidadPedida).HasPrecision(18, 4);
+            entity.Property(n => n.CantidadEntregada).HasPrecision(18, 4);
+            entity.Property(n => n.CantidadRegresada).HasPrecision(18, 4);
+            entity.Property(n => n.Importe).HasPrecision(18, 2);
+            entity.Ignore(n => n.CantidadNoEntregada);
+
+            // Lo que la pantalla de revision pide: lo pendiente de un camion.
+            entity.HasIndex(n => new { n.DespachoId, n.Estado });
+            entity.HasIndex(n => new { n.PedidoId, n.Tipo });
+
+            entity.HasOne(n => n.Pedido).WithMany()
+                .HasForeignKey(n => n.PedidoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(n => n.NotaVenta).WithMany()
+                .HasForeignKey(n => n.NotaVentaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(n => n.Despacho).WithMany()
+                .HasForeignKey(n => n.DespachoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(n => n.Producto).WithMany()
+                .HasForeignKey(n => n.ProductoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(n => n.Presentacion).WithMany()
+                .HasForeignKey(n => n.PresentacionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(n => n.Motivo).WithMany()
+                .HasForeignKey(n => n.MotivoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(n => n.Usuario).WithMany()
+                .HasForeignKey(n => n.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(n => n.VerificadoPor).WithMany()
+                .HasForeignKey(n => n.VerificadoPorId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 

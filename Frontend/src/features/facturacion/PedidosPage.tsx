@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, CheckCircle2, ClipboardList, Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ClipboardList, Contact, Eye, History, PackageX, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -43,6 +43,7 @@ import type { AlmacenOpcion } from '../inventario'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { pedidoApi } from './ventasApi'
+import { EntregaPedidoModal, NoEntregadoModal } from './EntregaPedidoModal'
 import type { AuditoriaResponse } from '../config'
 import type { CrearPedidoRequest, FormaPagoVenta, LineaVentaResponse, PedidoResponse, ResumenPedidos } from './ventasApi'
 
@@ -91,11 +92,9 @@ export function PedidosPage() {
   const [filas, setFilas] = useState<FilaPedido[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
 
-  // --- Confirmar (despachar): un pedido no lleva pagos, solo pide almacén ---
+  // --- Convertir en venta (con lo que de verdad se entregó) y "no entregado" ---
   const [confirmando, setConfirmando] = useState<PedidoResponse | null>(null)
-  const [confAlmacenId, setConfAlmacenId] = useState(0)
-  const [confGuardando, setConfGuardando] = useState(false)
-  const [confError, setConfError] = useState('')
+  const [noEntregando, setNoEntregando] = useState<PedidoResponse | null>(null)
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -325,38 +324,23 @@ export function PedidosPage() {
       },
     })
 
-  const abrirConfirmar = (pedido: PedidoResponse) => {
-    setConfirmando(pedido)
-    // Un pedido con reserva ya aparto la mercaderia de un almacen concreto:
-    // de ahi sale, y preguntarlo otra vez invita a elegir otro y dejar la
-    // reserva colgada en el primero.
-    setConfAlmacenId(pedido.reservaStock ? (pedido.almacenId ?? 0) : 0)
-    setConfError('')
-  }
-
-  const confirmarDespacho = async () => {
-    if (!confirmando) return
-    // Con reserva el almacen viene del pedido; sin ella hay que elegirlo.
-    if (!confirmando.reservaStock && !confAlmacenId) return setConfError('Elige el almacén.')
-
-    setConfGuardando(true)
-    setConfError('')
-    try {
-      await pedidoApi.confirmar(confirmando.id, {
-        almacenId: confirmando.reservaStock ? null : confAlmacenId,
-      })
-      setConfirmando(null)
-      await cargar()
-      toast.exito('Pedido convertido: ya es una venta.')
-    } catch (e) {
-      setConfError(
-        e instanceof ApiError ? (e.errors.length ? e.errors.join(' ') : e.message) : 'No pudimos confirmar el pedido.',
-      )
-    } finally {
-      setConfGuardando(false)
-    }
-  }
-
+  const quitarNoEntregado = (pedido: PedidoResponse) =>
+    confirmar({
+      titulo: `Quitar la marca de ${pedido.numero}`,
+      mensaje: 'El pedido deja de figurar como no entregado y vuelve a quedar solo pendiente.',
+      confirmar: 'Quitar marca',
+      tono: 'warning',
+      accion: async () => {
+        setError('')
+        try {
+          await pedidoApi.quitarNoEntregado(pedido.id)
+          await cargar()
+          toast.exito(`${pedido.numero} ya no figura como no entregado`)
+        } catch (e) {
+          setError(e instanceof ApiError ? e.message : 'No pudimos quitar la marca.')
+        }
+      },
+    })
 
   /** A cuántas unidades base equivale la presentación de esa línea. */
   const factorDeFila = (fila: { productoId: number; presentacionId: number }) =>
@@ -580,7 +564,16 @@ export function PedidosPage() {
         { value: 'CONFIRMADO', label: 'Confirmado' },
         { value: 'ANULADO', label: 'Anulado' },
       ],
-      render: (row) => estadoPedidoBadge(row.estado),
+      render: (row) => (
+        <span className="inline-flex flex-wrap items-center gap-1">
+          {estadoPedidoBadge(row.estado)}
+          {row.noEntregadoMotivo && (
+            <span title={row.noEntregadoObservacion ?? undefined}>
+              <Badge tone="danger">No entregado: {row.noEntregadoMotivo}</Badge>
+            </span>
+          )}
+        </span>
+      ),
     },
   ]
 
@@ -787,9 +780,9 @@ export function PedidosPage() {
         </>
       }
       columns={columns}
-      // 5 íconos por fila (Ver, Historial, Editar, Confirmar, Anular): el
+      // 6 íconos por fila (Ver, Historial, Editar, Confirmar, No entregado, Anular): el
       // ancho por defecto de Acciones se queda corto y fuerza scroll horizontal.
-      actionsWidth={205}
+      actionsWidth={235}
       rows={pedidos}
       servidor={{
         total: totalRegistros,
@@ -834,9 +827,24 @@ export function PedidosPage() {
                   ? `Ya es la venta ${row.notaVentaNumero}. Anúlala para rehacerla.`
                   : 'Está anulado'
               }
-              onClick={() => abrirConfirmar(row)}
+              onClick={() => setConfirmando(row)}
             >
               <ShoppingBag size={15} />
+            </RowAction>
+          )}
+          {puede('fact.pedidos', 'confirmar') && (
+            <RowAction
+              label={
+                row.noEntregadoMotivo
+                  ? `Quitar la marca de no entregado de ${row.numero}`
+                  : `Marcar ${row.numero} como no entregado`
+              }
+              tone="warning"
+              disabled={row.estado !== 'PENDIENTE'}
+              disabledReason="Solo un pedido pendiente puede marcarse como no entregado"
+              onClick={() => (row.noEntregadoMotivo ? quitarNoEntregado(row) : setNoEntregando(row))}
+            >
+              <PackageX size={15} />
             </RowAction>
           )}
           {puede('fact.pedidos', 'anular') && (
@@ -877,6 +885,13 @@ export function PedidosPage() {
               <p className="text-xs text-ink-soft">
                 Se quitaron productos al editar este pedido — quedan solo en "Ver historial".
               </p>
+            )}
+
+            {detalleAbierto.noEntregadoMotivo && (
+              <Alert tone="warning">
+                No se entregó: {detalleAbierto.noEntregadoMotivo}
+                {detalleAbierto.noEntregadoObservacion && ` — ${detalleAbierto.noEntregadoObservacion}`}
+              </Alert>
             )}
 
             {detalleAbierto.reservaStock && (
@@ -934,58 +949,26 @@ export function PedidosPage() {
         <HistorialCambios registros={historial} cargando={historialCargando} />
       </Modal>
 
-      <Modal
-        open={confirmando !== null}
+      <EntregaPedidoModal
+        pedido={confirmando}
+        almacenes={almacenes}
         onClose={() => setConfirmando(null)}
-        size="sm"
-        title={confirmando ? `Convertir ${confirmando.numero} en venta` : ''}
-        description={
-          confirmando?.reservaStock
-            ? 'Sale del almacén donde está reservada. Nace la nota de venta y el stock se descuenta en ese momento.'
-            : 'Elige de dónde sale la mercadería. Nace la nota de venta y el stock se descuenta en ese momento.'
-        }
-        footer={
-          <>
-            <Button variant="secondary" size="sm" onClick={() => setConfirmando(null)}>
-              Cancelar
-            </Button>
-            <Button size="sm" loading={confGuardando} onClick={() => void confirmarDespacho()}>
-              Convertir en venta
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-4">
-          {confError && <Alert>{confError}</Alert>}
+        onHecho={() => {
+          setConfirmando(null)
+          void cargar()
+          toast.exito('Pedido convertido: ya es una venta.')
+        }}
+      />
 
-          {confirmando?.reservaStock ? (
-            <div>
-              <span className="ui-label mb-1.5 block">Almacén</span>
-              <div className="flex items-center gap-2 rounded-field border border-line px-3 py-2 text-sm">
-                <span className="text-ink">{confirmando.almacen}</span>
-                <Badge tone="sys">stock reservado</Badge>
-              </div>
-            </div>
-          ) : (
-            <Desplegable
-              label="Almacén"
-              value={confAlmacenId}
-              onChange={(v) => setConfAlmacenId(Number(v))}
-              placeholder="Elige el almacén"
-              options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
-            />
-          )}
-
-          <p className="text-xs text-ink-soft">
-            La nota de venta que nace queda a crédito, pendiente de cobro — un pedido no registra pagos.
-          </p>
-
-          <div className="flex items-center justify-between border-t border-line pt-3 text-sm font-semibold">
-            <span>Total</span>
-            <span className="text-ink">S/ {(confirmando?.total ?? 0).toFixed(2)}</span>
-          </div>
-        </div>
-      </Modal>
+      <NoEntregadoModal
+        pedido={noEntregando}
+        onClose={() => setNoEntregando(null)}
+        onHecho={() => {
+          setNoEntregando(null)
+          void cargar()
+          toast.exito('Pedido marcado como no entregado.')
+        }}
+      />
 
       {dialogo}
     </ListPage>

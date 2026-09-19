@@ -102,6 +102,7 @@ builder.Services.AddScoped<IVentasService, VentasService>();
 builder.Services.AddScoped<IPdfService, PdfService>();
 builder.Services.AddScoped<IUsuarioActual, UsuarioActual>();
 builder.Services.AddScoped<IDespachoService, DespachoService>();
+builder.Services.AddScoped<INovedadService, NovedadService>();
 builder.Services.AddScoped<IVisitaService, VisitaService>();
 builder.Services.AddScoped<IDevolucionService, DevolucionService>();
 

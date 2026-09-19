@@ -353,9 +353,12 @@ export function DespachosPage() {
       // Cuántos de los que lleva ya se entregaron: es lo que se mira para
       // saber si el camión terminó su vuelta.
       render: (row) => (
-        <Badge tone={row.entregados === row.pedidos ? 'success' : 'warning'}>
-          {row.entregados} de {row.pedidos}
-        </Badge>
+        <span className="inline-flex flex-wrap items-center justify-end gap-1">
+          <Badge tone={row.entregados === row.pedidos ? 'success' : 'warning'}>
+            {row.entregados} de {row.pedidos}
+          </Badge>
+          {row.noEntregados > 0 && <Badge tone="danger">{row.noEntregados} no entregados</Badge>}
+        </span>
       ),
     },
     {
@@ -650,7 +653,13 @@ export function DespachosPage() {
                   {
                     key: 'entrega',
                     label: 'Entrega',
-                    render: (p) => p.notaVentaNumero ?? 'Sin entregar',
+                    render: (p) => {
+                      if (p.noEntregadoMotivo) return `No entregado: ${p.noEntregadoMotivo}`
+                      const base = p.notaVentaNumero ?? 'Sin entregar'
+                      return p.lineasConNovedad > 0
+                        ? `${base} · ${p.lineasConNovedad} con novedad`
+                        : base
+                    },
                   },
                 ] satisfies ColumnaDetalleProducto<DespachoPedidoResponse>[],
               ]}

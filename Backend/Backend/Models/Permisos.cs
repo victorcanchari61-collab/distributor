@@ -135,6 +135,9 @@ public static class CatalogoPermisos
             // Un despacho no se borra: se anula, y sus pedidos vuelven a
             // quedar libres para otro camion.
             ["tms.despachos"] = Documento,
+            // Por que no se entrego algo. Los crea el dueño; se desactivan,
+            // no se borran, porque cada novedad registrada apunta a uno.
+            ["tms.motivos"] = CatalogoSinBorrado,
 
             // --- DMS ---
             // Una lista de trabajo, no un documento: no se crea ni se anula

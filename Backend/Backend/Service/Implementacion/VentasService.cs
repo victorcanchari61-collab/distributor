@@ -34,6 +34,8 @@ public class VentasService : IVentasService
     private readonly IAuditoriaService _auditoria;
     private readonly IValidator<CrearPedidoRequest> _pedidoValidator;
     private readonly IValidator<ConfirmarPedidoRequest> _confirmarValidator;
+    private readonly IValidator<NoEntregadoRequest> _noEntregadoValidator;
+    private readonly INovedadService _novedades;
     private readonly IValidator<CrearNotaVentaRequest> _notaVentaValidator;
     private readonly IValidator<PagoVentaRequest> _pagoValidator;
     private readonly IPermisoService _permisos;
@@ -48,6 +50,8 @@ public class VentasService : IVentasService
         IAuditoriaService auditoria,
         IValidator<CrearPedidoRequest> pedidoValidator,
         IValidator<ConfirmarPedidoRequest> confirmarValidator,
+        IValidator<NoEntregadoRequest> noEntregadoValidator,
+        INovedadService novedades,
         IValidator<CrearNotaVentaRequest> notaVentaValidator,
         IValidator<PagoVentaRequest> pagoValidator,
         IPermisoService permisos,
@@ -61,6 +65,8 @@ public class VentasService : IVentasService
         _auditoria = auditoria;
         _pedidoValidator = pedidoValidator;
         _confirmarValidator = confirmarValidator;
+        _noEntregadoValidator = noEntregadoValidator;
+        _novedades = novedades;
         _notaVentaValidator = notaVentaValidator;
         _pagoValidator = pagoValidator;
         _permisos = permisos;
@@ -96,11 +102,31 @@ public class VentasService : IVentasService
     public async Task<IEnumerable<PedidoResponse>> GetPedidosAsync(string? estado = null)
     {
         var pedidos = await _repository.GetPedidosAsync(estado, await AlcancePedidosAsync());
-        return pedidos.Select(MapPedido);
+        return await ConNoEntregadosAsync(pedidos.Select(MapPedido).ToList());
     }
 
     public async Task<PedidoResponse> GetPedidoAsync(int id) =>
-        MapPedido(await GetPedidoOrThrowAsync(id));
+        (await ConNoEntregadosAsync([MapPedido(await GetPedidoOrThrowAsync(id))]))[0];
+
+    /// <summary>
+    /// Anota en cada pedido por qué no se entregó, si se marcó así. Una sola
+    /// consulta para toda la lista; un pedido que ya es venta no lo lleva.
+    /// </summary>
+    private async Task<List<PedidoResponse>> ConNoEntregadosAsync(List<PedidoResponse> pedidos)
+    {
+        var marcas = await _novedades.GetNoEntregadosAsync(pedidos.Select(p => p.Id));
+
+        foreach (var pedido in pedidos)
+        {
+            if (pedido.NotaVentaId is null && marcas.TryGetValue(pedido.Id, out var marca))
+            {
+                pedido.NoEntregadoMotivo = marca.Motivo;
+                pedido.NoEntregadoObservacion = marca.Observacion;
+            }
+        }
+
+        return pedidos;
+    }
 
     public async Task<PaginaResponse<PedidoResponse>> ListarPedidosAsync(ConsultaTablaRequest consulta)
     {
@@ -108,7 +134,7 @@ public class VentasService : IVentasService
 
         return new PaginaResponse<PedidoResponse>
         {
-            Items = items.Select(MapPedido).ToList(),
+            Items = await ConNoEntregadosAsync(items.Select(MapPedido).ToList()),
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,
@@ -239,6 +265,9 @@ public class VentasService : IVentasService
             : request.AlmacenId
               ?? throw new BadRequestException("Elige el almacén del que sale la mercadería.");
 
+        var (lineasVenta, cambios) = ResolverEntrega(pedido, request);
+        var motivos = await _novedades.ExigirMotivosAsync(cambios.Select(c => c.MotivoId));
+
         var notaVenta = await CrearNotaVentaInternaAsync(
             clienteId: pedido.ClienteId,
             almacenId: almacenId,
@@ -246,24 +275,139 @@ public class VentasService : IVentasService
             formaPago: FormaPagoVenta.Credito,
             pagos: [],
             observacion: pedido.Observacion,
-            // Una línea anulada al editar el pedido no se despacha: quedó
-            // fuera del total y no debe salir del almacén.
-            lineas: pedido.Detalle.Where(d => !d.Anulado).Select(d => new PedidoDetalle
-            {
-                ProductoId = d.ProductoId,
-                PresentacionId = d.PresentacionId,
-                CantidadPresentacion = d.CantidadPresentacion,
-                Cantidad = d.Cantidad,
-                PrecioPresentacion = d.PrecioPresentacion,
-                PrecioUnitario = d.PrecioUnitario
-            }).ToList(),
+            lineas: lineasVenta,
             usuarioId: usuarioId);
 
         pedido.Estado = EstadoPedido.Confirmado;
         await _repository.UpdatePedidoAsync(pedido);
 
+        // Solo con la venta ya hecha: si el stock no alcanzó y la venta
+        // falló, no queda ninguna novedad huérfana.
+        await _novedades.RegistrarLineasAsync(pedido, notaVenta.Id, cambios, motivos, usuarioId);
+
+        // Si antes se marcó como no entregado y al final sí se entregó, esa
+        // marca ya no aplica.
+        await _novedades.AnularNoEntregadoAsync(pedido.Id);
+
         await _notificador.AvisarAsync("pedidos", "confirmado", MapPedido(pedido));
         return notaVenta;
+    }
+
+    /// <summary>
+    /// Qué se le entrega de verdad al cliente: las líneas de la venta y, aparte,
+    /// las novedades de lo que quedó corto.
+    ///
+    /// Por defecto sale todo lo pedido. Una línea entregada en menos exige su
+    /// motivo, y una entregada en cero deja de ir en la venta — pero no todas a
+    /// la vez: un pedido que no se entregó nada no es una venta, es un "no
+    /// entregado".
+    /// </summary>
+    private static (List<PedidoDetalle> Lineas, List<CambioEntrega> Cambios) ResolverEntrega(
+        Pedido pedido, ConfirmarPedidoRequest request)
+    {
+        // Una línea anulada al editar el pedido no se despacha: quedó fuera
+        // del total y no debe salir del almacén.
+        var vivas = pedido.Detalle.Where(d => !d.Anulado).ToList();
+        var indicadas = new Dictionary<int, LineaEntregaRequest>();
+
+        foreach (var l in request.Lineas ?? [])
+        {
+            if (!indicadas.TryAdd(l.PedidoDetalleId, l))
+                throw new BadRequestException("Una línea del pedido viene repetida.");
+
+            if (vivas.All(d => d.Id != l.PedidoDetalleId))
+                throw new BadRequestException("Una de las líneas ya no pertenece al pedido. Vuelve a abrirlo.");
+        }
+
+        var lineas = new List<PedidoDetalle>();
+        var cambios = new List<CambioEntrega>();
+
+        foreach (var d in vivas)
+        {
+            var nombre = d.Producto?.Nombre ?? "un producto";
+            var entregada = d.Cantidad;
+
+            if (indicadas.TryGetValue(d.Id, out var indicada))
+            {
+                entregada = Math.Round(indicada.Cantidad, 4);
+
+                if (entregada > d.Cantidad)
+                    throw new BadRequestException(
+                        $"No se puede entregar más de lo pedido en {nombre}. Si el cliente quiere más, es otro pedido.");
+
+                if (entregada < d.Cantidad)
+                {
+                    if (indicada.MotivoId is not int motivoId)
+                        throw new BadRequestException($"Elige el motivo por el que {nombre} se entrega en menos.");
+
+                    // Cuánto vale lo que quedó sin entregar, al precio del pedido.
+                    var factor = d.CantidadPresentacion > 0 ? d.Cantidad / d.CantidadPresentacion : 1m;
+                    var faltante = (d.Cantidad - entregada) / factor;
+                    var importe = Math.Round(faltante * d.PrecioPresentacion, 2);
+
+                    cambios.Add(new CambioEntrega(d, entregada, importe, motivoId, indicada.Observacion));
+                }
+            }
+
+            if (entregada <= 0) continue;
+
+            var factorLinea = d.CantidadPresentacion > 0 ? d.Cantidad / d.CantidadPresentacion : 1m;
+
+            lineas.Add(new PedidoDetalle
+            {
+                ProductoId = d.ProductoId,
+                PresentacionId = d.PresentacionId,
+                // Entera, tal cual se pidió: un redondeo aquí movería el total
+                // de un pedido que se entrega completo.
+                CantidadPresentacion = entregada == d.Cantidad
+                    ? d.CantidadPresentacion
+                    : Math.Round(entregada / factorLinea, 4),
+                Cantidad = entregada,
+                PrecioPresentacion = d.PrecioPresentacion,
+                PrecioUnitario = d.PrecioUnitario
+            });
+        }
+
+        if (lineas.Count == 0)
+        {
+            throw new BadRequestException(
+                "No queda nada por entregar en este pedido. Si el cliente no recibió nada, márcalo como \"No entregado\".");
+        }
+
+        return (lineas, cambios);
+    }
+
+    public async Task<PedidoResponse> MarcarNoEntregadoAsync(int id, NoEntregadoRequest request, int? usuarioId)
+    {
+        await _noEntregadoValidator.ValidateAndThrowAsync(request);
+
+        var pedido = await GetPedidoOrThrowAsync(id);
+
+        if (pedido.Estado == EstadoPedido.Anulado)
+            throw new BadRequestException("Este pedido está anulado.");
+
+        if (VentaVigente(pedido) is NotaVenta vigente)
+        {
+            throw new BadRequestException(
+                $"Este pedido ya se convirtió en la venta {vigente.Numero}: no se puede marcar como no entregado.");
+        }
+
+        var motivos = await _novedades.ExigirMotivosAsync([request.MotivoId]);
+        await _novedades.RegistrarNoEntregadoAsync(pedido, motivos[request.MotivoId], request.Observacion, usuarioId);
+
+        var respuesta = (await ConNoEntregadosAsync([MapPedido(pedido)]))[0];
+        await _notificador.AvisarAsync("pedidos", "noEntregado", respuesta);
+        return respuesta;
+    }
+
+    public async Task<PedidoResponse> DeshacerNoEntregadoAsync(int id)
+    {
+        var pedido = await GetPedidoOrThrowAsync(id);
+        await _novedades.DeshacerNoEntregadoAsync(id);
+
+        var respuesta = (await ConNoEntregadosAsync([MapPedido(pedido)]))[0];
+        await _notificador.AvisarAsync("pedidos", "noEntregadoQuitado", respuesta);
+        return respuesta;
     }
 
     /// <summary>
@@ -364,6 +508,11 @@ public class VentasService : IVentasService
 
         pedido.Estado = EstadoPedido.Anulado;
         await _repository.UpdatePedidoAsync(pedido);
+
+        // Un "no entregado" pendiente de un pedido que ya no existe no se
+        // puede seguir esperando de vuelta en el camión.
+        await _novedades.AnularDePedidoAsync(id);
+
         await _notificador.AvisarAsync("pedidos", "anulado", MapPedido(pedido));
     }
 
@@ -524,6 +673,10 @@ public class VentasService : IVentasService
 
         notaVenta.Estado = EstadoNotaVenta.Anulada;
         await _repository.UpdateNotaVentaAsync(notaVenta);
+
+        // Lo que esa venta dejó sin entregar ya no cuenta: al rehacerla
+        // nacerán las novedades nuevas.
+        await _novedades.AnularDeVentaAsync(id);
 
         // El pedido del que salio vuelve a quedar disponible: sin esto se
         // quedaria marcado como convertido para siempre y el cliente no
