@@ -122,27 +122,20 @@ class _GraficoLineaState extends State<GraficoLinea> {
     final todos = widget.series.expand((s) => s.valores).whereType<double>();
     final esc = escala(minimoDe(todos), maximoDe(todos));
     final anchoUtil = math.max(10.0, ancho - ejeIzquierdo - _margenDerecho);
-    final cadaX = cadaEtiqueta(n, anchoUtil);
-
     // La distancia entre dos puntos decide a partir de cuánto un toque ya no
     // es de ese punto: con media separación, cada serie solo responde en su
     // propio día y una serie con huecos no arrastra el punto de otro día.
     final separacion = n <= 1 ? anchoUtil : anchoUtil / (n - 1);
+    final cadaX = cadaEtiqueta(
+      widget.etiquetas,
+      separacion,
+      MediaQuery.textScalerOf(context),
+    );
 
     final tocado = _tocado != null && _tocado! < n ? _tocado : null;
     final barras = [for (final s in widget.series) _barra(s, n, esc, tocado)];
 
-    final conGlobo = tocado == null
-        ? const <ShowingTooltipIndicators>[]
-        : [
-            ShowingTooltipIndicators([
-              for (var b = 0; b < barras.length; b++)
-                if (!barras[b].spots[tocado].isNull())
-                  LineBarSpot(barras[b], b, barras[b].spots[tocado]),
-            ]),
-          ];
-
-    return LineChart(
+    final grafico = LineChart(
       duration: Duration.zero,
       LineChartData(
         lineBarsData: barras,
@@ -165,9 +158,6 @@ class _GraficoLineaState extends State<GraficoLinea> {
           topTitles: ejeMargen(8),
           rightTitles: ejeMargen(_margenDerecho),
         ),
-        showingTooltipIndicators: conGlobo
-            .where((g) => g.showingSpots.isNotEmpty)
-            .toList(),
         lineTouchData: LineTouchData(
           handleBuiltInTouches: false,
           touchSpotThreshold: separacion / 2 + 1,
@@ -190,9 +180,21 @@ class _GraficoLineaState extends State<GraficoLinea> {
                 ),
               ),
           ],
-          touchTooltipData: globoLinea(_renglones),
         ),
       ),
+    );
+
+    if (tocado == null) return grafico;
+
+    return Stack(
+      children: [
+        grafico,
+        globoSobreGrafico(
+          fraccionX: n <= 1 ? 0.5 : tocado / (n - 1),
+          derecha: _margenDerecho,
+          globo: _globo(tocado),
+        ),
+      ],
     );
   }
 
@@ -263,41 +265,22 @@ class _GraficoLineaState extends State<GraficoLinea> {
     }
   }
 
-  /// El contenido del globo: el día arriba y una línea por serie.
-  List<LineTooltipItem?> _renglones(List<LineBarSpot> puntos) {
-    if (puntos.isEmpty) return const [];
-
-    final i = puntos.first.x.round();
+  /// El globo: el día arriba y una línea por serie que tenga valor ese día.
+  Widget _globo(int i) {
     final rotulos = widget.etiquetasLargas ?? widget.etiquetas;
-    final cabecera = i >= 0 && i < rotulos.length ? rotulos[i] : '';
-    final marcas = widget.marcas.where((m) => m.indice == i);
 
-    return [
-      for (var k = 0; k < puntos.length; k++)
-        LineTooltipItem(
-          '',
-          estiloGlobo,
-          textAlign: TextAlign.left,
-          children: [
-            if (k == 0)
-              TextSpan(
-                text: '$cabecera\n',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ...renglonGlobo(
-              widget.series[puntos[k].barIndex].color,
-              widget.series[puntos[k].barIndex].nombre,
-              widget.formato(puntos[k].y),
-            ),
-            // Lo que dice la marca (día atípico, cierre proyectado) va al pie.
-            if (k == puntos.length - 1)
-              for (final m in marcas)
-                TextSpan(
-                  text: '\n${m.titulo}',
-                  style: TextStyle(color: m.color, fontWeight: FontWeight.w700),
-                ),
-          ],
-        ),
-    ];
+    return GloboDetalle(
+      titulo: i < rotulos.length ? rotulos[i] : '',
+      filas: [
+        for (final s in widget.series)
+          if (i < s.valores.length && s.valores[i] != null)
+            FilaGlobo(s.color, s.nombre, widget.formato(s.valores[i]!)),
+      ],
+      // Lo que dice la marca (día atípico, cierre proyectado) va al pie.
+      notas: [
+        for (final m in widget.marcas)
+          if (m.indice == i) (texto: m.titulo, color: m.color),
+      ],
+    );
   }
 }

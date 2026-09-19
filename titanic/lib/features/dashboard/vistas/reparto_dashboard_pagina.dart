@@ -152,7 +152,7 @@ class RepartoDashboardPagina extends ConsumerWidget {
           cargando: b.cargando,
           error: b.error,
           vacio: sinPedidos,
-          alto: 210,
+          alto: 240,
           contenido: () => GraficoEmbudo(
             etapas: [
               for (final e in r!.embudo)

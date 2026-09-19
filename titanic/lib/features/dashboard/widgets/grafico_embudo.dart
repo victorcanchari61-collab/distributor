@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import 'grafico_util.dart';
 
@@ -13,8 +14,11 @@ class EtapaEmbudo {
 }
 
 /// Embudo horizontal: cada etapa es una barra centrada, más angosta que la
-/// anterior. A la derecha de cada una, qué parte de la etapa previa llegó hasta
-/// ahí — ahí se ve dónde se pierde la venta.
+/// anterior. A la derecha del nombre de cada una, qué parte de la etapa previa
+/// llegó hasta ahí — ahí se ve dónde se pierde la venta.
+///
+/// El nombre va sobre la barra y no dentro: en un teléfono la última etapa
+/// queda tan angosta que "Cobrados del todo" se leería "C…".
 class GraficoEmbudo extends StatelessWidget {
   const GraficoEmbudo({super.key, required this.etapas});
 
@@ -32,7 +36,7 @@ class GraficoEmbudo extends StatelessWidget {
       children: [
         for (var i = 0; i < etapas.length; i++)
           Padding(
-            padding: EdgeInsets.only(bottom: i < etapas.length - 1 ? 8 : 0),
+            padding: EdgeInsets.only(bottom: i < etapas.length - 1 ? 10 : 0),
             child: _Etapa(
               etapa: etapas[i],
               color: PaletaDash.deSerie(i),
@@ -64,62 +68,52 @@ class _Etapa extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = conversion;
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: FractionallySizedBox(
-            widthFactor: ancho,
-            child: Container(
-              height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(Dimen.radioCampo),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      etapa.nombre,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    numeroEs(etapa.valor),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                etapa.nombre,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
               ),
             ),
-          ),
+            if (c != null)
+              Text(
+                porcentaje(c, 0),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: c >= 85
+                      ? PaletaDash.bien
+                      : c >= 60
+                      ? PaletaDash.alerta
+                      : PaletaDash.mal,
+                ),
+              ),
+          ],
         ),
-        const SizedBox(width: 12),
-        SizedBox(
-          width: 44,
-          child: Text(
-            c == null ? '' : porcentaje(c, 0),
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: c == null
-                  ? null
-                  : c >= 85
-                  ? PaletaDash.bien
-                  : c >= 60
-                  ? PaletaDash.alerta
-                  : PaletaDash.mal,
+        const SizedBox(height: 4),
+        FractionallySizedBox(
+          widthFactor: ancho,
+          alignment: Alignment.center,
+          child: Container(
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(Dimen.radioCampo),
+            ),
+            child: Text(
+              numeroEs(etapa.valor),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
             ),
           ),
         ),

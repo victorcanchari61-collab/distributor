@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -421,7 +425,7 @@ Future<void> _mostrarGrafico(WidgetTester tester, Type tipo) async {
   await tester.pump();
 }
 
-void main() {
+void _mainOriginal() {
   // ------------------------------------------------------------- Formatos
 
   group('formatos es-PE', () {
@@ -1185,4 +1189,137 @@ void main() {
     expect(InventarioDashboardPagina.ruta, resolverRuta('/dashboard/inventario').item?.ruta);
     expect(RepartoDashboardPagina.ruta, resolverRuta('/dashboard/reparto').item?.ruta);
   });
+}
+
+
+// ============================ TEMPORAL: capturas =============================
+
+const _fuentes = 'C:/Users/victorraul/dev/flutter/bin/cache/artifacts/material_fonts';
+const _salida = 'C:/Users/VICTOR~1/AppData/Local/Temp/claude/C--laragon-www-distributor/e58d9d2f-6479-422f-94ff-bb4603a25ff2/scratchpad/fotos';
+
+Future<void> _cargarFuentes() async {
+  Future<ByteData> leer(String f) async => ByteData.view(Uint8List.fromList(await File('$_fuentes/$f').readAsBytes()).buffer);
+  final roboto = FontLoader('RobotoReal')
+    ..addFont(leer('roboto-regular.ttf'))
+    ..addFont(leer('roboto-medium.ttf'))
+    ..addFont(leer('roboto-bold.ttf'))
+    ..addFont(leer('roboto-black.ttf'));
+  await roboto.load();
+  final iconos = FontLoader('MaterialIcons')..addFont(leer('materialicons-regular.otf'));
+  await iconos.load();
+}
+
+final _llave = GlobalKey();
+
+Future<void> _foto(WidgetTester tester, String nombre, {Rect? area}) async {
+  await tester.runAsync(() async {
+    final boundary = _llave.currentContext!.findRenderObject() as RenderRepaintBoundary;
+    const escala = 1.5;
+    var image = await boundary.toImage(pixelRatio: escala);
+    if (area != null) {
+      final src = Rect.fromLTWH(area.left * escala, area.top * escala, area.width * escala, area.height * escala);
+      final rec = ui.PictureRecorder();
+      final canvas = Canvas(rec);
+      canvas.drawImageRect(image, src, Rect.fromLTWH(0, 0, src.width, src.height), Paint());
+      image = await rec.endRecording().toImage(src.width.round(), src.height.round());
+    }
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    await File('$_salida/$nombre.png').writeAsBytes(data!.buffer.asUint8List());
+  });
+}
+
+Future<void> _capturas(WidgetTester tester, String nombre, Widget pagina, _ApiFalsa api, {int tramos = 5}) async {
+  tester.view.physicalSize = const Size(375, 860);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        sesionAlmacenProvider.overrideWithValue(const _AlmacenConSesion()),
+        dashboardApiProvider.overrideWithValue(api),
+      ],
+      child: RepaintBoundary(key: _llave, child: MaterialApp(theme: Tema.claro().copyWith(textTheme: Tema.claro().textTheme.apply(fontFamily: 'RobotoReal')), home: pagina)),
+    ),
+  );
+  await tester.pumpAndSettle();
+
+  final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
+  for (var i = 0; i < tramos; i++) {
+    scroll.position.jumpTo((i * 700.0).clamp(0, scroll.position.maxScrollExtent));
+    await tester.pumpAndSettle();
+    await _foto(tester, '${nombre}_$i');
+  }
+}
+
+void main() {
+  setUpAll(_cargarFuentes);
+
+  Future<void> toque(WidgetTester tester, String nombre, Widget pagina, Type tipo, {int cual = 0, Offset delta = Offset.zero}) async {
+    tester.view.physicalSize = const Size(375, 7000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sesionAlmacenProvider.overrideWithValue(const _AlmacenConSesion()), dashboardApiProvider.overrideWithValue(_ApiFalsa())],
+      child: RepaintBoundary(key: _llave, child: MaterialApp(theme: Tema.claro().copyWith(textTheme: Tema.claro().textTheme.apply(fontFamily: 'RobotoReal')), home: pagina)),
+    ));
+    await tester.pumpAndSettle();
+    final f = find.byType(tipo).at(cual);
+    await tester.tapAt(tester.getCenter(f) + delta);
+    await tester.pumpAndSettle();
+    final r = tester.getRect(f);
+    await _foto(tester, nombre, area: Rect.fromLTRB(0, r.top - 120, 375, r.bottom + 90));
+  }
+
+  testWidgets('toque linea ventas', (t) => toque(t, 'toque_linea', const VentasDashboardPagina(), LineChart, delta: const Offset(-20, 0)));
+  testWidgets('toque linea mes', (t) => toque(t, 'toque_mes', const VentasDashboardPagina(), LineChart, cual: 1, delta: const Offset(60, 0)));
+  testWidgets('toque pareto', (t) => toque(t, 'toque_pareto', const VentasDashboardPagina(), BarChart, delta: const Offset(-30, 40)));
+  testWidgets('toque rentab', (t) => toque(t, 'toque_rentab', const RentabilidadDashboardPagina(), BarChart, delta: const Offset(-60, 40)));
+  testWidgets('toque cobros', (t) => toque(t, 'toque_cobros', const CobranzaDashboardPagina(), BarChart, cual: 1, delta: const Offset(20, 40)));
+  testWidgets('toque calor', (t) => toque(t, 'toque_calor', const VentasDashboardPagina(), GraficoCalor, delta: const Offset(-20, -20)));
+  testWidgets('toque dona', (t) => toque(t, 'toque_dona', const VentasDashboardPagina(), GraficoDona, delta: const Offset(0, -60)));
+  testWidgets('toque dispersion', (t) => toque(t, 'toque_disp', const RentabilidadDashboardPagina(), GraficoDispersion, delta: const Offset(-10, -30)));
+  testWidgets('sondeo toques barras', (tester) async {
+    tester.view.physicalSize = const Size(375, 7000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sesionAlmacenProvider.overrideWithValue(const _AlmacenConSesion()), dashboardApiProvider.overrideWithValue(_ApiFalsa())],
+      child: MaterialApp(theme: Tema.claro(), home: const RentabilidadDashboardPagina()),
+    ));
+    await tester.pumpAndSettle();
+    final f = find.byType(BarChart).first;
+    final r = tester.getRect(f);
+    final resultados = <String>[];
+    for (var dx = 10.0; dx < r.width - 10; dx += 6) {
+      for (final dy in [0.15, 0.5, 0.85]) {
+        await tester.tapAt(Offset(r.left + dx, r.top + r.height * dy));
+        await tester.pump();
+        final g = tester.widget<BarChart>(f).data.barGroups.where((g) => g.showingTooltipIndicators.isNotEmpty).map((g) => g.x).toList();
+        resultados.add('dx=$dx dy=$dy -> $g');
+      }
+    }
+    // ignore: avoid_print
+    print(resultados.join('|'));
+  });
+
+  testWidgets('glifos', (tester) async {
+    tester.view.physicalSize = const Size(375, 300);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(RepaintBoundary(key: _llave, child: MaterialApp(theme: Tema.claro().copyWith(textTheme: Tema.claro().textTheme.apply(fontFamily: 'RobotoReal')), home: const Scaffold(body: Padding(padding: EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('circulo ● cuadrado ■ bullet • mid · flecha → ▲ ▼ – — − ‑ ⬤ ◼ ✓', style: TextStyle(fontSize: 16)),
+      Text('◆ ◉ ⏺ ▪ ⚫ ⬛', style: TextStyle(fontSize: 16)),
+    ]))))));
+    await tester.pumpAndSettle();
+    await _foto(tester, 'glifos');
+  });
+
+  testWidgets('capturas ventas', (t) => _capturas(t, 'ventas', const VentasDashboardPagina(), _ApiFalsa(), tramos: 6));
+  testWidgets('capturas rentabilidad', (t) => _capturas(t, 'rentab', const RentabilidadDashboardPagina(), _ApiFalsa(), tramos: 4));
+  testWidgets('capturas cobranza', (t) => _capturas(t, 'cobranza', const CobranzaDashboardPagina(), _ApiFalsa(), tramos: 4));
+  testWidgets('capturas inventario', (t) => _capturas(t, 'inventario', const InventarioDashboardPagina(), _ApiFalsa(), tramos: 5));
+  testWidgets('capturas reparto', (t) => _capturas(t, 'reparto', const RepartoDashboardPagina(), _ApiFalsa(), tramos: 4));
+  testWidgets('capturas vacio ventas', (t) => _capturas(t, 'vacio_ventas', const VentasDashboardPagina(), _ApiFalsa(vacia: true), tramos: 3));
+  testWidgets('capturas vacio reparto', (t) => _capturas(t, 'vacio_reparto', const RepartoDashboardPagina(), _ApiFalsa(vacia: true), tramos: 3));
 }

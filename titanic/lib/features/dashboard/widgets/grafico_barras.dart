@@ -151,7 +151,8 @@ class _GraficoBarrasState extends State<GraficoBarras> {
     final tocado = _tocado != null && _tocado! < n ? _tocado : null;
 
     final grupos = [
-      for (var i = 0; i < n; i++) _grupo(i, esc, grosorBarra, tocado == i),
+      for (var i = 0; i < n; i++)
+        _grupo(i, grosorBarra, atenuada: tocado != null && tocado != i),
     ];
 
     final barras = BarChart(
@@ -170,28 +171,46 @@ class _GraficoBarrasState extends State<GraficoBarras> {
           ),
           bottomTitles: ejeHorizontal(
             etiquetas: widget.etiquetas,
-            cadaX: cadaEtiqueta(n, anchoUtil),
+            cadaX: cadaEtiqueta(
+              widget.etiquetas,
+              banda,
+              MediaQuery.textScalerOf(context),
+            ),
           ),
           topTitles: ejeMargen(_margenSuperior),
           rightTitles: ejeMargen(derecha),
         ),
         barTouchData: BarTouchData(
           handleBuiltInTouches: false,
-          allowTouchBarBackDraw: true,
-          // Toda la banda es del dedo, no solo el ancho de la barra: con 30
-          // barras finas, acertarles era cuestión de suerte.
-          touchExtraThreshold: EdgeInsets.symmetric(
-            horizontal: math.max(0.0, (banda - grosorBarra) / 2),
-            vertical: 4,
-          ),
-          touchCallback: _alTocar,
-          touchTooltipData: globoBarras(_globo),
+          // La barra que se toca no la decide fl_chart sino la posición del
+          // dedo (ver `_alTocar`): así responde toda la columna, también donde
+          // la barra no llega, y no solo las que tienen algo que dibujar.
+          touchCallback: (evento, _) => _alTocar(evento, banda, n),
         ),
       ),
     );
 
-    if (linea == null) return barras;
+    final capas = <Widget>[
+      barras,
+      if (linea != null) ..._capaLinea(linea, esc, n, derecha),
+      if (tocado != null)
+        globoSobreGrafico(
+          fraccionX: (tocado + 0.5) / n,
+          derecha: derecha,
+          globo: _globo(tocado),
+        ),
+    ];
+    return Stack(children: capas);
+  }
 
+  /// La línea del eje derecho, superpuesta a las barras: el gráfico, los
+  /// números de su eje y nada que responda al toque.
+  List<Widget> _capaLinea(
+    LineaSecundaria linea,
+    Escala esc,
+    int n,
+    double derecha,
+  ) {
     // El eje de la línea. Si las barras bajan de cero, el de la línea también,
     // y con el cero en el MISMO renglón: dos ceros a alturas distintas hacen
     // que un margen negativo parezca positivo junto a una ganancia negativa.
@@ -222,84 +241,80 @@ class _GraficoBarrasState extends State<GraficoBarras> {
         ? [minLinea, 0.0, maxLinea]
         : [0.0, maxLinea / 2, maxLinea];
 
-    return Stack(
-      children: [
-        barras,
-        // Sin tacto: el que responde es el de las barras.
-        IgnorePointer(
-          child: LineChart(
-            duration: Duration.zero,
-            LineChartData(
-              minX: -0.5,
-              maxX: n - 0.5,
-              minY: minLinea,
-              maxY: maxLinea,
-              gridData: const FlGridData(show: false),
-              borderData: FlBorderData(show: false),
-              titlesData: FlTitlesData(
-                leftTitles: ejeMargen(ejeIzquierdo),
-                bottomTitles: ejeMargen(ejeInferior),
-                topTitles: ejeMargen(_margenSuperior),
-                rightTitles: ejeMargen(derecha),
-              ),
-              lineTouchData: const LineTouchData(enabled: false),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: [
-                    for (var i = 0; i < n; i++)
-                      i < linea.valores.length && linea.valores[i] != null
-                          ? FlSpot(i.toDouble(), linea.valores[i]!)
-                          : FlSpot.nullSpot,
-                  ],
-                  color: linea.color,
-                  barWidth: 2,
-                  isStrokeCapRound: true,
-                  isStrokeJoinRound: true,
-                  dotData: FlDotData(
-                    // Con 60 días los puntos serían una hilera de bolitas.
-                    show: n <= 31,
-                    getDotPainter: (spot, porcentaje, barra, i) =>
-                        FlDotCirclePainter(
-                          radius: 2.8,
-                          color: Colors.white,
-                          strokeColor: linea.color,
-                          strokeWidth: 1.8,
-                        ),
-                  ),
+    return [
+      // Sin tacto: el que responde es el de las barras.
+      IgnorePointer(
+        child: LineChart(
+          duration: Duration.zero,
+          LineChartData(
+            minX: -0.5,
+            maxX: n - 0.5,
+            minY: minLinea,
+            maxY: maxLinea,
+            gridData: const FlGridData(show: false),
+            borderData: FlBorderData(show: false),
+            titlesData: FlTitlesData(
+              leftTitles: ejeMargen(ejeIzquierdo),
+              bottomTitles: ejeMargen(ejeInferior),
+              topTitles: ejeMargen(_margenSuperior),
+              rightTitles: ejeMargen(derecha),
+            ),
+            lineTouchData: const LineTouchData(enabled: false),
+            lineBarsData: [
+              LineChartBarData(
+                spots: [
+                  for (var i = 0; i < n; i++)
+                    i < linea.valores.length && linea.valores[i] != null
+                        ? FlSpot(i.toDouble(), linea.valores[i]!)
+                        : FlSpot.nullSpot,
+                ],
+                color: linea.color,
+                barWidth: 2,
+                isStrokeCapRound: true,
+                isStrokeJoinRound: true,
+                dotData: FlDotData(
+                  // Con 60 días los puntos serían una hilera de bolitas.
+                  show: n <= 31,
+                  getDotPainter: (spot, porcentaje, barra, i) =>
+                      FlDotCirclePainter(
+                        radius: 2.8,
+                        color: Colors.white,
+                        strokeColor: linea.color,
+                        strokeWidth: 1.8,
+                      ),
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      // Los números del eje derecho, a la altura de su escala.
+      for (final v in marcasEje)
+        Positioned(
+          right: 0,
+          top: yDe(v) - 7,
+          width: derecha - 4,
+          child: IgnorePointer(
+            child: Text(
+              linea.formato(v),
+              maxLines: 1,
+              style: estiloEje.copyWith(color: linea.color),
             ),
           ),
         ),
-        // Los números del eje derecho, a la altura de su escala.
-        for (final v in marcasEje)
-          Positioned(
-            right: 0,
-            top: yDe(v) - 7,
-            width: derecha - 4,
-            child: IgnorePointer(
-              child: Text(
-                linea.formato(v),
-                maxLines: 1,
-                style: estiloEje.copyWith(color: linea.color),
-              ),
-            ),
-          ),
-      ],
-    );
+    ];
   }
 
-  BarChartGroupData _grupo(int i, Escala esc, double grosorBarra, bool activo) {
+  /// Una columna. Cuando hay otra elegida, esta se ve más tenue (como en el
+  /// panel web) para que la elegida resalte sin dibujarle nada encima.
+  BarChartGroupData _grupo(
+    int i,
+    double grosorBarra, {
+    required bool atenuada,
+  }) {
+    Color tono(Color c) => atenuada ? c.withValues(alpha: 0.55) : c;
     final series = widget.series;
     final radio = math.min(3.0, grosorBarra / 3);
-
-    // Todo el alto de la banda responde al toque, también donde la barra no
-    // llega (un día sin movimiento).
-    final fondoTactil = BackgroundBarChartRodData(
-      show: true,
-      toY: esc.max,
-      color: Colors.transparent,
-    );
 
     final BarChartRodData Function(int) rodDe;
     if (widget.apilado) {
@@ -312,10 +327,10 @@ class _GraficoBarrasState extends State<GraficoBarras> {
         final v = _valor(s, i);
         if (v == 0) continue;
         if (v > 0) {
-          tramos.add(BarChartRodStackItem(arriba, arriba + v, s.color));
+          tramos.add(BarChartRodStackItem(arriba, arriba + v, tono(s.color)));
           arriba += v;
         } else {
-          tramos.add(BarChartRodStackItem(abajo + v, abajo, s.color));
+          tramos.add(BarChartRodStackItem(abajo + v, abajo, tono(s.color)));
           abajo += v;
         }
       }
@@ -326,7 +341,6 @@ class _GraficoBarrasState extends State<GraficoBarras> {
         color: Colors.transparent,
         rodStackItems: tramos,
         borderRadius: BorderRadius.vertical(top: Radius.circular(radio)),
-        backDrawRodData: fondoTactil,
       );
     } else {
       rodDe = (k) {
@@ -334,11 +348,10 @@ class _GraficoBarrasState extends State<GraficoBarras> {
         return BarChartRodData(
           toY: v,
           width: math.max(2.0, grosorBarra - 1.5),
-          color: _color(series[k], i),
+          color: tono(_color(series[k], i)),
           borderRadius: v >= 0
               ? BorderRadius.vertical(top: Radius.circular(radio))
               : BorderRadius.vertical(bottom: Radius.circular(radio)),
-          backDrawRodData: fondoTactil,
         );
       };
     }
@@ -349,39 +362,41 @@ class _GraficoBarrasState extends State<GraficoBarras> {
       barRods: [
         for (var k = 0; k < (widget.apilado ? 1 : series.length); k++) rodDe(k),
       ],
-      showingTooltipIndicators: activo ? const [0] : const [],
     );
   }
 
-  void _alTocar(FlTouchEvent evento, BarTouchResponse? respuesta) {
-    final punto = respuesta?.spot;
+  /// Cuál columna se tocó, por la posición del dedo.
+  ///
+  /// Con el acierto sobre la barra misma, un día sin movimiento (barra de alto
+  /// cero) o con la barra colgando del cero no respondía nunca, y con 30 barras
+  /// finas acertarles a las demás era cuestión de suerte. Todas las columnas
+  /// miden lo mismo (`banda`). La posición que da fl_chart ya viene medida
+  /// desde el borde izquierdo del área de las barras, sin los números del eje.
+  void _alTocar(FlTouchEvent evento, double banda, int n) {
+    final posicion = evento.localPosition;
+    if (posicion == null) return;
 
-    if (punto != null) {
-      final i = punto.touchedBarGroupIndex;
+    final i = (posicion.dx / banda).floor();
+    final dentro = posicion.dx >= 0 && i >= 0 && i < n;
+
+    if (dentro) {
       if (i != _tocado) setState(() => _tocado = i);
     } else if (evento is FlTapUpEvent && _tocado != null) {
-      // Se tocó entre dos barras: se cierra el globo.
+      // Se tocó fuera de las columnas: se cierra el globo.
       setState(() => _tocado = null);
     }
   }
 
   /// El globo: el día arriba y una línea por serie.
-  BarTooltipItem? _globo(
-    BarChartGroupData grupo,
-    int indiceGrupo,
-    BarChartRodData rod,
-    int indiceRod,
-  ) {
-    final i = grupo.x;
+  Widget _globo(int i) {
     final rotulos = widget.etiquetasLargas ?? widget.etiquetas;
-    if (i < 0 || i >= rotulos.length) return null;
 
     // Apiladas: solo lo que aportó algo, salvo que no haya nada (entonces la
     // primera, para que el globo no quede vacío). Un método de pago sin cobros
     // ese día es ruido en pantalla de teléfono.
-    var series = widget.series.indexed.toList();
+    var series = widget.series;
     if (widget.apilado) {
-      final conValor = series.where((e) => _valor(e.$2, i) != 0).toList();
+      final conValor = series.where((s) => _valor(s, i) != 0).toList();
       series = conValor.isEmpty ? series.take(1).toList() : conValor;
     }
 
@@ -390,23 +405,13 @@ class _GraficoBarrasState extends State<GraficoBarras> {
         ? linea.valores[i]
         : null;
 
-    return BarTooltipItem(
-      '',
-      estiloGlobo,
-      textAlign: TextAlign.left,
-      children: [
-        TextSpan(
-          text: rotulos[i],
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        for (final (_, s) in series) ...[
-          const TextSpan(text: '\n'),
-          ...renglonGlobo(_color(s, i), s.nombre, widget.formato(_valor(s, i))),
-        ],
-        if (linea != null && valorLinea != null) ...[
-          const TextSpan(text: '\n'),
-          ...renglonGlobo(linea.color, linea.nombre, linea.formato(valorLinea)),
-        ],
+    return GloboDetalle(
+      titulo: i < rotulos.length ? rotulos[i] : '',
+      filas: [
+        for (final s in series)
+          FilaGlobo(_color(s, i), s.nombre, widget.formato(_valor(s, i))),
+        if (linea != null && valorLinea != null)
+          FilaGlobo(linea.color, linea.nombre, linea.formato(valorLinea)),
       ],
     );
   }

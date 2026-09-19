@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -106,64 +108,151 @@ FlGridData rejillaHorizontal(double paso) => FlGridData(
       : const FlLine(color: Colores.linea, strokeWidth: 1, dashArray: [3, 4]),
 );
 
-/// Cuántas etiquetas del eje horizontal se saltan para que no se pisen: caben
-/// unas 56 px por etiqueta.
-int cadaEtiqueta(int n, double anchoUtil) {
-  final caben = (anchoUtil / 56).floor();
-  final cuantas = caben < 2 ? 2 : caben;
-  final paso = (n / cuantas).ceil();
-  return paso < 1 ? 1 : paso;
+/// Cada cuántos puntos se escribe una etiqueta del eje horizontal para que no
+/// se pisen.
+///
+/// Se mide el texto de verdad, no se supone un ancho: con cinco barras de un
+/// teléfono ("0–7 d", "8–15 d"…) caben todas, y con 90 días de fechas ("21 ago")
+/// solo una de cada quince. [separacion] es lo que hay en píxeles entre un
+/// punto (o una barra) y el siguiente.
+int cadaEtiqueta(
+  List<String> etiquetas,
+  double separacion,
+  TextScaler escalaTexto,
+) {
+  var mayor = 0.0;
+  for (final e in etiquetas) {
+    final tp = TextPainter(
+      text: TextSpan(text: e, style: estiloEje),
+      textDirection: TextDirection.ltr,
+      textScaler: escalaTexto,
+    )..layout();
+    mayor = math.max(mayor, tp.width);
+  }
+
+  // Un respiro de 8 px entre una etiqueta y la siguiente.
+  final paso = ((mayor + 8) / math.max(separacion, 1)).ceil();
+  return math.max(1, paso);
 }
 
 // ---------------------------------------------------------------- Globo
 
-/// Estilo base del texto dentro del globo de detalle.
-const estiloGlobo = TextStyle(
-  fontSize: 11.5,
-  height: 1.35,
-  color: Colores.tinta,
-);
+/// Un renglón del globo: el color de la serie, su nombre y su valor.
+class FilaGlobo {
+  const FilaGlobo(this.color, this.nombre, this.valor);
 
-/// Un renglón del globo: "● Nombre  valor", con el punto del color de la serie.
-List<TextSpan> renglonGlobo(Color color, String nombre, String valor) => [
-  TextSpan(
-    text: '● ',
-    style: TextStyle(color: color),
+  final Color color;
+  final String nombre;
+  final String valor;
+}
+
+/// El detalle de lo que se tocó: el día arriba, una fila por serie y, al pie,
+/// lo que dice una marca (día atípico, cierre proyectado).
+///
+/// Es un widget y no el globo que dibuja fl_chart por tres razones: en las
+/// barras con su línea de margen la línea es OTRO gráfico encima y taparía el
+/// globo del de abajo; el punto de color es un círculo de verdad y no un
+/// carácter que algunas fuentes no traen; y así el de la línea y el de las
+/// barras se ven idénticos.
+class GloboDetalle extends StatelessWidget {
+  const GloboDetalle({
+    super.key,
+    required this.titulo,
+    required this.filas,
+    this.notas = const [],
+  });
+
+  final String titulo;
+  final List<FilaGlobo> filas;
+  final List<({String texto, Color color})> notas;
+
+  @override
+  Widget build(BuildContext context) {
+    const estilo = TextStyle(
+      fontSize: 11.5,
+      height: 1.35,
+      color: Colores.tinta,
+    );
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 240),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colores.lineaFuerte),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A0F172A),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: IntrinsicWidth(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(titulo, style: estilo.copyWith(fontWeight: FontWeight.w700)),
+            for (final f in filas)
+              Row(
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: f.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      f.nombre,
+                      style: estilo.copyWith(color: Colores.tintaSuave),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    f.valor,
+                    style: estilo.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            for (final n in notas)
+              Text(
+                n.texto,
+                style: estilo.copyWith(
+                  color: n.color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Pone el globo arriba del gráfico, en el lado contrario al punto tocado: así
+/// nunca tapa lo que se acaba de tocar. [fraccionX] es dónde cayó el toque, de 0
+/// (izquierda) a 1 (derecha) del área de los datos.
+///
+/// Va junto al gráfico dentro de un `Stack`, y sin recibir toques: el dedo sigue
+/// hablando con el gráfico de abajo.
+Widget globoSobreGrafico({
+  required double fraccionX,
+  required Widget globo,
+  double derecha = 12,
+}) => Positioned(
+  top: 4,
+  left: ejeIzquierdo,
+  right: derecha,
+  child: IgnorePointer(
+    child: Align(
+      alignment: fraccionX < 0.5 ? Alignment.topRight : Alignment.topLeft,
+      child: globo,
+    ),
   ),
-  TextSpan(text: '$nombre  '),
-  TextSpan(
-    text: valor,
-    style: const TextStyle(fontWeight: FontWeight.w700),
-  ),
-];
-
-/// Los bordes del globo: blanco con filo, para que se lea sobre la rejilla.
-const _radioGlobo = 8.0;
-
-LineTouchTooltipData globoLinea(
-  List<LineTooltipItem?> Function(List<LineBarSpot>) items,
-) => LineTouchTooltipData(
-  getTooltipColor: (_) => Colors.white,
-  tooltipBorder: const BorderSide(color: Colores.lineaFuerte),
-  tooltipBorderRadius: BorderRadius.circular(_radioGlobo),
-  tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-  tooltipMargin: 10,
-  maxContentWidth: 230,
-  fitInsideHorizontally: true,
-  fitInsideVertically: true,
-  getTooltipItems: items,
-);
-
-BarTouchTooltipData globoBarras(
-  BarTooltipItem? Function(BarChartGroupData, int, BarChartRodData, int) item,
-) => BarTouchTooltipData(
-  getTooltipColor: (_) => Colors.white,
-  tooltipBorder: const BorderSide(color: Colores.lineaFuerte),
-  tooltipBorderRadius: BorderRadius.circular(_radioGlobo),
-  tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-  tooltipMargin: 8,
-  maxContentWidth: 230,
-  fitInsideHorizontally: true,
-  fitInsideVertically: true,
-  getTooltipItem: item,
 );

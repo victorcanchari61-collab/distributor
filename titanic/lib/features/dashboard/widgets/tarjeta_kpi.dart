@@ -57,15 +57,20 @@ class TarjetaKpi extends StatelessWidget {
         children: [
           Row(
             children: [
+              // Igual que el valor: "Clientes que compraron" no cabe en media
+              // tarjeta y "Clientes que compr…" no se entiende. Se achica.
               Expanded(
-                child: Text(
-                  titulo,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colores.tintaSuave,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    titulo,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colores.tintaSuave,
+                    ),
                   ),
                 ),
               ),
