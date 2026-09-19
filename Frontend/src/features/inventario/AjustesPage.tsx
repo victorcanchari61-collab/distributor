@@ -38,6 +38,7 @@ import type {
   LineaDocumentoResponse,
   MotivoResponse,
   ResumenDocumentos,
+  TipoMovimiento,
 } from './inventarioApi'
 import { MotivosTabla } from './MotivosTabla'
 import { usePermisos } from '../../lib/permisos'
@@ -79,8 +80,15 @@ export function AjustesPage() {
   const [detalleAbierto, setDetalleAbierto] = useState<DocumentoInventarioResponse | null>(null)
   const [guardando, setGuardando] = useState(false)
 
-  const [cabecera, setCabecera] = useState({
+  const [cabecera, setCabecera] = useState<{
+    almacenId: number
+    tipo: TipoMovimiento
+    motivoId: number
+    observacion: string
+    flete: string
+  }>({
     almacenId: 0,
+    tipo: 'ENTRADA',
     motivoId: 0,
     observacion: '',
     flete: '',
@@ -91,6 +99,8 @@ export function AjustesPage() {
   const { confirmar, dialogo } = useConfirmacion()
 
   const motivosManuales = motivos.filter((m) => !m.delSistema && m.activo)
+  // Primero se elige si el ajuste suma o resta; el motivo sale de ese tipo.
+  const motivosDelTipo = motivosManuales.filter((m) => m.tipo === cabecera.tipo)
   const motivo = motivos.find((m) => m.id === cabecera.motivoId)
 
   /*
@@ -157,7 +167,8 @@ export function AjustesPage() {
   const abrirNuevo = () => {
     setCabecera({
       almacenId: almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0,
-      motivoId: motivosManuales[0]?.id ?? 0,
+      tipo: 'ENTRADA',
+      motivoId: motivosManuales.find((m) => m.tipo === 'ENTRADA')?.id ?? 0,
       observacion: '',
       flete: '',
     })
@@ -489,14 +500,31 @@ export function AjustesPage() {
 
               <Desplegable
                 className="mt-4"
+                label="Tipo"
+                value={cabecera.tipo}
+                onChange={(v) => {
+                  const tipo = v as TipoMovimiento
+                  // El motivo elegido puede no existir en el otro tipo: se
+                  // parte del primero de la nueva lista.
+                  setCabecera({
+                    ...cabecera,
+                    tipo,
+                    motivoId: motivosManuales.find((m) => m.tipo === tipo)?.id ?? 0,
+                  })
+                }}
+                options={[
+                  { value: 'ENTRADA', label: 'Ingreso', nota: 'suma stock' },
+                  { value: 'SALIDA', label: 'Salida', nota: 'resta stock' },
+                ]}
+              />
+
+              <Desplegable
+                className="mt-4"
                 label="Motivo"
                 value={cabecera.motivoId}
                 onChange={(v) => setCabecera({ ...cabecera, motivoId: Number(v) })}
-                options={motivosManuales.map((m) => ({
-                  value: m.id,
-                  label: m.nombre,
-                  nota: m.tipo === 'ENTRADA' ? 'suma stock' : 'resta stock',
-                }))}
+                placeholder="Elegir motivo"
+                options={motivosDelTipo.map((m) => ({ value: m.id, label: m.nombre }))}
               />
 
               <Input
