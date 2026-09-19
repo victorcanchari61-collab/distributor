@@ -921,11 +921,11 @@ export function ProductosPage() {
                 {/* Cambiarla no reescribe el pasado: lo que ya se movió se
                     contó en la unidad anterior y no hay forma de convertirlo. */}
                 {editando && editando.tieneMovimientos && form.unidadBaseId !== editando.unidadBaseId && (
-                  <p className="rounded-field border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800">
+                  <Alert tone="warning">
                     Lo ya registrado (stock, kardex y costos) se queda como está: se contó en{' '}
                     {editando.unidadBase} y no se convierte. Los factores de las presentaciones
                     pasan a leerse en la unidad nueva.
-                  </p>
+                  </Alert>
                 )}
 
                 <PresentacionesEditor

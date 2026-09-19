@@ -438,18 +438,10 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
             (widget.producto?.tieneMovimientos ?? false) &&
             _unidadBaseId != widget.producto?.unidadBaseId) ...[
           const SizedBox(height: Dimen.espacio2),
-          Container(
-            padding: const EdgeInsets.all(Dimen.espacio3),
-            decoration: BoxDecoration(
-              color: Colores.advertencia.withValues(alpha: 0.08),
-              border: Border.all(color: Colores.advertencia.withValues(alpha: 0.4)),
-              borderRadius: BorderRadius.circular(Dimen.radioCampo),
-            ),
-            child: const Text(
-              'Lo ya registrado (stock, kardex y costos) se queda como está: '
-              'se contó en la unidad anterior y no se convierte.',
-              style: TextStyle(fontSize: 11.5, color: Colores.advertencia),
-            ),
+          const AppAlerta(
+            'Lo ya registrado (stock, kardex y costos) se queda como está: '
+            'se contó en la unidad anterior y no se convierte.',
+            tono: AlertaTono.aviso,
           ),
         ],
         const SizedBox(height: Dimen.espacio4),
