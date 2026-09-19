@@ -22,6 +22,16 @@ class ClienteApi {
    */
   static void Function(ApiExcepcion)? alNegarPermiso;
 
+  /*
+   * A quien avisar cuando el servidor dice que la sesion ya no vale (401).
+   *
+   * El token guardado en el telefono vence: al abrir la app al dia siguiente
+   * se restauraba la sesion "como si nada" y TODA llamada fallaba, con lo que
+   * las pantallas salian sin permiso hasta cerrar sesion a mano. Ahora el 401
+   * de una llamada con token saca a la persona a la pantalla de entrada.
+   */
+  static void Function()? alSesionVencida;
+
   ClienteApi({http.Client? cliente, SesionAlmacen? sesion})
     : _http = cliente ?? http.Client(),
       _sesion = sesion ?? SesionAlmacen();
@@ -94,6 +104,9 @@ class ClienteApi {
         accion: mapa['accion'] as String?,
       );
       if (fallo.permisoNegado) alNegarPermiso?.call(fallo);
+      if (respuesta.statusCode == 401 && conAuth && cabeceras.containsKey('Authorization')) {
+        alSesionVencida?.call();
+      }
       throw fallo;
     }
 
@@ -132,6 +145,7 @@ class ClienteApi {
         accion: mapa['accion'] as String?,
       );
       if (fallo.permisoNegado) alNegarPermiso?.call(fallo);
+      if (respuesta.statusCode == 401 && token != null) alSesionVencida?.call();
       throw fallo;
     }
 

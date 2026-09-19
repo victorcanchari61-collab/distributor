@@ -63,6 +63,17 @@ class AuthEstado {
 class AuthControlador extends Notifier<AuthEstado> {
   @override
   AuthEstado build() {
+    // Un 401 de cualquier llamada con token = la sesion vencio: a la entrada.
+    ClienteApi.alSesionVencida = () {
+      if (state.estado != EstadoSesion.autenticado) return;
+      salir().then(
+        (_) => state = state.copiar(
+          error: 'Tu sesión venció. Entra de nuevo para continuar.',
+        ),
+      );
+    };
+    ref.onDispose(() => ClienteApi.alSesionVencida = null);
+
     // Se lanza sin await: la UI muestra la pantalla de carga mientras tanto.
     Future.microtask(restaurar);
     return const AuthEstado();
