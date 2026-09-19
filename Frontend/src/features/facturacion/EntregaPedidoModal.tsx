@@ -67,6 +67,8 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
   const [almacenId, setAlmacenId] = useState(0)
   const [entregas, setEntregas] = useState<Record<number, Entrega>>({})
   const [motivos, setMotivos] = useState<MotivoNovedadOpcion[]>([])
+  // Sin esto el aviso de "no hay motivos" parpadea mientras la lista carga.
+  const [motivosListos, setMotivosListos] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
@@ -80,6 +82,7 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
     setEntregas(Object.fromEntries(lineas.map((l) => [l.id, entregaCompleta(l)])))
     setError('')
 
+    setMotivosListos(false)
     let cancelado = false
     void motivoNovedadApi
       .opciones()
@@ -89,13 +92,18 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
       .catch(() => {
         if (!cancelado) setMotivos([])
       })
+      .finally(() => {
+        if (!cancelado) setMotivosListos(true)
+      })
     return () => {
       cancelado = true
     }
   }, [pedido, lineas])
 
-  const cambiar = (id: number, parcial: Partial<Entrega>) =>
+  const cambiar = (id: number, parcial: Partial<Entrega>) => {
+    setError('')
     setEntregas((prev) => ({ ...prev, [id]: { ...prev[id], ...parcial } }))
+  }
 
   // Lo que sale de cada línea, ya calculado: lo usan la pantalla y el envío.
   const calculo = lineas.map((l) => {
@@ -189,7 +197,10 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
           <Desplegable
             label="Almacén"
             value={almacenId}
-            onChange={(v) => setAlmacenId(Number(v))}
+            onChange={(v) => {
+              setAlmacenId(Number(v))
+              setError('')
+            }}
             placeholder="Elige de dónde sale la mercadería"
             options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
           />
@@ -287,7 +298,7 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
             })}
           </div>
 
-          {hayRecortes && motivos.length === 0 && (
+          {hayRecortes && motivosListos && motivos.length === 0 && (
             <div className="mt-2">
               <Alert tone="warning">
                 Todavía no hay motivos de novedad. Pídele a quien administra que los cree en TMS → Motivos de novedad.
@@ -330,6 +341,8 @@ interface NoEntregadoModalProps {
  */
 export function NoEntregadoModal({ pedido, onClose, onHecho }: NoEntregadoModalProps) {
   const [motivos, setMotivos] = useState<MotivoNovedadOpcion[]>([])
+  // Sin esto el aviso de "no hay motivos" parpadea mientras la lista carga.
+  const [motivosListos, setMotivosListos] = useState(false)
   const [motivoId, setMotivoId] = useState(0)
   const [observacion, setObservacion] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -341,6 +354,7 @@ export function NoEntregadoModal({ pedido, onClose, onHecho }: NoEntregadoModalP
     setObservacion('')
     setError('')
 
+    setMotivosListos(false)
     let cancelado = false
     void motivoNovedadApi
       .opciones()
@@ -349,6 +363,9 @@ export function NoEntregadoModal({ pedido, onClose, onHecho }: NoEntregadoModalP
       })
       .catch(() => {
         if (!cancelado) setMotivos([])
+      })
+      .finally(() => {
+        if (!cancelado) setMotivosListos(true)
       })
     return () => {
       cancelado = true
@@ -399,12 +416,15 @@ export function NoEntregadoModal({ pedido, onClose, onHecho }: NoEntregadoModalP
         <Desplegable
           label="Motivo"
           value={motivoId}
-          onChange={(v) => setMotivoId(Number(v))}
+          onChange={(v) => {
+            setMotivoId(Number(v))
+            setError('')
+          }}
           placeholder="¿Por qué no se entregó?"
           options={motivos.map((m) => ({ value: m.id, label: m.nombre, nota: m.descripcion ?? undefined }))}
         />
 
-        {motivos.length === 0 && (
+        {motivosListos && motivos.length === 0 && (
           <Alert tone="warning">
             Todavía no hay motivos de novedad. Pídele a quien administra que los cree en TMS → Motivos de novedad.
           </Alert>

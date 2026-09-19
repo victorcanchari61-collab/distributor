@@ -357,7 +357,11 @@ export function DespachosPage() {
           <Badge tone={row.entregados === row.pedidos ? 'success' : 'warning'}>
             {row.entregados} de {row.pedidos}
           </Badge>
-          {row.noEntregados > 0 && <Badge tone="danger">{row.noEntregados} no entregados</Badge>}
+          {row.noEntregados > 0 && (
+            <Badge tone="danger">
+              {row.noEntregados} no {row.noEntregados === 1 ? 'entregado' : 'entregados'}
+            </Badge>
+          )}
         </span>
       ),
     },

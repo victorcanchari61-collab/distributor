@@ -3,6 +3,7 @@ using Backend.Dtos.Requests;
 using Backend.Dtos.Responses;
 using Backend.Exceptions;
 using Backend.Models;
+using Backend.Repository;
 using Backend.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -93,6 +94,208 @@ public class NovedadService : INovedadService
         await _notificador.AvisarAsync("novedades", "motivoActualizado", new { motivo.Id });
 
         return (await GetMotivosAsync()).First(m => m.Id == id);
+    }
+
+    // ------------------------------------------------------------------
+    // Listado y revisión
+    // ------------------------------------------------------------------
+
+    public async Task<PaginaResponse<NovedadResponse>> ListarAsync(ConsultaTablaRequest consulta)
+    {
+        var query = _context.NovedadesEntrega.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = consulta.Buscar.Trim();
+            query = query.Where(n =>
+                EF.Functions.Like(n.Producto!.Nombre, $"%{texto}%")
+                || EF.Functions.Like(n.Producto!.Codigo, $"%{texto}%")
+                || EF.Functions.Like(n.Pedido!.Numero, $"%{texto}%")
+                || EF.Functions.Like(n.Pedido!.Cliente!.Nombre, $"%{texto}%")
+                || EF.Functions.Like(n.Motivo!.Nombre, $"%{texto}%")
+                || (n.Despacho != null && EF.Functions.Like(n.Despacho.Numero, $"%{texto}%")));
+        }
+
+        if (consulta.ValorDe("pedido") is string pedido)
+            query = query.Where(n => EF.Functions.Like(n.Pedido!.Numero, $"%{pedido}%"));
+
+        if (consulta.ValorDe("cliente") is string cliente)
+            query = query.Where(n => EF.Functions.Like(n.Pedido!.Cliente!.Nombre, $"%{cliente}%"));
+
+        if (consulta.ValorDe("despacho") is string despacho)
+            query = query.Where(n => n.Despacho != null && EF.Functions.Like(n.Despacho.Numero, $"%{despacho}%"));
+
+        if (consulta.ValorDe("producto") is string producto)
+            query = query.Where(n => EF.Functions.Like(n.Producto!.Nombre, $"%{producto}%")
+                                     || EF.Functions.Like(n.Producto!.Codigo, $"%{producto}%"));
+
+        if (consulta.ValorDe("motivo") is string motivo)
+            query = query.Where(n => n.Motivo!.Nombre == motivo);
+
+        if (consulta.ValorDe("tipo") is string tipo)
+            query = query.Where(n => n.Tipo == tipo);
+
+        // Las anuladas no cuentan: solo salen si se piden expresamente.
+        if (consulta.ValorDe("estado") is string estado)
+            query = query.Where(n => n.Estado == estado);
+        else
+            query = query.Where(n => n.Estado != EstadoNovedad.Anulada);
+
+        var (desde, hasta) = consulta.RangoFechas("fecha");
+        if (desde is not null) query = query.Where(n => n.Fecha >= desde);
+        if (hasta is not null) query = query.Where(n => n.Fecha <= hasta);
+
+        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
+
+        query = consulta.Orden switch
+        {
+            "pedido" => desc ? query.OrderByDescending(n => n.Pedido!.Numero).ThenByDescending(n => n.Id)
+                             : query.OrderBy(n => n.Pedido!.Numero).ThenBy(n => n.Id),
+            "cliente" => desc ? query.OrderByDescending(n => n.Pedido!.Cliente!.Nombre).ThenByDescending(n => n.Id)
+                              : query.OrderBy(n => n.Pedido!.Cliente!.Nombre).ThenBy(n => n.Id),
+            "producto" => desc ? query.OrderByDescending(n => n.Producto!.Nombre).ThenByDescending(n => n.Id)
+                               : query.OrderBy(n => n.Producto!.Nombre).ThenBy(n => n.Id),
+            "motivo" => desc ? query.OrderByDescending(n => n.Motivo!.Nombre).ThenByDescending(n => n.Id)
+                             : query.OrderBy(n => n.Motivo!.Nombre).ThenBy(n => n.Id),
+            "estado" => desc ? query.OrderByDescending(n => n.Estado).ThenByDescending(n => n.Id)
+                             : query.OrderBy(n => n.Estado).ThenBy(n => n.Id),
+            "importe" => desc ? query.OrderByDescending(n => n.Importe).ThenByDescending(n => n.Id)
+                              : query.OrderBy(n => n.Importe).ThenBy(n => n.Id),
+            _ => desc ? query.OrderByDescending(n => n.Fecha).ThenByDescending(n => n.Id)
+                      : query.OrderBy(n => n.Fecha).ThenBy(n => n.Id),
+        };
+
+        var (items, total) = await Proyectar(query).PaginarAsync(consulta);
+
+        return new PaginaResponse<NovedadResponse>
+        {
+            Items = items,
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    private static IQueryable<NovedadResponse> Proyectar(IQueryable<NovedadEntrega> query) =>
+        query.Select(n => new NovedadResponse
+        {
+            Id = n.Id,
+            Tipo = n.Tipo,
+            Fecha = n.Fecha,
+            Estado = n.Estado,
+            PedidoId = n.PedidoId,
+            Pedido = n.Pedido!.Numero,
+            Cliente = n.Pedido.Cliente!.Nombre,
+            DespachoId = n.DespachoId,
+            Despacho = n.Despacho != null ? n.Despacho.Numero : null,
+            NotaVentaId = n.NotaVentaId,
+            NotaVenta = n.NotaVenta != null ? n.NotaVenta.Numero : null,
+            ProductoId = n.ProductoId,
+            Codigo = n.Producto!.Codigo,
+            Producto = n.Producto.Nombre,
+            Presentacion = n.Presentacion != null ? n.Presentacion.Nombre : null,
+            Factor = n.Presentacion != null ? n.Presentacion.Factor : 1,
+            UnidadBase = n.Producto.UnidadBase != null ? n.Producto.UnidadBase.Codigo : string.Empty,
+            CantidadPedida = n.CantidadPedida,
+            CantidadEntregada = n.CantidadEntregada,
+            CantidadNoEntregada = n.CantidadPedida - n.CantidadEntregada,
+            Importe = n.Importe,
+            MotivoId = n.MotivoId,
+            Motivo = n.Motivo!.Nombre,
+            RegresaAlAlmacen = n.Motivo.RegresaAlAlmacen,
+            Observacion = n.Observacion,
+            Usuario = n.Usuario != null ? n.Usuario.Nombre : null,
+            CantidadRegresada = n.CantidadRegresada,
+            VerificadoPor = n.VerificadoPor != null ? n.VerificadoPor.Nombre : null,
+            VerificadoEn = n.VerificadoEn,
+            ObservacionVerificacion = n.ObservacionVerificacion,
+        });
+
+    private async Task<NovedadResponse> UnaAsync(int id) =>
+        await Proyectar(_context.NovedadesEntrega.AsNoTracking().Where(n => n.Id == id)).FirstOrDefaultAsync()
+        ?? throw new NotFoundException("Novedad no encontrada");
+
+    public async Task<ResumenNovedadesResponse> ResumenAsync()
+    {
+        var vigentes = _context.NovedadesEntrega.Where(n => n.Estado != EstadoNovedad.Anulada);
+
+        return new ResumenNovedadesResponse
+        {
+            Total = await vigentes.CountAsync(),
+            PorRevisar = await vigentes.CountAsync(n => n.Estado == EstadoNovedad.Pendiente),
+            Recibidas = await vigentes.CountAsync(n => n.Estado == EstadoNovedad.Recibida),
+            Faltantes = await vigentes.CountAsync(n => n.Estado == EstadoNovedad.Faltante),
+            Importe = await vigentes.SumAsync(n => (decimal?)n.Importe) ?? 0,
+        };
+    }
+
+    public async Task<NovedadResponse> VerificarAsync(int id, VerificarNovedadRequest request, int? usuarioId)
+    {
+        var novedad = await _context.NovedadesEntrega.FirstOrDefaultAsync(n => n.Id == id)
+            ?? throw new NotFoundException("Novedad no encontrada");
+
+        if (novedad.Estado != EstadoNovedad.Pendiente)
+        {
+            throw new BadRequestException(novedad.Estado switch
+            {
+                EstadoNovedad.Anulada => "Esta novedad está anulada: ya no se revisa.",
+                EstadoNovedad.SinRetorno => "Esa mercadería nunca salió del almacén: no hay nada que contar.",
+                _ => "Esta novedad ya se revisó. Ábrela de nuevo si quieres corregirla.",
+            });
+        }
+
+        var noEntregada = novedad.CantidadNoEntregada;
+
+        switch (request.Estado)
+        {
+            case EstadoNovedad.Recibida:
+                // Volvió todo lo que no se entregó.
+                novedad.CantidadRegresada = noEntregada;
+                break;
+
+            case EstadoNovedad.Faltante:
+                var regresada = Math.Round(request.CantidadRegresada ?? 0, 4);
+                if (regresada < 0 || regresada >= noEntregada)
+                {
+                    throw new BadRequestException(
+                        "Lo que volvió tiene que ser menos de lo que no se entregó. Si volvió todo, márcala como recibida.");
+                }
+                novedad.CantidadRegresada = regresada;
+                break;
+
+            default:
+                throw new BadRequestException("Elige si la mercadería volvió (RECIBIDA) o faltó (FALTANTE).");
+        }
+
+        novedad.Estado = request.Estado;
+        novedad.VerificadoPorId = usuarioId;
+        novedad.VerificadoEn = DateTime.UtcNow;
+        novedad.ObservacionVerificacion = Limpiar(request.Observacion);
+
+        await _context.SaveChangesAsync();
+        await _notificador.AvisarAsync("novedades", "verificada", new { novedad.Id });
+
+        return await UnaAsync(id);
+    }
+
+    public async Task<NovedadResponse> ReabrirAsync(int id)
+    {
+        var novedad = await _context.NovedadesEntrega.FirstOrDefaultAsync(n => n.Id == id)
+            ?? throw new NotFoundException("Novedad no encontrada");
+
+        if (novedad.Estado is not (EstadoNovedad.Recibida or EstadoNovedad.Faltante))
+            throw new BadRequestException("Solo se puede reabrir una novedad ya revisada.");
+
+        novedad.Estado = EstadoNovedad.Pendiente;
+        novedad.CantidadRegresada = null;
+        novedad.VerificadoPorId = null;
+        novedad.VerificadoEn = null;
+        novedad.ObservacionVerificacion = null;
+
+        await _context.SaveChangesAsync();
+        await _notificador.AvisarAsync("novedades", "reabierta", new { novedad.Id });
+
+        return await UnaAsync(id);
     }
 
     // ------------------------------------------------------------------

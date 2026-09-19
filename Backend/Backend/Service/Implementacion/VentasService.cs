@@ -265,7 +265,7 @@ public class VentasService : IVentasService
             : request.AlmacenId
               ?? throw new BadRequestException("Elige el almacén del que sale la mercadería.");
 
-        var (lineasVenta, cambios) = ResolverEntrega(pedido, request);
+        var (lineasVenta, cambios) = await ResolverEntregaAsync(pedido, request);
         var motivos = await _novedades.ExigirMotivosAsync(cambios.Select(c => c.MotivoId));
 
         var notaVenta = await CrearNotaVentaInternaAsync(
@@ -302,7 +302,7 @@ public class VentasService : IVentasService
     /// la vez: un pedido que no se entregó nada no es una venta, es un "no
     /// entregado".
     /// </summary>
-    private static (List<PedidoDetalle> Lineas, List<CambioEntrega> Cambios) ResolverEntrega(
+    private async Task<(List<PedidoDetalle> Lineas, List<CambioEntrega> Cambios)> ResolverEntregaAsync(
         Pedido pedido, ConfirmarPedidoRequest request)
     {
         // Una línea anulada al editar el pedido no se despacha: quedó fuera
@@ -341,8 +341,7 @@ public class VentasService : IVentasService
                         throw new BadRequestException($"Elige el motivo por el que {nombre} se entrega en menos.");
 
                     // Cuánto vale lo que quedó sin entregar, al precio del pedido.
-                    var factor = d.CantidadPresentacion > 0 ? d.Cantidad / d.CantidadPresentacion : 1m;
-                    var faltante = (d.Cantidad - entregada) / factor;
+                    var faltante = (d.Cantidad - entregada) / FactorDe(d);
                     var importe = Math.Round(faltante * d.PrecioPresentacion, 2);
 
                     cambios.Add(new CambioEntrega(d, entregada, importe, motivoId, indicada.Observacion));
@@ -351,21 +350,15 @@ public class VentasService : IVentasService
 
             if (entregada <= 0) continue;
 
-            var factorLinea = d.CantidadPresentacion > 0 ? d.Cantidad / d.CantidadPresentacion : 1m;
-
-            lineas.Add(new PedidoDetalle
+            // Completa, tal cual se pidió: un redondeo aquí movería el total
+            // de un pedido que se entrega entero.
+            if (entregada == d.Cantidad)
             {
-                ProductoId = d.ProductoId,
-                PresentacionId = d.PresentacionId,
-                // Entera, tal cual se pidió: un redondeo aquí movería el total
-                // de un pedido que se entrega completo.
-                CantidadPresentacion = entregada == d.Cantidad
-                    ? d.CantidadPresentacion
-                    : Math.Round(entregada / factorLinea, 4),
-                Cantidad = entregada,
-                PrecioPresentacion = d.PrecioPresentacion,
-                PrecioUnitario = d.PrecioUnitario
-            });
+                lineas.Add(CopiarLinea(d, d.PresentacionId, d.CantidadPresentacion, d.Cantidad, d.PrecioPresentacion));
+                continue;
+            }
+
+            lineas.AddRange(await LineasEntregadasAsync(d, entregada));
         }
 
         if (lineas.Count == 0)
@@ -375,6 +368,68 @@ public class VentasService : IVentasService
         }
 
         return (lineas, cambios);
+    }
+
+    /// <summary>Cuántas unidades base trae una presentación de esa línea.</summary>
+    private static decimal FactorDe(PedidoDetalle d) =>
+        d.Presentacion is { Factor: > 0 }
+            ? d.Presentacion.Factor
+            : d.CantidadPresentacion > 0 ? d.Cantidad / d.CantidadPresentacion : 1m;
+
+    private static PedidoDetalle CopiarLinea(
+        PedidoDetalle d, int? presentacionId, decimal cantidadPresentacion, decimal cantidad, decimal precioPresentacion) =>
+        new()
+        {
+            ProductoId = d.ProductoId,
+            PresentacionId = presentacionId,
+            CantidadPresentacion = cantidadPresentacion,
+            Cantidad = cantidad,
+            PrecioPresentacion = precioPresentacion,
+            PrecioUnitario = d.PrecioUnitario
+        };
+
+    /// <summary>
+    /// La línea de una entrega parcial, partida en cajas enteras y unidades
+    /// sueltas: 113 unidades de una caja de 12 son 9 cajas y 5 sueltas.
+    ///
+    /// Como una sola línea saldría "9.4167 cajas", y multiplicado por el precio
+    /// de la caja ya no da el total justo (S/ 11,300.04 en vez de 11,300.00). Así
+    /// cada línea es un número exacto de su presentación: las cajas al precio
+    /// de la caja, las sueltas al precio por unidad.
+    /// </summary>
+    private async Task<List<PedidoDetalle>> LineasEntregadasAsync(PedidoDetalle d, decimal entregada)
+    {
+        var factor = FactorDe(d);
+
+        if (d.PresentacionId is not null && factor > 1)
+        {
+            var cajas = Math.Floor(entregada / factor + 0.000001m);
+            var sueltas = Math.Round(entregada - cajas * factor, 4);
+
+            // La presentación de una unidad, para asentar las sueltas. Si el
+            // producto no tiene, queda una sola línea fraccionada.
+            var producto = await _productos.GetConDetalleAsync(d.ProductoId);
+            var unidad = producto?.Presentaciones.FirstOrDefault(p => p.Factor == 1 && p.Activo);
+
+            if (unidad is not null)
+            {
+                var partes = new List<PedidoDetalle>();
+
+                if (cajas > 0)
+                {
+                    partes.Add(CopiarLinea(d, d.PresentacionId, cajas, cajas * factor, d.PrecioPresentacion));
+                }
+
+                if (sueltas > 0)
+                {
+                    partes.Add(CopiarLinea(d, unidad.Id, sueltas, sueltas, d.PrecioUnitario));
+                }
+
+                return partes;
+            }
+        }
+
+        return [CopiarLinea(d, d.PresentacionId, Math.Round(entregada / factor, 4), entregada, d.PrecioPresentacion)];
     }
 
     public async Task<PedidoResponse> MarcarNoEntregadoAsync(int id, NoEntregadoRequest request, int? usuarioId)

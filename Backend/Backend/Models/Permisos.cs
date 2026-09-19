@@ -138,6 +138,9 @@ public static class CatalogoPermisos
             // Por que no se entrego algo. Los crea el dueño; se desactivan,
             // no se borran, porque cada novedad registrada apunta a uno.
             ["tms.motivos"] = CatalogoSinBorrado,
+            // Lo que no se entregó, y la revisión de lo que vuelve en el
+            // camión. "Confirmar" es contar y dar por recibida o faltante.
+            ["tms.novedades"] = [Accion.Ver, Accion.Confirmar],
 
             // --- DMS ---
             // Una lista de trabajo, no un documento: no se crea ni se anula

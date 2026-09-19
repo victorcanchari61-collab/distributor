@@ -31,3 +31,6 @@ export type {
 export { MotivosNovedadPage } from './MotivosNovedadPage'
 export { motivoNovedadApi } from './motivoNovedadApi'
 export type { MotivoNovedadOpcion, MotivoNovedadRequest, MotivoNovedadResponse } from './motivoNovedadApi'
+export { NovedadesPage } from './NovedadesPage'
+export { novedadApi, textoCantidad } from './novedadApi'
+export type { EstadoNovedad, NovedadResponse, ResumenNovedades, TipoNovedad } from './novedadApi'

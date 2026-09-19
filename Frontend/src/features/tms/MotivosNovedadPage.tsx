@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { PackageX, Pencil, Plus, ShieldCheck, ShieldOff } from 'lucide-react'
+import { Pencil, Plus, ShieldCheck, ShieldOff, Tags } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -163,7 +163,7 @@ export function MotivosNovedadPage() {
 
   return (
     <ListPage
-      icon={<PackageX size={20} />}
+      icon={<Tags size={20} />}
       title="Motivos de novedad"
       description="Por qué no se entregó algo. Los eliges al convertir un pedido en venta cuando el cliente recibe menos de lo pedido."
       actions={
@@ -176,7 +176,7 @@ export function MotivosNovedadPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Motivos" value={String(motivos.length)} icon={<PackageX size={18} />} />
+          <StatCard label="Motivos" value={String(motivos.length)} icon={<Tags size={18} />} />
           <StatCard
             label="Activos"
             value={String(motivos.filter((m) => m.activo).length)}
@@ -187,7 +187,7 @@ export function MotivosNovedadPage() {
       }
       columns={columns}
       rows={motivos}
-      cardIcon={PackageX}
+      cardIcon={Tags}
       searchPlaceholder="Buscar motivo..."
       empty={cargando ? 'Cargando motivos...' : 'Todavía no hay motivos: crea el primero.'}
       rowActions={(row) => (
