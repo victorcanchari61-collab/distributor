@@ -3,6 +3,9 @@ namespace Backend.Dtos.Responses;
 public class ProductoResponse
 {
     public int Id { get; set; }
+
+    /// <summary>Si ya tiene stock, kardex o costos: cambiar su unidad base no los convierte.</summary>
+    public bool TieneMovimientos { get; set; }
     public string Codigo { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;
     public string? Descripcion { get; set; }

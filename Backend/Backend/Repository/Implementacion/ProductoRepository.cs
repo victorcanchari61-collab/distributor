@@ -25,6 +25,14 @@ public class ProductoRepository : IProductoRepository
         .Include(p => p.Presentaciones)
         .ThenInclude(pr => pr.Unidad);
 
+    public async Task<HashSet<int>> GetIdsConMovimientosAsync(IEnumerable<int> ids)
+    {
+        var lista = ids.ToList();
+        return (await _context.Movimientos
+            .Where(m => lista.Contains(m.ProductoId))
+            .Select(m => m.ProductoId).Distinct().ToListAsync()).ToHashSet();
+    }
+
     public async Task<IEnumerable<Producto>> GetAllConDetalleAsync()
     {
         return await ConDetalle()
@@ -100,7 +108,13 @@ public class ProductoRepository : IProductoRepository
     public async Task<(List<Producto> Items, int Total)> ListarConStockAsync(
         ConsultaTablaRequest consulta, int? almacenId)
     {
-        var query = ConDetalle().Where(p => p.ControlaStock).AsNoTracking().AsQueryable();
+        // Solo lo que ya entró a ese almacén: el catálogo recién importado no
+        // cuenta como stock hasta que se recibe mercadería.
+        var query = ConDetalle()
+            .Where(p => p.ControlaStock
+                        && _context.CapasCosto.Any(c => c.ProductoId == p.Id
+                                                        && (almacenId == null || c.AlmacenId == almacenId)))
+            .AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {

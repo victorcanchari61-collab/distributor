@@ -53,17 +53,29 @@ public class ProductoService : IProductoService
 
     public async Task<IEnumerable<ProductoResponse>> GetAllAsync()
     {
-        var productos = await _repository.GetAllConDetalleAsync();
-        return productos.Select(MapToResponse);
+        var productos = (await _repository.GetAllConDetalleAsync()).ToList();
+        var conMovimientos = await _repository.GetIdsConMovimientosAsync(productos.Select(p => p.Id));
+        return productos.Select(p =>
+        {
+            var r = MapToResponse(p);
+            r.TieneMovimientos = conMovimientos.Contains(p.Id);
+            return r;
+        });
     }
 
     public async Task<PaginaResponse<ProductoResponse>> ListarAsync(ConsultaTablaRequest consulta)
     {
         var (items, total) = await _repository.ListarAsync(consulta);
+        var conMovimientos = await _repository.GetIdsConMovimientosAsync(items.Select(p => p.Id));
 
         return new PaginaResponse<ProductoResponse>
         {
-            Items = items.Select(MapToResponse).ToList(),
+            Items = items.Select(p =>
+            {
+                var r = MapToResponse(p);
+                r.TieneMovimientos = conMovimientos.Contains(p.Id);
+                return r;
+            }).ToList(),
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,
@@ -72,8 +84,13 @@ public class ProductoService : IProductoService
 
     public Task<ResumenProductosResponse> GetResumenAsync() => _repository.ResumenAsync();
 
-    public async Task<ProductoResponse> GetByIdAsync(int id) =>
-        MapToResponse(await GetOrThrowAsync(id));
+    public async Task<ProductoResponse> GetByIdAsync(int id)
+    {
+        var p = await GetOrThrowAsync(id);
+        var r = MapToResponse(p);
+        r.TieneMovimientos = (await _repository.GetIdsConMovimientosAsync([p.Id])).Contains(p.Id);
+        return r;
+    }
 
     public async Task<ProductoResponse> CreateAsync(CreateProductoRequest request)
     {

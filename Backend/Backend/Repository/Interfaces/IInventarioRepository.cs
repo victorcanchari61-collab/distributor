@@ -109,6 +109,12 @@ public interface IInventarioRepository
     Task<Dtos.Responses.ResumenStockResponse> ResumenStockAsync(int? almacenId);
 
     /// <summary>Stock y costos de varios productos, para pintar listados.</summary>
+    /// <summary>
+    /// Ids de los productos que de verdad entraron a ese almacén (o a alguno):
+    /// los que tienen al menos una capa de costo, aunque ya se hayan agotado.
+    /// </summary>
+    Task<HashSet<int>> GetProductoIdsConCapasAsync(int? almacenId);
+
     Task<Dictionary<int, ResumenStock>> GetResumenAsync(
         IEnumerable<int> productoIds, int? almacenId = null);
 

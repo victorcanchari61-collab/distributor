@@ -57,12 +57,16 @@ class Producto {
     required this.stockMinimo,
     required this.activo,
     required this.presentaciones,
+    this.tieneMovimientos = false,
   });
 
   final int id;
   final String codigo;
   final String nombre;
   final String? descripcion;
+
+  /// Ya tiene stock, kardex o costos: cambiar su unidad base no los convierte.
+  final bool tieneMovimientos;
   final int? categoriaId;
   final String? categoria;
   final int? marcaId;
@@ -86,6 +90,7 @@ class Producto {
 
   factory Producto.desdeJson(Map<String, dynamic> json) => Producto(
     id: json['id'] as int,
+    tieneMovimientos: json['tieneMovimientos'] as bool? ?? false,
     codigo: json['codigo'] as String? ?? '',
     nombre: json['nombre'] as String? ?? '',
     descripcion: json['descripcion'] as String?,

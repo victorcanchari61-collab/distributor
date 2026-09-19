@@ -9,6 +9,9 @@ public interface IProductoRepository
     /// <summary>Productos con categoria, marca, unidad y presentaciones.</summary>
     Task<IEnumerable<Producto>> GetAllConDetalleAsync();
 
+    /// <summary>Ids de los productos que ya tienen algún movimiento de inventario.</summary>
+    Task<HashSet<int>> GetIdsConMovimientosAsync(IEnumerable<int> ids);
+
     /// <summary>Una página del catálogo, buscada, filtrada y ordenada en la base.</summary>
     Task<(List<Producto> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta);
 

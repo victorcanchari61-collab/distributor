@@ -434,7 +434,9 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
         ),
         // Cambiarla no reescribe el pasado: lo que ya se movio se conto en la
         // unidad anterior y de UND a KG no hay factor que convierta.
-        if (!_esNuevo && _unidadBaseId != widget.producto?.unidadBaseId) ...[
+        if (!_esNuevo &&
+            (widget.producto?.tieneMovimientos ?? false) &&
+            _unidadBaseId != widget.producto?.unidadBaseId) ...[
           const SizedBox(height: Dimen.espacio2),
           Container(
             padding: const EdgeInsets.all(Dimen.espacio3),

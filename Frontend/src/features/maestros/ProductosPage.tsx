@@ -920,7 +920,7 @@ export function ProductosPage() {
 
                 {/* Cambiarla no reescribe el pasado: lo que ya se movió se
                     contó en la unidad anterior y no hay forma de convertirlo. */}
-                {editando && form.unidadBaseId !== editando.unidadBaseId && (
+                {editando && editando.tieneMovimientos && form.unidadBaseId !== editando.unidadBaseId && (
                   <p className="rounded-field border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800">
                     Lo ya registrado (stock, kardex y costos) se queda como está: se contó en{' '}
                     {editando.unidadBase} y no se convierte. Los factores de las presentaciones

@@ -189,6 +189,13 @@ public class InventarioRepository : IInventarioRepository
         };
     }
 
+    public async Task<HashSet<int>> GetProductoIdsConCapasAsync(int? almacenId) =>
+        (await _context.CapasCosto
+            .Where(c => almacenId == null || c.AlmacenId == almacenId)
+            .Select(c => c.ProductoId)
+            .Distinct()
+            .ToListAsync()).ToHashSet();
+
     public async Task<Dictionary<int, ResumenStock>> GetResumenAsync(
         IEnumerable<int> productoIds, int? almacenId = null)
     {

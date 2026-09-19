@@ -307,8 +307,11 @@ public class InventarioService : IInventarioService
 
     public async Task<IEnumerable<StockResponse>> GetStockAsync(int? almacenId)
     {
+        // Solo lo que de verdad entró al almacén: un producto recién importado
+        // al catálogo no está "en" ningún almacén hasta que recibe mercadería.
+        var conCapas = await _repository.GetProductoIdsConCapasAsync(almacenId);
         var productos = (await _productos.GetAllConDetalleAsync())
-            .Where(p => p.ControlaStock)
+            .Where(p => p.ControlaStock && conCapas.Contains(p.Id))
             .ToList();
 
         var ids = productos.Select(p => p.Id).ToList();

@@ -58,6 +58,8 @@ export interface PresentacionResponse {
 
 export interface ProductoResponse {
   id: number
+  /** Ya tiene stock, kardex o costos: cambiar la unidad base no los convierte. */
+  tieneMovimientos: boolean
   codigo: string
   nombre: string
   descripcion: string | null
