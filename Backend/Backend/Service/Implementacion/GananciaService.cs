@@ -45,22 +45,6 @@ public class GananciaService : IGananciaService
         _usuarioActual = usuarioActual;
     }
 
-    /// <summary>Una línea vendida, con lo que costó.</summary>
-    private sealed record Linea(
-        int NotaVentaId,
-        string Venta,
-        DateTime Fecha,
-        string Vendedor,
-        int ProductoId,
-        string Codigo,
-        string Producto,
-        string Categoria,
-        string Marca,
-        string UnidadBase,
-        decimal Cantidad,
-        decimal Importe,
-        decimal Costo);
-
     public async Task<GananciaPaginaResponse> ListarAsync(ConsultaTablaRequest consulta)
     {
         // El día se cuenta como en la calle: un pedido de las 8 de la noche es
@@ -84,53 +68,7 @@ public class GananciaService : IGananciaService
 
         // Lo que ve cada quien: el alcance del submódulo. Sin usuario en el
         // token (llamada interna) no hay a quién acotar.
-        var alcance = _usuarioActual.Id is int uid
-            ? new AlcanceFiltro(await _permisos.AlcanceAsync(uid, "finanzas.ganancias"), uid)
-            : null;
-
-        var soloPropio = alcance is { SinRestriccion: false };
-
-        var notas = _context.NotasVenta
-            .Where(n => n.Estado != EstadoNotaVenta.Anulada && n.Fecha >= inicioUtc && n.Fecha < finUtc);
-
-        if (alcance is { SinRestriccion: false })
-        {
-            notas = alcance.SoloPropios
-                ? notas.Where(n => n.UsuarioId == alcance.UsuarioId)
-                : notas.Where(n => n.UsuarioId == alcance.UsuarioId
-                                   || (n.Cliente != null && n.Cliente.VendedorId == alcance.UsuarioId));
-        }
-
-        var todas = (await notas
-                .SelectMany(n => n.Detalle)
-                .Select(d => new
-                {
-                    d.NotaVentaId,
-                    Venta = d.NotaVenta!.Numero,
-                    d.NotaVenta.Fecha,
-                    Vendedor = d.NotaVenta.Usuario != null ? d.NotaVenta.Usuario.Nombre : null,
-                    d.ProductoId,
-                    Codigo = d.Producto!.Codigo,
-                    Producto = d.Producto.Nombre,
-                    Categoria = d.Producto.Categoria != null ? d.Producto.Categoria.Nombre : null,
-                    Marca = d.Producto.Marca != null ? d.Producto.Marca.Nombre : null,
-                    UnidadBase = d.Producto.UnidadBase != null ? d.Producto.UnidadBase.Codigo : string.Empty,
-                    Cantidad = d.Anulado ? 0m : d.Cantidad,
-                    Importe = d.Anulado ? 0m : d.CantidadPresentacion * d.PrecioPresentacion,
-                    Costo = _context.Movimientos
-                        .Where(m => m.NotaVentaDetalleId == d.Id)
-                        .Sum(m => (decimal?)(m.Tipo == TipoMovimiento.Salida ? m.CostoTotal : -m.CostoTotal)) ?? 0m,
-                })
-                .AsNoTracking()
-                .ToListAsync())
-            .Select(l => new Linea(
-                l.NotaVentaId, l.Venta, l.Fecha,
-                l.Vendedor ?? SinVendedor,
-                l.ProductoId, l.Codigo, l.Producto,
-                l.Categoria ?? SinCategoria,
-                l.Marca ?? SinMarca,
-                l.UnidadBase, l.Cantidad, l.Importe, l.Costo))
-            .ToList();
+        var (todas, soloPropio) = await LineasAsync(inicioUtc, finUtc);
 
         // Lo que hay para elegir se arma ANTES de filtrar: si al elegir un
         // vendedor las demás opciones se encogieran, no habría cómo cambiarlo.
@@ -208,10 +146,71 @@ public class GananciaService : IGananciaService
         };
     }
 
-    /// <summary>Los filtros del panel y el buscador, sobre las líneas del rango.</summary>
-    private static List<Linea> Filtrar(List<Linea> lineas, ConsultaTablaRequest consulta)
+    /// <summary>
+    /// Las líneas vendidas entre dos instantes (UTC), cada una con lo que costó,
+    /// ya acotadas a lo que la persona tiene permitido ver.
+    ///
+    /// Es la base común de esta pantalla y del dashboard: si cada una calculara
+    /// el costo por su cuenta, dos pantallas dirían dos ganancias distintas.
+    /// </summary>
+    public async Task<(List<LineaGanancia> Lineas, bool SoloPropio)> LineasAsync(
+        DateTime inicioUtc, DateTime finUtc)
     {
-        IEnumerable<Linea> query = lineas;
+        // Lo que ve cada quien: el alcance del submódulo. Sin usuario en el
+        // token (llamada interna) no hay a quién acotar.
+        var alcance = _usuarioActual.Id is int uid
+            ? new AlcanceFiltro(await _permisos.AlcanceAsync(uid, "finanzas.ganancias"), uid)
+            : null;
+
+        var notas = _context.NotasVenta
+            .Where(n => n.Estado != EstadoNotaVenta.Anulada && n.Fecha >= inicioUtc && n.Fecha < finUtc);
+
+        if (alcance is { SinRestriccion: false })
+        {
+            notas = alcance.SoloPropios
+                ? notas.Where(n => n.UsuarioId == alcance.UsuarioId)
+                : notas.Where(n => n.UsuarioId == alcance.UsuarioId
+                                   || (n.Cliente != null && n.Cliente.VendedorId == alcance.UsuarioId));
+        }
+
+        var lineas = (await notas
+                .SelectMany(n => n.Detalle)
+                .Select(d => new
+                {
+                    d.NotaVentaId,
+                    Venta = d.NotaVenta!.Numero,
+                    d.NotaVenta.Fecha,
+                    Vendedor = d.NotaVenta.Usuario != null ? d.NotaVenta.Usuario.Nombre : null,
+                    d.ProductoId,
+                    Codigo = d.Producto!.Codigo,
+                    Producto = d.Producto.Nombre,
+                    Categoria = d.Producto.Categoria != null ? d.Producto.Categoria.Nombre : null,
+                    Marca = d.Producto.Marca != null ? d.Producto.Marca.Nombre : null,
+                    UnidadBase = d.Producto.UnidadBase != null ? d.Producto.UnidadBase.Codigo : string.Empty,
+                    Cantidad = d.Anulado ? 0m : d.Cantidad,
+                    Importe = d.Anulado ? 0m : d.CantidadPresentacion * d.PrecioPresentacion,
+                    Costo = _context.Movimientos
+                        .Where(m => m.NotaVentaDetalleId == d.Id)
+                        .Sum(m => (decimal?)(m.Tipo == TipoMovimiento.Salida ? m.CostoTotal : -m.CostoTotal)) ?? 0m,
+                })
+                .AsNoTracking()
+                .ToListAsync())
+            .Select(l => new LineaGanancia(
+                l.NotaVentaId, l.Venta, l.Fecha,
+                l.Vendedor ?? SinVendedor,
+                l.ProductoId, l.Codigo, l.Producto,
+                l.Categoria ?? SinCategoria,
+                l.Marca ?? SinMarca,
+                l.UnidadBase, l.Cantidad, l.Importe, l.Costo))
+            .ToList();
+
+        return (lineas, alcance is { SinRestriccion: false });
+    }
+
+    /// <summary>Los filtros del panel y el buscador, sobre las líneas del rango.</summary>
+    private static List<LineaGanancia> Filtrar(List<LineaGanancia> lineas, ConsultaTablaRequest consulta)
+    {
+        IEnumerable<LineaGanancia> query = lineas;
 
         if (consulta.ValorDe("vendedor") is string vendedor)
             query = query.Where(l => l.Vendedor == vendedor);

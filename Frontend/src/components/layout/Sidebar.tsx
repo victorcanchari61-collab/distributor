@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, Home, PanelLeftClose, PanelLeftOpen, EyeOff, X } from 'lucide-react'
+import { ChevronDown, Home, LayoutDashboard, PanelLeftClose, PanelLeftOpen, EyeOff, X } from 'lucide-react'
 import { cn, Logo } from '../ui'
-import { NAV_GROUPS } from './navigation'
+import { NAV_DASHBOARD, NAV_DASHBOARD_FUENTES, NAV_GROUPS } from './navigation'
 import type { NavGroup } from './navigation'
 import { usePermisos } from '../../lib/permisos'
 
@@ -46,6 +46,9 @@ export function Sidebar({
       (g) => g.items.length > 0,
     )
   }, [cargando, puedeVer])
+
+  // Sin ninguna pantalla con datos no hay nada que graficar: el boton sobra.
+  const verDashboard = !cargando && NAV_DASHBOARD_FUENTES.some((s) => puedeVer(s))
 
   // Empieza abierto el grupo que contiene la vista activa.
   const [open, setOpen] = useState<string[]>(() => {
@@ -129,6 +132,19 @@ export function Sidebar({
               onClick={() => onSelect('')}
             />
           </div>
+
+          {/* Suelto, como Inicio: el tablero cruza varios modulos y no es de ninguno. */}
+          {verDashboard && (
+            <div data-sys="brand">
+              <NavButton
+                icon={<LayoutDashboard size={18} />}
+                label="Dashboard"
+                active={active === NAV_DASHBOARD}
+                collapsed={collapsed}
+                onClick={() => onSelect(NAV_DASHBOARD)}
+              />
+            </div>
+          )}
 
           {grupos.map((group) => (
             <NavGroupBlock

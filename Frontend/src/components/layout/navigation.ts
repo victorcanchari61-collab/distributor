@@ -220,6 +220,22 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ]
 
+/**
+ * El Dashboard no pertenece a ningun modulo: va suelto en el menu, debajo de Inicio.
+ *
+ * Se muestra a quien pueda abrir al menos una de las pantallas de las que saca sus
+ * graficos; cada grafico, ademas, solo se pide si esa pantalla concreta se puede ver.
+ */
+export const NAV_DASHBOARD = 'dashboard'
+
+export const NAV_DASHBOARD_FUENTES = [
+  'fact.notaventa',
+  'finanzas.ganancias',
+  'finanzas.cobrar',
+  'inv.stock',
+  'fact.pedidos',
+] as const
+
 /** Color de sistema y titulo de una entrada del menu. */
 export function resolveNav(itemId: string): { sys: SysKey; group?: NavGroup; item?: NavItem } {
   const group = NAV_GROUPS.find((g) => g.items.some((i) => i.id === itemId))

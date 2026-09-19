@@ -7,7 +7,7 @@ import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, AuditoriaPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
 import { SolicitudPermisoModal } from './features/config/SolicitudPermisoModal'
 import { solicitudApi } from './features/config/solicitudApi'
-import { InicioPage } from './features/inicio'
+import { DashboardPage, InicioPage } from './features/inicio'
 import { MiPerfilPage } from './features/perfil'
 import { Button } from './components/ui'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
@@ -139,6 +139,8 @@ function App() {
         <Route path="/" element={<Inicio />} />
         {/* Ruta propia y fuera del filtro de permisos: es de todos, no de un modulo. */}
         <Route path="/perfil" element={<MiPerfilPage />} />
+        {/* Suelto: el Dashboard grafica varios modulos y cada grafico se filtra por su propio permiso. */}
+        <Route path="/dashboard" element={<TableroVista />} />
         <Route path="/:modulo/:vista" element={<Vista />} />
         <Route path="*" element={<Inicio />} />
       </Routes>
@@ -152,6 +154,14 @@ function App() {
     </DashboardLayout>
     </PermisosProvider>
   )
+}
+
+function TableroVista() {
+  const { cargando } = usePermisos()
+
+  if (cargando) return null
+
+  return <DashboardPage />
 }
 
 /** Resuelve la vista que corresponde a la ruta actual. */
