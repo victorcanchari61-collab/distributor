@@ -45,6 +45,13 @@ export const auditoriaApi = {
 
   resumen: () => api.get<ResumenAuditoria>('/auditoria/resumen'),
 
+  /**
+   * Depuración masiva: borra todo lo que el buscador y los filtros de esa
+   * consulta dejan a la vista (la página y el orden no cuentan).
+   */
+  eliminar: (consulta: ConsultaTabla) =>
+    api.post<{ eliminados: number }>('/auditoria/eliminar', consulta),
+
   getAll: (filtros: FiltrosAuditoria = {}) => {
     const q = new URLSearchParams()
     if (filtros.entidad) q.set('entidad', filtros.entidad)

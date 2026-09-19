@@ -18,6 +18,15 @@ public interface IAuditoriaRepository
     /// </summary>
     Task<(List<RegistroAuditoria> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta);
 
+    /// <summary>
+    /// Borra, en lotes, todo lo que el buscador y los filtros de la consulta
+    /// dejan a la vista (la página y el orden no cuentan). Devuelve cuántos.
+    /// </summary>
+    Task<int> EliminarAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Anota un registro a mano. Lo usa la depuración para dejar constancia de sí misma.</summary>
+    Task AgregarAsync(RegistroAuditoria registro);
+
     /// <summary>Conteos por acción sobre TODA la bitácora, no sobre la página visible.</summary>
     Task<ResumenAuditoriaResponse> ResumenAsync();
 

@@ -1,9 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fechaHora } from '../../lib/fechas'
-import { Eye, RefreshCw, ScrollText } from 'lucide-react'
-import { Alert, Badge, Button, ListPage, Modal, RowAction, StatCard } from '../../components/ui'
+import { fechaCorta, fechaHora } from '../../lib/fechas'
+import { Eye, RefreshCw, ScrollText, Trash2 } from 'lucide-react'
+import {
+  Alert,
+  Badge,
+  Button,
+  Input,
+  ListPage,
+  Modal,
+  RowAction,
+  StatCard,
+  useToast,
+} from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { usePermisos } from '../../lib/permisos'
 import { auditoriaApi } from './auditoriaApi'
 import type { AccionAuditoria, AuditoriaResponse, ResumenAuditoria } from './auditoriaApi'
 
@@ -24,14 +35,35 @@ function formatearValor(valor: unknown): string {
   return String(valor)
 }
 
+const ACCIONES: Record<string, string> = {
+  CREADO: 'Creado',
+  ACTUALIZADO: 'Actualizado',
+  ELIMINADO: 'Eliminado',
+}
+
+/** La palabra que hay que escribir para depurar TODA la bitácora, sin filtros. */
+const PALABRA_CONFIRMACION = 'ELIMINAR'
+
 /**
  * Auditoría: qué cambió en el sistema, quién y cuándo.
  *
- * Es solo lectura. Los registros los deja el backend al guardar cualquier
- * entidad — nada se anota desde aquí. Los filtros consultan al servidor; el
- * buscador de la tabla afina sobre lo que ya llegó.
+ * Los registros los deja el backend al guardar cualquier entidad — nada se
+ * anota desde aquí. Lo único que se hace es depurarla: la bitácora crece con
+ * cada cambio del sistema, así que se puede borrar en bloque lo que los
+ * filtros de la tabla dejan a la vista.
  */
 export function AuditoriaPage() {
+  const { puede } = usePermisos()
+  const toast = useToast()
+
+  const [depurando, setDepurando] = useState(false)
+  const [confirmacion, setConfirmacion] = useState('')
+  const [eliminando, setEliminando] = useState(false)
+  // Al depurar se remonta la tabla: vuelve a la primera página, que es donde
+  // hay algo que ver — si estaba en la 7 y ya no quedan 7 páginas, mostraría
+  // una tabla vacía sin explicación.
+  const [version, setVersion] = useState(0)
+
   const [registros, setRegistros] = useState<AuditoriaResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -125,6 +157,49 @@ export function AuditoriaPage() {
     },
   ]
 
+  /** Lo que la persona tiene puesto en el buscador y el panel de filtros, en palabras. */
+  const filtrosPuestos = consulta
+    ? [
+        ...(consulta.buscar ? [`Búsqueda: "${consulta.buscar}"`] : []),
+        ...consulta.filtros
+          .filter((f) => f.valor)
+          .map((f) => {
+            const columna = columns.find((c) => c.key === f.columna)?.label ?? f.columna
+            if (f.columna === 'fecha') {
+              return f.valorHasta
+                ? `${columna}: ${fechaCorta(f.valor)} → ${fechaCorta(f.valorHasta)}`
+                : `${columna}: ${fechaCorta(f.valor)}`
+            }
+            return `${columna}: ${f.columna === 'accion' ? (ACCIONES[f.valor] ?? f.valor) : f.valor}`
+          }),
+      ]
+    : []
+  const sinFiltros = filtrosPuestos.length === 0
+  const confirmado = !sinFiltros || confirmacion.trim().toUpperCase() === PALABRA_CONFIRMACION
+
+  const cerrarDepuracion = () => {
+    setDepurando(false)
+    setConfirmacion('')
+  }
+
+  const depurar = async () => {
+    if (!consulta) return
+    setEliminando(true)
+    try {
+      const { eliminados } = await auditoriaApi.eliminar(consulta)
+      cerrarDepuracion()
+      setVersion((v) => v + 1)
+      await cargarResumen()
+      toast.exito(
+        eliminados === 1 ? 'Se eliminó 1 registro' : `Se eliminaron ${eliminados.toLocaleString('es-PE')} registros`,
+      )
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos depurar la auditoría.')
+    } finally {
+      setEliminando(false)
+    }
+  }
+
   const campos = detalleAbierto
     ? Array.from(
         new Set([
@@ -136,14 +211,28 @@ export function AuditoriaPage() {
 
   return (
     <ListPage
+      key={version}
       icon={<ScrollText size={20} />}
       title="Auditoría"
       description="Qué cambió en el sistema, quién lo hizo y cuándo. Se registra solo, al guardar cualquier dato."
       actions={
-        <Button variant="secondary" size="sm" onClick={() => void cargar()} loading={cargando}>
-          <RefreshCw size={15} />
-          Actualizar
-        </Button>
+        <>
+          {puede('config.auditoria', 'eliminar') && (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={total === 0 || !consulta}
+              onClick={() => setDepurando(true)}
+            >
+              <Trash2 size={15} />
+              Depurar
+            </Button>
+          )}
+          <Button variant="secondary" size="sm" onClick={() => void cargar()} loading={cargando}>
+            <RefreshCw size={15} />
+            Actualizar
+          </Button>
+        </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -188,6 +277,72 @@ export function AuditoriaPage() {
         </RowAction>
       )}
     >
+      <Modal
+        open={depurando}
+        title="Depurar auditoría"
+        size="sm"
+        onClose={cerrarDepuracion}
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={cerrarDepuracion}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              loading={eliminando}
+              disabled={!confirmado || total === 0}
+              onClick={() => void depurar()}
+              className="bg-red-600 hover:not-disabled:bg-red-700"
+            >
+              <Trash2 size={15} />
+              Eliminar {total.toLocaleString('es-PE')} {total === 1 ? 'registro' : 'registros'}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-ink-muted">
+            Se eliminarán{' '}
+            <strong className="text-ink">
+              {total.toLocaleString('es-PE')} {total === 1 ? 'registro' : 'registros'}
+            </strong>{' '}
+            de la bitácora: los que ves ahora en la tabla, de todas sus páginas. No se puede deshacer.
+          </p>
+
+          <div>
+            <p className="mb-1.5 text-[10.5px] font-semibold tracking-wide text-ink-muted uppercase">
+              Filtros aplicados
+            </p>
+            {sinFiltros ? (
+              <Alert tone="warning">No hay ningún filtro: se borrará toda la bitácora.</Alert>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {filtrosPuestos.map((texto) => (
+                  <Badge key={texto}>{texto}</Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {sinFiltros ? (
+            <Input
+              label={`Escribe ${PALABRA_CONFIRMACION} para confirmar`}
+              value={confirmacion}
+              onChange={(e) => setConfirmacion(e.target.value)}
+              autoComplete="off"
+            />
+          ) : (
+            <p className="text-xs text-ink-soft">
+              Para depurar otra parte, cierra esta ventana y cambia los filtros del ícono de la tabla.
+            </p>
+          )}
+
+          <p className="text-xs text-ink-soft">
+            Queda un registro con quién depuró, cuántos y con qué filtros.
+          </p>
+        </div>
+      </Modal>
+
       <Modal
         open={detalleAbierto !== null}
         title={detalleAbierto ? `${detalleAbierto.entidad} #${detalleAbierto.entidadId}` : ''}

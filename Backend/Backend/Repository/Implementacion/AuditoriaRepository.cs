@@ -31,13 +31,55 @@ public class AuditoriaRepository : IAuditoriaRepository
             .Take(300)
             .ToListAsync();
 
+    /// <summary>
+    /// Cuántos registros se borran por vuelta. Un solo DELETE sobre cientos de
+    /// miles de filas mantiene la tabla bloqueada todo ese rato y frena a quien
+    /// esté guardando; en lotes el bloqueo dura lo que dura cada uno.
+    /// </summary>
+    private const int LoteBorrado = 5000;
+
     public async Task<(List<RegistroAuditoria> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta)
     {
-        var query = _context.RegistrosAuditoria
-            .Include(r => r.Usuario)
-            .AsNoTracking()
-            .AsQueryable();
+        var query = Filtrar(
+            _context.RegistrosAuditoria.Include(r => r.Usuario).AsNoTracking(),
+            consulta);
 
+        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
+
+        // El desempate por Id es lo que hace estable la paginacion: dos
+        // cambios en el mismo instante podrian intercambiarse entre paginas.
+        query = consulta.Orden switch
+        {
+            "usuario" => desc
+                ? query.OrderByDescending(r => r.Usuario!.Nombre).ThenByDescending(r => r.Id)
+                : query.OrderBy(r => r.Usuario!.Nombre).ThenBy(r => r.Id),
+            "entidad" => desc
+                ? query.OrderByDescending(r => r.Entidad).ThenByDescending(r => r.Id)
+                : query.OrderBy(r => r.Entidad).ThenBy(r => r.Id),
+            "entidadId" => desc
+                ? query.OrderByDescending(r => r.EntidadId).ThenByDescending(r => r.Id)
+                : query.OrderBy(r => r.EntidadId).ThenBy(r => r.Id),
+            "accion" => desc
+                ? query.OrderByDescending(r => r.Accion).ThenByDescending(r => r.Id)
+                : query.OrderBy(r => r.Accion).ThenBy(r => r.Id),
+            // Por defecto y por fecha: lo mas nuevo primero, que es como se lee
+            // una bitacora.
+            _ => desc
+                ? query.OrderByDescending(r => r.Fecha).ThenByDescending(r => r.Id)
+                : query.OrderBy(r => r.Fecha).ThenBy(r => r.Id),
+        };
+
+        return await query.PaginarAsync(consulta);
+    }
+
+    /// <summary>
+    /// Los registros que casan con el buscador y los filtros de la tabla, sin
+    /// orden ni página. Lo usan el listado y el borrado masivo: el segundo
+    /// tiene que borrar exactamente lo que el primero le mostró a la persona.
+    /// </summary>
+    private static IQueryable<RegistroAuditoria> Filtrar(
+        IQueryable<RegistroAuditoria> query, ConsultaTablaRequest consulta)
+    {
         // Buscador general: las columnas de texto que alguien escribiria para
         // encontrar un cambio. Los valores viejo/nuevo quedan fuera a
         // proposito — son JSON y buscar dentro seria un escaneo completo.
@@ -71,36 +113,61 @@ public class AuditoriaRepository : IAuditoriaRepository
             query = query.Where(r => r.Usuario != null && r.Usuario.Nombre == usuario);
         }
 
+        // La fecha se guarda en UTC pero la persona filtra por día de calle: sin
+        // pasarla a UTC, "hasta el 15" dejaba fuera lo de la noche del 15 y
+        // "desde el 15" traía desde las 7 de la noche del 14. Con el borrado
+        // masivo por fecha eso sería borrar el día equivocado.
         var (desde, hasta) = consulta.RangoFechas("fecha");
-        if (desde is not null) query = query.Where(r => r.Fecha >= desde);
-        if (hasta is not null) query = query.Where(r => r.Fecha <= hasta);
-
-        var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
-
-        // El desempate por Id es lo que hace estable la paginacion: dos
-        // cambios en el mismo instante podrian intercambiarse entre paginas.
-        query = consulta.Orden switch
+        if (desde is not null)
         {
-            "usuario" => desc
-                ? query.OrderByDescending(r => r.Usuario!.Nombre).ThenByDescending(r => r.Id)
-                : query.OrderBy(r => r.Usuario!.Nombre).ThenBy(r => r.Id),
-            "entidad" => desc
-                ? query.OrderByDescending(r => r.Entidad).ThenByDescending(r => r.Id)
-                : query.OrderBy(r => r.Entidad).ThenBy(r => r.Id),
-            "entidadId" => desc
-                ? query.OrderByDescending(r => r.EntidadId).ThenByDescending(r => r.Id)
-                : query.OrderBy(r => r.EntidadId).ThenBy(r => r.Id),
-            "accion" => desc
-                ? query.OrderByDescending(r => r.Accion).ThenByDescending(r => r.Id)
-                : query.OrderBy(r => r.Accion).ThenBy(r => r.Id),
-            // Por defecto y por fecha: lo mas nuevo primero, que es como se lee
-            // una bitacora.
-            _ => desc
-                ? query.OrderByDescending(r => r.Fecha).ThenByDescending(r => r.Id)
-                : query.OrderBy(r => r.Fecha).ThenBy(r => r.Id),
-        };
+            var desdeUtc = Zona.AUtc(desde.Value);
+            query = query.Where(r => r.Fecha >= desdeUtc);
+        }
 
-        return await query.PaginarAsync(consulta);
+        if (hasta is not null)
+        {
+            var hastaUtc = Zona.AUtc(hasta.Value);
+            query = query.Where(r => r.Fecha <= hastaUtc);
+        }
+
+        return query;
+    }
+
+    public async Task<int> EliminarAsync(ConsultaTablaRequest consulta)
+    {
+        var filtradas = Filtrar(_context.RegistrosAuditoria.AsNoTracking(), consulta);
+        var eliminados = 0;
+
+        while (true)
+        {
+            // Primero los ids y luego el borrado por id: filtrar directo en el
+            // DELETE obligaria a MySQL a leer la misma tabla que borra (por el
+            // join con Usuarios) y no lo permite.
+            var ids = await filtradas
+                .OrderBy(r => r.Id)
+                .Select(r => r.Id)
+                .Take(LoteBorrado)
+                .ToListAsync();
+
+            if (ids.Count == 0) break;
+
+            var borrados = await _context.RegistrosAuditoria
+                .Where(r => ids.Contains(r.Id))
+                .ExecuteDeleteAsync();
+
+            // Otra persona pudo borrarlos a la vez; sin esto el ciclo no termina.
+            if (borrados == 0) break;
+
+            eliminados += borrados;
+        }
+
+        return eliminados;
+    }
+
+    public async Task AgregarAsync(RegistroAuditoria registro)
+    {
+        _context.RegistrosAuditoria.Add(registro);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<ResumenAuditoriaResponse> ResumenAsync() => new()

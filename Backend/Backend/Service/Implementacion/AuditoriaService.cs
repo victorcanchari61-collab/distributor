@@ -37,6 +37,58 @@ public class AuditoriaService : IAuditoriaService
         };
     }
 
+    public async Task<int> EliminarAsync(ConsultaTablaRequest consulta, int? usuarioId)
+    {
+        var eliminados = await _repository.EliminarAsync(consulta);
+        if (eliminados == 0) return 0;
+
+        // Queda un solo registro que dice qué se depuró. Va DESPUÉS del borrado:
+        // si fuera antes, un borrado sin filtros se lo llevaría también.
+        var valores = new Dictionary<string, object?>
+        {
+            ["Registros eliminados"] = eliminados,
+            ["Búsqueda"] = string.IsNullOrWhiteSpace(consulta.Buscar) ? null : consulta.Buscar.Trim(),
+            ["Filtros"] = DescribirFiltros(consulta),
+        };
+
+        await _repository.AgregarAsync(new RegistroAuditoria
+        {
+            UsuarioId = usuarioId,
+            Entidad = "Auditoria",
+            EntidadId = "depuración",
+            Accion = AccionAuditoria.Eliminado,
+            ValoresAnteriores = JsonSerializer.Serialize(valores),
+        });
+
+        return eliminados;
+    }
+
+    /// <summary>Los filtros puestos, en una línea legible; "Ninguno" si se borró todo.</summary>
+    private static string DescribirFiltros(ConsultaTablaRequest consulta)
+    {
+        var partes = consulta.Filtros
+            .Where(f => !string.IsNullOrWhiteSpace(f.Valor))
+            .Select(f =>
+            {
+                var nombre = f.Columna switch
+                {
+                    "fecha" => "Fecha",
+                    "usuario" => "Usuario",
+                    "entidad" => "Entidad",
+                    "accion" => "Acción",
+                    "entidadId" => "Registro",
+                    var otra => otra,
+                };
+
+                return string.IsNullOrWhiteSpace(f.ValorHasta)
+                    ? $"{nombre}: {f.Valor}"
+                    : $"{nombre}: {f.Valor} → {f.ValorHasta}";
+            })
+            .ToList();
+
+        return partes.Count == 0 ? "Ninguno" : string.Join(" · ", partes);
+    }
+
     public Task<ResumenAuditoriaResponse> GetResumenAsync() => _repository.ResumenAsync();
 
     public Task<IEnumerable<string>> GetEntidadesAsync() => _repository.GetEntidadesAsync();

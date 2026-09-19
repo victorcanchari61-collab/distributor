@@ -4,6 +4,7 @@ using Backend.Models;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Backend.Controllers;
 
@@ -38,6 +39,21 @@ public class AuditoriaController : ControllerBase
     [Permiso("config.auditoria", Accion.Ver)]
     public async Task<IActionResult> Listar([FromBody] ConsultaTablaRequest consulta) =>
         Ok(await _auditoria.ListarAsync(consulta));
+
+    /// <summary>
+    /// Depuración masiva: borra todo lo que el buscador y los filtros de la
+    /// tabla dejan a la vista. Recibe la misma consulta que <c>listar</c> para
+    /// que borre exactamente lo que la persona estaba viendo.
+    /// </summary>
+    [HttpPost("eliminar")]
+    [Permiso("config.auditoria", Accion.Eliminar)]
+    public async Task<IActionResult> Eliminar([FromBody] ConsultaTablaRequest consulta) =>
+        Ok(new { eliminados = await _auditoria.EliminarAsync(consulta, UsuarioId) });
+
+    private int? UsuarioId =>
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"), out var id)
+            ? id
+            : null;
 
     /// <summary>Contadores y valores de filtro de toda la bitácora.</summary>
     [HttpGet("resumen")]

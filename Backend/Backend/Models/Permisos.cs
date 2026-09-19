@@ -175,7 +175,9 @@ public static class CatalogoPermisos
             // que colgarse de "editar" y quien pudiera cambiar un RUC podria
             // tambien borrar la sucursal.
             ["config.empresa"] = Catalogo,
-            ["config.auditoria"] = Consulta,
+            // La bitácora crece con cada cambio del sistema: eliminar es la
+            // depuración masiva por filtros, no el borrado de un registro.
+            ["config.auditoria"] = [Accion.Ver, Accion.Exportar, Accion.Eliminar],
             ["config.series"] = Catalogo,
             ["config.parametros"] = [Accion.Ver, Accion.Editar],
         };
