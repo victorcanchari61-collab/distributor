@@ -94,13 +94,13 @@ public sealed class NovedadesA4(
         {
             tabla.ColumnsDefinition(c =>
             {
-                c.ConstantColumn(50);   // fecha
+                c.ConstantColumn(48);   // fecha
                 c.RelativeColumn(1.6f); // producto
                 c.ConstantColumn(105);  // no entregado
                 c.ConstantColumn(62);   // importe
                 c.RelativeColumn(1.5f); // motivo
                 c.RelativeColumn(1.4f); // pedido y cliente
-                c.ConstantColumn(50);   // despacho
+                c.ConstantColumn(62);   // despacho
                 c.ConstantColumn(78);   // estado
             });
 
