@@ -74,6 +74,8 @@ export interface DespachoRequest {
 export interface OpcionesCarga {
   mercados: { id: number; nombre: string; pedidos: number }[]
   unidades: { codigo: string; nombre: string; productos: number }[]
+  /** Todos (0), primer, segundo y tercer corte, con el texto con que se muestran. */
+  cortes: { codigo: number; nombre: string }[]
 }
 
 export const despachoApi = {

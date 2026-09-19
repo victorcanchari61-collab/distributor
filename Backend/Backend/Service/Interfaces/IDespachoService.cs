@@ -20,6 +20,15 @@ public interface IDespachoService
     /// </summary>
     Task<List<LineaCargaResponse>> LineasCargaAsync(int id);
 
+    /// <summary>
+    /// Lo que entra al camión en un corte de horario (1, 2 o 3).
+    ///
+    /// El primero es la carga base; el segundo y el tercero son aumentos: solo
+    /// la diferencia de cada línea en esa franja, en negativo si bajó. Devuelve
+    /// también el día de carga que se tomó, para escribirlo en el papel.
+    /// </summary>
+    Task<(List<LineaCargaResponse> Lineas, DateTime DiaCarga)> LineasCargaCorteAsync(int id, int corte);
+
     /// <summary>Los mercados y unidades de medida que lleva el camión, para filtrar el reporte.</summary>
     Task<OpcionesCargaResponse> OpcionesCargaAsync(int id);
     Task<ResumenDespachosResponse> GetResumenAsync();

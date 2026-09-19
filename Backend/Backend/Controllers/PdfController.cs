@@ -63,14 +63,16 @@ public class PdfController(IPdfService pdf) : ControllerBase
         int id,
         [FromQuery] string? mercados,
         [FromQuery] string? unidades,
-        [FromQuery] bool porMercado = false) =>
+        [FromQuery] bool porMercado = false,
+        [FromQuery] int? corte = null) =>
         Archivo(await pdf.CargaDespachoAsync(
             id,
             // "1,7,11": lo que manda el modal de filtros.
             mercados?.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(x => int.TryParse(x, out var n) ? n : -1).Where(n => n >= 0).ToList(),
             unidades?.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
-            porMercado));
+            porMercado,
+            corte));
 
     /// <summary>
     /// Las novedades de entrega, con los mismos filtros de la pantalla.

@@ -267,12 +267,27 @@ public class PdfService(
     }
 
     public async Task<(byte[], string)> CargaDespachoAsync(
-        int id, IReadOnlyCollection<int>? mercados, IReadOnlyCollection<string>? unidades, bool porMercado)
+        int id, IReadOnlyCollection<int>? mercados, IReadOnlyCollection<string>? unidades, bool porMercado,
+        int? corte = null)
     {
         var despacho = await despachos.GetAsync(id);
         if (despacho.Detalle.Count == 0) throw new BadRequestException("Este despacho no tiene pedidos");
 
-        var todas = await despachos.LineasCargaAsync(id);
+        // Sin corte (o 0) sale todo el camión, como siempre.
+        var conCorte = corte is int c && CortesCarga.EsValido(c);
+
+        List<LineaCargaResponse> todas;
+        DateTime? diaCarga = null;
+        if (conCorte)
+        {
+            var resultado = await despachos.LineasCargaCorteAsync(id, corte!.Value);
+            todas = resultado.Lineas;
+            diaCarga = resultado.DiaCarga;
+        }
+        else
+        {
+            todas = await despachos.LineasCargaAsync(id);
+        }
 
         var lineas = todas
             .Where(l => mercados is null || mercados.Count == 0 || mercados.Contains(l.MercadoId))
@@ -282,6 +297,12 @@ public class PdfService(
 
         // Lo que se filtró, dicho con los nombres y no con los ids.
         var partes = new List<string>();
+
+        // El corte primero, con el día de carga que se tomó: un papel de
+        // aumentos que no dice de qué día es no se puede comprobar.
+        if (conCorte)
+            partes.Add($"{CortesCarga.Nombre(corte!.Value)}   ·   día de carga {diaCarga:dd/MM/yyyy}");
+
         if (mercados is { Count: > 0 })
             partes.Add("Mercado " + string.Join(", ", todas
                 .Where(l => mercados.Contains(l.MercadoId))
@@ -292,8 +313,9 @@ public class PdfService(
                 .Select(l => l.UnidadNombre).Distinct()));
 
         var contenido = new CargaDespachoA4(
-            despacho, lineas, partes.Count == 0 ? null : string.Join("   ·   ", partes), porMercado).GeneratePdf();
-        return (contenido, Nombre("carga", despacho.Numero, FormatoPdf.A4));
+            despacho, lineas, partes.Count == 0 ? null : string.Join("   ·   ", partes), porMercado,
+            aumentos: conCorte && CortesCarga.EsAumento(corte!.Value)).GeneratePdf();
+        return (contenido, Nombre("carga", conCorte ? $"{despacho.Numero}-corte{corte}" : despacho.Numero, FormatoPdf.A4));
     }
 
     public async Task<(byte[], string)> NovedadesAsync(ConsultaTablaRequest consulta)

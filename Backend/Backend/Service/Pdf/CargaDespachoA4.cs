@@ -25,7 +25,8 @@ public sealed class CargaDespachoA4(
     DespachoResponse despacho,
     IReadOnlyList<LineaCargaResponse> lineas,
     string? filtros,
-    bool porMercado) : IDocument
+    bool porMercado,
+    bool aumentos = false) : IDocument
 {
     private const float Linea = 0.75f;
 
@@ -87,7 +88,7 @@ public sealed class CargaDespachoA4(
 
         if (!porMercado)
         {
-            container.Element(c => Tabla(c, lineas));
+            container.Element(c => Tabla(c, lineas, aumentos));
             return;
         }
 
@@ -105,14 +106,14 @@ public sealed class CargaDespachoA4(
             {
                 col.Item().PaddingTop(primero ? 0 : 10).PaddingBottom(3)
                     .Text($"MERCADO {mercado.Key.Mercado}").FontSize(10).Bold();
-                col.Item().Element(c => Tabla(c, mercado.ToList()));
+                col.Item().Element(c => Tabla(c, mercado.ToList(), aumentos));
                 primero = false;
             }
         });
     }
 
     /// <summary>Una tabla: sumada por producto y presentación, sin importar el mercado.</summary>
-    private static void Tabla(IContainer container, IReadOnlyList<LineaCargaResponse> filas)
+    private static void Tabla(IContainer container, IReadOnlyList<LineaCargaResponse> filas, bool aumentos)
     {
         var sumadas = filas
             .GroupBy(l => (l.ProductoId, l.PresentacionId))
@@ -161,12 +162,20 @@ public sealed class CargaDespachoA4(
                     Celda(tabla.Cell(), l.Codigo);
                     Celda(tabla.Cell(), l.Producto);
                     Celda(tabla.Cell(), l.Presentacion);
-                    Celda(tabla.Cell(), Textos.Cantidad(l.Cantidad), derecha: true, fuerte: true);
-                    Celda(tabla.Cell(), $"{Textos.Cantidad(l.EnBase)} {l.UnidadBase}", derecha: true);
+                    Celda(tabla.Cell(), Cifra(l.Cantidad, aumentos), derecha: true, fuerte: true);
+                    Celda(tabla.Cell(), $"{Cifra(l.EnBase, aumentos)} {l.UnidadBase}", derecha: true);
                 }
             }
         });
     }
+
+    /// <summary>
+    /// Una cantidad. En un corte de aumentos lleva su signo —"+4", "−2"—: lo que
+    /// sube es lo que hay que agregar al camión, y lo que baja, lo que hay que
+    /// sacar. Sin el signo, una baja se leería como algo más por cargar.
+    /// </summary>
+    private static string Cifra(decimal valor, bool aumentos) =>
+        aumentos && valor > 0 ? "+" + Textos.Cantidad(valor) : Textos.Cantidad(valor);
 
     private static void Encabezado(IContainer celda, string texto, bool derecha = false)
     {

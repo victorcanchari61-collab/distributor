@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { PackageCheck } from 'lucide-react'
-import { Alert, Button, Checkbox, Modal, RowAction, VisorPdf } from '../../components/ui'
+import { Alert, Button, Checkbox, Desplegable, Modal, RowAction, VisorPdf } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { despachoApi } from './despachoApi'
 import type { OpcionesCarga } from './despachoApi'
@@ -16,6 +16,10 @@ interface Props {
  * Primero se elige qué mercados y qué unidades de medida entran —solo las
  * bolsas, solo el mercado 7— y si va un bloque por mercado; recién entonces se
  * abre el PDF. Sin marcar nada sale el camión completo.
+ *
+ * El corte de horario recorta por CUÁNDO se registró cada pedido, no por el día
+ * del reparto: el primero es la carga base (hasta las 15:00) y los otros dos son
+ * aumentos, solo lo que se agregó después, para sumarlo a lo que ya subió.
  */
 export function AccionCargaDespacho({ id, numero }: Props) {
   const [paso, setPaso] = useState<'cerrado' | 'filtros' | 'visor'>('cerrado')
@@ -24,6 +28,8 @@ export function AccionCargaDespacho({ id, numero }: Props) {
   const [mercados, setMercados] = useState<number[]>([])
   const [unidades, setUnidades] = useState<string[]>([])
   const [porMercado, setPorMercado] = useState(false)
+  // 0 es todo el camión; 1, 2 y 3 son los cortes de horario.
+  const [corte, setCorte] = useState(0)
 
   useEffect(() => {
     if (paso !== 'filtros' || opciones) return
@@ -40,6 +46,7 @@ export function AccionCargaDespacho({ id, numero }: Props) {
     mercados.length ? `mercados=${mercados.join(',')}` : '',
     unidades.length ? `unidades=${unidades.map(encodeURIComponent).join(',')}` : '',
     porMercado ? 'porMercado=true' : '',
+    corte ? `corte=${corte}` : '',
   ]
     .filter(Boolean)
     .join('&')
@@ -71,6 +78,26 @@ export function AccionCargaDespacho({ id, numero }: Props) {
           {!opciones && !error && <p className="py-6 text-center text-sm text-ink-soft">Cargando...</p>}
           {opciones && (
             <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-1.5">
+                <Desplegable
+                  label="Corte de horario"
+                  value={corte}
+                  onChange={(v) => setCorte(Number(v))}
+                  options={opciones.cortes.map((c) => ({ value: c.codigo, label: c.nombre }))}
+                />
+                {corte > 1 && (
+                  <p className="text-xs text-ink-soft">
+                    Aumentos: sale solo lo que se agregó en esa franja —lo que subió de cantidad, los productos y los
+                    pedidos nuevos—, para sumarlo a lo que ya se cargó. Lo que bajó sale en negativo.
+                  </p>
+                )}
+                {corte === 1 && (
+                  <p className="text-xs text-ink-soft">
+                    La carga base: los pedidos como quedaron hasta las 15:00, incluido lo registrado en días anteriores.
+                  </p>
+                )}
+              </div>
+
               <Grupo
                 titulo="Mercados"
                 todos={mercados.length === 0}
@@ -110,7 +137,8 @@ export function AccionCargaDespacho({ id, numero }: Props) {
               </div>
 
               <p className="text-xs text-ink-soft">
-                Cortes de horario: próximamente, cuando se registren los cambios de cada pedido.
+                Los cortes cuentan por la fecha y hora en que se registró cada pedido o aumento; el día del reparto no
+                influye.
               </p>
             </div>
           )}

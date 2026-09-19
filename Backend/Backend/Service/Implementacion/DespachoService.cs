@@ -101,25 +101,46 @@ public class DespachoService : IDespachoService
         }
     }
 
-    public async Task<List<LineaCargaResponse>> LineasCargaAsync(int id)
+    /// <summary>Una línea de pedido de un camión, con lo que hace falta para sumarla al reporte de carga.</summary>
+    private sealed class LineaPedido
     {
-        if (!await _context.Despachos.AnyAsync(d => d.Id == id))
-            throw new NotFoundException($"No existe el despacho {id}");
+        public int Id { get; init; }
+        public DateTime PedidoFecha { get; init; }
+        public DateTime Registro { get; init; }
+        public int? MercadoId { get; init; }
+        public string? Mercado { get; init; }
+        public int ProductoId { get; init; }
+        public string Codigo { get; init; } = string.Empty;
+        public string Producto { get; init; } = string.Empty;
+        public int? PresentacionId { get; init; }
+        public string? Presentacion { get; init; }
+        public decimal Factor { get; init; }
+        public string UnidadCodigo { get; init; } = string.Empty;
+        public string UnidadNombre { get; init; } = string.Empty;
+        public string UnidadBase { get; init; } = string.Empty;
+        public decimal CantidadPresentacion { get; init; }
+        public decimal Cantidad { get; init; }
+        public bool Anulado { get; init; }
+    }
 
-        var lineas = await _context.PedidoDetalles
+    private IQueryable<LineaPedido> LineasDelDespacho(int id, bool conAnuladas) =>
+        _context.PedidoDetalles
             .AsNoTracking()
-            .Where(l => !l.Anulado
+            .Where(l => (conAnuladas || !l.Anulado)
                         && _context.Despachos.Where(d => d.Id == id)
                             .SelectMany(d => d.Detalle)
                             .Any(x => x.PedidoId == l.PedidoId))
-            .Select(l => new
+            .Select(l => new LineaPedido
             {
-                MercadoId = l.Pedido!.Cliente!.MercadoId,
+                Id = l.Id,
+                PedidoFecha = l.Pedido!.Fecha,
+                Registro = l.Pedido.FechaCreacion,
+                MercadoId = l.Pedido.Cliente!.MercadoId,
                 Mercado = l.Pedido.Cliente.Mercado != null ? l.Pedido.Cliente.Mercado.Nombre : null,
-                l.ProductoId,
-                l.Producto!.Codigo,
+                ProductoId = l.ProductoId,
+                Codigo = l.Producto!.Codigo,
                 Producto = l.Producto.Nombre,
-                l.PresentacionId,
+                PresentacionId = l.PresentacionId,
                 Presentacion = l.Presentacion != null ? l.Presentacion.Nombre : null,
                 Factor = l.Presentacion != null ? l.Presentacion.Factor : 1m,
                 // Sin presentación se vendió en la unidad base: esa es su unidad.
@@ -130,16 +151,19 @@ public class DespachoService : IDespachoService
                     ? l.Presentacion.Unidad!.Nombre
                     : l.Producto.UnidadBase!.Nombre,
                 UnidadBase = l.Producto.UnidadBase!.Codigo,
-                l.CantidadPresentacion,
-                l.Cantidad,
-            })
-            .ToListAsync();
+                CantidadPresentacion = l.CantidadPresentacion,
+                Cantidad = l.Cantidad,
+                Anulado = l.Anulado,
+            });
 
-        return lineas
-            .GroupBy(l => (l.MercadoId, l.ProductoId, l.PresentacionId))
+    /// <summary>Suma por mercado, producto y presentación las cantidades que se le pasan.</summary>
+    private static List<LineaCargaResponse> AgruparCarga(
+        IEnumerable<(LineaPedido Linea, decimal Presentaciones, decimal EnBase)> filas) =>
+        filas
+            .GroupBy(f => (f.Linea.MercadoId, f.Linea.ProductoId, f.Linea.PresentacionId))
             .Select(g =>
             {
-                var l = g.First();
+                var l = g.First().Linea;
                 return new LineaCargaResponse
                 {
                     MercadoId = l.MercadoId ?? 0,
@@ -153,11 +177,191 @@ public class DespachoService : IDespachoService
                     UnidadCodigo = l.UnidadCodigo,
                     UnidadNombre = l.UnidadNombre,
                     UnidadBase = l.UnidadBase,
-                    Cantidad = g.Sum(x => x.CantidadPresentacion),
-                    EnUnidadBase = g.Sum(x => x.Cantidad),
+                    Cantidad = g.Sum(x => x.Presentaciones),
+                    EnUnidadBase = g.Sum(x => x.EnBase),
                 };
             })
             .ToList();
+
+    public async Task<List<LineaCargaResponse>> LineasCargaAsync(int id)
+    {
+        if (!await _context.Despachos.AnyAsync(d => d.Id == id))
+            throw new NotFoundException($"No existe el despacho {id}");
+
+        var lineas = await LineasDelDespacho(id, conAnuladas: false).ToListAsync();
+
+        return AgruparCarga(lineas.Select(l => (l, l.CantidadPresentacion, l.Cantidad)));
+    }
+
+    public async Task<(List<LineaCargaResponse> Lineas, DateTime DiaCarga)> LineasCargaCorteAsync(int id, int corte)
+    {
+        if (!CortesCarga.EsValido(corte))
+            throw new BadRequestException("Elige un corte válido.");
+
+        if (!await _context.Despachos.AnyAsync(d => d.Id == id))
+            throw new NotFoundException($"No existe el despacho {id}");
+
+        // Con las anuladas: una línea que hoy está quitada pudo estar pedida a
+        // las 15:00, y la base tiene que contarla.
+        var lineas = await LineasDelDespacho(id, conAnuladas: true).ToListAsync();
+
+        /*
+         * El día de carga es el de los PEDIDOS: el más reciente del camión. El
+         * día en que se reparte no cuenta. Lo registrado en días anteriores
+         * queda dentro de la base, porque el primer corte llega hasta las 15:00
+         * de este día sin límite por atrás.
+         */
+        var diaCarga = lineas.Count == 0 ? Zona.Hoy : lineas.Max(l => Zona.DiaDe(l.PedidoFecha));
+        var primerCorte = Zona.AUtc(diaCarga + CortesCarga.HoraPrimerCorte);
+        var segundoCorte = Zona.AUtc(diaCarga + CortesCarga.HoraSegundoCorte);
+
+        var historiales = await HistorialesAsync(lineas);
+
+        var filas = new List<(LineaPedido, decimal, decimal)>();
+        foreach (var l in lineas)
+        {
+            var h = historiales[l.Id];
+            var actual = l.Anulado ? (0m, 0m) : (l.CantidadPresentacion, l.Cantidad);
+
+            var (pres, bas) = corte switch
+            {
+                CortesCarga.Primero => h.En(primerCorte),
+                CortesCarga.Segundo => Restar(h.En(segundoCorte), h.En(primerCorte)),
+                // Del segundo corte en adelante hasta hoy: lo que queda por
+                // sumar. Por diferencia con lo actual, así los tres cortes
+                // suman siempre lo mismo que el camión completo.
+                _ => Restar(actual, h.En(segundoCorte)),
+            };
+
+            if (pres != 0 || bas != 0) filas.Add((l, pres, bas));
+        }
+
+        return (AgruparCarga(filas).Where(l => l.Cantidad != 0 || l.EnUnidadBase != 0).ToList(), diaCarga);
+    }
+
+    private static (decimal, decimal) Restar((decimal Pres, decimal Bas) a, (decimal Pres, decimal Bas) b) =>
+        (a.Pres - b.Pres, a.Bas - b.Bas);
+
+    /// <summary>
+    /// Cuánto valía una línea de pedido en cada momento, según el registro de
+    /// cambios. Ese registro guarda la hora exacta de cada aumento, baja o
+    /// anulación, que es lo único que permite cortar el día por horas.
+    /// </summary>
+    private sealed class HistorialLinea
+    {
+        private readonly List<(DateTime Desde, decimal Pres, decimal Bas, bool Anulado)> _puntos = [];
+
+        public void Agregar(DateTime desde, decimal pres, decimal bas, bool anulado) =>
+            _puntos.Add((desde, pres, bas, anulado));
+
+        /// <summary>Lo que valía a esa hora; cero si el pedido todavía no existía o la línea estaba anulada.</summary>
+        public (decimal Pres, decimal Bas) En(DateTime instante)
+        {
+            var punto = _puntos.LastOrDefault(p => p.Desde <= instante);
+            return punto == default || punto.Anulado ? (0m, 0m) : (punto.Pres, punto.Bas);
+        }
+    }
+
+    private async Task<Dictionary<int, HistorialLinea>> HistorialesAsync(List<LineaPedido> lineas)
+    {
+        var ids = lineas.Select(l => l.Id.ToString()).ToList();
+
+        var eventos = ids.Count == 0
+            ? []
+            : await _context.RegistrosAuditoria
+                .AsNoTracking()
+                .Where(r => r.Entidad == nameof(PedidoDetalle) && ids.Contains(r.EntidadId))
+                .OrderBy(r => r.Fecha).ThenBy(r => r.Id)
+                .Select(r => new { r.EntidadId, r.Accion, r.Fecha, r.ValoresAnteriores, r.ValoresNuevos })
+                .ToListAsync();
+
+        var porLinea = eventos.ToLookup(e => e.EntidadId);
+        var resultado = new Dictionary<int, HistorialLinea>();
+
+        foreach (var l in lineas)
+        {
+            var propios = porLinea[l.Id.ToString()].ToList();
+            var creado = propios.FirstOrDefault(e => e.Accion == AccionAuditoria.Creado);
+            var cambios = propios.Where(e => e.Accion == AccionAuditoria.Actualizado).ToList();
+
+            var pres = l.CantidadPresentacion;
+            var bas = l.Cantidad;
+            var anulado = l.Anulado;
+            DateTime desde;
+
+            if (creado is not null)
+            {
+                // El alta trae todos los valores: de ahí se parte.
+                var inicial = Leer(creado.ValoresNuevos);
+                pres = inicial.Pres ?? pres;
+                bas = inicial.Bas ?? bas;
+                anulado = inicial.Anulado ?? false;
+                desde = creado.Fecha;
+            }
+            else
+            {
+                // Sin alta en el registro (una línea anterior a la bitácora): se
+                // parte de lo que valía antes del primer cambio de cada dato, y
+                // se da por existente desde que se creó el pedido.
+                var vistoPres = false;
+                var vistoBas = false;
+                var vistoAnulado = false;
+                foreach (var c in cambios)
+                {
+                    var antes = Leer(c.ValoresAnteriores);
+                    if (!vistoPres && antes.Pres is not null) { pres = antes.Pres.Value; vistoPres = true; }
+                    if (!vistoBas && antes.Bas is not null) { bas = antes.Bas.Value; vistoBas = true; }
+                    if (!vistoAnulado && antes.Anulado is not null) { anulado = antes.Anulado.Value; vistoAnulado = true; }
+                }
+                desde = l.Registro;
+            }
+
+            var historial = new HistorialLinea();
+            historial.Agregar(desde, pres, bas, anulado);
+
+            foreach (var c in cambios)
+            {
+                var nuevo = Leer(c.ValoresNuevos);
+                pres = nuevo.Pres ?? pres;
+                bas = nuevo.Bas ?? bas;
+                anulado = nuevo.Anulado ?? anulado;
+                historial.Agregar(c.Fecha, pres, bas, anulado);
+            }
+
+            resultado[l.Id] = historial;
+        }
+
+        return resultado;
+    }
+
+    /// <summary>Lo que un registro de cambios dice de cantidad y anulación; lo que no dice, vacío.</summary>
+    private static (decimal? Pres, decimal? Bas, bool? Anulado) Leer(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return (null, null, null);
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var raiz = doc.RootElement;
+
+            decimal? Numero(string nombre) =>
+                raiz.TryGetProperty(nombre, out var v) && v.ValueKind == System.Text.Json.JsonValueKind.Number
+                    ? v.GetDecimal()
+                    : null;
+
+            bool? Bandera(string nombre) =>
+                raiz.TryGetProperty(nombre, out var v)
+                && v.ValueKind is System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False
+                    ? v.GetBoolean()
+                    : null;
+
+            return (Numero(nameof(PedidoDetalle.CantidadPresentacion)), Numero(nameof(PedidoDetalle.Cantidad)),
+                Bandera(nameof(PedidoDetalle.Anulado)));
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return (null, null, null);
+        }
     }
 
     public async Task<OpcionesCargaResponse> OpcionesCargaAsync(int id)
@@ -185,6 +389,9 @@ public class DespachoService : IDespachoService
                     Productos = g.Select(l => l.ProductoId).Distinct().Count(),
                 })
                 .OrderBy(u => u.Nombre)
+                .ToList(),
+            Cortes = new[] { CortesCarga.Todos, CortesCarga.Primero, CortesCarga.Segundo, CortesCarga.Tercero }
+                .Select(c => new OpcionCorteCarga { Codigo = c, Nombre = CortesCarga.Nombre(c) })
                 .ToList(),
         };
     }

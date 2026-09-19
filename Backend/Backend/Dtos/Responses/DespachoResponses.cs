@@ -116,6 +116,13 @@ public class OpcionMercadoCarga
     public int Pedidos { get; set; }
 }
 
+/// <summary>Un corte de horario para elegir: 0 es todo el camión.</summary>
+public class OpcionCorteCarga
+{
+    public int Codigo { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+}
+
 public class OpcionUnidadCarga
 {
     public string Codigo { get; set; } = string.Empty;
@@ -128,6 +135,9 @@ public class OpcionesCargaResponse
 {
     public List<OpcionMercadoCarga> Mercados { get; set; } = [];
     public List<OpcionUnidadCarga> Unidades { get; set; } = [];
+
+    /// <summary>Todos, primer, segundo y tercer corte, con el texto con que se muestran.</summary>
+    public List<OpcionCorteCarga> Cortes { get; set; } = [];
 }
 
 public class ResumenDespachosResponse

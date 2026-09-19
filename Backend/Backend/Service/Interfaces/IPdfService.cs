@@ -48,8 +48,13 @@ public interface IPdfService
     /// <param name="mercados">Ids de mercado; vacío es todos. 0 es "sin mercado".</param>
     /// <param name="unidades">Códigos de unidad de medida (BOL, SAC); vacío es todas.</param>
     /// <param name="porMercado">Un bloque por mercado en vez de todo sumado.</param>
+    /// <param name="corte">
+    /// 1, 2 o 3 para sacar un corte de horario (base, primer aumento, segundo
+    /// aumento); vacío es todo el camión.
+    /// </param>
     Task<(byte[] Contenido, string Nombre)> CargaDespachoAsync(
-        int id, IReadOnlyCollection<int>? mercados, IReadOnlyCollection<string>? unidades, bool porMercado);
+        int id, IReadOnlyCollection<int>? mercados, IReadOnlyCollection<string>? unidades, bool porMercado,
+        int? corte = null);
 
     /// <summary>
     /// Las novedades de entrega —lo que no llegó al cliente y por qué—, con los
