@@ -1,3 +1,5 @@
+using Backend.Dtos.Requests;
+
 namespace Backend.Service.Interfaces;
 
 /// <summary>En qué papel se va a imprimir.</summary>
@@ -48,6 +50,12 @@ public interface IPdfService
     /// <param name="porMercado">Un bloque por mercado en vez de todo sumado.</param>
     Task<(byte[] Contenido, string Nombre)> CargaDespachoAsync(
         int id, IReadOnlyCollection<int>? mercados, IReadOnlyCollection<string>? unidades, bool porMercado);
+
+    /// <summary>
+    /// Las novedades de entrega —lo que no llegó al cliente y por qué—, con los
+    /// mismos filtros y el mismo orden que ve la pantalla.
+    /// </summary>
+    Task<(byte[] Contenido, string Nombre)> NovedadesAsync(ConsultaTablaRequest consulta);
 
     Task<(byte[] Contenido, string Nombre)> AjusteAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> TransferenciaAsync(int id, FormatoPdf formato);

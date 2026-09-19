@@ -255,6 +255,18 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Despachos',
         icono: Icons.local_shipping,
       ),
+      MenuItem(
+        id: 'tms.novedades',
+        pendiente: false,
+        titulo: 'Novedades',
+        icono: Icons.inventory_2_outlined,
+      ),
+      MenuItem(
+        id: 'tms.motivos',
+        pendiente: false,
+        titulo: 'Motivos de novedad',
+        icono: Icons.label_outline,
+      ),
     ],
   ),
   MenuGrupo(

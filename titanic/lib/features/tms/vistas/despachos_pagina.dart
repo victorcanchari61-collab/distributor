@@ -245,7 +245,11 @@ class _TarjetaDespacho extends StatelessWidget {
     CampoDetalle('Vehículo', despacho.vehiculo),
     CampoDetalle('Conductor', despacho.conductor),
     CampoDetalle('Fecha', _fecha(despacho.fecha)),
-    CampoDetalle('Entregas', '${despacho.entregados} de ${despacho.pedidos}'),
+    CampoDetalle(
+      'Entregas',
+      '${despacho.entregados} de ${despacho.pedidos}'
+          '${despacho.noEntregados > 0 ? ' · ${despacho.noEntregados} no ${despacho.noEntregados == 1 ? 'entregado' : 'entregados'}' : ''}',
+    ),
     CampoDetalle('Total', 'S/ ${despacho.total.toStringAsFixed(2)}'),
     if (despacho.usuario != null) CampoDetalle('Registrado por', despacho.usuario),
     if (despacho.observacion != null) CampoDetalle('Observación', despacho.observacion),
@@ -260,7 +264,13 @@ class _TarjetaDespacho extends StatelessWidget {
         filas: [
           [
             ('Total', 'S/ ${p.total.toStringAsFixed(2)}'),
-            ('Entrega', p.notaVentaNumero ?? 'Sin entregar'),
+            (
+              'Entrega',
+              p.noEntregadoMotivo != null
+                  ? 'No entregado: ${p.noEntregadoMotivo}'
+                  : '${p.notaVentaNumero ?? 'Sin entregar'}'
+                        '${p.lineasConNovedad > 0 ? ' · ${p.lineasConNovedad} con novedad' : ''}',
+            ),
           ],
         ],
       ),

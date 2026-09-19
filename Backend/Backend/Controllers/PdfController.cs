@@ -1,3 +1,6 @@
+using System.Text.Json;
+using Backend.Dtos.Requests;
+using Backend.Exceptions;
 using Backend.Filters;
 using Backend.Models;
 using Backend.Service.Interfaces;
@@ -68,6 +71,34 @@ public class PdfController(IPdfService pdf) : ControllerBase
                 .Select(x => int.TryParse(x, out var n) ? n : -1).Where(n => n >= 0).ToList(),
             unidades?.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
             porMercado));
+
+    /// <summary>
+    /// Las novedades de entrega, con los mismos filtros de la pantalla.
+    ///
+    /// Los filtros viajan como el JSON de la consulta de la tabla en un solo
+    /// parámetro: son una lista de columna, operador y valor, y armar un
+    /// parámetro por columna sería tener que enseñarle al servidor cada uno.
+    /// </summary>
+    [HttpGet("api/novedad/pdf")]
+    [Permiso("tms.novedades", Accion.Exportar)]
+    public async Task<IActionResult> Novedades([FromQuery] string? consulta) =>
+        Archivo(await pdf.NovedadesAsync(ConsultaDe(consulta)));
+
+    private static ConsultaTablaRequest ConsultaDe(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new ConsultaTablaRequest();
+
+        try
+        {
+            return JsonSerializer.Deserialize<ConsultaTablaRequest>(
+                       json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                   ?? new ConsultaTablaRequest();
+        }
+        catch (JsonException)
+        {
+            throw new BadRequestException("Los filtros del reporte no se entienden.");
+        }
+    }
 
     /*
      * Los cuatro documentos de inventario viven en la misma tabla y comparten

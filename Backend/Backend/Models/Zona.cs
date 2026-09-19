@@ -17,6 +17,9 @@ public static class Zona
     /// <summary>Un instante en UTC, visto desde la hora local.</summary>
     public static DateTime ALocal(DateTime utc) => utc + Peru;
 
+    /// <summary>Una hora local, vista en UTC: para acotar una consulta por día.</summary>
+    public static DateTime AUtc(DateTime local) => local - Peru;
+
     /// <summary>El día al que pertenece ese instante, en hora local.</summary>
     public static DateTime DiaDe(DateTime utc) => ALocal(utc).Date;
 

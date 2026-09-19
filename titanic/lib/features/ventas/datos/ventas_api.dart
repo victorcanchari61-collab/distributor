@@ -34,6 +34,17 @@ class VentasApi {
         await _api.patch('/pedido/$id/confirmar', cuerpo: cuerpo) as Map<String, dynamic>,
       );
 
+  /// POST /api/pedido/{id}/noentregado. El pedido entero no se entregó: no
+  /// crea venta ni mueve stock, deja la novedad con su motivo.
+  Future<Pedido> marcarNoEntregado(int id, Map<String, dynamic> cuerpo) async => Pedido.desdeJson(
+    await _api.post('/pedido/$id/noentregado', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
+
+  /// DELETE /api/pedido/{id}/noentregado. Se marcó por error o se reintentó.
+  Future<Pedido> quitarNoEntregado(int id) async => Pedido.desdeJson(
+    await _api.delete('/pedido/$id/noentregado') as Map<String, dynamic>,
+  );
+
   /// PATCH /api/pedido/{id}/anular
   Future<void> anularPedido(int id) async {
     await _api.patch('/pedido/$id/anular');

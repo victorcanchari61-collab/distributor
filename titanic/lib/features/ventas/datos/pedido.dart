@@ -15,6 +15,7 @@ class LineaVenta {
     required this.precioUnitario,
     required this.precioPresentacion,
     required this.subtotal,
+    this.anulado = false,
   });
 
   final int id;
@@ -42,6 +43,13 @@ class LineaVenta {
 
   final double subtotal;
 
+  /// Se quitó del pedido al editarlo: no cuenta para el total ni se entrega,
+  /// pero la fila se conserva para no perder su historial.
+  final bool anulado;
+
+  /// Cuántas unidades base trae una presentación de esta línea.
+  double get factor => cantidadPresentacion > 0 ? cantidad / cantidadPresentacion : 1;
+
   factory LineaVenta.desdeJson(Map<String, dynamic> json) => LineaVenta(
     id: json['id'] as int,
     productoId: json['productoId'] as int,
@@ -55,6 +63,7 @@ class LineaVenta {
     precioUnitario: (json['precioUnitario'] as num?)?.toDouble() ?? 0,
     precioPresentacion: (json['precioPresentacion'] as num?)?.toDouble() ?? 0,
     subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
+    anulado: json['anulado'] as bool? ?? false,
   );
 }
 
@@ -96,6 +105,8 @@ class Pedido {
     this.almacenId,
     this.almacen,
     this.notaVentaNumero,
+    this.noEntregadoMotivo,
+    this.noEntregadoObservacion,
     required this.total,
     required this.detalle,
   });
@@ -126,6 +137,11 @@ class Pedido {
   /// El número de la venta que nació de confirmarlo, si ya se convirtió.
   final String? notaVentaNumero;
 
+  /// Por qué no se entregó, si el repartidor lo marcó como no entregado. El
+  /// pedido sigue Pendiente: puede reintentarse o anularse.
+  final String? noEntregadoMotivo;
+  final String? noEntregadoObservacion;
+
   final double total;
   final List<LineaVenta> detalle;
 
@@ -147,6 +163,8 @@ class Pedido {
     almacenId: json['almacenId'] as int?,
     almacen: json['almacen'] as String?,
     notaVentaNumero: json['notaVentaNumero'] as String?,
+    noEntregadoMotivo: json['noEntregadoMotivo'] as String?,
+    noEntregadoObservacion: json['noEntregadoObservacion'] as String?,
     total: (json['total'] as num?)?.toDouble() ?? 0,
     detalle: (json['detalle'] as List? ?? const [])
         .map((e) => LineaVenta.desdeJson(e as Map<String, dynamic>))

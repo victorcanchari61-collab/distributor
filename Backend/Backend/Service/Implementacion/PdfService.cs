@@ -1,3 +1,4 @@
+using Backend.Dtos.Requests;
 using Backend.Dtos.Responses;
 using Backend.Exceptions;
 using Backend.Models;
@@ -22,6 +23,7 @@ public class PdfService(
     IComprasService compras,
     IInventarioService inventario,
     IDespachoService despachos,
+    INovedadService novedades,
     IEmpresaService empresas,
     IClienteRepository clientes,
     IProveedorRepository proveedores) : IPdfService
@@ -293,6 +295,87 @@ public class PdfService(
             despacho, lineas, partes.Count == 0 ? null : string.Join("   ·   ", partes), porMercado).GeneratePdf();
         return (contenido, Nombre("carga", despacho.Numero, FormatoPdf.A4));
     }
+
+    public async Task<(byte[], string)> NovedadesAsync(ConsultaTablaRequest consulta)
+    {
+        // Sin tope de página: el papel es todo lo que ve el filtro, no un trozo.
+        var (filas, total) = await novedades.ExportarAsync(consulta);
+
+        var contenido = new NovedadesA4(
+            filas, total, DescribirFiltrosNovedades(consulta), Zona.ALocal(DateTime.UtcNow)).GeneratePdf();
+
+        return (contenido, $"novedades-{Zona.Hoy:yyyy-MM-dd}.pdf");
+    }
+
+    /// <summary>
+    /// Lo que se filtró, dicho con palabras: la hoja tiene que decir de qué es
+    /// un recorte, o pasa por el total de todo.
+    /// </summary>
+    private static string? DescribirFiltrosNovedades(ConsultaTablaRequest consulta)
+    {
+        var partes = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+            partes.Add($"búsqueda «{consulta.Buscar.Trim()}»");
+
+        foreach (var filtro in consulta.Filtros)
+        {
+            if (string.IsNullOrWhiteSpace(filtro.Valor) && string.IsNullOrWhiteSpace(filtro.ValorHasta)) continue;
+
+            if (filtro.Columna == "fecha")
+            {
+                partes.Add(string.IsNullOrWhiteSpace(filtro.ValorHasta)
+                    ? $"desde el {Dia(filtro.Valor)}"
+                    : string.IsNullOrWhiteSpace(filtro.Valor)
+                        ? $"hasta el {Dia(filtro.ValorHasta)}"
+                        : $"del {Dia(filtro.Valor)} al {Dia(filtro.ValorHasta)}");
+                continue;
+            }
+
+            var etiqueta = filtro.Columna switch
+            {
+                "producto" => "Producto",
+                "pedido" => "Pedido",
+                "cliente" => "Cliente",
+                "despacho" => "Despacho",
+                "motivo" => "Motivo",
+                "tipo" => "Qué pasó",
+                "estado" => "Estado",
+                _ => filtro.Columna,
+            };
+
+            var valor = filtro.Columna switch
+            {
+                "tipo" => filtro.Valor switch
+                {
+                    TipoNovedad.Linea => "Entregado en menos",
+                    TipoNovedad.Pedido => "Pedido sin entregar",
+                    _ => filtro.Valor,
+                },
+                "estado" => filtro.Valor switch
+                {
+                    EstadoNovedad.Pendiente => "Por revisar",
+                    EstadoNovedad.Recibida => "Recibida",
+                    EstadoNovedad.Faltante => "Faltante",
+                    EstadoNovedad.SinRetorno => "Sin retorno",
+                    EstadoNovedad.Anulada => "Anulada",
+                    _ => filtro.Valor,
+                },
+                _ => filtro.Valor,
+            };
+
+            partes.Add($"{etiqueta} {valor}");
+        }
+
+        return partes.Count == 0 ? null : string.Join("   ·   ", partes);
+    }
+
+    /// <summary>Un día como lo manda el panel (yyyy-MM-dd), escrito dd/MM/yyyy.</summary>
+    private static string Dia(string? valor) =>
+        DateTime.TryParse(valor, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var d)
+            ? d.ToString("dd/MM/yyyy")
+            : valor ?? string.Empty;
 
     // --- Inventario: mercadería que se mueve y alguien tiene que firmar ---
 

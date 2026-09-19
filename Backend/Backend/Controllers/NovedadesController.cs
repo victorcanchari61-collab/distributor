@@ -75,6 +75,11 @@ public class NovedadController : ControllerBase
     [Permiso("tms.novedades", Accion.Ver)]
     public async Task<IActionResult> Resumen() => Ok(await _novedades.ResumenAsync());
 
+    /// <summary>Lo que hay para elegir en los filtros del listado.</summary>
+    [HttpGet("opciones")]
+    [Permiso("tms.novedades", Accion.Ver)]
+    public async Task<IActionResult> Opciones() => Ok(await _novedades.OpcionesAsync());
+
     /// <summary>El encargado cuenta lo que volvió en el camión: llegó completo o faltó.</summary>
     [HttpPatch("{id:int}/verificar")]
     [Permiso("tms.novedades", Accion.Confirmar)]

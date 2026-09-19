@@ -113,6 +113,7 @@ builder.Services.AddScoped<IDevolucionService, DevolucionService>();
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 builder.Services.AddScoped<IFinanzasService, FinanzasService>();
 builder.Services.AddScoped<IArqueoService, ArqueoService>();
+builder.Services.AddScoped<IGananciaService, GananciaService>();
 
 // Consulta de RUC y DNI: se llama al proveedor desde el backend para no
 // exponer el token en el navegador.

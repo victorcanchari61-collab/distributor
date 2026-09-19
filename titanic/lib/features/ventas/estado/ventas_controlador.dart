@@ -65,6 +65,16 @@ class PedidosControlador extends AsyncNotifier<List<Pedido>> {
     await ref.read(ventasApiProvider).anularPedido(id);
     await recargar();
   }
+
+  Future<void> marcarNoEntregado(int id, Map<String, dynamic> cuerpo) async {
+    await ref.read(ventasApiProvider).marcarNoEntregado(id, cuerpo);
+    await recargar();
+  }
+
+  Future<void> quitarNoEntregado(int id) async {
+    await ref.read(ventasApiProvider).quitarNoEntregado(id);
+    await recargar();
+  }
 }
 
 final pedidosProvider = AsyncNotifierProvider<PedidosControlador, List<Pedido>>(

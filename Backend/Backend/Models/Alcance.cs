@@ -44,6 +44,8 @@ public static class AlcanceDatos
         "fact.pedidos",
         "fact.notaventa",
         "maestros.clientes",
+        // Las ganancias salen de las ventas de alguien: quien solo vende ve las suyas.
+        "finanzas.ganancias",
     ];
 }
 

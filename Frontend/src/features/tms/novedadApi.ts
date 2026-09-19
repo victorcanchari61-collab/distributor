@@ -67,6 +67,15 @@ export interface ResumenNovedades {
   importe: number
 }
 
+/** Lo que hay para elegir en los filtros: solo lo que aparece en alguna novedad. */
+export interface NovedadOpciones {
+  productos: string[]
+  pedidos: string[]
+  clientes: string[]
+  despachos: string[]
+  motivos: string[]
+}
+
 export interface VerificarNovedadRequest {
   estado: 'RECIBIDA' | 'FALTANTE'
   /** Cuánto volvió, en unidad base. Solo cuenta en FALTANTE. */
@@ -79,6 +88,7 @@ export const novedadApi = {
   listar: (consulta: ConsultaTabla) =>
     api.post<PaginaResponse<NovedadResponse>>('/novedad/listar', consulta),
   resumen: () => api.get<ResumenNovedades>('/novedad/resumen'),
+  opciones: () => api.get<NovedadOpciones>('/novedad/opciones'),
   /** El encargado cuenta lo que volvió en el camión: llegó completo o faltó. */
   verificar: (id: number, body: VerificarNovedadRequest) =>
     api.patch<NovedadResponse>(`/novedad/${id}/verificar`, body),

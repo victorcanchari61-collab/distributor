@@ -118,6 +118,10 @@ public static class CatalogoPermisos
             ["finanzas.cobrar"] = [Accion.Ver, Accion.Cobrar, Accion.Exportar],
             ["finanzas.pagar"] = [Accion.Ver, Accion.Cobrar, Accion.Exportar],
             ["finanzas.miscobros"] = Consulta,
+            // Cuánto se ganó con cada producto: ventas menos lo que costó la
+            // mercadería. Es un dato del negocio, no de cualquiera: se da a
+            // quien lo necesite, y el alcance lo recorta a lo propio.
+            ["finanzas.ganancias"] = [Accion.Ver],
             ["finanzas.arqueo"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Eliminar, Accion.Cobrar, Accion.Exportar],
 
             // --- TMS ---
@@ -140,7 +144,7 @@ public static class CatalogoPermisos
             ["tms.motivos"] = CatalogoSinBorrado,
             // Lo que no se entregó, y la revisión de lo que vuelve en el
             // camión. "Confirmar" es contar y dar por recibida o faltante.
-            ["tms.novedades"] = [Accion.Ver, Accion.Confirmar],
+            ["tms.novedades"] = [Accion.Ver, Accion.Confirmar, Accion.Exportar],
 
             // --- DMS ---
             // Una lista de trabajo, no un documento: no se crea ni se anula

@@ -9,7 +9,6 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
-import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/permisos.dart';
@@ -17,10 +16,9 @@ import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
-import '../../../core/tema/dimensiones.dart';
-import '../../inventario/estado/inventario_controlador.dart';
 import '../datos/pedido.dart';
 import '../estado/ventas_controlador.dart';
+import 'entrega_pedido_hoja.dart';
 import 'pedido_formulario.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
@@ -90,6 +88,12 @@ class PedidosPagina extends ConsumerWidget {
         onConfirmar: puede(ref, 'fact.pedidos', Accion.confirmar) &&
                 pedido.estado == EstadoPedido.pendiente
             ? () => _confirmar(context, ref, pedido)
+            : null,
+        onNoEntregado: puede(ref, 'fact.pedidos', Accion.confirmar) &&
+                pedido.estado == EstadoPedido.pendiente
+            ? () => pedido.noEntregadoMotivo != null
+                  ? _quitarNoEntregado(context, ref, pedido)
+                  : _noEntregado(context, ref, pedido)
             : null,
         onAnular: puede(ref, 'fact.pedidos', Accion.anular) &&
                 pedido.estado == EstadoPedido.pendiente
@@ -161,126 +165,39 @@ class PedidosPagina extends ConsumerWidget {
     );
   }
 
+  /// Convierte el pedido en venta con lo que de verdad se entregó: por defecto
+  /// todo, y si el cliente recibió menos se corrige la línea y se pide el motivo.
   Future<void> _confirmar(BuildContext context, WidgetRef ref, Pedido pedido) async {
-    final almacenes = ref.read(almacenesActivosProvider);
+    final mensajero = Aviso.de(context);
+    final hecho = await mostrarEntregaPedido(context, pedido);
+    if (hecho == true) {
+      mensajero.mostrar('${pedido.numero} confirmado: se creó la nota de venta.');
+    }
+  }
 
-    /*
-     * Con reserva no se pregunta.
-     *
-     * El pedido ya aparto la mercaderia de un almacen concreto: de ahi sale.
-     * Preguntarlo otra vez invita a elegir otro y dejar la reserva colgada en
-     * el primero, descontando de donde nadie aparto nada. El backend tambien
-     * lo ignora en ese caso, pero la pregunta sobra y confunde.
-     */
-    final conReserva = pedido.reservaStock && pedido.almacenId != null;
+  /// El pedido entero no se entregó: no crea venta, deja la novedad con su motivo.
+  Future<void> _noEntregado(BuildContext context, WidgetRef ref, Pedido pedido) async {
+    final mensajero = Aviso.de(context);
+    final hecho = await mostrarNoEntregado(context, pedido);
+    if (hecho == true) {
+      mensajero.mostrar('${pedido.numero} marcado como no entregado.');
+    }
+  }
 
-    int? almacenId = conReserva
-        ? pedido.almacenId
-        : (almacenes.length == 1 ? almacenes.first.id : null);
-    String? error;
-
-    final confirmado = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: Dimen.espacio4,
-                right: Dimen.espacio4,
-                top: Dimen.espacio2,
-                bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Confirmar ${pedido.numero}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
-                  ),
-                  const SizedBox(height: Dimen.espacio2),
-                  Text(
-                    conReserva
-                        ? 'Sale del almacén donde está reservada. El stock se descuenta al '
-                              'confirmar. Un pedido no lleva pagos: la venta queda a crédito, '
-                              'pendiente de cobro.'
-                        : 'Elige de dónde sale la mercadería. El stock se descuenta al '
-                              'confirmar. Un pedido no lleva pagos: la venta queda a crédito, '
-                              'pendiente de cobro.',
-                    style: const TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  if (error != null) ...[
-                    Text(error!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
-                    const SizedBox(height: Dimen.espacio2),
-                  ],
-                  if (conReserva)
-                    Container(
-                      padding: const EdgeInsets.all(Dimen.espacio3),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colores.linea),
-                        borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.warehouse_outlined,
-                            size: 18,
-                            color: Colores.tintaTenue,
-                          ),
-                          const SizedBox(width: Dimen.espacio2),
-                          Expanded(
-                            child: Text(
-                              pedido.almacen ?? 'Almacén de la reserva',
-                              style: const TextStyle(fontSize: 14, color: Colores.tinta),
-                            ),
-                          ),
-                          const AppEtiqueta('stock reservado', tono: EtiquetaTono.modulo),
-                        ],
-                      ),
-                    )
-                  else
-                    AppSelector<int>(
-                      valor: almacenId,
-                      etiqueta: 'Almacén',
-                      icono: Icons.warehouse_outlined,
-                      opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
-                      onCambio: (v) => setSheetState(() => almacenId = v),
-                    ),
-                  const SizedBox(height: Dimen.espacio4),
-                  AppBoton(
-                    texto: 'Confirmar y despachar',
-                    onPressed: () {
-                      if (almacenId == null) {
-                        setSheetState(() => error = 'Elige el almacén.');
-                        return;
-                      }
-                      Navigator.of(context).pop(true);
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+  Future<void> _quitarNoEntregado(BuildContext context, WidgetRef ref, Pedido pedido) async {
+    final ok = await confirmarAccion(
+      context,
+      titulo: 'Quitar la marca de ${pedido.numero}',
+      mensaje: 'El pedido deja de figurar como no entregado y vuelve a quedar solo pendiente.',
+      textoConfirmar: 'Quitar marca',
+      tono: ConfirmTono.aviso,
     );
-
-    if (confirmado != true || almacenId == null || !context.mounted) return;
+    if (!ok || !context.mounted) return;
 
     final mensajero = Aviso.de(context);
     try {
-      await ref
-          .read(pedidosProvider.notifier)
-          .confirmar(pedido.id, {'almacenId': conReserva ? null : almacenId});
-      mensajero.mostrar('${pedido.numero} confirmado: se creó la nota de venta.');
+      await ref.read(pedidosProvider.notifier).quitarNoEntregado(pedido.id);
+      mensajero.mostrar('${pedido.numero} ya no figura como no entregado');
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -324,6 +241,7 @@ class _TarjetaPedido extends StatelessWidget {
     required this.color,
     this.onEditar,
     this.onConfirmar,
+    this.onNoEntregado,
     this.onAnular,
   });
 
@@ -331,19 +249,50 @@ class _TarjetaPedido extends StatelessWidget {
   final Color color;
   final VoidCallback? onEditar;
   final VoidCallback? onConfirmar;
+
+  /// Marca el pedido como no entregado, o quita la marca si ya la tiene.
+  final VoidCallback? onNoEntregado;
   final VoidCallback? onAnular;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Cliente', pedido.cliente),
     CampoDetalle('Fecha', _fecha(pedido.fecha)),
     CampoDetalle('Total', 'S/ ${pedido.total.toStringAsFixed(2)}'),
+    if (pedido.noEntregadoMotivo != null)
+      CampoDetalle(
+        'No se entregó',
+        pedido.noEntregadoObservacion == null
+            ? pedido.noEntregadoMotivo
+            : '${pedido.noEntregadoMotivo} — ${pedido.noEntregadoObservacion}',
+        widget: AppEtiqueta('No entregado: ${pedido.noEntregadoMotivo}', tono: EtiquetaTono.peligro),
+      ),
     if (pedido.reservaStock) CampoDetalle('Stock reservado en', pedido.almacen),
     if (pedido.usuario != null) CampoDetalle('Registrado por', pedido.usuario),
     if (pedido.observacion != null) CampoDetalle('Observación', pedido.observacion),
   ];
 
+  /// El estado del pedido; si el repartidor lo marcó como no entregado, además
+  /// va el motivo, que es lo que hay que ver de un vistazo en la lista.
+  Widget get _estado {
+    final etiqueta = AppEtiqueta(
+      _etiquetaEstadoPedido(pedido.estado),
+      tono: _tonoEstadoPedido(pedido.estado),
+    );
+    if (pedido.noEntregadoMotivo == null) return etiqueta;
+
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      alignment: WrapAlignment.end,
+      children: [
+        etiqueta,
+        AppEtiqueta('No entregado: ${pedido.noEntregadoMotivo}', tono: EtiquetaTono.peligro),
+      ],
+    );
+  }
+
   List<Widget> get _lineas => [
-    for (final linea in pedido.detalle)
+    for (final linea in pedido.detalle.where((l) => !l.anulado))
       LineaProductoTarjeta(
         titulo: linea.producto,
         subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
@@ -363,7 +312,7 @@ class _TarjetaPedido extends StatelessWidget {
       icono: Icons.list_alt_outlined,
       color: color,
       titulo: pedido.numero,
-      estado: AppEtiqueta(_etiquetaEstadoPedido(pedido.estado), tono: _tonoEstadoPedido(pedido.estado)),
+      estado: _estado,
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
@@ -384,6 +333,17 @@ class _TarjetaPedido extends StatelessWidget {
             tooltip: 'Confirmar',
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.check_circle_outline, size: 18, color: Colores.exito),
+          ),
+        if (onNoEntregado != null)
+          IconButton(
+            onPressed: onNoEntregado,
+            tooltip: pedido.noEntregadoMotivo != null ? 'Quitar la marca de no entregado' : 'No entregado',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              pedido.noEntregadoMotivo != null ? Icons.undo : Icons.report_gmailerrorred_outlined,
+              size: 18,
+              color: Colores.advertencia,
+            ),
           ),
         if (onEditar != null)
           IconButton(
@@ -410,7 +370,7 @@ class _TarjetaPedido extends StatelessWidget {
       color: color,
       titulo: pedido.numero,
       subtitulo: pedido.cliente,
-      estado: AppEtiqueta(_etiquetaEstadoPedido(pedido.estado), tono: _tonoEstadoPedido(pedido.estado)),
+      estado: _estado,
       campos: _campos,
       contenidoExtra: _lineas,
       acciones: [

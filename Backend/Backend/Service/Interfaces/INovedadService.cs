@@ -26,6 +26,16 @@ public interface INovedadService
 
     Task<ResumenNovedadesResponse> ResumenAsync();
 
+    /// <summary>
+    /// Lo mismo que el listado pero sin paginar, para el reporte en papel: con
+    /// los mismos filtros y el mismo orden que ve la pantalla. Devuelve además
+    /// cuántas había en total, por si el papel tuvo que cortarse.
+    /// </summary>
+    Task<(List<NovedadResponse> Filas, int Total)> ExportarAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Lo que hay para elegir en los filtros: solo lo que aparece en alguna novedad.</summary>
+    Task<NovedadOpcionesResponse> OpcionesAsync();
+
     /// <summary>El encargado cuenta lo que volvió: llegó completo o faltó algo.</summary>
     Task<NovedadResponse> VerificarAsync(int id, VerificarNovedadRequest request, int? usuarioId);
 

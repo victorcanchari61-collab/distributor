@@ -102,6 +102,35 @@ public class NovedadService : INovedadService
 
     public async Task<PaginaResponse<NovedadResponse>> ListarAsync(ConsultaTablaRequest consulta)
     {
+        var (items, total) = await Proyectar(Filtradas(consulta)).PaginarAsync(consulta);
+
+        return new PaginaResponse<NovedadResponse>
+        {
+            Items = items,
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    /// <summary>
+    /// Lo que el listado muestra, sin paginar: para sacarlo en papel con
+    /// exactamente los mismos filtros y el mismo orden que ve la pantalla.
+    /// </summary>
+    public async Task<(List<NovedadResponse> Filas, int Total)> ExportarAsync(ConsultaTablaRequest consulta)
+    {
+        var query = Filtradas(consulta);
+        var total = await query.CountAsync();
+        var filas = await Proyectar(query).Take(MaximoExportar).ToListAsync();
+        return (filas, total);
+    }
+
+    /// <summary>Un papel de más de un par de miles de filas ya no lo lee nadie.</summary>
+    private const int MaximoExportar = 2000;
+
+    /// <summary>Búsqueda, filtros y orden del listado. Lo comparten la pantalla y el PDF.</summary>
+    private IQueryable<NovedadEntrega> Filtradas(ConsultaTablaRequest consulta)
+    {
         var query = _context.NovedadesEntrega.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
@@ -116,18 +145,20 @@ public class NovedadService : INovedadService
                 || (n.Despacho != null && EF.Functions.Like(n.Despacho.Numero, $"%{texto}%")));
         }
 
+        // Producto, pedido, cliente y despacho se eligen de una lista (ver
+        // OpcionesAsync), así que llegan exactos: contra "contiene", elegir
+        // "ACEITE" traería también todo lo que lleve esa palabra.
         if (consulta.ValorDe("pedido") is string pedido)
-            query = query.Where(n => EF.Functions.Like(n.Pedido!.Numero, $"%{pedido}%"));
+            query = query.Where(n => n.Pedido!.Numero == pedido);
 
         if (consulta.ValorDe("cliente") is string cliente)
-            query = query.Where(n => EF.Functions.Like(n.Pedido!.Cliente!.Nombre, $"%{cliente}%"));
+            query = query.Where(n => n.Pedido!.Cliente!.Nombre == cliente);
 
         if (consulta.ValorDe("despacho") is string despacho)
-            query = query.Where(n => n.Despacho != null && EF.Functions.Like(n.Despacho.Numero, $"%{despacho}%"));
+            query = query.Where(n => n.Despacho != null && n.Despacho.Numero == despacho);
 
         if (consulta.ValorDe("producto") is string producto)
-            query = query.Where(n => EF.Functions.Like(n.Producto!.Nombre, $"%{producto}%")
-                                     || EF.Functions.Like(n.Producto!.Codigo, $"%{producto}%"));
+            query = query.Where(n => n.Producto!.Nombre == producto);
 
         if (consulta.ValorDe("motivo") is string motivo)
             query = query.Where(n => n.Motivo!.Nombre == motivo);
@@ -165,15 +196,7 @@ public class NovedadService : INovedadService
                       : query.OrderBy(n => n.Fecha).ThenBy(n => n.Id),
         };
 
-        var (items, total) = await Proyectar(query).PaginarAsync(consulta);
-
-        return new PaginaResponse<NovedadResponse>
-        {
-            Items = items,
-            Total = total,
-            Pagina = consulta.PaginaSegura,
-            PorPagina = consulta.PorPaginaSegura,
-        };
+        return query;
     }
 
     private static IQueryable<NovedadResponse> Proyectar(IQueryable<NovedadEntrega> query) =>
@@ -214,6 +237,28 @@ public class NovedadService : INovedadService
     private async Task<NovedadResponse> UnaAsync(int id) =>
         await Proyectar(_context.NovedadesEntrega.AsNoTracking().Where(n => n.Id == id)).FirstOrDefaultAsync()
         ?? throw new NotFoundException("Novedad no encontrada");
+
+    /// <summary>
+    /// Lo que hay para elegir en los filtros: solo lo que de verdad aparece en
+    /// alguna novedad. Un producto o un cliente sin novedades no sirve de
+    /// filtro — daría una tabla vacía — y ofrecerlos todos serían miles de
+    /// clientes para encontrar dos.
+    /// </summary>
+    public async Task<NovedadOpcionesResponse> OpcionesAsync()
+    {
+        var todas = _context.NovedadesEntrega.AsNoTracking();
+
+        return new NovedadOpcionesResponse
+        {
+            Productos = await todas.Select(n => n.Producto!.Nombre).Distinct().OrderBy(x => x).ToListAsync(),
+            Pedidos = await todas.Select(n => n.Pedido!.Numero).Distinct().OrderBy(x => x).ToListAsync(),
+            Clientes = await todas.Select(n => n.Pedido!.Cliente!.Nombre).Distinct().OrderBy(x => x).ToListAsync(),
+            Despachos = await todas
+                .Where(n => n.Despacho != null)
+                .Select(n => n.Despacho!.Numero).Distinct().OrderBy(x => x).ToListAsync(),
+            Motivos = await todas.Select(n => n.Motivo!.Nombre).Distinct().OrderBy(x => x).ToListAsync(),
+        };
+    }
 
     public async Task<ResumenNovedadesResponse> ResumenAsync()
     {

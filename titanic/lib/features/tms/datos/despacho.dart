@@ -23,6 +23,9 @@ class DespachoPedido {
     required this.lineas,
     this.notaVentaId,
     this.notaVentaNumero,
+    this.noEntregadoMotivo,
+    this.noEntregadoObservacion,
+    this.lineasConNovedad = 0,
   });
 
   final int pedidoId;
@@ -43,6 +46,14 @@ class DespachoPedido {
   final int? notaVentaId;
   final String? notaVentaNumero;
 
+  /// Por qué no se entregó, si se marcó entero como no entregado en este
+  /// camión. Vacío mientras no se haya marcado o si después se entregó.
+  final String? noEntregadoMotivo;
+  final String? noEntregadoObservacion;
+
+  /// En cuántos productos se entregó menos de lo pedido.
+  final int lineasConNovedad;
+
   bool get entregado => notaVentaId != null;
 
   factory DespachoPedido.desdeJson(Map<String, dynamic> json) => DespachoPedido(
@@ -59,6 +70,9 @@ class DespachoPedido {
     lineas: json['lineas'] as int? ?? 0,
     notaVentaId: json['notaVentaId'] as int?,
     notaVentaNumero: json['notaVentaNumero'] as String?,
+    noEntregadoMotivo: json['noEntregadoMotivo'] as String?,
+    noEntregadoObservacion: json['noEntregadoObservacion'] as String?,
+    lineasConNovedad: json['lineasConNovedad'] as int? ?? 0,
   );
 }
 
@@ -86,6 +100,7 @@ class Despacho {
     required this.pedidos,
     required this.total,
     required this.entregados,
+    this.noEntregados = 0,
     required this.detalle,
   });
 
@@ -113,6 +128,9 @@ class Despacho {
 
   /// Cuántos de esos pedidos ya se convirtieron en venta.
   final int entregados;
+
+  /// Cuántos pedidos se marcaron como no entregados.
+  final int noEntregados;
   final List<DespachoPedido> detalle;
 
   bool get anulado => estado == EstadoDespacho.anulado;
@@ -137,6 +155,7 @@ class Despacho {
     pedidos: json['pedidos'] as int? ?? 0,
     total: (json['total'] as num?)?.toDouble() ?? 0,
     entregados: json['entregados'] as int? ?? 0,
+    noEntregados: json['noEntregados'] as int? ?? 0,
     detalle: (json['detalle'] as List? ?? const [])
         .map((e) => DespachoPedido.desdeJson(e as Map<String, dynamic>))
         .toList(),

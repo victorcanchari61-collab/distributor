@@ -11,7 +11,14 @@ import { InicioPage } from './features/inicio'
 import { MiPerfilPage } from './features/perfil'
 import { Button } from './components/ui'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
-import { ArqueoDiarioPage, CuentasPorCobrarPage, CuentasPorPagarPage, MetodosPagoPage, MisCobrosPage } from './features/finanzas'
+import {
+  ArqueoDiarioPage,
+  CuentasPorCobrarPage,
+  CuentasPorPagarPage,
+  MetodosPagoPage,
+  MisCobrosPage,
+  MisGananciasPage,
+} from './features/finanzas'
 import {
   AlmacenesPage,
   AjustesPage,
@@ -70,6 +77,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'finanzas.cobrar': CuentasPorCobrarPage,
   'finanzas.pagar': CuentasPorPagarPage,
   'finanzas.miscobros': MisCobrosPage,
+  'finanzas.ganancias': MisGananciasPage,
   'finanzas.arqueo': ArqueoDiarioPage,
   'config.usuarios': UsuariosPage,
   'config.accesos': AccesosPage,

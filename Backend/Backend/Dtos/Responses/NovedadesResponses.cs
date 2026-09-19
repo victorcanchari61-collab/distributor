@@ -94,3 +94,13 @@ public class ResumenNovedadesResponse
     /// <summary>Cuánto valen S/ todas las unidades no entregadas.</summary>
     public decimal Importe { get; set; }
 }
+
+/// <summary>Lo que hay para elegir en los filtros del listado: lo que aparece en alguna novedad.</summary>
+public class NovedadOpcionesResponse
+{
+    public List<string> Productos { get; set; } = [];
+    public List<string> Pedidos { get; set; } = [];
+    public List<string> Clientes { get; set; } = [];
+    public List<string> Despachos { get; set; } = [];
+    public List<string> Motivos { get; set; } = [];
+}

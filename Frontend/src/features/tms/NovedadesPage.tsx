@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Eye, PackageX, RotateCcw, Wallet } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ClipboardCheck, Eye, FileText, PackageX, RotateCcw, Wallet } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -12,15 +12,15 @@ import {
   StatCard,
   useConfirmacion,
   useToast,
+  VisorReportePdf,
 } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaCorta } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
-import { motivoNovedadApi } from './motivoNovedadApi'
 import { novedadApi, textoCantidad } from './novedadApi'
-import type { EstadoNovedad, NovedadResponse, ResumenNovedades } from './novedadApi'
+import type { EstadoNovedad, NovedadOpciones, NovedadResponse, ResumenNovedades } from './novedadApi'
 
 const ESTADOS: Record<EstadoNovedad, { texto: string; tono: 'warning' | 'success' | 'danger' | 'neutral' }> = {
   PENDIENTE: { texto: 'Por revisar', tono: 'warning' },
@@ -29,6 +29,8 @@ const ESTADOS: Record<EstadoNovedad, { texto: string; tono: 'warning' | 'success
   SIN_RETORNO: { texto: 'Sin retorno', tono: 'neutral' },
   ANULADA: { texto: 'Anulada', tono: 'neutral' },
 }
+
+const opcionesDe = (valores: string[]) => valores.map((v) => ({ value: v, label: v }))
 
 const cantidadNoEntregada = (n: NovedadResponse) =>
   textoCantidad(n.cantidadNoEntregada, n.factor, n.presentacion, n.unidadBase)
@@ -48,7 +50,13 @@ export function NovedadesPage() {
   const toast = useToast()
   const [novedades, setNovedades] = useState<NovedadResponse[]>([])
   const [resumen, setResumen] = useState<ResumenNovedades | null>(null)
-  const [motivos, setMotivos] = useState<string[]>([])
+  const [opciones, setOpciones] = useState<NovedadOpciones>({
+    productos: [],
+    pedidos: [],
+    clientes: [],
+    despachos: [],
+    motivos: [],
+  })
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -57,6 +65,7 @@ export function NovedadesPage() {
 
   const [detalle, setDetalle] = useState<NovedadResponse | null>(null)
   const [revisando, setRevisando] = useState<NovedadResponse | null>(null)
+  const [reporteAbierto, setReporteAbierto] = useState(false)
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -82,11 +91,11 @@ export function NovedadesPage() {
       /* los contadores son un adorno: sin ellos la lista igual sirve */
     }
     try {
-      // Todos, activos o no: una novedad vieja puede tener un motivo ya desactivado.
-      const lista = await motivoNovedadApi.getAll().catch(() => motivoNovedadApi.opciones())
-      setMotivos(lista.map((m) => m.nombre))
+      // Solo lo que de verdad aparece en alguna novedad: los filtros son listas
+      // para elegir, no cajas de búsqueda.
+      setOpciones(await novedadApi.opciones())
     } catch {
-      setMotivos([])
+      /* sin opciones el listado igual sirve; solo faltan las listas */
     }
   }, [])
 
@@ -99,6 +108,21 @@ export function NovedadesPage() {
   }, [cargarApoyo])
 
   useRealtime(['novedades', 'pedidos', 'notasventa'], cargar)
+
+  /*
+   * El reporte en PDF sale con lo mismo que muestra la tabla: la búsqueda, los
+   * filtros y el orden. Viajan como el JSON de la consulta en un solo
+   * parámetro; la página no, porque el papel es todo lo que ve el filtro.
+   */
+  const rutaReporte = () => {
+    const c = {
+      buscar: consulta?.buscar ?? '',
+      orden: consulta?.orden ?? null,
+      sentido: consulta?.sentido ?? null,
+      filtros: consulta?.filtros ?? [],
+    }
+    return `/novedad/pdf?consulta=${encodeURIComponent(JSON.stringify(c))}`
+  }
 
   const reabrir = (n: NovedadResponse) =>
     confirmar({
@@ -129,6 +153,8 @@ export function NovedadesPage() {
     {
       key: 'producto',
       label: 'Producto',
+      filterType: 'select',
+      filterOptions: opcionesDe(opciones.productos),
       render: (row) => (
         <span className="flex flex-col">
           <span className="font-semibold text-ink">{row.producto}</span>
@@ -154,9 +180,7 @@ export function NovedadesPage() {
       key: 'motivo',
       label: 'Motivo',
       filterType: 'select',
-      filterOptions: [...new Set(motivos)]
-        .sort((a, b) => a.localeCompare(b, 'es'))
-        .map((m) => ({ value: m, label: m })),
+      filterOptions: opcionesDe(opciones.motivos),
       render: (row) => (
         <span className="flex flex-col">
           <span className="text-ink">{row.motivo}</span>
@@ -175,11 +199,13 @@ export function NovedadesPage() {
       render: (row) =>
         row.tipo === 'PEDIDO' ? <Badge tone="danger">Pedido sin entregar</Badge> : <Badge tone="warning">Entregado en menos</Badge>,
     },
-    { key: 'pedido', label: 'Pedido' },
-    { key: 'cliente', label: 'Cliente' },
+    { key: 'pedido', label: 'Pedido', filterType: 'select', filterOptions: opcionesDe(opciones.pedidos) },
+    { key: 'cliente', label: 'Cliente', filterType: 'select', filterOptions: opcionesDe(opciones.clientes) },
     {
       key: 'despacho',
       label: 'Despacho',
+      filterType: 'select',
+      filterOptions: opcionesDe(opciones.despachos),
       render: (row) => row.despacho ?? <span className="text-ink-soft">—</span>,
     },
     {
@@ -196,6 +222,18 @@ export function NovedadesPage() {
       icon={<PackageX size={20} />}
       title="Novedades de entrega"
       description="Lo que no llegó al cliente y el motivo. Cuando la mercadería vuelve en el camión, aquí se cuenta y se deja constancia."
+      actions={
+        puede('tms.novedades', 'exportar') ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            iconRight={<FileText size={15} />}
+            onClick={() => setReporteAbierto(true)}
+          >
+            Reporte PDF
+          </Button>
+        ) : undefined
+      }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
@@ -253,6 +291,16 @@ export function NovedadesPage() {
       )}
     >
       <DetalleNovedad novedad={detalle} onClose={() => setDetalle(null)} />
+
+      {/* Se monta solo al abrir, con los filtros que hay en ese momento. */}
+      {reporteAbierto && (
+        <VisorReportePdf
+          ruta={rutaReporte()}
+          titulo="Reporte de novedades de entrega"
+          nombreArchivo="novedades.pdf"
+          onCerrar={() => setReporteAbierto(false)}
+        />
+      )}
 
       <RevisarModal
         novedad={revisando}
