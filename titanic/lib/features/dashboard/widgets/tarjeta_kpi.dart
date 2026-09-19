@@ -69,7 +69,8 @@ class TarjetaKpi extends StatelessWidget {
                   ),
                 ),
               ),
-              if (icono != null) Icon(icono, size: 15, color: Colores.tintaTenue),
+              if (icono != null)
+                Icon(icono, size: 15, color: Colores.tintaTenue),
             ],
           ),
           const SizedBox(height: Dimen.espacio2),
@@ -94,7 +95,13 @@ class TarjetaKpi extends StatelessWidget {
 
           if (c != null) ...[
             const SizedBox(height: Dimen.espacio2),
-            _ChipCambio(cambio: c, sube: sube, baja: baja, bueno: bueno, malo: malo),
+            _ChipCambio(
+              cambio: c,
+              sube: sube,
+              baja: baja,
+              bueno: bueno,
+              malo: malo,
+            ),
           ],
 
           if (serie != null) ...[

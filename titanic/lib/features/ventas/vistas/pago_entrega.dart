@@ -459,16 +459,26 @@ class _PagoEntregaState extends State<PagoEntrega> {
       ),
       child: Row(
         children: [
-          if (fila.tipo != null) ...[
-            AppEtiqueta(TipoMetodoPago.etiqueta(fila.tipo!), tono: EtiquetaTono.modulo),
-            const SizedBox(width: Dimen.espacio2),
-          ],
+          // El tipo va bajo el método y no a su lado: "Billetera digital" más un
+          // monto de cuatro cifras dejaban al nombre sin sitio en 320 de ancho.
           Expanded(
-            child: Text(
-              _nombreMetodo(fila.metodoPagoId),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: Dimen.espacio2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _nombreMetodo(fila.metodoPagoId),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                  ),
+                  if (fila.tipo != null) ...[
+                    const SizedBox(height: 2),
+                    AppEtiqueta(TipoMetodoPago.etiqueta(fila.tipo!), tono: EtiquetaTono.modulo),
+                  ],
+                ],
+              ),
             ),
           ),
           Text(monto, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),

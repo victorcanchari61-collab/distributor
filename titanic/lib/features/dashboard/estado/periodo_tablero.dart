@@ -37,14 +37,24 @@ class PeriodoTablero {
 
     return [
       PeriodoTablero(id: '7', etiqueta: '7 días', desde: atras(6), hasta: hoy),
-      PeriodoTablero(id: '30', etiqueta: '30 días', desde: atras(29), hasta: hoy),
+      PeriodoTablero(
+        id: '30',
+        etiqueta: '30 días',
+        desde: atras(29),
+        hasta: hoy,
+      ),
       PeriodoTablero(
         id: 'mes',
         etiqueta: 'Este mes',
         desde: DateTime(hoy.year, hoy.month, 1),
         hasta: hoy,
       ),
-      PeriodoTablero(id: '90', etiqueta: '90 días', desde: atras(89), hasta: hoy),
+      PeriodoTablero(
+        id: '90',
+        etiqueta: '90 días',
+        desde: atras(89),
+        hasta: hoy,
+      ),
     ];
   }
 
@@ -55,9 +65,11 @@ class PeriodoTablero {
   ///
   /// Se cuenta en UTC para que un cambio de hora del reloj no reste un día.
   int get dias =>
-      DateTime.utc(hasta.year, hasta.month, hasta.day)
-          .difference(DateTime.utc(desde.year, desde.month, desde.day))
-          .inDays +
+      DateTime.utc(
+        hasta.year,
+        hasta.month,
+        hasta.day,
+      ).difference(DateTime.utc(desde.year, desde.month, desde.day)).inDays +
       1;
 
   @override

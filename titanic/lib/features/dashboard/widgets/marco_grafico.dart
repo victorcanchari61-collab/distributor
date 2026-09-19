@@ -121,7 +121,11 @@ class MarcoGrafico extends StatelessWidget {
 
 /// El bloque gris que pulsa mientras llegan los datos.
 class Esqueleto extends StatefulWidget {
-  const Esqueleto({super.key, required this.alto, this.radio = Dimen.radioCampo});
+  const Esqueleto({
+    super.key,
+    required this.alto,
+    this.radio = Dimen.radioCampo,
+  });
 
   final double alto;
   final double radio;
@@ -202,7 +206,11 @@ class _Vacio extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.bar_chart_rounded, size: 24, color: Colores.tintaTenue),
+          const Icon(
+            Icons.bar_chart_rounded,
+            size: 24,
+            color: Colores.tintaTenue,
+          ),
           const SizedBox(height: Dimen.espacio2),
           Text(
             mensaje,

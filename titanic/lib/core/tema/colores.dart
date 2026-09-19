@@ -38,6 +38,7 @@ class Colores {
 
   /// Acento de cada modulo, igual que `data-sys` en el web.
   static const modulos = <String, Color>{
+    'dashboard': Color(0xFF4F46E5),
     'maestros': navy,
     'compras': Color(0xFF7C3AED),
     'inv': Color(0xFF0E9F6E),

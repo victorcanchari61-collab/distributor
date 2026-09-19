@@ -1,9 +1,9 @@
-/// Modelos de los cinco dashboards.
-///
-/// Espejo de `Backend/Dtos/Responses/DashboardResponses.cs` (JSON en camelCase).
-/// Todo se lee con tolerancia: un campo que no llega es un cero o una lista
-/// vacía, no una excepción — el tablero tiene que poder pintarse aunque la base
-/// no tenga un solo dato, que es justo cuando más listas vacías hay.
+// Modelos de los cinco dashboards.
+//
+// Espejo de `Backend/Dtos/Responses/DashboardResponses.cs` (JSON en camelCase).
+// Todo se lee con tolerancia: un campo que no llega es un cero o una lista
+// vacía, no una excepción — el tablero tiene que poder pintarse aunque la base
+// no tenga un solo dato, que es justo cuando más listas vacías hay.
 
 /// Un día de calle: "2026-09-05T00:00:00Z" es el 5 de septiembre.
 ///
@@ -33,7 +33,11 @@ List<double> _numeros(Object? v) =>
 
 /// Un valor con nombre: una barra, una porción de dona.
 class DashItem {
-  const DashItem({required this.nombre, required this.valor, this.cantidad = 0});
+  const DashItem({
+    required this.nombre,
+    required this.valor,
+    this.cantidad = 0,
+  });
 
   final String nombre;
   final double valor;

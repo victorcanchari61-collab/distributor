@@ -133,6 +133,8 @@ class _MisGananciasPaginaState extends ConsumerState<MisGananciasPagina> {
           valor: '${resumen?.ventas ?? 0}',
           icono: Icons.receipt_long_outlined,
           tono: DatoTono.neutral,
+          // El alcance lo aplica el servidor: aquí solo se dice cuál es.
+          nota: resumen?.soloPropio == true ? 'Solo lo tuyo' : null,
         ),
         AppTarjetaDato(
           etiqueta: 'Productos',
@@ -247,19 +249,14 @@ class _Encabezado extends StatelessWidget {
                 : 'Este mes: ${_fecha(r.desde)} — ${_fecha(r.hasta)}',
             onCambio: onRango,
           ),
-          const SizedBox(height: Dimen.espacio2),
-          Text(
-            r?.soloPropio == true
-                ? 'Lo que ganaste con cada producto que vendiste: lo vendido menos lo que costó la mercadería.'
-                : 'Cuánto se ganó con cada producto: lo vendido menos lo que costó la mercadería.',
-            style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-          ),
+          // Lo que sigue solo sale cuando hay algo que avisar: este encabezado
+          // no se desplaza, y en un teléfono chico cada línea de más se la
+          // quita a la lista.
           if (r != null && r.lineasSinCosto > 0) ...[
             const SizedBox(height: Dimen.espacio2),
             AppAlerta(
-              '${r.lineasSinCosto == 1 ? '1 producto vendido no tiene' : '${r.lineasSinCosto} productos vendidos no tienen'} '
-              'costo: la mercadería entró sin declararlo. En esos la ganancia sale '
-              'igual al precio y el total queda inflado. Van marcados «Sin costo».',
+              '${r.lineasSinCosto} ${r.lineasSinCosto == 1 ? 'producto sin costo' : 'productos sin costo'}: '
+              'ahí la ganancia sale igual al precio y el total queda inflado.',
               tono: AlertaTono.aviso,
             ),
           ],
@@ -268,8 +265,8 @@ class _Encabezado extends StatelessWidget {
           if (total > cargados) ...[
             const SizedBox(height: Dimen.espacio2),
             Text(
-              'Se muestran los $cargados productos que más ganancia dejan, de $total. '
-              'Los totales incluyen todos: afina con los filtros para ver el resto.',
+              'Se muestran $cargados de $total productos, los que más ganancia dejan. '
+              'Los totales incluyen todos.',
               style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
             ),
           ],

@@ -54,6 +54,43 @@ class MenuGrupo {
 /// menu salen con un punto gris.
 const menuGrupos = <MenuGrupo>[
   MenuGrupo(
+    id: 'dashboard',
+    titulo: 'Dashboard',
+    icono: Icons.dashboard_outlined,
+    items: [
+      MenuItem(
+        id: 'dashboard.ventas',
+        pendiente: false,
+        titulo: 'Ventas',
+        icono: Icons.shopping_cart_outlined,
+      ),
+      MenuItem(
+        id: 'dashboard.rentabilidad',
+        pendiente: false,
+        titulo: 'Rentabilidad',
+        icono: Icons.trending_up,
+      ),
+      MenuItem(
+        id: 'dashboard.cobranza',
+        pendiente: false,
+        titulo: 'Cobranza',
+        icono: Icons.account_balance_wallet_outlined,
+      ),
+      MenuItem(
+        id: 'dashboard.inventario',
+        pendiente: false,
+        titulo: 'Inventario',
+        icono: Icons.inventory_2_outlined,
+      ),
+      MenuItem(
+        id: 'dashboard.reparto',
+        pendiente: false,
+        titulo: 'Pedidos y reparto',
+        icono: Icons.assignment_turned_in_outlined,
+      ),
+    ],
+  ),
+  MenuGrupo(
     id: 'maestros',
     titulo: 'Maestros',
     icono: Icons.grid_view_outlined,

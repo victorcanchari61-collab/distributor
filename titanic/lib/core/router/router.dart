@@ -12,6 +12,11 @@ import '../../features/config/vistas/auditoria_pagina.dart';
 import '../../features/config/vistas/empresas_pagina.dart';
 import '../../features/config/vistas/roles_pagina.dart';
 import '../../features/config/vistas/usuarios_pagina.dart';
+import '../../features/dashboard/vistas/cobranza_dashboard_pagina.dart';
+import '../../features/dashboard/vistas/inventario_dashboard_pagina.dart';
+import '../../features/dashboard/vistas/rentabilidad_dashboard_pagina.dart';
+import '../../features/dashboard/vistas/reparto_dashboard_pagina.dart';
+import '../../features/dashboard/vistas/ventas_dashboard_pagina.dart';
 import '../../features/facturacion/vistas/listas_precios_pagina.dart';
 import '../../features/finanzas/vistas/arqueo_pagina.dart';
 import '../../features/finanzas/vistas/cuentas_por_cobrar_pagina.dart';
@@ -239,6 +244,33 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, estado) => const PuertaPermiso(child: MotivosNovedadPagina()),
       ),
 
+      // Los cinco dashboards: cada uno con su propio permiso (dashboard.*).
+      GoRoute(
+        path: VentasDashboardPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: VentasDashboardPagina()),
+      ),
+      GoRoute(
+        path: RentabilidadDashboardPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: RentabilidadDashboardPagina()),
+      ),
+      GoRoute(
+        path: CobranzaDashboardPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: CobranzaDashboardPagina()),
+      ),
+      GoRoute(
+        path: InventarioDashboardPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: InventarioDashboardPagina()),
+      ),
+      GoRoute(
+        path: RepartoDashboardPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: RepartoDashboardPagina()),
+      ),
+
       // Mi perfil no es una vista del menu: se llega desde el avatar de la
       // barra superior o desde el propio drawer.
       GoRoute(
@@ -249,7 +281,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       for (final grupo in menuGrupos)
         for (final item in grupo.items)
           // Las que ya tienen pantalla propia se declaran arriba.
-          if (item.ruta != ClientesPagina.ruta &&
+          if (item.ruta != VentasDashboardPagina.ruta &&
+              item.ruta != RentabilidadDashboardPagina.ruta &&
+              item.ruta != CobranzaDashboardPagina.ruta &&
+              item.ruta != InventarioDashboardPagina.ruta &&
+              item.ruta != RepartoDashboardPagina.ruta &&
+              item.ruta != ClientesPagina.ruta &&
               item.ruta != ProveedoresPagina.ruta &&
               item.ruta != ProductosPagina.ruta &&
               item.ruta != AlmacenesPagina.ruta &&
