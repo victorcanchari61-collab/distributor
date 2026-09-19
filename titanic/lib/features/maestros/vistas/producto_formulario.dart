@@ -83,6 +83,14 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
         ),
   ];
 
+  /// Si la unidad base se compra / se vende. Hay productos que solo se
+  /// compran y venden por caja o saco: la base sirve para llevar el stock y
+  /// descontar (rotos, mermas), no para vender sueltas.
+  late bool _baseSeCompra =
+      widget.producto?.presentaciones.where((p) => p.esBase).firstOrNull?.esCompra ?? true;
+  late bool _baseSeVende =
+      widget.producto?.presentaciones.where((p) => p.esBase).firstOrNull?.esVenta ?? true;
+
   bool _guardando = false;
   String? _error;
   String? _errorCodigo;
@@ -145,7 +153,12 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
     try {
       if (_esNuevo) {
         cuerpo['presentaciones'] = [for (final f in _filas) _cuerpoPresentacion(f)];
-        await api.crearProducto(cuerpo);
+        final creado = await api.crearProducto(cuerpo);
+        // El alta crea la base comprable y vendible: se aplica lo desmarcado.
+        final base = creado.presentaciones.where((p) => p.esBase).firstOrNull;
+        if (base != null && (!_baseSeCompra || !_baseSeVende)) {
+          await _guardarBase(api, base);
+        }
       } else {
         await api.actualizarProducto(widget.producto!.id, cuerpo);
         await _sincronizarPresentaciones(api);
@@ -171,10 +184,25 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
     'esVenta': f.esVenta,
   };
 
+  Future<void> _guardarBase(MaestrosApi api, Presentacion base) =>
+      api.actualizarPresentacion(base.id, {
+        'unidadId': base.unidadId,
+        'nombre': base.nombre,
+        'factor': base.factor,
+        'esCompra': _baseSeCompra,
+        'esVenta': _baseSeVende,
+        'activo': true,
+      });
+
   /// Las presentaciones se guardan una a una: las nuevas se agregan, las que
   /// ya tenian id se actualizan y las que faltan (se borraron en pantalla) se
   /// eliminan.
   Future<void> _sincronizarPresentaciones(MaestrosApi api) async {
+    final base = widget.producto!.presentaciones.where((p) => p.esBase).firstOrNull;
+    if (base != null && (base.esCompra != _baseSeCompra || base.esVenta != _baseSeVende)) {
+      await _guardarBase(api, base);
+    }
+
     final previas = widget.producto!.presentaciones.where((p) => !p.esBase);
     final actualesIds = _filas.map((f) => f.id).whereType<int>().toSet();
 
@@ -603,6 +631,27 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
               ),
             ],
           ),
+        ),
+        CheckboxListTile(
+          value: _baseSeCompra,
+          dense: true,
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('La unidad base se compra', style: TextStyle(fontSize: 13.5)),
+          onChanged: _guardando ? null : (v) => setState(() => _baseSeCompra = v ?? true),
+        ),
+        CheckboxListTile(
+          value: _baseSeVende,
+          dense: true,
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('La unidad base se vende', style: TextStyle(fontSize: 13.5)),
+          subtitle: const Text(
+            'Desmárcala si solo se vende por caja o saco: la unidad suelta '
+            'queda para llevar el stock y descontar rotos.',
+            style: TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
+          ),
+          onChanged: _guardando ? null : (v) => setState(() => _baseSeVende = v ?? true),
         ),
         const SizedBox(height: Dimen.espacio4),
 

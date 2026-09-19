@@ -185,9 +185,9 @@ export function PresentacionesEditor({
           label=""
           checked={fila.esVenta}
           onChange={(e) => actualizar(filas.indexOf(fila), { esVenta: e.target.checked })}
-          // Por la unidad base siempre se puede vender: es la medida en la
-          // que se lleva el stock.
-          disabled={disabled || fila.esBase}
+          // La base se puede dejar sin venta: hay productos que solo se venden
+          // por caja o saco, y la base sirve para llevar el stock y descontar.
+          disabled={disabled}
         />
       ),
     },

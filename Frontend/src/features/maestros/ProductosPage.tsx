@@ -114,6 +114,9 @@ export function ProductosPage() {
   const [presentacionCosto, setPresentacionCosto] = useState(0)
   /** Si el producto se compra por su unidad base o solo por bulto. */
   const [baseSeCompra, setBaseSeCompra] = useState(true)
+  // Hay productos que se compran y se venden por caja y no por unidad suelta:
+  // la base solo sirve para llevar el stock y descontar (rotos, mermas).
+  const [baseSeVende, setBaseSeVende] = useState(true)
 
   // Alta rapida desde el formulario: que catalogo se esta creando.
   const [crearRapido, setCrearRapido] = useState<CatalogoRapido>(null)
@@ -185,6 +188,7 @@ export function ProductosPage() {
     setPresentaciones([])
     setPresentacionCosto(0)
     setBaseSeCompra(true)
+    setBaseSeVende(true)
     setPestanaForm('datos')
     setAbierto(true)
   }
@@ -211,6 +215,7 @@ export function ProductosPage() {
       producto.presentaciones[0]
     setPresentacionCosto(compra?.id ?? 0)
     setBaseSeCompra(producto.presentaciones.find((p) => p.esBase)?.esCompra ?? true)
+    setBaseSeVende(producto.presentaciones.find((p) => p.esBase)?.esVenta ?? true)
     // El factor de la base no se edita aquí: lo maneja el backend.
     setPresentaciones(
       producto.presentaciones
@@ -247,7 +252,7 @@ export function ProductosPage() {
     nombre: unidades.find((u) => u.id === form.unidadBaseId)?.nombre ?? 'Unidad base',
     factor: 1,
     esCompra: baseSeCompra,
-    esVenta: true,
+    esVenta: baseSeVende,
     activo: true,
   }
 
@@ -269,7 +274,7 @@ export function ProductosPage() {
       // cosa; al editar manda lo que ya esta guardado — hay negocios donde la
       // base NO se compra (el camanejo entra por saco, nunca por kilo suelto).
       esCompra: baseSeCompra,
-      esVenta: true,
+      esVenta: baseSeVende,
       predeterminadaVenta: false,
       predeterminadaCompra: false,
       codigoBarras: null,
@@ -373,13 +378,13 @@ export function ProductosPage() {
          * edita, y sin esto el cambio se perdia al guardar.
          */
         const filaBase = editando.presentaciones.find((p) => p.esBase)
-        if (filaBase && filaBase.esCompra !== baseSeCompra) {
+        if (filaBase && (filaBase.esCompra !== baseSeCompra || filaBase.esVenta !== baseSeVende)) {
           await productoApi.actualizarPresentacion(filaBase.id, {
             unidadId: filaBase.unidadId,
             nombre: filaBase.nombre,
             factor: filaBase.factor,
             esCompra: baseSeCompra,
-            esVenta: filaBase.esVenta,
+            esVenta: baseSeVende,
             activo: filaBase.activo,
           })
         }
@@ -392,7 +397,7 @@ export function ProductosPage() {
           }
         }
       } else {
-        await productoApi.create({
+        const creado = await productoApi.create({
           ...base,
           presentaciones: presentaciones.map((p) => ({
             unidadId: p.unidadId,
@@ -403,6 +408,20 @@ export function ProductosPage() {
             activo: true,
           })),
         })
+
+        // El alta siempre crea la base como comprable y vendible: si se
+        // desmarcó alguna casilla, se aplica ahora.
+        const baseCreada = creado.presentaciones.find((p) => p.esBase)
+        if (baseCreada && (!baseSeCompra || !baseSeVende)) {
+          await productoApi.actualizarPresentacion(baseCreada.id, {
+            unidadId: baseCreada.unidadId,
+            nombre: baseCreada.nombre,
+            factor: baseCreada.factor,
+            esCompra: baseSeCompra,
+            esVenta: baseSeVende,
+            activo: true,
+          })
+        }
       }
 
       setAbierto(false)
@@ -934,7 +953,10 @@ export function ProductosPage() {
                   unidadBase={unidadBase}
                   onChange={(filas) => {
                     const base = filas.find((f) => f.esBase)
-                    if (base) setBaseSeCompra(base.esCompra)
+                    if (base) {
+                      setBaseSeCompra(base.esCompra)
+                      setBaseSeVende(base.esVenta)
+                    }
                     setPresentaciones(filas.filter((f) => !f.esBase))
                   }}
                   disabled={guardando}
