@@ -74,8 +74,10 @@ class TarjetaKpi extends StatelessWidget {
                   ),
                 ),
               ),
-              if (icono != null)
+              if (icono != null) ...[
+                const SizedBox(width: Dimen.espacio2),
                 Icon(icono, size: 15, color: Colores.tintaTenue),
+              ],
             ],
           ),
           const SizedBox(height: Dimen.espacio2),

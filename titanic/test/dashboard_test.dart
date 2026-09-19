@@ -136,7 +136,12 @@ DashboardVentas _ventasConDatos() => DashboardVentas(
   calor: [
     for (var d = 0; d < 6; d++)
       for (var h = 8; h < 18; h++)
-        DashCalor(dia: d, hora: h, importe: ((d * 7 + h * 3) % 11) * 120.0, notas: (d + h) % 4),
+        DashCalor(
+          dia: d,
+          hora: h,
+          importe: ((d * 7 + h * 3) % 11) * 120.0,
+          notas: (d + h) % 4,
+        ),
   ],
 );
 
@@ -206,7 +211,12 @@ DashboardCobranza _cobranzaConDatos() => DashboardCobranza(
     DashItem(nombre: 'Más de 60', valor: 2000, cantidad: 1),
   ],
   deudores: const [
-    DashDeudor(cliente: 'Bodega San Martín de Porres', saldo: 4200, notas: 3, dias: 75),
+    DashDeudor(
+      cliente: 'Bodega San Martín de Porres',
+      saldo: 4200,
+      notas: 3,
+      dias: 75,
+    ),
     DashDeudor(cliente: 'Minimarket Lucía', saldo: 3100, notas: 2, dias: 22),
     DashDeudor(cliente: 'Juan Pérez', saldo: 900, notas: 1, dias: 5),
   ],
@@ -214,7 +224,10 @@ DashboardCobranza _cobranzaConDatos() => DashboardCobranza(
   metodos: const ['Efectivo', 'Yape', 'Transferencia'],
   cobros: [
     for (var i = 0; i < 30; i++)
-      DashCobroDia(fecha: _dia(i), valores: [400.0 + i * 5, i % 3 == 0 ? 250 : 0, i % 5 == 0 ? 800 : 0]),
+      DashCobroDia(
+        fecha: _dia(i),
+        valores: [400.0 + i * 5, i % 3 == 0 ? 250 : 0, i % 5 == 0 ? 800 : 0],
+      ),
   ],
   creditoOtorgado: 12250,
 );
@@ -281,33 +294,34 @@ DashboardInventario _inventarioVacio() => const DashboardInventario(
   ],
 );
 
-DashboardReparto _repartoConDatos({bool conNovedades = true}) => DashboardReparto(
-  desde: _dia(0),
-  hasta: _dia(29),
-  serie: [
-    for (var i = 0; i < 30; i++)
-      DashDiaPedidos(
-        fecha: _dia(i),
-        confirmados: 3 + i % 4,
-        pendientes: i % 3,
-        anulados: i % 6 == 0 ? 1 : 0,
-      ),
-  ],
-  embudo: const [
-    DashItem(nombre: 'Pedidos tomados', valor: 120),
-    DashItem(nombre: 'Convertidos a venta', valor: 100),
-    DashItem(nombre: 'Entregados completos', valor: 70),
-    DashItem(nombre: 'Cobrados del todo', valor: 30),
-  ],
-  novedadesPorMotivo: conNovedades
-      ? const [
-          DashItem(nombre: 'Cliente ausente', valor: 900, cantidad: 4),
-          DashItem(nombre: 'Sin motivo', valor: 300, cantidad: 1),
-        ]
-      : null,
-  importeNovedades: conNovedades ? 1200 : 0,
-  entregaCompleta: 82.5,
-);
+DashboardReparto _repartoConDatos({bool conNovedades = true}) =>
+    DashboardReparto(
+      desde: _dia(0),
+      hasta: _dia(29),
+      serie: [
+        for (var i = 0; i < 30; i++)
+          DashDiaPedidos(
+            fecha: _dia(i),
+            confirmados: 3 + i % 4,
+            pendientes: i % 3,
+            anulados: i % 6 == 0 ? 1 : 0,
+          ),
+      ],
+      embudo: const [
+        DashItem(nombre: 'Pedidos tomados', valor: 120),
+        DashItem(nombre: 'Convertidos a venta', valor: 100),
+        DashItem(nombre: 'Entregados completos', valor: 70),
+        DashItem(nombre: 'Cobrados del todo', valor: 30),
+      ],
+      novedadesPorMotivo: conNovedades
+          ? const [
+              DashItem(nombre: 'Cliente ausente', valor: 900, cantidad: 4),
+              DashItem(nombre: 'Sin motivo', valor: 300, cantidad: 1),
+            ]
+          : null,
+      importeNovedades: conNovedades ? 1200 : 0,
+      entregaCompleta: 82.5,
+    );
 
 DashboardReparto _repartoVacio({bool conNovedades = true}) => DashboardReparto(
   desde: _dia(0),
@@ -324,8 +338,12 @@ DashboardReparto _repartoVacio({bool conNovedades = true}) => DashboardReparto(
 
 /// API de mentira: no toca la red y anota cada llamada.
 class _ApiFalsa extends DashboardApi {
-  _ApiFalsa({this.vacia = false, this.falla = false, this.conNovedades = true, this.espera})
-    : super(ClienteApi());
+  _ApiFalsa({
+    this.vacia = false,
+    this.falla = false,
+    this.conNovedades = true,
+    this.espera,
+  }) : super(ClienteApi());
 
   final bool vacia;
   final bool falla;
@@ -337,7 +355,12 @@ class _ApiFalsa extends DashboardApi {
   /// "ventas 2026-08-21 2026-09-19", una por llamada.
   final llamadas = <String>[];
 
-  Future<T> _responder<T>(String tablero, DateTime? desde, DateTime? hasta, T Function() datos) async {
+  Future<T> _responder<T>(
+    String tablero,
+    DateTime? desde,
+    DateTime? hasta,
+    T Function() datos,
+  ) async {
     llamadas.add('$tablero $desde $hasta');
     if (espera != null) await espera!.future;
     if (falla) throw const ApiExcepcion('El servidor no responde');
@@ -345,32 +368,49 @@ class _ApiFalsa extends DashboardApi {
   }
 
   @override
-  Future<DashboardVentas> ventas(DateTime desde, DateTime hasta) =>
-      _responder('ventas', desde, hasta, () => vacia ? _ventasVacias() : _ventasConDatos());
-
-  @override
-  Future<DashboardGanancias> ganancias(DateTime desde, DateTime hasta) => _responder(
-    'ganancias',
+  Future<DashboardVentas> ventas(DateTime desde, DateTime hasta) => _responder(
+    'ventas',
     desde,
     hasta,
-    () => vacia ? _gananciasVacias() : _gananciasConDatos(),
+    () => vacia ? _ventasVacias() : _ventasConDatos(),
   );
+
+  @override
+  Future<DashboardGanancias> ganancias(DateTime desde, DateTime hasta) =>
+      _responder(
+        'ganancias',
+        desde,
+        hasta,
+        () => vacia ? _gananciasVacias() : _gananciasConDatos(),
+      );
 
   @override
   Future<DashboardCobranza> cobranza(DateTime desde, DateTime hasta) =>
-      _responder('cobranza', desde, hasta, () => vacia ? _cobranzaVacia() : _cobranzaConDatos());
+      _responder(
+        'cobranza',
+        desde,
+        hasta,
+        () => vacia ? _cobranzaVacia() : _cobranzaConDatos(),
+      );
 
   @override
-  Future<DashboardInventario> inventario() =>
-      _responder('inventario', null, null, () => vacia ? _inventarioVacio() : _inventarioConDatos());
-
-  @override
-  Future<DashboardReparto> reparto(DateTime desde, DateTime hasta) => _responder(
-    'reparto',
-    desde,
-    hasta,
-    () => vacia ? _repartoVacio(conNovedades: conNovedades) : _repartoConDatos(conNovedades: conNovedades),
+  Future<DashboardInventario> inventario() => _responder(
+    'inventario',
+    null,
+    null,
+    () => vacia ? _inventarioVacio() : _inventarioConDatos(),
   );
+
+  @override
+  Future<DashboardReparto> reparto(DateTime desde, DateTime hasta) =>
+      _responder(
+        'reparto',
+        desde,
+        hasta,
+        () => vacia
+            ? _repartoVacio(conNovedades: conNovedades)
+            : _repartoConDatos(conNovedades: conNovedades),
+      );
 }
 
 /// Monta una pantalla en un telefono comun y con alto de sobra: el ListView
@@ -403,18 +443,39 @@ Future<void> _montar(
 }
 
 /// Las cinco pantallas con lo que las distingue.
-final _tableros = <({String nombre, Widget pagina, String titulo, String ruta})>[
-  (nombre: 'ventas', pagina: const VentasDashboardPagina(), titulo: 'Ventas por día', ruta: '/dashboard/ventas'),
-  (
-    nombre: 'rentabilidad',
-    pagina: const RentabilidadDashboardPagina(),
-    titulo: 'Ganancia y margen por día',
-    ruta: '/dashboard/rentabilidad',
-  ),
-  (nombre: 'cobranza', pagina: const CobranzaDashboardPagina(), titulo: 'Cuánto hace que se debe', ruta: '/dashboard/cobranza'),
-  (nombre: 'inventario', pagina: const InventarioDashboardPagina(), titulo: 'Cuánto dura el stock', ruta: '/dashboard/inventario'),
-  (nombre: 'reparto', pagina: const RepartoDashboardPagina(), titulo: 'Pedidos por día', ruta: '/dashboard/reparto'),
-];
+final _tableros =
+    <({String nombre, Widget pagina, String titulo, String ruta})>[
+      (
+        nombre: 'ventas',
+        pagina: const VentasDashboardPagina(),
+        titulo: 'Ventas por día',
+        ruta: '/dashboard/ventas',
+      ),
+      (
+        nombre: 'rentabilidad',
+        pagina: const RentabilidadDashboardPagina(),
+        titulo: 'Ganancia y margen por día',
+        ruta: '/dashboard/rentabilidad',
+      ),
+      (
+        nombre: 'cobranza',
+        pagina: const CobranzaDashboardPagina(),
+        titulo: 'Cuánto hace que se debe',
+        ruta: '/dashboard/cobranza',
+      ),
+      (
+        nombre: 'inventario',
+        pagina: const InventarioDashboardPagina(),
+        titulo: 'Cuánto dura el stock',
+        ruta: '/dashboard/inventario',
+      ),
+      (
+        nombre: 'reparto',
+        pagina: const RepartoDashboardPagina(),
+        titulo: 'Pedidos por día',
+        ruta: '/dashboard/reparto',
+      ),
+    ];
 
 Future<void> _mostrarGrafico(WidgetTester tester, Type tipo) async {
   await tester.ensureVisible(find.byType(tipo).first);
@@ -450,7 +511,10 @@ void main() {
       expect(variacion(110, 100), closeTo(10, 1e-9));
       // Sin período anterior no hay con qué comparar: nada de "+∞%".
       expect(variacion(50, 0), isNull);
-      expect(fraseVariacion(12.4, 'los 30 días anteriores'), '+12% frente a los 30 días anteriores');
+      expect(
+        fraseVariacion(12.4, 'los 30 días anteriores'),
+        '+12% frente a los 30 días anteriores',
+      );
       expect(fraseVariacion(-5, 'el mes pasado'), '−5% frente a el mes pasado');
       expect(fraseVariacion(0.2, 'x'), 'Igual que x');
       expect(fraseVariacion(null, 'x'), 'Sin x con qué comparar');
@@ -498,7 +562,12 @@ void main() {
     test('los cuatro atajos cuentan hacia atrás desde hoy, incluido', () {
       final a = PeriodoTablero.atajos(DateTime(2026, 9, 19, 14, 30));
 
-      expect(a.map((p) => p.etiqueta), ['7 días', '30 días', 'Este mes', '90 días']);
+      expect(a.map((p) => p.etiqueta), [
+        '7 días',
+        '30 días',
+        'Este mes',
+        '90 días',
+      ]);
       expect(a[0].desde, DateTime(2026, 9, 13));
       expect(a[1].desde, DateTime(2026, 8, 21));
       expect(a[2].desde, DateTime(2026, 9, 1));
@@ -509,7 +578,10 @@ void main() {
     });
 
     test('un rango propio se queda en días, sin hora', () {
-      final p = PeriodoTablero.propio(DateTime(2026, 9, 1, 8), DateTime(2026, 9, 3, 23, 59));
+      final p = PeriodoTablero.propio(
+        DateTime(2026, 9, 1, 8),
+        DateTime(2026, 9, 3, 23, 59),
+      );
       expect(p.id, 'custom');
       expect(p.dias, 3);
       expect(p.hasta, DateTime(2026, 9, 3));
@@ -526,7 +598,12 @@ void main() {
         'soloPropio': true,
         'actual': {'importe': 100.5, 'notas': 3, 'clientes': 2, 'ticket': 33.5},
         'serie': [
-          {'fecha': '2026-09-05T00:00:00Z', 'importe': 10, 'notas': 1, 'importeAnterior': 4.5},
+          {
+            'fecha': '2026-09-05T00:00:00Z',
+            'importe': 10,
+            'notas': 1,
+            'importeAnterior': 4.5,
+          },
         ],
         'atipicos': [
           {'indice': 0, 'tipo': 'CAIDA'},
@@ -550,11 +627,17 @@ void main() {
     });
 
     test('las novedades nulas se distinguen de las vacías', () {
-      final sinPermiso = DashboardReparto.desdeJson({'novedadesPorMotivo': null, 'entregaCompleta': null});
+      final sinPermiso = DashboardReparto.desdeJson({
+        'novedadesPorMotivo': null,
+        'entregaCompleta': null,
+      });
       expect(sinPermiso.novedadesPorMotivo, isNull);
       expect(sinPermiso.entregaCompleta, isNull);
 
-      final sinNovedades = DashboardReparto.desdeJson({'novedadesPorMotivo': [], 'entregaCompleta': 91});
+      final sinNovedades = DashboardReparto.desdeJson({
+        'novedadesPorMotivo': [],
+        'entregaCompleta': 91,
+      });
       expect(sinNovedades.novedadesPorMotivo, isEmpty);
       expect(sinNovedades.entregaCompleta, 91);
     });
@@ -591,7 +674,9 @@ void main() {
 
   group('con datos', () {
     for (final t in _tableros) {
-      testWidgets('${t.nombre}: se construye completo y sin desbordes', (tester) async {
+      testWidgets('${t.nombre}: se construye completo y sin desbordes', (
+        tester,
+      ) async {
         final api = _ApiFalsa();
         await _montar(tester, t.pagina, api);
 
@@ -609,7 +694,12 @@ void main() {
       await _montar(tester, const VentasDashboardPagina(), _ApiFalsa());
 
       // Indicadores.
-      for (final k in ['Ventas', 'Ticket promedio', 'Ventas realizadas', 'Clientes que compraron']) {
+      for (final k in [
+        'Ventas',
+        'Ticket promedio',
+        'Ventas realizadas',
+        'Clientes que compraron',
+      ]) {
         expect(find.text(k), findsWidgets, reason: k);
       }
       // Una vez en el indicador y otra en el centro de la dona de categorías.
@@ -623,13 +713,26 @@ void main() {
       expect(find.byType(GraficoDona), findsNWidgets(2));
 
       // Conclusiones escritas.
-      expect(find.text('+20% frente a los 30 días anteriores · 2 días fuera de lo normal'), findsOneWidget);
+      expect(
+        find.text(
+          '+20% frente a los 30 días anteriores · 2 días fuera de lo normal',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Avance de septiembre'), findsOneWidget);
-      expect(find.textContaining('Cierre proyectado', findRichText: true), findsOneWidget);
-      expect(find.text('6 de 41 clientes hacen el 80% de lo vendido'), findsOneWidget);
+      expect(
+        find.textContaining('Cierre proyectado', findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        find.text('6 de 41 clientes hacen el 80% de lo vendido'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('rentabilidad: matriz de productos y avisos de costo', (tester) async {
+    testWidgets('rentabilidad: matriz de productos y avisos de costo', (
+      tester,
+    ) async {
       await _montar(tester, const RentabilidadDashboardPagina(), _ApiFalsa());
 
       expect(find.byType(GraficoDispersion), findsOneWidget);
@@ -638,17 +741,28 @@ void main() {
       expect(find.text('3 líneas sin costo conocido'), findsOneWidget);
       expect(find.text('19.2%'), findsOneWidget);
       // La conclusión de la matriz: cuántos venden mucho y dejan poco.
-      expect(find.textContaining('menos que el margen de la casa (19.2%)', findRichText: true), findsOneWidget);
+      expect(
+        find.textContaining(
+          'menos que el margen de la casa (19.2%)',
+          findRichText: true,
+        ),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('cobranza: antigüedad, deudores y cobros apilados', (tester) async {
+    testWidgets('cobranza: antigüedad, deudores y cobros apilados', (
+      tester,
+    ) async {
       await _montar(tester, const CobranzaDashboardPagina(), _ApiFalsa());
 
       expect(find.byType(GraficoBarras), findsNWidgets(2));
       expect(find.byType(GraficoBarrasH), findsOneWidget);
       // 4 mil de 12.4 mil pasan de 30 días: 32%.
       expect(find.text('32% de la deuda pasa de 30 días'), findsOneWidget);
-      expect(find.text('La deuda más vieja tiene más de 60 días'), findsOneWidget);
+      expect(
+        find.text('La deuda más vieja tiene más de 60 días'),
+        findsOneWidget,
+      );
       expect(find.textContaining('a crédito se dio S/ 12,250'), findsOneWidget);
     });
 
@@ -659,7 +773,12 @@ void main() {
       expect(find.byType(GraficoBarrasH), findsNWidgets(2));
       expect(find.byType(GraficoDona), findsNWidgets(2));
       expect(find.byType(GraficoBarras), findsOneWidget);
-      expect(find.text('1 producto se acaba en menos de una semana al ritmo de venta actual'), findsOneWidget);
+      expect(
+        find.text(
+          '1 producto se acaba en menos de una semana al ritmo de venta actual',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('reparto: embudo, medidor y novedades', (tester) async {
@@ -672,22 +791,31 @@ void main() {
       expect(find.text('Por qué no llegó completo'), findsOneWidget);
     });
 
-    testWidgets('reparto: sin permiso de Novedades no hay ese gráfico ni ese indicador', (tester) async {
-      await _montar(tester, const RepartoDashboardPagina(), _ApiFalsa(conNovedades: false));
+    testWidgets(
+      'reparto: sin permiso de Novedades no hay ese gráfico ni ese indicador',
+      (tester) async {
+        await _montar(
+          tester,
+          const RepartoDashboardPagina(),
+          _ApiFalsa(conNovedades: false),
+        );
 
-      expect(tester.takeException(), isNull);
-      expect(find.byType(TarjetaKpi), findsNWidgets(3));
-      expect(find.text('No entregado'), findsNothing);
-      expect(find.text('Por qué no llegó completo'), findsNothing);
-      // Lo demás sigue.
-      expect(find.byType(GraficoEmbudo), findsOneWidget);
-      expect(find.byType(GraficoMedidor), findsOneWidget);
-    });
+        expect(tester.takeException(), isNull);
+        expect(find.byType(TarjetaKpi), findsNWidgets(3));
+        expect(find.text('No entregado'), findsNothing);
+        expect(find.text('Por qué no llegó completo'), findsNothing);
+        // Lo demás sigue.
+        expect(find.byType(GraficoEmbudo), findsOneWidget);
+        expect(find.byType(GraficoMedidor), findsOneWidget);
+      },
+    );
   });
 
   group('sin datos (la base de prueba: todo en cero)', () {
     for (final t in _tableros) {
-      testWidgets('${t.nombre}: pinta sus estados vacíos sin romperse', (tester) async {
+      testWidgets('${t.nombre}: pinta sus estados vacíos sin romperse', (
+        tester,
+      ) async {
         await _montar(tester, t.pagina, _ApiFalsa(vacia: true));
 
         expect(tester.takeException(), isNull);
@@ -704,14 +832,22 @@ void main() {
     }
 
     testWidgets('ventas: el mensaje de cada marco', (tester) async {
-      await _montar(tester, const VentasDashboardPagina(), _ApiFalsa(vacia: true));
+      await _montar(
+        tester,
+        const VentasDashboardPagina(),
+        _ApiFalsa(vacia: true),
+      );
 
       expect(find.text('Sin datos en este período'), findsNWidgets(8));
       expect(find.text('S/ 0'), findsWidgets);
     });
 
     testWidgets('cobranza: nadie debe nada', (tester) async {
-      await _montar(tester, const CobranzaDashboardPagina(), _ApiFalsa(vacia: true));
+      await _montar(
+        tester,
+        const CobranzaDashboardPagina(),
+        _ApiFalsa(vacia: true),
+      );
 
       expect(find.text('Nadie debe nada'), findsOneWidget);
       expect(find.text('Sin cuentas por cobrar'), findsOneWidget);
@@ -722,16 +858,29 @@ void main() {
     });
 
     testWidgets('inventario: nada parado ni por vencer', (tester) async {
-      await _montar(tester, const InventarioDashboardPagina(), _ApiFalsa(vacia: true));
+      await _montar(
+        tester,
+        const InventarioDashboardPagina(),
+        _ApiFalsa(vacia: true),
+      );
 
       expect(find.text('Nada parado'), findsOneWidget);
       expect(find.text('Nada vence en 90 días'), findsOneWidget);
-      expect(find.text('Todavía no hay ventas para calcular el ritmo'), findsOneWidget);
+      expect(
+        find.text('Todavía no hay ventas para calcular el ritmo'),
+        findsOneWidget,
+      );
       expect(find.text('Ningún producto se acaba esta semana'), findsOneWidget);
     });
 
-    testWidgets('reparto: el medidor dice "—" y las novedades están vacías', (tester) async {
-      await _montar(tester, const RepartoDashboardPagina(), _ApiFalsa(vacia: true));
+    testWidgets('reparto: el medidor dice "—" y las novedades están vacías', (
+      tester,
+    ) async {
+      await _montar(
+        tester,
+        const RepartoDashboardPagina(),
+        _ApiFalsa(vacia: true),
+      );
 
       // El medidor sigue ahí: sin entregas su respuesta es "—", no un 0%.
       expect(find.byType(GraficoMedidor), findsOneWidget);
@@ -739,17 +888,33 @@ void main() {
       expect(find.text('Sin novedades en el período'), findsOneWidget);
     });
 
-    testWidgets('rentabilidad: la matriz pide al menos dos productos', (tester) async {
-      await _montar(tester, const RentabilidadDashboardPagina(), _ApiFalsa(vacia: true));
+    testWidgets('rentabilidad: la matriz pide al menos dos productos', (
+      tester,
+    ) async {
+      await _montar(
+        tester,
+        const RentabilidadDashboardPagina(),
+        _ApiFalsa(vacia: true),
+      );
 
-      expect(find.text('Hacen falta al menos dos productos vendidos'), findsOneWidget);
+      expect(
+        find.text('Hacen falta al menos dos productos vendidos'),
+        findsOneWidget,
+      );
     });
   });
 
   group('estados de carga y error', () {
-    testWidgets('mientras llegan los datos hay esqueletos, no gráficos', (tester) async {
+    testWidgets('mientras llegan los datos hay esqueletos, no gráficos', (
+      tester,
+    ) async {
       final espera = Completer<void>();
-      await _montar(tester, const VentasDashboardPagina(), _ApiFalsa(espera: espera), esperar: false);
+      await _montar(
+        tester,
+        const VentasDashboardPagina(),
+        _ApiFalsa(espera: espera),
+        esperar: false,
+      );
 
       // 4 indicadores + los 8 marcos.
       expect(find.byType(Esqueleto), findsNWidgets(12));
@@ -762,7 +927,9 @@ void main() {
     });
 
     for (final t in _tableros) {
-      testWidgets('${t.nombre}: si falla, cada gráfico lo dice', (tester) async {
+      testWidgets('${t.nombre}: si falla, cada gráfico lo dice', (
+        tester,
+      ) async {
         await _montar(tester, t.pagina, _ApiFalsa(falla: true));
 
         expect(tester.takeException(), isNull);
@@ -772,13 +939,17 @@ void main() {
       });
     }
 
-    testWidgets('un error que no es del API dice algo entendible', (tester) async {
+    testWidgets('un error que no es del API dice algo entendible', (
+      tester,
+    ) async {
       final contenedor = ProviderContainer(
         overrides: [dashboardApiProvider.overrideWithValue(_ApiFalsa())],
       );
       addTearDown(contenedor.dispose);
 
-      final bloque = bloqueDe<int>(AsyncError(StateError('x'), StackTrace.empty));
+      final bloque = bloqueDe<int>(
+        AsyncError(StateError('x'), StackTrace.empty),
+      );
       expect(bloque.error, 'No pudimos cargar este dashboard.');
       expect(bloque.datos, isNull);
       expect(bloqueDe<int>(const AsyncLoading()).cargando, isTrue);
@@ -787,7 +958,9 @@ void main() {
   });
 
   group('período y actualizar', () {
-    testWidgets('elegir un atajo vuelve a pedir con el rango nuevo', (tester) async {
+    testWidgets('elegir un atajo vuelve a pedir con el rango nuevo', (
+      tester,
+    ) async {
       final api = _ApiFalsa();
       await _montar(tester, const VentasDashboardPagina(), api);
 
@@ -808,7 +981,9 @@ void main() {
       await tester.tap(find.text('7 días'));
       await tester.pumpAndSettle();
 
-      final contenedor = ProviderScope.containerOf(tester.element(find.byType(VentasDashboardPagina)));
+      final contenedor = ProviderScope.containerOf(
+        tester.element(find.byType(VentasDashboardPagina)),
+      );
       expect(contenedor.read(periodoVentasProvider).id, '7');
       // Los demás siguen en 30 días: cambiar Ventas no mueve a Cobranza.
       expect(contenedor.read(periodoCobranzaProvider).id, '30');
@@ -830,31 +1005,45 @@ void main() {
 
     testWidgets('tirar hacia abajo también actualiza', (tester) async {
       final api = _ApiFalsa();
-      await _montar(tester, const InventarioDashboardPagina(), api, pantalla: const Size(375, 900));
+      await _montar(
+        tester,
+        const InventarioDashboardPagina(),
+        api,
+        pantalla: const Size(375, 900),
+      );
 
-      await tester.fling(find.byType(ListView).first, const Offset(0, 400), 1000);
+      await tester.fling(
+        find.byType(ListView).first,
+        const Offset(0, 400),
+        1000,
+      );
       await tester.pumpAndSettle();
 
       expect(api.llamadas, hasLength(2));
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('actualizar aunque el servidor falle no deja una excepción sin atender', (tester) async {
-      final api = _ApiFalsa(falla: true);
-      await _montar(tester, const CobranzaDashboardPagina(), api);
+    testWidgets(
+      'actualizar aunque el servidor falle no deja una excepción sin atender',
+      (tester) async {
+        final api = _ApiFalsa(falla: true);
+        await _montar(tester, const CobranzaDashboardPagina(), api);
 
-      await tester.tap(find.byTooltip('Actualizar'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Actualizar'));
+        await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
-      expect(find.text('El servidor no responde'), findsWidgets);
-    });
+        expect(tester.takeException(), isNull);
+        expect(find.text('El servidor no responde'), findsWidgets);
+      },
+    );
   });
 
   // ------------------------------------------------------ Toques y detalle
 
   group('al tocar', () {
-    testWidgets('una línea deja el globo con el día y sus valores', (tester) async {
+    testWidgets('una línea deja el globo con el día y sus valores', (
+      tester,
+    ) async {
       await _montar(tester, const VentasDashboardPagina(), _ApiFalsa());
 
       await _mostrarGrafico(tester, LineChart);
@@ -869,7 +1058,9 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('las barras con su línea de margen responden al toque', (tester) async {
+    testWidgets('las barras con su línea de margen responden al toque', (
+      tester,
+    ) async {
       await _montar(tester, const RentabilidadDashboardPagina(), _ApiFalsa());
 
       await _mostrarGrafico(tester, BarChart);
@@ -878,36 +1069,49 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('la dona resalta la porción de su leyenda y la suelta al tocar otra vez', (tester) async {
-      await _montar(tester, const VentasDashboardPagina(), _ApiFalsa());
+    testWidgets(
+      'la dona resalta la porción de su leyenda y la suelta al tocar otra vez',
+      (tester) async {
+        await _montar(tester, const VentasDashboardPagina(), _ApiFalsa());
 
-      // Antes de tocar, el centro dice el total.
-      expect(find.text('VENDIDO'), findsOneWidget);
+        // Antes de tocar, el centro dice el total.
+        expect(find.text('VENDIDO'), findsOneWidget);
 
-      await tester.ensureVisible(find.text('Bebidas'));
-      await tester.tap(find.text('Bebidas'));
-      await tester.pumpAndSettle();
-      expect(find.text('BEBIDAS'), findsOneWidget);
-      expect(find.text('VENDIDO'), findsNothing);
+        await tester.ensureVisible(find.text('Bebidas'));
+        await tester.tap(find.text('Bebidas'));
+        await tester.pumpAndSettle();
+        expect(find.text('BEBIDAS'), findsOneWidget);
+        expect(find.text('VENDIDO'), findsNothing);
 
-      await tester.tap(find.text('Bebidas'));
-      await tester.pumpAndSettle();
-      expect(find.text('VENDIDO'), findsOneWidget);
-    });
+        await tester.tap(find.text('Bebidas'));
+        await tester.pumpAndSettle();
+        expect(find.text('VENDIDO'), findsOneWidget);
+      },
+    );
 
-    testWidgets('el mapa de calor muestra el detalle de la celda tocada', (tester) async {
+    testWidgets('el mapa de calor muestra el detalle de la celda tocada', (
+      tester,
+    ) async {
       await _montar(tester, const VentasDashboardPagina(), _ApiFalsa());
 
       expect(find.text('Toca una celda para ver el detalle'), findsOneWidget);
 
-      final mapa = find.descendant(of: find.byType(GraficoCalor), matching: find.byType(CustomPaint)).first;
+      final mapa = find
+          .descendant(
+            of: find.byType(GraficoCalor),
+            matching: find.byType(CustomPaint),
+          )
+          .first;
       await tester.ensureVisible(mapa);
       // La primera celda del lunes: 8 h.
       final esquina = tester.getTopLeft(mapa);
       await tester.tapAt(esquina + const Offset(30 + 8, 8));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Lun · 8:00', findRichText: true), findsOneWidget);
+      expect(
+        find.textContaining('Lun · 8:00', findRichText: true),
+        findsOneWidget,
+      );
       expect(find.text('Toca una celda para ver el detalle'), findsNothing);
 
       // Fuera de la cuadrícula, se suelta.
@@ -916,12 +1120,19 @@ void main() {
       expect(find.text('Toca una celda para ver el detalle'), findsOneWidget);
     });
 
-    testWidgets('la matriz de productos elige el punto más cercano', (tester) async {
+    testWidgets('la matriz de productos elige el punto más cercano', (
+      tester,
+    ) async {
       await _montar(tester, const RentabilidadDashboardPagina(), _ApiFalsa());
 
       expect(find.text('Toca un punto para ver el producto'), findsOneWidget);
 
-      final lienzo = find.descendant(of: find.byType(GraficoDispersion), matching: find.byType(CustomPaint)).first;
+      final lienzo = find
+          .descendant(
+            of: find.byType(GraficoDispersion),
+            matching: find.byType(CustomPaint),
+          )
+          .first;
       await tester.ensureVisible(lienzo);
       // Un toque en cualquier lugar del plano elige un punto si hay uno a menos
       // de 28 px; se prueba en una rejilla para no depender de la escala.
@@ -932,29 +1143,42 @@ void main() {
         for (var y = 20.0; y < tam.height - 40 && !elegido; y += 20) {
           await tester.tapAt(origen + Offset(x, y));
           await tester.pump();
-          elegido = find.text('Toca un punto para ver el producto').evaluate().isEmpty;
+          elegido = find
+              .text('Toca un punto para ver el producto')
+              .evaluate()
+              .isEmpty;
         }
       }
       expect(elegido, isTrue);
-      expect(find.textContaining('de margen', findRichText: true), findsOneWidget);
+      expect(
+        find.textContaining('de margen', findRichText: true),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('tocar una fila de barras horizontales muestra el nombre completo', (tester) async {
-      await _montar(tester, const CobranzaDashboardPagina(), _ApiFalsa());
+    testWidgets(
+      'tocar una fila de barras horizontales muestra el nombre completo',
+      (tester) async {
+        await _montar(tester, const CobranzaDashboardPagina(), _ApiFalsa());
 
-      await tester.ensureVisible(find.text('Juan Pérez'));
-      await tester.tap(find.text('Juan Pérez'));
-      await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Juan Pérez'));
+        await tester.tap(find.text('Juan Pérez'));
+        await tester.pumpAndSettle();
 
-      expect(find.textContaining('S/ 900 · 5 d'), findsWidgets);
-    });
+        expect(find.textContaining('S/ 900 · 5 d'), findsWidgets);
+      },
+    );
   });
 
   // ---------------------------------------------------- Cada gráfico suelto
 
   group('gráficos con datos límite', () {
-    Future<void> montarSuelto(WidgetTester tester, Widget grafico, {double ancho = 320}) async {
+    Future<void> montarSuelto(
+      WidgetTester tester,
+      Widget grafico, {
+      double ancho = 320,
+    }) async {
       tester.view.physicalSize = const Size(400, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -964,7 +1188,9 @@ void main() {
           theme: Tema.claro(),
           home: Scaffold(
             body: SingleChildScrollView(
-              child: Center(child: SizedBox(width: ancho, child: grafico)),
+              child: Center(
+                child: SizedBox(width: ancho, child: grafico),
+              ),
             ),
           ),
         ),
@@ -973,39 +1199,70 @@ void main() {
       expect(tester.takeException(), isNull);
     }
 
-    testWidgets('línea de un solo punto, de todo ceros y de puros huecos', (tester) async {
+    testWidgets('línea de un solo punto, de todo ceros y de puros huecos', (
+      tester,
+    ) async {
       await montarSuelto(
         tester,
         const GraficoLinea(
           etiquetas: ['5 set'],
-          series: [SerieLinea(id: 'a', nombre: 'A', color: Colors.blue, valores: [120])],
+          series: [
+            SerieLinea(
+              id: 'a',
+              nombre: 'A',
+              color: Colors.blue,
+              valores: [120],
+            ),
+          ],
         ),
       );
       await montarSuelto(
         tester,
         GraficoLinea(
           etiquetas: List.generate(30, (i) => '$i'),
-          series: [SerieLinea(id: 'a', nombre: 'A', color: Colors.blue, valores: List.filled(30, 0), area: true)],
+          series: [
+            SerieLinea(
+              id: 'a',
+              nombre: 'A',
+              color: Colors.blue,
+              valores: List.filled(30, 0),
+              area: true,
+            ),
+          ],
         ),
       );
       await montarSuelto(
         tester,
         GraficoLinea(
           etiquetas: List.generate(5, (i) => '$i'),
-          series: [SerieLinea(id: 'a', nombre: 'A', color: Colors.blue, valores: List.filled(5, null))],
+          series: [
+            SerieLinea(
+              id: 'a',
+              nombre: 'A',
+              color: Colors.blue,
+              valores: List.filled(5, null),
+            ),
+          ],
         ),
       );
       // Sin etiquetas ni series: no dibuja nada, no falla.
       await montarSuelto(tester, const GraficoLinea(etiquetas: [], series: []));
     });
 
-    testWidgets('línea con más de 60 días y una marca sobre un hueco', (tester) async {
+    testWidgets('línea con más de 60 días y una marca sobre un hueco', (
+      tester,
+    ) async {
       await montarSuelto(
         tester,
         GraficoLinea(
           etiquetas: List.generate(90, (i) => '${i + 1} set'),
           series: [
-            SerieLinea(id: 'a', nombre: 'A', color: Colors.blue, valores: List.generate(90, (i) => i * 10.0)),
+            SerieLinea(
+              id: 'a',
+              nombre: 'A',
+              color: Colors.blue,
+              valores: List.generate(90, (i) => i * 10.0),
+            ),
             SerieLinea(
               id: 'b',
               nombre: 'B',
@@ -1015,26 +1272,52 @@ void main() {
             ),
           ],
           marcas: const [
-            MarcaLinea(indice: 10, serie: 'b', color: Colors.green, titulo: 'sobre un hueco'),
-            MarcaLinea(indice: 89, serie: 'a', color: Colors.green, titulo: 'cierre'),
+            MarcaLinea(
+              indice: 10,
+              serie: 'b',
+              color: Colors.green,
+              titulo: 'sobre un hueco',
+            ),
+            MarcaLinea(
+              indice: 89,
+              serie: 'a',
+              color: Colors.green,
+              titulo: 'cierre',
+            ),
           ],
         ),
       );
     });
 
-    testWidgets('barras: ceros, negativos con línea de margen, y un solo día', (tester) async {
+    testWidgets('barras: ceros, negativos con línea de margen, y un solo día', (
+      tester,
+    ) async {
       await montarSuelto(
         tester,
         const GraficoBarras(
           etiquetas: ['a', 'b', 'c'],
-          series: [SerieBarra(id: 's', nombre: 'S', color: Colors.green, valores: [0, 0, 0])],
+          series: [
+            SerieBarra(
+              id: 's',
+              nombre: 'S',
+              color: Colors.green,
+              valores: [0, 0, 0],
+            ),
+          ],
         ),
       );
       await montarSuelto(
         tester,
         GraficoBarras(
           etiquetas: const ['a', 'b', 'c', 'd'],
-          series: const [SerieBarra(id: 's', nombre: 'S', color: Colors.green, valores: [300, -120, 0, 80])],
+          series: const [
+            SerieBarra(
+              id: 's',
+              nombre: 'S',
+              color: Colors.green,
+              valores: [300, -120, 0, 80],
+            ),
+          ],
           colorDe: (v, i) => v < 0 ? Colors.red : Colors.green,
           linea: LineaSecundaria(
             nombre: 'Margen',
@@ -1048,7 +1331,14 @@ void main() {
         tester,
         GraficoBarras(
           etiquetas: const ['solo'],
-          series: const [SerieBarra(id: 's', nombre: 'S', color: Colors.green, valores: [50])],
+          series: const [
+            SerieBarra(
+              id: 's',
+              nombre: 'S',
+              color: Colors.green,
+              valores: [50],
+            ),
+          ],
           linea: LineaSecundaria(
             nombre: 'Acum',
             color: Colors.orange,
@@ -1065,25 +1355,41 @@ void main() {
           apilado: true,
           etiquetas: ['a', 'b', 'c'],
           series: [
-            SerieBarra(id: 'x', nombre: 'X', color: Colors.green, valores: [5, 3, 0]),
+            SerieBarra(
+              id: 'x',
+              nombre: 'X',
+              color: Colors.green,
+              valores: [5, 3, 0],
+            ),
             SerieBarra(id: 'y', nombre: 'Y', color: Colors.amber, valores: [1]),
           ],
         ),
       );
     });
 
-    testWidgets('dona: todo en cero, una sola porción y valores negativos', (tester) async {
+    testWidgets('dona: todo en cero, una sola porción y valores negativos', (
+      tester,
+    ) async {
       await montarSuelto(
         tester,
         const GraficoDona(
-          porciones: [PorcionDona(nombre: 'A', valor: 0), PorcionDona(nombre: 'B', valor: 0)],
+          porciones: [
+            PorcionDona(nombre: 'A', valor: 0),
+            PorcionDona(nombre: 'B', valor: 0),
+          ],
         ),
       );
-      await montarSuelto(tester, const GraficoDona(porciones: [PorcionDona(nombre: 'A', valor: 10)]));
+      await montarSuelto(
+        tester,
+        const GraficoDona(porciones: [PorcionDona(nombre: 'A', valor: 10)]),
+      );
       await montarSuelto(
         tester,
         const GraficoDona(
-          porciones: [PorcionDona(nombre: 'A', valor: 10), PorcionDona(nombre: 'B', valor: -3)],
+          porciones: [
+            PorcionDona(nombre: 'A', valor: 10),
+            PorcionDona(nombre: 'B', valor: -3),
+          ],
         ),
       );
       await montarSuelto(tester, const GraficoDona(porciones: []));
@@ -1091,7 +1397,10 @@ void main() {
       await montarSuelto(
         tester,
         const GraficoDona(
-          porciones: [PorcionDona(nombre: 'A', valor: 10), PorcionDona(nombre: 'B', valor: 5)],
+          porciones: [
+            PorcionDona(nombre: 'A', valor: 10),
+            PorcionDona(nombre: 'B', valor: 5),
+          ],
         ),
         ancho: 380,
       );
@@ -1100,11 +1409,21 @@ void main() {
     testWidgets('barras horizontales: ceros, negativos y nada', (tester) async {
       await montarSuelto(
         tester,
-        const GraficoBarrasH(items: [ItemBarraH(nombre: 'A', valor: 0), ItemBarraH(nombre: 'B', valor: 0)]),
+        const GraficoBarrasH(
+          items: [
+            ItemBarraH(nombre: 'A', valor: 0),
+            ItemBarraH(nombre: 'B', valor: 0),
+          ],
+        ),
       );
       await montarSuelto(
         tester,
-        const GraficoBarrasH(items: [ItemBarraH(nombre: 'Pérdida', valor: -50), ItemBarraH(nombre: 'Ganancia', valor: 200)]),
+        const GraficoBarrasH(
+          items: [
+            ItemBarraH(nombre: 'Pérdida', valor: -50),
+            ItemBarraH(nombre: 'Ganancia', valor: 200),
+          ],
+        ),
       );
       await montarSuelto(tester, const GraficoBarrasH(items: []));
     });
@@ -1113,32 +1432,64 @@ void main() {
       await montarSuelto(tester, const GraficoCalor(celdas: []));
       await montarSuelto(
         tester,
-        const GraficoCalor(celdas: [CeldaCalor(dia: 6, hora: 23, valor: 5, detalle: 'x')]),
+        const GraficoCalor(
+          celdas: [CeldaCalor(dia: 6, hora: 23, valor: 5, detalle: 'x')],
+        ),
       );
     });
 
-    testWidgets('dispersión con un punto, con todos iguales y sin cuadrantes', (tester) async {
+    testWidgets('dispersión con un punto, con todos iguales y sin cuadrantes', (
+      tester,
+    ) async {
       await montarSuelto(
         tester,
         const GraficoDispersion(
           etiquetaX: 'X',
           etiquetaY: 'Y',
-          puntos: [PuntoDispersion(nombre: 'P', x: 10, y: 5, color: Colors.blue, detalle: 'd', rotulo: true)],
-        ),
-      );
-      await montarSuelto(
-        tester,
-        const GraficoDispersion(
-          etiquetaX: 'X',
-          etiquetaY: 'Y',
-          cuadrantes: CuadrantesDispersion(x: 0, y: 0, rotulos: ['a', 'b', 'c', 'd']),
           puntos: [
-            PuntoDispersion(nombre: 'P', x: 0, y: 0, color: Colors.blue, detalle: 'd'),
-            PuntoDispersion(nombre: 'Q', x: 0, y: 0, color: Colors.red, detalle: 'd'),
+            PuntoDispersion(
+              nombre: 'P',
+              x: 10,
+              y: 5,
+              color: Colors.blue,
+              detalle: 'd',
+              rotulo: true,
+            ),
           ],
         ),
       );
-      await montarSuelto(tester, const GraficoDispersion(etiquetaX: 'X', etiquetaY: 'Y', puntos: []));
+      await montarSuelto(
+        tester,
+        const GraficoDispersion(
+          etiquetaX: 'X',
+          etiquetaY: 'Y',
+          cuadrantes: CuadrantesDispersion(
+            x: 0,
+            y: 0,
+            rotulos: ['a', 'b', 'c', 'd'],
+          ),
+          puntos: [
+            PuntoDispersion(
+              nombre: 'P',
+              x: 0,
+              y: 0,
+              color: Colors.blue,
+              detalle: 'd',
+            ),
+            PuntoDispersion(
+              nombre: 'Q',
+              x: 0,
+              y: 0,
+              color: Colors.red,
+              detalle: 'd',
+            ),
+          ],
+        ),
+      );
+      await montarSuelto(
+        tester,
+        const GraficoDispersion(etiquetaX: 'X', etiquetaY: 'Y', puntos: []),
+      );
     });
 
     testWidgets('embudo y medidor con datos límite', (tester) async {
@@ -1152,37 +1503,81 @@ void main() {
         ),
       );
       await montarSuelto(tester, const GraficoEmbudo(etapas: []));
-      await montarSuelto(tester, const GraficoMedidor(valor: null, titulo: 't', meta: 90));
-      await montarSuelto(tester, const GraficoMedidor(valor: 250, titulo: 't', meta: 90));
-      await montarSuelto(tester, const GraficoMedidor(valor: 40, titulo: 't', meta: 90, mejorAlto: false));
-    });
-
-    testWidgets('tarjetas de indicadores: serie plana, de un punto y valor largo', (tester) async {
       await montarSuelto(
         tester,
-        Column(
-          children: const [
-            TarjetaKpi(titulo: 'Plana', valor: 'S/ 1', serie: [5, 5, 5], cambio: 0),
-            TarjetaKpi(titulo: 'Un punto', valor: 'S/ 1', serie: [5], cambio: null),
-            TarjetaKpi(
-              titulo: 'Un título larguísimo que no cabe en una tarjeta angosta',
-              valor: 'S/ 123,456,789,012',
-              cambio: -12.4,
-              bajarEsBueno: true,
-              nota: 'Una nota que también es larga y ocupa más de dos renglones en una tarjeta angosta',
-            ),
-          ],
+        const GraficoMedidor(valor: null, titulo: 't', meta: 90),
+      );
+      await montarSuelto(
+        tester,
+        const GraficoMedidor(valor: 250, titulo: 't', meta: 90),
+      );
+      await montarSuelto(
+        tester,
+        const GraficoMedidor(
+          valor: 40,
+          titulo: 't',
+          meta: 90,
+          mejorAlto: false,
         ),
-        ancho: 170,
       );
     });
+
+    testWidgets(
+      'tarjetas de indicadores: serie plana, de un punto y valor largo',
+      (tester) async {
+        await montarSuelto(
+          tester,
+          Column(
+            children: const [
+              TarjetaKpi(
+                titulo: 'Plana',
+                valor: 'S/ 1',
+                serie: [5, 5, 5],
+                cambio: 0,
+              ),
+              TarjetaKpi(
+                titulo: 'Un punto',
+                valor: 'S/ 1',
+                serie: [5],
+                cambio: null,
+              ),
+              TarjetaKpi(
+                titulo:
+                    'Un título larguísimo que no cabe en una tarjeta angosta',
+                valor: 'S/ 123,456,789,012',
+                cambio: -12.4,
+                bajarEsBueno: true,
+                nota:
+                    'Una nota que también es larga y ocupa más de dos renglones en una tarjeta angosta',
+              ),
+            ],
+          ),
+          ancho: 170,
+        );
+      },
+    );
   });
 
   test('cada pantalla dice su ruta y la ruta está en el menú', () {
-    expect(VentasDashboardPagina.ruta, resolverRuta('/dashboard/ventas').item?.ruta);
-    expect(RentabilidadDashboardPagina.ruta, resolverRuta('/dashboard/rentabilidad').item?.ruta);
-    expect(CobranzaDashboardPagina.ruta, resolverRuta('/dashboard/cobranza').item?.ruta);
-    expect(InventarioDashboardPagina.ruta, resolverRuta('/dashboard/inventario').item?.ruta);
-    expect(RepartoDashboardPagina.ruta, resolverRuta('/dashboard/reparto').item?.ruta);
+    expect(
+      VentasDashboardPagina.ruta,
+      resolverRuta('/dashboard/ventas').item?.ruta,
+    );
+    expect(
+      RentabilidadDashboardPagina.ruta,
+      resolverRuta('/dashboard/rentabilidad').item?.ruta,
+    );
+    expect(
+      CobranzaDashboardPagina.ruta,
+      resolverRuta('/dashboard/cobranza').item?.ruta,
+    );
+    expect(
+      InventarioDashboardPagina.ruta,
+      resolverRuta('/dashboard/inventario').item?.ruta,
+    );
+    expect(
+      RepartoDashboardPagina.ruta,
+      resolverRuta('/dashboard/reparto').item?.ruta,
+    );
   });
 }

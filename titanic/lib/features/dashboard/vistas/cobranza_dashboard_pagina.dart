@@ -101,8 +101,15 @@ class CobranzaDashboardPagina extends ConsumerWidget {
           alto: 240,
           contenido: () => GraficoBarras(
             alto: 240,
+            // "Más de 60" se lee "> 60" en el eje: con cinco barras en un
+            // teléfono cada etiqueta tiene ~50 px y la larga obligaba a saltarse
+            // las del medio. El globo sigue diciendo el nombre completo.
             etiquetas: antiguedad
-                .map((a) => a.nombre.replaceAll(' días', ' d'))
+                .map(
+                  (a) => a.nombre
+                      .replaceAll(' días', ' d')
+                      .replaceAll('Más de ', '> '),
+                )
                 .toList(),
             etiquetasLargas: antiguedad
                 .map(
