@@ -1,14 +1,22 @@
-import { CheckCircle2, Plus, Trash2, Wallet } from 'lucide-react'
-import { Alert, Badge, Button, Desplegable, Input, RowAction } from '../../components/ui'
+import { useState } from 'react'
+import { Check, CheckCircle2, Pencil, Plus, Trash2, Wallet, X } from 'lucide-react'
+import { Alert, Badge, Button, Desplegable, Input, RowAction, SysDataTable } from '../../components/ui'
+import type { DataTableColumn } from '../../components/ui'
 import type { MetodoPagoOpcion, TipoMetodoPago } from '../finanzas/finanzasApi'
 import type { PedidoResponse } from './ventasApi'
 
-/** Un pago tal como se teclea: el monto queda como texto hasta que se calcula. */
+/**
+ * Un pago de la tabla. Mientras `guardado` es falso la fila se está escribiendo:
+ * no cuenta para el total y hay que guardarla o cancelarla antes de convertir.
+ */
 export interface FilaPagoEntrega {
   clave: number
   tipo: TipoMetodoPago | ''
   metodoPagoId: number
   monto: string
+  guardado: boolean
+  /** Lo que valía antes de empezar a editarla, para poder cancelar. */
+  previo?: Omit<FilaPagoEntrega, 'previo'>
 }
 
 const TIPOS: { value: TipoMetodoPago; label: string }[] = [
@@ -17,6 +25,12 @@ const TIPOS: { value: TipoMetodoPago; label: string }[] = [
   { value: 'TRANSFERENCIA', label: 'Transferencia' },
 ]
 
+const NOMBRE_TIPO: Record<TipoMetodoPago, string> = {
+  EFECTIVO: 'Efectivo',
+  BILLETERA_DIGITAL: 'Billetera digital',
+  TRANSFERENCIA: 'Transferencia',
+}
+
 let contador = 0
 const nuevaClave = () => ++contador
 
@@ -24,24 +38,20 @@ const redondear = (n: number) => Math.round(n * 100) / 100
 const monto = (fila: FilaPagoEntrega) => (fila.monto.trim() === '' ? 0 : Number(fila.monto))
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
-/** Una fila en blanco, lista para llenar. */
-export const filaPagoVacia = (): FilaPagoEntrega => ({ clave: nuevaClave(), tipo: '', metodoPagoId: 0, monto: '' })
-
 /**
- * Lo que dicen los pagos tecleados frente al total a cobrar.
+ * Lo que dicen los pagos guardados frente al total a cobrar.
  *
- * Una fila sin método ni monto es una fila que nadie llenó y no cuenta; una a
- * medias —solo el monto, o solo el método— sí es un error y se avisa.
+ * Solo cuentan las filas guardadas; una que todavía se está escribiendo
+ * (`pendiente`) impide convertir hasta que se guarde o se cancele.
  */
 export function resumenPago(filas: FilaPagoEntrega[], total: number) {
-  const usadas = filas.filter((f) => f.metodoPagoId !== 0 || monto(f) > 0)
-  const incompletas = usadas.some((f) => f.metodoPagoId === 0 || !(monto(f) > 0))
-  const pagado = redondear(usadas.reduce((suma, f) => suma + (monto(f) > 0 ? monto(f) : 0), 0))
+  const usadas = filas.filter((f) => f.guardado)
+  const pagado = redondear(usadas.reduce((suma, f) => suma + monto(f), 0))
   const totalRedondo = redondear(total)
 
   return {
     usadas,
-    incompletas,
+    pendiente: filas.some((f) => !f.guardado),
     pagado,
     saldo: redondear(totalRedondo - pagado),
     sobra: pagado > totalRedondo + 0.001,
@@ -60,7 +70,8 @@ interface PagoEntregaProps {
 }
 
 /**
- * La pestaña de pago al entregar.
+ * La pestaña de pago al entregar, con el mismo diseño que el modal de pagos de
+ * Cuentas por cobrar: una tabla de pagos que se escribe en la propia fila.
  *
  * La condición de pago del pedido es solo lo acordado: al repartir, quien iba a
  * pagar a crédito a veces paga todo o una parte, y quien iba al contado a veces
@@ -70,29 +81,143 @@ interface PagoEntregaProps {
  */
 export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFilas }: PagoEntregaProps) {
   const r = resumenPago(filas, total)
+  const [aviso, setAviso] = useState('')
 
-  const cambiar = (clave: number, parcial: Partial<FilaPagoEntrega>) =>
+  const editando = filas.find((f) => !f.guardado)
+
+  const cambiar = (clave: number, parcial: Partial<FilaPagoEntrega>) => {
+    setAviso('')
     onFilas(filas.map((f) => (f.clave === clave ? { ...f, ...parcial } : f)))
+  }
 
-  const quitar = (clave: number) => onFilas(filas.filter((f) => f.clave !== clave))
+  const agregar = () => {
+    setAviso('')
+    onFilas([...filas, { clave: nuevaClave(), tipo: '', metodoPagoId: 0, monto: '', guardado: false }])
+  }
+
+  /** Pasa una fila guardada a modo edición, recordando lo que tenía. */
+  const editar = (fila: FilaPagoEntrega) => {
+    setAviso('')
+    const { previo: _descartado, ...copia } = fila
+    void _descartado
+    cambiar(fila.clave, { guardado: false, previo: copia })
+  }
+
+  const cancelar = (fila: FilaPagoEntrega) => {
+    setAviso('')
+    // Una fila que ya existía vuelve a lo que tenía; una nueva se descarta.
+    onFilas(
+      fila.previo
+        ? filas.map((f) => (f.clave === fila.clave ? { ...fila.previo!, previo: undefined } : f))
+        : filas.filter((f) => f.clave !== fila.clave),
+    )
+  }
+
+  const guardar = (fila: FilaPagoEntrega) => {
+    if (!fila.tipo || !fila.metodoPagoId) return setAviso('Elige el tipo y el método de pago.')
+    if (!(monto(fila) > 0)) return setAviso('El monto debe ser mayor que cero.')
+
+    // Lo ya guardado más esta fila no puede pasarse del total.
+    const otros = filas.filter((f) => f.guardado && f.clave !== fila.clave).reduce((s, f) => s + monto(f), 0)
+    if (redondear(otros + monto(fila)) > redondear(total) + 0.001) {
+      return setAviso(
+        `Con este pago se cobraría ${soles(redondear(otros + monto(fila)))} y la venta es de ${soles(total)}. Baja el monto.`,
+      )
+    }
+
+    setAviso('')
+    onFilas(filas.map((f) => (f.clave === fila.clave ? { ...fila, guardado: true, previo: undefined } : f)))
+  }
+
+  const quitar = (fila: FilaPagoEntrega) => {
+    setAviso('')
+    onFilas(filas.filter((f) => f.clave !== fila.clave))
+  }
 
   /*
-   * "Cobrar todo": una fila con lo que falta, en efectivo si hay un método así,
-   * que es lo que se cobra casi siempre en la puerta del cliente.
+   * "Cobrar todo": un pago con lo que falta, en efectivo si hay un método así,
+   * que es lo que se cobra casi siempre en la puerta del cliente. Si no hay
+   * efectivo queda la fila para elegir el método.
    */
   const cobrarTodo = () => {
+    setAviso('')
     const efectivo = metodos.find((m) => m.tipo === 'EFECTIVO')
     const falta = Math.max(r.saldo, 0)
-    // Si ya hay una fila en blanco, se llena esa en vez de sumar otra.
-    const vacia = filas.find((f) => f.metodoPagoId === 0 && f.monto.trim() === '')
-    const llena: FilaPagoEntrega = {
-      clave: vacia?.clave ?? nuevaClave(),
-      tipo: efectivo ? 'EFECTIVO' : '',
-      metodoPagoId: efectivo?.id ?? 0,
-      monto: falta > 0 ? falta.toFixed(2) : '',
-    }
-    onFilas(vacia ? filas.map((f) => (f.clave === vacia.clave ? llena : f)) : [...filas, llena])
+    onFilas([
+      ...filas,
+      {
+        clave: nuevaClave(),
+        tipo: efectivo ? 'EFECTIVO' : '',
+        metodoPagoId: efectivo?.id ?? 0,
+        monto: falta > 0 ? falta.toFixed(2) : '',
+        guardado: !!efectivo && falta > 0,
+      },
+    ])
   }
+
+  const columnas: DataTableColumn<FilaPagoEntrega>[] = [
+    {
+      key: 'tipo',
+      label: 'Tipo de pago',
+      render: (fila) =>
+        !fila.guardado ? (
+          <Desplegable
+            value={fila.tipo}
+            onChange={(v) => {
+              const tipoElegido = v as TipoMetodoPago
+              const delTipo = metodos.filter((m) => m.tipo === tipoElegido)
+              // Con un solo método de ese tipo —el efectivo casi siempre— no hay
+              // nada que elegir: se completa solo. Con varios, se elige a mano.
+              cambiar(fila.clave, {
+                tipo: tipoElegido,
+                metodoPagoId: delTipo.length === 1 ? delTipo[0].id : 0,
+              })
+            }}
+            placeholder="Elige el tipo"
+            options={TIPOS}
+          />
+        ) : fila.tipo ? (
+          <Badge tone="sys">{NOMBRE_TIPO[fila.tipo]}</Badge>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
+      key: 'metodo',
+      label: 'Método',
+      render: (fila) =>
+        !fila.guardado ? (
+          <Desplegable
+            value={fila.metodoPagoId}
+            onChange={(v) => cambiar(fila.clave, { metodoPagoId: Number(v) })}
+            placeholder={fila.tipo ? 'Elige el método' : 'Elige el tipo primero'}
+            disabled={!fila.tipo}
+            options={metodos.filter((m) => m.tipo === fila.tipo).map((m) => ({ value: m.id, label: m.nombre }))}
+          />
+        ) : (
+          (metodos.find((m) => m.id === fila.metodoPagoId)?.nombre ?? '—')
+        ),
+    },
+    {
+      key: 'monto',
+      label: 'Monto',
+      align: 'right',
+      render: (fila) =>
+        !fila.guardado ? (
+          <Input
+            size="sm"
+            type="number"
+            min={0}
+            step="0.01"
+            placeholder="0.00"
+            value={fila.monto}
+            onChange={(e) => cambiar(fila.clave, { monto: e.target.value })}
+          />
+        ) : (
+          soles(monto(fila))
+        ),
+    },
+  ]
 
   const acordado = pedido?.condicionPago === 'CREDITO' ? 'Crédito' : 'Contado'
 
@@ -101,9 +226,7 @@ export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFi
       <div className="flex flex-wrap items-center gap-2 rounded-field bg-surface-alt px-3 py-2 text-xs text-ink-soft">
         <span>Acordado con el cliente:</span>
         <Badge tone={pedido?.condicionPago === 'CREDITO' ? 'warning' : 'success'}>{acordado}</Badge>
-        <span>
-          Es solo una referencia: manda lo que se cobre ahora. Lo que no se cobre queda a crédito.
-        </span>
+        <span>Es solo una referencia: manda lo que se cobre ahora. Lo que no se cobre queda a crédito.</span>
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-center sm:gap-3">
@@ -123,6 +246,7 @@ export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFi
         </div>
       </div>
 
+      {/* Sin cobro no se dice nada: los cards ya muestran que todo queda a crédito. */}
       {r.sobra ? (
         <Alert>Lo cobrado supera el total en {soles(r.pagado - redondear(total))}. Corrige los montos.</Alert>
       ) : r.completo ? (
@@ -133,11 +257,7 @@ export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFi
         <div className="rounded-field bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
           Cobro parcial: la venta queda a crédito y el cliente debe {soles(r.saldo)}.
         </div>
-      ) : (
-        <div className="rounded-field bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
-          Sin cobro: la venta queda a crédito por {soles(total)}.
-        </div>
-      )}
+      ) : null}
 
       {metodosListos && metodos.length === 0 && (
         <Alert tone="warning">
@@ -145,72 +265,66 @@ export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFi
         </Alert>
       )}
 
+      {aviso && <Alert>{aviso}</Alert>}
+
       <div className="flex flex-col gap-3">
-        {filas.map((f) => (
-          <div
-            key={f.clave}
-            className="grid items-end gap-2 rounded-field border border-line p-2.5 sm:grid-cols-[1fr_1fr_9rem_auto]"
-          >
-            <Desplegable
-              label="Tipo de pago"
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-ink">Pagos</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
               size="sm"
-              value={f.tipo}
-              onChange={(v) => cambiar(f.clave, { tipo: v as TipoMetodoPago, metodoPagoId: 0 })}
-              placeholder="Elige el tipo"
-              options={TIPOS}
-            />
-            <Desplegable
-              label="Método"
-              size="sm"
-              value={f.metodoPagoId}
-              onChange={(v) => cambiar(f.clave, { metodoPagoId: Number(v) })}
-              placeholder={f.tipo ? 'Elige el método' : 'Elige el tipo primero'}
-              disabled={!f.tipo}
-              options={metodos.filter((m) => m.tipo === f.tipo).map((m) => ({ value: m.id, label: m.nombre }))}
-            />
-            <Input
-              label="Monto"
-              size="sm"
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="0.00"
-              value={f.monto}
-              onChange={(e) => cambiar(f.clave, { monto: e.target.value })}
-            />
-            <div className="pb-1">
-              <RowAction label="Quitar este pago" tone="danger" onClick={() => quitar(f.clave)}>
-                <Trash2 size={15} />
-              </RowAction>
-            </div>
+              iconRight={<Wallet size={15} />}
+              disabled={editando !== undefined || r.saldo <= 0 || !metodosListos || metodos.length === 0}
+              onClick={cobrarTodo}
+            >
+              Cobrar todo
+            </Button>
+            <Button size="sm" disabled={editando !== undefined || metodos.length === 0} onClick={agregar}>
+              <Plus size={15} />
+              Agregar pago
+            </Button>
           </div>
-        ))}
-
-        {filas.length === 0 && (
-          <p className="rounded-field border border-dashed border-line px-3 py-4 text-center text-sm text-ink-soft">
-            Todavía no se cobró nada. Si el cliente pagó algo, agrégalo aquí; si no, deja la venta a crédito.
-          </p>
-        )}
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            iconRight={<Plus size={15} />}
-            onClick={() => onFilas([...filas, filaPagoVacia()])}
-          >
-            Agregar pago
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            iconRight={<Wallet size={15} />}
-            disabled={r.saldo <= 0 || !metodosListos || metodos.length === 0}
-            onClick={cobrarTodo}
-          >
-            Cobrar todo
-          </Button>
         </div>
+
+        <SysDataTable<FilaPagoEntrega>
+          columns={columnas}
+          rows={filas}
+          rowKey="clave"
+          toolbar={false}
+          empty="Todavía no se cobró nada. Si el cliente pagó algo, agrégalo; si no, la venta queda a crédito."
+          actions={(fila) =>
+            !fila.guardado ? (
+              <>
+                <RowAction label="Guardar pago" tone="success" onClick={() => guardar(fila)}>
+                  <Check size={15} />
+                </RowAction>
+                <RowAction label="Cancelar" tone="neutral" onClick={() => cancelar(fila)}>
+                  <X size={15} />
+                </RowAction>
+              </>
+            ) : (
+              <>
+                <RowAction
+                  label={`Editar pago de ${soles(monto(fila))}`}
+                  tone="edit"
+                  disabled={editando !== undefined}
+                  onClick={() => editar(fila)}
+                >
+                  <Pencil size={15} />
+                </RowAction>
+                <RowAction
+                  label={`Quitar pago de ${soles(monto(fila))}`}
+                  tone="danger"
+                  disabled={editando !== undefined}
+                  onClick={() => quitar(fila)}
+                >
+                  <Trash2 size={15} />
+                </RowAction>
+              </>
+            )
+          }
+        />
       </div>
     </div>
   )

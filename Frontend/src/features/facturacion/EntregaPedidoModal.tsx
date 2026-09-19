@@ -180,8 +180,8 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
       )
     }
 
-    if (cobro.incompletas) {
-      return fallar('Completa el método y el monto de cada pago, o quita la fila que no uses.', 'pago')
+    if (cobro.pendiente) {
+      return fallar('Hay un pago sin guardar: guárdalo con el visto o cancélalo antes de convertir.', 'pago')
     }
     if (cobro.sobra) {
       return fallar(`Lo cobrado (${soles(cobro.pagado)}) supera el total de la venta (${soles(total)}).`, 'pago')
@@ -400,18 +400,21 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
           />
         )}
 
-        <div className="flex flex-col gap-1 border-t border-line pt-3 text-sm">
-          {hayRecortes && (
-            <div className="flex items-center justify-between text-ink-soft">
-              <span>Total del pedido</span>
-              <span>{soles(pedido?.total ?? 0)}</span>
+        {/* En Pago el total ya está en el card "A cobrar": repetirlo sobra. */}
+        {pestana === 'entrega' && (
+          <div className="flex flex-col gap-1 border-t border-line pt-3 text-sm">
+            {hayRecortes && (
+              <div className="flex items-center justify-between text-ink-soft">
+                <span>Total del pedido</span>
+                <span>{soles(pedido?.total ?? 0)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between font-semibold">
+              <span>{hayRecortes ? 'Total a cobrar' : 'Total'}</span>
+              <span className="text-ink">{soles(total)}</span>
             </div>
-          )}
-          <div className="flex items-center justify-between font-semibold">
-            <span>{hayRecortes ? 'Total a cobrar' : 'Total'}</span>
-            <span className="text-ink">{soles(total)}</span>
           </div>
-        </div>
+        )}
       </div>
     </Modal>
   )
