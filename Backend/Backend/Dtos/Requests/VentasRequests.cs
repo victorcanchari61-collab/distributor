@@ -54,9 +54,9 @@ public class CrearPedidoRequest
 /// <summary>Con qué almacén se despacha el pedido al confirmarlo.</summary>
 ///
 /// <remarks>
-/// Un pedido no lleva pagos — eso es cosa de la nota de venta que nace al
-/// confirmarlo, y ahí queda sin registrar ninguno (a crédito, pendiente de
-/// cobro) hasta que se pague.
+/// El pedido en sí no lleva pagos: se registran aquí, al entregar, y quedan en
+/// la nota de venta que nace. Sin ninguno, la venta queda a crédito, pendiente
+/// de cobro, hasta que se pague.
 /// </remarks>
 public class ConfirmarPedidoRequest
 {
@@ -77,6 +77,17 @@ public class ConfirmarPedidoRequest
     /// registrado como novedad con su motivo.
     /// </summary>
     public List<LineaEntregaRequest> Lineas { get; set; } = [];
+
+    /// <summary>
+    /// Lo que el cliente pagó al recibir, en uno o varios métodos.
+    ///
+    /// La condición de pago del pedido (contado o crédito) es solo lo acordado:
+    /// al repartir, quien iba a pagar a crédito a veces paga todo o una parte, y
+    /// quien iba al contado a veces paga solo una parte o nada. Manda lo que se
+    /// cobró de verdad: si cubre el total la venta es al contado; si no, queda
+    /// a crédito con este adelanto, y lo que falte es deuda del cliente.
+    /// </summary>
+    public List<PagoVentaRequest> Pagos { get; set; } = [];
 }
 
 /// <summary>Cuánto de una línea del pedido se entregó, y por qué no fue todo.</summary>

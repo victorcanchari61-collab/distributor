@@ -30,8 +30,20 @@ export interface MetodoPagoRequest {
   titular?: string | null
 }
 
+/** Lo justo para elegir con cuál se cobra: sin datos de cuenta ni contadores. */
+export interface MetodoPagoOpcion {
+  id: number
+  nombre: string
+  tipo: TipoMetodoPago
+}
+
 export const metodoPagoApi = {
   getAll: () => api.get<MetodoPagoResponse[]>('/metodopago'),
+  /**
+   * Los métodos activos para cobrar. Lo puede pedir quien entrega pedidos aunque
+   * no tenga acceso al catálogo de Finanzas.
+   */
+  opciones: () => api.get<MetodoPagoOpcion[]>('/metodopago/opciones'),
   create: (body: MetodoPagoRequest) => api.post<MetodoPagoResponse>('/metodopago', body),
   update: (id: number, body: MetodoPagoRequest & { activo: boolean }) =>
     api.put<MetodoPagoResponse>(`/metodopago/${id}`, body),

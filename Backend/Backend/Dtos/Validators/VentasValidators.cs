@@ -53,6 +53,8 @@ public class ConfirmarPedidoRequestValidator : AbstractValidator<ConfirmarPedido
             .GreaterThan(0).When(x => x.AlmacenId.HasValue)
             .WithMessage("Elige el almacén");
 
+        RuleForEach(x => x.Pagos).SetValidator(new PagoVentaRequestValidator());
+
         RuleForEach(x => x.Lineas).ChildRules(l =>
         {
             l.RuleFor(x => x.PedidoDetalleId).GreaterThan(0).WithMessage("Línea inválida");

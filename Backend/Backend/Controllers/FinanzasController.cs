@@ -24,6 +24,20 @@ public class MetodoPagoController : ControllerBase
     [Permiso("finanzas.metodospago", Accion.Ver)]
     public async Task<IActionResult> GetAll() => Ok(await _finanzas.GetMetodosPagoAsync());
 
+    /// <summary>
+    /// Los métodos activos, lo justo para elegir con cuál se cobra: nombre y
+    /// tipo, sin datos de cuenta ni contadores.
+    ///
+    /// Lo pide quien entrega pedidos y cobra al recibir, que puede tener ese
+    /// permiso sin poder ver ni editar el catálogo de Finanzas.
+    /// </summary>
+    [HttpGet("opciones")]
+    [PermisoAlguno("finanzas.metodospago:ver", "fact.pedidos:confirmar", "fact.notaventa:cobrar")]
+    public async Task<IActionResult> Opciones() =>
+        Ok((await _finanzas.GetMetodosPagoAsync())
+            .Where(m => m.Activo)
+            .Select(m => new { m.Id, m.Nombre, m.Tipo }));
+
     [HttpGet("{id:int}")]
     [Permiso("finanzas.metodospago", Accion.Ver)]
     public async Task<IActionResult> GetById(int id) => Ok(await _finanzas.GetMetodoPagoAsync(id));

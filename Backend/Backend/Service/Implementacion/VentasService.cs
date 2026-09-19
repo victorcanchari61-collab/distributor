@@ -251,8 +251,8 @@ public class VentasService : IVentasService
                 $"Este pedido ya se convirtió en la venta {vigente.Numero}. Anúlala si necesitas rehacerla.");
         }
 
-        // Un pedido no lleva pagos: la nota que nace al confirmarlo queda a
-        // crédito, pendiente de cobro, hasta que se registre uno.
+        // La venta que nace al confirmarlo lleva lo que el cliente pagó al recibir
+        // (ver más abajo): todo, una parte o nada.
         /*
          * De donde sale: el de la reserva manda.
          *
@@ -268,12 +268,26 @@ public class VentasService : IVentasService
         var (lineasVenta, cambios) = await ResolverEntregaAsync(pedido, request);
         var motivos = await _novedades.ExigirMotivosAsync(cambios.Select(c => c.MotivoId));
 
+        /*
+         * La forma de pago sale de lo que se cobró, no de lo que se acordó.
+         *
+         * El pedido dice contado o crédito, pero solo como referencia: al
+         * repartir se cobra todo, una parte o nada, sin importar lo acordado.
+         * Si lo cobrado cubre el total, la venta es al contado; si no, queda a
+         * crédito con ese adelanto (que puede ser cero) y el resto es deuda.
+         * Un cobro de más lo rechaza la propia creación de la venta.
+         */
+        var pagos = request.Pagos ?? [];
+        var totalVenta = Math.Round(lineasVenta.Sum(l => l.CantidadPresentacion * l.PrecioPresentacion), 2);
+        var cobrado = Math.Round(pagos.Sum(p => p.Monto), 2);
+        var forma = cobrado > 0 && cobrado >= totalVenta ? FormaPagoVenta.Contado : FormaPagoVenta.Credito;
+
         var notaVenta = await CrearNotaVentaInternaAsync(
             clienteId: pedido.ClienteId,
             almacenId: almacenId,
             pedidoId: pedido.Id,
-            formaPago: FormaPagoVenta.Credito,
-            pagos: [],
+            formaPago: forma,
+            pagos: pagos,
             observacion: pedido.Observacion,
             lineas: lineasVenta,
             usuarioId: usuarioId);

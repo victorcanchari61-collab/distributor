@@ -124,6 +124,12 @@ export interface ConfirmarPedidoRequest {
    * cambian: una que no aparece se entregó completa.
    */
   lineas?: LineaEntregaRequest[]
+  /**
+   * Lo que el cliente pagó al recibir, en uno o varios métodos. Manda lo que se
+   * cobró, no lo acordado: si cubre el total la venta es al contado; si no,
+   * queda a crédito con este adelanto (puede ser ninguno).
+   */
+  pagos?: PagoVentaRequest[]
 }
 
 /** Cuánto de una línea se entregó, y por qué no fue todo. */

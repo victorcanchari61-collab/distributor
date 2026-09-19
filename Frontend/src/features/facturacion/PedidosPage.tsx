@@ -953,10 +953,10 @@ export function PedidosPage() {
         pedido={confirmando}
         almacenes={almacenes}
         onClose={() => setConfirmando(null)}
-        onHecho={() => {
+        onHecho={(mensaje) => {
           setConfirmando(null)
           void cargar()
-          toast.exito('Pedido convertido: ya es una venta.')
+          toast.exito(mensaje)
         }}
       />
 
