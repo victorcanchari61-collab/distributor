@@ -87,6 +87,15 @@ public static class CatalogoPermisos
     public static readonly IReadOnlyDictionary<string, string[]> Submodulos =
         new Dictionary<string, string[]>
         {
+            // --- Dashboard ---
+            // Un tablero por área, cada uno con su propio permiso: quien maneja el almacén ve
+            // Inventario sin que eso le abra las ganancias. Son solo de lectura.
+            ["dashboard.ventas"] = [Accion.Ver],
+            ["dashboard.rentabilidad"] = [Accion.Ver],
+            ["dashboard.cobranza"] = [Accion.Ver],
+            ["dashboard.inventario"] = [Accion.Ver],
+            ["dashboard.reparto"] = [Accion.Ver],
+
             // --- Maestros ---
             ["maestros.clientes"] = CatalogoImportable,
             ["maestros.proveedores"] = CatalogoImportable,

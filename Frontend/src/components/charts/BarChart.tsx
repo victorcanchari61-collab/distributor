@@ -82,9 +82,28 @@ export function BarChart({
   const grosorBarra = apilado ? grosorGrupo : Math.max(3, grosorGrupo / series.length)
   const xCentro = (i: number) => IZQ + banda * i + banda / 2
 
+  /*
+   * El eje derecho. Si las barras bajan de cero, el de la linea tambien, y con el cero en el
+   * MISMO renglon: dos ceros a alturas distintas hacen que un margen negativo parezca positivo
+   * al lado de una ganancia negativa.
+   */
   const valoresLinea = linea?.valores.filter((v): v is number => v !== null) ?? []
-  const maxLinea = linea ? (linea.max ?? escala(0, Math.max(...valoresLinea, 0), 4).max) : 1
-  const yLinea = (v: number) => ARRIBA + altoUtil - (v / (maxLinea || 1)) * altoUtil
+  const datoMax = Math.max(...valoresLinea, 0)
+  const datoMin = Math.min(...valoresLinea, 0)
+  let maxLinea = 1
+  let minLinea = 0
+  if (linea) {
+    if (min < 0 && max > 0) {
+      const proporcion = min / max
+      maxLinea = escala(0, Math.max(linea.max ?? datoMax, datoMin < 0 ? datoMin / proporcion : 0), 2).max
+      minLinea = maxLinea * proporcion
+    } else {
+      maxLinea = linea.max ?? escala(0, datoMax, 4).max
+      minLinea = datoMin < 0 ? escala(datoMin, 0, 2).min : 0
+    }
+  }
+  const yLinea = (v: number) => ARRIBA + altoUtil - ((v - minLinea) / (maxLinea - minLinea || 1)) * altoUtil
+  const marcasLinea = minLinea < 0 ? [minLinea, 0, maxLinea] : [0, maxLinea / 2, maxLinea]
 
   const cadaX = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(anchoUtil / 56))))
 
@@ -114,9 +133,9 @@ export function BarChart({
         ))}
 
         {linea &&
-          [0, 0.5, 1].map((f) => (
-            <text key={f} x={ancho - der + 6} y={yLinea(maxLinea * f) + 3.5} fontSize="10.5" fill={linea.color}>
-              {linea.formato(maxLinea * f)}
+          marcasLinea.map((v) => (
+            <text key={v} x={ancho - der + 6} y={yLinea(v) + 3.5} fontSize="10.5" fill={linea.color}>
+              {linea.formato(v)}
             </text>
           ))}
 

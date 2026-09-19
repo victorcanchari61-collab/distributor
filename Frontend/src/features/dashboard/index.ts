@@ -1,0 +1,5 @@
+export { VentasDashboard } from './VentasDashboard'
+export { RentabilidadDashboard } from './RentabilidadDashboard'
+export { CobranzaDashboard } from './CobranzaDashboard'
+export { InventarioDashboard } from './InventarioDashboard'
+export { RepartoDashboard } from './RepartoDashboard'

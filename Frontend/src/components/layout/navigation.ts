@@ -16,6 +16,7 @@ import {
   Gauge,
   HandCoins,
   TrendingUp,
+  LayoutDashboard,
   Hash,
   IdCard,
   Landmark,
@@ -57,6 +58,7 @@ export type SysKey =
   | 'dms'
   | 'rrhh'
   | 'config'
+  | 'dashboard'
 
 export interface NavItem {
   id: string
@@ -86,6 +88,20 @@ export interface NavGroup {
  * donde crearlos y editarlos, los demas modulos solo los seleccionan.
  */
 export const NAV_GROUPS: NavGroup[] = [
+  // Los tableros van primero: son lo que se mira antes de entrar a operar.
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    sys: 'dashboard',
+    icon: LayoutDashboard,
+    items: [
+      { id: 'dashboard.ventas', label: 'Ventas', icon: ShoppingCart },
+      { id: 'dashboard.rentabilidad', label: 'Rentabilidad', icon: TrendingUp },
+      { id: 'dashboard.cobranza', label: 'Cobranza', icon: Wallet },
+      { id: 'dashboard.inventario', label: 'Inventario', icon: Boxes },
+      { id: 'dashboard.reparto', label: 'Pedidos y reparto', icon: PackageCheck },
+    ],
+  },
   {
     id: 'maestros',
     label: 'Maestros',
@@ -219,22 +235,6 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
 ]
-
-/**
- * El Dashboard no pertenece a ningun modulo: va suelto en el menu, debajo de Inicio.
- *
- * Se muestra a quien pueda abrir al menos una de las pantallas de las que saca sus
- * graficos; cada grafico, ademas, solo se pide si esa pantalla concreta se puede ver.
- */
-export const NAV_DASHBOARD = 'dashboard'
-
-export const NAV_DASHBOARD_FUENTES = [
-  'fact.notaventa',
-  'finanzas.ganancias',
-  'finanzas.cobrar',
-  'inv.stock',
-  'fact.pedidos',
-] as const
 
 /** Color de sistema y titulo de una entrada del menu. */
 export function resolveNav(itemId: string): { sys: SysKey; group?: NavGroup; item?: NavItem } {

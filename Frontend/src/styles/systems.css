@@ -66,6 +66,14 @@
   --sys-on: #ffffff;
 }
 
+/* Dashboard — índigo */
+[data-sys='dashboard'] {
+  --sys-rgb: 79 70 229;
+  --sys-dark-rgb: 55 48 163;
+  --sys-ink-rgb: 67 56 202;
+  --sys-on: #ffffff;
+}
+
 /* TMS — cian */
 [data-sys='tms'] {
   --sys-rgb: 8 145 178;

@@ -7,7 +7,14 @@ import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, AuditoriaPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
 import { SolicitudPermisoModal } from './features/config/SolicitudPermisoModal'
 import { solicitudApi } from './features/config/solicitudApi'
-import { DashboardPage, InicioPage } from './features/inicio'
+import { InicioPage } from './features/inicio'
+import {
+  CobranzaDashboard,
+  InventarioDashboard,
+  RentabilidadDashboard,
+  RepartoDashboard,
+  VentasDashboard,
+} from './features/dashboard'
 import { MiPerfilPage } from './features/perfil'
 import { Button } from './components/ui'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
@@ -47,6 +54,11 @@ import { PermisosProvider, usePermisos } from './lib/permisos'
 
 /** Vistas ya construidas, por id del menu. El resto cae en PendingPage. */
 const VIEWS: Record<string, () => React.ReactElement> = {
+  'dashboard.ventas': VentasDashboard,
+  'dashboard.rentabilidad': RentabilidadDashboard,
+  'dashboard.cobranza': CobranzaDashboard,
+  'dashboard.inventario': InventarioDashboard,
+  'dashboard.reparto': RepartoDashboard,
   'maestros.clientes': ClientesPage,
   'maestros.proveedores': ProveedoresPage,
   'maestros.productos': ProductosPage,
@@ -139,8 +151,6 @@ function App() {
         <Route path="/" element={<Inicio />} />
         {/* Ruta propia y fuera del filtro de permisos: es de todos, no de un modulo. */}
         <Route path="/perfil" element={<MiPerfilPage />} />
-        {/* Suelto: el Dashboard grafica varios modulos y cada grafico se filtra por su propio permiso. */}
-        <Route path="/dashboard" element={<TableroVista />} />
         <Route path="/:modulo/:vista" element={<Vista />} />
         <Route path="*" element={<Inicio />} />
       </Routes>
@@ -154,14 +164,6 @@ function App() {
     </DashboardLayout>
     </PermisosProvider>
   )
-}
-
-function TableroVista() {
-  const { cargando } = usePermisos()
-
-  if (cargando) return null
-
-  return <DashboardPage />
 }
 
 /** Resuelve la vista que corresponde a la ruta actual. */

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Backend.Service.Implementacion;
 
 /// <summary>
-/// Los números del tablero de inicio.
+/// Los números de los dashboards.
 ///
 /// Todo se agrupa por día de calle (hora de Lima), no por día UTC: una venta
 /// de las 8 de la noche es de ESE día. Los importes salen de las mismas

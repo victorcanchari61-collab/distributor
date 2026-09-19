@@ -3,11 +3,10 @@ using Backend.Dtos.Responses;
 namespace Backend.Service.Interfaces;
 
 /// <summary>
-/// Los números del tablero de inicio, ya resumidos para dibujarlos.
+/// Los números de los dashboards, ya resumidos para dibujarlos.
 ///
-/// Cada bloque es independiente y lo protege el permiso de la pantalla de donde
-/// salen sus datos: quien no puede ver Ventas no ve el bloque de ventas, y un
-/// bloque que falla no tumba a los demás.
+/// Un bloque por dashboard, cada uno con su propio permiso ("dashboard.ventas",
+/// "dashboard.inventario"...): quien puede ver uno no ve por eso los demás.
 /// </summary>
 public interface IDashboardService
 {

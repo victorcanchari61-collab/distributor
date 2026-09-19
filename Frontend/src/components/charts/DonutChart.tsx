@@ -28,7 +28,11 @@ export function DonutChart({ porciones, formato = compacto, centro, tamano = 168
 
   const r = tamano / 2 - 14
   const c = 2 * Math.PI * r
-  let acumulado = 0
+
+  // Dónde arranca cada porción: la suma de lo que ocupan las anteriores.
+  const inicios = porciones.map((_, i) =>
+    porciones.slice(0, i).reduce((suma, p) => suma + (total > 0 ? (p.valor / total) * c : 0), 0),
+  )
 
   const seleccion = activa !== null ? porciones[activa] : null
 
@@ -41,8 +45,7 @@ export function DonutChart({ porciones, formato = compacto, centro, tamano = 168
             {porciones.map((p, i) => {
               const largo = total > 0 ? (p.valor / total) * c : 0
               const separacion = total > 0 && p.valor / total > 0.015 && porciones.length > 1 ? 2 : 0
-              const inicio = acumulado
-              acumulado += largo
+              const inicio = inicios[i]
 
               return (
                 <circle

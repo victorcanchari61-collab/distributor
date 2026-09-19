@@ -2,13 +2,5 @@ export { DashboardLayout } from './DashboardLayout'
 export type { DashboardLayoutProps } from './DashboardLayout'
 export { Sidebar } from './Sidebar'
 export { Topbar } from './Topbar'
-export {
-  NAV_GROUPS,
-  NAV_DEFAULT,
-  NAV_DASHBOARD,
-  NAV_DASHBOARD_FUENTES,
-  resolveNav,
-  navPath,
-  navIdFromPath,
-} from './navigation'
+export { NAV_GROUPS, NAV_DEFAULT, resolveNav, navPath, navIdFromPath } from './navigation'
 export type { NavGroup, NavItem, SysKey } from './navigation'

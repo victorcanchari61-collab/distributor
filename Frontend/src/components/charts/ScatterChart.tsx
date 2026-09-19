@@ -117,7 +117,15 @@ export function ScatterChart({
               onPointerLeave={() => setHover(null)}
             />
             {p.rotulo && (
-              <text x={px(p.x) + 9} y={py(p.y) + 3.5} fontSize="10.5" fill="#334155" pointerEvents="none">
+              // Cerca del borde derecho el rótulo se escribe hacia la izquierda: si no, se corta.
+              <text
+                x={px(p.x) + (px(p.x) > ancho * 0.72 ? -9 : 9)}
+                y={py(p.y) + 3.5}
+                textAnchor={px(p.x) > ancho * 0.72 ? 'end' : 'start'}
+                fontSize="10.5"
+                fill="#334155"
+                pointerEvents="none"
+              >
                 {p.nombre.length > 18 ? `${p.nombre.slice(0, 17)}…` : p.nombre}
               </text>
             )}
