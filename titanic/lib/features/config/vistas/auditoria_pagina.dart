@@ -9,9 +9,11 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/auditoria.dart';
 import '../estado/auditoria_controlador.dart';
+import 'depurar_auditoria_hoja.dart';
 
 /// Auditoria: que cambio en el sistema, quien lo hizo y cuando. Solo lectura.
 class AuditoriaPagina extends ConsumerWidget {
@@ -64,12 +66,34 @@ class AuditoriaPagina extends ConsumerWidget {
           tono: DatoTono.neutral,
         ),
       ],
-      filtro: BotonFiltros(
-        activos: (accionFiltro == null ? 0 : 1) +
-            (usuarioFiltro == null ? 0 : 1) +
-            (entidadFiltro == null ? 0 : 1),
-        color: color,
-        onAbrir: () => _abrirFiltros(context, ref),
+      filtro: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BotonFiltros(
+            activos: (accionFiltro == null ? 0 : 1) +
+                (usuarioFiltro == null ? 0 : 1) +
+                (entidadFiltro == null ? 0 : 1),
+            color: color,
+            onAbrir: () => _abrirFiltros(context, ref),
+          ),
+          // Borrar de la bitácora es una acción con permiso propio: sin él ni
+          // se ofrece.
+          if (puede(ref, 'config.auditoria', Accion.eliminar))
+            IconButton(
+              onPressed: () => mostrarDepuracion(
+                context,
+                accion: accionFiltro,
+                usuario: usuarioFiltro,
+                entidad: entidadFiltro,
+              ),
+              tooltip: 'Depurar',
+              icon: const Icon(
+                Icons.delete_sweep_outlined,
+                size: 22,
+                color: Colores.tintaSuave,
+              ),
+            ),
+        ],
       ),
       fila: (context, registro) => _TarjetaAuditoria(registro: registro, color: color),
     );

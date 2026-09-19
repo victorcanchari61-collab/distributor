@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../../core/red/cliente_api.dart';
 import 'novedad.dart';
 
@@ -45,6 +47,16 @@ class NovedadApi {
         .map((e) => Novedad.desdeJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// GET /api/novedad/pdf. El reporte con lo mismo que muestra la pantalla.
+  ///
+  /// La búsqueda y los filtros viajan como el JSON de la consulta (la misma
+  /// forma que recibe `/novedad/listar`) en un solo parámetro: son una lista de
+  /// columna, operador y valor, y armar un parámetro por filtro sería tener que
+  /// enseñarle al servidor cada uno. El servidor no pagina el papel: trae todo
+  /// lo que pasa el filtro, hasta 2000 filas.
+  Future<List<int>> pdf(Map<String, dynamic> consulta) =>
+      _api.archivo('/novedad/pdf?consulta=${Uri.encodeComponent(jsonEncode(consulta))}');
 
   /// GET /api/novedad/resumen
   Future<ResumenNovedades> resumen() async =>

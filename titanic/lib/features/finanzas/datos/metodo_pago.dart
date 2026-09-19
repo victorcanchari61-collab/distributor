@@ -59,3 +59,26 @@ class MetodoPago {
     usos: json['usos'] as int? ?? 0,
   );
 }
+
+/// Lo justo para elegir con cuál se cobra: nombre y tipo, sin datos de cuenta
+/// ni contadores.
+///
+/// Es lo que devuelve GET /api/metodopago/opciones, que solo trae los activos y
+/// lo puede pedir quien convierte pedidos sin tener acceso al catálogo de
+/// Finanzas. Por eso no reutiliza [MetodoPago]: aquí no hay `activo` ni `usos`
+/// que inventar.
+class MetodoPagoOpcion {
+  const MetodoPagoOpcion({required this.id, required this.nombre, required this.tipo});
+
+  final int id;
+  final String nombre;
+
+  /// EFECTIVO, BILLETERA_DIGITAL o TRANSFERENCIA: ver [TipoMetodoPago].
+  final String tipo;
+
+  factory MetodoPagoOpcion.desdeJson(Map<String, dynamic> json) => MetodoPagoOpcion(
+    id: json['id'] as int,
+    nombre: json['nombre'] as String? ?? '',
+    tipo: json['tipo'] as String? ?? TipoMetodoPago.efectivo,
+  );
+}

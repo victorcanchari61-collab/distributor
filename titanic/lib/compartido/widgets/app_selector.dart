@@ -33,6 +33,7 @@ class AppSelector<T> extends StatelessWidget {
     this.error,
     this.onCrear,
     this.etiquetaCrear,
+    this.lineasOpcion = 1,
   });
 
   final T? valor;
@@ -45,6 +46,13 @@ class AppSelector<T> extends StatelessWidget {
 
   final bool habilitado;
   final String? error;
+
+  /// Cuantas lineas ocupa el texto de cada opcion antes de cortarse con "...".
+  ///
+  /// Una sola es lo normal. Se sube cuando lo que hay que leer va AL FINAL del
+  /// texto —los cortes de horario del reporte de carga terminan en las horas—
+  /// y cortarlo lo dejaria sin el dato que distingue una opcion de otra.
+  final int lineasOpcion;
 
   /// Dar de alta lo que falta sin salir del formulario.
   ///
@@ -162,7 +170,7 @@ class AppSelector<T> extends StatelessWidget {
                 Flexible(
                   child: Text(
                     o.texto,
-                    maxLines: 1,
+                    maxLines: lineasOpcion,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

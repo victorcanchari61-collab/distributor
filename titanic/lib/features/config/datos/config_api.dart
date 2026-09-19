@@ -1,3 +1,4 @@
+import '../../../compartido/consulta_tabla.dart';
 import '../../../core/red/cliente_api.dart';
 import 'auditoria.dart';
 import 'config_modelos.dart';
@@ -137,6 +138,37 @@ class ConfigApi {
     return datos
         .map((e) => RegistroAuditoria.desdeJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// GET /api/auditoria/resumen. Contadores y valores de filtro de toda la
+  /// bitácora: de aquí salen las listas de usuarios y entidades.
+  Future<ResumenAuditoria> resumenAuditoria() async => ResumenAuditoria.desdeJson(
+    await _api.get('/auditoria/resumen') as Map<String, dynamic>,
+  );
+
+  /// POST /api/auditoria/listar, pidiendo una sola fila: solo interesa el
+  /// `total`, es decir, cuántos registros deja a la vista esa consulta.
+  ///
+  /// Se cuenta con el mismo listado que después se borra, no con otro camino:
+  /// así el número que se le enseña a la persona es lo que de verdad se va.
+  Future<int> contarAuditoria(ConsultaTabla consulta) async {
+    final pagina =
+        await _api.post(
+              '/auditoria/listar',
+              cuerpo: consulta.conPagina(1, porPagina: 1).aJson(),
+            )
+            as Map<String, dynamic>;
+    return pagina['total'] as int? ?? 0;
+  }
+
+  /// POST /api/auditoria/eliminar. Depuración masiva: borra todo lo que esa
+  /// consulta deja a la vista, sin importar página ni orden. Devuelve cuántos
+  /// registros se eliminaron.
+  Future<int> depurarAuditoria(ConsultaTabla consulta) async {
+    final respuesta =
+        await _api.post('/auditoria/eliminar', cuerpo: consulta.aJson())
+            as Map<String, dynamic>;
+    return respuesta['eliminados'] as int? ?? 0;
   }
 
   // --- Empresas ---

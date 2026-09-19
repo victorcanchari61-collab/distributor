@@ -65,7 +65,15 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
   final _flete = TextEditingController();
 
   int? _almacenId;
-  int? _motivoId;
+
+  // Primero se elige si el ajuste suma o resta; el motivo sale de ese tipo.
+  // Por defecto un ingreso, igual que en la web.
+  String _tipo = TipoMotivo.entrada;
+
+  // Lo que la persona eligio a mano. Null significa "el primero de la lista
+  // del tipo": los motivos llegan del servidor y pueden no estar cargados al
+  // abrir el formulario, asi que el valor por defecto se resuelve al leerlo.
+  int? _motivoElegido;
   final List<LineaDocumento> _lineas = [];
 
   bool _guardando = false;
@@ -74,12 +82,19 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
   String? _errorMotivo;
   String? _errorLineas;
 
+  /// Los motivos manuales y activos del tipo elegido.
+  List<Motivo> get _motivosDelTipo => [
+    for (final m in ref.read(motivosDisponiblesProvider))
+      if (m.tipo == _tipo) m,
+  ];
+
   Motivo? get _motivo {
-    final motivos = ref.read(motivosDisponiblesProvider);
-    for (final m in motivos) {
-      if (m.id == _motivoId) return m;
+    final delTipo = _motivosDelTipo;
+    for (final m in delTipo) {
+      if (m.id == _motivoElegido) return m;
     }
-    return null;
+    // Nada elegido (o lo elegido ya no es de este tipo): el primero.
+    return delTipo.isEmpty ? null : delTipo.first;
   }
 
   @override
@@ -92,7 +107,7 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
   bool _validar() {
     setState(() {
       _errorAlmacen = _almacenId == null ? 'Elige el almacén.' : null;
-      _errorMotivo = _motivoId == null ? 'Elige el motivo.' : null;
+      _errorMotivo = _motivo == null ? 'Elige el motivo.' : null;
       _errorLineas = _lineas.isEmpty ? 'Agrega al menos un producto.' : null;
     });
     return _errorAlmacen == null && _errorMotivo == null && _errorLineas == null;
@@ -110,11 +125,12 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
     final navegador = Navigator.of(context);
     final mensajero = Aviso.de(context);
     final flete = double.tryParse(_flete.text.trim().replaceAll(',', '.')) ?? 0;
-    final pideCosto = _motivo?.pideCosto ?? false;
+    final motivo = _motivo;
+    final pideCosto = motivo?.pideCosto ?? false;
 
     final cuerpo = <String, dynamic>{
       'almacenId': _almacenId,
-      'motivoId': _motivoId,
+      'motivoId': motivo?.id,
       'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
       'flete': flete,
       'detalle': [
@@ -218,8 +234,12 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
   @override
   Widget build(BuildContext context) {
     final almacenes = ref.watch(almacenesActivosProvider);
-    final motivos = ref.watch(motivosDisponiblesProvider);
-    final pideCosto = _motivo?.pideCosto ?? false;
+    // El watch mantiene viva la lista y redibuja cuando llegan los motivos;
+    // _motivosDelTipo y _motivo la leen ya filtrada por el tipo elegido.
+    ref.watch(motivosDisponiblesProvider);
+    final motivosDelTipo = _motivosDelTipo;
+    final motivo = _motivo;
+    final pideCosto = motivo?.pideCosto ?? false;
 
     // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
     // acento del modulo. Sin esto los componentes compartidos y las hojas que
@@ -249,22 +269,41 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
             ),
             const SizedBox(height: Dimen.espacio4),
 
+            AppSelector<String>(
+              valor: _tipo,
+              etiqueta: 'Tipo',
+              icono: Icons.swap_vert_rounded,
+              opciones: const [
+                Opcion<String>(TipoMotivo.entrada, 'Ingreso (suma stock)'),
+                Opcion<String>(TipoMotivo.salida, 'Salida (resta stock)'),
+              ],
+              onCambio: (v) {
+                if (v == null || v == _tipo) return;
+                // El motivo elegido puede no existir en el otro tipo: se
+                // reinicia y vuelve a ser el primero de la nueva lista.
+                setState(() {
+                  _tipo = v;
+                  _motivoElegido = null;
+                  _errorMotivo = null;
+                });
+              },
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
             AppSelector<int>(
-              valor: _motivoId,
+              valor: motivo?.id,
               etiqueta: 'Motivo',
               icono: Icons.fact_check_outlined,
               error: _errorMotivo,
-              opciones: [
-                for (final m in motivos)
-                  Opcion<int>(m.id, '${m.nombre} (${m.esEntrada ? 'Entrada' : 'Salida'})'),
-              ],
-              onCambio: (v) => setState(() => _motivoId = v),
+              opciones: [for (final m in motivosDelTipo) Opcion<int>(m.id, m.nombre)],
+              onCambio: (v) => setState(() => _motivoElegido = v),
             ),
-            if (motivos.isEmpty) ...[
+            if (motivosDelTipo.isEmpty) ...[
               const SizedBox(height: Dimen.espacio1),
-              const Text(
-                'No hay motivos manuales. Créalos en la pestaña Motivos.',
-                style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+              Text(
+                'No hay motivos de ${_tipo == TipoMotivo.entrada ? 'ingreso' : 'salida'}. '
+                'Créalos en la pestaña Motivos.',
+                style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
               ),
             ],
             const SizedBox(height: Dimen.espacio4),
@@ -298,13 +337,13 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
                   .toList(),
               cargando: ref.watch(productosProvider).isLoading,
               paraVenta: false,
-              habilitado: !_guardando && _motivoId != null,
+              habilitado: !_guardando && motivo != null,
               onAgregar: _agregarLineas,
             ),
-            if (_motivoId == null) ...[
+            if (motivo == null) ...[
               const SizedBox(height: Dimen.espacio2),
               const Text(
-                'Elige primero el motivo: de él depende si la mercadería entra o sale.',
+                'Elige primero el motivo: de él depende si se pide costo, lote y vencimiento.',
                 style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
               ),
             ],

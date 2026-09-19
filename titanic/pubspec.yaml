@@ -53,6 +53,10 @@ dependencies:
   # el stock que se movio llegan solos mientras la app este abierta.
   signalr_netcore: ^1.4.1
 
+  # Los gráficos de los dashboards (línea, barras, dona y dispersión): dibujan
+  # y atienden el toque para mostrar el detalle sin que haya que pintarlos a mano.
+  fl_chart: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -16,6 +16,16 @@ class FinanzasApi {
         .toList();
   }
 
+  /// GET /api/metodopago/opciones. Solo los activos y sin datos de cuenta, para
+  /// elegir con cuál se cobra al entregar: lo pide quien convierte pedidos, que
+  /// no ve el catálogo de Finanzas.
+  Future<List<MetodoPagoOpcion>> metodosPagoOpciones() async {
+    final datos = await _api.get('/metodopago/opciones') as List;
+    return datos
+        .map((e) => MetodoPagoOpcion.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   /// POST /api/metodopago
   Future<MetodoPago> crearMetodoPago(Map<String, dynamic> cuerpo) async =>
       MetodoPago.desdeJson(

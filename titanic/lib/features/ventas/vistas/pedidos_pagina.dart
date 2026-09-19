@@ -165,14 +165,14 @@ class PedidosPagina extends ConsumerWidget {
     );
   }
 
-  /// Convierte el pedido en venta con lo que de verdad se entregó: por defecto
-  /// todo, y si el cliente recibió menos se corrige la línea y se pide el motivo.
+  /// Convierte el pedido en venta con lo que de verdad se entregó y se cobró:
+  /// por defecto todo lo pedido, y si el cliente recibió menos se corrige la
+  /// línea y se pide el motivo. El aviso dice qué pasó con el cobro (contado,
+  /// parcial o a crédito), igual que en la web.
   Future<void> _confirmar(BuildContext context, WidgetRef ref, Pedido pedido) async {
     final mensajero = Aviso.de(context);
-    final hecho = await mostrarEntregaPedido(context, pedido);
-    if (hecho == true) {
-      mensajero.mostrar('${pedido.numero} confirmado: se creó la nota de venta.');
-    }
+    final mensaje = await mostrarEntregaPedido(context, pedido);
+    if (mensaje != null) mensajero.mostrar(mensaje);
   }
 
   /// El pedido entero no se entregó: no crea venta, deja la novedad con su motivo.

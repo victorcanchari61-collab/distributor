@@ -29,6 +29,11 @@ class VentasApi {
       );
 
   /// PATCH /api/pedido/{id}/confirmar. Cierra el pedido y crea la NotaVenta.
+  ///
+  /// El cuerpo lleva `almacenId`, `lineas` (solo las que se entregaron en menos)
+  /// y `pagos` (`[{metodoPagoId, monto}]`, lo cobrado al recibir). La forma de
+  /// pago de la venta la deriva el backend de lo cobrado: si cubre el total es
+  /// al contado, y si no queda a crédito con ese adelanto.
   Future<NotaVenta> confirmarPedido(int id, Map<String, dynamic> cuerpo) async =>
       NotaVenta.desdeJson(
         await _api.patch('/pedido/$id/confirmar', cuerpo: cuerpo) as Map<String, dynamic>,

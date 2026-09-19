@@ -100,6 +100,14 @@ final bancosMetodoPagoProvider = Provider.autoDispose<List<String>>((ref) {
   return valores;
 });
 
+/// Los métodos activos para cobrar al convertir un pedido en venta.
+///
+/// Va por la ruta de "opciones" y no por el catálogo: quien entrega puede tener
+/// permiso de convertir pedidos sin poder ver ni editar los métodos de pago.
+final metodosPagoOpcionesProvider = FutureProvider.autoDispose<List<MetodoPagoOpcion>>(
+  (ref) => ref.watch(finanzasApiProvider).metodosPagoOpciones(),
+);
+
 /// Metodos de pago activos, para los selectores de otros modulos (Compras).
 final metodosPagoActivosProvider = Provider.autoDispose<List<MetodoPago>>(
   (ref) =>

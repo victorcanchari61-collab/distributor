@@ -17,6 +17,7 @@ import '../../features/finanzas/vistas/arqueo_pagina.dart';
 import '../../features/finanzas/vistas/cuentas_por_cobrar_pagina.dart';
 import '../../features/finanzas/vistas/cuentas_por_pagar_pagina.dart';
 import '../../features/finanzas/vistas/mis_cobros_pagina.dart';
+import '../../features/finanzas/vistas/mis_ganancias_pagina.dart';
 import '../../features/finanzas/vistas/metodos_pago_pagina.dart';
 import '../../features/inicio/vistas/inicio_pagina.dart';
 import '../../features/inicio/vistas/pendiente_pagina.dart';
@@ -202,6 +203,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, estado) => const PuertaPermiso(child: MisCobrosPagina()),
       ),
       GoRoute(
+        path: MisGananciasPagina.ruta,
+        builder: (context, estado) => const PuertaPermiso(child: MisGananciasPagina()),
+      ),
+      GoRoute(
         path: ArqueoPagina.ruta,
         builder: (context, estado) => const PuertaPermiso(child: ArqueoPagina()),
       ),
@@ -267,6 +272,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != CuentasPorCobrarPagina.ruta &&
               item.ruta != CuentasPorPagarPagina.ruta &&
               item.ruta != MisCobrosPagina.ruta &&
+              item.ruta != MisGananciasPagina.ruta &&
               item.ruta != ArqueoPagina.ruta &&
               item.ruta != MercadosPagina.ruta &&
               item.ruta != RutasPagina.ruta &&

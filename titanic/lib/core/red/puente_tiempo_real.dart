@@ -6,6 +6,7 @@ import '../../features/config/estado/config_controlador.dart';
 import '../../features/facturacion/estado/facturacion_controlador.dart';
 import '../../features/finanzas/estado/arqueo_controlador.dart';
 import '../../features/finanzas/estado/finanzas_controlador.dart';
+import '../../features/finanzas/estado/ganancia_controlador.dart';
 import '../../features/inventario/estado/inventario_controlador.dart';
 import '../../features/maestros/estado/maestros_controlador.dart';
 // Dos modulos declaran rutasProvider —el de clientes y el de reparto—: aqui se
@@ -31,7 +32,14 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   // --- Lo que un vendedor necesita al día mientras toma un pedido ---
   'productos': [productosProvider, stockProvider, stockDisponibleProvider],
   'listasprecio': [listasPrecioProvider, preciosListaActivaProvider],
-  'stock': [stockProvider, stockDisponibleProvider, kardexProvider, lotesProvider],
+  // gananciasProvider: el costo de lo vendido sale de los movimientos de stock.
+  'stock': [
+    stockProvider,
+    stockDisponibleProvider,
+    kardexProvider,
+    lotesProvider,
+    gananciasProvider,
+  ],
   'kardex': [kardexProvider, stockProvider, stockDisponibleProvider],
 
   // --- Documentos ---
@@ -46,6 +54,7 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     notasVentaProvider,
     cuentasPorCobrarProvider,
     misCobrosProvider,
+    gananciasProvider,
     stockProvider,
     kardexProvider,
   ],

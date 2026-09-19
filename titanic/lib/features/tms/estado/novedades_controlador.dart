@@ -125,6 +125,34 @@ final motivosDeNovedadesProvider = Provider.autoDispose<List<String>>((ref) {
   return <String>{for (final n in todas) n.motivo}.toList()..sort();
 });
 
+/// La búsqueda y los filtros de la pantalla, dichos como los entiende el
+/// servidor: la consulta de la tabla, con columna, operador y valor.
+///
+/// Sirve para pedir el reporte en PDF con exactamente lo que se ve en la lista.
+/// El orden no viaja: el natural del servidor es el mismo de la pantalla, de la
+/// más nueva a la más vieja. Sin filtro de estado el servidor también deja
+/// fuera las anuladas, igual que [novedadesFiltradasProvider].
+final consultaNovedadesProvider = Provider.autoDispose<Map<String, dynamic>>((ref) {
+  final estado = ref.watch(estadoNovedadFiltroProvider);
+  final motivo = ref.watch(motivoNovedadFiltroProvider);
+  final tipo = ref.watch(tipoNovedadFiltroProvider);
+
+  Map<String, String> igual(String columna, String valor) => {
+    'columna': columna,
+    'operador': 'equals',
+    'valor': valor,
+  };
+
+  return {
+    'buscar': ref.watch(busquedaNovedadesProvider).trim(),
+    'filtros': [
+      if (estado != null) igual('estado', estado),
+      if (motivo != null) igual('motivo', motivo),
+      if (tipo != null) igual('tipo', tipo),
+    ],
+  };
+});
+
 final novedadesFiltradasProvider = Provider.autoDispose<List<Novedad>>((ref) {
   final todas = ref.watch(novedadesProvider).valueOrNull ?? const <Novedad>[];
   final texto = ref.watch(busquedaNovedadesProvider).trim().toLowerCase();

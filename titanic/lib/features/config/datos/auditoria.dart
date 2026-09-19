@@ -52,6 +52,38 @@ class RegistroAuditoria {
   );
 }
 
+/// Contadores y valores de filtro de TODA la bitácora, no solo de los últimos
+/// cambios que trae la lista.
+class ResumenAuditoria {
+  const ResumenAuditoria({
+    required this.total,
+    required this.creados,
+    required this.actualizados,
+    required this.eliminados,
+    required this.entidades,
+    required this.usuarios,
+  });
+
+  final int total;
+  final int creados;
+  final int actualizados;
+  final int eliminados;
+
+  /// Las entidades y los usuarios que tienen algún registro, para armar listas
+  /// de selección sin traer la bitácora entera.
+  final List<String> entidades;
+  final List<String> usuarios;
+
+  factory ResumenAuditoria.desdeJson(Map<String, dynamic> json) => ResumenAuditoria(
+    total: json['total'] as int? ?? 0,
+    creados: json['creados'] as int? ?? 0,
+    actualizados: json['actualizados'] as int? ?? 0,
+    eliminados: json['eliminados'] as int? ?? 0,
+    entidades: [for (final e in (json['entidades'] as List?) ?? const []) e.toString()],
+    usuarios: [for (final u in (json['usuarios'] as List?) ?? const []) u.toString()],
+  );
+}
+
 class AccionAuditoria {
   const AccionAuditoria._();
   static const creado = 'CREADO';
