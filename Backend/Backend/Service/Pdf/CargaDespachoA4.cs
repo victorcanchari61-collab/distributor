@@ -164,18 +164,6 @@ public sealed class CargaDespachoA4(
                     Celda(tabla.Cell(), Textos.Cantidad(l.Cantidad), derecha: true, fuerte: true);
                     Celda(tabla.Cell(), $"{Textos.Cantidad(l.EnBase)} {l.UnidadBase}", derecha: true);
                 }
-
-                // El total del producto solo cuando va en más de una presentación:
-                // con una sola repetiría la fila de arriba.
-                if (producto.Count() > 1)
-                {
-                    tabla.Cell().ColumnSpan(5).PaddingVertical(2).PaddingHorizontal(4).AlignRight()
-                        .Text($"Total {producto.Key.Producto}").FontSize(8).Bold();
-                    tabla.Cell().BorderTop(Linea).BorderColor(Colores.Linea)
-                        .PaddingVertical(2).PaddingHorizontal(4).AlignRight()
-                        .Text($"{Textos.Cantidad(producto.Sum(l => l.EnBase))} {producto.Key.UnidadBase}")
-                        .FontSize(8).Bold();
-                }
             }
         });
     }
