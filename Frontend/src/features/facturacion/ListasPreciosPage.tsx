@@ -41,7 +41,17 @@ interface FilaPrecio {
   desde: string
   precio: string
   margen: string
+  /**
+   * El precio por unidad base (S/ 7.01 el kilo), que también se escribe: el precio de la
+   * presentación es este por su factor. Se guarda aparte en vez de derivarlo al pintar, porque un
+   * campo que se reformatea mientras se teclea ("7." se vuelve "7") no deja escribir.
+   */
+  precioBase: string
 }
+
+/** El precio de una unidad base a partir del de una presentación; vacío si no hay con qué calcularlo. */
+const precioPorBase = (precio: number, factor: number) =>
+  precio > 0 && factor > 0 ? (precio / factor).toFixed(2) : ''
 
 export function ListasPreciosPage() {
   const { puede } = usePermisos()
@@ -215,6 +225,7 @@ export function ListasPreciosPage() {
           desde: '1',
           precio: '',
           margen: '',
+          precioBase: '',
         })
       }
 
@@ -230,6 +241,7 @@ export function ListasPreciosPage() {
           presentacionId: pres.id,
           desde: String(x.cantidadMinima),
           precio: String(x.precio),
+          precioBase: precioPorBase(x.precio, pres.factor),
           margen:
             costo != null && x.precio > 0
               ? (((x.precio - costo) / x.precio) * 100).toFixed(1)
@@ -268,13 +280,33 @@ export function ListasPreciosPage() {
   const actualizarFila = (clave: string, cambio: Partial<FilaPrecio>) =>
     setFilasPrecio((prev) => prev.map((f) => (f.clave === clave ? { ...f, ...cambio } : f)))
 
-  /** Escriben el precio: el margen de esa fila se recalcula solo. */
+  /** Escriben el precio de la presentación: el margen y el precio por unidad base se recalculan solos. */
   const escribirPrecio = (fila: FilaPrecio, valor: string) => {
-    const costo = costoDe(presentacionDe(fila.presentacionId)?.factor ?? 0)
+    const factor = presentacionDe(fila.presentacionId)?.factor ?? 0
+    const costo = costoDe(factor)
     const precio = Number(valor)
     actualizarFila(fila.clave, {
       precio: valor,
+      precioBase: precioPorBase(precio, factor),
       margen: costo != null && precio > 0 ? (((precio - costo) / precio) * 100).toFixed(1) : '',
+    })
+  }
+
+  /**
+   * Escriben el precio POR UNIDAD BASE —7.01 el kilo—: el de la presentación sale de multiplicarlo
+   * por su factor y el margen se calcula solo. Es la forma directa de fijar el precio cuando se
+   * piensa en kilos y no en sacos.
+   */
+  const escribirPrecioBase = (fila: FilaPrecio, valor: string) => {
+    const factor = presentacionDe(fila.presentacionId)?.factor ?? 0
+    const costo = costoDe(factor)
+    const porBase = Number(valor)
+    const precio = valor !== '' && porBase > 0 && factor > 0 ? porBase * factor : 0
+
+    actualizarFila(fila.clave, {
+      precioBase: valor,
+      precio: precio > 0 ? precio.toFixed(2) : '',
+      margen: costo != null && precio > 0 ? (((Number(precio.toFixed(2)) - costo) / Number(precio.toFixed(2))) * 100).toFixed(1) : '',
     })
   }
 
@@ -286,19 +318,21 @@ export function ListasPreciosPage() {
     // Borrar el margen es dejarlo en cero: el precio baja al costo. Antes se
     // quedaba el precio del margen anterior y las dos columnas se
     // contradecian. Para dejar la fila sin precio se vacia la de precio.
+    const factor = presentacionDe(fila.presentacionId)?.factor ?? 0
+
     if (valor === '') {
       return actualizarFila(fila.clave, {
         margen: '',
-        ...(costo != null ? { precio: costo.toFixed(2) } : {}),
+        ...(costo != null ? { precio: costo.toFixed(2), precioBase: precioPorBase(costo, factor) } : {}),
       })
     }
 
-    actualizarFila(fila.clave, {
-      margen: valor,
-      ...(costo != null && producto?.costoReferencia != null && margen < 100
-        ? { precio: precioPorMargen(producto.costoReferencia, margen, presentacionDe(fila.presentacionId)?.factor ?? 0) }
-        : {}),
-    })
+    if (costo != null && producto?.costoReferencia != null && margen < 100) {
+      const precio = precioPorMargen(producto.costoReferencia, margen, factor)
+      return actualizarFila(fila.clave, { margen: valor, precio, precioBase: precioPorBase(Number(precio), factor) })
+    }
+
+    actualizarFila(fila.clave, { margen: valor })
   }
 
   /**
@@ -319,6 +353,7 @@ export function ListasPreciosPage() {
         desde: String(ultimo + 1),
         precio: '',
         margen: '',
+        precioBase: '',
       }
 
       // Va pegada a las de su presentacion, no al final de la tabla.
@@ -348,11 +383,9 @@ export function ListasPreciosPage() {
         // mano y llenarlos con el mismo margen los dejaria al precio normal,
         // que es justo lo contrario de para lo que existen.
         if (costo == null || Number(f.desde) > 1) return f
-        return {
-          ...f,
-          precio: precioPorMargen(costoBase, margen, presentacionDe(f.presentacionId)?.factor ?? 0),
-          margen: margen.toFixed(1),
-        }
+        const factor = presentacionDe(f.presentacionId)?.factor ?? 0
+        const precio = precioPorMargen(costoBase, margen, factor)
+        return { ...f, precio, precioBase: precioPorBase(Number(precio), factor), margen: margen.toFixed(1) }
       }),
     )
   }
@@ -474,17 +507,18 @@ export function ListasPreciosPage() {
     {
       key: 'porBase',
       label: `Precio por ${producto?.unidadBase ?? 'unidad'}`,
-      align: 'right',
-      width: 110,
-      render: (fila) => {
-        const precio = Number(fila.precio) || 0
-        const factor = presentacionDe(fila.presentacionId)?.factor ?? 0
-        return (
-          <span className="text-sm font-medium text-ink">
-            {precio > 0 && factor > 0 ? `S/ ${(precio / factor).toFixed(2)}` : '—'}
-          </span>
-        )
-      },
+      width: 130,
+      render: (fila) => (
+        <Input
+          size="sm"
+          type="number"
+          step="0.01"
+          min={0}
+          placeholder="0.00"
+          value={fila.precioBase}
+          onChange={(e) => escribirPrecioBase(fila, e.target.value)}
+        />
+      ),
     },
   ]
 
