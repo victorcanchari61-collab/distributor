@@ -4,6 +4,7 @@ import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/maestros/datos/producto.dart';
+import '../presentaciones_uso.dart';
 import 'app_boton.dart';
 import 'app_buscador.dart';
 import 'app_selector.dart';
@@ -60,13 +61,18 @@ class _Marcado {
 /// capturara el precio, agregar cinco productos seguiria costando cinco hojas
 /// mas y la carga masiva no serviria de nada.
 ///
-/// [paraVenta] cambia dos cosas: que presentaciones se ofrecen (un producto
-/// puede venderse por unidad y comprarse solo por saco) y si el importe se
-/// llama Precio o Costo.
+/// [paraVenta] decide si el importe se llama Precio o Costo y qué se propone
+/// (un producto puede venderse por unidad y comprarse solo por saco).
+///
+/// [uso] decide qué unidades se ofrecen, la base incluida, y qué productos: uno
+/// que en ese uso no tiene ninguna presentación disponible no aparece. Sin
+/// [uso] (documentos de inventario) la base siempre se ofrece y las demás
+/// siguen la marca de [paraVenta], como antes de que la base tuviera marcas.
 Future<List<SeleccionProducto>?> mostrarBuscadorProductos({
   required BuildContext context,
   required List<Producto> productos,
   bool paraVenta = true,
+  UsoPresentacion? uso,
   Map<int, double>? stock,
 }) {
   // El acento se captura ANTES de abrir: la hoja cuelga del Navigator, no de
@@ -89,6 +95,7 @@ Future<List<SeleccionProducto>?> mostrarBuscadorProductos({
       child: _HojaBuscadorProductos(
         productos: productos,
         paraVenta: paraVenta,
+        uso: uso,
         stock: stock,
       ),
     ),
@@ -99,11 +106,13 @@ class _HojaBuscadorProductos extends StatefulWidget {
   const _HojaBuscadorProductos({
     required this.productos,
     required this.paraVenta,
+    required this.uso,
     this.stock,
   });
 
   final List<Producto> productos;
   final bool paraVenta;
+  final UsoPresentacion? uso;
   final Map<int, double>? stock;
 
   @override
@@ -125,10 +134,25 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
   /// Cuantos filtros hay puestos, para la insignia del boton.
   int get _activos => (_categoria != null ? 1 : 0) + (_marca != null ? 1 : 0);
 
+  /// La regla con la que se ofrecen las unidades. Sin `uso` (inventario) la base
+  /// va siempre y las demás siguen la marca de paraVenta.
+  UsoPresentacion get _uso =>
+      widget.uso ?? (widget.paraVenta ? UsoPresentacion.venta : UsoPresentacion.compra);
+  bool get _baseSiempre => widget.uso == null;
+
+  /// Solo los productos que tienen con qué armar la línea en este documento: uno
+  /// que no se vende (o no se compra) en ninguna presentación no se ofrece. Se
+  /// calcula una vez, la lista de la hoja no cambia mientras está abierta.
+  late final List<Producto> _ofrecidos = productosConOpcion(
+    widget.productos,
+    widget.uso,
+    baseSiempre: _baseSiempre,
+  );
+
   List<Producto> get _visibles {
     final texto = _texto.trim().toLowerCase();
 
-    return widget.productos.where((p) {
+    return _ofrecidos.where((p) {
       if (texto.isNotEmpty && !p.buscable.contains(texto)) return false;
       if (_categoria != null && p.categoria != _categoria) return false;
       if (_marca != null && p.marca != _marca) return false;
@@ -136,10 +160,14 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
     }).toList();
   }
 
-  /// Las presentaciones que aplican, con la unidad base siempre primero.
-  List<Presentacion> _presentacionesDe(Producto p) => p.presentaciones
-      .where((pr) => pr.activo && (widget.paraVenta ? pr.esVenta : pr.esCompra))
-      .toList();
+  /// Las unidades que se pueden elegir para el producto, con la base primero si
+  /// se puede usar.
+  List<OpcionPresentacion> _opcionesDe(Producto p) => opcionesPresentacion(
+    unidadBase: p.unidadBase,
+    presentaciones: p.presentaciones,
+    uso: _uso,
+    baseSiempre: _baseSiempre,
+  );
 
   void _alternar(Producto p) {
     setState(() {
@@ -152,7 +180,10 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
             ? _texto2(p.costoReferencia!)
             : '';
         _marcados[p.id] = _Marcado(
-          presentacionId: 0,
+          // La base si se puede usar; si no, la primera presentacion que si.
+          // Marcar siempre con 0 dejaba una linea por unidades sueltas de algo
+          // que solo se vende por caja.
+          presentacionId: presentacionInicial(p, _uso, baseSiempre: _baseSiempre) ?? 0,
           cantidad: '1',
           importe: sugerido,
         );
@@ -195,14 +226,14 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
     final listos = _resultado().length;
 
     final categorias =
-        widget.productos
+        _ofrecidos
             .map((p) => p.categoria)
             .whereType<String>()
             .toSet()
             .toList()
           ..sort();
     final marcas =
-        widget.productos
+        _ofrecidos
             .map((p) => p.marca)
             .whereType<String>()
             .toSet()
@@ -397,7 +428,11 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                       return _FilaProducto(
                         producto: p,
                         marcado: _marcados[p.id],
-                        presentaciones: _presentacionesDe(p),
+                        // Las unidades solo se necesitan en la fila marcada,
+                        // que es la que muestra el desplegable.
+                        opciones: _marcados.containsKey(p.id)
+                            ? _opcionesDe(p)
+                            : const [],
                         stock: widget.stock?[p.id],
                         onAlternar: () => _alternar(p),
                         onPresentacion: (id) => setState(
@@ -446,7 +481,7 @@ class _FilaProducto extends StatelessWidget {
   const _FilaProducto({
     required this.producto,
     required this.marcado,
-    required this.presentaciones,
+    required this.opciones,
     required this.stock,
     required this.onAlternar,
     required this.onPresentacion,
@@ -455,7 +490,7 @@ class _FilaProducto extends StatelessWidget {
 
   final Producto producto;
   final _Marcado? marcado;
-  final List<Presentacion> presentaciones;
+  final List<OpcionPresentacion> opciones;
   final double? stock;
   final VoidCallback onAlternar;
   final ValueChanged<int> onPresentacion;
@@ -534,8 +569,7 @@ class _FilaProducto extends StatelessWidget {
                 Expanded(
                   flex: 4,
                   child: _CampoUnidad(
-                    producto: producto,
-                    presentaciones: presentaciones,
+                    opciones: opciones,
                     valor: marcado!.presentacionId,
                     onChanged: onPresentacion,
                   ),
@@ -594,25 +628,21 @@ class _EtiquetaStock extends StatelessWidget {
 
 class _CampoUnidad extends StatelessWidget {
   const _CampoUnidad({
-    required this.producto,
-    required this.presentaciones,
+    required this.opciones,
     required this.valor,
     required this.onChanged,
   });
 
-  final Producto producto;
-  final List<Presentacion> presentaciones;
+  final List<OpcionPresentacion> opciones;
   final int valor;
   final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    // La unidad base siempre esta: es como se mide el producto por dentro.
-    final opciones = <DropdownMenuItem<int>>[
-      DropdownMenuItem(value: 0, child: Text(producto.unidadBase)),
-      ...presentaciones
-          .where((p) => !p.esBase)
-          .map((p) => DropdownMenuItem(value: p.id, child: Text(p.nombre))),
+    // La unidad base ya viene en la lista si se puede usar: hay productos que
+    // solo salen por caja y no por unidad suelta.
+    final items = <DropdownMenuItem<int>>[
+      for (final o in opciones) DropdownMenuItem(value: o.valor, child: Text(o.nombre)),
     ];
 
     return _CajaCampo(
@@ -622,7 +652,7 @@ class _CampoUnidad extends StatelessWidget {
           value: valor,
           isExpanded: true,
           isDense: true,
-          items: opciones,
+          items: items,
           onChanged: (v) => onChanged(v ?? 0),
           style: const TextStyle(fontSize: 13, color: Colores.tinta),
         ),

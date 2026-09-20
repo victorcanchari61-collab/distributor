@@ -5,6 +5,7 @@ import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/maestros/datos/producto.dart';
 import '../formato.dart';
+import '../presentaciones_uso.dart';
 
 /// Una línea ya cargada en el documento, tal como se edita en pantalla.
 class LineaDocumento {
@@ -14,6 +15,7 @@ class LineaDocumento {
     required this.codigo,
     required this.unidadBase,
     required this.presentaciones,
+    this.uso,
     required this.presentacionId,
     required this.cantidad,
     required this.importe,
@@ -24,8 +26,16 @@ class LineaDocumento {
   final String codigo;
   final String unidadBase;
 
-  /// Las que valen para este documento, ya filtradas por venta o compra.
+  /// Las presentaciones del producto. Con [uso] van TODAS, la base incluida: el
+  /// selector decide cuáles ofrece, y necesita ver la base para saber si esa
+  /// se puede usar (si viniera ya filtrada, una base apagada sería
+  /// indistinguible de un producto que no trae ninguna).
   final List<Presentacion> presentaciones;
+
+  /// Para qué se arma la línea: pedidos y notas de venta miran "se vende";
+  /// órdenes de compra y compras, "se compra". Null en los documentos de
+  /// inventario, que ofrecen las presentaciones que traen sin mirar marcas.
+  final UsoPresentacion? uso;
 
   /// 0 = la unidad base.
   int presentacionId;
@@ -358,6 +368,16 @@ class _Unidad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Con `actual`, una línea guardada cuya unidad dejó de estar permitida se
+    // sigue mostrando (marcada) en vez de dejar el desplegable en blanco — o
+    // peor, sin ítem para su valor —: quien edita ve qué pasó y la cambia.
+    final opciones = opcionesPresentacion(
+      unidadBase: linea.unidadBase,
+      presentaciones: linea.presentaciones,
+      uso: linea.uso,
+      actual: linea.presentacionId,
+    );
+
     return InputDecorator(
       decoration: const InputDecoration(
         labelText: 'Unidad',
@@ -368,9 +388,14 @@ class _Unidad extends StatelessWidget {
           value: linea.presentacionId,
           isExpanded: true,
           items: [
-            DropdownMenuItem(value: 0, child: Text('${linea.unidadBase}${_texto(1) ?? ''}')),
-            for (final p in linea.presentaciones.where((p) => !p.esBase))
-              DropdownMenuItem(value: p.id, child: Text('${p.nombre}${_texto(p.factor) ?? ''}')),
+            for (final o in opciones)
+              DropdownMenuItem(
+                value: o.valor,
+                child: Text(
+                  '${o.nombre}${_texto(o.factor) ?? ''}'
+                  '${o.nota == null ? '' : ' · ${o.nota}'}',
+                ),
+              ),
           ],
           onChanged: habilitado ? (v) => onCambio(v ?? 0) : null,
           style: const TextStyle(fontSize: 14, color: Colores.tinta),

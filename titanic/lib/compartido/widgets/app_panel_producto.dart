@@ -6,6 +6,7 @@ import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/maestros/datos/producto.dart';
 import '../formato.dart';
+import '../presentaciones_uso.dart';
 import 'app_boton.dart';
 import 'app_buscador_productos.dart';
 import 'app_campo_busqueda.dart';
@@ -46,6 +47,7 @@ class AppPanelProducto extends StatefulWidget {
     this.cargando = false,
     required this.onAgregar,
     this.paraVenta = true,
+    this.uso,
     this.stock,
     this.habilitado = true,
     this.resolverPrecio,
@@ -59,9 +61,19 @@ class AppPanelProducto extends StatefulWidget {
   /// Se llama con una línea (desde el panel) o con varias (desde la hoja).
   final void Function(List<LineaElegida>) onAgregar;
 
-  /// Cambia qué presentaciones se ofrecen y si el importe se llama Precio o
-  /// Costo: un producto puede venderse por unidad y comprarse solo por saco.
+  /// Decide si el importe se llama Precio o Costo y qué se propone como
+  /// importe: un producto puede venderse por unidad y comprarse solo por saco.
   final bool paraVenta;
+
+  /// Para qué se arma la línea: decide qué unidades se ofrecen, la base
+  /// incluida (un producto puede venderse solo por caja). Lo pasan pedidos,
+  /// notas de venta, órdenes de compra y compras.
+  ///
+  /// Se separa de [paraVenta] porque los documentos de inventario también
+  /// piden "Costo" y no deben filtrarse por estas marcas: sin [uso] la unidad
+  /// base siempre se ofrece y las demás siguen la marca de [paraVenta], como
+  /// antes de que la base tuviera marcas.
+  final UsoPresentacion? uso;
 
   /// Stock disponible por producto en el almacén del documento.
   ///
@@ -112,15 +124,29 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
     super.dispose();
   }
 
-  /// Las presentaciones que valen para este documento, con la base primero.
-  List<Presentacion> get _presentaciones {
+  /// La regla con la que se ofrecen las unidades. Sin `uso` (inventario) la base
+  /// va siempre y las demás siguen la marca de paraVenta, como antes de que la
+  /// base tuviera marcas propias.
+  UsoPresentacion get _uso =>
+      widget.uso ?? (widget.paraVenta ? UsoPresentacion.venta : UsoPresentacion.compra);
+  bool get _baseSiempre => widget.uso == null;
+
+  /// Solo los productos que tienen con qué armar la línea en este documento.
+  List<Producto> get _ofrecidos =>
+      productosConOpcion(widget.productos, widget.uso, baseSiempre: _baseSiempre);
+
+  /// Las unidades que valen para el producto elegido, con la base primero si
+  /// se puede usar.
+  List<OpcionPresentacion> get _opciones {
     final p = _producto;
     if (p == null) return const [];
 
-    return p.presentaciones
-        .where((pr) => pr.activo && (widget.paraVenta ? pr.esVenta : pr.esCompra))
-        .where((pr) => !pr.esBase)
-        .toList();
+    return opcionesPresentacion(
+      unidadBase: p.unidadBase,
+      presentaciones: p.presentaciones,
+      uso: _uso,
+      baseSiempre: _baseSiempre,
+    );
   }
 
   /// La presentación real: 0 en el selector significa la unidad base, que sí
@@ -163,7 +189,11 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
   void _elegir(Producto producto) {
     setState(() {
       _producto = producto;
-      _presentacionId = 0;
+      // Arranca con la base si esa se puede usar; si no, con la primera
+      // presentación que sí. Empezar siempre en 0 dejaba una línea por unidades
+      // sueltas de algo que solo se vende por caja.
+      _presentacionId =
+          presentacionInicial(producto, _uso, baseSiempre: _baseSiempre) ?? 0;
       _cantidad.text = '1';
 
       // Al comprar se propone el costo de referencia; al vender NO, porque eso
@@ -212,16 +242,11 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
     final p = _producto;
     if (p == null || !_listo) return;
 
-    String nombrePresentacion = p.unidadBase;
-    for (final pr in _presentaciones) {
-      if (pr.id == _presentacionId) nombrePresentacion = pr.nombre;
-    }
-
     widget.onAgregar([
       LineaElegida(
         producto: p,
         presentacionId: _presentacionId,
-        presentacion: nombrePresentacion,
+        presentacion: _nombreDe(p, _presentacionId),
         cantidad: _cantidadNum,
         importe: _importeNum,
       ),
@@ -235,6 +260,7 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
       context: context,
       productos: widget.productos,
       paraVenta: widget.paraVenta,
+      uso: widget.uso,
       stock: widget.stock,
     );
     if (elegidos == null || elegidos.isEmpty) return;
@@ -283,7 +309,9 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
             etiqueta: 'Producto',
             icono: Icons.inventory_2_outlined,
             pista: 'Escribe el nombre o el código',
-            items: widget.productos,
+            // Un producto que no se vende (o no se compra) en ninguna
+            // presentación no se ofrece: no habría unidad con qué armar la línea.
+            items: _ofrecidos,
             cargando: widget.cargando,
             habilitado: widget.habilitado,
             textoElegido: _producto?.nombre,
@@ -315,7 +343,7 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
           _SelectorUnidad(
             habilitado: widget.habilitado && _producto != null,
             unidadBase: _producto?.unidadBase ?? '',
-            presentaciones: _presentaciones,
+            opciones: _opciones,
             valor: _presentacionId,
             onCambio: (v) => setState(() => _presentacionId = v),
           ),
@@ -377,14 +405,14 @@ class _SelectorUnidad extends StatelessWidget {
   const _SelectorUnidad({
     required this.habilitado,
     required this.unidadBase,
-    required this.presentaciones,
+    required this.opciones,
     required this.valor,
     required this.onCambio,
   });
 
   final bool habilitado;
   final String unidadBase;
-  final List<Presentacion> presentaciones;
+  final List<OpcionPresentacion> opciones;
   final int valor;
   final ValueChanged<int> onCambio;
 
@@ -402,14 +430,23 @@ class _SelectorUnidad extends StatelessWidget {
           value: valor,
           isExpanded: true,
           items: [
-            DropdownMenuItem(
-              value: 0,
-              child: Text(unidadBase.isEmpty ? 'Unidad' : unidadBase),
-            ),
-            for (final p in presentaciones)
+            // Sin producto elegido no hay opciones, pero el desplegable
+            // necesita un ítem con el valor actual: se deja el rótulo genérico.
+            if (opciones.isEmpty)
               DropdownMenuItem(
-                value: p.id,
-                child: Text('${p.nombre} · ${formatoNumero(p.factor)} $unidadBase'),
+                value: valor,
+                child: Text(unidadBase.isEmpty ? 'Unidad' : unidadBase),
+              ),
+            for (final o in opciones)
+              DropdownMenuItem(
+                value: o.valor,
+                // La base es solo su código; las presentaciones dicen cuánto
+                // equivalen.
+                child: Text(
+                  o.valor == 0
+                      ? (o.nombre.isEmpty ? 'Unidad' : o.nombre)
+                      : '${o.nombre} · ${formatoNumero(o.factor)} $unidadBase',
+                ),
               ),
           ],
           onChanged: habilitado ? (v) => onCambio(v ?? 0) : null,

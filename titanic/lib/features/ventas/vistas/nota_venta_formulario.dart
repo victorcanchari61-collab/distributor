@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/presentaciones_uso.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
@@ -54,12 +55,6 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
 
   final List<LineaDocumento> _lineas = [];
   final List<_FilaPago> _pagos = [];
-
-  /// Las presentaciones que valen para este documento.
-  static List<Presentacion> _presentacionesDe(Producto? p, bool venta) =>
-      (p?.presentaciones ?? const <Presentacion>[])
-          .where((pr) => pr.activo && (venta ? pr.esVenta : pr.esCompra))
-          .toList();
 
   bool _guardando = false;
   String? _error;
@@ -195,7 +190,10 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
             producto: e.producto.nombre,
             codigo: e.producto.codigo,
             unidadBase: e.producto.unidadBase,
-            presentaciones: _presentacionesDe(e.producto, true),
+            // Todas las del producto: el selector decide cuáles ofrece según el
+            // uso (la base incluida, que puede no venderse suelta).
+            presentaciones: e.producto.presentaciones,
+            uso: UsoPresentacion.venta,
             presentacionId: e.presentacionId,
             cantidad: e.cantidad,
             importe: e.importe,
@@ -503,6 +501,7 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                   .toList(),
               cargando: ref.watch(productosProvider).isLoading,
               paraVenta: true,
+              uso: UsoPresentacion.venta,
               stock: ref.watch(stockDisponibleProvider(_almacenId)).valueOrNull,
               habilitado: !_guardando,
               // El precio lo pone la lista, no la memoria del vendedor.

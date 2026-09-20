@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/presentaciones_uso.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
@@ -65,7 +66,11 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
           producto: l.producto,
           codigo: porId[l.productoId]?.codigo ?? '',
           unidadBase: l.unidadBase,
-          presentaciones: _presentacionesDe(porId[l.productoId], true),
+          // Todas las del producto: el selector decide cuáles ofrece según el
+          // uso, y una unidad que ya no se vende así sigue mostrándose (marcada)
+          // en la línea guardada.
+          presentaciones: porId[l.productoId]?.presentaciones ?? const <Presentacion>[],
+          uso: UsoPresentacion.venta,
           presentacionId: l.presentacionId ?? 0,
           cantidad: l.cantidadPresentacion,
           // El precio pactado, tal cual se guardo: el de unidad base por el
@@ -88,12 +93,6 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
   bool get _esNuevo => widget.pedido == null;
 
   double get _total => _lineas.fold<double>(0, (n, f) => n + f.subtotal);
-
-  /// Las presentaciones que valen para este documento.
-  static List<Presentacion> _presentacionesDe(Producto? p, bool venta) =>
-      (p?.presentaciones ?? const <Presentacion>[])
-          .where((pr) => pr.activo && (venta ? pr.esVenta : pr.esCompra))
-          .toList();
 
   /// El almacén principal (marcado en Almacenes); si no hubiera, el más antiguo.
   int? _primerAlmacenId(List<Almacen> almacenes) {
@@ -210,7 +209,8 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
             producto: e.producto.nombre,
             codigo: e.producto.codigo,
             unidadBase: e.producto.unidadBase,
-            presentaciones: _presentacionesDe(e.producto, true),
+            presentaciones: e.producto.presentaciones,
+            uso: UsoPresentacion.venta,
             presentacionId: e.presentacionId,
             cantidad: e.cantidad,
             importe: e.importe,
@@ -371,6 +371,7 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
                   .toList(),
               cargando: ref.watch(productosProvider).isLoading,
               paraVenta: true,
+              uso: UsoPresentacion.venta,
               stock: ref.watch(stockDisponibleProvider(_almacenReservaId)).valueOrNull,
               habilitado: !_guardando,
               // El precio lo pone la lista, no la memoria del vendedor.

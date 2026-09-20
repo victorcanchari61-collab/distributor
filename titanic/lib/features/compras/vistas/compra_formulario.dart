@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/catalogo_listo.dart';
+import '../../../compartido/presentaciones_uso.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
@@ -78,7 +79,11 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
           producto: l.producto,
           codigo: l.codigo,
           unidadBase: l.unidadBase,
-          presentaciones: _presentacionesDe(porId[l.productoId], false),
+          // Todas las del producto: el selector decide cuáles ofrece según el
+          // uso, y una unidad que ya no se compra así sigue mostrándose (marcada)
+          // en la línea guardada.
+          presentaciones: porId[l.productoId]?.presentaciones ?? const <Presentacion>[],
+          uso: UsoPresentacion.compra,
           presentacionId: l.presentacionId ?? 0,
           cantidad: l.cantidadPresentacion,
           // El costo se guarda por unidad base; aqui se edita por presentacion.
@@ -90,12 +95,6 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
       if (mounted) setState(() => _lineas.addAll(nuevas));
     });
   }
-
-  /// Las presentaciones que valen para este documento.
-  static List<Presentacion> _presentacionesDe(Producto? p, bool venta) =>
-      (p?.presentaciones ?? const <Presentacion>[])
-          .where((pr) => pr.activo && (venta ? pr.esVenta : pr.esCompra))
-          .toList();
 
   late final List<_FilaPago> _pagos = [
     for (final p in widget.compra?.pagos ?? const [])
@@ -226,7 +225,8 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
             producto: e.producto.nombre,
             codigo: e.producto.codigo,
             unidadBase: e.producto.unidadBase,
-            presentaciones: _presentacionesDe(e.producto, false),
+            presentaciones: e.producto.presentaciones,
+            uso: UsoPresentacion.compra,
             presentacionId: e.presentacionId,
             cantidad: e.cantidad,
             importe: e.importe,
@@ -521,6 +521,7 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                   .toList(),
               cargando: ref.watch(productosProvider).isLoading,
               paraVenta: false,
+              uso: UsoPresentacion.compra,
               habilitado: !_guardando,
               onAgregar: _agregarLineas,
             ),
