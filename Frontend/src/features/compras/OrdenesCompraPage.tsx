@@ -43,6 +43,7 @@ import type {
   OpcionBuscador,
 } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { opcionesPresentacion, presentacionInicialDe } from '../../lib/presentaciones'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { productoApi, proveedorApi } from '../maestros'
@@ -272,7 +273,7 @@ export function OrdenesCompraPage() {
       render: (fila) => (
         <Desplegable
           value={fila.productoId}
-          onChange={(v) => actualizarFila(fila.id, { productoId: Number(v), presentacionId: 0 })}
+          onChange={(v) => actualizarFila(fila.id, { productoId: Number(v), presentacionId: presentacionInicialDe(productos, Number(v), 'compra') })}
           options={productos.map((p) => ({ value: p.id, label: p.nombre, detalle: p.codigo }))}
         />
       ),
@@ -282,28 +283,13 @@ export function OrdenesCompraPage() {
       label: 'Presentación',
       render: (fila) => {
         const producto = productos.find((p) => p.id === fila.productoId)
-        const compras = producto?.presentaciones.filter((p) => p.esCompra && p.activo) ?? []
-
         return (
           <Desplegable
             value={fila.presentacionId}
             onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
             placeholder={producto?.unidadBase ?? 'Elegir'}
             disabled={!producto}
-            options={
-              producto
-                ? [
-                    { value: 0, label: producto.unidadBase, nota: 'unidad base' },
-                    ...compras
-                      .filter((p) => !p.esBase)
-                      .map((p) => ({
-                        value: p.id,
-                        label: p.nombre,
-                        detalle: `${p.factor} ${producto.unidadBase}`,
-                      })),
-                  ]
-                : []
-            }
+            options={producto ? opcionesPresentacion(producto, 'compra', fila.presentacionId) : []}
           />
         )
       },
@@ -441,6 +427,7 @@ export function OrdenesCompraPage() {
             <AgregarProductoPanel
               productos={productos}
               stock={stockMap}
+              uso="compra"
               costoLabel="Costo pactado"
               onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
             />

@@ -34,6 +34,7 @@ import type {
   OpcionBuscador,
 } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { opcionesPresentacion, presentacionInicialDe } from '../../lib/presentaciones'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { clienteApi, productoApi } from '../maestros'
@@ -352,28 +353,13 @@ export function PedidosPage() {
   /** El selector de presentacion de una linea: se usa en dos sitios. */
   const presentacionDeFila = (fila: { id: string; productoId: number; presentacionId: number }) => {
     const producto = productos.find((p) => p.id === fila.productoId)
-    const disponibles = producto?.presentaciones.filter((p) => p.esVenta && p.activo) ?? []
-
     return (
       <Desplegable
         value={fila.presentacionId}
         onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
         placeholder={producto?.unidadBase ?? 'Elegir'}
         disabled={!producto}
-        options={
-          producto
-            ? [
-                { value: 0, label: producto.unidadBase, nota: 'unidad base' },
-                ...disponibles
-                  .filter((p) => !p.esBase)
-                  .map((p) => ({
-                    value: p.id,
-                    label: p.nombre,
-                    detalle: `${p.factor} ${producto.unidadBase}`,
-                  })),
-              ]
-            : []
-        }
+        options={producto ? opcionesPresentacion(producto, 'venta', fila.presentacionId) : []}
       />
     )
   }
@@ -389,7 +375,7 @@ export function PedidosPage() {
       render: (fila) => (
         <Desplegable
           value={fila.productoId}
-          onChange={(v) => actualizarFila(fila.id, { productoId: Number(v), presentacionId: 0 })}
+          onChange={(v) => actualizarFila(fila.id, { productoId: Number(v), presentacionId: presentacionInicialDe(productos, Number(v), 'venta') })}
           options={productos.map((p) => ({ value: p.id, label: p.nombre, detalle: p.codigo }))}
         />
       ),
@@ -605,6 +591,7 @@ export function PedidosPage() {
             <AgregarProductoPanel
               productos={productos}
               stock={stockMap}
+              uso="venta"
               costoLabel="Precio de venta"
               resolverPrecio={precioDeLista}
               onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}

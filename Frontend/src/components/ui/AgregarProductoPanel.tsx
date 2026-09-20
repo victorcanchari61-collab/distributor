@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { idUnico } from '../../lib/ids'
+import { opcionesPresentacion, presentacionInicial } from '../../lib/presentaciones'
+import type { UsoPresentacion } from '../../lib/presentaciones'
 import { Plus } from 'lucide-react'
 import { BuscadorCampo } from './BuscadorCampo'
 import type { OpcionBuscador } from './BuscadorCampo'
@@ -44,6 +46,12 @@ export interface AgregarProductoPanelProps {
    * presentación, o null si esa forma de vender no tiene precio cargado.
    */
   resolverPrecio?: (presentacionId: number, cantidad: number) => Promise<number | null>
+  /**
+   * Para qué se arma la línea. En una venta solo se ofrecen las presentaciones marcadas "Se vende"
+   * (la unidad base incluida); en una compra, las "Se compra". Sin uso (ajustes, transferencias)
+   * valen todas.
+   */
+  uso?: UsoPresentacion
   onAgregar: (linea: LineaProductoNueva) => void
 }
 
@@ -70,6 +78,7 @@ export function AgregarProductoPanel({
   costoLabel = 'Precio',
   pideLote = false,
   resolverPrecio,
+  uso,
   onAgregar,
 }: AgregarProductoPanelProps) {
   const [linea, setLinea] = useState(VACIO)
@@ -84,13 +93,21 @@ export function AgregarProductoPanel({
   const factor = presentacionElegida?.factor ?? 1
   const stockActual = producto ? (stock?.[producto.id] ?? 0) : null
 
-  const opcionesProducto: OpcionBuscador<number>[] = productos.map((p) => ({
+  // Un producto que no se vende (o no se compra) en ninguna presentación no se puede ofrecer:
+  // no habría con qué unidad armar la línea.
+  const usables = uso ? productos.filter((p) => presentacionInicial(p, uso) !== null) : productos
+
+  const opcionesProducto: OpcionBuscador<number>[] = usables.map((p) => ({
     item: p.id,
     label: p.nombre,
     detalle: p.codigo,
   }))
 
-  const elegir = (id: number) => setLinea({ ...VACIO, productoId: id })
+  // Arranca con la unidad base si esa se puede usar; si no, con la primera presentación que sí.
+  const elegir = (id: number) => {
+    const elegido = productos.find((p) => p.id === id)
+    setLinea({ ...VACIO, productoId: id, presentacionId: elegido ? (presentacionInicial(elegido, uso) ?? 0) : 0 })
+  }
 
   /*
    * El precio se pide a la lista, no se teclea.
@@ -187,20 +204,7 @@ export function AgregarProductoPanel({
           value={linea.presentacionId}
           onChange={(v) => setLinea({ ...linea, presentacionId: Number(v) })}
           disabled={!producto}
-          options={
-            producto
-              ? [
-                  { value: 0, label: producto.unidadBase, nota: 'unidad base' },
-                  ...presentaciones
-                    .filter((p) => !p.esBase)
-                    .map((p) => ({
-                      value: p.id,
-                      label: p.nombre,
-                      detalle: `${p.factor} ${producto.unidadBase}`,
-                    })),
-                ]
-              : []
-          }
+          options={producto ? opcionesPresentacion(producto, uso) : []}
         />
 
         <Input
@@ -271,8 +275,9 @@ export function AgregarProductoPanel({
       <BuscadorProductoModal
         open={buscadorAbierto}
         onClose={() => setBuscadorAbierto(false)}
-        productos={productos}
+        productos={usables}
         stock={stock}
+        uso={uso}
         onAgregar={(selecciones) => {
           selecciones.forEach(({ producto, presentacionId, cantidad }) =>
             onAgregar({

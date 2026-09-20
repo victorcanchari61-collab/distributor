@@ -527,6 +527,13 @@ public class ComprasService : IComprasService
                 factor = presentacion.Factor;
             }
 
+            if (!DisponibilidadPresentacion.SeCompra(producto, presentacion))
+            {
+                throw new BadRequestException(
+                    $"'{producto.Nombre}' no se compra en {presentacion?.Nombre ?? "su unidad base"}: " +
+                    "elige otra presentación o quita la línea.");
+            }
+
             var cantidad = linea.Cantidad * factor;
             var costoTotal = linea.CostoPresentacion * linea.Cantidad;
 

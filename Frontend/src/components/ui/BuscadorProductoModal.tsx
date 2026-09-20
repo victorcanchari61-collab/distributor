@@ -6,6 +6,8 @@ import { Button } from './Button'
 import { Desplegable } from './Desplegable'
 import { Input } from './Input'
 import { Modal } from './Modal'
+import { opcionesPresentacion, presentacionInicial } from '../../lib/presentaciones'
+import type { UsoPresentacion } from '../../lib/presentaciones'
 
 /** Lo mínimo de un producto que este buscador necesita para funcionar. */
 export interface ProductoBuscable {
@@ -24,6 +26,9 @@ export interface ProductoBuscable {
     factor: number
     esBase: boolean
     activo: boolean
+    /** Si no vienen, no excluyen a la presentación. */
+    esCompra?: boolean
+    esVenta?: boolean
   }[]
 }
 
@@ -40,6 +45,8 @@ export interface BuscadorProductoModalProps {
   productos: ProductoBuscable[]
   /** Stock actual por producto, en unidad base — se pinta como badge de color y habilita los filtros de stock. */
   stock?: Record<number, number>
+  /** Para qué se arma la línea: decide qué unidades se ofrecen (ver `opcionesPresentacion`). */
+  uso?: UsoPresentacion
   /** Se llama una sola vez con todo lo marcado al pulsar "Agregar". */
   onAgregar: (selecciones: SeleccionProducto[]) => void
 }
@@ -92,7 +99,7 @@ function CampoConLabel({
  * vez (cada uno con su unidad y cantidad) y se agregan todos juntos, en vez de
  * abrir el buscador una vez por producto.
  */
-export function BuscadorProductoModal({ open, onClose, productos, stock, onAgregar }: BuscadorProductoModalProps) {
+export function BuscadorProductoModal({ open, onClose, productos, stock, uso, onAgregar }: BuscadorProductoModalProps) {
   const [filtros, setFiltros] = useState(FILTROS_VACIOS)
   /*
    * Los filtros salen plegados.
@@ -146,7 +153,8 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
   /** Los del panel: el texto no cuenta, que ya se ve escrito en el buscador. */
   const filtrosSinTexto = filtrosActivos - (filtros.texto ? 1 : 0)
 
-  const presentacionesDe = (producto: ProductoBuscable) => producto.presentaciones.filter((p) => p.activo)
+  /** La unidad con la que arranca cada fila: la base si se puede usar, si no la primera que sí. */
+  const unidadInicial = (producto: ProductoBuscable) => presentacionInicial(producto, uso) ?? 0
 
   /** Selección resuelta contra `productos` (no `resultados`), para que no se pierda al cambiar los filtros. */
   const seleccionados: SeleccionProducto[] = useMemo(
@@ -156,10 +164,11 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
         .filter((p): p is ProductoBuscable => Boolean(p))
         .map((producto) => ({
           producto,
-          presentacionId: unidades[producto.id] ?? 0,
+          presentacionId: unidades[producto.id] ?? unidadInicial(producto),
           cantidad: Number(cantidades[producto.id] ?? '1') || 1,
         })),
-    [marcados, productos, unidades, cantidades],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [marcados, productos, unidades, cantidades, uso],
   )
 
   const alternar = (producto: ProductoBuscable) =>
@@ -312,7 +321,6 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
             {resultados.map((p) => {
               const cantidadStock = stock?.[p.id]
               const marcado = Boolean(marcados[p.id])
-              const presentaciones = presentacionesDe(p)
 
               return (
                 <div
@@ -370,14 +378,9 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, onAgreg
                     >
                       <CampoConLabel label="Unidad" className="min-w-0 flex-1">
                         <Desplegable
-                          value={unidades[p.id] ?? 0}
+                          value={unidades[p.id] ?? unidadInicial(p)}
                           onChange={(v) => setUnidades((prev) => ({ ...prev, [p.id]: Number(v) }))}
-                          options={[
-                            { value: 0, label: p.unidadBase },
-                            ...presentaciones
-                              .filter((pr) => !pr.esBase)
-                              .map((pr) => ({ value: pr.id, label: pr.nombre })),
-                          ]}
+                          options={opcionesPresentacion(p, uso).map((o) => ({ value: o.value, label: o.label }))}
                         />
                       </CampoConLabel>
 

@@ -1174,6 +1174,14 @@ public class VentasService : IVentasService
                 factor = presentacion.Factor;
             }
 
+            // Una línea quitada del pedido no se valida: ya no cuenta para nada.
+            if (!linea.Anulado && !DisponibilidadPresentacion.SeVende(producto, presentacion))
+            {
+                throw new BadRequestException(
+                    $"'{producto.Nombre}' no se vende en {presentacion?.Nombre ?? "su unidad base"}: " +
+                    "elige otra presentación o quita la línea.");
+            }
+
             var cantidad = linea.Cantidad * factor;
 
             lineas.Add(new PedidoDetalle
