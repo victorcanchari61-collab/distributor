@@ -334,9 +334,22 @@ export function ProductosPage() {
    * kilo, y compartir el selector obligaría a que el precio se escribiera sobre la presentación en
    * la que se compra.
    */
+  /**
+   * La presentación más grande de una lista: el saco antes que el kilo.
+   *
+   * Es la que el vendedor tiene en la cabeza —"el saco a 310"—, y la misma regla que ya usa el
+   * buscador de productos para el stock. Escribir 310 sobre el kilo y que quede en 15500 el saco
+   * es el error que esto evita.
+   */
+  const laMasGrande = (lista: typeof presentacionesDelForm) =>
+    lista.reduce<(typeof lista)[number] | undefined>(
+      (mayor, p) => (!mayor || p.factor > mayor.factor ? p : mayor),
+      undefined,
+    )
+
   const vendibles = presentacionesDelForm.filter((p) => p.esVenta && p.activo)
   const presentacionDelPrecio =
-    vendibles.find((p) => p.id === presentacionPrecio)?.id ?? vendibles[0]?.id ?? 0
+    vendibles.find((p) => p.id === presentacionPrecio)?.id ?? laMasGrande(vendibles)?.id ?? 0
 
   /*
    * El peso se escribe sobre CUALQUIER presentación, no solo las de compra o venta.
@@ -344,11 +357,9 @@ export function ProductosPage() {
    * Un saco pesa 50 kg se compre, se venda o se quede en el almacén: filtrar aquí obligaría a
    * teclear el peso del kilo —1— cuando lo que el usuario tiene delante es el saco.
    */
+  const activas = presentacionesDelForm.filter((p) => p.activo)
   const presentacionDelPeso =
-    presentacionesDelForm.find((p) => p.id === presentacionPeso)?.id ??
-    presentacionesDelForm.find((p) => p.esVenta || p.esCompra)?.id ??
-    presentacionesDelForm[0]?.id ??
-    0
+    activas.find((p) => p.id === presentacionPeso)?.id ?? laMasGrande(activas)?.id ?? 0
 
   const guardar = async () => {
 
@@ -929,7 +940,6 @@ export function ProductosPage() {
                     disabled={guardando}
                     uso="venta"
                     etiqueta="Precio de venta"
-                    descripcion="Es el que sale cuando no hay lista de precios, o cuando la lista no tiene esa presentación. La lista manda sobre él."
                   />
 
                   <Input
@@ -960,7 +970,6 @@ export function ProductosPage() {
                     uso="todas"
                     magnitud="peso"
                     etiqueta="Peso"
-                    descripcion="De aquí sale cuánto pesa un pedido entero, para cargar el camión."
                   />
                 </div>
 
