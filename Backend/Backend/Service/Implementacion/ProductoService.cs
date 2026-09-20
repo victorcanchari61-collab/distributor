@@ -264,10 +264,11 @@ public class ProductoService : IProductoService
     /// ejemplo). Cada fila va por su cuenta: una mala no tumba a las buenas.
     ///
     /// La lista "predeterminada" recibe PrecioContado; "Por saco" y
-    /// "Mayorista" se crean solas la primera vez que una fila trae ese
-    /// precio. Si el producto ya existe y se pide actualizar, se refresca su
-    /// nombre, costo y los precios que traiga — nunca sus presentaciones, para
-    /// no pisar lo que ya se ajustó a mano.
+    /// "Mayorista" se crean solas la primera vez que una fila trae ESE precio
+    /// — un catálogo sin columnas de precio no crea ninguna lista. Si el
+    /// producto ya existe y se pide actualizar, se refresca su nombre, costo y
+    /// los precios que traiga — nunca sus presentaciones, para no pisar lo que
+    /// ya se ajustó a mano.
     /// </summary>
     public async Task<ImportarResponse> ImportarAsync(ImportarProductosRequest request)
     {
@@ -275,11 +276,22 @@ public class ProductoService : IProductoService
         var unidades = (await _catalogo.GetUnidadesAsync()).ToList();
         var vistos = new HashSet<string>();
 
+        /*
+         * Las listas se crean SOLO si alguna fila trae ese precio.
+         *
+         * Antes se creaban las tres al empezar, así que importar un catálogo con código, nombre,
+         * medida y costo —sin ninguna columna de precio— dejaba "Contado", "Por saco" y
+         * "Mayorista" vacías, salidas de la nada.
+         */
         var listas = (await _listasPrecio.GetAllAsync()).ToList();
-        var listaContado = listas.FirstOrDefault(l => l.EsPredeterminada)
-            ?? await ObtenerOCrearListaAsync(listas, "Contado");
-        var listaPorSaco = await ObtenerOCrearListaAsync(listas, "Por saco");
-        var listaMayorista = await ObtenerOCrearListaAsync(listas, "Mayorista");
+        ListaPrecio? listaContado = null;
+        ListaPrecio? listaPorSaco = null;
+        ListaPrecio? listaMayorista = null;
+
+        async Task<ListaPrecio> Contado() => listaContado ??=
+            listas.FirstOrDefault(l => l.EsPredeterminada) ?? await ObtenerOCrearListaAsync(listas, "Contado");
+        async Task<ListaPrecio> PorSaco() => listaPorSaco ??= await ObtenerOCrearListaAsync(listas, "Por saco");
+        async Task<ListaPrecio> Mayorista() => listaMayorista ??= await ObtenerOCrearListaAsync(listas, "Mayorista");
 
         for (var i = 0; i < request.Filas.Count; i++)
         {
@@ -345,7 +357,7 @@ public class ProductoService : IProductoService
                     var basePresentacion = existente.Presentaciones.FirstOrDefault(p => p.Factor == 1m);
                     if (basePresentacion is not null)
                     {
-                        await AsignarPreciosAsync(basePresentacion.Id, listaContado, listaPorSaco, listaMayorista, fila);
+                        await AsignarPreciosAsync(basePresentacion.Id, Contado, PorSaco, Mayorista, fila);
                     }
 
                     resultado.Actualizados++;
@@ -390,7 +402,7 @@ public class ProductoService : IProductoService
                 await _repository.AddAsync(producto);
 
                 var nuevaBase = producto.Presentaciones.First(p => p.Factor == 1m);
-                await AsignarPreciosAsync(nuevaBase.Id, listaContado, listaPorSaco, listaMayorista, fila);
+                await AsignarPreciosAsync(nuevaBase.Id, Contado, PorSaco, Mayorista, fila);
 
                 resultado.Creados++;
             }
@@ -407,7 +419,8 @@ public class ProductoService : IProductoService
         }
 
         await _notificador.AvisarAsync("productos", "importado", new { resultado.Creados, resultado.Actualizados });
-        if (resultado.Creados > 0 || resultado.Actualizados > 0)
+        // Sin precios en el archivo no hay nada que recargar en Listas de precios.
+        if (listaContado is not null || listaPorSaco is not null || listaMayorista is not null)
         {
             await _notificador.AvisarAsync("listasprecio", "precios", new { });
         }
@@ -675,17 +688,24 @@ public class ProductoService : IProductoService
     /// Deja el precio de cada columna que traiga la fila en su lista, sobre la
     /// presentación base. Una columna vacía o en cero no toca nada.
     /// </summary>
+    /// <summary>
+    /// Los precios que trae la fila, cada uno en su lista.
+    ///
+    /// Las listas llegan como funciones y no ya resueltas: así la lista se busca —y se crea, si no
+    /// existía— solo cuando esa fila trae ese precio, en vez de crear las tres al importar.
+    /// </summary>
     private async Task AsignarPreciosAsync(
         int presentacionBaseId,
-        ListaPrecio contado,
-        ListaPrecio porSaco,
-        ListaPrecio mayorista,
+        Func<Task<ListaPrecio>> contado,
+        Func<Task<ListaPrecio>> porSaco,
+        Func<Task<ListaPrecio>> mayorista,
         CreateProductoImportRequest fila)
     {
-        async Task Asignar(ListaPrecio lista, decimal? precio)
+        async Task Asignar(Func<Task<ListaPrecio>> obtenerLista, decimal? precio)
         {
             if (precio is not decimal valor || valor <= 0) return;
 
+            var lista = await obtenerLista();
             var existente = await _listasPrecio.BuscarPrecioAsync(lista.Id, presentacionBaseId, 1m);
             if (existente is null)
             {
