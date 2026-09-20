@@ -244,15 +244,22 @@ export function ListasPreciosPage() {
   }
 
   /**
-   * Precio que deja el margen pedido, redondeado al centimo de ARRIBA.
+   * Precio que deja el margen pedido: el de la UNIDAD BASE redondeado al centimo de ARRIBA, y el de
+   * cada presentacion es ese por su factor.
    *
-   * El kilo de camanejo cuesta 3.40 y al 25% daria 4.5333, que no se puede
-   * cobrar. Al redondear al mas cercano quedaba 4.53, o sea 24.9%: un pelo
-   * MENOS de lo pedido, y encima distinto del margen que salia en el saco.
-   * Subiendo el centimo el margen nunca queda por debajo del que se escribio.
+   * El kilo de camanejo cuesta 3.40 y al 25% daria 4.5333, que no se puede cobrar. Al redondear al
+   * mas cercano quedaba 4.53, o sea 24.9%: un pelo MENOS de lo pedido. Subiendo el centimo el margen
+   * nunca queda por debajo del que se escribio.
+   *
+   * Se redondea el kilo y no cada presentacion por separado: con costo 6.10 y 12.9 % el kilo da
+   * 7.0034, y redondear el precio de cada bolsa dejaba la de 3 kg en 21.02 (7.01 el kilo) mientras
+   * las demas salian a 7.00. Asi todas cuadran al mismo precio por kilo.
    */
-  const precioPorMargen = (costo: number, margen: number) =>
-    (Math.ceil((costo / (1 - margen / 100)) * 100) / 100).toFixed(2)
+  const precioPorMargen = (costoBase: number, margen: number, factor: number) => {
+    // El toFixed quita el ruido de coma flotante (4.5 * 100 = 450.00000000000006) antes del ceil.
+    const precioBase = Math.ceil(Number(((costoBase / (1 - margen / 100)) * 100).toFixed(6))) / 100
+    return (precioBase * factor).toFixed(2)
+  }
 
   /** Costo de una presentacion: el de la unidad base por su factor. */
   const costoDe = (factor: number) =>
@@ -288,7 +295,9 @@ export function ListasPreciosPage() {
 
     actualizarFila(fila.clave, {
       margen: valor,
-      ...(costo != null && margen < 100 ? { precio: precioPorMargen(costo, margen) } : {}),
+      ...(costo != null && producto?.costoReferencia != null && margen < 100
+        ? { precio: precioPorMargen(producto.costoReferencia, margen, presentacionDe(fila.presentacionId)?.factor ?? 0) }
+        : {}),
     })
   }
 
@@ -330,6 +339,8 @@ export function ListasPreciosPage() {
       return toast.error('El margen va entre 1 y 99.')
     }
 
+    const costoBase = producto.costoReferencia
+
     setFilasPrecio((prev) =>
       prev.map((f) => {
         const costo = costoDe(presentacionDe(f.presentacionId)?.factor ?? 0)
@@ -337,7 +348,11 @@ export function ListasPreciosPage() {
         // mano y llenarlos con el mismo margen los dejaria al precio normal,
         // que es justo lo contrario de para lo que existen.
         if (costo == null || Number(f.desde) > 1) return f
-        return { ...f, precio: precioPorMargen(costo, margen), margen: margen.toFixed(1) }
+        return {
+          ...f,
+          precio: precioPorMargen(costoBase, margen, presentacionDe(f.presentacionId)?.factor ?? 0),
+          margen: margen.toFixed(1),
+        }
       }),
     )
   }
