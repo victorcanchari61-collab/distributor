@@ -44,6 +44,14 @@ const ACTIONS_WIDTH = 140
  */
 const PAGE_SIZE = 20
 
+/**
+ * Lo minimo que mide una columna sin ancho propio, en pixeles.
+ *
+ * Es lo que necesita una cabecera corta ("SUBTOTAL") con un importe debajo ("S/ 3000.00"). Menos
+ * que esto y las dos se recortan a la vez.
+ */
+const MIN_COLUMNA = 120
+
 /** Las otras opciones del selector de "por pagina". */
 const PAGE_SIZES = [PAGE_SIZE, 50, 100, 200]
 
@@ -518,6 +526,23 @@ export function SysDataTable<T>({
    * en pixeles, asi que la tabla medía siempre mas que su contenedor y
    * aparecia un scroll horizontal aunque hubiera cuatro columnas.
    */
+  /*
+   * El ancho MINIMO que puede tener la tabla.
+   *
+   * Con `table-fixed` y anchos en porcentaje, un contenedor angosto —una pantalla de 1024px, o
+   * esta misma tabla dentro de un formulario que comparte la fila con el panel de resumen—
+   * repartia lo poco que habia entre TODAS las columnas: la cabecera quedaba en "P. | C. | S." y
+   * las celdas en "S...". Por debajo de este minimo la tabla ya no se encoge, se desplaza de lado:
+   * asi lo que no entra queda fuera de vista un momento, en vez de ilegible siempre.
+   */
+  const minTabla = useMemo(() => {
+    const suma = visible.reduce(
+      (total, col) => total + (widths[col.key] ?? col.width ?? MIN_COLUMNA),
+      0,
+    )
+    return suma + (actions ? actionsWidth : 0)
+  }, [visible, widths, actions, actionsWidth])
+
   const colTemplate = useMemo(() => {
     // Las que tienen ancho propio —fijado en la columna o arrastrado por el
     // usuario— salen del reparto: lo que ocupan se descuenta antes de dividir
@@ -728,7 +753,7 @@ export function SysDataTable<T>({
         >
           <table
             className="border-collapse text-sm"
-            style={{ tableLayout: 'fixed', width: `calc(100% - ${scrollbar}px)` }}
+            style={{ tableLayout: 'fixed', width: `calc(100% - ${scrollbar}px)`, minWidth: minTabla }}
           >
             <colgroup>
               {colTemplate.map((w, i) => (
@@ -879,7 +904,7 @@ export function SysDataTable<T>({
         >
           <table
             className="w-full border-collapse bg-white text-sm"
-            style={{ tableLayout: 'fixed' }}
+            style={{ tableLayout: 'fixed', minWidth: minTabla }}
           >
             <colgroup>
               {colTemplate.map((w, i) => (

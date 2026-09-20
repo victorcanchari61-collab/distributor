@@ -4,3 +4,6 @@ sudo systemctl restart distributor-backend && sudo systemctl status distributor-
 cd /var/www/distributor/Frontend && pnpm run build
 cd /var/www/distributor && git pull
 sudo mysql -u root distributor < Backend/sql/limpiar-movimiento.sql
+
+
+creo que la logica esta mal del despacho ya que la ruta como maneja del otro proyecto es diferente ya que mas parace una cartera de clientes de ruta mira anliza nada mas solo analiza C:\laragon\www\titanicsac.com 

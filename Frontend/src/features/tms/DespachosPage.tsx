@@ -399,7 +399,7 @@ export function DespachosPage() {
         />
 
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
+        <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
           <PageSection title="Pedidos" description="Los pendientes de los clientes de esa ruta, tomados entre esas fechas.">
             <div className="mb-3 grid gap-3 sm:grid-cols-2">
               <Input

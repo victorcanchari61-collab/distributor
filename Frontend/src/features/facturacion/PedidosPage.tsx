@@ -588,7 +588,7 @@ export function PedidosPage() {
             izquierda porque es lo que más espacio pide (buscador y tabla);
             los datos del pedido y el total van en una columna angosta a la
             derecha, como un resumen de pedido. */}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:items-start">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_360px] xl:items-start">
           <PageSection
             title="Productos"
             description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
