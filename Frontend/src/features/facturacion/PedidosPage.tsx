@@ -241,12 +241,15 @@ export function PedidosPage() {
    */
   const listaEfectiva = listaPrecioId || listas.find((l) => l.esPredeterminada)?.id || 0
 
-  /** Precio de una presentacion por esa cantidad, segun la lista elegida. */
-  const precioDeLista = async (presentacionId: number, cantidad: number) => {
-    if (!listaEfectiva) return null
-    const precio = await listaPrecioApi.resolver(listaEfectiva, presentacionId, cantidad)
-    return precio?.precio ?? null
-  }
+  /**
+   * El precio de una presentación por esa cantidad.
+   *
+   * Sale de la lista elegida; si la lista no tiene cargada esa presentación —o no hay lista— cae al
+   * precio de referencia del producto, para que nada salga en cero por una lista a medio armar. El
+   * panel avisa de cuál de los dos vino.
+   */
+  const precioDeLista = async (presentacionId: number, cantidad: number) =>
+    await listaPrecioApi.precioVenta(presentacionId, cantidad, listaEfectiva || undefined)
 
 
   /*

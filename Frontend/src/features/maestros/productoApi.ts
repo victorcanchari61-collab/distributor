@@ -77,6 +77,8 @@ export interface ProductoResponse {
   contenidoUnidad: string | null
   /** Lo que suele costar una unidad base. Referencia, no el costo del stock. */
   costoReferencia: number | null
+  /** Precio de venta habitual por unidad base. Respaldo cuando la lista no lo tiene. */
+  precioReferencia: number | null
   /** Cuánto pesa una unidad base, en kilos. */
   pesoUnidadBase: number | null
   controlaStock: boolean
@@ -109,6 +111,7 @@ export interface ProductoRequest {
   contenido?: number | null
   contenidoUnidadId?: number | null
   costoReferencia?: number | null
+  precioReferencia?: number | null
   pesoUnidadBase?: number | null
   controlaStock: boolean
   stockMinimo: number

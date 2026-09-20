@@ -12,6 +12,25 @@ public class ListaPrecioResponse
     public int Precios { get; set; }
 }
 
+/// <summary>
+/// El precio que corresponde cobrar por una presentación, venga de donde venga.
+///
+/// Se devuelve de dónde salió y no solo el número: la pantalla avisa "precio de referencia" cuando
+/// la lista no lo tenía, que es lo que permite detectar una lista a medio armar en vez de cobrar un
+/// precio viejo creyendo que es el de la lista.
+/// </summary>
+public class PrecioVentaResponse
+{
+    /// <summary>Precio de UNA presentación: el saco, la caja.</summary>
+    public decimal Precio { get; set; }
+
+    /// <summary>LISTA o REFERENCIA.</summary>
+    public string Origen { get; set; } = string.Empty;
+
+    /// <summary>Desde qué cantidad rige, cuando salió de un escalón de la lista.</summary>
+    public decimal? CantidadMinima { get; set; }
+}
+
 public class PrecioResponse
 {
     public int Id { get; set; }

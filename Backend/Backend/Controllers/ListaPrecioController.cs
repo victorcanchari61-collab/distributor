@@ -91,4 +91,19 @@ public class ListaPrecioController : ControllerBase
         var precio = await _listaService.ResolverPrecioAsync(id, presentacionId, cantidad);
         return precio is null ? NotFound() : Ok(precio);
     }
+
+    /// <summary>
+    /// El precio que corresponde cobrar: el de la lista, y si no lo tiene el de referencia del
+    /// producto. Sin <c>listaId</c> va directo a la referencia.
+    ///
+    /// Lo pide quien toma un pedido o arma una venta, que no siempre entra al catálogo de precios.
+    /// </summary>
+    [HttpGet("precio-venta")]
+    [PermisoAlguno("fact.precios:ver", "fact.pedidos:ver", "fact.notaventa:ver")]
+    public async Task<IActionResult> PrecioVenta(
+        [FromQuery] int presentacionId, [FromQuery] decimal cantidad = 1m, [FromQuery] int? listaId = null)
+    {
+        var precio = await _listaService.ResolverPrecioVentaAsync(listaId, presentacionId, cantidad);
+        return precio is null ? NotFound() : Ok(precio);
+    }
 }

@@ -248,6 +248,38 @@ public class ListaPrecioService : IListaPrecioService
         return elegido is null ? null : MapPrecio(elegido);
     }
 
+    public async Task<PrecioVentaResponse?> ResolverPrecioVentaAsync(
+        int? listaId, int presentacionId, decimal cantidad)
+    {
+        // La lista manda: solo si no tiene esa presentación se cae a la referencia del producto.
+        if (listaId is int id and > 0 &&
+            await ResolverPrecioAsync(id, presentacionId, cantidad) is { } deLista)
+        {
+            return new PrecioVentaResponse
+            {
+                Precio = deLista.Precio,
+                Origen = "LISTA",
+                CantidadMinima = deLista.CantidadMinima,
+            };
+        }
+
+        var presentacion = await _productos.GetPresentacionAsync(presentacionId);
+        if (presentacion is null) return null;
+
+        var producto = await _productos.GetConDetalleAsync(presentacion.ProductoId);
+        if (producto?.PrecioReferencia is not decimal porBase || porBase <= 0) return null;
+
+        /*
+         * La referencia se guarda por unidad base: el precio de la presentación es ese por su
+         * factor, redondeado al céntimo porque es lo que se va a cobrar.
+         */
+        return new PrecioVentaResponse
+        {
+            Precio = Math.Round(porBase * presentacion.Factor, 2),
+            Origen = "REFERENCIA",
+        };
+    }
+
     // ------------------------------------------------------------ Auxiliares
 
     private async Task<ListaPrecio> GetOrThrowAsync(int id) =>

@@ -23,4 +23,10 @@ public interface IListaPrecioService
     /// minima no supera lo pedido. Es lo que usara el pedido para tarifar.
     /// </summary>
     Task<PrecioResponse?> ResolverPrecioAsync(int listaId, int presentacionId, decimal cantidad);
+
+    /// <summary>
+    /// El precio que corresponde cobrar: el de la lista si lo tiene, y si no el de referencia del
+    /// producto. <paramref name="listaId"/> en null o 0 es "sin lista": va directo a la referencia.
+    /// </summary>
+    Task<PrecioVentaResponse?> ResolverPrecioVentaAsync(int? listaId, int presentacionId, decimal cantidad);
 }

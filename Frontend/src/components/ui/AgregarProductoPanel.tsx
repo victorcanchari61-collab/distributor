@@ -28,6 +28,12 @@ export interface LineaProductoNueva {
   fechaVencimiento: string
 }
 
+/** Un precio ya resuelto, con de dónde salió: de la lista o de la referencia del producto. */
+export interface PrecioResuelto {
+  precio: number
+  origen: 'LISTA' | 'REFERENCIA'
+}
+
 export interface AgregarProductoPanelProps {
   productos: ProductoBuscable[]
   /** Stock actual por producto, en unidad base — para mostrarlo mientras se arma la línea. */
@@ -51,7 +57,7 @@ export interface AgregarProductoPanelProps {
    * —el tramo "desde 5 sacos" es más barato—. Devuelve el precio de UNA
    * presentación, o null si esa forma de vender no tiene precio cargado.
    */
-  resolverPrecio?: (presentacionId: number, cantidad: number) => Promise<number | null>
+  resolverPrecio?: (presentacionId: number, cantidad: number) => Promise<PrecioResuelto | null>
   /**
    * Para qué se arma la línea. En una venta solo se ofrecen las presentaciones marcadas "Se vende"
    * (la unidad base incluida); en una compra, las "Se compra". Sin uso (ajustes, transferencias)
@@ -91,7 +97,7 @@ export function AgregarProductoPanel({
   const [linea, setLinea] = useState(VACIO)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   /** Qué dijo la lista: para avisar cuando no hay precio o cuando se cambió. */
-  const [precioLista, setPrecioLista] = useState<number | null>(null)
+  const [precioLista, setPrecioLista] = useState<PrecioResuelto | null>(null)
   const [buscandoPrecio, setBuscandoPrecio] = useState(false)
 
   const producto = productos.find((p) => p.id === linea.productoId)
@@ -145,7 +151,7 @@ export function AgregarProductoPanel({
         setPrecioLista(precio)
         // Solo escribe el precio: si el que carga ya lo piso a mano, se
         // respeta lo que puso.
-        setLinea((l) => (precio == null ? l : { ...l, costo: String(precio) }))
+        setLinea((l) => (precio == null ? l : { ...l, costo: String(precio.precio) }))
       })
       .finally(() => vigente && setBuscandoPrecio(false))
 
@@ -249,12 +255,19 @@ export function AgregarProductoPanel({
                   // Sin precio cargado la venta saldria en cero sin que nadie
                   // chille: mejor decirlo aqui, antes de agregar la linea.
                   <span className="text-xs font-medium text-amber-600">Sin precio en la lista</span>
-                ) : Number(linea.costo) !== precioLista ? (
+                ) : Number(linea.costo) !== precioLista.precio ? (
                   <span className="text-xs font-medium text-amber-600">
-                    Lista: S/ {precioLista.toFixed(2)}
+                    {precioLista.origen === 'LISTA' ? 'Lista' : 'Referencia'}: S/{' '}
+                    {precioLista.precio.toFixed(2)}
                   </span>
-                ) : (
+                ) : precioLista.origen === 'LISTA' ? (
                   <span className="text-xs text-ink-soft">De la lista</span>
+                ) : (
+                  /* La lista no tenia esa presentacion y salio el precio del producto: decirlo
+                     evita cobrar una referencia vieja creyendo que es el precio de la lista. */
+                  <span className="text-xs font-medium text-amber-600">
+                    Precio de referencia del producto
+                  </span>
                 )
               ) : undefined
             }
@@ -311,7 +324,7 @@ export function AgregarProductoPanel({
                 productoId: producto.id,
                 presentacionId,
                 cantidad: String(cantidad),
-                costo: precio == null ? '' : String(precio),
+                costo: precio == null ? '' : String(precio.precio),
                 lote: '',
                 fechaVencimiento: '',
               }

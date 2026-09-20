@@ -119,6 +119,7 @@ public class ProductoService : IProductoService
             ContenidoUnidadId = request.ContenidoUnidadId,
             CostoReferencia = request.CostoReferencia,
             PesoUnidadBase = request.PesoUnidadBase,
+            PrecioReferencia = request.PrecioReferencia,
             ControlaStock = request.ControlaStock,
             StockMinimo = request.StockMinimo,
             Activo = true
@@ -223,6 +224,7 @@ public class ProductoService : IProductoService
         producto.ContenidoUnidadId = request.ContenidoUnidadId;
         producto.CostoReferencia = request.CostoReferencia;
         producto.PesoUnidadBase = request.PesoUnidadBase;
+        producto.PrecioReferencia = request.PrecioReferencia;
         producto.ControlaStock = request.ControlaStock;
         producto.StockMinimo = request.StockMinimo;
         producto.Activo = request.Activo;
@@ -752,6 +754,7 @@ public class ProductoService : IProductoService
         ContenidoUnidad = p.ContenidoUnidad?.Codigo,
         CostoReferencia = p.CostoReferencia,
         PesoUnidadBase = p.PesoUnidadBase,
+        PrecioReferencia = p.PrecioReferencia,
         ControlaStock = p.ControlaStock,
         StockMinimo = p.StockMinimo,
         Activo = p.Activo,

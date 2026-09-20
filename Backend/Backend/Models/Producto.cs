@@ -55,6 +55,18 @@ public class Producto
     public decimal? CostoReferencia { get; set; }
 
     /// <summary>
+    /// A cuánto SUELE venderse una unidad base.
+    ///
+    /// Es el precio de respaldo: cuando el pedido no lleva lista de precios, o la lista elegida no
+    /// tiene cargada esa presentación, es este el que sale. Así ningún producto se vende en cero
+    /// por no haber terminado de armar las listas.
+    ///
+    /// La lista MANDA sobre él: si la lista tiene precio para esa presentación y esa cantidad, se
+    /// cobra el de la lista. Este es el piso común y la referencia al armar una lista nueva.
+    /// </summary>
+    public decimal? PrecioReferencia { get; set; }
+
+    /// <summary>
     /// Cuánto pesa UNA unidad base, en kilos.
     ///
     /// De aquí sale el peso de cualquier cantidad sin tener que anotarlo en cada presentación: una
