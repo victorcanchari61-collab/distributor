@@ -199,9 +199,11 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
       // Al comprar se propone el costo de referencia; al vender NO, porque eso
       // es lo que costó y no lo que se cobra — proponerlo invita a vender a
       // precio de compra sin darse cuenta.
-      _importe.text = widget.paraVenta
+      // Al céntimo: el costo se guarda por unidad base con ocho decimales y
+      // proponer "6.3377193" en una caja de importe es ilegible.
+      _importe.text = widget.paraVenta || producto.costoReferencia == null
           ? '0'
-          : formatoNumero(producto.costoReferencia ?? 0);
+          : formatoCosto(producto.costoReferencia!);
       _precioLista = null;
       _sinPrecioEnLista = false;
     });

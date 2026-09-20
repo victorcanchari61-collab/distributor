@@ -92,6 +92,32 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
         _error == null;
   }
 
+  /*
+   * Elegir empleado llena los datos de la cuenta con los de su ficha.
+   *
+   * Se pisa lo que haya, no solo lo vacio: elegir a alguien es decir "esta
+   * cuenta es de esta persona", y al cambiar de empleado los datos del
+   * anterior tienen que irse con el. Lo que la ficha NO tiene se deja como
+   * esta en vez de borrarlo —un empleado sin correo cargado no deberia vaciar
+   * el que se acaba de escribir— y "Sin empleado" tampoco borra nada: lo
+   * escrito sigue sirviendo aunque la cuenta no sea de nadie del padron.
+   */
+  void _elegirEmpleado(int? empleadoId, List<EmpleadoOpcion> empleados) {
+    final empleado = empleados.where((e) => e.id == empleadoId).firstOrNull;
+
+    setState(() {
+      _empleadoId = empleadoId;
+      if (empleado == null) return;
+
+      _nombre.text = empleado.nombreCompleto;
+      // El codigo interno de un extranjero no es un DNI: ese campo solo acepta
+      // ocho digitos y lo rechazaria al guardar.
+      if (empleado.tipoDoc == 'DNI') _dni.text = empleado.documento;
+      final correo = empleado.email?.trim() ?? '';
+      if (correo.isNotEmpty) _email.text = correo;
+    });
+  }
+
   Future<void> _guardar() async {
     FocusScope.of(context).unfocus();
     if (!_validar()) return;
@@ -161,6 +187,46 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
           children: [
             if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
 
+            /*
+             * De quien es esta cuenta, lo primero que se elige.
+             *
+             * Es OPCIONAL: hay cuentas que no son de nadie del padron
+             * —soporte, la del dueño— y empleados que nunca entran al sistema.
+             * Va arriba porque al elegir a alguien se llenan solos su DNI, su
+             * nombre y su correo, y lo de abajo queda para corregir y no para
+             * teclear.
+             */
+            AppSelector<int?>(
+              valor: _empleadoId,
+              etiqueta: 'Empleado (opcional)',
+              icono: Icons.groups_outlined,
+              habilitado: !_guardando,
+              opciones: [
+                const Opcion<int?>(null, 'Sin empleado'),
+                for (final e in empleados)
+                  Opcion<int?>(
+                    e.id,
+                    // El que ya tiene cuenta sale en la lista pero ocupado; el
+                    // suyo propio no, o al editarlo el selector saldria vacio.
+                    e.usuarioId != null && e.usuarioId != widget.usuario?.id
+                        ? '${e.etiqueta} (ya tiene usuario)'
+                        : e.etiqueta,
+                    habilitada:
+                        e.usuarioId == null ||
+                        e.usuarioId == widget.usuario?.id,
+                  ),
+              ],
+              onCambio: (v) => _elegirEmpleado(v, empleados),
+            ),
+            const SizedBox(height: Dimen.espacio2),
+            Text(
+              empleados.isEmpty
+                  ? 'Todavía no hay empleados registrados. Se dan de alta en Maestros → Empleados.'
+                  : 'Al elegirlo se llenan el DNI, el nombre y el correo de su ficha.',
+              style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
             AppCampo(
               controlador: _nombre,
               etiqueta: 'Nombre',
@@ -207,40 +273,6 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
                 'No hay roles activos. Crea uno en Roles antes de dar de alta un usuario.',
               ),
             ],
-            const SizedBox(height: Dimen.espacio4),
-
-            // De quien es esta cuenta. Es OPCIONAL: hay cuentas que no son de
-            // nadie del padron —soporte, la del dueño— y empleados que nunca
-            // entran al sistema.
-            AppSelector<int?>(
-              valor: _empleadoId,
-              etiqueta: 'Empleado (opcional)',
-              icono: Icons.groups_outlined,
-              habilitado: !_guardando,
-              opciones: [
-                const Opcion<int?>(null, 'Sin empleado'),
-                for (final e in empleados)
-                  Opcion<int?>(
-                    e.id,
-                    // El que ya tiene cuenta sale en la lista pero ocupado; el
-                    // suyo propio no, o al editarlo el selector saldria vacio.
-                    e.usuarioId != null && e.usuarioId != widget.usuario?.id
-                        ? '${e.etiqueta} (ya tiene usuario)'
-                        : e.etiqueta,
-                    habilitada:
-                        e.usuarioId == null ||
-                        e.usuarioId == widget.usuario?.id,
-                  ),
-              ],
-              onCambio: (v) => setState(() => _empleadoId = v),
-            ),
-            const SizedBox(height: Dimen.espacio2),
-            Text(
-              empleados.isEmpty
-                  ? 'Todavía no hay empleados registrados. Se dan de alta en Maestros → Empleados.'
-                  : 'Enlaza la cuenta con su ficha en Maestros → Empleados.',
-              style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-            ),
             const SizedBox(height: Dimen.espacio4),
 
             AppCampo(

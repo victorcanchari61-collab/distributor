@@ -121,15 +121,26 @@ class EmpleadoOpcion {
   const EmpleadoOpcion({
     required this.id,
     required this.documento,
+    this.tipoDoc = '',
     required this.nombreCompleto,
     this.cargo,
+    this.email,
     this.usuarioId,
   });
 
   final int id;
   final String documento;
+
+  /// DNI o CODIGO. Solo el DNI sirve para llenar el DNI de la cuenta: el
+  /// codigo interno de un extranjero no es un documento de identidad.
+  final String tipoDoc;
+
   final String nombreCompleto;
   final String? cargo;
+
+  /// El correo de su ficha, para proponerlo como el de la cuenta. Puede no
+  /// tenerlo.
+  final String? email;
 
   /// Id del usuario que YA lo usa. El selector lo muestra ocupado en vez de
   /// esconderlo: esconderlo dejaria pensando por que no aparece.
@@ -144,8 +155,10 @@ class EmpleadoOpcion {
   factory EmpleadoOpcion.desdeJson(Map<String, dynamic> json) => EmpleadoOpcion(
     id: json['id'] as int,
     documento: json['documento'] as String? ?? '',
+    tipoDoc: json['tipoDoc'] as String? ?? '',
     nombreCompleto: json['nombreCompleto'] as String? ?? '',
     cargo: json['cargo'] as String?,
+    email: json['email'] as String?,
     usuarioId: json['usuarioId'] as int?,
   );
 }

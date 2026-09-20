@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:titanic/compartido/widgets/app_campo.dart';
 import 'package:titanic/compartido/widgets/app_selector.dart';
 import 'package:titanic/core/almacenamiento/sesion_almacen.dart';
 import 'package:titanic/core/red/cliente_api.dart';
@@ -107,23 +108,41 @@ class _MaestrosFalso extends MaestrosApi {
     EmpleadoOpcion.desdeJson({
       'id': 7,
       'documento': '45871203',
+      'tipoDoc': 'DNI',
       'nombreCompleto': 'Juan Carlos Quispe Mamani',
       'cargo': 'Repartidor',
+      'email': 'juan@distributor.com',
       'usuarioId': 3,
     }),
     // Ocupado por OTRA cuenta: sale en la lista pero no se puede elegir.
     EmpleadoOpcion.desdeJson({
       'id': 8,
       'documento': '10203040',
+      'tipoDoc': 'DNI',
       'nombreCompleto': 'Rosa Huaman',
       'cargo': 'Almacenera',
+      'email': null,
       'usuarioId': 9,
     }),
+    // Otro con ficha completa: al cambiar a el, los datos del anterior se van.
     EmpleadoOpcion.desdeJson({
       'id': 9,
       'documento': '50607080',
+      'tipoDoc': 'DNI',
       'nombreCompleto': 'Luis Ccahuana',
       'cargo': null,
+      'email': 'luis@distributor.com',
+      'usuarioId': null,
+    }),
+    // Extranjero sin DNI y sin correo: su codigo interno no puede llenar el
+    // campo DNI de la cuenta, y su ficha no tiene nada que proponer de correo.
+    EmpleadoOpcion.desdeJson({
+      'id': 10,
+      'documento': 'EXT-001',
+      'tipoDoc': 'CODIGO',
+      'nombreCompleto': 'Marta Silva',
+      'cargo': 'Vendedora',
+      'email': null,
       'usuarioId': null,
     }),
   ];
@@ -133,6 +152,31 @@ class _MaestrosFalso extends MaestrosApi {
 ///
 /// Se queda tres segundos en pantalla con su propio temporizador, y el test
 /// falla si el arbol se desmonta con uno pendiente.
+/// Los campos del formulario de usuario, en el orden en que se pintan:
+/// nombre, correo, DNI y contraseña.
+String _texto(WidgetTester tester, int n) =>
+    tester
+        .widget<TextField>(
+          find.descendant(
+            of: find.byType(AppCampo).at(n),
+            matching: find.byType(TextField),
+          ),
+        )
+        .controller!
+        .text;
+
+String _nombreDe(WidgetTester tester) => _texto(tester, 0);
+String _correoDe(WidgetTester tester) => _texto(tester, 1);
+String _dniDe(WidgetTester tester) => _texto(tester, 2);
+
+/// Elige a alguien en el selector de empleado.
+Future<void> _elegir(WidgetTester tester, String etiqueta) async {
+  await tester.tap(find.byType(AppSelector<int?>).last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(etiqueta).last);
+  await tester.pumpAndSettle();
+}
+
 Future<void> _dejarPasarElAviso(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 4));
   await tester.pumpAndSettle();
@@ -233,6 +277,35 @@ void main() {
       expect(sinCargo.etiqueta, 'Rosa Huaman');
       expect(sinCargo.usuarioId, 4);
     });
+
+    /// El tipo de documento y el correo son los que llenan la cuenta al
+    /// elegirlo: sin ellos el selector no sabria si el documento es un DNI.
+    test('la opcion trae el tipo de documento y el correo de la ficha', () {
+      final opcion = EmpleadoOpcion.desdeJson({
+        'id': 1,
+        'documento': 'EXT-001',
+        'tipoDoc': 'CODIGO',
+        'nombreCompleto': 'Marta Silva',
+        'cargo': 'Vendedora',
+        'email': 'marta@distributor.com',
+        'usuarioId': null,
+      });
+
+      expect(opcion.tipoDoc, 'CODIGO');
+      expect(opcion.email, 'marta@distributor.com');
+    });
+
+    /// Un servidor que todavia no los manda no puede romper el selector.
+    test('sin esos campos la opcion se lee igual', () {
+      final opcion = EmpleadoOpcion.desdeJson({
+        'id': 1,
+        'documento': '45871203',
+        'nombreCompleto': 'Juan Quispe',
+      });
+
+      expect(opcion.tipoDoc, '');
+      expect(opcion.email, isNull);
+    });
   });
 
   group('selector de empleado en el formulario de usuario', () {
@@ -303,16 +376,91 @@ void main() {
     testWidgets('se puede desenlazar eligiendo "Sin empleado"', (tester) async {
       final config = await montar(tester);
 
-      await tester.tap(find.byType(AppSelector<int?>).last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Sin empleado').last);
-      await tester.pumpAndSettle();
+      await _elegir(tester, 'Sin empleado');
 
       await tester.tap(find.text('Guardar cambios'));
       await tester.pumpAndSettle();
       await _dejarPasarElAviso(tester);
 
       expect(config.ultimoActualizado?['empleadoId'], isNull);
+    });
+
+    /*
+     * El selector va antes que todo lo demas.
+     *
+     * Al elegir a alguien se llenan solos su DNI, su nombre y su correo: lo de
+     * abajo queda para corregir y no para teclear, y eso solo se entiende si
+     * es lo primero que se ve.
+     */
+    testWidgets('el selector se pinta antes que el DNI', (tester) async {
+      await montar(tester);
+
+      final selector = tester.getTopLeft(find.byType(AppSelector<int?>).last).dy;
+      final dni = tester.getTopLeft(find.byType(AppCampo).at(2)).dy;
+
+      expect(selector, lessThan(dni));
+      expect(
+        find.text('Al elegirlo se llenan el DNI, el nombre y el correo de su ficha.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('elegir empleado llena nombre, DNI y correo de su ficha', (
+      tester,
+    ) async {
+      await montar(tester);
+
+      await _elegir(tester, 'Luis Ccahuana');
+
+      expect(_nombreDe(tester), 'Luis Ccahuana');
+      expect(_dniDe(tester), '50607080');
+      expect(_correoDe(tester), 'luis@distributor.com');
+    });
+
+    /*
+     * Al cambiar de empleado los datos del anterior tienen que irse con el:
+     * se pisa lo que haya y no solo lo vacio, porque elegir a alguien es decir
+     * "esta cuenta es de esta persona".
+     */
+    testWidgets('cambiar de empleado reemplaza los tres datos', (tester) async {
+      await montar(tester);
+
+      await _elegir(tester, 'Luis Ccahuana');
+      await _elegir(tester, 'Juan Carlos Quispe Mamani — Repartidor');
+
+      expect(_nombreDe(tester), 'Juan Carlos Quispe Mamani');
+      expect(_dniDe(tester), '45871203');
+      expect(_correoDe(tester), 'juan@distributor.com');
+    });
+
+    /*
+     * Lo que la ficha NO tiene se deja como esta, en vez de borrarlo: el
+     * codigo interno de un extranjero no es un DNI —ese campo solo acepta ocho
+     * digitos— y un empleado sin correo cargado no deberia vaciar el que se
+     * acaba de escribir.
+     */
+    testWidgets('un empleado con CODIGO y sin correo no borra lo que habia', (
+      tester,
+    ) async {
+      await montar(tester);
+
+      await _elegir(tester, 'Marta Silva — Vendedora');
+
+      expect(_nombreDe(tester), 'Marta Silva');
+      expect(_dniDe(tester), '45871203');
+      expect(_correoDe(tester), 'juan@distributor.com');
+    });
+
+    testWidgets('"Sin empleado" desenlaza pero no borra nada de lo escrito', (
+      tester,
+    ) async {
+      await montar(tester);
+
+      await _elegir(tester, 'Sin empleado');
+
+      expect(_nombreDe(tester), 'Juan Quispe');
+      expect(_dniDe(tester), '45871203');
+      expect(_correoDe(tester), 'juan@distributor.com');
     });
   });
 }

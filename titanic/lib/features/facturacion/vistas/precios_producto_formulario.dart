@@ -106,10 +106,10 @@ class _PreciosProductoFormularioState
 
   // ------------------------------------------------------------- calculos
 
-  /// Costo de una presentación: el de la unidad base por su factor.
+  /// Costo de una presentación: el de la unidad base por su factor, al céntimo.
   double? _costoDe(Presentacion p) {
     final base = _producto?.costoReferencia;
-    return base == null ? null : base * p.factor;
+    return base == null ? null : costoDePresentacion(base, p.factor);
   }
 
   /*
@@ -154,7 +154,9 @@ class _PreciosProductoFormularioState
       for (final x in suyos) {
         // El margen de lo guardado no viene del backend: se saca del costo,
         // igual que al teclear. Sin esto la columna salía vacía al editar.
-        final costo = costoBase == null ? null : costoBase * pres.factor;
+        final costo = costoBase == null
+            ? null
+            : costoDePresentacion(costoBase, pres.factor);
         _filas.add(
           _Fila(
             id: x.id,
@@ -431,7 +433,7 @@ class _PreciosProductoFormularioState
               const SizedBox(height: Dimen.espacio1),
               Text(
                 'Costo del ${producto!.unidadBase}: '
-                '${formatoSoles(producto.costoReferencia!)}. Los tramos por '
+                'S/ ${formatoCosto(producto.costoReferencia!)}. Los tramos por '
                 'volumen no se tocan.',
                 style: const TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
               ),

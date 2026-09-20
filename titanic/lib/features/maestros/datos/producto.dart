@@ -78,6 +78,7 @@ class Producto {
     this.costoReferencia,
     required this.controlaStock,
     required this.stockMinimo,
+    this.pesoUnidadBase,
     required this.activo,
     required this.presentaciones,
     this.tieneMovimientos = false,
@@ -104,6 +105,14 @@ class Producto {
 
   final bool controlaStock;
   final double stockMinimo;
+
+  /// Kilos que pesa UNA unidad base. Null si el producto no se pesa.
+  ///
+  /// De aqui sale el peso de cualquier cantidad sin anotarlo en cada
+  /// presentacion: si la botella pesa 0.92, la caja de 12 pesa 11.04 y diez
+  /// cajas 110.4.
+  final double? pesoUnidadBase;
+
   final bool activo;
   final List<Presentacion> presentaciones;
 
@@ -126,6 +135,7 @@ class Producto {
     costoReferencia: (json['costoReferencia'] as num?)?.toDouble(),
     controlaStock: json['controlaStock'] as bool? ?? true,
     stockMinimo: (json['stockMinimo'] as num?)?.toDouble() ?? 0,
+    pesoUnidadBase: (json['pesoUnidadBase'] as num?)?.toDouble(),
     activo: json['activo'] as bool? ?? true,
     presentaciones: (json['presentaciones'] as List? ?? const [])
         .map((e) => Presentacion.desdeJson(e as Map<String, dynamic>))

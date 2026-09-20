@@ -62,13 +62,23 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   late final _codigo = TextEditingController(text: widget.producto?.codigo ?? '');
   late final _nombre = TextEditingController(text: widget.producto?.nombre ?? '');
   late final _descripcion = TextEditingController(text: widget.producto?.descripcion ?? '');
+  /// El costo llega TAL CUAL, sin redondear: es por unidad base y se guarda
+  /// con ocho decimales —S/ 289 el saco de 45.6 kg son 6.33771930 el kilo—.
+  /// Lo que este campo muestra es lo que se vuelve a enviar al guardar, asi
+  /// que recortarlo a dos decimales cambiaria el costo puesto desde la web
+  /// solo por haber abierto el formulario.
   late final _costoReferencia = TextEditingController(
     text: widget.producto?.costoReferencia == null
         ? ''
-        : formatoNumero(widget.producto!.costoReferencia!),
+        : _sinCerosDeMas(widget.producto!.costoReferencia!),
   );
   late final _stockMinimo = TextEditingController(
     text: widget.producto == null ? '' : formatoNumero(widget.producto!.stockMinimo),
+  );
+  late final _peso = TextEditingController(
+    text: widget.producto?.pesoUnidadBase == null
+        ? ''
+        : _sinCerosDeMas(widget.producto!.pesoUnidadBase!),
   );
 
   late int? _categoriaId = widget.producto?.categoriaId;
@@ -106,10 +116,22 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
 
   bool get _esNuevo => widget.producto == null;
 
+  /// Un numero para teclear encima: 50 y no 50.0, pero 6.3377193 completo.
+  static String _sinCerosDeMas(double v) =>
+      v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
+
+  @override
+  void initState() {
+    super.initState();
+    // La ayuda del peso dice lo que pesa la caja con el numero que se esta
+    // tecleando: sin escuchar el campo solo se refrescaria al tocar otra cosa.
+    _peso.addListener(() => setState(() {}));
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
-    for (final c in [_codigo, _nombre, _descripcion, _costoReferencia, _stockMinimo]) {
+    for (final c in [_codigo, _nombre, _descripcion, _costoReferencia, _stockMinimo, _peso]) {
       c.dispose();
     }
     super.dispose();
@@ -154,6 +176,10 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
       // en la web. El campo sigue viajando porque el backend lo espera.
       'controlaStock': true,
       'stockMinimo': _numero(_stockMinimo.text) ?? 0,
+      // Viaja SIEMPRE, tambien cuando nadie lo toco: el endpoint REEMPLAZA el
+      // producto con lo que le llega, asi que no mandarlo borraria el peso
+      // puesto desde la web solo por haber corregido el nombre aqui.
+      'pesoUnidadBase': _numero(_peso.text),
       if (!_esNuevo) 'activo': widget.producto!.activo,
     };
 
@@ -322,6 +348,29 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
         ),
       ),
     );
+  }
+
+  /*
+   * La ayuda del peso: "kg por UND · un Caja 12 LT pesa 11.04 kg".
+   *
+   * El peso se guarda por unidad base, que en una caja de 12 no dice mucho:
+   * ver lo que pesa la presentacion con la que se compra es lo que deja
+   * comprobar de un vistazo si el numero esta bien. La segunda parte solo sale
+   * si hay peso y una presentacion de compra que no sea la base.
+   */
+  String _ayudaPeso(List<UnidadMedida> unidades) {
+    final unidadBase =
+        unidades.where((u) => u.id == _unidadBaseId).firstOrNull?.codigo ?? 'unidad base';
+    final texto = 'kg por $unidadBase';
+
+    final peso = _numero(_peso.text);
+    final pres = _filas.where((f) => f.esCompra && f.factor != 1).firstOrNull;
+    if (peso == null || peso <= 0 || pres == null) return texto;
+
+    final kilos = peso * pres.factor;
+    // 11.04 y no 11.040: los ceros de mas hacen dudar de si el peso es exacto.
+    final redondeado = double.parse(kilos.toStringAsFixed(3));
+    return '$texto · un ${pres.nombre} pesa ${_sinCerosDeMas(redondeado)} kg';
   }
 
   Widget _datosTab() {
@@ -499,6 +548,25 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
           icono: Icons.warning_amber_outlined,
           tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
           habilitado: !_guardando,
+        ),
+        const SizedBox(height: Dimen.espacio2),
+
+        // El peso de UNA unidad base, en kilos. De aqui sale solo lo que pesa
+        // cualquier cantidad —una caja, un pedido, el camion entero— sin
+        // anotarlo en cada presentacion.
+        AppCampo(
+          controlador: _peso,
+          etiqueta: 'Peso',
+          pista: '0.92',
+          icono: Icons.scale_outlined,
+          opcional: true,
+          tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+          habilitado: !_guardando,
+        ),
+        const SizedBox(height: Dimen.espacio1),
+        Text(
+          _ayudaPeso(unidades),
+          style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
         ),
         const SizedBox(height: Dimen.espacio5),
       ],

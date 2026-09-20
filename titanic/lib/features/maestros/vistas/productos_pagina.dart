@@ -269,7 +269,7 @@ class _TarjetaProducto extends StatelessWidget {
       'Costo referencia',
       producto.costoReferencia == null
           ? null
-          : 'S/ ${producto.costoReferencia!.toStringAsFixed(2)}',
+          : 'S/ ${formatoCosto(producto.costoReferencia!)}',
     ),
     CampoDetalle(
       'Presentaciones',

@@ -242,7 +242,7 @@ void main() {
 
       expect(tester.widget<CheckboxListTile>(_casillaPdf).value, isTrue);
       expect(
-        find.textContaining('la línea sale en esta presentación y no en unidad base'),
+        find.textContaining('la línea sale en esta presentación'),
         findsOneWidget,
       );
 

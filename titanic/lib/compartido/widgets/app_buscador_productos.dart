@@ -4,6 +4,7 @@ import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/maestros/datos/producto.dart';
+import '../formato.dart';
 import '../presentaciones_uso.dart';
 import 'app_boton.dart';
 import 'app_buscador.dart';
@@ -31,10 +32,6 @@ class SeleccionProducto {
   /// para que se abrio el buscador.
   final double importe;
 }
-
-/// Un numero sin decimales de mas: 12 en vez de 12.0.
-String _texto2(double v) =>
-    v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
 
 /// Estado de una fila mientras la hoja esta abierta.
 class _Marcado {
@@ -176,8 +173,10 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
       } else {
         // En una compra el costo de referencia es un punto de partida util;
         // en una venta no, porque es lo que costo, no lo que se cobra.
+        // Al centimo: el costo se guarda por unidad base con ocho decimales
+        // y proponer "6.3377193" en una caja de importe es ilegible.
         final sugerido = !widget.paraVenta && p.costoReferencia != null
-            ? _texto2(p.costoReferencia!)
+            ? formatoCosto(p.costoReferencia!)
             : '';
         _marcados[p.id] = _Marcado(
           // La base si se puede usar; si no, la primera presentacion que si.
