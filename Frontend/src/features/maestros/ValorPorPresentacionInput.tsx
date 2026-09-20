@@ -3,41 +3,57 @@ import { Desplegable, Input } from '../../components/ui'
 import type { PresentacionResponse } from './productoApi'
 
 /**
- * El costo por unidad base, dicho por presentación y limpio.
+ * Qué se está escribiendo: plata (el costo, el precio) o kilos (el peso).
  *
- * Dos decimales: es plata, y así vuelve exactamente lo que se escribió. La multiplicación arrastra
- * basura de coma flotante —S/ 289 el saco volvía como 288.9991— y `Number(...)` quita además los
- * ceros que sobran: 280 y no 280.00.
+ * Solo cambia cómo se lee el número —"S/ 3.40 por kilogramo" contra "50 kg por saco"— y cuántos
+ * decimales sobreviven a la ida y vuelta. La mecánica de la conversión es la misma.
  */
-function aPresentacion(costoBase: string, factor: number) {
-  if (!costoBase) return ''
-  return String(Number((Number(costoBase) * factor).toFixed(2)))
+export type MagnitudValor = 'dinero' | 'peso'
+
+/**
+ * Decimales con los que el número vuelve exacto a la presentación.
+ *
+ * Dos para la plata, que es como se cobra: S/ 289 el saco volvía como 288.9991 porque la
+ * multiplicación arrastra basura de coma flotante. Tres para el peso, que baja de un céntimo sin
+ * problema: un sobre de 30 g pesa 0.03 kg y con dos decimales se perdería.
+ */
+function aPresentacion(valorBase: string, factor: number, magnitud: MagnitudValor) {
+  if (!valorBase) return ''
+  const decimales = magnitud === 'peso' ? 3 : 2
+  // `Number(...)` quita además los ceros que sobran: 280 y no 280.00.
+  return String(Number((Number(valorBase) * factor).toFixed(decimales)))
 }
 
-export interface CostoReferenciaInputProps {
-  /** Costo por unidad base, que es como se guarda. */
+export interface ValorPorPresentacionInputProps {
+  /** Valor por unidad base, que es como se guarda. */
   valor: string
-  onChange: (costoUnidadBase: string) => void
+  onChange: (valorUnidadBase: string) => void
   /** Presentación en la que se escribe: el saco, la caja. */
   presentacionId: number
   onPresentacion: (id: number) => void
   presentaciones: PresentacionResponse[]
   unidadBase: string
   disabled?: boolean
+  /**
+   * Qué presentaciones se ofrecen. El costo se escribe sobre las que SE COMPRAN y el precio sobre
+   * las que SE VENDEN: ofrecer las otras invita a poner el precio del saco en un producto que solo
+   * sale por kilo. El peso no distingue —un saco pesa lo mismo se compre o se venda—, y va con
+   * 'todas'.
+   */
+  uso?: 'compra' | 'venta' | 'todas'
+  magnitud?: MagnitudValor
+  etiqueta?: string
+  marcador?: string
 }
 
 /**
- * Costo de referencia del producto.
+ * Un valor del producto escrito por presentación y guardado por unidad base.
  *
- * Se escribe como te lo cobra el proveedor —S/ 170 el saco— y se guarda por
- * unidad base —S/ 3.40 el kilo—, que es como lo necesita todo lo demás. La
- * equivalencia se muestra debajo para que se vea la conversión y no haya duda
- * de si el número era por saco o por kilo.
- *
- * Es una referencia: el costo real de cada compra lo fija la entrada al
- * almacén, no este campo.
+ * Se escribe como se dice en el almacén —S/ 170 el saco, 50 kg el saco— y se guarda por unidad
+ * base —S/ 3.40 el kilo, 1 kg el kilo—, que es como lo necesita todo lo demás. La etiqueta dice
+ * sobre qué presentación está escrito, que es lo único que hacía falta aclarar.
  */
-export function CostoReferenciaInput({
+export function ValorPorPresentacionInput({
   valor,
   onChange,
   presentacionId,
@@ -45,15 +61,21 @@ export function CostoReferenciaInput({
   presentaciones,
   unidadBase,
   disabled,
-}: CostoReferenciaInputProps) {
-  const compras = presentaciones.filter((p) => p.esCompra && p.activo)
-  const elegida = compras.find((p) => p.id === presentacionId)
+  uso = 'compra',
+  magnitud = 'dinero',
+  etiqueta = 'Costo de referencia',
+  marcador,
+}: ValorPorPresentacionInputProps) {
+  const opciones = presentaciones.filter(
+    (p) => p.activo && (uso === 'todas' || (uso === 'venta' ? p.esVenta : p.esCompra)),
+  )
+  const elegida = opciones.find((p) => p.id === presentacionId)
   const factor = elegida?.factor ?? 1
 
   /*
     El texto del campo vive aqui, no se re-deriva del valor en cada tecla.
 
-    El costo se guarda por unidad base y se muestra por presentacion, asi que
+    El valor se guarda por unidad base y se muestra por presentacion, asi que
     cada tecla hacia ida y vuelta: dividir entre 50 al guardar, multiplicar por
     50 al repintar. En coma flotante eso no siempre cierra —0.56 × 50 da
     28.000000000000004—, y al escribir "280" el paso intermedio "28" se
@@ -64,7 +86,7 @@ export function CostoReferenciaInput({
     valor cuando el cambio NO vino de aqui: al abrir el formulario, o al
     elegir otra presentacion.
   */
-  const [texto, setTexto] = useState(() => aPresentacion(valor, factor))
+  const [texto, setTexto] = useState(() => aPresentacion(valor, factor, magnitud))
   const ultimoValor = useRef(valor)
   const ultimoFactor = useRef(factor)
   /** El cambio de presentación lo hizo esta misma caja: el número se conserva. */
@@ -80,15 +102,15 @@ export function CostoReferenciaInput({
       return
     }
     // Tambien cuando solo cambia el factor sin que nadie lo tocara aqui: al
-    // editar, las presentaciones pueden llegar despues que el costo, y sin
+    // editar, las presentaciones pueden llegar despues que el valor, y sin
     // esto el campo mostraria el costo por kilo en la etiqueta del saco.
-    if (vieneDeFuera) setTexto(aPresentacion(valor, factor))
-  }, [valor, factor])
+    if (vieneDeFuera) setTexto(aPresentacion(valor, factor, magnitud))
+  }, [valor, factor, magnitud])
 
-  const emitir = (costoBase: string) => {
+  const emitir = (valorBase: string) => {
     // Lo que sale de aqui no debe volver a pintarse encima de lo tecleado.
-    ultimoValor.current = costoBase
-    onChange(costoBase)
+    ultimoValor.current = valorBase
+    onChange(valorBase)
   }
 
   const escribir = (nuevo: string) => {
@@ -104,70 +126,58 @@ export function CostoReferenciaInput({
   */
   const cambiarPresentacion = (id: number) => {
     if (id === presentacionId) return
-    const nuevoFactor = compras.find((p) => p.id === id)?.factor ?? 1
+    const nuevoFactor = opciones.find((p) => p.id === id)?.factor ?? 1
     cambioPropio.current = true
     if (texto) emitir(String(Number(texto) / nuevoFactor))
     onPresentacion(id)
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    /*
+      Apilado, no en dos columnas: el selector casi nunca esta —solo si se
+      compra o se vende de varias formas— y una rejilla fija dejaba media fila
+      vacia. Asi el campo entra como uno mas de la rejilla del formulario.
+    */
+    <div className="flex flex-col gap-3">
+      <Input
+        // La etiqueta dice de que presentacion es el numero, en vez de dejarlo
+        // a la imaginacion: "S/ 170" a secas no se sabe si es el saco o el kilo.
+        label={`${etiqueta}${elegida ? ` — un ${elegida.nombre}` : ''}`}
+        optional
+        type="number"
+        step={magnitud === 'peso' ? '0.001' : '0.01'}
+        min="0"
+        placeholder={marcador ?? (magnitud === 'peso' ? '50' : '170.00')}
+        value={texto}
+        onChange={(e) => escribir(e.target.value)}
+        disabled={disabled}
+      />
+
       {/*
-        Apilado, no en dos columnas: el selector casi nunca esta —solo si se
-        compra de varias formas— y una rejilla fija dejaba media fila vacia.
-        Asi el costo entra como un campo mas de la rejilla del formulario.
+        El selector SOLO aparece si de verdad hay algo que elegir.
+
+        Las opciones salen de las columnas «Se compra»/«Se vende» de la pestaña
+        Presentaciones, que es donde eso se declara: esto es solo una pregunta
+        de seguimiento sobre el valor.
       */}
-      <div className="flex flex-col gap-3">
-        <Input
-          // La etiqueta dice de que presentacion es el numero, en vez de
-          // dejarlo a la imaginacion: "S/ 170" a secas no se sabe si es el
-          // saco o el kilo.
-          label={`Costo de referencia${elegida ? ` — un ${elegida.nombre}` : ''}`}
-          optional
-          type="number"
-          step="0.01"
-          placeholder="170.00"
-          value={texto}
-          onChange={(e) => escribir(e.target.value)}
+      {opciones.length > 1 && (
+        <Desplegable
+          label={
+            magnitud === 'peso'
+              ? 'Ese peso es de'
+              : uso === 'venta'
+                ? 'Ese precio es de'
+                : 'Ese costo es de'
+          }
+          value={presentacionId}
+          onChange={(v) => cambiarPresentacion(Number(v))}
           disabled={disabled}
+          options={opciones.map((p) => ({
+            value: p.id,
+            label: p.nombre,
+            detalle: `${p.factor} ${unidadBase}`,
+          }))}
         />
-
-        {/*
-          El selector SOLO aparece si de verdad hay algo que elegir.
-          
-          Antes decia "Se compra por" y repetia la columna "Se compra" de la
-          pestaña Presentaciones, que es donde eso se declara de verdad — dos
-          sitios para el mismo dato, y podian contradecirse. Ahora las opciones
-          salen de esa misma columna y esto es solo una pregunta de seguimiento
-          sobre el costo: cuando se compra de una sola forma, ni se muestra.
-        */}
-        {compras.length > 1 && (
-          <Desplegable
-            label="Ese costo es de"
-            value={presentacionId}
-            onChange={(v) => cambiarPresentacion(Number(v))}
-            disabled={disabled}
-            options={compras.map((p) => ({
-              value: p.id,
-              label: p.nombre,
-              detalle: `${p.factor} ${unidadBase}`,
-            }))}
-          />
-        )}
-      </div>
-
-      {valor && Number(valor) > 0 && (
-        <p className="rounded-field bg-slate-50 px-3 py-2 text-xs text-ink-muted">
-          Equivale a{' '}
-          <span className="font-semibold text-ink">
-            {/* Dos decimales, que es como se cobra. Los cuatro solo cuando
-                el centimo se come el numero: el sobre de 30 g sale a
-                S/ 0.0025 el gramo y "S/ 0.00" no dice nada. */}
-            S/ {Number(valor) < 0.01 ? Number(valor).toFixed(4) : Number(valor).toFixed(2)} por{' '}
-            {unidadBase}
-          </span>
-          . Es lo que sueles pagar; el costo real lo fija cada entrada al almacén.
-        </p>
       )}
     </div>
   )

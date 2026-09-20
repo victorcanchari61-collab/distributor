@@ -215,15 +215,6 @@ export function PresentacionesEditor({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-ink">Presentaciones</p>
-          <p className="text-xs text-ink-soft">
-            Cómo se compra y se vende. El factor dice a cuántos{' '}
-            <span className="font-semibold">{unidadBase || 'unidad base'}</span> equivale.
-          </p>
-          <p className="text-xs text-ink-soft">
-            «Por presentación (PDF)»: en los PDF (pedidos, ventas, compras, ajustes, transferencias y préstamos)
-            la línea sale en esa presentación —5 sacos × S/ 295.00— y no en unidad base —250 kg × S/ 5.90—.
-            Sin marcar, sale en unidad base.
-          </p>
         </div>
         <Button variant="secondary" size="sm" onClick={agregar} disabled={disabled}>
           <Plus size={15} />

@@ -36,7 +36,7 @@ import { ApiError } from '../../lib/apiClient'
 import { exportarExcel, valorDe } from '../../lib/excel'
 import { usePermisos } from '../../lib/permisos'
 import { CatalogoSimple } from './CatalogoSimple'
-import { CostoReferenciaInput } from './CostoReferenciaInput'
+import { ValorPorPresentacionInput } from './ValorPorPresentacionInput'
 import { PresentacionesEditor } from './PresentacionesEditor'
 import type { FilaPresentacion } from './PresentacionesEditor'
 import { categoriaApi, marcaApi, productoApi, unidadApi } from './productoApi'
@@ -77,6 +77,7 @@ const VACIO = {
   contenido: '',
   contenidoUnidadId: 0,
   costoReferencia: '',
+  precioReferencia: '',
   pesoUnidadBase: '',
   stockMinimo: '',
 }
@@ -113,6 +114,8 @@ export function ProductosPage() {
 
   // En que presentacion se escribe el costo de referencia: el saco, la caja.
   const [presentacionCosto, setPresentacionCosto] = useState(0)
+  const [presentacionPrecio, setPresentacionPrecio] = useState(0)
+  const [presentacionPeso, setPresentacionPeso] = useState(0)
   /** Si el producto se compra por su unidad base o solo por bulto. */
   const [baseSeCompra, setBaseSeCompra] = useState(true)
   // Hay productos que se compran y se venden por caja y no por unidad suelta:
@@ -206,6 +209,7 @@ export function ProductosPage() {
       contenido: producto.contenido ? String(producto.contenido) : '',
       contenidoUnidadId: producto.contenidoUnidadId ?? 0,
       costoReferencia: producto.costoReferencia ? String(producto.costoReferencia) : '',
+      precioReferencia: producto.precioReferencia ? String(producto.precioReferencia) : '',
       pesoUnidadBase: producto.pesoUnidadBase ? String(producto.pesoUnidadBase) : '',
       stockMinimo: producto.stockMinimo ? String(producto.stockMinimo) : '',
     })
@@ -324,17 +328,27 @@ export function ProductosPage() {
     0
 
   /*
-   * Lo que pesa la presentación de compra, para verlo al escribir el peso.
+   * Sobre qué presentación se escribe el precio de venta.
    *
-   * El peso se guarda por unidad base, que en una caja de 12 no dice mucho: mostrar "un Caja 12 LT
-   * pesa 11.04 kg" es lo que deja comprobar de un vistazo si el número está bien.
+   * Es su propio estado y no el del costo: un producto puede comprarse por saco y venderse por
+   * kilo, y compartir el selector obligaría a que el precio se escribiera sobre la presentación en
+   * la que se compra.
    */
-  const pesoDePresentacion = (() => {
-    const peso = Number(form.pesoUnidadBase)
-    const presentacion = comprables.find((p) => p.id === presentacionDelCosto)
-    if (!peso || !presentacion || presentacion.factor === 1) return ''
-    return `${presentacion.nombre} pesa ${Number((peso * presentacion.factor).toFixed(3))} kg`
-  })()
+  const vendibles = presentacionesDelForm.filter((p) => p.esVenta && p.activo)
+  const presentacionDelPrecio =
+    vendibles.find((p) => p.id === presentacionPrecio)?.id ?? vendibles[0]?.id ?? 0
+
+  /*
+   * El peso se escribe sobre CUALQUIER presentación, no solo las de compra o venta.
+   *
+   * Un saco pesa 50 kg se compre, se venda o se quede en el almacén: filtrar aquí obligaría a
+   * teclear el peso del kilo —1— cuando lo que el usuario tiene delante es el saco.
+   */
+  const presentacionDelPeso =
+    presentacionesDelForm.find((p) => p.id === presentacionPeso)?.id ??
+    presentacionesDelForm.find((p) => p.esVenta || p.esCompra)?.id ??
+    presentacionesDelForm[0]?.id ??
+    0
 
   const guardar = async () => {
 
@@ -365,6 +379,7 @@ export function ProductosPage() {
       contenido: form.contenido ? Number(form.contenido) : null,
       contenidoUnidadId: form.contenido ? form.contenidoUnidadId || null : null,
       costoReferencia: form.costoReferencia ? Number(form.costoReferencia) : null,
+      precioReferencia: form.precioReferencia ? Number(form.precioReferencia) : null,
       pesoUnidadBase: form.pesoUnidadBase ? Number(form.pesoUnidadBase) : null,
       controlaStock: true,
       stockMinimo: Number(form.stockMinimo || 0),
@@ -889,7 +904,7 @@ export function ProductosPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   {/* Se escribe como lo cobra el proveedor y se guarda por
                       unidad base, igual que los precios de venta. */}
-                  <CostoReferenciaInput
+                  <ValorPorPresentacionInput
                     valor={form.costoReferencia}
                     onChange={(v) => setForm({ ...form, costoReferencia: v })}
                     presentacionId={presentacionDelCosto}
@@ -897,6 +912,24 @@ export function ProductosPage() {
                     presentaciones={presentacionesDelForm}
                     unidadBase={unidadBase || 'unidad base'}
                     disabled={guardando}
+                  />
+
+                  {/*
+                    A cuánto se vende, como respaldo.
+                    Es el precio que sale cuando el pedido no lleva lista, o cuando la lista no
+                    tiene cargada esa presentación: sin esto la línea salía en cero.
+                  */}
+                  <ValorPorPresentacionInput
+                    valor={form.precioReferencia}
+                    onChange={(v) => setForm({ ...form, precioReferencia: v })}
+                    presentacionId={presentacionDelPrecio}
+                    onPresentacion={setPresentacionPrecio}
+                    presentaciones={presentacionesDelForm}
+                    unidadBase={unidadBase || 'unidad base'}
+                    disabled={guardando}
+                    uso="venta"
+                    etiqueta="Precio de venta"
+                    descripcion="Es el que sale cuando no hay lista de precios, o cuando la lista no tiene esa presentación. La lista manda sobre él."
                   />
 
                   <Input
@@ -912,25 +945,22 @@ export function ProductosPage() {
                   />
 
                   {/*
-                    El peso de UNA unidad base, en kilos.
-                    De aquí sale solo lo que pesa cualquier cantidad —una caja, un pedido, el
-                    camión entero— sin anotarlo en cada presentación.
+                    Cuánto pesa, escrito sobre la presentación que se tiene delante.
+                    Se guarda por unidad base, y de ahí sale solo lo que pesa cualquier cantidad
+                    —una caja, un pedido, el camión entero— sin anotarlo en cada presentación.
                   */}
-                  <Input
-                    label="Peso"
-                    optional
-                    type="number"
-                    step="0.0001"
-                    min="0"
-                    placeholder="0.92"
-                    hint={
-                      <span className="text-xs text-ink-soft">
-                        kg por {unidadBase || 'unidad base'}
-                        {pesoDePresentacion && ` · un ${pesoDePresentacion}`}
-                      </span>
-                    }
-                    value={form.pesoUnidadBase}
-                    onChange={(e) => setForm({ ...form, pesoUnidadBase: e.target.value })}
+                  <ValorPorPresentacionInput
+                    valor={form.pesoUnidadBase}
+                    onChange={(v) => setForm({ ...form, pesoUnidadBase: v })}
+                    presentacionId={presentacionDelPeso}
+                    onPresentacion={setPresentacionPeso}
+                    presentaciones={presentacionesDelForm}
+                    unidadBase={unidadBase || 'unidad base'}
+                    disabled={guardando}
+                    uso="todas"
+                    magnitud="peso"
+                    etiqueta="Peso"
+                    descripcion="De aquí sale cuánto pesa un pedido entero, para cargar el camión."
                   />
                 </div>
 
