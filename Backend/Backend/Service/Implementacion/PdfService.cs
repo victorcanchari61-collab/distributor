@@ -178,9 +178,7 @@ public class PdfService(
             EtiquetaImporte = "Costo",
             Lineas =
             [
-                .. orden.Detalle.Select(l => new LineaImprimible(
-                    l.Codigo, l.Producto, l.Presentacion, l.CantidadPresentacion,
-                    l.Presentacion ?? l.UnidadBase, CostoPorPresentacion(l), l.CostoTotal)),
+                .. orden.Detalle.Select(LineaCompra),
             ],
             Total = orden.Total,
             Observacion = orden.Observacion,
@@ -226,9 +224,7 @@ public class PdfService(
             EtiquetaImporte = "Costo",
             Lineas =
             [
-                .. compra.Detalle.Select(l => new LineaImprimible(
-                    l.Codigo, l.Producto, l.Presentacion, l.CantidadPresentacion,
-                    l.Presentacion ?? l.UnidadBase, CostoPorPresentacion(l), l.CostoTotal)),
+                .. compra.Detalle.Select(LineaCompra),
             ],
             Total = compra.Total,
             Pagos = [.. compra.Pagos.Where(p => !p.Anulado).Select(p => new PagoImprimible(p.MetodoPago, p.Monto))],
@@ -561,6 +557,24 @@ public class PdfService(
      * las presentaciones: da el mismo numero sin arrastrar el redondeo de la
      * division por el factor.
      */
+    /*
+     * Una línea de compra, por unidad base o por presentación según el marcador de la presentación.
+     *
+     * Sin marcar sale en unidad base ("125 KG × 5.60"); marcada, por lo que se compró ("5 × ½ saco
+     * a 140.00"). El importe es el mismo en los dos casos.
+     */
+    private static LineaImprimible LineaCompra(LineaCompraResponse l) =>
+        l.PrecioPorPresentacion && l.CantidadPresentacion > 0
+            ? new(l.Codigo, l.Producto, l.Presentacion, l.CantidadPresentacion,
+                l.Presentacion ?? l.UnidadBase, CostoPorPresentacion(l), l.CostoTotal)
+            : new(l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.CostoUnitario, l.CostoTotal);
+
+    private static LineaImprimible LineaCompra(CompraDetalleResponse l) =>
+        l.PrecioPorPresentacion && l.CantidadPresentacion > 0
+            ? new(l.Codigo, l.Producto, l.Presentacion, l.CantidadPresentacion,
+                l.Presentacion ?? l.UnidadBase, CostoPorPresentacion(l), l.CostoTotal)
+            : new(l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.CostoUnitario, l.CostoTotal);
+
     private static decimal CostoPorPresentacion(LineaCompraResponse l) =>
         l.CantidadPresentacion == 0 ? 0 : Math.Round(l.CostoTotal / l.CantidadPresentacion, 2);
 
@@ -585,14 +599,16 @@ public class PdfService(
     /*
      * La linea, tal como se vendio.
      *
-     * Con la cantidad y el precio de la PRESENTACION, no los de unidad base:
-     * el cliente pidio un saco a 212.50, y "50 · 4.25" no lo reconoce nadie.
-     * La unidad base sigue guardada para el stock y los margenes, pero el
-     * papel es del cliente.
+     * Por defecto sale en unidad base ("250 KG × 5.90"). Si la presentacion lleva el marcador "Por
+     * presentacion (PDF)", sale con la cantidad y el precio de la PRESENTACION —"5 sacos a 295.00"—,
+     * que es lo que el cliente pidio: el marcador se enciende en las que se venden asi. El importe no
+     * cambia; la unidad base sigue guardada para el stock y los margenes.
      */
     private static LineaImprimible Linea(LineaVentaResponse l) =>
-        new(l.Codigo, l.Producto, l.Presentacion, l.CantidadPresentacion,
-            l.Presentacion ?? l.UnidadBase, l.PrecioPresentacion, l.Subtotal);
+        l.PrecioPorPresentacion
+            ? new(l.Codigo, l.Producto, l.Presentacion, l.CantidadPresentacion,
+                l.Presentacion ?? l.UnidadBase, l.PrecioPresentacion, l.Subtotal)
+            : new(l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.PrecioUnitario, l.Subtotal);
 
     private static byte[] Generar(DocumentoImprimible doc, FormatoPdf formato)
     {

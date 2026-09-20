@@ -53,11 +53,12 @@ public class ProductoPresentacion
     public bool PredeterminadaCompra { get; set; }
 
     /// <summary>
-    /// En los documentos de inventario impresos (ajustes, transferencias, préstamos) la línea sale
-    /// por ESTA presentación —150 cajas a S/ 83.00— en vez de por unidad base —1,800 a S/ 6.92—.
+    /// En los PDF —pedidos, ventas, órdenes de compra, compras, ajustes, transferencias y
+    /// préstamos— la línea sale por ESTA presentación —5 sacos a S/ 295.00— en vez de por unidad
+    /// base —250 kg a S/ 5.90—.
     ///
-    /// Apagado por defecto para que nada cambie. Las ventas y las compras no lo necesitan: ya se
-    /// imprimen por presentación, que es lo que pidió o compró la persona.
+    /// Apagado por defecto: sin marcar, el papel sale en unidad base. Se enciende en las
+    /// presentaciones que se piden o se cuentan así; el importe de la línea no cambia.
     /// </summary>
     public bool PrecioPorPresentacion { get; set; }
 

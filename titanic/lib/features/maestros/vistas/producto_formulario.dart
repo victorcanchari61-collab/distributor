@@ -907,8 +907,9 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
                     onChanged: (v) => setSheetState(() => precioPorPresentacion = v ?? false),
                     title: const Text('Por presentación (PDF)', style: TextStyle(fontSize: 13)),
                     subtitle: const Text(
-                      'En los PDF de ajustes, transferencias y préstamos la línea sale '
-                      'en esta presentación y no en unidad base.',
+                      'En los PDF (pedidos, ventas, compras, ajustes, transferencias y '
+                      'préstamos) la línea sale en esta presentación. Sin marcar, '
+                      'sale en unidad base.',
                       style: TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
                     ),
                     controlAffinity: ListTileControlAffinity.leading,

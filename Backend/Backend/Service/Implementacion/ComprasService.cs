@@ -572,6 +572,7 @@ public class ComprasService : IComprasService
         PresentacionId = d.PresentacionId,
         Presentacion = d.Presentacion?.Nombre,
         CantidadPresentacion = d.CantidadPresentacion,
+        PrecioPorPresentacion = d.Presentacion?.PrecioPorPresentacion ?? false,
         Cantidad = d.Cantidad,
         CostoUnitario = d.CostoUnitario,
         CostoTotal = Math.Round(d.Cantidad * d.CostoUnitario, 2)
@@ -602,6 +603,7 @@ public class ComprasService : IComprasService
         PresentacionId = d.PresentacionId,
         Presentacion = d.Presentacion?.Nombre,
         CantidadPresentacion = d.CantidadPresentacion,
+        PrecioPorPresentacion = d.Presentacion?.PrecioPorPresentacion ?? false,
         Cantidad = d.Cantidad,
         CostoUnitario = d.CostoUnitario,
         CostoTotal = Math.Round(d.Cantidad * d.CostoUnitario, 2),

@@ -220,8 +220,9 @@ export function PresentacionesEditor({
             <span className="font-semibold">{unidadBase || 'unidad base'}</span> equivale.
           </p>
           <p className="text-xs text-ink-soft">
-            «Por presentación (PDF)»: en los PDF de ajustes, transferencias y préstamos la línea sale en esa
-            presentación —150 cajas × S/ 83.00— y no en unidad base —1,800 × S/ 6.92—.
+            «Por presentación (PDF)»: en los PDF (pedidos, ventas, compras, ajustes, transferencias y préstamos)
+            la línea sale en esa presentación —5 sacos × S/ 295.00— y no en unidad base —250 kg × S/ 5.90—.
+            Sin marcar, sale en unidad base.
           </p>
         </div>
         <Button variant="secondary" size="sm" onClick={agregar} disabled={disabled}>
