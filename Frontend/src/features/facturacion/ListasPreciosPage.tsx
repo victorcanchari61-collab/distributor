@@ -436,8 +436,29 @@ export function ListasPreciosPage() {
       ),
     },
     {
+      /*
+       * El costo por unidad base, siempre a la vista.
+       *
+       * "Costo" de arriba es el de la presentación —S/ 280.00 el saco— y no dice cuánto cuesta
+       * el kilo, que es contra lo que se compara el precio por kilo de al lado. Es el mismo en
+       * todas las filas del producto, pero repetirlo aquí evita tener que dividir a mano.
+       */
+      key: 'costoBase',
+      label: `Costo por ${producto?.unidadBase ?? 'unidad'}`,
+      align: 'right',
+      width: 110,
+      render: () => (
+        <span
+          className="text-sm font-medium text-ink"
+          title={producto?.costoReferencia == null ? 'Este producto no tiene costo de referencia' : undefined}
+        >
+          {producto?.costoReferencia != null ? `S/ ${producto.costoReferencia.toFixed(2)}` : '—'}
+        </span>
+      ),
+    },
+    {
       key: 'porBase',
-      label: `Por ${producto?.unidadBase ?? 'unidad'}`,
+      label: `Precio por ${producto?.unidadBase ?? 'unidad'}`,
       align: 'right',
       width: 110,
       render: (fila) => {
