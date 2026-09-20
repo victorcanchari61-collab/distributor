@@ -4,19 +4,19 @@ import { Banknote, Check, Pencil, Plus, Star, Tag, Trash2 } from 'lucide-react'
 import {
   Alert,
   Badge,
+  BuscadorCampo,
   Button,
   Input,
   ListPage,
   Modal,
   RowAction,
-  Select,
   StatCard,
   SysDataTable,
   Tabs,
   useConfirmacion,
   useToast,
 } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
@@ -120,6 +120,12 @@ export function ListasPreciosPage() {
 
   const lista = listas.find((l) => l.id === listaActiva) ?? null
   const producto = productos.find((p) => p.id === precioForm.productoId)
+
+  const opcionesProducto: OpcionBuscador<number>[] = productos.map((p) => ({
+    item: p.id,
+    label: p.nombre,
+    detalle: p.codigo,
+  }))
 
   /**
    * Borra la lista abierta.
@@ -822,18 +828,15 @@ export function ListasPreciosPage() {
           <div className="flex flex-col gap-4">
 
             <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
-              <Select
+              {/* Se escribe para buscar: el catálogo tiene cientos de productos y una lista plana obligaba a recorrerla. */}
+              <BuscadorCampo
                 label="Producto"
-                value={precioForm.productoId}
-                onChange={(e) => cambiarProductoMasivo(Number(e.target.value))}
-              >
-                <option value={0}>Elige un producto</option>
-                {productos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.codigo} — {p.nombre}
-                  </option>
-                ))}
-              </Select>
+                value={precioForm.productoId || null}
+                onChange={(id) => cambiarProductoMasivo(id ?? 0)}
+                opciones={opcionesProducto}
+                placeholder="Nombre o código..."
+                vacio="Ningún producto coincide"
+              />
 
               {producto?.costoReferencia != null && (
                 <div className="flex items-end gap-2">
