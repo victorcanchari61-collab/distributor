@@ -908,9 +908,11 @@ export function ProductosPage() {
                 </div>
 
                 {/*
-                  Tercera fila de la misma rejilla: el costo —lo que pagas— y
-                  el stock minimo —cuando avisar—. Cada uno solo ocupaba media
-                  pantalla y dejaba la otra mitad vacia.
+                  Los cuatro numeros del producto, en dos filas de dos.
+
+                  Los tres que se escriben por presentacion llevan el selector al lado del numero,
+                  no debajo, para que todas las celdas midan lo mismo y la rejilla no salga
+                  descuadrada segun cuantas presentaciones tenga cada uno.
                 */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   {/* Se escribe como lo cobra el proveedor y se guarda por

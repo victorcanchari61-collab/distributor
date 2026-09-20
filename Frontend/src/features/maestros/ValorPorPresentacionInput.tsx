@@ -134,51 +134,50 @@ export function ValorPorPresentacionInput({
 
   return (
     /*
-      Apilado, no en dos columnas: el selector casi nunca esta —solo si se
-      compra o se vende de varias formas— y una rejilla fija dejaba media fila
-      vacia. Asi el campo entra como uno mas de la rejilla del formulario.
+      El numero y la presentacion, en la MISMA fila y bajo una sola etiqueta.
+
+      Antes el selector iba debajo, en su propio campo con su propia etiqueta: el costo no lo
+      mostraba (se compra de una sola forma) y el precio si, asi que las dos columnas del
+      formulario quedaban con alturas distintas y la rejilla salia descuadrada. Asi cada campo
+      ocupa una fila y todo alinea.
     */
-    <div className="flex flex-col gap-3">
-      <Input
-        // La etiqueta dice de que presentacion es el numero, en vez de dejarlo
-        // a la imaginacion: "S/ 170" a secas no se sabe si es el saco o el kilo.
-        label={`${etiqueta}${elegida ? ` — un ${elegida.nombre}` : ''}`}
-        optional
-        type="number"
-        step={magnitud === 'peso' ? '0.001' : '0.01'}
-        min="0"
-        placeholder={marcador ?? (magnitud === 'peso' ? '50' : '170.00')}
-        value={texto}
-        onChange={(e) => escribir(e.target.value)}
-        disabled={disabled}
-      />
+    <div className="w-full min-w-0">
+      <div className="mb-1.5 flex min-h-5 items-center gap-2">
+        <span className="ui-label truncate">
+          {etiqueta}
+          <span className="ml-1.5 font-normal text-ink-soft">(opcional)</span>
+        </span>
+      </div>
 
-      {/*
-        El selector SOLO aparece si de verdad hay algo que elegir.
-
-        Las opciones salen de las columnas «Se compra»/«Se vende» de la pestaña
-        Presentaciones, que es donde eso se declara: esto es solo una pregunta
-        de seguimiento sobre el valor.
-      */}
-      {opciones.length > 1 && (
-        <Desplegable
-          label={
-            magnitud === 'peso'
-              ? 'Ese peso es de'
-              : uso === 'venta'
-                ? 'Ese precio es de'
-                : 'Ese costo es de'
-          }
-          value={presentacionId}
-          onChange={(v) => cambiarPresentacion(Number(v))}
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,9.5rem)] gap-2">
+        <Input
+          type="number"
+          step={magnitud === 'peso' ? '0.001' : '0.01'}
+          min="0"
+          placeholder={marcador ?? (magnitud === 'peso' ? '50' : '170.00')}
+          value={texto}
+          onChange={(e) => escribir(e.target.value)}
           disabled={disabled}
-          options={opciones.map((p) => ({
-            value: p.id,
-            label: p.nombre,
-            detalle: `${p.factor} ${unidadBase}`,
-          }))}
         />
-      )}
+
+        {/*
+          Siempre, aunque solo haya una presentacion: "170" a secas no se sabe si es el saco o el
+          kilo, y con una sola opcion el selector es justamente donde se lee cual.
+        */}
+        {opciones.length > 0 && (
+          <Desplegable
+            className="min-w-0"
+            value={presentacionId}
+            onChange={(v) => cambiarPresentacion(Number(v))}
+            disabled={disabled || opciones.length === 1}
+            options={opciones.map((p) => ({
+              value: p.id,
+              label: p.nombre,
+              detalle: `${p.factor} ${unidadBase}`,
+            }))}
+          />
+        )}
+      </div>
     </div>
   )
 }
