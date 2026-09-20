@@ -9,4 +9,7 @@ public class CreateUsuarioRequest
 
     /// <summary>Id de la tabla Roles.</summary>
     public int RolId { get; set; }
+
+    /// <summary>Su ficha en Empleados. Opcional: hay cuentas que no son de nadie del padrón.</summary>
+    public int? EmpleadoId { get; set; }
 }

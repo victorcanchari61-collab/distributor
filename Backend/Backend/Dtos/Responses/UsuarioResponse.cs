@@ -16,6 +16,10 @@ public class UsuarioResponse
     /// <summary>Nombre del rol, para no obligar al cliente a otra llamada.</summary>
     public string Rol { get; set; } = string.Empty;
 
+    /// <summary>Su ficha de empleado, si la tiene enlazada.</summary>
+    public int? EmpleadoId { get; set; }
+    public string? Empleado { get; set; }
+
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 }

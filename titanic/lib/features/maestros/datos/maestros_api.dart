@@ -1,10 +1,11 @@
 import '../../../core/red/cliente_api.dart';
 import 'catalogo.dart';
 import 'cliente.dart';
+import 'empleado.dart';
 import 'producto.dart';
 import 'proveedor.dart';
 
-/// Llamadas de clientes, proveedores y productos.
+/// Llamadas de clientes, proveedores, productos y empleados.
 class MaestrosApi {
   const MaestrosApi(this._api);
 
@@ -73,6 +74,54 @@ class MaestrosApi {
     await _api.patch('/proveedor/$id/${activo ? 'activar' : 'desactivar'}')
         as Map<String, dynamic>,
   );
+
+  // --- Empleados ---
+
+  /// GET /api/empleado
+  Future<List<Empleado>> empleados() async {
+    final datos = await _api.get('/empleado') as List;
+    return datos
+        .map((e) => Empleado.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// GET /api/empleado/opciones
+  ///
+  /// Solo los activos, para elegir uno al crear un usuario. Lo puede pedir
+  /// quien administra usuarios aunque no tenga el maestro de Empleados: si no,
+  /// no podria enlazar la cuenta con su ficha.
+  Future<List<EmpleadoOpcion>> opcionesEmpleado() async {
+    final datos = await _api.get('/empleado/opciones') as List;
+    return datos
+        .map((e) => EmpleadoOpcion.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// POST /api/empleado
+  Future<Empleado> crearEmpleado(Map<String, dynamic> cuerpo) async =>
+      Empleado.desdeJson(
+        await _api.post('/empleado', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
+
+  /// PUT /api/empleado/{id}
+  Future<Empleado> actualizarEmpleado(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => Empleado.desdeJson(
+    await _api.put('/empleado/$id', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
+
+  /// PATCH /api/empleado/{id}/activar | /desactivar
+  Future<Empleado> cambiarEstadoEmpleado(int id, {required bool activo}) async =>
+      Empleado.desdeJson(
+        await _api.patch('/empleado/$id/${activo ? 'activar' : 'desactivar'}')
+            as Map<String, dynamic>,
+      );
+
+  /// DELETE /api/empleado/{id}
+  ///
+  /// Borrado definitivo. El backend lo rechaza si una cuenta usa la ficha.
+  Future<void> eliminarEmpleado(int id) => _api.delete('/empleado/$id');
 
   // --- Productos ---
 

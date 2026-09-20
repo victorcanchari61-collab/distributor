@@ -69,12 +69,17 @@ class UsuariosControlador extends AsyncNotifier<List<Usuario>> {
 
   /// Activa o desactiva. El backend no tiene un PATCH de estado para usuarios:
   /// se reenvia el usuario completo con el `activo` cambiado.
+  ///
+  /// Va TODO lo que tiene, tambien el empleado enlazado: el PUT reemplaza el
+  /// registro, asi que un campo que no viaje se borra —desactivar a alguien le
+  /// desharia el enlace con su ficha sin que nadie lo pidiera.
   Future<void> cambiarEstado(Usuario usuario) async {
     await ref.read(configApiProvider).actualizarUsuario(usuario.id, {
       'nombre': usuario.nombre,
       'email': usuario.email,
       'dni': usuario.dni,
       'rolId': usuario.rolId,
+      'empleadoId': usuario.empleadoId,
       'activo': !usuario.activo,
     });
     await recargar();

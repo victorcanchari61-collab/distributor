@@ -75,6 +75,14 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   // El dia de visita y la ruta salen del cliente: cambiarlos rehace la lista.
   'clientes': [clientesProvider, visitasProvider, resumenVisitasProvider],
   'proveedores': [proveedoresProvider],
+  // El selector del formulario de usuario sale de `opciones`, no del listado:
+  // se invalidan los dos o el que acaban de dar de alta no se podria elegir
+  // hasta salir y volver a entrar.
+  'empleados': [
+    empleadosProvider,
+    empleadosOpcionesProvider,
+    usuariosProvider,
+  ],
   'categorias': [categoriasProvider, productosProvider],
   'marcas': [marcasProvider, productosProvider],
   'unidades': [unidadesProvider, productosProvider],
@@ -108,7 +116,9 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     solicitudesProvider,
   ],
   'roles': [misPermisosProvider, rolesProvider, usuariosProvider],
-  'usuarios': [usuariosProvider],
+  // Enlazar una cuenta a una ficha cambia quien tiene usuario en Empleados, y
+  // deja ocupada esa opcion para el resto.
+  'usuarios': [usuariosProvider, empleadosProvider, empleadosOpcionesProvider],
 };
 
 /// Vuelve a pedir lo que ese módulo dejó viejo.

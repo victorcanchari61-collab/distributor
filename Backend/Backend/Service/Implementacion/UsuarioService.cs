@@ -93,17 +93,21 @@ public class UsuarioService : IUsuarioService
             throw new BadRequestException("El rol indicado está desactivado");
         }
 
+        var empleado = await ResolverEmpleadoAsync(request.EmpleadoId, null);
+
         var usuario = new Usuario
         {
             Nombre = request.Nombre,
             Email = request.Email,
             Dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni,
-            RolId = rol.Id
+            RolId = rol.Id,
+            EmpleadoId = empleado?.Id
         };
         usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.Password);
 
         await _repository.AddAsync(usuario);
         usuario.Rol = rol;
+        usuario.Empleado = empleado;
         var response = MapToResponse(usuario);
         await _notificador.AvisarAsync("usuarios", "creado", response);
         return response;
@@ -146,10 +150,14 @@ public class UsuarioService : IUsuarioService
             throw new BadRequestException("El rol indicado está desactivado");
         }
 
+        var empleado = await ResolverEmpleadoAsync(request.EmpleadoId, id);
+
         usuario.Nombre = request.Nombre;
         usuario.Email = request.Email;
         usuario.Dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni;
         usuario.RolId = rol.Id;
+        // Null desenlaza la ficha: la cuenta deja de ser de esa persona.
+        usuario.EmpleadoId = empleado?.Id;
         usuario.Activo = request.Activo;
 
         if (!string.IsNullOrWhiteSpace(request.Password))
@@ -159,6 +167,7 @@ public class UsuarioService : IUsuarioService
 
         await _repository.UpdateAsync(usuario);
         usuario.Rol = rol;
+        usuario.Empleado = empleado;
         var response = MapToResponse(usuario);
         await _notificador.AvisarAsync("usuarios", "actualizado", response);
         return response;
@@ -245,6 +254,34 @@ public class UsuarioService : IUsuarioService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    /*
+     * La ficha de empleado que se quiere enlazar, ya comprobada.
+     *
+     * Sin id no hay nada que enlazar y devuelve null: el enlace es opcional. Con id se exige que
+     * exista, que esté activa y que no la tenga ya otra cuenta — dos usuarios diciendo ser la misma
+     * persona romperían cualquier reporte por empleado, y el índice único lo rechazaría igual pero
+     * con un error de base de datos que nadie entiende.
+     */
+    private async Task<Empleado?> ResolverEmpleadoAsync(int? empleadoId, int? usuarioEditado)
+    {
+        if (empleadoId is not int id || id <= 0) return null;
+
+        var empleado = await _repository.GetEmpleadoAsync(id)
+            ?? throw new BadRequestException("El empleado indicado no existe");
+
+        if (!empleado.Activo)
+        {
+            throw new BadRequestException("El empleado indicado está desactivado");
+        }
+
+        if (await _repository.GetUsuarioDeEmpleadoAsync(id, usuarioEditado) is { } otro)
+        {
+            throw new ConflictException($"{empleado.NombreCompleto} ya tiene la cuenta de {otro.Nombre}");
+        }
+
+        return empleado;
+    }
+
     private static UsuarioResponse MapToResponse(Usuario usuario)
     {
         return new UsuarioResponse
@@ -257,6 +294,8 @@ public class UsuarioService : IUsuarioService
             Foto = usuario.Foto,
             RolId = usuario.RolId,
             Rol = usuario.Rol?.Nombre ?? string.Empty,
+            EmpleadoId = usuario.EmpleadoId,
+            Empleado = usuario.Empleado?.NombreCompleto,
             Activo = usuario.Activo,
             FechaCreacion = usuario.FechaCreacion
         };

@@ -13,6 +13,8 @@ class Usuario {
     required this.rol,
     required this.activo,
     this.dni,
+    this.empleadoId,
+    this.empleado,
   });
 
   final int id;
@@ -24,9 +26,17 @@ class Usuario {
   /// Nombre del rol: el backend lo manda resuelto para no pedirlo aparte.
   final String rol;
 
+  /// Su ficha en Empleados, si la cuenta pertenece a alguien del padron. Es
+  /// opcional: la de soporte y la del dueño no son de nadie del padron.
+  final int? empleadoId;
+
+  /// Nombre de ese empleado, solo para mostrar.
+  final String? empleado;
+
   final bool activo;
 
-  String get buscable => '$nombre $email ${dni ?? ''} $rol'.toLowerCase();
+  String get buscable =>
+      '$nombre $email ${dni ?? ''} $rol ${empleado ?? ''}'.toLowerCase();
 
   factory Usuario.desdeJson(Map<String, dynamic> json) => Usuario(
     id: json['id'] as int,
@@ -35,6 +45,8 @@ class Usuario {
     dni: json['dni'] as String?,
     rolId: json['rolId'] as int? ?? 0,
     rol: json['rol'] as String? ?? '',
+    empleadoId: json['empleadoId'] as int?,
+    empleado: json['empleado'] as String?,
     activo: json['activo'] as bool? ?? true,
   );
 }

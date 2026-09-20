@@ -4,6 +4,7 @@ import '../../../compartido/estado/filtro_estado.dart';
 import '../../auth/estado/auth_controlador.dart';
 import '../datos/catalogo.dart';
 import '../datos/cliente.dart';
+import '../datos/empleado.dart';
 import '../datos/maestros_api.dart';
 import '../datos/producto.dart';
 import '../datos/proveedor.dart';
@@ -443,3 +444,121 @@ final unidadesPresentacionProductoProvider =
             ..sort();
       return valores;
     });
+
+// --- Empleados ---
+
+final busquedaEmpleadosProvider = StateProvider.autoDispose((ref) => '');
+
+/// Filtros propios de empleados. Null es "todos".
+final cargoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+final areaFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+
+/// null = todos, true = los que entran al sistema, false = los que no.
+final conUsuarioFiltroProvider = StateProvider.autoDispose<bool?>((ref) => null);
+
+final filtrosEmpleadosActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
+  if (ref.watch(cargoFiltroProvider) != null) n++;
+  if (ref.watch(areaFiltroProvider) != null) n++;
+  if (ref.watch(conUsuarioFiltroProvider) != null) n++;
+  return n;
+});
+
+/// Listado de empleados.
+class EmpleadosControlador extends AsyncNotifier<List<Empleado>> {
+  @override
+  Future<List<Empleado>> build() => ref.watch(maestrosApiProvider).empleados();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(maestrosApiProvider).empleados(),
+    );
+  }
+
+  Future<void> guardar({int? id, required Map<String, dynamic> cuerpo}) async {
+    final api = ref.read(maestrosApiProvider);
+    if (id == null) {
+      await api.crearEmpleado(cuerpo);
+    } else {
+      await api.actualizarEmpleado(id, cuerpo);
+    }
+    await recargar();
+  }
+
+  Future<void> cambiarEstado(Empleado empleado) async {
+    await ref
+        .read(maestrosApiProvider)
+        .cambiarEstadoEmpleado(empleado.id, activo: !empleado.activo);
+    await recargar();
+  }
+
+  Future<void> eliminar(Empleado empleado) async {
+    await ref.read(maestrosApiProvider).eliminarEmpleado(empleado.id);
+    await recargar();
+  }
+}
+
+final empleadosProvider =
+    AsyncNotifierProvider<EmpleadosControlador, List<Empleado>>(
+      EmpleadosControlador.new,
+    );
+
+final empleadosFiltradosProvider = Provider.autoDispose<List<Empleado>>((ref) {
+  final todos = ref.watch(empleadosProvider).valueOrNull ?? const <Empleado>[];
+  final texto = ref.watch(busquedaEmpleadosProvider).trim().toLowerCase();
+  final estado = ref.watch(estadoFiltroProvider);
+  final cargo = ref.watch(cargoFiltroProvider);
+  final area = ref.watch(areaFiltroProvider);
+  final conUsuario = ref.watch(conUsuarioFiltroProvider);
+
+  return todos
+      .where((e) => pasaEstado(e.activo, estado))
+      .where((e) => cargo == null || e.cargo == cargo)
+      .where((e) => area == null || e.area == area)
+      .where((e) => conUsuario == null || conUsuario == (e.usuarioId != null))
+      .where((e) => texto.isEmpty || e.buscable.contains(texto))
+      .toList();
+});
+
+/// Cargos y areas que existen en los datos, para armar el filtro sin listas
+/// fijas: cada negocio llama a su gente a su manera.
+final cargosProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(empleadosProvider).valueOrNull ?? const <Empleado>[];
+  final valores =
+      todos
+          .map((e) => e.cargo)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
+});
+
+final areasProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(empleadosProvider).valueOrNull ?? const <Empleado>[];
+  final valores =
+      todos
+          .map((e) => e.area)
+          .whereType<String>()
+          .where((v) => v.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+  return valores;
+});
+
+/// Los empleados para elegir uno al crear un usuario.
+///
+/// No sale del listado de arriba a proposito: quien administra usuarios puede
+/// no tener el maestro de Empleados, y entonces `GET /empleado` le responderia
+/// 403 y el selector quedaria vacio sin explicacion. `opciones` es el endpoint
+/// que si le permiten leer.
+///
+/// `autoDispose` no: el puente de tiempo real lo invalida cuando alguien
+/// enlaza una ficha desde otro equipo.
+final empleadosOpcionesProvider = FutureProvider<List<EmpleadoOpcion>>(
+  (ref) => ref.watch(maestrosApiProvider).opcionesEmpleado(),
+);

@@ -21,7 +21,7 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
     {
         // Activos primero: los desactivados siguen listandose para poder
         // volver a habilitarlos, igual que en clientes y proveedores.
-        return await DbSet.Include(u => u.Rol)
+        return await DbSet.Include(u => u.Rol).Include(u => u.Empleado)
             .OrderByDescending(u => u.Activo)
             .ThenBy(u => u.Nombre)
             .ToListAsync();
@@ -29,11 +29,22 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
 
     public async Task<Usuario?> GetByIdConRolAsync(int id)
     {
-        return await DbSet.Include(u => u.Rol).FirstOrDefaultAsync(u => u.Id == id);
+        return await DbSet.Include(u => u.Rol).Include(u => u.Empleado).FirstOrDefaultAsync(u => u.Id == id);
     }
 
     public async Task<Rol?> GetRolAsync(int rolId)
     {
         return await Context.Roles.FirstOrDefaultAsync(r => r.Id == rolId);
+    }
+
+    public async Task<Empleado?> GetEmpleadoAsync(int empleadoId)
+    {
+        return await Context.Empleados.FirstOrDefaultAsync(e => e.Id == empleadoId);
+    }
+
+    public async Task<Usuario?> GetUsuarioDeEmpleadoAsync(int empleadoId, int? excluirUsuarioId = null)
+    {
+        return await DbSet.AsNoTracking()
+            .FirstOrDefaultAsync(u => u.EmpleadoId == empleadoId && u.Id != excluirUsuarioId);
     }
 }

@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<Provincia> Provincias => Set<Provincia>();
     public DbSet<Distrito> Distritos => Set<Distrito>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
+    public DbSet<Empleado> Empleados => Set<Empleado>();
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<RolPermiso> RolPermisos => Set<RolPermiso>();
@@ -308,6 +309,19 @@ public class AppDbContext : DbContext
                 .WithMany(r => r.Usuarios)
                 .HasForeignKey(u => u.RolId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            /*
+             * Una ficha de empleado, una cuenta como mucho.
+             *
+             * El indice unico deja pasar varios NULL —la mayoria de cuentas no enlaza ninguna— pero
+             * impide que dos usuarios digan ser la misma persona. Restrict: la ficha no se borra
+             * mientras una cuenta la use; el servicio lo explica antes de llegar aqui.
+             */
+            entity.HasIndex(u => u.EmpleadoId).IsUnique();
+            entity.HasOne(u => u.Empleado)
+                .WithMany()
+                .HasForeignKey(u => u.EmpleadoId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Empresa>(entity =>
@@ -468,6 +482,25 @@ public class AppDbContext : DbContext
                 .HasForeignKey(d => d.ProvinciaId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<Empleado>(entity =>
+        {
+            entity.ToTable("Empleados");
+            entity.HasIndex(e => e.Documento).IsUnique();
+            entity.Property(e => e.Documento).HasMaxLength(15).IsRequired();
+            entity.Property(e => e.TipoDoc).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.Nombres).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Apellidos).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Telefono).HasMaxLength(40);
+            entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.Direccion).HasMaxLength(250);
+            entity.Property(e => e.Cargo).HasMaxLength(80);
+            entity.Property(e => e.Area).HasMaxLength(80);
+            entity.Property(e => e.Observacion).HasMaxLength(500);
+
+            // Calculada a partir de nombres y apellidos: no es una columna.
+            entity.Ignore(e => e.NombreCompleto);
+        });
+
         modelBuilder.Entity<Proveedor>(entity =>
         {
             entity.ToTable("Proveedores");
@@ -544,7 +577,18 @@ public class AppDbContext : DbContext
             entity.Property(p => p.Descripcion).HasMaxLength(500);
             entity.Property(p => p.Contenido).HasPrecision(18, 4);
             entity.Property(p => p.StockMinimo).HasPrecision(18, 4);
-            entity.Property(p => p.CostoReferencia).HasPrecision(18, 4);
+            entity.Property(p => p.PesoUnidadBase).HasPrecision(18, 4);
+
+            /*
+             * Ocho decimales, no cuatro.
+             *
+             * El costo se teclea por presentación —S/ 289 el saco de 45.6 kg— y se guarda por unidad
+             * base: 289 / 45.6 = 6.33771930. Con cuatro decimales quedaba 6.3377, y al reabrir el
+             * formulario se multiplicaba de vuelta dando 288.9991 en vez de los 289 que se habían
+             * escrito. No es plata que se cobre: es un divisor, y necesita los decimales para que la
+             * vuelta cierre.
+             */
+            entity.Property(p => p.CostoReferencia).HasPrecision(18, 8);
 
             // Restrict: borrar una categoria o una unidad no puede llevarse
             // productos por delante. El servicio ya avisa antes.

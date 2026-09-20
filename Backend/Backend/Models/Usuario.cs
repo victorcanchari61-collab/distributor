@@ -23,6 +23,16 @@ public class Usuario
     public int RolId { get; set; }
     public Rol? Rol { get; set; }
 
+    /// <summary>
+    /// Su ficha en el maestro de Empleados, si la tiene.
+    ///
+    /// Es OPCIONAL en los dos sentidos: hay empleados que nunca entran al sistema (el estibador) y
+    /// cuentas que no son de nadie del padrón (soporte, el dueño). Enlazarla es lo que permite
+    /// saber quién está detrás de una cuenta sin repetir aquí sus datos personales.
+    /// </summary>
+    public int? EmpleadoId { get; set; }
+    public Empleado? Empleado { get; set; }
+
     public bool Activo { get; set; } = true;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }

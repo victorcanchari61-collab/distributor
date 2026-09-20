@@ -155,6 +155,13 @@ class _TarjetaUsuario extends StatelessWidget {
       widget: AppEtiqueta(usuario.rol, tono: EtiquetaTono.modulo, color: color),
     ),
     CampoDetalle('DNI', usuario.dni, enTarjeta: false),
+    // Se dice siempre: que una cuenta no sea de nadie del padron —soporte, la
+    // del dueño— es un dato, no un campo que falta por llenar.
+    CampoDetalle(
+      'Empleado',
+      usuario.empleado ?? 'Sin empleado',
+      enTarjeta: false,
+    ),
     CampoDetalle(
       'Estado',
       usuario.activo ? 'Activo' : 'Inactivo',

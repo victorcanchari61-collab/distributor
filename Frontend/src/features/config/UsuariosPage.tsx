@@ -14,6 +14,8 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { empleadoApi } from '../maestros'
+import type { EmpleadoOpcion } from '../maestros'
 import { consultaApi } from '../../lib/consultaApi'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
@@ -25,13 +27,14 @@ import type { UsuarioResponse } from './usuarioApi'
 /** Un usuario, tal como lo devuelve el API. */
 export type Usuario = UsuarioResponse
 
-const VACIO = { nombre: '', email: '', password: '', dni: '', rolId: 0 }
+const VACIO = { nombre: '', email: '', password: '', dni: '', rolId: 0, empleadoId: 0 }
 
 export function UsuariosPage() {
   const { puede } = usePermisos()
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [cargando, setCargando] = useState(true)
   const [roles, setRoles] = useState<RolResponse[]>([])
+  const [empleados, setEmpleados] = useState<EmpleadoOpcion[]>([])
 
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<Usuario | null>(null)
@@ -47,6 +50,20 @@ export function UsuariosPage() {
       setRoles((await rolApi.getAll()).filter((r) => r.activo))
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los roles.')
+    }
+  }, [])
+
+  /*
+   * Los empleados para enlazar la cuenta con su ficha.
+   *
+   * Si falla se sigue: el enlace es opcional, y quedarse sin poder crear un usuario porque el
+   * padrón no cargó sería peor que crearlo sin ficha.
+   */
+  const cargarEmpleados = useCallback(async () => {
+    try {
+      setEmpleados(await empleadoApi.opciones())
+    } catch {
+      setEmpleados([])
     }
   }, [])
 
@@ -66,10 +83,12 @@ export function UsuariosPage() {
   useEffect(() => {
     void cargarRoles()
     void cargarUsuarios()
-  }, [cargarRoles, cargarUsuarios])
+    void cargarEmpleados()
+  }, [cargarRoles, cargarUsuarios, cargarEmpleados])
 
   useRealtime('roles', cargarRoles)
   useRealtime('usuarios', cargarUsuarios)
+  useRealtime('empleados', cargarEmpleados)
 
   const activos = usuarios.filter((u) => u.activo).length
   const admins = usuarios.filter((u) => u.rol === 'Administrador').length
@@ -88,8 +107,35 @@ export function UsuariosPage() {
       password: '',
       dni: usuario.dni ?? '',
       rolId: usuario.rolId,
+      empleadoId: usuario.empleadoId ?? 0,
     })
     setAbierto(true)
+  }
+
+  /*
+   * Elegir empleado llena los datos de la cuenta con los de su ficha.
+   *
+   * Se pisa lo que haya, no solo lo vacío: elegir a alguien es decir "esta cuenta es de esta
+   * persona", y al cambiar de empleado los datos del anterior tienen que irse con él. Lo que la
+   * ficha no tiene se deja como está, en vez de borrarlo: un empleado sin correo cargado no debería
+   * vaciar el que se acaba de escribir. "Sin empleado" tampoco borra nada — lo escrito sigue
+   * sirviendo aunque la cuenta no sea de nadie del padrón.
+   */
+  const elegirEmpleado = (empleadoId: number) => {
+    const empleado = empleados.find((e) => e.id === empleadoId)
+
+    setForm((prev) => ({
+      ...prev,
+      empleadoId,
+      ...(empleado
+        ? {
+            nombre: empleado.nombreCompleto,
+            // El código interno de un extranjero no es un DNI: ese campo solo acepta 8 dígitos.
+            dni: empleado.tipoDoc === 'DNI' ? empleado.documento : prev.dni,
+            email: empleado.email ?? prev.email,
+          }
+        : {}),
+    }))
   }
 
   /** Trae de RENIEC el nombre de la persona y llena el campo Nombre. */
@@ -128,6 +174,8 @@ export function UsuariosPage() {
           email: form.email.trim(),
           dni: form.dni || null,
           rolId: form.rolId,
+          // 0 es "sin empleado": desenlaza la ficha.
+          empleadoId: form.empleadoId || null,
           activo: editando.activo,
           // Vacio: el backend deja la contraseña que ya tenia.
           password: form.password || null,
@@ -139,6 +187,7 @@ export function UsuariosPage() {
           password: form.password,
           dni: form.dni || null,
           rolId: form.rolId,
+          empleadoId: form.empleadoId || null,
         })
       }
 
@@ -186,6 +235,18 @@ export function UsuariosPage() {
       label: 'DNI',
       filterable: false,
       render: (row) => row.dni ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'empleado',
+      label: 'Empleado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Con empleado', label: 'Con empleado' },
+        { value: 'Sin empleado', label: 'Sin empleado' },
+      ],
+      value: (row) => (row.empleadoId ? 'Con empleado' : 'Sin empleado'),
+      render: (row) =>
+        row.empleado ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'rol',
@@ -294,6 +355,43 @@ export function UsuariosPage() {
         }
       >
         <div className="flex flex-col gap-4">
+          {/*
+            De quién es esta cuenta, lo primero que se elige.
+
+            Es OPCIONAL: hay cuentas que no son de nadie del padrón —soporte, la del dueño— y
+            empleados que nunca entran al sistema. Va arriba porque al elegir a alguien se llenan
+            solos su DNI, su nombre y su correo, y lo de abajo queda para corregir, no para teclear.
+
+            El que ya tiene cuenta sale en la lista pero no se puede elegir: esconderlo dejaría
+            pensando por qué no aparece, y al editar su propio usuario el selector saldría vacío.
+          */}
+          <label className="block">
+            <span className="ui-label mb-1.5">
+              Empleado <span className="font-normal text-ink-soft">(opcional)</span>
+            </span>
+            <select
+              value={form.empleadoId}
+              onChange={(e) => elegirEmpleado(Number(e.target.value))}
+              className="h-[var(--height-field-md)] w-full cursor-pointer rounded-field border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-ink-soft"
+            >
+              <option value={0}>Sin empleado</option>
+              {empleados.map((e) => {
+                const ocupado = e.usuarioId != null && e.usuarioId !== editando?.id
+                return (
+                  <option key={e.id} value={e.id} disabled={ocupado}>
+                    {e.nombreCompleto}
+                    {e.cargo ? ` — ${e.cargo}` : ''}
+                    {ocupado ? ' (ya tiene usuario)' : ''}
+                  </option>
+                )
+              })}
+            </select>
+            <span className="mt-1.5 block text-xs text-ink-soft">
+              {empleados.length === 0
+                ? 'Todavía no hay empleados registrados. Se dan de alta en Maestros → Empleados.'
+                : 'Al elegirlo se llenan el DNI, el nombre y el correo de su ficha.'}
+            </span>
+          </label>
 
           {/* Un usuario es una persona: siempre DNI. */}
           <DocumentoInput
@@ -355,6 +453,7 @@ export function UsuariosPage() {
               <span className="mt-1.5 block text-xs text-ink-soft">{rolElegido.descripcion}</span>
             )}
           </label>
+
         </div>
       </Modal>
     </ListPage>

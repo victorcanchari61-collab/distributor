@@ -5,13 +5,13 @@ import type { PresentacionResponse } from './productoApi'
 /**
  * El costo por unidad base, dicho por presentación y limpio.
  *
- * Se redondea a 4 decimales porque la multiplicación arrastra basura de coma
- * flotante —S/ 300 el saco no debe volver como 299.99999999999994—, y
- * `Number(...)` quita los ceros que sobran: 280 y no 280.0000.
+ * Dos decimales: es plata, y así vuelve exactamente lo que se escribió. La multiplicación arrastra
+ * basura de coma flotante —S/ 289 el saco volvía como 288.9991— y `Number(...)` quita además los
+ * ceros que sobran: 280 y no 280.00.
  */
 function aPresentacion(costoBase: string, factor: number) {
   if (!costoBase) return ''
-  return String(Number((Number(costoBase) * factor).toFixed(4)))
+  return String(Number((Number(costoBase) * factor).toFixed(2)))
 }
 
 export interface CostoReferenciaInputProps {

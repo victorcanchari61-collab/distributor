@@ -29,6 +29,9 @@ public class ProductoResponse
     /// <summary>Costo habitual por unidad base.</summary>
     public decimal? CostoReferencia { get; set; }
 
+    /// <summary>Cuánto pesa una unidad base, en kilos.</summary>
+    public decimal? PesoUnidadBase { get; set; }
+
     public bool ControlaStock { get; set; }
     public decimal StockMinimo { get; set; }
     public bool Activo { get; set; }

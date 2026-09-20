@@ -54,6 +54,15 @@ public class Producto
     /// </summary>
     public decimal? CostoReferencia { get; set; }
 
+    /// <summary>
+    /// Cuánto pesa UNA unidad base, en kilos.
+    ///
+    /// De aquí sale el peso de cualquier cantidad sin tener que anotarlo en cada presentación: una
+    /// caja de 12 botellas de 0.92 kg pesa 11.04, y un pedido de 10 cajas, 110.4. Sirve para saber
+    /// qué carga lleva el camión. Vacío en lo que no se pesa.
+    /// </summary>
+    public decimal? PesoUnidadBase { get; set; }
+
     /// <summary>Servicios y similares no descuentan stock.</summary>
     public bool ControlaStock { get; set; } = true;
 

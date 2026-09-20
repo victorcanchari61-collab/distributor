@@ -17,6 +17,9 @@ public abstract class ProductoRequestBase
     /// <summary>Costo habitual por unidad base. Referencia, no el del stock.</summary>
     public decimal? CostoReferencia { get; set; }
 
+    /// <summary>Cuánto pesa una unidad base, en kilos.</summary>
+    public decimal? PesoUnidadBase { get; set; }
+
     public bool ControlaStock { get; set; } = true;
     public decimal StockMinimo { get; set; }
 }

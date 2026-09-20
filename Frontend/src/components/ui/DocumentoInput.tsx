@@ -32,6 +32,12 @@ export interface DocumentoInputProps extends Omit<
    * empresa emisora o el DNI de un usuario.
    */
   tipoFijo?: boolean
+  /**
+   * Qué tipos se pueden elegir. Por defecto los tres.
+   *
+   * Un empleado es una persona: ofrecerle RUC invita a un dato que el servidor rechaza después.
+   */
+  tipos?: TipoDocumento[]
   value: string
   onChange: (value: string) => void
   /** Se llama al pulsar Buscar o Enter, con el numero completo. */
@@ -51,6 +57,7 @@ export function DocumentoInput({
   tipo,
   onTipoChange,
   tipoFijo = false,
+  tipos,
   value,
   onChange,
   onBuscar,
@@ -93,7 +100,7 @@ export function DocumentoInput({
                 FIELD_HEIGHT[size],
               )}
             >
-              {(Object.keys(REGLAS) as TipoDocumento[]).map((t) => (
+              {(tipos ?? (Object.keys(REGLAS) as TipoDocumento[])).map((t) => (
                 <option key={t} value={t}>
                   {REGLAS[t].label}
                 </option>

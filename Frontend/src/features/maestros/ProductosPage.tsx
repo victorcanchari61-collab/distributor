@@ -77,6 +77,7 @@ const VACIO = {
   contenido: '',
   contenidoUnidadId: 0,
   costoReferencia: '',
+  pesoUnidadBase: '',
   stockMinimo: '',
 }
 
@@ -205,6 +206,7 @@ export function ProductosPage() {
       contenido: producto.contenido ? String(producto.contenido) : '',
       contenidoUnidadId: producto.contenidoUnidadId ?? 0,
       costoReferencia: producto.costoReferencia ? String(producto.costoReferencia) : '',
+      pesoUnidadBase: producto.pesoUnidadBase ? String(producto.pesoUnidadBase) : '',
       stockMinimo: producto.stockMinimo ? String(producto.stockMinimo) : '',
     })
 
@@ -321,6 +323,19 @@ export function ProductosPage() {
     comprables[0]?.id ??
     0
 
+  /*
+   * Lo que pesa la presentación de compra, para verlo al escribir el peso.
+   *
+   * El peso se guarda por unidad base, que en una caja de 12 no dice mucho: mostrar "un Caja 12 LT
+   * pesa 11.04 kg" es lo que deja comprobar de un vistazo si el número está bien.
+   */
+  const pesoDePresentacion = (() => {
+    const peso = Number(form.pesoUnidadBase)
+    const presentacion = comprables.find((p) => p.id === presentacionDelCosto)
+    if (!peso || !presentacion || presentacion.factor === 1) return ''
+    return `${presentacion.nombre} pesa ${Number((peso * presentacion.factor).toFixed(3))} kg`
+  })()
+
   const guardar = async () => {
 
     if (!form.codigo.trim()) return toast.error('Ingresa el código del producto.')
@@ -350,6 +365,7 @@ export function ProductosPage() {
       contenido: form.contenido ? Number(form.contenido) : null,
       contenidoUnidadId: form.contenido ? form.contenidoUnidadId || null : null,
       costoReferencia: form.costoReferencia ? Number(form.costoReferencia) : null,
+      pesoUnidadBase: form.pesoUnidadBase ? Number(form.pesoUnidadBase) : null,
       controlaStock: true,
       stockMinimo: Number(form.stockMinimo || 0),
     }
@@ -587,7 +603,9 @@ export function ProductosPage() {
           <span className="text-ink-soft">—</span>
         ) : (
           <span>
-            S/ {row.costoReferencia}
+            {/* Dos decimales, salvo que el céntimo se coma el número: el gramo de un sobre
+                de 30 g sale a S/ 0.0025 y "S/ 0.00" no diría nada. */}
+            S/ {row.costoReferencia < 0.01 ? row.costoReferencia.toFixed(4) : row.costoReferencia.toFixed(2)}
             <span className="ml-1 text-xs text-ink-soft">× {row.unidadBase}</span>
           </span>
         ),
@@ -891,6 +909,28 @@ export function ProductosPage() {
                     }
                     value={form.stockMinimo}
                     onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
+                  />
+
+                  {/*
+                    El peso de UNA unidad base, en kilos.
+                    De aquí sale solo lo que pesa cualquier cantidad —una caja, un pedido, el
+                    camión entero— sin anotarlo en cada presentación.
+                  */}
+                  <Input
+                    label="Peso"
+                    optional
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    placeholder="0.92"
+                    hint={
+                      <span className="text-xs text-ink-soft">
+                        kg por {unidadBase || 'unidad base'}
+                        {pesoDePresentacion && ` · un ${pesoDePresentacion}`}
+                      </span>
+                    }
+                    value={form.pesoUnidadBase}
+                    onChange={(e) => setForm({ ...form, pesoUnidadBase: e.target.value })}
                   />
                 </div>
 

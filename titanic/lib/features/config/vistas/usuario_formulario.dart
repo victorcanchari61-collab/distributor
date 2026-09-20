@@ -8,7 +8,10 @@ import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
+import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
+import '../../maestros/datos/empleado.dart';
+import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
@@ -30,6 +33,9 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
   final _password = TextEditingController();
 
   late int? _rolId = widget.usuario?.rolId;
+
+  /// De quien es esta cuenta. Null es "sin empleado".
+  late int? _empleadoId = widget.usuario?.empleadoId;
 
   bool _guardando = false;
   String? _error;
@@ -103,6 +109,10 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
       'email': _email.text.trim(),
       'dni': _dni.text.trim(),
       'rolId': _rolId,
+      // Viaja SIEMPRE, tambien cuando nadie toco el selector: el PUT reemplaza
+      // el registro, asi que no mandarlo desenlazaria la ficha de quien ya la
+      // tenia solo por haber cambiado el nombre.
+      'empleadoId': _empleadoId,
       if (_esNuevo) 'password': _password.text,
       if (!_esNuevo) ...{
         'activo': widget.usuario!.activo,
@@ -127,6 +137,11 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
   @override
   Widget build(BuildContext context) {
     final roles = ref.watch(rolesActivosProvider);
+    // Si el padron no carga se sigue sin el: el enlace es opcional, y quedarse
+    // sin poder crear un usuario porque Empleados fallo seria peor.
+    final empleados =
+        ref.watch(empleadosOpcionesProvider).valueOrNull ??
+        const <EmpleadoOpcion>[];
 
     // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
     // acento del modulo. Sin esto los componentes compartidos y las hojas que
@@ -192,6 +207,40 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
                 'No hay roles activos. Crea uno en Roles antes de dar de alta un usuario.',
               ),
             ],
+            const SizedBox(height: Dimen.espacio4),
+
+            // De quien es esta cuenta. Es OPCIONAL: hay cuentas que no son de
+            // nadie del padron —soporte, la del dueño— y empleados que nunca
+            // entran al sistema.
+            AppSelector<int?>(
+              valor: _empleadoId,
+              etiqueta: 'Empleado (opcional)',
+              icono: Icons.groups_outlined,
+              habilitado: !_guardando,
+              opciones: [
+                const Opcion<int?>(null, 'Sin empleado'),
+                for (final e in empleados)
+                  Opcion<int?>(
+                    e.id,
+                    // El que ya tiene cuenta sale en la lista pero ocupado; el
+                    // suyo propio no, o al editarlo el selector saldria vacio.
+                    e.usuarioId != null && e.usuarioId != widget.usuario?.id
+                        ? '${e.etiqueta} (ya tiene usuario)'
+                        : e.etiqueta,
+                    habilitada:
+                        e.usuarioId == null ||
+                        e.usuarioId == widget.usuario?.id,
+                  ),
+              ],
+              onCambio: (v) => setState(() => _empleadoId = v),
+            ),
+            const SizedBox(height: Dimen.espacio2),
+            Text(
+              empleados.isEmpty
+                  ? 'Todavía no hay empleados registrados. Se dan de alta en Maestros → Empleados.'
+                  : 'Enlaza la cuenta con su ficha en Maestros → Empleados.',
+              style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+            ),
             const SizedBox(height: Dimen.espacio4),
 
             AppCampo(

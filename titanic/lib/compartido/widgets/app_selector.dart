@@ -6,13 +6,20 @@ import '../../core/tema/dimensiones.dart';
 
 /// Una opcion del selector.
 class Opcion<T> {
-  const Opcion(this.valor, this.texto, {this.icono});
+  const Opcion(this.valor, this.texto, {this.icono, this.habilitada = true});
 
   final T valor;
   final String texto;
 
   /// Icono a la izquierda del texto, dentro del menu.
   final IconData? icono;
+
+  /// Se ve pero no se puede elegir.
+  ///
+  /// Para lo que esta ocupado —un empleado que ya tiene cuenta—: esconderlo
+  /// dejaria pensando por que no aparece, y al editar el registro que lo usa
+  /// el selector saldria vacio.
+  final bool habilitada;
 }
 
 /// Selector del sistema, hermano de [AppCampo].
@@ -161,6 +168,7 @@ class AppSelector<T> extends StatelessWidget {
         for (final o in opciones)
           DropdownMenuItem(
             value: o.valor,
+            enabled: o.habilitada,
             child: Row(
               children: [
                 if (o.icono != null) ...[
@@ -172,6 +180,9 @@ class AppSelector<T> extends StatelessWidget {
                     o.texto,
                     maxLines: lineasOpcion,
                     overflow: TextOverflow.ellipsis,
+                    style: o.habilitada
+                        ? null
+                        : const TextStyle(color: Colores.tintaTenue),
                   ),
                 ),
               ],

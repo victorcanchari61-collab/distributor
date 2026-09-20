@@ -4,16 +4,19 @@ using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Backend.Data.Migrations
+namespace Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260920205717_Empleados")]
+    partial class Empleados
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2299,8 +2302,8 @@ namespace Backend.Data.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<decimal?>("CostoReferencia")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("Descripcion")
                         .HasMaxLength(500)
@@ -2316,10 +2319,6 @@ namespace Backend.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("varchar(150)");
-
-                    b.Property<decimal?>("PesoUnidadBase")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("StockMinimo")
                         .HasPrecision(18, 4)

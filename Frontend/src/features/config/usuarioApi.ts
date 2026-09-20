@@ -10,6 +10,9 @@ export interface UsuarioResponse {
   rolId: number
   /** Nombre del rol, resuelto por el backend. */
   rol: string
+  /** Su ficha de empleado, si la tiene enlazada. */
+  empleadoId: number | null
+  empleado: string | null
   activo: boolean
   fechaCreacion: string
 }
@@ -20,6 +23,8 @@ export interface CreateUsuarioRequest {
   password: string
   dni?: string | null
   rolId: number
+  /** A quién pertenece la cuenta. Opcional: hay cuentas que no son de nadie del padrón. */
+  empleadoId?: number | null
 }
 
 export interface UpdateUsuarioRequest {
@@ -27,6 +32,8 @@ export interface UpdateUsuarioRequest {
   email: string
   dni?: string | null
   rolId: number
+  /** Null desenlaza la ficha. */
+  empleadoId?: number | null
   activo: boolean
   /** Vacio deja la contraseña actual. */
   password?: string | null

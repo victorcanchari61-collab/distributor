@@ -9,6 +9,9 @@ public class UpdateUsuarioRequest
     /// <summary>Id de la tabla Roles.</summary>
     public int RolId { get; set; }
 
+    /// <summary>Su ficha en Empleados. Null la desenlaza.</summary>
+    public int? EmpleadoId { get; set; }
+
     public bool Activo { get; set; } = true;
 
     /// <summary>

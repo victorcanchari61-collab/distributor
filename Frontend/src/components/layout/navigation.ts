@@ -111,6 +111,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'maestros.clientes', label: 'Clientes', icon: Contact },
       { id: 'maestros.proveedores', label: 'Proveedores', icon: Building2 },
       { id: 'maestros.productos', label: 'Productos', icon: Package },
+      { id: 'maestros.empleados', label: 'Empleados', icon: Users },
     ],
   },
   {
