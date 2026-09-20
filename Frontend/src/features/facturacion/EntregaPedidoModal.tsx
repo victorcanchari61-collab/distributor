@@ -132,6 +132,14 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
     }
   }, [pedido, lineas])
 
+  // Sin reserva se sale del almacén principal, salvo que se elija otro: quien tiene un solo depósito
+  // (o casi siempre despacha del mismo) no debería tener que buscarlo en cada conversión. Va aparte
+  // del efecto de arriba para no borrar lo entregado si la lista de almacenes se recarga.
+  useEffect(() => {
+    if (!pedido || pedido.reservaStock || almacenId) return
+    setAlmacenId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
+  }, [pedido, almacenes, almacenId])
+
   const cambiar = (id: number, parcial: Partial<Entrega>) => {
     setError('')
     setEntregas((prev) => ({ ...prev, [id]: { ...prev[id], ...parcial } }))

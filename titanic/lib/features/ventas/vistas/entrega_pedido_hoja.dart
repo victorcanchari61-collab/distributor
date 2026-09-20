@@ -12,6 +12,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../finanzas/estado/finanzas_controlador.dart';
+import '../../inventario/datos/almacen.dart';
 import '../../inventario/estado/inventario_controlador.dart';
 import '../../tms/datos/novedad.dart';
 import '../../tms/estado/novedades_controlador.dart';
@@ -146,10 +147,9 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
   @override
   void initState() {
     super.initState();
-    final almacenes = ref.read(almacenesActivosProvider);
-    _almacenId = _conReserva
-        ? widget.pedido.almacenId
-        : (almacenes.length == 1 ? almacenes.first.id : null);
+    // Sin reserva, el principal se pone en el build (ver `_ponerAlmacenPorDefecto`): aquí la lista
+    // de almacenes casi nunca ha llegado todavía.
+    _almacenId = _conReserva ? widget.pedido.almacenId : null;
 
     for (final l in _lineas) {
       l.pres.addListener(_recalcular);
@@ -158,6 +158,29 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
   }
 
   void _recalcular() => setState(() => _error = null);
+
+  /*
+   * Sin reserva se sale del almacén principal, salvo que se elija otro: quien despacha casi siempre
+   * del mismo no debería buscarlo en cada conversión.
+   *
+   * NO se hace en initState: los almacenes llegan por red y ahí la lista suele estar vacía, así que
+   * el campo se quedaba en blanco. Se resuelve en el build, la primera vez que trae algo, y solo esa
+   * vez, para no pisar lo que la persona elija después.
+   */
+  bool _almacenPuesto = false;
+
+  void _ponerAlmacenPorDefecto(List<Almacen> almacenes) {
+    if (_almacenPuesto || almacenes.isEmpty) return;
+    _almacenPuesto = true;
+    if (_conReserva || _almacenId != null) return;
+
+    final principal = almacenes.firstWhere((a) => a.esPrincipal, orElse: () => almacenes.first);
+
+    // En el build no se puede llamar a setState: se agenda para el cuadro siguiente.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _almacenId = principal.id);
+    });
+  }
 
   @override
   void dispose() {
@@ -278,6 +301,7 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
   @override
   Widget build(BuildContext context) {
     final almacenes = ref.watch(almacenesActivosProvider);
+    _ponerAlmacenPorDefecto(almacenes);
     final motivos = ref.watch(opcionesMotivoProvider);
     // Se pide al abrir la hoja, no al entrar en Pago: así ya está al llegar.
     final metodos = ref.watch(metodosPagoOpcionesProvider);

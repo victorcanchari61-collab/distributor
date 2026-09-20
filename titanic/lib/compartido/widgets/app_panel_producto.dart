@@ -265,16 +265,49 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
     );
     if (elegidos == null || elegidos.isEmpty) return;
 
+    /*
+     * El precio se pide a la lista igual que al agregar de a uno: sin esto todo lo que entraba por
+     * la búsqueda avanzada quedaba en cero y había que teclear cada precio a mano. Se piden juntos
+     * y un precio que no llegue no frena a los demás.
+     */
+    final resolver = widget.resolverPrecio;
+    final importes = await Future.wait([
+      for (final e in elegidos) _precioDeLista(resolver, e),
+    ]);
+    if (!mounted) return;
+
     widget.onAgregar([
-      for (final e in elegidos)
+      for (var i = 0; i < elegidos.length; i++)
         LineaElegida(
-          producto: e.producto,
-          presentacionId: e.presentacionId,
-          presentacion: _nombreDe(e.producto, e.presentacionId),
-          cantidad: e.cantidad,
-          importe: e.importe,
+          producto: elegidos[i].producto,
+          presentacionId: elegidos[i].presentacionId,
+          presentacion: _nombreDe(elegidos[i].producto, elegidos[i].presentacionId),
+          cantidad: elegidos[i].cantidad,
+          importe: importes[i] ?? elegidos[i].importe,
         ),
     ]);
+  }
+
+  /// El precio de la lista para una selección de la búsqueda avanzada, o null si no lo hay.
+  Future<double?> _precioDeLista(
+    Future<double?> Function(int presentacionId, double cantidad)? resolver,
+    SeleccionProducto e,
+  ) async {
+    if (resolver == null) return null;
+
+    var real = e.presentacionId;
+    if (real == 0) {
+      // La unidad base tiene su propia presentación, con su propio precio.
+      final base = e.producto.presentaciones.where((p) => p.esBase);
+      real = base.isNotEmpty ? base.first.id : 0;
+    }
+    if (real == 0) return null;
+
+    try {
+      return await resolver(real, e.cantidad);
+    } catch (_) {
+      return null;
+    }
   }
 
   String _nombreDe(Producto p, int presentacionId) {

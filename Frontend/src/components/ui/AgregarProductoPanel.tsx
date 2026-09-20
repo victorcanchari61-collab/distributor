@@ -296,17 +296,27 @@ export function AgregarProductoPanel({
         reservado={reservado}
         uso={uso}
         onAgregar={(selecciones) => {
-          selecciones.forEach(({ producto, presentacionId, cantidad }) =>
-            onAgregar({
-              id: idUnico(),
-              productoId: producto.id,
-              presentacionId,
-              cantidad: String(cantidad),
-              costo: '',
-              lote: '',
-              fechaVencimiento: '',
+          /*
+           * El precio se pide a la lista igual que al agregar de a uno: sin esto, todo lo que
+           * entraba por esta búsqueda quedaba en cero y había que teclear cada precio a mano.
+           * Se piden juntos y las líneas se agregan en el orden en que se marcaron.
+           */
+          void Promise.all(
+            selecciones.map(async ({ producto, presentacionId, cantidad }) => {
+              const real = presentacionId || producto.presentaciones.find((x) => x.esBase)?.id || 0
+              const precio = resolverPrecio && real ? await resolverPrecio(real, cantidad).catch(() => null) : null
+
+              return {
+                id: idUnico(),
+                productoId: producto.id,
+                presentacionId,
+                cantidad: String(cantidad),
+                costo: precio == null ? '' : String(precio),
+                lote: '',
+                fechaVencimiento: '',
+              }
             }),
-          )
+          ).then((lineas) => lineas.forEach(onAgregar))
         }}
       />
     </div>
