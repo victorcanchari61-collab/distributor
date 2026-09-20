@@ -32,6 +32,12 @@ export interface AgregarProductoPanelProps {
   productos: ProductoBuscable[]
   /** Stock actual por producto, en unidad base — para mostrarlo mientras se arma la línea. */
   stock?: Record<number, number>
+  /**
+   * Lo que ya apartan otros pedidos pendientes, por producto y en unidad base. Es solo informativo:
+   * al vendedor le sirve saber que de los 10 sacos que hay, 5 están comprometidos, pero no se le
+   * impide pedir más — decide él.
+   */
+  reservado?: Record<number, number>
   /** Si el motivo/documento pide declarar costo (una entrada) o no (una salida/transferencia). */
   pideCosto?: boolean
   costoLabel?: string
@@ -74,6 +80,7 @@ const VACIO = { productoId: 0, presentacionId: 0, cantidad: '', costo: '', lote:
 export function AgregarProductoPanel({
   productos,
   stock,
+  reservado,
   pideCosto = true,
   costoLabel = 'Precio',
   pideLote = false,
@@ -91,7 +98,11 @@ export function AgregarProductoPanel({
   const presentaciones = producto?.presentaciones.filter((p) => p.activo) ?? []
   const presentacionElegida = presentaciones.find((p) => p.id === linea.presentacionId)
   const factor = presentacionElegida?.factor ?? 1
-  const stockActual = producto ? (stock?.[producto.id] ?? 0) : null
+  // `stock` es lo disponible (ya sin lo apartado); lo que hay en el almacén es eso más lo reservado.
+  const disponibleActual = producto ? (stock?.[producto.id] ?? 0) : null
+  const reservadoActual = producto ? (reservado?.[producto.id] ?? 0) : 0
+  const stockActual = disponibleActual != null ? disponibleActual + reservadoActual : null
+  const unidadElegida = presentacionElegida?.nombre ?? producto?.unidadBase ?? ''
 
   // Un producto que no se vende (o no se compra) en ninguna presentación no se puede ofrecer:
   // no habría con qué unidad armar la línea.
@@ -192,10 +203,15 @@ export function AgregarProductoPanel({
           disabled
           value={
             producto && stockActual != null
-              ? `${Number((stockActual / factor).toFixed(4))} ${
-                  presentacionElegida?.nombre ?? producto.unidadBase
-                }`
+              ? `${Number((stockActual / factor).toFixed(4))} ${unidadElegida}`
               : ''
+          }
+          hint={
+            producto && reservadoActual > 0 ? (
+              <span className="text-xs font-medium text-amber-600">
+                {Number((reservadoActual / factor).toFixed(2))} reservados · {Number((disponibleActual! / factor).toFixed(2))} libres
+              </span>
+            ) : undefined
           }
         />
 
@@ -277,6 +293,7 @@ export function AgregarProductoPanel({
         onClose={() => setBuscadorAbierto(false)}
         productos={usables}
         stock={stock}
+        reservado={reservado}
         uso={uso}
         onAgregar={(selecciones) => {
           selecciones.forEach(({ producto, presentacionId, cantidad }) =>

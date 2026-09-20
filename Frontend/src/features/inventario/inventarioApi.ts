@@ -28,6 +28,8 @@ export type AlmacenOpcion = Pick<AlmacenResponse, 'id' | 'codigo' | 'nombre' | '
 export interface DisponibleResponse {
   productoId: number
   disponible: number
+  /** Lo que ya apartan pedidos pendientes; solo informa, ya viene descontado de `disponible`. */
+  reservado: number
 }
 
 export interface AlmacenRequest {

@@ -45,6 +45,11 @@ export interface BuscadorProductoModalProps {
   productos: ProductoBuscable[]
   /** Stock actual por producto, en unidad base — se pinta como badge de color y habilita los filtros de stock. */
   stock?: Record<number, number>
+  /**
+   * Lo que ya apartan pedidos pendientes, por producto y en unidad base. Solo informa: junto al
+   * stock aparece "5 reservados" para que el vendedor esté atento, pero no bloquea nada.
+   */
+  reservado?: Record<number, number>
   /** Para qué se arma la línea: decide qué unidades se ofrecen (ver `opcionesPresentacion`). */
   uso?: UsoPresentacion
   /** Se llama una sola vez con todo lo marcado al pulsar "Agregar". */
@@ -99,7 +104,15 @@ function CampoConLabel({
  * vez (cada uno con su unidad y cantidad) y se agregan todos juntos, en vez de
  * abrir el buscador una vez por producto.
  */
-export function BuscadorProductoModal({ open, onClose, productos, stock, uso, onAgregar }: BuscadorProductoModalProps) {
+export function BuscadorProductoModal({
+  open,
+  onClose,
+  productos,
+  stock,
+  reservado,
+  uso,
+  onAgregar,
+}: BuscadorProductoModalProps) {
   const [filtros, setFiltros] = useState(FILTROS_VACIOS)
   /*
    * Los filtros salen plegados.
@@ -319,8 +332,18 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, uso, on
         ) : (
           <div className="flex max-h-[22rem] flex-col gap-2 overflow-y-auto overflow-x-hidden p-0.5">
             {resultados.map((p) => {
-              const cantidadStock = stock?.[p.id]
+              // `stock` es lo disponible; lo que hay en el almacén es eso más lo apartado.
+              const disponible = stock?.[p.id]
+              const apartado = reservado?.[p.id] ?? 0
+              const enAlmacen = disponible != null ? disponible + apartado : null
               const marcado = Boolean(marcados[p.id])
+
+              // El stock se lee en la unidad elegida, que por defecto es la más grande: "10 Saco 50KG"
+              // dice más que "500 KG" a quien vende por saco.
+              const opcionesUnidad = opcionesPresentacion(p, uso)
+              const unidadElegida = unidades[p.id] ?? unidadInicial(p)
+              const factorElegido = opcionesUnidad.find((o) => o.value === unidadElegida)?.factor ?? 1
+              const enUnidad = (base: number, factor: number) => Number((base / factor).toFixed(2))
 
               return (
                 <div
@@ -352,17 +375,35 @@ export function BuscadorProductoModal({ open, onClose, productos, stock, uso, on
                       </span>
                     </span>
 
-                    {cantidadStock != null && (
-                      <span
-                        className={cn(
-                          'shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold',
-                          cantidadStock <= 0
-                            ? 'bg-red-50 text-red-700'
-                            : 'bg-surface-alt text-ink-muted',
-                        )}
+                    {enAlmacen != null && (
+                      <div
+                        className="flex w-44 shrink-0 flex-col items-stretch gap-0.5"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        {cantidadStock} {p.unidadBase}
-                      </span>
+                        {/* Cada opción muestra el stock convertido a esa unidad; elegirla también deja
+                            esa unidad para la línea, así lo que se ve y lo que se pide coinciden. */}
+                        <Desplegable
+                          size="sm"
+                          value={unidadElegida}
+                          onChange={(v) => setUnidades((prev) => ({ ...prev, [p.id]: Number(v) }))}
+                          options={opcionesUnidad.map((o) => ({
+                            value: o.value,
+                            label: `${enUnidad(enAlmacen, o.factor)} ${o.label}`,
+                          }))}
+                          className={cn(disponible! <= 0 && 'text-red-700')}
+                        />
+
+                        {apartado > 0 ? (
+                          <span
+                            className="text-right text-[11px] font-medium text-amber-600"
+                            title="Lo apartan pedidos pendientes. Es solo informativo: puedes pedir igual."
+                          >
+                            {enUnidad(apartado, factorElegido)} reservados · {enUnidad(disponible!, factorElegido)} libres
+                          </span>
+                        ) : disponible! <= 0 ? (
+                          <span className="text-right text-[11px] font-medium text-red-600">Sin stock</span>
+                        ) : null}
+                      </div>
                     )}
                   </div>
 

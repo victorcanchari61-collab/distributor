@@ -140,6 +140,8 @@ export function NotasVentaPage() {
   const [observacion, setObservacion] = useState('')
   const [filas, setFilas] = useState<FilaVenta[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
+  /** Lo que apartan otros pedidos pendientes, por producto: el panel lo muestra como aviso. */
+  const [reservadoMap, setReservadoMap] = useState<Record<number, number>>({})
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -203,7 +205,10 @@ export function NotasVentaPage() {
     if (!almacenId) return
     let cancelado = false
     void stockApi.disponible(almacenId).then((stock) => {
-      if (!cancelado) setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
+      if (!cancelado) {
+        setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
+        setReservadoMap(Object.fromEntries(stock.map((s) => [s.productoId, s.reservado])))
+      }
     })
     return () => {
       cancelado = true
@@ -780,6 +785,7 @@ export function NotasVentaPage() {
             <AgregarProductoPanel
               productos={productos}
               stock={stockMap}
+              reservado={reservadoMap}
               uso="venta"
               costoLabel="Precio de venta"
               resolverPrecio={precioDeLista}

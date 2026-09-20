@@ -30,6 +30,8 @@ export interface ProductoUsable {
 export interface OpcionPresentacion {
   value: number
   label: string
+  /** A cuántas unidades base equivale (la base es 1): con esto se convierte un stock a esa unidad. */
+  factor: number
   nota?: string
   detalle?: string
 }
@@ -64,12 +66,12 @@ export function opcionesPresentacion(
   const opciones: OpcionPresentacion[] = []
 
   if (baseHabilitada(producto, uso)) {
-    opciones.push({ value: 0, label: producto.unidadBase, nota: 'unidad base' })
+    opciones.push({ value: 0, label: producto.unidadBase, factor: 1, nota: 'unidad base' })
   }
 
   for (const p of producto.presentaciones) {
     if (p.esBase || !habilitada(p, uso)) continue
-    opciones.push({ value: p.id, label: p.nombre, detalle: `${p.factor} ${producto.unidadBase}` })
+    opciones.push({ value: p.id, label: p.nombre, factor: p.factor, detalle: `${p.factor} ${producto.unidadBase}` })
   }
 
   if (actual !== undefined && !opciones.some((o) => o.value === actual)) {
@@ -77,6 +79,7 @@ export function opcionesPresentacion(
     opciones.push({
       value: actual,
       label: guardada?.nombre ?? producto.unidadBase,
+      factor: guardada?.factor ?? 1,
       nota: uso === 'compra' ? 'ya no se compra así' : uso === 'venta' ? 'ya no se vende así' : 'no disponible',
     })
   }
@@ -85,11 +88,17 @@ export function opcionesPresentacion(
 }
 
 /**
- * La unidad con la que arranca una línea nueva: la base si se puede, y si no la primera que sí.
+ * La unidad con la que arranca una línea nueva: la MÁS GRANDE que se puede usar (el saco de 50 kg
+ * antes que la bolsa o el kilo). En un mayorista casi todo sale por saco o caja, y de todos modos
+ * se puede cambiar; arrancar por la unidad suelta obligaba a cambiarla en cada línea.
  * Null cuando el producto no se puede usar en ninguna presentación para ese uso.
  */
 export function presentacionInicial(producto: ProductoUsable, uso?: UsoPresentacion): number | null {
-  return opcionesPresentacion(producto, uso)[0]?.value ?? null
+  const opciones = opcionesPresentacion(producto, uso)
+  if (opciones.length === 0) return null
+
+  // A igualdad de tamaño gana la primera (la base va antes que las presentaciones).
+  return opciones.reduce((mayor, o) => (o.factor > mayor.factor ? o : mayor)).value
 }
 
 /** Igual que `presentacionInicial`, para cuando se cambia el producto de una fila y solo se tiene su id. */

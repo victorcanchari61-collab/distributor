@@ -151,7 +151,8 @@ public class InventarioController : ControllerBase
         // y quien pregunta "cuánto hay" quiere el total, no la lista.
         Ok((await _inventario.GetStockAsync(almacenId))
             .GroupBy(s => s.ProductoId)
-            .Select(g => new { productoId = g.Key, disponible = g.Sum(s => s.Disponible) }));
+            // "reservado" va aparte solo para informar: quien toma un pedido ve cuánto hay ya comprometido.
+            .Select(g => new { productoId = g.Key, disponible = g.Sum(s => s.Disponible), reservado = g.Sum(s => s.Reservado) }));
 
     /// <summary>Stock y capas de costo de un producto.</summary>
     [HttpGet("stock/{productoId:int}")]

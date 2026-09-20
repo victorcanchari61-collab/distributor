@@ -92,6 +92,8 @@ export function PedidosPage() {
   const [almacenReservaId, setAlmacenReservaId] = useState(0)
   const [filas, setFilas] = useState<FilaPedido[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
+  /** Lo que apartan otros pedidos pendientes, por producto: el panel lo muestra como aviso. */
+  const [reservadoMap, setReservadoMap] = useState<Record<number, number>>({})
 
   // --- Convertir en venta (con lo que de verdad se entregó) y "no entregado" ---
   const [confirmando, setConfirmando] = useState<PedidoResponse | null>(null)
@@ -158,7 +160,10 @@ export function PedidosPage() {
     if (!almacenReservaId) return
     let cancelado = false
     void stockApi.disponible(almacenReservaId).then((stock) => {
-      if (!cancelado) setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
+      if (!cancelado) {
+        setStockMap(Object.fromEntries(stock.map((s) => [s.productoId, s.disponible])))
+        setReservadoMap(Object.fromEntries(stock.map((s) => [s.productoId, s.reservado])))
+      }
     })
     return () => {
       cancelado = true
@@ -591,6 +596,7 @@ export function PedidosPage() {
             <AgregarProductoPanel
               productos={productos}
               stock={stockMap}
+              reservado={reservadoMap}
               uso="venta"
               costoLabel="Precio de venta"
               resolverPrecio={precioDeLista}
