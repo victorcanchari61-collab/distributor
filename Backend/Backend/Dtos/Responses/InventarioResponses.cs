@@ -203,6 +203,9 @@ public class LineaDocumentoResponse
     public string? Presentacion { get; set; }
     public decimal CantidadPresentacion { get; set; }
 
+    /// <summary>Si el papel imprime esta línea por presentación (ver <c>ProductoPresentacion.PrecioPorPresentacion</c>).</summary>
+    public bool PrecioPorPresentacion { get; set; }
+
     public decimal Cantidad { get; set; }
     public decimal CostoUnitario { get; set; }
     public decimal CostoTotal { get; set; }
@@ -249,6 +252,9 @@ public class PrestamoDetalleResponse
     public int? PresentacionId { get; set; }
     public string? Presentacion { get; set; }
     public decimal CantidadPresentacion { get; set; }
+
+    /// <summary>Si el papel imprime esta línea por presentación (ver <c>ProductoPresentacion.PrecioPorPresentacion</c>).</summary>
+    public bool PrecioPorPresentacion { get; set; }
 
     public decimal Cantidad { get; set; }
     public decimal CantidadDevuelta { get; set; }

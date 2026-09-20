@@ -56,6 +56,7 @@ export function PresentacionesEditor({
         factor: 0,
         esCompra: true,
         esVenta: true,
+        precioPorPresentacion: false,
         activo: true,
       },
     ])
@@ -191,6 +192,22 @@ export function PresentacionesEditor({
         />
       ),
     },
+    {
+      key: 'precioPorPresentacion',
+      label: 'Por presentación (PDF)',
+      render: (fila) =>
+        // La base no tiene con qué compararse: por unidad base ya ES por presentación.
+        fila.esBase ? (
+          <span className="text-ink-soft">—</span>
+        ) : (
+          <Checkbox
+            label=""
+            checked={fila.precioPorPresentacion ?? false}
+            onChange={(e) => actualizar(filas.indexOf(fila), { precioPorPresentacion: e.target.checked })}
+            disabled={disabled}
+          />
+        ),
+    },
   ]
 
   return (
@@ -201,6 +218,10 @@ export function PresentacionesEditor({
           <p className="text-xs text-ink-soft">
             Cómo se compra y se vende. El factor dice a cuántos{' '}
             <span className="font-semibold">{unidadBase || 'unidad base'}</span> equivale.
+          </p>
+          <p className="text-xs text-ink-soft">
+            «Por presentación (PDF)»: en los PDF de ajustes, transferencias y préstamos la línea sale en esa
+            presentación —150 cajas × S/ 83.00— y no en unidad base —1,800 × S/ 6.92—.
           </p>
         </div>
         <Button variant="secondary" size="sm" onClick={agregar} disabled={disabled}>

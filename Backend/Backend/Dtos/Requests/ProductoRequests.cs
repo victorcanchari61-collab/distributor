@@ -72,6 +72,10 @@ public class PresentacionRequest
     public bool EsVenta { get; set; } = true;
     public bool PredeterminadaVenta { get; set; }
     public bool PredeterminadaCompra { get; set; }
+
+    /// <summary>Los documentos de inventario impresos salen por esta presentación y no por unidad base.</summary>
+    public bool PrecioPorPresentacion { get; set; }
+
     public string? CodigoBarras { get; set; }
     public bool Activo { get; set; } = true;
 }

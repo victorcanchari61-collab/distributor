@@ -27,6 +27,7 @@ class _FilaPresentacion {
     required this.factor,
     this.esCompra = true,
     this.esVenta = true,
+    this.precioPorPresentacion = false,
   });
 
   final int? id;
@@ -36,6 +37,11 @@ class _FilaPresentacion {
   double factor;
   bool esCompra;
   bool esVenta;
+
+  /// Los PDF de inventario salen en esta presentacion y no en unidad base. Hay
+  /// que llevarlo en la fila: el endpoint reemplaza la presentacion con lo que
+  /// le llega, y si la fila no lo recordara se borraria el que puso la web.
+  bool precioPorPresentacion;
 }
 
 /// Alta y edicion de un producto, con sus presentaciones.
@@ -80,6 +86,7 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
           factor: p.factor,
           esCompra: p.esCompra,
           esVenta: p.esVenta,
+          precioPorPresentacion: p.precioPorPresentacion,
         ),
   ];
 
@@ -182,13 +189,14 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
     'factor': f.factor,
     'esCompra': f.esCompra,
     'esVenta': f.esVenta,
+    'precioPorPresentacion': f.precioPorPresentacion,
   };
 
+  /// Solo cambia si la base se compra / se vende: lo demas viaja tal como esta
+  /// —incluido `precioPorPresentacion`— para que el PUT no lo pise.
   Future<void> _guardarBase(MaestrosApi api, Presentacion base) =>
       api.actualizarPresentacion(base.id, {
-        'unidadId': base.unidadId,
-        'nombre': base.nombre,
-        'factor': base.factor,
+        ...base.aJson(),
         'esCompra': _baseSeCompra,
         'esVenta': _baseSeVende,
         'activo': true,
@@ -734,6 +742,13 @@ class _TarjetaPresentacion extends StatelessWidget {
                   '${usos.isEmpty ? '' : ' · ${usos.join(' y ')}'}',
                   style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
                 ),
+                // Solo cuando esta puesto: apagado es lo normal y no hace falta
+                // decirlo en cada tarjeta.
+                if (fila.precioPorPresentacion)
+                  const Text(
+                    'PDF por presentación',
+                    style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                  ),
               ],
             ),
           ),
@@ -768,6 +783,7 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
   int? unidadId = existente?.unidadId ?? (unidades.length == 1 ? unidades.first.id : null);
   bool esCompra = existente?.esCompra ?? true;
   bool esVenta = existente?.esVenta ?? true;
+  bool precioPorPresentacion = existente?.precioPorPresentacion ?? false;
   String? errorNombre;
   String? errorUnidad;
   String? errorFactor;
@@ -803,6 +819,9 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
                 factor: factor!,
                 esCompra: esCompra,
                 esVenta: esVenta,
+                // Se arma una fila nueva: sin pasarlo aqui, editar el nombre o
+                // el factor de una presentacion apagaria el marcador.
+                precioPorPresentacion: precioPorPresentacion,
               ),
             );
           }
@@ -814,75 +833,95 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
               top: Dimen.espacio2,
               bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  existente == null ? 'Nueva presentación' : 'Editar presentación',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colores.tinta,
+            // Con scroll: con el teclado abierto sobre el factor y la linea de
+            // "Por presentación (PDF)" de mas, la hoja ya no entra en pantallas
+            // chicas y el boton de guardar quedaria tapado.
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    existente == null ? 'Nueva presentación' : 'Editar presentación',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colores.tinta,
+                    ),
                   ),
-                ),
-                const SizedBox(height: Dimen.espacio4),
-                AppCampo(
-                  controlador: nombreCtrl,
-                  etiqueta: 'Nombre',
-                  pista: 'Saco de 50, Caja x12...',
-                  icono: Icons.label_outline,
-                  error: errorNombre,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-                AppSelector<int>(
-                  valor: unidadId,
-                  etiqueta: 'Unidad',
-                  icono: Icons.straighten_outlined,
-                  error: errorUnidad,
-                  opciones: [for (final u in unidades) Opcion(u.id, '${u.nombre} (${u.codigo})')],
-                  onCambio: (v) => setSheetState(() => unidadId = v),
-                ),
-                const SizedBox(height: Dimen.espacio4),
-                AppCampo(
-                  controlador: factorCtrl,
-                  etiqueta: 'Factor',
-                  pista: 'Cuántas unidades base equivale',
-                  icono: Icons.calculate_outlined,
-                  tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-                  error: errorFactor,
-                ),
-                const SizedBox(height: Dimen.espacio2),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CheckboxListTile(
-                        value: esCompra,
-                        onChanged: (v) => setSheetState(() => esCompra = v ?? true),
-                        title: const Text('Compra', style: TextStyle(fontSize: 13)),
-                        controlAffinity: ListTileControlAffinity.leading,
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
+                  const SizedBox(height: Dimen.espacio4),
+                  AppCampo(
+                    controlador: nombreCtrl,
+                    etiqueta: 'Nombre',
+                    pista: 'Saco de 50, Caja x12...',
+                    icono: Icons.label_outline,
+                    error: errorNombre,
+                  ),
+                  const SizedBox(height: Dimen.espacio4),
+                  AppSelector<int>(
+                    valor: unidadId,
+                    etiqueta: 'Unidad',
+                    icono: Icons.straighten_outlined,
+                    error: errorUnidad,
+                    opciones: [for (final u in unidades) Opcion(u.id, '${u.nombre} (${u.codigo})')],
+                    onCambio: (v) => setSheetState(() => unidadId = v),
+                  ),
+                  const SizedBox(height: Dimen.espacio4),
+                  AppCampo(
+                    controlador: factorCtrl,
+                    etiqueta: 'Factor',
+                    pista: 'Cuántas unidades base equivale',
+                    icono: Icons.calculate_outlined,
+                    tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+                    error: errorFactor,
+                  ),
+                  const SizedBox(height: Dimen.espacio2),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CheckboxListTile(
+                          value: esCompra,
+                          onChanged: (v) => setSheetState(() => esCompra = v ?? true),
+                          title: const Text('Compra', style: TextStyle(fontSize: 13)),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: CheckboxListTile(
-                        value: esVenta,
-                        onChanged: (v) => setSheetState(() => esVenta = v ?? true),
-                        title: const Text('Venta', style: TextStyle(fontSize: 13)),
-                        controlAffinity: ListTileControlAffinity.leading,
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
+                      Expanded(
+                        child: CheckboxListTile(
+                          value: esVenta,
+                          onChanged: (v) => setSheetState(() => esVenta = v ?? true),
+                          title: const Text('Venta', style: TextStyle(fontSize: 13)),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
                       ),
+                    ],
+                  ),
+                  // Solo en las presentaciones extra: esta hoja nunca edita la
+                  // base, donde "por presentacion" y "por unidad base" son lo mismo.
+                  CheckboxListTile(
+                    value: precioPorPresentacion,
+                    onChanged: (v) => setSheetState(() => precioPorPresentacion = v ?? false),
+                    title: const Text('Por presentación (PDF)', style: TextStyle(fontSize: 13)),
+                    subtitle: const Text(
+                      'En los PDF de ajustes, transferencias y préstamos la línea sale '
+                      'en esta presentación y no en unidad base.',
+                      style: TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
                     ),
-                  ],
-                ),
-                const SizedBox(height: Dimen.espacio4),
-                AppBoton(
-                  texto: existente == null ? 'Agregar' : 'Guardar cambios',
-                  onPressed: guardar,
-                ),
-              ],
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                  ),
+                  const SizedBox(height: Dimen.espacio4),
+                  AppBoton(
+                    texto: existente == null ? 'Agregar' : 'Guardar cambios',
+                    onPressed: guardar,
+                  ),
+                ],
+              ),
             ),
           );
         },

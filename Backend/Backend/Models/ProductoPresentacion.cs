@@ -52,6 +52,15 @@ public class ProductoPresentacion
     /// <summary>La que sale elegida en una orden de compra nueva.</summary>
     public bool PredeterminadaCompra { get; set; }
 
+    /// <summary>
+    /// En los documentos de inventario impresos (ajustes, transferencias, préstamos) la línea sale
+    /// por ESTA presentación —150 cajas a S/ 83.00— en vez de por unidad base —1,800 a S/ 6.92—.
+    ///
+    /// Apagado por defecto para que nada cambie. Las ventas y las compras no lo necesitan: ya se
+    /// imprimen por presentación, que es lo que pidió o compró la persona.
+    /// </summary>
+    public bool PrecioPorPresentacion { get; set; }
+
     public string? CodigoBarras { get; set; }
 
     public bool Activo { get; set; } = true;

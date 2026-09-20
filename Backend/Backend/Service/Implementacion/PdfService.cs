@@ -498,8 +498,12 @@ public class PdfService(
             EtiquetaImporte = "Costo",
             Lineas =
             [
-                .. prestamo.Detalle.Select(l => new LineaImprimible(
-                    l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.CostoUnitario, l.CostoTotal)),
+                .. prestamo.Detalle.Select(l => l.PrecioPorPresentacion && l.CantidadPresentacion > 0
+                    ? new LineaImprimible(
+                        l.Codigo, l.Producto, l.Presentacion, l.CantidadPresentacion,
+                        l.Presentacion ?? l.UnidadBase, Math.Round(l.CostoTotal / l.CantidadPresentacion, 2), l.CostoTotal)
+                    : new LineaImprimible(
+                        l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.CostoUnitario, l.CostoTotal)),
             ],
             Total = prestamo.Total,
             Observacion = prestamo.Observacion,
@@ -563,8 +567,20 @@ public class PdfService(
     private static decimal CostoPorPresentacion(CompraDetalleResponse l) =>
         l.CantidadPresentacion == 0 ? 0 : Math.Round(l.CostoTotal / l.CantidadPresentacion, 2);
 
+    /*
+     * Una línea de inventario, por unidad base o por presentación según el marcador de la
+     * presentación.
+     *
+     * Por unidad base sale "1,800 × 6.92", que sirve para el stock pero no lo reconoce quien
+     * contó "150 cajas". Con el marcador puesto sale "150 × 83.00" y el importe no cambia. Solo
+     * vale si la línea se hizo en esa presentación: una cantidad en unidad base no se puede
+     * repartir en cajas sin inventarse decimales.
+     */
     private static LineaImprimible LineaInventario(LineaDocumentoResponse l) =>
-        new(l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.CostoUnitario, l.CostoTotal);
+        l.PrecioPorPresentacion && l.CantidadPresentacion > 0
+            ? new(l.Codigo, l.Producto, l.Presentacion, l.CantidadPresentacion,
+                l.Presentacion ?? l.UnidadBase, Math.Round(l.CostoTotal / l.CantidadPresentacion, 2), l.CostoTotal)
+            : new(l.Codigo, l.Producto, l.Presentacion, l.Cantidad, l.UnidadBase, l.CostoUnitario, l.CostoTotal);
 
     /*
      * La linea, tal como se vendio.

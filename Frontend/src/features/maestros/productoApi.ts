@@ -52,6 +52,8 @@ export interface PresentacionResponse {
   esVenta: boolean
   predeterminadaVenta: boolean
   predeterminadaCompra: boolean
+  /** Los PDF de inventario (ajustes, transferencias, préstamos) salen por esta presentación y no por unidad base. */
+  precioPorPresentacion: boolean
   codigoBarras: string | null
   activo: boolean
 }
@@ -90,6 +92,7 @@ export interface PresentacionRequest {
   esVenta: boolean
   predeterminadaVenta?: boolean
   predeterminadaCompra?: boolean
+  precioPorPresentacion?: boolean
   codigoBarras?: string | null
   activo?: boolean
 }

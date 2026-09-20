@@ -156,6 +156,7 @@ public class ProductoService : IProductoService
                 Factor = extra.Factor,
                 EsCompra = extra.EsCompra,
                 EsVenta = extra.EsVenta,
+                PrecioPorPresentacion = extra.PrecioPorPresentacion,
                 CodigoBarras = Limpiar(extra.CodigoBarras),
                 Activo = extra.Activo
             });
@@ -446,6 +447,7 @@ public class ProductoService : IProductoService
             EsVenta = request.EsVenta,
             PredeterminadaVenta = request.PredeterminadaVenta,
             PredeterminadaCompra = request.PredeterminadaCompra,
+            PrecioPorPresentacion = request.PrecioPorPresentacion,
             CodigoBarras = Limpiar(request.CodigoBarras),
             Activo = request.Activo
         };
@@ -519,6 +521,7 @@ public class ProductoService : IProductoService
         presentacion.EsVenta = request.EsVenta;
         presentacion.PredeterminadaVenta = request.PredeterminadaVenta;
         presentacion.PredeterminadaCompra = request.PredeterminadaCompra;
+        presentacion.PrecioPorPresentacion = request.PrecioPorPresentacion;
         presentacion.CodigoBarras = Limpiar(request.CodigoBarras);
         presentacion.Activo = esBase || request.Activo;
 
@@ -749,6 +752,7 @@ public class ProductoService : IProductoService
         EsVenta = p.EsVenta,
         PredeterminadaVenta = p.PredeterminadaVenta,
         PredeterminadaCompra = p.PredeterminadaCompra,
+        PrecioPorPresentacion = p.PrecioPorPresentacion,
         CodigoBarras = p.CodigoBarras,
         Activo = p.Activo
     };

@@ -9,6 +9,7 @@ class Presentacion {
     required this.esBase,
     required this.esCompra,
     required this.esVenta,
+    this.precioPorPresentacion = false,
     required this.activo,
   });
 
@@ -24,6 +25,12 @@ class Presentacion {
   final bool esBase;
   final bool esCompra;
   final bool esVenta;
+
+  /// Los PDF de ajustes, transferencias y prestamos sacan la linea en esta
+  /// presentacion ("150 cajas × S/ 83.00") y no en unidad base ("1,800 × S/ 6.92").
+  /// Lo arma el servidor: la app solo lo lee y lo devuelve. Apagado por defecto
+  /// —y en la base no se ofrece, por unidad base ya ES por presentacion—.
+  final bool precioPorPresentacion;
   final bool activo;
 
   factory Presentacion.desdeJson(Map<String, dynamic> json) => Presentacion(
@@ -35,8 +42,24 @@ class Presentacion {
     esBase: json['esBase'] as bool? ?? false,
     esCompra: json['esCompra'] as bool? ?? true,
     esVenta: json['esVenta'] as bool? ?? true,
+    precioPorPresentacion: json['precioPorPresentacion'] as bool? ?? false,
     activo: json['activo'] as bool? ?? true,
   );
+
+  /// Cuerpo de POST/PUT de una presentacion.
+  ///
+  /// El endpoint REEMPLAZA la presentacion con lo que llega y un campo ausente
+  /// se guarda como apagado: por eso el marcador viaja siempre, con el valor
+  /// que ya tenia, para no borrar el que se puso desde la web.
+  Map<String, dynamic> aJson() => {
+    'unidadId': unidadId,
+    'nombre': nombre,
+    'factor': factor,
+    'esCompra': esCompra,
+    'esVenta': esVenta,
+    'precioPorPresentacion': precioPorPresentacion,
+    'activo': activo,
+  };
 }
 
 /// Producto: lo que se compra y se vende.

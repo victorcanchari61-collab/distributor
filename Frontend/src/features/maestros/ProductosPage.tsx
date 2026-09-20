@@ -228,6 +228,7 @@ export function ProductosPage() {
           factor: p.factor,
           esCompra: p.esCompra,
           esVenta: p.esVenta,
+          precioPorPresentacion: p.precioPorPresentacion,
           activo: p.activo,
         })),
     )
@@ -253,6 +254,8 @@ export function ProductosPage() {
     factor: 1,
     esCompra: baseSeCompra,
     esVenta: baseSeVende,
+    // En la base "por presentación" y "por unidad base" son lo mismo: no hay nada que marcar.
+    precioPorPresentacion: false,
     activo: true,
   }
 
@@ -277,6 +280,7 @@ export function ProductosPage() {
       esVenta: baseSeVende,
       predeterminadaVenta: false,
       predeterminadaCompra: false,
+      precioPorPresentacion: false,
       codigoBarras: null,
       activo: true,
     },
@@ -296,6 +300,7 @@ export function ProductosPage() {
         esVenta: fila.esVenta,
         predeterminadaVenta: false,
         predeterminadaCompra: false,
+        precioPorPresentacion: fila.precioPorPresentacion ?? false,
         codigoBarras: fila.codigoBarras ?? null,
         activo: true,
       })),
@@ -363,6 +368,7 @@ export function ProductosPage() {
             factor: fila.factor,
             esCompra: fila.esCompra,
             esVenta: fila.esVenta,
+            precioPorPresentacion: fila.precioPorPresentacion ?? false,
             activo: fila.activo ?? true,
           }
           if (fila.id) {
@@ -405,6 +411,7 @@ export function ProductosPage() {
             factor: p.factor,
             esCompra: p.esCompra,
             esVenta: p.esVenta,
+            precioPorPresentacion: p.precioPorPresentacion ?? false,
             activo: true,
           })),
         })
