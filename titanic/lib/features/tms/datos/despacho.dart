@@ -19,6 +19,8 @@ class DespachoPedido {
     this.direccion,
     this.mercado,
     this.telefono,
+    this.rutaCliente,
+    this.diaVisita,
     required this.total,
     required this.lineas,
     this.notaVentaId,
@@ -39,6 +41,10 @@ class DespachoPedido {
   final String? direccion;
   final String? mercado;
   final String? telefono;
+
+  /// La ruta del cliente y el día en que se lo visita: con varias rutas en el camión, dice de cuál es cada pedido.
+  final String? rutaCliente;
+  final String? diaVisita;
   final double total;
   final int lineas;
 
@@ -66,6 +72,8 @@ class DespachoPedido {
     direccion: json['direccion'] as String?,
     mercado: json['mercado'] as String?,
     telefono: json['telefono'] as String?,
+    rutaCliente: json['rutaCliente'] as String?,
+    diaVisita: json['diaVisita'] as String?,
     total: (json['total'] as num?)?.toDouble() ?? 0,
     lineas: json['lineas'] as int? ?? 0,
     notaVentaId: json['notaVentaId'] as int?,
@@ -90,6 +98,8 @@ class Despacho {
     this.pedidosHasta,
     required this.rutaId,
     required this.ruta,
+    this.rutaIds = const [],
+    this.rutas = const [],
     required this.vehiculoId,
     required this.vehiculo,
     required this.conductorId,
@@ -112,8 +122,13 @@ class Despacho {
   final DateTime? pedidosDesde;
   final DateTime? pedidosHasta;
 
+  /// La ruta principal (la primera).
   final int rutaId;
+
+  /// Todas las rutas, dichas como se leen: "1 · 7".
   final String ruta;
+  final List<int> rutaIds;
+  final List<String> rutas;
   final int vehiculoId;
 
   /// La placa: es como se nombra a un camión de verdad.
@@ -145,6 +160,8 @@ class Despacho {
     pedidosHasta: fechaDeJsonOpcional(json['pedidosHasta']),
     rutaId: json['rutaId'] as int,
     ruta: json['ruta'] as String? ?? '',
+    rutaIds: [for (final r in (json['rutaIds'] as List? ?? const [])) r as int],
+    rutas: [for (final r in (json['rutas'] as List? ?? const [])) r as String],
     vehiculoId: json['vehiculoId'] as int,
     vehiculo: json['vehiculo'] as String? ?? '',
     conductorId: json['conductorId'] as int,

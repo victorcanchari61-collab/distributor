@@ -4,7 +4,12 @@ public class Usuario
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Correo. OPCIONAL: no todo el que usa el sistema tiene uno (el repartidor, el del mostrador). Quien no lo
+    /// tiene entra con su DNI, así que una cuenta necesita al menos uno de los dos.
+    /// </summary>
+    public string? Email { get; set; }
 
     /// <summary>DNI del empleado. Se llena consultando RENIEC.</summary>
     public string? Dni { get; set; }

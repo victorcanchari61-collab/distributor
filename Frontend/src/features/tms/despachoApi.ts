@@ -14,6 +14,9 @@ export interface DespachoPedidoResponse {
   direccion: string | null
   mercado: string | null
   telefono: string | null
+  /** La ruta del cliente y el día en que se lo visita: con varias rutas en el camión, dice de cuál es cada pedido. */
+  rutaCliente: string | null
+  diaVisita: string | null
   total: number
   lineas: number
   /** La venta, si el repartidor ya lo convirtió. */
@@ -33,8 +36,12 @@ export interface DespachoResponse {
   /** De qué días son los pedidos que carga el camión. */
   pedidosDesde: string | null
   pedidosHasta: string | null
+  /** La ruta principal (la primera). */
   rutaId: number
+  /** Todas las rutas, dichas como se leen: "1 · 7". */
   ruta: string
+  rutaIds: number[]
+  rutas: string[]
   vehiculoId: number
   /** La placa: es como se nombra a un camión de verdad. */
   vehiculo: string
@@ -63,7 +70,8 @@ export interface DespachoRequest {
   fecha?: string | null
   pedidosDesde?: string | null
   pedidosHasta?: string | null
-  rutaId: number
+  /** Las rutas que carga el camión ese día. Al menos una. */
+  rutaIds: number[]
   vehiculoId: number
   conductorId: number
   observacion?: string | null
@@ -87,14 +95,17 @@ export const despachoApi = {
   resumen: () => api.get<ResumenDespachos>('/despacho/resumen'),
 
   /**
-   * Los pedidos que se pueden cargar en esa ruta.
+   * Los pedidos que se pueden cargar en esas rutas.
    *
    * `despachoId` se manda al editar: sin él, los pedidos que ya son de ese
    * despacho se verían como tomados y desaparecerían de la pantalla.
    */
-  disponibles: (rutaId: number, despachoId?: number) =>
+  disponibles: (rutaIds: number[], despachoId?: number, diaDeVisita?: string) =>
     api.get<DespachoPedidoResponse[]>(
-      `/despacho/disponibles?rutaId=${rutaId}${despachoId ? `&despachoId=${despachoId}` : ''}`,
+      `/despacho/disponibles?${rutaIds.map((id) => `rutaIds=${id}`).join('&')}` +
+        (despachoId ? `&despachoId=${despachoId}` : '') +
+        // Solo los clientes que se visitan el día de esa fecha; sin ella salen de todos los días.
+        (diaDeVisita ? `&diaDeVisita=${diaDeVisita}` : ''),
     ),
 
   create: (body: DespachoRequest) => api.post<DespachoResponse>('/despacho', body),

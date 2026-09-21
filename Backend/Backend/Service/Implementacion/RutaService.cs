@@ -97,6 +97,12 @@ public class RutaService : IRutaService
             throw new BadRequestException($"La ruta tiene {usos} cliente(s). Desactívala en vez de eliminarla.");
         }
 
+        if (await _repository.ContarUsosEnRepartoAsync(id) > 0)
+        {
+            throw new BadRequestException(
+                "La ruta está en el recorrido de un camión o en un despacho. Desactívala en vez de eliminarla.");
+        }
+
         var a_cargo = await _repository.VendedoresAsync(id);
         if (a_cargo.Count > 0)
         {

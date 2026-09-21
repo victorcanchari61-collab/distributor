@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,6 +24,10 @@ String _fechaTexto(DateTime f) =>
 
 DateTime _soloDia(DateTime f) => DateTime(f.year, f.month, f.day);
 
+/// Los días como los guarda el backend, en el orden de `DateTime.weekday` (lunes = 1).
+const _dias = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+const _diasTexto = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+
 /// Alta y edicion de un despacho: elegir el camion y marcar los pedidos que
 /// suben, entre el rango de fechas en que se tomaron.
 class DespachoFormulario extends ConsumerStatefulWidget {
@@ -40,8 +46,18 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
   late DateTime _desde = widget.despacho?.pedidosDesde ?? _diaMasTemprano();
   late DateTime _hasta = widget.despacho?.pedidosHasta ?? DateTime.now();
 
-  late int _rutaId = widget.despacho?.rutaId ?? 0;
-  late String? _rutaNombre = widget.despacho?.ruta;
+  /// Las rutas que carga el camión ese día: el lunes del camión 1 son la 1 y la 7.
+  late final Set<int> _rutaIds = {
+    if (widget.despacho != null)
+      ...(widget.despacho!.rutaIds.isNotEmpty ? widget.despacho!.rutaIds : [widget.despacho!.rutaId]),
+  };
+
+  /// Si las rutas se tocaron a mano, el recorrido del vehículo deja de imponerlas. Al editar, las guardadas
+  /// mandan: fueron una decisión que ya se tomó.
+  late bool _rutasTocadas = widget.despacho != null;
+
+  /// Por defecto solo salen los clientes que se visitan el día de la fecha (el lunes, los de lunes).
+  late bool _otrosDias = _tieneOtrosDias();
   late int _vehiculoId = widget.despacho?.vehiculoId ?? 0;
   late String? _vehiculoPlaca = widget.despacho?.vehiculo;
   late int _conductorId = widget.despacho?.conductorId ?? 0;
@@ -64,6 +80,42 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
   }
 
   bool get _esNuevo => widget.despacho == null;
+
+  /// Un despacho armado con clientes de otros días debe seguir viéndolos al editarlo.
+  bool _tieneOtrosDias() {
+    final d = widget.despacho;
+    if (d == null) return false;
+    final dia = _dias[d.fecha.weekday - 1];
+    return d.detalle.any((p) => p.diaVisita != null && p.diaVisita != dia);
+  }
+
+  String get _diaDeLaFecha => _dias[_fecha.weekday - 1];
+  String get _diaTexto => _diasTexto[_fecha.weekday - 1];
+
+  /// Las rutas que el vehículo elegido hace ese día, según su recorrido.
+  List<int> get _rutasDelDia {
+    if (_vehiculoId == 0) return const [];
+    final recorrido = ref.read(recorridoVehiculoProvider(_vehiculoId)).valueOrNull;
+    return recorrido?[_diaDeLaFecha] ?? const [];
+  }
+
+  /// Elegir vehículo o fecha propone las rutas de ese día, salvo que ya se hayan tocado a mano.
+  Future<void> _proponerRutas() async {
+    if (_rutasTocadas || _vehiculoId == 0) return;
+    try {
+      final recorrido = await ref.read(recorridoVehiculoProvider(_vehiculoId).future);
+      if (!mounted || _rutasTocadas) return;
+      final delDia = recorrido[_diaDeLaFecha] ?? const <int>[];
+      setState(() {
+        _rutaIds
+          ..clear()
+          ..addAll(delDia);
+        _elegidos.clear();
+      });
+    } catch (_) {
+      // Sin recorrido se sigue: las rutas se eligen a mano, como siempre.
+    }
+  }
 
   @override
   void initState() {
@@ -90,27 +142,6 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
 
   bool _enRango(DespachoPedido p) =>
       !_soloDia(p.fecha).isBefore(_soloDia(_desde)) && !_soloDia(p.fecha).isAfter(_soloDia(_hasta));
-
-  Future<void> _elegirRuta() async {
-    final rutas = await catalogoListo(context, ref.read(rutasProvider.future), queEs: 'las rutas');
-    if (!mounted) return;
-    final activas = rutas.where((r) => r.activo).toList();
-    final elegida = await mostrarSelectorBuscable<Ruta>(
-      context: context,
-      titulo: 'Elige la ruta',
-      items: activas,
-      buscable: (r) => r.buscable,
-      pistaBusqueda: 'Buscar por nombre',
-      fila: (r) => Text(r.nombre, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-    );
-    if (elegida != null) {
-      setState(() {
-        _rutaId = elegida.id;
-        _rutaNombre = elegida.nombre;
-        _elegidos.clear();
-      });
-    }
-  }
 
   Future<void> _elegirVehiculo() async {
     final vehiculos = await catalogoListo(
@@ -139,6 +170,9 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
         _conductorNombre = elegido.conductor;
       }
     });
+
+    // Y las rutas que hace ese día, salvo que ya se hayan tocado a mano.
+    unawaited(_proponerRutas());
   }
 
   Future<void> _elegirConductor() async {
@@ -173,7 +207,10 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
       firstDate: DateTime.now().subtract(const Duration(days: 30)),
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
-    if (elegida != null) setState(() => _fecha = elegida);
+    if (elegida != null) {
+      setState(() => _fecha = elegida);
+      unawaited(_proponerRutas());
+    }
   }
 
   Future<void> _elegirDesde() async {
@@ -200,7 +237,7 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
     FocusScope.of(context).unfocus();
     setState(() => _error = null);
 
-    if (_rutaId == 0) return setState(() => _error = 'Elige la ruta.');
+    if (_rutaIds.isEmpty) return setState(() => _error = 'Elige al menos una ruta.');
     if (_vehiculoId == 0) return setState(() => _error = 'Elige el vehículo.');
     if (_conductorId == 0) return setState(() => _error = 'Elige el conductor.');
     if (_desde.isAfter(_hasta)) {
@@ -222,7 +259,7 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
       'fecha': _soloDia(_fecha).toIso8601String(),
       'pedidosDesde': _soloDia(_desde).toIso8601String(),
       'pedidosHasta': _soloDia(_hasta).toIso8601String(),
-      'rutaId': _rutaId,
+      'rutaIds': _rutaIds.toList(),
       'vehiculoId': _vehiculoId,
       'conductorId': _conductorId,
       'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
@@ -247,11 +284,20 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
 
   @override
   Widget build(BuildContext context) {
-    final disponiblesAsync = _rutaId == 0
+    final rutasOrdenadas = _rutaIds.toList()..sort();
+    final disponiblesAsync = _rutaIds.isEmpty
         ? null
         : ref.watch(
-            disponiblesProvider((rutaId: _rutaId, despachoId: widget.despacho?.id)),
+            disponiblesProvider((
+              rutas: rutasOrdenadas.join(','),
+              despachoId: widget.despacho?.id,
+              // Sin fecha salen los de cualquier día de visita ("incluir otros días").
+              dia: _otrosDias ? null : _soloDia(_fecha),
+            )),
           );
+    final todasLasRutas = (ref.watch(rutasProvider).valueOrNull ?? const <Ruta>[]).where((r) => r.activo).toList();
+    // Se observa para mantener vivo el recorrido del vehiculo: `_rutasDelDia` lo lee sin suscribirse.
+    if (_vehiculoId != 0) ref.watch(recorridoVehiculoProvider(_vehiculoId));
 
     final disponibles = _completar(disponiblesAsync?.valueOrNull ?? const <DespachoPedido>[]);
 
@@ -289,24 +335,6 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
                   constraints: BoxConstraints(minHeight: Dimen.campoLg),
                 ),
                 child: Text(_fechaTexto(_fecha), style: const TextStyle(fontSize: 15)),
-              ),
-            ),
-            const SizedBox(height: Dimen.espacio4),
-
-            InkWell(
-              onTap: _elegirRuta,
-              borderRadius: BorderRadius.circular(Dimen.radioCampo),
-              child: InputDecorator(
-                decoration: InputDecoration(
-                  labelText: 'Ruta',
-                  prefixIcon: const Icon(Icons.route_outlined, size: 19, color: Colores.tintaTenue),
-                  suffixIcon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
-                  constraints: const BoxConstraints(minHeight: Dimen.campoLg),
-                ),
-                child: Text(
-                  _rutaNombre ?? 'Toca para elegir',
-                  style: TextStyle(fontSize: 15, color: _rutaNombre == null ? Colores.tintaTenue : Colores.tinta),
-                ),
               ),
             ),
             const SizedBox(height: Dimen.espacio4),
@@ -350,17 +378,74 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
             ),
             const SizedBox(height: Dimen.espacio5),
 
+            // Las rutas que carga el camión ese día. El vehículo y la fecha las proponen desde su recorrido
+            // semanal; se pueden cambiar para este despacho.
+            const Text('Rutas', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: Dimen.espacio2),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final r in todasLasRutas)
+                  FilterChip(
+                    label: Text(r.nombre),
+                    selected: _rutaIds.contains(r.id),
+                    onSelected: _guardando
+                        ? null
+                        : (v) => setState(() {
+                            _rutasTocadas = true;
+                            if (v) {
+                              _rutaIds.add(r.id);
+                            } else {
+                              _rutaIds.remove(r.id);
+                            }
+                            _elegidos.clear();
+                          }),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _vehiculoId == 0
+                  ? 'Elige el vehículo y el día: sus rutas se proponen solas.'
+                  : _rutasTocadas
+                  ? 'Cambiadas a mano para este despacho.'
+                  : _rutasDelDia.isEmpty
+                  ? 'Este vehículo no tiene rutas los $_diaTexto. Elígelas a mano o cárgalas en Flota → Recorrido.'
+                  : 'Del recorrido del vehículo para el $_diaTexto.',
+              style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+            ),
+            const SizedBox(height: Dimen.espacio5),
+
             const Text(
               'Pedidos',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 2),
             const Text(
-              'Los pendientes de esa ruta, tomados entre estas fechas. Incluye el '
+              'Los pendientes de esas rutas, tomados entre estas fechas. Incluye el '
               'día en que se pesa: los aumentos de ese día también suben al camión.',
               style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
             ),
-            const SizedBox(height: Dimen.espacio3),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              value: _otrosDias,
+              onChanged: _guardando
+                  ? null
+                  : (v) => setState(() {
+                      _otrosDias = v;
+                      _elegidos.clear();
+                    }),
+              title: const Text('Incluir clientes de otros días', style: TextStyle(fontSize: 13.5)),
+              subtitle: Text(
+                _otrosDias
+                    ? 'Salen los pedidos de esas rutas de cualquier día de visita.'
+                    : 'Solo salen los clientes que se visitan el $_diaTexto.',
+                style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+              ),
+            ),
+            const SizedBox(height: Dimen.espacio2),
 
             Row(
               children: [
@@ -406,20 +491,20 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
                 ),
                 child: Text(
                   fueraDeRango.length == 1
-                      ? 'Hay 1 pedido pendiente de esta ruta fuera de esas fechas. '
+                      ? 'Hay 1 pedido pendiente de esas rutas fuera de esas fechas. '
                             'No sube al camión; amplía las fechas si debe ir.'
-                      : 'Hay ${fueraDeRango.length} pedidos pendientes de esta ruta fuera de '
+                      : 'Hay ${fueraDeRango.length} pedidos pendientes de esas rutas fuera de '
                             'esas fechas. No suben al camión; amplía las fechas si deben ir.',
                   style: const TextStyle(fontSize: 12.5, color: Colores.advertencia),
                 ),
               ),
 
-            if (_rutaId == 0)
+            if (_rutaIds.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: Dimen.espacio5),
                 child: Center(
                   child: Text(
-                    'Elige primero la ruta para ver sus pedidos.',
+                    'Elige primero las rutas para ver sus pedidos.',
                     style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
                   ),
                 ),
@@ -434,7 +519,7 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
                 padding: EdgeInsets.symmetric(vertical: Dimen.espacio5),
                 child: Center(
                   child: Text(
-                    'No hay pedidos pendientes en esta ruta. Puede que ya estén '
+                    'No hay pedidos pendientes para esas rutas. Puede que ya estén '
                     'en otro camión.',
                     style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
                   ),
@@ -445,7 +530,7 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
                 padding: EdgeInsets.symmetric(vertical: Dimen.espacio5),
                 child: Center(
                   child: Text(
-                    'No hay pedidos de esta ruta entre esas fechas.',
+                    'No hay pedidos de esas rutas entre esas fechas.',
                     style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
                   ),
                 ),
@@ -513,6 +598,8 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
                     subtitle: Text(
                       [
                             if (p.entregado) 'Ya entregado (${p.notaVentaNumero})',
+                            // Con varias rutas en el camión, dice de cuál es cada cliente.
+                            if (p.rutaCliente != null) 'Ruta ${p.rutaCliente}',
                             [p.mercado, p.direccion].where((s) => s != null && s.isNotEmpty).join(' — '),
                             if (p.telefono != null) p.telefono!,
                           ]

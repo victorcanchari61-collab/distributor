@@ -22,6 +22,7 @@ public class DespachoService : IDespachoService
     private IQueryable<Despacho> Completos() =>
         _context.Despachos
             .Include(d => d.Ruta)
+            .Include(d => d.Rutas).ThenInclude(r => r.Ruta)
             .Include(d => d.Vehiculo)
             .Include(d => d.Conductor)
             .Include(d => d.Usuario)
@@ -413,7 +414,7 @@ public class DespachoService : IDespachoService
     }
 
     public async Task<IEnumerable<DespachoPedidoResponse>> PedidosDisponiblesAsync(
-        int rutaId, int? despachoId = null)
+        IReadOnlyCollection<int> rutaIds, int? despachoId = null, DateTime? diaDeVisita = null)
     {
         /*
          * Un pedido esta disponible si sigue pendiente y no viaja ya en otro
@@ -428,13 +429,26 @@ public class DespachoService : IDespachoService
             .SelectMany(d => d.Detalle)
             .Select(x => x.PedidoId);
 
+        /*
+         * El día de visita: el lunes solo salen los clientes que se visitan el lunes.
+         *
+         * Es la regla del reparto del sistema anterior —día de visita del cliente Y ruta dentro de las
+         * de ese camión— y es lo que separa los ~110 clientes del lunes de las rutas 1 y 7 de los cerca
+         * de 700 que suman las dos rutas enteras. Sin fecha no se filtra por día: es lo que se pide
+         * cuando alguien decide, a propósito, llevar a un cliente atrasado.
+         */
+        var dia = diaDeVisita is DateTime fecha ? DiaSemana.De(fecha) : null;
+
         var pedidos = await _context.Pedidos
             .AsNoTracking()
             .Include(p => p.Cliente!).ThenInclude(c => c.Mercado)
+            .Include(p => p.Cliente!).ThenInclude(c => c.Ruta)
             .Include(p => p.Detalle)
             .Include(p => p.Ventas)
             .Where(p => p.Estado == EstadoPedido.Pendiente
-                        && p.Cliente!.RutaId == rutaId
+                        && p.Cliente!.RutaId != null
+                        && rutaIds.Contains(p.Cliente!.RutaId!.Value)
+                        && (dia == null || p.Cliente!.DiaVisita == dia)
                         && !comprometidos.Contains(p.Id))
             .OrderBy(p => p.Fecha)
             .ToListAsync();
@@ -452,12 +466,17 @@ public class DespachoService : IDespachoService
             Fecha = (request.Fecha ?? DateTime.UtcNow).Date,
             PedidosDesde = request.PedidosDesde?.Date,
             PedidosHasta = request.PedidosHasta?.Date,
-            RutaId = request.RutaId,
+            RutaId = RutasDe(request)[0],
             VehiculoId = request.VehiculoId,
             ConductorId = request.ConductorId,
             Observacion = Limpiar(request.Observacion),
             UsuarioId = usuarioId,
         };
+
+        foreach (var rutaId in RutasDe(request))
+        {
+            despacho.Rutas.Add(new DespachoRuta { RutaId = rutaId });
+        }
 
         foreach (var pedidoId in await PedidosValidosAsync(request, null))
         {
@@ -485,8 +504,19 @@ public class DespachoService : IDespachoService
         despacho.Fecha = (request.Fecha ?? despacho.Fecha).Date;
         despacho.PedidosDesde = request.PedidosDesde?.Date;
         despacho.PedidosHasta = request.PedidosHasta?.Date;
-        despacho.RutaId = request.RutaId;
+        despacho.RutaId = RutasDe(request)[0];
         despacho.VehiculoId = request.VehiculoId;
+
+        // Las rutas se sincronizan: se quitan las que ya no van y se agregan las nuevas.
+        var rutasNuevas = RutasDe(request);
+        foreach (var quitar in despacho.Rutas.Where(r => !rutasNuevas.Contains(r.RutaId)).ToList())
+        {
+            despacho.Rutas.Remove(quitar);
+        }
+        foreach (var rutaId in rutasNuevas.Where(id => despacho.Rutas.All(r => r.RutaId != id)))
+        {
+            despacho.Rutas.Add(new DespachoRuta { RutaId = rutaId });
+        }
         despacho.ConductorId = request.ConductorId;
         despacho.Observacion = Limpiar(request.Observacion);
 
@@ -567,8 +597,13 @@ public class DespachoService : IDespachoService
             throw new BadRequestException("El \"desde\" de los pedidos no puede ser después del \"hasta\".");
         }
 
-        if (!await _context.Rutas.AnyAsync(r => r.Id == request.RutaId))
-            throw new BadRequestException("Elige la ruta");
+        var rutas = RutasDe(request);
+        if (rutas.Count == 0)
+            throw new BadRequestException("Elige al menos una ruta");
+
+        var existentes = await _context.Rutas.CountAsync(r => rutas.Contains(r.Id));
+        if (existentes != rutas.Count)
+            throw new BadRequestException("Alguna de las rutas elegidas no existe");
 
         var vehiculo = await _context.Vehiculos.FirstOrDefaultAsync(v => v.Id == request.VehiculoId)
             ?? throw new BadRequestException("Elige el vehículo");
@@ -595,7 +630,9 @@ public class DespachoService : IDespachoService
         var pedidos = request.PedidoIds.Distinct().ToList();
         if (pedidos.Count == 0) return [];
 
-        var disponibles = (await PedidosDisponiblesAsync(request.RutaId, despachoId))
+        // Sin filtro de día: el día es una comodidad al LISTAR. Quien decidió llevar a un cliente de otro
+        // día ya lo eligió en pantalla, y aquí solo se comprueba que el pedido siga libre y sea de las rutas.
+        var disponibles = (await PedidosDisponiblesAsync(RutasDe(request), despachoId))
             .Select(p => p.PedidoId)
             .ToHashSet();
 
@@ -637,6 +674,14 @@ public class DespachoService : IDespachoService
         return $"DP-{correlativo:0000}";
     }
 
+    /// <summary>Las rutas del request, sin repetir y en el orden en que llegaron. Acepta el `RutaId` de antes.</summary>
+    private static List<int> RutasDe(DespachoRequest request)
+    {
+        var rutas = request.RutaIds.Where(id => id > 0).Distinct().ToList();
+        if (rutas.Count == 0 && request.RutaId > 0) rutas.Add(request.RutaId);
+        return rutas;
+    }
+
     private static string? Limpiar(string? texto) =>
         string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
 
@@ -652,7 +697,9 @@ public class DespachoService : IDespachoService
             PedidosDesde = d.PedidosDesde,
             PedidosHasta = d.PedidosHasta,
             RutaId = d.RutaId,
-            Ruta = d.Ruta?.Nombre ?? string.Empty,
+            Ruta = string.Join(" · ", NombresDeRutas(d)),
+            RutaIds = d.Rutas.OrderBy(r => r.Id).Select(r => r.RutaId).ToList(),
+            Rutas = NombresDeRutas(d),
             VehiculoId = d.VehiculoId,
             Vehiculo = d.Vehiculo?.Placa ?? string.Empty,
             ConductorId = d.ConductorId,
@@ -665,6 +712,14 @@ public class DespachoService : IDespachoService
             Entregados = pedidos.Count(p => p.NotaVentaId is not null),
             Detalle = pedidos,
         };
+    }
+
+    /// <summary>Los nombres de las rutas del despacho; si es de los de antes (sin lista), la ruta principal.</summary>
+    private static List<string> NombresDeRutas(Despacho d)
+    {
+        var nombres = d.Rutas.OrderBy(r => r.Id).Select(r => r.Ruta?.Nombre).OfType<string>().ToList();
+        if (nombres.Count == 0 && d.Ruta?.Nombre is string principal) nombres.Add(principal);
+        return nombres;
     }
 
     private static DespachoPedidoResponse MapPedido(Pedido p)
@@ -683,6 +738,8 @@ public class DespachoService : IDespachoService
             Direccion = p.Cliente?.Direccion,
             Mercado = p.Cliente?.Mercado?.Nombre,
             Telefono = p.Cliente?.Telefono,
+            RutaCliente = p.Cliente?.Ruta?.Nombre,
+            DiaVisita = p.Cliente?.DiaVisita,
             /*
              * Con el precio pactado por presentación, no con el derivado por
              * unidad base.

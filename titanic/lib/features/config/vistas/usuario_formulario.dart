@@ -66,10 +66,12 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
     setState(() {
       _errorNombre = _nombre.text.trim().isEmpty ? 'Ingresa el nombre.' : null;
 
-      _errorEmail = correo.isEmpty
-          ? 'Ingresa el correo.'
-          : !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(correo)
+      // El correo es opcional; si se escribe tiene que ser un correo. Pero sin correo ni DNI la cuenta no
+      // tendria con que iniciar sesion.
+      _errorEmail = correo.isNotEmpty && !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(correo)
           ? 'Ese correo no tiene un formato válido.'
+          : correo.isEmpty && _dni.text.trim().isEmpty
+          ? 'Ingresa el correo o el DNI: sin uno de los dos no podrá iniciar sesión.'
           : null;
 
       // Al crear la clave es obligatoria; al editar, vacio significa dejar la
@@ -248,6 +250,7 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
               controlador: _email,
               etiqueta: 'Correo',
               icono: Icons.mail_outline,
+              opcional: true,
               tipoTeclado: TextInputType.emailAddress,
               error: _errorEmail,
               habilitado: !_guardando,

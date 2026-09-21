@@ -54,7 +54,7 @@ public sealed class CargaDespachoA4(
     private void Cabecera(IContainer container) =>
         container.Column(col =>
         {
-            col.Item().Text($"Reporte de Carga - CAMIÓN {despacho.Ruta}")
+            col.Item().Text($"Reporte de Carga - {(despacho.Rutas.Count > 1 ? "RUTAS" : "CAMIÓN")} {despacho.Ruta}")
                 .FontSize(14).Bold().FontColor(Colores.Fuerte);
 
             col.Item().Text($"REPARTO {despacho.Fecha:dd/MM/yyyy}").FontSize(10).Bold();

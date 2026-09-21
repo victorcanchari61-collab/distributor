@@ -50,7 +50,7 @@ public class UsuarioService : IUsuarioService
     {
         await _loginValidator.ValidateAndThrowAsync(request);
 
-        var usuario = await _repository.GetByEmailAsync(request.Email);
+        var usuario = await _repository.GetByIdentificadorAsync(request.Email);
         if (usuario is null ||
             _passwordHasher.VerifyHashedPassword(usuario, usuario.PasswordHash, request.Password) ==
             PasswordVerificationResult.Failed)
@@ -80,10 +80,9 @@ public class UsuarioService : IUsuarioService
     {
         await _createValidator.ValidateAndThrowAsync(request);
 
-        if (await _repository.GetByEmailAsync(request.Email) is not null)
-        {
-            throw new ConflictException("Ya existe un usuario con ese email");
-        }
+        var email = LimpiarEmail(request.Email);
+        var dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni.Trim();
+        await ExigirIdentificadoresLibresAsync(email, dni, null);
 
         var rol = await _repository.GetRolAsync(request.RolId)
             ?? throw new BadRequestException("El rol indicado no existe");
@@ -99,8 +98,8 @@ public class UsuarioService : IUsuarioService
         var usuario = new Usuario
         {
             Nombre = request.Nombre,
-            Email = request.Email,
-            Dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni,
+            Email = email,
+            Dni = dni,
             RolId = rol.Id,
             EmpleadoId = empleado?.Id,
             RutaId = ruta?.Id
@@ -137,11 +136,9 @@ public class UsuarioService : IUsuarioService
         var usuario = await _repository.GetByIdConRolAsync(id)
             ?? throw new NotFoundException($"No existe el usuario {id}");
 
-        var otro = await _repository.GetByEmailAsync(request.Email);
-        if (otro is not null && otro.Id != id)
-        {
-            throw new ConflictException("Ya existe un usuario con ese email");
-        }
+        var email = LimpiarEmail(request.Email);
+        var dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni.Trim();
+        await ExigirIdentificadoresLibresAsync(email, dni, id);
 
         var rol = await _repository.GetRolAsync(request.RolId)
             ?? throw new BadRequestException("El rol indicado no existe");
@@ -157,8 +154,8 @@ public class UsuarioService : IUsuarioService
         var ruta = await ResolverRutaAsync(request.RutaId);
 
         usuario.Nombre = request.Nombre;
-        usuario.Email = request.Email;
-        usuario.Dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni;
+        usuario.Email = email;
+        usuario.Dni = dni;
         usuario.RolId = rol.Id;
         // Null desenlaza la ficha: la cuenta deja de ser de esa persona.
         usuario.EmpleadoId = empleado?.Id;
@@ -195,15 +192,13 @@ public class UsuarioService : IUsuarioService
         var usuario = await _repository.GetByIdConRolAsync(usuarioId)
             ?? throw new NotFoundException($"No existe el usuario {usuarioId}");
 
-        var otro = await _repository.GetByEmailAsync(request.Email);
-        if (otro is not null && otro.Id != usuarioId)
-        {
-            throw new ConflictException("Ya existe un usuario con ese email");
-        }
+        var email = LimpiarEmail(request.Email);
+        var dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni.Trim();
+        await ExigirIdentificadoresLibresAsync(email, dni, usuarioId);
 
         usuario.Nombre = request.Nombre;
-        usuario.Email = request.Email;
-        usuario.Dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni;
+        usuario.Email = email;
+        usuario.Dni = dni;
         usuario.Telefono = string.IsNullOrWhiteSpace(request.Telefono) ? null : request.Telefono;
         usuario.Foto = string.IsNullOrWhiteSpace(request.Foto) ? null : request.Foto;
 
@@ -240,7 +235,6 @@ public class UsuarioService : IUsuarioService
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, usuario.Email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(ClaimTypes.Name, usuario.Nombre),
             // El nombre del rol viaja en el token solo para mostrarlo. Los
@@ -304,13 +298,36 @@ public class UsuarioService : IUsuarioService
             ?? throw new BadRequestException("La ruta indicada no existe");
     }
 
+    /// <summary>Vacío es "sin correo": se guarda como nulo, no como texto vacío, para que el índice único no lo cuente.</summary>
+    private static string? LimpiarEmail(string? email) =>
+        string.IsNullOrWhiteSpace(email) ? null : email.Trim();
+
+    /// <summary>
+    /// Que el correo y el DNI no los tenga ya otra cuenta.
+    ///
+    /// Los dos sirven para iniciar sesión, así que repetirlos dejaría a dos personas entrando con lo mismo.
+    /// El DNI antes no se comprobaba porque no identificaba a nadie; ahora sí.
+    /// </summary>
+    private async Task ExigirIdentificadoresLibresAsync(string? email, string? dni, int? usuarioId)
+    {
+        if (email is not null && await _repository.GetByEmailAsync(email) is { } porCorreo && porCorreo.Id != usuarioId)
+        {
+            throw new ConflictException("Ya existe un usuario con ese email");
+        }
+
+        if (dni is not null && await _repository.GetByDniAsync(dni) is { } porDni && porDni.Id != usuarioId)
+        {
+            throw new ConflictException("Ya existe un usuario con ese DNI");
+        }
+    }
+
     private static UsuarioResponse MapToResponse(Usuario usuario)
     {
         return new UsuarioResponse
         {
             Id = usuario.Id,
             Nombre = usuario.Nombre,
-            Email = usuario.Email,
+            Email = usuario.Email ?? string.Empty,
             Dni = usuario.Dni,
             Telefono = usuario.Telefono,
             Foto = usuario.Foto,

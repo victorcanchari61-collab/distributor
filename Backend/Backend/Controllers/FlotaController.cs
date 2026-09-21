@@ -50,10 +50,12 @@ public class TipoVehiculoController : ControllerBase
 public class VehiculoController : ControllerBase
 {
     private readonly IFlotaService _flota;
+    private readonly IRecorridoService _recorrido;
 
-    public VehiculoController(IFlotaService flota)
+    public VehiculoController(IFlotaService flota, IRecorridoService recorrido)
     {
         _flota = flota;
+        _recorrido = recorrido;
     }
 
     [HttpGet]
@@ -81,6 +83,20 @@ public class VehiculoController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] VehiculoRequest request) =>
         Ok(await _flota.ActualizarVehiculoAsync(id, request));
 
+    /// <summary>
+    /// Las rutas que recorre el vehículo cada día de la semana.
+    ///
+    /// Lo lee también quien arma despachos, que no necesita entrar a Flota: al elegir vehículo y fecha, las
+    /// rutas se llenan desde aquí.
+    /// </summary>
+    [HttpGet("{id:int}/recorrido")]
+    [PermisoAlguno("tms.flota:ver", "tms.despachos:crear", "tms.despachos:editar")]
+    public async Task<IActionResult> Recorrido(int id) => Ok(await _recorrido.GetAsync(id));
+
+    [HttpPut("{id:int}/recorrido")]
+    [Permiso("tms.flota", Accion.Editar)]
+    public async Task<IActionResult> GuardarRecorrido(int id, [FromBody] RecorridoRequest request) =>
+        Ok(await _recorrido.GuardarAsync(id, request));
 }
 
 /// <summary>Quienes conducen.</summary>

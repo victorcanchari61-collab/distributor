@@ -34,6 +34,7 @@ public class AppDbContext : DbContext
     public DbSet<RolPermiso> RolPermisos => Set<RolPermiso>();
     public DbSet<UsuarioPermiso> UsuarioPermisos => Set<UsuarioPermiso>();
     public DbSet<Despacho> Despachos => Set<Despacho>();
+    public DbSet<RecorridoVehiculo> RecorridosVehiculo => Set<RecorridoVehiculo>();
     public DbSet<Devolucion> Devoluciones => Set<Devolucion>();
     public DbSet<RolAlcance> RolAlcances => Set<RolAlcance>();
     public DbSet<UsuarioAlcance> UsuarioAlcances => Set<UsuarioAlcance>();
@@ -183,6 +184,31 @@ public class AppDbContext : DbContext
                 .HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.SetNull);
         });
 
+        modelBuilder.Entity<DespachoRuta>(entity =>
+        {
+            entity.ToTable("DespachoRutas");
+            // Una ruta una vez por despacho: repetirla no carga nada de más y confunde la lista.
+            entity.HasIndex(d => new { d.DespachoId, d.RutaId }).IsUnique();
+
+            entity.HasOne(d => d.Despacho).WithMany(x => x!.Rutas)
+                .HasForeignKey(d => d.DespachoId).OnDelete(DeleteBehavior.Cascade);
+            // Restrict: la ruta de un despacho es historial y no se borra por debajo.
+            entity.HasOne(d => d.Ruta).WithMany()
+                .HasForeignKey(d => d.RutaId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<RecorridoVehiculo>(entity =>
+        {
+            entity.ToTable("RecorridosVehiculo");
+            entity.Property(r => r.Dia).HasMaxLength(12).IsRequired();
+            entity.HasIndex(r => new { r.VehiculoId, r.Dia, r.RutaId }).IsUnique();
+
+            entity.HasOne(r => r.Vehiculo).WithMany()
+                .HasForeignKey(r => r.VehiculoId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(r => r.Ruta).WithMany()
+                .HasForeignKey(r => r.RutaId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<DespachoDetalle>(entity =>
         {
             entity.ToTable("DespachoDetalles");
@@ -298,7 +324,9 @@ public class AppDbContext : DbContext
             entity.ToTable("Usuarios");
             entity.HasIndex(u => u.Email).IsUnique();
             entity.Property(u => u.Nombre).HasMaxLength(100).IsRequired();
-            entity.Property(u => u.Email).HasMaxLength(100).IsRequired();
+            // Sin IsRequired: el correo es opcional. El indice unico deja pasar varios NULL, asi que
+            // varias cuentas sin correo conviven y solo se impide repetir uno que si existe.
+            entity.Property(u => u.Email).HasMaxLength(100);
             entity.Property(u => u.PasswordHash).HasMaxLength(256).IsRequired();
             entity.Property(u => u.Dni).HasMaxLength(8);
             entity.Property(u => u.Telefono).HasMaxLength(20);

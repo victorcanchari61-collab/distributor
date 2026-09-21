@@ -41,8 +41,23 @@ public class Despacho
     public DateTime? PedidosDesde { get; set; }
     public DateTime? PedidosHasta { get; set; }
 
+    /// <summary>
+    /// La ruta principal: la primera de <see cref="Rutas"/>.
+    ///
+    /// Se conserva porque un camión casi siempre recorre varias rutas el mismo día pero el papel, las
+    /// listas y todo lo que ya leía este campo necesitan un nombre corto. La lista completa es
+    /// <see cref="Rutas"/>.
+    /// </summary>
     public int RutaId { get; set; }
     public Ruta? Ruta { get; set; }
+
+    /// <summary>
+    /// Todas las rutas que carga este camión ese día: el lunes del camión 1 son las rutas 1 y 7.
+    ///
+    /// El despacho las junta porque así se reparte de verdad —un camión atiende varias carteras el
+    /// mismo día— y con una sola ruta habría que armar dos despachos para el mismo vehículo.
+    /// </summary>
+    public ICollection<DespachoRuta> Rutas { get; set; } = [];
 
     public int VehiculoId { get; set; }
     public Vehiculo? Vehiculo { get; set; }
@@ -68,6 +83,18 @@ public class Despacho
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
     public ICollection<DespachoDetalle> Detalle { get; set; } = [];
+}
+
+/// <summary>Una de las rutas que recorre un despacho.</summary>
+public class DespachoRuta
+{
+    public int Id { get; set; }
+
+    public int DespachoId { get; set; }
+    public Despacho? Despacho { get; set; }
+
+    public int RutaId { get; set; }
+    public Ruta? Ruta { get; set; }
 }
 
 /// <summary>Un pedido cargado en el camión.</summary>

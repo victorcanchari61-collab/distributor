@@ -175,7 +175,14 @@ export function UsuariosPage() {
   const guardar = async () => {
 
     if (!form.nombre.trim()) return toast.error('Ingresa el nombre del usuario.')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return toast.error('El correo no es válido.')
+    // El correo es opcional; si se escribe, tiene que ser un correo.
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      return toast.error('El correo no es válido.')
+    }
+    // Sin correo ni DNI la cuenta no tendria con que iniciar sesion.
+    if (!form.email.trim() && !form.dni.trim()) {
+      return toast.error('Ingresa el correo o el DNI: sin uno de los dos no podrá iniciar sesión.')
+    }
     if (!form.rolId) return toast.error('Selecciona un rol.')
     if (!editando && form.password.length < 6) {
       return toast.error('La contraseña debe tener al menos 6 caracteres.')
@@ -444,9 +451,11 @@ export function UsuariosPage() {
 
           <Input
             label="Correo electrónico"
+            optional
             type="email"
             autoComplete="off"
             placeholder="usuario@distributor.com"
+            hint={<span className="text-xs text-ink-soft">sin correo entra con su DNI</span>}
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />

@@ -133,8 +133,19 @@ export const tipoVehiculoApi = {
     api.put<TipoVehiculoResponse>(`/tipovehiculo/${id}`, body),
 }
 
+/** El recorrido semanal de un vehículo: día (LUNES…DOMINGO) → ids de sus rutas. Solo los días con salida. */
+export interface RecorridoResponse {
+  vehiculoId: number
+  dias: Record<string, number[]>
+}
+
 export const vehiculoApi = {
   getAll: () => api.get<VehiculoResponse[]>('/vehiculo'),
+  /** GET /api/vehiculo/{id}/recorrido */
+  recorrido: (id: number) => api.get<RecorridoResponse>(`/vehiculo/${id}/recorrido`),
+  /** PUT /api/vehiculo/{id}/recorrido — reemplaza el recorrido entero. */
+  guardarRecorrido: (id: number, dias: Record<string, number[]>) =>
+    api.put<RecorridoResponse>(`/vehiculo/${id}/recorrido`, { dias }),
   resumen: () => api.get<ResumenFlotaResponse>('/vehiculo/resumen'),
   create: (body: VehiculoRequest) => api.post<VehiculoResponse>('/vehiculo', body),
   update: (id: number, body: VehiculoRequest) => api.put<VehiculoResponse>(`/vehiculo/${id}`, body),

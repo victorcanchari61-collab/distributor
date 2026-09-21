@@ -24,8 +24,11 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
 
   function validate() {
     const next: { email?: string; password?: string } = {}
-    if (!email.trim()) next.email = 'Ingresa tu correo electrónico.'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = 'El correo no tiene un formato válido.'
+    // Correo o DNI: quien no tiene correo entra con su DNI.
+    if (!email.trim()) next.email = 'Ingresa tu correo o tu DNI.'
+    else if (email.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      next.email = 'El correo no tiene un formato válido.'
+    }
     if (!password) next.password = 'Ingresa tu contraseña.'
     else if (password.length < 6) next.password = 'La contraseña debe tener al menos 6 caracteres.'
     setErrors(next)
@@ -92,10 +95,10 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
 
               <Input
                 size="lg"
-                label="Correo electrónico"
-                type="email"
-                autoComplete="email"
-                placeholder="admin@distributor.com"
+                label="Correo o DNI"
+                type="text"
+                autoComplete="username"
+                placeholder="admin@distributor.com o 45871203"
                 value={email}
                 error={errors.email}
                 onChange={(e) => setEmail(e.target.value)}

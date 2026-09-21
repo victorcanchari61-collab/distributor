@@ -6,6 +6,7 @@ import {
   Eye,
   Pencil,
   Plus,
+  Route as RutaIcono,
   ShieldCheck,
   ShieldOff,
   Truck,
@@ -30,6 +31,7 @@ import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { BadgeEstadoDocumentos, CampoFoto } from './CampoFoto'
+import { RecorridoVehiculoModal } from './RecorridoVehiculoModal'
 import { conductorApi, tipoVehiculoApi, urlImagen, vehiculoApi } from './flotaApi'
 import type {
   ConductorResponse,
@@ -98,6 +100,7 @@ export function FlotaPage() {
   const [error, setError] = useState('')
 
   const [detalle, setDetalle] = useState<VehiculoResponse | null>(null)
+  const [recorrido, setRecorrido] = useState<VehiculoResponse | null>(null)
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<VehiculoResponse | null>(null)
   const [form, setForm] = useState<FormVehiculo>(VACIO)
@@ -416,6 +419,11 @@ export function FlotaPage() {
               </RowAction>
             )}
             {puede('tms.flota', 'editar') && (
+              <RowAction label={`Recorrido de ${row.placa}`} onClick={() => setRecorrido(row)}>
+                <RutaIcono size={15} />
+              </RowAction>
+            )}
+            {puede('tms.flota', 'editar') && (
               <RowAction
                 label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.placa}`}
                 tone={row.activo ? 'warning' : 'success'}
@@ -427,6 +435,8 @@ export function FlotaPage() {
           </>
         )}
       >
+        <RecorridoVehiculoModal vehiculo={recorrido} onClose={() => setRecorrido(null)} />
+
         {/*
           La ficha, en solo lectura. Antes lo unico que habia era Editar, asi
           que para mirar los vencimientos de un camion habia que abrir el

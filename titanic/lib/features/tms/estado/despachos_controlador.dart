@@ -80,12 +80,22 @@ final despachosFiltradosProvider = Provider.autoDispose<List<Despacho>>((ref) {
 ///
 /// `despachoId` viaja en la clave: al editar, el backend suma los propios
 /// pedidos del despacho aunque ya no estén "disponibles" para otro camión.
-typedef ClaveDisponibles = ({int rutaId, int? despachoId});
+///
+/// Las rutas viajan como texto ("1,7") y no como lista: la clave de un `family` se compara por igualdad, y
+/// dos listas iguales no lo son — cada rebuild pediría los pedidos otra vez, sin parar.
+typedef ClaveDisponibles = ({String rutas, int? despachoId, DateTime? dia});
 
 final disponiblesProvider = FutureProvider.autoDispose.family<List<DespachoPedido>, ClaveDisponibles>(
-  (ref, clave) => ref
-      .watch(despachoApiProvider)
-      .disponibles(clave.rutaId, despachoId: clave.despachoId),
+  (ref, clave) => ref.watch(despachoApiProvider).disponibles(
+    [for (final r in clave.rutas.split(',')) if (r.isNotEmpty) int.parse(r)],
+    despachoId: clave.despachoId,
+    diaDeVisita: clave.dia,
+  ),
+);
+
+/// El recorrido semanal de un vehículo, para proponer las rutas de un despacho.
+final recorridoVehiculoProvider = FutureProvider.autoDispose.family<Map<String, List<int>>, int>(
+  (ref, vehiculoId) => ref.watch(despachoApiProvider).recorridoDe(vehiculoId),
 );
 
 /// Lo que ese camión lleva, para recortar el reporte de carga.

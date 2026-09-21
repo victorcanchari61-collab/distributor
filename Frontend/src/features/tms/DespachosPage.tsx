@@ -5,6 +5,7 @@ import {
   Alert,
   Badge,
   Button,
+  cn,
   Desplegable,
   Input,
   ListPage,
@@ -23,6 +24,7 @@ import { usePermisos } from '../../lib/permisos'
 import { diaLocal, hoyLocal, fechaCorta } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { conductorApi, vehiculoApi } from './flotaApi'
+import { DIAS_SEMANA } from './RecorridoVehiculoModal'
 import type { ConductorResponse, VehiculoResponse } from './flotaApi'
 import { rutaApi } from './rutaApi'
 import type { RutaResponse } from './rutaApi'
@@ -80,7 +82,14 @@ export function DespachosPage() {
    */
   const [desde, setDesde] = useState(hoy())
   const [hasta, setHasta] = useState(hoy())
-  const [rutaId, setRutaId] = useState(0)
+  // Las rutas que carga el camión ese día: el lunes del camión 1 son la 1 y la 7.
+  const [rutaIds, setRutaIds] = useState<number[]>([])
+  // Igual que el conductor: si se tocaron a mano, el recorrido del vehículo deja de imponerlas.
+  const [rutasTocadas, setRutasTocadas] = useState(false)
+  // De qué está hecho el recorrido del vehículo elegido: para proponer las rutas y decir de dónde salieron.
+  const [recorrido, setRecorrido] = useState<Record<string, number[]> | null>(null)
+  // Por defecto solo salen los clientes que se visitan el día de la fecha (el lunes, los de lunes).
+  const [otrosDias, setOtrosDias] = useState(false)
   const [vehiculoId, setVehiculoId] = useState(0)
   const [conductorId, setConductorId] = useState(0)
   const [observacion, setObservacion] = useState('')
@@ -136,9 +145,41 @@ export function DespachosPage() {
     if (vehiculo?.conductorId) setConductorId(vehiculo.conductorId)
   }, [vehiculoId, vehiculos, conductorTocado])
 
-  // Al cambiar de ruta se piden sus pedidos pendientes.
+  // El recorrido del vehículo elegido, para proponer las rutas del día.
   useEffect(() => {
-    if (vista !== 'form' || !rutaId) {
+    if (vista !== 'form' || !vehiculoId) {
+      setRecorrido(null)
+      return
+    }
+    let vivo = true
+    void vehiculoApi
+      .recorrido(vehiculoId)
+      .then((r) => {
+        if (vivo) setRecorrido(r.dias)
+      })
+      // Sin recorrido se sigue: las rutas se eligen a mano, como siempre.
+      .catch(() => {
+        if (vivo) setRecorrido(null)
+      })
+    return () => {
+      vivo = false
+    }
+  }, [vehiculoId, vista])
+
+  const diaDeLaFecha = DIAS_SEMANA[(new Date(`${fecha}T00:00:00`).getDay() + 6) % 7]
+  const rutasDelDia = recorrido?.[diaDeLaFecha.id] ?? []
+
+  // Elegir vehículo o fecha propone las rutas de ese día, salvo que ya se hayan tocado a mano.
+  useEffect(() => {
+    if (vista !== 'form' || rutasTocadas || !recorrido) return
+    setRutaIds(rutasDelDia)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recorrido, fecha, vista, rutasTocadas])
+
+  // Al cambiar de rutas o de día se piden los pedidos pendientes.
+  const rutasClave = rutaIds.join(',')
+  useEffect(() => {
+    if (vista !== 'form' || rutaIds.length === 0) {
       setDisponibles([])
       return
     }
@@ -146,7 +187,7 @@ export function DespachosPage() {
     let vivo = true
     setCargandoPedidos(true)
     void despachoApi
-      .disponibles(rutaId, editando?.id)
+      .disponibles(rutaIds, editando?.id, otrosDias ? undefined : fecha)
       .then((lista) => {
         if (!vivo) return
 
@@ -179,14 +220,19 @@ export function DespachosPage() {
     return () => {
       vivo = false
     }
-  }, [rutaId, vista, editando])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rutasClave, fecha, otrosDias, vista, editando])
 
   const abrirNuevo = () => {
     setEditando(null)
     setFecha(hoy())
     setDesde(hoy())
     setHasta(hoy())
-    setRutaId(0)
+    setRutaIds([])
+    setRutasTocadas(false)
+    // El recorrido del vehiculo anterior no debe proponer rutas en un despacho nuevo.
+    setRecorrido(null)
+    setOtrosDias(false)
     setVehiculoId(0)
     setConductorId(0)
     setConductorTocado(false)
@@ -203,7 +249,11 @@ export function DespachosPage() {
     const dias = d.detalle.filter((p) => p.fecha).map((p) => diaLocal(p.fecha)).sort()
     setDesde(d.pedidosDesde?.slice(0, 10) ?? dias[0] ?? hoy())
     setHasta(d.pedidosHasta?.slice(0, 10) ?? dias[dias.length - 1] ?? hoy())
-    setRutaId(d.rutaId)
+    setRutaIds(d.rutaIds?.length ? d.rutaIds : [d.rutaId])
+    // Al editar, las rutas guardadas mandan: fueron una decision que ya se tomo.
+    setRutasTocadas(true)
+    // Un despacho armado con clientes de otros dias debe seguir viendolos al editarlo.
+    setOtrosDias(d.detalle.some((p) => p.diaVisita && p.diaVisita !== DIAS_SEMANA[(new Date(`${d.fecha.slice(0, 10)}T00:00:00`).getDay() + 6) % 7].id))
     setVehiculoId(d.vehiculoId)
     setConductorId(d.conductorId)
     // Al editar, el conductor guardado manda: fue una decisión que ya se tomó.
@@ -219,7 +269,7 @@ export function DespachosPage() {
     )
 
   const guardar = async () => {
-    if (!rutaId) return toast.error('Elige la ruta.')
+    if (rutaIds.length === 0) return toast.error('Elige al menos una ruta.')
     if (!vehiculoId) return toast.error('Elige el vehículo.')
     if (!conductorId) return toast.error('Elige el conductor.')
     if (desde > hasta) return toast.error('El "desde" de los pedidos no puede ser después del "hasta".')
@@ -229,7 +279,7 @@ export function DespachosPage() {
       fecha,
       pedidosDesde: desde,
       pedidosHasta: hasta,
-      rutaId,
+      rutaIds,
       vehiculoId,
       conductorId,
       observacion: observacion.trim() || null,
@@ -325,8 +375,8 @@ export function DespachosPage() {
       key: 'ruta',
       label: 'Ruta',
       filterType: 'select',
-      filterOptions: [...new Set(rutas.filter((r) => r.activo).map((r) => r.nombre))]
-        .sort((a, b) => a.localeCompare(b, 'es'))
+      filterOptions: [...new Set(despachos.map((d) => d.ruta))]
+        .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
         .map((n) => ({ value: n, label: n })),
     },
     {
@@ -390,7 +440,7 @@ export function DespachosPage() {
         <PageHeader
           icon={<Truck size={20} />}
           title={editando ? `Editar ${editando.numero}` : 'Nuevo despacho'}
-          description="Arma la carga del camión: elige la ruta y marca los pedidos que salen."
+          description="Arma la carga del camión: elige el vehículo y el día, y marca los pedidos que salen."
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')} iconRight={<ArrowLeft size={15} />}>
               Volver
@@ -400,7 +450,10 @@ export function DespachosPage() {
 
 
         <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
-          <PageSection title="Pedidos" description="Los pendientes de los clientes de esa ruta, tomados entre esas fechas.">
+          <PageSection
+            title="Pedidos"
+            description="Los pendientes de los clientes de esas rutas, tomados entre esas fechas."
+          >
             <div className="mb-3 grid gap-3 sm:grid-cols-2">
               <Input
                 label="Pedidos desde"
@@ -417,11 +470,27 @@ export function DespachosPage() {
                 onChange={(e) => setHasta(e.target.value)}
               />
             </div>
+            <label className="mb-3 flex cursor-pointer items-start gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={otrosDias}
+                onChange={(e) => setOtrosDias(e.target.checked)}
+              />
+              <span>
+                Incluir clientes de otros días de visita
+                <span className="block text-xs text-ink-soft">
+                  {otrosDias
+                    ? 'Salen los pedidos de esas rutas de cualquier día de visita.'
+                    : `Solo salen los clientes que se visitan el ${diaDeLaFecha.label.toLowerCase()}.`}
+                </span>
+              </span>
+            </label>
             <p className="mb-3 text-xs text-ink-soft">
               Incluye el día en que se pesa: los aumentos de ese día también suben al camión.
             </p>
 
-            {rutaId > 0 && fueraDeRango.length > 0 && (
+            {rutaIds.length > 0 && fueraDeRango.length > 0 && (
               <div className="mb-3 rounded-field border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                 {fueraDeRango.length === 1
                   ? 'Hay 1 pedido pendiente de esta ruta fuera de esas fechas'
@@ -433,19 +502,19 @@ export function DespachosPage() {
               </div>
             )}
 
-            {!rutaId ? (
+            {rutaIds.length === 0 ? (
               <p className="py-8 text-center text-sm text-ink-soft">
-                Elige primero la ruta para ver sus pedidos.
+                Elige primero las rutas para ver sus pedidos.
               </p>
             ) : cargandoPedidos ? (
               <p className="py-8 text-center text-sm text-ink-soft">Cargando pedidos...</p>
             ) : disponibles.length === 0 ? (
               <p className="py-8 text-center text-sm text-ink-soft">
-                No hay pedidos pendientes en esta ruta. Puede que ya estén en otro camión.
+                No hay pedidos pendientes para esas rutas{otrosDias ? '' : ` con visita el ${diaDeLaFecha.label.toLowerCase()}`}. Puede que ya estén en otro camión.
               </p>
             ) : visibles.length === 0 ? (
               <p className="py-8 text-center text-sm text-ink-soft">
-                No hay pedidos de esta ruta entre esas fechas.
+                No hay pedidos de esas rutas entre esas fechas.
               </p>
             ) : (
               <div className="flex flex-col gap-2">
@@ -478,6 +547,14 @@ export function DespachosPage() {
                         {[p.mercado, p.direccion].filter(Boolean).join(' — ') || 'Sin dirección'}
                         {p.telefono ? ` · ${p.telefono}` : ''}
                       </span>
+                      {/* Con varias rutas en el camión, dice de cuál es cada cliente y qué día se lo visita. */}
+                      {(p.rutaCliente || p.diaVisita) && (
+                        <span className="text-xs text-ink-soft">
+                          {p.rutaCliente ? `Ruta ${p.rutaCliente}` : ''}
+                          {p.rutaCliente && p.diaVisita ? ' · ' : ''}
+                          {p.diaVisita ? (DIAS_SEMANA.find((d) => d.id === p.diaVisita)?.label ?? p.diaVisita) : ''}
+                        </span>
+                      )}
                     </span>
                     <span className="text-sm font-semibold text-ink">S/ {p.total.toFixed(2)}</span>
                   </label>
@@ -496,13 +573,6 @@ export function DespachosPage() {
               />
 
               <Desplegable
-                label="Ruta"
-                value={rutaId}
-                onChange={(v) => setRutaId(Number(v))}
-                options={rutas.map((r) => ({ value: r.id, label: r.nombre }))}
-              />
-
-              <Desplegable
                 label="Vehículo"
                 value={vehiculoId}
                 onChange={(v) => setVehiculoId(Number(v))}
@@ -512,6 +582,47 @@ export function DespachosPage() {
                   detalle: v.conductor ?? undefined,
                 }))}
               />
+
+              {/*
+                Las rutas que carga el camión ese día. El vehículo y la fecha las proponen desde su
+                recorrido semanal; se pueden cambiar para este despacho.
+              */}
+              <div>
+                <span className="ui-label mb-1.5 block">Rutas</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {rutas.map((r) => {
+                    const puesta = rutaIds.includes(r.id)
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        aria-pressed={puesta}
+                        onClick={() => {
+                          setRutasTocadas(true)
+                          setRutaIds((prev) => (prev.includes(r.id) ? prev.filter((id) => id !== r.id) : [...prev, r.id]))
+                        }}
+                        className={cn(
+                          'min-w-9 cursor-pointer rounded-full border px-3 py-1 text-sm font-semibold transition-colors',
+                          puesta
+                            ? 'border-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.12)] text-[rgb(var(--sys-ink-rgb))]'
+                            : 'border-line text-ink-muted hover:border-ink-soft',
+                        )}
+                      >
+                        {r.nombre}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="mt-1.5 text-xs text-ink-soft">
+                  {!vehiculoId
+                    ? 'Elige el vehículo y el día: sus rutas se proponen solas.'
+                    : rutasDelDia.length === 0
+                      ? `Este vehículo no tiene rutas los ${diaDeLaFecha.label.toLowerCase()}. Elígelas a mano o cárgalas en Flota → Recorrido.`
+                      : rutasTocadas
+                        ? 'Cambiadas a mano para este despacho.'
+                        : `Del recorrido del vehículo para el ${diaDeLaFecha.label.toLowerCase()}.`}
+                </p>
+              </div>
 
               <Desplegable
                 label="Conductor"

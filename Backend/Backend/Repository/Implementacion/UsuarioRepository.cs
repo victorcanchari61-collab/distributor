@@ -17,6 +17,17 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
         return await DbSet.Include(u => u.Rol).FirstOrDefaultAsync(u => u.Email == email);
     }
 
+    public async Task<Usuario?> GetByIdentificadorAsync(string identificador)
+    {
+        // El correo manda; el DNI es para quien no tiene. Se distinguen solos: un correo lleva arroba.
+        var texto = identificador.Trim();
+        return await DbSet.Include(u => u.Rol)
+            .FirstOrDefaultAsync(u => u.Email == texto || (u.Dni != null && u.Dni == texto));
+    }
+
+    public async Task<Usuario?> GetByDniAsync(string dni) =>
+        await DbSet.AsNoTracking().FirstOrDefaultAsync(u => u.Dni == dni);
+
     public async Task<IEnumerable<Usuario>> GetAllConRolAsync()
     {
         // Activos primero: los desactivados siguen listandose para poder

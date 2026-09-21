@@ -6,6 +6,11 @@ public interface IUsuarioRepository : IRepository<Usuario>
 {
     Task<Usuario?> GetByEmailAsync(string email);
 
+    /// <summary>Por correo o, si no coincide, por DNI: con lo que la persona escribe para entrar.</summary>
+    Task<Usuario?> GetByIdentificadorAsync(string identificador);
+
+    Task<Usuario?> GetByDniAsync(string dni);
+
     /// <summary>Todos los usuarios con su rol, activos primero.</summary>
     Task<IEnumerable<Usuario>> GetAllConRolAsync();
 

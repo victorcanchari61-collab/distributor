@@ -13,7 +13,14 @@ public class DespachoRequest
     public DateTime? PedidosDesde { get; set; }
     public DateTime? PedidosHasta { get; set; }
 
+    /// <summary>
+    /// Las rutas que carga el camión ese día (el lunes del camión 1: la 1 y la 7). Al menos una.
+    /// </summary>
+    public List<int> RutaIds { get; set; } = [];
+
+    /// <summary>Solo para clientes que aún mandan una ruta: se toma como la única de <see cref="RutaIds"/>.</summary>
     public int RutaId { get; set; }
+
     public int VehiculoId { get; set; }
 
     /// <summary>

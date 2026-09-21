@@ -20,6 +20,10 @@ public class DespachoPedidoResponse
     public string? Mercado { get; set; }
     public string? Telefono { get; set; }
 
+    /// <summary>La ruta del cliente y el día en que se lo visita: con varias rutas en el camión, dice de cuál es cada pedido.</summary>
+    public string? RutaCliente { get; set; }
+    public string? DiaVisita { get; set; }
+
     public decimal Total { get; set; }
     public int Lineas { get; set; }
 
@@ -48,8 +52,14 @@ public class DespachoResponse
     public DateTime? PedidosDesde { get; set; }
     public DateTime? PedidosHasta { get; set; }
 
+    /// <summary>La ruta principal (la primera); la lista completa está en <see cref="RutaIds"/>.</summary>
     public int RutaId { get; set; }
+
+    /// <summary>Todas las rutas, dichas como se leen: "1 · 7".</summary>
     public string Ruta { get; set; } = string.Empty;
+
+    public List<int> RutaIds { get; set; } = [];
+    public List<string> Rutas { get; set; } = [];
 
     public int VehiculoId { get; set; }
     /// <summary>La placa, que es como se nombra a un camión de verdad.</summary>
