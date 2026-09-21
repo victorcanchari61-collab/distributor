@@ -12,6 +12,7 @@ import {
   Button,
   Checkbox,
   Desplegable,
+  SelectorPresentacion,
   HistorialCambios,
   Input,
   ListPage,
@@ -34,7 +35,7 @@ import type {
   OpcionBuscador,
 } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { opcionesPresentacion, presentacionInicialDe } from '../../lib/presentaciones'
+import { presentacionInicialDe } from '../../lib/presentaciones'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { clienteApi, productoApi } from '../maestros'
@@ -362,12 +363,16 @@ export function PedidosPage() {
   const presentacionDeFila = (fila: { id: string; productoId: number; presentacionId: number }) => {
     const producto = productos.find((p) => p.id === fila.productoId)
     return (
-      <Desplegable
+      <SelectorPresentacion
         value={fila.presentacionId}
-        onChange={(v) => actualizarFila(fila.id, { presentacionId: Number(v) })}
+        onChange={(v) => actualizarFila(fila.id, { presentacionId: v })}
         placeholder={producto?.unidadBase ?? 'Elegir'}
         disabled={!producto}
-        options={producto ? opcionesPresentacion(producto, 'venta', fila.presentacionId) : []}
+        producto={producto}
+        uso="venta"
+        actual={fila.presentacionId}
+        resolverPrecio={precioDeLista}
+        claveLista={listaEfectiva}
       />
     )
   }
@@ -603,6 +608,7 @@ export function PedidosPage() {
               uso="venta"
               costoLabel="Precio de venta"
               resolverPrecio={precioDeLista}
+              claveLista={listaEfectiva}
               onAgregar={(linea: LineaProductoNueva) => setFilas((f) => [...f, linea])}
             />
 

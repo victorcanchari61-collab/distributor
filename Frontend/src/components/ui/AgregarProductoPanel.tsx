@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { idUnico } from '../../lib/ids'
-import { opcionesPresentacion, presentacionInicial } from '../../lib/presentaciones'
+import { presentacionInicial } from '../../lib/presentaciones'
 import type { UsoPresentacion } from '../../lib/presentaciones'
 import { Plus } from 'lucide-react'
 import { BuscadorCampo } from './BuscadorCampo'
@@ -8,7 +8,7 @@ import type { OpcionBuscador } from './BuscadorCampo'
 import { BuscadorProductoModal } from './BuscadorProductoModal'
 import type { ProductoBuscable } from './BuscadorProductoModal'
 import { Button } from './Button'
-import { Desplegable } from './Desplegable'
+import { SelectorPresentacion } from './SelectorPresentacion'
 import { Input } from './Input'
 
 export type { ProductoBuscable }
@@ -58,6 +58,8 @@ export interface AgregarProductoPanelProps {
    * presentación, o null si esa forma de vender no tiene precio cargado.
    */
   resolverPrecio?: (presentacionId: number, cantidad: number) => Promise<PrecioResuelto | null>
+  /** Cambia con la lista de precios elegida: el precio se vuelve a pedir. */
+  claveLista?: string | number
   /**
    * Para qué se arma la línea. En una venta solo se ofrecen las presentaciones marcadas "Se vende"
    * (la unidad base incluida); en una compra, las "Se compra". Sin uso (ajustes, transferencias)
@@ -91,6 +93,7 @@ export function AgregarProductoPanel({
   costoLabel = 'Precio',
   pideLote = false,
   resolverPrecio,
+  claveLista,
   uso,
   onAgregar,
 }: AgregarProductoPanelProps) {
@@ -159,7 +162,7 @@ export function AgregarProductoPanel({
       vigente = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [producto?.id, presentacionReal, linea.cantidad])
+  }, [producto?.id, presentacionReal, linea.cantidad, claveLista])
 
   const agregar = () => {
     if (!producto || !linea.cantidad) return
@@ -221,12 +224,15 @@ export function AgregarProductoPanel({
           }
         />
 
-        <Desplegable
+        <SelectorPresentacion
           label="Unidad"
           value={linea.presentacionId}
-          onChange={(v) => setLinea({ ...linea, presentacionId: Number(v) })}
+          onChange={(v) => setLinea({ ...linea, presentacionId: v })}
           disabled={!producto}
-          options={producto ? opcionesPresentacion(producto, uso) : []}
+          producto={producto}
+          uso={uso}
+          resolverPrecio={resolverPrecio}
+          claveLista={claveLista}
         />
 
         <Input
