@@ -2,6 +2,16 @@ import '../../../core/red/cliente_api.dart';
 import '../../../core/red/excepciones.dart';
 import 'lista_precio.dart';
 
+/// Un precio ya resuelto y de dónde salió: la lista o la referencia del producto.
+class PrecioResuelto {
+  const PrecioResuelto(this.precio, {required this.deLista});
+
+  final double precio;
+
+  /// false = la lista no tenía esa presentación (o no hay lista) y salió el precio de referencia.
+  final bool deLista;
+}
+
 /// Llamadas del modulo de facturacion.
 class FacturacionApi {
   const FacturacionApi(this._api);
@@ -59,6 +69,30 @@ class FacturacionApi {
               as Map<String, dynamic>;
 
       return (dato['precio'] as num?)?.toDouble();
+    } on ApiExcepcion catch (e) {
+      if (e.codigo == 404) return null;
+      rethrow;
+    }
+  }
+
+  /// GET /api/listaprecio/precio-venta
+  ///
+  /// El precio que corresponde cobrar: el de la lista si lo tiene y, si no, el de referencia del
+  /// producto por el factor de la presentación. Sin lista va directo a la referencia. Null cuando
+  /// no hay ninguno de los dos: el 404 no debe tumbar la pantalla.
+  Future<PrecioResuelto?> precioVenta(int presentacionId, double cantidad, {int? listaId}) async {
+    try {
+      final dato =
+          await _api.get(
+                '/listaprecio/precio-venta'
+                '?presentacionId=$presentacionId&cantidad=$cantidad'
+                '${listaId == null ? '' : '&listaId=$listaId'}',
+              )
+              as Map<String, dynamic>;
+
+      final precio = (dato['precio'] as num?)?.toDouble();
+      if (precio == null) return null;
+      return PrecioResuelto(precio, deLista: dato['origen'] == 'LISTA');
     } on ApiExcepcion catch (e) {
       if (e.codigo == 404) return null;
       rethrow;

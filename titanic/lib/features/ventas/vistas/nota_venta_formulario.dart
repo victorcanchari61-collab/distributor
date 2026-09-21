@@ -13,6 +13,7 @@ import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
+import '../../facturacion/datos/facturacion_api.dart';
 import '../../facturacion/datos/lista_precio.dart';
 import '../../facturacion/estado/facturacion_controlador.dart';
 import '../../finanzas/datos/metodo_pago.dart';
@@ -403,18 +404,16 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
     return null;
   }
 
-  /// Precio de una presentacion por esa cantidad, segun la lista elegida.
-  Future<double?> _precioDeLista(
+  /// Precio de una presentacion por esa cantidad: el de la lista elegida y, si esa lista no lo
+  /// tiene, el de referencia del producto. Así nada sale en cero por una lista a medio armar.
+  Future<PrecioResuelto?> _precioDeLista(
     List<ListaPrecio> listas,
     int presentacionId,
     double cantidad,
   ) async {
-    final lista = _listaEfectiva(listas);
-    if (lista == null) return null;
-
     return ref
         .read(facturacionApiProvider)
-        .resolverPrecio(lista, presentacionId, cantidad);
+        .precioVenta(presentacionId, cantidad, listaId: _listaEfectiva(listas));
   }
 
   @override
@@ -507,6 +506,7 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
               // El precio lo pone la lista, no la memoria del vendedor.
               resolverPrecio: (presentacionId, cantidad) =>
                   _precioDeLista(listas, presentacionId, cantidad),
+              claveLista: _listaEfectiva(listas),
               onAgregar: _agregarLineas,
             ),
             const SizedBox(height: Dimen.espacio5),

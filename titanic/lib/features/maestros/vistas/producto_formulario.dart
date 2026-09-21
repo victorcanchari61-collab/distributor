@@ -72,6 +72,13 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
         ? ''
         : _sinCerosDeMas(widget.producto!.costoReferencia!),
   );
+  /// Igual que el costo: por unidad base y sin redondear, para que abrir el formulario y guardar no
+  /// cambie lo que se puso desde la web.
+  late final _precioReferencia = TextEditingController(
+    text: widget.producto?.precioReferencia == null
+        ? ''
+        : _sinCerosDeMas(widget.producto!.precioReferencia!),
+  );
   late final _stockMinimo = TextEditingController(
     text: widget.producto == null ? '' : formatoNumero(widget.producto!.stockMinimo),
   );
@@ -123,15 +130,12 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   @override
   void initState() {
     super.initState();
-    // La ayuda del peso dice lo que pesa la caja con el numero que se esta
-    // tecleando: sin escuchar el campo solo se refrescaria al tocar otra cosa.
-    _peso.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    for (final c in [_codigo, _nombre, _descripcion, _costoReferencia, _stockMinimo, _peso]) {
+    for (final c in [_codigo, _nombre, _descripcion, _costoReferencia, _precioReferencia, _stockMinimo, _peso]) {
       c.dispose();
     }
     super.dispose();
@@ -172,6 +176,8 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
       'marcaId': _marcaId,
       'unidadBaseId': _unidadBaseId,
       'costoReferencia': _numero(_costoReferencia.text),
+      // Viaja SIEMPRE, igual que el peso: el endpoint reemplaza el producto con lo que le llega.
+      'precioReferencia': _numero(_precioReferencia.text),
       // Todo producto controla stock: el formulario ya no pregunta, igual que
       // en la web. El campo sigue viajando porque el backend lo espera.
       'controlaStock': true,
@@ -351,26 +357,27 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   }
 
   /*
-   * La ayuda del peso: "kg por UND · un Caja 12 LT pesa 11.04 kg".
+   * Las presentaciones sobre las que se puede escribir un valor: la base y las que tiene el
+   * formulario ahora mismo, aunque todavía no estén guardadas.
    *
-   * El peso se guarda por unidad base, que en una caja de 12 no dice mucho:
-   * ver lo que pesa la presentacion con la que se compra es lo que deja
-   * comprobar de un vistazo si el numero esta bien. La segunda parte solo sale
-   * si hay peso y una presentacion de compra que no sea la base.
+   * El costo se escribe sobre las que SE COMPRAN y el precio sobre las que SE VENDEN: ofrecer las
+   * otras invita a poner el precio del saco en un producto que solo sale por kilo. El peso no
+   * distingue —un saco pesa lo mismo se compre o se venda—.
    */
-  String _ayudaPeso(List<UnidadMedida> unidades) {
-    final unidadBase =
-        unidades.where((u) => u.id == _unidadBaseId).firstOrNull?.codigo ?? 'unidad base';
-    final texto = 'kg por $unidadBase';
+  List<_OpcionValor> _opcionesDePresentacion(
+    List<UnidadMedida> unidades, {
+    bool compra = false,
+    bool venta = false,
+  }) {
+    final base = unidades.where((u) => u.id == _unidadBaseId).firstOrNull?.codigo ?? 'unidad base';
+    bool sirve(bool esCompra, bool esVenta) =>
+        (!compra && !venta) || (compra && esCompra) || (venta && esVenta);
 
-    final peso = _numero(_peso.text);
-    final pres = _filas.where((f) => f.esCompra && f.factor != 1).firstOrNull;
-    if (peso == null || peso <= 0 || pres == null) return texto;
-
-    final kilos = peso * pres.factor;
-    // 11.04 y no 11.040: los ceros de mas hacen dudar de si el peso es exacto.
-    final redondeado = double.parse(kilos.toStringAsFixed(3));
-    return '$texto · un ${pres.nombre} pesa ${_sinCerosDeMas(redondeado)} kg';
+    return [
+      if (sirve(_baseSeCompra, _baseSeVende)) _OpcionValor(base, 1),
+      for (final f in _filas)
+        if (f.factor > 0 && sirve(f.esCompra, f.esVenta)) _OpcionValor(f.nombre, f.factor),
+    ];
   }
 
   Widget _datosTab() {
@@ -531,16 +538,30 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
         ],
         const SizedBox(height: Dimen.espacio4),
 
-        AppCampo(
-          controlador: _costoReferencia,
+        // Se escribe como se dice en el almacén —S/ 170 el saco— y se guarda por unidad base.
+        _ValorPorPresentacion(
+          controladorBase: _costoReferencia,
           etiqueta: 'Costo de referencia',
-          pista: 'Lo que suele costar la unidad base',
+          pista: '170.00',
           icono: Icons.payments_outlined,
-          opcional: true,
-          tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+          decimales: 2,
+          opciones: _opcionesDePresentacion(unidades, compra: true),
           habilitado: !_guardando,
         ),
-        const SizedBox(height: Dimen.espacio2),
+        const SizedBox(height: Dimen.espacio3),
+
+        // A cuánto se vende, como respaldo: sale cuando el pedido no lleva lista o la lista no
+        // tiene esa presentación. La lista manda sobre él.
+        _ValorPorPresentacion(
+          controladorBase: _precioReferencia,
+          etiqueta: 'Precio de venta',
+          pista: '310.00',
+          icono: Icons.sell_outlined,
+          decimales: 2,
+          opciones: _opcionesDePresentacion(unidades, venta: true),
+          habilitado: !_guardando,
+        ),
+        const SizedBox(height: Dimen.espacio3),
 
         AppCampo(
           controlador: _stockMinimo,
@@ -551,22 +572,17 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
         ),
         const SizedBox(height: Dimen.espacio2),
 
-        // El peso de UNA unidad base, en kilos. De aqui sale solo lo que pesa
-        // cualquier cantidad —una caja, un pedido, el camion entero— sin
-        // anotarlo en cada presentacion.
-        AppCampo(
-          controlador: _peso,
-          etiqueta: 'Peso',
-          pista: '0.92',
+        // Cuánto pesa, escrito sobre la presentación que se tiene delante (50 kg el saco). Se
+        // guarda por unidad base, y de ahí sale lo que pesa cualquier cantidad: una caja, un
+        // pedido, el camión entero.
+        _ValorPorPresentacion(
+          controladorBase: _peso,
+          etiqueta: 'Peso (kg)',
+          pista: '50',
           icono: Icons.scale_outlined,
-          opcional: true,
-          tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+          decimales: 3,
+          opciones: _opcionesDePresentacion(unidades),
           habilitado: !_guardando,
-        ),
-        const SizedBox(height: Dimen.espacio1),
-        Text(
-          _ayudaPeso(unidades),
-          style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
         ),
         const SizedBox(height: Dimen.espacio5),
       ],
@@ -997,4 +1013,149 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
       );
     },
   );
+}
+
+/// Una forma de decir el valor: "Saco 50 kg" pesa 50 veces la unidad base.
+class _OpcionValor {
+  const _OpcionValor(this.nombre, this.factor);
+
+  final String nombre;
+  final double factor;
+}
+
+/// Un valor del producto escrito por presentación y guardado por unidad base.
+///
+/// Se escribe como se dice en el almacén —S/ 170 el saco, 50 kg el saco— y se guarda por unidad
+/// base —S/ 3.40 el kilo, 1 kg el kilo—, que es como lo necesita todo lo demás. Arranca en la
+/// presentación MÁS GRANDE, que es la que se tiene en la cabeza: escribir 310 sobre el kilo y que
+/// quede en 15 500 el saco es el error que esto evita.
+///
+/// El controlador que recibe guarda SIEMPRE el valor por unidad base: el resto del formulario lo lee
+/// y lo envía tal cual, sin saber que aquí se escribe distinto.
+class _ValorPorPresentacion extends StatefulWidget {
+  const _ValorPorPresentacion({
+    required this.controladorBase,
+    required this.etiqueta,
+    required this.pista,
+    required this.icono,
+    required this.decimales,
+    required this.opciones,
+    required this.habilitado,
+  });
+
+  final TextEditingController controladorBase;
+  final String etiqueta;
+  final String pista;
+  final IconData icono;
+
+  /// Con cuántos decimales vuelve exacto el número a la presentación: dos para la plata, tres para
+  /// el peso (un sobre de 30 g pesa 0.03 kg).
+  final int decimales;
+  final List<_OpcionValor> opciones;
+  final bool habilitado;
+
+  @override
+  State<_ValorPorPresentacion> createState() => _ValorPorPresentacionState();
+}
+
+class _ValorPorPresentacionState extends State<_ValorPorPresentacion> {
+  final _texto = TextEditingController();
+  String? _elegida;
+
+  static String _limpio(double v) => v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
+
+  _OpcionValor? get _opcion {
+    for (final o in widget.opciones) {
+      if (o.nombre == _elegida) return o;
+    }
+    return null;
+  }
+
+  double get _factor => _opcion?.factor ?? 1;
+
+  /// La más grande de las que se ofrecen; a igualdad, la primera.
+  _OpcionValor? _masGrande() {
+    _OpcionValor? mayor;
+    for (final o in widget.opciones) {
+      if (mayor == null || o.factor > mayor.factor) mayor = o;
+    }
+    return mayor;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _elegida = _masGrande()?.nombre;
+    _texto.text = _deBaseAPresentacion();
+    _texto.addListener(_alEscribir);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ValorPorPresentacion anterior) {
+    super.didUpdateWidget(anterior);
+    // La presentación elegida ya no existe (la quitaron en la otra pestaña): se vuelve a la más
+    // grande y el número escrito se conserva.
+    if (_opcion == null && widget.opciones.isNotEmpty) {
+      _elegida = _masGrande()?.nombre;
+      _alEscribir();
+    }
+  }
+
+  @override
+  void dispose() {
+    _texto.dispose();
+    super.dispose();
+  }
+
+  String _deBaseAPresentacion() {
+    final base = double.tryParse(widget.controladorBase.text.replaceAll(',', '.'));
+    if (base == null) return '';
+    // Sin ceros de más: 280 y no 280.00.
+    return _limpio(double.parse((base * _factor).toStringAsFixed(widget.decimales)));
+  }
+
+  void _alEscribir() {
+    final n = double.tryParse(_texto.text.replaceAll(',', '.'));
+    widget.controladorBase.text = n == null ? '' : _limpio(n / _factor);
+  }
+
+  /// Cambiar de presentación conserva el número y cambia a qué se refiere: si tecleaste 170 pensando
+  /// en el saco y estaba el kilo, corriges el selector y sigue siendo 170 el saco.
+  void _cambiar(String? nombre) {
+    setState(() => _elegida = nombre);
+    _alEscribir();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 5,
+          child: AppCampo(
+            controlador: _texto,
+            etiqueta: widget.etiqueta,
+            pista: widget.pista,
+            icono: widget.icono,
+            opcional: true,
+            tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+            habilitado: widget.habilitado,
+          ),
+        ),
+        const SizedBox(width: Dimen.espacio2),
+        Expanded(
+          flex: 6,
+          child: AppSelector<String>(
+            valor: _elegida,
+            etiqueta: 'Por',
+            icono: Icons.straighten,
+            habilitado: widget.habilitado && widget.opciones.length > 1,
+            opciones: [for (final o in widget.opciones) Opcion(o.nombre, o.nombre)],
+            onCambio: _cambiar,
+          ),
+        ),
+      ],
+    );
+  }
 }

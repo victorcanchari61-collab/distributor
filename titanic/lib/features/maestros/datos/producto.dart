@@ -76,6 +76,7 @@ class Producto {
     required this.unidadBaseId,
     required this.unidadBase,
     this.costoReferencia,
+    this.precioReferencia,
     required this.controlaStock,
     required this.stockMinimo,
     this.pesoUnidadBase,
@@ -102,6 +103,9 @@ class Producto {
 
   /// Lo que suele costar una unidad base. Referencia, no el costo del stock.
   final double? costoReferencia;
+
+  /// A cuánto suele venderse una unidad base: el respaldo cuando la lista no tiene precio.
+  final double? precioReferencia;
 
   final bool controlaStock;
   final double stockMinimo;
@@ -133,6 +137,7 @@ class Producto {
     unidadBaseId: json['unidadBaseId'] as int,
     unidadBase: json['unidadBase'] as String? ?? '',
     costoReferencia: (json['costoReferencia'] as num?)?.toDouble(),
+    precioReferencia: (json['precioReferencia'] as num?)?.toDouble(),
     controlaStock: json['controlaStock'] as bool? ?? true,
     stockMinimo: (json['stockMinimo'] as num?)?.toDouble() ?? 0,
     pesoUnidadBase: (json['pesoUnidadBase'] as num?)?.toDouble(),

@@ -13,6 +13,7 @@ import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
+import '../../facturacion/datos/facturacion_api.dart';
 import '../../facturacion/datos/lista_precio.dart';
 import '../../facturacion/estado/facturacion_controlador.dart';
 import '../../inventario/datos/almacen.dart';
@@ -39,7 +40,7 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
 
   late int? _clienteId = widget.pedido?.clienteId;
   late String? _clienteNombre = widget.pedido?.cliente;
-  late int? _listaPrecioId = widget.pedido?.listaPrecioId;
+  late final int? _listaPrecioId = widget.pedido?.listaPrecioId;
   late String _condicionPago = widget.pedido?.condicionPago ?? CondicionPago.contado;
   late bool _reservaStock = widget.pedido?.reservaStock ?? false;
   late int? _almacenReservaId = widget.pedido?.almacenId;
@@ -236,18 +237,16 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
     return null;
   }
 
-  /// Precio de una presentacion por esa cantidad, segun la lista elegida.
-  Future<double?> _precioDeLista(
+  /// Precio de una presentacion por esa cantidad: el de la lista elegida y, si esa lista no lo
+  /// tiene, el de referencia del producto. Así nada sale en cero por una lista a medio armar.
+  Future<PrecioResuelto?> _precioDeLista(
     List<ListaPrecio> listas,
     int presentacionId,
     double cantidad,
   ) async {
-    final lista = _listaEfectiva(listas);
-    if (lista == null) return null;
-
     return ref
         .read(facturacionApiProvider)
-        .resolverPrecio(lista, presentacionId, cantidad);
+        .precioVenta(presentacionId, cantidad, listaId: _listaEfectiva(listas));
   }
 
   @override
@@ -291,17 +290,9 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
             ),
             const SizedBox(height: Dimen.espacio4),
 
-            AppSelector<int?>(
-              valor: _listaPrecioId,
-              etiqueta: 'Lista de precios',
-              icono: Icons.sell_outlined,
-              opciones: [
-                const Opcion<int?>(null, 'Predeterminada'),
-                for (final l in listas) Opcion<int?>(l.id, l.nombre),
-              ],
-              onCambio: (v) => setState(() => _listaPrecioId = v),
-            ),
-            const SizedBox(height: Dimen.espacio4),
+            // La lista de precios no se elige aquí: el pedido se toma con la lista del cliente (o la
+            // predeterminada) y el precio sale solo. Sigue existiendo por dentro y se ve en la nota
+            // de venta.
 
             // Lo que se acordo, no lo que se cobro: el repartidor llega y tiene
             // que saber si deja la mercaderia contra el dinero o si va fiada.
@@ -377,6 +368,7 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
               // El precio lo pone la lista, no la memoria del vendedor.
               resolverPrecio: (presentacionId, cantidad) =>
                   _precioDeLista(listas, presentacionId, cantidad),
+              claveLista: _listaEfectiva(listas),
               onAgregar: _agregarLineas,
             ),
             const SizedBox(height: Dimen.espacio5),

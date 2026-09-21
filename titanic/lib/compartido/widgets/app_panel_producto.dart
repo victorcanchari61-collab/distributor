@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
+import '../../features/facturacion/datos/facturacion_api.dart';
 import '../../features/maestros/datos/producto.dart';
 import '../formato.dart';
 import '../presentaciones_uso.dart';
@@ -51,6 +52,7 @@ class AppPanelProducto extends StatefulWidget {
     this.stock,
     this.habilitado = true,
     this.resolverPrecio,
+    this.claveLista,
   });
 
   final List<Producto> productos;
@@ -92,7 +94,10 @@ class AppPanelProducto extends StatefulWidget {
   ///
   /// Sin esto el vendedor teclea el precio de memoria, que es como se cobra de
   /// menos sin que nadie se entere.
-  final Future<double?> Function(int presentacionId, double cantidad)? resolverPrecio;
+  final Future<PrecioResuelto?> Function(int presentacionId, double cantidad)? resolverPrecio;
+
+  /// Cambia con la lista de precios elegida: los precios se piden otra vez.
+  final Object? claveLista;
 
   @override
   State<AppPanelProducto> createState() => _AppPanelProductoState();
@@ -106,6 +111,11 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
 
   /// Qué dijo la lista: para avisar cuando no hay precio o cuando se cambió.
   double? _precioLista;
+  bool _precioDeReferencia = false;
+
+  /// El precio de UNA unidad de cada presentación (por id real), para rotular el selector de unidad:
+  /// quien vende elige entre "Bolsa 5 kg" y "Saco 50 kg" pensando en cuánto cobra por cada una.
+  Map<int, double> _preciosUnidad = const {};
   bool _buscandoPrecio = false;
   bool _sinPrecioEnLista = false;
 
@@ -114,6 +124,16 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
     super.initState();
     // La cantidad manda sobre el tramo: 4 sacos y 5 sacos no valen lo mismo.
     _cantidad.addListener(_pedirPrecio);
+  }
+
+  @override
+  void didUpdateWidget(covariant AppPanelProducto anterior) {
+    super.didUpdateWidget(anterior);
+    // Otra lista: el precio de la línea y los del selector ya no valen.
+    if (anterior.claveLista != widget.claveLista && _producto != null) {
+      unawaited(_pedirPrecio());
+      unawaited(_pedirPreciosDeUnidades());
+    }
   }
 
   @override
@@ -149,6 +169,11 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
     );
   }
 
+  int get _presentacionBase {
+    final base = _producto?.presentaciones.where((p) => p.esBase);
+    return base != null && base.isNotEmpty ? base.first.id : 0;
+  }
+
   /// La presentación real: 0 en el selector significa la unidad base, que sí
   /// tiene su propia presentación con precio propio.
   int get _presentacionReal {
@@ -177,9 +202,10 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
       if (!mounted) return;
 
       setState(() {
-        _precioLista = precio;
+        _precioLista = precio?.precio;
+        _precioDeReferencia = precio != null && !precio.deLista;
         _sinPrecioEnLista = precio == null;
-        if (precio != null) _importe.text = formatoNumero(precio);
+        if (precio != null) _importe.text = formatoNumero(precio.precio);
       });
     } finally {
       if (mounted) setState(() => _buscandoPrecio = false);
@@ -205,10 +231,40 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
           ? '0'
           : formatoCosto(producto.costoReferencia!);
       _precioLista = null;
+      _precioDeReferencia = false;
       _sinPrecioEnLista = false;
+      _preciosUnidad = const {};
     });
 
     unawaited(_pedirPrecio());
+    unawaited(_pedirPreciosDeUnidades());
+  }
+
+  /// El precio de una unidad de cada presentación que se ofrece, sin tramos por volumen.
+  Future<void> _pedirPreciosDeUnidades() async {
+    final resolver = widget.resolverPrecio;
+    final producto = _producto;
+    if (resolver == null || producto == null) return;
+
+    final baseId = _presentacionBase;
+    final ids = {
+      for (final o in _opciones) o.valor == 0 ? baseId : o.valor,
+    }..remove(0);
+
+    final pares = await Future.wait([
+      for (final id in ids)
+        resolver(id, 1).then<MapEntry<int, double>?>(
+          (p) => p == null ? null : MapEntry(id, p.precio),
+          onError: (_) => null,
+        ),
+    ]);
+    // Si mientras tanto eligieron otro producto, estos precios ya no son de este.
+    if (!mounted || _producto != producto) return;
+
+    setState(() => _preciosUnidad = {
+      for (final par in pares)
+        if (par != null) par.key: par.value,
+    });
   }
 
   void _limpiar() {
@@ -218,6 +274,8 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
       _cantidad.text = '1';
       _importe.text = '0';
       _precioLista = null;
+      _precioDeReferencia = false;
+      _preciosUnidad = const {};
       _sinPrecioEnLista = false;
     });
   }
@@ -228,11 +286,14 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
 
   String? get _avisoPrecio {
     if (widget.resolverPrecio == null || _producto == null) return null;
-    if (_buscandoPrecio) return 'Buscando en la lista...';
+    if (_buscandoPrecio) return 'Buscando el precio...';
     if (_sinPrecioEnLista) return 'Sin precio en la lista';
     if (_precioLista == null) return null;
-    if (_precioPisado) return 'Lista: ${formatoSoles(_precioLista!)}';
-    return 'De la lista';
+    final origen = _precioDeReferencia ? 'Referencia' : 'Lista';
+    if (_precioPisado) return '$origen: ${formatoSoles(_precioLista!)}';
+    // La lista no tenía esa presentación y salió el precio del producto: decirlo evita cobrar una
+    // referencia vieja creyendo que es el precio de la lista.
+    return _precioDeReferencia ? 'Precio de referencia del producto' : 'De la lista';
   }
 
   double get _cantidadNum => double.tryParse(_cantidad.text.replaceAll(',', '.')) ?? 0;
@@ -292,7 +353,7 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
 
   /// El precio de la lista para una selección de la búsqueda avanzada, o null si no lo hay.
   Future<double?> _precioDeLista(
-    Future<double?> Function(int presentacionId, double cantidad)? resolver,
+    Future<PrecioResuelto?> Function(int presentacionId, double cantidad)? resolver,
     SeleccionProducto e,
   ) async {
     if (resolver == null) return null;
@@ -306,7 +367,7 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
     if (real == 0) return null;
 
     try {
-      return await resolver(real, e.cantidad);
+      return (await resolver(real, e.cantidad))?.precio;
     } catch (_) {
       return null;
     }
@@ -379,6 +440,8 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
             habilitado: widget.habilitado && _producto != null,
             unidadBase: _producto?.unidadBase ?? '',
             opciones: _opciones,
+            precios: _preciosUnidad,
+            idBase: _presentacionBase,
             valor: _presentacionId,
             onCambio: (v) => setState(() => _presentacionId = v),
           ),
@@ -415,7 +478,7 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: _sinPrecioEnLista || _precioPisado
+                color: _sinPrecioEnLista || _precioPisado || _precioDeReferencia
                     ? Colores.advertencia
                     : Colores.tintaSuave,
               ),
@@ -441,6 +504,8 @@ class _SelectorUnidad extends StatelessWidget {
     required this.habilitado,
     required this.unidadBase,
     required this.opciones,
+    required this.precios,
+    required this.idBase,
     required this.valor,
     required this.onCambio,
   });
@@ -448,8 +513,22 @@ class _SelectorUnidad extends StatelessWidget {
   final bool habilitado;
   final String unidadBase;
   final List<OpcionPresentacion> opciones;
+
+  /// Precio de una unidad por id real de presentación; vacío si no hay o no se pidió.
+  final Map<int, double> precios;
+
+  /// El id real de la presentación base, que en el selector viaja como 0.
+  final int idBase;
   final int valor;
   final ValueChanged<int> onCambio;
+
+  /// Al vender se lee el precio de cada unidad; sin precio, a cuántas unidades base equivale.
+  String _rotulo(OpcionPresentacion o) {
+    final precio = precios[o.valor == 0 ? idBase : o.valor];
+    final nombre = o.nombre.isEmpty ? 'Unidad' : o.nombre;
+    if (precio != null) return '$nombre · ${formatoSoles(precio)}';
+    return o.valor == 0 ? nombre : '$nombre · ${formatoNumero(o.factor)} $unidadBase';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -477,11 +556,7 @@ class _SelectorUnidad extends StatelessWidget {
                 value: o.valor,
                 // La base es solo su código; las presentaciones dicen cuánto
                 // equivalen.
-                child: Text(
-                  o.valor == 0
-                      ? (o.nombre.isEmpty ? 'Unidad' : o.nombre)
-                      : '${o.nombre} · ${formatoNumero(o.factor)} $unidadBase',
-                ),
+                child: Text(_rotulo(o)),
               ),
           ],
           onChanged: habilitado ? (v) => onCambio(v ?? 0) : null,

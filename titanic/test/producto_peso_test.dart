@@ -37,7 +37,7 @@ Map<String, dynamic> _presJson({
 };
 
 /// Botella de 0.92 kg que ademas se compra por caja de 12: la caja pesa 11.04.
-Map<String, dynamic> _productoJson({double? peso = 0.92, double? costo}) => {
+Map<String, dynamic> _productoJson({double? peso = 0.92, double? costo, double? precio}) => {
   'id': 5,
   'codigo': 'ACE-01',
   'nombre': 'ACEITE BELTRAN',
@@ -45,6 +45,7 @@ Map<String, dynamic> _productoJson({double? peso = 0.92, double? costo}) => {
   'unidadBase': 'LT',
   'stockMinimo': 10,
   'costoReferencia': ?costo,
+  'precioReferencia': ?precio,
   'pesoUnidadBase': ?peso,
   'presentaciones': [
     _presJson(id: 10, nombre: 'Litro', factor: 1, esBase: true),
@@ -150,12 +151,16 @@ Future<void> _guardar(WidgetTester tester, {bool nuevo = false}) async {
 }
 
 /// Los campos de la pestaña Datos, en el orden en que se pintan: codigo,
-/// nombre, descripcion, costo, stock minimo y peso.
+/// nombre, descripcion, costo, precio de venta, stock minimo y peso.
+///
+/// Costo, precio y peso se escriben sobre la presentacion MAS GRANDE (aqui la caja de 12) y se
+/// guardan por unidad base: 11.04 la caja son 0.92 el litro.
 Finder _campo(int n) =>
     find.descendant(of: find.byType(AppCampo).at(n), matching: find.byType(TextField));
 
 Finder get _campoCosto => _campo(3);
-Finder get _campoPeso => _campo(5);
+Finder get _campoPrecio => _campo(4);
+Finder get _campoPeso => _campo(6);
 
 void main() {
   group('modelo', () {
@@ -191,6 +196,7 @@ void main() {
 
       await tester.enterText(_campo(0), 'ACE-02');
       await tester.enterText(_campo(1), 'ACEITE NUEVO');
+      // Un producto nuevo aun no tiene presentaciones: el peso se escribe sobre la unidad base.
       await tester.enterText(_campoPeso, '0.92');
       await tester.pumpAndSettle();
 
@@ -202,7 +208,7 @@ void main() {
 
       await _guardar(tester, nuevo: true);
 
-      expect(api.creado?['pesoUnidadBase'], 0.92);
+      expect(api.creado?['pesoUnidadBase'], closeTo(0.92, 1e-9));
     });
 
     testWidgets('borrar el peso lo manda en null: el producto deja de pesarse', (
@@ -217,11 +223,36 @@ void main() {
       expect(api.actualizado, containsPair('pesoUnidadBase', isNull));
     });
 
-    testWidgets('la ayuda dice lo que pesa la presentacion de compra', (tester) async {
+    testWidgets('el peso se lee sobre la presentacion mas grande', (tester) async {
       await _abrir(tester, producto: Producto.desdeJson(_productoJson()));
 
-      // El peso se guarda por litro, que en una caja de 12 no dice mucho.
-      expect(find.text('kg por LT · un Caja 12 LT pesa 11.04 kg'), findsOneWidget);
+      // Se guarda por litro (0.92) y se muestra como se dice en el almacen: la caja de 12 pesa 11.04.
+      expect(tester.widget<TextField>(_campoPeso).controller?.text, '11.04');
+    });
+
+    testWidgets('el precio de venta se escribe por presentacion y viaja por unidad base', (
+      tester,
+    ) async {
+      final api = await _abrir(tester, producto: Producto.desdeJson(_productoJson()));
+
+      // 310 la caja de 12 son 25.8333... el litro.
+      await tester.enterText(_campoPrecio, '310');
+      await tester.pumpAndSettle();
+      await _guardar(tester);
+
+      expect(api.actualizado?['precioReferencia'], closeTo(310 / 12, 1e-9));
+    });
+
+    testWidgets('sin tocar el precio de venta se reenvia tal cual', (tester) async {
+      final api = await _abrir(
+        tester,
+        producto: Producto.desdeJson(_productoJson(precio: 25.8333333)),
+      );
+
+      // El PUT reemplaza el producto: si no viajara, abrir y guardar borraria el precio puesto en la web.
+      await _guardar(tester);
+
+      expect(api.actualizado?['precioReferencia'], 25.8333333);
     });
 
     /*
@@ -236,20 +267,20 @@ void main() {
         producto: Producto.desdeJson(_productoJson(costo: 6.3377193)),
       );
 
-      expect(find.text('6.3377193'), findsOneWidget);
+      // Por caja de 12: 6.3377193 × 12 = 76.05 al centimo.
+      expect(tester.widget<TextField>(_campoCosto).controller?.text, '76.05');
 
+      // Lo guardado no se toca: se reenvia con todos sus decimales.
       await _guardar(tester);
 
       expect(api.actualizado?['costoReferencia'], 6.3377193);
     });
 
     testWidgets('un costo redondo se muestra sin el .0 de sobra', (tester) async {
+      // 289 el litro son 3468 la caja de 12.
       await _abrir(tester, producto: Producto.desdeJson(_productoJson(costo: 289)));
 
-      expect(
-        tester.widget<TextField>(_campoCosto).controller?.text,
-        '289',
-      );
+      expect(tester.widget<TextField>(_campoCosto).controller?.text, '3468');
     });
   });
 
