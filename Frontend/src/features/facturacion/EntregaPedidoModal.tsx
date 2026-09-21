@@ -5,6 +5,7 @@ import { motivoNovedadApi } from '../tms/motivoNovedadApi'
 import type { MotivoNovedadOpcion } from '../tms/motivoNovedadApi'
 import { metodoPagoApi } from '../finanzas/finanzasApi'
 import type { MetodoPagoOpcion } from '../finanzas/finanzasApi'
+import { stockApi } from '../inventario'
 import type { AlmacenOpcion } from '../inventario'
 import { PagoEntrega, resumenPago } from './PagoEntrega'
 import type { FilaPagoEntrega } from './PagoEntrega'
@@ -51,6 +52,25 @@ function entregadaBase(l: LineaVentaResponse, e: Entrega) {
   return redondear(factor <= 1 ? numero(e.pres) : numero(e.pres) * factor + numero(e.sueltas))
 }
 
+/** Una cantidad en unidad base, dicha como se cuenta en el almacén: "4 Saco 50 kg y 48 KG". */
+function enPresentaciones(base: number, factor: number, presentacion: string, unidadBase: string) {
+  if (factor <= 1) return `${cantidadTexto(base)} ${unidadBase}`
+  const enteras = Math.floor(base / factor + 1e-6)
+  const resto = redondear(base - enteras * factor)
+  const partes = []
+  if (enteras > 0) partes.push(`${enteras} ${presentacion}`)
+  if (resto > 0 || partes.length === 0) partes.push(`${cantidadTexto(resto)} ${unidadBase}`)
+  return partes.join(' y ')
+}
+
+/** Lo entregado, partido en presentaciones enteras y sueltas: 248 kg son "4" y "48". */
+function partirBase(l: LineaVentaResponse, base: number): Pick<Entrega, 'pres' | 'sueltas'> {
+  const factor = factorDe(l)
+  if (factor <= 1) return { pres: cantidadTexto(base), sueltas: '0' }
+  const enteras = Math.floor(base / factor + 1e-6)
+  return { pres: String(enteras), sueltas: cantidadTexto(base - enteras * factor) }
+}
+
 type Pestana = 'entrega' | 'pago'
 
 interface EntregaPedidoModalProps {
@@ -86,6 +106,8 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
   const [pagos, setPagos] = useState<FilaPagoEntrega[]>([])
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+  /** Lo que se puede prometer por producto en el almacén de donde sale; null mientras carga. */
+  const [disponible, setDisponible] = useState<Record<number, number> | null>(null)
 
   const lineas = useMemo(() => pedido?.detalle.filter((l) => !l.anulado) ?? [], [pedido])
 
@@ -140,13 +162,48 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
     setAlmacenId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
   }, [pedido, almacenes, almacenId])
 
+  // De dónde sale la mercadería: el almacén de la reserva, o el elegido.
+  const almacenDeSalida = pedido?.reservaStock ? (pedido.almacenId ?? 0) : almacenId
+
+  useEffect(() => {
+    setDisponible(null)
+    if (!pedido || !almacenDeSalida) return
+    let cancelado = false
+    void stockApi
+      .disponible(almacenDeSalida)
+      .then((filas) => {
+        if (!cancelado) setDisponible(Object.fromEntries(filas.map((f) => [f.productoId, f.disponible])))
+      })
+      .catch(() => {
+        // Sin stock a la vista no se bloquea: el servidor lo vuelve a validar al convertir.
+        if (!cancelado) setDisponible(null)
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [pedido, almacenDeSalida])
+
   const cambiar = (id: number, parcial: Partial<Entrega>) => {
     setError('')
     setEntregas((prev) => ({ ...prev, [id]: { ...prev[id], ...parcial } }))
   }
 
+  /*
+   * Cuánto se puede entregar de cada producto.
+   *
+   * Es lo disponible en el almacén; si el pedido apartó stock, esa reserva ya está descontada de
+   * lo disponible y es justamente lo que este pedido puede sacar, así que se le suma de vuelta.
+   */
+  const tope = (productoId: number): number | null => {
+    if (!disponible) return null
+    const reservado = pedido?.reservaStock
+      ? lineas.filter((l) => l.productoId === productoId).reduce((s, l) => s + l.cantidad, 0)
+      : 0
+    return redondear((disponible[productoId] ?? 0) + reservado)
+  }
+
   // Lo que sale de cada línea, ya calculado: lo usan la pantalla y el envío.
-  const calculo = lineas.map((l) => {
+  const base = lineas.map((l) => {
     const e = entregas[l.id] ?? entregaCompleta(l)
     const entregada = entregadaBase(l, e)
     const factor = factorDe(l)
@@ -158,6 +215,19 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
       reducida: entregada < l.cantidad - 1e-6,
       excede: entregada > l.cantidad + 1e-6,
       subtotal: (entregada / factor) * l.precioPresentacion,
+    }
+  })
+
+  // Dos líneas del mismo producto comparten el mismo stock: se compara la suma.
+  const calculo = base.map((c) => {
+    const hay = tope(c.linea.productoId)
+    const pedidoDelProducto = base
+      .filter((o) => o.linea.productoId === c.linea.productoId)
+      .reduce((s, o) => s + o.entregada, 0)
+    return {
+      ...c,
+      hay,
+      sinStock: hay !== null && pedidoDelProducto > hay + 1e-6,
     }
   })
 
@@ -177,6 +247,12 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
 
     for (const c of calculo) {
       if (c.excede) return fallar(`${c.linea.producto}: no se puede entregar más de lo pedido.`, 'entrega')
+      if (c.sinStock) {
+        return fallar(
+          `${c.linea.producto}: no alcanza el stock (hay ${enPresentaciones(c.hay ?? 0, c.factor, c.linea.presentacion ?? c.linea.unidadBase, c.linea.unidadBase)}). Baja la cantidad o usa "Entregar lo que hay".`,
+          'entrega',
+        )
+      }
       if (c.reducida && !c.entrega.motivoId) {
         return fallar(`Elige el motivo por el que ${c.linea.producto} se entrega en menos.`, 'entrega')
       }
@@ -293,21 +369,29 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
                 {calculo.map((c) => {
                   const l = c.linea
                   const conSueltas = c.factor > 1
+                  const nombrePres = l.presentacion ?? l.unidadBase
+                  const alcanzaTodo = c.hay === null || c.hay >= l.cantidad - 1e-6
                   return (
                     <div key={l.id} className="flex flex-col gap-2 px-3 py-2.5">
                       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                         <div className="min-w-0 flex-1 basis-56">
                           <p className="truncate text-sm font-semibold text-ink">{l.producto}</p>
                           <p className="text-xs text-ink-soft">
-                            {l.codigo} · Pedido: {cantidadTexto(l.cantidadPresentacion)} {l.presentacion ?? l.unidadBase}
+                            {l.codigo} · Pedido: {cantidadTexto(l.cantidadPresentacion)} {nombrePres}
                             {conSueltas && ` (${cantidadTexto(l.cantidad)} ${l.unidadBase})`}
                           </p>
+                          {c.hay !== null && (
+                            <p className={alcanzaTodo ? 'text-xs text-ink-soft' : 'text-xs font-medium text-red-600'}>
+                              Hay en el almacén: {enPresentaciones(c.hay, c.factor, nombrePres, l.unidadBase)}
+                              {conSueltas && c.hay > 0 && ` (${cantidadTexto(c.hay)} ${l.unidadBase})`}
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex items-end gap-2">
                           <div className="w-24">
                             <Input
-                              label={conSueltas ? (l.presentacion ?? 'Cajas') : l.unidadBase}
+                              label={conSueltas ? nombrePres : l.unidadBase}
                               size="sm"
                               type="number"
                               min={0}
@@ -317,17 +401,20 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
                             />
                           </div>
                           {conSueltas && (
-                            <div className="w-24">
-                              <Input
-                                label={`Sueltas (${l.unidadBase})`}
-                                size="sm"
-                                type="number"
-                                min={0}
-                                step="any"
-                                value={c.entrega.sueltas}
-                                onChange={(e) => cambiar(l.id, { sueltas: e.target.value })}
-                              />
-                            </div>
+                            <>
+                              <span className="pb-2 text-sm text-ink-soft">+</span>
+                              <div className="w-24">
+                                <Input
+                                  label={`${l.unidadBase} sueltos`}
+                                  size="sm"
+                                  type="number"
+                                  min={0}
+                                  step="any"
+                                  value={c.entrega.sueltas}
+                                  onChange={(e) => cambiar(l.id, { sueltas: e.target.value })}
+                                />
+                              </div>
+                            </>
                           )}
                           <div className="w-24 pb-2 text-right text-sm font-semibold text-ink">
                             {soles(c.subtotal)}
@@ -335,19 +422,53 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
                         </div>
                       </div>
 
+                      {/* Lo que se entrega, dicho de una vez: cuenta lo que sale sin que haya que multiplicar. */}
+                      {conSueltas && !c.excede && !c.sinStock && c.entregada > 0 && (
+                        <p className="text-xs text-ink-soft">
+                          Entrega {enPresentaciones(c.entregada, c.factor, nombrePres, l.unidadBase)} ={' '}
+                          {cantidadTexto(c.entregada)} {l.unidadBase}
+                        </p>
+                      )}
+
                       {c.excede && (
                         <p className="text-xs font-medium text-red-600">
                           No puede ser más de lo pedido ({cantidadTexto(l.cantidad)} {l.unidadBase}).
                         </p>
                       )}
 
+                      {c.sinStock && !c.excede && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-red-600">
+                          <span>
+                            No alcanza el stock: se quieren entregar {cantidadTexto(c.entregada)} {l.unidadBase} y hay{' '}
+                            {cantidadTexto(c.hay ?? 0)}.
+                          </span>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() =>
+                              cambiar(l.id, { ...partirBase(l, Math.min(l.cantidad, c.hay ?? 0)) })
+                            }
+                          >
+                            Entregar lo que hay
+                          </Button>
+                        </div>
+                      )}
+
                       {c.reducida && !c.excede && (
-                        <div className="flex flex-col gap-2 rounded-field bg-amber-50 p-2.5">
-                          <p className="text-xs font-medium text-amber-800">
-                            {c.entregada <= 0
-                              ? 'No se entrega este producto.'
-                              : `Se entrega ${cantidadTexto(c.entregada)} de ${cantidadTexto(l.cantidad)} ${l.unidadBase}.`}{' '}
-                            Falta {cantidadTexto(l.cantidad - c.entregada)} {l.unidadBase}.
+                        <div className="flex flex-col gap-2 rounded-field border border-line bg-slate-50 p-2.5">
+                          <p className="text-xs text-ink-muted">
+                            {c.entregada <= 0 ? (
+                              'No se entrega este producto.'
+                            ) : (
+                              <>
+                                Se entrega {cantidadTexto(c.entregada)} de {cantidadTexto(l.cantidad)} {l.unidadBase}
+                              </>
+                            )}{' '}
+                            ·{' '}
+                            <span className="font-semibold text-ink">
+                              falta {cantidadTexto(l.cantidad - c.entregada)} {l.unidadBase}
+                            </span>
+                            . Se registra como novedad: elige el motivo.
                           </p>
                           <div className="grid gap-2 sm:grid-cols-2">
                             <Desplegable
@@ -380,7 +501,7 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
 
               {hayRecortes && motivosListos && motivos.length === 0 && (
                 <div className="mt-2">
-                  <Alert tone="warning">
+                  <Alert tone="info">
                     Todavía no hay motivos de novedad. Pídele a quien administra que los cree en TMS → Motivos de
                     novedad.
                   </Alert>

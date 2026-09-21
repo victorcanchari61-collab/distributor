@@ -24,7 +24,7 @@ import type { NotaVentaResponse, PagoVentaResponse, ResumenCuentas } from '../fa
 import { clienteApi } from '../maestros'
 import type { ClienteResponse } from '../maestros'
 import { metodoPagoApi } from './finanzasApi'
-import type { MetodoPagoResponse, TipoMetodoPago } from './finanzasApi'
+import type { MetodoPagoOpcion, TipoMetodoPago } from './finanzasApi'
 
 const NOTA_TIPO: Record<TipoMetodoPago, string> = {
   EFECTIVO: 'Efectivo',
@@ -67,7 +67,7 @@ export function CuentasPorCobrarPage() {
   const { puede } = usePermisos()
   const toast = useToast()
   const [cuentas, setCuentas] = useState<NotaVentaResponse[]>([])
-  const [metodosPago, setMetodosPago] = useState<MetodoPagoResponse[]>([])
+  const [metodosPago, setMetodosPago] = useState<MetodoPagoOpcion[]>([])
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -108,11 +108,13 @@ export function CuentasPorCobrarPage() {
     try {
       const [res, metodos, clis] = await Promise.all([
         notaVentaApi.resumenCuentasPorCobrar(),
-        metodoPagoApi.getAll(),
+        // Las opciones y no el catalogo: quien cobra no tiene por que poder ver el catalogo de Finanzas,
+        // y con el catalogo un cajero se quedaba sin metodos para elegir.
+        metodoPagoApi.opciones(),
         clienteApi.getAll(),
       ])
       setResumen(res)
-      setMetodosPago(metodos.filter((m) => m.activo))
+      setMetodosPago(metodos)
       setClientes(clis)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
@@ -297,7 +299,9 @@ export function CuentasPorCobrarPage() {
               value={tipo}
               onChange={(v) => {
                 setTipo(v as TipoMetodoPago)
-                setMetodoPagoId(0)
+                // Si ese tipo tiene un solo metodo (el efectivo casi siempre), no hay nada que elegir.
+                const delTipo = metodosPago.filter((m) => m.tipo === v)
+                setMetodoPagoId(delTipo.length === 1 ? delTipo[0].id : 0)
               }}
               placeholder="Elige el tipo"
               options={TIPOS_METODO_PAGO}

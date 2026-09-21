@@ -32,7 +32,7 @@ public class MetodoPagoController : ControllerBase
     /// permiso sin poder ver ni editar el catálogo de Finanzas.
     /// </summary>
     [HttpGet("opciones")]
-    [PermisoAlguno("finanzas.metodospago:ver", "fact.pedidos:confirmar", "fact.notaventa:cobrar")]
+    [PermisoAlguno("finanzas.metodospago:ver", "fact.pedidos:confirmar", "fact.notaventa:cobrar", "finanzas.cobrar:cobrar")]
     public async Task<IActionResult> Opciones() =>
         Ok((await _finanzas.GetMetodosPagoAsync())
             .Where(m => m.Activo)

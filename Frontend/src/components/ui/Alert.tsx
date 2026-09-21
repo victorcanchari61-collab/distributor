@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react'
 
-/** `warning` es un aviso (ámbar): informa algo a tener en cuenta, no un error. */
+/**
+ * `warning` es un aviso (ámbar): algo a tener en cuenta. `info` es una nota neutra, para lo que no
+ * es ni un error ni una advertencia y no debe llamar la atención como una.
+ */
 export function Alert({
   children,
   tone = 'error',
 }: {
   children: ReactNode
-  tone?: 'error' | 'warning'
+  tone?: 'error' | 'warning' | 'info'
 }) {
   return (
     <div
@@ -14,7 +17,9 @@ export function Alert({
       className={
         tone === 'warning'
           ? 'flex gap-2 rounded-field border border-amber-500 bg-amber-50 p-3 text-sm text-amber-800'
-          : 'flex gap-2 rounded-field border border-red-600 bg-red-50 p-3 text-sm text-red-700'
+          : tone === 'info'
+            ? 'flex gap-2 rounded-field border border-line bg-slate-50 p-3 text-sm text-ink-muted'
+            : 'flex gap-2 rounded-field border border-red-600 bg-red-50 p-3 text-sm text-red-700'
       }
     >
       <svg
