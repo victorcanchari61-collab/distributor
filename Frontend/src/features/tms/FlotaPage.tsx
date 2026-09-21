@@ -43,6 +43,7 @@ import type {
 } from './flotaApi'
 
 type Pestana = 'vehiculos' | 'tipos'
+type PestanaForm = 'datos' | 'recorrido'
 
 /** Lo que el formulario mantiene como texto: los <input> devuelven strings. */
 interface FormVehiculo {
@@ -107,6 +108,8 @@ export function FlotaPage() {
   const [rutasActivas, setRutasActivas] = useState<RutaResponse[]>([])
   const [recorridoForm, setRecorridoForm] = useState<Record<string, number[]>>({})
   const [recorridoCargando, setRecorridoCargando] = useState(false)
+  // El formulario del vehiculo tiene dos pestañas: sus datos y el recorrido semanal.
+  const [pestanaForm, setPestanaForm] = useState<PestanaForm>('datos')
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<VehiculoResponse | null>(null)
   const [form, setForm] = useState<FormVehiculo>(VACIO)
@@ -160,6 +163,7 @@ export function FlotaPage() {
     setEditando(null)
     setForm({ ...VACIO, tipoVehiculoId: tiposActivos[0]?.id ?? 0 })
     setRecorridoForm({})
+    setPestanaForm('datos')
     setAbierto(true)
   }
 
@@ -192,6 +196,7 @@ export function FlotaPage() {
         .catch(() => setRecorridoForm({}))
         .finally(() => setRecorridoCargando(false))
     }
+    setPestanaForm('datos')
     setAbierto(true)
   }
 
@@ -564,6 +569,20 @@ export function FlotaPage() {
           }
         >
           <div className="flex flex-col gap-4">
+            {/* Los datos del vehiculo y su recorrido semanal, en pestañas: la grilla es larga y tapaba el resto. */}
+            {puedeRecorrido && (
+              <Tabs
+                active={pestanaForm}
+                onChange={(id) => setPestanaForm(id as PestanaForm)}
+                items={[
+                  { id: 'datos', label: 'Datos', icon: <Truck size={14} /> },
+                  { id: 'recorrido', label: 'Recorrido semanal', icon: <RutaIcono size={14} /> },
+                ]}
+              />
+            )}
+
+            {(pestanaForm === 'datos' || !puedeRecorrido) && (
+              <>
 
             <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
               <Input
@@ -694,6 +713,19 @@ export function FlotaPage() {
               onChange={(e) => setForm({ ...form, observacion: e.target.value })}
             />
 
+            <label className="flex items-center gap-2 text-sm text-ink-muted">
+              <input
+                type="checkbox"
+                checked={form.activo}
+                onChange={(e) => setForm({ ...form, activo: e.target.checked })}
+              />
+              Activo (disponible para repartir)
+            </label>
+              </>
+            )}
+
+            {puedeRecorrido && pestanaForm === 'recorrido' && (
+              <div className="flex flex-col gap-4">
             {/*
               Las rutas que hace cada día de la semana. Es el camión 1 → lunes: rutas 1 y 7 del sistema
               anterior, y es lo que propone las rutas al armar un despacho. Se carga aquí al crear el camión.
@@ -717,14 +749,8 @@ export function FlotaPage() {
               </div>
             )}
 
-            <label className="flex items-center gap-2 text-sm text-ink-muted">
-              <input
-                type="checkbox"
-                checked={form.activo}
-                onChange={(e) => setForm({ ...form, activo: e.target.checked })}
-              />
-              Activo (disponible para repartir)
-            </label>
+              </div>
+            )}
           </div>
         </Modal>
 
