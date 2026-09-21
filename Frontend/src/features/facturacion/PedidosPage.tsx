@@ -648,15 +648,11 @@ export function PedidosPage() {
                 avanzadoLabel="Búsqueda avanzada de clientes"
               />
 
-              <Desplegable
-                className="mt-4"
-                label="Lista de precios"
-                optional
-                value={listaPrecioId}
-                onChange={(v) => setListaPrecioId(Number(v))}
-                placeholder="Predeterminada"
-                options={listas.map((l) => ({ value: l.id, label: l.nombre }))}
-              />
+              {/*
+                La lista de precios no se elige aqui: el vendedor toma el pedido con la lista del
+                cliente (o la predeterminada) y el precio sale solo. Sigue existiendo por dentro
+                —el cliente la trae en su ficha— y se ve en la nota de venta.
+              */}
 
               {/*
                 Lo que se acordo, no lo que se cobro.
