@@ -9,17 +9,22 @@
 --   Camión 2   lunes 3,6 · martes 1,3 · miércoles 1,3 · jueves 3,6 · viernes 3,5 · sábado 3,6
 --   Camión 3   miércoles 6,7 · viernes 2,8 · sábado 1,5
 --
--- QUÉ NO HACE: no crea rutas ni mercados (se asume que producción ya los tiene, con
--- las rutas llamadas 1 … 8), ni usuarios, ni conductores, ni pedidos. Las rutas se
--- buscan por NOMBRE, no por id, porque los ids pueden ser distintos en producción.
+-- También crea el conductor habitual de cada camión y se lo deja asignado: al armar un
+-- despacho, elegir el camión propone su conductor.
 --
--- SE PUEDE CORRER VARIAS VECES: si el camión ya existe (misma placa) no lo duplica, y
--- un día/ruta que ya está en el recorrido se deja como está.
+-- QUÉ NO HACE: no crea rutas ni mercados (se asume que producción ya los tiene, con
+-- las rutas llamadas 1 … 8), ni usuarios, ni pedidos. Las rutas se buscan por NOMBRE,
+-- no por id, porque los ids pueden ser distintos en producción.
+--
+-- SE PUEDE CORRER VARIAS VECES: si el camión ya existe (misma placa) no lo duplica, si el
+-- conductor ya existe (mismo documento) tampoco, y un día/ruta que ya está en el
+-- recorrido se deja como está. Un camión que ya tiene conductor no se le cambia.
 --
 -- ANTES DE CORRERLO
 --   1. Aplicar las migraciones (DespachoVariasRutas crea la tabla del recorrido).
---   2. Poner abajo las PLACAS REALES de los tres camiones. Mientras no se pongan, quedan
---      con un nombre provisorio (CAMION-1 …) que se corrige después en TMS → Flota.
+--   2. Poner abajo las PLACAS REALES y los CONDUCTORES REALES (nombre y DNI). Mientras no
+--      se pongan, quedan con datos provisorios que se corrigen después en TMS → Flota y
+--      TMS → Conductores. El DNI no se puede repetir entre conductores.
 --
 -- CÓMO CORRERLO (en el servidor):
 --   sudo mysql -u root distributor < Backend/sql/sembrar-flota-y-recorridos.sql
@@ -29,6 +34,11 @@
 SET @placa1 = 'CAMION-1';
 SET @placa2 = 'CAMION-2';
 SET @placa3 = 'CAMION-3';
+
+-- El conductor habitual de cada camión: nombre y documento (DNI). Provisorios hasta que se pongan los reales.
+SET @conductor1_nombre = 'Conductor Camión 1';  SET @conductor1_doc = 'PROV-0001';
+SET @conductor2_nombre = 'Conductor Camión 2';  SET @conductor2_doc = 'PROV-0002';
+SET @conductor3_nombre = 'Conductor Camión 3';  SET @conductor3_doc = 'PROV-0003';
 -- -----------------------------------------------------------------------------
 
 -- Falla a la vista si faltan las tablas: mejor eso que un error a medias.
@@ -53,6 +63,27 @@ WHERE NOT EXISTS (SELECT 1 FROM Vehiculos WHERE Placa = @placa2);
 INSERT INTO Vehiculos (Placa, TipoVehiculoId, Observacion, Activo, FechaCreacion)
 SELECT @placa3, @tipo, 'Camión 3', 1, UTC_TIMESTAMP(6)
 WHERE NOT EXISTS (SELECT 1 FROM Vehiculos WHERE Placa = @placa3);
+
+-- Los conductores, solo si no existen ya con ese documento.
+INSERT INTO Conductores (Nombre, Documento, Activo, FechaCreacion)
+SELECT @conductor1_nombre, @conductor1_doc, 1, UTC_TIMESTAMP(6)
+WHERE NOT EXISTS (SELECT 1 FROM Conductores WHERE Documento = @conductor1_doc);
+
+INSERT INTO Conductores (Nombre, Documento, Activo, FechaCreacion)
+SELECT @conductor2_nombre, @conductor2_doc, 1, UTC_TIMESTAMP(6)
+WHERE NOT EXISTS (SELECT 1 FROM Conductores WHERE Documento = @conductor2_doc);
+
+INSERT INTO Conductores (Nombre, Documento, Activo, FechaCreacion)
+SELECT @conductor3_nombre, @conductor3_doc, 1, UTC_TIMESTAMP(6)
+WHERE NOT EXISTS (SELECT 1 FROM Conductores WHERE Documento = @conductor3_doc);
+
+-- Cada camión queda con su conductor habitual, salvo que ya tenga uno.
+UPDATE Vehiculos SET ConductorId = (SELECT Id FROM Conductores WHERE Documento = @conductor1_doc)
+WHERE Placa = @placa1 AND ConductorId IS NULL;
+UPDATE Vehiculos SET ConductorId = (SELECT Id FROM Conductores WHERE Documento = @conductor2_doc)
+WHERE Placa = @placa2 AND ConductorId IS NULL;
+UPDATE Vehiculos SET ConductorId = (SELECT Id FROM Conductores WHERE Documento = @conductor3_doc)
+WHERE Placa = @placa3 AND ConductorId IS NULL;
 
 -- El mapa camión → día → ruta, escrito con los NOMBRES de las rutas.
 DROP TEMPORARY TABLE IF EXISTS mapa_recorrido;
@@ -91,6 +122,13 @@ SELECT DISTINCT m.ruta AS ruta_que_no_existe_en_esta_base
 FROM mapa_recorrido m
 LEFT JOIN Rutas r ON r.Nombre = m.ruta
 WHERE r.Id IS NULL;
+
+-- Cada camión con su conductor.
+SELECT v.Placa, c.Nombre AS conductor, c.Documento
+FROM Vehiculos v
+LEFT JOIN Conductores c ON c.Id = v.ConductorId
+WHERE v.Placa IN (@placa1, @placa2, @placa3)
+ORDER BY v.Placa;
 
 -- Cómo quedó cada camión.
 SELECT v.Placa,
