@@ -113,6 +113,16 @@ class ClientesControlador extends AsyncNotifier<List<Cliente>> {
   }
 }
 
+/// Los clientes a los que quien pide puede venderles, para el selector de Pedidos y Notas de venta.
+///
+/// Aparte de [clientesProvider] porque ese es el padrón completo (evita dar de alta dos veces a
+/// alguien que ya existe) y aquí ofrecer un cliente ajeno solo dejaría elegirlo para fallar al
+/// guardar. Se pide al abrir el formulario y no se guarda: cambiar la ruta de alguien debe verse
+/// sin cerrar sesión.
+final clientesParaVenderProvider = FutureProvider.autoDispose.family<List<Cliente>, String>(
+  (ref, para) => ref.watch(maestrosApiProvider).clientes(para: para),
+);
+
 final clientesProvider =
     AsyncNotifierProvider<ClientesControlador, List<Cliente>>(
       ClientesControlador.new,

@@ -21,6 +21,7 @@ import type { SubmoduloCatalogo } from '../../lib/permisos'
 import { usuarioApi } from './usuarioApi'
 import type { UsuarioResponse } from './usuarioApi'
 import { ALCANCE, ALCANCE_LABEL, permisoApi } from './permisoApi'
+import { AlcanceDatosEditor } from './AlcanceDatosEditor'
 import type { Alcance, UsuarioPermisoResponse } from './permisoApi'
 
 const ICONO_ALCANCE: Record<Alcance, React.ReactNode> = {
@@ -66,6 +67,12 @@ export function ExcepcionesPermisos() {
   const [abierto, setAbierto] = useState(false)
   const { confirmar, dialogo } = useConfirmacion()
 
+  // Qué filas ve ESTA persona. Vacío en una pantalla = igual que su rol.
+  const [pantallasAlcance, setPantallasAlcance] = useState<string[]>([])
+  const [alcances, setAlcances] = useState<Record<string, string>>({})
+  const [alcancesBase, setAlcancesBase] = useState<Record<string, string>>({})
+  const [guardandoAlcance, setGuardandoAlcance] = useState(false)
+
   useEffect(() => {
     void usuarioApi
       .getAll()
@@ -79,6 +86,52 @@ export function ExcepcionesPermisos() {
       .then(setCatalogo)
       .catch(() => setError('No pudimos cargar el catálogo de permisos.'))
   }, [])
+
+  useEffect(() => {
+    void permisoApi
+      .catalogoAlcances()
+      .then((c) => setPantallasAlcance(c.submodulos))
+      .catch(() => setPantallasAlcance([]))
+  }, [])
+
+  useEffect(() => {
+    if (usuarioId === null) return
+    let vigente = true
+    void permisoApi
+      .alcancesDeUsuario(usuarioId)
+      .then((a) => {
+        if (!vigente) return
+        setAlcances(a)
+        setAlcancesBase(a)
+      })
+      .catch(() => {
+        if (!vigente) return
+        setAlcances({})
+        setAlcancesBase({})
+      })
+    return () => {
+      vigente = false
+    }
+  }, [usuarioId])
+
+  const alcancesSucios = JSON.stringify(alcances) !== JSON.stringify(alcancesBase)
+
+  const guardarAlcances = async () => {
+    if (usuarioId === null) return
+    setGuardandoAlcance(true)
+    try {
+      // Lo que se deja en "igual que su rol" no viaja: sin fila la persona sigue a su rol.
+      const propios = Object.fromEntries(Object.entries(alcances).filter(([, nivel]) => nivel !== ''))
+      await permisoApi.guardarAlcancesUsuario(usuarioId, propios)
+      setAlcancesBase(propios)
+      setAlcances(propios)
+      toast.exito('Alcance guardado')
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos guardar el alcance.')
+    } finally {
+      setGuardandoAlcance(false)
+    }
+  }
 
   const cargar = useCallback(async () => {
     if (usuarioId === null) return
@@ -245,6 +298,38 @@ export function ExcepcionesPermisos() {
       <p className="mt-3 text-xs text-ink-soft">
         Lo que se concede aquí <b>se suma</b> a lo del rol, nunca lo quita.
       </p>
+
+      {/*
+        El alcance sí puede cambiar lo del rol en cualquier sentido: el supervisor del rol Vendedor que
+        debe verlo todo, o el dueño que solo atiende su ruta. Por eso aquí manda sobre el rol.
+      */}
+      {pantallasAlcance.length > 0 && usuarioId !== null && (
+        <div className="mt-6 border-t border-line pt-5">
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold text-ink">Qué clientes y ventas ve</h3>
+              <p className="mt-0.5 text-sm text-ink-muted">
+                Manda sobre el alcance de su rol. Déjalo en <b>Igual que su rol</b> para no cambiar nada.
+                {usuario && !usuario.rutaId && ' Esta persona todavía no tiene ruta asignada (se asigna en Usuarios).'}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              disabled={!alcancesSucios}
+              loading={guardandoAlcance}
+              onClick={() => void guardarAlcances()}
+            >
+              Guardar alcance
+            </Button>
+          </div>
+          <AlcanceDatosEditor
+            submodulos={pantallasAlcance}
+            valores={alcances}
+            onChange={(sub, nivel) => setAlcances((prev) => ({ ...prev, [sub]: nivel }))}
+            heredable
+          />
+        </div>
+      )}
 
       {abierto && usuarioId !== null && (
         <ModalConceder

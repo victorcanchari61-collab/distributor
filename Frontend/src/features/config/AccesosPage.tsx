@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, Inbox, RotateCcw, Save, ShieldCheck, ShieldPlus, Users } from 'lucide-react'
 import { Alert, Badge, Button, cn, PageHeader, PageSection, Tabs, useToast } from '../../components/ui'
 import { ExcepcionesPermisos } from './ExcepcionesPermisos'
+import { AlcanceDatosEditor } from './AlcanceDatosEditor'
+import { permisoApi } from './permisoApi'
 import { BandejaSolicitudes } from './BandejaSolicitudes'
 import { ESTADO_SOLICITUD, solicitudApi } from './solicitudApi'
 import { NAV_GROUPS, resolveNav } from '../../components/layout'
@@ -52,6 +54,10 @@ export function AccesosPage() {
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
   const [abiertos, setAbiertos] = useState<string[]>([])
+  // Qué filas ve el rol (todos / solo su ruta / solo lo que registró) y en qué pantallas aplica.
+  const [pantallasAlcance, setPantallasAlcance] = useState<string[]>([])
+  const [alcances, setAlcances] = useState<Record<string, string>>({})
+  const [alcancesBase, setAlcancesBase] = useState<Record<string, string>>({})
 
   /*
    * Dos pestañas porque son dos preguntas distintas: "que hace este rol" se
@@ -120,6 +126,13 @@ export function AccesosPage() {
 
   useRealtime('roles', cargar)
 
+  useEffect(() => {
+    void permisoApi
+      .catalogoAlcances()
+      .then((c) => setPantallasAlcance(c.submodulos))
+      .catch(() => setPantallasAlcance([]))
+  }, [])
+
   const rol = useMemo(() => roles.find((r) => r.id === rolId) ?? null, [roles, rolId])
 
   /** El catálogo agrupado por módulo, en el orden del menú. */
@@ -145,6 +158,34 @@ export function AccesosPage() {
     setSucio(false)
     setOk('')
   }, [rol])
+
+  // Los alcances del rol viven aparte de la matriz: se leen al elegir el rol.
+  const rolIdActual = rol?.id
+  useEffect(() => {
+    if (rolIdActual === undefined) return
+    let vigente = true
+    void permisoApi
+      .alcancesDeRol(rolIdActual)
+      .then((a) => {
+        if (!vigente) return
+        setAlcances(a)
+        setAlcancesBase(a)
+      })
+      .catch(() => {
+        if (!vigente) return
+        setAlcances({})
+        setAlcancesBase({})
+      })
+    return () => {
+      vigente = false
+    }
+  }, [rolIdActual])
+
+  const cambiarAlcance = (submodulo: string, nivel: string) => {
+    setSucio(true)
+    setOk('')
+    setAlcances((prev) => ({ ...prev, [submodulo]: nivel }))
+  }
 
   const toggle = (submodulo: string, accion: string, acciones: string[]) => {
     setSucio(true)
@@ -200,6 +241,7 @@ export function AccesosPage() {
   }
 
   const restablecer = () => {
+    setAlcances(alcancesBase)
     setMarcas(rol ? deRol(rol.permisos) : new Set())
     setSucio(false)
     setOk('')
@@ -215,6 +257,12 @@ export function AccesosPage() {
         return { submodulo: k.slice(0, corte), accion: k.slice(corte + 1) }
       })
       await rolApi.updatePermisos(rol.id, permisos)
+      // Solo lo que limita algo: "todos" es no restringir y el backend ni lo guarda.
+      const restringidos = Object.fromEntries(
+        Object.entries(alcances).filter(([, nivel]) => nivel !== '' && nivel !== 'todos'),
+      )
+      await permisoApi.guardarAlcancesRol(rol.id, restringidos)
+      setAlcancesBase(restringidos)
       await cargar()
       toast.exito(`Accesos de ${rol.nombre} guardados`)
       setSucio(false)
@@ -474,6 +522,29 @@ export function AccesosPage() {
           pantalla.
         </p>
       </PageSection>
+
+      {/*
+        Qué FILAS ve, no qué botones tiene: el permiso de arriba dice si entra a Pedidos; esto dice de
+        qué clientes. "Solo mi ruta" limita a los clientes de la ruta que la persona tiene a cargo
+        (se asigna en Usuarios); sin ruta no ve ninguno.
+      */}
+      {pantallasAlcance.length > 0 && (
+        <PageSection
+          title="Qué clientes y ventas ve"
+          description={
+            rol?.protegido
+              ? 'El Administrador ve siempre todo.'
+              : 'Todos, solo los de su ruta asignada, o solo lo que él mismo registró. Se guarda con el botón Guardar de arriba.'
+          }
+        >
+          <AlcanceDatosEditor
+            submodulos={pantallasAlcance}
+            valores={alcances}
+            onChange={cambiarAlcance}
+            disabled={rol?.protegido}
+          />
+        </PageSection>
+      )}
       </>
       )}
     </div>

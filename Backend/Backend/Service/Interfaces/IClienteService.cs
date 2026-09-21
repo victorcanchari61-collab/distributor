@@ -10,7 +10,8 @@ public interface IClienteService
     /// pantallas (pedidos, ventas), que necesitan la lista completa en memoria
     /// para filtrar mientras se escribe.
     /// </summary>
-    Task<IEnumerable<ClienteResponse>> GetAllAsync();
+    /// <param name="para">"pedidos" o "notaventa": deja solo los clientes que quien pide puede vender.</param>
+    Task<IEnumerable<ClienteResponse>> GetAllAsync(string? para = null);
 
     /// <summary>Una página del listado, ya buscada, filtrada y ordenada en la base.</summary>
     Task<PaginaResponse<ClienteResponse>> ListarAsync(ConsultaTablaRequest consulta);

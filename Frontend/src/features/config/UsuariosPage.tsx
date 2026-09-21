@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   DocumentoInput,
+  Desplegable,
   Input,
   ListPage,
   Modal,
@@ -15,6 +16,8 @@ import {
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { empleadoApi } from '../maestros'
+import { rutaApi } from '../tms'
+import type { RutaResponse } from '../tms'
 import type { EmpleadoOpcion } from '../maestros'
 import { consultaApi } from '../../lib/consultaApi'
 import { usePermisos } from '../../lib/permisos'
@@ -27,7 +30,7 @@ import type { UsuarioResponse } from './usuarioApi'
 /** Un usuario, tal como lo devuelve el API. */
 export type Usuario = UsuarioResponse
 
-const VACIO = { nombre: '', email: '', password: '', dni: '', rolId: 0, empleadoId: 0 }
+const VACIO = { nombre: '', email: '', password: '', dni: '', rolId: 0, empleadoId: 0, rutaId: 0 }
 
 export function UsuariosPage() {
   const { puede } = usePermisos()
@@ -35,6 +38,7 @@ export function UsuariosPage() {
   const [cargando, setCargando] = useState(true)
   const [roles, setRoles] = useState<RolResponse[]>([])
   const [empleados, setEmpleados] = useState<EmpleadoOpcion[]>([])
+  const [rutas, setRutas] = useState<RutaResponse[]>([])
 
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<Usuario | null>(null)
@@ -59,6 +63,15 @@ export function UsuariosPage() {
    * Si falla se sigue: el enlace es opcional, y quedarse sin poder crear un usuario porque el
    * padrón no cargó sería peor que crearlo sin ficha.
    */
+  // Igual que los empleados: sin rutas se sigue, la ruta es opcional.
+  const cargarRutas = useCallback(async () => {
+    try {
+      setRutas(await rutaApi.getAll())
+    } catch {
+      setRutas([])
+    }
+  }, [])
+
   const cargarEmpleados = useCallback(async () => {
     try {
       setEmpleados(await empleadoApi.opciones())
@@ -84,7 +97,8 @@ export function UsuariosPage() {
     void cargarRoles()
     void cargarUsuarios()
     void cargarEmpleados()
-  }, [cargarRoles, cargarUsuarios, cargarEmpleados])
+    void cargarRutas()
+  }, [cargarRoles, cargarUsuarios, cargarEmpleados, cargarRutas])
 
   useRealtime('roles', cargarRoles)
   useRealtime('usuarios', cargarUsuarios)
@@ -108,6 +122,7 @@ export function UsuariosPage() {
       dni: usuario.dni ?? '',
       rolId: usuario.rolId,
       empleadoId: usuario.empleadoId ?? 0,
+      rutaId: usuario.rutaId ?? 0,
     })
     setAbierto(true)
   }
@@ -176,6 +191,8 @@ export function UsuariosPage() {
           rolId: form.rolId,
           // 0 es "sin empleado": desenlaza la ficha.
           empleadoId: form.empleadoId || null,
+          // 0 es "sin ruta": la quita.
+          rutaId: form.rutaId || null,
           activo: editando.activo,
           // Vacio: el backend deja la contraseña que ya tenia.
           password: form.password || null,
@@ -188,6 +205,7 @@ export function UsuariosPage() {
           dni: form.dni || null,
           rolId: form.rolId,
           empleadoId: form.empleadoId || null,
+          rutaId: form.rutaId || null,
         })
       }
 
@@ -247,6 +265,17 @@ export function UsuariosPage() {
       value: (row) => (row.empleadoId ? 'Con empleado' : 'Sin empleado'),
       render: (row) =>
         row.empleado ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'ruta',
+      label: 'Ruta',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Sin ruta', label: 'Sin ruta' },
+        ...rutas.map((r) => ({ value: r.nombre, label: `Ruta ${r.nombre}` })),
+      ],
+      value: (row) => row.ruta ?? 'Sin ruta',
+      render: (row) => (row.ruta ? <Badge tone="neutral">Ruta {row.ruta}</Badge> : <span className="text-ink-soft">—</span>),
     },
     {
       key: 'rol',
@@ -453,6 +482,30 @@ export function UsuariosPage() {
               <span className="mt-1.5 block text-xs text-ink-soft">{rolElegido.descripcion}</span>
             )}
           </label>
+
+          {/*
+            La cartera de clientes que atiende, para cualquier usuario y sin depender del rol: el dueño
+            también vende y tiene la suya. Sola no restringe nada; lo que limita a "mis clientes" es el
+            alcance del rol. Con ese alcance, sin ruta no ve ningún cliente.
+          */}
+          <Desplegable
+            label="Ruta"
+            optional
+            placeholder="Sin ruta"
+            value={form.rutaId}
+            onChange={(v) => setForm({ ...form, rutaId: Number(v) })}
+            options={[
+              { value: 0, label: 'Sin ruta' },
+              ...rutas
+                // Una ruta desactivada no se asigna, pero se sigue mostrando a quien ya la tiene.
+                .filter((r) => r.activo || r.id === form.rutaId)
+                .map((r) => ({
+                  value: r.id,
+                  label: `Ruta ${r.nombre}`,
+                  detalle: r.vendedores.length ? r.vendedores.join(', ') : 'sin vendedor',
+                })),
+            ]}
+          />
 
         </div>
       </Modal>

@@ -95,7 +95,11 @@ public class UsuarioAlcance
 /// consulta: filtrar en memoria despues de paginar daria paginas incompletas
 /// — "mostrando 3 de 40" con dos filas visibles.
 /// </summary>
-public sealed record AlcanceFiltro(string Alcance, int UsuarioId)
+/// <param name="RutaId">
+/// La ruta que tiene a cargo quien pide. "Mis clientes" son los de ESA ruta; sin ruta no hay
+/// ninguno, y no "todos": null nunca debe compararse contra la ruta de un cliente sin ruta.
+/// </param>
+public sealed record AlcanceFiltro(string Alcance, int UsuarioId, int? RutaId = null)
 {
     public bool SinRestriccion => Alcance == AlcanceDatos.Todos;
 

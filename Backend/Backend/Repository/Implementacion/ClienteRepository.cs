@@ -46,7 +46,6 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
         var query = DbSet
             .Include(c => c.Mercado)
             .Include(c => c.Ruta)
-            .Include(c => c.Vendedor)
             .Include(c => c.Distrito!).ThenInclude(d => d.Provincia!).ThenInclude(p => p.Departamento)
             .AsNoTracking()
             .AsQueryable();
@@ -55,7 +54,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
 
         foreach (var filtro in consulta.Filtros)
         {
-            query = AplicarFiltro(query, filtro);
+            query = AplicarFiltro(query, filtro, Context.Usuarios);
         }
 
         // El total se cuenta ANTES de paginar: es cuántas filas hay en todo el
@@ -99,7 +98,8 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
     /// propósito: la lista es la whitelist de lo que se puede filtrar, para
     /// que un nombre de columna inventado no llegue nunca a la consulta.
     /// </summary>
-    private static IQueryable<Cliente> AplicarFiltro(IQueryable<Cliente> query, FiltroTablaRequest filtro)
+    private static IQueryable<Cliente> AplicarFiltro(
+        IQueryable<Cliente> query, FiltroTablaRequest filtro, IQueryable<Usuario> usuarios)
     {
         var valor = filtro.Valor?.Trim();
 
@@ -144,6 +144,9 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
                 (exacto ? c.Distrito.Nombre == valor : EF.Functions.Like(c.Distrito.Nombre, $"%{valor}%"))),
             "ruta" => query.Where(c => c.Ruta != null &&
                 (exacto ? c.Ruta.Nombre == valor : EF.Functions.Like(c.Ruta.Nombre, $"%{valor}%"))),
+            // El vendedor de un cliente es quien tiene a cargo su ruta.
+            "vendedor" => query.Where(c => c.RutaId != null &&
+                usuarios.Any(u => u.Activo && u.RutaId == c.RutaId && u.Nombre == valor)),
             "mercado" => query.Where(c => c.Mercado != null &&
                 (exacto ? c.Mercado.Nombre == valor : EF.Functions.Like(c.Mercado.Nombre, $"%{valor}%"))),
             // En pantalla el estado se lee "Activo" / "Inactivo", no true/false.

@@ -20,6 +20,10 @@ public class UsuarioResponse
     public int? EmpleadoId { get; set; }
     public string? Empleado { get; set; }
 
+    /// <summary>La ruta que tiene a cargo, si tiene.</summary>
+    public int? RutaId { get; set; }
+    public string? Ruta { get; set; }
+
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 }

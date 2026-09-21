@@ -53,6 +53,9 @@ public interface IPermisoService
     /// </summary>
     Task<string> AlcanceAsync(int usuarioId, string submodulo);
 
+    /// <summary>El alcance junto con la ruta de la persona: lo que hace falta para filtrar "mis clientes".</summary>
+    Task<AlcanceFiltro> AlcanceFiltroAsync(int usuarioId, string submodulo);
+
     /// <summary>Los alcances de una persona, ya resueltos: submódulo → alcance.</summary>
     Task<IReadOnlyDictionary<string, string>> MisAlcancesAsync(int usuarioId);
 

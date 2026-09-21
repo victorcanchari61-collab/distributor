@@ -15,6 +15,8 @@ class Usuario {
     this.dni,
     this.empleadoId,
     this.empleado,
+    this.rutaId,
+    this.ruta,
   });
 
   final int id;
@@ -33,10 +35,15 @@ class Usuario {
   /// Nombre de ese empleado, solo para mostrar.
   final String? empleado;
 
+  /// La ruta que tiene a cargo: su cartera de clientes. Es de la PERSONA, no del rol: el dueño
+  /// también vende y tiene la suya. Por sí sola no restringe nada; lo hace el alcance del rol.
+  final int? rutaId;
+  final String? ruta;
+
   final bool activo;
 
   String get buscable =>
-      '$nombre $email ${dni ?? ''} $rol ${empleado ?? ''}'.toLowerCase();
+      '$nombre $email ${dni ?? ''} $rol ${empleado ?? ''} ${ruta ?? ''}'.toLowerCase();
 
   factory Usuario.desdeJson(Map<String, dynamic> json) => Usuario(
     id: json['id'] as int,
@@ -47,6 +54,8 @@ class Usuario {
     rol: json['rol'] as String? ?? '',
     empleadoId: json['empleadoId'] as int?,
     empleado: json['empleado'] as String?,
+    rutaId: json['rutaId'] as int?,
+    ruta: json['ruta'] as String?,
     activo: json['activo'] as bool? ?? true,
   );
 }

@@ -52,40 +52,69 @@ public class ClienteService : IClienteService
      * completo hace falta para no dar de alta por segunda vez a alguien que ya
      * existe a nombre de otro vendedor.
      *
-     * Se comprueba sobre el cliente ya guardado y no sobre el request: si no,
-     * bastaria con mandar otro VendedorId para apropiarse de un cliente ajeno
-     * y editarlo en la misma llamada.
+     * "Los que tienes asignados" son los de TU RUTA: el cliente pertenece a una ruta y la ruta a quien
+     * la tiene a cargo. Sin ruta no hay ninguno.
+     *
+     * Se comprueba sobre el cliente ya guardado y no sobre el request: si no, bastaria con mandar otra
+     * ruta para apropiarse de un cliente ajeno y editarlo en la misma llamada. Tras aplicar el request
+     * se vuelve a comprobar, para que tampoco se pueda MOVER un cliente a una ruta que no es la suya.
      */
     private async Task ExigirAlcanceAsync(Cliente cliente)
     {
         if (_usuarioActual.Id is not int id) return;
 
-        var alcance = await _permisos.AlcanceAsync(id, "maestros.clientes");
-        if (alcance == AlcanceDatos.Todos) return;
+        var alcance = await _permisos.AlcanceFiltroAsync(id, "maestros.clientes");
+        if (alcance.SinRestriccion) return;
 
-        if (cliente.VendedorId != id)
+        if (alcance.RutaId is null || cliente.RutaId != alcance.RutaId)
         {
-            throw new ForbiddenException("Solo puedes modificar los clientes que tienes asignados");
+            throw new ForbiddenException("Solo puedes modificar los clientes de tu ruta");
         }
     }
 
-    public async Task<IEnumerable<ClienteResponse>> GetAllAsync()
+    public async Task<IEnumerable<ClienteResponse>> GetAllAsync(string? para = null)
     {
         var clientes = await _repository.GetAllAsync();
+        var vendedores = await _usuarios.VendedoresPorRutaAsync();
+
+        /*
+         * El selector de cliente de Pedidos y Notas de venta ofrece solo los de la ruta de quien vende.
+         *
+         * El padron completo sigue disponible para el resto (evita dar de alta dos veces a alguien que
+         * ya existe), pero armar un pedido de un cliente ajeno se rechaza al guardar: ofrecerlo aqui
+         * solo lo dejaria elegir para fallar despues.
+         */
+        var submodulo = para switch
+        {
+            "pedidos" => "fact.pedidos",
+            "notaventa" => "fact.notaventa",
+            _ => null,
+        };
+        if (submodulo is not null && _usuarioActual.Id is int uid)
+        {
+            var alcance = await _permisos.AlcanceFiltroAsync(uid, submodulo);
+            if (!alcance.SinRestriccion && !alcance.SoloPropios)
+            {
+                var ruta = alcance.RutaId;
+                clientes = clientes.Where(c => ruta != null && c.RutaId == ruta);
+            }
+        }
+
         // Se devuelven tambien los inactivos: si no, un registro desactivado
         // desaparece de la pantalla y ya no hay forma de reactivarlo.
         return clientes.OrderByDescending(c => c.Activo)
             .ThenBy(c => c.Nombre)
-            .Select(MapToResponse);
+            .Select(c => MapToResponse(c, vendedores));
     }
 
     public async Task<PaginaResponse<ClienteResponse>> ListarAsync(ConsultaTablaRequest consulta)
     {
         var (items, total) = await _repository.ListarAsync(consulta);
+        var vendedores = await _usuarios.VendedoresPorRutaAsync();
 
         return new PaginaResponse<ClienteResponse>
         {
-            Items = items.Select(MapToResponse).ToList(),
+            Items = items.Select(c => MapToResponse(c, vendedores)).ToList(),
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura
@@ -96,7 +125,7 @@ public class ClienteService : IClienteService
 
     public async Task<ClienteResponse> GetByIdAsync(int id)
     {
-        return MapToResponse(await GetOrThrowAsync(id));
+        return MapToResponse(await GetOrThrowAsync(id), await _usuarios.VendedoresPorRutaAsync());
     }
 
     public async Task<ClienteResponse> CreateAsync(CreateClienteRequest request)
@@ -110,10 +139,11 @@ public class ClienteService : IClienteService
 
         var cliente = new Cliente();
         Aplicar(cliente, request, await ResolverMercadoAsync(request), await ResolverRutaAsync(request),
-            await ResolverDistritoAsync(request), await ResolverVendedorAsync(request), await ResolverListaAsync(request));
+            await ResolverDistritoAsync(request), await ResolverListaAsync(request));
+        await ExigirAlcanceAsync(cliente);
 
         await _repository.AddAsync(cliente);
-        var response = MapToResponse(cliente);
+        var response = MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync());
         await _notificador.AvisarAsync("clientes", "creado", response);
         return response;
     }
@@ -131,11 +161,12 @@ public class ClienteService : IClienteService
         }
 
         Aplicar(cliente, request, await ResolverMercadoAsync(request), await ResolverRutaAsync(request),
-            await ResolverDistritoAsync(request), await ResolverVendedorAsync(request), await ResolverListaAsync(request));
+            await ResolverDistritoAsync(request), await ResolverListaAsync(request));
+        await ExigirAlcanceAsync(cliente);
         cliente.Activo = request.Activo;
 
         await _repository.UpdateAsync(cliente);
-        var response = MapToResponse(cliente);
+        var response = MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync());
         await _notificador.AvisarAsync("clientes", "actualizado", response);
         return response;
     }
@@ -149,10 +180,10 @@ public class ClienteService : IClienteService
         {
             cliente.Activo = activo;
             await _repository.UpdateAsync(cliente);
-            await _notificador.AvisarAsync("clientes", "estado", MapToResponse(cliente));
+            await _notificador.AvisarAsync("clientes", "estado", MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync()));
         }
 
-        return MapToResponse(cliente);
+        return MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync());
     }
 
     public async Task DeleteAsync(int id)
@@ -222,7 +253,7 @@ public class ClienteService : IClienteService
                     }
 
                     Aplicar(existente, fila, await ResolverMercadoAsync(fila), await ResolverRutaAsync(fila),
-                        await ResolverDistritoAsync(fila), await ResolverVendedorAsync(fila), await ResolverListaAsync(fila));
+                        await ResolverDistritoAsync(fila), await ResolverListaAsync(fila));
                     existente.Activo = true;
                     await _repository.UpdateAsync(existente);
                     resultado.Actualizados++;
@@ -231,7 +262,7 @@ public class ClienteService : IClienteService
 
                 var cliente = new Cliente();
                 Aplicar(cliente, fila, await ResolverMercadoAsync(fila), await ResolverRutaAsync(fila),
-                    await ResolverDistritoAsync(fila), await ResolverVendedorAsync(fila), await ResolverListaAsync(fila));
+                    await ResolverDistritoAsync(fila), await ResolverListaAsync(fila));
                 await _repository.AddAsync(cliente);
                 resultado.Creados++;
             }
@@ -273,7 +304,7 @@ public class ClienteService : IClienteService
     }
 
     private static void Aplicar(Cliente cliente, ClienteRequestBase request, Mercado? mercado, Ruta? ruta,
-        Distrito? distrito, Usuario? vendedor, ListaPrecio? lista)
+        Distrito? distrito, ListaPrecio? lista)
     {
         cliente.Documento = request.Documento.Trim();
         // Si el usuario eligio el tipo se respeta; si no (importacion), se deduce
@@ -292,9 +323,8 @@ public class ClienteService : IClienteService
         cliente.Ruta = ruta;
         cliente.MercadoId = mercado?.Id;
         cliente.Mercado = mercado;
-        // El 0 del formulario significa "sin asignar": se guarda como nulo.
-        cliente.VendedorId = vendedor?.Id;
-        cliente.Vendedor = vendedor;
+        // Ya no se asigna vendedor al cliente: la ruta es la que tiene quien la atiende. VendedorId queda
+        // como estaba (nadie lo usa) hasta que se quite la columna, para no perder lo que hubiera.
         cliente.ListaPrecioId = lista?.Id;
         cliente.ListaPrecio = lista;
     }
@@ -319,29 +349,6 @@ public class ClienteService : IClienteService
         }
 
         return lista;
-    }
-
-    /// <summary>
-    /// Resuelve el vendedor: cualquier usuario activo, no solo los del rol
-    /// Vendedor.
-    ///
-    /// Se comprueba que exista antes de guardar para que un id inventado
-    /// devuelva un mensaje claro y no un error de base de datos.
-    /// </summary>
-    private async Task<Usuario?> ResolverVendedorAsync(ClienteRequestBase request)
-    {
-        // 0 es "sin asignar": es lo que manda el formulario cuando se deja vacío.
-        if (request.VendedorId is not > 0) return null;
-
-        var usuario = await _usuarios.GetByIdAsync(request.VendedorId.Value)
-            ?? throw new BadRequestException("El vendedor indicado no existe");
-
-        if (!usuario.Activo)
-        {
-            throw new BadRequestException("El vendedor indicado está desactivado");
-        }
-
-        return usuario;
     }
 
     /// <summary>
@@ -445,7 +452,8 @@ public class ClienteService : IClienteService
             ?? throw new NotFoundException("Cliente no encontrado");
     }
 
-    private static ClienteResponse MapToResponse(Cliente cliente)
+    /// <param name="vendedores">Quién tiene a cargo cada ruta: el vendedor de un cliente sale de su ruta.</param>
+    private static ClienteResponse MapToResponse(Cliente cliente, IReadOnlyDictionary<int, string> vendedores)
     {
         return new ClienteResponse
         {
@@ -467,8 +475,7 @@ public class ClienteService : IClienteService
             Ruta = cliente.Ruta?.Nombre,
             MercadoId = cliente.MercadoId,
             Mercado = cliente.Mercado?.Nombre,
-            VendedorId = cliente.VendedorId,
-            Vendedor = cliente.Vendedor?.Nombre,
+            Vendedor = cliente.RutaId is int ruta && vendedores.TryGetValue(ruta, out var atiende) ? atiende : null,
             ListaPrecioId = cliente.ListaPrecioId,
             ListaPrecio = cliente.ListaPrecio?.Nombre,
             Activo = cliente.Activo,

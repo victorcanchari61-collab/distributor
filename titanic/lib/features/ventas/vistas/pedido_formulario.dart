@@ -275,10 +275,10 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
             if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
 
             campoCliente(
-              clientes: ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[],
+              clientes: ref.watch(clientesParaVenderProvider('pedidos')).valueOrNull ?? const <Cliente>[],
               // Mientras el catalogo viene, el buscador lo dice en vez de
               // afirmar que no hay ningun cliente.
-              cargando: ref.watch(clientesProvider).isLoading,
+              cargando: ref.watch(clientesParaVenderProvider('pedidos')).isLoading,
               elegido: _clienteNombre,
               error: _errorCliente,
               habilitado: !_guardando,

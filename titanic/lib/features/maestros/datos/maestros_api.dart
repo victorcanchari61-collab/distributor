@@ -14,8 +14,11 @@ class MaestrosApi {
   // --- Clientes ---
 
   /// GET /api/cliente
-  Future<List<Cliente>> clientes() async {
-    final datos = await _api.get('/cliente') as List;
+  ///
+  /// Con [para] ("pedidos" o "notaventa") el servidor deja solo los clientes que quien pide puede
+  /// vender: los de su ruta si tiene el alcance "mis clientes".
+  Future<List<Cliente>> clientes({String? para}) async {
+    final datos = await _api.get(para == null ? '/cliente' : '/cliente?para=$para') as List;
     return datos
         .map((e) => Cliente.desdeJson(e as Map<String, dynamic>))
         .toList();

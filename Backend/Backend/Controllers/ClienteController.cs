@@ -25,9 +25,9 @@ public class ClienteController : ControllerBase
     /// </summary>
     [HttpGet]
     [Permiso("maestros.clientes", Accion.Ver)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] string? para = null)
     {
-        return Ok(await _clienteService.GetAllAsync());
+        return Ok(await _clienteService.GetAllAsync(para));
     }
 
     /// <summary>

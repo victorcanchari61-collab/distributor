@@ -113,6 +113,19 @@ export function RutasPage() {
     // Un contador no se busca por texto: no hay control numerico en el panel.
     { key: 'clientes', label: 'Clientes', align: 'right', filterable: false },
     {
+      // Quién la tiene a cargo: se asigna en Usuarios, no aquí.
+      key: 'vendedores',
+      label: 'A cargo de',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Con vendedor', label: 'Con vendedor' },
+        { value: 'Sin vendedor', label: 'Sin vendedor' },
+      ],
+      value: (row) => (row.vendedores.length ? 'Con vendedor' : 'Sin vendedor'),
+      render: (row) =>
+        row.vendedores.length ? row.vendedores.join(', ') : <span className="text-ink-soft">Sin vendedor</span>,
+    },
+    {
       key: 'activo',
       label: 'Estado',
       filterType: 'select',
@@ -200,6 +213,7 @@ export function RutasPage() {
           <div className="grid grid-cols-2 gap-3">
             <Dato etiqueta="Nombre" valor={detalle.nombre} />
             <Dato etiqueta="Clientes" valor={String(detalle.clientes)} />
+            <Dato etiqueta="A cargo de" valor={detalle.vendedores.length ? detalle.vendedores.join(', ') : 'Sin vendedor'} />
             <Dato etiqueta="Estado" valor={detalle.activo ? 'Activa' : 'Inactiva'} />
           </div>
         )}

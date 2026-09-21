@@ -441,10 +441,10 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
             if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
 
             campoCliente(
-              clientes: ref.watch(clientesProvider).valueOrNull ?? const <Cliente>[],
+              clientes: ref.watch(clientesParaVenderProvider('notaventa')).valueOrNull ?? const <Cliente>[],
               // Mientras el catalogo viene, el buscador lo dice en vez de
               // afirmar que no hay ningun cliente.
-              cargando: ref.watch(clientesProvider).isLoading,
+              cargando: ref.watch(clientesParaVenderProvider('notaventa')).isLoading,
               elegido: _clienteNombre,
               error: _errorCliente,
               habilitado: !_guardando,

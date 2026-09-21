@@ -69,7 +69,7 @@ class _ApiFalso extends MaestrosApi {
   Map<String, dynamic>? ultimoCreado;
 
   @override
-  Future<List<Cliente>> clientes() async {
+  Future<List<Cliente>> clientes({String? para}) async {
     if (falla) throw const ApiExcepcion('sin conexión');
 
     return [

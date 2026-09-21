@@ -21,7 +21,7 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
     {
         // Activos primero: los desactivados siguen listandose para poder
         // volver a habilitarlos, igual que en clientes y proveedores.
-        return await DbSet.Include(u => u.Rol).Include(u => u.Empleado)
+        return await DbSet.Include(u => u.Rol).Include(u => u.Empleado).Include(u => u.Ruta)
             .OrderByDescending(u => u.Activo)
             .ThenBy(u => u.Nombre)
             .ToListAsync();
@@ -29,7 +29,8 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
 
     public async Task<Usuario?> GetByIdConRolAsync(int id)
     {
-        return await DbSet.Include(u => u.Rol).Include(u => u.Empleado).FirstOrDefaultAsync(u => u.Id == id);
+        return await DbSet.Include(u => u.Rol).Include(u => u.Empleado).Include(u => u.Ruta)
+            .FirstOrDefaultAsync(u => u.Id == id);
     }
 
     public async Task<Rol?> GetRolAsync(int rolId)
@@ -40,6 +41,21 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
     public async Task<Empleado?> GetEmpleadoAsync(int empleadoId)
     {
         return await Context.Empleados.FirstOrDefaultAsync(e => e.Id == empleadoId);
+    }
+
+    public async Task<Dictionary<int, string>> VendedoresPorRutaAsync()
+    {
+        var filas = await DbSet.AsNoTracking()
+            .Where(u => u.Activo && u.RutaId != null)
+            .Select(u => new { RutaId = u.RutaId!.Value, u.Nombre })
+            .ToListAsync();
+        return filas.GroupBy(f => f.RutaId)
+            .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(f => f.Nombre).OrderBy(n => n)));
+    }
+
+    public async Task<Ruta?> GetRutaAsync(int rutaId)
+    {
+        return await Context.Rutas.FirstOrDefaultAsync(r => r.Id == rutaId);
     }
 
     public async Task<Usuario?> GetUsuarioDeEmpleadoAsync(int empleadoId, int? excluirUsuarioId = null)

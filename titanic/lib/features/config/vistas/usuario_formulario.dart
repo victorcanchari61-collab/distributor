@@ -12,6 +12,8 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../maestros/datos/empleado.dart';
 import '../../maestros/estado/maestros_controlador.dart';
+import '../../tms/datos/ruta.dart';
+import '../../tms/estado/tms_controlador.dart' as tms;
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
@@ -36,6 +38,9 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
 
   /// De quien es esta cuenta. Null es "sin empleado".
   late int? _empleadoId = widget.usuario?.empleadoId;
+
+  /// La ruta que tiene a cargo. Null es "sin ruta".
+  late int? _rutaId = widget.usuario?.rutaId;
 
   bool _guardando = false;
   String? _error;
@@ -139,6 +144,8 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
       // el registro, asi que no mandarlo desenlazaria la ficha de quien ya la
       // tenia solo por haber cambiado el nombre.
       'empleadoId': _empleadoId,
+      // Igual: viaja siempre, o guardar cualquier otro cambio le quitaria la ruta.
+      'rutaId': _rutaId,
       if (_esNuevo) 'password': _password.text,
       if (!_esNuevo) ...{
         'activo': widget.usuario!.activo,
@@ -163,6 +170,7 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
   @override
   Widget build(BuildContext context) {
     final roles = ref.watch(rolesActivosProvider);
+    final rutas = ref.watch(tms.rutasProvider).valueOrNull ?? const <Ruta>[];
     // Si el padron no carga se sigue sin el: el enlace es opcional, y quedarse
     // sin poder crear un usuario porque Empleados fallo seria peor.
     final empleados =
@@ -266,6 +274,30 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
               error: _errorRol,
               opciones: [for (final rol in roles) Opcion(rol.id, rol.nombre)],
               onCambio: (v) => setState(() => _rolId = v),
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            // La cartera de clientes que atiende, para cualquier usuario y sin depender del rol: el
+            // dueño también vende. Sola no restringe nada; lo que limita a "mis clientes" es el
+            // alcance del rol, y con ese alcance sin ruta no se ve ningún cliente.
+            AppSelector<int?>(
+              valor: _rutaId,
+              etiqueta: 'Ruta (opcional)',
+              icono: Icons.alt_route,
+              habilitado: !_guardando,
+              opciones: [
+                const Opcion<int?>(null, 'Sin ruta'),
+                for (final r in rutas)
+                  // Una ruta desactivada no se asigna, pero se sigue mostrando a quien ya la tiene.
+                  if (r.activo || r.id == _rutaId)
+                    Opcion<int?>(
+                      r.id,
+                      r.vendedores.isEmpty
+                          ? 'Ruta ${r.nombre}'
+                          : 'Ruta ${r.nombre} · ${r.vendedores.join(', ')}',
+                    ),
+              ],
+              onCambio: (v) => setState(() => _rutaId = v),
             ),
             if (roles.isEmpty) ...[
               const SizedBox(height: Dimen.espacio2),

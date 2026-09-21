@@ -322,6 +322,13 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(u => u.EmpleadoId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Varias cuentas pueden compartir ruta (el titular y su reemplazo). Restrict: una ruta
+            // con gente a cargo no se borra; el servicio lo explica antes de llegar aqui.
+            entity.HasOne(u => u.Ruta)
+                .WithMany()
+                .HasForeignKey(u => u.RutaId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Empresa>(entity =>

@@ -35,6 +35,14 @@ public class VisitaService : IVisitaService
         var clientes = await ClientesAsync(dias.Select(DiaSemana.De).Distinct().ToList(), rutaId, vendedorId);
         var pedidos = await PedidosAsync(clientes.Select(c => c.Id).ToList(), dias);
 
+        // Quien tiene cada ruta a cargo, para rotular la visita: una ruta puede tener mas de una persona.
+        var vendedoresPorRuta = (await _context.Usuarios.AsNoTracking()
+                .Where(u => u.Activo && u.RutaId != null)
+                .Select(u => new { RutaId = u.RutaId!.Value, u.Nombre })
+                .ToListAsync())
+            .GroupBy(u => u.RutaId)
+            .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(u => u.Nombre).OrderBy(n => n)));
+
         var visitas = new List<VisitaResponse>();
 
         foreach (var fecha in dias)
@@ -57,8 +65,8 @@ public class VisitaService : IVisitaService
                     Telefono = c.Telefono,
                     RutaId = c.RutaId,
                     Ruta = c.Ruta?.Nombre,
-                    VendedorId = c.VendedorId,
-                    Vendedor = c.Vendedor?.Nombre,
+                    // Quien tiene la ruta a cargo, no un vendedor puesto a mano en el cliente.
+                    Vendedor = vendedoresPorRuta.GetValueOrDefault(c.RutaId ?? 0),
                     Atendido = pedido is not null,
                     PedidoId = pedido?.Id,
                     PedidoNumero = pedido?.Numero,
@@ -112,11 +120,16 @@ public class VisitaService : IVisitaService
             .AsNoTracking()
             .Include(c => c.Mercado)
             .Include(c => c.Ruta)
-            .Include(c => c.Vendedor)
             .Where(c => c.Activo && c.DiaVisita != null && dias.Contains(c.DiaVisita));
 
         if (rutaId is int ruta) clientes = clientes.Where(c => c.RutaId == ruta);
-        if (vendedorId is int vendedor) clientes = clientes.Where(c => c.VendedorId == vendedor);
+        // "El vendedor" es quien tiene la ruta a cargo: sus clientes son los de su ruta.
+        if (vendedorId is int vendedor)
+        {
+            var rutaDelVendedor = await _context.Usuarios.AsNoTracking()
+                .Where(u => u.Id == vendedor).Select(u => u.RutaId).FirstOrDefaultAsync();
+            clientes = clientes.Where(c => rutaDelVendedor != null && c.RutaId == rutaDelVendedor);
+        }
 
         /*
          * El alcance de datos manda igual que en Pedidos.
@@ -127,10 +140,11 @@ public class VisitaService : IVisitaService
          */
         if (_usuarioActual.Id is int usuarioId)
         {
-            var alcance = await _permisos.AlcanceAsync(usuarioId, "fact.pedidos");
-            if (alcance != AlcanceDatos.Todos)
+            var alcance = await _permisos.AlcanceFiltroAsync(usuarioId, "fact.pedidos");
+            if (!alcance.SinRestriccion)
             {
-                clientes = clientes.Where(c => c.VendedorId == usuarioId);
+                var miRuta = alcance.RutaId;
+                clientes = clientes.Where(c => miRuta != null && c.RutaId == miRuta);
             }
         }
 

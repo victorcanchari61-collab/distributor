@@ -12,4 +12,7 @@ public class CreateUsuarioRequest
 
     /// <summary>Su ficha en Empleados. Opcional: hay cuentas que no son de nadie del padrón.</summary>
     public int? EmpleadoId { get; set; }
+
+    /// <summary>La ruta que tiene a cargo. Opcional y de cualquier usuario, no solo de vendedores.</summary>
+    public int? RutaId { get; set; }
 }

@@ -75,21 +75,32 @@ public class VentasRepository : IVentasRepository
     {
         if (alcance is null || alcance.SinRestriccion) return query;
 
+        // Local y no alcance.RutaId dentro de la consulta: asi EF la manda como parametro y el
+        // "sin ruta" (null) queda descartado antes de comparar, en vez de emparejar con clientes sin ruta.
+        var ruta = alcance.RutaId;
+
         return alcance.SoloPropios
             ? query.Where(p => p.UsuarioId == alcance.UsuarioId)
             : query.Where(p => p.UsuarioId == alcance.UsuarioId
-                               || (p.Cliente != null && p.Cliente.VendedorId == alcance.UsuarioId));
+                               || (ruta != null && p.Cliente != null && p.Cliente.RutaId == ruta));
     }
 
     private static IQueryable<NotaVenta> Acotar(IQueryable<NotaVenta> query, AlcanceFiltro? alcance)
     {
         if (alcance is null || alcance.SinRestriccion) return query;
 
+        // Local y no alcance.RutaId dentro de la consulta: asi EF la manda como parametro y el
+        // "sin ruta" (null) queda descartado antes de comparar, en vez de emparejar con clientes sin ruta.
+        var ruta = alcance.RutaId;
+
         return alcance.SoloPropios
             ? query.Where(n => n.UsuarioId == alcance.UsuarioId)
             : query.Where(n => n.UsuarioId == alcance.UsuarioId
-                               || (n.Cliente != null && n.Cliente.VendedorId == alcance.UsuarioId));
+                               || (ruta != null && n.Cliente != null && n.Cliente.RutaId == ruta));
     }
+
+    public async Task<int?> RutaDeClienteAsync(int clienteId) =>
+        await _context.Clientes.AsNoTracking().Where(c => c.Id == clienteId).Select(c => c.RutaId).FirstOrDefaultAsync();
 
     public async Task<Pedido?> GetPedidoAsync(int id, AlcanceFiltro? alcance = null) =>
         await Acotar(PedidosConDetalle(), alcance).FirstOrDefaultAsync(p => p.Id == id);

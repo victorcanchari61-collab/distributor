@@ -11,6 +11,9 @@ public interface IRutaRepository
     /// <summary>Clientes que ya la usan.</summary>
     Task<int> ContarClientesAsync(int id);
 
+    /// <summary>Nombres de quienes la tienen a cargo, activos primero.</summary>
+    Task<List<string>> VendedoresAsync(int id);
+
     Task<Ruta> AddAsync(Ruta ruta);
     Task UpdateAsync(Ruta ruta);
     Task DeleteAsync(Ruta ruta);

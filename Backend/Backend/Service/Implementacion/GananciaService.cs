@@ -159,7 +159,7 @@ public class GananciaService : IGananciaService
         // Lo que ve cada quien: el alcance del submódulo. Sin usuario en el
         // token (llamada interna) no hay a quién acotar.
         var alcance = _usuarioActual.Id is int uid
-            ? new AlcanceFiltro(await _permisos.AlcanceAsync(uid, "finanzas.ganancias"), uid)
+            ? await _permisos.AlcanceFiltroAsync(uid, "finanzas.ganancias")
             : null;
 
         var notas = _context.NotasVenta
@@ -167,10 +167,11 @@ public class GananciaService : IGananciaService
 
         if (alcance is { SinRestriccion: false })
         {
+            var ruta = alcance.RutaId;
             notas = alcance.SoloPropios
                 ? notas.Where(n => n.UsuarioId == alcance.UsuarioId)
                 : notas.Where(n => n.UsuarioId == alcance.UsuarioId
-                                   || (n.Cliente != null && n.Cliente.VendedorId == alcance.UsuarioId));
+                                   || (ruta != null && n.Cliente != null && n.Cliente.RutaId == ruta));
         }
 
         var lineas = (await notas

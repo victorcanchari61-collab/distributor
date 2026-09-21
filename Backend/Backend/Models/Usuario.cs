@@ -31,6 +31,16 @@ public class Usuario
     /// saber quién está detrás de una cuenta sin repetir aquí sus datos personales.
     /// </summary>
     public int? EmpleadoId { get; set; }
+
+    /// <summary>
+    /// La ruta que tiene a cargo: su cartera de clientes de la semana.
+    ///
+    /// Es un dato de la PERSONA y no del rol, a propósito: el dueño también vende y tiene la suya sin
+    /// ser Vendedor. Por sí sola no restringe nada; lo que limita a "mis clientes" es el alcance de
+    /// datos del rol o del usuario. Con ese alcance, quien no tiene ruta no ve ningún cliente.
+    /// </summary>
+    public int? RutaId { get; set; }
+    public Ruta? Ruta { get; set; }
     public Empleado? Empleado { get; set; }
 
     public bool Activo { get; set; } = true;

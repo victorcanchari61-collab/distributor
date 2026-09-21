@@ -80,6 +80,8 @@ class UsuariosControlador extends AsyncNotifier<List<Usuario>> {
       'dni': usuario.dni,
       'rolId': usuario.rolId,
       'empleadoId': usuario.empleadoId,
+      // Tambien la ruta: sin ella, activar o desactivar a alguien le quitaria su cartera.
+      'rutaId': usuario.rutaId,
       'activo': !usuario.activo,
     });
     await recargar();

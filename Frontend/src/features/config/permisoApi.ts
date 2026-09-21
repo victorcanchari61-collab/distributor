@@ -44,7 +44,33 @@ export interface ConcederPermisoRequest {
   motivo?: string | null
 }
 
+/** Qué filas ve alguien en cada pantalla: submódulo → todos | misclientes | propios. */
+export type AlcancesDatos = Record<string, string>
+
+export interface CatalogoAlcances {
+  /** Las pantallas donde el alcance tiene sentido: las que tienen filas que son de alguien. */
+  submodulos: string[]
+  niveles: string[]
+}
+
 export const permisoApi = {
+  /** GET /api/permiso/alcances/catalogo */
+  catalogoAlcances: () => api.get<CatalogoAlcances>('/permiso/alcances/catalogo'),
+
+  /** GET /api/permiso/alcances/rol/{id}. Lo que falta es "todos": el backend no guarda lo que no limita. */
+  alcancesDeRol: (rolId: number) => api.get<AlcancesDatos>(`/permiso/alcances/rol/${rolId}`),
+
+  /** PUT /api/permiso/alcances/rol/{id} — reemplaza los alcances del rol. */
+  guardarAlcancesRol: (rolId: number, alcances: AlcancesDatos) =>
+    api.put<void>(`/permiso/alcances/rol/${rolId}`, alcances),
+
+  /** GET /api/permiso/alcances/usuario/{id}. Lo que falta es "igual que su rol". */
+  alcancesDeUsuario: (usuarioId: number) => api.get<AlcancesDatos>(`/permiso/alcances/usuario/${usuarioId}`),
+
+  /** PUT /api/permiso/alcances/usuario/{id} — reemplaza los de la persona; los que no viajan siguen a su rol. */
+  guardarAlcancesUsuario: (usuarioId: number, alcances: AlcancesDatos) =>
+    api.put<void>(`/permiso/alcances/usuario/${usuarioId}`, alcances),
+
   /** GET /api/permiso/usuario/{id} — excepciones de una persona. */
   deUsuario: (usuarioId: number) =>
     api.get<UsuarioPermisoResponse[]>(`/permiso/usuario/${usuarioId}`),

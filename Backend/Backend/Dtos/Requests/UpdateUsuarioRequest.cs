@@ -12,6 +12,9 @@ public class UpdateUsuarioRequest
     /// <summary>Su ficha en Empleados. Null la desenlaza.</summary>
     public int? EmpleadoId { get; set; }
 
+    /// <summary>La ruta que tiene a cargo. Null la quita.</summary>
+    public int? RutaId { get; set; }
+
     public bool Activo { get; set; } = true;
 
     /// <summary>

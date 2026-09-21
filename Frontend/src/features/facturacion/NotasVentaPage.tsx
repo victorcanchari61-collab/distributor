@@ -174,7 +174,7 @@ export function NotasVentaPage() {
     try {
       const [res, clis, prods, alms, lis, metodos] = await Promise.all([
         notaVentaApi.resumen(),
-        clienteApi.getAll(),
+        clienteApi.getAll('notaventa'),
         productoApi.getAll(),
         almacenApi.opciones(),
         listaPrecioApi.getAll(),

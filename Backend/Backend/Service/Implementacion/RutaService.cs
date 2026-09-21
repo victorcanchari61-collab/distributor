@@ -37,7 +37,7 @@ public class RutaService : IRutaService
         var respuesta = new List<RutaResponse>();
         foreach (var ruta in rutas)
         {
-            respuesta.Add(MapToResponse(ruta, await _repository.ContarClientesAsync(ruta.Id)));
+            respuesta.Add(await MapAsync(ruta));
         }
         return respuesta;
     }
@@ -45,7 +45,7 @@ public class RutaService : IRutaService
     public async Task<RutaResponse> GetByIdAsync(int id)
     {
         var ruta = await GetOrThrowAsync(id);
-        return MapToResponse(ruta, await _repository.ContarClientesAsync(id));
+        return await MapAsync(ruta);
     }
 
     public async Task<RutaResponse> CreateAsync(CreateRutaRequest request)
@@ -82,7 +82,7 @@ public class RutaService : IRutaService
         ruta.Activo = request.Activo;
         await _repository.UpdateAsync(ruta);
 
-        var response = MapToResponse(ruta, await _repository.ContarClientesAsync(id));
+        var response = await MapAsync(ruta);
         await _notificador.AvisarAsync("rutas", "actualizado", response);
         return response;
     }
@@ -97,6 +97,13 @@ public class RutaService : IRutaService
             throw new BadRequestException($"La ruta tiene {usos} cliente(s). Desactívala en vez de eliminarla.");
         }
 
+        var a_cargo = await _repository.VendedoresAsync(id);
+        if (a_cargo.Count > 0)
+        {
+            throw new BadRequestException(
+                $"La ruta la tiene a cargo {string.Join(", ", a_cargo)}. Quítasela primero en Usuarios.");
+        }
+
         await _repository.DeleteAsync(ruta);
         await _notificador.AvisarAsync("rutas", "eliminado", new { id });
     }
@@ -105,11 +112,15 @@ public class RutaService : IRutaService
         await _repository.GetByIdAsync(id)
         ?? throw new NotFoundException($"No existe la ruta {id}");
 
-    private static RutaResponse MapToResponse(Ruta r, int clientes) => new()
+    private async Task<RutaResponse> MapAsync(Ruta ruta) =>
+        MapToResponse(ruta, await _repository.ContarClientesAsync(ruta.Id), await _repository.VendedoresAsync(ruta.Id));
+
+    private static RutaResponse MapToResponse(Ruta r, int clientes, List<string>? vendedores = null) => new()
     {
         Id = r.Id,
         Nombre = r.Nombre,
         Activo = r.Activo,
-        Clientes = clientes
+        Clientes = clientes,
+        Vendedores = vendedores ?? []
     };
 }

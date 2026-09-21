@@ -58,27 +58,35 @@ public class DashboardService : IDashboardService
 
     private async Task<AlcanceFiltro?> AlcanceAsync(string submodulo) =>
         _usuarioActual.Id is int uid
-            ? new AlcanceFiltro(await _permisos.AlcanceAsync(uid, submodulo), uid)
+            ? await _permisos.AlcanceFiltroAsync(uid, submodulo)
             : null;
 
     private static IQueryable<NotaVenta> Acotar(IQueryable<NotaVenta> query, AlcanceFiltro? alcance)
     {
         if (alcance is null || alcance.SinRestriccion) return query;
 
+        // Local y no alcance.RutaId dentro de la consulta: asi EF la manda como parametro y el
+        // "sin ruta" (null) queda descartado antes de comparar, en vez de emparejar con clientes sin ruta.
+        var ruta = alcance.RutaId;
+
         return alcance.SoloPropios
             ? query.Where(n => n.UsuarioId == alcance.UsuarioId)
             : query.Where(n => n.UsuarioId == alcance.UsuarioId
-                               || (n.Cliente != null && n.Cliente.VendedorId == alcance.UsuarioId));
+                               || (ruta != null && n.Cliente != null && n.Cliente.RutaId == ruta));
     }
 
     private static IQueryable<Pedido> Acotar(IQueryable<Pedido> query, AlcanceFiltro? alcance)
     {
         if (alcance is null || alcance.SinRestriccion) return query;
 
+        // Local y no alcance.RutaId dentro de la consulta: asi EF la manda como parametro y el
+        // "sin ruta" (null) queda descartado antes de comparar, en vez de emparejar con clientes sin ruta.
+        var ruta = alcance.RutaId;
+
         return alcance.SoloPropios
             ? query.Where(p => p.UsuarioId == alcance.UsuarioId)
             : query.Where(p => p.UsuarioId == alcance.UsuarioId
-                               || (p.Cliente != null && p.Cliente.VendedorId == alcance.UsuarioId));
+                               || (ruta != null && p.Cliente != null && p.Cliente.RutaId == ruta));
     }
 
     /// <summary>Lunes = 0 … domingo = 6.</summary>

@@ -171,7 +171,7 @@ String _dniDe(WidgetTester tester) => _texto(tester, 2);
 
 /// Elige a alguien en el selector de empleado.
 Future<void> _elegir(WidgetTester tester, String etiqueta) async {
-  await tester.tap(find.byType(AppSelector<int?>).last);
+  await tester.tap(find.byType(AppSelector<int?>).first);
   await tester.pumpAndSettle();
   await tester.tap(find.text(etiqueta).last);
   await tester.pumpAndSettle();
@@ -358,7 +358,7 @@ void main() {
     ) async {
       await montar(tester);
 
-      await tester.tap(find.byType(AppSelector<int?>).last);
+      await tester.tap(find.byType(AppSelector<int?>).first);
       await tester.pumpAndSettle();
 
       // El de otra cuenta lo dice; el del usuario que se edita, no.
@@ -395,7 +395,7 @@ void main() {
     testWidgets('el selector se pinta antes que el DNI', (tester) async {
       await montar(tester);
 
-      final selector = tester.getTopLeft(find.byType(AppSelector<int?>).last).dy;
+      final selector = tester.getTopLeft(find.byType(AppSelector<int?>).first).dy;
       final dni = tester.getTopLeft(find.byType(AppCampo).at(2)).dy;
 
       expect(selector, lessThan(dni));

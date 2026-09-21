@@ -251,6 +251,16 @@ public class PermisoService : IPermisoService
 
     private record UsuarioMinimo(int RolId, bool EsAdministrador);
 
+    public async Task<AlcanceFiltro> AlcanceFiltroAsync(int usuarioId, string submodulo)
+    {
+        var alcance = await AlcanceAsync(usuarioId, submodulo);
+        var ruta = await _context.Usuarios.AsNoTracking()
+            .Where(u => u.Id == usuarioId)
+            .Select(u => u.RutaId)
+            .FirstOrDefaultAsync();
+        return new AlcanceFiltro(alcance, usuarioId, ruta);
+    }
+
     public async Task<string> AlcanceAsync(int usuarioId, string submodulo)
     {
         var usuario = await UsuarioAsync(usuarioId);

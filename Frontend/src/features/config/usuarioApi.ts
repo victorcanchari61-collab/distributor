@@ -13,6 +13,9 @@ export interface UsuarioResponse {
   /** Su ficha de empleado, si la tiene enlazada. */
   empleadoId: number | null
   empleado: string | null
+  /** La ruta que tiene a cargo, si tiene. */
+  rutaId: number | null
+  ruta: string | null
   activo: boolean
   fechaCreacion: string
 }
@@ -25,6 +28,8 @@ export interface CreateUsuarioRequest {
   rolId: number
   /** A quién pertenece la cuenta. Opcional: hay cuentas que no son de nadie del padrón. */
   empleadoId?: number | null
+  /** La ruta que tiene a cargo. Opcional y de cualquier usuario, no solo de vendedores. */
+  rutaId?: number | null
 }
 
 export interface UpdateUsuarioRequest {
@@ -34,6 +39,8 @@ export interface UpdateUsuarioRequest {
   rolId: number
   /** Null desenlaza la ficha. */
   empleadoId?: number | null
+  /** Null la quita. */
+  rutaId?: number | null
   activo: boolean
   /** Vacio deja la contraseña actual. */
   password?: string | null

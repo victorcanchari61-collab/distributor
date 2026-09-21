@@ -12,6 +12,9 @@ public interface IVentasRepository
 
     // --- Pedidos ---
     Task<string> SiguienteNumeroPedidoAsync();
+
+    /// <summary>La ruta de un cliente; null si no tiene o no existe.</summary>
+    Task<int?> RutaDeClienteAsync(int clienteId);
     Task<Pedido> AddPedidoAsync(Pedido pedido);
     Task<Pedido?> GetPedidoAsync(int id, AlcanceFiltro? alcance = null);
     Task<IEnumerable<Pedido>> GetPedidosAsync(string? estado = null, AlcanceFiltro? alcance = null);

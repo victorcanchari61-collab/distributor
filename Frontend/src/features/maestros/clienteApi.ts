@@ -53,8 +53,6 @@ export interface ClienteRequest {
   mercadoId?: number | null
   /** Solo para importación: si no hay mercadoId, crea o reutiliza uno con este nombre. */
   mercadoNombre?: string | null
-  /** Quién atiende al cliente. Cualquier usuario, no solo los del rol Vendedor. */
-  vendedorId?: number | null
   /** Lista con la que se le cobra. Vacía usa la predeterminada. */
   listaPrecioId?: number | null
 }
@@ -77,7 +75,12 @@ export interface ResumenClientes {
 
 export const clienteApi = {
   /** Todos, sin paginar: para los buscadores de cliente de otras pantallas. */
-  getAll: () => api.get<ClienteResponse[]>('/cliente'),
+  /**
+   * Todos. Con `para` deja solo los que quien pide puede vender (los de su ruta si tiene el alcance
+   * "mis clientes"): es lo que ofrecen los selectores de Pedidos y Notas de venta.
+   */
+  getAll: (para?: 'pedidos' | 'notaventa') =>
+    api.get<ClienteResponse[]>(para ? `/cliente?para=${para}` : '/cliente'),
 
   /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
   listar: (consulta: ConsultaTabla) =>

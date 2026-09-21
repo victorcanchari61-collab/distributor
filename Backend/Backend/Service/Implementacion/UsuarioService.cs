@@ -94,6 +94,7 @@ public class UsuarioService : IUsuarioService
         }
 
         var empleado = await ResolverEmpleadoAsync(request.EmpleadoId, null);
+        var ruta = await ResolverRutaAsync(request.RutaId);
 
         var usuario = new Usuario
         {
@@ -101,13 +102,15 @@ public class UsuarioService : IUsuarioService
             Email = request.Email,
             Dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni,
             RolId = rol.Id,
-            EmpleadoId = empleado?.Id
+            EmpleadoId = empleado?.Id,
+            RutaId = ruta?.Id
         };
         usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.Password);
 
         await _repository.AddAsync(usuario);
         usuario.Rol = rol;
         usuario.Empleado = empleado;
+        usuario.Ruta = ruta;
         var response = MapToResponse(usuario);
         await _notificador.AvisarAsync("usuarios", "creado", response);
         return response;
@@ -151,6 +154,7 @@ public class UsuarioService : IUsuarioService
         }
 
         var empleado = await ResolverEmpleadoAsync(request.EmpleadoId, id);
+        var ruta = await ResolverRutaAsync(request.RutaId);
 
         usuario.Nombre = request.Nombre;
         usuario.Email = request.Email;
@@ -158,6 +162,9 @@ public class UsuarioService : IUsuarioService
         usuario.RolId = rol.Id;
         // Null desenlaza la ficha: la cuenta deja de ser de esa persona.
         usuario.EmpleadoId = empleado?.Id;
+        // Null la quita: deja de tener cartera. Con alcance "mis clientes" pasa a no ver ninguno.
+        usuario.RutaId = ruta?.Id;
+        usuario.Ruta = ruta;
         usuario.Activo = request.Activo;
 
         if (!string.IsNullOrWhiteSpace(request.Password))
@@ -282,6 +289,21 @@ public class UsuarioService : IUsuarioService
         return empleado;
     }
 
+    /// <summary>
+    /// La ruta que se le asigna: cualquier ruta activa, a cualquier usuario.
+    ///
+    /// Se comprueba que exista para que un id inventado devuelva un mensaje claro y no un error de
+    /// base de datos. Una ruta desactivada no se asigna, pero tampoco se le quita a quien ya la tiene
+    /// por editar otra cosa: eso lo decide quien la desactiva.
+    /// </summary>
+    private async Task<Ruta?> ResolverRutaAsync(int? rutaId)
+    {
+        if (rutaId is not int id || id <= 0) return null;
+
+        return await _repository.GetRutaAsync(id)
+            ?? throw new BadRequestException("La ruta indicada no existe");
+    }
+
     private static UsuarioResponse MapToResponse(Usuario usuario)
     {
         return new UsuarioResponse
@@ -296,6 +318,8 @@ public class UsuarioService : IUsuarioService
             Rol = usuario.Rol?.Nombre ?? string.Empty,
             EmpleadoId = usuario.EmpleadoId,
             Empleado = usuario.Empleado?.NombreCompleto,
+            RutaId = usuario.RutaId,
+            Ruta = usuario.Ruta?.Nombre,
             Activo = usuario.Activo,
             FechaCreacion = usuario.FechaCreacion
         };

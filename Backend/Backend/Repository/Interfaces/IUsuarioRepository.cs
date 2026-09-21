@@ -17,6 +17,10 @@ public interface IUsuarioRepository : IRepository<Usuario>
 
     /// <summary>La ficha de empleado por id, para validarla al enlazarla a una cuenta.</summary>
     Task<Empleado?> GetEmpleadoAsync(int empleadoId);
+    Task<Ruta?> GetRutaAsync(int rutaId);
+
+    /// <summary>Quién tiene a cargo cada ruta (activos): id de ruta → nombres separados por coma.</summary>
+    Task<Dictionary<int, string>> VendedoresPorRutaAsync();
 
     /// <summary>Quién tiene ya enlazada esa ficha, sin contar al usuario que se está editando.</summary>
     Task<Usuario?> GetUsuarioDeEmpleadoAsync(int empleadoId, int? excluirUsuarioId = null);

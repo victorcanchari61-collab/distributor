@@ -6,6 +6,8 @@ export interface RutaResponse {
   activo: boolean
   /** Cuántos clientes ya la usan. Si hay alguno, no se elimina. */
   clientes: number
+  /** Quiénes la tienen a cargo. Puede ser más de uno (el titular y su reemplazo). */
+  vendedores: string[]
 }
 
 export interface RutaRequest {

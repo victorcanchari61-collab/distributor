@@ -130,7 +130,7 @@ export function PedidosPage() {
     try {
       const [res, clis, prods, alms, lis] = await Promise.all([
         pedidoApi.resumen(),
-        clienteApi.getAll(),
+        clienteApi.getAll('pedidos'),
         productoApi.getAll(),
         almacenApi.opciones(),
         listaPrecioApi.getAll(),

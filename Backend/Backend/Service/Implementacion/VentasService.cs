@@ -87,14 +87,31 @@ public class VentasService : IVentasService
 
     private async Task<AlcanceFiltro?> AlcanceVentasAsync() => await AlcanceAsync("fact.notaventa");
 
+    /*
+     * Un cliente que no es de mi ruta no se puede vender.
+     *
+     * Ocultarlo en el selector no basta: bastaria con mandar el id a mano. Solo aplica al alcance
+     * "mis clientes"; "propios" limita lo que se VE y "todos" no limita nada.
+     */
+    private async Task ExigirClienteDeMiRutaAsync(int clienteId, string submodulo)
+    {
+        var alcance = await AlcanceAsync(submodulo);
+        if (alcance is null || alcance.SinRestriccion || alcance.SoloPropios) return;
+
+        var rutaDelCliente = await _repository.RutaDeClienteAsync(clienteId);
+        if (alcance.RutaId is null || rutaDelCliente != alcance.RutaId)
+        {
+            throw new ForbiddenException("Solo puedes vender a los clientes de tu ruta");
+        }
+    }
+
     private async Task<AlcanceFiltro?> AlcanceAsync(string submodulo)
     {
         // Sin usuario en el token no hay a quien acotar. Ocurre en las llamadas
         // internas del propio sistema, que no pasan por un controlador.
         if (_usuarioActual.Id is not int id) return null;
 
-        var alcance = await _permisos.AlcanceAsync(id, submodulo);
-        return new AlcanceFiltro(alcance, id);
+        return await _permisos.AlcanceFiltroAsync(id, submodulo);
     }
 
     // --------------------------------------------------------------- Pedidos
@@ -163,6 +180,7 @@ public class VentasService : IVentasService
     public async Task<PedidoResponse> CrearPedidoAsync(CrearPedidoRequest request, int? usuarioId)
     {
         await _pedidoValidator.ValidateAndThrowAsync(request);
+        await ExigirClienteDeMiRutaAsync(request.ClienteId, "fact.pedidos");
 
         if (request.ReservaStock)
         {
@@ -209,6 +227,11 @@ public class VentasService : IVentasService
             await ValidarAlmacenReservaAsync(request.AlmacenId!.Value);
         }
 
+        // Solo si CAMBIA de cliente: corregir un pedido viejo no debe fallar porque la ruta ya no sea la mia.
+        if (pedido.ClienteId != request.ClienteId)
+        {
+            await ExigirClienteDeMiRutaAsync(request.ClienteId, "fact.pedidos");
+        }
         pedido.ClienteId = request.ClienteId;
         pedido.ListaPrecioId = request.ListaPrecioId;
         pedido.Fecha = request.Fecha ?? pedido.Fecha;
@@ -599,6 +622,7 @@ public class VentasService : IVentasService
     public async Task<NotaVentaResponse> CrearNotaVentaAsync(CrearNotaVentaRequest request, int? usuarioId)
     {
         await _notaVentaValidator.ValidateAndThrowAsync(request);
+        await ExigirClienteDeMiRutaAsync(request.ClienteId, "fact.notaventa");
 
         return await CrearNotaVentaInternaAsync(
             clienteId: request.ClienteId,
@@ -684,6 +708,10 @@ public class VentasService : IVentasService
             await _inventario.AnularAsync(documentoAnteriorId, usuarioId);
         }
 
+        if (notaVenta.ClienteId != request.ClienteId)
+        {
+            await ExigirClienteDeMiRutaAsync(request.ClienteId, "fact.notaventa");
+        }
         notaVenta.ClienteId = request.ClienteId;
         notaVenta.AlmacenId = request.AlmacenId;
         notaVenta.Observacion = Limpiar(request.Observacion);

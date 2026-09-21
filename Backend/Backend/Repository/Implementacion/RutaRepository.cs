@@ -29,6 +29,13 @@ public class RutaRepository : IRutaRepository
     public async Task<int> ContarClientesAsync(int id) =>
         await _context.Clientes.CountAsync(c => c.RutaId == id);
 
+    public async Task<List<string>> VendedoresAsync(int id) =>
+        await _context.Usuarios.AsNoTracking()
+            .Where(u => u.RutaId == id)
+            .OrderByDescending(u => u.Activo).ThenBy(u => u.Nombre)
+            .Select(u => u.Nombre)
+            .ToListAsync();
+
     public async Task<Ruta> AddAsync(Ruta ruta)
     {
         await _context.Rutas.AddAsync(ruta);

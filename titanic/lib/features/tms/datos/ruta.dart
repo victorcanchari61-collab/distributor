@@ -5,6 +5,7 @@ class Ruta {
     required this.nombre,
     required this.activo,
     this.clientes = 0,
+    this.vendedores = const [],
   });
 
   final int id;
@@ -14,6 +15,9 @@ class Ruta {
   /// Cuántos clientes ya la usan. Si hay alguno, no se elimina.
   final int clientes;
 
+  /// Quiénes la tienen a cargo (puede ser más de uno). Se asigna en Usuarios.
+  final List<String> vendedores;
+
   String get buscable => nombre.toLowerCase();
 
   factory Ruta.desdeJson(Map<String, dynamic> json) => Ruta(
@@ -21,5 +25,6 @@ class Ruta {
     nombre: json['nombre'] as String? ?? '',
     activo: json['activo'] as bool? ?? true,
     clientes: json['clientes'] as int? ?? 0,
+    vendedores: [for (final v in (json['vendedores'] as List? ?? const [])) v as String],
   );
 }
