@@ -33,7 +33,8 @@ public class RolRepository : Repository<Rol>, IRolRepository
 
     public async Task<int> ContarUsuariosAsync(int rolId)
     {
-        return await Context.Usuarios.CountAsync(u => u.RolId == rolId);
+        // Los que lo tienen como principal y los que lo tienen ademas de otro.
+        return await Context.Usuarios.CountAsync(u => u.RolId == rolId || u.RolesAdicionales.Any(r => r.RolId == rolId));
     }
 
     public async Task ReemplazarPermisosAsync(int rolId, IEnumerable<RolPermiso> permisos)

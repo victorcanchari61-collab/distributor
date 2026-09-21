@@ -7,7 +7,7 @@ import {
   Button,
   Modal,
   PageSection,
-  Select,
+  Desplegable,
   SysDataTable,
   cn,
   useConfirmacion,
@@ -249,17 +249,13 @@ export function ExcepcionesPermisos() {
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="min-w-56">
-          <Select
+          <Desplegable
             label="Usuario"
-            value={String(usuarioId ?? '')}
-            onChange={(e) => setUsuarioId(Number(e.target.value))}
-          >
-            {usuarios.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nombre} · {u.rol}
-              </option>
-            ))}
-          </Select>
+            value={usuarioId ?? 0}
+            onChange={(v) => setUsuarioId(Number(v))}
+            placeholder="Elige un usuario"
+            options={usuarios.map((u) => ({ value: u.id, label: u.nombre, detalle: u.rol }))}
+          />
         </div>
 
         <Button size="sm" disabled={usuarioId === null} onClick={() => setAbierto(true)}>
@@ -426,32 +422,22 @@ function ModalConceder({
       <div className="space-y-4">
         {error && <Alert>{error}</Alert>}
 
-        <Select
+        <Desplegable
           label="Pantalla"
           value={submodulo}
-          onChange={(e) => setSubmodulo(e.target.value)}
-        >
-          <option value="">Elige una pantalla</option>
-          {catalogo.map((s) => (
-            <option key={s.submodulo} value={s.submodulo}>
-              {nombrePantalla(s.submodulo)}
-            </option>
-          ))}
-        </Select>
+          onChange={(v) => setSubmodulo(String(v))}
+          placeholder="Elige una pantalla"
+          options={catalogo.map((s) => ({ value: s.submodulo, label: nombrePantalla(s.submodulo) }))}
+        />
 
-        <Select
+        <Desplegable
           label="Acción"
           value={accion}
-          onChange={(e) => setAccion(e.target.value)}
+          onChange={(v) => setAccion(String(v))}
           disabled={submodulo === ''}
-        >
-          <option value="">Elige una acción</option>
-          {acciones.map((a) => (
-            <option key={a} value={a}>
-              {ACCION_LABEL[a] ?? a}
-            </option>
-          ))}
-        </Select>
+          placeholder="Elige una acción"
+          options={acciones.map((a) => ({ value: a, label: ACCION_LABEL[a] ?? a }))}
+        />
 
         <div>
           <p className="mb-1.5 text-sm font-medium text-ink">¿Hasta cuándo?</p>

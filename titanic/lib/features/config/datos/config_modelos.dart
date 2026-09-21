@@ -10,6 +10,7 @@ class Usuario {
     required this.nombre,
     required this.email,
     required this.rolId,
+    this.rolIds = const [],
     required this.rol,
     required this.activo,
     this.dni,
@@ -27,7 +28,11 @@ class Usuario {
 
   /// El usuario que eligió para iniciar sesión; opcional. Sirve igual que el correo o el DNI.
   final String? nombreUsuario;
+  /// El rol principal.
   final int rolId;
+
+  /// Todos sus roles, el principal primero. Una persona puede tener varios; sus permisos son la unión.
+  final List<int> rolIds;
 
   /// Nombre del rol: el backend lo manda resuelto para no pedirlo aparte.
   final String rol;
@@ -56,6 +61,7 @@ class Usuario {
     dni: json['dni'] as String?,
     nombreUsuario: json['nombreUsuario'] as String?,
     rolId: json['rolId'] as int? ?? 0,
+    rolIds: [for (final r in (json['rolIds'] as List? ?? const [])) r as int],
     rol: json['rol'] as String? ?? '',
     empleadoId: json['empleadoId'] as int?,
     empleado: json['empleado'] as String?,

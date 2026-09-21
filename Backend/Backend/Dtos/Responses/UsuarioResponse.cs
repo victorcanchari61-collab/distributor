@@ -14,10 +14,15 @@ public class UsuarioResponse
     /// <summary>Ruta relativa de la foto de perfil, si tiene.</summary>
     public string? Foto { get; set; }
 
+    /// <summary>El rol principal.</summary>
     public int RolId { get; set; }
 
-    /// <summary>Nombre del rol, para no obligar al cliente a otra llamada.</summary>
+    /// <summary>Los roles de la persona dichos como se leen: "Vendedor, Almacenero".</summary>
     public string Rol { get; set; } = string.Empty;
+
+    /// <summary>Todos los roles: el principal primero.</summary>
+    public List<int> RolIds { get; set; } = [];
+    public List<string> Roles { get; set; } = [];
 
     /// <summary>Su ficha de empleado, si la tiene enlazada.</summary>
     public int? EmpleadoId { get; set; }

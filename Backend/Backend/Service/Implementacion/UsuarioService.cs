@@ -63,8 +63,9 @@ public class UsuarioService : IUsuarioService
             throw new UnauthorizedException("El usuario está desactivado");
         }
 
-        // Desactivar un rol tiene que significar algo: sus usuarios no entran.
-        if (usuario.Rol is not null && !usuario.Rol.Activo)
+        // Desactivar un rol tiene que significar algo: sus usuarios no entran. Con varios roles basta con que
+        // uno siga activo: los desactivados dejan de dar permisos, pero la persona sigue trabajando con el resto.
+        if (RolesDe(usuario).All(r => !r.Activo))
         {
             throw new UnauthorizedException("El rol de este usuario está desactivado");
         }
@@ -85,13 +86,8 @@ public class UsuarioService : IUsuarioService
         var nombreUsuario = LimpiarUsuario(request.NombreUsuario);
         await ExigirIdentificadoresLibresAsync(email, dni, nombreUsuario, null);
 
-        var rol = await _repository.GetRolAsync(request.RolId)
-            ?? throw new BadRequestException("El rol indicado no existe");
-
-        if (!rol.Activo)
-        {
-            throw new BadRequestException("El rol indicado está desactivado");
-        }
+        var roles = await ResolverRolesAsync(request.RolIds, request.RolId, null);
+        var rol = roles[0];
 
         var empleado = await ResolverEmpleadoAsync(request.EmpleadoId, null);
         var ruta = await ResolverRutaAsync(request.RutaId);
@@ -103,6 +99,7 @@ public class UsuarioService : IUsuarioService
             Dni = dni,
             NombreUsuario = nombreUsuario,
             RolId = rol.Id,
+            RolesAdicionales = roles.Skip(1).Select(r => new UsuarioRol { RolId = r.Id }).ToList(),
             EmpleadoId = empleado?.Id,
             RutaId = ruta?.Id
         };
@@ -143,15 +140,10 @@ public class UsuarioService : IUsuarioService
         var nombreUsuario = LimpiarUsuario(request.NombreUsuario);
         await ExigirIdentificadoresLibresAsync(email, dni, nombreUsuario, id);
 
-        var rol = await _repository.GetRolAsync(request.RolId)
-            ?? throw new BadRequestException("El rol indicado no existe");
-
-        // Solo se exige rol activo si de verdad esta cambiando: si el rol se
-        // desactivo despues, editar el telefono del usuario no deberia fallar.
-        if (!rol.Activo && rol.Id != usuario.RolId)
-        {
-            throw new BadRequestException("El rol indicado está desactivado");
-        }
+        // Solo se exige rol activo a los que se AGREGAN: si un rol se desactivo despues, editar el telefono del
+        // usuario no deberia fallar.
+        var roles = await ResolverRolesAsync(request.RolIds, request.RolId, usuario);
+        var rol = roles[0];
 
         var empleado = await ResolverEmpleadoAsync(request.EmpleadoId, id);
         var ruta = await ResolverRutaAsync(request.RutaId);
@@ -161,6 +153,17 @@ public class UsuarioService : IUsuarioService
         usuario.Dni = dni;
         usuario.NombreUsuario = nombreUsuario;
         usuario.RolId = rol.Id;
+
+        // Los roles adicionales se sincronizan: se quitan los que ya no van y se agregan los nuevos.
+        var adicionales = roles.Skip(1).Select(r => r.Id).ToHashSet();
+        foreach (var quitar in usuario.RolesAdicionales.Where(r => !adicionales.Contains(r.RolId)).ToList())
+        {
+            usuario.RolesAdicionales.Remove(quitar);
+        }
+        foreach (var agregar in adicionales.Where(id => usuario.RolesAdicionales.All(r => r.RolId != id)))
+        {
+            usuario.RolesAdicionales.Add(new UsuarioRol { UsuarioId = usuario.Id, RolId = agregar });
+        }
         // Null desenlaza la ficha: la cuenta deja de ser de esa persona.
         usuario.EmpleadoId = empleado?.Id;
         // Null la quita: deja de tener cartera. Con alcance "mis clientes" pasa a no ver ninguno.
@@ -253,7 +256,11 @@ public class UsuarioService : IUsuarioService
             // solicitar y aprobar existe para que sirva en el momento.
             // Quien decide es PermisoService, leyendo de la base.
             new Claim(ClaimTypes.Role, usuario.Rol?.Nombre ?? string.Empty)
-        };
+        }.Concat(usuario.RolesAdicionales
+                .Select(r => r.Rol?.Nombre)
+                .Where(n => !string.IsNullOrEmpty(n))
+                .Select(n => new Claim(ClaimTypes.Role, n!)))
+            .ToArray();
 
         var token = new JwtSecurityToken(
             issuer: _configuration["Jwt:Issuer"],
@@ -309,6 +316,45 @@ public class UsuarioService : IUsuarioService
     }
 
     /// <summary>Vacío es "sin correo": se guarda como nulo, no como texto vacío, para que el índice único no lo cuente.</summary>
+    /// <summary>Todos los roles de la persona, el principal primero.</summary>
+    private static List<Rol> RolesDe(Usuario usuario)
+    {
+        var roles = new List<Rol>();
+        if (usuario.Rol is not null) roles.Add(usuario.Rol);
+        roles.AddRange(usuario.RolesAdicionales.Select(r => r.Rol).OfType<Rol>().Where(r => roles.All(x => x.Id != r.Id)));
+        return roles;
+    }
+
+    /// <summary>
+    /// Los roles que se piden, el primero como principal. Acepta el `RolId` de antes.
+    ///
+    /// Cada uno tiene que existir. Se exige que esté activo solo si es NUEVO para esa persona (o si es un alta):
+    /// un rol que se desactivó después no impide corregir el teléfono de quien ya lo tenía.
+    /// </summary>
+    private async Task<List<Rol>> ResolverRolesAsync(List<int> pedidos, int rolIdUnico, Usuario? existente)
+    {
+        var ids = pedidos.Where(id => id > 0).Distinct().ToList();
+        if (ids.Count == 0 && rolIdUnico > 0) ids.Add(rolIdUnico);
+        if (ids.Count == 0) throw new BadRequestException("Selecciona al menos un rol");
+
+        var actuales = existente is null
+            ? new HashSet<int>()
+            : RolesDe(existente).Select(r => r.Id).ToHashSet();
+
+        var roles = new List<Rol>();
+        foreach (var id in ids)
+        {
+            var rol = await _repository.GetRolAsync(id)
+                ?? throw new BadRequestException("El rol indicado no existe");
+
+            if (!rol.Activo && !actuales.Contains(rol.Id))
+                throw new BadRequestException($"El rol {rol.Nombre} está desactivado");
+
+            roles.Add(rol);
+        }
+        return roles;
+    }
+
     private static string? LimpiarUsuario(string? usuario) =>
         string.IsNullOrWhiteSpace(usuario) ? null : usuario.Trim();
 
@@ -352,7 +398,9 @@ public class UsuarioService : IUsuarioService
             Telefono = usuario.Telefono,
             Foto = usuario.Foto,
             RolId = usuario.RolId,
-            Rol = usuario.Rol?.Nombre ?? string.Empty,
+            Rol = string.Join(", ", RolesDe(usuario).Select(r => r.Nombre)),
+            RolIds = RolesDe(usuario).Select(r => r.Id).ToList(),
+            Roles = RolesDe(usuario).Select(r => r.Nombre).ToList(),
             EmpleadoId = usuario.EmpleadoId,
             Empleado = usuario.Empleado?.NombreCompleto,
             RutaId = usuario.RutaId,

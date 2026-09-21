@@ -9,9 +9,13 @@ export interface UsuarioResponse {
   nombreUsuario: string | null
   telefono: string | null
   foto: string | null
+  /** El rol principal. */
   rolId: number
-  /** Nombre del rol, resuelto por el backend. */
+  /** Los roles dichos como se leen: "Vendedor, Almacenero". */
   rol: string
+  /** Todos los roles de la persona, el principal primero. */
+  rolIds: number[]
+  roles: string[]
   /** Su ficha de empleado, si la tiene enlazada. */
   empleadoId: number | null
   empleado: string | null
@@ -29,7 +33,8 @@ export interface CreateUsuarioRequest {
   dni?: string | null
   /** Nombre de usuario para iniciar sesión. Opcional. */
   nombreUsuario?: string | null
-  rolId: number
+  /** Todos sus roles, el primero como principal. Sus permisos son la unión de los de todos. */
+  rolIds: number[]
   /** A quién pertenece la cuenta. Opcional: hay cuentas que no son de nadie del padrón. */
   empleadoId?: number | null
   /** La ruta que tiene a cargo. Opcional y de cualquier usuario, no solo de vendedores. */
@@ -42,7 +47,8 @@ export interface UpdateUsuarioRequest {
   dni?: string | null
   /** Null lo quita. */
   nombreUsuario?: string | null
-  rolId: number
+  /** Todos sus roles, el primero como principal. */
+  rolIds: number[]
   /** Null desenlaza la ficha. */
   empleadoId?: number | null
   /** Null la quita. */

@@ -52,7 +52,9 @@ public class PermisoService : IPermisoService
         if (usuario is null) return new HashSet<string>();
         if (usuario.EsAdministrador) return Todos;
 
-        var permisos = new HashSet<string>(await DeRolAsync(usuario.RolId));
+        // La union de los permisos de TODOS sus roles: tener mas roles nunca le quita nada.
+        var permisos = new HashSet<string>();
+        foreach (var rolId in usuario.RolIds) permisos.UnionWith(await DeRolAsync(rolId));
         foreach (var e in await VigentesAsync(usuarioId))
         {
             permisos.Add($"{e.Submodulo}:{e.Accion}");
@@ -69,8 +71,11 @@ public class PermisoService : IPermisoService
         // El rol primero: si ya lo cubre, no se toca ninguna excepcion — asi un
         // permiso de un solo uso no se gasta por algo que la persona podia
         // hacer igual.
-        if ((await DeRolAsync(usuario.RolId)).Contains($"{submodulo}:{accion}"))
-            return Veredicto.PorRol;
+        foreach (var rolId in usuario.RolIds)
+        {
+            if ((await DeRolAsync(rolId)).Contains($"{submodulo}:{accion}"))
+                return Veredicto.PorRol;
+        }
 
         var excepciones = (await VigentesAsync(usuarioId))
             .Where(e => e.Submodulo == submodulo && e.Accion == accion)
@@ -249,7 +254,7 @@ public class PermisoService : IPermisoService
         return solicitud;
     }
 
-    private record UsuarioMinimo(int RolId, bool EsAdministrador);
+    private record UsuarioMinimo(IReadOnlyList<int> RolIds, bool EsAdministrador);
 
     public async Task<AlcanceFiltro> AlcanceFiltroAsync(int usuarioId, string submodulo)
     {
@@ -279,14 +284,18 @@ public class PermisoService : IPermisoService
 
         var delRol = await _context.RolAlcances
             .AsNoTracking()
-            .Where(a => a.RolId == usuario.RolId && a.Submodulo == submodulo)
-            .Select(a => a.Alcance)
-            .FirstOrDefaultAsync();
+            .Where(a => usuario.RolIds.Contains(a.RolId) && a.Submodulo == submodulo)
+            .Select(a => new { a.RolId, a.Alcance })
+            .ToListAsync();
 
-        // Sin configurar es "todos": el sistema funcionaba asi antes de que
-        // esto existiera, y un alcance restrictivo por defecto habria dejado a
-        // todo el mundo sin ver nada al desplegar.
-        return delRol ?? AlcanceDatos.Todos;
+        // Con varios roles gana el MAS AMPLIO, igual que con los permisos: quien es Vendedor (solo su ruta) y
+        // ademas Almacenero (sin restriccion) no debe quedar limitado por uno de ellos. Un rol sin fila para esta
+        // pantalla no restringe nada ("todos"): el sistema funcionaba asi antes de que esto existiera, y un
+        // alcance restrictivo por defecto habria dejado a todo el mundo sin ver nada al desplegar.
+        var niveles = usuario.RolIds.Select(id => delRol.FirstOrDefault(a => a.RolId == id)?.Alcance ?? AlcanceDatos.Todos).ToList();
+        if (niveles.Contains(AlcanceDatos.Todos)) return AlcanceDatos.Todos;
+        if (niveles.Contains(AlcanceDatos.MisClientes)) return AlcanceDatos.MisClientes;
+        return niveles.FirstOrDefault() ?? AlcanceDatos.Todos;
     }
 
     public async Task<IReadOnlyDictionary<string, string>> MisAlcancesAsync(int usuarioId)
@@ -378,14 +387,23 @@ public class PermisoService : IPermisoService
         }
     }
 
-    private async Task<UsuarioMinimo?> UsuarioAsync(int usuarioId) =>
-        await _context.Usuarios
+    private async Task<UsuarioMinimo?> UsuarioAsync(int usuarioId)
+    {
+        var u = await _context.Usuarios
             .AsNoTracking()
-            .Where(u => u.Id == usuarioId && u.Activo)
-            // El administrador no se configura: si su matriz quedara a medias se
-            // quedaria fuera de la propia pantalla que arregla los permisos.
-            .Select(u => new UsuarioMinimo(u.RolId, u.Rol!.Nombre == "Administrador"))
+            .Where(x => x.Id == usuarioId && x.Activo)
+            .Select(x => new
+            {
+                x.RolId,
+                Adicionales = x.RolesAdicionales.Select(r => r.RolId).ToList(),
+                // El administrador no se configura: si su matriz quedara a medias se quedaria fuera de la propia
+                // pantalla que arregla los permisos. Con varios roles, basta con que uno sea Administrador.
+                Admin = x.Rol!.Nombre == "Administrador" || x.RolesAdicionales.Any(r => r.Rol!.Nombre == "Administrador"),
+            })
             .FirstOrDefaultAsync();
+
+        return u is null ? null : new UsuarioMinimo([u.RolId, .. u.Adicionales], u.Admin);
+    }
 
     private async Task<IReadOnlySet<string>> DeRolAsync(int rolId)
     {

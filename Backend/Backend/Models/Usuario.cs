@@ -37,6 +37,16 @@ public class Usuario
     public Rol? Rol { get; set; }
 
     /// <summary>
+    /// Los demás roles de la persona, además del principal (<see cref="RolId"/>).
+    ///
+    /// Una misma persona puede hacer varias cosas —vender y llevar el almacén—, y crearle un rol nuevo para cada
+    /// combinación obligaría a inventar roles. Sus permisos son la UNIÓN de los de todos sus roles: tener más
+    /// roles nunca le quita nada. El principal se conserva porque es el que se muestra y el que usa lo que ya
+    /// leía un solo rol.
+    /// </summary>
+    public ICollection<UsuarioRol> RolesAdicionales { get; set; } = [];
+
+    /// <summary>
     /// Su ficha en el maestro de Empleados, si la tiene.
     ///
     /// Es OPCIONAL en los dos sentidos: hay empleados que nunca entran al sistema (el estibador) y

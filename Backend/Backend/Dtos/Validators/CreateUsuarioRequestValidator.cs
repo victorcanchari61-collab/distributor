@@ -24,7 +24,10 @@ public class CreateUsuarioRequestValidator : AbstractValidator<CreateUsuarioRequ
             .WithName("Usuario")
             .WithMessage("Ingresa el usuario, el correo o el DNI: sin uno de los tres no podrá iniciar sesión.");
         RuleFor(x => x.Password).NotEmpty().MinimumLength(6).MaximumLength(100);
-        RuleFor(x => x.RolId).GreaterThan(0).WithMessage("Selecciona un rol");
+        RuleFor(x => x)
+            .Must(x => x.RolIds.Any(id => id > 0) || x.RolId > 0)
+            .WithName("Rol")
+            .WithMessage("Selecciona al menos un rol");
         RuleFor(x => x.Dni)
             .Matches("^[0-9]{8}$")
             .When(x => !string.IsNullOrWhiteSpace(x.Dni))

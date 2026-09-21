@@ -10,8 +10,14 @@ public class CreateUsuarioRequest
     /// <summary>Nombre de usuario para iniciar sesión. Opcional.</summary>
     public string? NombreUsuario { get; set; }
 
-    /// <summary>Id de la tabla Roles.</summary>
+    /// <summary>Id del rol principal (tabla Roles). Lo mandan los clientes anteriores a los roles múltiples.</summary>
     public int RolId { get; set; }
+
+    /// <summary>
+    /// Todos los roles de la persona, el primero como principal. Sus permisos son la unión de los de todos.
+    /// Vacío usa <see cref="RolId"/>.
+    /// </summary>
+    public List<int> RolIds { get; set; } = [];
 
     /// <summary>Su ficha en Empleados. Opcional: hay cuentas que no son de nadie del padrón.</summary>
     public int? EmpleadoId { get; set; }

@@ -6,6 +6,7 @@ import {
   Button,
   DocumentoInput,
   Desplegable,
+  DesplegableMultiple,
   Input,
   ListPage,
   Modal,
@@ -30,7 +31,17 @@ import type { UsuarioResponse } from './usuarioApi'
 /** Un usuario, tal como lo devuelve el API. */
 export type Usuario = UsuarioResponse
 
-const VACIO = { nombre: '', nombreUsuario: '', email: '', password: '', dni: '', rolId: 0, empleadoId: 0, rutaId: 0 }
+const VACIO = {
+  nombre: '',
+  nombreUsuario: '',
+  email: '',
+  password: '',
+  dni: '',
+  // Todos sus roles; el primero es el principal.
+  rolIds: [] as number[],
+  empleadoId: 0,
+  rutaId: 0,
+}
 
 export function UsuariosPage() {
   const { puede } = usePermisos()
@@ -109,7 +120,7 @@ export function UsuariosPage() {
 
   const abrirNuevo = () => {
     setEditando(null)
-    setForm({ ...VACIO, rolId: roles[0]?.id ?? 0 })
+    setForm({ ...VACIO, rolIds: roles[0] ? [roles[0].id] : [] })
     setAbierto(true)
   }
 
@@ -121,7 +132,7 @@ export function UsuariosPage() {
       email: usuario.email,
       password: '',
       dni: usuario.dni ?? '',
-      rolId: usuario.rolId,
+      rolIds: usuario.rolIds?.length ? usuario.rolIds : [usuario.rolId],
       empleadoId: usuario.empleadoId ?? 0,
       rutaId: usuario.rutaId ?? 0,
     })
@@ -188,7 +199,7 @@ export function UsuariosPage() {
     if (!form.nombreUsuario.trim() && !form.email.trim() && !form.dni.trim()) {
       return toast.error('Ingresa el usuario, el correo o el DNI: sin uno de los tres no podrá iniciar sesión.')
     }
-    if (!form.rolId) return toast.error('Selecciona un rol.')
+    if (form.rolIds.length === 0) return toast.error('Selecciona al menos un rol.')
     if (!editando && form.password.length < 6) {
       return toast.error('La contraseña debe tener al menos 6 caracteres.')
     }
@@ -201,7 +212,7 @@ export function UsuariosPage() {
           email: form.email.trim(),
           nombreUsuario: form.nombreUsuario.trim() || null,
           dni: form.dni || null,
-          rolId: form.rolId,
+          rolIds: form.rolIds,
           // 0 es "sin empleado": desenlaza la ficha.
           empleadoId: form.empleadoId || null,
           // 0 es "sin ruta": la quita.
@@ -217,7 +228,7 @@ export function UsuariosPage() {
           password: form.password,
           nombreUsuario: form.nombreUsuario.trim() || null,
           dni: form.dni || null,
-          rolId: form.rolId,
+          rolIds: form.rolIds,
           empleadoId: form.empleadoId || null,
           rutaId: form.rutaId || null,
         })
@@ -249,7 +260,7 @@ export function UsuariosPage() {
         email: usuario.email,
         nombreUsuario: usuario.nombreUsuario,
         dni: usuario.dni,
-        rolId: usuario.rolId,
+        rolIds: usuario.rolIds?.length ? usuario.rolIds : [usuario.rolId],
         // El PUT REEMPLAZA el usuario: lo que no viaje se borra. Sin esto, desactivar a alguien le quitaba
         // su ruta y el enlace con su ficha de empleado.
         empleadoId: usuario.empleadoId,
@@ -302,8 +313,20 @@ export function UsuariosPage() {
       label: 'Rol',
       // Sale del catalogo de roles ya cargado, no de una lista fija.
       filterType: 'select',
-      filterOptions: roles.map((r) => ({ value: r.nombre, label: r.nombre })),
-      render: (row) => <Badge tone="sys">{row.rol}</Badge>,
+      // Una persona puede tener varios roles: el filtro ofrece las combinaciones que de verdad existen
+      // ("Vendedor", "Vendedor, Almacenero") porque un select compara por igualdad.
+      filterOptions: [...new Set(usuarios.map((u) => u.rol))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+      render: (row) => (
+        <span className="inline-flex flex-wrap gap-1">
+          {(row.roles?.length ? row.roles : [row.rol]).map((nombre) => (
+            <Badge key={nombre} tone="sys">
+              {nombre}
+            </Badge>
+          ))}
+        </span>
+      ),
     },
     {
       key: 'activo',
@@ -320,7 +343,7 @@ export function UsuariosPage() {
     },
   ]
 
-  const rolElegido = roles.find((r) => r.id === form.rolId)
+  const rolesElegidos = roles.filter((r) => form.rolIds.includes(r.id))
 
   return (
     <ListPage
@@ -414,33 +437,33 @@ export function UsuariosPage() {
             El que ya tiene cuenta sale en la lista pero no se puede elegir: esconderlo dejaría
             pensando por qué no aparece, y al editar su propio usuario el selector saldría vacío.
           */}
-          <label className="block">
-            <span className="ui-label mb-1.5">
-              Empleado <span className="font-normal text-ink-soft">(opcional)</span>
-            </span>
-            <select
+          <div>
+            <Desplegable
+              label="Empleado"
+              optional
+              placeholder="Sin empleado"
               value={form.empleadoId}
-              onChange={(e) => elegirEmpleado(Number(e.target.value))}
-              className="h-[var(--height-field-md)] w-full cursor-pointer rounded-field border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-ink-soft"
-            >
-              <option value={0}>Sin empleado</option>
-              {empleados.map((e) => {
-                const ocupado = e.usuarioId != null && e.usuarioId !== editando?.id
-                return (
-                  <option key={e.id} value={e.id} disabled={ocupado}>
-                    {e.nombreCompleto}
-                    {e.cargo ? ` — ${e.cargo}` : ''}
-                    {ocupado ? ' (ya tiene usuario)' : ''}
-                  </option>
-                )
-              })}
-            </select>
+              onChange={(v) => elegirEmpleado(Number(v))}
+              options={[
+                { value: 0, label: 'Sin empleado' },
+                ...empleados.map((e) => {
+                  const ocupado = e.usuarioId != null && e.usuarioId !== editando?.id
+                  return {
+                    value: e.id,
+                    label: e.nombreCompleto,
+                    detalle: ocupado ? 'ya tiene usuario' : (e.cargo ?? undefined),
+                    // Se ve pero no se elige: esconderlo dejaria pensando por que no aparece.
+                    deshabilitada: ocupado,
+                  }
+                }),
+              ]}
+            />
             <span className="mt-1.5 block text-xs text-ink-soft">
               {empleados.length === 0
                 ? 'Todavía no hay empleados registrados. Se dan de alta en Maestros → Empleados.'
                 : 'Al elegirlo se llenan el DNI, el nombre y el correo de su ficha.'}
             </span>
-          </label>
+          </div>
 
           {/* Un usuario es una persona: siempre DNI. */}
           <DocumentoInput
@@ -501,24 +524,28 @@ export function UsuariosPage() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
 
-          <label className="block">
-            <span className="ui-label mb-1.5">Rol</span>
-            <select
-              value={form.rolId}
-              onChange={(e) => setForm({ ...form, rolId: Number(e.target.value) })}
-              className="h-[var(--height-field-md)] w-full cursor-pointer rounded-field border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-ink-soft"
-            >
-              <option value={0}>Selecciona un rol</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.nombre}
-                </option>
-              ))}
-            </select>
-            {rolElegido?.descripcion && (
-              <span className="mt-1.5 block text-xs text-ink-soft">{rolElegido.descripcion}</span>
+          {/*
+            Uno o varios roles. El primero que se marca es el principal; sus permisos son la UNIÓN de los de
+            todos, así que tener más roles nunca le quita nada.
+          */}
+          <div>
+            <DesplegableMultiple
+              label="Roles"
+              placeholder="Selecciona al menos un rol"
+              value={form.rolIds}
+              onChange={(v) => setForm({ ...form, rolIds: v.map(Number) })}
+              options={roles.map((r) => ({ value: r.id, label: r.nombre }))}
+            />
+            {rolesElegidos.length > 1 && (
+              <span className="mt-1.5 block text-xs text-ink-soft">
+                Rol principal: <b>{rolesElegidos.find((r) => r.id === form.rolIds[0])?.nombre}</b>. Tendrá los permisos
+                de todos sus roles juntos.
+              </span>
             )}
-          </label>
+            {rolesElegidos.length === 1 && rolesElegidos[0].descripcion && (
+              <span className="mt-1.5 block text-xs text-ink-soft">{rolesElegidos[0].descripcion}</span>
+            )}
+          </div>
 
           {/*
             La cartera de clientes que atiende, para cualquier usuario y sin depender del rol: el dueño

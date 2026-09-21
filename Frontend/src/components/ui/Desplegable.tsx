@@ -10,6 +10,8 @@ export interface OpcionDesplegable {
   detalle?: ReactNode
   /** Aclaracion bajo el nombre. */
   nota?: string
+  /** Se ve pero no se puede elegir: un empleado que ya tiene usuario, por ejemplo. */
+  deshabilitada?: boolean
 }
 
 export interface DesplegableProps {
@@ -81,7 +83,8 @@ export function Desplegable({
           label: o.label,
           detalle: o.detalle,
           nota: o.nota,
-          onClick: () => onChange(o.value),
+          deshabilitado: o.deshabilitada,
+          onClick: o.deshabilitada ? undefined : () => onChange(o.value),
         }))}
         className={cn(!elegida && 'text-ink-soft')}
       />

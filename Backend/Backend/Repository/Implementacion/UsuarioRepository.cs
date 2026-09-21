@@ -14,7 +14,8 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
     public async Task<Usuario?> GetByEmailAsync(string email)
     {
         // Include del rol: el token necesita su nombre para las autorizaciones.
-        return await DbSet.Include(u => u.Rol).FirstOrDefaultAsync(u => u.Email == email);
+        return await DbSet.Include(u => u.Rol).Include(u => u.RolesAdicionales).ThenInclude(r => r.Rol)
+            .FirstOrDefaultAsync(u => u.Email == email);
     }
 
     public async Task<Usuario?> GetByIdentificadorAsync(string identificador)
@@ -22,7 +23,7 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
         // Correo, DNI o nombre de usuario. Se distinguen solos y no chocan: un correo lleva arroba, un DNI son
         // solo digitos y un nombre de usuario exige al menos una letra y no admite arroba.
         var texto = identificador.Trim();
-        return await DbSet.Include(u => u.Rol)
+        return await DbSet.Include(u => u.Rol).Include(u => u.RolesAdicionales).ThenInclude(r => r.Rol)
             .FirstOrDefaultAsync(u => u.Email == texto
                                       || (u.Dni != null && u.Dni == texto)
                                       || (u.NombreUsuario != null && u.NombreUsuario == texto));
@@ -38,7 +39,8 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
     {
         // Activos primero: los desactivados siguen listandose para poder
         // volver a habilitarlos, igual que en clientes y proveedores.
-        return await DbSet.Include(u => u.Rol).Include(u => u.Empleado).Include(u => u.Ruta)
+        return await DbSet.Include(u => u.Rol).Include(u => u.RolesAdicionales).ThenInclude(r => r.Rol)
+            .Include(u => u.Empleado).Include(u => u.Ruta)
             .OrderByDescending(u => u.Activo)
             .ThenBy(u => u.Nombre)
             .ToListAsync();
@@ -46,7 +48,8 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
 
     public async Task<Usuario?> GetByIdConRolAsync(int id)
     {
-        return await DbSet.Include(u => u.Rol).Include(u => u.Empleado).Include(u => u.Ruta)
+        return await DbSet.Include(u => u.Rol).Include(u => u.RolesAdicionales).ThenInclude(r => r.Rol)
+            .Include(u => u.Empleado).Include(u => u.Ruta)
             .FirstOrDefaultAsync(u => u.Id == id);
     }
 

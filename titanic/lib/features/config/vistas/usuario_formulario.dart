@@ -150,7 +150,12 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
       'nombreUsuario': _usuario.text.trim().isEmpty ? null : _usuario.text.trim(),
       'email': _email.text.trim(),
       'dni': _dni.text.trim(),
-      'rolId': _rolId,
+      // El rol elegido es el principal; los demas roles de la persona (se asignan desde la web) se conservan, o
+      // editar cualquier dato aqui se los quitaria.
+      'rolIds': [
+        _rolId,
+        ...?widget.usuario?.rolIds.where((id) => id != _rolId),
+      ],
       // Viaja SIEMPRE, tambien cuando nadie toco el selector: el PUT reemplaza
       // el registro, asi que no mandarlo desenlazaria la ficha de quien ya la
       // tenia solo por haber cambiado el nombre.

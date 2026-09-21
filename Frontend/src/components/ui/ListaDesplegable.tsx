@@ -14,6 +14,8 @@ export interface ItemLista {
   detalle?: ReactNode
   /** Etiqueta corta bajo el nombre, para marcar el elemento principal. */
   nota?: string
+  /** Se ve pero no se puede elegir: lo ocupado, lo que ya no aplica. */
+  deshabilitado?: boolean
   onClick?: () => void
 }
 
@@ -37,6 +39,12 @@ export interface ListaDesplegableProps {
 
   /** Item elegido: se marca con un check y se cierra el panel al elegir. */
   seleccionado?: string | number
+
+  /**
+   * Varios elegidos: cada uno con su check, y el panel NO se cierra al marcar, para poder elegir de corrido.
+   * Es lo que hace `DesplegableMultiple`.
+   */
+  seleccionados?: Array<string | number>
 
   deshabilitado?: boolean
   error?: boolean
@@ -73,6 +81,7 @@ export function ListaDesplegable({
   variante = 'pastilla',
   size = 'md',
   seleccionado,
+  seleccionados,
   deshabilitado,
   error,
   buscable,
@@ -87,6 +96,9 @@ export function ListaDesplegable({
   const buscadorRef = useRef<HTMLInputElement>(null)
 
   const conBuscador = buscable ?? items.length >= MINIMO_BUSCADOR
+  const multiple = seleccionados !== undefined
+  const marcado = (id: string | number) => (multiple ? seleccionados.includes(id) : id === seleccionado)
+  const conChecks = multiple || seleccionado !== undefined
 
   // Busca en el nombre y tambien en el dato de la derecha, que suele ser el
   // codigo: escribir "KG" tiene que encontrar "Kilogramo".
@@ -267,7 +279,7 @@ export function ListaDesplegable({
                     // levantar la mano del teclado.
                     if (e.key === 'Enter' && visibles.length === 1) {
                       visibles[0].onClick?.()
-                      setAbierto(false)
+                      if (!multiple) setAbierto(false)
                     }
                   }}
                   placeholder="Buscar..."
@@ -301,25 +313,28 @@ export function ListaDesplegable({
                   <li key={item.id}>
                     <div
                       role={item.onClick ? 'option' : undefined}
-                      aria-selected={item.id === seleccionado}
+                      aria-selected={marcado(item.id)}
+                      aria-disabled={item.deshabilitado || undefined}
                       onClick={() => {
                         item.onClick?.()
-                        // Elegir cierra: en un campo, el panel ya cumplio.
-                        if (seleccionado !== undefined) setAbierto(false)
+                        // Elegir cierra: en un campo, el panel ya cumplio. Con varios elegidos no, y lo
+                        // deshabilitado no elige nada, asi que tampoco cierra.
+                        if (seleccionado !== undefined && item.onClick) setAbierto(false)
                       }}
                       className={cn(
                         'flex items-center justify-between gap-3 px-3 py-2',
                         item.onClick && 'cursor-pointer hover:bg-slate-50',
-                        item.id === seleccionado && 'bg-[rgb(var(--sys-rgb)/0.08)]',
+                        item.deshabilitado && 'cursor-not-allowed opacity-50',
+                        marcado(item.id) && 'bg-[rgb(var(--sys-rgb)/0.08)]',
                       )}
                     >
                       <span className="flex min-w-0 items-center gap-2">
-                        {seleccionado !== undefined && (
+                        {conChecks && (
                           <Check
                             size={14}
                             className={cn(
                               'shrink-0 text-[rgb(var(--sys-ink-rgb))]',
-                              item.id !== seleccionado && 'invisible',
+                              !marcado(item.id) && 'invisible',
                             )}
                           />
                         )}

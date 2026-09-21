@@ -31,6 +31,7 @@ public class AppDbContext : DbContext
     public DbSet<Empleado> Empleados => Set<Empleado>();
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Rol> Roles => Set<Rol>();
+    public DbSet<UsuarioRol> UsuarioRoles => Set<UsuarioRol>();
     public DbSet<RolPermiso> RolPermisos => Set<RolPermiso>();
     public DbSet<UsuarioPermiso> UsuarioPermisos => Set<UsuarioPermiso>();
     public DbSet<Despacho> Despachos => Set<Despacho>();
@@ -362,6 +363,18 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(u => u.RutaId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<UsuarioRol>(entity =>
+        {
+            entity.ToTable("UsuarioRoles");
+            entity.HasKey(x => new { x.UsuarioId, x.RolId });
+
+            entity.HasOne(x => x.Usuario).WithMany(u => u.RolesAdicionales)
+                .HasForeignKey(x => x.UsuarioId).OnDelete(DeleteBehavior.Cascade);
+            // Restrict: un rol con gente asignada no se borra; el servicio lo explica antes de llegar aqui.
+            entity.HasOne(x => x.Rol).WithMany()
+                .HasForeignKey(x => x.RolId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Empresa>(entity =>
