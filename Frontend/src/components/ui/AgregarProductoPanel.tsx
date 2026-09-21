@@ -123,7 +123,7 @@ export function AgregarProductoPanel({
   // Arranca con la unidad base si esa se puede usar; si no, con la primera presentación que sí.
   const elegir = (id: number) => {
     const elegido = productos.find((p) => p.id === id)
-    setLinea({ ...VACIO, productoId: id, presentacionId: elegido ? (presentacionInicial(elegido, uso) ?? 0) : 0 })
+    setLinea({ ...VACIO, cantidad: '1', productoId: id, presentacionId: elegido ? (presentacionInicial(elegido, uso) ?? 0) : 0 })
   }
 
   /*
