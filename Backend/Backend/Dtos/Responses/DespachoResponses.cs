@@ -61,6 +61,9 @@ public class DespachoResponse
     public List<int> RutaIds { get; set; } = [];
     public List<string> Rutas { get; set; } = [];
 
+    /// <summary>El día de visita que atiende (LUNES … SABADO); nulo en los despachos de antes.</summary>
+    public string? DiaVisita { get; set; }
+
     public int VehiculoId { get; set; }
     /// <summary>La placa, que es como se nombra a un camión de verdad.</summary>
     public string Vehiculo { get; set; } = string.Empty;

@@ -170,6 +170,7 @@ public class AppDbContext : DbContext
             entity.Property(d => d.Numero).HasMaxLength(20).IsRequired();
             entity.Property(d => d.Estado).HasMaxLength(20).IsRequired();
             entity.Property(d => d.Observacion).HasMaxLength(250);
+            entity.Property(d => d.DiaVisita).HasMaxLength(12);
 
             // Restrict en los tres: un despacho es historial del reparto, y
             // borrar la ruta, el camion o el conductor lo dejaria sin decir

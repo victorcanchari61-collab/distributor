@@ -37,9 +37,9 @@ public interface IDespachoService
     /// Los pedidos que se pueden cargar: pendientes, de esa ruta, y que no
     /// estén ya en otro despacho vigente.
     /// </summary>
-    /// <param name="diaDeVisita">Si viene, solo los clientes que se visitan ese día de la semana.</param>
+    /// <param name="diaVisita">LUNES … SABADO. Si viene, solo los clientes que se visitan ese día.</param>
     Task<IEnumerable<DespachoPedidoResponse>> PedidosDisponiblesAsync(
-        IReadOnlyCollection<int> rutaIds, int? despachoId = null, DateTime? diaDeVisita = null);
+        IReadOnlyCollection<int> rutaIds, int? despachoId = null, string? diaVisita = null);
 
     Task<DespachoResponse> CrearAsync(DespachoRequest request, int? usuarioId);
     Task<DespachoResponse> ActualizarAsync(int id, DespachoRequest request);

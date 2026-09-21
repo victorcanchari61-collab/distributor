@@ -1317,6 +1317,8 @@ public class VentasService : IVentasService
         Numero = p.Numero,
         ClienteId = p.ClienteId,
         Cliente = p.Cliente?.Nombre ?? string.Empty,
+        Ruta = p.Cliente?.Ruta?.Nombre,
+        DiaVisita = p.Cliente?.DiaVisita,
         ListaPrecioId = p.ListaPrecioId,
         ListaPrecio = p.ListaPrecio?.Nombre,
         Fecha = p.Fecha,

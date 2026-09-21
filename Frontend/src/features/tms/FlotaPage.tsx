@@ -31,7 +31,9 @@ import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { BadgeEstadoDocumentos, CampoFoto } from './CampoFoto'
-import { RecorridoVehiculoModal } from './RecorridoVehiculoModal'
+import { RecorridoEditor, RecorridoVehiculoModal } from './RecorridoVehiculoModal'
+import { rutaApi } from './rutaApi'
+import type { RutaResponse } from './rutaApi'
 import { conductorApi, tipoVehiculoApi, urlImagen, vehiculoApi } from './flotaApi'
 import type {
   ConductorResponse,
@@ -101,6 +103,10 @@ export function FlotaPage() {
 
   const [detalle, setDetalle] = useState<VehiculoResponse | null>(null)
   const [recorrido, setRecorrido] = useState<VehiculoResponse | null>(null)
+  // El recorrido semanal (dia -> rutas) que se edita dentro del formulario del vehiculo, al crearlo o editarlo.
+  const [rutasActivas, setRutasActivas] = useState<RutaResponse[]>([])
+  const [recorridoForm, setRecorridoForm] = useState<Record<string, number[]>>({})
+  const [recorridoCargando, setRecorridoCargando] = useState(false)
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<VehiculoResponse | null>(null)
   const [form, setForm] = useState<FormVehiculo>(VACIO)
@@ -140,9 +146,20 @@ export function FlotaPage() {
 
   const tiposActivos = tipos.filter((t) => t.activo)
 
+  // Las rutas para la grilla del recorrido: solo hace falta si se puede editar el recorrido.
+  const puedeRecorrido = puede('tms.flota', 'editar')
+  useEffect(() => {
+    if (!puedeRecorrido) return
+    void rutaApi
+      .getAll()
+      .then((r) => setRutasActivas(r.filter((x) => x.activo)))
+      .catch(() => setRutasActivas([]))
+  }, [puedeRecorrido])
+
   const abrirNuevo = () => {
     setEditando(null)
     setForm({ ...VACIO, tipoVehiculoId: tiposActivos[0]?.id ?? 0 })
+    setRecorridoForm({})
     setAbierto(true)
   }
 
@@ -165,6 +182,16 @@ export function FlotaPage() {
       observacion: v.observacion ?? '',
       activo: v.activo,
     })
+    // El recorrido guardado, para verlo y corregirlo aqui mismo.
+    setRecorridoForm({})
+    if (puedeRecorrido) {
+      setRecorridoCargando(true)
+      void vehiculoApi
+        .recorrido(v.id)
+        .then((r) => setRecorridoForm(r.dias))
+        .catch(() => setRecorridoForm({}))
+        .finally(() => setRecorridoCargando(false))
+    }
     setAbierto(true)
   }
 
@@ -192,8 +219,13 @@ export function FlotaPage() {
         activo: form.activo,
       }
 
-      if (editando) await vehiculoApi.update(editando.id, cuerpo)
-      else await vehiculoApi.create(cuerpo)
+      const guardado = editando ? await vehiculoApi.update(editando.id, cuerpo) : await vehiculoApi.create(cuerpo)
+
+      // El recorrido va con el vehiculo: se guarda en el mismo paso, ya con el id del camion recien creado.
+      // Al editar solo si terminó de cargar, para no pisar el guardado con una grilla vacía.
+      if (puedeRecorrido && !recorridoCargando) {
+        await vehiculoApi.guardarRecorrido(guardado.id, recorridoForm)
+      }
 
       setAbierto(false)
       await cargar()
@@ -661,6 +693,29 @@ export function FlotaPage() {
               value={form.observacion}
               onChange={(e) => setForm({ ...form, observacion: e.target.value })}
             />
+
+            {/*
+              Las rutas que hace cada día de la semana. Es el camión 1 → lunes: rutas 1 y 7 del sistema
+              anterior, y es lo que propone las rutas al armar un despacho. Se carga aquí al crear el camión.
+            */}
+            {puedeRecorrido && (
+              <div>
+                <span className="ui-label mb-1.5 block">
+                  Recorrido semanal <span className="font-normal text-ink-soft">(opcional)</span>
+                </span>
+                {recorridoCargando ? (
+                  <p className="py-4 text-sm text-ink-soft">Cargando el recorrido...</p>
+                ) : rutasActivas.length === 0 ? (
+                  <p className="text-sm text-ink-soft">Todavía no hay rutas. Se crean en TMS → Rutas.</p>
+                ) : (
+                  <RecorridoEditor rutas={rutasActivas} dias={recorridoForm} onChange={setRecorridoForm} />
+                )}
+                <p className="mt-1.5 text-xs text-ink-soft">
+                  Marca las rutas que atiende cada día. Al armar un despacho con este vehículo y ese día de visita, se
+                  proponen solas.
+                </p>
+              </div>
+            )}
 
             <label className="flex items-center gap-2 text-sm text-ink-muted">
               <input

@@ -64,6 +64,17 @@ type FilaPedido = LineaProductoNueva
  * NotaVenta correspondiente, que es la que descuenta el stock — el pedido
  * nunca lo toca.
  */
+/** Los días de visita como los guarda el backend, en orden de semana. */
+const DIAS_VISITA = [
+  { id: 'LUNES', label: 'Lunes' },
+  { id: 'MARTES', label: 'Martes' },
+  { id: 'MIERCOLES', label: 'Miércoles' },
+  { id: 'JUEVES', label: 'Jueves' },
+  { id: 'VIERNES', label: 'Viernes' },
+  { id: 'SABADO', label: 'Sábado' },
+  { id: 'DOMINGO', label: 'Domingo' },
+]
+
 export function PedidosPage() {
   const { puede } = usePermisos()
   const toast = useToast()
@@ -501,6 +512,26 @@ export function PedidosPage() {
       filterOptions: [...new Set(clientes.map((c) => c.nombre))]
         .sort((a, b) => a.localeCompare(b, 'es'))
         .map((n) => ({ value: n, label: n })),
+    },
+    {
+      // La ruta del cliente: sale de los clientes que este usuario puede vender, asi que quien solo tiene su
+      // ruta ve solo esa en el filtro.
+      key: 'ruta',
+      label: 'Ruta',
+      width: 90,
+      filterType: 'select',
+      filterOptions: [...new Set(clientes.map((c) => c.ruta).filter((r): r is string => Boolean(r)))]
+        .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
+        .map((n) => ({ value: n, label: `Ruta ${n}` })),
+      render: (row) => row.ruta ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'diaVisita',
+      label: 'Día de visita',
+      filterType: 'select',
+      filterOptions: DIAS_VISITA.map((d) => ({ value: d.id, label: d.label })),
+      render: (row) =>
+        DIAS_VISITA.find((d) => d.id === row.diaVisita)?.label ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'fecha',

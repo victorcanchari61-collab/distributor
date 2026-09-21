@@ -7,6 +7,7 @@ import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_selector_buscable.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -56,8 +57,13 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
   /// mandan: fueron una decisión que ya se tomó.
   late bool _rutasTocadas = widget.despacho != null;
 
-  /// Por defecto solo salen los clientes que se visitan el día de la fecha (el lunes, los de lunes).
-  late bool _otrosDias = _tieneOtrosDias();
+  /// El día de visita que atiende el despacho: UNO solo, como en el reporte del sistema anterior (día de visita +
+  /// camión → rutas). Decide qué clientes salen y no tiene por qué ser el día de la fecha del reparto. Mientras
+  /// nadie lo elija a mano sigue a la fecha; al editar manda el guardado.
+  late String _diaVisita = widget.despacho?.diaVisita ??
+      widget.despacho?.detalle.map((p) => p.diaVisita).whereType<String>().firstOrNull ??
+      _dias[(widget.despacho?.fecha ?? DateTime.now()).weekday - 1];
+  late bool _diaTocado = widget.despacho != null;
   late int _vehiculoId = widget.despacho?.vehiculoId ?? 0;
   late String? _vehiculoPlaca = widget.despacho?.vehiculo;
   late int _conductorId = widget.despacho?.conductorId ?? 0;
@@ -81,22 +87,13 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
 
   bool get _esNuevo => widget.despacho == null;
 
-  /// Un despacho armado con clientes de otros días debe seguir viéndolos al editarlo.
-  bool _tieneOtrosDias() {
-    final d = widget.despacho;
-    if (d == null) return false;
-    final dia = _dias[d.fecha.weekday - 1];
-    return d.detalle.any((p) => p.diaVisita != null && p.diaVisita != dia);
-  }
-
-  String get _diaDeLaFecha => _dias[_fecha.weekday - 1];
-  String get _diaTexto => _diasTexto[_fecha.weekday - 1];
+  String get _diaTexto => _diasTexto[_dias.indexOf(_diaVisita).clamp(0, 6)];
 
   /// Las rutas que el vehículo elegido hace ese día, según su recorrido.
   List<int> get _rutasDelDia {
     if (_vehiculoId == 0) return const [];
     final recorrido = ref.read(recorridoVehiculoProvider(_vehiculoId)).valueOrNull;
-    return recorrido?[_diaDeLaFecha] ?? const [];
+    return recorrido?[_diaVisita] ?? const [];
   }
 
   /// Elegir vehículo o fecha propone las rutas de ese día, salvo que ya se hayan tocado a mano.
@@ -105,7 +102,7 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
     try {
       final recorrido = await ref.read(recorridoVehiculoProvider(_vehiculoId).future);
       if (!mounted || _rutasTocadas) return;
-      final delDia = recorrido[_diaDeLaFecha] ?? const <int>[];
+      final delDia = recorrido[_diaVisita] ?? const <int>[];
       setState(() {
         _rutaIds
           ..clear()
@@ -208,7 +205,14 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
     if (elegida != null) {
-      setState(() => _fecha = elegida);
+      setState(() {
+        _fecha = elegida;
+        // Mientras el dia no se haya elegido a mano, sigue a la fecha del reparto.
+        if (!_diaTocado) {
+          _diaVisita = _dias[elegida.weekday - 1];
+          _elegidos.clear();
+        }
+      });
       unawaited(_proponerRutas());
     }
   }
@@ -259,6 +263,7 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
       'fecha': _soloDia(_fecha).toIso8601String(),
       'pedidosDesde': _soloDia(_desde).toIso8601String(),
       'pedidosHasta': _soloDia(_hasta).toIso8601String(),
+      'diaVisita': _diaVisita,
       'rutaIds': _rutaIds.toList(),
       'vehiculoId': _vehiculoId,
       'conductorId': _conductorId,
@@ -292,7 +297,7 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
               rutas: rutasOrdenadas.join(','),
               despachoId: widget.despacho?.id,
               // Sin fecha salen los de cualquier día de visita ("incluir otros días").
-              dia: _otrosDias ? null : _soloDia(_fecha),
+              dia: _diaVisita,
             )),
           );
     final todasLasRutas = (ref.watch(rutasProvider).valueOrNull ?? const <Ruta>[]).where((r) => r.activo).toList();
@@ -336,6 +341,28 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
                 ),
                 child: Text(_fechaTexto(_fecha), style: const TextStyle(fontSize: 15)),
               ),
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            // El día de visita que atiende este despacho: uno solo. Con el vehículo decide las rutas
+            // (camión 1 + lunes = rutas 1 y 7) y qué clientes salen.
+            AppSelector<String>(
+              valor: _diaVisita,
+              etiqueta: 'Día de visita',
+              icono: Icons.calendar_view_week_outlined,
+              habilitado: !_guardando,
+              opciones: [
+                for (var i = 0; i < 6; i++) Opcion<String>(_dias[i], _diasTexto[i][0].toUpperCase() + _diasTexto[i].substring(1)),
+              ],
+              onCambio: (v) {
+                if (v == null) return;
+                setState(() {
+                  _diaVisita = v;
+                  _diaTocado = true;
+                  _elegidos.clear();
+                });
+                unawaited(_proponerRutas());
+              },
             ),
             const SizedBox(height: Dimen.espacio4),
 
@@ -427,25 +454,12 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
               'día en que se pesa: los aumentos de ese día también suben al camión.',
               style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
             ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              value: _otrosDias,
-              onChanged: _guardando
-                  ? null
-                  : (v) => setState(() {
-                      _otrosDias = v;
-                      _elegidos.clear();
-                    }),
-              title: const Text('Incluir clientes de otros días', style: TextStyle(fontSize: 13.5)),
-              subtitle: Text(
-                _otrosDias
-                    ? 'Salen los pedidos de esas rutas de cualquier día de visita.'
-                    : 'Solo salen los clientes que se visitan el $_diaTexto.',
-                style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-              ),
-            ),
             const SizedBox(height: Dimen.espacio2),
+            Text(
+              'Solo salen los clientes que se visitan el $_diaTexto.',
+              style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+            ),
+            const SizedBox(height: Dimen.espacio3),
 
             Row(
               children: [

@@ -80,6 +80,9 @@ export interface PedidoResponse {
   numero: string
   clienteId: number
   cliente: string
+  /** La ruta del cliente y el día en que se lo visita. */
+  ruta: string | null
+  diaVisita: string | null
   listaPrecioId: number | null
   listaPrecio: string | null
   fecha: string

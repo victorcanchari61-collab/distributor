@@ -42,6 +42,16 @@ public class Despacho
     public DateTime? PedidosHasta { get; set; }
 
     /// <summary>
+    /// El día de visita que atiende este despacho: LUNES … SABADO.
+    ///
+    /// Un despacho trabaja UN solo día de visita, como el reporte del sistema anterior (día de visita +
+    /// camión → rutas). Es lo que decide qué clientes salen: los que se visitan ese día, de las rutas del
+    /// camión. No tiene por qué coincidir con la fecha del reparto. Nulo en los despachos armados antes de que
+    /// existiera: esos no filtran por día.
+    /// </summary>
+    public string? DiaVisita { get; set; }
+
+    /// <summary>
     /// La ruta principal: la primera de <see cref="Rutas"/>.
     ///
     /// Se conserva porque un camión casi siempre recorre varias rutas el mismo día pero el papel, las

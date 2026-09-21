@@ -98,6 +98,7 @@ class Despacho {
     this.pedidosHasta,
     required this.rutaId,
     required this.ruta,
+    this.diaVisita,
     this.rutaIds = const [],
     this.rutas = const [],
     required this.vehiculoId,
@@ -121,6 +122,9 @@ class Despacho {
   /// De qué días son los pedidos que carga el camión.
   final DateTime? pedidosDesde;
   final DateTime? pedidosHasta;
+
+  /// El día de visita que atiende (LUNES … SABADO); nulo en los despachos armados antes de este campo.
+  final String? diaVisita;
 
   /// La ruta principal (la primera).
   final int rutaId;
@@ -160,6 +164,7 @@ class Despacho {
     pedidosHasta: fechaDeJsonOpcional(json['pedidosHasta']),
     rutaId: json['rutaId'] as int,
     ruta: json['ruta'] as String? ?? '',
+    diaVisita: json['diaVisita'] as String?,
     rutaIds: [for (final r in (json['rutaIds'] as List? ?? const [])) r as int],
     rutas: [for (final r in (json['rutas'] as List? ?? const [])) r as String],
     vehiculoId: json['vehiculoId'] as int,

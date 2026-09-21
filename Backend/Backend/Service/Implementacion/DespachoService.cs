@@ -414,7 +414,7 @@ public class DespachoService : IDespachoService
     }
 
     public async Task<IEnumerable<DespachoPedidoResponse>> PedidosDisponiblesAsync(
-        IReadOnlyCollection<int> rutaIds, int? despachoId = null, DateTime? diaDeVisita = null)
+        IReadOnlyCollection<int> rutaIds, int? despachoId = null, string? diaVisita = null)
     {
         /*
          * Un pedido esta disponible si sigue pendiente y no viaja ya en otro
@@ -437,7 +437,7 @@ public class DespachoService : IDespachoService
          * de 700 que suman las dos rutas enteras. Sin fecha no se filtra por día: es lo que se pide
          * cuando alguien decide, a propósito, llevar a un cliente atrasado.
          */
-        var dia = diaDeVisita is DateTime fecha ? DiaSemana.De(fecha) : null;
+        var dia = DiaSemana.Normalizar(diaVisita);
 
         var pedidos = await _context.Pedidos
             .AsNoTracking()
@@ -466,6 +466,7 @@ public class DespachoService : IDespachoService
             Fecha = (request.Fecha ?? DateTime.UtcNow).Date,
             PedidosDesde = request.PedidosDesde?.Date,
             PedidosHasta = request.PedidosHasta?.Date,
+            DiaVisita = DiaSemana.Normalizar(request.DiaVisita),
             RutaId = RutasDe(request)[0],
             VehiculoId = request.VehiculoId,
             ConductorId = request.ConductorId,
@@ -504,6 +505,7 @@ public class DespachoService : IDespachoService
         despacho.Fecha = (request.Fecha ?? despacho.Fecha).Date;
         despacho.PedidosDesde = request.PedidosDesde?.Date;
         despacho.PedidosHasta = request.PedidosHasta?.Date;
+        despacho.DiaVisita = DiaSemana.Normalizar(request.DiaVisita);
         despacho.RutaId = RutasDe(request)[0];
         despacho.VehiculoId = request.VehiculoId;
 
@@ -597,6 +599,11 @@ public class DespachoService : IDespachoService
             throw new BadRequestException("El \"desde\" de los pedidos no puede ser después del \"hasta\".");
         }
 
+        // Un despacho trabaja UN dia de visita: si viene, tiene que ser un dia de verdad.
+        var dia = DiaSemana.Normalizar(request.DiaVisita);
+        if (dia is not null && !DiaSemana.EsValido(dia))
+            throw new BadRequestException($"'{request.DiaVisita}' no es un día de visita");
+
         var rutas = RutasDe(request);
         if (rutas.Count == 0)
             throw new BadRequestException("Elige al menos una ruta");
@@ -630,9 +637,9 @@ public class DespachoService : IDespachoService
         var pedidos = request.PedidoIds.Distinct().ToList();
         if (pedidos.Count == 0) return [];
 
-        // Sin filtro de día: el día es una comodidad al LISTAR. Quien decidió llevar a un cliente de otro
-        // día ya lo eligió en pantalla, y aquí solo se comprueba que el pedido siga libre y sea de las rutas.
-        var disponibles = (await PedidosDisponiblesAsync(RutasDe(request), despachoId))
+        // Con el día de visita del despacho: un despacho trabaja UN día, así que un pedido de un cliente que se
+        // visita otro día no entra aunque llegue por la API. Si el despacho no trae día (los de antes), no se filtra.
+        var disponibles = (await PedidosDisponiblesAsync(RutasDe(request), despachoId, request.DiaVisita))
             .Select(p => p.PedidoId)
             .ToHashSet();
 
@@ -698,6 +705,7 @@ public class DespachoService : IDespachoService
             PedidosHasta = d.PedidosHasta,
             RutaId = d.RutaId,
             Ruta = string.Join(" · ", NombresDeRutas(d)),
+            DiaVisita = d.DiaVisita,
             RutaIds = d.Rutas.OrderBy(r => r.Id).Select(r => r.RutaId).ToList(),
             Rutas = NombresDeRutas(d),
             VehiculoId = d.VehiculoId,

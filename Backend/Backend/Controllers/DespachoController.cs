@@ -47,11 +47,11 @@ public class DespachoController : ControllerBase
     [HttpGet("disponibles")]
     [Permiso("tms.despachos", Accion.Ver)]
     public async Task<IActionResult> Disponibles(
-        [FromQuery] int[] rutaIds, [FromQuery] int? rutaId, [FromQuery] int? despachoId, [FromQuery] DateTime? diaDeVisita)
+        [FromQuery] int[] rutaIds, [FromQuery] int? rutaId, [FromQuery] int? despachoId, [FromQuery] string? diaVisita)
     {
         // `rutaId` es el parametro de antes: una sola ruta.
         var rutas = rutaIds.Length > 0 ? rutaIds : rutaId is int uno ? [uno] : [];
-        return Ok(await _despachos.PedidosDisponiblesAsync(rutas, despachoId, diaDeVisita));
+        return Ok(await _despachos.PedidosDisponiblesAsync(rutas, despachoId, diaVisita));
     }
 
     [HttpPost]

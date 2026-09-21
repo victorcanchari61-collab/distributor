@@ -22,24 +22,21 @@ class DespachoApi {
   /// `despachoId` se manda al editar: sin él, los pedidos que ya son de ese
   /// despacho se verían como tomados y desaparecerían de la pantalla.
   ///
-  /// Varias rutas: un camión atiende más de una el mismo día. Con [diaDeVisita] solo salen los clientes que
-  /// se visitan ese día de la semana; sin él, de cualquier día.
+  /// Varias rutas: un camión atiende más de una el mismo día. Con [diaVisita] (LUNES … SABADO) solo salen los
+  /// clientes que se visitan ese día; sin él, de cualquier día.
   Future<List<DespachoPedido>> disponibles(
     List<int> rutaIds, {
     int? despachoId,
-    DateTime? diaDeVisita,
+    String? diaVisita,
   }) async {
     final partes = [
       for (final id in rutaIds) 'rutaIds=$id',
       if (despachoId != null) 'despachoId=$despachoId',
-      if (diaDeVisita != null) 'diaDeVisita=${_fechaIso(diaDeVisita)}',
+      if (diaVisita != null) 'diaVisita=$diaVisita',
     ];
     final datos = await _api.get('/despacho/disponibles?${partes.join('&')}') as List;
     return datos.map((e) => DespachoPedido.desdeJson(e as Map<String, dynamic>)).toList();
   }
-
-  static String _fechaIso(DateTime f) =>
-      '${f.year}-${f.month.toString().padLeft(2, '0')}-${f.day.toString().padLeft(2, '0')}';
 
   /// GET /api/vehiculo/{id}/recorrido
   ///

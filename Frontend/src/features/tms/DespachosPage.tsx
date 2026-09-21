@@ -88,8 +88,14 @@ export function DespachosPage() {
   const [rutasTocadas, setRutasTocadas] = useState(false)
   // De qué está hecho el recorrido del vehículo elegido: para proponer las rutas y decir de dónde salieron.
   const [recorrido, setRecorrido] = useState<Record<string, number[]> | null>(null)
-  // Por defecto solo salen los clientes que se visitan el día de la fecha (el lunes, los de lunes).
-  const [otrosDias, setOtrosDias] = useState(false)
+  /*
+   * El día de visita que atiende el despacho: UNO solo, como en el reporte del sistema anterior (día de
+   * visita + camión → rutas). Es lo que decide qué clientes salen, y no tiene por qué ser el día de la
+   * fecha del reparto. Al abrir un despacho nuevo arranca en el día de hoy y sigue a la fecha mientras nadie
+   * lo elija a mano.
+   */
+  const [diaVisita, setDiaVisita] = useState<string>(DIAS_SEMANA[0].id)
+  const [diaTocado, setDiaTocado] = useState(false)
   const [vehiculoId, setVehiculoId] = useState(0)
   const [conductorId, setConductorId] = useState(0)
   const [observacion, setObservacion] = useState('')
@@ -167,14 +173,20 @@ export function DespachosPage() {
   }, [vehiculoId, vista])
 
   const diaDeLaFecha = DIAS_SEMANA[(new Date(`${fecha}T00:00:00`).getDay() + 6) % 7]
-  const rutasDelDia = recorrido?.[diaDeLaFecha.id] ?? []
+  const diaElegido = DIAS_SEMANA.find((d) => d.id === diaVisita) ?? diaDeLaFecha
+  const rutasDelDia = recorrido?.[diaElegido.id] ?? []
 
-  // Elegir vehículo o fecha propone las rutas de ese día, salvo que ya se hayan tocado a mano.
+  // Mientras el dia no se haya elegido a mano, sigue a la fecha del reparto.
+  useEffect(() => {
+    if (vista === 'form' && !diaTocado) setDiaVisita(diaDeLaFecha.id)
+  }, [vista, diaTocado, diaDeLaFecha.id])
+
+  // Elegir vehículo o día de visita propone las rutas de ese día, salvo que ya se hayan tocado a mano.
   useEffect(() => {
     if (vista !== 'form' || rutasTocadas || !recorrido) return
     setRutaIds(rutasDelDia)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recorrido, fecha, vista, rutasTocadas])
+  }, [recorrido, diaVisita, vista, rutasTocadas])
 
   // Al cambiar de rutas o de día se piden los pedidos pendientes.
   const rutasClave = rutaIds.join(',')
@@ -187,7 +199,7 @@ export function DespachosPage() {
     let vivo = true
     setCargandoPedidos(true)
     void despachoApi
-      .disponibles(rutaIds, editando?.id, otrosDias ? undefined : fecha)
+      .disponibles(rutaIds, editando?.id, diaVisita)
       .then((lista) => {
         if (!vivo) return
 
@@ -221,7 +233,7 @@ export function DespachosPage() {
       vivo = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rutasClave, fecha, otrosDias, vista, editando])
+  }, [rutasClave, diaVisita, vista, editando])
 
   const abrirNuevo = () => {
     setEditando(null)
@@ -232,7 +244,7 @@ export function DespachosPage() {
     setRutasTocadas(false)
     // El recorrido del vehiculo anterior no debe proponer rutas en un despacho nuevo.
     setRecorrido(null)
-    setOtrosDias(false)
+    setDiaTocado(false)
     setVehiculoId(0)
     setConductorId(0)
     setConductorTocado(false)
@@ -252,8 +264,14 @@ export function DespachosPage() {
     setRutaIds(d.rutaIds?.length ? d.rutaIds : [d.rutaId])
     // Al editar, las rutas guardadas mandan: fueron una decision que ya se tomo.
     setRutasTocadas(true)
-    // Un despacho armado con clientes de otros dias debe seguir viendolos al editarlo.
-    setOtrosDias(d.detalle.some((p) => p.diaVisita && p.diaVisita !== DIAS_SEMANA[(new Date(`${d.fecha.slice(0, 10)}T00:00:00`).getDay() + 6) % 7].id))
+    // El dia de visita guardado manda. Los despachos de antes no lo tienen: se toma el de sus pedidos y, si no
+    // hay, el de la fecha.
+    setDiaTocado(true)
+    setDiaVisita(
+      d.diaVisita ??
+        d.detalle.find((p) => p.diaVisita)?.diaVisita ??
+        DIAS_SEMANA[(new Date(`${d.fecha.slice(0, 10)}T00:00:00`).getDay() + 6) % 7].id,
+    )
     setVehiculoId(d.vehiculoId)
     setConductorId(d.conductorId)
     // Al editar, el conductor guardado manda: fue una decisión que ya se tomó.
@@ -279,6 +297,7 @@ export function DespachosPage() {
       fecha,
       pedidosDesde: desde,
       pedidosHasta: hasta,
+      diaVisita,
       rutaIds,
       vehiculoId,
       conductorId,
@@ -380,6 +399,15 @@ export function DespachosPage() {
         .map((n) => ({ value: n, label: n })),
     },
     {
+      key: 'diaVisita',
+      label: 'Día de visita',
+      filterType: 'select',
+      filterOptions: DIAS_SEMANA.filter((d) => d.id !== 'DOMINGO').map((d) => ({ value: d.label, label: d.label })),
+      value: (row) => DIAS_SEMANA.find((d) => d.id === row.diaVisita)?.label ?? '',
+      render: (row) =>
+        DIAS_SEMANA.find((d) => d.id === row.diaVisita)?.label ?? <span className="text-ink-soft">—</span>,
+    },
+    {
       key: 'vehiculo',
       label: 'Vehículo',
       filterType: 'select',
@@ -470,22 +498,6 @@ export function DespachosPage() {
                 onChange={(e) => setHasta(e.target.value)}
               />
             </div>
-            <label className="mb-3 flex cursor-pointer items-start gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                className="mt-1"
-                checked={otrosDias}
-                onChange={(e) => setOtrosDias(e.target.checked)}
-              />
-              <span>
-                Incluir clientes de otros días de visita
-                <span className="block text-xs text-ink-soft">
-                  {otrosDias
-                    ? 'Salen los pedidos de esas rutas de cualquier día de visita.'
-                    : `Solo salen los clientes que se visitan el ${diaDeLaFecha.label.toLowerCase()}.`}
-                </span>
-              </span>
-            </label>
             <p className="mb-3 text-xs text-ink-soft">
               Incluye el día en que se pesa: los aumentos de ese día también suben al camión.
             </p>
@@ -510,7 +522,7 @@ export function DespachosPage() {
               <p className="py-8 text-center text-sm text-ink-soft">Cargando pedidos...</p>
             ) : disponibles.length === 0 ? (
               <p className="py-8 text-center text-sm text-ink-soft">
-                No hay pedidos pendientes para esas rutas{otrosDias ? '' : ` con visita el ${diaDeLaFecha.label.toLowerCase()}`}. Puede que ya estén en otro camión.
+                No hay pedidos pendientes para esas rutas con visita el {diaElegido.label.toLowerCase()}. Puede que ya estén en otro camión.
               </p>
             ) : visibles.length === 0 ? (
               <p className="py-8 text-center text-sm text-ink-soft">
@@ -522,6 +534,11 @@ export function DespachosPage() {
                   <input type="checkbox" checked={todosMarcados} onChange={alternarTodos} />
                   {todosMarcados ? 'Quitar todos' : `Marcar todos (${visibles.length})`}
                 </label>
+                {/*
+                  Con 45 pedidos la lista se iba hasta abajo y "Marcar todos" quedaba fuera de la vista: la lista
+                  tiene su propio scroll y el marcar-todos se queda fijo arriba.
+                */}
+                <div className="flex max-h-[65vh] flex-col gap-2 overflow-y-auto pr-1">
                 {visibles.map((p) => (
                   <label
                     key={p.pedidoId}
@@ -559,6 +576,7 @@ export function DespachosPage() {
                     <span className="text-sm font-semibold text-ink">S/ {p.total.toFixed(2)}</span>
                   </label>
                 ))}
+                </div>
               </div>
             )}
           </PageSection>
@@ -570,6 +588,20 @@ export function DespachosPage() {
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
+              />
+
+              {/*
+                El día de visita que atiende este despacho: uno solo. Con el vehículo decide las rutas
+                (camión 1 + lunes = rutas 1 y 7) y qué clientes salen.
+              */}
+              <Desplegable
+                label="Día de visita"
+                value={diaVisita}
+                onChange={(v) => {
+                  setDiaVisita(String(v))
+                  setDiaTocado(true)
+                }}
+                options={DIAS_SEMANA.filter((d) => d.id !== 'DOMINGO').map((d) => ({ value: d.id, label: d.label }))}
               />
 
               <Desplegable
@@ -615,12 +647,12 @@ export function DespachosPage() {
                 </div>
                 <p className="mt-1.5 text-xs text-ink-soft">
                   {!vehiculoId
-                    ? 'Elige el vehículo y el día: sus rutas se proponen solas.'
+                    ? 'Elige el vehículo y el día de visita: sus rutas se proponen solas.'
                     : rutasDelDia.length === 0
-                      ? `Este vehículo no tiene rutas los ${diaDeLaFecha.label.toLowerCase()}. Elígelas a mano o cárgalas en Flota → Recorrido.`
+                      ? `Este vehículo no tiene rutas los ${diaElegido.label.toLowerCase()}. Elígelas a mano o cárgalas en Flota → Recorrido.`
                       : rutasTocadas
                         ? 'Cambiadas a mano para este despacho.'
-                        : `Del recorrido del vehículo para el ${diaDeLaFecha.label.toLowerCase()}.`}
+                        : `Del recorrido del vehículo para el ${diaElegido.label.toLowerCase()}.`}
                 </p>
               </div>
 

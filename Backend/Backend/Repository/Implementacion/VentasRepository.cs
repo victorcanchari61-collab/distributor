@@ -50,7 +50,7 @@ public class VentasRepository : IVentasRepository
 
     private IQueryable<Pedido> PedidosConDetalle() =>
         _context.Pedidos
-            .Include(p => p.Cliente)
+            .Include(p => p.Cliente).ThenInclude(c => c!.Ruta)
             .Include(p => p.ListaPrecio)
             .Include(p => p.Almacen)
             .Include(p => p.Usuario)
@@ -146,6 +146,18 @@ public class VentasRepository : IVentasRepository
         if (consulta.ValorDe("estado") is string estado)
         {
             query = query.Where(p => p.Estado == estado);
+        }
+
+        // La ruta y el dia de visita son del CLIENTE del pedido: es lo que separa el reparto de un dia.
+        if (consulta.ValorDe("ruta") is string ruta)
+        {
+            query = query.Where(p => p.Cliente != null && p.Cliente.Ruta != null && p.Cliente.Ruta.Nombre == ruta);
+        }
+
+        if (consulta.ValorDe("diaVisita") is string diaVisita)
+        {
+            var dia = DiaSemana.Normalizar(diaVisita);
+            query = query.Where(p => p.Cliente != null && p.Cliente.DiaVisita == dia);
         }
 
         // El filtro viaja con el nombre de la columna: "notaVentaNumero".

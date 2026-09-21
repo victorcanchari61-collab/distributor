@@ -36,6 +36,8 @@ export interface DespachoResponse {
   /** De qué días son los pedidos que carga el camión. */
   pedidosDesde: string | null
   pedidosHasta: string | null
+  /** El día de visita que atiende (LUNES … SABADO); nulo en los despachos armados antes de este campo. */
+  diaVisita: string | null
   /** La ruta principal (la primera). */
   rutaId: number
   /** Todas las rutas, dichas como se leen: "1 · 7". */
@@ -72,6 +74,8 @@ export interface DespachoRequest {
   pedidosHasta?: string | null
   /** Las rutas que carga el camión ese día. Al menos una. */
   rutaIds: number[]
+  /** El día de visita que atiende: solo salen los clientes que se visitan ese día. */
+  diaVisita?: string | null
   vehiculoId: number
   conductorId: number
   observacion?: string | null
@@ -100,12 +104,12 @@ export const despachoApi = {
    * `despachoId` se manda al editar: sin él, los pedidos que ya son de ese
    * despacho se verían como tomados y desaparecerían de la pantalla.
    */
-  disponibles: (rutaIds: number[], despachoId?: number, diaDeVisita?: string) =>
+  disponibles: (rutaIds: number[], despachoId?: number, diaVisita?: string) =>
     api.get<DespachoPedidoResponse[]>(
       `/despacho/disponibles?${rutaIds.map((id) => `rutaIds=${id}`).join('&')}` +
         (despachoId ? `&despachoId=${despachoId}` : '') +
-        // Solo los clientes que se visitan el día de esa fecha; sin ella salen de todos los días.
-        (diaDeVisita ? `&diaDeVisita=${diaDeVisita}` : ''),
+        // Solo los clientes que se visitan ese día (LUNES … SABADO); sin él salen de todos los días.
+        (diaVisita ? `&diaVisita=${diaVisita}` : ''),
     ),
 
   create: (body: DespachoRequest) => api.post<DespachoResponse>('/despacho', body),

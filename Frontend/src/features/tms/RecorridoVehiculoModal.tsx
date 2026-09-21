@@ -17,6 +17,65 @@ export const DIAS_SEMANA: { id: string; label: string }[] = [
   { id: 'DOMINGO', label: 'Domingo' },
 ]
 
+/**
+ * La grilla lunes-domingo con las rutas de cada día. Se usa aquí y dentro del formulario del vehículo, para que
+ * el recorrido se pueda cargar al CREAR el camión y no solo después.
+ */
+export function RecorridoEditor({
+  rutas,
+  dias,
+  onChange,
+}: {
+  rutas: RutaResponse[]
+  dias: Record<string, number[]>
+  onChange: (dias: Record<string, number[]>) => void
+}) {
+  const alternar = (dia: string, rutaId: number) => {
+    const actuales = dias[dia] ?? []
+    const siguientes = actuales.includes(rutaId) ? actuales.filter((id) => id !== rutaId) : [...actuales, rutaId]
+    onChange({ ...dias, [dia]: siguientes })
+  }
+
+  return (
+    <div className="divide-y divide-line rounded-field border border-line">
+      {DIAS_SEMANA.map((d) => {
+        const elegidas = dias[d.id] ?? []
+        return (
+          <div key={d.id} className="grid gap-2 px-3 py-2.5 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center">
+            <div>
+              <p className="text-sm font-semibold text-ink">{d.label}</p>
+              <p className="text-xs text-ink-soft">
+                {elegidas.length === 0 ? 'No sale' : `${elegidas.length} ruta${elegidas.length === 1 ? '' : 's'}`}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {rutas.map((r) => {
+                const puesta = elegidas.includes(r.id)
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    aria-pressed={puesta}
+                    onClick={() => alternar(d.id, r.id)}
+                    className={cn(
+                      'min-w-9 cursor-pointer rounded-full border px-3 py-1 text-sm font-semibold transition-colors',
+                      puesta
+                        ? 'border-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.12)] text-[rgb(var(--sys-ink-rgb))]'
+                        : 'border-line text-ink-muted hover:border-ink-soft',
+                    )}
+                  >
+                    {r.nombre}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 interface RecorridoVehiculoModalProps {
   /** El vehículo cuyo recorrido se edita; null lo deja cerrado. */
   vehiculo: VehiculoResponse | null
@@ -60,13 +119,6 @@ export function RecorridoVehiculoModal({ vehiculo, onClose }: RecorridoVehiculoM
     }
   }, [vehiculo])
 
-  const alternar = (dia: string, rutaId: number) =>
-    setDias((prev) => {
-      const actuales = prev[dia] ?? []
-      const siguientes = actuales.includes(rutaId) ? actuales.filter((id) => id !== rutaId) : [...actuales, rutaId]
-      return { ...prev, [dia]: siguientes }
-    })
-
   const guardar = async () => {
     if (!vehiculo) return
     setGuardando(true)
@@ -109,42 +161,7 @@ export function RecorridoVehiculoModal({ vehiculo, onClose }: RecorridoVehiculoM
             Todavía no hay rutas. Se crean en TMS → Rutas.
           </p>
         ) : (
-          <div className="divide-y divide-line rounded-field border border-line">
-            {DIAS_SEMANA.map((d) => {
-              const elegidas = dias[d.id] ?? []
-              return (
-                <div key={d.id} className="grid gap-2 px-3 py-2.5 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center">
-                  <div>
-                    <p className="text-sm font-semibold text-ink">{d.label}</p>
-                    <p className="text-xs text-ink-soft">
-                      {elegidas.length === 0 ? 'No sale' : `${elegidas.length} ruta${elegidas.length === 1 ? '' : 's'}`}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {rutas.map((r) => {
-                      const puesta = elegidas.includes(r.id)
-                      return (
-                        <button
-                          key={r.id}
-                          type="button"
-                          aria-pressed={puesta}
-                          onClick={() => alternar(d.id, r.id)}
-                          className={cn(
-                            'min-w-9 cursor-pointer rounded-full border px-3 py-1 text-sm font-semibold transition-colors',
-                            puesta
-                              ? 'border-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.12)] text-[rgb(var(--sys-ink-rgb))]'
-                              : 'border-line text-ink-muted hover:border-ink-soft',
-                          )}
-                        >
-                          {r.nombre}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          <RecorridoEditor rutas={rutas} dias={dias} onChange={setDias} />
         )}
 
         <p className="text-xs text-ink-soft">

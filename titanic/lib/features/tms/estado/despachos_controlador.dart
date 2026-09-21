@@ -83,13 +83,13 @@ final despachosFiltradosProvider = Provider.autoDispose<List<Despacho>>((ref) {
 ///
 /// Las rutas viajan como texto ("1,7") y no como lista: la clave de un `family` se compara por igualdad, y
 /// dos listas iguales no lo son — cada rebuild pediría los pedidos otra vez, sin parar.
-typedef ClaveDisponibles = ({String rutas, int? despachoId, DateTime? dia});
+typedef ClaveDisponibles = ({String rutas, int? despachoId, String? dia});
 
 final disponiblesProvider = FutureProvider.autoDispose.family<List<DespachoPedido>, ClaveDisponibles>(
   (ref, clave) => ref.watch(despachoApiProvider).disponibles(
     [for (final r in clave.rutas.split(',')) if (r.isNotEmpty) int.parse(r)],
     despachoId: clave.despachoId,
-    diaDeVisita: clave.dia,
+    diaVisita: clave.dia,
   ),
 );
 

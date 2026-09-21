@@ -37,6 +37,10 @@ public class PedidoResponse
     public int ClienteId { get; set; }
     public string Cliente { get; set; } = string.Empty;
 
+    /// <summary>La ruta del cliente y el día en que se lo visita: con lo que se filtra el listado.</summary>
+    public string? Ruta { get; set; }
+    public string? DiaVisita { get; set; }
+
     public int? ListaPrecioId { get; set; }
     public string? ListaPrecio { get; set; }
 
