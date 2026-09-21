@@ -11,6 +11,8 @@ public interface IUsuarioRepository : IRepository<Usuario>
 
     Task<Usuario?> GetByDniAsync(string dni);
 
+    Task<Usuario?> GetByNombreUsuarioAsync(string nombreUsuario);
+
     /// <summary>Todos los usuarios con su rol, activos primero.</summary>
     Task<IEnumerable<Usuario>> GetAllConRolAsync();
 

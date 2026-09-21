@@ -82,7 +82,8 @@ public class UsuarioService : IUsuarioService
 
         var email = LimpiarEmail(request.Email);
         var dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni.Trim();
-        await ExigirIdentificadoresLibresAsync(email, dni, null);
+        var nombreUsuario = LimpiarUsuario(request.NombreUsuario);
+        await ExigirIdentificadoresLibresAsync(email, dni, nombreUsuario, null);
 
         var rol = await _repository.GetRolAsync(request.RolId)
             ?? throw new BadRequestException("El rol indicado no existe");
@@ -100,6 +101,7 @@ public class UsuarioService : IUsuarioService
             Nombre = request.Nombre,
             Email = email,
             Dni = dni,
+            NombreUsuario = nombreUsuario,
             RolId = rol.Id,
             EmpleadoId = empleado?.Id,
             RutaId = ruta?.Id
@@ -138,7 +140,8 @@ public class UsuarioService : IUsuarioService
 
         var email = LimpiarEmail(request.Email);
         var dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni.Trim();
-        await ExigirIdentificadoresLibresAsync(email, dni, id);
+        var nombreUsuario = LimpiarUsuario(request.NombreUsuario);
+        await ExigirIdentificadoresLibresAsync(email, dni, nombreUsuario, id);
 
         var rol = await _repository.GetRolAsync(request.RolId)
             ?? throw new BadRequestException("El rol indicado no existe");
@@ -156,6 +159,7 @@ public class UsuarioService : IUsuarioService
         usuario.Nombre = request.Nombre;
         usuario.Email = email;
         usuario.Dni = dni;
+        usuario.NombreUsuario = nombreUsuario;
         usuario.RolId = rol.Id;
         // Null desenlaza la ficha: la cuenta deja de ser de esa persona.
         usuario.EmpleadoId = empleado?.Id;
@@ -194,7 +198,13 @@ public class UsuarioService : IUsuarioService
 
         var email = LimpiarEmail(request.Email);
         var dni = string.IsNullOrWhiteSpace(request.Dni) ? null : request.Dni.Trim();
-        await ExigirIdentificadoresLibresAsync(email, dni, usuarioId);
+        await ExigirIdentificadoresLibresAsync(email, dni, usuario.NombreUsuario, usuarioId);
+
+        // El perfil no cambia el nombre de usuario, asi que este cuenta como con lo que puede entrar.
+        if (email is null && dni is null && usuario.NombreUsuario is null)
+        {
+            throw new BadRequestException("Deja al menos el correo o el DNI: sin ellos no podrás iniciar sesión.");
+        }
 
         usuario.Nombre = request.Nombre;
         usuario.Email = email;
@@ -299,6 +309,9 @@ public class UsuarioService : IUsuarioService
     }
 
     /// <summary>Vacío es "sin correo": se guarda como nulo, no como texto vacío, para que el índice único no lo cuente.</summary>
+    private static string? LimpiarUsuario(string? usuario) =>
+        string.IsNullOrWhiteSpace(usuario) ? null : usuario.Trim();
+
     private static string? LimpiarEmail(string? email) =>
         string.IsNullOrWhiteSpace(email) ? null : email.Trim();
 
@@ -308,8 +321,14 @@ public class UsuarioService : IUsuarioService
     /// Los dos sirven para iniciar sesión, así que repetirlos dejaría a dos personas entrando con lo mismo.
     /// El DNI antes no se comprobaba porque no identificaba a nadie; ahora sí.
     /// </summary>
-    private async Task ExigirIdentificadoresLibresAsync(string? email, string? dni, int? usuarioId)
+    private async Task ExigirIdentificadoresLibresAsync(string? email, string? dni, string? nombreUsuario, int? usuarioId)
     {
+        if (nombreUsuario is not null
+            && await _repository.GetByNombreUsuarioAsync(nombreUsuario) is { } porUsuario && porUsuario.Id != usuarioId)
+        {
+            throw new ConflictException("Ya existe un usuario con ese nombre de usuario");
+        }
+
         if (email is not null && await _repository.GetByEmailAsync(email) is { } porCorreo && porCorreo.Id != usuarioId)
         {
             throw new ConflictException("Ya existe un usuario con ese email");
@@ -329,6 +348,7 @@ public class UsuarioService : IUsuarioService
             Nombre = usuario.Nombre,
             Email = usuario.Email ?? string.Empty,
             Dni = usuario.Dni,
+            NombreUsuario = usuario.NombreUsuario,
             Telefono = usuario.Telefono,
             Foto = usuario.Foto,
             RolId = usuario.RolId,

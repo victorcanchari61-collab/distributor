@@ -19,11 +19,17 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
 
     public async Task<Usuario?> GetByIdentificadorAsync(string identificador)
     {
-        // El correo manda; el DNI es para quien no tiene. Se distinguen solos: un correo lleva arroba.
+        // Correo, DNI o nombre de usuario. Se distinguen solos y no chocan: un correo lleva arroba, un DNI son
+        // solo digitos y un nombre de usuario exige al menos una letra y no admite arroba.
         var texto = identificador.Trim();
         return await DbSet.Include(u => u.Rol)
-            .FirstOrDefaultAsync(u => u.Email == texto || (u.Dni != null && u.Dni == texto));
+            .FirstOrDefaultAsync(u => u.Email == texto
+                                      || (u.Dni != null && u.Dni == texto)
+                                      || (u.NombreUsuario != null && u.NombreUsuario == texto));
     }
+
+    public async Task<Usuario?> GetByNombreUsuarioAsync(string nombreUsuario) =>
+        await DbSet.AsNoTracking().FirstOrDefaultAsync(u => u.NombreUsuario == nombreUsuario);
 
     public async Task<Usuario?> GetByDniAsync(string dni) =>
         await DbSet.AsNoTracking().FirstOrDefaultAsync(u => u.Dni == dni);

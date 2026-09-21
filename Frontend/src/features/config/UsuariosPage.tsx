@@ -30,7 +30,7 @@ import type { UsuarioResponse } from './usuarioApi'
 /** Un usuario, tal como lo devuelve el API. */
 export type Usuario = UsuarioResponse
 
-const VACIO = { nombre: '', email: '', password: '', dni: '', rolId: 0, empleadoId: 0, rutaId: 0 }
+const VACIO = { nombre: '', nombreUsuario: '', email: '', password: '', dni: '', rolId: 0, empleadoId: 0, rutaId: 0 }
 
 export function UsuariosPage() {
   const { puede } = usePermisos()
@@ -117,6 +117,7 @@ export function UsuariosPage() {
     setEditando(usuario)
     setForm({
       nombre: usuario.nombre,
+      nombreUsuario: usuario.nombreUsuario ?? '',
       email: usuario.email,
       password: '',
       dni: usuario.dni ?? '',
@@ -179,9 +180,13 @@ export function UsuariosPage() {
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       return toast.error('El correo no es válido.')
     }
-    // Sin correo ni DNI la cuenta no tendria con que iniciar sesion.
-    if (!form.email.trim() && !form.dni.trim()) {
-      return toast.error('Ingresa el correo o el DNI: sin uno de los dos no podrá iniciar sesión.')
+    // El usuario: al menos una letra, para que nunca se confunda con un DNI ni con un correo.
+    if (form.nombreUsuario.trim() && !/^(?=.*[A-Za-z])[A-Za-z0-9._-]{3,30}$/.test(form.nombreUsuario.trim())) {
+      return toast.error('El usuario debe tener de 3 a 30 caracteres —letras, números, punto o guion— y al menos una letra.')
+    }
+    // Sin usuario, correo ni DNI la cuenta no tendria con que iniciar sesion.
+    if (!form.nombreUsuario.trim() && !form.email.trim() && !form.dni.trim()) {
+      return toast.error('Ingresa el usuario, el correo o el DNI: sin uno de los tres no podrá iniciar sesión.')
     }
     if (!form.rolId) return toast.error('Selecciona un rol.')
     if (!editando && form.password.length < 6) {
@@ -194,6 +199,7 @@ export function UsuariosPage() {
         await usuarioApi.update(editando.id, {
           nombre: form.nombre.trim(),
           email: form.email.trim(),
+          nombreUsuario: form.nombreUsuario.trim() || null,
           dni: form.dni || null,
           rolId: form.rolId,
           // 0 es "sin empleado": desenlaza la ficha.
@@ -209,6 +215,7 @@ export function UsuariosPage() {
           nombre: form.nombre.trim(),
           email: form.email.trim(),
           password: form.password,
+          nombreUsuario: form.nombreUsuario.trim() || null,
           dni: form.dni || null,
           rolId: form.rolId,
           empleadoId: form.empleadoId || null,
@@ -240,8 +247,13 @@ export function UsuariosPage() {
       await usuarioApi.update(usuario.id, {
         nombre: usuario.nombre,
         email: usuario.email,
+        nombreUsuario: usuario.nombreUsuario,
         dni: usuario.dni,
         rolId: usuario.rolId,
+        // El PUT REEMPLAZA el usuario: lo que no viaje se borra. Sin esto, desactivar a alguien le quitaba
+        // su ruta y el enlace con su ficha de empleado.
+        empleadoId: usuario.empleadoId,
+        rutaId: usuario.rutaId,
         activo: !usuario.activo,
       })
       await cargarUsuarios()
@@ -254,7 +266,8 @@ export function UsuariosPage() {
     // Nombre, correo y DNI son datos únicos por persona: se buscan arriba,
     // no en el panel.
     { key: 'nombre', label: 'Nombre', filterable: false },
-    { key: 'email', label: 'Correo', filterable: false },
+    { key: 'nombreUsuario', label: 'Usuario', filterable: false, render: (row) => row.nombreUsuario ?? <span className="text-ink-soft">—</span> },
+    { key: 'email', label: 'Correo', filterable: false, render: (row) => row.email || <span className="text-ink-soft">—</span> },
     {
       key: 'dni',
       label: 'DNI',
@@ -449,13 +462,28 @@ export function UsuariosPage() {
             onChange={(e) => setForm({ ...form, nombre: e.target.value })}
           />
 
+          {/*
+            Con lo que la persona entra: el usuario que ELIGE, su correo o su DNI, cualquiera de los tres.
+            El usuario es opcional pero es lo más cómodo para quien no tiene correo.
+          */}
+          <Input
+            label="Usuario"
+            optional
+            autoComplete="off"
+            placeholder="Ej. jperez"
+            maxLength={30}
+            hint={<span className="text-xs text-ink-soft">sirve para iniciar sesión</span>}
+            value={form.nombreUsuario}
+            onChange={(e) => setForm({ ...form, nombreUsuario: e.target.value.replace(/\s/g, '') })}
+          />
+
           <Input
             label="Correo electrónico"
             optional
             type="email"
             autoComplete="off"
             placeholder="usuario@distributor.com"
-            hint={<span className="text-xs text-ink-soft">sin correo entra con su DNI</span>}
+            hint={<span className="text-xs text-ink-soft">también sirve para entrar</span>}
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />

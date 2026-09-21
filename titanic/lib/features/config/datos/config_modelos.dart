@@ -13,6 +13,7 @@ class Usuario {
     required this.rol,
     required this.activo,
     this.dni,
+    this.nombreUsuario,
     this.empleadoId,
     this.empleado,
     this.rutaId,
@@ -23,6 +24,9 @@ class Usuario {
   final String nombre;
   final String email;
   final String? dni;
+
+  /// El usuario que eligió para iniciar sesión; opcional. Sirve igual que el correo o el DNI.
+  final String? nombreUsuario;
   final int rolId;
 
   /// Nombre del rol: el backend lo manda resuelto para no pedirlo aparte.
@@ -43,13 +47,14 @@ class Usuario {
   final bool activo;
 
   String get buscable =>
-      '$nombre $email ${dni ?? ''} $rol ${empleado ?? ''} ${ruta ?? ''}'.toLowerCase();
+      '$nombre ${nombreUsuario ?? ''} $email ${dni ?? ''} $rol ${empleado ?? ''} ${ruta ?? ''}'.toLowerCase();
 
   factory Usuario.desdeJson(Map<String, dynamic> json) => Usuario(
     id: json['id'] as int,
     nombre: json['nombre'] as String? ?? '',
     email: json['email'] as String? ?? '',
     dni: json['dni'] as String?,
+    nombreUsuario: json['nombreUsuario'] as String?,
     rolId: json['rolId'] as int? ?? 0,
     rol: json['rol'] as String? ?? '',
     empleadoId: json['empleadoId'] as int?,

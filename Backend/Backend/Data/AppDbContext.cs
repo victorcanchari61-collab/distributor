@@ -327,6 +327,10 @@ public class AppDbContext : DbContext
             // Sin IsRequired: el correo es opcional. El indice unico deja pasar varios NULL, asi que
             // varias cuentas sin correo conviven y solo se impide repetir uno que si existe.
             entity.Property(u => u.Email).HasMaxLength(100);
+
+            // Unico y opcional, igual que el correo: varias cuentas sin nombre de usuario conviven.
+            entity.Property(u => u.NombreUsuario).HasMaxLength(30);
+            entity.HasIndex(u => u.NombreUsuario).IsUnique();
             entity.Property(u => u.PasswordHash).HasMaxLength(256).IsRequired();
             entity.Property(u => u.Dni).HasMaxLength(8);
             entity.Property(u => u.Telefono).HasMaxLength(20);

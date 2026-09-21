@@ -30,6 +30,7 @@ class UsuarioFormulario extends ConsumerStatefulWidget {
 
 class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
   late final _nombre = TextEditingController(text: widget.usuario?.nombre ?? '');
+  late final _usuario = TextEditingController(text: widget.usuario?.nombreUsuario ?? '');
   late final _email = TextEditingController(text: widget.usuario?.email ?? '');
   late final _dni = TextEditingController(text: widget.usuario?.dni ?? '');
   final _password = TextEditingController();
@@ -46,6 +47,7 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
   String? _error;
   String? _errorNombre;
   String? _errorEmail;
+  String? _errorUsuario;
   String? _errorPassword;
   String? _errorRol;
 
@@ -53,7 +55,7 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
 
   @override
   void dispose() {
-    for (final c in [_nombre, _email, _dni, _password]) {
+    for (final c in [_nombre, _usuario, _email, _dni, _password]) {
       c.dispose();
     }
     super.dispose();
@@ -66,12 +68,17 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
     setState(() {
       _errorNombre = _nombre.text.trim().isEmpty ? 'Ingresa el nombre.' : null;
 
-      // El correo es opcional; si se escribe tiene que ser un correo. Pero sin correo ni DNI la cuenta no
-      // tendria con que iniciar sesion.
+      // El usuario y el correo son opcionales, pero sin usuario, correo ni DNI la cuenta no tendria con que
+      // iniciar sesion. El usuario exige al menos una letra: asi nunca se confunde con un DNI ni un correo.
+      final usuario = _usuario.text.trim();
+      _errorUsuario = usuario.isNotEmpty && !RegExp(r'^(?=.*[A-Za-z])[A-Za-z0-9._-]{3,30}$').hasMatch(usuario)
+          ? 'De 3 a 30 caracteres —letras, números, punto o guion— y al menos una letra.'
+          : usuario.isEmpty && correo.isEmpty && _dni.text.trim().isEmpty
+          ? 'Ingresa el usuario, el correo o el DNI: sin uno no podrá iniciar sesión.'
+          : null;
+
       _errorEmail = correo.isNotEmpty && !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(correo)
           ? 'Ese correo no tiene un formato válido.'
-          : correo.isEmpty && _dni.text.trim().isEmpty
-          ? 'Ingresa el correo o el DNI: sin uno de los dos no podrá iniciar sesión.'
           : null;
 
       // Al crear la clave es obligatoria; al editar, vacio significa dejar la
@@ -93,6 +100,7 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
     });
 
     return _errorNombre == null &&
+        _errorUsuario == null &&
         _errorEmail == null &&
         _errorPassword == null &&
         _errorRol == null &&
@@ -139,6 +147,7 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
 
     final cuerpo = <String, dynamic>{
       'nombre': _nombre.text.trim(),
+      'nombreUsuario': _usuario.text.trim().isEmpty ? null : _usuario.text.trim(),
       'email': _email.text.trim(),
       'dni': _dni.text.trim(),
       'rolId': _rolId,
@@ -242,6 +251,20 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
               etiqueta: 'Nombre',
               icono: Icons.person_outline,
               error: _errorNombre,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            // Con lo que la persona entra: el usuario que ELIGE, su correo o su DNI, cualquiera de los tres.
+            AppCampo(
+              controlador: _usuario,
+              etiqueta: 'Usuario',
+              pista: 'jperez',
+              icono: Icons.alternate_email,
+              opcional: true,
+              maxLargo: 30,
+              formateadores: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+              error: _errorUsuario,
               habilitado: !_guardando,
             ),
             const SizedBox(height: Dimen.espacio4),

@@ -5,6 +5,8 @@ export interface UsuarioResponse {
   nombre: string
   email: string
   dni: string | null
+  /** Nombre de usuario para iniciar sesión, si eligió uno. */
+  nombreUsuario: string | null
   telefono: string | null
   foto: string | null
   rolId: number
@@ -25,6 +27,8 @@ export interface CreateUsuarioRequest {
   email: string
   password: string
   dni?: string | null
+  /** Nombre de usuario para iniciar sesión. Opcional. */
+  nombreUsuario?: string | null
   rolId: number
   /** A quién pertenece la cuenta. Opcional: hay cuentas que no son de nadie del padrón. */
   empleadoId?: number | null
@@ -36,6 +40,8 @@ export interface UpdateUsuarioRequest {
   nombre: string
   email: string
   dni?: string | null
+  /** Null lo quita. */
+  nombreUsuario?: string | null
   rolId: number
   /** Null desenlaza la ficha. */
   empleadoId?: number | null

@@ -6,6 +6,9 @@ public class UsuarioResponse
     public string Nombre { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? Dni { get; set; }
+
+    /// <summary>Nombre de usuario, si eligió uno.</summary>
+    public string? NombreUsuario { get; set; }
     public string? Telefono { get; set; }
 
     /// <summary>Ruta relativa de la foto de perfil, si tiene.</summary>

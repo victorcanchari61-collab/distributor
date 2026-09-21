@@ -40,9 +40,9 @@ class _LoginPaginaState extends ConsumerState<LoginPagina> {
     final password = _password.text;
 
     setState(() {
-      // Correo o DNI: quien no tiene correo entra con su DNI.
+      // Usuario, correo o DNI: quien no tiene correo entra con lo que tenga.
       _errorEmail = email.isEmpty
-          ? 'Ingresa tu correo o tu DNI.'
+          ? 'Ingresa tu usuario, correo o DNI.'
           : email.contains('@') && !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)
           ? 'El correo no tiene un formato válido.'
           : null;
@@ -119,8 +119,8 @@ class _LoginPaginaState extends ConsumerState<LoginPagina> {
 
                   AppCampo(
                     controlador: _email,
-                    etiqueta: 'Correo o DNI',
-                    pista: 'admin@distributor.com o 45871203',
+                    etiqueta: 'Usuario, correo o DNI',
+                    pista: 'usuario, correo o DNI',
                     icono: Icons.mail_outline,
                     // Texto y no correo: quien no tiene correo escribe su DNI.
                     tipoTeclado: TextInputType.text,

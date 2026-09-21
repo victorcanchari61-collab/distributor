@@ -33,7 +33,7 @@ void main() {
     await tester.pumpWidget(_app(const LoginPagina()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Correo o DNI'), findsOneWidget);
+    expect(find.text('Usuario, correo o DNI'), findsOneWidget);
     expect(find.text('Contraseña'), findsOneWidget);
     expect(find.text('Ingresar'), findsOneWidget);
   });
@@ -45,7 +45,7 @@ void main() {
     await tester.tap(find.text('Ingresar'));
     await tester.pump();
 
-    expect(find.text('Ingresa tu correo o tu DNI.'), findsOneWidget);
+    expect(find.text('Ingresa tu usuario, correo o DNI.'), findsOneWidget);
     expect(find.text('Ingresa tu contraseña.'), findsOneWidget);
   });
 

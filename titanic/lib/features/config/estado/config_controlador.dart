@@ -78,6 +78,8 @@ class UsuariosControlador extends AsyncNotifier<List<Usuario>> {
       'nombre': usuario.nombre,
       'email': usuario.email,
       'dni': usuario.dni,
+      // El PUT reemplaza el usuario: sin esto, desactivar a alguien le borraria el usuario con el que entra.
+      'nombreUsuario': usuario.nombreUsuario,
       'rolId': usuario.rolId,
       'empleadoId': usuario.empleadoId,
       // Tambien la ruta: sin ella, activar o desactivar a alguien le quitaria su cartera.

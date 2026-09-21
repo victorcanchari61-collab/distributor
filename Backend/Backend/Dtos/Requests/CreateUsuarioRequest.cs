@@ -7,6 +7,9 @@ public class CreateUsuarioRequest
     public string Password { get; set; } = string.Empty;
     public string? Dni { get; set; }
 
+    /// <summary>Nombre de usuario para iniciar sesión. Opcional.</summary>
+    public string? NombreUsuario { get; set; }
+
     /// <summary>Id de la tabla Roles.</summary>
     public int RolId { get; set; }
 

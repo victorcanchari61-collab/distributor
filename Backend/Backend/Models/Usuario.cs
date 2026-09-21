@@ -11,6 +11,14 @@ public class Usuario
     /// </summary>
     public string? Email { get; set; }
 
+    /// <summary>
+    /// Nombre de usuario: lo que se ELIGE para entrar ("jperez"), sin depender de tener correo.
+    ///
+    /// Opcional y único. Sirve, junto con el correo y el DNI, para iniciar sesión. Se le exige al menos una
+    /// letra para que nunca se confunda con un DNI (solo dígitos) ni con un correo (lleva arroba).
+    /// </summary>
+    public string? NombreUsuario { get; set; }
+
     /// <summary>DNI del empleado. Se llena consultando RENIEC.</summary>
     public string? Dni { get; set; }
 

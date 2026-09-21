@@ -166,8 +166,8 @@ String _texto(WidgetTester tester, int n) =>
         .text;
 
 String _nombreDe(WidgetTester tester) => _texto(tester, 0);
-String _correoDe(WidgetTester tester) => _texto(tester, 1);
-String _dniDe(WidgetTester tester) => _texto(tester, 2);
+String _correoDe(WidgetTester tester) => _texto(tester, 2);
+String _dniDe(WidgetTester tester) => _texto(tester, 3);
 
 /// Elige a alguien en el selector de empleado.
 Future<void> _elegir(WidgetTester tester, String etiqueta) async {
