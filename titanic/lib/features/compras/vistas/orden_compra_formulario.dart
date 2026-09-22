@@ -13,6 +13,7 @@ import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
+import '../../inventario/estado/inventario_controlador.dart';
 import '../../maestros/datos/producto.dart';
 import '../../maestros/datos/proveedor.dart';
 import '../../maestros/estado/maestros_controlador.dart';
@@ -236,6 +237,25 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
       ref.watch(productosProvider).valueOrNull ?? const <Producto>[],
     );
 
+    /*
+     * La orden de compra no tiene almacen propio — eso lo decide la
+     * Recepcion, despues —, pero mostrar cuanto hay ayuda a decidir cuanto
+     * pedir: sin esto no habia forma de ver el stock desde aqui. Se usa el
+     * principal como referencia, igual que en el resto de la app.
+     */
+    final almacenes = ref.watch(almacenesActivosProvider);
+    final almacenStockId = almacenes.isEmpty
+        ? null
+        : almacenes
+              .firstWhere((a) => a.esPrincipal, orElse: () => almacenes.first)
+              .id;
+    final stock = ref
+        .watch(stockDisponibleProvider(almacenStockId))
+        .valueOrNull;
+    final reservado = ref
+        .watch(stockReservadoProvider(almacenStockId))
+        .valueOrNull;
+
     // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
     // acento del modulo. Sin esto los componentes compartidos y las hojas que
     // se abran desde dentro saldrian con el azul de marca.
@@ -349,6 +369,8 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
               cargando: ref.watch(productosProvider).isLoading,
               paraVenta: false,
               uso: UsoPresentacion.compra,
+              stock: stock,
+              reservado: reservado,
               habilitado: !_guardando,
               onAgregar: _agregarLineas,
             ),

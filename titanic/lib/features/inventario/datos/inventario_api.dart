@@ -72,6 +72,18 @@ class InventarioApi {
     };
   }
 
+  /// Igual que [disponible], pero con lo reservado aparte: lo que ya apartan
+  /// pedidos pendientes, para avisar "5 reservados, 10 libres" en vez de
+  /// mostrar solo el número final.
+  Future<Map<int, double>> reservado({int? almacenId}) async {
+    final query = almacenId == null ? '' : '?almacenId=$almacenId';
+    final datos = await _api.get('/inventario/disponible$query') as List;
+    return {
+      for (final e in datos.cast<Map<String, dynamic>>())
+        e['productoId'] as int: (e['reservado'] as num?)?.toDouble() ?? 0,
+    };
+  }
+
   // --- Kardex ---
 
   /// GET /api/inventario/kardex. Sin almacenId, trae todos los movimientos.

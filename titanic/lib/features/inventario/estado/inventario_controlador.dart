@@ -146,6 +146,16 @@ final stockDisponibleProvider = FutureProvider.autoDispose
       return ref.watch(inventarioApiProvider).disponible(almacenId: almacenId);
     });
 
+/// Lo reservado por producto en UN almacen: producto -> reservado.
+///
+/// Aparte de [stockDisponibleProvider] porque es solo informativo — el
+/// buscador de productos lo muestra como aviso ("5 reservados, 10 libres"),
+/// pero no impide pedir más de lo disponible.
+final stockReservadoProvider = FutureProvider.autoDispose
+    .family<Map<int, double>, int?>((ref, almacenId) async {
+      return ref.watch(inventarioApiProvider).reservado(almacenId: almacenId);
+    });
+
 /// Que se mira del almacen: todo, lo que falta reponer o lo que no se mueve.
 enum FiltroStock { todos, bajoMinimo, sinStock, conStock }
 

@@ -71,6 +71,9 @@ Future<List<SeleccionProducto>?> mostrarBuscadorProductos({
   bool paraVenta = true,
   UsoPresentacion? uso,
   Map<int, double>? stock,
+
+  /// Lo que ya apartan pedidos pendientes, por producto — solo informativo.
+  Map<int, double>? reservado,
 }) {
   // El acento se captura ANTES de abrir: la hoja cuelga del Navigator, no de
   // la pantalla, asi que ahi dentro ya no hay de quien heredarlo y saldria
@@ -94,6 +97,7 @@ Future<List<SeleccionProducto>?> mostrarBuscadorProductos({
         paraVenta: paraVenta,
         uso: uso,
         stock: stock,
+        reservado: reservado,
       ),
     ),
   );
@@ -105,12 +109,14 @@ class _HojaBuscadorProductos extends StatefulWidget {
     required this.paraVenta,
     required this.uso,
     this.stock,
+    this.reservado,
   });
 
   final List<Producto> productos;
   final bool paraVenta;
   final UsoPresentacion? uso;
   final Map<int, double>? stock;
+  final Map<int, double>? reservado;
 
   @override
   State<_HojaBuscadorProductos> createState() => _HojaBuscadorProductosState();
@@ -427,6 +433,7 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
                             ? _opcionesDe(p)
                             : const [],
                         stock: widget.stock?[p.id],
+                        reservado: widget.reservado?[p.id] ?? 0,
                         onAlternar: () => _alternar(p),
                         onPresentacion: (id) => setState(
                           () => _marcados[p.id]?.presentacionId = id,
@@ -476,6 +483,7 @@ class _FilaProducto extends StatelessWidget {
     required this.marcado,
     required this.opciones,
     required this.stock,
+    required this.reservado,
     required this.onAlternar,
     required this.onPresentacion,
     required this.onCantidad,
@@ -485,9 +493,32 @@ class _FilaProducto extends StatelessWidget {
   final _Marcado? marcado;
   final List<OpcionPresentacion> opciones;
   final double? stock;
+  final double reservado;
   final VoidCallback onAlternar;
   final ValueChanged<int> onPresentacion;
   final ValueChanged<String> onCantidad;
+
+  /// A cuántas unidades base equivale la presentación marcada — el stock se
+  /// guarda en base y se muestra en la unidad que se está eligiendo.
+  double get _factor {
+    final id = marcado?.presentacionId;
+    if (id == null || id == 0) return 1;
+    for (final p in producto.presentaciones) {
+      if (p.id == id) return p.factor;
+    }
+    return 1;
+  }
+
+  /// El nombre de la unidad en la que se muestra el stock: la marcada, o la
+  /// base cuando todavía no se eligió ninguna.
+  String get _unidad {
+    final id = marcado?.presentacionId;
+    if (id == null || id == 0) return producto.unidadBase;
+    for (final p in producto.presentaciones) {
+      if (p.id == id) return p.nombre;
+    }
+    return producto.unidadBase;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -552,7 +583,11 @@ class _FilaProducto extends StatelessWidget {
                 ),
               ),
               if (stock != null)
-                _EtiquetaStock(stock: stock!, unidad: producto.unidadBase),
+                _EtiquetaStock(
+                  disponible: stock! / _factor,
+                  reservado: reservado / _factor,
+                  unidad: _unidad,
+                ),
             ],
           ),
           if (activo) ...[
@@ -586,35 +621,57 @@ class _FilaProducto extends StatelessWidget {
 }
 
 class _EtiquetaStock extends StatelessWidget {
-  const _EtiquetaStock({required this.stock, required this.unidad});
+  const _EtiquetaStock({
+    required this.disponible,
+    required this.reservado,
+    required this.unidad,
+  });
 
-  final double stock;
+  final double disponible;
+  final double reservado;
   final String unidad;
+
+  static String _texto(double n) =>
+      n == n.roundToDouble() ? n.toStringAsFixed(0) : n.toStringAsFixed(2);
 
   @override
   Widget build(BuildContext context) {
-    final hay = stock > 0;
-    final texto = stock == stock.roundToDouble()
-        ? stock.toStringAsFixed(0)
-        : stock.toString();
+    final hay = disponible > 0;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Dimen.espacio2,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: hay ? Colores.exitoSuave : Colores.peligroSuave,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        '$texto $unidad',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: hay ? Colores.exito : Colores.peligro,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Dimen.espacio2,
+            vertical: 3,
+          ),
+          decoration: BoxDecoration(
+            color: hay ? Colores.exitoSuave : Colores.peligroSuave,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            '${_texto(disponible)} $unidad',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: hay ? Colores.exito : Colores.peligro,
+            ),
+          ),
         ),
-      ),
+        if (reservado > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              '${_texto(reservado)} reservados',
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Colores.advertencia,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

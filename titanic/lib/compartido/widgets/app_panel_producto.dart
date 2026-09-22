@@ -53,6 +53,7 @@ class AppPanelProducto extends StatefulWidget {
     this.habilitado = true,
     this.resolverPrecio,
     this.claveLista,
+    this.reservado,
   });
 
   final List<Producto> productos;
@@ -83,6 +84,11 @@ class AppPanelProducto extends StatefulWidget {
   /// prometerle a un cliente algo que está en otro depósito es prometer lo
   /// que no hay.
   final Map<int, double>? stock;
+
+  /// Lo que ya apartan pedidos pendientes, por producto — solo informativo:
+  /// no impide pedir más, pero avisa que parte de lo disponible ya está
+  /// comprometido.
+  final Map<int, double>? reservado;
 
   final bool habilitado;
 
@@ -177,6 +183,16 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
   int get _presentacionBase {
     final base = _producto?.presentaciones.where((p) => p.esBase);
     return base != null && base.isNotEmpty ? base.first.id : 0;
+  }
+
+  /// A cuántas unidades base equivale la presentación elegida: el stock se
+  /// guarda siempre en base y se muestra en la unidad que se está armando.
+  double get _factorActual {
+    if (_presentacionId == 0) return 1;
+    for (final p in _producto?.presentaciones ?? const []) {
+      if (p.id == _presentacionId) return p.factor;
+    }
+    return 1;
   }
 
   /// La presentación real: 0 en el selector significa la unidad base, que sí
@@ -335,6 +351,7 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
       paraVenta: widget.paraVenta,
       uso: widget.uso,
       stock: widget.stock,
+      reservado: widget.reservado,
     );
     if (elegidos == null || elegidos.isEmpty) return;
 
@@ -463,8 +480,23 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
             precios: _preciosUnidad,
             idBase: _presentacionBase,
             valor: _presentacionId,
-            onCambio: (v) => setState(() => _presentacionId = v),
+            onCambio: (v) {
+              setState(() => _presentacionId = v);
+              // Cambiar de unidad no debe dejar el precio de la anterior
+              // puesto: el saco y la bolsa no cuestan lo mismo.
+              unawaited(_pedirPrecio());
+            },
           ),
+
+          if (_producto != null && stock != null) ...[
+            const SizedBox(height: Dimen.espacio2),
+            _AvisoStock(
+              disponible: stock[_producto!.id] ?? 0,
+              reservado: widget.reservado?[_producto!.id] ?? 0,
+              factor: _factorActual,
+              unidad: _nombreDe(_producto!, _presentacionId),
+            ),
+          ],
           const SizedBox(height: Dimen.espacio3),
 
           Row(
@@ -589,6 +621,68 @@ class _SelectorUnidad extends StatelessWidget {
           style: const TextStyle(fontSize: 15, color: Colores.tinta),
         ),
       ),
+    );
+  }
+}
+
+/// Cuánto hay, en la unidad que se está armando — no en la base.
+///
+/// "1250 KG" no dice nada cuando se está comprando en sacos: hay que dividir
+/// a mano para saber si alcanza. Y lo reservado se avisa aparte porque no
+/// bloquea nada — solo informa cuánto de lo disponible ya está comprometido.
+class _AvisoStock extends StatelessWidget {
+  const _AvisoStock({
+    required this.disponible,
+    required this.reservado,
+    required this.factor,
+    required this.unidad,
+  });
+
+  final double disponible;
+  final double reservado;
+  final double factor;
+  final String unidad;
+
+  @override
+  Widget build(BuildContext context) {
+    final f = factor > 0 ? factor : 1;
+    final libres = disponible / f;
+    final reservados = reservado / f;
+
+    return Row(
+      children: [
+        const Icon(
+          Icons.inventory_2_outlined,
+          size: 15,
+          color: Colores.tintaTenue,
+        ),
+        const SizedBox(width: Dimen.espacio1),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Hay ${formatoNumero(libres)} $unidad',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colores.tintaSuave,
+                  ),
+                ),
+                if (reservados > 0)
+                  TextSpan(
+                    text: ' · ${formatoNumero(reservados)} reservados',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colores.advertencia,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

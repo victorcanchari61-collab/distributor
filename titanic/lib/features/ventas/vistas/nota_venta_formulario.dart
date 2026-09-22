@@ -560,6 +560,9 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
               paraVenta: true,
               uso: UsoPresentacion.venta,
               stock: ref.watch(stockDisponibleProvider(_almacenId)).valueOrNull,
+              reservado: ref
+                  .watch(stockReservadoProvider(_almacenId))
+                  .valueOrNull,
               habilitado: !_guardando,
               // El precio lo pone la lista, no la memoria del vendedor.
               resolverPrecio: (presentacionId, cantidad) =>

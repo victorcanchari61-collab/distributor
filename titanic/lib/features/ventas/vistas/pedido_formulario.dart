@@ -402,6 +402,9 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
               stock: ref
                   .watch(stockDisponibleProvider(_almacenReservaId))
                   .valueOrNull,
+              reservado: ref
+                  .watch(stockReservadoProvider(_almacenReservaId))
+                  .valueOrNull,
               habilitado: !_guardando,
               // El precio lo pone la lista, no la memoria del vendedor.
               resolverPrecio: (presentacionId, cantidad) =>

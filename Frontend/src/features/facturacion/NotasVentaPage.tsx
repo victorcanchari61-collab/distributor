@@ -630,13 +630,31 @@ export function NotasVentaPage() {
       ?.presentaciones.find((x) => x.id === fila.presentacionId)?.factor ?? 1
 
 
-  /** El selector de presentacion de una linea: se usa en dos sitios. */
-  const presentacionDeFila = (fila: { id: string; productoId: number; presentacionId: number }) => {
+  /**
+   * El selector de presentacion de una linea: se usa en dos sitios.
+   *
+   * Al cambiar de unidad se vuelve a pedir el precio: si no, la linea se
+   * quedaba con el precio de la presentacion anterior (el del saco) puesto
+   * ahora sobre la nueva (la bolsa), y nadie se daba cuenta hasta cobrar mal.
+   */
+  const presentacionDeFila = (fila: {
+    id: string
+    productoId: number
+    presentacionId: number
+    cantidad: string
+  }) => {
     const producto = productos.find((p) => p.id === fila.productoId)
     return (
       <SelectorPresentacion
         value={fila.presentacionId}
-        onChange={(v) => actualizarFila(fila.id, { presentacionId: v })}
+        onChange={(v) => {
+          actualizarFila(fila.id, { presentacionId: v })
+          const real = v || producto?.presentaciones.find((x) => x.esBase)?.id || 0
+          if (!real) return
+          void precioDeLista(real, Number(fila.cantidad) || 1).then((precio) => {
+            if (precio != null) actualizarFila(fila.id, { costo: String(precio.precio) })
+          })
+        }}
         placeholder={producto?.unidadBase ?? 'Elegir'}
         disabled={!producto}
         producto={producto}
