@@ -301,7 +301,9 @@ public class VentasService : IVentasService
          * Un cobro de más lo rechaza la propia creación de la venta.
          */
         var pagos = request.Pagos ?? [];
-        var totalVenta = Math.Round(lineasVenta.Sum(l => l.CantidadPresentacion * l.PrecioPresentacion), 2);
+        var totalLineas = Math.Round(lineasVenta.Sum(l => l.CantidadPresentacion * l.PrecioPresentacion), 2);
+        var totalRecojos = Math.Round((request.Recojos ?? []).Sum(r => r.Cantidad * r.PrecioUnitario), 2);
+        var totalVenta = totalLineas - totalRecojos;
         var cobrado = Math.Round(pagos.Sum(p => p.Monto), 2);
         var forma = cobrado > 0 && cobrado >= totalVenta ? FormaPagoVenta.Contado : FormaPagoVenta.Credito;
 
@@ -313,7 +315,8 @@ public class VentasService : IVentasService
             pagos: pagos,
             observacion: pedido.Observacion,
             lineas: lineasVenta,
-            usuarioId: usuarioId);
+            usuarioId: usuarioId,
+            recojos: request.Recojos);
 
         pedido.Estado = EstadoPedido.Confirmado;
         await _repository.UpdatePedidoAsync(pedido);
@@ -632,7 +635,8 @@ public class VentasService : IVentasService
             pagos: request.Pagos,
             observacion: request.Observacion,
             lineas: await ResolverLineasAsync(request.Detalle),
-            usuarioId: usuarioId);
+            usuarioId: usuarioId,
+            recojos: request.Recojos);
     }
 
     /// <summary>
@@ -766,6 +770,14 @@ public class VentasService : IVentasService
         if (notaVenta.DocumentoInventarioId is int documentoId)
         {
             await _inventario.AnularAsync(documentoId, usuarioId);
+        }
+
+        // Cada recojo entró como su propio documento: se revierte aparte,
+        // así la mercadería recogida vuelve a salir del almacén al que entró.
+        foreach (var recojo in notaVenta.Recojos.Where(r => !r.Anulado && r.DocumentoInventarioId != null))
+        {
+            await _inventario.AnularAsync(recojo.DocumentoInventarioId!.Value, usuarioId);
+            recojo.Anulado = true;
         }
 
         notaVenta.Estado = EstadoNotaVenta.Anulada;
@@ -1002,7 +1014,8 @@ public class VentasService : IVentasService
         List<PagoVentaRequest> pagos,
         string? observacion,
         List<PedidoDetalle> lineas,
-        int? usuarioId)
+        int? usuarioId,
+        List<RecojoRequest>? recojos = null)
     {
         // Antes de guardar nada: si el almacén no existe o está desactivado,
         // mejor que falle aquí que dejar una nota guardada sin poder despachar.
@@ -1012,8 +1025,21 @@ public class VentasService : IVentasService
             throw new BadRequestException("El almacén está desactivado");
         }
 
+        var recojosResueltos = await ResolverRecojosAsync(recojos ?? []);
+        foreach (var recojo in recojosResueltos) recojo.UsuarioId = usuarioId;
+        await _novedades.ExigirMotivosAsync(recojosResueltos.Select(r => r.MotivoId));
+
         var forma = string.IsNullOrWhiteSpace(formaPago) ? FormaPagoVenta.Contado : formaPago;
-        var total = Math.Round(lineas.Sum(l => l.CantidadPresentacion * l.PrecioPresentacion), 2);
+        var totalLineas = Math.Round(lineas.Sum(l => l.CantidadPresentacion * l.PrecioPresentacion), 2);
+        var totalRecojos = Math.Round(recojosResueltos.Sum(r => r.Importe), 2);
+
+        if (totalRecojos > totalLineas)
+        {
+            throw new BadRequestException(
+                $"Lo recogido (S/ {totalRecojos:N2}) supera el total de la venta (S/ {totalLineas:N2}).");
+        }
+
+        var total = totalLineas - totalRecojos;
         var cobrado = Math.Round(pagos.Sum(p => p.Monto), 2);
 
         // Al contado significa que el dinero entra ahora: sin esto se guardaba
@@ -1058,7 +1084,8 @@ public class VentasService : IVentasService
                 MetodoPagoId = p.MetodoPagoId,
                 Monto = p.Monto,
                 UsuarioId = usuarioId
-            }).ToList()
+            }).ToList(),
+            Recojos = recojosResueltos,
         };
 
         await _repository.AddNotaVentaAsync(notaVenta);
@@ -1067,6 +1094,16 @@ public class VentasService : IVentasService
         {
             var documento = await _inventario.CrearSalidaVentaAsync(notaVenta, usuarioId);
             notaVenta.DocumentoInventarioId = documento.Id;
+            await _repository.UpdateNotaVentaAsync(notaVenta);
+
+            // Cada recojo entra a su propio almacén, aparte del descuento de
+            // stock de la venta: son dos movimientos independientes.
+            foreach (var recojo in notaVenta.Recojos)
+            {
+                recojo.NotaVenta = notaVenta;
+                var documentoRecojo = await _inventario.CrearRecojoAsync(recojo, usuarioId);
+                recojo.DocumentoInventarioId = documentoRecojo.Id;
+            }
             await _repository.UpdateNotaVentaAsync(notaVenta);
         }
         catch
@@ -1237,6 +1274,65 @@ public class VentasService : IVentasService
         return lineas;
     }
 
+    /// <summary>
+    /// Resuelve producto y presentación de cada recojo, igual que
+    /// <see cref="ResolverLineasAsync"/> con las líneas de venta — pero sin
+    /// validar que el producto SE VENDA en esa presentación: un recojo entra,
+    /// no sale, así que basta con que la presentación exista.
+    /// </summary>
+    private async Task<List<RecojoVenta>> ResolverRecojosAsync(List<RecojoRequest> recojos)
+    {
+        var lista = new List<RecojoVenta>();
+
+        foreach (var recojo in recojos)
+        {
+            if (recojo.Cantidad <= 0)
+            {
+                throw new BadRequestException("La cantidad a recoger tiene que ser mayor que cero.");
+            }
+
+            var producto = await _productos.GetConDetalleAsync(recojo.ProductoId)
+                ?? throw new BadRequestException($"No existe el producto {recojo.ProductoId}");
+
+            if (!producto.ControlaStock)
+            {
+                throw new BadRequestException($"'{producto.Nombre}' no controla stock: no se puede recoger.");
+            }
+
+            var factor = 1m;
+            ProductoPresentacion? presentacion = null;
+
+            if (recojo.PresentacionId is int presentacionId)
+            {
+                presentacion = await _productos.GetPresentacionAsync(presentacionId)
+                    ?? throw new BadRequestException("La presentación indicada no existe");
+
+                if (presentacion.ProductoId != producto.Id)
+                {
+                    throw new BadRequestException(
+                        $"La presentación '{presentacion.Nombre}' no es de '{producto.Nombre}'.");
+                }
+
+                factor = presentacion.Factor;
+            }
+
+            lista.Add(new RecojoVenta
+            {
+                ProductoId = producto.Id,
+                PresentacionId = presentacion?.Id,
+                CantidadPresentacion = recojo.Cantidad,
+                Cantidad = recojo.Cantidad * factor,
+                PrecioUnitario = recojo.PrecioUnitario,
+                Importe = Math.Round(recojo.Cantidad * recojo.PrecioUnitario, 2),
+                AlmacenId = recojo.AlmacenId,
+                MotivoId = recojo.MotivoId,
+                Observacion = Limpiar(recojo.Observacion),
+            });
+        }
+
+        return lista;
+    }
+
     private async Task ValidarAlmacenReservaAsync(int almacenId)
     {
         var almacen = await _inventario.GetAlmacenAsync(almacenId);
@@ -1353,8 +1449,11 @@ public class VentasService : IVentasService
         Observacion = n.Observacion,
         Usuario = n.Usuario?.Nombre,
         // Una línea anulada se sigue mostrando (para no perder su rastro),
-        // pero no suma al total.
-        Total = Math.Round(n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion), 2),
+        // pero no suma al total. Los recojos vigentes se restan aparte: a
+        // diferencia de una devolución, no encogen ninguna línea de aquí.
+        Total = Math.Round(
+            n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion)
+            - n.Recojos.Where(r => !r.Anulado).Sum(r => r.Importe), 2),
         Detalle = n.Detalle.Select(MapLinea).ToList(),
         Pagos = n.Pagos.Select(MapPago).ToList(),
         TotalPagado = Math.Round(n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2),
@@ -1391,7 +1490,28 @@ public class VentasService : IVentasService
                     })
                     .ToList(),
             })
-            .ToList()
+            .ToList(),
+        TotalRecogido = Math.Round(n.Recojos.Where(r => !r.Anulado).Sum(r => r.Importe), 2),
+        Recojos = n.Recojos
+            .OrderByDescending(r => r.Id)
+            .Select(r => new RecojoDeVentaResponse
+            {
+                Id = r.Id,
+                Fecha = r.Fecha,
+                ProductoId = r.ProductoId,
+                Producto = r.Producto?.Nombre ?? string.Empty,
+                Presentacion = r.Presentacion?.Nombre,
+                UnidadBase = r.Producto?.UnidadBase?.Codigo ?? string.Empty,
+                CantidadPresentacion = r.CantidadPresentacion,
+                AlmacenId = r.AlmacenId,
+                Almacen = r.Almacen?.Nombre ?? string.Empty,
+                Motivo = r.Motivo?.Nombre ?? string.Empty,
+                Observacion = r.Observacion,
+                Usuario = r.Usuario?.Nombre,
+                Importe = r.Importe,
+                Anulado = r.Anulado,
+            })
+            .ToList(),
     };
 
     private static PagoVentaResponse MapPago(PagoVenta p) => new()

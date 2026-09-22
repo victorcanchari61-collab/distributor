@@ -188,6 +188,71 @@ public class NotaVenta
     /// saldo y el cliente seguiría debiendo mercadería que ya trajo.
     /// </summary>
     public ICollection<Devolucion> Devoluciones { get; set; } = [];
+
+    /// <summary>
+    /// Mercadería de OTRA venta anterior que el repartidor recoge justo al
+    /// entregar esta: se descuenta de esta nota, no de aquella donde se
+    /// compró. Ver <see cref="RecojoVenta"/>.
+    /// </summary>
+    public ICollection<RecojoVenta> Recojos { get; set; } = [];
+}
+
+/// <summary>
+/// Un producto ajeno a esta venta que el repartidor recoge al mismo tiempo
+/// que la entrega — malogrado, no lo pidió, lo que sea — y cuyo valor se
+/// descuenta de ESTA nota de venta en vez de la venta original donde se
+/// compró.
+///
+/// A diferencia de <see cref="Devolucion"/> (que reduce la venta donde
+/// estaba la línea), aquí el producto no tiene por qué venir de esta venta:
+/// por eso no hay <c>NotaVentaDetalleId</c>, solo el producto y la cantidad.
+/// El stock SIEMPRE vuelve al almacén elegido — a diferencia de las
+/// novedades de entrega, esta mercadería sí salió y sí regresa físicamente.
+/// </summary>
+public class RecojoVenta
+{
+    public int Id { get; set; }
+
+    public int NotaVentaId { get; set; }
+    public NotaVenta? NotaVenta { get; set; }
+
+    public int ProductoId { get; set; }
+    public Producto? Producto { get; set; }
+
+    public int? PresentacionId { get; set; }
+    public ProductoPresentacion? Presentacion { get; set; }
+
+    /// <summary>Cómo se escribió: "1 Caja x12".</summary>
+    public decimal CantidadPresentacion { get; set; }
+
+    /// <summary>En unidad base.</summary>
+    public decimal Cantidad { get; set; }
+
+    /// <summary>Precio de UNA presentación completa, con el que se valoriza el descuento.</summary>
+    public decimal PrecioUnitario { get; set; }
+
+    /// <summary>Cuánto se descuenta de esta venta: CantidadPresentacion × PrecioUnitario.</summary>
+    public decimal Importe { get; set; }
+
+    /// <summary>A qué almacén vuelve la mercadería recogida.</summary>
+    public int AlmacenId { get; set; }
+    public Almacen? Almacen { get; set; }
+
+    public int MotivoId { get; set; }
+    public MotivoNovedad? Motivo { get; set; }
+
+    public string? Observacion { get; set; }
+
+    public int? UsuarioId { get; set; }
+    public Usuario? Usuario { get; set; }
+
+    public DateTime Fecha { get; set; } = DateTime.UtcNow;
+
+    /// <summary>El documento que sumó esta mercadería al almacén. Ata la reversa al anular la venta.</summary>
+    public int? DocumentoInventarioId { get; set; }
+
+    /// <summary>Se anula junto con la venta que lo contiene; el stock vuelve a salir.</summary>
+    public bool Anulado { get; set; }
 }
 
 public static class EstadoNotaVenta

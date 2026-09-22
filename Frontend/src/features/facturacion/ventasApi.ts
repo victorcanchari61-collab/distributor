@@ -133,6 +133,8 @@ export interface ConfirmarPedidoRequest {
    * queda a crédito con este adelanto (puede ser ninguno).
    */
   pagos?: PagoVentaRequest[]
+  /** Mercadería de OTRA venta que se recoge al entregar esta: se descuenta del total. */
+  recojos?: RecojoRequest[]
 }
 
 /** Cuánto de una línea se entregó, y por qué no fue todo. */
@@ -143,6 +145,41 @@ export interface LineaEntregaRequest {
   /** Obligatorio cuando se entrega menos de lo pedido. */
   motivoId?: number | null
   observacion?: string | null
+}
+
+/**
+ * Mercadería de OTRA venta que el repartidor recoge al entregar esta: se
+ * descuenta del total y vuelve al almacén elegido.
+ */
+export interface RecojoRequest {
+  productoId: number
+  presentacionId?: number | null
+  /** En la presentación elegida. */
+  cantidad: number
+  /** Valor de UNA presentación completa: con eso se descuenta de la venta. */
+  precioUnitario: number
+  motivoId: number
+  observacion?: string | null
+  /** A qué almacén vuelve. */
+  almacenId: number
+}
+
+/** Un recojo visto desde su venta. */
+export interface RecojoDeVenta {
+  id: number
+  fecha: string
+  productoId: number
+  producto: string
+  presentacion: string | null
+  unidadBase: string
+  cantidadPresentacion: number
+  almacenId: number
+  almacen: string
+  motivo: string
+  observacion: string | null
+  usuario: string | null
+  importe: number
+  anulado: boolean
 }
 
 /** El pedido entero no se entregó. */
@@ -221,6 +258,7 @@ export interface NotaVentaResponse {
   formaPago: FormaPagoVenta
   observacion: string | null
   usuario: string | null
+  /** La suma del detalle MENOS los recojos: es lo que de verdad se cobra. */
   total: number
   detalle: LineaVentaResponse[]
   /** Puede ser más de un método — un pago mixto. */
@@ -231,6 +269,10 @@ export interface NotaVentaResponse {
   totalDevuelto: number
   /** Lo que el cliente devolvió, con su estado. Nacen de editar esta venta. */
   devoluciones: DevolucionDeVenta[]
+  /** Suma de los recojos vigentes. Ya está restada de total; esto es informativo. */
+  totalRecogido: number
+  /** Mercadería de otra venta que se recogió al entregar esta. */
+  recojos: RecojoDeVenta[]
 }
 
 export type EstadoDevolucion = 'SOLICITADA' | 'APROBADA' | 'RECHAZADA'
@@ -273,6 +315,8 @@ export interface CrearNotaVentaRequest {
   pagos?: PagoVentaRequest[]
   observacion?: string | null
   detalle: LineaVentaRequest[]
+  /** Mercadería de OTRA venta que se recoge al entregar esta: se descuenta del total. */
+  recojos?: RecojoRequest[]
 }
 
 /** Las devoluciones que nacieron de editar una venta: solo se resuelven. */

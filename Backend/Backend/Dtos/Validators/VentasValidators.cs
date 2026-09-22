@@ -34,6 +34,19 @@ public class CrearPedidoRequestValidator : AbstractValidator<CrearPedidoRequest>
     }
 }
 
+public class RecojoRequestValidator : AbstractValidator<RecojoRequest>
+{
+    public RecojoRequestValidator()
+    {
+        RuleFor(x => x.ProductoId).GreaterThan(0).WithMessage("Elige el producto a recoger");
+        RuleFor(x => x.Cantidad).GreaterThan(0).WithMessage("La cantidad a recoger debe ser mayor que cero");
+        RuleFor(x => x.PrecioUnitario).GreaterThan(0).WithMessage("Indica el valor de lo recogido");
+        RuleFor(x => x.MotivoId).GreaterThan(0).WithMessage("Elige el motivo del recojo");
+        RuleFor(x => x.AlmacenId).GreaterThan(0).WithMessage("Elige a qué almacén vuelve lo recogido");
+        RuleFor(x => x.Observacion).MaximumLength(250);
+    }
+}
+
 public class PagoVentaRequestValidator : AbstractValidator<PagoVentaRequest>
 {
     public PagoVentaRequestValidator()
@@ -61,6 +74,8 @@ public class ConfirmarPedidoRequestValidator : AbstractValidator<ConfirmarPedido
             l.RuleFor(x => x.Cantidad).GreaterThanOrEqualTo(0).WithMessage("La cantidad no puede ser negativa");
             l.RuleFor(x => x.Observacion).MaximumLength(250).WithMessage("La observación es muy larga (máx. 250)");
         });
+
+        RuleForEach(x => x.Recojos).SetValidator(new RecojoRequestValidator());
     }
 }
 
@@ -87,5 +102,6 @@ public class CrearNotaVentaRequestValidator : AbstractValidator<CrearNotaVentaRe
         RuleFor(x => x.Observacion).MaximumLength(250);
         RuleFor(x => x.Detalle).NotEmpty().WithMessage("Agrega al menos un producto");
         RuleForEach(x => x.Detalle).SetValidator(new LineaVentaRequestValidator());
+        RuleForEach(x => x.Recojos).SetValidator(new RecojoRequestValidator());
     }
 }

@@ -269,6 +269,7 @@ public class InventarioRepository : IInventarioRepository
             TipoDocumentoInventario.Recepcion => "RC",
             TipoDocumentoInventario.NotaVenta => "SV",
             TipoDocumentoInventario.DevolucionCliente => "DC",
+            TipoDocumentoInventario.Recojo => "RJ",
             _ => "AJ"
         };
 

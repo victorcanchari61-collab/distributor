@@ -66,6 +66,7 @@ public class AppDbContext : DbContext
     public DbSet<NotaVenta> NotasVenta => Set<NotaVenta>();
     public DbSet<NotaVentaDetalle> NotaVentaDetalles => Set<NotaVentaDetalle>();
     public DbSet<PagoVenta> PagosVenta => Set<PagoVenta>();
+    public DbSet<RecojoVenta> RecojosVenta => Set<RecojoVenta>();
     public DbSet<RegistroAuditoria> RegistrosAuditoria => Set<RegistroAuditoria>();
     public DbSet<ArqueoCaja> ArqueosCaja => Set<ArqueoCaja>();
     public DbSet<ArqueoGasto> ArqueoGastos => Set<ArqueoGasto>();
@@ -828,6 +829,8 @@ public class AppDbContext : DbContext
                 .HasForeignKey(d => d.CompraId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(d => d.NotaVenta).WithMany()
                 .HasForeignKey(d => d.NotaVentaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.RecojoVenta).WithMany()
+                .HasForeignKey(d => d.RecojoVentaId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<MovimientoInventario>(entity =>
@@ -857,6 +860,8 @@ public class AppDbContext : DbContext
                 .HasForeignKey(m => m.CompraDetalleId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(m => m.NotaVentaDetalle).WithMany()
                 .HasForeignKey(m => m.NotaVentaDetalleId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(m => m.RecojoVenta).WithMany()
+                .HasForeignKey(m => m.RecojoVentaId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CapaCosto>(entity =>
@@ -1106,6 +1111,30 @@ public class AppDbContext : DbContext
                 .HasForeignKey(p => p.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(p => p.Usuario).WithMany()
                 .HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<RecojoVenta>(entity =>
+        {
+            entity.ToTable("RecojosVenta");
+            entity.HasIndex(r => r.Fecha);
+            entity.Property(r => r.CantidadPresentacion).HasPrecision(18, 4);
+            entity.Property(r => r.Cantidad).HasPrecision(18, 4);
+            entity.Property(r => r.PrecioUnitario).HasPrecision(18, 4);
+            entity.Property(r => r.Importe).HasPrecision(18, 4);
+            entity.Property(r => r.Observacion).HasMaxLength(250);
+
+            entity.HasOne(r => r.NotaVenta).WithMany(n => n.Recojos)
+                .HasForeignKey(r => r.NotaVentaId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(r => r.Producto).WithMany()
+                .HasForeignKey(r => r.ProductoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(r => r.Presentacion).WithMany()
+                .HasForeignKey(r => r.PresentacionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(r => r.Almacen).WithMany()
+                .HasForeignKey(r => r.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(r => r.Motivo).WithMany()
+                .HasForeignKey(r => r.MotivoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(r => r.Usuario).WithMany()
+                .HasForeignKey(r => r.UsuarioId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 

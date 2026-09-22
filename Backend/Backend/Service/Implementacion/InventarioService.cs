@@ -1361,6 +1361,76 @@ public class InventarioService : IInventarioService
         return creado;
     }
 
+    public async Task<DocumentoInventarioResponse> CrearRecojoAsync(RecojoVenta recojo, int? usuarioId)
+    {
+        var almacen = await GetAlmacenOrThrowAsync(recojo.AlmacenId);
+        var entrada = await GetMotivoOrThrowAsync(Motivos.DevolucionCliente);
+        var producto = await _productos.GetConDetalleAsync(recojo.ProductoId)
+            ?? throw new BadRequestException($"No existe el producto {recojo.ProductoId}");
+        var fecha = DateTime.UtcNow;
+
+        var documento = new DocumentoInventario
+        {
+            Numero = await _repository.SiguienteNumeroAsync(TipoDocumentoInventario.Recojo),
+            Tipo = TipoDocumentoInventario.Recojo,
+            AlmacenId = almacen.Id,
+            MotivoId = entrada.Id,
+            NotaVentaId = recojo.NotaVentaId,
+            Fecha = fecha,
+            Estado = EstadoDocumento.Confirmado,
+            Observacion = $"Recojo en {recojo.NotaVenta?.Numero ?? $"venta {recojo.NotaVentaId}"}",
+            UsuarioId = usuarioId,
+        };
+
+        await using var transaccion = await _repository.IniciarTransaccionAsync();
+
+        await _repository.AddDocumentoAsync(documento);
+        await _repository.GuardarAsync();
+
+        var movimiento = new MovimientoInventario
+        {
+            DocumentoId = documento.Id,
+            ProductoId = producto.Id,
+            AlmacenId = almacen.Id,
+            MotivoId = entrada.Id,
+            Tipo = TipoMovimiento.Entrada,
+            PresentacionId = recojo.PresentacionId,
+            CantidadPresentacion = recojo.CantidadPresentacion,
+            Cantidad = recojo.Cantidad,
+            Fecha = fecha,
+            RecojoVentaId = recojo.Id,
+            // No viene de ninguna capa conocida —no es la misma venta la que se
+            // esta revirtiendo—, asi que entra como capa nueva. Se valoriza al
+            // precio del propio recojo: es lo mas cercano que se puede saber,
+            // igual que hace una devolucion cuando no encuentra su origen.
+            CostoUnitario = recojo.Cantidad > 0 ? recojo.Importe / recojo.Cantidad : 0m,
+            CostoTotal = recojo.Importe,
+        };
+
+        await _repository.AddDocumentoMovimientoAsync(movimiento);
+        await _repository.GuardarAsync();
+
+        await _repository.AddCapaAsync(new CapaCosto
+        {
+            ProductoId = producto.Id,
+            AlmacenId = almacen.Id,
+            MovimientoId = movimiento.Id,
+            CantidadInicial = recojo.Cantidad,
+            CantidadDisponible = recojo.Cantidad,
+            CostoUnitario = movimiento.CostoUnitario,
+            Origen = OrigenCapa.Devolucion,
+            Fecha = fecha,
+        });
+        await _repository.GuardarAsync();
+
+        await transaccion.CommitAsync();
+
+        var creado = await GetDocumentoAsync(documento.Id);
+        await _notificador.AvisarAsync("stock", "cambio", new { almacenId = almacen.Id });
+        await _notificador.AvisarAsync("kardex", "cambio", new { almacenId = almacen.Id });
+        return creado;
+    }
+
     /// <summary>
     /// Devuelve la mercadería a las capas de las que salió esa venta.
     ///

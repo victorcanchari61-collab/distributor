@@ -136,6 +136,12 @@ public class NotaVentaResponse
     public string? Observacion { get; set; }
     public string? Usuario { get; set; }
 
+    /// <summary>
+    /// Lo que de verdad se cobra: la suma del Detalle MENOS los Recojos. A
+    /// diferencia de una devolución (que ya viene descontada porque encoge
+    /// su propia línea), un recojo es de OTRA venta y no tiene línea aquí que
+    /// encoger, así que se resta aparte.
+    /// </summary>
     public decimal Total { get; set; }
     public List<LineaVentaResponse> Detalle { get; set; } = [];
 
@@ -162,6 +168,38 @@ public class NotaVentaResponse
     /// mismo se aprueban o se rechazan.
     /// </summary>
     public List<DevolucionDeVentaResponse> Devoluciones { get; set; } = [];
+
+    /// <summary>Suma de los Recojos vigentes. Ya está restada de Total; esto es solo informativo.</summary>
+    public decimal TotalRecogido { get; set; }
+
+    /// <summary>
+    /// Mercadería de OTRA venta que se recogió al entregar esta, y que ya
+    /// descontó su valor del Total.
+    /// </summary>
+    public List<RecojoDeVentaResponse> Recojos { get; set; } = [];
+}
+
+/// <summary>Un recojo visto desde su venta.</summary>
+public class RecojoDeVentaResponse
+{
+    public int Id { get; set; }
+    public DateTime Fecha { get; set; }
+
+    public int ProductoId { get; set; }
+    public string Producto { get; set; } = string.Empty;
+    public string? Presentacion { get; set; }
+    public string UnidadBase { get; set; } = string.Empty;
+    public decimal CantidadPresentacion { get; set; }
+
+    public int AlmacenId { get; set; }
+    public string Almacen { get; set; } = string.Empty;
+
+    public string Motivo { get; set; } = string.Empty;
+    public string? Observacion { get; set; }
+    public string? Usuario { get; set; }
+
+    public decimal Importe { get; set; }
+    public bool Anulado { get; set; }
 }
 
 /// <summary>Una devolucion vista desde su venta: lo justo para resolverla.</summary>

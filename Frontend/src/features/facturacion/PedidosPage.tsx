@@ -981,6 +981,7 @@ export function PedidosPage() {
       <EntregaPedidoModal
         pedido={confirmando}
         almacenes={almacenes}
+        productos={productos}
         onClose={() => setConfirmando(null)}
         onHecho={(mensaje) => {
           setConfirmando(null)

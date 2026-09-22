@@ -79,6 +79,12 @@ public class ConfirmarPedidoRequest
     public List<LineaEntregaRequest> Lineas { get; set; } = [];
 
     /// <summary>
+    /// Mercadería de OTRA venta que el repartidor recoge al entregar esta:
+    /// se descuenta del total y vuelve al almacén que se elija por cada una.
+    /// </summary>
+    public List<RecojoRequest> Recojos { get; set; } = [];
+
+    /// <summary>
     /// Lo que el cliente pagó al recibir, en uno o varios métodos.
     ///
     /// La condición de pago del pedido (contado o crédito) es solo lo acordado:
@@ -114,6 +120,30 @@ public class PagoVentaRequest
     public decimal Monto { get; set; }
 }
 
+/// <summary>
+/// Mercadería de OTRA venta que el repartidor recoge al entregar esta: se
+/// descuenta de esta nota, y vuelve al almacén elegido.
+/// </summary>
+public class RecojoRequest
+{
+    public int ProductoId { get; set; }
+
+    /// <summary>En qué presentación se cuenta. Vacío significa unidad base.</summary>
+    public int? PresentacionId { get; set; }
+
+    /// <summary>Cuántas presentaciones.</summary>
+    public decimal Cantidad { get; set; }
+
+    /// <summary>Valor de UNA presentación completa, con el que se descuenta de la venta.</summary>
+    public decimal PrecioUnitario { get; set; }
+
+    public int MotivoId { get; set; }
+    public string? Observacion { get; set; }
+
+    /// <summary>A qué almacén vuelve la mercadería recogida.</summary>
+    public int AlmacenId { get; set; }
+}
+
 /// <summary>Una venta directa, sin pedido previo: el stock sale al momento.</summary>
 public class CrearNotaVentaRequest
 {
@@ -130,4 +160,10 @@ public class CrearNotaVentaRequest
 
     public string? Observacion { get; set; }
     public List<LineaVentaRequest> Detalle { get; set; } = [];
+
+    /// <summary>
+    /// Mercadería de OTRA venta que el repartidor recoge al entregar esta:
+    /// se descuenta del total y vuelve al almacén que se elija por cada una.
+    /// </summary>
+    public List<RecojoRequest> Recojos { get; set; } = [];
 }

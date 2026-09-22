@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
 import { ArrowLeft, Check, Contact, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2, X } from 'lucide-react'
+import { motivoNovedadApi } from '../tms/motivoNovedadApi'
+import type { MotivoNovedadOpcion } from '../tms/motivoNovedadApi'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -55,6 +57,7 @@ import type {
   LineaDevuelta,
   LineaVentaResponse,
   NotaVentaResponse,
+  RecojoRequest,
   ResumenNotasVenta,
 } from './ventasApi'
 
@@ -98,6 +101,12 @@ const TIPOS_METODO_PAGO: { value: TipoMetodoPago; label: string }[] = [
 
 type FilaVenta = LineaProductoNueva
 
+/** Una línea de recojo: lo que arma el buscador, más el motivo y la observación. */
+interface RecojoLinea extends LineaProductoNueva {
+  motivoId: number
+  observacion: string
+}
+
 /**
  * Notas de venta: la venta lista tal cual, nacida de confirmar un pedido o
  * registrada directa. El stock sale al momento de crearla — no existe una
@@ -140,6 +149,10 @@ export function NotasVentaPage() {
   const [pagoMonto, setPagoMonto] = useState('')
   const [observacion, setObservacion] = useState('')
   const [filas, setFilas] = useState<FilaVenta[]>([])
+  // Mercadería de OTRA venta que se recoge al registrar esta: solo al crear, no al editar.
+  const [recojos, setRecojos] = useState<RecojoLinea[]>([])
+  const [almacenRecojoId, setAlmacenRecojoId] = useState(0)
+  const [motivos, setMotivos] = useState<MotivoNovedadOpcion[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
   /** Lo que apartan otros pedidos pendientes, por producto: el panel lo muestra como aviso. */
   const [reservadoMap, setReservadoMap] = useState<Record<number, number>>({})
@@ -172,13 +185,14 @@ export function NotasVentaPage() {
   /** Catalogos del formulario y contadores: no cambian al paginar. */
   const cargarApoyo = useCallback(async () => {
     try {
-      const [res, clis, prods, alms, lis, metodos] = await Promise.all([
+      const [res, clis, prods, alms, lis, metodos, motivosNovedad] = await Promise.all([
         notaVentaApi.resumen(),
         clienteApi.getAll('notaventa'),
         productoApi.getAll(),
         almacenApi.opciones(),
         listaPrecioApi.getAll(),
         metodoPagoApi.getAll(),
+        motivoNovedadApi.opciones(),
       ])
       setResumen(res)
       setClientes(clis.filter((c) => c.activo))
@@ -186,6 +200,7 @@ export function NotasVentaPage() {
       setAlmacenes(alms.filter((a) => a.activo))
       setListas(lis.filter((l) => l.activo))
       setMetodosPago(metodos.filter((m) => m.activo))
+      setMotivos(motivosNovedad)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
     }
@@ -229,6 +244,8 @@ export function NotasVentaPage() {
     setPagoMonto('')
     setObservacion('')
     setFilas([])
+    setRecojos([])
+    setAlmacenRecojoId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
     setVista('form')
   }
 
@@ -243,6 +260,8 @@ export function NotasVentaPage() {
     setPagoMetodoId(0)
     setPagoMonto('')
     setObservacion(nota.observacion ?? '')
+    setRecojos([])
+    setAlmacenRecojoId(0)
     setFilas(
       nota.detalle
         .filter((l) => !l.anulado)
@@ -277,6 +296,9 @@ export function NotasVentaPage() {
     setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, ...cambio } : f)))
 
   const total = filas.reduce((n, f) => n + (Number(f.cantidad) || 0) * (Number(f.costo) || 0), 0)
+  // Solo al crear: mercadería de otra venta que se recoge al registrar esta y se descuenta del total.
+  const totalRecojo = editando ? 0 : recojos.reduce((s, r) => s + (Number(r.cantidad) || 0) * (Number(r.costo) || 0), 0)
+  const totalNeto = total - totalRecojo
   const totalPagado = pagos.reduce((n, p) => n + (Number(p.monto) || 0), 0)
 
   /**
@@ -323,9 +345,9 @@ export function NotasVentaPage() {
       0,
     )
 
-    if (otros + monto > total + 0.001) {
+    if (otros + monto > totalNeto + 0.001) {
       return toast.error(
-        `Ese pago deja lo pagado en S/ ${(otros + monto).toFixed(2)}, más que el total de la venta (S/ ${total.toFixed(2)}).`,
+        `Ese pago deja lo pagado en S/ ${(otros + monto).toFixed(2)}, más que el total a cobrar (S/ ${totalNeto.toFixed(2)}).`,
       )
     }
 
@@ -499,23 +521,47 @@ export function NotasVentaPage() {
       return fallar(`${nombre} no tiene precio. Ponlo o quita la línea.`)
     }
 
+    if (!editando) {
+      for (const r of recojos) {
+        const producto = productos.find((p) => p.id === r.productoId)
+        if (!r.motivoId) return fallar(`Elige el motivo del recojo de ${producto?.nombre ?? 'un producto'}.`)
+        if (!(Number(r.costo) > 0)) return fallar(`Indica el valor de lo recogido de ${producto?.nombre ?? 'un producto'}.`)
+      }
+      if (recojos.length > 0 && !almacenRecojoId) return fallar('Elige a qué almacén vuelve lo recogido.')
+      if (totalRecojo > total) {
+        return fallar(`Lo recogido (S/ ${totalRecojo.toFixed(2)}) supera el total de la venta (S/ ${total.toFixed(2)}).`)
+      }
+    }
+
     // Al editar no se tocan los pagos: eso ya tiene su propio flujo
     // ("Gestionar pagos" desde Ver detalle), así que ni se valida ni se envía.
-    if (!editando && totalPagado > total + 0.001) {
+    if (!editando && totalPagado > totalNeto + 0.001) {
       return fallar(
-        `Los pagos suman S/ ${totalPagado.toFixed(2)}, más que el total de la venta (S/ ${total.toFixed(2)}).`,
+        `Los pagos suman S/ ${totalPagado.toFixed(2)}, más que el total a cobrar (S/ ${totalNeto.toFixed(2)}).`,
         'pagos',
       )
     }
 
     // Al contado el dinero entra ahora. Sin esto quedaba una venta cobrada que
     // nadie pagó y que, por no ser a crédito, tampoco salía en cuentas por cobrar.
-    if (!editando && formaPago === 'CONTADO' && totalPagado < total - 0.001) {
+    if (!editando && formaPago === 'CONTADO' && totalPagado < totalNeto - 0.001) {
       return fallar(
-        `Una venta al contado se cobra completa: faltan S/ ${(total - totalPagado).toFixed(2)} por registrar.`,
+        `Una venta al contado se cobra completa: faltan S/ ${(totalNeto - totalPagado).toFixed(2)} por registrar.`,
         'pagos',
       )
     }
+
+    const recojosEnvio: RecojoRequest[] = editando
+      ? []
+      : recojos.map((r) => ({
+          productoId: r.productoId,
+          presentacionId: r.presentacionId || null,
+          cantidad: Number(r.cantidad) || 0,
+          precioUnitario: Number(r.costo) || 0,
+          motivoId: r.motivoId,
+          observacion: r.observacion.trim() || null,
+          almacenId: almacenRecojoId,
+        }))
 
     const body: CrearNotaVentaRequest = {
       clienteId,
@@ -531,6 +577,7 @@ export function NotasVentaPage() {
         cantidad: Number(f.cantidad),
         precioUnitario: Number(f.costo),
       })),
+      recojos: recojosEnvio,
     }
 
     setGuardando(true)
@@ -893,7 +940,7 @@ export function NotasVentaPage() {
                           <span className={cn('text-xs', errorPagos ? 'text-red-700' : 'text-ink-soft')}>
                             {pagos.length === 0
                               ? 'Sin registrar'
-                              : `S/ ${totalPagado.toFixed(2)} de S/ ${total.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
+                              : `S/ ${totalPagado.toFixed(2)} de S/ ${totalNeto.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
                           </span>
                         </div>
                         {puede('fact.notaventa', 'cobrar') && (
@@ -923,10 +970,100 @@ export function NotasVentaPage() {
               />
             </PageSection>
 
+            {!editando && (
+              <PageSection
+                title="Recojo"
+                description="Mercadería de otra venta que se recoge al registrar esta: se descuenta del total."
+              >
+                <Desplegable
+                  label="Almacén al que vuelve"
+                  value={almacenRecojoId}
+                  onChange={(v) => setAlmacenRecojoId(Number(v))}
+                  placeholder="Elige el almacén"
+                  options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
+                />
+
+                <div className="mt-4">
+                  <AgregarProductoPanel
+                    productos={productos}
+                    uso="venta"
+                    pideCosto
+                    costoLabel="Valor recogido"
+                    onAgregar={(linea) => setRecojos((r) => [...r, { ...linea, motivoId: 0, observacion: '' }])}
+                  />
+                </div>
+
+                {recojos.length > 0 && (
+                  <div className="mt-3 divide-y divide-line rounded-field border border-line">
+                    {recojos.map((r) => {
+                      const producto = productos.find((p) => p.id === r.productoId)
+                      const subtotal = (Number(r.cantidad) || 0) * (Number(r.costo) || 0)
+                      return (
+                        <div key={r.id} className="flex flex-col gap-2 px-3 py-2.5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-ink">{producto?.nombre ?? 'Producto'}</p>
+                              <p className="text-xs text-ink-soft">
+                                {Number(r.cantidad) || 0} × S/ {(Number(r.costo) || 0).toFixed(2)} = S/ {subtotal.toFixed(2)}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setRecojos((rs) => rs.filter((x) => x.id !== r.id))}
+                              className="shrink-0 cursor-pointer rounded-md p-1.5 text-ink-soft transition-colors hover:bg-surface-alt hover:text-red-600"
+                              title="Quitar"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <Desplegable
+                              label="Motivo"
+                              size="sm"
+                              value={r.motivoId}
+                              onChange={(v) =>
+                                setRecojos((rs) => rs.map((x) => (x.id === r.id ? { ...x, motivoId: Number(v) } : x)))
+                              }
+                              placeholder="¿Por qué se recoge?"
+                              options={motivos.map((m) => ({
+                                value: m.id,
+                                label: m.nombre,
+                                nota: m.descripcion ?? undefined,
+                              }))}
+                            />
+                            <Input
+                              label="Observación"
+                              optional
+                              size="sm"
+                              maxLength={250}
+                              value={r.observacion}
+                              onChange={(e) =>
+                                setRecojos((rs) =>
+                                  rs.map((x) => (x.id === r.id ? { ...x, observacion: e.target.value } : x)),
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </PageSection>
+            )}
+
             <PageSection title="Resumen">
+              {totalRecojo > 0 && (
+                <div className="mb-2 flex items-center justify-between text-sm text-ink-soft">
+                  <span>Recojo</span>
+                  <span>− S/ {totalRecojo.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-ink-soft uppercase tracking-wide">Total de la venta</span>
-                <span className="text-xl font-bold text-[rgb(var(--sys-rgb))]">S/ {total.toFixed(2)}</span>
+                <span className="text-xs font-semibold text-ink-soft uppercase tracking-wide">
+                  {totalRecojo > 0 ? 'Total a cobrar' : 'Total de la venta'}
+                </span>
+                <span className="text-xl font-bold text-[rgb(var(--sys-rgb))]">S/ {totalNeto.toFixed(2)}</span>
               </div>
             </PageSection>
           </div>
@@ -961,7 +1098,7 @@ export function NotasVentaPage() {
           }}
           size="lg"
           title="Pagos"
-          description={`Reparte S/ ${total.toFixed(2)} entre uno o varios métodos.`}
+          description={`Reparte S/ ${totalNeto.toFixed(2)} entre uno o varios métodos.`}
           footer={
             <>
               <Button
@@ -1024,8 +1161,8 @@ export function NotasVentaPage() {
 
             <div className="flex items-center justify-between border-t border-line pt-3 text-sm font-semibold">
               <span>Pagado</span>
-              <span className={totalPagado > total + 0.001 ? 'text-red-600' : 'text-ink'}>
-                S/ {totalPagado.toFixed(2)} de S/ {total.toFixed(2)}
+              <span className={totalPagado > totalNeto + 0.001 ? 'text-red-600' : 'text-ink'}>
+                S/ {totalPagado.toFixed(2)} de S/ {totalNeto.toFixed(2)}
               </span>
             </div>
           </div>
@@ -1210,6 +1347,33 @@ export function NotasVentaPage() {
                         </Button>
                       </div>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {detalleAbierto.recojos.length > 0 && (
+              <div className="flex flex-col gap-2 rounded-field border border-line p-3">
+                <span className="ui-label">Recogido de otra venta</span>
+
+                {detalleAbierto.recojos.map((r) => (
+                  <div
+                    key={r.id}
+                    className={cn(
+                      'flex items-center justify-between gap-2 border-t border-line pt-2 text-sm first:border-0 first:pt-0',
+                      r.anulado && 'opacity-60',
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-ink">
+                        {r.producto} <span className="text-ink-soft">· {r.cantidadPresentacion} {r.presentacion ?? r.unidadBase}</span>
+                      </p>
+                      <p className="text-xs text-ink-soft">
+                        {r.motivo} · vuelve a {r.almacen}
+                        {r.anulado && ' · anulado'}
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-semibold text-ink">S/ {r.importe.toFixed(2)}</span>
                   </div>
                 ))}
               </div>

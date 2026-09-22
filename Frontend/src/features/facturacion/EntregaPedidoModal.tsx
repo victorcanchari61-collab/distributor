@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Badge, Button, Desplegable, Input, Modal, Tabs } from '../../components/ui'
+import { Trash2 } from 'lucide-react'
+import {
+  AgregarProductoPanel,
+  Alert,
+  Badge,
+  Button,
+  Desplegable,
+  Input,
+  Modal,
+  Tabs,
+} from '../../components/ui'
+import type { LineaProductoNueva, ProductoBuscable } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { motivoNovedadApi } from '../tms/motivoNovedadApi'
 import type { MotivoNovedadOpcion } from '../tms/motivoNovedadApi'
@@ -10,7 +21,13 @@ import type { AlmacenOpcion } from '../inventario'
 import { PagoEntrega, resumenPago } from './PagoEntrega'
 import type { FilaPagoEntrega } from './PagoEntrega'
 import { pedidoApi } from './ventasApi'
-import type { LineaEntregaRequest, LineaVentaResponse, PedidoResponse } from './ventasApi'
+import type { LineaEntregaRequest, LineaVentaResponse, PedidoResponse, RecojoRequest } from './ventasApi'
+
+/** Una línea de recojo: lo que arma el buscador, más el motivo y la observación. */
+interface RecojoLinea extends LineaProductoNueva {
+  motivoId: number
+  observacion: string
+}
 
 /** Lo tecleado para una línea, tal cual: se convierte a número solo al calcular. */
 interface Entrega {
@@ -71,12 +88,14 @@ function partirBase(l: LineaVentaResponse, base: number): Pick<Entrega, 'pres' |
   return { pres: String(enteras), sueltas: cantidadTexto(base - enteras * factor) }
 }
 
-type Pestana = 'entrega' | 'pago'
+type Pestana = 'entrega' | 'recojo' | 'pago'
 
 interface EntregaPedidoModalProps {
   /** El pedido que se va a convertir en venta; null lo deja cerrado. */
   pedido: PedidoResponse | null
   almacenes: AlmacenOpcion[]
+  /** Catálogo para buscar el producto que se recoge de otra venta. */
+  productos: ProductoBuscable[]
   onClose: () => void
   /** Ya se convirtió: quien lo abrió recarga su lista. Recibe qué pasó con el cobro. */
   onHecho: (mensaje: string) => void
@@ -94,10 +113,13 @@ interface EntregaPedidoModalProps {
  * pedido es solo lo acordado; manda lo cobrado. Si cubre el total la venta es
  * al contado, y si no queda a crédito con ese adelanto.
  */
-export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: EntregaPedidoModalProps) {
+export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHecho }: EntregaPedidoModalProps) {
   const [pestana, setPestana] = useState<Pestana>('entrega')
   const [almacenId, setAlmacenId] = useState(0)
   const [entregas, setEntregas] = useState<Record<number, Entrega>>({})
+  // Mercadería de OTRA venta que el repartidor recoge al entregar esta: se descuenta del total.
+  const [recojos, setRecojos] = useState<RecojoLinea[]>([])
+  const [almacenRecojoId, setAlmacenRecojoId] = useState(0)
   const [motivos, setMotivos] = useState<MotivoNovedadOpcion[]>([])
   // Sin esto el aviso de "no hay motivos" parpadea mientras la lista carga.
   const [motivosListos, setMotivosListos] = useState(false)
@@ -118,6 +140,8 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
     setAlmacenId(pedido.reservaStock ? (pedido.almacenId ?? 0) : 0)
     setEntregas(Object.fromEntries(lineas.map((l) => [l.id, entregaCompleta(l)])))
     setPagos([])
+    setRecojos([])
+    setAlmacenRecojoId(0)
     setPestana('entrega')
     setError('')
 
@@ -161,6 +185,13 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
     if (!pedido || pedido.reservaStock || almacenId) return
     setAlmacenId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
   }, [pedido, almacenes, almacenId])
+
+  // El recojo vuelve al almacén principal por defecto: es otro almacén, no
+  // necesariamente el de salida de esta entrega.
+  useEffect(() => {
+    if (!pedido || almacenRecojoId) return
+    setAlmacenRecojoId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
+  }, [pedido, almacenes, almacenRecojoId])
 
   // De dónde sale la mercadería: el almacén de la reserva, o el elegido.
   const almacenDeSalida = pedido?.reservaStock ? (pedido.almacenId ?? 0) : almacenId
@@ -233,7 +264,10 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
 
   const total = calculo.reduce((suma, c) => suma + c.subtotal, 0)
   const hayRecortes = calculo.some((c) => c.reducida)
-  const cobro = resumenPago(pagos, total)
+  const totalRecojo = recojos.reduce((s, r) => s + (Number(r.cantidad) || 0) * (Number(r.costo) || 0), 0)
+  // Lo que de verdad se cobra: lo entregado menos lo recogido de otra venta.
+  const totalNeto = total - totalRecojo
+  const cobro = resumenPago(pagos, totalNeto)
 
   /** Un fallo de validación: se muestra arriba y se lleva a la pestaña donde se arregla. */
   const fallar = (mensaje: string, en: Pestana) => {
@@ -264,11 +298,23 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
       )
     }
 
+    for (const r of recojos) {
+      const producto = productos.find((p) => p.id === r.productoId)
+      if (!r.motivoId) return fallar(`Elige el motivo del recojo de ${producto?.nombre ?? 'un producto'}.`, 'recojo')
+      if (!(Number(r.costo) > 0)) return fallar(`Indica el valor de lo recogido de ${producto?.nombre ?? 'un producto'}.`, 'recojo')
+    }
+    if (recojos.length > 0 && !almacenRecojoId) {
+      return fallar('Elige a qué almacén vuelve lo recogido.', 'recojo')
+    }
+    if (totalRecojo > total) {
+      return fallar(`Lo recogido (${soles(totalRecojo)}) supera el total de la venta (${soles(total)}).`, 'recojo')
+    }
+
     if (cobro.pendiente) {
       return fallar('Hay un pago sin guardar: guárdalo con el visto o cancélalo antes de convertir.', 'pago')
     }
     if (cobro.sobra) {
-      return fallar(`Lo cobrado (${soles(cobro.pagado)}) supera el total de la venta (${soles(total)}).`, 'pago')
+      return fallar(`Lo cobrado (${soles(cobro.pagado)}) supera el total a cobrar (${soles(totalNeto)}).`, 'pago')
     }
 
     const lineasEntrega: LineaEntregaRequest[] = calculo
@@ -280,6 +326,16 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
         observacion: c.entrega.observacion.trim() || null,
       }))
 
+    const recojosEnvio: RecojoRequest[] = recojos.map((r) => ({
+      productoId: r.productoId,
+      presentacionId: r.presentacionId || null,
+      cantidad: Number(r.cantidad) || 0,
+      precioUnitario: Number(r.costo) || 0,
+      motivoId: r.motivoId,
+      observacion: r.observacion.trim() || null,
+      almacenId: almacenRecojoId,
+    }))
+
     setGuardando(true)
     setError('')
     try {
@@ -287,6 +343,7 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
         almacenId: pedido.reservaStock ? null : almacenId,
         lineas: lineasEntrega,
         pagos: cobro.usadas.map((f) => ({ metodoPagoId: f.metodoPagoId, monto: Number(f.monto) })),
+        recojos: recojosEnvio,
       })
 
       onHecho(
@@ -294,7 +351,7 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
           ? `Pedido convertido: venta al contado, cobrada (${soles(cobro.pagado)}).`
           : cobro.pagado > 0
             ? `Pedido convertido: cobrado ${soles(cobro.pagado)}, quedan ${soles(cobro.saldo)} a crédito.`
-            : `Pedido convertido: venta a crédito por ${soles(total)}.`,
+            : `Pedido convertido: venta a crédito por ${soles(totalNeto)}.`,
       )
     } catch (e) {
       setError(
@@ -329,6 +386,7 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
         <Tabs
           items={[
             { id: 'entrega', label: 'Entrega' },
+            { id: 'recojo', label: 'Recojo', badge: recojos.length || undefined },
             { id: 'pago', label: 'Pago', badge: cobro.usadas.length || undefined },
           ]}
           active={pestana}
@@ -515,13 +573,104 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
           </>
         )}
 
+        {pestana === 'recojo' && (
+          <>
+            <p className="text-xs text-ink-soft">
+              Mercadería de OTRA venta que el repartidor recoge al entregar esta —malograda, no la pidió, lo que sea—.
+              Se descuenta del total y vuelve al almacén que elijas.
+            </p>
+
+            <Desplegable
+              label="Almacén al que vuelve"
+              value={almacenRecojoId}
+              onChange={(v) => {
+                setAlmacenRecojoId(Number(v))
+                setError('')
+              }}
+              placeholder="Elige el almacén"
+              options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
+            />
+
+            <AgregarProductoPanel
+              productos={productos}
+              uso="venta"
+              pideCosto
+              costoLabel="Valor recogido"
+              onAgregar={(linea) => setRecojos((r) => [...r, { ...linea, motivoId: 0, observacion: '' }])}
+            />
+
+            {recojos.length > 0 && (
+              <div className="divide-y divide-line rounded-field border border-line">
+                {recojos.map((r) => {
+                  const producto = productos.find((p) => p.id === r.productoId)
+                  const subtotal = (Number(r.cantidad) || 0) * (Number(r.costo) || 0)
+                  return (
+                    <div key={r.id} className="flex flex-col gap-2 px-3 py-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-ink">{producto?.nombre ?? 'Producto'}</p>
+                          <p className="text-xs text-ink-soft">
+                            {cantidadTexto(Number(r.cantidad) || 0)} × {soles(Number(r.costo) || 0)} = {soles(subtotal)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setRecojos((rs) => rs.filter((x) => x.id !== r.id))}
+                          className="shrink-0 cursor-pointer rounded-md p-1.5 text-ink-soft transition-colors hover:bg-surface-alt hover:text-red-600"
+                          title="Quitar"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <Desplegable
+                          label="Motivo"
+                          size="sm"
+                          value={r.motivoId}
+                          onChange={(v) =>
+                            setRecojos((rs) => rs.map((x) => (x.id === r.id ? { ...x, motivoId: Number(v) } : x)))
+                          }
+                          placeholder="¿Por qué se recoge?"
+                          options={motivos.map((m) => ({
+                            value: m.id,
+                            label: m.nombre,
+                            nota: m.descripcion ?? undefined,
+                          }))}
+                        />
+                        <Input
+                          label="Observación"
+                          optional
+                          size="sm"
+                          maxLength={250}
+                          value={r.observacion}
+                          onChange={(e) =>
+                            setRecojos((rs) =>
+                              rs.map((x) => (x.id === r.id ? { ...x, observacion: e.target.value } : x)),
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {recojos.length > 0 && motivosListos && motivos.length === 0 && (
+              <Alert tone="info">
+                Todavía no hay motivos de novedad. Pídele a quien administra que los cree en TMS → Motivos de novedad.
+              </Alert>
+            )}
+          </>
+        )}
+
         {pestana === 'pago' && (
           <PagoEntrega
             pedido={pedido}
             metodos={metodos}
             metodosListos={metodosListos}
             filas={pagos}
-            total={total}
+            total={totalNeto}
             onFilas={(filas) => {
               setError('')
               setPagos(filas)
@@ -530,7 +679,7 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
         )}
 
         {/* En Pago el total ya está en el card "A cobrar": repetirlo sobra. */}
-        {pestana === 'entrega' && (
+        {(pestana === 'entrega' || pestana === 'recojo') && (
           <div className="flex flex-col gap-1 border-t border-line pt-3 text-sm">
             {hayRecortes && (
               <div className="flex items-center justify-between text-ink-soft">
@@ -538,9 +687,15 @@ export function EntregaPedidoModal({ pedido, almacenes, onClose, onHecho }: Entr
                 <span>{soles(pedido?.total ?? 0)}</span>
               </div>
             )}
+            {totalRecojo > 0 && (
+              <div className="flex items-center justify-between text-ink-soft">
+                <span>Recojo</span>
+                <span>− {soles(totalRecojo)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between font-semibold">
-              <span>{hayRecortes ? 'Total a cobrar' : 'Total'}</span>
-              <span className="text-ink">{soles(total)}</span>
+              <span>{hayRecortes || totalRecojo > 0 ? 'Total a cobrar' : 'Total'}</span>
+              <span className="text-ink">{soles(totalNeto)}</span>
             </div>
           </div>
         )}

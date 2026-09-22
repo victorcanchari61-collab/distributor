@@ -126,4 +126,11 @@ public interface IInventarioService
     /// </summary>
     Task<DocumentoInventarioResponse> CrearDevolucionClienteAsync(
         Devolucion devolucion, int? usuarioId);
+
+    /// <summary>
+    /// Entra al almacén elegido la mercadería que un repartidor recoge al
+    /// entregar OTRA venta — no viene de ninguna capa conocida, así que
+    /// entra como una capa nueva, valorizada al precio del propio recojo.
+    /// </summary>
+    Task<DocumentoInventarioResponse> CrearRecojoAsync(RecojoVenta recojo, int? usuarioId);
 }

@@ -310,7 +310,12 @@ public class VentasRepository : IVentasRepository
                 .ThenInclude(l => l.NotaVentaDetalle!).ThenInclude(v => v.Presentacion)
             .Include(n => n.Pagos).ThenInclude(p => p.Usuario)
             .Include(n => n.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
-            .Include(n => n.Detalle).ThenInclude(d => d.Presentacion);
+            .Include(n => n.Detalle).ThenInclude(d => d.Presentacion)
+            .Include(n => n.Recojos).ThenInclude(r => r.Producto).ThenInclude(p => p!.UnidadBase)
+            .Include(n => n.Recojos).ThenInclude(r => r.Presentacion)
+            .Include(n => n.Recojos).ThenInclude(r => r.Almacen)
+            .Include(n => n.Recojos).ThenInclude(r => r.Motivo)
+            .Include(n => n.Recojos).ThenInclude(r => r.Usuario);
 
     public async Task<NotaVenta?> GetNotaVentaAsync(int id, AlcanceFiltro? alcance = null) =>
         await Acotar(NotasVentaConDetalle(), alcance).FirstOrDefaultAsync(n => n.Id == id);

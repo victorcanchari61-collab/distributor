@@ -120,6 +120,13 @@ public static class TipoDocumentoInventario
 
     /// <summary>Lo que un cliente devuelve de una venta.</summary>
     public const string DevolucionCliente = "DEVOLUCION_CLIENTE";
+
+    /// <summary>
+    /// Mercadería ajena a esta venta que el repartidor recoge al entregarla:
+    /// vuelve al almacén, pero se descuenta de esta nota, no de aquella
+    /// donde se compró. Ver <see cref="RecojoVenta"/>.
+    /// </summary>
+    public const string Recojo = "RECOJO";
 }
 
 /// <summary>
@@ -171,6 +178,10 @@ public class DocumentoInventario
     /// <summary>Solo en una salida de venta: la nota de venta que descarga.</summary>
     public int? NotaVentaId { get; set; }
     public NotaVenta? NotaVenta { get; set; }
+
+    /// <summary>Solo en un recojo: qué recogió y a qué venta se descontó.</summary>
+    public int? RecojoVentaId { get; set; }
+    public RecojoVenta? RecojoVenta { get; set; }
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
@@ -238,6 +249,10 @@ public class MovimientoInventario
     /// </summary>
     public int? NotaVentaDetalleId { get; set; }
     public NotaVentaDetalle? NotaVentaDetalle { get; set; }
+
+    /// <summary>Solo en un recojo: qué recogió.</summary>
+    public int? RecojoVentaId { get; set; }
+    public RecojoVenta? RecojoVenta { get; set; }
 
     public List<ConsumoCapa> Consumos { get; set; } = [];
 }

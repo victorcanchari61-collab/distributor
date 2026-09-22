@@ -46,6 +46,61 @@ class PagoVenta {
   );
 }
 
+/// Mercaderia de OTRA venta que se recogio al entregar esta: se descuenta
+/// del total y vuelve al almacen elegido, en vez de la venta original donde
+/// se compro.
+class RecojoVenta {
+  const RecojoVenta({
+    required this.id,
+    required this.fecha,
+    required this.productoId,
+    required this.producto,
+    this.presentacion,
+    required this.unidadBase,
+    required this.cantidadPresentacion,
+    required this.almacenId,
+    required this.almacen,
+    required this.motivo,
+    this.observacion,
+    this.usuario,
+    required this.importe,
+    this.anulado = false,
+  });
+
+  final int id;
+  final DateTime fecha;
+  final int productoId;
+  final String producto;
+  final String? presentacion;
+  final String unidadBase;
+  final double cantidadPresentacion;
+  final int almacenId;
+  final String almacen;
+  final String motivo;
+  final String? observacion;
+  final String? usuario;
+  final double importe;
+  final bool anulado;
+
+  factory RecojoVenta.desdeJson(Map<String, dynamic> json) => RecojoVenta(
+    id: json['id'] as int,
+    fecha: fechaDeJson(json['fecha'] as String),
+    productoId: json['productoId'] as int,
+    producto: json['producto'] as String? ?? '',
+    presentacion: json['presentacion'] as String?,
+    unidadBase: json['unidadBase'] as String? ?? '',
+    cantidadPresentacion:
+        (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
+    almacenId: json['almacenId'] as int,
+    almacen: json['almacen'] as String? ?? '',
+    motivo: json['motivo'] as String? ?? '',
+    observacion: json['observacion'] as String?,
+    usuario: json['usuario'] as String?,
+    importe: (json['importe'] as num?)?.toDouble() ?? 0,
+    anulado: json['anulado'] as bool? ?? false,
+  );
+}
+
 /// Una venta lista tal cual: nacio de confirmar un pedido o se registro
 /// directa. El stock ya salio al momento de crearla — no hay estados de
 /// "recibido parcial" como en una compra.
@@ -68,6 +123,8 @@ class NotaVenta {
     required this.detalle,
     required this.pagos,
     required this.totalPagado,
+    this.totalRecogido = 0,
+    this.recojos = const [],
   });
 
   final int id;
@@ -101,6 +158,12 @@ class NotaVenta {
   /// Suma de pagos. Si es menor que total, falta esa diferencia por cobrar.
   final double totalPagado;
 
+  /// Suma de los recojos vigentes. Ya esta restada de total; es informativo.
+  final double totalRecogido;
+
+  /// Mercaderia de otra venta que se recogio al entregar esta.
+  final List<RecojoVenta> recojos;
+
   String get buscable => '$numero $cliente'.toLowerCase();
 
   factory NotaVenta.desdeJson(Map<String, dynamic> json) => NotaVenta(
@@ -125,5 +188,9 @@ class NotaVenta {
         .map((e) => PagoVenta.desdeJson(e as Map<String, dynamic>))
         .toList(),
     totalPagado: (json['totalPagado'] as num?)?.toDouble() ?? 0,
+    totalRecogido: (json['totalRecogido'] as num?)?.toDouble() ?? 0,
+    recojos: (json['recojos'] as List? ?? const [])
+        .map((e) => RecojoVenta.desdeJson(e as Map<String, dynamic>))
+        .toList(),
   );
 }

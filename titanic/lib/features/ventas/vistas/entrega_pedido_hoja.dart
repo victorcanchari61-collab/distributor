@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/formato.dart';
+import '../../../compartido/presentaciones_uso.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_buscador_productos.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_selector.dart';
@@ -14,6 +16,8 @@ import '../../../core/tema/dimensiones.dart';
 import '../../finanzas/estado/finanzas_controlador.dart';
 import '../../inventario/datos/almacen.dart';
 import '../../inventario/estado/inventario_controlador.dart';
+import '../../maestros/datos/producto.dart';
+import '../../maestros/estado/maestros_controlador.dart';
 import '../../tms/datos/novedad.dart';
 import '../../tms/estado/novedades_controlador.dart';
 import '../datos/pedido.dart';
@@ -109,6 +113,33 @@ class _EntregaLinea {
   }
 }
 
+/// Mercaderia de OTRA venta que se recoge al entregar esta: se descuenta del
+/// total y vuelve al almacen elegido.
+class _RecojoLinea {
+  _RecojoLinea({
+    required this.producto,
+    required this.presentacionId,
+    required double cantidad,
+    required double importe,
+  }) : cantidad = _texto(cantidad),
+       importeControlador = TextEditingController(text: _texto(importe));
+
+  final Producto producto;
+  final int presentacionId;
+  final String cantidad;
+  final TextEditingController importeControlador;
+  final observacion = TextEditingController();
+  int? motivoId;
+
+  double get importe => _numero(importeControlador.text);
+  double get subtotal => _numero(cantidad) * importe;
+
+  void dispose() {
+    importeControlador.dispose();
+    observacion.dispose();
+  }
+}
+
 /// Convertir un pedido en venta, con lo que de verdad se entregó y se cobró.
 ///
 /// Dos pestañas. En "Entrega": por defecto sale todo lo pedido; si el cliente
@@ -131,9 +162,10 @@ class EntregaPedidoHoja extends ConsumerStatefulWidget {
 class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
     with SingleTickerProviderStateMixin {
   static const _pestanaEntrega = 0;
-  static const _pestanaPago = 1;
+  static const _pestanaRecojo = 1;
+  static const _pestanaPago = 2;
 
-  late final _tabs = TabController(length: 2, vsync: this);
+  late final _tabs = TabController(length: 3, vsync: this);
 
   late final List<_EntregaLinea> _lineas = [
     for (final l in widget.pedido.detalle)
@@ -143,6 +175,10 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
   /// Lo cobrado al recibir. Vive aquí y no en la pestaña porque también hace
   /// falta al convertir, y la pestaña se reconstruye al cambiar de una a otra.
   final List<FilaPagoEntrega> _pagos = [];
+
+  /// Mercadería de otra venta que se recoge al entregar esta.
+  final List<_RecojoLinea> _recojos = [];
+  int? _almacenRecojoId;
 
   int? _almacenId;
   bool _guardando = false;
@@ -194,6 +230,25 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
     });
   }
 
+  /// El recojo vuelve al almacén principal por defecto: es otro almacén, no
+  /// necesariamente el de salida de esta entrega. Mismo truco que arriba: se
+  /// pone en el build, la primera vez que la lista trae algo.
+  bool _almacenRecojoPuesto = false;
+
+  void _ponerAlmacenRecojoPorDefecto(List<Almacen> almacenes) {
+    if (_almacenRecojoPuesto || almacenes.isEmpty) return;
+    _almacenRecojoPuesto = true;
+
+    final principal = almacenes.firstWhere(
+      (a) => a.esPrincipal,
+      orElse: () => almacenes.first,
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _almacenRecojoId = principal.id);
+    });
+  }
+
   @override
   void dispose() {
     _tabs.dispose();
@@ -203,11 +258,18 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
     for (final p in _pagos) {
       p.dispose();
     }
+    for (final r in _recojos) {
+      r.dispose();
+    }
     super.dispose();
   }
 
-  /// Lo que se cobra: solo lo entregado.
-  double get _total => _lineas.fold<double>(0, (suma, l) => suma + l.subtotal);
+  /// Lo que se cobra: lo entregado menos lo recogido de otra venta.
+  double get _totalLineas =>
+      _lineas.fold<double>(0, (suma, l) => suma + l.subtotal);
+  double get _totalRecojo =>
+      _recojos.fold<double>(0, (suma, r) => suma + r.subtotal);
+  double get _total => _totalLineas - _totalRecojo;
 
   /// Un fallo de validación: se muestra arriba y se lleva a la pestaña donde se arregla.
   void _fallar(String mensaje, int pestana) {
@@ -254,6 +316,31 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
       );
     }
 
+    for (final r in _recojos) {
+      if (r.motivoId == null) {
+        return _fallar(
+          'Elige el motivo del recojo de ${r.producto.nombre}.',
+          _pestanaRecojo,
+        );
+      }
+      if (r.importe <= 0) {
+        return _fallar(
+          'Indica el valor de lo recogido de ${r.producto.nombre}.',
+          _pestanaRecojo,
+        );
+      }
+    }
+    if (_recojos.isNotEmpty && _almacenRecojoId == null) {
+      return _fallar('Elige a qué almacén vuelve lo recogido.', _pestanaRecojo);
+    }
+    if (_totalRecojo > _totalLineas) {
+      return _fallar(
+        'Lo recogido (${formatoSoles(_totalRecojo)}) supera el total de la venta '
+        '(${formatoSoles(_totalLineas)}).',
+        _pestanaRecojo,
+      );
+    }
+
     // La entrega se valida primero; recién después el cobro.
     final total = _total;
     final cobro = ResumenPago(_pagos, total);
@@ -296,6 +383,20 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
         for (final p in cobro.usadas)
           {'metodoPagoId': p.metodoPagoId, 'monto': p.valor},
       ],
+      'recojos': [
+        for (final r in _recojos)
+          {
+            'productoId': r.producto.id,
+            'presentacionId': r.presentacionId == 0 ? null : r.presentacionId,
+            'cantidad': _numero(r.cantidad),
+            'precioUnitario': r.importe,
+            'motivoId': r.motivoId,
+            'observacion': r.observacion.text.trim().isEmpty
+                ? null
+                : r.observacion.text.trim(),
+            'almacenId': _almacenRecojoId,
+          },
+      ],
     };
 
     // Antes del await: al cerrar la hoja este estado ya no está para calcularlo.
@@ -319,9 +420,12 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
   Widget build(BuildContext context) {
     final almacenes = ref.watch(almacenesActivosProvider);
     _ponerAlmacenPorDefecto(almacenes);
+    _ponerAlmacenRecojoPorDefecto(almacenes);
     final motivos = ref.watch(opcionesMotivoProvider);
     // Se pide al abrir la hoja, no al entrar en Pago: así ya está al llegar.
     final metodos = ref.watch(metodosPagoOpcionesProvider);
+    final productos =
+        ref.watch(productosProvider).valueOrNull ?? const <Producto>[];
     final opcionesMotivo = motivos.valueOrNull ?? const <MotivoNovedad>[];
     final hayRecortes = _lineas.any((l) => l.reducida);
     final total = _total;
@@ -370,6 +474,35 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
               onTap: (_) => FocusScope.of(context).unfocus(),
               tabs: [
                 const Tab(text: 'Entrega'),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Recojo'),
+                      if (_recojos.isNotEmpty) ...[
+                        const SizedBox(width: Dimen.espacio2),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '${_recojos.length}',
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
                 Tab(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -523,12 +656,56 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
                           widget.pedido.total,
                           suave: true,
                         ),
+                      if (_totalRecojo > 0)
+                        _FilaTotal('Recojo', -_totalRecojo, suave: true),
                       _FilaTotal(
-                        hayRecortes ? 'Total a cobrar' : 'Total',
+                        hayRecortes || _totalRecojo > 0
+                            ? 'Total a cobrar'
+                            : 'Total',
                         total,
                       ),
                       const SizedBox(height: Dimen.espacio2),
                     ],
+                  ),
+
+                  _RecojoTab(
+                    recojos: _recojos,
+                    productos: productos,
+                    almacenes: almacenes,
+                    almacenRecojoId: _almacenRecojoId,
+                    onAlmacen: (v) => setState(() => _almacenRecojoId = v),
+                    motivos: opcionesMotivo,
+                    cargandoMotivos: motivos.isLoading,
+                    onAgregar: () async {
+                      final elegidos = await mostrarBuscadorProductos(
+                        context: context,
+                        productos: productos,
+                        uso: UsoPresentacion.venta,
+                      );
+                      if (elegidos == null || elegidos.isEmpty || !mounted) {
+                        return;
+                      }
+                      setState(() {
+                        for (final e in elegidos) {
+                          final linea = _RecojoLinea(
+                            producto: e.producto,
+                            presentacionId: e.presentacionId,
+                            cantidad: e.cantidad,
+                            importe: e.importe,
+                          );
+                          linea.importeControlador.addListener(
+                            () => setState(() => _error = null),
+                          );
+                          _recojos.add(linea);
+                        }
+                        _error = null;
+                      });
+                    },
+                    onQuitar: (r) => setState(() {
+                      _recojos.remove(r);
+                      r.dispose();
+                    }),
+                    onCambio: () => setState(() => _error = null),
                   ),
 
                   // En Pago el total ya está en la tarjeta "A cobrar": repetirlo sobra.
@@ -577,6 +754,184 @@ class _FilaTotal extends StatelessWidget {
         children: [
           Text(etiqueta, style: estilo),
           Text('S/ ${valor.toStringAsFixed(2)}', style: estilo),
+        ],
+      ),
+    );
+  }
+}
+
+/// Nombre de la presentación de una línea de recojo: la base o una del producto.
+String _nombrePresentacion(Producto producto, int presentacionId) {
+  if (presentacionId == 0) return producto.unidadBase;
+  return producto.presentaciones
+      .firstWhere(
+        (p) => p.id == presentacionId,
+        orElse: () => producto.presentaciones.first,
+      )
+      .nombre;
+}
+
+/// Pestaña de recojo: mercadería de otra venta que se recoge al entregar esta.
+class _RecojoTab extends StatelessWidget {
+  const _RecojoTab({
+    required this.recojos,
+    required this.productos,
+    required this.almacenes,
+    required this.almacenRecojoId,
+    required this.onAlmacen,
+    required this.motivos,
+    required this.cargandoMotivos,
+    required this.onAgregar,
+    required this.onQuitar,
+    required this.onCambio,
+  });
+
+  final List<_RecojoLinea> recojos;
+  final List<Producto> productos;
+  final List<Almacen> almacenes;
+  final int? almacenRecojoId;
+  final ValueChanged<int?> onAlmacen;
+  final List<MotivoNovedad> motivos;
+  final bool cargandoMotivos;
+  final VoidCallback onAgregar;
+  final ValueChanged<_RecojoLinea> onQuitar;
+  final VoidCallback onCambio;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: [
+        const Text(
+          'Mercadería de OTRA venta que el repartidor recoge al entregar esta —malograda, no la pidió, lo '
+          'que sea—. Se descuenta del total y vuelve al almacén que elijas.',
+          style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+        ),
+        const SizedBox(height: Dimen.espacio3),
+
+        AppSelector<int>(
+          valor: almacenRecojoId,
+          etiqueta: 'Almacén al que vuelve',
+          icono: Icons.warehouse_outlined,
+          opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
+          onCambio: onAlmacen,
+        ),
+        const SizedBox(height: Dimen.espacio3),
+
+        AppBoton(
+          texto: 'Agregar productos',
+          variante: BotonVariante.secundario,
+          icono: Icons.add,
+          onPressed: onAgregar,
+        ),
+        const SizedBox(height: Dimen.espacio3),
+
+        for (final r in recojos) ...[
+          _TarjetaRecojo(
+            recojo: r,
+            motivos: motivos,
+            cargandoMotivos: cargandoMotivos,
+            onQuitar: () => onQuitar(r),
+            onCambio: onCambio,
+          ),
+          const SizedBox(height: Dimen.espacio3),
+        ],
+
+        if (recojos.isNotEmpty && !cargandoMotivos && motivos.isEmpty)
+          const AppAlerta(
+            'Todavía no hay motivos de novedad. Pídele a quien administra que los cree en '
+            'TMS → Motivos de novedad.',
+            tono: AlertaTono.aviso,
+          ),
+      ],
+    );
+  }
+}
+
+/// Una línea de recojo: producto, valor, motivo y observación.
+class _TarjetaRecojo extends StatelessWidget {
+  const _TarjetaRecojo({
+    required this.recojo,
+    required this.motivos,
+    required this.cargandoMotivos,
+    required this.onQuitar,
+    required this.onCambio,
+  });
+
+  final _RecojoLinea recojo;
+  final List<MotivoNovedad> motivos;
+  final bool cargandoMotivos;
+  final VoidCallback onQuitar;
+  final VoidCallback onCambio;
+
+  @override
+  Widget build(BuildContext context) {
+    final nombrePres = _nombrePresentacion(
+      recojo.producto,
+      recojo.presentacionId,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(Dimen.espacio3),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colores.linea),
+        borderRadius: BorderRadius.circular(Dimen.radioCampo),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      recojo.producto.nombre,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colores.tinta,
+                      ),
+                    ),
+                    Text(
+                      '${recojo.cantidad} $nombrePres',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colores.tintaSuave,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: onQuitar,
+                icon: const Icon(Icons.close, size: 18, color: Colores.peligro),
+                tooltip: 'Quitar',
+              ),
+            ],
+          ),
+          const SizedBox(height: Dimen.espacio2),
+          AppCampo(
+            controlador: recojo.importeControlador,
+            etiqueta: 'Valor recogido',
+            tipoTeclado: _teclado,
+          ),
+          const SizedBox(height: Dimen.espacio2),
+          AppSelector<int>(
+            valor: recojo.motivoId,
+            etiqueta: 'Motivo',
+            opciones: [for (final m in motivos) Opcion<int>(m.id, m.nombre)],
+            onCambio: (v) {
+              recojo.motivoId = v;
+              onCambio();
+            },
+          ),
+          const SizedBox(height: Dimen.espacio2),
+          AppCampo(
+            controlador: recojo.observacion,
+            etiqueta: 'Observación',
+            opcional: true,
+          ),
         ],
       ),
     );
