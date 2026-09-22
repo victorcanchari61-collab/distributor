@@ -24,6 +24,7 @@ class _LoginPaginaState extends ConsumerState<LoginPagina> {
 
   String? _errorEmail;
   String? _errorPassword;
+  bool _recordar = true;
 
   @override
   void dispose() {
@@ -62,7 +63,11 @@ class _LoginPaginaState extends ConsumerState<LoginPagina> {
 
     await ref
         .read(authProvider.notifier)
-        .entrar(email: _email.text, password: _password.text);
+        .entrar(
+          email: _email.text,
+          password: _password.text,
+          recordar: _recordar,
+        );
   }
 
   @override
@@ -142,7 +147,20 @@ class _LoginPaginaState extends ConsumerState<LoginPagina> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: Dimen.espacio5),
+                  CheckboxListTile(
+                    value: _recordar,
+                    onChanged: auth.enviando
+                        ? null
+                        : (v) => setState(() => _recordar = v ?? true),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: const Text(
+                      'Mantener sesión iniciada en este equipo',
+                      style: TextStyle(fontSize: 13, color: Colores.tinta),
+                    ),
+                  ),
+                  const SizedBox(height: Dimen.espacio3),
 
                   AppBoton(
                     texto: 'Ingresar',

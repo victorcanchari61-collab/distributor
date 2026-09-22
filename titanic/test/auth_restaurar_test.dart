@@ -12,7 +12,8 @@ class _AlmacenRoto extends SesionAlmacen {
   Future<String?> token() async => throw Exception('almacén no disponible');
 
   @override
-  Future<Map<String, dynamic>?> usuario() async => throw Exception('almacén no disponible');
+  Future<Map<String, dynamic>?> usuario() async =>
+      throw Exception('almacén no disponible');
 }
 
 /// Almacen que nunca responde: prueba el limite de tiempo.
@@ -20,7 +21,8 @@ class _AlmacenColgado extends SesionAlmacen {
   const _AlmacenColgado();
 
   @override
-  Future<String?> token() => Future.delayed(const Duration(minutes: 1), () => null);
+  Future<String?> token() =>
+      Future.delayed(const Duration(minutes: 1), () => null);
 
   @override
   Future<Map<String, dynamic>?> usuario() =>
@@ -47,13 +49,16 @@ class _AlmacenConSesion extends SesionAlmacen {
 
   @override
   Future<Map<String, dynamic>?> usuario() async => {
-        'id': 1,
-        'nombre': 'Admin',
-        'email': 'admin@distributor.com',
-        'rolId': 1,
-        'rol': 'Administrador',
-        'activo': true,
-      };
+    'id': 1,
+    'nombre': 'Admin',
+    'email': 'admin@distributor.com',
+    'rolId': 1,
+    'rol': 'Administrador',
+    'activo': true,
+  };
+
+  @override
+  Future<bool> recordar() async => true;
 }
 
 ProviderContainer _contenedor(SesionAlmacen almacen) {
@@ -66,21 +71,28 @@ ProviderContainer _contenedor(SesionAlmacen almacen) {
 
 void main() {
   group('restaurar sesion', () {
-    test('si el almacen falla, deja pasar al login en vez de colgarse', () async {
-      final c = _contenedor(const _AlmacenRoto());
+    test(
+      'si el almacen falla, deja pasar al login en vez de colgarse',
+      () async {
+        final c = _contenedor(const _AlmacenRoto());
 
-      await c.read(authProvider.notifier).restaurar();
+        await c.read(authProvider.notifier).restaurar();
 
-      expect(c.read(authProvider).estado, EstadoSesion.invitado);
-    });
+        expect(c.read(authProvider).estado, EstadoSesion.invitado);
+      },
+    );
 
-    test('si el almacen no responde, corta y deja pasar al login', () async {
-      final c = _contenedor(const _AlmacenColgado());
+    test(
+      'si el almacen no responde, corta y deja pasar al login',
+      () async {
+        final c = _contenedor(const _AlmacenColgado());
 
-      await c.read(authProvider.notifier).restaurar();
+        await c.read(authProvider.notifier).restaurar();
 
-      expect(c.read(authProvider).estado, EstadoSesion.invitado);
-    }, timeout: const Timeout(Duration(seconds: 15)));
+        expect(c.read(authProvider).estado, EstadoSesion.invitado);
+      },
+      timeout: const Timeout(Duration(seconds: 15)),
+    );
 
     test('sin sesion guardada queda como invitado', () async {
       final c = _contenedor(const _AlmacenVacio());

@@ -102,6 +102,30 @@ class AuthControlador extends Notifier<AuthEstado> {
         return;
       }
 
+      // No se pidió recordarla: sobrevivió mientras la app siguió abierta
+      // (por eso el token igual se guardó), pero al volver a abrirla se
+      // descarta, como si nunca se hubiera guardado.
+      //
+      // Aparte del try general: si ESTO falla, no hay por qué mandar a
+      // alguien con sesión válida de vuelta al login — se sigue como si
+      // recordar() hubiera dicho que sí, que es lo que pasaba antes de que
+      // esto existiera.
+      var recuerda = true;
+      try {
+        recuerda = await _sesion.recordar().timeout(const Duration(seconds: 5));
+      } catch (e, pila) {
+        debugPrint('No se pudo leer si la sesión se recuerda: $e\n$pila');
+      }
+
+      if (!recuerda) {
+        await _sesion.limpiar();
+        state = state.copiar(
+          estado: EstadoSesion.invitado,
+          limpiarUsuario: true,
+        );
+        return;
+      }
+
       state = state.copiar(
         estado: EstadoSesion.autenticado,
         usuario: Usuario.desdeJson(datos),
@@ -112,7 +136,16 @@ class AuthControlador extends Notifier<AuthEstado> {
     }
   }
 
-  Future<bool> entrar({required String email, required String password}) async {
+  Future<bool> entrar({
+    required String email,
+    required String password,
+    // Igual que "Mantener sesión iniciada" en la web: desmarcado, la sesión
+    // sigue guardada mientras la app queda abierta —si no, ninguna llamada
+    // de este mismo uso tendría con qué autenticarse—, pero al volver a
+    // abrir la app se descarta y pide entrar de nuevo. Marcado (el default)
+    // es el comportamiento de siempre: sigue ahí la próxima vez también.
+    bool recordar = true,
+  }) async {
     state = state.copiar(enviando: true, limpiarError: true);
 
     try {
@@ -123,6 +156,7 @@ class AuthControlador extends Notifier<AuthEstado> {
       await _sesion.guardar(
         token: respuesta.token,
         usuario: respuesta.usuario.aJson(),
+        recordar: recordar,
       );
 
       state = AuthEstado(

@@ -37,7 +37,11 @@ Map<String, dynamic> _presJson({
 };
 
 /// Botella de 0.92 kg que ademas se compra por caja de 12: la caja pesa 11.04.
-Map<String, dynamic> _productoJson({double? peso = 0.92, double? costo, double? precio}) => {
+Map<String, dynamic> _productoJson({
+  double? peso = 0.92,
+  double? costo,
+  double? precio,
+}) => {
   'id': 5,
   'codigo': 'ACE-01',
   'nombre': 'ACEITE BELTRAN',
@@ -84,7 +88,10 @@ class _ApiFalso extends MaestrosApi {
   }
 
   @override
-  Future<Producto> actualizarProducto(int id, Map<String, dynamic> cuerpo) async {
+  Future<Producto> actualizarProducto(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async {
     actualizado = cuerpo;
     return Producto.desdeJson(_productoJson());
   }
@@ -114,7 +121,9 @@ class _Lanzador extends StatelessWidget {
     body: Center(
       child: TextButton(
         onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => ProductoFormulario(producto: producto)),
+          MaterialPageRoute(
+            builder: (_) => ProductoFormulario(producto: producto),
+          ),
         ),
         child: const Text('Abrir'),
       ),
@@ -155,8 +164,10 @@ Future<void> _guardar(WidgetTester tester, {bool nuevo = false}) async {
 ///
 /// Costo, precio y peso se escriben sobre la presentacion MAS GRANDE (aqui la caja de 12) y se
 /// guardan por unidad base: 11.04 la caja son 0.92 el litro.
-Finder _campo(int n) =>
-    find.descendant(of: find.byType(AppCampo).at(n), matching: find.byType(TextField));
+Finder _campo(int n) => find.descendant(
+  of: find.byType(AppCampo).at(n),
+  matching: find.byType(TextField),
+);
 
 Finder get _campoCosto => _campo(3);
 Finder get _campoPrecio => _campo(4);
@@ -183,8 +194,13 @@ void main() {
      * corregir cualquier otra cosa y guardar. El PUT reemplaza el registro,
      * asi que el campo tiene que viajar aunque nadie lo haya tocado.
      */
-    testWidgets('guardar sin tocar el peso lo reenvia tal cual', (tester) async {
-      final api = await _abrir(tester, producto: Producto.desdeJson(_productoJson()));
+    testWidgets('guardar sin tocar el peso lo reenvia tal cual', (
+      tester,
+    ) async {
+      final api = await _abrir(
+        tester,
+        producto: Producto.desdeJson(_productoJson()),
+      );
 
       await _guardar(tester);
 
@@ -211,39 +227,51 @@ void main() {
       expect(api.creado?['pesoUnidadBase'], closeTo(0.92, 1e-9));
     });
 
-    testWidgets('borrar el peso lo manda en null: el producto deja de pesarse', (
+    testWidgets(
+      'borrar el peso lo manda en null: el producto deja de pesarse',
+      (tester) async {
+        final api = await _abrir(
+          tester,
+          producto: Producto.desdeJson(_productoJson()),
+        );
+
+        await tester.enterText(_campoPeso, '');
+        await tester.pumpAndSettle();
+        await _guardar(tester);
+
+        expect(api.actualizado, containsPair('pesoUnidadBase', isNull));
+      },
+    );
+
+    testWidgets('el peso se lee sobre la presentacion mas grande', (
       tester,
     ) async {
-      final api = await _abrir(tester, producto: Producto.desdeJson(_productoJson()));
-
-      await tester.enterText(_campoPeso, '');
-      await tester.pumpAndSettle();
-      await _guardar(tester);
-
-      expect(api.actualizado, containsPair('pesoUnidadBase', isNull));
-    });
-
-    testWidgets('el peso se lee sobre la presentacion mas grande', (tester) async {
       await _abrir(tester, producto: Producto.desdeJson(_productoJson()));
 
       // Se guarda por litro (0.92) y se muestra como se dice en el almacen: la caja de 12 pesa 11.04.
       expect(tester.widget<TextField>(_campoPeso).controller?.text, '11.04');
     });
 
-    testWidgets('el precio de venta se escribe por presentacion y viaja por unidad base', (
+    testWidgets(
+      'el precio de venta se escribe por presentacion y viaja por unidad base',
+      (tester) async {
+        final api = await _abrir(
+          tester,
+          producto: Producto.desdeJson(_productoJson()),
+        );
+
+        // 310 la caja de 12 son 25.8333... el litro.
+        await tester.enterText(_campoPrecio, '310');
+        await tester.pumpAndSettle();
+        await _guardar(tester);
+
+        expect(api.actualizado?['precioReferencia'], closeTo(310 / 12, 1e-9));
+      },
+    );
+
+    testWidgets('sin tocar el precio de venta se reenvia tal cual', (
       tester,
     ) async {
-      final api = await _abrir(tester, producto: Producto.desdeJson(_productoJson()));
-
-      // 310 la caja de 12 son 25.8333... el litro.
-      await tester.enterText(_campoPrecio, '310');
-      await tester.pumpAndSettle();
-      await _guardar(tester);
-
-      expect(api.actualizado?['precioReferencia'], closeTo(310 / 12, 1e-9));
-    });
-
-    testWidgets('sin tocar el precio de venta se reenvia tal cual', (tester) async {
       final api = await _abrir(
         tester,
         producto: Producto.desdeJson(_productoJson(precio: 25.8333333)),
@@ -276,9 +304,14 @@ void main() {
       expect(api.actualizado?['costoReferencia'], 6.3377193);
     });
 
-    testWidgets('un costo redondo se muestra sin el .0 de sobra', (tester) async {
+    testWidgets('un costo redondo se muestra sin el .0 de sobra', (
+      tester,
+    ) async {
       // 289 el litro son 3468 la caja de 12.
-      await _abrir(tester, producto: Producto.desdeJson(_productoJson(costo: 289)));
+      await _abrir(
+        tester,
+        producto: Producto.desdeJson(_productoJson(costo: 289)),
+      );
 
       expect(tester.widget<TextField>(_campoCosto).controller?.text, '3468');
     });

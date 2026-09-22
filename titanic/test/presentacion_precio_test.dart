@@ -78,8 +78,10 @@ class _ApiFalso extends MaestrosApi {
   Future<List<Producto>> productos() async => const [];
 
   @override
-  Future<Producto> actualizarProducto(int id, Map<String, dynamic> cuerpo) async =>
-      _producto();
+  Future<Producto> actualizarProducto(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => _producto();
 
   @override
   Future<Producto> crearProducto(Map<String, dynamic> cuerpo) async {
@@ -118,7 +120,9 @@ class _Lanzador extends StatelessWidget {
     body: Center(
       child: TextButton(
         onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => ProductoFormulario(producto: producto)),
+          MaterialPageRoute(
+            builder: (_) => ProductoFormulario(producto: producto),
+          ),
         ),
         child: const Text('Abrir'),
       ),
@@ -156,10 +160,12 @@ Future<void> _guardar(WidgetTester tester) async {
 
 /// El campo de texto `n` de la hoja de presentacion (0 = nombre, 1 = factor).
 /// Solo dentro de la hoja: el formulario de abajo tambien tiene campos.
-Finder _campoDeLaHoja(int n) =>
-    find.descendant(of: find.byType(BottomSheet), matching: find.byType(TextField)).at(n);
+Finder _campoDeLaHoja(int n) => find
+    .descendant(of: find.byType(BottomSheet), matching: find.byType(TextField))
+    .at(n);
 
-Finder get _casillaPdf => find.widgetWithText(CheckboxListTile, 'Por presentación (PDF)');
+Finder get _casillaPdf =>
+    find.widgetWithText(CheckboxListTile, 'Por presentación (PDF)');
 
 Future<void> _irAPresentaciones(WidgetTester tester, int cuantas) async {
   await tester.tap(find.text('Presentaciones ($cuantas)'));
@@ -168,18 +174,21 @@ Future<void> _irAPresentaciones(WidgetTester tester, int cuantas) async {
 
 void main() {
   group('Presentacion', () {
-    test('parsear con precioPorPresentacion true y volver a serializar lo conserva', () {
-      final p = Presentacion.desdeJson(
-        _presJson(id: 11, nombre: 'Caja x12', factor: 12, precio: true),
-      );
+    test(
+      'parsear con precioPorPresentacion true y volver a serializar lo conserva',
+      () {
+        final p = Presentacion.desdeJson(
+          _presJson(id: 11, nombre: 'Caja x12', factor: 12, precio: true),
+        );
 
-      expect(p.precioPorPresentacion, isTrue);
-      expect(p.aJson()['precioPorPresentacion'], isTrue);
+        expect(p.precioPorPresentacion, isTrue);
+        expect(p.aJson()['precioPorPresentacion'], isTrue);
 
-      // Ida y vuelta: lo que se serializa es lo que el backend volveria a leer.
-      final otra = Presentacion.desdeJson({'id': p.id, ...p.aJson()});
-      expect(otra.precioPorPresentacion, isTrue);
-    });
+        // Ida y vuelta: lo que se serializa es lo que el backend volveria a leer.
+        final otra = Presentacion.desdeJson({'id': p.id, ...p.aJson()});
+        expect(otra.precioPorPresentacion, isTrue);
+      },
+    );
 
     test('sin el campo queda en false y se envia explicito', () {
       final p = Presentacion.desdeJson(
@@ -209,55 +218,59 @@ void main() {
     });
 
     test('un producto lo trae en cada una de sus presentaciones', () {
-      final marcas = _producto().presentaciones.map((p) => p.precioPorPresentacion);
+      final marcas = _producto().presentaciones.map(
+        (p) => p.precioPorPresentacion,
+      );
 
       expect(marcas, [false, true, false]);
     });
   });
 
   group('formulario de producto', () {
-    testWidgets('guardar sin tocar las presentaciones reenvia el marcador que tenian', (
-      tester,
-    ) async {
-      final api = await _abrir(tester, producto: _producto());
+    testWidgets(
+      'guardar sin tocar las presentaciones reenvia el marcador que tenian',
+      (tester) async {
+        final api = await _abrir(tester, producto: _producto());
 
-      await _guardar(tester);
+        await _guardar(tester);
 
-      // El caso que borraba el marcador de la web: editar el producto y nada mas.
-      expect(api.actualizadas[11]?['precioPorPresentacion'], isTrue);
-      expect(api.actualizadas[12]?['precioPorPresentacion'], isFalse);
-    });
+        // El caso que borraba el marcador de la web: editar el producto y nada mas.
+        expect(api.actualizadas[11]?['precioPorPresentacion'], isTrue);
+        expect(api.actualizadas[12]?['precioPorPresentacion'], isFalse);
+      },
+    );
 
-    testWidgets('la hoja trae la casilla marcada y editar el nombre no la apaga', (
-      tester,
-    ) async {
-      final api = await _abrir(tester, producto: _producto());
-      await _irAPresentaciones(tester, 2);
+    testWidgets(
+      'la hoja trae la casilla marcada y editar el nombre no la apaga',
+      (tester) async {
+        final api = await _abrir(tester, producto: _producto());
+        await _irAPresentaciones(tester, 2);
 
-      // Solo la caja se ve marcada en la lista.
-      expect(find.text('PDF por presentación'), findsOneWidget);
+        // Solo la caja se ve marcada en la lista.
+        expect(find.text('PDF por presentación'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Editar').first);
-      await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Editar').first);
+        await tester.pumpAndSettle();
 
-      expect(tester.widget<CheckboxListTile>(_casillaPdf).value, isTrue);
-      expect(
-        find.textContaining('la línea sale en esta presentación'),
-        findsOneWidget,
-      );
+        expect(tester.widget<CheckboxListTile>(_casillaPdf).value, isTrue);
+        expect(
+          find.textContaining('la línea sale en esta presentación'),
+          findsOneWidget,
+        );
 
-      await tester.enterText(_campoDeLaHoja(0), 'Caja x24');
-      await tester.tap(find.text('Guardar cambios'));
-      await tester.pumpAndSettle();
+        await tester.enterText(_campoDeLaHoja(0), 'Caja x24');
+        await tester.tap(find.text('Guardar cambios'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Caja x24'), findsOneWidget);
-      expect(find.text('PDF por presentación'), findsOneWidget);
+        expect(find.text('Caja x24'), findsOneWidget);
+        expect(find.text('PDF por presentación'), findsOneWidget);
 
-      await _guardar(tester);
+        await _guardar(tester);
 
-      expect(api.actualizadas[11]?['nombre'], 'Caja x24');
-      expect(api.actualizadas[11]?['precioPorPresentacion'], isTrue);
-    });
+        expect(api.actualizadas[11]?['nombre'], 'Caja x24');
+        expect(api.actualizadas[11]?['precioPorPresentacion'], isTrue);
+      },
+    );
 
     testWidgets('se enciende y se apaga desde la hoja', (tester) async {
       final api = await _abrir(tester, producto: _producto());
@@ -311,7 +324,9 @@ void main() {
       expect(api.agregadas.single['precioPorPresentacion'], isTrue);
     });
 
-    testWidgets('un producto nuevo lo envia en sus presentaciones', (tester) async {
+    testWidgets('un producto nuevo lo envia en sus presentaciones', (
+      tester,
+    ) async {
       final api = await _abrir(tester);
 
       await tester.enterText(find.byType(TextField).at(0), 'ACE-02');

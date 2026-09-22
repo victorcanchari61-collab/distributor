@@ -32,6 +32,9 @@ class _AlmacenConSesion extends SesionAlmacen {
     'rol': 'Administrador',
     'activo': true,
   };
+
+  @override
+  Future<bool> recordar() async => true;
 }
 
 /// La ficha completa tal como la devuelve el API.
@@ -154,16 +157,15 @@ class _MaestrosFalso extends MaestrosApi {
 /// falla si el arbol se desmonta con uno pendiente.
 /// Los campos del formulario de usuario, en el orden en que se pintan:
 /// nombre, correo, DNI y contraseña.
-String _texto(WidgetTester tester, int n) =>
-    tester
-        .widget<TextField>(
-          find.descendant(
-            of: find.byType(AppCampo).at(n),
-            matching: find.byType(TextField),
-          ),
-        )
-        .controller!
-        .text;
+String _texto(WidgetTester tester, int n) => tester
+    .widget<TextField>(
+      find.descendant(
+        of: find.byType(AppCampo).at(n),
+        matching: find.byType(TextField),
+      ),
+    )
+    .controller!
+    .text;
 
 String _nombreDe(WidgetTester tester) => _texto(tester, 0);
 String _correoDe(WidgetTester tester) => _texto(tester, 2);
@@ -325,9 +327,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: Tema.claro(),
-            home: UsuarioFormulario(
-              usuario: Usuario.desdeJson(_usuarioJson()),
-            ),
+            home: UsuarioFormulario(usuario: Usuario.desdeJson(_usuarioJson())),
           ),
         ),
       );
@@ -395,12 +395,16 @@ void main() {
     testWidgets('el selector se pinta antes que el DNI', (tester) async {
       await montar(tester);
 
-      final selector = tester.getTopLeft(find.byType(AppSelector<int?>).first).dy;
+      final selector = tester
+          .getTopLeft(find.byType(AppSelector<int?>).first)
+          .dy;
       final dni = tester.getTopLeft(find.byType(AppCampo).at(2)).dy;
 
       expect(selector, lessThan(dni));
       expect(
-        find.text('Al elegirlo se llenan el DNI, el nombre y el correo de su ficha.'),
+        find.text(
+          'Al elegirlo se llenan el DNI, el nombre y el correo de su ficha.',
+        ),
         findsOneWidget,
       );
     });

@@ -514,12 +514,12 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
               ],
             ),
             const Divider(height: 1),
-            // Un poco mas que el espacio normal entre bloques: el primer
+            // Bastante mas que el espacio normal entre bloques: el primer
             // campo de cada pestaña es un selector con etiqueta flotante, que
             // ya de por si dibuja parte de su texto por encima del recuadro.
             // Con el espaciado normal esa etiqueta quedaba pegada al divisor
-            // de arriba.
-            const SizedBox(height: Dimen.espacio4),
+            // de arriba, como si chocara con las pestañas.
+            const SizedBox(height: Dimen.espacio6),
 
             // Encima de las pestañas: el error de una se arregla en la otra.
             if (_error != null) ...[
@@ -532,6 +532,11 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
                 controller: _tabs,
                 children: [
                   ListView(
+                    // Aparte del SizedBox de arriba (compartido con las otras
+                    // pestañas): este campo puntual lleva su propio respiro,
+                    // para que su etiqueta flotante nunca quede pegada al
+                    // divisor de las pestañas, pase lo que pase arriba.
+                    padding: const EdgeInsets.only(top: Dimen.espacio3),
                     children: [
                       if (_conReserva)
                         Container(
@@ -589,15 +594,6 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: Colores.tinta,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Por defecto sale todo lo pedido. Si el cliente recibió menos, corrige la '
-                        'cantidad y elige el motivo: la venta cobra solo lo entregado.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colores.tintaSuave,
                         ),
                       ),
                       const SizedBox(height: Dimen.espacio3),

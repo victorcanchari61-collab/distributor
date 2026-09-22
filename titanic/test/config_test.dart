@@ -29,6 +29,9 @@ class _AlmacenConSesion extends SesionAlmacen {
     'rol': 'Administrador',
     'activo': true,
   };
+
+  @override
+  Future<bool> recordar() async => true;
 }
 
 /// API de mentira: no toca la red.

@@ -44,9 +44,19 @@ export function PageHeader({
           </h1>
         </div>
 
-        {/* Los botones bajan a su propia linea solo si no entran: con uno
-            comparten fila con el titulo, con dos largos se acomodan debajo. */}
-        {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}
+        {/*
+          Los botones bajan a su propia linea solo si no entran: con uno
+          comparten fila con el titulo, con dos largos se acomodan debajo.
+          flex-wrap tambien AQUI ADENTRO: con tres o cuatro botones (Editar
+          lista, Eliminar lista, Nueva lista, Agregar precio...) ni su propia
+          linea entera alcanza en un telefono angosto, y sin wrap se salian
+          de la pantalla en vez de partirse en dos filas.
+        */}
+        {actions && (
+          <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {actions}
+          </div>
+        )}
       </div>
 
       {description && <p className="text-sm text-ink-muted">{description}</p>}

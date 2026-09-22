@@ -63,6 +63,14 @@
     color: var(--color-ink);
     background-color: var(--color-surface);
     -webkit-font-smoothing: antialiased;
+    /*
+      Red de seguridad: sin esto, un elemento que se pasa de ancho en movil
+      (una fila de botones que no envuelve, una tabla angosta) no se recorta
+      solo — empuja TODA la pagina a un lado y la deja con scroll horizontal.
+      En iOS Safari ese desborde tambien arrastra lo que esta en position:
+      fixed —como los modales—, que es por lo que se veian cortados.
+    */
+    overflow-x: hidden;
   }
 }
 

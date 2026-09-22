@@ -26,13 +26,16 @@ class _AlmacenConSesion extends SesionAlmacen {
 
   @override
   Future<Map<String, dynamic>?> usuario() async => {
-        'id': 1,
-        'nombre': 'Admin',
-        'email': 'admin@distributor.com',
-        'rolId': 1,
-        'rol': 'Administrador',
-        'activo': true,
-      };
+    'id': 1,
+    'nombre': 'Admin',
+    'email': 'admin@distributor.com',
+    'rolId': 1,
+    'rol': 'Administrador',
+    'activo': true,
+  };
+
+  @override
+  Future<bool> recordar() async => true;
 }
 
 Map<String, dynamic> _cliente({
@@ -42,22 +45,21 @@ Map<String, dynamic> _cliente({
   bool activo = true,
   String? diaVisita,
   String? ruta,
-}) =>
-    {
-      'id': id,
-      'documento': documento,
-      'tipoDoc': documento.length == 8 ? 'DNI' : 'CODIGO',
-      'nombre': nombre,
-      'direccion': 'MDO SAN ANTONIO',
-      'distrito': null,
-      'telefono': null,
-      'email': null,
-      'diaVisita': diaVisita,
-      'ruta': ruta,
-      'mercadoId': null,
-      'mercado': null,
-      'activo': activo,
-    };
+}) => {
+  'id': id,
+  'documento': documento,
+  'tipoDoc': documento.length == 8 ? 'DNI' : 'CODIGO',
+  'nombre': nombre,
+  'direccion': 'MDO SAN ANTONIO',
+  'distrito': null,
+  'telefono': null,
+  'email': null,
+  'diaVisita': diaVisita,
+  'ruta': ruta,
+  'mercadoId': null,
+  'mercado': null,
+  'activo': activo,
+};
 
 /// API de mentira: no toca la red.
 class _ApiFalso extends MaestrosApi {
@@ -73,9 +75,20 @@ class _ApiFalso extends MaestrosApi {
     if (falla) throw const ApiExcepcion('sin conexión');
 
     return [
-      _cliente(id: 1, documento: '45871203', nombre: 'ANA LEANDRO', diaVisita: 'MARTES', ruta: '5'),
+      _cliente(
+        id: 1,
+        documento: '45871203',
+        nombre: 'ANA LEANDRO',
+        diaVisita: 'MARTES',
+        ruta: '5',
+      ),
       _cliente(id: 2, documento: '90007638', nombre: 'D-SOFIA CAYO'),
-      _cliente(id: 3, documento: '41203877', nombre: 'PEDRO RETIRADO', activo: false),
+      _cliente(
+        id: 3,
+        documento: '41203877',
+        nombre: 'PEDRO RETIRADO',
+        activo: false,
+      ),
     ].map(Cliente.desdeJson).toList();
   }
 
@@ -86,7 +99,12 @@ class _ApiFalso extends MaestrosApi {
   Future<Cliente> cambiarEstadoCliente(int id, {required bool activo}) async {
     cambiados.add(id);
     return Cliente.desdeJson(
-      _cliente(id: id, documento: '45871203', nombre: 'ANA LEANDRO', activo: activo),
+      _cliente(
+        id: id,
+        documento: '45871203',
+        nombre: 'ANA LEANDRO',
+        activo: activo,
+      ),
     );
   }
 
@@ -114,11 +132,16 @@ class _ApiFalso extends MaestrosApi {
   @override
   Future<Cliente> crearCliente(Map<String, dynamic> cuerpo) async {
     ultimoCreado = cuerpo;
-    return Cliente.desdeJson(_cliente(id: 9, documento: '12345678', nombre: 'NUEVO'));
+    return Cliente.desdeJson(
+      _cliente(id: 9, documento: '12345678', nombre: 'NUEVO'),
+    );
   }
 }
 
-Future<_ApiFalso> _montarClientes(WidgetTester tester, {bool falla = false}) async {
+Future<_ApiFalso> _montarClientes(
+  WidgetTester tester, {
+  bool falla = false,
+}) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -140,7 +163,9 @@ Future<_ApiFalso> _montarClientes(WidgetTester tester, {bool falla = false}) asy
 }
 
 void main() {
-  testWidgets('lista los clientes activos y oculta los desactivados', (tester) async {
+  testWidgets('lista los clientes activos y oculta los desactivados', (
+    tester,
+  ) async {
     await _montarClientes(tester);
 
     expect(find.text('ANA LEANDRO'), findsOneWidget);
@@ -177,10 +202,8 @@ void main() {
     await _montarClientes(tester);
 
     // El globo va dentro del icono: los indicadores tambien muestran numeros.
-    Finder globo(String n) => find.descendant(
-      of: find.byType(BotonFiltros),
-      matching: find.text(n),
-    );
+    Finder globo(String n) =>
+        find.descendant(of: find.byType(BotonFiltros), matching: find.text(n));
 
     // Sin filtros no hay globo.
     expect(globo('1'), findsNothing);
@@ -214,14 +237,18 @@ void main() {
     expect(find.text('ANA LEANDRO'), findsOneWidget);
   });
 
-  testWidgets('si el API falla, ofrece reintentar en vez de quedarse vacio', (tester) async {
+  testWidgets('si el API falla, ofrece reintentar en vez de quedarse vacio', (
+    tester,
+  ) async {
     await _montarClientes(tester, falla: true);
 
     expect(find.text('No se pudo cargar'), findsOneWidget);
     expect(find.text('Reintentar'), findsOneWidget);
   });
 
-  testWidgets('el formulario exige documento y nombre antes de enviar', (tester) async {
+  testWidgets('el formulario exige documento y nombre antes de enviar', (
+    tester,
+  ) async {
     final api = await _montarClientes(tester);
 
     await tester.tap(find.text('Nuevo'));
@@ -250,7 +277,9 @@ void main() {
     expect(find.text('Un DNI tiene 8 dígitos.'), findsOneWidget);
   });
 
-  testWidgets('desactivar pide confirmacion y respeta el cancelar', (tester) async {
+  testWidgets('desactivar pide confirmacion y respeta el cancelar', (
+    tester,
+  ) async {
     final api = await _montarClientes(tester);
 
     // El icono de desactivar de la primera tarjeta.
@@ -284,7 +313,10 @@ void main() {
           sesionAlmacenProvider.overrideWithValue(const _AlmacenConSesion()),
           maestrosApiProvider.overrideWithValue(_ApiFalso(falla: true)),
         ],
-        child: MaterialApp(theme: Tema.claro(), home: const ProveedoresPagina()),
+        child: MaterialApp(
+          theme: Tema.claro(),
+          home: const ProveedoresPagina(),
+        ),
       ),
     );
     await tester.pumpAndSettle();

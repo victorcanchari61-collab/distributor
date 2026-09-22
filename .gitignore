@@ -8,6 +8,7 @@ obj/
 # Node
 node_modules/
 dist/
+.claude
 
 # Logs
 *.log

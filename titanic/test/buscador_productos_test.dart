@@ -48,13 +48,20 @@ Producto _producto({
 );
 
 final _productos = [
-  _producto(id: 1, codigo: 'PROD001', nombre: 'arroz caserita', costoReferencia: 4),
+  _producto(
+    id: 1,
+    codigo: 'PROD001',
+    nombre: 'arroz caserita',
+    costoReferencia: 4,
+  ),
   _producto(
     id: 2,
     codigo: 'PROD002',
     nombre: 'yogurt vainilla',
     costoReferencia: 7,
-    presentaciones: [_presentacion(id: 20, nombre: 'Botella', factor: 1, esCompra: false)],
+    presentaciones: [
+      _presentacion(id: 20, nombre: 'Botella', factor: 1, esCompra: false),
+    ],
   ),
 ];
 
@@ -183,7 +190,9 @@ void main() {
     expect(find.textContaining(' KG'), findsNothing);
   });
 
-  testWidgets('en compra no se ofrece una presentacion solo de venta', (tester) async {
+  testWidgets('en compra no se ofrece una presentacion solo de venta', (
+    tester,
+  ) async {
     await _abrir(tester, paraVenta: false, leer: () => null, guardar: (_) {});
 
     // "Botella" es esCompra: false — al comprar no debe aparecer como unidad.

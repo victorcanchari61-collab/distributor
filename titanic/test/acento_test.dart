@@ -23,12 +23,16 @@ void main() {
 
   testWidgets('dentro de un modulo, el color de ese modulo', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(home: Acento(color: Colores.modulos['compras']!, child: _sonda())),
+      MaterialApp(
+        home: Acento(color: Colores.modulos['compras']!, child: _sonda()),
+      ),
     );
     expect(_leido, Colores.modulos['compras']);
   });
 
-  testWidgets('lo que arma Acento.modulo queda POR DEBAJO del acento', (tester) async {
+  testWidgets('lo que arma Acento.modulo queda POR DEBAJO del acento', (
+    tester,
+  ) async {
     /*
      * La trampa que costo encontrar: si `Acento.modulo` recibiera un widget ya
      * construido, el context con el que se armo seria ancestro del Acento, y

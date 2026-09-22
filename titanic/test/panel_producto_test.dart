@@ -28,8 +28,18 @@ Producto _producto({
 );
 
 final _productos = [
-  _producto(id: 1, codigo: 'PROD001', nombre: 'arroz caserita', costoReferencia: 4),
-  _producto(id: 2, codigo: 'PROD002', nombre: 'yogurt vainilla', costoReferencia: 7),
+  _producto(
+    id: 1,
+    codigo: 'PROD001',
+    nombre: 'arroz caserita',
+    costoReferencia: 4,
+  ),
+  _producto(
+    id: 2,
+    codigo: 'PROD002',
+    nombre: 'yogurt vainilla',
+    costoReferencia: 7,
+  ),
 ];
 
 Future<List<LineaElegida>> _montar(
@@ -58,7 +68,9 @@ Future<List<LineaElegida>> _montar(
 }
 
 void main() {
-  testWidgets('escribir lista los productos sin abrir ninguna hoja', (tester) async {
+  testWidgets('escribir lista los productos sin abrir ninguna hoja', (
+    tester,
+  ) async {
     await _montar(tester);
 
     await tester.enterText(find.byType(TextField).first, 'arroz');
@@ -70,7 +82,9 @@ void main() {
     expect(find.text('Buscar productos'), findsNothing);
   });
 
-  testWidgets('la lista muestra el stock del almacen que se le pasa', (tester) async {
+  testWidgets('la lista muestra el stock del almacen que se le pasa', (
+    tester,
+  ) async {
     await _montar(tester, stock: const {1: 12, 2: 0});
 
     await tester.enterText(find.byType(TextField).first, 'arroz');
@@ -79,7 +93,9 @@ void main() {
     expect(find.textContaining('12 KG'), findsOneWidget);
   });
 
-  testWidgets('no lleva boton de filtros: se busca escribiendo', (tester) async {
+  testWidgets('no lleva boton de filtros: se busca escribiendo', (
+    tester,
+  ) async {
     await _montar(tester);
 
     expect(find.byIcon(Icons.tune), findsNothing);

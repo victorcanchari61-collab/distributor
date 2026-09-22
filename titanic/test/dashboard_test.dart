@@ -49,6 +49,9 @@ class _AlmacenConSesion extends SesionAlmacen {
     'rol': 'Administrador',
     'activo': true,
   };
+
+  @override
+  Future<bool> recordar() async => true;
 }
 
 // --------------------------------------------------------- Datos de ejemplo

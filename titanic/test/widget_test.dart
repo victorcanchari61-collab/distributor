@@ -24,12 +24,16 @@ class _AlmacenDePrueba extends SesionAlmacen {
 }
 
 Widget _app(Widget pantalla) => ProviderScope(
-      overrides: [sesionAlmacenProvider.overrideWithValue(const _AlmacenDePrueba())],
-      child: MaterialApp(theme: Tema.claro(), home: pantalla),
-    );
+  overrides: [
+    sesionAlmacenProvider.overrideWithValue(const _AlmacenDePrueba()),
+  ],
+  child: MaterialApp(theme: Tema.claro(), home: pantalla),
+);
 
 void main() {
-  testWidgets('el login muestra sus campos y el boton de ingresar', (tester) async {
+  testWidgets('el login muestra sus campos y el boton de ingresar', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(const LoginPagina()));
     await tester.pumpAndSettle();
 
@@ -38,7 +42,9 @@ void main() {
     expect(find.text('Ingresar'), findsOneWidget);
   });
 
-  testWidgets('sin datos avisa que faltan el correo y la contrasena', (tester) async {
+  testWidgets('sin datos avisa que faltan el correo y la contrasena', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(const LoginPagina()));
     await tester.pumpAndSettle();
 
@@ -53,11 +59,19 @@ void main() {
     final rutas = <String>{};
 
     for (final grupo in menuGrupos) {
-      expect(grupo.items, isNotEmpty, reason: '${grupo.titulo} no tiene vistas');
+      expect(
+        grupo.items,
+        isNotEmpty,
+        reason: '${grupo.titulo} no tiene vistas',
+      );
 
       for (final item in grupo.items) {
         expect(item.ruta.startsWith('/'), isTrue);
-        expect(rutas.add(item.ruta), isTrue, reason: 'ruta repetida: ${item.ruta}');
+        expect(
+          rutas.add(item.ruta),
+          isTrue,
+          reason: 'ruta repetida: ${item.ruta}',
+        );
 
         // El menu y el buscador de rutas tienen que coincidir: si no, el drawer
         // marcaria como activa una vista que la ruta no reconoce.

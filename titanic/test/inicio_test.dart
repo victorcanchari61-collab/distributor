@@ -17,16 +17,22 @@ class _AlmacenConSesion extends SesionAlmacen {
 
   @override
   Future<Map<String, dynamic>?> usuario() async => {
-        'id': 1,
-        'nombre': 'Admin',
-        'email': 'admin@distributor.com',
-        'rolId': 1,
-        'rol': 'Administrador',
-        'activo': true,
-      };
+    'id': 1,
+    'nombre': 'Admin',
+    'email': 'admin@distributor.com',
+    'rolId': 1,
+    'rol': 'Administrador',
+    'activo': true,
+  };
+
+  @override
+  Future<bool> recordar() async => true;
 }
 
-Future<void> _montar(WidgetTester tester, {Size pantalla = const Size(375, 812)}) async {
+Future<void> _montar(
+  WidgetTester tester, {
+  Size pantalla = const Size(375, 812),
+}) async {
   // Tamano de un telefono comun: los desbordamientos aparecen en pantallas
   // angostas, no en la ventana grande del escritorio.
   tester.view.physicalSize = pantalla;
@@ -35,7 +41,9 @@ Future<void> _montar(WidgetTester tester, {Size pantalla = const Size(375, 812)}
 
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [sesionAlmacenProvider.overrideWithValue(const _AlmacenConSesion())],
+      overrides: [
+        sesionAlmacenProvider.overrideWithValue(const _AlmacenConSesion()),
+      ],
       child: MaterialApp(theme: Tema.claro(), home: const InicioPagina()),
     ),
   );
@@ -48,29 +56,38 @@ void main() {
 
     expect(find.text('Módulos'), findsOneWidget);
     for (final grupo in menuGrupos) {
-      expect(find.text(grupo.titulo), findsWidgets, reason: 'falta ${grupo.titulo}');
+      expect(
+        find.text(grupo.titulo),
+        findsWidgets,
+        reason: 'falta ${grupo.titulo}',
+      );
     }
   });
 
-  testWidgets('el inicio se ve bien tambien en una pantalla angosta', (tester) async {
+  testWidgets('el inicio se ve bien tambien en una pantalla angosta', (
+    tester,
+  ) async {
     // 320 de ancho es lo mas angosto que se ve todavia en telefonos viejos.
     await _montar(tester, pantalla: const Size(320, 640));
 
     expect(find.text('Módulos'), findsOneWidget);
   });
 
-  testWidgets('el menu lateral abre y lista los modulos, sin datos de usuario', (tester) async {
-    await _montar(tester);
+  testWidgets(
+    'el menu lateral abre y lista los modulos, sin datos de usuario',
+    (tester) async {
+      await _montar(tester);
 
-    await tester.tap(find.byTooltip('Open navigation menu'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Open navigation menu'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Inicio'), findsWidgets);
-    expect(find.text('Cerrar sesión'), findsOneWidget);
+      expect(find.text('Inicio'), findsWidgets);
+      expect(find.text('Cerrar sesión'), findsOneWidget);
 
-    // El correo del usuario vive en la barra superior, no en el menu.
-    expect(find.text('admin@distributor.com'), findsNothing);
-  });
+      // El correo del usuario vive en la barra superior, no en el menu.
+      expect(find.text('admin@distributor.com'), findsNothing);
+    },
+  );
 
   testWidgets('al elegir un modulo se despliegan sus vistas', (tester) async {
     await _montar(tester);

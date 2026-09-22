@@ -15,7 +15,10 @@ const _bodegas = [
   _Bodega('Minimarket Lucero', 'Santa Anita'),
 ];
 
-Future<void> _montar(WidgetTester tester, {void Function(_Bodega)? onElegir}) async {
+Future<void> _montar(
+  WidgetTester tester, {
+  void Function(_Bodega)? onElegir,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
@@ -36,7 +39,9 @@ Future<void> _montar(WidgetTester tester, {void Function(_Bodega)? onElegir}) as
 }
 
 void main() {
-  testWidgets('tocar el campo no abre ninguna hoja: se escribe en el sitio', (tester) async {
+  testWidgets('tocar el campo no abre ninguna hoja: se escribe en el sitio', (
+    tester,
+  ) async {
     await _montar(tester);
 
     await tester.tap(find.byType(TextField));
@@ -65,7 +70,9 @@ void main() {
     expect(find.widgetWithText(TextField, 'Bodega Rojas'), findsOneWidget);
   });
 
-  testWidgets('la lupa abre la lista completa, con sus filtros', (tester) async {
+  testWidgets('la lupa abre la lista completa, con sus filtros', (
+    tester,
+  ) async {
     await _montar(tester);
 
     await tester.tap(find.byIcon(Icons.search));
@@ -84,7 +91,9 @@ void main() {
     expect(find.byIcon(Icons.tune), findsNothing);
   });
 
-  testWidgets('sin coincidencias lo dice, no se queda en blanco', (tester) async {
+  testWidgets('sin coincidencias lo dice, no se queda en blanco', (
+    tester,
+  ) async {
     await _montar(tester);
 
     await tester.enterText(find.byType(TextField), 'zzzz');
