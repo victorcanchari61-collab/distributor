@@ -38,6 +38,7 @@ public class VentasService : IVentasService
     private readonly INovedadService _novedades;
     private readonly IValidator<CrearNotaVentaRequest> _notaVentaValidator;
     private readonly IValidator<PagoVentaRequest> _pagoValidator;
+    private readonly IValidator<VerificarRecojoRequest> _verificarRecojoValidator;
     private readonly IPermisoService _permisos;
     private readonly IUsuarioActual _usuarioActual;
     private readonly INotificador _notificador;
@@ -54,6 +55,7 @@ public class VentasService : IVentasService
         INovedadService novedades,
         IValidator<CrearNotaVentaRequest> notaVentaValidator,
         IValidator<PagoVentaRequest> pagoValidator,
+        IValidator<VerificarRecojoRequest> verificarRecojoValidator,
         IPermisoService permisos,
         IUsuarioActual usuarioActual,
         INotificador notificador,
@@ -69,6 +71,7 @@ public class VentasService : IVentasService
         _novedades = novedades;
         _notaVentaValidator = notaVentaValidator;
         _pagoValidator = pagoValidator;
+        _verificarRecojoValidator = verificarRecojoValidator;
         _permisos = permisos;
         _usuarioActual = usuarioActual;
         _notificador = notificador;
@@ -772,12 +775,16 @@ public class VentasService : IVentasService
             await _inventario.AnularAsync(documentoId, usuarioId);
         }
 
-        // Cada recojo entró como su propio documento: se revierte aparte,
-        // así la mercadería recogida vuelve a salir del almacén al que entró.
-        foreach (var recojo in notaVenta.Recojos.Where(r => !r.Anulado && r.DocumentoInventarioId != null))
+        // Los verificados entraron como su propio documento: se revierte
+        // aparte, así la mercadería vuelve a salir del almacén al que entró.
+        // Los que seguían pendientes no tocaron stock, así que solo se cierran.
+        foreach (var recojo in notaVenta.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado))
         {
-            await _inventario.AnularAsync(recojo.DocumentoInventarioId!.Value, usuarioId);
-            recojo.Anulado = true;
+            if (recojo.Estado == EstadoRecojo.Verificado && recojo.DocumentoInventarioId is int docRecojo)
+            {
+                await _inventario.AnularAsync(docRecojo, usuarioId);
+            }
+            recojo.Estado = EstadoRecojo.Anulado;
         }
 
         notaVenta.Estado = EstadoNotaVenta.Anulada;
@@ -802,6 +809,66 @@ public class VentasService : IVentasService
         }
 
         await _notificador.AvisarAsync("notasventa", "anulada", MapNotaVenta(notaVenta));
+    }
+
+    public async Task<IEnumerable<RecojoPendienteResponse>> GetRecojosPendientesAsync()
+    {
+        var pendientes = await _repository.GetRecojosPendientesAsync();
+
+        return pendientes.Select(r => new RecojoPendienteResponse
+        {
+            Id = r.Id,
+            Fecha = r.Fecha,
+            NotaVentaId = r.NotaVentaId,
+            NotaVenta = r.NotaVenta?.Numero ?? string.Empty,
+            Cliente = r.NotaVenta?.Cliente?.Nombre ?? string.Empty,
+            ProductoId = r.ProductoId,
+            Producto = r.Producto?.Nombre ?? string.Empty,
+            Presentacion = r.Presentacion?.Nombre,
+            UnidadBase = r.Producto?.UnidadBase?.Codigo ?? string.Empty,
+            CantidadPresentacion = r.CantidadPresentacion,
+            Motivo = r.Motivo?.Nombre ?? string.Empty,
+            Observacion = r.Observacion,
+            Usuario = r.Usuario?.Nombre,
+            Importe = r.Importe,
+        });
+    }
+
+    /// <summary>
+    /// El encargado del almacén cuenta lo que volvió y dice a qué almacén
+    /// entra: recién aquí el recojo suma stock de verdad, igual que al
+    /// verificar una novedad de entrega.
+    /// </summary>
+    public async Task<NotaVentaResponse> VerificarRecojoAsync(
+        int recojoId, VerificarRecojoRequest request, int? usuarioId)
+    {
+        await _verificarRecojoValidator.ValidateAndThrowAsync(request);
+
+        var recojo = await _repository.GetRecojoConNotaVentaAsync(recojoId)
+            ?? throw new NotFoundException($"No existe el recojo {recojoId}");
+
+        if (recojo.Estado != EstadoRecojo.Pendiente)
+        {
+            throw new BadRequestException(recojo.Estado switch
+            {
+                EstadoRecojo.Anulado => "Este recojo está anulado: ya no se verifica.",
+                _ => "Este recojo ya se verificó.",
+            });
+        }
+
+        recojo.AlmacenId = request.AlmacenId;
+        var documento = await _inventario.CrearRecojoAsync(recojo, usuarioId);
+        recojo.DocumentoInventarioId = documento.Id;
+        recojo.Estado = EstadoRecojo.Verificado;
+        recojo.VerificadoPorId = usuarioId;
+        recojo.VerificadoEn = DateTime.UtcNow;
+
+        await _repository.GuardarAsync();
+
+        var notaVenta = await GetNotaVentaOrThrowAsync(recojo.NotaVentaId);
+        var respuesta = MapNotaVenta(notaVenta);
+        await _notificador.AvisarAsync("notasventa", "actualizada", respuesta);
+        return respuesta;
     }
 
     /// <summary>
@@ -1092,18 +1159,11 @@ public class VentasService : IVentasService
 
         try
         {
+            // Los recojos NO mueven stock aquí: quedan Pendientes, igual que
+            // una novedad de entrega, hasta que el encargado los verifique y
+            // diga a qué almacén entran (ver VerificarRecojoAsync).
             var documento = await _inventario.CrearSalidaVentaAsync(notaVenta, usuarioId);
             notaVenta.DocumentoInventarioId = documento.Id;
-            await _repository.UpdateNotaVentaAsync(notaVenta);
-
-            // Cada recojo entra a su propio almacén, aparte del descuento de
-            // stock de la venta: son dos movimientos independientes.
-            foreach (var recojo in notaVenta.Recojos)
-            {
-                recojo.NotaVenta = notaVenta;
-                var documentoRecojo = await _inventario.CrearRecojoAsync(recojo, usuarioId);
-                recojo.DocumentoInventarioId = documentoRecojo.Id;
-            }
             await _repository.UpdateNotaVentaAsync(notaVenta);
         }
         catch
@@ -1324,7 +1384,6 @@ public class VentasService : IVentasService
                 Cantidad = recojo.Cantidad * factor,
                 PrecioUnitario = recojo.PrecioUnitario,
                 Importe = Math.Round(recojo.Cantidad * recojo.PrecioUnitario, 2),
-                AlmacenId = recojo.AlmacenId,
                 MotivoId = recojo.MotivoId,
                 Observacion = Limpiar(recojo.Observacion),
             });
@@ -1453,7 +1512,7 @@ public class VentasService : IVentasService
         // diferencia de una devolución, no encogen ninguna línea de aquí.
         Total = Math.Round(
             n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion)
-            - n.Recojos.Where(r => !r.Anulado).Sum(r => r.Importe), 2),
+            - n.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado).Sum(r => r.Importe), 2),
         Detalle = n.Detalle.Select(MapLinea).ToList(),
         Pagos = n.Pagos.Select(MapPago).ToList(),
         TotalPagado = Math.Round(n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2),
@@ -1491,7 +1550,8 @@ public class VentasService : IVentasService
                     .ToList(),
             })
             .ToList(),
-        TotalRecogido = Math.Round(n.Recojos.Where(r => !r.Anulado).Sum(r => r.Importe), 2),
+        TotalRecogido = Math.Round(
+            n.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado).Sum(r => r.Importe), 2),
         Recojos = n.Recojos
             .OrderByDescending(r => r.Id)
             .Select(r => new RecojoDeVentaResponse
@@ -1504,12 +1564,14 @@ public class VentasService : IVentasService
                 UnidadBase = r.Producto?.UnidadBase?.Codigo ?? string.Empty,
                 CantidadPresentacion = r.CantidadPresentacion,
                 AlmacenId = r.AlmacenId,
-                Almacen = r.Almacen?.Nombre ?? string.Empty,
+                Almacen = r.Almacen?.Nombre,
                 Motivo = r.Motivo?.Nombre ?? string.Empty,
                 Observacion = r.Observacion,
                 Usuario = r.Usuario?.Nombre,
                 Importe = r.Importe,
-                Anulado = r.Anulado,
+                Estado = r.Estado,
+                VerificadoPor = r.VerificadoPor?.Nombre,
+                VerificadoEn = r.VerificadoEn,
             })
             .ToList(),
     };

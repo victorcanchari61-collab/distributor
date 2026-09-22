@@ -178,6 +178,17 @@ public class NotaVentaController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Recojos que todavía no entraron a ningún almacén, para revisar en Novedades.</summary>
+    [HttpGet("recojo/pendientes")]
+    [Permiso("tms.novedades", Accion.Ver)]
+    public async Task<IActionResult> RecojosPendientes() => Ok(await _ventas.GetRecojosPendientesAsync());
+
+    /// <summary>El encargado dice a qué almacén entra un recojo: recién ahí suma stock.</summary>
+    [HttpPatch("recojo/{id:int}/verificar")]
+    [Permiso("tms.novedades", Accion.Confirmar)]
+    public async Task<IActionResult> VerificarRecojo(int id, [FromBody] VerificarRecojoRequest request) =>
+        Ok(await _ventas.VerificarRecojoAsync(id, request, UsuarioId));
+
     /// <summary>Registra un abono contra el saldo pendiente de la nota.</summary>
     [HttpPost("{id:int}/pagos")]
     [Permiso("fact.notaventa", Accion.Cobrar)]

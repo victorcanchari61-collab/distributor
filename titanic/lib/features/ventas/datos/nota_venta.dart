@@ -46,9 +46,20 @@ class PagoVenta {
   );
 }
 
+/// PENDIENTE: todavia no entra a ningun almacen (el repartidor no lo elige).
+/// VERIFICADO: el encargado ya lo conto y eligio el almacen. ANULADO: se
+/// anulo junto con la venta.
+class EstadoRecojo {
+  const EstadoRecojo._();
+  static const pendiente = 'PENDIENTE';
+  static const verificado = 'VERIFICADO';
+  static const anulado = 'ANULADO';
+}
+
 /// Mercaderia de OTRA venta que se recogio al entregar esta: se descuenta
-/// del total y vuelve al almacen elegido, en vez de la venta original donde
-/// se compro.
+/// del total. No entra a stock al registrarla — queda Pendiente, igual que
+/// una novedad de entrega, hasta que se verifica en Novedades de entrega y
+/// recien ahi se elige el almacen.
 class RecojoVenta {
   const RecojoVenta({
     required this.id,
@@ -58,13 +69,15 @@ class RecojoVenta {
     this.presentacion,
     required this.unidadBase,
     required this.cantidadPresentacion,
-    required this.almacenId,
-    required this.almacen,
+    this.almacenId,
+    this.almacen,
     required this.motivo,
     this.observacion,
     this.usuario,
     required this.importe,
-    this.anulado = false,
+    this.estado = EstadoRecojo.pendiente,
+    this.verificadoPor,
+    this.verificadoEn,
   });
 
   final int id;
@@ -74,13 +87,18 @@ class RecojoVenta {
   final String? presentacion;
   final String unidadBase;
   final double cantidadPresentacion;
-  final int almacenId;
-  final String almacen;
+
+  /// Vacio mientras esta Pendiente: el almacen lo decide quien lo verifica.
+  final int? almacenId;
+  final String? almacen;
+
   final String motivo;
   final String? observacion;
   final String? usuario;
   final double importe;
-  final bool anulado;
+  final String estado;
+  final String? verificadoPor;
+  final DateTime? verificadoEn;
 
   factory RecojoVenta.desdeJson(Map<String, dynamic> json) => RecojoVenta(
     id: json['id'] as int,
@@ -91,14 +109,73 @@ class RecojoVenta {
     unidadBase: json['unidadBase'] as String? ?? '',
     cantidadPresentacion:
         (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
-    almacenId: json['almacenId'] as int,
-    almacen: json['almacen'] as String? ?? '',
+    almacenId: json['almacenId'] as int?,
+    almacen: json['almacen'] as String?,
     motivo: json['motivo'] as String? ?? '',
     observacion: json['observacion'] as String?,
     usuario: json['usuario'] as String?,
     importe: (json['importe'] as num?)?.toDouble() ?? 0,
-    anulado: json['anulado'] as bool? ?? false,
+    estado: json['estado'] as String? ?? EstadoRecojo.pendiente,
+    verificadoPor: json['verificadoPor'] as String?,
+    verificadoEn: json['verificadoEn'] == null
+        ? null
+        : fechaDeJson(json['verificadoEn'] as String),
   );
+}
+
+/// Un recojo pendiente de verificar, visto desde Novedades de entrega — con
+/// el contexto de la venta que lo desconto.
+class RecojoPendiente {
+  const RecojoPendiente({
+    required this.id,
+    required this.fecha,
+    required this.notaVentaId,
+    required this.notaVenta,
+    required this.cliente,
+    required this.productoId,
+    required this.producto,
+    this.presentacion,
+    required this.unidadBase,
+    required this.cantidadPresentacion,
+    required this.motivo,
+    this.observacion,
+    this.usuario,
+    required this.importe,
+  });
+
+  final int id;
+  final DateTime fecha;
+  final int notaVentaId;
+  final String notaVenta;
+  final String cliente;
+  final int productoId;
+  final String producto;
+  final String? presentacion;
+  final String unidadBase;
+  final double cantidadPresentacion;
+  final String motivo;
+  final String? observacion;
+  final String? usuario;
+  final double importe;
+
+  factory RecojoPendiente.desdeJson(Map<String, dynamic> json) =>
+      RecojoPendiente(
+        id: json['id'] as int,
+        fecha: fechaDeJson(json['fecha'] as String),
+        notaVentaId: json['notaVentaId'] as int,
+        notaVenta: json['notaVenta'] as String? ?? '',
+        cliente: json['cliente'] as String? ?? '',
+        productoId: json['productoId'] as int,
+        producto: json['producto'] as String? ?? '',
+        presentacion: json['presentacion'] as String?,
+        unidadBase: json['unidadBase'] as String? ?? '',
+        cantidadPresentacion:
+            (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
+        motivo: json['motivo'] as String? ?? '',
+        observacion: json['observacion'] as String?,
+        usuario: json['usuario'] as String?,
+        importe: (json['importe'] as num?)?.toDouble() ?? 0,
+      );
 }
 
 /// Una venta lista tal cual: nacio de confirmar un pedido o se registro

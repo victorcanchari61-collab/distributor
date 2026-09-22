@@ -127,4 +127,24 @@ class VentasApi {
         await _api.delete('/notaventa/$id/pagos/$pagoId')
             as Map<String, dynamic>,
       );
+
+  // --- Recojos ---
+
+  /// GET /api/notaventa/recojo/pendientes — los que aun no entran a stock.
+  Future<List<RecojoPendiente>> recojosPendientes() async {
+    final datos = await _api.get('/notaventa/recojo/pendientes') as List;
+    return datos
+        .map((e) => RecojoPendiente.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// PATCH /api/notaventa/recojo/{id}/verificar — el encargado dice a que
+  /// almacen entra: recien ahi suma stock.
+  Future<NotaVenta> verificarRecojo(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => NotaVenta.desdeJson(
+    await _api.patch('/notaventa/recojo/$id/verificar', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
 }

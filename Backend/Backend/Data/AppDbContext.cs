@@ -1117,6 +1117,8 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("RecojosVenta");
             entity.HasIndex(r => r.Fecha);
+            entity.HasIndex(r => r.Estado);
+            entity.Property(r => r.Estado).HasMaxLength(15).IsRequired();
             entity.Property(r => r.CantidadPresentacion).HasPrecision(18, 4);
             entity.Property(r => r.Cantidad).HasPrecision(18, 4);
             entity.Property(r => r.PrecioUnitario).HasPrecision(18, 4);
@@ -1135,6 +1137,8 @@ public class AppDbContext : DbContext
                 .HasForeignKey(r => r.MotivoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(r => r.Usuario).WithMany()
                 .HasForeignKey(r => r.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(r => r.VerificadoPor).WithMany()
+                .HasForeignKey(r => r.VerificadoPorId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 

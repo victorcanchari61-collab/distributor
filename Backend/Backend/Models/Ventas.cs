@@ -197,6 +197,23 @@ public class NotaVenta
     public ICollection<RecojoVenta> Recojos { get; set; } = [];
 }
 
+/// <summary>Qué falta para que un recojo termine de contar como stock de verdad.</summary>
+public static class EstadoRecojo
+{
+    /// <summary>
+    /// Recién registrado por el repartidor: ya descontó la venta, pero
+    /// todavía no entró a ningún almacén. El repartidor no decide a dónde va
+    /// — eso lo cuenta el encargado cuando el camión vuelve.
+    /// </summary>
+    public const string Pendiente = "PENDIENTE";
+
+    /// <summary>El encargado ya lo contó y eligió el almacén: el stock ya entró.</summary>
+    public const string Verificado = "VERIFICADO";
+
+    /// <summary>Se anuló junto con la venta que lo contenía.</summary>
+    public const string Anulado = "ANULADO";
+}
+
 /// <summary>
 /// Un producto ajeno a esta venta que el repartidor recoge al mismo tiempo
 /// que la entrega — malogrado, no lo pidió, lo que sea — y cuyo valor se
@@ -206,8 +223,11 @@ public class NotaVenta
 /// A diferencia de <see cref="Devolucion"/> (que reduce la venta donde
 /// estaba la línea), aquí el producto no tiene por qué venir de esta venta:
 /// por eso no hay <c>NotaVentaDetalleId</c>, solo el producto y la cantidad.
-/// El stock SIEMPRE vuelve al almacén elegido — a diferencia de las
-/// novedades de entrega, esta mercadería sí salió y sí regresa físicamente.
+///
+/// El stock no entra al registrarlo: el repartidor no decide a qué almacén
+/// va esa mercadería, así que queda Pendiente — igual que una novedad de
+/// entrega — hasta que el encargado lo revisa en el camión de vuelta y
+/// recién ahí, en <see cref="EstadoRecojo.Verificado"/>, entra de verdad.
 /// </summary>
 public class RecojoVenta
 {
@@ -234,8 +254,8 @@ public class RecojoVenta
     /// <summary>Cuánto se descuenta de esta venta: CantidadPresentacion × PrecioUnitario.</summary>
     public decimal Importe { get; set; }
 
-    /// <summary>A qué almacén vuelve la mercadería recogida.</summary>
-    public int AlmacenId { get; set; }
+    /// <summary>A qué almacén vuelve la mercadería recogida. Vacío hasta que se verifica.</summary>
+    public int? AlmacenId { get; set; }
     public Almacen? Almacen { get; set; }
 
     public int MotivoId { get; set; }
@@ -248,11 +268,15 @@ public class RecojoVenta
 
     public DateTime Fecha { get; set; } = DateTime.UtcNow;
 
-    /// <summary>El documento que sumó esta mercadería al almacén. Ata la reversa al anular la venta.</summary>
+    /// <summary><see cref="EstadoRecojo"/>.</summary>
+    public string Estado { get; set; } = EstadoRecojo.Pendiente;
+
+    /// <summary>El documento que sumó esta mercadería al almacén, una vez verificado.</summary>
     public int? DocumentoInventarioId { get; set; }
 
-    /// <summary>Se anula junto con la venta que lo contiene; el stock vuelve a salir.</summary>
-    public bool Anulado { get; set; }
+    public int? VerificadoPorId { get; set; }
+    public Usuario? VerificadoPor { get; set; }
+    public DateTime? VerificadoEn { get; set; }
 }
 
 public static class EstadoNotaVenta

@@ -42,8 +42,15 @@ public class RecojoRequestValidator : AbstractValidator<RecojoRequest>
         RuleFor(x => x.Cantidad).GreaterThan(0).WithMessage("La cantidad a recoger debe ser mayor que cero");
         RuleFor(x => x.PrecioUnitario).GreaterThan(0).WithMessage("Indica el valor de lo recogido");
         RuleFor(x => x.MotivoId).GreaterThan(0).WithMessage("Elige el motivo del recojo");
-        RuleFor(x => x.AlmacenId).GreaterThan(0).WithMessage("Elige a qué almacén vuelve lo recogido");
         RuleFor(x => x.Observacion).MaximumLength(250);
+    }
+}
+
+public class VerificarRecojoRequestValidator : AbstractValidator<VerificarRecojoRequest>
+{
+    public VerificarRecojoRequestValidator()
+    {
+        RuleFor(x => x.AlmacenId).GreaterThan(0).WithMessage("Elige a qué almacén entra lo recogido");
     }
 }
 

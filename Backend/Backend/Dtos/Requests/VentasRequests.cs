@@ -122,7 +122,11 @@ public class PagoVentaRequest
 
 /// <summary>
 /// Mercadería de OTRA venta que el repartidor recoge al entregar esta: se
-/// descuenta de esta nota, y vuelve al almacén elegido.
+/// descuenta de esta nota.
+///
+/// No lleva almacén: el repartidor no decide a dónde va esa mercadería, eso
+/// lo cuenta el encargado cuando el camión vuelve (ver
+/// <see cref="VerificarRecojoRequest"/>).
 /// </summary>
 public class RecojoRequest
 {
@@ -139,8 +143,14 @@ public class RecojoRequest
 
     public int MotivoId { get; set; }
     public string? Observacion { get; set; }
+}
 
-    /// <summary>A qué almacén vuelve la mercadería recogida.</summary>
+/// <summary>
+/// El encargado ya contó lo que volvió y dice a qué almacén entra: recién
+/// aquí el recojo suma stock de verdad.
+/// </summary>
+public class VerificarRecojoRequest
+{
     public int AlmacenId { get; set; }
 }
 

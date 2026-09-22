@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Eye, FileText, PackageX, RotateCcw, Wallet } from 'lucide-react'
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardCheck,
+  Eye,
+  FileText,
+  PackageX,
+  RotateCcw,
+  Wallet,
+} from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -8,6 +17,7 @@ import {
   Input,
   ListPage,
   Modal,
+  PageSection,
   RowAction,
   StatCard,
   useConfirmacion,
@@ -21,6 +31,10 @@ import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { novedadApi, textoCantidad } from './novedadApi'
 import type { EstadoNovedad, NovedadOpciones, NovedadResponse, ResumenNovedades } from './novedadApi'
+import { almacenApi } from '../inventario'
+import type { AlmacenOpcion } from '../inventario'
+import { recojoApi } from '../facturacion/ventasApi'
+import type { RecojoPendiente } from '../facturacion/ventasApi'
 
 const ESTADOS: Record<EstadoNovedad, { texto: string; tono: 'warning' | 'success' | 'danger' | 'neutral' }> = {
   PENDIENTE: { texto: 'Por revisar', tono: 'warning' },
@@ -67,6 +81,12 @@ export function NovedadesPage() {
   const [revisando, setRevisando] = useState<NovedadResponse | null>(null)
   const [reporteAbierto, setReporteAbierto] = useState(false)
 
+  // Mercadería recogida de otra venta, todavía sin almacén: el repartidor no
+  // lo elige, se revisa aquí igual que las novedades de entrega.
+  const [recojosPendientes, setRecojosPendientes] = useState<RecojoPendiente[]>([])
+  const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
+  const [verificandoRecojo, setVerificandoRecojo] = useState<RecojoPendiente | null>(null)
+
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargarPagina = useCallback(async (q: ConsultaTabla) => {
@@ -96,6 +116,16 @@ export function NovedadesPage() {
       setOpciones(await novedadApi.opciones())
     } catch {
       /* sin opciones el listado igual sirve; solo faltan las listas */
+    }
+    try {
+      setRecojosPendientes(await recojoApi.pendientes())
+    } catch {
+      /* si falla, la lista de novedades igual sirve */
+    }
+    try {
+      setAlmacenes((await almacenApi.opciones()).filter((a) => a.activo))
+    } catch {
+      /* sin almacenes no se puede verificar, pero el resto de la pantalla sirve */
     }
   }, [])
 
@@ -218,7 +248,39 @@ export function NovedadesPage() {
   ]
 
   return (
-    <ListPage
+    <div className="space-y-5">
+      {recojosPendientes.length > 0 && (
+        <PageSection
+          title="Recojos por revisar"
+          description="Mercadería de otra venta que el repartidor recogió: cuenta lo que volvió y di a qué almacén entra."
+        >
+          <div className="divide-y divide-line rounded-field border border-line">
+            {recojosPendientes.map((r) => (
+              <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">
+                    {r.producto} <span className="font-normal text-ink-soft">· {r.cantidadPresentacion} {r.presentacion ?? r.unidadBase}</span>
+                  </p>
+                  <p className="text-xs text-ink-soft">
+                    {r.motivo} · {r.notaVenta} · {r.cliente}
+                    {r.observacion && ` · ${r.observacion}`}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="text-sm font-semibold text-ink">S/ {r.importe.toFixed(2)}</span>
+                  {puede('tms.novedades', 'confirmar') && (
+                    <Button size="sm" onClick={() => setVerificandoRecojo(r)}>
+                      Verificar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </PageSection>
+      )}
+
+      <ListPage
       icon={<PackageX size={20} />}
       title="Novedades de entrega"
       description="Lo que no llegó al cliente y el motivo. Cuando la mercadería vuelve en el camión, aquí se cuenta y se deja constancia."
@@ -313,7 +375,19 @@ export function NovedadesPage() {
       />
 
       {dialogo}
-    </ListPage>
+      </ListPage>
+
+      <VerificarRecojoModal
+        recojo={verificandoRecojo}
+        almacenes={almacenes}
+        onClose={() => setVerificandoRecojo(null)}
+        onHecho={() => {
+          setVerificandoRecojo(null)
+          void cargar()
+          toast.exito('Recojo verificado')
+        }}
+      />
+    </div>
   )
 }
 
@@ -512,6 +586,93 @@ function RevisarModal({
             maxLength={250}
             value={observacion}
             onChange={(e) => setObservacion(e.target.value)}
+          />
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+/**
+ * El encargado dice a qué almacén entra un recojo: recién ahí suma stock de
+ * verdad. El repartidor no lo elige — por eso este paso vive aquí y no en la
+ * conversión del pedido.
+ */
+function VerificarRecojoModal({
+  recojo: r,
+  almacenes,
+  onClose,
+  onHecho,
+}: {
+  recojo: RecojoPendiente | null
+  almacenes: AlmacenOpcion[]
+  onClose: () => void
+  onHecho: () => void
+}) {
+  const [almacenId, setAlmacenId] = useState(0)
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!r) return
+    setAlmacenId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
+    setError('')
+  }, [r, almacenes])
+
+  const guardar = async () => {
+    if (!r) return
+    if (!almacenId) return setError('Elige el almacén.')
+
+    setGuardando(true)
+    setError('')
+    try {
+      await recojoApi.verificar(r.id, { almacenId })
+      onHecho()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos verificar el recojo.')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={r !== null}
+      size="sm"
+      title={r ? `Verificar recojo de ${r.producto}` : ''}
+      description={r ? `${r.notaVenta} · ${r.cliente}` : undefined}
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+            Verificar
+          </Button>
+        </>
+      }
+    >
+      {r && (
+        <div className="flex flex-col gap-4">
+          {error && <Alert>{error}</Alert>}
+
+          <p className="text-sm text-ink-muted">
+            <span className="font-semibold text-ink">
+              {r.cantidadPresentacion} {r.presentacion ?? r.unidadBase}
+            </span>{' '}
+            de vuelta ({r.motivo}). ¿A qué almacén entra?
+          </p>
+
+          <Desplegable
+            label="Almacén"
+            value={almacenId}
+            onChange={(v) => {
+              setAlmacenId(Number(v))
+              setError('')
+            }}
+            placeholder="Elige el almacén"
+            options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
           />
         </div>
       )}

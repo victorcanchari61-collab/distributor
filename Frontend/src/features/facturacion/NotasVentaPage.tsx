@@ -151,7 +151,6 @@ export function NotasVentaPage() {
   const [filas, setFilas] = useState<FilaVenta[]>([])
   // Mercadería de OTRA venta que se recoge al registrar esta: solo al crear, no al editar.
   const [recojos, setRecojos] = useState<RecojoLinea[]>([])
-  const [almacenRecojoId, setAlmacenRecojoId] = useState(0)
   const [motivos, setMotivos] = useState<MotivoNovedadOpcion[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
   /** Lo que apartan otros pedidos pendientes, por producto: el panel lo muestra como aviso. */
@@ -245,7 +244,6 @@ export function NotasVentaPage() {
     setObservacion('')
     setFilas([])
     setRecojos([])
-    setAlmacenRecojoId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
     setVista('form')
   }
 
@@ -261,7 +259,6 @@ export function NotasVentaPage() {
     setPagoMonto('')
     setObservacion(nota.observacion ?? '')
     setRecojos([])
-    setAlmacenRecojoId(0)
     setFilas(
       nota.detalle
         .filter((l) => !l.anulado)
@@ -527,7 +524,6 @@ export function NotasVentaPage() {
         if (!r.motivoId) return fallar(`Elige el motivo del recojo de ${producto?.nombre ?? 'un producto'}.`)
         if (!(Number(r.costo) > 0)) return fallar(`Indica el valor de lo recogido de ${producto?.nombre ?? 'un producto'}.`)
       }
-      if (recojos.length > 0 && !almacenRecojoId) return fallar('Elige a qué almacén vuelve lo recogido.')
       if (totalRecojo > total) {
         return fallar(`Lo recogido (S/ ${totalRecojo.toFixed(2)}) supera el total de la venta (S/ ${total.toFixed(2)}).`)
       }
@@ -560,7 +556,6 @@ export function NotasVentaPage() {
           precioUnitario: Number(r.costo) || 0,
           motivoId: r.motivoId,
           observacion: r.observacion.trim() || null,
-          almacenId: almacenRecojoId,
         }))
 
     const body: CrearNotaVentaRequest = {
@@ -991,17 +986,9 @@ export function NotasVentaPage() {
             {!editando && (
               <PageSection
                 title="Recojo"
-                description="Mercadería de otra venta que se recoge al registrar esta: se descuenta del total."
+                description="Mercadería de otra venta que se recoge al registrar esta: se descuenta del total. A qué almacén entra lo decide quien lo revise en Novedades de entrega."
               >
-                <Desplegable
-                  label="Almacén al que vuelve"
-                  value={almacenRecojoId}
-                  onChange={(v) => setAlmacenRecojoId(Number(v))}
-                  placeholder="Elige el almacén"
-                  options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
-                />
-
-                <div className="mt-4">
+                <div>
                   <AgregarProductoPanel
                     productos={productos}
                     uso="venta"
@@ -1379,7 +1366,7 @@ export function NotasVentaPage() {
                     key={r.id}
                     className={cn(
                       'flex items-center justify-between gap-2 border-t border-line pt-2 text-sm first:border-0 first:pt-0',
-                      r.anulado && 'opacity-60',
+                      r.estado === 'ANULADO' && 'opacity-60',
                     )}
                   >
                     <div className="min-w-0">
@@ -1387,8 +1374,13 @@ export function NotasVentaPage() {
                         {r.producto} <span className="text-ink-soft">· {r.cantidadPresentacion} {r.presentacion ?? r.unidadBase}</span>
                       </p>
                       <p className="text-xs text-ink-soft">
-                        {r.motivo} · vuelve a {r.almacen}
-                        {r.anulado && ' · anulado'}
+                        {r.motivo}
+                        {' · '}
+                        {r.estado === 'ANULADO'
+                          ? 'anulado'
+                          : r.estado === 'VERIFICADO'
+                            ? `entró a ${r.almacen}`
+                            : 'pendiente de revisar'}
                       </p>
                     </div>
                     <span className="shrink-0 font-semibold text-ink">S/ {r.importe.toFixed(2)}</span>

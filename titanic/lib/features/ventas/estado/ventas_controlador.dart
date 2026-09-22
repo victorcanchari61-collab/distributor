@@ -389,3 +389,32 @@ final metodosMisCobrosProvider = Provider.autoDispose<List<String>>((ref) {
   final valores = todos.map((c) => c.metodoPago).toSet().toList()..sort();
   return valores;
 });
+
+// --- Recojos ---
+
+/// Los recojos que todavía no entraron a ningún almacén: el repartidor no
+/// elige el almacén, así que quedan aquí hasta que se revisan en Novedades
+/// de entrega.
+class RecojosPendientesControlador
+    extends AsyncNotifier<List<RecojoPendiente>> {
+  @override
+  Future<List<RecojoPendiente>> build() =>
+      ref.watch(ventasApiProvider).recojosPendientes();
+
+  Future<void> recargar() async {
+    state = await AsyncValue.guard(
+      () => ref.read(ventasApiProvider).recojosPendientes(),
+    );
+  }
+
+  /// El encargado dice a qué almacén entra: recién ahí suma stock.
+  Future<void> verificar(int id, Map<String, dynamic> cuerpo) async {
+    await ref.read(ventasApiProvider).verificarRecojo(id, cuerpo);
+    await recargar();
+  }
+}
+
+final recojosPendientesProvider =
+    AsyncNotifierProvider<RecojosPendientesControlador, List<RecojoPendiente>>(
+      RecojosPendientesControlador.new,
+    );

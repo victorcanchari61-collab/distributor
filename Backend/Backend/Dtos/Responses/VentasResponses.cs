@@ -191,15 +191,47 @@ public class RecojoDeVentaResponse
     public string UnidadBase { get; set; } = string.Empty;
     public decimal CantidadPresentacion { get; set; }
 
-    public int AlmacenId { get; set; }
-    public string Almacen { get; set; } = string.Empty;
+    /// <summary>Vacío mientras está pendiente: el almacén lo decide quien lo verifica.</summary>
+    public int? AlmacenId { get; set; }
+    public string? Almacen { get; set; }
 
     public string Motivo { get; set; } = string.Empty;
     public string? Observacion { get; set; }
     public string? Usuario { get; set; }
 
     public decimal Importe { get; set; }
-    public bool Anulado { get; set; }
+
+    /// <summary>PENDIENTE, VERIFICADO o ANULADO.</summary>
+    public string Estado { get; set; } = string.Empty;
+    public string? VerificadoPor { get; set; }
+    public DateTime? VerificadoEn { get; set; }
+}
+
+/// <summary>
+/// Un recojo pendiente de verificar, visto para la pantalla de Novedades de
+/// entrega — con el contexto de la venta que lo descontó, que
+/// <see cref="RecojoDeVentaResponse"/> no necesita porque ya está adentro.
+/// </summary>
+public class RecojoPendienteResponse
+{
+    public int Id { get; set; }
+    public DateTime Fecha { get; set; }
+
+    public int NotaVentaId { get; set; }
+    public string NotaVenta { get; set; } = string.Empty;
+    public string Cliente { get; set; } = string.Empty;
+
+    public int ProductoId { get; set; }
+    public string Producto { get; set; } = string.Empty;
+    public string? Presentacion { get; set; }
+    public string UnidadBase { get; set; } = string.Empty;
+    public decimal CantidadPresentacion { get; set; }
+
+    public string Motivo { get; set; } = string.Empty;
+    public string? Observacion { get; set; }
+    public string? Usuario { get; set; }
+
+    public decimal Importe { get; set; }
 }
 
 /// <summary>Una devolucion vista desde su venta: lo justo para resolverla.</summary>

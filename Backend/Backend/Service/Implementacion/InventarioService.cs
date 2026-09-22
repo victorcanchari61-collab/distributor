@@ -1363,7 +1363,9 @@ public class InventarioService : IInventarioService
 
     public async Task<DocumentoInventarioResponse> CrearRecojoAsync(RecojoVenta recojo, int? usuarioId)
     {
-        var almacen = await GetAlmacenOrThrowAsync(recojo.AlmacenId);
+        var almacenId = recojo.AlmacenId
+            ?? throw new BadRequestException("El recojo todavía no tiene almacén: hay que verificarlo primero.");
+        var almacen = await GetAlmacenOrThrowAsync(almacenId);
         var entrada = await GetMotivoOrThrowAsync(Motivos.DevolucionCliente);
         var producto = await _productos.GetConDetalleAsync(recojo.ProductoId)
             ?? throw new BadRequestException($"No existe el producto {recojo.ProductoId}");

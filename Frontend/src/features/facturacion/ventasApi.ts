@@ -149,7 +149,11 @@ export interface LineaEntregaRequest {
 
 /**
  * Mercadería de OTRA venta que el repartidor recoge al entregar esta: se
- * descuenta del total y vuelve al almacén elegido.
+ * descuenta del total.
+ *
+ * No lleva almacén: el repartidor no decide a dónde va — eso lo cuenta el
+ * encargado cuando el camión vuelve, en Novedades de entrega
+ * (ver {@link recojoApi.verificar}).
  */
 export interface RecojoRequest {
   productoId: number
@@ -160,9 +164,10 @@ export interface RecojoRequest {
   precioUnitario: number
   motivoId: number
   observacion?: string | null
-  /** A qué almacén vuelve. */
-  almacenId: number
 }
+
+/** PENDIENTE (todavía no entra a stock), VERIFICADO (ya entró) o ANULADO. */
+export type EstadoRecojo = 'PENDIENTE' | 'VERIFICADO' | 'ANULADO'
 
 /** Un recojo visto desde su venta. */
 export interface RecojoDeVenta {
@@ -173,13 +178,38 @@ export interface RecojoDeVenta {
   presentacion: string | null
   unidadBase: string
   cantidadPresentacion: number
-  almacenId: number
-  almacen: string
+  /** Vacío mientras está pendiente: el almacén lo decide quien lo verifica. */
+  almacenId: number | null
+  almacen: string | null
   motivo: string
   observacion: string | null
   usuario: string | null
   importe: number
-  anulado: boolean
+  estado: EstadoRecojo
+  verificadoPor: string | null
+  verificadoEn: string | null
+}
+
+/** Un recojo pendiente de verificar, con el contexto de la venta que lo descontó. */
+export interface RecojoPendiente {
+  id: number
+  fecha: string
+  notaVentaId: number
+  notaVenta: string
+  cliente: string
+  productoId: number
+  producto: string
+  presentacion: string | null
+  unidadBase: string
+  cantidadPresentacion: number
+  motivo: string
+  observacion: string | null
+  usuario: string | null
+  importe: number
+}
+
+export interface VerificarRecojoRequest {
+  almacenId: number
 }
 
 /** El pedido entero no se entregó. */
@@ -389,5 +419,13 @@ export const notaVentaApi = {
   },
   /** Qué cambió en esta nota de venta: sobre todo anulaciones y movimientos de pago. */
   historial: (id: number) => api.get<AuditoriaResponse[]>(`/notaventa/${id}/historial`),
+}
+
+/** Los recojos que todavía no entraron a ningún almacén, para revisarlos desde Novedades de entrega. */
+export const recojoApi = {
+  pendientes: () => api.get<RecojoPendiente[]>('/notaventa/recojo/pendientes'),
+  /** El encargado dice a qué almacén entra: recién ahí suma stock. */
+  verificar: (id: number, body: VerificarRecojoRequest) =>
+    api.patch<NotaVentaResponse>(`/notaventa/recojo/${id}/verificar`, body),
 }
 

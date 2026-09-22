@@ -21,6 +21,9 @@ import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
+import '../../inventario/estado/inventario_controlador.dart';
+import '../../ventas/datos/nota_venta.dart';
+import '../../ventas/estado/ventas_controlador.dart';
 import '../datos/novedad.dart';
 import '../estado/novedades_controlador.dart';
 
@@ -91,6 +94,7 @@ class NovedadesPagina extends ConsumerWidget {
             color: color,
             onAbrir: () => _abrirFiltros(context, ref),
           ),
+          if (puedeRevisar) const _BotonRecojos(),
           if (puedeExportar) const _BotonReporte(),
         ],
       ),
@@ -481,6 +485,332 @@ class _BotonReporteState extends ConsumerState<_BotonReporte> {
               color: Colores.tintaSuave,
             ),
     );
+  }
+}
+
+/// Cuántos recojos hay por revisar — mercadería de otra venta que el
+/// repartidor recogió y que todavía no entró a ningún almacén — con acceso a
+/// la hoja donde se verifican.
+class _BotonRecojos extends ConsumerWidget {
+  const _BotonRecojos();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pendientes =
+        ref.watch(recojosPendientesProvider).valueOrNull ??
+        const <RecojoPendiente>[];
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          onPressed: () => _abrirRecojosPendientes(context, ref),
+          tooltip: 'Recojos por revisar',
+          icon: const Icon(
+            Icons.assignment_return_outlined,
+            size: 22,
+            color: Colores.tintaSuave,
+          ),
+        ),
+        if (pendientes.isNotEmpty)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              constraints: const BoxConstraints(minWidth: 15),
+              decoration: BoxDecoration(
+                color: Colores.advertencia,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                pendientes.length > 9 ? '9+' : '${pendientes.length}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+Future<void> _abrirRecojosPendientes(BuildContext context, WidgetRef ref) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colores.superficie,
+    isScrollControlled: true,
+    showDragHandle: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
+    ),
+    builder: (context) => const _HojaRecojosPendientes(),
+  );
+}
+
+class _HojaRecojosPendientes extends ConsumerWidget {
+  const _HojaRecojosPendientes();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final estado = ref.watch(recojosPendientesProvider);
+    final pendientes = estado.valueOrNull ?? const <RecojoPendiente>[];
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Recojos por revisar',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
+              ),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              'Mercadería de otra venta que el repartidor recogió. Cuenta lo que volvió y di a qué '
+              'almacén entra.',
+              style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
+            ),
+            const SizedBox(height: Dimen.espacio3),
+            Flexible(
+              child: estado.isLoading && pendientes.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: Dimen.espacio6),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : pendientes.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: Dimen.espacio6),
+                      child: Center(
+                        child: Text(
+                          'No hay recojos pendientes.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colores.tintaSuave,
+                          ),
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: pendientes.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, i) => _FilaRecojoPendiente(
+                        recojo: pendientes[i],
+                        onVerificar: () =>
+                            _verificarRecojo(context, ref, pendientes[i]),
+                      ),
+                    ),
+            ),
+            const SizedBox(height: Dimen.espacio3),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilaRecojoPendiente extends StatelessWidget {
+  const _FilaRecojoPendiente({required this.recojo, required this.onVerificar});
+
+  final RecojoPendiente recojo;
+  final VoidCallback onVerificar;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = recojo;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Dimen.espacio3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  r.producto,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colores.tinta,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${r.cantidadPresentacion} ${r.presentacion ?? r.unidadBase} · ${r.motivo}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colores.tintaSuave,
+                  ),
+                ),
+                Text(
+                  '${r.notaVenta} · ${r.cliente}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colores.tintaSuave,
+                  ),
+                ),
+                if (r.observacion != null)
+                  Text(
+                    r.observacion!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colores.tintaSuave,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: Dimen.espacio2),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'S/ ${r.importe.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colores.tinta,
+                ),
+              ),
+              const SizedBox(height: Dimen.espacio2),
+              AppBoton(
+                texto: 'Verificar',
+                tam: BotonTam.sm,
+                expandido: false,
+                onPressed: onVerificar,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// El encargado cuenta lo que volvió y dice a qué almacén entra: recién ahí
+/// el recojo suma stock de verdad.
+Future<void> _verificarRecojo(
+  BuildContext context,
+  WidgetRef ref,
+  RecojoPendiente recojo,
+) async {
+  final almacenes = ref.read(almacenesActivosProvider);
+  int? almacenId = almacenes.isEmpty
+      ? null
+      : almacenes
+            .firstWhere((a) => a.esPrincipal, orElse: () => almacenes.first)
+            .id;
+  String? error;
+
+  final confirmar = await showModalBottomSheet<bool>(
+    context: context,
+    backgroundColor: Colores.superficie,
+    isScrollControlled: true,
+    showDragHandle: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
+    ),
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              left: Dimen.espacio4,
+              right: Dimen.espacio4,
+              top: Dimen.espacio2,
+              bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Verificar recojo de ${recojo.producto}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colores.tinta,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${recojo.notaVenta} · ${recojo.cliente}',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: Colores.tintaSuave,
+                  ),
+                ),
+                const SizedBox(height: Dimen.espacio4),
+                if (error != null) ...[
+                  Text(
+                    error!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colores.peligro,
+                    ),
+                  ),
+                  const SizedBox(height: Dimen.espacio2),
+                ],
+                AppSelector<int>(
+                  valor: almacenId,
+                  etiqueta: 'Almacén',
+                  icono: Icons.warehouse_outlined,
+                  opciones: [
+                    for (final a in almacenes) Opcion<int>(a.id, a.nombre),
+                  ],
+                  onCambio: (v) => setSheetState(() {
+                    almacenId = v;
+                    error = null;
+                  }),
+                ),
+                const SizedBox(height: Dimen.espacio3),
+                AppBoton(
+                  texto: 'Verificar',
+                  onPressed: () {
+                    if (almacenId == null) {
+                      setSheetState(() => error = 'Elige el almacén.');
+                      return;
+                    }
+                    Navigator.of(context).pop(true);
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+
+  if (confirmar != true || almacenId == null || !context.mounted) return;
+
+  final mensajero = Aviso.de(context);
+  try {
+    await ref.read(recojosPendientesProvider.notifier).verificar(recojo.id, {
+      'almacenId': almacenId,
+    });
+    mensajero.mostrar('Recojo verificado');
+  } on ApiExcepcion catch (e) {
+    mensajero.error(e.texto);
   }
 }
 

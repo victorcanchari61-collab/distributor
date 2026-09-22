@@ -176,9 +176,10 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
   /// falta al convertir, y la pestaña se reconstruye al cambiar de una a otra.
   final List<FilaPagoEntrega> _pagos = [];
 
-  /// Mercadería de otra venta que se recoge al entregar esta.
+  /// Mercadería de otra venta que se recoge al entregar esta. Sin almacén: el
+  /// repartidor no lo elige, eso lo decide el encargado en Novedades de
+  /// entrega cuando el camión vuelve.
   final List<_RecojoLinea> _recojos = [];
-  int? _almacenRecojoId;
 
   int? _almacenId;
   bool _guardando = false;
@@ -227,25 +228,6 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
     // En el build no se puede llamar a setState: se agenda para el cuadro siguiente.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _almacenId = principal.id);
-    });
-  }
-
-  /// El recojo vuelve al almacén principal por defecto: es otro almacén, no
-  /// necesariamente el de salida de esta entrega. Mismo truco que arriba: se
-  /// pone en el build, la primera vez que la lista trae algo.
-  bool _almacenRecojoPuesto = false;
-
-  void _ponerAlmacenRecojoPorDefecto(List<Almacen> almacenes) {
-    if (_almacenRecojoPuesto || almacenes.isEmpty) return;
-    _almacenRecojoPuesto = true;
-
-    final principal = almacenes.firstWhere(
-      (a) => a.esPrincipal,
-      orElse: () => almacenes.first,
-    );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _almacenRecojoId = principal.id);
     });
   }
 
@@ -330,9 +312,6 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
         );
       }
     }
-    if (_recojos.isNotEmpty && _almacenRecojoId == null) {
-      return _fallar('Elige a qué almacén vuelve lo recogido.', _pestanaRecojo);
-    }
     if (_totalRecojo > _totalLineas) {
       return _fallar(
         'Lo recogido (${formatoSoles(_totalRecojo)}) supera el total de la venta '
@@ -394,7 +373,6 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
             'observacion': r.observacion.text.trim().isEmpty
                 ? null
                 : r.observacion.text.trim(),
-            'almacenId': _almacenRecojoId,
           },
       ],
     };
@@ -420,7 +398,6 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
   Widget build(BuildContext context) {
     final almacenes = ref.watch(almacenesActivosProvider);
     _ponerAlmacenPorDefecto(almacenes);
-    _ponerAlmacenRecojoPorDefecto(almacenes);
     final motivos = ref.watch(opcionesMotivoProvider);
     // Se pide al abrir la hoja, no al entrar en Pago: así ya está al llegar.
     final metodos = ref.watch(metodosPagoOpcionesProvider);
@@ -537,7 +514,12 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
               ],
             ),
             const Divider(height: 1),
-            const SizedBox(height: Dimen.espacio3),
+            // Un poco mas que el espacio normal entre bloques: el primer
+            // campo de cada pestaña es un selector con etiqueta flotante, que
+            // ya de por si dibuja parte de su texto por encima del recuadro.
+            // Con el espaciado normal esa etiqueta quedaba pegada al divisor
+            // de arriba.
+            const SizedBox(height: Dimen.espacio4),
 
             // Encima de las pestañas: el error de una se arregla en la otra.
             if (_error != null) ...[
@@ -671,9 +653,6 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
                   _RecojoTab(
                     recojos: _recojos,
                     productos: productos,
-                    almacenes: almacenes,
-                    almacenRecojoId: _almacenRecojoId,
-                    onAlmacen: (v) => setState(() => _almacenRecojoId = v),
                     motivos: opcionesMotivo,
                     cargandoMotivos: motivos.isLoading,
                     onAgregar: () async {
@@ -776,9 +755,6 @@ class _RecojoTab extends StatelessWidget {
   const _RecojoTab({
     required this.recojos,
     required this.productos,
-    required this.almacenes,
-    required this.almacenRecojoId,
-    required this.onAlmacen,
     required this.motivos,
     required this.cargandoMotivos,
     required this.onAgregar,
@@ -788,9 +764,6 @@ class _RecojoTab extends StatelessWidget {
 
   final List<_RecojoLinea> recojos;
   final List<Producto> productos;
-  final List<Almacen> almacenes;
-  final int? almacenRecojoId;
-  final ValueChanged<int?> onAlmacen;
   final List<MotivoNovedad> motivos;
   final bool cargandoMotivos;
   final VoidCallback onAgregar;
@@ -803,17 +776,9 @@ class _RecojoTab extends StatelessWidget {
       children: [
         const Text(
           'Mercadería de OTRA venta que el repartidor recoge al entregar esta —malograda, no la pidió, lo '
-          'que sea—. Se descuenta del total y vuelve al almacén que elijas.',
+          'que sea—. Se descuenta del total. A qué almacén entra lo decide quien lo revise en Novedades '
+          'de entrega, cuando el camión vuelva.',
           style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
-        ),
-        const SizedBox(height: Dimen.espacio3),
-
-        AppSelector<int>(
-          valor: almacenRecojoId,
-          etiqueta: 'Almacén al que vuelve',
-          icono: Icons.warehouse_outlined,
-          opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
-          onCambio: onAlmacen,
         ),
         const SizedBox(height: Dimen.espacio3),
 

@@ -80,6 +80,8 @@ public interface IVentasRepository
     /// la venta completa como anulada al revertir su salida de stock.
     /// </summary>
     Task<NotaVentaDetalle?> GetNotaVentaDetalleConNotaVentaAsync(int id);
+    Task<RecojoVenta?> GetRecojoConNotaVentaAsync(int id);
+    Task<List<RecojoVenta>> GetRecojosPendientesAsync();
 
     /// <summary>
     /// Igual que <see cref="ReemplazarDetallePedidoAsync"/> pero para una nota

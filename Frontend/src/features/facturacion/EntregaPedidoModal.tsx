@@ -119,7 +119,6 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
   const [entregas, setEntregas] = useState<Record<number, Entrega>>({})
   // Mercadería de OTRA venta que el repartidor recoge al entregar esta: se descuenta del total.
   const [recojos, setRecojos] = useState<RecojoLinea[]>([])
-  const [almacenRecojoId, setAlmacenRecojoId] = useState(0)
   const [motivos, setMotivos] = useState<MotivoNovedadOpcion[]>([])
   // Sin esto el aviso de "no hay motivos" parpadea mientras la lista carga.
   const [motivosListos, setMotivosListos] = useState(false)
@@ -141,7 +140,6 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
     setEntregas(Object.fromEntries(lineas.map((l) => [l.id, entregaCompleta(l)])))
     setPagos([])
     setRecojos([])
-    setAlmacenRecojoId(0)
     setPestana('entrega')
     setError('')
 
@@ -185,13 +183,6 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
     if (!pedido || pedido.reservaStock || almacenId) return
     setAlmacenId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
   }, [pedido, almacenes, almacenId])
-
-  // El recojo vuelve al almacén principal por defecto: es otro almacén, no
-  // necesariamente el de salida de esta entrega.
-  useEffect(() => {
-    if (!pedido || almacenRecojoId) return
-    setAlmacenRecojoId(almacenes.find((a) => a.esPrincipal)?.id ?? almacenes[0]?.id ?? 0)
-  }, [pedido, almacenes, almacenRecojoId])
 
   // De dónde sale la mercadería: el almacén de la reserva, o el elegido.
   const almacenDeSalida = pedido?.reservaStock ? (pedido.almacenId ?? 0) : almacenId
@@ -303,9 +294,6 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
       if (!r.motivoId) return fallar(`Elige el motivo del recojo de ${producto?.nombre ?? 'un producto'}.`, 'recojo')
       if (!(Number(r.costo) > 0)) return fallar(`Indica el valor de lo recogido de ${producto?.nombre ?? 'un producto'}.`, 'recojo')
     }
-    if (recojos.length > 0 && !almacenRecojoId) {
-      return fallar('Elige a qué almacén vuelve lo recogido.', 'recojo')
-    }
     if (totalRecojo > total) {
       return fallar(`Lo recogido (${soles(totalRecojo)}) supera el total de la venta (${soles(total)}).`, 'recojo')
     }
@@ -333,7 +321,6 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
       precioUnitario: Number(r.costo) || 0,
       motivoId: r.motivoId,
       observacion: r.observacion.trim() || null,
-      almacenId: almacenRecojoId,
     }))
 
     setGuardando(true)
@@ -577,19 +564,9 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
           <>
             <p className="text-xs text-ink-soft">
               Mercadería de OTRA venta que el repartidor recoge al entregar esta —malograda, no la pidió, lo que sea—.
-              Se descuenta del total y vuelve al almacén que elijas.
+              Se descuenta del total. A qué almacén entra lo decide quien lo revise en Novedades de entrega, cuando
+              el camión vuelva.
             </p>
-
-            <Desplegable
-              label="Almacén al que vuelve"
-              value={almacenRecojoId}
-              onChange={(v) => {
-                setAlmacenRecojoId(Number(v))
-                setError('')
-              }}
-              placeholder="Elige el almacén"
-              options={almacenes.map((a) => ({ value: a.id, label: a.nombre }))}
-            />
 
             <AgregarProductoPanel
               productos={productos}

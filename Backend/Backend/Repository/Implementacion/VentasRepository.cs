@@ -579,6 +579,24 @@ public class VentasRepository : IVentasRepository
             .Include(d => d.NotaVenta)
             .FirstOrDefaultAsync(d => d.Id == id);
 
+    public async Task<RecojoVenta?> GetRecojoConNotaVentaAsync(int id) =>
+        await _context.RecojosVenta
+            .Include(r => r.Producto)
+            .Include(r => r.NotaVenta)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+    public async Task<List<RecojoVenta>> GetRecojosPendientesAsync() =>
+        await _context.RecojosVenta
+            .AsNoTracking()
+            .Where(r => r.Estado == EstadoRecojo.Pendiente)
+            .Include(r => r.Producto).ThenInclude(p => p!.UnidadBase)
+            .Include(r => r.Presentacion)
+            .Include(r => r.Motivo)
+            .Include(r => r.Usuario)
+            .Include(r => r.NotaVenta).ThenInclude(n => n!.Cliente)
+            .OrderBy(r => r.Fecha)
+            .ToListAsync();
+
     public async Task ReemplazarDetalleNotaVentaAsync(int notaVentaId, IEnumerable<NotaVentaDetalle> detalle)
     {
         var actuales = await _context.NotaVentaDetalles

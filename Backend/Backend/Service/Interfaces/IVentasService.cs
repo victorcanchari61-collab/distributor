@@ -56,6 +56,12 @@ public interface IVentasService
 
     Task AnularNotaVentaAsync(int id, int? usuarioId);
 
+    /// <summary>Los recojos que todavía no entraron a ningún almacén, para revisarlos en Novedades.</summary>
+    Task<IEnumerable<RecojoPendienteResponse>> GetRecojosPendientesAsync();
+
+    /// <summary>El encargado dice a qué almacén entra un recojo: recién ahí suma stock.</summary>
+    Task<NotaVentaResponse> VerificarRecojoAsync(int recojoId, VerificarRecojoRequest request, int? usuarioId);
+
     /// <summary>Registra un abono contra el saldo pendiente de una nota de venta.</summary>
     Task<NotaVentaResponse> RegistrarPagoAsync(int id, PagoVentaRequest request, int? usuarioId);
 
