@@ -164,6 +164,22 @@ export function AgregarProductoPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [producto?.id, presentacionReal, linea.cantidad, claveLista])
 
+  /*
+   * Sin lista de precios que resolver —las compras no tienen una—, el costo se autocompleta con el
+   * costo de referencia del producto, por el factor de la presentación elegida.
+   *
+   * Antes solo se mostraba como PLACEHOLDER: un texto gris de fondo que no es el valor del campo, así
+   * que el costo parecía vacío y había que teclearlo a mano cada vez, aunque el dato ya existiera.
+   *
+   * Se vuelve a calcular al elegir el producto o al cambiar de unidad, no en cada tecla de cantidad
+   * ni de costo: así lo que la persona corrija a mano no se pisa solo mientras sigue escribiendo.
+   */
+  useEffect(() => {
+    if (resolverPrecio || !producto || producto.costoReferencia == null || !presentacionReal) return
+    setLinea((l) => ({ ...l, costo: String(Math.round(producto.costoReferencia! * factor * 100) / 100) }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [producto?.id, presentacionReal, Boolean(resolverPrecio)])
+
   const agregar = () => {
     if (!producto || !linea.cantidad) return
 
@@ -250,7 +266,11 @@ export function AgregarProductoPanel({
             type="number"
             step="0.01"
             disabled={!producto}
-            placeholder={producto?.costoReferencia ? String(producto.costoReferencia * factor) : '0.00'}
+            placeholder={
+              producto?.costoReferencia
+                ? String(Math.round(producto.costoReferencia * factor * 100) / 100)
+                : '0.00'
+            }
             value={linea.costo}
             onChange={(e) => setLinea({ ...linea, costo: e.target.value })}
             hint={

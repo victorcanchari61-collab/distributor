@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowRight, Eye, Plus, Trash2, Truck, Undo2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Eye, Plus, Trash2, Truck, Undo2 } from 'lucide-react'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -11,6 +11,8 @@ import {
   Input,
   ListPage,
   Modal,
+  PageHeader,
+  PageSection,
   ResumenDocumento,
   RowAction,
   StatCard,
@@ -67,7 +69,7 @@ export function TransferenciasPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
-  const [abierto, setAbierto] = useState(false)
+  const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [detalleAbierto, setDetalleAbierto] = useState<DocumentoInventarioResponse | null>(null)
   const [guardando, setGuardando] = useState(false)
 
@@ -132,7 +134,7 @@ export function TransferenciasPage() {
 
   // Stock del almacén de origen, para mostrarlo mientras se arma cada línea.
   useEffect(() => {
-    if (!abierto || !cabecera.almacenOrigenId) return
+    if (vista !== 'form' || !cabecera.almacenOrigenId) return
     let cancelado = false
     void stockApi.getAll(cabecera.almacenOrigenId).then((filas) => {
       if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.disponible])))
@@ -140,7 +142,7 @@ export function TransferenciasPage() {
     return () => {
       cancelado = true
     }
-  }, [abierto, cabecera.almacenOrigenId])
+  }, [vista, cabecera.almacenOrigenId])
 
   const abrirNuevo = () => {
     setCabecera({
@@ -149,7 +151,7 @@ export function TransferenciasPage() {
       observacion: '',
     })
     setFilas([])
-    setAbierto(true)
+    setVista('form')
   }
 
   const actualizarFila = (id: string, cambio: Partial<FilaTransferencia>) =>
@@ -177,7 +179,7 @@ export function TransferenciasPage() {
           cantidad: Number(f.cantidad),
         })),
       })
-      setAbierto(false)
+      setVista('lista')
       await cargar()
       toast.exito('Transferencia registrada')
     } catch (e) {
@@ -329,6 +331,96 @@ export function TransferenciasPage() {
     },
   ]
 
+  if (vista === 'form') {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          icon={<Truck size={20} />}
+          title="Nueva transferencia"
+          description="Confirmada, no se edita: se anula con otro documento."
+          actions={
+            <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+              <ArrowLeft size={15} />
+              Volver
+            </Button>
+          }
+        />
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_360px] xl:items-start">
+          <PageSection
+            title="Productos"
+            description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
+          >
+            <AgregarProductoPanel
+              productos={productos}
+              stock={stockMap}
+              pideCosto={false}
+              onAgregar={(linea) => setFilas((f) => [...f, linea])}
+            />
+
+            <div className="mt-4">
+              <SysDataTable
+                columns={columnasFilas}
+                rows={filas}
+                rowKey="id"
+                toolbar={false}
+                empty="Agrega productos con el buscador de arriba."
+                actions={(fila) => (
+                  <RowAction
+                    label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                    tone="danger"
+                    onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+                  >
+                    <Trash2 size={15} />
+                  </RowAction>
+                )}
+              />
+            </div>
+          </PageSection>
+
+          <PageSection title="Transferencia">
+            <Desplegable
+              label="Origen"
+              value={cabecera.almacenOrigenId}
+              onChange={(v) => setCabecera({ ...cabecera, almacenOrigenId: Number(v) })}
+              options={activos.map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
+            />
+
+            <Desplegable
+              className="mt-4"
+              label="Destino"
+              value={cabecera.almacenDestinoId}
+              onChange={(v) => setCabecera({ ...cabecera, almacenDestinoId: Number(v) })}
+              options={activos
+                .filter((a) => a.id !== cabecera.almacenOrigenId)
+                .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
+            />
+
+            <Input
+              className="mt-4"
+              label="Observación"
+              optional
+              placeholder="Motivo, guía de remisión..."
+              value={cabecera.observacion}
+              onChange={(e) => setCabecera({ ...cabecera, observacion: e.target.value })}
+            />
+          </PageSection>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+            Cancelar
+          </Button>
+          <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+            Registrar transferencia
+          </Button>
+        </div>
+
+        {dialogo}
+      </div>
+    )
+  }
+
   return (
     <ListPage
       icon={<Truck size={20} />}
@@ -417,88 +509,6 @@ export function TransferenciasPage() {
         </>
       )}
     >
-      {/* Nueva transferencia */}
-      <Modal
-        open={abierto}
-        title="Nueva transferencia"
-        description="Confirmada, no se edita: se anula con otro documento."
-        onClose={() => setAbierto(false)}
-        footer={
-          <>
-            <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
-              Cancelar
-            </Button>
-            <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-              Registrar transferencia
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-4">
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Desplegable
-              label="Origen"
-              value={cabecera.almacenOrigenId}
-              onChange={(v) => setCabecera({ ...cabecera, almacenOrigenId: Number(v) })}
-              options={activos.map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
-            />
-            <Desplegable
-              label="Destino"
-              value={cabecera.almacenDestinoId}
-              onChange={(v) => setCabecera({ ...cabecera, almacenDestinoId: Number(v) })}
-              options={activos
-                .filter((a) => a.id !== cabecera.almacenOrigenId)
-                .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
-            />
-          </div>
-
-          <Input
-            label="Observación"
-            optional
-            placeholder="Motivo, guía de remisión..."
-            value={cabecera.observacion}
-            onChange={(e) => setCabecera({ ...cabecera, observacion: e.target.value })}
-          />
-
-          <hr className="border-line" />
-
-          <p className="text-sm font-semibold text-ink">Agregar producto</p>
-          <AgregarProductoPanel
-            productos={productos}
-            stock={stockMap}
-            pideCosto={false}
-            onAgregar={(linea) => setFilas((f) => [...f, linea])}
-          />
-
-          <hr className="border-line" />
-
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-ink">Productos</p>
-            <span className="text-xs text-ink-soft">
-              {filas.length} producto{filas.length === 1 ? '' : 's'} agregado{filas.length === 1 ? '' : 's'}
-            </span>
-          </div>
-
-          <SysDataTable
-            columns={columnasFilas}
-            rows={filas}
-            rowKey="id"
-            toolbar={false}
-            empty="Agrega productos con el buscador de arriba."
-            actions={(fila) => (
-              <RowAction
-                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
-                tone="danger"
-                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
-              >
-                <Trash2 size={15} />
-              </RowAction>
-            )}
-          />
-        </div>
-      </Modal>
-
       {/* Ver detalle */}
       <Modal
         open={detalleAbierto !== null}
