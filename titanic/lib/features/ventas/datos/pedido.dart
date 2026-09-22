@@ -96,6 +96,8 @@ class Pedido {
     required this.cliente,
     this.listaPrecioId,
     this.listaPrecio,
+    this.ruta,
+    this.diaVisita,
     this.condicionPago = CondicionPago.contado,
     required this.fecha,
     required this.estado,
@@ -118,6 +120,10 @@ class Pedido {
 
   final int? listaPrecioId;
   final String? listaPrecio;
+
+  /// La ruta del cliente y el día en que se lo visita: con lo que se filtra el listado.
+  final String? ruta;
+  final String? diaVisita;
 
   /// CONTADO o CREDITO: lo acordado con el cliente.
   final String condicionPago;
@@ -155,6 +161,8 @@ class Pedido {
     listaPrecioId: json['listaPrecioId'] as int?,
     condicionPago: json['condicionPago'] as String? ?? CondicionPago.contado,
     listaPrecio: json['listaPrecio'] as String?,
+    ruta: json['ruta'] as String?,
+    diaVisita: json['diaVisita'] as String?,
     fecha: fechaDeJson(json['fecha'] as String),
     estado: json['estado'] as String? ?? EstadoPedido.pendiente,
     observacion: json['observacion'] as String?,

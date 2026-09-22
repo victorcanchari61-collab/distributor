@@ -26,11 +26,19 @@ final ventaPedidoFiltroProvider = StateProvider.autoDispose<bool?>(
   (ref) => null,
 );
 
+/// La ruta del cliente. Null es "todas".
+final rutaPedidoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+
+/// El día de visita del cliente. Null es "todos".
+final diaVisitaPedidoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+
 final filtrosPedidosActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(estadoPedidoFiltroProvider) != null) n++;
   if (ref.watch(clientePedidoFiltroProvider) != null) n++;
   if (ref.watch(ventaPedidoFiltroProvider) != null) n++;
+  if (ref.watch(rutaPedidoFiltroProvider) != null) n++;
+  if (ref.watch(diaVisitaPedidoFiltroProvider) != null) n++;
   return n;
 });
 
@@ -87,10 +95,14 @@ final pedidosFiltradosProvider = Provider.autoDispose<List<Pedido>>((ref) {
   final estado = ref.watch(estadoPedidoFiltroProvider);
   final cliente = ref.watch(clientePedidoFiltroProvider);
   final venta = ref.watch(ventaPedidoFiltroProvider);
+  final ruta = ref.watch(rutaPedidoFiltroProvider);
+  final diaVisita = ref.watch(diaVisitaPedidoFiltroProvider);
   return todos
       .where((p) => estado == null || p.estado == estado)
       .where((p) => cliente == null || p.cliente == cliente)
       .where((p) => venta == null || venta == (p.notaVentaNumero != null))
+      .where((p) => ruta == null || p.ruta == ruta)
+      .where((p) => diaVisita == null || p.diaVisita == diaVisita)
       .where((p) => texto.isEmpty || p.buscable.contains(texto))
       .toList();
 });
@@ -101,6 +113,17 @@ final clientesPedidoProvider = Provider.autoDispose<List<String>>((ref) {
   final valores = todos.map((p) => p.cliente).toSet().toList()..sort();
   return valores;
 });
+
+/// Rutas que existen en los pedidos, para armar el filtro.
+final rutasPedidoProvider = Provider.autoDispose<List<String>>((ref) {
+  final todos = ref.watch(pedidosProvider).valueOrNull ?? const <Pedido>[];
+  final valores = todos.map((p) => p.ruta).whereType<String>().toSet().toList()
+    ..sort((a, b) => a.compareTo(b));
+  return valores;
+});
+
+/// Los días de visita, en orden de semana, que las rutas de este listado usan.
+const diasVisitaOrden = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
 
 // --- Notas de venta ---
 

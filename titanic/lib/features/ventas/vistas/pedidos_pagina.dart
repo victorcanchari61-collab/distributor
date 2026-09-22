@@ -35,7 +35,7 @@ class PedidosPagina extends ConsumerWidget {
     final todos = ref.watch(pedidosProvider).valueOrNull ?? const <Pedido>[];
     final pendientes = todos.where((p) => p.estado == EstadoPedido.pendiente).length;
     final confirmados = todos.where((p) => p.estado == EstadoPedido.confirmado).length;
-    final estadoFiltro = ref.watch(estadoPedidoFiltroProvider);
+    final filtrosActivos = ref.watch(filtrosPedidosActivosProvider);
 
     return AppListaPagina<Pedido>(
       titulo: 'Pedidos',
@@ -74,7 +74,7 @@ class PedidosPagina extends ConsumerWidget {
         ),
       ],
       filtro: BotonFiltros(
-        activos: estadoFiltro == null ? 0 : 1,
+        activos: filtrosActivos,
         color: color,
         onAbrir: () => _abrirFiltros(context, ref),
       ),
@@ -111,6 +111,8 @@ class PedidosPagina extends ConsumerWidget {
         ref.read(estadoPedidoFiltroProvider.notifier).state = null;
         ref.read(clientePedidoFiltroProvider.notifier).state = null;
         ref.read(ventaPedidoFiltroProvider.notifier).state = null;
+        ref.read(rutaPedidoFiltroProvider.notifier).state = null;
+        ref.read(diaVisitaPedidoFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -155,9 +157,47 @@ class PedidosPagina extends ConsumerWidget {
             onCambio: (v) => ref.read(ventaPedidoFiltroProvider.notifier).state = v,
           ),
         ),
+        // La ruta y el día de visita son del CLIENTE del pedido, igual que en la web.
+        Consumer(
+          builder: (context, ref, _) {
+            final rutas = ref.watch(rutasPedidoProvider);
+            if (rutas.isEmpty) return const SizedBox.shrink();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Ruta',
+              valor: ref.watch(rutaPedidoFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todas'),
+                for (final r in rutas) OpcionFiltro(r, 'Ruta $r'),
+              ],
+              onCambio: (v) => ref.read(rutaPedidoFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final todos = ref.watch(pedidosProvider).valueOrNull ?? const [];
+            final dias = todos.map((p) => p.diaVisita).whereType<String>().toSet();
+            if (dias.isEmpty) return const SizedBox.shrink();
+            final ordenados = diasVisitaOrden.where(dias.contains).toList();
+
+            return GrupoFiltro<String?>(
+              titulo: 'Día de visita',
+              valor: ref.watch(diaVisitaPedidoFiltroProvider),
+              opciones: [
+                const OpcionFiltro(null, 'Todos'),
+                for (final d in ordenados) OpcionFiltro(d, _diaLegible(d)),
+              ],
+              onCambio: (v) => ref.read(diaVisitaPedidoFiltroProvider.notifier).state = v,
+            );
+          },
+        ),
       ],
     );
   }
+
+  static String _diaLegible(String dia) =>
+      dia.isEmpty ? dia : dia[0] + dia.substring(1).toLowerCase();
 
   Future<void> _abrirFormulario(BuildContext context, Pedido? pedido) {
     return Navigator.of(context).push(

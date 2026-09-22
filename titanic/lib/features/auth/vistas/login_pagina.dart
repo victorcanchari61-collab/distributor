@@ -18,8 +18,6 @@ class LoginPagina extends ConsumerStatefulWidget {
 }
 
 /// Credenciales de demostracion, las mismas del panel web.
-const _demo = (email: 'admin@distributor.com', password: '123456');
-
 class _LoginPaginaState extends ConsumerState<LoginPagina> {
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -55,18 +53,6 @@ class _LoginPaginaState extends ConsumerState<LoginPagina> {
     });
 
     return _errorEmail == null && _errorPassword == null;
-  }
-
-  /// Llena el formulario con el usuario de prueba, sin iniciar sesion: el
-  /// usuario ve que se completo y decide entrar.
-  void _usarDemo() {
-    setState(() {
-      _email.text = _demo.email;
-      _password.text = _demo.password;
-      _errorEmail = null;
-      _errorPassword = null;
-    });
-    ref.read(authProvider.notifier).limpiarError();
   }
 
   Future<void> _entrar() async {
@@ -161,40 +147,6 @@ class _LoginPaginaState extends ConsumerState<LoginPagina> {
                     iconoDerecha: Icons.arrow_forward,
                     cargando: auth.enviando,
                     onPressed: _entrar,
-                  ),
-                  const SizedBox(height: Dimen.espacio3),
-
-                  // Wrap y no Row: en pantallas angostas la frase y el boton no
-                  // caben en una linea y el boton pasa abajo en vez de cortarse.
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      const Text(
-                        '¿Solo quieres echar un vistazo?',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colores.tintaSuave,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: auth.enviando ? null : _usarDemo,
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: Dimen.espacio2,
-                          ),
-                          minimumSize: const Size(0, 0),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: const Text(
-                          'Usar credenciales de prueba',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                   const SizedBox(height: Dimen.espacio5),
 

@@ -49,18 +49,6 @@ void main() {
     expect(find.text('Ingresa tu contraseña.'), findsOneWidget);
   });
 
-  testWidgets('el atajo de prueba llena correo y contrasena', (tester) async {
-    await tester.pumpWidget(_app(const LoginPagina()));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Usar credenciales de prueba'));
-    await tester.pump();
-
-    final campos = tester.widgetList<TextField>(find.byType(TextField)).toList();
-    expect(campos.first.controller?.text, 'admin@distributor.com');
-    expect(campos.last.controller?.text, '123456');
-  });
-
   test('cada vista del menu tiene una ruta valida y sin repetir', () {
     final rutas = <String>{};
 

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertTriangle,
   Bell,
+  Check,
+  CheckCheck,
   LockKeyhole,
   LogOut,
   Menu,
@@ -13,6 +15,7 @@ import {
 import { cn } from '../ui'
 import { alertaApi } from '../../lib/alertasApi'
 import type { AlertaResponse } from '../../lib/alertasApi'
+import { alertasLeidas, marcarLeida, marcarTodasLeidas } from '../../lib/alertasLeidas'
 import { useRealtime } from '../../lib/realtime'
 import { resolveNav } from './navigation'
 
@@ -59,6 +62,10 @@ export function Topbar({
 }: TopbarProps) {
   const [alertas, setAlertas] = useState<AlertaResponse[]>([])
   const [abierto, setAbierto] = useState(false)
+  // Ids marcados como leidos, por dispositivo: mientras la causa no cambie, dejan de insistir.
+  const [leidas, setLeidas] = useState<Record<string, number>>(() => alertasLeidas())
+  // Las leidas no desaparecen del todo: se pueden volver a ver, para no perder el rastro de que existieron.
+  const [verLeidas, setVerLeidas] = useState(false)
   const contenedorRef = useRef<HTMLDivElement>(null)
 
   const cargar = useCallback(() => {
@@ -88,9 +95,27 @@ export function Topbar({
     return () => document.removeEventListener('mousedown', onClickFuera)
   }, [abierto])
 
-  const criticas = alertas.filter((a) => a.severidad === 'CRITICA').length
-  const advertencias = alertas.filter((a) => a.severidad === 'ADVERTENCIA').length
+  const sinLeer = alertas.filter((a) => !leidas[a.id])
+  const criticas = sinLeer.filter((a) => a.severidad === 'CRITICA').length
+  const advertencias = sinLeer.filter((a) => a.severidad === 'ADVERTENCIA').length
   const colorContador = criticas > 0 ? 'bg-red-600' : advertencias > 0 ? 'bg-amber-500' : 'bg-emerald-600'
+  const visibles = verLeidas ? alertas : sinLeer
+
+  const marcar = (id: string) => {
+    marcarLeida(id)
+    setLeidas((prev) => ({ ...prev, [id]: Date.now() }))
+  }
+
+  const marcarTodas = () => {
+    const ids = sinLeer.map((a) => a.id)
+    marcarTodasLeidas(ids)
+    setLeidas((prev) => {
+      const ahora = Date.now()
+      const siguiente = { ...prev }
+      for (const id of ids) siguiente[id] = ahora
+      return siguiente
+    })
+  }
 
   /*
     El acceso pedido llega con los ids del backend —"fact.precios · ver"—,
@@ -173,14 +198,14 @@ export function Topbar({
           className="relative cursor-pointer rounded-lg p-2 text-ink-muted transition-colors hover:bg-surface-alt"
         >
           <Bell size={19} />
-          {alertas.length > 0 && (
+          {sinLeer.length > 0 && (
             <span
               className={cn(
                 'absolute top-0.5 right-0.5 flex size-4 items-center justify-center rounded-full text-[9px] font-bold text-white ring-2 ring-white',
                 colorContador,
               )}
             >
-              {alertas.length > 9 ? '9+' : alertas.length}
+              {sinLeer.length > 9 ? '9+' : sinLeer.length}
             </span>
           )}
         </button>
@@ -195,60 +220,108 @@ export function Topbar({
             desde sm vuelve a colgar de ella.
           */
           <div className="fixed inset-x-3 top-16 z-30 rounded-panel border border-line bg-white shadow-panel sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:mt-2 sm:w-96">
-            <div className="border-b border-line px-4 py-3">
-              <h3 className="text-sm font-bold text-ink">Alertas</h3>
-              <p className="text-xs text-ink-soft">
-                {alertas.length === 0
-                  ? 'Todo en orden'
-                  : criticas > 0 || advertencias > 0
-                    ? `${alertas.length} cosas para revisar`
-                    : `${alertas.length} novedades`}
-              </p>
+            <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3">
+              <div>
+                <h3 className="text-sm font-bold text-ink">Alertas</h3>
+                <p className="text-xs text-ink-soft">
+                  {alertas.length === 0
+                    ? 'Todo en orden'
+                    : sinLeer.length === 0
+                      ? 'Ya revisaste todo'
+                      : criticas > 0 || advertencias > 0
+                        ? `${sinLeer.length} cosas para revisar`
+                        : `${sinLeer.length} novedades`}
+                </p>
+              </div>
+              {sinLeer.length > 0 && (
+                <button
+                  type="button"
+                  onClick={marcarTodas}
+                  title="Marcar todas como leídas"
+                  className="flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink"
+                >
+                  <CheckCheck size={13} />
+                  Marcar todas
+                </button>
+              )}
             </div>
 
             <div className="max-h-96 overflow-y-auto">
-              {alertas.length === 0 ? (
-                <p className="px-4 py-6 text-center text-sm text-ink-soft">No hay nada pendiente.</p>
+              {visibles.length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-ink-soft">
+                  {alertas.length === 0 ? 'No hay nada pendiente.' : 'No queda nada sin leer.'}
+                </p>
               ) : (
-                alertas.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => irA(a)}
-                    disabled={!a.ruta}
-                    className={cn(
-                      'flex w-full items-start gap-3 border-b border-line px-4 py-3 text-left last:border-0',
-                      a.ruta ? 'cursor-pointer hover:bg-surface-alt' : 'cursor-default',
-                    )}
-                  >
-                    <span
+                visibles.map((a) => {
+                  const leida = Boolean(leidas[a.id])
+                  return (
+                    <div
+                      key={a.id}
                       className={cn(
-                        'mt-0.5 shrink-0 rounded-full p-1.5',
-                        a.severidad === 'CRITICA'
-                          ? 'bg-red-50 text-red-600'
-                          : a.severidad === 'ADVERTENCIA'
-                            ? 'bg-amber-50 text-amber-600'
-                            : 'bg-emerald-50 text-emerald-600',
+                        'flex w-full items-start gap-2 border-b border-line px-4 py-3 last:border-0',
+                        leida && 'opacity-60',
                       )}
                     >
-                      {a.tipo === 'STOCK_REPUESTO' ? (
-                        <PackageCheck size={14} />
-                      ) : a.tipo === 'LOTE_POR_VENCER' ? (
-                        <PackageX size={14} />
-                      ) : a.tipo === 'SOLICITUD_ACCESO' ? (
-                        <LockKeyhole size={14} />
-                      ) : (
-                        <AlertTriangle size={14} />
+                      <button
+                        type="button"
+                        onClick={() => irA(a)}
+                        disabled={!a.ruta}
+                        className={cn(
+                          'flex min-w-0 flex-1 items-start gap-3 text-left',
+                          a.ruta ? 'cursor-pointer' : 'cursor-default',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'mt-0.5 shrink-0 rounded-full p-1.5',
+                            a.severidad === 'CRITICA'
+                              ? 'bg-red-50 text-red-600'
+                              : a.severidad === 'ADVERTENCIA'
+                                ? 'bg-amber-50 text-amber-600'
+                                : 'bg-emerald-50 text-emerald-600',
+                          )}
+                        >
+                          {a.tipo === 'STOCK_REPUESTO' ? (
+                            <PackageCheck size={14} />
+                          ) : a.tipo === 'LOTE_POR_VENCER' ? (
+                            <PackageX size={14} />
+                          ) : a.tipo === 'SOLICITUD_ACCESO' ? (
+                            <LockKeyhole size={14} />
+                          ) : (
+                            <AlertTriangle size={14} />
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-ink">{a.titulo}</span>
+                          <span className="block truncate text-xs text-ink-soft">{detalleDe(a)}</span>
+                        </span>
+                      </button>
+                      {/* Marcar como leída sin navegar: por eso va fuera del boton que abre la alerta. */}
+                      {!leida && (
+                        <button
+                          type="button"
+                          onClick={() => marcar(a.id)}
+                          title="Marcar como leída"
+                          className="shrink-0 cursor-pointer rounded-md p-1.5 text-ink-soft transition-colors hover:bg-surface-alt hover:text-ink"
+                        >
+                          <Check size={14} />
+                        </button>
                       )}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-ink">{a.titulo}</span>
-                      <span className="block truncate text-xs text-ink-soft">{detalleDe(a)}</span>
-                    </span>
-                  </button>
-                ))
+                    </div>
+                  )
+                })
               )}
             </div>
+
+            {alertas.length > 0 && alertas.length !== sinLeer.length && (
+              <button
+                type="button"
+                onClick={() => setVerLeidas((v) => !v)}
+                className="w-full cursor-pointer border-t border-line px-4 py-2 text-center text-xs font-semibold text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink"
+              >
+                {verLeidas ? 'Ocultar las leídas' : `Ver también las leídas (${alertas.length - sinLeer.length})`}
+              </button>
+            )}
           </div>
         )}
       </div>

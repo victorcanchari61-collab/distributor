@@ -7,8 +7,6 @@ import { login } from './authApi'
 import type { UsuarioResponse } from './authApi'
 import { ModuleCarousel } from './ModuleCarousel'
 
-const DEMO = { email: 'admin@distributor.com', password: '123456' }
-
 export interface LoginPageProps {
   /** Se dispara cuando la autenticacion fue correcta. */
   onSuccess?: (usuario: UsuarioResponse) => void
@@ -54,12 +52,6 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
     } finally {
       setLoading(false)
     }
-  }
-
-  function useDemoCredentials() {
-    setEmail(DEMO.email)
-    setPassword(DEMO.password)
-    setErrors({})
   }
 
   return (
@@ -136,13 +128,6 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
                 Ingresar al panel
               </Button>
             </form>
-
-            <p className="mt-6 text-center text-xs text-ink-muted">
-              ¿Solo quieres echar un vistazo?{' '}
-              <Button variant="ghost" onClick={useDemoCredentials}>
-                Usar credenciales de prueba
-              </Button>
-            </p>
           </Card>
         </div>
 

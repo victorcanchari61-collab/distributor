@@ -57,6 +57,20 @@ class FlotaApi {
         await _api.put('/vehiculo/$id', cuerpo: cuerpo) as Map<String, dynamic>,
       );
 
+  /// GET /api/vehiculo/{id}/recorrido: las rutas que hace cada día de la semana (LUNES … SABADO).
+  Future<Map<String, List<int>>> recorridoDe(int vehiculoId) async {
+    final dato = await _api.get('/vehiculo/$vehiculoId/recorrido') as Map<String, dynamic>;
+    final dias = (dato['dias'] as Map<String, dynamic>?) ?? const {};
+    return {
+      for (final e in dias.entries) e.key: [for (final r in (e.value as List)) r as int],
+    };
+  }
+
+  /// PUT /api/vehiculo/{id}/recorrido — reemplaza el recorrido entero.
+  Future<void> guardarRecorrido(int vehiculoId, Map<String, List<int>> dias) async {
+    await _api.put('/vehiculo/$vehiculoId/recorrido', cuerpo: {'dias': dias});
+  }
+
   // --- Conductores ---
 
   /// GET /api/conductor

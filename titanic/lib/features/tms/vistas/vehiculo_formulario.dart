@@ -11,6 +11,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/flota.dart';
+import '../datos/ruta.dart';
 import '../estado/tms_controlador.dart';
 import 'campo_foto.dart';
 import '../../../compartido/widgets/app_aviso.dart';
@@ -33,7 +34,10 @@ String _textoDecimal(double? valor) {
   return valor == valor.roundToDouble() ? valor.round().toString() : valor.toString();
 }
 
-class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario> {
+class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario>
+    with SingleTickerProviderStateMixin {
+  late final _tabs = TabController(length: 2, vsync: this);
+
   late final _placa = TextEditingController(text: widget.vehiculo?.placa ?? '');
   late final _marca = TextEditingController(text: widget.vehiculo?.marca ?? '');
   late final _modelo = TextEditingController(text: widget.vehiculo?.modelo ?? '');
@@ -55,6 +59,11 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario> {
   late String? _foto = widget.vehiculo?.foto;
   late bool _activo = widget.vehiculo?.activo ?? true;
 
+  /// El recorrido semanal: día (LUNES … SABADO) → ids de sus rutas. Se carga al editar y se guarda
+  /// junto con el vehículo, con el id recién creado si es de alta.
+  Map<String, List<int>> _recorrido = {};
+  bool _cargandoRecorrido = false;
+
   bool _guardando = false;
   bool _subiendoFoto = false;
   String? _error;
@@ -64,7 +73,25 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario> {
   bool get _esNuevo => widget.vehiculo == null;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.vehiculo != null) {
+      _cargandoRecorrido = true;
+      ref
+          .read(flotaApiProvider)
+          .recorridoDe(widget.vehiculo!.id)
+          .then((dias) {
+            if (mounted) setState(() => _recorrido = dias);
+          })
+          .whenComplete(() {
+            if (mounted) setState(() => _cargandoRecorrido = false);
+          });
+    }
+  }
+
+  @override
   void dispose() {
+    _tabs.dispose();
     for (final c in [
       _placa,
       _marca,
@@ -126,10 +153,12 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario> {
     };
 
     try {
-      await ref.read(vehiculosProvider.notifier).guardar(
+      final id = await ref.read(vehiculosProvider.notifier).guardar(
         id: widget.vehiculo?.id,
         cuerpo: cuerpo,
       );
+      // El recorrido va con el vehiculo: se guarda en el mismo paso, ya con el id (nuevo o existente).
+      await ref.read(flotaApiProvider).guardarRecorrido(id, _recorrido);
 
       navegador.pop();
       mensajero.mostrar(_esNuevo ? 'Vehículo creado' : 'Vehículo actualizado');
@@ -158,11 +187,20 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario> {
             _esNuevo ? 'Nuevo vehículo' : 'Editar vehículo',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: TabBar(
+            controller: _tabs,
+            tabs: const [
+              Tab(text: 'Datos'),
+              Tab(text: 'Recorrido'),
+            ],
+          ),
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(Dimen.espacio4),
+        body: TabBarView(
+          controller: _tabs,
           children: [
+            ListView(
+              padding: const EdgeInsets.all(Dimen.espacio4),
+              children: [
             if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
 
             AppCampo(
@@ -343,9 +381,100 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario> {
               onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
+              ],
+            ),
+            _RecorridoTab(
+              cargando: _cargandoRecorrido,
+              dias: _recorrido,
+              onChange: (dias) => setState(() => _recorrido = dias),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Las rutas que el vehículo hace cada día de la semana: el "camión 1, los lunes: rutas 1 y 7" que
+/// el sistema anterior tenía escrito en el código. Al armar un despacho, elegir este vehículo y el
+/// día de visita propone las rutas desde aquí.
+class _RecorridoTab extends ConsumerWidget {
+  const _RecorridoTab({required this.cargando, required this.dias, required this.onChange});
+
+  final bool cargando;
+  final Map<String, List<int>> dias;
+  final ValueChanged<Map<String, List<int>>> onChange;
+
+  static const _diasSemana = [
+    ('LUNES', 'Lunes'),
+    ('MARTES', 'Martes'),
+    ('MIERCOLES', 'Miércoles'),
+    ('JUEVES', 'Jueves'),
+    ('VIERNES', 'Viernes'),
+    ('SABADO', 'Sábado'),
+    ('DOMINGO', 'Domingo'),
+  ];
+
+  void _alternar(String dia, int rutaId) {
+    final actuales = dias[dia] ?? const <int>[];
+    final siguientes = actuales.contains(rutaId)
+        ? actuales.where((id) => id != rutaId).toList()
+        : [...actuales, rutaId];
+    onChange({...dias, dia: siguientes});
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (cargando) return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+
+    final rutas = (ref.watch(rutasProvider).valueOrNull ?? const <Ruta>[])
+        .where((r) => r.activo)
+        .toList();
+
+    if (rutas.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(Dimen.espacio5),
+          child: Text(
+            'Todavía no hay rutas. Se crean en TMS → Rutas.',
+            style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
+          ),
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(Dimen.espacio4),
+      children: [
+        const Text(
+          'Marca las rutas que el vehículo atiende cada día. Al armar un despacho con este vehículo y '
+          'ese día de visita, se proponen solas.',
+          style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
+        ),
+        const SizedBox(height: Dimen.espacio3),
+        for (final (id, etiqueta) in _diasSemana) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              etiqueta,
+              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Colores.tinta),
+            ),
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              for (final r in rutas)
+                FilterChip(
+                  label: Text(r.nombre),
+                  selected: (dias[id] ?? const []).contains(r.id),
+                  onSelected: (_) => _alternar(id, r.id),
+                ),
+            ],
+          ),
+          const SizedBox(height: Dimen.espacio3),
+        ],
+      ],
     );
   }
 }

@@ -89,21 +89,19 @@ export function ValorPorPresentacionInput({
   const [texto, setTexto] = useState(() => aPresentacion(valor, factor, magnitud))
   const ultimoValor = useRef(valor)
   const ultimoFactor = useRef(factor)
-  /** El cambio de presentación lo hizo esta misma caja: el número se conserva. */
-  const cambioPropio = useRef(false)
 
   useEffect(() => {
+    // Se salta el recalculo solo cuando ni el valor ni el factor cambiaron desde afuera: si el
+    // valor cambio pero fue por lo que esta misma caja acaba de tipear (emitir ya actualizo
+    // ultimoValor), no hay nada que recalcular — y recalcularlo de vuelta puede arrastrar basura de
+    // coma flotante y pisar lo que se esta escribiendo a mitad de tecla.
+    //
+    // Un cambio de FACTOR (se eligio otra presentacion) SIEMPRE recalcula, aunque el valor guardado
+    // sea el mismo: es la unica forma de que el campo muestre lo que esta presentacion vale de
+    // verdad, y no se quede con los digitos de la anterior.
     const vieneDeFuera = valor !== ultimoValor.current || factor !== ultimoFactor.current
     ultimoValor.current = valor
     ultimoFactor.current = factor
-
-    if (cambioPropio.current) {
-      cambioPropio.current = false
-      return
-    }
-    // Tambien cuando solo cambia el factor sin que nadie lo tocara aqui: al
-    // editar, las presentaciones pueden llegar despues que el valor, y sin
-    // esto el campo mostraria el costo por kilo en la etiqueta del saco.
     if (vieneDeFuera) setTexto(aPresentacion(valor, factor, magnitud))
   }, [valor, factor, magnitud])
 
@@ -119,17 +117,14 @@ export function ValorPorPresentacionInput({
   }
 
   /*
-    Al cambiar de presentación el número escrito SE QUEDA y cambia a qué se
-    refiere: si tecleaste 170 pensando en el saco y el selector decía Kilogramo,
-    corriges el selector y sigue siendo 170 el saco. Convertirlo lo dispararía a
-    8500 y parecería un error del sistema.
+    Cambiar de presentación NO toca lo guardado: solo cambia con qué unidad se lee. El numero de
+    pantalla se recalcula solo (el efecto de arriba lo hace, porque el factor cambio) para mostrar
+    lo que esta presentacion vale de verdad — antes se quedaba con los digitos de la anterior sin
+    tocarlos y, por dentro, los reinterpretaba como si fueran de la nueva: bastaba tocar el
+    desplegable, sin escribir nada, para que el costo guardado cambiara de golpe.
   */
   const cambiarPresentacion = (id: number) => {
-    if (id === presentacionId) return
-    const nuevoFactor = opciones.find((p) => p.id === id)?.factor ?? 1
-    cambioPropio.current = true
-    if (texto) emitir(String(Number(texto) / nuevoFactor))
-    onPresentacion(id)
+    if (id !== presentacionId) onPresentacion(id)
   }
 
   return (

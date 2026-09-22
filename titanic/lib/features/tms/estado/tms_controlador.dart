@@ -177,14 +177,14 @@ class VehiculosControlador extends AsyncNotifier<List<Vehiculo>> {
     state = await AsyncValue.guard(() => ref.read(flotaApiProvider).vehiculos());
   }
 
-  Future<void> guardar({int? id, required Map<String, dynamic> cuerpo}) async {
+  /// Devuelve el id del vehículo, para poder guardar su recorrido justo después con el id ya creado.
+  Future<int> guardar({int? id, required Map<String, dynamic> cuerpo}) async {
     final api = ref.read(flotaApiProvider);
-    if (id == null) {
-      await api.crearVehiculo(cuerpo);
-    } else {
-      await api.actualizarVehiculo(id, cuerpo);
-    }
+    final guardado = id == null
+        ? await api.crearVehiculo(cuerpo)
+        : await api.actualizarVehiculo(id, cuerpo);
     await recargar();
+    return guardado.id;
   }
 }
 

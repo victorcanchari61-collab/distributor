@@ -119,7 +119,11 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
      * pantalla se pide desde la propia pantalla bloqueada.
      */
     if (permiso && permiso.accion !== 'ver') avisarPermisoNegado?.(permiso)
-    if (response.status === 401) avisarSesionVencida()
+    // Solo si la llamada llevaba un token: un 401 SIN token (el login con la clave mal escrita, por
+    // ejemplo) es "credenciales inválidas", no "sesión vencida". Tratarlo como vencida recargaba toda
+    // la pagina antes de que el formulario alcanzara a mostrar el error, y este desaparecia sin
+    // explicacion.
+    if (response.status === 401 && token) avisarSesionVencida()
 
     throw new ApiError(
       problem.message ?? `Error ${response.status}`,

@@ -35,7 +35,11 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
   late final _dni = TextEditingController(text: widget.usuario?.dni ?? '');
   final _password = TextEditingController();
 
-  late int? _rolId = widget.usuario?.rolId;
+  /// Todos sus roles, el principal primero. Sus permisos son la UNIÓN de los de todos: tener más
+  /// roles nunca le quita nada.
+  late List<int> _rolIds = widget.usuario?.rolIds.isNotEmpty ?? false
+      ? List.of(widget.usuario!.rolIds)
+      : [if (widget.usuario?.rolId != null) widget.usuario!.rolId];
 
   /// De quien es esta cuenta. Null es "sin empleado".
   late int? _empleadoId = widget.usuario?.empleadoId;
@@ -89,7 +93,7 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
           ? 'Debe tener al menos 6 caracteres.'
           : null;
 
-      _errorRol = _rolId == null ? 'Elige un rol.' : null;
+      _errorRol = _rolIds.isEmpty ? 'Elige al menos un rol.' : null;
 
       final dni = _dni.text.trim();
       if (dni.isNotEmpty && dni.length != 8) {
@@ -150,12 +154,9 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
       'nombreUsuario': _usuario.text.trim().isEmpty ? null : _usuario.text.trim(),
       'email': _email.text.trim(),
       'dni': _dni.text.trim(),
-      // El rol elegido es el principal; los demas roles de la persona (se asignan desde la web) se conservan, o
-      // editar cualquier dato aqui se los quitaria.
-      'rolIds': [
-        _rolId,
-        ...?widget.usuario?.rolIds.where((id) => id != _rolId),
-      ],
+      // El primero es el principal. El PUT reemplaza el usuario: sin esto, guardar cualquier otro dato le
+      // quitaria los roles que no se tocaron aqui.
+      'rolIds': _rolIds,
       // Viaja SIEMPRE, tambien cuando nadie toco el selector: el PUT reemplaza
       // el registro, asi que no mandarlo desenlazaria la ficha de quien ya la
       // tenia solo por haber cambiado el nombre.
@@ -297,15 +298,26 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
             ),
             const SizedBox(height: Dimen.espacio4),
 
-            AppSelector<int>(
-              valor: _rolId,
-              etiqueta: 'Rol',
-              icono: Icons.verified_user_outlined,
-              habilitado: !_guardando,
+            // Uno o varios roles: el primero que se marca es el principal. Sus permisos son la union de los de
+            // todos, asi que agregar un rol nunca le quita nada de lo que ya tenia.
+            _SelectorRoles(
+              roles: roles,
+              elegidos: _rolIds,
               error: _errorRol,
-              opciones: [for (final rol in roles) Opcion(rol.id, rol.nombre)],
-              onCambio: (v) => setState(() => _rolId = v),
+              habilitado: !_guardando,
+              onCambio: (v) => setState(() {
+                _rolIds = v;
+                _errorRol = null;
+              }),
             ),
+            if (_rolIds.length > 1) ...[
+              const SizedBox(height: Dimen.espacio1),
+              Text(
+                'Rol principal: ${roles.where((r) => r.id == _rolIds.first).map((r) => r.nombre).firstOrNull ?? ''}'
+                '. Tendrá los permisos de todos sus roles juntos.',
+                style: const TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
+              ),
+            ],
             const SizedBox(height: Dimen.espacio4),
 
             // La cartera de clientes que atiende, para cualquier usuario y sin depender del rol: el
@@ -364,6 +376,58 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
               onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Uno o varios roles: cada uno se marca sin cerrar nada, y el orden en que se marcan importa (el
+/// primero es el principal). Hermano de AppSelector, pero de varios.
+class _SelectorRoles extends StatelessWidget {
+  const _SelectorRoles({
+    required this.roles,
+    required this.elegidos,
+    required this.onCambio,
+    this.error,
+    this.habilitado = true,
+  });
+
+  final List<Rol> roles;
+  final List<int> elegidos;
+  final ValueChanged<List<int>> onCambio;
+  final String? error;
+  final bool habilitado;
+
+  void _alternar(int rolId) {
+    final siguientes = elegidos.contains(rolId)
+        ? elegidos.where((id) => id != rolId).toList()
+        : [...elegidos, rolId];
+    onCambio(siguientes);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: 'Roles',
+        prefixIcon: const Icon(Icons.verified_user_outlined, size: 19, color: Colores.tintaTenue),
+        errorText: error,
+        enabled: habilitado,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            for (final rol in roles)
+              FilterChip(
+                label: Text(rol.nombre),
+                selected: elegidos.contains(rol.id),
+                onSelected: habilitado ? (_) => _alternar(rol.id) : null,
+              ),
           ],
         ),
       ),
