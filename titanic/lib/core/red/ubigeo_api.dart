@@ -17,7 +17,11 @@ class Departamento {
 }
 
 class Provincia {
-  const Provincia({required this.id, required this.nombre, required this.departamentoId});
+  const Provincia({
+    required this.id,
+    required this.nombre,
+    required this.departamentoId,
+  });
 
   final int id;
   final String nombre;
@@ -59,18 +63,24 @@ class UbigeoApi {
   /// GET /api/ubigeo/departamentos
   Future<List<Departamento>> departamentos() async {
     final datos = await _api.get('/ubigeo/departamentos') as List;
-    return datos.map((e) => Departamento.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Departamento.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// GET /api/ubigeo/provincias
   Future<List<Provincia>> provincias() async {
     final datos = await _api.get('/ubigeo/provincias') as List;
-    return datos.map((e) => Provincia.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Provincia.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// GET /api/ubigeo/distritos
   Future<List<Distrito>> distritos() async {
     final datos = await _api.get('/ubigeo/distritos') as List;
-    return datos.map((e) => Distrito.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Distrito.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 }

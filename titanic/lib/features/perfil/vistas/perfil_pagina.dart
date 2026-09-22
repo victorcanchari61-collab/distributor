@@ -55,7 +55,15 @@ class _PerfilPaginaState extends ConsumerState<PerfilPagina> {
 
   @override
   void dispose() {
-    for (final c in [_nombre, _email, _dni, _telefono, _actual, _nueva, _repetir]) {
+    for (final c in [
+      _nombre,
+      _email,
+      _dni,
+      _telefono,
+      _actual,
+      _nueva,
+      _repetir,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -106,15 +114,15 @@ class _PerfilPaginaState extends ConsumerState<PerfilPagina> {
     });
 
     try {
-      final actualizado = await ref
-          .read(perfilApiProvider)
-          .actualizar({
-            'nombre': nombre,
-            'email': email,
-            'dni': dni.isEmpty ? null : dni,
-            'telefono': _telefono.text.trim().isEmpty ? null : _telefono.text.trim(),
-            'foto': _foto,
-          });
+      final actualizado = await ref.read(perfilApiProvider).actualizar({
+        'nombre': nombre,
+        'email': email,
+        'dni': dni.isEmpty ? null : dni,
+        'telefono': _telefono.text.trim().isEmpty
+            ? null
+            : _telefono.text.trim(),
+        'foto': _foto,
+      });
 
       // La sesion guardada se refresca para que la barra superior muestre el
       // nombre y la foto nuevos sin tener que cerrar sesion.
@@ -143,11 +151,14 @@ class _PerfilPaginaState extends ConsumerState<PerfilPagina> {
     }
     if (_nueva.text.length < 6) {
       return setState(
-        () => _errorPassword = 'La nueva contraseña debe tener al menos 6 caracteres.',
+        () => _errorPassword =
+            'La nueva contraseña debe tener al menos 6 caracteres.',
       );
     }
     if (_nueva.text != _repetir.text) {
-      return setState(() => _errorPassword = 'Las contraseñas nuevas no coinciden.');
+      return setState(
+        () => _errorPassword = 'Las contraseñas nuevas no coinciden.',
+      );
     }
 
     setState(() {
@@ -157,10 +168,9 @@ class _PerfilPaginaState extends ConsumerState<PerfilPagina> {
     });
 
     try {
-      await ref.read(perfilApiProvider).cambiarPassword(
-        actual: _actual.text,
-        nueva: _nueva.text,
-      );
+      await ref
+          .read(perfilApiProvider)
+          .cambiarPassword(actual: _actual.text, nueva: _nueva.text);
 
       if (!mounted) return;
       setState(() {
@@ -200,7 +210,8 @@ class _PerfilPaginaState extends ConsumerState<PerfilPagina> {
                   carpeta: 'usuarios',
                   habilitado: !_guardando,
                   onCambio: (ruta) => setState(() => _foto = ruta),
-                  onSubiendo: (subiendo) => setState(() => _subiendo = subiendo),
+                  onSubiendo: (subiendo) =>
+                      setState(() => _subiendo = subiendo),
                 ),
                 const SizedBox(height: Dimen.espacio4),
 

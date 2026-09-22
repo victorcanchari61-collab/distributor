@@ -22,7 +22,8 @@ import 'pago_entrega.dart';
 
 double _redondear(double n) => (n * 10000).round() / 10000;
 
-double _numero(String texto) => double.tryParse(texto.trim().replaceAll(',', '.')) ?? 0;
+double _numero(String texto) =>
+    double.tryParse(texto.trim().replaceAll(',', '.')) ?? 0;
 
 String _texto(double n) {
   final r = _redondear(n);
@@ -40,7 +41,9 @@ Future<String?> mostrarEntregaPedido(BuildContext context, Pedido pedido) {
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     builder: (context) => EntregaPedidoHoja(pedido: pedido),
   );
@@ -54,7 +57,9 @@ Future<bool?> mostrarNoEntregado(BuildContext context, Pedido pedido) {
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     builder: (context) => NoEntregadoHoja(pedido: pedido),
   );
@@ -87,8 +92,11 @@ class _EntregaLinea {
   bool get conSueltas => factor > 1;
 
   /// Lo entregado, en unidad base.
-  double get entregada =>
-      _redondear(conSueltas ? _numero(pres.text) * factor + _numero(sueltas.text) : _numero(pres.text));
+  double get entregada => _redondear(
+    conSueltas
+        ? _numero(pres.text) * factor + _numero(sueltas.text)
+        : _numero(pres.text),
+  );
 
   bool get reducida => entregada < linea.cantidad - 1e-6;
   bool get excede => entregada > linea.cantidad + 1e-6;
@@ -142,7 +150,8 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
 
   /// Con reserva el stock ya está apartado en un almacén: de ahí sale, y
   /// preguntarlo otra vez invita a elegir otro y dejar la reserva colgada.
-  bool get _conReserva => widget.pedido.reservaStock && widget.pedido.almacenId != null;
+  bool get _conReserva =>
+      widget.pedido.reservaStock && widget.pedido.almacenId != null;
 
   @override
   void initState() {
@@ -174,7 +183,10 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
     _almacenPuesto = true;
     if (_conReserva || _almacenId != null) return;
 
-    final principal = almacenes.firstWhere((a) => a.esPrincipal, orElse: () => almacenes.first);
+    final principal = almacenes.firstWhere(
+      (a) => a.esPrincipal,
+      orElse: () => almacenes.first,
+    );
 
     // En el build no se puede llamar a setState: se agenda para el cuadro siguiente.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -273,13 +285,16 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
               'pedidoDetalleId': l.linea.id,
               'cantidad': l.entregada,
               'motivoId': l.motivoId,
-              'observacion': l.observacion.text.trim().isEmpty ? null : l.observacion.text.trim(),
+              'observacion': l.observacion.text.trim().isEmpty
+                  ? null
+                  : l.observacion.text.trim(),
             },
       ],
       // Sin ningún pago va vacío y la venta queda a crédito: es el backend
       // quien deriva la forma de pago de lo cobrado.
       'pagos': [
-        for (final p in cobro.usadas) {'metodoPagoId': p.metodoPagoId, 'monto': p.valor},
+        for (final p in cobro.usadas)
+          {'metodoPagoId': p.metodoPagoId, 'monto': p.valor},
       ],
     };
 
@@ -287,7 +302,9 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
     final mensaje = _mensajeHecho(cobro, total);
     final navegador = Navigator.of(context);
     try {
-      await ref.read(pedidosProvider.notifier).confirmar(widget.pedido.id, cuerpo);
+      await ref
+          .read(pedidosProvider.notifier)
+          .confirmar(widget.pedido.id, cuerpo);
       navegador.pop(mensaje);
     } on ApiExcepcion catch (e) {
       if (!mounted) return;
@@ -312,7 +329,9 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
     final color = Acento.de(context);
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.92),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.92,
+      ),
       child: Padding(
         padding: EdgeInsets.only(
           left: Dimen.espacio4,
@@ -325,7 +344,11 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
           children: [
             Text(
               'Convertir ${widget.pedido.numero} en venta',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
@@ -338,7 +361,10 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
               labelColor: color,
               unselectedLabelColor: Colores.tintaSuave,
               indicatorColor: color,
-              labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              labelStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
               // Se suelta el teclado al cambiar: el campo que tenía el foco se va
               // con su pestaña y el teclado se quedaba abierto sin campo.
               onTap: (_) => FocusScope.of(context).unfocus(),
@@ -354,7 +380,10 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
                       if (cobro.usadas.isNotEmpty) ...[
                         const SizedBox(width: Dimen.espacio2),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
                           decoration: BoxDecoration(
                             color: color,
                             borderRadius: BorderRadius.circular(999),
@@ -378,7 +407,10 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
             const SizedBox(height: Dimen.espacio3),
 
             // Encima de las pestañas: el error de una se arregla en la otra.
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio3)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio3),
+            ],
 
             Expanded(
               child: TabBarView(
@@ -391,19 +423,32 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
                           padding: const EdgeInsets.all(Dimen.espacio3),
                           decoration: BoxDecoration(
                             border: Border.all(color: Colores.linea),
-                            borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                            borderRadius: BorderRadius.circular(
+                              Dimen.radioCampo,
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.warehouse_outlined, size: 18, color: Colores.tintaTenue),
+                              const Icon(
+                                Icons.warehouse_outlined,
+                                size: 18,
+                                color: Colores.tintaTenue,
+                              ),
                               const SizedBox(width: Dimen.espacio2),
                               Expanded(
                                 child: Text(
-                                  widget.pedido.almacen ?? 'Almacén de la reserva',
-                                  style: const TextStyle(fontSize: 14, color: Colores.tinta),
+                                  widget.pedido.almacen ??
+                                      'Almacén de la reserva',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colores.tinta,
+                                  ),
                                 ),
                               ),
-                              const AppEtiqueta('stock reservado', tono: EtiquetaTono.modulo),
+                              const AppEtiqueta(
+                                'stock reservado',
+                                tono: EtiquetaTono.modulo,
+                              ),
                             ],
                           ),
                         )
@@ -412,7 +457,10 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
                           valor: _almacenId,
                           etiqueta: 'Almacén',
                           icono: Icons.warehouse_outlined,
-                          opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
+                          opciones: [
+                            for (final a in almacenes)
+                              Opcion<int>(a.id, a.nombre),
+                          ],
                           onCambio: (v) => setState(() {
                             _almacenId = v;
                             _error = null;
@@ -422,13 +470,20 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
                       const SizedBox(height: Dimen.espacio4),
                       const Text(
                         'Lo que se entregó',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colores.tinta),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Colores.tinta,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       const Text(
                         'Por defecto sale todo lo pedido. Si el cliente recibió menos, corrige la '
                         'cantidad y elige el motivo: la venta cobra solo lo entregado.',
-                        style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colores.tintaSuave,
+                        ),
                       ),
                       const SizedBox(height: Dimen.espacio3),
 
@@ -442,7 +497,9 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
                         const SizedBox(height: Dimen.espacio3),
                       ],
 
-                      if (hayRecortes && !motivos.isLoading && opcionesMotivo.isEmpty)
+                      if (hayRecortes &&
+                          !motivos.isLoading &&
+                          opcionesMotivo.isEmpty)
                         const AppAlerta(
                           'Todavía no hay motivos de novedad. Pídele a quien administra que los cree en '
                           'TMS → Motivos de novedad.',
@@ -452,14 +509,24 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
                       const Text(
                         'El cobro se registra en la pestaña Pago. Si no se cobra nada, la venta queda '
                         'a crédito.',
-                        style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colores.tintaSuave,
+                        ),
                       ),
                       const SizedBox(height: Dimen.espacio3),
                       const Divider(height: 1),
                       const SizedBox(height: Dimen.espacio2),
                       if (hayRecortes)
-                        _FilaTotal('Total del pedido', widget.pedido.total, suave: true),
-                      _FilaTotal(hayRecortes ? 'Total a cobrar' : 'Total', total),
+                        _FilaTotal(
+                          'Total del pedido',
+                          widget.pedido.total,
+                          suave: true,
+                        ),
+                      _FilaTotal(
+                        hayRecortes ? 'Total a cobrar' : 'Total',
+                        total,
+                      ),
                       const SizedBox(height: Dimen.espacio2),
                     ],
                   ),
@@ -476,7 +543,11 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
               ),
             ),
             const SizedBox(height: Dimen.espacio2),
-            AppBoton(texto: 'Convertir en venta', cargando: _guardando, onPressed: _convertir),
+            AppBoton(
+              texto: 'Convertir en venta',
+              cargando: _guardando,
+              onPressed: _convertir,
+            ),
           ],
         ),
       ),
@@ -529,13 +600,16 @@ class _TarjetaEntrega extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = linea.linea;
-    final pedido = '${_texto(l.cantidadPresentacion)} ${l.presentacion ?? l.unidadBase}'
+    final pedido =
+        '${_texto(l.cantidadPresentacion)} ${l.presentacion ?? l.unidadBase}'
         '${linea.conSueltas ? ' (${_texto(l.cantidad)} ${l.unidadBase})' : ''}';
 
     return Container(
       padding: const EdgeInsets.all(Dimen.espacio3),
       decoration: BoxDecoration(
-        border: Border.all(color: linea.reducida ? Colores.advertencia : Colores.linea),
+        border: Border.all(
+          color: linea.reducida ? Colores.advertencia : Colores.linea,
+        ),
         borderRadius: BorderRadius.circular(Dimen.radioCampo),
       ),
       child: Column(
@@ -550,18 +624,29 @@ class _TarjetaEntrega extends StatelessWidget {
                   children: [
                     Text(
                       l.producto,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colores.tinta),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colores.tinta,
+                      ),
                     ),
                     Text(
                       '${l.codigo} · Pedido: $pedido',
-                      style: const TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Colores.tintaSuave,
+                      ),
                     ),
                   ],
                 ),
               ),
               Text(
                 'S/ ${linea.subtotal.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colores.tinta),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colores.tinta,
+                ),
               ),
             ],
           ),
@@ -571,8 +656,12 @@ class _TarjetaEntrega extends StatelessWidget {
               Expanded(
                 child: AppCampo(
                   controlador: linea.pres,
-                  etiqueta: linea.conSueltas ? (l.presentacion ?? 'Cajas') : l.unidadBase,
-                  tipoTeclado: linea.conSueltas ? TextInputType.number : _teclado,
+                  etiqueta: linea.conSueltas
+                      ? (l.presentacion ?? 'Cajas')
+                      : l.unidadBase,
+                  tipoTeclado: linea.conSueltas
+                      ? TextInputType.number
+                      : _teclado,
                 ),
               ),
               if (linea.conSueltas) ...[
@@ -591,7 +680,11 @@ class _TarjetaEntrega extends StatelessWidget {
             const SizedBox(height: Dimen.espacio2),
             Text(
               'No puede ser más de lo pedido (${_texto(l.cantidad)} ${l.unidadBase}).',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colores.peligro),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colores.peligro,
+              ),
             ),
           ],
           if (linea.reducida && !linea.excede) ...[
@@ -608,14 +701,20 @@ class _TarjetaEntrega extends StatelessWidget {
                   Text(
                     '${linea.entregada <= 0 ? 'No se entrega este producto.' : 'Se entrega ${_texto(linea.entregada)} de ${_texto(l.cantidad)} ${l.unidadBase}.'} '
                     'Falta ${_texto(l.cantidad - linea.entregada)} ${l.unidadBase}.',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colores.advertencia),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colores.advertencia,
+                    ),
                   ),
                   const SizedBox(height: Dimen.espacio3),
                   AppSelector<int>(
                     valor: linea.motivoId,
                     etiqueta: 'Motivo',
                     icono: Icons.label_outline,
-                    opciones: [for (final m in motivos) Opcion<int>(m.id, m.nombre)],
+                    opciones: [
+                      for (final m in motivos) Opcion<int>(m.id, m.nombre),
+                    ],
                     onCambio: (v) {
                       linea.motivoId = v;
                       onCambio();
@@ -666,7 +765,9 @@ class _NoEntregadoHojaState extends ConsumerState<NoEntregadoHoja> {
 
   Future<void> _guardar() async {
     if (_motivoId == null) {
-      return setState(() => _error = 'Elige el motivo por el que no se entregó.');
+      return setState(
+        () => _error = 'Elige el motivo por el que no se entregó.',
+      );
     }
 
     setState(() {
@@ -676,10 +777,14 @@ class _NoEntregadoHojaState extends ConsumerState<NoEntregadoHoja> {
 
     final navegador = Navigator.of(context);
     try {
-      await ref.read(pedidosProvider.notifier).marcarNoEntregado(widget.pedido.id, {
-        'motivoId': _motivoId,
-        'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
-      });
+      await ref
+          .read(pedidosProvider.notifier)
+          .marcarNoEntregado(widget.pedido.id, {
+            'motivoId': _motivoId,
+            'observacion': _observacion.text.trim().isEmpty
+                ? null
+                : _observacion.text.trim(),
+          });
       navegador.pop(true);
     } on ApiExcepcion catch (e) {
       if (!mounted) return;
@@ -709,7 +814,11 @@ class _NoEntregadoHojaState extends ConsumerState<NoEntregadoHoja> {
           children: [
             Text(
               '${widget.pedido.numero} no se entregó',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
@@ -723,7 +832,10 @@ class _NoEntregadoHojaState extends ConsumerState<NoEntregadoHoja> {
               style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
             ),
             const SizedBox(height: Dimen.espacio4),
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio3)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio3),
+            ],
             AppSelector<int>(
               valor: _motivoId,
               etiqueta: 'Motivo',
@@ -751,7 +863,11 @@ class _NoEntregadoHojaState extends ConsumerState<NoEntregadoHoja> {
               maxLargo: 250,
             ),
             const SizedBox(height: Dimen.espacio3),
-            AppBoton(texto: 'Marcar como no entregado', cargando: _guardando, onPressed: _guardar),
+            AppBoton(
+              texto: 'Marcar como no entregado',
+              cargando: _guardando,
+              onPressed: _guardar,
+            ),
           ],
         ),
       ),

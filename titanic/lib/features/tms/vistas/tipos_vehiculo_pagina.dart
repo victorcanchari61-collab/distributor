@@ -54,21 +54,26 @@ class TiposVehiculoPagina extends ConsumerWidget {
           error: (e, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(Dimen.espacio4),
-              child: AppAlerta(e is ApiExcepcion ? e.texto : 'No pudimos cargar los tipos.'),
+              child: AppAlerta(
+                e is ApiExcepcion ? e.texto : 'No pudimos cargar los tipos.',
+              ),
             ),
           ),
           data: (tipos) => tipos.isEmpty
               ? const AppVacio(
                   icono: Icons.category_outlined,
                   titulo: 'Todavía no hay tipos',
-                  detalle: 'Crea al menos uno para poder dar de alta vehículos.',
+                  detalle:
+                      'Crea al menos uno para poder dar de alta vehículos.',
                 )
               : RefreshIndicator(
-                  onRefresh: () => ref.read(tiposVehiculoProvider.notifier).recargar(),
+                  onRefresh: () =>
+                      ref.read(tiposVehiculoProvider.notifier).recargar(),
                   child: ListView.separated(
                     padding: const EdgeInsets.all(Dimen.espacio4),
                     itemCount: tipos.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: Dimen.espacio3),
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: Dimen.espacio3),
                     itemBuilder: (_, i) => _Tarjeta(
                       tipo: tipos[i],
                       onVer: () => _verDetalle(context, tipos[i]),
@@ -86,14 +91,20 @@ class TiposVehiculoPagina extends ConsumerWidget {
     );
   }
 
-  Future<void> _abrirHoja(BuildContext context, WidgetRef ref, TipoVehiculo? tipo) {
+  Future<void> _abrirHoja(
+    BuildContext context,
+    WidgetRef ref,
+    TipoVehiculo? tipo,
+  ) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colores.superficie,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Dimen.radioPanel),
+        ),
       ),
       builder: (_) => _HojaTipo(tipo: tipo),
     );
@@ -120,16 +131,20 @@ class TiposVehiculoPagina extends ConsumerWidget {
     try {
       // El PUT reemplaza el registro entero, asi que se reenvia lo que ya
       // tenia: mandar solo `activo` vaciaria el nombre y la descripcion.
-      await ref.read(tiposVehiculoProvider.notifier).guardar(
-        id: tipo.id,
-        cuerpo: {
-          'nombre': tipo.nombre,
-          'descripcion': tipo.descripcion,
-          'capacidadKgReferencia': tipo.capacidadKgReferencia,
-          'activo': !tipo.activo,
-        },
+      await ref
+          .read(tiposVehiculoProvider.notifier)
+          .guardar(
+            id: tipo.id,
+            cuerpo: {
+              'nombre': tipo.nombre,
+              'descripcion': tipo.descripcion,
+              'capacidadKgReferencia': tipo.capacidadKgReferencia,
+              'activo': !tipo.activo,
+            },
+          );
+      mensajero.mostrar(
+        tipo.activo ? '${tipo.nombre} desactivado' : '${tipo.nombre} activado',
       );
-      mensajero.mostrar(tipo.activo ? '${tipo.nombre} desactivado' : '${tipo.nombre} activado');
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -217,7 +232,11 @@ class _Tarjeta extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(
@@ -247,7 +266,9 @@ class _HojaTipo extends ConsumerStatefulWidget {
 
 class _HojaTipoState extends ConsumerState<_HojaTipo> {
   late final _nombre = TextEditingController(text: widget.tipo?.nombre ?? '');
-  late final _descripcion = TextEditingController(text: widget.tipo?.descripcion ?? '');
+  late final _descripcion = TextEditingController(
+    text: widget.tipo?.descripcion ?? '',
+  );
   late final _capacidad = TextEditingController(
     text: widget.tipo?.capacidadKgReferencia == null
         ? ''
@@ -298,7 +319,9 @@ class _HojaTipoState extends ConsumerState<_HojaTipo> {
           );
 
       navegador.pop();
-      mensajero.mostrar(widget.tipo == null ? 'Tipo creado' : 'Tipo actualizado');
+      mensajero.mostrar(
+        widget.tipo == null ? 'Tipo creado' : 'Tipo actualizado',
+      );
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;
@@ -321,7 +344,9 @@ class _HojaTipoState extends ConsumerState<_HojaTipo> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            widget.tipo == null ? 'Nuevo tipo de vehículo' : 'Editar ${widget.tipo!.nombre}',
+            widget.tipo == null
+                ? 'Nuevo tipo de vehículo'
+                : 'Editar ${widget.tipo!.nombre}',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -367,7 +392,9 @@ class _HojaTipoState extends ConsumerState<_HojaTipo> {
 
           CheckboxListTile(
             value: _activo,
-            onChanged: _guardando ? null : (v) => setState(() => _activo = v ?? true),
+            onChanged: _guardando
+                ? null
+                : (v) => setState(() => _activo = v ?? true),
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
             title: const Text('Activo', style: TextStyle(fontSize: 14)),

@@ -48,4 +48,6 @@ class SolicitudApi {
   }
 }
 
-final solicitudApiProvider = Provider((ref) => SolicitudApi(ref.watch(clienteApiProvider)));
+final solicitudApiProvider = Provider(
+  (ref) => SolicitudApi(ref.watch(clienteApiProvider)),
+);

@@ -31,7 +31,8 @@ class TransferenciasPagina extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final todas =
-        ref.watch(transferenciasProvider).valueOrNull ?? const <DocumentoInventario>[];
+        ref.watch(transferenciasProvider).valueOrNull ??
+        const <DocumentoInventario>[];
     final confirmadas = todas.where((d) => !d.anulado).length;
     final almacenesActivos = ref.watch(almacenesActivosProvider).length;
 
@@ -41,11 +42,14 @@ class TransferenciasPagina extends ConsumerWidget {
       estado: ref.watch(transferenciasProvider),
       visibles: ref.watch(transferenciasFiltradasProvider),
       busqueda: ref.watch(busquedaTransferenciasProvider),
-      onBuscar: (t) => ref.read(busquedaTransferenciasProvider.notifier).state = t,
+      onBuscar: (t) =>
+          ref.read(busquedaTransferenciasProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o almacén',
       onRecargar: () => ref.read(transferenciasProvider.notifier).recargar(),
       onNuevo: puede(ref, 'inv.transferencias', Accion.crear)
-          ? almacenesActivos >= 2 ? () => _abrirFormulario(context) : null
+          ? almacenesActivos >= 2
+                ? () => _abrirFormulario(context)
+                : null
           : null,
       textoNuevo: 'Nueva transferencia',
       iconoVacio: Icons.local_shipping_outlined,
@@ -76,7 +80,8 @@ class TransferenciasPagina extends ConsumerWidget {
       fila: (context, doc) => _TarjetaTransferencia(
         doc: doc,
         color: color,
-        onAnular: doc.anulado || !puede(ref, 'inv.transferencias', Accion.anular)
+        onAnular:
+            doc.anulado || !puede(ref, 'inv.transferencias', Accion.anular)
             ? null
             : () => _anular(context, ref, doc),
       ),
@@ -119,9 +124,11 @@ class TransferenciasPagina extends ConsumerWidget {
                 const OpcionFiltro(null, 'Todos'),
                 for (final a in almacenes) OpcionFiltro(a.nombre, a.nombre),
               ],
-              onCambio: (v) => ref
-                  .read(deAlmacenTransferenciaFiltroProvider.notifier)
-                  .state = v,
+              onCambio: (v) =>
+                  ref
+                          .read(deAlmacenTransferenciaFiltroProvider.notifier)
+                          .state =
+                      v,
             );
           },
         ),
@@ -137,9 +144,9 @@ class TransferenciasPagina extends ConsumerWidget {
                 const OpcionFiltro(null, 'Todos'),
                 for (final a in almacenes) OpcionFiltro(a.nombre, a.nombre),
               ],
-              onCambio: (v) => ref
-                  .read(aAlmacenTransferenciaFiltroProvider.notifier)
-                  .state = v,
+              onCambio: (v) =>
+                  ref.read(aAlmacenTransferenciaFiltroProvider.notifier).state =
+                      v,
             );
           },
         ),
@@ -148,16 +155,21 @@ class TransferenciasPagina extends ConsumerWidget {
   }
 
   Future<void> _abrirFormulario(BuildContext context) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const TransferenciaFormulario()),
-    );
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const TransferenciaFormulario()));
   }
 
-  Future<void> _anular(BuildContext context, WidgetRef ref, DocumentoInventario doc) async {
+  Future<void> _anular(
+    BuildContext context,
+    WidgetRef ref,
+    DocumentoInventario doc,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Anular ${doc.numero}',
-      mensaje: 'Se revierte el movimiento con un documento espejo. No se puede deshacer.',
+      mensaje:
+          'Se revierte el movimiento con un documento espejo. No se puede deshacer.',
       textoConfirmar: 'Anular',
       tono: ConfirmTono.peligro,
     );
@@ -174,7 +186,11 @@ class TransferenciasPagina extends ConsumerWidget {
 }
 
 class _TarjetaTransferencia extends StatelessWidget {
-  const _TarjetaTransferencia({required this.doc, required this.color, this.onAnular});
+  const _TarjetaTransferencia({
+    required this.doc,
+    required this.color,
+    this.onAnular,
+  });
 
   final DocumentoInventario doc;
   final Color color;
@@ -193,7 +209,8 @@ class _TarjetaTransferencia extends StatelessWidget {
     for (final linea in doc.detalle.where((l) => l.esEntrada))
       LineaProductoTarjeta(
         titulo: linea.producto,
-        subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
+        subtitulo:
+            '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
         filas: [
           [
             ('Cant.', formatoNumero(linea.cantidadPresentacion)),

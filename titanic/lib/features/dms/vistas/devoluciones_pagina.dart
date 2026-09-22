@@ -387,14 +387,22 @@ class _TarjetaDevolucion extends StatelessWidget {
             onPressed: onRechazar,
             tooltip: 'Rechazar',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.close_rounded, size: 18, color: Colores.peligro),
+            icon: const Icon(
+              Icons.close_rounded,
+              size: 18,
+              color: Colores.peligro,
+            ),
           ),
         if (onAprobar != null)
           IconButton(
             onPressed: onAprobar,
             tooltip: 'Aprobar',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.check_rounded, size: 18, color: Colores.exito),
+            icon: const Icon(
+              Icons.check_rounded,
+              size: 18,
+              color: Colores.exito,
+            ),
           ),
       ],
     );

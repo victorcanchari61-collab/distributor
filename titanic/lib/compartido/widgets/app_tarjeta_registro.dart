@@ -153,7 +153,8 @@ class AppTarjetaRegistro extends StatelessWidget {
             ),
             const SizedBox(height: Dimen.espacio2),
             for (final campo in visibles) FilaDato(campo),
-            if (estado != null) FilaDato(CampoDetalle('Estado', null, widget: estado)),
+            if (estado != null)
+              FilaDato(CampoDetalle('Estado', null, widget: estado)),
           ],
         ),
       ),

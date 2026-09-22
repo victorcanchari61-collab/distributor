@@ -18,7 +18,9 @@ class MaestrosApi {
   /// Con [para] ("pedidos" o "notaventa") el servidor deja solo los clientes que quien pide puede
   /// vender: los de su ruta si tiene el alcance "mis clientes".
   Future<List<Cliente>> clientes({String? para}) async {
-    final datos = await _api.get(para == null ? '/cliente' : '/cliente?para=$para') as List;
+    final datos =
+        await _api.get(para == null ? '/cliente' : '/cliente?para=$para')
+            as List;
     return datos
         .map((e) => Cliente.desdeJson(e as Map<String, dynamic>))
         .toList();
@@ -115,11 +117,13 @@ class MaestrosApi {
   );
 
   /// PATCH /api/empleado/{id}/activar | /desactivar
-  Future<Empleado> cambiarEstadoEmpleado(int id, {required bool activo}) async =>
-      Empleado.desdeJson(
-        await _api.patch('/empleado/$id/${activo ? 'activar' : 'desactivar'}')
-            as Map<String, dynamic>,
-      );
+  Future<Empleado> cambiarEstadoEmpleado(
+    int id, {
+    required bool activo,
+  }) async => Empleado.desdeJson(
+    await _api.patch('/empleado/$id/${activo ? 'activar' : 'desactivar'}')
+        as Map<String, dynamic>,
+  );
 
   /// DELETE /api/empleado/{id}
   ///
@@ -151,11 +155,13 @@ class MaestrosApi {
   );
 
   /// PATCH /api/producto/{id}/activar | /desactivar
-  Future<Producto> cambiarEstadoProducto(int id, {required bool activo}) async =>
-      Producto.desdeJson(
-        await _api.patch('/producto/$id/${activo ? 'activar' : 'desactivar'}')
-            as Map<String, dynamic>,
-      );
+  Future<Producto> cambiarEstadoProducto(
+    int id, {
+    required bool activo,
+  }) async => Producto.desdeJson(
+    await _api.patch('/producto/$id/${activo ? 'activar' : 'desactivar'}')
+        as Map<String, dynamic>,
+  );
 
   /// POST /api/producto/{productoId}/presentaciones
   Future<Presentacion> agregarPresentacion(
@@ -198,7 +204,9 @@ class MaestrosApi {
   /// GET /api/marca
   Future<List<Marca>> marcas() async {
     final datos = await _api.get('/marca') as List;
-    return datos.map((e) => Marca.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Marca.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// POST /api/marca

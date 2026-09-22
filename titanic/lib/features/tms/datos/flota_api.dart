@@ -21,53 +21,72 @@ class FlotaApi {
   /// GET /api/tipovehiculo
   Future<List<TipoVehiculo>> tipos() async {
     final datos = await _api.get('/tipovehiculo') as List;
-    return datos.map((e) => TipoVehiculo.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => TipoVehiculo.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// POST /api/tipovehiculo
-  Future<TipoVehiculo> crearTipo(Map<String, dynamic> cuerpo) async => TipoVehiculo.desdeJson(
-    await _api.post('/tipovehiculo', cuerpo: cuerpo) as Map<String, dynamic>,
-  );
+  Future<TipoVehiculo> crearTipo(Map<String, dynamic> cuerpo) async =>
+      TipoVehiculo.desdeJson(
+        await _api.post('/tipovehiculo', cuerpo: cuerpo)
+            as Map<String, dynamic>,
+      );
 
   /// PUT /api/tipovehiculo/{id}
-  Future<TipoVehiculo> actualizarTipo(int id, Map<String, dynamic> cuerpo) async =>
-      TipoVehiculo.desdeJson(
-        await _api.put('/tipovehiculo/$id', cuerpo: cuerpo) as Map<String, dynamic>,
-      );
+  Future<TipoVehiculo> actualizarTipo(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => TipoVehiculo.desdeJson(
+    await _api.put('/tipovehiculo/$id', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
 
   // --- Vehículos ---
 
   /// GET /api/vehiculo
   Future<List<Vehiculo>> vehiculos() async {
     final datos = await _api.get('/vehiculo') as List;
-    return datos.map((e) => Vehiculo.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Vehiculo.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// GET /api/vehiculo/resumen
-  Future<ResumenFlota> resumenFlota() async =>
-      ResumenFlota.desdeJson(await _api.get('/vehiculo/resumen') as Map<String, dynamic>);
+  Future<ResumenFlota> resumenFlota() async => ResumenFlota.desdeJson(
+    await _api.get('/vehiculo/resumen') as Map<String, dynamic>,
+  );
 
   /// POST /api/vehiculo
   Future<Vehiculo> crearVehiculo(Map<String, dynamic> cuerpo) async =>
-      Vehiculo.desdeJson(await _api.post('/vehiculo', cuerpo: cuerpo) as Map<String, dynamic>);
+      Vehiculo.desdeJson(
+        await _api.post('/vehiculo', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
 
   /// PUT /api/vehiculo/{id}
-  Future<Vehiculo> actualizarVehiculo(int id, Map<String, dynamic> cuerpo) async =>
-      Vehiculo.desdeJson(
-        await _api.put('/vehiculo/$id', cuerpo: cuerpo) as Map<String, dynamic>,
-      );
+  Future<Vehiculo> actualizarVehiculo(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => Vehiculo.desdeJson(
+    await _api.put('/vehiculo/$id', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
 
   /// GET /api/vehiculo/{id}/recorrido: las rutas que hace cada día de la semana (LUNES … SABADO).
   Future<Map<String, List<int>>> recorridoDe(int vehiculoId) async {
-    final dato = await _api.get('/vehiculo/$vehiculoId/recorrido') as Map<String, dynamic>;
+    final dato =
+        await _api.get('/vehiculo/$vehiculoId/recorrido')
+            as Map<String, dynamic>;
     final dias = (dato['dias'] as Map<String, dynamic>?) ?? const {};
     return {
-      for (final e in dias.entries) e.key: [for (final r in (e.value as List)) r as int],
+      for (final e in dias.entries)
+        e.key: [for (final r in (e.value as List)) r as int],
     };
   }
 
   /// PUT /api/vehiculo/{id}/recorrido — reemplaza el recorrido entero.
-  Future<void> guardarRecorrido(int vehiculoId, Map<String, List<int>> dias) async {
+  Future<void> guardarRecorrido(
+    int vehiculoId,
+    Map<String, List<int>> dias,
+  ) async {
     await _api.put('/vehiculo/$vehiculoId/recorrido', cuerpo: {'dias': dias});
   }
 
@@ -76,22 +95,30 @@ class FlotaApi {
   /// GET /api/conductor
   Future<List<Conductor>> conductores() async {
     final datos = await _api.get('/conductor') as List;
-    return datos.map((e) => Conductor.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Conductor.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// GET /api/conductor/resumen
   Future<ResumenConductores> resumenConductores() async =>
-      ResumenConductores.desdeJson(await _api.get('/conductor/resumen') as Map<String, dynamic>);
+      ResumenConductores.desdeJson(
+        await _api.get('/conductor/resumen') as Map<String, dynamic>,
+      );
 
   /// POST /api/conductor
   Future<Conductor> crearConductor(Map<String, dynamic> cuerpo) async =>
-      Conductor.desdeJson(await _api.post('/conductor', cuerpo: cuerpo) as Map<String, dynamic>);
+      Conductor.desdeJson(
+        await _api.post('/conductor', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
 
   /// PUT /api/conductor/{id}
-  Future<Conductor> actualizarConductor(int id, Map<String, dynamic> cuerpo) async =>
-      Conductor.desdeJson(
-        await _api.put('/conductor/$id', cuerpo: cuerpo) as Map<String, dynamic>,
-      );
+  Future<Conductor> actualizarConductor(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => Conductor.desdeJson(
+    await _api.put('/conductor/$id', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
 }
 
 /// Subida de fotos y resolución de sus URLs.
@@ -116,7 +143,10 @@ class ArchivoApi {
       await http.MultipartFile.fromPath(
         'archivo',
         archivo.path,
-        contentType: MediaType('image', extension == 'jpg' ? 'jpeg' : extension),
+        contentType: MediaType(
+          'image',
+          extension == 'jpg' ? 'jpeg' : extension,
+        ),
       ),
     );
 

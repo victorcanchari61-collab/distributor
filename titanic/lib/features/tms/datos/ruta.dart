@@ -25,6 +25,8 @@ class Ruta {
     nombre: json['nombre'] as String? ?? '',
     activo: json['activo'] as bool? ?? true,
     clientes: json['clientes'] as int? ?? 0,
-    vendedores: [for (final v in (json['vendedores'] as List? ?? const [])) v as String],
+    vendedores: [
+      for (final v in (json['vendedores'] as List? ?? const [])) v as String,
+    ],
   );
 }

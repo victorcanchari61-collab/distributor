@@ -4,15 +4,25 @@ import '../../auth/estado/auth_controlador.dart';
 import '../datos/despacho.dart';
 import '../datos/despacho_api.dart';
 
-final despachoApiProvider = Provider((ref) => DespachoApi(ref.watch(clienteApiProvider)));
+final despachoApiProvider = Provider(
+  (ref) => DespachoApi(ref.watch(clienteApiProvider)),
+);
 
 final busquedaDespachosProvider = StateProvider.autoDispose((ref) => '');
 
 /// Filtros propios de despachos. Null es "todos".
-final estadoDespachoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
-final rutaDespachoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
-final vehiculoDespachoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
-final conductorDespachoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+final estadoDespachoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final rutaDespachoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final vehiculoDespachoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final conductorDespachoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
 final filtrosDespachosActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
@@ -30,7 +40,9 @@ class DespachosControlador extends AsyncNotifier<List<Despacho>> {
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(despachoApiProvider).despachos());
+    state = await AsyncValue.guard(
+      () => ref.read(despachoApiProvider).despachos(),
+    );
   }
 
   Future<void> crear(Map<String, dynamic> cuerpo) async {
@@ -49,11 +61,14 @@ class DespachosControlador extends AsyncNotifier<List<Despacho>> {
   }
 }
 
-final despachosProvider = AsyncNotifierProvider<DespachosControlador, List<Despacho>>(
-  DespachosControlador.new,
-);
+final despachosProvider =
+    AsyncNotifierProvider<DespachosControlador, List<Despacho>>(
+      DespachosControlador.new,
+    );
 
-final resumenDespachosProvider = FutureProvider.autoDispose<ResumenDespachos>((ref) {
+final resumenDespachosProvider = FutureProvider.autoDispose<ResumenDespachos>((
+  ref,
+) {
   // Atado al listado: al armar o anular un despacho, los totales se rehacen solos.
   ref.watch(despachosProvider);
   return ref.watch(despachoApiProvider).resumen();
@@ -85,20 +100,30 @@ final despachosFiltradosProvider = Provider.autoDispose<List<Despacho>>((ref) {
 /// dos listas iguales no lo son — cada rebuild pediría los pedidos otra vez, sin parar.
 typedef ClaveDisponibles = ({String rutas, int? despachoId, String? dia});
 
-final disponiblesProvider = FutureProvider.autoDispose.family<List<DespachoPedido>, ClaveDisponibles>(
-  (ref, clave) => ref.watch(despachoApiProvider).disponibles(
-    [for (final r in clave.rutas.split(',')) if (r.isNotEmpty) int.parse(r)],
-    despachoId: clave.despachoId,
-    diaVisita: clave.dia,
-  ),
-);
+final disponiblesProvider = FutureProvider.autoDispose
+    .family<List<DespachoPedido>, ClaveDisponibles>(
+      (ref, clave) => ref
+          .watch(despachoApiProvider)
+          .disponibles(
+            [
+              for (final r in clave.rutas.split(','))
+                if (r.isNotEmpty) int.parse(r),
+            ],
+            despachoId: clave.despachoId,
+            diaVisita: clave.dia,
+          ),
+    );
 
 /// El recorrido semanal de un vehículo, para proponer las rutas de un despacho.
-final recorridoVehiculoProvider = FutureProvider.autoDispose.family<Map<String, List<int>>, int>(
-  (ref, vehiculoId) => ref.watch(despachoApiProvider).recorridoDe(vehiculoId),
-);
+final recorridoVehiculoProvider = FutureProvider.autoDispose
+    .family<Map<String, List<int>>, int>(
+      (ref, vehiculoId) =>
+          ref.watch(despachoApiProvider).recorridoDe(vehiculoId),
+    );
 
 /// Lo que ese camión lleva, para recortar el reporte de carga.
-final opcionesCargaProvider = FutureProvider.autoDispose.family<OpcionesCarga, int>(
-  (ref, despachoId) => ref.watch(despachoApiProvider).opcionesCarga(despachoId),
-);
+final opcionesCargaProvider = FutureProvider.autoDispose
+    .family<OpcionesCarga, int>(
+      (ref, despachoId) =>
+          ref.watch(despachoApiProvider).opcionesCarga(despachoId),
+    );

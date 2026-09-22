@@ -30,8 +30,11 @@ class NotasVentaPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final todas = ref.watch(notasVentaProvider).valueOrNull ?? const <NotaVenta>[];
-    final confirmadas = todas.where((n) => n.estado == EstadoNotaVenta.confirmada).length;
+    final todas =
+        ref.watch(notasVentaProvider).valueOrNull ?? const <NotaVenta>[];
+    final confirmadas = todas
+        .where((n) => n.estado == EstadoNotaVenta.confirmada)
+        .length;
     final totalVendido = todas
         .where((n) => n.estado == EstadoNotaVenta.confirmada)
         .fold<double>(0, (n, x) => n + x.total);
@@ -80,7 +83,8 @@ class NotasVentaPagina extends ConsumerWidget {
       fila: (context, nota) => _TarjetaNotaVenta(
         nota: nota,
         color: color,
-        onAnular: puede(ref, 'fact.notaventa', Accion.anular) &&
+        onAnular:
+            puede(ref, 'fact.notaventa', Accion.anular) &&
                 nota.estado == EstadoNotaVenta.confirmada
             ? () => _anular(context, ref, nota)
             : null,
@@ -161,16 +165,21 @@ class NotasVentaPagina extends ConsumerWidget {
   }
 
   Future<void> _abrirFormulario(BuildContext context) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const NotaVentaFormulario()),
-    );
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const NotaVentaFormulario()));
   }
 
-  Future<void> _anular(BuildContext context, WidgetRef ref, NotaVenta nota) async {
+  Future<void> _anular(
+    BuildContext context,
+    WidgetRef ref,
+    NotaVenta nota,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Anular ${nota.numero}',
-      mensaje: 'Se anula la venta y el stock que salió vuelve al almacén. No se puede deshacer.',
+      mensaje:
+          'Se anula la venta y el stock que salió vuelve al almacén. No se puede deshacer.',
       textoConfirmar: 'Anular',
       tono: ConfirmTono.peligro,
     );
@@ -187,7 +196,11 @@ class NotasVentaPagina extends ConsumerWidget {
 }
 
 class _TarjetaNotaVenta extends StatelessWidget {
-  const _TarjetaNotaVenta({required this.nota, required this.color, this.onAnular});
+  const _TarjetaNotaVenta({
+    required this.nota,
+    required this.color,
+    this.onAnular,
+  });
 
   final NotaVenta nota;
   final Color color;
@@ -211,14 +224,19 @@ class _TarjetaNotaVenta extends StatelessWidget {
     if (nota.usuario != null) CampoDetalle('Registrada por', nota.usuario),
     if (nota.observacion != null) CampoDetalle('Observación', nota.observacion),
     for (final pago in nota.pagos)
-      CampoDetalle(pago.metodoPago, 'S/ ${pago.monto.toStringAsFixed(2)}', enTarjeta: false),
+      CampoDetalle(
+        pago.metodoPago,
+        'S/ ${pago.monto.toStringAsFixed(2)}',
+        enTarjeta: false,
+      ),
   ];
 
   List<Widget> get _lineas => [
     for (final linea in nota.detalle)
       LineaProductoTarjeta(
         titulo: linea.producto,
-        subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
+        subtitulo:
+            '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
         filas: [
           [
             ('Cant.', '${linea.cantidadPresentacion}'),
@@ -237,7 +255,9 @@ class _TarjetaNotaVenta extends StatelessWidget {
       titulo: nota.numero,
       estado: AppEtiqueta(
         nota.estado == EstadoNotaVenta.anulada ? 'Anulada' : 'Confirmada',
-        tono: nota.estado == EstadoNotaVenta.anulada ? EtiquetaTono.peligro : EtiquetaTono.exito,
+        tono: nota.estado == EstadoNotaVenta.anulada
+            ? EtiquetaTono.peligro
+            : EtiquetaTono.exito,
       ),
       campos: _campos,
       onTap: () => _abrirDetalle(context),
@@ -273,7 +293,9 @@ class _TarjetaNotaVenta extends StatelessWidget {
       subtitulo: nota.cliente,
       estado: AppEtiqueta(
         nota.estado == EstadoNotaVenta.anulada ? 'Anulada' : 'Confirmada',
-        tono: nota.estado == EstadoNotaVenta.anulada ? EtiquetaTono.peligro : EtiquetaTono.exito,
+        tono: nota.estado == EstadoNotaVenta.anulada
+            ? EtiquetaTono.peligro
+            : EtiquetaTono.exito,
       ),
       campos: _campos,
       contenidoExtra: _lineas,

@@ -22,7 +22,9 @@ Future<T?> mostrarSelectorBuscable<T>({
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     builder: (context) {
       var texto = '';
@@ -31,7 +33,11 @@ Future<T?> mostrarSelectorBuscable<T>({
           final visibles = texto.isEmpty
               ? items
               : items
-                    .where((i) => buscable(i).toLowerCase().contains(texto.toLowerCase()))
+                    .where(
+                      (i) => buscable(
+                        i,
+                      ).toLowerCase().contains(texto.toLowerCase()),
+                    )
                     .toList();
 
           return SizedBox(
@@ -86,13 +92,17 @@ Future<T?> mostrarSelectorBuscable<T>({
                           itemBuilder: (context, i) {
                             final item = visibles[i];
                             return InkWell(
-                              borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                              borderRadius: BorderRadius.circular(
+                                Dimen.radioCampo,
+                              ),
                               onTap: () => Navigator.of(context).pop(item),
                               child: Container(
                                 padding: const EdgeInsets.all(Dimen.espacio3),
                                 decoration: BoxDecoration(
                                   color: Colores.fondo,
-                                  borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                                  borderRadius: BorderRadius.circular(
+                                    Dimen.radioCampo,
+                                  ),
                                 ),
                                 child: fila(item),
                               ),

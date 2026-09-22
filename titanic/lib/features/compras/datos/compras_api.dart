@@ -33,9 +33,10 @@ class ComprasApi {
   );
 
   /// PATCH /api/ordencompra/{id}/confirmar. Cierra la orden y crea la Compra.
-  Future<OrdenCompra> confirmarOrdenCompra(int id) async => OrdenCompra.desdeJson(
-    await _api.patch('/ordencompra/$id/confirmar') as Map<String, dynamic>,
-  );
+  Future<OrdenCompra> confirmarOrdenCompra(int id) async =>
+      OrdenCompra.desdeJson(
+        await _api.patch('/ordencompra/$id/confirmar') as Map<String, dynamic>,
+      );
 
   /// PATCH /api/ordencompra/{id}/anular
   Future<void> anularOrdenCompra(int id) async {
@@ -47,16 +48,22 @@ class ComprasApi {
   /// GET /api/compra
   Future<List<Compra>> compras() async {
     final datos = await _api.get('/compra') as List;
-    return datos.map((e) => Compra.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Compra.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// POST /api/compra. Directa, sin orden previa: al contado, en el momento.
   Future<Compra> crearCompra(Map<String, dynamic> cuerpo) async =>
-      Compra.desdeJson(await _api.post('/compra', cuerpo: cuerpo) as Map<String, dynamic>);
+      Compra.desdeJson(
+        await _api.post('/compra', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
 
   /// PUT /api/compra/{id}. Solo mientras esta Pendiente: sin nada recibido.
   Future<Compra> actualizarCompra(int id, Map<String, dynamic> cuerpo) async =>
-      Compra.desdeJson(await _api.put('/compra/$id', cuerpo: cuerpo) as Map<String, dynamic>);
+      Compra.desdeJson(
+        await _api.put('/compra/$id', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
 
   /// PATCH /api/compra/{id}/anular. Solo si nada se ha recibido.
   Future<void> anularCompra(int id) async {
@@ -68,14 +75,19 @@ class ComprasApi {
   /// GET /api/compra/cuentasporpagar
   Future<List<Compra>> cuentasPorPagar() async {
     final datos = await _api.get('/compra/cuentasporpagar') as List;
-    return datos.map((e) => Compra.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Compra.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// POST /api/compra/{id}/pagos
-  Future<Compra> registrarPagoCompra(int id, Map<String, dynamic> cuerpo) async =>
-      Compra.desdeJson(
-        await _api.post('/compra/$id/pagos', cuerpo: cuerpo) as Map<String, dynamic>,
-      );
+  Future<Compra> registrarPagoCompra(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => Compra.desdeJson(
+    await _api.post('/compra/$id/pagos', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
 
   /// PUT /api/compra/{id}/pagos/{pagoId}
   Future<Compra> actualizarPagoCompra(
@@ -83,7 +95,8 @@ class ComprasApi {
     int pagoId,
     Map<String, dynamic> cuerpo,
   ) async => Compra.desdeJson(
-    await _api.put('/compra/$id/pagos/$pagoId', cuerpo: cuerpo) as Map<String, dynamic>,
+    await _api.put('/compra/$id/pagos/$pagoId', cuerpo: cuerpo)
+        as Map<String, dynamic>,
   );
 
   /// DELETE /api/compra/{id}/pagos/{pagoId} — anula, no borra.

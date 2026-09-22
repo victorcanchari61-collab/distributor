@@ -70,8 +70,7 @@ class EmpresasPagina extends ConsumerWidget {
       context,
       activos: ref.read(filtrosEmpresasActivosProvider),
       onLimpiar: () {
-        ref.read(estadoFiltroProvider.notifier).state =
-            FiltroEstado.activos;
+        ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
       },
       grupos: [
         Consumer(
@@ -130,7 +129,9 @@ class EmpresasPagina extends ConsumerWidget {
     final mensajero = Aviso.de(context);
 
     if (empresa.activa && empresa.habilitada) {
-      mensajero.mostrar('No se puede retirar la empresa activa. Activa otra primero.');
+      mensajero.mostrar(
+        'No se puede retirar la empresa activa. Activa otra primero.',
+      );
       return;
     }
 
@@ -148,9 +149,11 @@ class EmpresasPagina extends ConsumerWidget {
 
     try {
       await ref.read(empresasProvider.notifier).cambiarHabilitacion(empresa);
-      mensajero.mostrar(empresa.habilitada
-                ? '${empresa.nombreComercial} retirada'
-                : '${empresa.nombreComercial} habilitada');
+      mensajero.mostrar(
+        empresa.habilitada
+            ? '${empresa.nombreComercial} retirada'
+            : '${empresa.nombreComercial} habilitada',
+      );
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -253,7 +256,11 @@ class _TarjetaEmpresa extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         // La empresa activa no ofrece "activar": ya lo esta.
         if (!empresa.activa && empresa.habilitada)

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -23,9 +23,15 @@ class MercadoFormulario extends ConsumerStatefulWidget {
 }
 
 class _MercadoFormularioState extends ConsumerState<MercadoFormulario> {
-  late final _nombre = TextEditingController(text: widget.mercado?.nombre ?? '');
-  late final _direccion = TextEditingController(text: widget.mercado?.direccion ?? '');
-  late final _distrito = TextEditingController(text: widget.mercado?.distrito ?? '');
+  late final _nombre = TextEditingController(
+    text: widget.mercado?.nombre ?? '',
+  );
+  late final _direccion = TextEditingController(
+    text: widget.mercado?.direccion ?? '',
+  );
+  late final _distrito = TextEditingController(
+    text: widget.mercado?.distrito ?? '',
+  );
 
   bool _guardando = false;
   String? _error;
@@ -62,13 +68,19 @@ class _MercadoFormularioState extends ConsumerState<MercadoFormulario> {
 
     final cuerpo = <String, dynamic>{
       'nombre': _nombre.text.trim(),
-      'direccion': _direccion.text.trim().isNotEmpty ? _direccion.text.trim() : null,
-      'distrito': _distrito.text.trim().isNotEmpty ? _distrito.text.trim() : null,
+      'direccion': _direccion.text.trim().isNotEmpty
+          ? _direccion.text.trim()
+          : null,
+      'distrito': _distrito.text.trim().isNotEmpty
+          ? _distrito.text.trim()
+          : null,
       if (!_esNuevo) 'activo': widget.mercado!.activo,
     };
 
     try {
-      await ref.read(mercadosProvider.notifier).guardar(id: widget.mercado?.id, cuerpo: cuerpo);
+      await ref
+          .read(mercadosProvider.notifier)
+          .guardar(id: widget.mercado?.id, cuerpo: cuerpo);
 
       navegador.pop();
       mensajero.mostrar(_esNuevo ? 'Mercado creado' : 'Mercado actualizado');
@@ -93,12 +105,18 @@ class _MercadoFormularioState extends ConsumerState<MercadoFormulario> {
             _esNuevo ? 'Nuevo mercado' : 'Editar mercado',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             AppCampo(
               controlador: _nombre,
@@ -128,16 +146,11 @@ class _MercadoFormularioState extends ConsumerState<MercadoFormulario> {
             ),
 
             const SizedBox(height: Dimen.espacio2),
-            AppBoton(
-              texto: _esNuevo ? 'Crear mercado' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

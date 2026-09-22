@@ -68,7 +68,13 @@ class AppShell extends ConsumerWidget {
                     color: acentado ?? Colores.marca,
                   ),
                 ),
-              Text(titulo, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              Text(
+                titulo,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
           actions: [
@@ -132,7 +138,10 @@ class AppShell extends ConsumerWidget {
                 ),
               ),
           ],
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: child,
         floatingActionButton: accionFlotante,

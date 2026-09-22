@@ -139,72 +139,72 @@ Future<void> mostrarFiltros(
     builder: (context) => Acento(
       color: acento,
       child: ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Dimen.espacio4,
-              0,
-              Dimen.espacio4,
-              Dimen.espacio3,
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.filter_list_rounded,
-                  size: 20,
-                  color: Colores.tintaSuave,
-                ),
-                const SizedBox(width: Dimen.espacio2),
-                const Text(
-                  'Filtros',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colores.tinta,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Dimen.espacio4,
+                0,
+                Dimen.espacio4,
+                Dimen.espacio3,
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.filter_list_rounded,
+                    size: 20,
+                    color: Colores.tintaSuave,
                   ),
-                ),
-                const Spacer(),
-                if (activos > 0)
-                  TextButton(
-                    onPressed: () {
-                      onLimpiar();
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('Limpiar'),
+                  const SizedBox(width: Dimen.espacio2),
+                  const Text(
+                    'Filtros',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colores.tinta,
+                    ),
                   ),
-              ],
+                  const Spacer(),
+                  if (activos > 0)
+                    TextButton(
+                      onPressed: () {
+                        onLimpiar();
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Limpiar'),
+                    ),
+                ],
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(Dimen.espacio4),
-              itemCount: grupos.length,
-              separatorBuilder: (context, i) =>
-                  const SizedBox(height: Dimen.espacio4),
-              itemBuilder: (context, i) => grupos[i],
+            const Divider(height: 1),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.all(Dimen.espacio4),
+                itemCount: grupos.length,
+                separatorBuilder: (context, i) =>
+                    const SizedBox(height: Dimen.espacio4),
+                itemBuilder: (context, i) => grupos[i],
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              Dimen.espacio4,
-              Dimen.espacio3,
-              Dimen.espacio4,
-              Dimen.espacio4 + MediaQuery.of(context).padding.bottom,
-            ),
-            // La lista se filtra en vivo al elegir en cada select: este boton
-            // solo cierra, pero hace falta para saber que se termino.
-            child: AppBoton(
-              texto: 'Ver resultados',
-              onPressed: () => Navigator.of(context).pop(),
-            ),
+            const Divider(height: 1),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                Dimen.espacio4,
+                Dimen.espacio3,
+                Dimen.espacio4,
+                Dimen.espacio4 + MediaQuery.of(context).padding.bottom,
+              ),
+              // La lista se filtra en vivo al elegir en cada select: este boton
+              // solo cierra, pero hace falta para saber que se termino.
+              child: AppBoton(
+                texto: 'Ver resultados',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
             ),
           ],
         ),

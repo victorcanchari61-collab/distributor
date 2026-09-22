@@ -94,7 +94,8 @@ class AppPanelProducto extends StatefulWidget {
   ///
   /// Sin esto el vendedor teclea el precio de memoria, que es como se cobra de
   /// menos sin que nadie se entere.
-  final Future<PrecioResuelto?> Function(int presentacionId, double cantidad)? resolverPrecio;
+  final Future<PrecioResuelto?> Function(int presentacionId, double cantidad)?
+  resolverPrecio;
 
   /// Cambia con la lista de precios elegida: los precios se piden otra vez.
   final Object? claveLista;
@@ -148,12 +149,16 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
   /// va siempre y las demás siguen la marca de paraVenta, como antes de que la
   /// base tuviera marcas propias.
   UsoPresentacion get _uso =>
-      widget.uso ?? (widget.paraVenta ? UsoPresentacion.venta : UsoPresentacion.compra);
+      widget.uso ??
+      (widget.paraVenta ? UsoPresentacion.venta : UsoPresentacion.compra);
   bool get _baseSiempre => widget.uso == null;
 
   /// Solo los productos que tienen con qué armar la línea en este documento.
-  List<Producto> get _ofrecidos =>
-      productosConOpcion(widget.productos, widget.uso, baseSiempre: _baseSiempre);
+  List<Producto> get _ofrecidos => productosConOpcion(
+    widget.productos,
+    widget.uso,
+    baseSiempre: _baseSiempre,
+  );
 
   /// Las unidades que valen para el producto elegido, con la base primero si
   /// se puede usar.
@@ -247,9 +252,8 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
     if (resolver == null || producto == null) return;
 
     final baseId = _presentacionBase;
-    final ids = {
-      for (final o in _opciones) o.valor == 0 ? baseId : o.valor,
-    }..remove(0);
+    final ids = {for (final o in _opciones) o.valor == 0 ? baseId : o.valor}
+      ..remove(0);
 
     final pares = await Future.wait([
       for (final id in ids)
@@ -261,10 +265,12 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
     // Si mientras tanto eligieron otro producto, estos precios ya no son de este.
     if (!mounted || _producto != producto) return;
 
-    setState(() => _preciosUnidad = {
-      for (final par in pares)
-        if (par != null) par.key: par.value,
-    });
+    setState(
+      () => _preciosUnidad = {
+        for (final par in pares)
+          if (par != null) par.key: par.value,
+      },
+    );
   }
 
   void _limpiar() {
@@ -293,11 +299,15 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
     if (_precioPisado) return '$origen: ${formatoSoles(_precioLista!)}';
     // La lista no tenía esa presentación y salió el precio del producto: decirlo evita cobrar una
     // referencia vieja creyendo que es el precio de la lista.
-    return _precioDeReferencia ? 'Precio de referencia del producto' : 'De la lista';
+    return _precioDeReferencia
+        ? 'Precio de referencia del producto'
+        : 'De la lista';
   }
 
-  double get _cantidadNum => double.tryParse(_cantidad.text.replaceAll(',', '.')) ?? 0;
-  double get _importeNum => double.tryParse(_importe.text.replaceAll(',', '.')) ?? 0;
+  double get _cantidadNum =>
+      double.tryParse(_cantidad.text.replaceAll(',', '.')) ?? 0;
+  double get _importeNum =>
+      double.tryParse(_importe.text.replaceAll(',', '.')) ?? 0;
 
   bool get _listo => _producto != null && _cantidadNum > 0 && _importeNum > 0;
 
@@ -344,7 +354,10 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
         LineaElegida(
           producto: elegidos[i].producto,
           presentacionId: elegidos[i].presentacionId,
-          presentacion: _nombreDe(elegidos[i].producto, elegidos[i].presentacionId),
+          presentacion: _nombreDe(
+            elegidos[i].producto,
+            elegidos[i].presentacionId,
+          ),
           cantidad: elegidos[i].cantidad,
           importe: importes[i] ?? elegidos[i].importe,
         ),
@@ -353,7 +366,8 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
 
   /// El precio de la lista para una selección de la búsqueda avanzada, o null si no lo hay.
   Future<double?> _precioDeLista(
-    Future<PrecioResuelto?> Function(int presentacionId, double cantidad)? resolver,
+    Future<PrecioResuelto?> Function(int presentacionId, double cantidad)?
+    resolver,
     SeleccionProducto e,
   ) async {
     if (resolver == null) return null;
@@ -397,7 +411,11 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
         children: [
           const Text(
             'Buscar producto',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Colores.tinta,
+            ),
           ),
           const SizedBox(height: Dimen.espacio3),
 
@@ -415,13 +433,15 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
             subtitulo: (p) {
               final partes = <String>[p.codigo];
               if (p.marca != null && p.marca!.isNotEmpty) partes.add(p.marca!);
-              if (p.categoria != null && p.categoria!.isNotEmpty) partes.add(p.categoria!);
+              if (p.categoria != null && p.categoria!.isNotEmpty)
+                partes.add(p.categoria!);
 
               // El stock va en el subtítulo y no en una columna aparte porque
               // en el móvil no hay ancho para las dos cosas, y sin él la
               // lista serviría para elegir lo que no se puede despachar.
               final hay = stock?[p.id];
-              if (hay != null) partes.add('${formatoNumero(hay)} ${p.unidadBase}');
+              if (hay != null)
+                partes.add('${formatoNumero(hay)} ${p.unidadBase}');
               return partes.join(' · ');
             },
             buscable: (p) => p.buscable,
@@ -527,7 +547,9 @@ class _SelectorUnidad extends StatelessWidget {
     final precio = precios[o.valor == 0 ? idBase : o.valor];
     final nombre = o.nombre.isEmpty ? 'Unidad' : o.nombre;
     if (precio != null) return '$nombre · ${formatoSoles(precio)}';
-    return o.valor == 0 ? nombre : '$nombre · ${formatoNumero(o.factor)} $unidadBase';
+    return o.valor == 0
+        ? nombre
+        : '$nombre · ${formatoNumero(o.factor)} $unidadBase';
   }
 
   @override
@@ -535,7 +557,11 @@ class _SelectorUnidad extends StatelessWidget {
     return InputDecorator(
       decoration: InputDecoration(
         labelText: 'Unidad',
-        prefixIcon: const Icon(Icons.straighten, size: 19, color: Colores.tintaTenue),
+        prefixIcon: const Icon(
+          Icons.straighten,
+          size: 19,
+          color: Colores.tintaTenue,
+        ),
         enabled: habilitado,
         constraints: const BoxConstraints(minHeight: Dimen.campoLg),
       ),

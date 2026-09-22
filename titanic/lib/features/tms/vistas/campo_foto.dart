@@ -89,7 +89,11 @@ class _CampoFotoState extends State<CampoFoto> {
       children: [
         const Text(
           'Foto',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colores.tintaSuave),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Colores.tintaSuave,
+          ),
         ),
         const SizedBox(height: Dimen.espacio2),
 
@@ -127,7 +131,10 @@ class _CampoFotoState extends State<CampoFoto> {
 
         if (_error != null) ...[
           const SizedBox(height: Dimen.espacio1),
-          Text(_error!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
+          Text(
+            _error!,
+            style: const TextStyle(fontSize: 12, color: Colores.peligro),
+          ),
         ],
 
         const SizedBox(height: Dimen.espacio2),
@@ -192,7 +199,9 @@ class CampoFecha extends StatelessWidget {
                 initialDate: valor ?? DateTime.now(),
                 // Hacia atrás también: se da de alta un vehículo cuyo SOAT ya
                 // venció, justamente para que salte la alerta.
-                firstDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
+                firstDate: DateTime.now().subtract(
+                  const Duration(days: 365 * 5),
+                ),
                 lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
               );
               if (elegida != null) onCambio(elegida);
@@ -202,12 +211,20 @@ class CampoFecha extends StatelessWidget {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: etiqueta,
-          prefixIcon: const Icon(Icons.event_outlined, size: 19, color: Colores.tintaTenue),
+          prefixIcon: const Icon(
+            Icons.event_outlined,
+            size: 19,
+            color: Colores.tintaTenue,
+          ),
           suffixIcon: valor == null
               ? null
               : IconButton(
                   onPressed: habilitado ? () => onCambio(null) : null,
-                  icon: const Icon(Icons.close, size: 18, color: Colores.tintaTenue),
+                  icon: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: Colores.tintaTenue,
+                  ),
                   tooltip: 'Quitar la fecha',
                 ),
           constraints: const BoxConstraints(minHeight: Dimen.campoLg),

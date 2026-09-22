@@ -20,13 +20,16 @@ class Acento extends InheritedWidget {
 
   /// El acento vigente. Sin nadie que lo declare, el azul de marca.
   static Color de(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<Acento>()?.color ?? Colores.marca;
+      context.dependOnInheritedWidgetOfExactType<Acento>()?.color ??
+      Colores.marca;
 
   /// El mismo color al 8%, para fondos de chip y de fila marcada.
-  static Color suave(BuildContext context) => de(context).withValues(alpha: 0.08);
+  static Color suave(BuildContext context) =>
+      de(context).withValues(alpha: 0.08);
 
   /// El acento de un módulo por su clave del menú: 'compras', 'inv', 'fact'...
-  static Color deModulo(String modulo) => Colores.modulos[modulo] ?? Colores.marca;
+  static Color deModulo(String modulo) =>
+      Colores.modulos[modulo] ?? Colores.marca;
 
   /// Envuelve una pantalla con el acento de un módulo.
   ///
@@ -41,8 +44,13 @@ class Acento extends InheritedWidget {
   /// escrito en el build del formulario miraría por encima de su propio Acento
   /// y devolvería el azul de marca. Se veía igual que antes de todo esto y
   /// costaba entender por qué ese color no cambiaba.
-  static Widget modulo(String modulo, Widget Function(BuildContext) construir) =>
-      Acento(color: deModulo(modulo), child: Builder(builder: construir));
+  static Widget modulo(
+    String modulo,
+    Widget Function(BuildContext) construir,
+  ) => Acento(
+    color: deModulo(modulo),
+    child: Builder(builder: construir),
+  );
 
   @override
   bool updateShouldNotify(Acento anterior) => anterior.color != color;

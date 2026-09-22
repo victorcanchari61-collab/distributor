@@ -35,7 +35,11 @@ class LineaProductoTarjeta extends StatelessWidget {
         children: [
           Text(
             titulo,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colores.tinta),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colores.tinta,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
@@ -53,7 +57,10 @@ class LineaProductoTarjeta extends StatelessWidget {
                       children: [
                         Text(
                           etiqueta,
-                          style: const TextStyle(fontSize: 10.5, color: Colores.tintaTenue),
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            color: Colores.tintaTenue,
+                          ),
                         ),
                         const SizedBox(height: 1),
                         Text(

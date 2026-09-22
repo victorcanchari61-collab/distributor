@@ -167,7 +167,7 @@ export function StockPage() {
             }))}
           />
         ) : (
-          <span className="text-sm text-ink-soft">{row.unidadBase}</span>
+          <span className="text-sm">{row.unidadBase}</span>
         )
       },
     },
@@ -212,11 +212,7 @@ export function StockPage() {
       align: 'right',
       filterable: false,
       value: (row) => row.disponible,
-      render: (row) => (
-        <span className={row.reservado > 0 ? 'font-medium text-ink' : 'text-ink-soft'}>
-          {enUnidad(row, row.disponible)}
-        </span>
-      ),
+      render: (row) => <span className="font-medium">{enUnidad(row, row.disponible)}</span>,
     },
     {
       key: 'stockMinimo',
@@ -226,9 +222,7 @@ export function StockPage() {
       value: (row) => row.stockMinimo,
       render: (row) =>
         row.stockMinimo > 0 ? (
-          <span className="text-ink-soft">
-            {enUnidad(row, row.stockMinimo)}
-          </span>
+          <span>{enUnidad(row, row.stockMinimo)}</span>
         ) : (
           <span className="text-ink-soft">—</span>
         ),
@@ -324,9 +318,7 @@ export function StockPage() {
       value: (row) => row.ultimaSalida ?? '',
       render: (row) =>
         row.ultimaSalida ? (
-          <span className="text-ink-soft">
-            {fechaCorta(row.ultimaSalida)}
-          </span>
+          <span>{fechaCorta(row.ultimaSalida)}</span>
         ) : (
           <span className="text-ink-soft">Nunca</span>
         ),
@@ -338,9 +330,7 @@ export function StockPage() {
       value: (row) => row.ultimaEntrada ?? '',
       render: (row) =>
         row.ultimaEntrada ? (
-          <span className="text-ink-soft">
-            {fechaCorta(row.ultimaEntrada)}
-          </span>
+          <span>{fechaCorta(row.ultimaEntrada)}</span>
         ) : (
           <span className="text-ink-soft">Nunca</span>
         ),

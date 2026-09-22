@@ -117,7 +117,8 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
         (faltantes.isNotEmpty && motivoFaltante == null)) {
       setState(() {
         _guardando = false;
-        _error = 'Revisa Ajustes → Motivos: falta el motivo SOBRANTE o FALTANTE.';
+        _error =
+            'Revisa Ajustes → Motivos: falta el motivo SOBRANTE o FALTANTE.';
       });
       return;
     }
@@ -166,7 +167,8 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
 
   @override
   Widget build(BuildContext context) {
-    final color = resolverRuta(ConteosPagina.ruta).grupo?.color ?? Colores.marca;
+    final color =
+        resolverRuta(ConteosPagina.ruta).grupo?.color ?? Colores.marca;
     final almacenes = ref.watch(almacenesActivosProvider);
     final almacenId = ref.watch(almacenConteoProvider);
     final stockAsync = ref.watch(stockConteoProvider);
@@ -191,8 +193,11 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
                   valor: almacenId,
                   etiqueta: 'Almacén a contar',
                   icono: Icons.warehouse_outlined,
-                  opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
-                  onCambio: (v) => ref.read(almacenConteoProvider.notifier).state = v,
+                  opciones: [
+                    for (final a in almacenes) Opcion<int>(a.id, a.nombre),
+                  ],
+                  onCambio: (v) =>
+                      ref.read(almacenConteoProvider.notifier).state = v,
                 ),
                 if (almacenId != null) ...[
                   const SizedBox(height: Dimen.espacio3),
@@ -213,16 +218,25 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
                     detalle: 'Para empezar a contar, primero elige el almacén.',
                   )
                 : stockAsync.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
                     error: (e, _) => AppVacio(
                       icono: Icons.wifi_off_outlined,
                       titulo: 'No se pudo cargar',
-                      detalle: e is ApiExcepcion ? e.texto : 'No pudimos cargar el stock.',
+                      detalle: e is ApiExcepcion
+                          ? e.texto
+                          : 'No pudimos cargar el stock.',
                     ),
                     data: (stock) {
                       final visibles = _busqueda.isEmpty
                           ? stock
-                          : stock.where((s) => s.buscable.contains(_busqueda.toLowerCase())).toList();
+                          : stock
+                                .where(
+                                  (s) => s.buscable.contains(
+                                    _busqueda.toLowerCase(),
+                                  ),
+                                )
+                                .toList();
                       if (visibles.isEmpty) {
                         return const AppVacio(
                           icono: Icons.inventory_2_outlined,
@@ -238,7 +252,8 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
                           Dimen.espacio6 * 2,
                         ),
                         itemCount: visibles.length,
-                        separatorBuilder: (context, i) => const SizedBox(height: Dimen.espacio2),
+                        separatorBuilder: (context, i) =>
+                            const SizedBox(height: Dimen.espacio2),
                         itemBuilder: (context, i) => _FilaConteo(
                           stock: visibles[i],
                           controlador: _controlador(visibles[i]),
@@ -297,7 +312,11 @@ class _FilaConteo extends StatelessWidget {
               children: [
                 Text(
                   stock.producto,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colores.tinta),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colores.tinta,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -308,7 +327,9 @@ class _FilaConteo extends StatelessWidget {
                     color: diff == null || diff == 0
                         ? Colores.tintaSuave
                         : (diff > 0 ? Colores.exito : Colores.peligro),
-                    fontWeight: diff == null || diff == 0 ? FontWeight.normal : FontWeight.w700,
+                    fontWeight: diff == null || diff == 0
+                        ? FontWeight.normal
+                        : FontWeight.w700,
                   ),
                 ),
               ],

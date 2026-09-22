@@ -140,7 +140,8 @@ class Vehiculo {
       [marca, modelo].where((t) => t != null && t.isNotEmpty).join(' ');
 
   String get buscable =>
-      '$placa $tipoVehiculo ${marca ?? ''} ${modelo ?? ''} ${conductor ?? ''}'.toLowerCase();
+      '$placa $tipoVehiculo ${marca ?? ''} ${modelo ?? ''} ${conductor ?? ''}'
+          .toLowerCase();
 
   factory Vehiculo.desdeJson(Map<String, dynamic> json) => Vehiculo(
     id: json['id'] as int,
@@ -153,7 +154,9 @@ class Vehiculo {
     color: json['color'] as String?,
     capacidadKg: (json['capacidadKg'] as num?)?.toDouble(),
     soatNumero: json['soatNumero'] as String?,
-    soatVence: json['soatVence'] == null ? null : fechaDeJson(json['soatVence'] as String),
+    soatVence: json['soatVence'] == null
+        ? null
+        : fechaDeJson(json['soatVence'] as String),
     revisionTecnicaVence: json['revisionTecnicaVence'] == null
         ? null
         : fechaDeJson(json['revisionTecnicaVence'] as String),
@@ -168,7 +171,8 @@ class Vehiculo {
     vencimientos: ((json['vencimientos'] as List?) ?? const [])
         .map((e) => Vencimiento.desdeJson(e as Map<String, dynamic>))
         .toList(),
-    estadoDocumentos: json['estadoDocumentos'] as String? ?? EstadoVencimiento.sinFecha,
+    estadoDocumentos:
+        json['estadoDocumentos'] as String? ?? EstadoVencimiento.sinFecha,
   );
 }
 
@@ -214,7 +218,8 @@ class Conductor {
   final String estadoDocumentos;
 
   String get buscable =>
-      '$nombre $documento ${telefono ?? ''} ${licenciaNumero ?? ''}'.toLowerCase();
+      '$nombre $documento ${telefono ?? ''} ${licenciaNumero ?? ''}'
+          .toLowerCase();
 
   factory Conductor.desdeJson(Map<String, dynamic> json) => Conductor(
     id: json['id'] as int,
@@ -233,11 +238,14 @@ class Conductor {
         : fechaDeJson(json['fechaIngreso'] as String),
     observacion: json['observacion'] as String?,
     activo: json['activo'] as bool? ?? true,
-    vehiculos: ((json['vehiculos'] as List?) ?? const []).map((e) => e as String).toList(),
+    vehiculos: ((json['vehiculos'] as List?) ?? const [])
+        .map((e) => e as String)
+        .toList(),
     vencimientos: ((json['vencimientos'] as List?) ?? const [])
         .map((e) => Vencimiento.desdeJson(e as Map<String, dynamic>))
         .toList(),
-    estadoDocumentos: json['estadoDocumentos'] as String? ?? EstadoVencimiento.sinFecha,
+    estadoDocumentos:
+        json['estadoDocumentos'] as String? ?? EstadoVencimiento.sinFecha,
   );
 }
 
@@ -277,10 +285,11 @@ class ResumenConductores {
   final int conLicenciaVencida;
   final int porVencer;
 
-  factory ResumenConductores.desdeJson(Map<String, dynamic> json) => ResumenConductores(
-    conductores: json['conductores'] as int? ?? 0,
-    activos: json['activos'] as int? ?? 0,
-    conLicenciaVencida: json['conLicenciaVencida'] as int? ?? 0,
-    porVencer: json['porVencer'] as int? ?? 0,
-  );
+  factory ResumenConductores.desdeJson(Map<String, dynamic> json) =>
+      ResumenConductores(
+        conductores: json['conductores'] as int? ?? 0,
+        activos: json['activos'] as int? ?? 0,
+        conLicenciaVencida: json['conLicenciaVencida'] as int? ?? 0,
+        porVencer: json['porVencer'] as int? ?? 0,
+      );
 }

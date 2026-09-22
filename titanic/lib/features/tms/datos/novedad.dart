@@ -77,8 +77,14 @@ String _numero(double n) {
 
 /// Una cantidad en unidad base, dicha como se cuenta en el almacén: 113
 /// unidades de una caja de 12 son "9 Caja 12UND + 5 UND".
-String textoCantidad(double base, double factor, String? presentacion, String unidadBase) {
-  if (factor <= 1 || presentacion == null) return '${_numero(base)} $unidadBase';
+String textoCantidad(
+  double base,
+  double factor,
+  String? presentacion,
+  String unidadBase,
+) {
+  if (factor <= 1 || presentacion == null)
+    return '${_numero(base)} $unidadBase';
 
   final cajas = (base / factor + 1e-6).floor();
   final sueltas = _redondear(base - cajas * factor);
@@ -169,11 +175,15 @@ class Novedad {
   final String? observacionVerificacion;
 
   bool get porRevisar => estado == EstadoNovedad.pendiente;
-  bool get revisada => estado == EstadoNovedad.recibida || estado == EstadoNovedad.faltante;
+  bool get revisada =>
+      estado == EstadoNovedad.recibida || estado == EstadoNovedad.faltante;
 
-  String cantidad(double base) => textoCantidad(base, factor, presentacion, unidadBase);
+  String cantidad(double base) =>
+      textoCantidad(base, factor, presentacion, unidadBase);
 
-  String get buscable => '$producto $codigo $pedido $cliente $motivo ${despacho ?? ''}'.toLowerCase();
+  String get buscable =>
+      '$producto $codigo $pedido $cliente $motivo ${despacho ?? ''}'
+          .toLowerCase();
 
   factory Novedad.desdeJson(Map<String, dynamic> json) => Novedad(
     id: json['id'] as int,
@@ -203,7 +213,9 @@ class Novedad {
     usuario: json['usuario'] as String?,
     cantidadRegresada: (json['cantidadRegresada'] as num?)?.toDouble(),
     verificadoPor: json['verificadoPor'] as String?,
-    verificadoEn: json['verificadoEn'] == null ? null : fechaDeJson(json['verificadoEn'] as String),
+    verificadoEn: json['verificadoEn'] == null
+        ? null
+        : fechaDeJson(json['verificadoEn'] as String),
     observacionVerificacion: json['observacionVerificacion'] as String?,
   );
 }
@@ -228,11 +240,12 @@ class ResumenNovedades {
   /// Cuánto valen S/ todas las unidades no entregadas.
   final double importe;
 
-  factory ResumenNovedades.desdeJson(Map<String, dynamic> json) => ResumenNovedades(
-    total: json['total'] as int? ?? 0,
-    porRevisar: json['porRevisar'] as int? ?? 0,
-    recibidas: json['recibidas'] as int? ?? 0,
-    faltantes: json['faltantes'] as int? ?? 0,
-    importe: (json['importe'] as num?)?.toDouble() ?? 0,
-  );
+  factory ResumenNovedades.desdeJson(Map<String, dynamic> json) =>
+      ResumenNovedades(
+        total: json['total'] as int? ?? 0,
+        porRevisar: json['porRevisar'] as int? ?? 0,
+        recibidas: json['recibidas'] as int? ?? 0,
+        faltantes: json['faltantes'] as int? ?? 0,
+        importe: (json['importe'] as num?)?.toDouble() ?? 0,
+      );
 }

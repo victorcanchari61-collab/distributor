@@ -32,9 +32,14 @@ class OrdenesCompraPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final todas = ref.watch(ordenesCompraProvider).valueOrNull ?? const <OrdenCompra>[];
-    final pendientes = todas.where((o) => o.estado == EstadoOrdenCompra.pendiente).length;
-    final confirmadas = todas.where((o) => o.estado == EstadoOrdenCompra.confirmada).length;
+    final todas =
+        ref.watch(ordenesCompraProvider).valueOrNull ?? const <OrdenCompra>[];
+    final pendientes = todas
+        .where((o) => o.estado == EstadoOrdenCompra.pendiente)
+        .length;
+    final confirmadas = todas
+        .where((o) => o.estado == EstadoOrdenCompra.confirmada)
+        .length;
     final estadoFiltro = ref.watch(estadoOrdenCompraFiltroProvider);
 
     return AppListaPagina<OrdenCompra>(
@@ -43,7 +48,8 @@ class OrdenesCompraPagina extends ConsumerWidget {
       estado: ref.watch(ordenesCompraProvider),
       visibles: ref.watch(ordenesCompraFiltradasProvider),
       busqueda: ref.watch(busquedaOrdenesCompraProvider),
-      onBuscar: (t) => ref.read(busquedaOrdenesCompraProvider.notifier).state = t,
+      onBuscar: (t) =>
+          ref.read(busquedaOrdenesCompraProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o proveedor',
       onRecargar: () => ref.read(ordenesCompraProvider.notifier).recargar(),
       onNuevo: puede(ref, 'compras.ordenes', Accion.crear)
@@ -81,15 +87,18 @@ class OrdenesCompraPagina extends ConsumerWidget {
       fila: (context, orden) => _TarjetaOrden(
         orden: orden,
         color: color,
-        onEditar: puede(ref, 'compras.ordenes', Accion.editar) &&
+        onEditar:
+            puede(ref, 'compras.ordenes', Accion.editar) &&
                 orden.estado == EstadoOrdenCompra.pendiente
             ? () => _abrirFormulario(context, orden)
             : null,
-        onConfirmar: puede(ref, 'compras.ordenes', Accion.confirmar) &&
+        onConfirmar:
+            puede(ref, 'compras.ordenes', Accion.confirmar) &&
                 orden.estado == EstadoOrdenCompra.pendiente
             ? () => _confirmar(context, ref, orden)
             : null,
-        onAnular: puede(ref, 'compras.ordenes', Accion.anular) &&
+        onAnular:
+            puede(ref, 'compras.ordenes', Accion.anular) &&
                 orden.estado != EstadoOrdenCompra.anulada
             ? () => _anular(context, ref, orden)
             : null,
@@ -100,7 +109,8 @@ class OrdenesCompraPagina extends ConsumerWidget {
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
     return mostrarFiltros(
       context,
-      activos: (ref.read(estadoOrdenCompraFiltroProvider) == null ? 0 : 1) +
+      activos:
+          (ref.read(estadoOrdenCompraFiltroProvider) == null ? 0 : 1) +
           (ref.read(proveedorOrdenCompraFiltroProvider) == null ? 0 : 1),
       onLimpiar: () {
         ref.read(estadoOrdenCompraFiltroProvider.notifier).state = null;
@@ -117,7 +127,8 @@ class OrdenesCompraPagina extends ConsumerWidget {
               OpcionFiltro(EstadoOrdenCompra.confirmada, 'Confirmadas'),
               OpcionFiltro(EstadoOrdenCompra.anulada, 'Anuladas'),
             ],
-            onCambio: (v) => ref.read(estadoOrdenCompraFiltroProvider.notifier).state = v,
+            onCambio: (v) =>
+                ref.read(estadoOrdenCompraFiltroProvider.notifier).state = v,
           ),
         ),
         Consumer(
@@ -133,7 +144,8 @@ class OrdenesCompraPagina extends ConsumerWidget {
                 for (final p in proveedores) OpcionFiltro(p, p),
               ],
               onCambio: (v) =>
-                  ref.read(proveedorOrdenCompraFiltroProvider.notifier).state = v,
+                  ref.read(proveedorOrdenCompraFiltroProvider.notifier).state =
+                      v,
             );
           },
         ),
@@ -147,11 +159,16 @@ class OrdenesCompraPagina extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmar(BuildContext context, WidgetRef ref, OrdenCompra orden) async {
+  Future<void> _confirmar(
+    BuildContext context,
+    WidgetRef ref,
+    OrdenCompra orden,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Confirmar ${orden.numero}',
-      mensaje: 'El proveedor aceptó despachar: se cierra la orden y se crea la compra.',
+      mensaje:
+          'El proveedor aceptó despachar: se cierra la orden y se crea la compra.',
       textoConfirmar: 'Confirmar',
       tono: ConfirmTono.pregunta,
     );
@@ -166,7 +183,11 @@ class OrdenesCompraPagina extends ConsumerWidget {
     }
   }
 
-  Future<void> _anular(BuildContext context, WidgetRef ref, OrdenCompra orden) async {
+  Future<void> _anular(
+    BuildContext context,
+    WidgetRef ref,
+    OrdenCompra orden,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Anular ${orden.numero}',
@@ -220,14 +241,16 @@ class _TarjetaOrden extends StatelessWidget {
     CampoDetalle('Líneas', '${orden.detalle.length}'),
     CampoDetalle('Total', 'S/ ${orden.total.toStringAsFixed(2)}'),
     if (orden.usuario != null) CampoDetalle('Registrada por', orden.usuario),
-    if (orden.observacion != null) CampoDetalle('Observación', orden.observacion),
+    if (orden.observacion != null)
+      CampoDetalle('Observación', orden.observacion),
   ];
 
   List<Widget> get _lineas => [
     for (final linea in orden.detalle)
       LineaProductoTarjeta(
         titulo: linea.producto,
-        subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
+        subtitulo:
+            '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
         filas: [
           [
             ('Cant.', formatoNumero(linea.cantidadPresentacion)),
@@ -270,14 +293,22 @@ class _TarjetaOrden extends StatelessWidget {
             onPressed: onConfirmar,
             tooltip: 'Confirmar',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.check_circle_outline, size: 18, color: Colores.exito),
+            icon: const Icon(
+              Icons.check_circle_outline,
+              size: 18,
+              color: Colores.exito,
+            ),
           ),
         if (onEditar != null)
           IconButton(
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onAnular != null)
           IconButton(

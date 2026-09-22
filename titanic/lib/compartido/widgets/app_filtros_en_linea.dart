@@ -10,7 +10,11 @@ import '../../core/tema/dimensiones.dart';
 /// filtro puesto: si no, al cerrarlo se perdería de vista que la lista sigue
 /// recortada y parecería que faltan registros.
 class BotonFiltrosEnLinea extends StatelessWidget {
-  const BotonFiltrosEnLinea({super.key, required this.activo, required this.onTap});
+  const BotonFiltrosEnLinea({
+    super.key,
+    required this.activo,
+    required this.onTap,
+  });
 
   final bool activo;
   final VoidCallback onTap;
@@ -25,10 +29,16 @@ class BotonFiltrosEnLinea extends StatelessWidget {
         height: Dimen.campoMd,
         decoration: BoxDecoration(
           color: activo ? Acento.suave(context) : Colores.superficie,
-          border: Border.all(color: activo ? Acento.de(context) : Colores.linea),
+          border: Border.all(
+            color: activo ? Acento.de(context) : Colores.linea,
+          ),
           borderRadius: BorderRadius.circular(Dimen.radioCampo),
         ),
-        child: Icon(Icons.tune, size: 18, color: activo ? Acento.de(context) : Colores.tintaSuave),
+        child: Icon(
+          Icons.tune,
+          size: 18,
+          color: activo ? Acento.de(context) : Colores.tintaSuave,
+        ),
       ),
     );
   }
@@ -61,13 +71,18 @@ class FiltroEnLinea extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3),
       decoration: BoxDecoration(
         color: Colores.superficie,
-        border: Border.all(color: valor == null ? Colores.linea : Acento.de(context)),
+        border: Border.all(
+          color: valor == null ? Colores.linea : Acento.de(context),
+        ),
         borderRadius: BorderRadius.circular(Dimen.radioCampo),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String?>(
           value: valor,
-          hint: Text(etiqueta, style: const TextStyle(fontSize: 13, color: Colores.tintaSuave)),
+          hint: Text(
+            etiqueta,
+            style: const TextStyle(fontSize: 13, color: Colores.tintaSuave),
+          ),
           items: [
             DropdownMenuItem(value: null, child: Text('Todas · $etiqueta')),
             ...opciones.map((o) => DropdownMenuItem(value: o, child: Text(o))),

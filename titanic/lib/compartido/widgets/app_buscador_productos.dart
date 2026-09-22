@@ -134,7 +134,8 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
   /// La regla con la que se ofrecen las unidades. Sin `uso` (inventario) la base
   /// va siempre y las demás siguen la marca de paraVenta.
   UsoPresentacion get _uso =>
-      widget.uso ?? (widget.paraVenta ? UsoPresentacion.venta : UsoPresentacion.compra);
+      widget.uso ??
+      (widget.paraVenta ? UsoPresentacion.venta : UsoPresentacion.compra);
   bool get _baseSiempre => widget.uso == null;
 
   /// Solo los productos que tienen con qué armar la línea en este documento: uno
@@ -182,7 +183,8 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
           // La base si se puede usar; si no, la primera presentacion que si.
           // Marcar siempre con 0 dejaba una linea por unidades sueltas de algo
           // que solo se vende por caja.
-          presentacionId: presentacionInicial(p, _uso, baseSiempre: _baseSiempre) ?? 0,
+          presentacionId:
+              presentacionInicial(p, _uso, baseSiempre: _baseSiempre) ?? 0,
           cantidad: '1',
           importe: sugerido,
         );
@@ -225,18 +227,10 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
     final listos = _resultado().length;
 
     final categorias =
-        _ofrecidos
-            .map((p) => p.categoria)
-            .whereType<String>()
-            .toSet()
-            .toList()
+        _ofrecidos.map((p) => p.categoria).whereType<String>().toSet().toList()
           ..sort();
     final marcas =
-        _ofrecidos
-            .map((p) => p.marca)
-            .whereType<String>()
-            .toSet()
-            .toList()
+        _ofrecidos.map((p) => p.marca).whereType<String>().toSet().toList()
           ..sort();
 
     return SizedBox(
@@ -641,7 +635,8 @@ class _CampoUnidad extends StatelessWidget {
     // La unidad base ya viene en la lista si se puede usar: hay productos que
     // solo salen por caja y no por unidad suelta.
     final items = <DropdownMenuItem<int>>[
-      for (final o in opciones) DropdownMenuItem(value: o.valor, child: Text(o.nombre)),
+      for (final o in opciones)
+        DropdownMenuItem(value: o.valor, child: Text(o.nombre)),
     ];
 
     return _CajaCampo(
@@ -702,7 +697,11 @@ class _CampoNumeroState extends State<_CampoNumero> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           onChanged: widget.onChanged,
           textAlignVertical: TextAlignVertical.center,
-          style: const TextStyle(fontSize: 13, height: 1.2, color: Colores.tinta),
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1.2,
+            color: Colores.tinta,
+          ),
           decoration: const InputDecoration(
             isDense: true,
             contentPadding: EdgeInsets.zero,
@@ -741,32 +740,32 @@ class _CajaCampo extends StatelessWidget {
       arriba y abajo, los dos se dibujan iguales por construccion.
     */
     return InputDecorator(
-        isEmpty: false,
-        decoration: InputDecoration(
-          labelText: etiqueta,
-          isDense: true,
-          filled: true,
-          fillColor: Colores.superficie,
-          constraints: const BoxConstraints(minHeight: Dimen.campoMd + 6),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: Dimen.espacio3,
-            vertical: Dimen.espacio2,
-          ),
-          labelStyle: const TextStyle(fontSize: 13, color: Colores.tintaSuave),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(Dimen.radioCampo),
-            borderSide: const BorderSide(color: Colores.linea),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(Dimen.radioCampo),
-            borderSide: const BorderSide(color: Colores.linea),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(Dimen.radioCampo),
-            borderSide: BorderSide(color: Acento.de(context)),
-          ),
+      isEmpty: false,
+      decoration: InputDecoration(
+        labelText: etiqueta,
+        isDense: true,
+        filled: true,
+        fillColor: Colores.superficie,
+        constraints: const BoxConstraints(minHeight: Dimen.campoMd + 6),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: Dimen.espacio3,
+          vertical: Dimen.espacio2,
         ),
-        child: child,
+        labelStyle: const TextStyle(fontSize: 13, color: Colores.tintaSuave),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Dimen.radioCampo),
+          borderSide: const BorderSide(color: Colores.linea),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Dimen.radioCampo),
+          borderSide: const BorderSide(color: Colores.linea),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Dimen.radioCampo),
+          borderSide: BorderSide(color: Acento.de(context)),
+        ),
+      ),
+      child: child,
     );
   }
 }

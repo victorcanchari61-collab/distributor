@@ -42,7 +42,9 @@ Future<void> mostrarDepuracion(
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     builder: (context) => Acento(
       color: acento,
@@ -104,7 +106,8 @@ class _HojaDepurarState extends ConsumerState<_HojaDepurar> {
 
   bool get _sinFiltros => _consulta.filtros.isEmpty;
 
-  Future<int> _contar() => ref.read(auditoriaProvider.notifier).contar(_consulta);
+  Future<int> _contar() =>
+      ref.read(auditoriaProvider.notifier).contar(_consulta);
 
   /// Cambia un filtro y vuelve a contar. La confirmación escrita se borra: si
   /// se tecleó ELIMINAR con todo abierto y luego se puso y quitó un filtro, no
@@ -154,7 +157,9 @@ class _HojaDepurarState extends ConsumerState<_HojaDepurar> {
         _confirmacion.text.trim().toUpperCase() == _palabraConfirmacion;
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
       child: Padding(
         padding: EdgeInsets.only(
           left: Dimen.espacio4,
@@ -174,7 +179,11 @@ class _HojaDepurarState extends ConsumerState<_HojaDepurar> {
                     color: Colores.peligro.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(Dimen.radioCampo),
                   ),
-                  child: const Icon(Icons.delete_sweep_outlined, size: 20, color: Colores.peligro),
+                  child: const Icon(
+                    Icons.delete_sweep_outlined,
+                    size: 20,
+                    color: Colores.peligro,
+                  ),
                 ),
                 const SizedBox(width: Dimen.espacio3),
                 const Expanded(
@@ -210,7 +219,11 @@ class _HojaDepurarState extends ConsumerState<_HojaDepurar> {
                       titulo: 'Entidad',
                       icono: Icons.category_outlined,
                       valor: _entidad,
-                      opciones: _opciones(resumen?.entidades, _entidad, 'Todas'),
+                      opciones: _opciones(
+                        resumen?.entidades,
+                        _entidad,
+                        'Todas',
+                      ),
                       onCambio: (v) => _cambiar(() => _entidad = v),
                     ),
                     const SizedBox(height: Dimen.espacio3),
@@ -220,9 +233,18 @@ class _HojaDepurarState extends ConsumerState<_HojaDepurar> {
                       valor: _accion,
                       opciones: const [
                         OpcionFiltro<String?>(null, 'Todas'),
-                        OpcionFiltro<String?>(AccionAuditoria.creado, 'Creados'),
-                        OpcionFiltro<String?>(AccionAuditoria.actualizado, 'Actualizados'),
-                        OpcionFiltro<String?>(AccionAuditoria.eliminado, 'Eliminados'),
+                        OpcionFiltro<String?>(
+                          AccionAuditoria.creado,
+                          'Creados',
+                        ),
+                        OpcionFiltro<String?>(
+                          AccionAuditoria.actualizado,
+                          'Actualizados',
+                        ),
+                        OpcionFiltro<String?>(
+                          AccionAuditoria.eliminado,
+                          'Eliminados',
+                        ),
                       ],
                       onCambio: (v) => _cambiar(() => _accion = v),
                     ),
@@ -242,7 +264,8 @@ class _HojaDepurarState extends ConsumerState<_HojaDepurar> {
                       const SizedBox(height: Dimen.espacio3),
                       AppCampo(
                         controlador: _confirmacion,
-                        etiqueta: 'Escribe $_palabraConfirmacion para confirmar',
+                        etiqueta:
+                            'Escribe $_palabraConfirmacion para confirmar',
                         habilitado: !_eliminando,
                       ),
                       const SizedBox(height: Dimen.espacio2),
@@ -275,7 +298,9 @@ class _HojaDepurarState extends ConsumerState<_HojaDepurar> {
                   cargando: _eliminando,
                   // Sin saber cuántos son —cargando o con error— no se borra:
                   // la persona tiene que ver el número antes de aceptar.
-                  onPressed: total != null && total > 0 && confirmado ? _eliminar : null,
+                  onPressed: total != null && total > 0 && confirmado
+                      ? _eliminar
+                      : null,
                 );
               },
             ),
@@ -301,7 +326,8 @@ class _HojaDepurarState extends ConsumerState<_HojaDepurar> {
     String todos,
   ) => [
     OpcionFiltro<String?>(null, todos),
-    if (valor != null && !(lista?.contains(valor) ?? false)) OpcionFiltro<String?>(valor, valor),
+    if (valor != null && !(lista?.contains(valor) ?? false))
+      OpcionFiltro<String?>(valor, valor),
     for (final o in lista ?? const <String>[]) OpcionFiltro<String?>(o, o),
   ];
 }
@@ -344,12 +370,19 @@ class _Conteo extends StatelessWidget {
 
         return Text.rich(
           TextSpan(
-            style: const TextStyle(fontSize: 13.5, height: 1.4, color: Colores.tintaSuave),
+            style: const TextStyle(
+              fontSize: 13.5,
+              height: 1.4,
+              color: Colores.tintaSuave,
+            ),
             children: [
               const TextSpan(text: 'Se eliminarán '),
               TextSpan(
                 text: '${_miles(n)} ${n == 1 ? 'registro' : 'registros'}',
-                style: const TextStyle(fontWeight: FontWeight.w700, color: Colores.tinta),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Colores.tinta,
+                ),
               ),
               const TextSpan(
                 text:
@@ -365,7 +398,5 @@ class _Conteo extends StatelessWidget {
 }
 
 /// 12345 -> 12,345, como se lee en el panel web.
-String _miles(int n) => n.toString().replaceAllMapped(
-  RegExp(r'\B(?=(\d{3})+(?!\d))'),
-  (_) => ',',
-);
+String _miles(int n) =>
+    n.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');

@@ -178,9 +178,7 @@ class EmpleadosPagina extends ConsumerWidget {
 
   Future<void> _abrirFormulario(BuildContext context, Empleado? empleado) {
     return Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => EmpleadoFormulario(empleado: empleado),
-      ),
+      MaterialPageRoute(builder: (_) => EmpleadoFormulario(empleado: empleado)),
     );
   }
 
@@ -303,7 +301,11 @@ class _TarjetaEmpleado extends StatelessWidget {
       empleado.usuario ?? 'No entra al sistema',
       widget: empleado.usuarioId == null
           ? null
-          : AppEtiqueta(empleado.usuario!, tono: EtiquetaTono.modulo, color: color),
+          : AppEtiqueta(
+              empleado.usuario!,
+              tono: EtiquetaTono.modulo,
+              color: color,
+            ),
       enTarjeta: false,
     ),
     CampoDetalle('Observación', empleado.observacion, enTarjeta: false),
@@ -332,7 +334,11 @@ class _TarjetaEmpleado extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

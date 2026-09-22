@@ -76,7 +76,8 @@ class CompraDetalle {
     unidadBase: json['unidadBase'] as String? ?? '',
     presentacionId: json['presentacionId'] as int?,
     presentacion: json['presentacion'] as String?,
-    cantidadPresentacion: (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
+    cantidadPresentacion:
+        (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
     cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0,
     costoUnitario: (json['costoUnitario'] as num?)?.toDouble() ?? 0,
     costoTotal: (json['costoTotal'] as num?)?.toDouble() ?? 0,
@@ -172,7 +173,8 @@ class Compra {
   /// Suma de pagos. Si es menor que total, falta esa diferencia por pagar.
   final double totalPagado;
 
-  String get buscable => '$numero $proveedor ${numeroComprobante ?? ''}'.toLowerCase();
+  String get buscable =>
+      '$numero $proveedor ${numeroComprobante ?? ''}'.toLowerCase();
 
   factory Compra.desdeJson(Map<String, dynamic> json) => Compra(
     id: json['id'] as int,
@@ -183,7 +185,8 @@ class Compra {
     ordenCompraNumero: json['ordenCompraNumero'] as String?,
     fecha: fechaDeJson(json['fecha'] as String),
     estado: json['estado'] as String? ?? EstadoCompra.pendiente,
-    tipoComprobante: json['tipoComprobante'] as String? ?? TipoComprobanteCompra.factura,
+    tipoComprobante:
+        json['tipoComprobante'] as String? ?? TipoComprobanteCompra.factura,
     serieComprobante: json['serieComprobante'] as String?,
     numeroComprobante: json['numeroComprobante'] as String?,
     formaPago: json['formaPago'] as String? ?? FormaPagoCompra.contado,

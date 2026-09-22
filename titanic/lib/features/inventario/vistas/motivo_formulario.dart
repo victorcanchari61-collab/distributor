@@ -29,7 +29,9 @@ Future<void> mostrarFormularioMotivo(
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     builder: (context) {
       var guardando = false;
@@ -41,8 +43,12 @@ Future<void> mostrarFormularioMotivo(
         builder: (context, setSheetState) {
           Future<void> guardar() async {
             setSheetState(() {
-              errorCodigo = codigoCtrl.text.trim().isEmpty ? 'Ingresa el código.' : null;
-              errorNombre = nombreCtrl.text.trim().isEmpty ? 'Ingresa el nombre.' : null;
+              errorCodigo = codigoCtrl.text.trim().isEmpty
+                  ? 'Ingresa el código.'
+                  : null;
+              errorNombre = nombreCtrl.text.trim().isEmpty
+                  ? 'Ingresa el nombre.'
+                  : null;
             });
             if (errorCodigo != null || errorNombre != null) return;
 
@@ -65,7 +71,9 @@ Future<void> mostrarFormularioMotivo(
                   .read(motivosProvider.notifier)
                   .guardar(id: motivo?.id, cuerpo: cuerpo);
               navegador.pop();
-              mensajero.mostrar(esNuevo ? 'Motivo creado' : 'Motivo actualizado');
+              mensajero.mostrar(
+                esNuevo ? 'Motivo creado' : 'Motivo actualizado',
+              );
             } on ApiExcepcion catch (e) {
               setSheetState(() {
                 guardando = false;
@@ -87,7 +95,11 @@ Future<void> mostrarFormularioMotivo(
               children: [
                 Text(
                   esNuevo ? 'Nuevo motivo' : 'Editar motivo',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colores.tinta,
+                  ),
                 ),
                 const SizedBox(height: Dimen.espacio4),
                 if (error != null) ...[
@@ -121,7 +133,8 @@ Future<void> mostrarFormularioMotivo(
                     Opcion(TipoMotivo.entrada, 'Entrada'),
                     Opcion(TipoMotivo.salida, 'Salida'),
                   ],
-                  onCambio: (v) => setSheetState(() => tipo = v ?? TipoMotivo.entrada),
+                  onCambio: (v) =>
+                      setSheetState(() => tipo = v ?? TipoMotivo.entrada),
                 ),
                 const SizedBox(height: Dimen.espacio4),
                 AppBoton(

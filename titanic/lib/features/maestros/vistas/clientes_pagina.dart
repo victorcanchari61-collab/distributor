@@ -277,9 +277,11 @@ class ClientesPagina extends ConsumerWidget {
 
     try {
       await ref.read(clientesProvider.notifier).cambiarEstado(cliente);
-      mensajero.mostrar(cliente.activo
-                ? '${cliente.nombre} desactivado'
-                : '${cliente.nombre} activado');
+      mensajero.mostrar(
+        cliente.activo
+            ? '${cliente.nombre} desactivado'
+            : '${cliente.nombre} activado',
+      );
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -345,7 +347,11 @@ class _TarjetaCliente extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

@@ -32,24 +32,24 @@ class RegistroAuditoria {
   final Map<String, dynamic>? valoresNuevos;
 
   /// Todos los campos tocados, sin repetir, en el orden en que aparecen.
-  List<String> get campos => {
-    ...?valoresAnteriores?.keys,
-    ...?valoresNuevos?.keys,
-  }.toList();
+  List<String> get campos =>
+      {...?valoresAnteriores?.keys, ...?valoresNuevos?.keys}.toList();
 
   String get buscable => '$usuario $entidad $entidadId $accion'.toLowerCase();
 
-  factory RegistroAuditoria.desdeJson(Map<String, dynamic> json) => RegistroAuditoria(
-    id: json['id'] as int,
-    fecha: fechaDeJson(json['fecha'] as String),
-    usuarioId: json['usuarioId'] as int?,
-    usuario: json['usuario'] as String? ?? 'Sistema',
-    entidad: json['entidad'] as String? ?? '',
-    entidadId: json['entidadId'] as String? ?? '',
-    accion: json['accion'] as String? ?? '',
-    valoresAnteriores: (json['valoresAnteriores'] as Map?)?.cast<String, dynamic>(),
-    valoresNuevos: (json['valoresNuevos'] as Map?)?.cast<String, dynamic>(),
-  );
+  factory RegistroAuditoria.desdeJson(Map<String, dynamic> json) =>
+      RegistroAuditoria(
+        id: json['id'] as int,
+        fecha: fechaDeJson(json['fecha'] as String),
+        usuarioId: json['usuarioId'] as int?,
+        usuario: json['usuario'] as String? ?? 'Sistema',
+        entidad: json['entidad'] as String? ?? '',
+        entidadId: json['entidadId'] as String? ?? '',
+        accion: json['accion'] as String? ?? '',
+        valoresAnteriores: (json['valoresAnteriores'] as Map?)
+            ?.cast<String, dynamic>(),
+        valoresNuevos: (json['valoresNuevos'] as Map?)?.cast<String, dynamic>(),
+      );
 }
 
 /// Contadores y valores de filtro de TODA la bitácora, no solo de los últimos
@@ -74,14 +74,20 @@ class ResumenAuditoria {
   final List<String> entidades;
   final List<String> usuarios;
 
-  factory ResumenAuditoria.desdeJson(Map<String, dynamic> json) => ResumenAuditoria(
-    total: json['total'] as int? ?? 0,
-    creados: json['creados'] as int? ?? 0,
-    actualizados: json['actualizados'] as int? ?? 0,
-    eliminados: json['eliminados'] as int? ?? 0,
-    entidades: [for (final e in (json['entidades'] as List?) ?? const []) e.toString()],
-    usuarios: [for (final u in (json['usuarios'] as List?) ?? const []) u.toString()],
-  );
+  factory ResumenAuditoria.desdeJson(Map<String, dynamic> json) =>
+      ResumenAuditoria(
+        total: json['total'] as int? ?? 0,
+        creados: json['creados'] as int? ?? 0,
+        actualizados: json['actualizados'] as int? ?? 0,
+        eliminados: json['eliminados'] as int? ?? 0,
+        entidades: [
+          for (final e in (json['entidades'] as List?) ?? const [])
+            e.toString(),
+        ],
+        usuarios: [
+          for (final u in (json['usuarios'] as List?) ?? const []) u.toString(),
+        ],
+      );
 }
 
 class AccionAuditoria {

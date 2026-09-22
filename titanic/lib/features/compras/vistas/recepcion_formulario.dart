@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_selector_buscable.dart';
@@ -20,7 +20,9 @@ import '../../../compartido/widgets/app_aviso.dart';
 class _FilaRecepcion {
   _FilaRecepcion({required this.detalle})
     : cantidadCtrl = TextEditingController(
-        text: formatoNumero(_enPresentacion(detalle, detalle.cantidadPendiente)),
+        text: formatoNumero(
+          _enPresentacion(detalle, detalle.cantidadPendiente),
+        ),
       ),
       loteCtrl = TextEditingController();
 
@@ -70,7 +72,8 @@ class RecepcionFormulario extends ConsumerStatefulWidget {
   final Compra? compraFija;
 
   @override
-  ConsumerState<RecepcionFormulario> createState() => _RecepcionFormularioState();
+  ConsumerState<RecepcionFormulario> createState() =>
+      _RecepcionFormularioState();
 }
 
 class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
@@ -107,7 +110,11 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
     // Esperar a que las compras esten cargadas: leerlas a secas solo
     // dispara la carga y devuelve una lista vacia, y el selector se abria
     // diciendo que no habia ninguna compra pendiente.
-    await catalogoListo(context, ref.read(comprasProvider.future), queEs: 'las compras');
+    await catalogoListo(
+      context,
+      ref.read(comprasProvider.future),
+      queEs: 'las compras',
+    );
     if (!mounted) return;
     final compras = ref.read(comprasConPendienteProvider);
     final elegida = await mostrarSelectorBuscable<Compra>(
@@ -168,14 +175,18 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
     final cuerpo = <String, dynamic>{
       'compraId': _compra!.id,
       'almacenId': _almacenId,
-      'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
+      'observacion': _observacion.text.trim().isEmpty
+          ? null
+          : _observacion.text.trim(),
       'detalle': [
         for (final f in lineas)
           {
             'compraDetalleId': f.detalle.id,
             // De vuelta a unidad base: el backend recibe siempre en esa.
             'cantidad': f.cantidadBase,
-            'lote': f.loteCtrl.text.trim().isEmpty ? null : f.loteCtrl.text.trim(),
+            'lote': f.loteCtrl.text.trim().isEmpty
+                ? null
+                : f.loteCtrl.text.trim(),
             'fechaVencimiento': f.vencimiento?.toIso8601String(),
           },
       ],
@@ -209,12 +220,18 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
             'Nueva recepción',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             if (widget.compraFija == null)
               InkWell(
@@ -229,7 +246,11 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
                       size: 19,
                       color: Colores.tintaTenue,
                     ),
-                    suffixIcon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
+                    suffixIcon: const Icon(
+                      Icons.search,
+                      size: 18,
+                      color: Colores.tintaTenue,
+                    ),
                     constraints: const BoxConstraints(minHeight: Dimen.campoLg),
                   ),
                   child: Text(
@@ -238,7 +259,9 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
                         : '${_compra!.numero} · ${_compra!.proveedor}',
                     style: TextStyle(
                       fontSize: 15,
-                      color: _compra == null ? Colores.tintaTenue : Colores.tinta,
+                      color: _compra == null
+                          ? Colores.tintaTenue
+                          : Colores.tinta,
                     ),
                   ),
                 ),
@@ -252,7 +275,11 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.shopping_bag_outlined, size: 18, color: Colores.tintaSuave),
+                    const Icon(
+                      Icons.shopping_bag_outlined,
+                      size: 18,
+                      color: Colores.tintaSuave,
+                    ),
                     const SizedBox(width: Dimen.espacio2),
                     Text(
                       '${_compra!.numero} · ${_compra!.proveedor}',
@@ -272,7 +299,9 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
               etiqueta: 'Almacén destino',
               icono: Icons.warehouse_outlined,
               error: _errorAlmacen,
-              opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
+              opciones: [
+                for (final a in almacenes) Opcion<int>(a.id, a.nombre),
+              ],
               onCambio: (v) => setState(() => _almacenId = v),
             ),
             const SizedBox(height: Dimen.espacio4),
@@ -290,7 +319,11 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
             if (_compra != null) ...[
               const Text(
                 'Productos pendientes',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colores.tinta,
+                ),
               ),
               const SizedBox(height: Dimen.espacio3),
 
@@ -304,18 +337,19 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
                 ),
 
               for (final fila in _filas) ...[
-                _TarjetaFilaRecepcion(fila: fila, onVencimiento: () => _elegirVencimiento(fila)),
+                _TarjetaFilaRecepcion(
+                  fila: fila,
+                  onVencimiento: () => _elegirVencimiento(fila),
+                ),
                 const SizedBox(height: Dimen.espacio3),
               ],
             ],
 
             const SizedBox(height: Dimen.espacio4),
-            AppBoton(texto: 'Registrar recepción', cargando: _guardando, onPressed: _guardar),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              cargando: _guardando,
             ),
             const SizedBox(height: Dimen.espacio5),
           ],
@@ -326,7 +360,10 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
 }
 
 class _TarjetaFilaRecepcion extends StatelessWidget {
-  const _TarjetaFilaRecepcion({required this.fila, required this.onVencimiento});
+  const _TarjetaFilaRecepcion({
+    required this.fila,
+    required this.onVencimiento,
+  });
 
   final _FilaRecepcion fila;
   final VoidCallback onVencimiento;
@@ -346,7 +383,11 @@ class _TarjetaFilaRecepcion extends StatelessWidget {
         children: [
           Text(
             d.producto,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colores.tinta),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colores.tinta,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
@@ -361,12 +402,18 @@ class _TarjetaFilaRecepcion extends StatelessWidget {
                 child: AppCampo(
                   controlador: fila.cantidadCtrl,
                   etiqueta: 'Llegó (${fila.unidad})',
-                  tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+                  tipoTeclado: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
               ),
               const SizedBox(width: Dimen.espacio3),
               Expanded(
-                child: AppCampo(controlador: fila.loteCtrl, etiqueta: 'Lote', opcional: true),
+                child: AppCampo(
+                  controlador: fila.loteCtrl,
+                  etiqueta: 'Lote',
+                  opcional: true,
+                ),
               ),
             ],
           ),
@@ -387,15 +434,25 @@ class _TarjetaFilaRecepcion extends StatelessWidget {
                     ],
                   ),
                 ),
-                prefixIcon: Icon(Icons.event_outlined, size: 18, color: Colores.tintaTenue),
+                prefixIcon: Icon(
+                  Icons.event_outlined,
+                  size: 18,
+                  color: Colores.tintaTenue,
+                ),
                 constraints: BoxConstraints(minHeight: Dimen.campoMd),
-                contentPadding: EdgeInsets.symmetric(horizontal: Dimen.espacio3),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: Dimen.espacio3,
+                ),
               ),
               child: Text(
-                fila.vencimiento == null ? 'Sin definir' : _fecha(fila.vencimiento!),
+                fila.vencimiento == null
+                    ? 'Sin definir'
+                    : _fecha(fila.vencimiento!),
                 style: TextStyle(
                   fontSize: 13,
-                  color: fila.vencimiento == null ? Colores.tintaTenue : Colores.tinta,
+                  color: fila.vencimiento == null
+                      ? Colores.tintaTenue
+                      : Colores.tinta,
                 ),
               ),
             ),

@@ -38,7 +38,9 @@ class NovedadesPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final resumen = ref.watch(resumenNovedadesProvider).valueOrNull ?? const ResumenNovedades();
+    final resumen =
+        ref.watch(resumenNovedadesProvider).valueOrNull ??
+        const ResumenNovedades();
     final puedeRevisar = puede(ref, 'tms.novedades', Accion.confirmar);
     final puedeExportar = puede(ref, 'tms.novedades', Accion.exportar);
 
@@ -96,8 +98,12 @@ class NovedadesPagina extends ConsumerWidget {
         novedad: novedad,
         color: color,
         onVer: () => _verDetalle(context, ref, novedad, color, puedeRevisar),
-        onRevisar: puedeRevisar && novedad.porRevisar ? () => _revisar(context, ref, novedad) : null,
-        onReabrir: puedeRevisar && novedad.revisada ? () => _reabrir(context, ref, novedad) : null,
+        onRevisar: puedeRevisar && novedad.porRevisar
+            ? () => _revisar(context, ref, novedad)
+            : null,
+        onReabrir: puedeRevisar && novedad.revisada
+            ? () => _reabrir(context, ref, novedad)
+            : null,
       ),
     );
   }
@@ -127,7 +133,8 @@ class NovedadesPagina extends ConsumerWidget {
               ])
                 OpcionFiltro(e, EstadoNovedad.texto(e)),
             ],
-            onCambio: (v) => ref.read(estadoNovedadFiltroProvider.notifier).state = v,
+            onCambio: (v) =>
+                ref.read(estadoNovedadFiltroProvider.notifier).state = v,
           ),
         ),
         Consumer(
@@ -139,7 +146,8 @@ class NovedadesPagina extends ConsumerWidget {
               OpcionFiltro(TipoNovedad.linea, 'Entregado en menos'),
               OpcionFiltro(TipoNovedad.pedido, 'Pedido sin entregar'),
             ],
-            onCambio: (v) => ref.read(tipoNovedadFiltroProvider.notifier).state = v,
+            onCambio: (v) =>
+                ref.read(tipoNovedadFiltroProvider.notifier).state = v,
           ),
         ),
         Consumer(
@@ -154,7 +162,8 @@ class NovedadesPagina extends ConsumerWidget {
                 const OpcionFiltro(null, 'Todos'),
                 for (final m in motivos) OpcionFiltro(m, m),
               ],
-              onCambio: (v) => ref.read(motivoNovedadFiltroProvider.notifier).state = v,
+              onCambio: (v) =>
+                  ref.read(motivoNovedadFiltroProvider.notifier).state = v,
             );
           },
         ),
@@ -162,7 +171,11 @@ class NovedadesPagina extends ConsumerWidget {
     );
   }
 
-  Future<void> _reabrir(BuildContext context, WidgetRef ref, Novedad novedad) async {
+  Future<void> _reabrir(
+    BuildContext context,
+    WidgetRef ref,
+    Novedad novedad,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Reabrir la revisión de ${novedad.producto}',
@@ -183,7 +196,11 @@ class NovedadesPagina extends ConsumerWidget {
 
   /// El encargado cuenta lo que volvió en el camión: llegó todo, o faltó algo.
   /// Lo que no llegó queda como faltante, a cargo de quien lo llevó.
-  Future<void> _revisar(BuildContext context, WidgetRef ref, Novedad novedad) async {
+  Future<void> _revisar(
+    BuildContext context,
+    WidgetRef ref,
+    Novedad novedad,
+  ) async {
     String resultado = EstadoNovedad.recibida;
     final regresada = TextEditingController(text: '0');
     final observacion = TextEditingController();
@@ -195,7 +212,9 @@ class NovedadesPagina extends ConsumerWidget {
       isScrollControlled: true,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Dimen.radioPanel),
+        ),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -205,7 +224,8 @@ class NovedadesPagina extends ConsumerWidget {
                 left: Dimen.espacio4,
                 right: Dimen.espacio4,
                 top: Dimen.espacio2,
-                bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
+                bottom:
+                    Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -214,17 +234,30 @@ class NovedadesPagina extends ConsumerWidget {
                   children: [
                     Text(
                       'Revisar ${novedad.producto}',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colores.tinta,
+                      ),
                     ),
                     const SizedBox(height: Dimen.espacio2),
                     Text(
                       'No se entregó ${novedad.cantidad(novedad.cantidadNoEntregada)} (${novedad.motivo}). '
                       '¿Qué encontraste al contar lo que volvió?',
-                      style: const TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: Colores.tintaSuave,
+                      ),
                     ),
                     const SizedBox(height: Dimen.espacio4),
                     if (error != null) ...[
-                      Text(error!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
+                      Text(
+                        error!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colores.peligro,
+                        ),
+                      ),
                       const SizedBox(height: Dimen.espacio2),
                     ],
                     AppSelector<String>(
@@ -246,7 +279,9 @@ class NovedadesPagina extends ConsumerWidget {
                         controlador: regresada,
                         etiqueta: 'Cuánto volvió (${novedad.unidadBase})',
                         icono: Icons.inventory_2_outlined,
-                        tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+                        tipoTeclado: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                       ),
                     ],
                     const SizedBox(height: Dimen.espacio4),
@@ -262,8 +297,13 @@ class NovedadesPagina extends ConsumerWidget {
                       texto: 'Guardar revisión',
                       onPressed: () {
                         if (resultado == EstadoNovedad.faltante) {
-                          final volvio = double.tryParse(regresada.text.replaceAll(',', '.')) ?? -1;
-                          if (volvio < 0 || volvio >= novedad.cantidadNoEntregada) {
+                          final volvio =
+                              double.tryParse(
+                                regresada.text.replaceAll(',', '.'),
+                              ) ??
+                              -1;
+                          if (volvio < 0 ||
+                              volvio >= novedad.cantidadNoEntregada) {
                             setSheetState(
                               () => error =
                                   'Lo que volvió tiene que ser menos de '
@@ -289,7 +329,9 @@ class NovedadesPagina extends ConsumerWidget {
       'cantidadRegresada': resultado == EstadoNovedad.faltante
           ? double.tryParse(regresada.text.replaceAll(',', '.')) ?? 0
           : null,
-      'observacion': observacion.text.trim().isEmpty ? null : observacion.text.trim(),
+      'observacion': observacion.text.trim().isEmpty
+          ? null
+          : observacion.text.trim(),
     };
     regresada.dispose();
     observacion.dispose();
@@ -320,7 +362,12 @@ class NovedadesPagina extends ConsumerWidget {
       subtitulo: '${n.pedido} · ${n.cliente}',
       estado: _etiquetaEstado(n),
       campos: [
-        CampoDetalle('Qué pasó', n.tipo == TipoNovedad.pedido ? 'Pedido sin entregar' : 'Entregado en menos'),
+        CampoDetalle(
+          'Qué pasó',
+          n.tipo == TipoNovedad.pedido
+              ? 'Pedido sin entregar'
+              : 'Entregado en menos',
+        ),
         CampoDetalle('Pedido', n.cantidad(n.cantidadPedida)),
         CampoDetalle('Se entregó', n.cantidad(n.cantidadEntregada)),
         CampoDetalle('No se entregó', n.cantidad(n.cantidadNoEntregada)),
@@ -328,17 +375,27 @@ class NovedadesPagina extends ConsumerWidget {
         CampoDetalle('Motivo', n.motivo),
         CampoDetalle(
           'La mercadería',
-          n.regresaAlAlmacen ? 'Viajó y vuelve al almacén' : 'Nunca salió del almacén',
+          n.regresaAlAlmacen
+              ? 'Viajó y vuelve al almacén'
+              : 'Nunca salió del almacén',
         ),
         if (n.observacion != null) CampoDetalle('Observación', n.observacion),
         CampoDetalle('Despacho', n.despacho),
         CampoDetalle('Venta', n.notaVenta),
-        CampoDetalle('Registrado', '${_fecha(n.fecha)}${n.usuario != null ? ' · ${n.usuario}' : ''}'),
+        CampoDetalle(
+          'Registrado',
+          '${_fecha(n.fecha)}${n.usuario != null ? ' · ${n.usuario}' : ''}',
+        ),
         if (n.verificadoEn != null) ...[
           CampoDetalle('Volvió', n.cantidad(n.cantidadRegresada ?? 0)),
           CampoDetalle(
             'Faltó',
-            n.cantidad((n.cantidadNoEntregada - (n.cantidadRegresada ?? 0)).clamp(0, double.infinity)),
+            n.cantidad(
+              (n.cantidadNoEntregada - (n.cantidadRegresada ?? 0)).clamp(
+                0,
+                double.infinity,
+              ),
+            ),
           ),
           CampoDetalle(
             'Revisó',
@@ -413,8 +470,16 @@ class _BotonReporteState extends ConsumerState<_BotonReporte> {
       onPressed: _generando ? null : _abrir,
       tooltip: 'Reporte PDF',
       icon: _generando
-          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-          : const Icon(Icons.picture_as_pdf_outlined, size: 22, color: Colores.tintaSuave),
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(
+              Icons.picture_as_pdf_outlined,
+              size: 22,
+              color: Colores.tintaSuave,
+            ),
     );
   }
 }
@@ -456,7 +521,10 @@ class _TarjetaNovedad extends StatelessWidget {
       campos: [
         CampoDetalle('No entregado', n.cantidad(n.cantidadNoEntregada)),
         CampoDetalle('Importe', 'S/ ${n.importe.toStringAsFixed(2)}'),
-        CampoDetalle('Motivo', n.observacion == null ? n.motivo : '${n.motivo} — ${n.observacion}'),
+        CampoDetalle(
+          'Motivo',
+          n.observacion == null ? n.motivo : '${n.motivo} — ${n.observacion}',
+        ),
         CampoDetalle('Pedido', '${n.pedido} · ${n.cliente}'),
         if (n.despacho != null) CampoDetalle('Despacho', n.despacho),
         CampoDetalle('Fecha', _fecha(n.fecha)),
@@ -467,21 +535,33 @@ class _TarjetaNovedad extends StatelessWidget {
           onPressed: onVer,
           tooltip: 'Ver detalle',
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.visibility_outlined, size: 18, color: Colores.tintaSuave),
+          icon: const Icon(
+            Icons.visibility_outlined,
+            size: 18,
+            color: Colores.tintaSuave,
+          ),
         ),
         if (onRevisar != null)
           IconButton(
             onPressed: onRevisar,
             tooltip: 'Revisar',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.fact_check_outlined, size: 18, color: Colores.exito),
+            icon: const Icon(
+              Icons.fact_check_outlined,
+              size: 18,
+              color: Colores.exito,
+            ),
           ),
         if (onReabrir != null)
           IconButton(
             onPressed: onReabrir,
             tooltip: 'Reabrir la revisión',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.replay, size: 18, color: Colores.advertencia),
+            icon: const Icon(
+              Icons.replay,
+              size: 18,
+              color: Colores.advertencia,
+            ),
           ),
       ],
     );

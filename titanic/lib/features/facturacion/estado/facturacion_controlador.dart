@@ -10,11 +10,14 @@ final facturacionApiProvider = Provider(
 
 class ListasPrecioControlador extends AsyncNotifier<List<ListaPrecio>> {
   @override
-  Future<List<ListaPrecio>> build() => ref.watch(facturacionApiProvider).listasPrecio();
+  Future<List<ListaPrecio>> build() =>
+      ref.watch(facturacionApiProvider).listasPrecio();
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(facturacionApiProvider).listasPrecio());
+    state = await AsyncValue.guard(
+      () => ref.read(facturacionApiProvider).listasPrecio(),
+    );
   }
 
   Future<ListaPrecio> crear(Map<String, dynamic> cuerpo) async {
@@ -45,11 +48,15 @@ final listasPrecioProvider =
     );
 
 /// Lista elegida en las pestañas. Null hasta que se cargan las listas.
-final listaPrecioActivaProvider = StateProvider.autoDispose<int?>((ref) => null);
+final listaPrecioActivaProvider = StateProvider.autoDispose<int?>(
+  (ref) => null,
+);
 
 final busquedaPreciosProvider = StateProvider.autoDispose((ref) => '');
 
-final preciosListaActivaProvider = FutureProvider.autoDispose<List<Precio>>((ref) {
+final preciosListaActivaProvider = FutureProvider.autoDispose<List<Precio>>((
+  ref,
+) {
   final listaId = ref.watch(listaPrecioActivaProvider);
   if (listaId == null) return Future.value(const []);
   return ref.watch(facturacionApiProvider).preciosDeLista(listaId);
@@ -64,7 +71,8 @@ final filtrosPreciosActivosProvider = Provider.autoDispose(
 );
 
 final preciosFiltradosProvider = Provider.autoDispose<List<Precio>>((ref) {
-  final todos = ref.watch(preciosListaActivaProvider).valueOrNull ?? const <Precio>[];
+  final todos =
+      ref.watch(preciosListaActivaProvider).valueOrNull ?? const <Precio>[];
   final texto = ref.watch(busquedaPreciosProvider).trim().toLowerCase();
   final presentacion = ref.watch(presentacionPrecioFiltroProvider);
   return todos
@@ -77,6 +85,7 @@ final preciosFiltradosProvider = Provider.autoDispose<List<Precio>>((ref) {
 final presentacionesDePreciosProvider = Provider.autoDispose<List<String>>((
   ref,
 ) {
-  final todos = ref.watch(preciosListaActivaProvider).valueOrNull ?? const <Precio>[];
+  final todos =
+      ref.watch(preciosListaActivaProvider).valueOrNull ?? const <Precio>[];
   return <String>{for (final p in todos) p.presentacion}.toList()..sort();
 });

@@ -34,11 +34,14 @@ class SubmoduloCatalogo {
   final String modulo;
   final List<String> acciones;
 
-  factory SubmoduloCatalogo.desdeJson(Map<String, dynamic> json) => SubmoduloCatalogo(
-    submodulo: json['submodulo'] as String? ?? '',
-    modulo: json['modulo'] as String? ?? '',
-    acciones: ((json['acciones'] as List?) ?? const []).map((e) => e as String).toList(),
-  );
+  factory SubmoduloCatalogo.desdeJson(Map<String, dynamic> json) =>
+      SubmoduloCatalogo(
+        submodulo: json['submodulo'] as String? ?? '',
+        modulo: json['modulo'] as String? ?? '',
+        acciones: ((json['acciones'] as List?) ?? const [])
+            .map((e) => e as String)
+            .toList(),
+      );
 }
 
 /// Llamadas de permisos.
@@ -62,7 +65,9 @@ class PermisoApi {
   }
 }
 
-final permisoApiProvider = Provider((ref) => PermisoApi(ref.watch(clienteApiProvider)));
+final permisoApiProvider = Provider(
+  (ref) => PermisoApi(ref.watch(clienteApiProvider)),
+);
 
 /// Lo que esta persona puede hacer.
 ///
@@ -88,11 +93,17 @@ final misPermisosProvider = FutureProvider<Set<String>>((ref) async {
 /// Mientras los permisos cargan devuelve false: es preferible un botón que
 /// aparece un instante después a uno que se ofrece y luego falla.
 bool puede(WidgetRef ref, String submodulo, String accion) =>
-    ref.watch(misPermisosProvider).valueOrNull?.contains('$submodulo:$accion') ?? false;
+    ref
+        .watch(misPermisosProvider)
+        .valueOrNull
+        ?.contains('$submodulo:$accion') ??
+    false;
 
 /// Si la pantalla se puede abrir siquiera.
-bool puedeVer(WidgetRef ref, String submodulo) => puede(ref, submodulo, Accion.ver);
+bool puedeVer(WidgetRef ref, String submodulo) =>
+    puede(ref, submodulo, Accion.ver);
 
 /// La versión para leer sin suscribirse, dentro de un callback.
 bool puedeLeer(Ref ref, String submodulo, String accion) =>
-    ref.read(misPermisosProvider).valueOrNull?.contains('$submodulo:$accion') ?? false;
+    ref.read(misPermisosProvider).valueOrNull?.contains('$submodulo:$accion') ??
+    false;

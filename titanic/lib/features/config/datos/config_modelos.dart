@@ -28,6 +28,7 @@ class Usuario {
 
   /// El usuario que eligió para iniciar sesión; opcional. Sirve igual que el correo o el DNI.
   final String? nombreUsuario;
+
   /// El rol principal.
   final int rolId;
 
@@ -52,7 +53,8 @@ class Usuario {
   final bool activo;
 
   String get buscable =>
-      '$nombre ${nombreUsuario ?? ''} $email ${dni ?? ''} $rol ${empleado ?? ''} ${ruta ?? ''}'.toLowerCase();
+      '$nombre ${nombreUsuario ?? ''} $email ${dni ?? ''} $rol ${empleado ?? ''} ${ruta ?? ''}'
+          .toLowerCase();
 
   factory Usuario.desdeJson(Map<String, dynamic> json) => Usuario(
     id: json['id'] as int,

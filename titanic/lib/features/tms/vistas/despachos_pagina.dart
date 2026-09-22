@@ -81,7 +81,9 @@ class DespachosPagina extends ConsumerWidget {
       iconoVacio: Icons.local_shipping_outlined,
       singular: 'despacho',
       plural: 'despachos',
-      detalleVacio: puestos > 0 ? 'Ninguno coincide con los filtros puestos.' : null,
+      detalleVacio: puestos > 0
+          ? 'Ninguno coincide con los filtros puestos.'
+          : null,
       indicadores: [
         AppTarjetaDato(
           etiqueta: 'Despachos',
@@ -111,10 +113,12 @@ class DespachosPagina extends ConsumerWidget {
       fila: (context, despacho) => _TarjetaDespacho(
         despacho: despacho,
         color: color,
-        onEditar: puede(ref, 'tms.despachos', Accion.editar) && !despacho.anulado
+        onEditar:
+            puede(ref, 'tms.despachos', Accion.editar) && !despacho.anulado
             ? () => _abrirFormulario(context, despacho)
             : null,
-        onAnular: puede(ref, 'tms.despachos', Accion.anular) &&
+        onAnular:
+            puede(ref, 'tms.despachos', Accion.anular) &&
                 !despacho.anulado &&
                 despacho.entregados == 0
             ? () => _anular(context, ref, despacho)
@@ -144,7 +148,8 @@ class DespachosPagina extends ConsumerWidget {
               OpcionFiltro(EstadoDespacho.armado, 'Armados'),
               OpcionFiltro(EstadoDespacho.anulado, 'Anulados'),
             ],
-            onCambio: (v) => ref.read(estadoDespachoFiltroProvider.notifier).state = v,
+            onCambio: (v) =>
+                ref.read(estadoDespachoFiltroProvider.notifier).state = v,
           ),
         ),
         Consumer(
@@ -159,7 +164,8 @@ class DespachosPagina extends ConsumerWidget {
                 const OpcionFiltro(null, 'Todas'),
                 for (final r in rutas) OpcionFiltro(r.nombre, r.nombre),
               ],
-              onCambio: (v) => ref.read(rutaDespachoFiltroProvider.notifier).state = v,
+              onCambio: (v) =>
+                  ref.read(rutaDespachoFiltroProvider.notifier).state = v,
             );
           },
         ),
@@ -175,7 +181,8 @@ class DespachosPagina extends ConsumerWidget {
                 const OpcionFiltro(null, 'Todos'),
                 for (final v in vehiculos) OpcionFiltro(v.placa, v.placa),
               ],
-              onCambio: (v) => ref.read(vehiculoDespachoFiltroProvider.notifier).state = v,
+              onCambio: (v) =>
+                  ref.read(vehiculoDespachoFiltroProvider.notifier).state = v,
             );
           },
         ),
@@ -191,7 +198,8 @@ class DespachosPagina extends ConsumerWidget {
                 const OpcionFiltro(null, 'Todos'),
                 for (final c in conductores) OpcionFiltro(c.nombre, c.nombre),
               ],
-              onCambio: (v) => ref.read(conductorDespachoFiltroProvider.notifier).state = v,
+              onCambio: (v) =>
+                  ref.read(conductorDespachoFiltroProvider.notifier).state = v,
             );
           },
         ),
@@ -205,7 +213,11 @@ class DespachosPagina extends ConsumerWidget {
     );
   }
 
-  Future<void> _anular(BuildContext context, WidgetRef ref, Despacho despacho) async {
+  Future<void> _anular(
+    BuildContext context,
+    WidgetRef ref,
+    Despacho despacho,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Anular ${despacho.numero}',
@@ -251,8 +263,10 @@ class _TarjetaDespacho extends StatelessWidget {
           '${despacho.noEntregados > 0 ? ' · ${despacho.noEntregados} no ${despacho.noEntregados == 1 ? 'entregado' : 'entregados'}' : ''}',
     ),
     CampoDetalle('Total', 'S/ ${despacho.total.toStringAsFixed(2)}'),
-    if (despacho.usuario != null) CampoDetalle('Registrado por', despacho.usuario),
-    if (despacho.observacion != null) CampoDetalle('Observación', despacho.observacion),
+    if (despacho.usuario != null)
+      CampoDetalle('Registrado por', despacho.usuario),
+    if (despacho.observacion != null)
+      CampoDetalle('Observación', despacho.observacion),
   ];
 
   List<Widget> get _lineas => [
@@ -326,7 +340,11 @@ class _TarjetaDespacho extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onAnular != null)
           IconButton(
@@ -345,7 +363,8 @@ class _TarjetaDespacho extends StatelessWidget {
       icono: Icons.local_shipping_outlined,
       color: color,
       titulo: despacho.numero,
-      subtitulo: '${despacho.ruta} · ${despacho.vehiculo} · ${despacho.conductor}',
+      subtitulo:
+          '${despacho.ruta} · ${despacho.vehiculo} · ${despacho.conductor}',
       estado: AppEtiqueta(
         despacho.anulado ? 'Anulado' : 'Armado',
         tono: despacho.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,

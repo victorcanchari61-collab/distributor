@@ -27,12 +27,19 @@ import '../../../compartido/widgets/app_aviso.dart';
 ///
 /// Vive junto a la pantalla y no en el modelo porque es decisión de
 /// presentación; el estado en sí lo decide el backend.
-({String texto, EtiquetaTono tono}) etiquetaEstado(String estado) => switch (estado) {
-  EstadoVencimiento.vencido => (texto: 'Documentos vencidos', tono: EtiquetaTono.peligro),
-  EstadoVencimiento.porVencer => (texto: 'Por vencer', tono: EtiquetaTono.aviso),
-  EstadoVencimiento.alDia => (texto: 'Al día', tono: EtiquetaTono.exito),
-  _ => (texto: 'Sin documentos', tono: EtiquetaTono.neutral),
-};
+({String texto, EtiquetaTono tono}) etiquetaEstado(String estado) =>
+    switch (estado) {
+      EstadoVencimiento.vencido => (
+        texto: 'Documentos vencidos',
+        tono: EtiquetaTono.peligro,
+      ),
+      EstadoVencimiento.porVencer => (
+        texto: 'Por vencer',
+        tono: EtiquetaTono.aviso,
+      ),
+      EstadoVencimiento.alDia => (texto: 'Al día', tono: EtiquetaTono.exito),
+      _ => (texto: 'Sin documentos', tono: EtiquetaTono.neutral),
+    };
 
 /// Los vehículos de reparto.
 ///
@@ -94,13 +101,17 @@ class FlotaPagina extends ConsumerWidget {
           etiqueta: 'Documentos vencidos',
           valor: '${resumen?.conDocumentoVencido ?? 0}',
           icono: Icons.gpp_bad_outlined,
-          tono: (resumen?.conDocumentoVencido ?? 0) > 0 ? DatoTono.peligro : DatoTono.neutral,
+          tono: (resumen?.conDocumentoVencido ?? 0) > 0
+              ? DatoTono.peligro
+              : DatoTono.neutral,
         ),
         AppTarjetaDato(
           etiqueta: 'Por vencer',
           valor: '${resumen?.porVencer ?? 0}',
           icono: Icons.schedule_outlined,
-          tono: (resumen?.porVencer ?? 0) > 0 ? DatoTono.aviso : DatoTono.neutral,
+          tono: (resumen?.porVencer ?? 0) > 0
+              ? DatoTono.aviso
+              : DatoTono.neutral,
         ),
       ],
       filtro: BotonFiltros(
@@ -127,10 +138,8 @@ class FlotaPagina extends ConsumerWidget {
       context,
       activos: ref.read(filtrosVehiculosActivosProvider),
       onLimpiar: () {
-        ref.read(estadoFiltroProvider.notifier).state =
-            FiltroEstado.activos;
-        ref.read(filtroPapelesProvider.notifier).state =
-            FiltroPapeles.todos;
+        ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
+        ref.read(filtroPapelesProvider.notifier).state = FiltroPapeles.todos;
         ref.read(tipoVehiculoFiltroProvider.notifier).state = null;
         ref.read(marcaVehiculoFiltroProvider.notifier).state = null;
         ref.read(conductorVehiculoFiltroProvider.notifier).state = null;
@@ -158,8 +167,7 @@ class FlotaPagina extends ConsumerWidget {
               OpcionFiltro(FiltroPapeles.porVencer, 'Por vencer'),
               OpcionFiltro(FiltroPapeles.alDia, 'Al día'),
             ],
-            onCambio: (v) =>
-                ref.read(filtroPapelesProvider.notifier).state = v,
+            onCambio: (v) => ref.read(filtroPapelesProvider.notifier).state = v,
           ),
         ),
         Consumer(
@@ -245,29 +253,35 @@ class FlotaPagina extends ConsumerWidget {
     try {
       // El PUT reemplaza el registro entero, asi que se reenvia lo que ya
       // tenia: mandar solo `activo` vaciaria el resto de la ficha.
-      await ref.read(vehiculosProvider.notifier).guardar(
-        id: vehiculo.id,
-        cuerpo: {
-          'placa': vehiculo.placa,
-          'tipoVehiculoId': vehiculo.tipoVehiculoId,
-          'marca': vehiculo.marca,
-          'modelo': vehiculo.modelo,
-          'anio': vehiculo.anio,
-          'color': vehiculo.color,
-          'capacidadKg': vehiculo.capacidadKg,
-          'soatNumero': vehiculo.soatNumero,
-          'soatVence': vehiculo.soatVence?.toIso8601String(),
-          'revisionTecnicaVence': vehiculo.revisionTecnicaVence?.toIso8601String(),
-          'permisoCirculacionVence': vehiculo.permisoCirculacionVence?.toIso8601String(),
-          'foto': vehiculo.foto,
-          'conductorId': vehiculo.conductorId,
-          'observacion': vehiculo.observacion,
-          'activo': !vehiculo.activo,
-        },
+      await ref
+          .read(vehiculosProvider.notifier)
+          .guardar(
+            id: vehiculo.id,
+            cuerpo: {
+              'placa': vehiculo.placa,
+              'tipoVehiculoId': vehiculo.tipoVehiculoId,
+              'marca': vehiculo.marca,
+              'modelo': vehiculo.modelo,
+              'anio': vehiculo.anio,
+              'color': vehiculo.color,
+              'capacidadKg': vehiculo.capacidadKg,
+              'soatNumero': vehiculo.soatNumero,
+              'soatVence': vehiculo.soatVence?.toIso8601String(),
+              'revisionTecnicaVence': vehiculo.revisionTecnicaVence
+                  ?.toIso8601String(),
+              'permisoCirculacionVence': vehiculo.permisoCirculacionVence
+                  ?.toIso8601String(),
+              'foto': vehiculo.foto,
+              'conductorId': vehiculo.conductorId,
+              'observacion': vehiculo.observacion,
+              'activo': !vehiculo.activo,
+            },
+          );
+      mensajero.mostrar(
+        vehiculo.activo
+            ? '${vehiculo.placa} desactivado'
+            : '${vehiculo.placa} activado',
       );
-      mensajero.mostrar(vehiculo.activo
-                ? '${vehiculo.placa} desactivado'
-                : '${vehiculo.placa} activado');
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -277,7 +291,11 @@ class FlotaPagina extends ConsumerWidget {
   ///
   /// Existe para poder consultar el vehiculo sin entrar al formulario, donde
   /// un toque de mas guarda cambios que nadie queria hacer.
-  Future<void> _verDetalle(BuildContext context, Vehiculo vehiculo, Color color) {
+  Future<void> _verDetalle(
+    BuildContext context,
+    Vehiculo vehiculo,
+    Color color,
+  ) {
     final estado = etiquetaEstado(vehiculo.estadoDocumentos);
 
     return mostrarDetalle(
@@ -356,7 +374,10 @@ class FechaConPlazo extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        AppEtiqueta(vencimiento.plazo, tono: etiquetaEstado(vencimiento.estado).tono),
+        AppEtiqueta(
+          vencimiento.plazo,
+          tono: etiquetaEstado(vencimiento.estado).tono,
+        ),
       ],
     );
   }
@@ -412,7 +433,8 @@ class _TarjetaVehiculo extends StatelessWidget {
 
     return [
       CampoDetalle('Tipo', vehiculo.tipoVehiculo),
-      if (vehiculo.descripcion.isNotEmpty) CampoDetalle('Vehículo', vehiculo.descripcion),
+      if (vehiculo.descripcion.isNotEmpty)
+        CampoDetalle('Vehículo', vehiculo.descripcion),
       if (vehiculo.capacidadKg != null)
         CampoDetalle('Capacidad', '${formatoNumero(vehiculo.capacidadKg!)} kg'),
       CampoDetalle('Conductor', vehiculo.conductor ?? 'sin asignar'),
@@ -464,7 +486,11 @@ class _TarjetaVehiculo extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

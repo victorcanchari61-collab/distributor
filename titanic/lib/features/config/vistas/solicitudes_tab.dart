@@ -67,7 +67,8 @@ class SolicitudesTab extends ConsumerWidget {
           return const AppVacio(
             icono: Icons.inbox_outlined,
             titulo: 'Sin solicitudes',
-            detalle: 'Aquí llega lo que alguien pide al toparse con un candado.',
+            detalle:
+                'Aquí llega lo que alguien pide al toparse con un candado.',
           );
         }
 
@@ -142,9 +143,7 @@ class _TarjetaState extends ConsumerState<_Tarjeta> {
     final mensajero = Aviso.de(context);
 
     try {
-      await ref
-          .read(configApiProvider)
-          .rechazarSolicitud(widget.solicitud.id);
+      await ref.read(configApiProvider).rechazarSolicitud(widget.solicitud.id);
       ref.invalidate(solicitudesProvider);
       mensajero.mostrar('Solicitud rechazada');
     } on ApiExcepcion catch (e) {
@@ -270,7 +269,9 @@ Future<void> _mostrarAprobacion(
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     builder: (_) => Acento(
       color: acento,
@@ -398,7 +399,8 @@ class _HojaAprobarState extends ConsumerState<_HojaAprobar> {
                       final hoy = DateTime.now();
                       final elegida = await showDatePicker(
                         context: context,
-                        initialDate: _expira ?? hoy.add(const Duration(days: 7)),
+                        initialDate:
+                            _expira ?? hoy.add(const Duration(days: 7)),
                         firstDate: hoy,
                         lastDate: hoy.add(const Duration(days: 365)),
                       );

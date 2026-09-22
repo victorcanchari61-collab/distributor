@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/estado/ubigeo_controlador.dart';
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
@@ -15,7 +15,15 @@ import '../datos/cliente.dart';
 import '../estado/maestros_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
-const _dias = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+const _dias = [
+  'LUNES',
+  'MARTES',
+  'MIERCOLES',
+  'JUEVES',
+  'VIERNES',
+  'SABADO',
+  'DOMINGO',
+];
 
 /// Alta y edicion de un cliente.
 class ClienteFormulario extends ConsumerStatefulWidget {
@@ -29,10 +37,18 @@ class ClienteFormulario extends ConsumerStatefulWidget {
 }
 
 class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
-  late final _documento = TextEditingController(text: widget.cliente?.documento ?? '');
-  late final _nombre = TextEditingController(text: widget.cliente?.nombre ?? '');
-  late final _direccion = TextEditingController(text: widget.cliente?.direccion ?? '');
-  late final _telefono = TextEditingController(text: widget.cliente?.telefono ?? '');
+  late final _documento = TextEditingController(
+    text: widget.cliente?.documento ?? '',
+  );
+  late final _nombre = TextEditingController(
+    text: widget.cliente?.nombre ?? '',
+  );
+  late final _direccion = TextEditingController(
+    text: widget.cliente?.direccion ?? '',
+  );
+  late final _telefono = TextEditingController(
+    text: widget.cliente?.telefono ?? '',
+  );
 
   late String _tipoDoc = widget.cliente?.tipoDoc.isNotEmpty == true
       ? widget.cliente!.tipoDoc
@@ -115,7 +131,9 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
     };
 
     try {
-      await ref.read(clientesProvider.notifier).guardar(id: widget.cliente?.id, cuerpo: cuerpo);
+      await ref
+          .read(clientesProvider.notifier)
+          .guardar(id: widget.cliente?.id, cuerpo: cuerpo);
 
       navegador.pop();
       mensajero.mostrar(_esNuevo ? 'Cliente creado' : 'Cliente actualizado');
@@ -140,12 +158,18 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
             _esNuevo ? 'Nuevo cliente' : 'Editar cliente',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             // Tipo y numero juntos: el tipo cambia cuantos digitos se piden.
             Row(
@@ -215,7 +239,8 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
               habilitado: !_guardando,
               opciones: [
                 const Opcion<int?>(null, 'Elegir'),
-                for (final d in ref.watch(departamentosProvider).valueOrNull ?? const [])
+                for (final d
+                    in ref.watch(departamentosProvider).valueOrNull ?? const [])
                   Opcion<int?>(d.id, d.nombre),
               ],
               onCambio: (v) => setState(() {
@@ -233,8 +258,10 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
               habilitado: !_guardando && _departamentoId != null,
               opciones: [
                 const Opcion<int?>(null, 'Elegir'),
-                for (final p in ref.watch(provinciasProvider).valueOrNull ?? const [])
-                  if (p.departamentoId == _departamentoId) Opcion<int?>(p.id, p.nombre),
+                for (final p
+                    in ref.watch(provinciasProvider).valueOrNull ?? const [])
+                  if (p.departamentoId == _departamentoId)
+                    Opcion<int?>(p.id, p.nombre),
               ],
               onCambio: (v) => setState(() {
                 _provinciaId = v;
@@ -250,8 +277,10 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
               habilitado: !_guardando && _provinciaId != null,
               opciones: [
                 const Opcion<int?>(null, 'Elegir'),
-                for (final d in ref.watch(distritosProvider).valueOrNull ?? const [])
-                  if (d.provinciaId == _provinciaId) Opcion<int?>(d.id, d.nombre),
+                for (final d
+                    in ref.watch(distritosProvider).valueOrNull ?? const [])
+                  if (d.provinciaId == _provinciaId)
+                    Opcion<int?>(d.id, d.nombre),
               ],
               onCambio: (v) => setState(() => _distritoId = v),
             ),
@@ -290,7 +319,8 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
                     habilitado: !_guardando,
                     opciones: [
                       const Opcion<int?>(null, 'Sin ruta'),
-                      for (final r in ref.watch(rutasActivasProvider)) Opcion<int?>(r.id, r.nombre),
+                      for (final r in ref.watch(rutasActivasProvider))
+                        Opcion<int?>(r.id, r.nombre),
                     ],
                     onCambio: (v) => setState(() => _rutaId = v),
                   ),
@@ -314,16 +344,11 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
             ),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(
-              texto: _esNuevo ? 'Crear cliente' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

@@ -182,8 +182,14 @@ class _TarjetaStock extends StatelessWidget {
             ),
     ),
     if (stock.reservado > 0) ...[
-      CampoDetalle('Reservado', '${formatoNumero(stock.reservado)} ${stock.unidadBase}'),
-      CampoDetalle('Disponible', '${formatoNumero(stock.disponible)} ${stock.unidadBase}'),
+      CampoDetalle(
+        'Reservado',
+        '${formatoNumero(stock.reservado)} ${stock.unidadBase}',
+      ),
+      CampoDetalle(
+        'Disponible',
+        '${formatoNumero(stock.disponible)} ${stock.unidadBase}',
+      ),
     ],
     // Cuanto pedir. El triangulo ambar avisa que falta, pero no cuanto, que es
     // lo que se necesita para armar la compra.
@@ -230,7 +236,9 @@ class _TarjetaStock extends StatelessWidget {
 
     CampoDetalle(
       'Costo actual',
-      stock.costoActual == null ? null : 'S/ ${stock.costoActual!.toStringAsFixed(2)}',
+      stock.costoActual == null
+          ? null
+          : 'S/ ${stock.costoActual!.toStringAsFixed(2)}',
     ),
     CampoDetalle('Valorizado', 'S/ ${stock.valorizado.toStringAsFixed(2)}'),
 
@@ -250,12 +258,20 @@ class _TarjetaStock extends StatelessWidget {
   List<Widget> get _capas => [
     for (var i = 0; i < stock.capas.length; i++)
       LineaProductoTarjeta(
-        titulo: i == 0 ? 'Capa ${i + 1} (la que se consume ahora)' : 'Capa ${i + 1}',
+        titulo: i == 0
+            ? 'Capa ${i + 1} (la que se consume ahora)'
+            : 'Capa ${i + 1}',
         subtitulo: _fecha(stock.capas[i].fecha),
         filas: [
           [
-            ('Disponible', '${formatoNumero(stock.capas[i].cantidadDisponible)} ${stock.unidadBase}'),
-            ('Costo unit.', 'S/ ${stock.capas[i].costoUnitario.toStringAsFixed(2)}'),
+            (
+              'Disponible',
+              '${formatoNumero(stock.capas[i].cantidadDisponible)} ${stock.unidadBase}',
+            ),
+            (
+              'Costo unit.',
+              'S/ ${stock.capas[i].costoUnitario.toStringAsFixed(2)}',
+            ),
             ('Valor', 'S/ ${stock.capas[i].valor.toStringAsFixed(2)}'),
           ],
         ],

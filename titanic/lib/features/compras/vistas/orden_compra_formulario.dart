@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/presentaciones_uso.dart';
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_lineas_producto.dart';
 import '../../../compartido/widgets/app_panel_producto.dart';
@@ -28,11 +28,14 @@ class OrdenCompraFormulario extends ConsumerStatefulWidget {
   final OrdenCompra? orden;
 
   @override
-  ConsumerState<OrdenCompraFormulario> createState() => _OrdenCompraFormularioState();
+  ConsumerState<OrdenCompraFormulario> createState() =>
+      _OrdenCompraFormularioState();
 }
 
 class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
-  late final _observacion = TextEditingController(text: widget.orden?.observacion ?? '');
+  late final _observacion = TextEditingController(
+    text: widget.orden?.observacion ?? '',
+  );
 
   late int? _proveedorId = widget.orden?.proveedorId;
   late String? _proveedorNombre = widget.orden?.proveedor;
@@ -63,7 +66,8 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
           // Todas las del producto: el selector decide cuáles ofrece según el
           // uso, y una unidad que ya no se compra así sigue mostrándose (marcada)
           // en la línea guardada.
-          presentaciones: porId[l.productoId]?.presentaciones ?? const <Presentacion>[],
+          presentaciones:
+              porId[l.productoId]?.presentaciones ?? const <Presentacion>[],
           uso: UsoPresentacion.compra,
           presentacionId: l.presentacionId ?? 0,
           /*
@@ -77,7 +81,9 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
            * abrir una orden y guardarla la dejaria con otros numeros.
            */
           cantidad: l.cantidadPresentacion,
-          importe: l.cantidadPresentacion == 0 ? 0 : l.costoTotal / l.cantidadPresentacion,
+          importe: l.cantidadPresentacion == 0
+              ? 0
+              : l.costoTotal / l.cantidadPresentacion,
         ),
     ];
 
@@ -124,7 +130,9 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
     final cuerpo = <String, dynamic>{
       'proveedorId': _proveedorId,
       'fechaEsperada': _fechaEsperada?.toIso8601String(),
-      'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
+      'observacion': _observacion.text.trim().isEmpty
+          ? null
+          : _observacion.text.trim(),
       'detalle': [
         for (final f in _lineas)
           {
@@ -140,7 +148,9 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
       if (_esNuevo) {
         await ref.read(ordenesCompraProvider.notifier).crear(cuerpo);
       } else {
-        await ref.read(ordenesCompraProvider.notifier).actualizar(widget.orden!.id, cuerpo);
+        await ref
+            .read(ordenesCompraProvider.notifier)
+            .actualizar(widget.orden!.id, cuerpo);
       }
 
       navegador.pop();
@@ -167,8 +177,10 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
       items: activos,
       buscable: (p) => p.buscable,
       pistaBusqueda: 'Buscar por nombre o documento',
-      fila: (p) =>
-          Text(p.nombre, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      fila: (p) => Text(
+        p.nombre,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
     );
     if (elegido != null) {
       setState(() {
@@ -220,7 +232,9 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
 
   @override
   Widget build(BuildContext context) {
-    _ponerLineasExistentes(ref.watch(productosProvider).valueOrNull ?? const <Producto>[]);
+    _ponerLineasExistentes(
+      ref.watch(productosProvider).valueOrNull ?? const <Producto>[],
+    );
 
     // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
     // acento del modulo. Sin esto los componentes compartidos y las hojas que
@@ -233,12 +247,18 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
             _esNuevo ? 'Nueva orden de compra' : 'Editar orden de compra',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             InkWell(
               onTap: _elegirProveedor,
@@ -252,14 +272,20 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
                     size: 19,
                     color: Colores.tintaTenue,
                   ),
-                  suffixIcon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
+                  suffixIcon: const Icon(
+                    Icons.search,
+                    size: 18,
+                    color: Colores.tintaTenue,
+                  ),
                   constraints: const BoxConstraints(minHeight: Dimen.campoLg),
                 ),
                 child: Text(
                   _proveedorNombre ?? 'Toca para elegir',
                   style: TextStyle(
                     fontSize: 15,
-                    color: _proveedorNombre == null ? Colores.tintaTenue : Colores.tinta,
+                    color: _proveedorNombre == null
+                        ? Colores.tintaTenue
+                        : Colores.tinta,
                   ),
                 ),
               ),
@@ -282,14 +308,22 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
                       ],
                     ),
                   ),
-                  prefixIcon: Icon(Icons.event_outlined, size: 19, color: Colores.tintaTenue),
+                  prefixIcon: Icon(
+                    Icons.event_outlined,
+                    size: 19,
+                    color: Colores.tintaTenue,
+                  ),
                   constraints: BoxConstraints(minHeight: Dimen.campoLg),
                 ),
                 child: Text(
-                  _fechaEsperada == null ? 'Sin definir' : _fechaTexto(_fechaEsperada!),
+                  _fechaEsperada == null
+                      ? 'Sin definir'
+                      : _fechaTexto(_fechaEsperada!),
                   style: TextStyle(
                     fontSize: 15,
-                    color: _fechaEsperada == null ? Colores.tintaTenue : Colores.tinta,
+                    color: _fechaEsperada == null
+                        ? Colores.tintaTenue
+                        : Colores.tinta,
                   ),
                 ),
               ),
@@ -307,9 +341,11 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
             const SizedBox(height: Dimen.espacio5),
 
             AppPanelProducto(
-              productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
-                  .where((p) => p.activo && p.controlaStock)
-                  .toList(),
+              productos:
+                  (ref.watch(productosProvider).valueOrNull ??
+                          const <Producto>[])
+                      .where((p) => p.activo && p.controlaStock)
+                      .toList(),
               cargando: ref.watch(productosProvider).isLoading,
               paraVenta: false,
               uso: UsoPresentacion.compra,
@@ -343,16 +379,11 @@ class _OrdenCompraFormularioState extends ConsumerState<OrdenCompraFormulario> {
             ),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(
-              texto: _esNuevo ? 'Crear orden' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

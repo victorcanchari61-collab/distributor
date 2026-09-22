@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -20,19 +20,32 @@ class ConductorFormulario extends ConsumerStatefulWidget {
   final Conductor? conductor;
 
   @override
-  ConsumerState<ConductorFormulario> createState() => _ConductorFormularioState();
+  ConsumerState<ConductorFormulario> createState() =>
+      _ConductorFormularioState();
 }
 
 class _ConductorFormularioState extends ConsumerState<ConductorFormulario> {
-  late final _nombre = TextEditingController(text: widget.conductor?.nombre ?? '');
-  late final _documento = TextEditingController(text: widget.conductor?.documento ?? '');
-  late final _telefono = TextEditingController(text: widget.conductor?.telefono ?? '');
-  late final _direccion = TextEditingController(text: widget.conductor?.direccion ?? '');
-  late final _licencia = TextEditingController(text: widget.conductor?.licenciaNumero ?? '');
+  late final _nombre = TextEditingController(
+    text: widget.conductor?.nombre ?? '',
+  );
+  late final _documento = TextEditingController(
+    text: widget.conductor?.documento ?? '',
+  );
+  late final _telefono = TextEditingController(
+    text: widget.conductor?.telefono ?? '',
+  );
+  late final _direccion = TextEditingController(
+    text: widget.conductor?.direccion ?? '',
+  );
+  late final _licencia = TextEditingController(
+    text: widget.conductor?.licenciaNumero ?? '',
+  );
   late final _categoria = TextEditingController(
     text: widget.conductor?.licenciaCategoria ?? '',
   );
-  late final _observacion = TextEditingController(text: widget.conductor?.observacion ?? '');
+  late final _observacion = TextEditingController(
+    text: widget.conductor?.observacion ?? '',
+  );
 
   late DateTime? _licenciaVence = widget.conductor?.licenciaVence;
   late DateTime? _fechaIngreso = widget.conductor?.fechaIngreso;
@@ -62,7 +75,9 @@ class _ConductorFormularioState extends ConsumerState<ConductorFormulario> {
   bool _validar() {
     setState(() {
       _errorNombre = _nombre.text.trim().isEmpty ? 'Escribe el nombre.' : null;
-      _errorDocumento = _documento.text.trim().isEmpty ? 'Escribe el documento.' : null;
+      _errorDocumento = _documento.text.trim().isEmpty
+          ? 'Escribe el documento.'
+          : null;
     });
     return _errorNombre == null && _errorDocumento == null;
   }
@@ -105,7 +120,9 @@ class _ConductorFormularioState extends ConsumerState<ConductorFormulario> {
           );
 
       navegador.pop();
-      mensajero.mostrar(_esNuevo ? 'Conductor creado' : 'Conductor actualizado');
+      mensajero.mostrar(
+        _esNuevo ? 'Conductor creado' : 'Conductor actualizado',
+      );
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;
@@ -250,7 +267,9 @@ class _ConductorFormularioState extends ConsumerState<ConductorFormulario> {
 
             CheckboxListTile(
               value: _activo,
-              onChanged: _guardando ? null : (v) => setState(() => _activo = v ?? true),
+              onChanged: _guardando
+                  ? null
+                  : (v) => setState(() => _activo = v ?? true),
               controlAffinity: ListTileControlAffinity.leading,
               contentPadding: EdgeInsets.zero,
               title: const Text('Activo', style: TextStyle(fontSize: 14)),
@@ -261,18 +280,11 @@ class _ConductorFormularioState extends ConsumerState<ConductorFormulario> {
             ),
             const SizedBox(height: Dimen.espacio5),
 
-            AppBoton(
-              texto: _esNuevo ? 'Crear conductor' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _subiendoFoto ? null : _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              // Mientras la foto sube no se guarda: se grabaría sin ella y
-              // habría que volver a entrar a ponerla.
-              onPressed: _subiendoFoto ? null : _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

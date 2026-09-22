@@ -48,7 +48,8 @@ class LineaDocumento {
     unidadBase: json['unidadBase'] as String? ?? '',
     presentacionId: json['presentacionId'] as int?,
     presentacion: json['presentacion'] as String?,
-    cantidadPresentacion: (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
+    cantidadPresentacion:
+        (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
     cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0,
     costoUnitario: (json['costoUnitario'] as num?)?.toDouble() ?? 0,
     costoTotal: (json['costoTotal'] as num?)?.toDouble() ?? 0,
@@ -117,30 +118,32 @@ class DocumentoInventario {
 
   bool get anulado => estado == 'ANULADO';
 
-  String get buscable => '$numero $almacen $motivo ${compra ?? ''}'.toLowerCase();
+  String get buscable =>
+      '$numero $almacen $motivo ${compra ?? ''}'.toLowerCase();
 
-  factory DocumentoInventario.desdeJson(Map<String, dynamic> json) => DocumentoInventario(
-    id: json['id'] as int,
-    numero: json['numero'] as String? ?? '',
-    tipo: json['tipo'] as String? ?? '',
-    fecha: fechaDeJson(json['fecha'] as String),
-    almacenId: json['almacenId'] as int? ?? 0,
-    almacen: json['almacen'] as String? ?? '',
-    almacenDestinoId: json['almacenDestinoId'] as int?,
-    almacenDestino: json['almacenDestino'] as String?,
-    compraId: json['compraId'] as int?,
-    compra: json['compra'] as String?,
-    motivoId: json['motivoId'] as int? ?? 0,
-    motivo: json['motivo'] as String? ?? '',
-    motivoTipo: json['motivoTipo'] as String? ?? '',
-    estado: json['estado'] as String? ?? 'CONFIRMADO',
-    observacion: json['observacion'] as String?,
-    usuario: json['usuario'] as String?,
-    anuladoPor: json['anuladoPor'] as String?,
-    total: (json['total'] as num?)?.toDouble() ?? 0,
-    lineas: json['lineas'] as int? ?? 0,
-    detalle: (json['detalle'] as List? ?? const [])
-        .map((e) => LineaDocumento.desdeJson(e as Map<String, dynamic>))
-        .toList(),
-  );
+  factory DocumentoInventario.desdeJson(Map<String, dynamic> json) =>
+      DocumentoInventario(
+        id: json['id'] as int,
+        numero: json['numero'] as String? ?? '',
+        tipo: json['tipo'] as String? ?? '',
+        fecha: fechaDeJson(json['fecha'] as String),
+        almacenId: json['almacenId'] as int? ?? 0,
+        almacen: json['almacen'] as String? ?? '',
+        almacenDestinoId: json['almacenDestinoId'] as int?,
+        almacenDestino: json['almacenDestino'] as String?,
+        compraId: json['compraId'] as int?,
+        compra: json['compra'] as String?,
+        motivoId: json['motivoId'] as int? ?? 0,
+        motivo: json['motivo'] as String? ?? '',
+        motivoTipo: json['motivoTipo'] as String? ?? '',
+        estado: json['estado'] as String? ?? 'CONFIRMADO',
+        observacion: json['observacion'] as String?,
+        usuario: json['usuario'] as String?,
+        anuladoPor: json['anuladoPor'] as String?,
+        total: (json['total'] as num?)?.toDouble() ?? 0,
+        lineas: json['lineas'] as int? ?? 0,
+        detalle: (json['detalle'] as List? ?? const [])
+            .map((e) => LineaDocumento.desdeJson(e as Map<String, dynamic>))
+            .toList(),
+      );
 }

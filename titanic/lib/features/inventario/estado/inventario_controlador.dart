@@ -56,14 +56,12 @@ class AlmacenesControlador extends AsyncNotifier<List<Almacen>> {
   /// El AlmacenController no tiene activar/desactivar propio: se manda el
   /// mismo PUT con el estado invertido, igual que hace el panel web.
   Future<void> cambiarEstado(Almacen almacen) async {
-    await ref
-        .read(inventarioApiProvider)
-        .actualizarAlmacen(almacen.id, {
-          'codigo': almacen.codigo,
-          'nombre': almacen.nombre,
-          'direccion': almacen.direccion,
-          'activo': !almacen.activo,
-        });
+    await ref.read(inventarioApiProvider).actualizarAlmacen(almacen.id, {
+      'codigo': almacen.codigo,
+      'nombre': almacen.nombre,
+      'direccion': almacen.direccion,
+      'activo': !almacen.activo,
+    });
     await recargar();
   }
 }
@@ -112,9 +110,10 @@ final almacenesOpcionesProvider = FutureProvider<List<Almacen>>(
 );
 
 final almacenesActivosProvider = Provider.autoDispose<List<Almacen>>(
-  (ref) => (ref.watch(almacenesOpcionesProvider).valueOrNull ?? const <Almacen>[])
-      .where((a) => a.activo)
-      .toList(),
+  (ref) =>
+      (ref.watch(almacenesOpcionesProvider).valueOrNull ?? const <Almacen>[])
+          .where((a) => a.activo)
+          .toList(),
 );
 
 // --- Stock ---
@@ -153,7 +152,9 @@ enum FiltroStock { todos, bajoMinimo, sinStock, conStock }
 final filtroStockProvider = StateProvider.autoDispose(
   (ref) => FiltroStock.todos,
 );
-final categoriaStockProvider = StateProvider.autoDispose<String?>((ref) => null);
+final categoriaStockProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 final marcaStockProvider = StateProvider.autoDispose<String?>((ref) => null);
 
 final filtrosStockActivosProvider = Provider.autoDispose((ref) {
@@ -242,27 +243,28 @@ final motivosDelKardexProvider = Provider.autoDispose<List<String>>((ref) {
   return <String>{for (final k in todos) k.motivo}.toList()..sort();
 });
 
-final kardexFiltradoProvider =
-    Provider.autoDispose<List<MovimientoKardex>>((ref) {
-      final todos =
-          ref.watch(kardexProvider).valueOrNull ?? const <MovimientoKardex>[];
-      final texto = ref.watch(busquedaKardexProvider).trim().toLowerCase();
-      final filtro = ref.watch(filtroKardexProvider);
-      final motivo = ref.watch(motivoKardexFiltroProvider);
+final kardexFiltradoProvider = Provider.autoDispose<List<MovimientoKardex>>((
+  ref,
+) {
+  final todos =
+      ref.watch(kardexProvider).valueOrNull ?? const <MovimientoKardex>[];
+  final texto = ref.watch(busquedaKardexProvider).trim().toLowerCase();
+  final filtro = ref.watch(filtroKardexProvider);
+  final motivo = ref.watch(motivoKardexFiltroProvider);
 
-      return todos
-          .where(
-            (k) => switch (filtro) {
-              FiltroKardex.todos => true,
-              FiltroKardex.entradas => k.esEntrada && !k.esReserva,
-              FiltroKardex.salidas => !k.esEntrada && !k.esReserva,
-              FiltroKardex.reservas => k.esReserva,
-            },
-          )
-          .where((k) => motivo == null || k.motivo == motivo)
-          .where((k) => texto.isEmpty || k.buscable.contains(texto))
-          .toList();
-    });
+  return todos
+      .where(
+        (k) => switch (filtro) {
+          FiltroKardex.todos => true,
+          FiltroKardex.entradas => k.esEntrada && !k.esReserva,
+          FiltroKardex.salidas => !k.esEntrada && !k.esReserva,
+          FiltroKardex.reservas => k.esReserva,
+        },
+      )
+      .where((k) => motivo == null || k.motivo == motivo)
+      .where((k) => texto.isEmpty || k.buscable.contains(texto))
+      .toList();
+});
 
 // --- Lotes y vencimientos ---
 
@@ -367,23 +369,23 @@ final compraRecepcionFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
 
-final recepcionesFiltradasProvider = Provider.autoDispose<List<DocumentoInventario>>((
-  ref,
-) {
-  final todas =
-      ref.watch(recepcionesProvider).valueOrNull ?? const <DocumentoInventario>[];
-  final texto = ref.watch(busquedaRecepcionesProvider).trim().toLowerCase();
-  final filtro = ref.watch(filtroDocumentoProvider);
-  final almacen = ref.watch(almacenRecepcionFiltroProvider);
-  final compra = ref.watch(compraRecepcionFiltroProvider);
+final recepcionesFiltradasProvider =
+    Provider.autoDispose<List<DocumentoInventario>>((ref) {
+      final todas =
+          ref.watch(recepcionesProvider).valueOrNull ??
+          const <DocumentoInventario>[];
+      final texto = ref.watch(busquedaRecepcionesProvider).trim().toLowerCase();
+      final filtro = ref.watch(filtroDocumentoProvider);
+      final almacen = ref.watch(almacenRecepcionFiltroProvider);
+      final compra = ref.watch(compraRecepcionFiltroProvider);
 
-  return todas
-      .where((d) => pasaDocumento(d.anulado, filtro))
-      .where((d) => almacen == null || d.almacen == almacen)
-      .where((d) => compra == null || d.compra == compra)
-      .where((d) => texto.isEmpty || d.buscable.contains(texto))
-      .toList();
-});
+      return todas
+          .where((d) => pasaDocumento(d.anulado, filtro))
+          .where((d) => almacen == null || d.almacen == almacen)
+          .where((d) => compra == null || d.compra == compra)
+          .where((d) => texto.isEmpty || d.buscable.contains(texto))
+          .toList();
+    });
 
 final filtrosRecepcionesActivosProvider = Provider.autoDispose((ref) {
   var n = ref.watch(filtroDocumentoProvider) == FiltroDocumento.todos ? 0 : 1;
@@ -395,7 +397,8 @@ final filtrosRecepcionesActivosProvider = Provider.autoDispose((ref) {
 /// Compras que existen en las recepciones, para armar el filtro.
 final comprasDeRecepcionesProvider = Provider.autoDispose<List<String>>((ref) {
   final todas =
-      ref.watch(recepcionesProvider).valueOrNull ?? const <DocumentoInventario>[];
+      ref.watch(recepcionesProvider).valueOrNull ??
+      const <DocumentoInventario>[];
   return <String>{
     for (final d in todas)
       if (d.compra != null && d.compra!.isNotEmpty) d.compra!,
@@ -412,7 +415,9 @@ class MotivosControlador extends AsyncNotifier<List<Motivo>> {
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(inventarioApiProvider).motivos());
+    state = await AsyncValue.guard(
+      () => ref.read(inventarioApiProvider).motivos(),
+    );
   }
 
   Future<void> guardar({int? id, required Map<String, dynamic> cuerpo}) async {
@@ -513,11 +518,14 @@ final busquedaAjustesProvider = StateProvider.autoDispose((ref) => '');
 
 class AjustesControlador extends AsyncNotifier<List<DocumentoInventario>> {
   @override
-  Future<List<DocumentoInventario>> build() => ref.watch(inventarioApiProvider).ajustes();
+  Future<List<DocumentoInventario>> build() =>
+      ref.watch(inventarioApiProvider).ajustes();
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(inventarioApiProvider).ajustes());
+    state = await AsyncValue.guard(
+      () => ref.read(inventarioApiProvider).ajustes(),
+    );
   }
 
   Future<void> crear(Map<String, dynamic> cuerpo) async {
@@ -555,33 +563,39 @@ final filtrosAjustesActivosProvider = Provider.autoDispose((ref) {
   return n;
 });
 
-final ajustesFiltradosProvider = Provider.autoDispose<List<DocumentoInventario>>((ref) {
-  final todos = ref.watch(ajustesProvider).valueOrNull ?? const <DocumentoInventario>[];
-  final texto = ref.watch(busquedaAjustesProvider).trim().toLowerCase();
-  final filtro = ref.watch(filtroDocumentoProvider);
-  final motivoId = ref.watch(motivoAjusteFiltroProvider);
-  final almacen = ref.watch(almacenAjusteFiltroProvider);
+final ajustesFiltradosProvider =
+    Provider.autoDispose<List<DocumentoInventario>>((ref) {
+      final todos =
+          ref.watch(ajustesProvider).valueOrNull ??
+          const <DocumentoInventario>[];
+      final texto = ref.watch(busquedaAjustesProvider).trim().toLowerCase();
+      final filtro = ref.watch(filtroDocumentoProvider);
+      final motivoId = ref.watch(motivoAjusteFiltroProvider);
+      final almacen = ref.watch(almacenAjusteFiltroProvider);
 
-  return todos
-      .where((d) => pasaDocumento(d.anulado, filtro))
-      .where((d) => motivoId == null || d.motivoId == motivoId)
-      .where((d) => almacen == null || d.almacen == almacen)
-      .where((d) => texto.isEmpty || d.buscable.contains(texto))
-      .toList();
-});
+      return todos
+          .where((d) => pasaDocumento(d.anulado, filtro))
+          .where((d) => motivoId == null || d.motivoId == motivoId)
+          .where((d) => almacen == null || d.almacen == almacen)
+          .where((d) => texto.isEmpty || d.buscable.contains(texto))
+          .toList();
+    });
 
 // --- Transferencias ---
 
 final busquedaTransferenciasProvider = StateProvider.autoDispose((ref) => '');
 
-class TransferenciasControlador extends AsyncNotifier<List<DocumentoInventario>> {
+class TransferenciasControlador
+    extends AsyncNotifier<List<DocumentoInventario>> {
   @override
   Future<List<DocumentoInventario>> build() =>
       ref.watch(inventarioApiProvider).transferencias();
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(inventarioApiProvider).transferencias());
+    state = await AsyncValue.guard(
+      () => ref.read(inventarioApiProvider).transferencias(),
+    );
   }
 
   Future<void> crear(Map<String, dynamic> cuerpo) async {
@@ -611,8 +625,12 @@ final aAlmacenTransferenciaFiltroProvider = StateProvider.autoDispose<String?>(
 final transferenciasFiltradasProvider =
     Provider.autoDispose<List<DocumentoInventario>>((ref) {
       final todos =
-          ref.watch(transferenciasProvider).valueOrNull ?? const <DocumentoInventario>[];
-      final texto = ref.watch(busquedaTransferenciasProvider).trim().toLowerCase();
+          ref.watch(transferenciasProvider).valueOrNull ??
+          const <DocumentoInventario>[];
+      final texto = ref
+          .watch(busquedaTransferenciasProvider)
+          .trim()
+          .toLowerCase();
       final filtro = ref.watch(filtroDocumentoProvider);
       final de = ref.watch(deAlmacenTransferenciaFiltroProvider);
       final a = ref.watch(aAlmacenTransferenciaFiltroProvider);
@@ -638,11 +656,14 @@ final busquedaPrestamosProvider = StateProvider.autoDispose((ref) => '');
 
 class PrestamosControlador extends AsyncNotifier<List<Prestamo>> {
   @override
-  Future<List<Prestamo>> build() => ref.watch(inventarioApiProvider).prestamos();
+  Future<List<Prestamo>> build() =>
+      ref.watch(inventarioApiProvider).prestamos();
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(inventarioApiProvider).prestamos());
+    state = await AsyncValue.guard(
+      () => ref.read(inventarioApiProvider).prestamos(),
+    );
   }
 
   Future<void> crear(Map<String, dynamic> cuerpo) async {

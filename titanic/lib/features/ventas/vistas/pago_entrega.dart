@@ -14,7 +14,8 @@ import '../../../core/tema/dimensiones.dart';
 import '../../finanzas/datos/metodo_pago.dart';
 import '../datos/pedido.dart';
 
-double _numero(String texto) => double.tryParse(texto.trim().replaceAll(',', '.')) ?? 0;
+double _numero(String texto) =>
+    double.tryParse(texto.trim().replaceAll(',', '.')) ?? 0;
 
 /// A centavos: lo que se suma y se envía no puede tener más decimales que lo
 /// que se muestra, o "cobrado" y "a cobrar" discreparían por una fracción.
@@ -24,8 +25,12 @@ double _centavos(double n) => (n * 100).round() / 100;
 /// escribiendo: no cuenta para el total y hay que guardarla o cancelarla antes
 /// de convertir.
 class FilaPagoEntrega {
-  FilaPagoEntrega({this.tipo, this.metodoPagoId, String montoInicial = '', this.guardado = false})
-    : monto = TextEditingController(text: montoInicial);
+  FilaPagoEntrega({
+    this.tipo,
+    this.metodoPagoId,
+    String montoInicial = '',
+    this.guardado = false,
+  }) : monto = TextEditingController(text: montoInicial);
 
   String? tipo;
   int? metodoPagoId;
@@ -132,7 +137,8 @@ class _PagoEntregaState extends State<PagoEntrega> {
     if (widget.filas.any((f) => !f.guardado)) _verEdicion();
   }
 
-  List<MetodoPagoOpcion> get _metodos => widget.metodos.valueOrNull ?? const <MetodoPagoOpcion>[];
+  List<MetodoPagoOpcion> get _metodos =>
+      widget.metodos.valueOrNull ?? const <MetodoPagoOpcion>[];
 
   String _nombreMetodo(int? id) {
     for (final m in _metodos) {
@@ -184,7 +190,11 @@ class _PagoEntregaState extends State<PagoEntrega> {
   /// Pasa una fila guardada a modo edición, recordando lo que tenía.
   void _editar(FilaPagoEntrega fila) {
     _cambiar(() {
-      fila.previo = (tipo: fila.tipo, metodoPagoId: fila.metodoPagoId, monto: fila.monto.text);
+      fila.previo = (
+        tipo: fila.tipo,
+        metodoPagoId: fila.metodoPagoId,
+        monto: fila.monto.text,
+      );
       fila.guardado = false;
     });
     _verEdicion();
@@ -303,7 +313,10 @@ class _PagoEntregaState extends State<PagoEntrega> {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3, vertical: Dimen.espacio2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: Dimen.espacio3,
+              vertical: Dimen.espacio2,
+            ),
             decoration: BoxDecoration(
               color: Colores.fondo,
               borderRadius: BorderRadius.circular(Dimen.radioCampo),
@@ -339,7 +352,13 @@ class _PagoEntregaState extends State<PagoEntrega> {
               children: [
                 Expanded(child: _Dato('A cobrar', formatoSoles(r.total))),
                 const SizedBox(width: Dimen.espacio2),
-                Expanded(child: _Dato('Cobrado ahora', formatoSoles(r.pagado), color: Colores.exito)),
+                Expanded(
+                  child: _Dato(
+                    'Cobrado ahora',
+                    formatoSoles(r.pagado),
+                    color: Colores.exito,
+                  ),
+                ),
                 const SizedBox(width: Dimen.espacio2),
                 Expanded(
                   child: _Dato(
@@ -396,7 +415,11 @@ class _PagoEntregaState extends State<PagoEntrega> {
 
           const Text(
             'Pagos',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colores.tinta),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colores.tinta,
+            ),
           ),
           const SizedBox(height: Dimen.espacio2),
           Row(
@@ -407,7 +430,8 @@ class _PagoEntregaState extends State<PagoEntrega> {
                   variante: BotonVariante.secundario,
                   tam: BotonTam.sm,
                   icono: Icons.account_balance_wallet_outlined,
-                  onPressed: editando || r.saldo <= 0 || cargando || _metodos.isEmpty
+                  onPressed:
+                      editando || r.saldo <= 0 || cargando || _metodos.isEmpty
                       ? null
                       : () => _cobrarTodo(r.saldo),
                 ),
@@ -439,7 +463,11 @@ class _PagoEntregaState extends State<PagoEntrega> {
           for (final fila in widget.filas) ...[
             fila.guardado
                 ? _filaGuardada(fila, editando)
-                : _filaEnEdicion(context, fila, esLaAbierta: identical(fila, enEdicion)),
+                : _filaEnEdicion(
+                    context,
+                    fila,
+                    esLaAbierta: identical(fila, enEdicion),
+                  ),
             const SizedBox(height: Dimen.espacio2),
           ],
         ],
@@ -471,17 +499,26 @@ class _PagoEntregaState extends State<PagoEntrega> {
                     _nombreMetodo(fila.metodoPagoId),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   if (fila.tipo != null) ...[
                     const SizedBox(height: 2),
-                    AppEtiqueta(TipoMetodoPago.etiqueta(fila.tipo!), tono: EtiquetaTono.modulo),
+                    AppEtiqueta(
+                      TipoMetodoPago.etiqueta(fila.tipo!),
+                      tono: EtiquetaTono.modulo,
+                    ),
                   ],
                 ],
               ),
             ),
           ),
-          Text(monto, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+          Text(
+            monto,
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+          ),
           IconButton(
             tooltip: 'Editar pago de $monto',
             visualDensity: VisualDensity.compact,
@@ -507,7 +544,11 @@ class _PagoEntregaState extends State<PagoEntrega> {
     );
   }
 
-  Widget _filaEnEdicion(BuildContext context, FilaPagoEntrega fila, {required bool esLaAbierta}) {
+  Widget _filaEnEdicion(
+    BuildContext context,
+    FilaPagoEntrega fila, {
+    required bool esLaAbierta,
+  }) {
     final delTipo = _metodos.where((m) => m.tipo == fila.tipo).toList();
 
     return Container(
@@ -525,7 +566,8 @@ class _PagoEntregaState extends State<PagoEntrega> {
             etiqueta: 'Tipo de pago',
             icono: Icons.category_outlined,
             opciones: [
-              for (final t in TipoMetodoPago.todos) Opcion(t, TipoMetodoPago.etiqueta(t)),
+              for (final t in TipoMetodoPago.todos)
+                Opcion(t, TipoMetodoPago.etiqueta(t)),
             ],
             onCambio: (v) => _elegirTipo(fila, v),
           ),
@@ -549,7 +591,10 @@ class _PagoEntregaState extends State<PagoEntrega> {
           const SizedBox(height: Dimen.espacio3),
           // Aquí y no arriba de la pestaña: quien guarda está mirando esta fila,
           // y un aviso fuera de pantalla se leería como "el botón no hace nada".
-          if (_aviso != null) ...[AppAlerta(_aviso!), const SizedBox(height: Dimen.espacio3)],
+          if (_aviso != null) ...[
+            AppAlerta(_aviso!),
+            const SizedBox(height: Dimen.espacio3),
+          ],
           Row(
             children: [
               Expanded(
@@ -588,7 +633,10 @@ class _Dato extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio2, vertical: Dimen.espacio2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Dimen.espacio2,
+        vertical: Dimen.espacio2,
+      ),
       decoration: BoxDecoration(
         border: Border.all(color: Colores.linea),
         borderRadius: BorderRadius.circular(Dimen.radioCampo),
@@ -613,7 +661,11 @@ class _Dato extends StatelessWidget {
             fit: BoxFit.scaleDown,
             child: Text(
               valor,
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: color),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ),
         ],

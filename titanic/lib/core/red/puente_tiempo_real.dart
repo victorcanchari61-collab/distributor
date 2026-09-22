@@ -66,7 +66,12 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   ],
   'compras': [comprasProvider, cuentasPorPagarProvider],
   'ordenescompra': [ordenesCompraProvider, comprasProvider],
-  'recepciones': [recepcionesProvider, comprasProvider, stockProvider, kardexProvider],
+  'recepciones': [
+    recepcionesProvider,
+    comprasProvider,
+    stockProvider,
+    kardexProvider,
+  ],
   'ajustes': [ajustesProvider, stockProvider, kardexProvider],
   'transferencias': [transferenciasProvider, stockProvider, kardexProvider],
   'prestamos': [prestamosProvider, stockProvider, kardexProvider],
@@ -78,11 +83,7 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   // El selector del formulario de usuario sale de `opciones`, no del listado:
   // se invalidan los dos o el que acaban de dar de alta no se podria elegir
   // hasta salir y volver a entrar.
-  'empleados': [
-    empleadosProvider,
-    empleadosOpcionesProvider,
-    usuariosProvider,
-  ],
+  'empleados': [empleadosProvider, empleadosOpcionesProvider, usuariosProvider],
   'categorias': [categoriasProvider, productosProvider],
   'marcas': [marcasProvider, productosProvider],
   'unidades': [unidadesProvider, productosProvider],

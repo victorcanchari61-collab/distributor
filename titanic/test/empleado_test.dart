@@ -346,7 +346,7 @@ void main() {
     testWidgets('al editar reenvia el empleadoId que ya tenia', (tester) async {
       final config = await montar(tester);
 
-      await tester.tap(find.text('Guardar cambios'));
+      await tester.tap(find.text('Guardar'));
       await tester.pumpAndSettle();
       await _dejarPasarElAviso(tester);
 
@@ -378,7 +378,7 @@ void main() {
 
       await _elegir(tester, 'Sin empleado');
 
-      await tester.tap(find.text('Guardar cambios'));
+      await tester.tap(find.text('Guardar'));
       await tester.pumpAndSettle();
       await _dejarPasarElAviso(tester);
 

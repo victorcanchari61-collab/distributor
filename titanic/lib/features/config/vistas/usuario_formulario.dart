@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
@@ -29,8 +29,12 @@ class UsuarioFormulario extends ConsumerStatefulWidget {
 }
 
 class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
-  late final _nombre = TextEditingController(text: widget.usuario?.nombre ?? '');
-  late final _usuario = TextEditingController(text: widget.usuario?.nombreUsuario ?? '');
+  late final _nombre = TextEditingController(
+    text: widget.usuario?.nombre ?? '',
+  );
+  late final _usuario = TextEditingController(
+    text: widget.usuario?.nombreUsuario ?? '',
+  );
   late final _email = TextEditingController(text: widget.usuario?.email ?? '');
   late final _dni = TextEditingController(text: widget.usuario?.dni ?? '');
   final _password = TextEditingController();
@@ -75,13 +79,17 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
       // El usuario y el correo son opcionales, pero sin usuario, correo ni DNI la cuenta no tendria con que
       // iniciar sesion. El usuario exige al menos una letra: asi nunca se confunde con un DNI ni un correo.
       final usuario = _usuario.text.trim();
-      _errorUsuario = usuario.isNotEmpty && !RegExp(r'^(?=.*[A-Za-z])[A-Za-z0-9._-]{3,30}$').hasMatch(usuario)
+      _errorUsuario =
+          usuario.isNotEmpty &&
+              !RegExp(r'^(?=.*[A-Za-z])[A-Za-z0-9._-]{3,30}$').hasMatch(usuario)
           ? 'De 3 a 30 caracteres —letras, números, punto o guion— y al menos una letra.'
           : usuario.isEmpty && correo.isEmpty && _dni.text.trim().isEmpty
           ? 'Ingresa el usuario, el correo o el DNI: sin uno no podrá iniciar sesión.'
           : null;
 
-      _errorEmail = correo.isNotEmpty && !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(correo)
+      _errorEmail =
+          correo.isNotEmpty &&
+              !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(correo)
           ? 'Ese correo no tiene un formato válido.'
           : null;
 
@@ -151,7 +159,9 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
 
     final cuerpo = <String, dynamic>{
       'nombre': _nombre.text.trim(),
-      'nombreUsuario': _usuario.text.trim().isEmpty ? null : _usuario.text.trim(),
+      'nombreUsuario': _usuario.text.trim().isEmpty
+          ? null
+          : _usuario.text.trim(),
       'email': _email.text.trim(),
       'dni': _dni.text.trim(),
       // El primero es el principal. El PUT reemplaza el usuario: sin esto, guardar cualquier otro dato le
@@ -172,7 +182,9 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
     };
 
     try {
-      await ref.read(usuariosProvider.notifier).guardar(id: widget.usuario?.id, cuerpo: cuerpo);
+      await ref
+          .read(usuariosProvider.notifier)
+          .guardar(id: widget.usuario?.id, cuerpo: cuerpo);
 
       navegador.pop();
       mensajero.mostrar(_esNuevo ? 'Usuario creado' : 'Usuario actualizado');
@@ -205,12 +217,18 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
             _esNuevo ? 'Nuevo usuario' : 'Editar usuario',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             /*
              * De quien es esta cuenta, lo primero que se elige.
@@ -315,7 +333,10 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
               Text(
                 'Rol principal: ${roles.where((r) => r.id == _rolIds.first).map((r) => r.nombre).firstOrNull ?? ''}'
                 '. Tendrá los permisos de todos sus roles juntos.',
-                style: const TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Colores.tintaSuave,
+                ),
               ),
             ],
             const SizedBox(height: Dimen.espacio4),
@@ -357,23 +378,20 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
               // Al editar se puede dejar en blanco: cambiar el nombre de alguien
               // no deberia obligar a reescribir su clave.
               opcional: !_esNuevo,
-              pista: _esNuevo ? 'Mínimo 6 caracteres' : 'Dejar vacío para no cambiarla',
+              pista: _esNuevo
+                  ? 'Mínimo 6 caracteres'
+                  : 'Dejar vacío para no cambiarla',
               esPassword: true,
               error: _errorPassword,
               habilitado: !_guardando,
             ),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(
-              texto: _esNuevo ? 'Crear usuario' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],
@@ -412,7 +430,11 @@ class _SelectorRoles extends StatelessWidget {
     return InputDecorator(
       decoration: InputDecoration(
         labelText: 'Roles',
-        prefixIcon: const Icon(Icons.verified_user_outlined, size: 19, color: Colores.tintaTenue),
+        prefixIcon: const Icon(
+          Icons.verified_user_outlined,
+          size: 19,
+          color: Colores.tintaTenue,
+        ),
         errorText: error,
         enabled: habilitado,
       ),

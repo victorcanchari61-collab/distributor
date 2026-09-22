@@ -119,9 +119,10 @@ class ClientesControlador extends AsyncNotifier<List<Cliente>> {
 /// alguien que ya existe) y aquí ofrecer un cliente ajeno solo dejaría elegirlo para fallar al
 /// guardar. Se pide al abrir el formulario y no se guarda: cambiar la ruta de alguien debe verse
 /// sin cerrar sesión.
-final clientesParaVenderProvider = FutureProvider.autoDispose.family<List<Cliente>, String>(
-  (ref, para) => ref.watch(maestrosApiProvider).clientes(para: para),
-);
+final clientesParaVenderProvider = FutureProvider.autoDispose
+    .family<List<Cliente>, String>(
+      (ref, para) => ref.watch(maestrosApiProvider).clientes(para: para),
+    );
 
 final clientesProvider =
     AsyncNotifierProvider<ClientesControlador, List<Cliente>>(
@@ -301,9 +302,7 @@ final rubrosProvider = Provider.autoDispose<List<String>>((ref) {
 
 /// Direcciones y distritos que existen en los datos, para armar el filtro
 /// sin listas fijas — igual que los rubros.
-final direccionesProveedorProvider = Provider.autoDispose<List<String>>((
-  ref,
-) {
+final direccionesProveedorProvider = Provider.autoDispose<List<String>>((ref) {
   final todos =
       ref.watch(proveedoresProvider).valueOrNull ?? const <Proveedor>[];
   final valores =
@@ -424,36 +423,34 @@ final productosFiltradosProvider = Provider.autoDispose<List<Producto>>((ref) {
       .where(
         (p) =>
             conCosto == null ||
-            conCosto ==
-                (p.costoReferencia != null && p.costoReferencia! > 0),
+            conCosto == (p.costoReferencia != null && p.costoReferencia! > 0),
       )
       .where((p) => texto.isEmpty || p.buscable.contains(texto))
       .toList();
 });
 
 /// Unidades base y de presentación que existen en los datos.
-final unidadesBaseProductoProvider = Provider.autoDispose<List<String>>((
-  ref,
-) {
+final unidadesBaseProductoProvider = Provider.autoDispose<List<String>>((ref) {
   final todos = ref.watch(productosProvider).valueOrNull ?? const <Producto>[];
   final valores = todos.map((p) => p.unidadBase).toSet().toList()..sort();
   return valores;
 });
 
-final unidadesPresentacionProductoProvider =
-    Provider.autoDispose<List<String>>((ref) {
-      final todos =
-          ref.watch(productosProvider).valueOrNull ?? const <Producto>[];
-      final valores =
-          todos
-              .expand((p) => p.presentaciones)
-              .where((x) => x.activo)
-              .map((x) => x.unidad)
-              .toSet()
-              .toList()
-            ..sort();
-      return valores;
-    });
+final unidadesPresentacionProductoProvider = Provider.autoDispose<List<String>>(
+  (ref) {
+    final todos =
+        ref.watch(productosProvider).valueOrNull ?? const <Producto>[];
+    final valores =
+        todos
+            .expand((p) => p.presentaciones)
+            .where((x) => x.activo)
+            .map((x) => x.unidad)
+            .toSet()
+            .toList()
+          ..sort();
+    return valores;
+  },
+);
 
 // --- Empleados ---
 
@@ -464,7 +461,9 @@ final cargoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
 final areaFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
 
 /// null = todos, true = los que entran al sistema, false = los que no.
-final conUsuarioFiltroProvider = StateProvider.autoDispose<bool?>((ref) => null);
+final conUsuarioFiltroProvider = StateProvider.autoDispose<bool?>(
+  (ref) => null,
+);
 
 final filtrosEmpleadosActivosProvider = Provider.autoDispose((ref) {
   var n = 0;

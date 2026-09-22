@@ -16,7 +16,10 @@ final tiempoRealProvider = Provider<TiempoReal>((ref) {
 });
 
 /// Los cambios de unos módulos concretos, para que una pantalla se refresque.
-final cambiosProvider = StreamProvider.family<CambioEvento, String>((ref, modulos) {
+final cambiosProvider = StreamProvider.family<CambioEvento, String>((
+  ref,
+  modulos,
+) {
   final tiempoReal = ref.watch(tiempoRealProvider);
   unawaited(tiempoReal.conectar());
   return tiempoReal.de(modulos.split(','));
@@ -29,7 +32,11 @@ final cambiosProvider = StreamProvider.family<CambioEvento, String>((ref, modulo
 /// ```dart
 /// escucharCambios(ref, ['productos'], () => ref.invalidate(productosProvider));
 /// ```
-void escucharCambios(WidgetRef ref, List<String> modulos, VoidCallback alCambiar) {
+void escucharCambios(
+  WidgetRef ref,
+  List<String> modulos,
+  VoidCallback alCambiar,
+) {
   ref.listen(cambiosProvider(modulos.join(',')), (_, siguiente) {
     if (siguiente.hasValue) alCambiar();
   });

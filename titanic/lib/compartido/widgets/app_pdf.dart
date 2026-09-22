@@ -167,7 +167,8 @@ class _HojaPdfState extends State<_HojaPdf> {
           _Opcion(
             icono: Icons.print_outlined,
             titulo: 'Hoja A4',
-            nota: 'Impresora de oficina. Lleva el detalle completo y espacio '
+            nota:
+                'Impresora de oficina. Lleva el detalle completo y espacio '
                 'para firmar.',
             acento: widget.acento,
             cargando: _bajando == 'a4',
@@ -177,7 +178,8 @@ class _HojaPdfState extends State<_HojaPdf> {
           _Opcion(
             icono: Icons.receipt_long_outlined,
             titulo: 'Ticket 80 mm',
-            nota: 'Rollo termico del reparto. Mas corto, pensado para entregar '
+            nota:
+                'Rollo termico del reparto. Mas corto, pensado para entregar '
                 'en mano.',
             acento: widget.acento,
             cargando: _bajando == 'ticket',

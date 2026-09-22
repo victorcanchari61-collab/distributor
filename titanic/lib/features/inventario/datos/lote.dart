@@ -47,7 +47,8 @@ class Lote {
       diasParaVencer! <= diasAlertaVencimiento;
 
   /// Texto contra el que se busca en la lista.
-  String get buscable => '$codigo $producto ${lote ?? ''} $almacen'.toLowerCase();
+  String get buscable =>
+      '$codigo $producto ${lote ?? ''} $almacen'.toLowerCase();
 
   factory Lote.desdeJson(Map<String, dynamic> json) => Lote(
     capaId: json['capaId'] as int,

@@ -5,6 +5,7 @@ import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/presentaciones_uso.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_lineas_producto.dart';
 import '../../../compartido/widgets/app_panel_producto.dart';
@@ -24,13 +25,20 @@ import '../estado/compras_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
 class _FilaPago {
-  _FilaPago({required this.metodoPagoId, required this.metodoPago, required this.monto});
+  _FilaPago({
+    required this.metodoPagoId,
+    required this.metodoPago,
+    required this.monto,
+  });
 
   final int metodoPagoId;
   final String metodoPago;
   final double monto;
 
-  Map<String, dynamic> aCuerpo() => {'metodoPagoId': metodoPagoId, 'monto': monto};
+  Map<String, dynamic> aCuerpo() => {
+    'metodoPagoId': metodoPagoId,
+    'monto': monto,
+  };
 }
 
 /// Alta y edicion de una compra directa, sin orden previa.
@@ -48,13 +56,20 @@ class CompraFormulario extends ConsumerStatefulWidget {
 }
 
 class _CompraFormularioState extends ConsumerState<CompraFormulario> {
-  late final _serie = TextEditingController(text: widget.compra?.serieComprobante ?? '');
-  late final _numero = TextEditingController(text: widget.compra?.numeroComprobante ?? '');
-  late final _observacion = TextEditingController(text: widget.compra?.observacion ?? '');
+  late final _serie = TextEditingController(
+    text: widget.compra?.serieComprobante ?? '',
+  );
+  late final _numero = TextEditingController(
+    text: widget.compra?.numeroComprobante ?? '',
+  );
+  late final _observacion = TextEditingController(
+    text: widget.compra?.observacion ?? '',
+  );
 
   late int? _proveedorId = widget.compra?.proveedorId;
   late String? _proveedorNombre = widget.compra?.proveedor;
-  late String _tipoComprobante = widget.compra?.tipoComprobante ?? TipoComprobanteCompra.factura;
+  late String _tipoComprobante =
+      widget.compra?.tipoComprobante ?? TipoComprobanteCompra.factura;
   late String _formaPago = widget.compra?.formaPago ?? FormaPagoCompra.contado;
 
   final List<LineaDocumento> _lineas = [];
@@ -82,12 +97,15 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
           // Todas las del producto: el selector decide cuáles ofrece según el
           // uso, y una unidad que ya no se compra así sigue mostrándose (marcada)
           // en la línea guardada.
-          presentaciones: porId[l.productoId]?.presentaciones ?? const <Presentacion>[],
+          presentaciones:
+              porId[l.productoId]?.presentaciones ?? const <Presentacion>[],
           uso: UsoPresentacion.compra,
           presentacionId: l.presentacionId ?? 0,
           cantidad: l.cantidadPresentacion,
           // El costo se guarda por unidad base; aqui se edita por presentacion.
-          importe: l.cantidadPresentacion == 0 ? 0 : l.costoTotal / l.cantidadPresentacion,
+          importe: l.cantidadPresentacion == 0
+              ? 0
+              : l.costoTotal / l.cantidadPresentacion,
         ),
     ];
 
@@ -98,7 +116,11 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
 
   late final List<_FilaPago> _pagos = [
     for (final p in widget.compra?.pagos ?? const [])
-      _FilaPago(metodoPagoId: p.metodoPagoId, metodoPago: p.metodoPago, monto: p.monto),
+      _FilaPago(
+        metodoPagoId: p.metodoPagoId,
+        metodoPago: p.metodoPago,
+        monto: p.monto,
+      ),
   ];
 
   bool get _esNuevo => widget.compra == null;
@@ -124,11 +146,14 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
     setState(() {
       _errorProveedor = _proveedorId == null ? 'Elige el proveedor.' : null;
       _errorLineas = _lineas.isEmpty ? 'Agrega al menos un producto.' : null;
-      _errorPagos = _formaPago == FormaPagoCompra.contado && _totalPagado > _total + 0.001
+      _errorPagos =
+          _formaPago == FormaPagoCompra.contado && _totalPagado > _total + 0.001
           ? 'Lo pagado (S/ ${_totalPagado.toStringAsFixed(2)}) no puede superar el total.'
           : null;
     });
-    return _errorProveedor == null && _errorLineas == null && _errorPagos == null;
+    return _errorProveedor == null &&
+        _errorLineas == null &&
+        _errorPagos == null;
   }
 
   Future<void> _guardar() async {
@@ -146,13 +171,19 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
     final cuerpo = <String, dynamic>{
       'proveedorId': _proveedorId,
       'tipoComprobante': _tipoComprobante,
-      'serieComprobante': _serie.text.trim().isEmpty ? null : _serie.text.trim(),
-      'numeroComprobante': _numero.text.trim().isEmpty ? null : _numero.text.trim(),
+      'serieComprobante': _serie.text.trim().isEmpty
+          ? null
+          : _serie.text.trim(),
+      'numeroComprobante': _numero.text.trim().isEmpty
+          ? null
+          : _numero.text.trim(),
       'formaPago': _formaPago,
       'pagos': _formaPago == FormaPagoCompra.contado
           ? [for (final p in _pagos) p.aCuerpo()]
           : const [],
-      'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
+      'observacion': _observacion.text.trim().isEmpty
+          ? null
+          : _observacion.text.trim(),
       'detalle': [
         for (final f in _lineas)
           {
@@ -168,7 +199,9 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
       if (_esNuevo) {
         await ref.read(comprasProvider.notifier).crear(cuerpo);
       } else {
-        await ref.read(comprasProvider.notifier).actualizar(widget.compra!.id, cuerpo);
+        await ref
+            .read(comprasProvider.notifier)
+            .actualizar(widget.compra!.id, cuerpo);
       }
 
       navegador.pop();
@@ -195,8 +228,10 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
       items: activos,
       buscable: (p) => p.buscable,
       pistaBusqueda: 'Buscar por nombre o documento',
-      fila: (p) =>
-          Text(p.nombre, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      fila: (p) => Text(
+        p.nombre,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
     );
     if (elegido != null) {
       setState(() {
@@ -244,7 +279,9 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
       isScrollControlled: true,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Dimen.radioPanel),
+        ),
       ),
       builder: (context) {
         String? tipo;
@@ -254,12 +291,16 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
 
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            final metodosDelTipo = metodos.where((m) => m.tipo == tipo).toList();
+            final metodosDelTipo = metodos
+                .where((m) => m.tipo == tipo)
+                .toList();
             final totalPagado = _pagos.fold<double>(0, (n, p) => n + p.monto);
             final excedido = totalPagado > _total + 0.001;
 
             void agregar() {
-              final monto = double.tryParse(montoCtrl.text.trim().replaceAll(',', '.'));
+              final monto = double.tryParse(
+                montoCtrl.text.trim().replaceAll(',', '.'),
+              );
               if (metodoId == null) {
                 setSheetState(() => errorAgregar = 'Elige el método de pago.');
                 return;
@@ -283,7 +324,11 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
               }
               setSheetState(() {
                 _pagos.add(
-                  _FilaPago(metodoPagoId: metodoId!, metodoPago: metodoNombre, monto: monto),
+                  _FilaPago(
+                    metodoPagoId: metodoId!,
+                    metodoPago: metodoNombre,
+                    monto: monto,
+                  ),
                 );
                 tipo = null;
                 metodoId = null;
@@ -297,7 +342,8 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                 left: Dimen.espacio4,
                 right: Dimen.espacio4,
                 top: Dimen.espacio2,
-                bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
+                bottom:
+                    Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -325,17 +371,28 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                           Expanded(
                             child: Text(
                               pago.metodoPago,
-                              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                           Text(
                             'S/ ${pago.monto.toStringAsFixed(2)}',
-                            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           IconButton(
                             visualDensity: VisualDensity.compact,
-                            onPressed: () => setSheetState(() => _pagos.remove(pago)),
-                            icon: const Icon(Icons.close, size: 16, color: Colores.peligro),
+                            onPressed: () =>
+                                setSheetState(() => _pagos.remove(pago)),
+                            icon: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Colores.peligro,
+                            ),
                           ),
                         ],
                       ),
@@ -353,7 +410,8 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                     etiqueta: 'Tipo',
                     icono: Icons.category_outlined,
                     opciones: [
-                      for (final t in TipoMetodoPago.todos) Opcion(t, TipoMetodoPago.etiqueta(t)),
+                      for (final t in TipoMetodoPago.todos)
+                        Opcion(t, TipoMetodoPago.etiqueta(t)),
                     ],
                     onCambio: (v) => setSheetState(() {
                       tipo = v;
@@ -367,7 +425,9 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                     etiqueta: 'Método',
                     icono: Icons.payments_outlined,
                     habilitado: tipo != null,
-                    opciones: [for (final m in metodosDelTipo) Opcion(m.id, m.nombre)],
+                    opciones: [
+                      for (final m in metodosDelTipo) Opcion(m.id, m.nombre),
+                    ],
                     onCambio: (v) => setSheetState(() => metodoId = v),
                   ),
                   const SizedBox(height: Dimen.espacio3),
@@ -380,7 +440,9 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                           controlador: montoCtrl,
                           etiqueta: 'Monto',
                           icono: Icons.attach_money,
-                          tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+                          tipoTeclado: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                         ),
                       ),
                       const SizedBox(width: Dimen.espacio3),
@@ -421,7 +483,9 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
 
   @override
   Widget build(BuildContext context) {
-    _ponerLineasExistentes(ref.watch(productosProvider).valueOrNull ?? const <Producto>[]);
+    _ponerLineasExistentes(
+      ref.watch(productosProvider).valueOrNull ?? const <Producto>[],
+    );
 
     // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
     // acento del modulo. Sin esto los componentes compartidos y las hojas que
@@ -434,12 +498,18 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
             _esNuevo ? 'Nueva compra' : 'Editar ${widget.compra!.numero}',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             InkWell(
               onTap: _elegirProveedor,
@@ -453,14 +523,20 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                     size: 19,
                     color: Colores.tintaTenue,
                   ),
-                  suffixIcon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
+                  suffixIcon: const Icon(
+                    Icons.search,
+                    size: 18,
+                    color: Colores.tintaTenue,
+                  ),
                   constraints: const BoxConstraints(minHeight: Dimen.campoLg),
                 ),
                 child: Text(
                   _proveedorNombre ?? 'Toca para elegir',
                   style: TextStyle(
                     fontSize: 15,
-                    color: _proveedorNombre == null ? Colores.tintaTenue : Colores.tinta,
+                    color: _proveedorNombre == null
+                        ? Colores.tintaTenue
+                        : Colores.tinta,
                   ),
                 ),
               ),
@@ -475,8 +551,9 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                 for (final t in TipoComprobanteCompra.todos)
                   Opcion(t, TipoComprobanteCompra.etiqueta(t)),
               ],
-              onCambio: (v) =>
-                  setState(() => _tipoComprobante = v ?? TipoComprobanteCompra.factura),
+              onCambio: (v) => setState(
+                () => _tipoComprobante = v ?? TipoComprobanteCompra.factura,
+              ),
             ),
             const SizedBox(height: Dimen.espacio4),
 
@@ -516,9 +593,11 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
             const SizedBox(height: Dimen.espacio5),
 
             AppPanelProducto(
-              productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
-                  .where((p) => p.activo && p.controlaStock)
-                  .toList(),
+              productos:
+                  (ref.watch(productosProvider).valueOrNull ??
+                          const <Producto>[])
+                      .where((p) => p.activo && p.controlaStock)
+                      .toList(),
               cargando: ref.watch(productosProvider).isLoading,
               paraVenta: false,
               uso: UsoPresentacion.compra,
@@ -559,7 +638,11 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
            */
             const Text(
               'Pago',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
+              ),
             ),
             const SizedBox(height: Dimen.espacio3),
 
@@ -584,7 +667,9 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                 decoration: BoxDecoration(
                   color: Colores.fondo,
                   borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                  border: _errorPagos != null ? Border.all(color: Colores.peligro) : null,
+                  border: _errorPagos != null
+                      ? Border.all(color: Colores.peligro)
+                      : null,
                 ),
                 child: Row(
                   children: [
@@ -596,12 +681,16 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: _errorPagos != null ? Colores.peligro : Colores.tinta,
+                          color: _errorPagos != null
+                              ? Colores.peligro
+                              : Colores.tinta,
                         ),
                       ),
                     ),
                     AppBoton(
-                      texto: _pagos.isEmpty ? 'Agregar pago' : 'Gestionar pagos',
+                      texto: _pagos.isEmpty
+                          ? 'Agregar pago'
+                          : 'Gestionar pagos',
                       variante: BotonVariante.secundario,
                       expandido: false,
                       onPressed: _gestionarPagos,
@@ -611,7 +700,10 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
               ),
               if (_errorPagos != null) ...[
                 const SizedBox(height: Dimen.espacio1),
-                Text(_errorPagos!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
+                Text(
+                  _errorPagos!,
+                  style: const TextStyle(fontSize: 12, color: Colores.peligro),
+                ),
               ],
             ] else
               const Text(
@@ -621,16 +713,11 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
             const SizedBox(height: Dimen.espacio4),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(
-              texto: _esNuevo ? 'Registrar compra' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

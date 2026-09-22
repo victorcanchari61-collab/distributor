@@ -49,11 +49,16 @@ Future<void> mostrarModulo(BuildContext context, MenuGrupo grupo) {
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     // La hoja cuelga del Navigator y no ve el acento de la pantalla que la
     // abrió: aquí lleva el del módulo, que es de lo que trata.
-    builder: (_) => Acento(color: grupo.color, child: _HojaModulo(grupo: grupo)),
+    builder: (_) => Acento(
+      color: grupo.color,
+      child: _HojaModulo(grupo: grupo),
+    ),
   );
 }
 
@@ -68,14 +73,17 @@ class _HojaModulo extends ConsumerWidget {
     // modelos de config— y sin decir cual, la lista sale como List<Object>.
     final List<cfg.SubmoduloCatalogo> catalogo =
         ref.watch(catalogoPermisosProvider).valueOrNull ?? const [];
-    final pendientes = ref.watch(_misPendientesProvider).valueOrNull ?? const <String>{};
+    final pendientes =
+        ref.watch(_misPendientesProvider).valueOrNull ?? const <String>{};
 
     final acciones = <String, List<String>>{
       for (final c in catalogo) c.submodulo: c.acciones,
     };
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -105,7 +113,10 @@ class _HojaModulo extends ConsumerWidget {
                       ),
                       const Text(
                         'Lo que puedes hacer aquí. Lo que no, se pide.',
-                        style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colores.tintaSuave,
+                        ),
                       ),
                     ],
                   ),
@@ -125,7 +136,8 @@ class _HojaModulo extends ConsumerWidget {
                 Dimen.espacio5,
               ),
               itemCount: grupo.items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: Dimen.espacio3),
+              separatorBuilder: (_, _) =>
+                  const SizedBox(height: Dimen.espacio3),
               itemBuilder: (context, i) => _Vista(
                 item: grupo.items[i],
                 acciones: acciones[grupo.items[i].id] ?? const [],
@@ -246,10 +258,9 @@ class _ChipState extends ConsumerState<_Chip> {
     final mensajero = Aviso.de(context);
 
     try {
-      await ref.read(solicitudApiProvider).solicitar(
-        submodulo: widget.submodulo,
-        accion: widget.accion,
-      );
+      await ref
+          .read(solicitudApiProvider)
+          .solicitar(submodulo: widget.submodulo, accion: widget.accion);
       setState(() => _recienPedida = true);
       mensajero.mostrar('Pedido. Un administrador lo verá en su bandeja.');
     } on ApiExcepcion catch (e) {

@@ -84,8 +84,7 @@ class RutasPagina extends ConsumerWidget {
       context,
       activos: ref.read(filtrosRutasActivosProvider),
       onLimpiar: () {
-        ref.read(estadoFiltroProvider.notifier).state =
-            FiltroEstado.activos;
+        ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
       },
       grupos: [
         Consumer(
@@ -105,12 +104,16 @@ class RutasPagina extends ConsumerWidget {
   }
 
   Future<void> _abrirFormulario(BuildContext context, Ruta? ruta) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => RutaFormulario(ruta: ruta)),
-    );
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => RutaFormulario(ruta: ruta)));
   }
 
-  Future<void> _cambiarEstado(BuildContext context, WidgetRef ref, Ruta ruta) async {
+  Future<void> _cambiarEstado(
+    BuildContext context,
+    WidgetRef ref,
+    Ruta ruta,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: '${ruta.activo ? 'Desactivar' : 'Activar'} ${ruta.nombre}',
@@ -125,7 +128,9 @@ class RutasPagina extends ConsumerWidget {
     final mensajero = Aviso.de(context);
     try {
       await ref.read(rutasProvider.notifier).cambiarEstado(ruta);
-      mensajero.mostrar(ruta.activo ? '${ruta.nombre} desactivada' : '${ruta.nombre} activada');
+      mensajero.mostrar(
+        ruta.activo ? '${ruta.nombre} desactivada' : '${ruta.nombre} activada',
+      );
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -208,7 +213,11 @@ class _TarjetaRuta extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

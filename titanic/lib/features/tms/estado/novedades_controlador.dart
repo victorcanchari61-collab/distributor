@@ -5,7 +5,9 @@ import '../../auth/estado/auth_controlador.dart';
 import '../datos/novedad.dart';
 import '../datos/novedad_api.dart';
 
-final novedadApiProvider = Provider((ref) => NovedadApi(ref.watch(clienteApiProvider)));
+final novedadApiProvider = Provider(
+  (ref) => NovedadApi(ref.watch(clienteApiProvider)),
+);
 
 // --- Motivos ---
 
@@ -14,11 +16,14 @@ final busquedaMotivosProvider = StateProvider.autoDispose((ref) => '');
 /// El catálogo de motivos, para quien lo administra.
 class MotivosNovedadControlador extends AsyncNotifier<List<MotivoNovedad>> {
   @override
-  Future<List<MotivoNovedad>> build() => ref.watch(novedadApiProvider).motivos();
+  Future<List<MotivoNovedad>> build() =>
+      ref.watch(novedadApiProvider).motivos();
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(novedadApiProvider).motivos());
+    state = await AsyncValue.guard(
+      () => ref.read(novedadApiProvider).motivos(),
+    );
   }
 
   Future<void> guardar({int? id, required Map<String, dynamic> cuerpo}) async {
@@ -51,16 +56,19 @@ final filtrosMotivosActivosProvider = Provider.autoDispose(
   (ref) => ref.watch(estadoFiltroProvider) == FiltroEstado.activos ? 0 : 1,
 );
 
-final motivosNovedadFiltradosProvider = Provider.autoDispose<List<MotivoNovedad>>((ref) {
-  final todos = ref.watch(motivosNovedadProvider).valueOrNull ?? const <MotivoNovedad>[];
-  final texto = ref.watch(busquedaMotivosProvider).trim().toLowerCase();
-  final estado = ref.watch(estadoFiltroProvider);
+final motivosNovedadFiltradosProvider =
+    Provider.autoDispose<List<MotivoNovedad>>((ref) {
+      final todos =
+          ref.watch(motivosNovedadProvider).valueOrNull ??
+          const <MotivoNovedad>[];
+      final texto = ref.watch(busquedaMotivosProvider).trim().toLowerCase();
+      final estado = ref.watch(estadoFiltroProvider);
 
-  return todos
-      .where((m) => pasaEstado(m.activo, estado))
-      .where((m) => texto.isEmpty || m.buscable.contains(texto))
-      .toList();
-});
+      return todos
+          .where((m) => pasaEstado(m.activo, estado))
+          .where((m) => texto.isEmpty || m.buscable.contains(texto))
+          .toList();
+    });
 
 /// Los motivos activos, para elegir al entregar un pedido.
 ///
@@ -75,9 +83,15 @@ final opcionesMotivoProvider = FutureProvider.autoDispose<List<MotivoNovedad>>(
 final busquedaNovedadesProvider = StateProvider.autoDispose((ref) => '');
 
 /// Filtros propios de novedades. Null es "todos".
-final estadoNovedadFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
-final motivoNovedadFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
-final tipoNovedadFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+final estadoNovedadFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final motivoNovedadFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+final tipoNovedadFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
 final filtrosNovedadesActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
@@ -94,7 +108,9 @@ class NovedadesControlador extends AsyncNotifier<List<Novedad>> {
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(novedadApiProvider).novedades());
+    state = await AsyncValue.guard(
+      () => ref.read(novedadApiProvider).novedades(),
+    );
   }
 
   /// El encargado cuenta lo que volvió: llegó completo (RECIBIDA) o faltó algo.
@@ -109,11 +125,14 @@ class NovedadesControlador extends AsyncNotifier<List<Novedad>> {
   }
 }
 
-final novedadesProvider = AsyncNotifierProvider<NovedadesControlador, List<Novedad>>(
-  NovedadesControlador.new,
-);
+final novedadesProvider =
+    AsyncNotifierProvider<NovedadesControlador, List<Novedad>>(
+      NovedadesControlador.new,
+    );
 
-final resumenNovedadesProvider = FutureProvider.autoDispose<ResumenNovedades>((ref) {
+final resumenNovedadesProvider = FutureProvider.autoDispose<ResumenNovedades>((
+  ref,
+) {
   // Atado al listado: al revisar una novedad, los contadores se rehacen solos.
   ref.watch(novedadesProvider);
   return ref.watch(novedadApiProvider).resumen();
@@ -132,7 +151,9 @@ final motivosDeNovedadesProvider = Provider.autoDispose<List<String>>((ref) {
 /// El orden no viaja: el natural del servidor es el mismo de la pantalla, de la
 /// más nueva a la más vieja. Sin filtro de estado el servidor también deja
 /// fuera las anuladas, igual que [novedadesFiltradasProvider].
-final consultaNovedadesProvider = Provider.autoDispose<Map<String, dynamic>>((ref) {
+final consultaNovedadesProvider = Provider.autoDispose<Map<String, dynamic>>((
+  ref,
+) {
   final estado = ref.watch(estadoNovedadFiltroProvider);
   final motivo = ref.watch(motivoNovedadFiltroProvider);
   final tipo = ref.watch(tipoNovedadFiltroProvider);
@@ -162,7 +183,11 @@ final novedadesFiltradasProvider = Provider.autoDispose<List<Novedad>>((ref) {
 
   return todas
       // Las anuladas no cuentan: solo salen si se piden expresamente.
-      .where((n) => estado == null ? n.estado != EstadoNovedad.anulada : n.estado == estado)
+      .where(
+        (n) => estado == null
+            ? n.estado != EstadoNovedad.anulada
+            : n.estado == estado,
+      )
       .where((n) => motivo == null || n.motivo == motivo)
       .where((n) => tipo == null || n.tipo == tipo)
       .where((n) => texto.isEmpty || n.buscable.contains(texto))

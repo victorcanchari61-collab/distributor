@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
@@ -20,15 +20,20 @@ class MetodoPagoFormulario extends ConsumerStatefulWidget {
   final MetodoPago? metodo;
 
   @override
-  ConsumerState<MetodoPagoFormulario> createState() => _MetodoPagoFormularioState();
+  ConsumerState<MetodoPagoFormulario> createState() =>
+      _MetodoPagoFormularioState();
 }
 
 class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
   late final _nombre = TextEditingController(text: widget.metodo?.nombre ?? '');
   late final _banco = TextEditingController(text: widget.metodo?.banco ?? '');
-  late final _numeroCuenta = TextEditingController(text: widget.metodo?.numeroCuenta ?? '');
+  late final _numeroCuenta = TextEditingController(
+    text: widget.metodo?.numeroCuenta ?? '',
+  );
   late final _cci = TextEditingController(text: widget.metodo?.cci ?? '');
-  late final _titular = TextEditingController(text: widget.metodo?.titular ?? '');
+  late final _titular = TextEditingController(
+    text: widget.metodo?.titular ?? '',
+  );
 
   late String _tipo = widget.metodo?.tipo ?? TipoMetodoPago.efectivo;
 
@@ -53,12 +58,18 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
   bool _validar() {
     setState(() {
       _errorNombre = _nombre.text.trim().isEmpty ? 'Ingresa el nombre.' : null;
-      _errorBanco = _esTransferencia && _banco.text.trim().isEmpty ? 'Indica el banco.' : null;
+      _errorBanco = _esTransferencia && _banco.text.trim().isEmpty
+          ? 'Indica el banco.'
+          : null;
       _errorNumeroCuenta = _tieneCuenta && _numeroCuenta.text.trim().isEmpty
-          ? (_esTransferencia ? 'Indica el número de cuenta.' : 'Indica el número de celular.')
+          ? (_esTransferencia
+                ? 'Indica el número de cuenta.'
+                : 'Indica el número de celular.')
           : null;
     });
-    return _errorNombre == null && _errorBanco == null && _errorNumeroCuenta == null;
+    return _errorNombre == null &&
+        _errorBanco == null &&
+        _errorNumeroCuenta == null;
   }
 
   Future<void> _guardar() async {
@@ -76,20 +87,30 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
     final cuerpo = <String, dynamic>{
       'nombre': _nombre.text.trim(),
       'tipo': _tipo,
-      'banco': _esTransferencia && _banco.text.trim().isNotEmpty ? _banco.text.trim() : null,
+      'banco': _esTransferencia && _banco.text.trim().isNotEmpty
+          ? _banco.text.trim()
+          : null,
       'numeroCuenta': _tieneCuenta && _numeroCuenta.text.trim().isNotEmpty
           ? _numeroCuenta.text.trim()
           : null,
-      'cci': _esTransferencia && _cci.text.trim().isNotEmpty ? _cci.text.trim() : null,
-      'titular': _tieneCuenta && _titular.text.trim().isNotEmpty ? _titular.text.trim() : null,
+      'cci': _esTransferencia && _cci.text.trim().isNotEmpty
+          ? _cci.text.trim()
+          : null,
+      'titular': _tieneCuenta && _titular.text.trim().isNotEmpty
+          ? _titular.text.trim()
+          : null,
       if (!_esNuevo) 'activo': widget.metodo!.activo,
     };
 
     try {
-      await ref.read(metodosPagoProvider.notifier).guardar(id: widget.metodo?.id, cuerpo: cuerpo);
+      await ref
+          .read(metodosPagoProvider.notifier)
+          .guardar(id: widget.metodo?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.mostrar(_esNuevo ? 'Método de pago creado' : 'Método de pago actualizado');
+      mensajero.mostrar(
+        _esNuevo ? 'Método de pago creado' : 'Método de pago actualizado',
+      );
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;
@@ -111,12 +132,18 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
             _esNuevo ? 'Nuevo método de pago' : 'Editar método de pago',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             AppSelector<String>(
               valor: _tipo,
@@ -124,9 +151,11 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
               icono: Icons.category_outlined,
               habilitado: !_guardando,
               opciones: [
-                for (final t in TipoMetodoPago.todos) Opcion(t, TipoMetodoPago.etiqueta(t)),
+                for (final t in TipoMetodoPago.todos)
+                  Opcion(t, TipoMetodoPago.etiqueta(t)),
               ],
-              onCambio: (v) => setState(() => _tipo = v ?? TipoMetodoPago.efectivo),
+              onCambio: (v) =>
+                  setState(() => _tipo = v ?? TipoMetodoPago.efectivo),
             ),
             const SizedBox(height: Dimen.espacio4),
 
@@ -155,7 +184,9 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
             if (_tieneCuenta) ...[
               AppCampo(
                 controlador: _numeroCuenta,
-                etiqueta: _esTransferencia ? 'Número de cuenta' : 'Número de celular',
+                etiqueta: _esTransferencia
+                    ? 'Número de cuenta'
+                    : 'Número de celular',
                 icono: Icons.numbers_outlined,
                 error: _errorNumeroCuenta,
                 habilitado: !_guardando,
@@ -188,16 +219,11 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
             ],
 
             const SizedBox(height: Dimen.espacio2),
-            AppBoton(
-              texto: _esNuevo ? 'Crear método' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

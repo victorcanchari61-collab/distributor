@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_lineas_producto.dart';
 import '../../../compartido/widgets/app_panel_producto.dart';
@@ -22,10 +22,12 @@ class TransferenciaFormulario extends ConsumerStatefulWidget {
   const TransferenciaFormulario({super.key});
 
   @override
-  ConsumerState<TransferenciaFormulario> createState() => _TransferenciaFormularioState();
+  ConsumerState<TransferenciaFormulario> createState() =>
+      _TransferenciaFormularioState();
 }
 
-class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulario> {
+class _TransferenciaFormularioState
+    extends ConsumerState<TransferenciaFormulario> {
   final _observacion = TextEditingController();
 
   int? _origenId;
@@ -49,10 +51,14 @@ class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulari
       _errorOrigen = _origenId == null ? 'Elige el almacén de origen.' : null;
       _errorDestino = _destinoId == null
           ? 'Elige el almacén de destino.'
-          : (_destinoId == _origenId ? 'Debe ser distinto del de origen.' : null);
+          : (_destinoId == _origenId
+                ? 'Debe ser distinto del de origen.'
+                : null);
       _errorLineas = _lineas.isEmpty ? 'Agrega al menos un producto.' : null;
     });
-    return _errorOrigen == null && _errorDestino == null && _errorLineas == null;
+    return _errorOrigen == null &&
+        _errorDestino == null &&
+        _errorLineas == null;
   }
 
   Future<void> _guardar() async {
@@ -70,7 +76,9 @@ class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulari
     final cuerpo = <String, dynamic>{
       'almacenOrigenId': _origenId,
       'almacenDestinoId': _destinoId,
-      'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
+      'observacion': _observacion.text.trim().isEmpty
+          ? null
+          : _observacion.text.trim(),
       'detalle': [
         for (final f in _lineas)
           {
@@ -136,19 +144,27 @@ class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulari
             'Nueva transferencia',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             AppSelector<int>(
               valor: _origenId,
               etiqueta: 'Almacén de origen',
               icono: Icons.warehouse_outlined,
               error: _errorOrigen,
-              opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
+              opciones: [
+                for (final a in almacenes) Opcion<int>(a.id, a.nombre),
+              ],
               onCambio: (v) => setState(() => _origenId = v),
             ),
             const SizedBox(height: Dimen.espacio4),
@@ -184,9 +200,11 @@ class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulari
             const SizedBox(height: Dimen.espacio5),
 
             AppPanelProducto(
-              productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
-                  .where((p) => p.activo && p.controlaStock)
-                  .toList(),
+              productos:
+                  (ref.watch(productosProvider).valueOrNull ??
+                          const <Producto>[])
+                      .where((p) => p.activo && p.controlaStock)
+                      .toList(),
               cargando: ref.watch(productosProvider).isLoading,
               paraVenta: false,
               habilitado: !_guardando,
@@ -207,12 +225,10 @@ class _TransferenciaFormularioState extends ConsumerState<TransferenciaFormulari
             ),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(texto: 'Registrar transferencia', cargando: _guardando, onPressed: _guardar),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              cargando: _guardando,
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

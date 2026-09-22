@@ -146,7 +146,8 @@ class _TarjetaLote extends StatelessWidget {
   ({String texto, EtiquetaTono tono}) get _estado {
     final dias = lote.diasParaVencer;
     if (dias == null) return (texto: 'Sin fecha', tono: EtiquetaTono.neutral);
-    if (dias < 0) return (texto: 'Vencido hace ${-dias} días', tono: EtiquetaTono.peligro);
+    if (dias < 0)
+      return (texto: 'Vencido hace ${-dias} días', tono: EtiquetaTono.peligro);
     if (dias <= diasAlertaVencimiento) {
       return (texto: 'Vence en $dias días', tono: EtiquetaTono.aviso);
     }
@@ -167,11 +168,12 @@ class _TarjetaLote extends StatelessWidget {
         estado.texto,
         widget: AppEtiqueta(estado.texto, tono: estado.tono),
       ),
+      CampoDetalle('Stock', '${lote.cantidadDisponible} ${lote.unidadBase}'),
       CampoDetalle(
-        'Stock',
-        '${lote.cantidadDisponible} ${lote.unidadBase}',
+        'Valorizado',
+        'S/ ${lote.valor.toStringAsFixed(2)}',
+        enTarjeta: false,
       ),
-      CampoDetalle('Valorizado', 'S/ ${lote.valor.toStringAsFixed(2)}', enTarjeta: false),
       CampoDetalle(
         'Costo unitario',
         'S/ ${lote.costoUnitario.toStringAsFixed(2)}',

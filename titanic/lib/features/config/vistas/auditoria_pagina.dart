@@ -24,10 +24,17 @@ class AuditoriaPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final todos = ref.watch(auditoriaProvider).valueOrNull ?? const <RegistroAuditoria>[];
-    final creados = todos.where((r) => r.accion == AccionAuditoria.creado).length;
-    final actualizados = todos.where((r) => r.accion == AccionAuditoria.actualizado).length;
-    final eliminados = todos.where((r) => r.accion == AccionAuditoria.eliminado).length;
+    final todos =
+        ref.watch(auditoriaProvider).valueOrNull ?? const <RegistroAuditoria>[];
+    final creados = todos
+        .where((r) => r.accion == AccionAuditoria.creado)
+        .length;
+    final actualizados = todos
+        .where((r) => r.accion == AccionAuditoria.actualizado)
+        .length;
+    final eliminados = todos
+        .where((r) => r.accion == AccionAuditoria.eliminado)
+        .length;
     final accionFiltro = ref.watch(accionAuditoriaFiltroProvider);
     final usuarioFiltro = ref.watch(usuarioAuditoriaFiltroProvider);
     final entidadFiltro = ref.watch(entidadAuditoriaFiltroProvider);
@@ -70,7 +77,8 @@ class AuditoriaPagina extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           BotonFiltros(
-            activos: (accionFiltro == null ? 0 : 1) +
+            activos:
+                (accionFiltro == null ? 0 : 1) +
                 (usuarioFiltro == null ? 0 : 1) +
                 (entidadFiltro == null ? 0 : 1),
             color: color,
@@ -95,14 +103,16 @@ class AuditoriaPagina extends ConsumerWidget {
             ),
         ],
       ),
-      fila: (context, registro) => _TarjetaAuditoria(registro: registro, color: color),
+      fila: (context, registro) =>
+          _TarjetaAuditoria(registro: registro, color: color),
     );
   }
 
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
     return mostrarFiltros(
       context,
-      activos: (ref.read(accionAuditoriaFiltroProvider) == null ? 0 : 1) +
+      activos:
+          (ref.read(accionAuditoriaFiltroProvider) == null ? 0 : 1) +
           (ref.read(usuarioAuditoriaFiltroProvider) == null ? 0 : 1) +
           (ref.read(entidadAuditoriaFiltroProvider) == null ? 0 : 1),
       onLimpiar: () {
@@ -121,7 +131,8 @@ class AuditoriaPagina extends ConsumerWidget {
               OpcionFiltro(AccionAuditoria.actualizado, 'Actualizados'),
               OpcionFiltro(AccionAuditoria.eliminado, 'Eliminados'),
             ],
-            onCambio: (v) => ref.read(accionAuditoriaFiltroProvider.notifier).state = v,
+            onCambio: (v) =>
+                ref.read(accionAuditoriaFiltroProvider.notifier).state = v,
           ),
         ),
         Consumer(
@@ -222,7 +233,10 @@ class _TarjetaAuditoria extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final insignia = AppEtiqueta(_etiquetaAccion(registro.accion), tono: _tonoAccion(registro.accion));
+    final insignia = AppEtiqueta(
+      _etiquetaAccion(registro.accion),
+      tono: _tonoAccion(registro.accion),
+    );
 
     return AppTarjetaRegistro(
       icono: Icons.history_outlined,
@@ -235,7 +249,8 @@ class _TarjetaAuditoria extends StatelessWidget {
         icono: Icons.history_outlined,
         color: color,
         titulo: '${registro.entidad} #${registro.entidadId}',
-        subtitulo: '${_fechaHora(registro.fecha.toLocal())} · ${registro.usuario}',
+        subtitulo:
+            '${_fechaHora(registro.fecha.toLocal())} · ${registro.usuario}',
         insignia: insignia,
         campos: _campos,
         contenidoExtra: _cambios,

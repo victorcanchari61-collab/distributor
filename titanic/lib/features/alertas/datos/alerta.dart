@@ -1,6 +1,7 @@
 /// Algo que conviene que alguien mire: stock bajo, un lote por vencer, una
 /// compra sin recibir hace mucho... Se calcula en el backend al pedirla, no
-/// se guarda en ningun lado, asi que nunca hay que marcarla como leida.
+/// se guarda en ningun lado — lo unico que se guarda, aparte y solo en este
+/// dispositivo, es si ya se marco como leida (ver `AlertasLeidasAlmacen`).
 class Alerta {
   const Alerta({
     required this.id,
@@ -32,7 +33,9 @@ class Alerta {
     titulo: json['titulo'] as String? ?? '',
     detalle: json['detalle'] as String? ?? '',
     ruta: json['ruta'] as String?,
-    fecha: json['fecha'] == null ? null : DateTime.tryParse(json['fecha'] as String),
+    fecha: json['fecha'] == null
+        ? null
+        : DateTime.tryParse(json['fecha'] as String),
   );
 }
 

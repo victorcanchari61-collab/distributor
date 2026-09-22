@@ -97,23 +97,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Pantallas ya construidas.
       GoRoute(
         path: ClientesPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: ClientesPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: ClientesPagina()),
       ),
       GoRoute(
         path: ProveedoresPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: ProveedoresPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: ProveedoresPagina()),
       ),
       GoRoute(
         path: ProductosPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: ProductosPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: ProductosPagina()),
       ),
       GoRoute(
         path: EmpleadosPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: EmpleadosPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: EmpleadosPagina()),
       ),
       GoRoute(
         path: AlmacenesPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: AlmacenesPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: AlmacenesPagina()),
       ),
       GoRoute(
         path: StockPagina.ruta,
@@ -121,7 +126,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: KardexPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: KardexPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: KardexPagina()),
       ),
       GoRoute(
         path: LotesPagina.ruta,
@@ -129,7 +135,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: VisitasPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: VisitasPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: VisitasPagina()),
       ),
       GoRoute(
         path: DevolucionesPagina.ruta,
@@ -138,7 +145,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: UsuariosPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: UsuariosPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: UsuariosPagina()),
       ),
       GoRoute(
         path: RolesPagina.ruta,
@@ -146,83 +154,103 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: EmpresasPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: EmpresasPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: EmpresasPagina()),
       ),
       GoRoute(
         path: MetodosPagoPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: MetodosPagoPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: MetodosPagoPagina()),
       ),
       GoRoute(
         path: OrdenesCompraPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: OrdenesCompraPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: OrdenesCompraPagina()),
       ),
       GoRoute(
         path: MisComprasPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: MisComprasPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: MisComprasPagina()),
       ),
       GoRoute(
         path: RecepcionesPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: RecepcionesPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: RecepcionesPagina()),
       ),
       GoRoute(
         path: AjustesPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: AjustesPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: AjustesPagina()),
       ),
       GoRoute(
         path: TransferenciasPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: TransferenciasPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: TransferenciasPagina()),
       ),
       GoRoute(
         path: PrestamosPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: PrestamosPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: PrestamosPagina()),
       ),
       GoRoute(
         path: ConteosPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: ConteosPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: ConteosPagina()),
       ),
       GoRoute(
         path: ListasPreciosPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: ListasPreciosPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: ListasPreciosPagina()),
       ),
       GoRoute(
         path: AccesosPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: AccesosPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: AccesosPagina()),
       ),
       GoRoute(
         path: AuditoriaPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: AuditoriaPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: AuditoriaPagina()),
       ),
       GoRoute(
         path: PedidosPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: PedidosPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: PedidosPagina()),
       ),
       GoRoute(
         path: NotasVentaPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: NotasVentaPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: NotasVentaPagina()),
       ),
       GoRoute(
         path: CuentasPorCobrarPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: CuentasPorCobrarPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: CuentasPorCobrarPagina()),
       ),
       GoRoute(
         path: CuentasPorPagarPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: CuentasPorPagarPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: CuentasPorPagarPagina()),
       ),
       GoRoute(
         path: MisCobrosPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: MisCobrosPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: MisCobrosPagina()),
       ),
       GoRoute(
         path: MisGananciasPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: MisGananciasPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: MisGananciasPagina()),
       ),
       GoRoute(
         path: ArqueoPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: ArqueoPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: ArqueoPagina()),
       ),
       GoRoute(
         path: MercadosPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: MercadosPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: MercadosPagina()),
       ),
       GoRoute(
         path: RutasPagina.ruta,
@@ -234,19 +262,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: ConductoresPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: ConductoresPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: ConductoresPagina()),
       ),
       GoRoute(
         path: DespachosPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: DespachosPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: DespachosPagina()),
       ),
       GoRoute(
         path: NovedadesPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: NovedadesPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: NovedadesPagina()),
       ),
       GoRoute(
         path: MotivosNovedadPagina.ruta,
-        builder: (context, estado) => const PuertaPermiso(child: MotivosNovedadPagina()),
+        builder: (context, estado) =>
+            const PuertaPermiso(child: MotivosNovedadPagina()),
       ),
 
       // Los cinco dashboards: cada uno con su propio permiso (dashboard.*).

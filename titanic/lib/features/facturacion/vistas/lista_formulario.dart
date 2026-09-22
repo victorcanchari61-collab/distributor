@@ -26,7 +26,9 @@ Future<ListaPrecio?> mostrarFormularioLista(
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     builder: (context) {
       var guardando = false;
@@ -37,7 +39,9 @@ Future<ListaPrecio?> mostrarFormularioLista(
         builder: (context, setSheetState) {
           Future<void> guardar() async {
             setSheetState(() {
-              errorNombre = nombreCtrl.text.trim().isEmpty ? 'Ingresa el nombre.' : null;
+              errorNombre = nombreCtrl.text.trim().isEmpty
+                  ? 'Ingresa el nombre.'
+                  : null;
             });
             if (errorNombre != null) return;
 
@@ -49,17 +53,23 @@ Future<ListaPrecio?> mostrarFormularioLista(
             final navegador = Navigator.of(context);
             final cuerpo = <String, dynamic>{
               'nombre': nombreCtrl.text.trim(),
-              'descripcion': descripcionCtrl.text.trim().isEmpty ? null : descripcionCtrl.text.trim(),
+              'descripcion': descripcionCtrl.text.trim().isEmpty
+                  ? null
+                  : descripcionCtrl.text.trim(),
               if (esNueva) 'esPredeterminada': false,
               if (!esNueva) 'activo': lista.activo,
             };
 
             try {
               if (esNueva) {
-                final creada = await ref.read(listasPrecioProvider.notifier).crear(cuerpo);
+                final creada = await ref
+                    .read(listasPrecioProvider.notifier)
+                    .crear(cuerpo);
                 navegador.pop(creada);
               } else {
-                await ref.read(listasPrecioProvider.notifier).actualizar(lista.id, cuerpo);
+                await ref
+                    .read(listasPrecioProvider.notifier)
+                    .actualizar(lista.id, cuerpo);
                 navegador.pop();
               }
             } on ApiExcepcion catch (e) {
@@ -83,7 +93,11 @@ Future<ListaPrecio?> mostrarFormularioLista(
               children: [
                 Text(
                   esNueva ? 'Nueva lista de precios' : 'Editar lista',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colores.tinta,
+                  ),
                 ),
                 const SizedBox(height: Dimen.espacio4),
                 if (error != null) ...[

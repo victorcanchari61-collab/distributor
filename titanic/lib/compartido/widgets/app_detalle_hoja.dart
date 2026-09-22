@@ -16,10 +16,12 @@ Future<void> mostrarDetalle(
   required String titulo,
   String? subtitulo,
   Widget? insignia,
+
   /// El estado, que va como una fila mas al final y no pegado al titulo.
   Widget? estado,
   required List<CampoDetalle> campos,
   List<Widget> acciones = const [],
+
   /// Contenido libre despues de los campos, como las tarjetas de producto de
   /// una compra: no cabe en el formato etiqueta/valor de [CampoDetalle].
   List<Widget> contenidoExtra = const [],

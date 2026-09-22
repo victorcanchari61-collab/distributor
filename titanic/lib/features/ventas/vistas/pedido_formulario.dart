@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/presentaciones_uso.dart';
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_campo_cliente.dart';
 import '../../../compartido/widgets/app_lineas_producto.dart';
@@ -36,12 +36,15 @@ class PedidoFormulario extends ConsumerStatefulWidget {
 }
 
 class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
-  late final _observacion = TextEditingController(text: widget.pedido?.observacion ?? '');
+  late final _observacion = TextEditingController(
+    text: widget.pedido?.observacion ?? '',
+  );
 
   late int? _clienteId = widget.pedido?.clienteId;
   late String? _clienteNombre = widget.pedido?.cliente;
   late final int? _listaPrecioId = widget.pedido?.listaPrecioId;
-  late String _condicionPago = widget.pedido?.condicionPago ?? CondicionPago.contado;
+  late String _condicionPago =
+      widget.pedido?.condicionPago ?? CondicionPago.contado;
   late bool _reservaStock = widget.pedido?.reservaStock ?? false;
   late int? _almacenReservaId = widget.pedido?.almacenId;
 
@@ -70,7 +73,8 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
           // Todas las del producto: el selector decide cuáles ofrece según el
           // uso, y una unidad que ya no se vende así sigue mostrándose (marcada)
           // en la línea guardada.
-          presentaciones: porId[l.productoId]?.presentaciones ?? const <Presentacion>[],
+          presentaciones:
+              porId[l.productoId]?.presentaciones ?? const <Presentacion>[],
           uso: UsoPresentacion.venta,
           presentacionId: l.presentacionId ?? 0,
           cantidad: l.cantidadPresentacion,
@@ -139,9 +143,13 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
     setState(() {
       _errorCliente = _clienteId == null ? 'Elige el cliente.' : null;
       _errorLineas = _lineas.isEmpty ? 'Agrega al menos un producto.' : null;
-      _errorAlmacen = _reservaStock && _almacenReservaId == null ? 'Elige el almacén.' : null;
+      _errorAlmacen = _reservaStock && _almacenReservaId == null
+          ? 'Elige el almacén.'
+          : null;
     });
-    return _errorCliente == null && _errorLineas == null && _errorAlmacen == null;
+    return _errorCliente == null &&
+        _errorLineas == null &&
+        _errorAlmacen == null;
   }
 
   Future<void> _guardar() async {
@@ -160,7 +168,9 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
       'clienteId': _clienteId,
       'listaPrecioId': _listaPrecioId,
       'condicionPago': _condicionPago,
-      'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
+      'observacion': _observacion.text.trim().isEmpty
+          ? null
+          : _observacion.text.trim(),
       'reservaStock': _reservaStock,
       'almacenId': _reservaStock ? _almacenReservaId : null,
       'detalle': [
@@ -178,7 +188,9 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
       if (_esNuevo) {
         await ref.read(pedidosProvider.notifier).crear(cuerpo);
       } else {
-        await ref.read(pedidosProvider.notifier).actualizar(widget.pedido!.id, cuerpo);
+        await ref
+            .read(pedidosProvider.notifier)
+            .actualizar(widget.pedido!.id, cuerpo);
       }
 
       navegador.pop();
@@ -221,7 +233,6 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
     });
   }
 
-
   /*
    * La lista con la que se cobra.
    *
@@ -251,10 +262,13 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
 
   @override
   Widget build(BuildContext context) {
-    final listas = ref.watch(listasPrecioProvider).valueOrNull ?? const <ListaPrecio>[];
+    final listas =
+        ref.watch(listasPrecioProvider).valueOrNull ?? const <ListaPrecio>[];
     final almacenes = ref.watch(almacenesActivosProvider);
     _ponerAlmacenPorDefecto(almacenes);
-    _ponerLineasExistentes(ref.watch(productosProvider).valueOrNull ?? const <Producto>[]);
+    _ponerLineasExistentes(
+      ref.watch(productosProvider).valueOrNull ?? const <Producto>[],
+    );
 
     // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
     // acento del modulo. Sin esto los componentes compartidos y las hojas que
@@ -267,18 +281,30 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
             _esNuevo ? 'Nuevo pedido' : 'Editar pedido',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             campoCliente(
-              clientes: ref.watch(clientesParaVenderProvider('pedidos')).valueOrNull ?? const <Cliente>[],
+              clientes:
+                  ref
+                      .watch(clientesParaVenderProvider('pedidos'))
+                      .valueOrNull ??
+                  const <Cliente>[],
               // Mientras el catalogo viene, el buscador lo dice en vez de
               // afirmar que no hay ningun cliente.
-              cargando: ref.watch(clientesParaVenderProvider('pedidos')).isLoading,
+              cargando: ref
+                  .watch(clientesParaVenderProvider('pedidos'))
+                  .isLoading,
               elegido: _clienteNombre,
               error: _errorCliente,
               habilitado: !_guardando,
@@ -305,7 +331,8 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
                 Opcion(CondicionPago.contado, 'Contado · se cobra al entregar'),
                 Opcion(CondicionPago.credito, 'Crédito · se deja fiado'),
               ],
-              onCambio: (v) => setState(() => _condicionPago = v ?? CondicionPago.contado),
+              onCambio: (v) =>
+                  setState(() => _condicionPago = v ?? CondicionPago.contado),
             ),
             const SizedBox(height: Dimen.espacio4),
 
@@ -326,7 +353,10 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
               error: _errorAlmacen,
               opciones: [
                 for (final a in almacenes)
-                  Opcion<int>(a.id, a.esPrincipal ? '${a.nombre} (principal)' : a.nombre),
+                  Opcion<int>(
+                    a.id,
+                    a.esPrincipal ? '${a.nombre} (principal)' : a.nombre,
+                  ),
               ],
               onCambio: (v) => setState(() => _almacenReservaId = v),
             ),
@@ -340,7 +370,11 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
               dense: true,
               title: const Text(
                 'Reservar stock',
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Colores.tinta),
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  color: Colores.tinta,
+                ),
               ),
               subtitle: const Text(
                 'Aparta el stock de ese almacén mientras el pedido esté pendiente, para que '
@@ -357,13 +391,17 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
            * hay.
            */
             AppPanelProducto(
-              productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
-                  .where((p) => p.activo && p.controlaStock)
-                  .toList(),
+              productos:
+                  (ref.watch(productosProvider).valueOrNull ??
+                          const <Producto>[])
+                      .where((p) => p.activo && p.controlaStock)
+                      .toList(),
               cargando: ref.watch(productosProvider).isLoading,
               paraVenta: true,
               uso: UsoPresentacion.venta,
-              stock: ref.watch(stockDisponibleProvider(_almacenReservaId)).valueOrNull,
+              stock: ref
+                  .watch(stockDisponibleProvider(_almacenReservaId))
+                  .valueOrNull,
               habilitado: !_guardando,
               // El precio lo pone la lista, no la memoria del vendedor.
               resolverPrecio: (presentacionId, cantidad) =>
@@ -379,7 +417,9 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
               lineas: _lineas,
               error: _errorLineas,
               habilitado: !_guardando,
-              disponible: ref.watch(stockDisponibleProvider(_almacenReservaId)).valueOrNull,
+              disponible: ref
+                  .watch(stockDisponibleProvider(_almacenReservaId))
+                  .valueOrNull,
               onCambio: () => setState(() {}),
               onEliminar: (l) => setState(() => _lineas.remove(l)),
             ),
@@ -398,16 +438,11 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
             ),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(
-              texto: _esNuevo ? 'Crear pedido' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

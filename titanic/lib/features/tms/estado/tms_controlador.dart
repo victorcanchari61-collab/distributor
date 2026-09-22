@@ -43,9 +43,10 @@ class MercadosControlador extends AsyncNotifier<List<Mercado>> {
   }
 }
 
-final mercadosProvider = AsyncNotifierProvider<MercadosControlador, List<Mercado>>(
-  MercadosControlador.new,
-);
+final mercadosProvider =
+    AsyncNotifierProvider<MercadosControlador, List<Mercado>>(
+      MercadosControlador.new,
+    );
 
 final filtrosMercadosActivosProvider = Provider.autoDispose((ref) {
   var n = ref.watch(estadoFiltroProvider) == FiltroEstado.activos ? 0 : 1;
@@ -71,9 +72,7 @@ final direccionMercadoProvider = StateProvider.autoDispose<String?>(
 );
 
 /// Las direcciones que de verdad tienen mercados, no una lista fija.
-final direccionesDeMercadosProvider = Provider.autoDispose<List<String>>((
-  ref,
-) {
+final direccionesDeMercadosProvider = Provider.autoDispose<List<String>>((ref) {
   final todos = ref.watch(mercadosProvider).valueOrNull ?? const <Mercado>[];
   return <String>{
     for (final m in todos)
@@ -162,7 +161,9 @@ final rutasActivasProvider = Provider.autoDispose<List<Ruta>>(
 
 // --- Flota y conductores ---
 
-final flotaApiProvider = Provider((ref) => FlotaApi(ref.watch(clienteApiProvider)));
+final flotaApiProvider = Provider(
+  (ref) => FlotaApi(ref.watch(clienteApiProvider)),
+);
 
 final busquedaVehiculosProvider = StateProvider.autoDispose((ref) => '');
 final busquedaConductoresProvider = StateProvider.autoDispose((ref) => '');
@@ -174,7 +175,9 @@ class VehiculosControlador extends AsyncNotifier<List<Vehiculo>> {
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(flotaApiProvider).vehiculos());
+    state = await AsyncValue.guard(
+      () => ref.read(flotaApiProvider).vehiculos(),
+    );
   }
 
   /// Devuelve el id del vehículo, para poder guardar su recorrido justo después con el id ya creado.
@@ -188,9 +191,10 @@ class VehiculosControlador extends AsyncNotifier<List<Vehiculo>> {
   }
 }
 
-final vehiculosProvider = AsyncNotifierProvider<VehiculosControlador, List<Vehiculo>>(
-  VehiculosControlador.new,
-);
+final vehiculosProvider =
+    AsyncNotifierProvider<VehiculosControlador, List<Vehiculo>>(
+      VehiculosControlador.new,
+    );
 
 /// Como andan los papeles. Es el filtro que importa de una flota: un camion
 /// con el SOAT vencido no puede salir, por muy activo que este en el sistema.
@@ -224,7 +228,8 @@ bool pasaPapeles(String estadoDocumentos, FiltroPapeles filtro) =>
     switch (filtro) {
       FiltroPapeles.todos => true,
       FiltroPapeles.vencidos => estadoDocumentos == EstadoVencimiento.vencido,
-      FiltroPapeles.porVencer => estadoDocumentos == EstadoVencimiento.porVencer,
+      FiltroPapeles.porVencer =>
+        estadoDocumentos == EstadoVencimiento.porVencer,
       FiltroPapeles.alDia => estadoDocumentos == EstadoVencimiento.alDia,
     };
 
@@ -309,9 +314,10 @@ final tiposVehiculoProvider =
 
 /// Tipos activos, para el selector del formulario de vehículo.
 final tiposVehiculoActivosProvider = Provider.autoDispose<List<TipoVehiculo>>(
-  (ref) => (ref.watch(tiposVehiculoProvider).valueOrNull ?? const <TipoVehiculo>[])
-      .where((t) => t.activo)
-      .toList(),
+  (ref) =>
+      (ref.watch(tiposVehiculoProvider).valueOrNull ?? const <TipoVehiculo>[])
+          .where((t) => t.activo)
+          .toList(),
 );
 
 /// Listado de conductores.
@@ -321,7 +327,9 @@ class ConductoresControlador extends AsyncNotifier<List<Conductor>> {
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(flotaApiProvider).conductores());
+    state = await AsyncValue.guard(
+      () => ref.read(flotaApiProvider).conductores(),
+    );
   }
 
   Future<void> guardar({int? id, required Map<String, dynamic> cuerpo}) async {
@@ -335,9 +343,10 @@ class ConductoresControlador extends AsyncNotifier<List<Conductor>> {
   }
 }
 
-final conductoresProvider = AsyncNotifierProvider<ConductoresControlador, List<Conductor>>(
-  ConductoresControlador.new,
-);
+final conductoresProvider =
+    AsyncNotifierProvider<ConductoresControlador, List<Conductor>>(
+      ConductoresControlador.new,
+    );
 
 final filtrosConductoresActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
@@ -346,8 +355,11 @@ final filtrosConductoresActivosProvider = Provider.autoDispose((ref) {
   return n;
 });
 
-final conductoresFiltradosProvider = Provider.autoDispose<List<Conductor>>((ref) {
-  final todos = ref.watch(conductoresProvider).valueOrNull ?? const <Conductor>[];
+final conductoresFiltradosProvider = Provider.autoDispose<List<Conductor>>((
+  ref,
+) {
+  final todos =
+      ref.watch(conductoresProvider).valueOrNull ?? const <Conductor>[];
   final texto = ref.watch(busquedaConductoresProvider).trim().toLowerCase();
   final estado = ref.watch(estadoFiltroProvider);
   final papeles = ref.watch(filtroPapelesProvider);
@@ -373,7 +385,8 @@ final vehiculosActivosProvider = Provider.autoDispose<List<Vehiculo>>(
       .toList(),
 );
 
-final resumenConductoresProvider = FutureProvider.autoDispose<ResumenConductores>((ref) {
-  ref.watch(conductoresProvider);
-  return ref.watch(flotaApiProvider).resumenConductores();
-});
+final resumenConductoresProvider =
+    FutureProvider.autoDispose<ResumenConductores>((ref) {
+      ref.watch(conductoresProvider);
+      return ref.watch(flotaApiProvider).resumenConductores();
+    });

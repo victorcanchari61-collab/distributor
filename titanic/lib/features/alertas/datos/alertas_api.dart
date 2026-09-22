@@ -10,6 +10,8 @@ class AlertasApi {
   /// GET /api/alertas. Se calcula al momento, sin tabla detras.
   Future<List<Alerta>> alertas() async {
     final datos = await _api.get('/alertas') as List;
-    return datos.map((e) => Alerta.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Alerta.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 }

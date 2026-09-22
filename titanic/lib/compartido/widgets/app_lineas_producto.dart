@@ -110,11 +110,19 @@ class AppLineasProducto extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(Icons.shopping_basket_outlined, size: 18, color: Acento.de(context)),
+            Icon(
+              Icons.shopping_basket_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
             const SizedBox(width: Dimen.espacio2),
             const Text(
               'Productos',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
+              ),
             ),
             const Spacer(),
             Text(
@@ -128,7 +136,10 @@ class AppLineasProducto extends StatelessWidget {
 
         if (error != null) ...[
           const SizedBox(height: Dimen.espacio1),
-          Text(error!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
+          Text(
+            error!,
+            style: const TextStyle(fontSize: 12, color: Colores.peligro),
+          ),
         ],
 
         const SizedBox(height: Dimen.espacio3),
@@ -189,8 +200,12 @@ class _TarjetaLinea extends StatefulWidget {
 }
 
 class _TarjetaLineaState extends State<_TarjetaLinea> {
-  late final _cantidad = TextEditingController(text: formatoNumero(widget.linea.cantidad));
-  late final _importe = TextEditingController(text: _dosDecimales(widget.linea.importe));
+  late final _cantidad = TextEditingController(
+    text: formatoNumero(widget.linea.cantidad),
+  );
+  late final _importe = TextEditingController(
+    text: _dosDecimales(widget.linea.importe),
+  );
 
   static String _dosDecimales(double v) => v == 0 ? '' : v.toStringAsFixed(2);
 
@@ -201,7 +216,8 @@ class _TarjetaLineaState extends State<_TarjetaLinea> {
     super.dispose();
   }
 
-  double _numero(String texto) => double.tryParse(texto.replaceAll(',', '.')) ?? 0;
+  double _numero(String texto) =>
+      double.tryParse(texto.replaceAll(',', '.')) ?? 0;
 
   @override
   Widget build(BuildContext context) {
@@ -226,7 +242,10 @@ class _TarjetaLineaState extends State<_TarjetaLinea> {
                 width: 22,
                 height: 22,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: Acento.suave(context), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: Acento.suave(context),
+                  shape: BoxShape.circle,
+                ),
                 child: Text(
                   '${widget.numero}',
                   style: TextStyle(
@@ -251,7 +270,10 @@ class _TarjetaLineaState extends State<_TarjetaLinea> {
                     ),
                     Text(
                       linea.codigo,
-                      style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colores.tintaSuave,
+                      ),
                     ),
                   ],
                 ),
@@ -259,7 +281,11 @@ class _TarjetaLineaState extends State<_TarjetaLinea> {
               IconButton(
                 onPressed: widget.habilitado ? widget.onEliminar : null,
                 visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: Colores.peligro,
+                ),
                 tooltip: 'Quitar del documento',
               ),
             ],
@@ -313,27 +339,30 @@ class _TarjetaLineaState extends State<_TarjetaLinea> {
           ],
 
           if (widget.mostrarImporte) ...[
-          const SizedBox(height: Dimen.espacio2),
+            const SizedBox(height: Dimen.espacio2),
 
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text.rich(
-              TextSpan(
-                text: 'Subtotal ',
-                style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-                children: [
-                  TextSpan(
-                    text: 'S/ ${linea.subtotal.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Acento.de(context),
-                    ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text.rich(
+                TextSpan(
+                  text: 'Subtotal ',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colores.tintaSuave,
                   ),
-                ],
+                  children: [
+                    TextSpan(
+                      text: 'S/ ${linea.subtotal.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Acento.de(context),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
           ],
         ],
       ),

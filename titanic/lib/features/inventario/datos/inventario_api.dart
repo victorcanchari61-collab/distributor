@@ -18,7 +18,9 @@ class InventarioApi {
   /// GET /api/almacen
   Future<List<Almacen>> almacenes() async {
     final datos = await _api.get('/almacen') as List;
-    return datos.map((e) => Almacen.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Almacen.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// GET /api/almacen/opciones — los activos, solo para elegir uno.
@@ -27,19 +29,24 @@ class InventarioApi {
   /// esto un vendedor recibía un 403 y la lista para elegir salía vacía.
   Future<List<Almacen>> almacenesOpciones() async {
     final datos = await _api.get('/almacen/opciones') as List;
-    return datos.map((e) => Almacen.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Almacen.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// POST /api/almacen
-  Future<Almacen> crearAlmacen(Map<String, dynamic> cuerpo) async => Almacen.desdeJson(
-    await _api.post('/almacen', cuerpo: cuerpo) as Map<String, dynamic>,
-  );
+  Future<Almacen> crearAlmacen(Map<String, dynamic> cuerpo) async =>
+      Almacen.desdeJson(
+        await _api.post('/almacen', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
 
   /// PUT /api/almacen/{id}
-  Future<Almacen> actualizarAlmacen(int id, Map<String, dynamic> cuerpo) async =>
-      Almacen.desdeJson(
-        await _api.put('/almacen/$id', cuerpo: cuerpo) as Map<String, dynamic>,
-      );
+  Future<Almacen> actualizarAlmacen(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => Almacen.desdeJson(
+    await _api.put('/almacen/$id', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
 
   // --- Stock ---
 
@@ -47,7 +54,9 @@ class InventarioApi {
   Future<List<Stock>> stock({int? almacenId}) async {
     final query = almacenId == null ? '' : '?almacenId=$almacenId';
     final datos = await _api.get('/inventario/stock$query') as List;
-    return datos.map((e) => Stock.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Stock.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// GET /api/inventario/disponible — cuánto se puede prometer, sin costos.
@@ -93,10 +102,12 @@ class InventarioApi {
   }
 
   /// POST /api/inventario/recepciones
-  Future<DocumentoInventario> crearRecepcion(Map<String, dynamic> cuerpo) async =>
-      DocumentoInventario.desdeJson(
-        await _api.post('/inventario/recepciones', cuerpo: cuerpo) as Map<String, dynamic>,
-      );
+  Future<DocumentoInventario> crearRecepcion(
+    Map<String, dynamic> cuerpo,
+  ) async => DocumentoInventario.desdeJson(
+    await _api.post('/inventario/recepciones', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
 
   /// PATCH /api/inventario/recepciones/{id}/anular
   Future<void> anularRecepcion(int id) async {
@@ -116,7 +127,8 @@ class InventarioApi {
   /// POST /api/inventario/ajustes
   Future<DocumentoInventario> crearAjuste(Map<String, dynamic> cuerpo) async =>
       DocumentoInventario.desdeJson(
-        await _api.post('/inventario/ajustes', cuerpo: cuerpo) as Map<String, dynamic>,
+        await _api.post('/inventario/ajustes', cuerpo: cuerpo)
+            as Map<String, dynamic>,
       );
 
   /// PATCH /api/inventario/ajustes/{id}/anular. Tambien anula transferencias:
@@ -130,13 +142,16 @@ class InventarioApi {
   /// GET /api/motivo
   Future<List<Motivo>> motivos() async {
     final datos = await _api.get('/motivo') as List;
-    return datos.map((e) => Motivo.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Motivo.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// POST /api/motivo
-  Future<Motivo> crearMotivo(Map<String, dynamic> cuerpo) async => Motivo.desdeJson(
-    await _api.post('/motivo', cuerpo: cuerpo) as Map<String, dynamic>,
-  );
+  Future<Motivo> crearMotivo(Map<String, dynamic> cuerpo) async =>
+      Motivo.desdeJson(
+        await _api.post('/motivo', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
 
   /// PUT /api/motivo/{id}
   Future<Motivo> actualizarMotivo(int id, Map<String, dynamic> cuerpo) async =>
@@ -160,28 +175,36 @@ class InventarioApi {
   }
 
   /// POST /api/inventario/transferencias
-  Future<DocumentoInventario> crearTransferencia(Map<String, dynamic> cuerpo) async =>
-      DocumentoInventario.desdeJson(
-        await _api.post('/inventario/transferencias', cuerpo: cuerpo) as Map<String, dynamic>,
-      );
+  Future<DocumentoInventario> crearTransferencia(
+    Map<String, dynamic> cuerpo,
+  ) async => DocumentoInventario.desdeJson(
+    await _api.post('/inventario/transferencias', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
 
   // --- Prestamos ---
 
   /// GET /api/inventario/prestamos
   Future<List<Prestamo>> prestamos() async {
     final datos = await _api.get('/inventario/prestamos') as List;
-    return datos.map((e) => Prestamo.desdeJson(e as Map<String, dynamic>)).toList();
+    return datos
+        .map((e) => Prestamo.desdeJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// POST /api/inventario/prestamos
-  Future<Prestamo> crearPrestamo(Map<String, dynamic> cuerpo) async => Prestamo.desdeJson(
-    await _api.post('/inventario/prestamos', cuerpo: cuerpo) as Map<String, dynamic>,
-  );
-
-  /// POST /api/inventario/prestamos/{id}/devolucion
-  Future<Prestamo> registrarDevolucion(int id, Map<String, dynamic> cuerpo) async =>
+  Future<Prestamo> crearPrestamo(Map<String, dynamic> cuerpo) async =>
       Prestamo.desdeJson(
-        await _api.post('/inventario/prestamos/$id/devolucion', cuerpo: cuerpo)
+        await _api.post('/inventario/prestamos', cuerpo: cuerpo)
             as Map<String, dynamic>,
       );
+
+  /// POST /api/inventario/prestamos/{id}/devolucion
+  Future<Prestamo> registrarDevolucion(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => Prestamo.desdeJson(
+    await _api.post('/inventario/prestamos/$id/devolucion', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
 }

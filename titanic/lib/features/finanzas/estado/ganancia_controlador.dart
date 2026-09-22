@@ -91,7 +91,9 @@ const _tandasMaximas = 5;
 /// El servidor corta en 200 por tanda: si hay más productos se piden las demás
 /// hasta cubrirlos, con el tope de [_tandasMaximas]. Los totales y las opciones
 /// vienen completos en cualquier tanda, así que no dependen de este corte.
-final gananciasProvider = FutureProvider.autoDispose<GananciaPagina>((ref) async {
+final gananciasProvider = FutureProvider.autoDispose<GananciaPagina>((
+  ref,
+) async {
   final consulta = ref.watch(consultaGananciasProvider);
   final api = ref.watch(gananciaApiProvider);
 

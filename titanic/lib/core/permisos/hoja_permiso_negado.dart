@@ -70,7 +70,9 @@ class _VigilantePermisosState extends ConsumerState<VigilantePermisos> {
       isScrollControlled: true,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Dimen.radioPanel),
+        ),
       ),
       builder: (_) => _Hoja(submodulo: e.submodulo!, accion: e.accion!),
     ).whenComplete(() => _abierta = false);
@@ -130,8 +132,7 @@ class _HojaState extends ConsumerState<_Hoja> {
 
   @override
   Widget build(BuildContext context) {
-    final pantalla =
-        vistaPorId(widget.submodulo)?.titulo ?? widget.submodulo;
+    final pantalla = vistaPorId(widget.submodulo)?.titulo ?? widget.submodulo;
     final accion = _accionNegada[widget.accion] ?? widget.accion;
 
     return Padding(

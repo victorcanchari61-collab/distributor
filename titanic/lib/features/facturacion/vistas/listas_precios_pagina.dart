@@ -85,7 +85,8 @@ class ListasPreciosPagina extends ConsumerWidget {
             listas: listas,
             valor: activaId,
             color: color,
-            onCambio: (id) => ref.read(listaPrecioActivaProvider.notifier).state = id,
+            onCambio: (id) =>
+                ref.read(listaPrecioActivaProvider.notifier).state = id,
             onNueva: () => _nuevaLista(context, ref),
           ),
           // Las acciones de la LISTA van aqui, junto a sus pestañas, y no en
@@ -104,11 +105,8 @@ class ListasPreciosPagina extends ConsumerWidget {
                         texto: 'Editar lista',
                         icono: Icons.edit_outlined,
                         variante: BotonVariante.secundario,
-                        onPressed: () => mostrarFormularioLista(
-                          context,
-                          ref,
-                          lista: activa,
-                        ),
+                        onPressed: () =>
+                            mostrarFormularioLista(context, ref, lista: activa),
                       ),
                     ),
                   if (puede(ref, 'fact.precios', Accion.editar) &&
@@ -149,13 +147,17 @@ class ListasPreciosPagina extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         '${activa.nombre} no es la lista predeterminada.',
-                        style: const TextStyle(fontSize: 12.5, color: Colores.tinta),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: Colores.tinta,
+                        ),
                       ),
                     ),
                     AppBoton(
                       texto: 'Marcar predeterminada',
                       variante: BotonVariante.texto,
-                      onPressed: () => _marcarPredeterminada(context, ref, activa!),
+                      onPressed: () =>
+                          _marcarPredeterminada(context, ref, activa!),
                     ),
                   ],
                 ),
@@ -277,10 +279,16 @@ class ListasPreciosPagina extends ConsumerWidget {
     }
   }
 
-  Future<void> _marcarPredeterminada(BuildContext context, WidgetRef ref, ListaPrecio lista) async {
+  Future<void> _marcarPredeterminada(
+    BuildContext context,
+    WidgetRef ref,
+    ListaPrecio lista,
+  ) async {
     final mensajero = Aviso.de(context);
     try {
-      await ref.read(listasPrecioProvider.notifier).marcarPredeterminada(lista.id);
+      await ref
+          .read(listasPrecioProvider.notifier)
+          .marcarPredeterminada(lista.id);
       mensajero.mostrar('${lista.nombre} es ahora la predeterminada');
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
@@ -327,11 +335,16 @@ class ListasPreciosPagina extends ConsumerWidget {
     );
   }
 
-  Future<void> _eliminarPrecio(BuildContext context, WidgetRef ref, Precio precio) async {
+  Future<void> _eliminarPrecio(
+    BuildContext context,
+    WidgetRef ref,
+    Precio precio,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Eliminar precio de ${precio.producto}',
-      mensaje: '${precio.presentacion}: S/ ${precio.precio.toStringAsFixed(2)}. No se puede deshacer.',
+      mensaje:
+          '${precio.presentacion}: S/ ${precio.precio.toStringAsFixed(2)}. No se puede deshacer.',
       textoConfirmar: 'Eliminar',
       tono: ConfirmTono.peligro,
     );
@@ -380,7 +393,10 @@ class _ListasTabs extends StatelessWidget {
               label: const Text('Nueva lista'),
               onPressed: onNueva,
               visualDensity: VisualDensity.compact,
-              labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+              labelStyle: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
               backgroundColor: Colores.superficie,
               side: const BorderSide(color: Colores.linea),
             );
@@ -436,7 +452,11 @@ class _TarjetaPrecio extends StatelessWidget {
       titulo: precio.producto,
       insignia: Text(
         'S/ ${precio.precio.toStringAsFixed(2)}',
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color),
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w800,
+          color: color,
+        ),
       ),
       campos: [
         CampoDetalle('Presentación', precio.presentacion),
@@ -460,14 +480,22 @@ class _TarjetaPrecio extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEliminar != null)
           IconButton(
             onPressed: onEliminar,
             tooltip: 'Eliminar',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
+            icon: const Icon(
+              Icons.delete_outline,
+              size: 18,
+              color: Colores.peligro,
+            ),
           ),
       ],
     );

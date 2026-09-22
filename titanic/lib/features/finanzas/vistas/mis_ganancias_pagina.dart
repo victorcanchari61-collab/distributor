@@ -172,8 +172,16 @@ class _MisGananciasPaginaState extends ConsumerState<MisGananciasPagina> {
         ref.read(productoGananciasFiltroProvider.notifier).state = null;
       },
       grupos: [
-        _grupo('Vendedor', vendedorGananciasFiltroProvider, (o) => o.vendedores),
-        _grupo('Categoría', categoriaGananciasFiltroProvider, (o) => o.categorias),
+        _grupo(
+          'Vendedor',
+          vendedorGananciasFiltroProvider,
+          (o) => o.vendedores,
+        ),
+        _grupo(
+          'Categoría',
+          categoriaGananciasFiltroProvider,
+          (o) => o.categorias,
+        ),
         _grupo('Marca', marcaGananciasFiltroProvider, (o) => o.marcas),
         _grupo('Venta', ventaGananciasFiltroProvider, (o) => o.ventas),
         _grupo('Producto', productoGananciasFiltroProvider, (o) => o.productos),
@@ -202,7 +210,8 @@ class _MisGananciasPaginaState extends ConsumerState<MisGananciasPagina> {
             // Un filtro puesto con otro rango puede no estar en la lista de
             // este: se deja a la vista en vez de dar un campo vacío que sigue
             // recortando.
-            if (valor != null && !lista.contains(valor)) OpcionFiltro(valor, valor),
+            if (valor != null && !lista.contains(valor))
+              OpcionFiltro(valor, valor),
             for (final o in lista) OpcionFiltro(o, o),
           ],
           onCambio: (v) => ref.read(filtro.notifier).state = v,
@@ -299,10 +308,16 @@ class _TarjetaGanancia extends StatelessWidget {
     ),
     CampoDetalle('Importe', formatoSoles(producto.importe)),
     CampoDetalle('Costo', formatoSoles(producto.costo)),
-    CampoDetalle('Ganancia', formatoSoles(producto.ganancia), widget: _ganancia),
+    CampoDetalle(
+      'Ganancia',
+      formatoSoles(producto.ganancia),
+      widget: _ganancia,
+    ),
     CampoDetalle(
       'Margen',
-      producto.margen == null ? null : '${producto.margen!.toStringAsFixed(1)} %',
+      producto.margen == null
+          ? null
+          : '${producto.margen!.toStringAsFixed(1)} %',
     ),
     CampoDetalle('Categoría', producto.categoria, enTarjeta: false),
     CampoDetalle('Marca', producto.marca, enTarjeta: false),
@@ -320,7 +335,11 @@ class _TarjetaGanancia extends StatelessWidget {
       widget: _lista(producto.notas),
       enTarjeta: false,
     ),
-    CampoDetalle('Última venta', _fecha(producto.ultimaVenta), enTarjeta: false),
+    CampoDetalle(
+      'Última venta',
+      _fecha(producto.ultimaVenta),
+      enTarjeta: false,
+    ),
   ];
 
   static Widget _lista(List<String> valores) => Text(

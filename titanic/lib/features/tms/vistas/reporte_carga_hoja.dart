@@ -35,7 +35,9 @@ Future<void> mostrarReporteCarga(
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     builder: (hoja) => Acento(
       color: acento,
@@ -72,14 +74,17 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
 
     final query = [
       if (_mercados.isNotEmpty) 'mercados=${_mercados.join(',')}',
-      if (_unidades.isNotEmpty) 'unidades=${_unidades.map(Uri.encodeComponent).join(',')}',
+      if (_unidades.isNotEmpty)
+        'unidades=${_unidades.map(Uri.encodeComponent).join(',')}',
       if (_porMercado) 'porMercado=true',
       // "Todos" no se manda: sin corte el backend saca el camión completo.
       if (_corte != 0) 'corte=$_corte',
     ].join('&');
 
     try {
-      final bytes = await ref.read(despachoApiProvider).pdfCarga(widget.despachoId, query);
+      final bytes = await ref
+          .read(despachoApiProvider)
+          .pdfCarga(widget.despachoId, query);
       final limpio = widget.numero.replaceAll(RegExp(r'[^A-Za-z0-9]'), '-');
       final carpeta = await getTemporaryDirectory();
       // El corte va en el nombre, como lo nombra el backend: cada tanda es un
@@ -105,7 +110,9 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
     final opcionesAsync = ref.watch(opcionesCargaProvider(widget.despachoId));
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           Dimen.espacio4,
@@ -136,7 +143,10 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
                   color: Colores.peligroSuave,
                   borderRadius: BorderRadius.circular(Dimen.radioCampo),
                 ),
-                child: Text(_error!, style: const TextStyle(fontSize: 13, color: Colores.peligro)),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(fontSize: 13, color: Colores.peligro),
+                ),
               ),
               const SizedBox(height: Dimen.espacio3),
             ],
@@ -145,13 +155,20 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
               child: opcionesAsync.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.symmetric(vertical: Dimen.espacio5),
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  child: Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: Dimen.espacio5),
                   child: Text(
-                    e is ApiExcepcion ? e.texto : 'No pudimos cargar los filtros.',
-                    style: const TextStyle(fontSize: 13, color: Colores.peligro),
+                    e is ApiExcepcion
+                        ? e.texto
+                        : 'No pudimos cargar los filtros.',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colores.peligro,
+                    ),
                   ),
                 ),
                 data: (opciones) => SingleChildScrollView(
@@ -168,7 +185,10 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
                           // Los nombres traen las horas al final: en una sola
                           // línea se cortaban justo ahí.
                           lineasOpcion: 2,
-                          opciones: [for (final c in opciones.cortes) Opcion(c.codigo, c.nombre)],
+                          opciones: [
+                            for (final c in opciones.cortes)
+                              Opcion(c.codigo, c.nombre),
+                          ],
                           onCambio: (v) => setState(() => _corte = v ?? 0),
                         ),
                         if (_corte == 1)
@@ -185,7 +205,13 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
                         const SizedBox(height: Dimen.espacio4),
                       ],
                       if (opciones.mercados.isNotEmpty) ...[
-                        const Text('Mercados', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                        const Text(
+                          'Mercados',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         for (final m in opciones.mercados)
                           CheckboxListTile(
                             value: _mercados.contains(m.id),
@@ -207,7 +233,13 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
                         const SizedBox(height: Dimen.espacio3),
                       ],
                       if (opciones.unidades.isNotEmpty) ...[
-                        const Text('Unidades de medida', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                        const Text(
+                          'Unidades de medida',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         for (final u in opciones.unidades)
                           CheckboxListTile(
                             value: _unidades.contains(u.codigo),
@@ -237,7 +269,8 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
                           'Separar por mercado (un bloque por cada uno)',
                           style: TextStyle(fontSize: 13.5),
                         ),
-                        onChanged: (v) => setState(() => _porMercado = v ?? false),
+                        onChanged: (v) =>
+                            setState(() => _porMercado = v ?? false),
                       ),
                     ],
                   ),
@@ -272,7 +305,10 @@ class _NotaCorte extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: Dimen.espacio2),
-      child: Text(texto, style: const TextStyle(fontSize: 12, color: Colores.tintaSuave)),
+      child: Text(
+        texto,
+        style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+      ),
     );
   }
 }

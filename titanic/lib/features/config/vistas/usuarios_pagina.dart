@@ -66,8 +66,7 @@ class UsuariosPagina extends ConsumerWidget {
       context,
       activos: ref.read(filtrosUsuariosActivosProvider),
       onLimpiar: () {
-        ref.read(estadoFiltroProvider.notifier).state =
-            FiltroEstado.activos;
+        ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
         ref.read(rolFiltroProvider.notifier).state = null;
       },
       grupos: [
@@ -125,9 +124,11 @@ class UsuariosPagina extends ConsumerWidget {
 
     try {
       await ref.read(usuariosProvider.notifier).cambiarEstado(usuario);
-      mensajero.mostrar(usuario.activo
-                ? '${usuario.nombre} desactivado'
-                : '${usuario.nombre} activado');
+      mensajero.mostrar(
+        usuario.activo
+            ? '${usuario.nombre} desactivado'
+            : '${usuario.nombre} activado',
+      );
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -215,7 +216,11 @@ class _TarjetaUsuario extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

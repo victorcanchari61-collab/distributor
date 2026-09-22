@@ -18,9 +18,12 @@ Future<void> mostrarHojaDevolucion(
   WidgetRef ref, {
   required Prestamo prestamo,
 }) {
-  final pendientes = prestamo.detalle.where((d) => d.cantidadPendiente > 0).toList();
+  final pendientes = prestamo.detalle
+      .where((d) => d.cantidadPendiente > 0)
+      .toList();
   final controladores = {
-    for (final d in pendientes) d.id: TextEditingController(text: formatoNumero(d.cantidadPendiente)),
+    for (final d in pendientes)
+      d.id: TextEditingController(text: formatoNumero(d.cantidadPendiente)),
   };
 
   return showModalBottomSheet<void>(
@@ -29,7 +32,9 @@ Future<void> mostrarHojaDevolucion(
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     builder: (context) {
       var guardando = false;
@@ -48,7 +53,10 @@ Future<void> mostrarHojaDevolucion(
               }
             }
             if (lineas.isEmpty) {
-              setSheetState(() => error = 'Ingresa cuánto se devuelve de al menos un producto.');
+              setSheetState(
+                () => error =
+                    'Ingresa cuánto se devuelve de al menos un producto.',
+              );
               return;
             }
 
@@ -60,9 +68,9 @@ Future<void> mostrarHojaDevolucion(
             final navegador = Navigator.of(context);
             final mensajero = Aviso.de(context);
             try {
-              await ref
-                  .read(prestamosProvider.notifier)
-                  .devolver(prestamo.id, {'detalle': lineas});
+              await ref.read(prestamosProvider.notifier).devolver(prestamo.id, {
+                'detalle': lineas,
+              });
               navegador.pop();
               mensajero.mostrar('Devolución registrada');
             } on ApiExcepcion catch (e) {
@@ -86,7 +94,11 @@ Future<void> mostrarHojaDevolucion(
               children: [
                 Text(
                   'Devolución de ${prestamo.numero}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colores.tinta,
+                  ),
                 ),
                 const SizedBox(height: Dimen.espacio4),
                 if (error != null) ...[
@@ -96,13 +108,20 @@ Future<void> mostrarHojaDevolucion(
                 for (final d in pendientes) ...[
                   Text(
                     d.producto,
-                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Colores.tinta),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Colores.tinta,
+                    ),
                   ),
                   const SizedBox(height: Dimen.espacio1),
                   AppCampo(
                     controlador: controladores[d.id]!,
-                    etiqueta: 'Devuelve (${d.unidadBase}) · pendiente ${formatoNumero(d.cantidadPendiente)}',
-                    tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+                    etiqueta:
+                        'Devuelve (${d.unidadBase}) · pendiente ${formatoNumero(d.cantidadPendiente)}',
+                    tipoTeclado: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     habilitado: !guardando,
                   ),
                   const SizedBox(height: Dimen.espacio3),

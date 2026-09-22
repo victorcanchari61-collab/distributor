@@ -39,7 +39,8 @@ class LineaCompra {
     unidadBase: json['unidadBase'] as String? ?? '',
     presentacionId: json['presentacionId'] as int?,
     presentacion: json['presentacion'] as String?,
-    cantidadPresentacion: (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
+    cantidadPresentacion:
+        (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
     cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0,
     costoUnitario: (json['costoUnitario'] as num?)?.toDouble() ?? 0,
     costoTotal: (json['costoTotal'] as num?)?.toDouble() ?? 0,

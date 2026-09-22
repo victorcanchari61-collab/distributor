@@ -29,8 +29,11 @@ class PrestamosPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final todos = ref.watch(prestamosProvider).valueOrNull ?? const <Prestamo>[];
-    final pendientes = todos.where((p) => p.estado == EstadoPrestamo.pendiente).length;
+    final todos =
+        ref.watch(prestamosProvider).valueOrNull ?? const <Prestamo>[];
+    final pendientes = todos
+        .where((p) => p.estado == EstadoPrestamo.pendiente)
+        .length;
 
     return AppListaPagina<Prestamo>(
       titulo: 'Préstamos',
@@ -70,7 +73,8 @@ class PrestamosPagina extends ConsumerWidget {
       fila: (context, prestamo) => _TarjetaPrestamo(
         prestamo: prestamo,
         color: color,
-        onDevolver: puede(ref, 'inv.prestamos', Accion.confirmar) &&
+        onDevolver:
+            puede(ref, 'inv.prestamos', Accion.confirmar) &&
                 prestamo.estado == EstadoPrestamo.pendiente
             ? () => mostrarHojaDevolucion(context, ref, prestamo: prestamo)
             : null,
@@ -83,8 +87,7 @@ class PrestamosPagina extends ConsumerWidget {
       context,
       activos: ref.read(filtrosPrestamosActivosProvider),
       onLimpiar: () {
-        ref.read(filtroPrestamoProvider.notifier).state =
-            FiltroPrestamo.todos;
+        ref.read(filtroPrestamoProvider.notifier).state = FiltroPrestamo.todos;
         ref.read(filtroDevolucionProvider.notifier).state =
             FiltroDevolucion.todos;
         ref.read(almacenPrestamoFiltroProvider.notifier).state = null;
@@ -138,14 +141,18 @@ class PrestamosPagina extends ConsumerWidget {
   }
 
   Future<void> _abrirFormulario(BuildContext context) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PrestamoFormulario()),
-    );
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const PrestamoFormulario()));
   }
 }
 
 class _TarjetaPrestamo extends StatelessWidget {
-  const _TarjetaPrestamo({required this.prestamo, required this.color, this.onDevolver});
+  const _TarjetaPrestamo({
+    required this.prestamo,
+    required this.color,
+    this.onDevolver,
+  });
 
   final Prestamo prestamo;
   final Color color;
@@ -154,15 +161,18 @@ class _TarjetaPrestamo extends StatelessWidget {
   List<CampoDetalle> get _campos => [
     CampoDetalle('Almacén', prestamo.almacen),
     CampoDetalle('Total', 'S/ ${prestamo.total.toStringAsFixed(2)}'),
-    if (prestamo.usuario != null) CampoDetalle('Registrado por', prestamo.usuario),
-    if (prestamo.observacion != null) CampoDetalle('Observación', prestamo.observacion),
+    if (prestamo.usuario != null)
+      CampoDetalle('Registrado por', prestamo.usuario),
+    if (prestamo.observacion != null)
+      CampoDetalle('Observación', prestamo.observacion),
   ];
 
   List<Widget> get _lineas => [
     for (final linea in prestamo.detalle)
       LineaProductoTarjeta(
         titulo: linea.producto,
-        subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
+        subtitulo:
+            '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
         filas: [
           [
             ('Cant.', formatoNumero(linea.cantidadPresentacion)),
@@ -173,8 +183,14 @@ class _TarjetaPrestamo extends StatelessWidget {
             ('Subtotal', 'S/ ${linea.costoTotal.toStringAsFixed(2)}'),
           ],
           [
-            ('Devuelto', '${formatoNumero(linea.cantidadDevuelta)} ${linea.unidadBase}'),
-            ('Pendiente', '${formatoNumero(linea.cantidadPendiente)} ${linea.unidadBase}'),
+            (
+              'Devuelto',
+              '${formatoNumero(linea.cantidadDevuelta)} ${linea.unidadBase}',
+            ),
+            (
+              'Pendiente',
+              '${formatoNumero(linea.cantidadPendiente)} ${linea.unidadBase}',
+            ),
           ],
         ],
       ),
@@ -186,7 +202,11 @@ class _TarjetaPrestamo extends StatelessWidget {
       icono: Icons.handshake_outlined,
       color: color,
       titulo: prestamo.numero,
-      insignia: AppEtiqueta(prestamo.esDado ? 'Dado' : 'Recibido', tono: EtiquetaTono.modulo, color: color),
+      insignia: AppEtiqueta(
+        prestamo.esDado ? 'Dado' : 'Recibido',
+        tono: EtiquetaTono.modulo,
+        color: color,
+      ),
       campos: [CampoDetalle('Contraparte', prestamo.contraparte), ..._campos],
       onTap: () => _abrirDetalle(context),
       acciones: [
@@ -221,7 +241,9 @@ class _TarjetaPrestamo extends StatelessWidget {
       subtitulo: prestamo.contraparte,
       estado: AppEtiqueta(
         prestamo.estado == EstadoPrestamo.pendiente ? 'Pendiente' : 'Devuelto',
-        tono: prestamo.estado == EstadoPrestamo.pendiente ? EtiquetaTono.aviso : EtiquetaTono.exito,
+        tono: prestamo.estado == EstadoPrestamo.pendiente
+            ? EtiquetaTono.aviso
+            : EtiquetaTono.exito,
       ),
       campos: _campos,
       contenidoExtra: _lineas,

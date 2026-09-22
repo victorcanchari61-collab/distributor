@@ -34,9 +34,15 @@ class MisComprasPagina extends ConsumerWidget {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final todas = ref.watch(comprasProvider).valueOrNull ?? const <Compra>[];
     final porRecibir = todas
-        .where((c) => c.estado == EstadoCompra.pendiente || c.estado == EstadoCompra.recibidaParcial)
+        .where(
+          (c) =>
+              c.estado == EstadoCompra.pendiente ||
+              c.estado == EstadoCompra.recibidaParcial,
+        )
         .length;
-    final recibidas = todas.where((c) => c.estado == EstadoCompra.recibidaTotal).length;
+    final recibidas = todas
+        .where((c) => c.estado == EstadoCompra.recibidaTotal)
+        .length;
     final estadoFiltro = ref.watch(estadoCompraFiltroProvider);
 
     return AppListaPagina<Compra>(
@@ -83,7 +89,8 @@ class MisComprasPagina extends ConsumerWidget {
       fila: (context, compra) => _TarjetaCompra(
         compra: compra,
         color: color,
-        onEditar: puede(ref, 'compras.compras', Accion.editar) &&
+        onEditar:
+            puede(ref, 'compras.compras', Accion.editar) &&
                 compra.estado == EstadoCompra.pendiente
             ? () => _abrirFormulario(context, compra)
             : null,
@@ -92,7 +99,8 @@ class MisComprasPagina extends ConsumerWidget {
                 compra.detalle.any((d) => d.cantidadPendiente > 0)
             ? () => _recibir(context, compra)
             : null,
-        onAnular: puede(ref, 'compras.compras', Accion.anular) &&
+        onAnular:
+            puede(ref, 'compras.compras', Accion.anular) &&
                 compra.estado == EstadoCompra.pendiente
             ? () => _anular(context, ref, compra)
             : null,
@@ -103,7 +111,8 @@ class MisComprasPagina extends ConsumerWidget {
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
     return mostrarFiltros(
       context,
-      activos: (ref.read(estadoCompraFiltroProvider) == null ? 0 : 1) +
+      activos:
+          (ref.read(estadoCompraFiltroProvider) == null ? 0 : 1) +
           (ref.read(proveedorCompraFiltroProvider) == null ? 0 : 1) +
           (ref.read(tipoComprobanteFiltroProvider) == null ? 0 : 1) +
           (ref.read(deOrdenFiltroProvider) == null ? 0 : 1),
@@ -125,7 +134,8 @@ class MisComprasPagina extends ConsumerWidget {
               OpcionFiltro(EstadoCompra.recibidaTotal, 'Recibidas total'),
               OpcionFiltro(EstadoCompra.anulada, 'Anuladas'),
             ],
-            onCambio: (v) => ref.read(estadoCompraFiltroProvider.notifier).state = v,
+            onCambio: (v) =>
+                ref.read(estadoCompraFiltroProvider.notifier).state = v,
           ),
         ),
         Consumer(
@@ -176,18 +186,24 @@ class MisComprasPagina extends ConsumerWidget {
   }
 
   Future<void> _abrirFormulario(BuildContext context, [Compra? compra]) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => CompraFormulario(compra: compra)),
-    );
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => CompraFormulario(compra: compra)));
   }
 
   Future<void> _recibir(BuildContext context, Compra compra) {
     return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => RecepcionFormulario(compraFija: compra)),
+      MaterialPageRoute(
+        builder: (_) => RecepcionFormulario(compraFija: compra),
+      ),
     );
   }
 
-  Future<void> _anular(BuildContext context, WidgetRef ref, Compra compra) async {
+  Future<void> _anular(
+    BuildContext context,
+    WidgetRef ref,
+    Compra compra,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Anular ${compra.numero}',
@@ -254,16 +270,19 @@ class _TarjetaCompra extends StatelessWidget {
         'S/ ${compra.totalPagado.toStringAsFixed(2)} de S/ ${compra.total.toStringAsFixed(2)}',
       ),
     CampoDetalle('Total', 'S/ ${compra.total.toStringAsFixed(2)}'),
-    if (compra.ordenCompraNumero != null) CampoDetalle('Orden de compra', compra.ordenCompraNumero),
+    if (compra.ordenCompraNumero != null)
+      CampoDetalle('Orden de compra', compra.ordenCompraNumero),
     if (compra.usuario != null) CampoDetalle('Registrada por', compra.usuario),
-    if (compra.observacion != null) CampoDetalle('Observación', compra.observacion),
+    if (compra.observacion != null)
+      CampoDetalle('Observación', compra.observacion),
   ];
 
   List<Widget> get _lineas => [
     for (final linea in compra.detalle)
       LineaProductoTarjeta(
         titulo: linea.producto,
-        subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
+        subtitulo:
+            '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
         filas: [
           [
             ('Cant.', formatoNumero(linea.cantidadPresentacion)),
@@ -274,8 +293,14 @@ class _TarjetaCompra extends StatelessWidget {
             ('Subtotal', 'S/ ${linea.costoTotal.toStringAsFixed(2)}'),
           ],
           [
-            ('Recibido', '${formatoNumero(linea.cantidadRecibida)} ${linea.unidadBase}'),
-            ('Pendiente', '${formatoNumero(linea.cantidadPendiente)} ${linea.unidadBase}'),
+            (
+              'Recibido',
+              '${formatoNumero(linea.cantidadRecibida)} ${linea.unidadBase}',
+            ),
+            (
+              'Pendiente',
+              '${formatoNumero(linea.cantidadPendiente)} ${linea.unidadBase}',
+            ),
           ],
         ],
       ),
@@ -287,7 +312,10 @@ class _TarjetaCompra extends StatelessWidget {
       icono: Icons.shopping_bag_outlined,
       color: color,
       titulo: compra.numero,
-      estado: AppEtiqueta(_etiquetaEstadoCompra(compra.estado), tono: _tonoEstadoCompra(compra.estado)),
+      estado: AppEtiqueta(
+        _etiquetaEstadoCompra(compra.estado),
+        tono: _tonoEstadoCompra(compra.estado),
+      ),
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
@@ -307,14 +335,22 @@ class _TarjetaCompra extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onRecibir != null)
           IconButton(
             onPressed: onRecibir,
             tooltip: 'Recibir',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.move_to_inbox_outlined, size: 18, color: Colores.exito),
+            icon: const Icon(
+              Icons.move_to_inbox_outlined,
+              size: 18,
+              color: Colores.exito,
+            ),
           ),
         if (onAnular != null)
           IconButton(
@@ -334,7 +370,10 @@ class _TarjetaCompra extends StatelessWidget {
       color: color,
       titulo: compra.numero,
       subtitulo: compra.proveedor,
-      estado: AppEtiqueta(_etiquetaEstadoCompra(compra.estado), tono: _tonoEstadoCompra(compra.estado)),
+      estado: AppEtiqueta(
+        _etiquetaEstadoCompra(compra.estado),
+        tono: _tonoEstadoCompra(compra.estado),
+      ),
       campos: [
         ..._campos,
         for (final pago in compra.pagos)

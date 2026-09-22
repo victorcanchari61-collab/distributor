@@ -147,8 +147,7 @@ class EmpleadoOpcion {
   final int? usuarioId;
 
   /// "Juan Quispe — Repartidor", como se lee en el desplegable.
-  String get etiqueta =>
-      cargo == null || cargo!.trim().isEmpty
+  String get etiqueta => cargo == null || cargo!.trim().isEmpty
       ? nombreCompleto
       : '$nombreCompleto — $cargo';
 

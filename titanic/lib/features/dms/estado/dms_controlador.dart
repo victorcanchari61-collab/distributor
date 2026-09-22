@@ -144,7 +144,8 @@ final motivoDevolucionFiltroProvider = StateProvider.autoDispose<String?>(
 
 final filtrosDevolucionesActivosProvider = Provider.autoDispose((ref) {
   var n =
-      ref.watch(filtroDevolucionEstadoProvider) == FiltroEstadoDevolucion.solicitadas
+      ref.watch(filtroDevolucionEstadoProvider) ==
+          FiltroEstadoDevolucion.solicitadas
       ? 0
       : 1;
   if (ref.watch(clienteDevolucionFiltroProvider) != null) n++;
@@ -178,8 +179,10 @@ final devolucionesFiltradasProvider = Provider.autoDispose<List<Devolucion>>((
           FiltroEstadoDevolucion.todas => true,
           FiltroEstadoDevolucion.solicitadas =>
             d.estado == EstadoDevolucion.solicitada,
-          FiltroEstadoDevolucion.aprobadas => d.estado == EstadoDevolucion.aprobada,
-          FiltroEstadoDevolucion.rechazadas => d.estado == EstadoDevolucion.rechazada,
+          FiltroEstadoDevolucion.aprobadas =>
+            d.estado == EstadoDevolucion.aprobada,
+          FiltroEstadoDevolucion.rechazadas =>
+            d.estado == EstadoDevolucion.rechazada,
         },
       )
       .where((d) => cliente == null || d.cliente == cliente)

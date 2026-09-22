@@ -197,11 +197,12 @@ class ResumenDespachos {
   /// Pedidos que están en un camión y todavía no se entregaron.
   final int pedidosEnRuta;
 
-  factory ResumenDespachos.desdeJson(Map<String, dynamic> json) => ResumenDespachos(
-    total: json['total'] as int? ?? 0,
-    armados: json['armados'] as int? ?? 0,
-    pedidosEnRuta: json['pedidosEnRuta'] as int? ?? 0,
-  );
+  factory ResumenDespachos.desdeJson(Map<String, dynamic> json) =>
+      ResumenDespachos(
+        total: json['total'] as int? ?? 0,
+        armados: json['armados'] as int? ?? 0,
+        pedidosEnRuta: json['pedidosEnRuta'] as int? ?? 0,
+      );
 }
 
 /// Un mercado o unidad de medida que se puede elegir para recortar el
@@ -217,11 +218,12 @@ class OpcionMercadoCarga {
   final String nombre;
   final int pedidos;
 
-  factory OpcionMercadoCarga.desdeJson(Map<String, dynamic> json) => OpcionMercadoCarga(
-    id: json['id'] as int,
-    nombre: json['nombre'] as String? ?? '',
-    pedidos: json['pedidos'] as int? ?? 0,
-  );
+  factory OpcionMercadoCarga.desdeJson(Map<String, dynamic> json) =>
+      OpcionMercadoCarga(
+        id: json['id'] as int,
+        nombre: json['nombre'] as String? ?? '',
+        pedidos: json['pedidos'] as int? ?? 0,
+      );
 }
 
 class OpcionUnidadCarga {
@@ -235,11 +237,12 @@ class OpcionUnidadCarga {
   final String nombre;
   final int productos;
 
-  factory OpcionUnidadCarga.desdeJson(Map<String, dynamic> json) => OpcionUnidadCarga(
-    codigo: json['codigo'] as String? ?? '',
-    nombre: json['nombre'] as String? ?? '',
-    productos: json['productos'] as int? ?? 0,
-  );
+  factory OpcionUnidadCarga.desdeJson(Map<String, dynamic> json) =>
+      OpcionUnidadCarga(
+        codigo: json['codigo'] as String? ?? '',
+        nombre: json['nombre'] as String? ?? '',
+        productos: json['productos'] as int? ?? 0,
+      );
 }
 
 /// Un corte de horario del reporte de carga: el camión se sube en tandas y cada
@@ -254,10 +257,11 @@ class OpcionCorteCarga {
   /// Ya viene dicho como se lee en el papel, con las horas del corte.
   final String nombre;
 
-  factory OpcionCorteCarga.desdeJson(Map<String, dynamic> json) => OpcionCorteCarga(
-    codigo: json['codigo'] as int? ?? 0,
-    nombre: json['nombre'] as String? ?? '',
-  );
+  factory OpcionCorteCarga.desdeJson(Map<String, dynamic> json) =>
+      OpcionCorteCarga(
+        codigo: json['codigo'] as int? ?? 0,
+        nombre: json['nombre'] as String? ?? '',
+      );
 }
 
 class OpcionesCarga {

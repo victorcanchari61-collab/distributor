@@ -41,7 +41,8 @@ class _LoginPaginaState extends ConsumerState<LoginPagina> {
       // Usuario, correo o DNI: quien no tiene correo entra con lo que tenga.
       _errorEmail = email.isEmpty
           ? 'Ingresa tu usuario, correo o DNI.'
-          : email.contains('@') && !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)
+          : email.contains('@') &&
+                !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)
           ? 'El correo no tiene un formato válido.'
           : null;
 
@@ -127,8 +128,9 @@ class _LoginPaginaState extends ConsumerState<LoginPagina> {
                     error: _errorPassword,
                     habilitado: !auth.enviando,
                     ayuda: TextButton(
-                      onPressed: () =>
-                          Aviso.de(context).mostrar('Pide a tu administrador que la restablezca.'),
+                      onPressed: () => Aviso.de(
+                        context,
+                      ).mostrar('Pide a tu administrador que la restablezca.'),
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: const Size(0, 0),

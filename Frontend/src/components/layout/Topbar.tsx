@@ -10,7 +10,6 @@ import {
   PackageCheck,
   PackageX,
   PanelLeftOpen,
-  Search,
 } from 'lucide-react'
 import { cn } from '../ui'
 import { alertaApi } from '../../lib/alertasApi'
@@ -173,22 +172,6 @@ export function Topbar({
 
       {/* El titulo de la vista vive en la propia pagina (PageHeader), no aqui. */}
       <div className="flex-1" />
-
-      <div className="relative hidden md:block">
-        <Search
-          size={15}
-          className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-soft"
-        />
-        <input
-          type="search"
-          placeholder="Buscar en el sistema..."
-          className={cn(
-            'w-64 rounded-lg border border-line bg-surface-alt py-2 pr-3 pl-9 text-sm outline-none',
-            'transition-colors placeholder:text-ink-soft',
-            'focus:border-line-strong focus:bg-white',
-          )}
-        />
-      </div>
 
       <div ref={contenedorRef} className="relative">
         <button

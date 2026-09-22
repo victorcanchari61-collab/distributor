@@ -72,7 +72,8 @@ final filtrosMetodosPagoActivosProvider = Provider.autoDispose((ref) {
 final metodosPagoFiltradosProvider = Provider.autoDispose<List<MetodoPago>>((
   ref,
 ) {
-  final todos = ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[];
+  final todos =
+      ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[];
   final texto = ref.watch(busquedaMetodosPagoProvider).trim().toLowerCase();
   final estado = ref.watch(estadoFiltroProvider);
   final tipo = ref.watch(tipoMetodoPagoFiltroProvider);
@@ -88,7 +89,8 @@ final metodosPagoFiltradosProvider = Provider.autoDispose<List<MetodoPago>>((
 
 /// Bancos que existen en los datos, para armar el filtro sin listas fijas.
 final bancosMetodoPagoProvider = Provider.autoDispose<List<String>>((ref) {
-  final todos = ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[];
+  final todos =
+      ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[];
   final valores =
       todos
           .map((m) => m.banco)
@@ -104,14 +106,14 @@ final bancosMetodoPagoProvider = Provider.autoDispose<List<String>>((ref) {
 ///
 /// Va por la ruta de "opciones" y no por el catálogo: quien entrega puede tener
 /// permiso de convertir pedidos sin poder ver ni editar los métodos de pago.
-final metodosPagoOpcionesProvider = FutureProvider.autoDispose<List<MetodoPagoOpcion>>(
-  (ref) => ref.watch(finanzasApiProvider).metodosPagoOpciones(),
-);
+final metodosPagoOpcionesProvider =
+    FutureProvider.autoDispose<List<MetodoPagoOpcion>>(
+      (ref) => ref.watch(finanzasApiProvider).metodosPagoOpciones(),
+    );
 
 /// Metodos de pago activos, para los selectores de otros modulos (Compras).
 final metodosPagoActivosProvider = Provider.autoDispose<List<MetodoPago>>(
-  (ref) =>
-      (ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[])
-          .where((m) => m.activo)
-          .toList(),
+  (ref) => (ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[])
+      .where((m) => m.activo)
+      .toList(),
 );

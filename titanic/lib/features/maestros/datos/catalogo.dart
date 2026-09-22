@@ -1,6 +1,10 @@
 /// Categoria de productos.
 class Categoria {
-  const Categoria({required this.id, required this.nombre, required this.activo});
+  const Categoria({
+    required this.id,
+    required this.nombre,
+    required this.activo,
+  });
 
   final int id;
   final String nombre;

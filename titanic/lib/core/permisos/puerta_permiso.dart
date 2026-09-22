@@ -76,10 +76,9 @@ class _SinAccesoState extends ConsumerState<_SinAcceso> {
     });
 
     try {
-      await ref.read(solicitudApiProvider).solicitar(
-        submodulo: widget.submodulo,
-        accion: Accion.ver,
-      );
+      await ref
+          .read(solicitudApiProvider)
+          .solicitar(submodulo: widget.submodulo, accion: Accion.ver);
       setState(() => _pedido = true);
     } on ApiExcepcion catch (e) {
       setState(() => _error = e.texto);
@@ -99,7 +98,11 @@ class _SinAccesoState extends ConsumerState<_SinAcceso> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.lock_outline, size: 40, color: Colores.tintaTenue),
+              const Icon(
+                Icons.lock_outline,
+                size: 40,
+                color: Colores.tintaTenue,
+              ),
               const SizedBox(height: Dimen.espacio3),
               const Text(
                 'No tienes acceso a esta pantalla',

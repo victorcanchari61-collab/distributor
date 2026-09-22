@@ -25,7 +25,8 @@ class KardexPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final todos = ref.watch(kardexProvider).valueOrNull ?? const <MovimientoKardex>[];
+    final todos =
+        ref.watch(kardexProvider).valueOrNull ?? const <MovimientoKardex>[];
     final almacenes = ref.watch(almacenesActivosProvider);
     final almacenId = ref.watch(almacenKardexProvider);
 
@@ -73,7 +74,8 @@ class KardexPagina extends ConsumerWidget {
         color: color,
         onAbrir: () => _abrirFiltros(context, ref),
       ),
-      fila: (context, movimiento) => _TarjetaKardex(movimiento: movimiento, color: color),
+      fila: (context, movimiento) =>
+          _TarjetaKardex(movimiento: movimiento, color: color),
     );
   }
 
@@ -176,7 +178,9 @@ class _TarjetaKardex extends StatelessWidget {
     // y un S/ 0.00 se leeria como que costo cero.
     CampoDetalle(
       'Costo',
-      movimiento.esReserva ? '—' : 'S/ ${movimiento.costoTotal.toStringAsFixed(2)}',
+      movimiento.esReserva
+          ? '—'
+          : 'S/ ${movimiento.costoTotal.toStringAsFixed(2)}',
       enTarjeta: false,
     ),
     // Con cuanto llegaba y con cuanto quedo: sin el anterior, una fila sola no
@@ -186,7 +190,10 @@ class _TarjetaKardex extends StatelessWidget {
       '${movimiento.saldoAnterior} ${movimiento.unidadBase}',
       enTarjeta: false,
     ),
-    CampoDetalle('Stock actual', '${movimiento.saldo} ${movimiento.unidadBase}'),
+    CampoDetalle(
+      'Stock actual',
+      '${movimiento.saldo} ${movimiento.unidadBase}',
+    ),
     CampoDetalle(
       'Valorizado',
       'S/ ${movimiento.valorizado.toStringAsFixed(2)}',
@@ -232,7 +239,9 @@ class _TarjetaKardex extends StatelessWidget {
       campos: _campos,
       onTap: () => mostrarDetalle(
         context,
-        icono: movimiento.esEntrada ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+        icono: movimiento.esEntrada
+            ? Icons.arrow_downward_rounded
+            : Icons.arrow_upward_rounded,
         color: movimiento.esEntrada ? Colores.exito : Colores.advertencia,
         titulo: movimiento.documento,
         subtitulo: movimiento.producto,

@@ -215,9 +215,11 @@ class _CuadrePaginaState extends ConsumerState<CuadrePagina> {
       });
 
       navegador.pop();
-      mensajero.mostrar(arqueo.faltante > 0
-                ? 'Cuadre guardado. Queda una deuda de ${formatoSoles(arqueo.faltante)}.'
-                : 'Cuadre guardado');
+      mensajero.mostrar(
+        arqueo.faltante > 0
+            ? 'Cuadre guardado. Queda una deuda de ${formatoSoles(arqueo.faltante)}.'
+            : 'Cuadre guardado',
+      );
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;
@@ -977,9 +979,7 @@ class _FilaConfirmacion extends StatelessWidget {
                   value: marcado,
                   visualDensity: VisualDensity.compact,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  onChanged: habilitado
-                      ? (v) => onMarcar(v ?? false)
-                      : null,
+                  onChanged: habilitado ? (v) => onMarcar(v ?? false) : null,
                 ),
               ),
               Expanded(
@@ -1040,10 +1040,7 @@ class _FilaConfirmacion extends StatelessWidget {
           // hay nada que rastrear en el banco.
           if (marcado && operacion != null)
             Padding(
-              padding: const EdgeInsets.only(
-                left: 32,
-                top: Dimen.espacio2,
-              ),
+              padding: const EdgeInsets.only(left: 32, top: Dimen.espacio2),
               child: AppCampo(
                 controlador: operacion!,
                 etiqueta: 'N° de operación',

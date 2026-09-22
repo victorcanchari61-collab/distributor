@@ -50,7 +50,8 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
 
   @override
   Widget build(BuildContext context) {
-    final color = resolverRuta(AjustesPagina.ruta).grupo?.color ?? Colores.marca;
+    final color =
+        resolverRuta(AjustesPagina.ruta).grupo?.color ?? Colores.marca;
 
     return AppShell(
       titulo: 'Ajustes de inventario',
@@ -75,7 +76,10 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
             labelColor: color,
             unselectedLabelColor: Colores.tintaSuave,
             indicatorColor: color,
-            tabs: const [Tab(text: 'Ajustes'), Tab(text: 'Motivos')],
+            tabs: const [
+              Tab(text: 'Ajustes'),
+              Tab(text: 'Motivos'),
+            ],
           ),
           Expanded(
             child: TabBarView(
@@ -89,7 +93,9 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
   }
 
   void _nuevoAjuste(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AjusteFormulario()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const AjusteFormulario()));
   }
 
   void _nuevoMotivo(BuildContext context) {
@@ -244,7 +250,9 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
             error: (e, _) => AppVacio(
               icono: Icons.wifi_off_outlined,
               titulo: 'No se pudo cargar',
-              detalle: e is ApiExcepcion ? e.texto : 'No pudimos cargar los ajustes.',
+              detalle: e is ApiExcepcion
+                  ? e.texto
+                  : 'No pudimos cargar los ajustes.',
               accion: FilledButton.icon(
                 onPressed: () => ref.read(ajustesProvider.notifier).recargar(),
                 icon: const Icon(Icons.refresh, size: 18),
@@ -258,7 +266,8 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
                     detalle: 'Registra el primero con el botón de abajo.',
                   )
                 : RefreshIndicator(
-                    onRefresh: () => ref.read(ajustesProvider.notifier).recargar(),
+                    onRefresh: () =>
+                        ref.read(ajustesProvider.notifier).recargar(),
                     child: ListView.separated(
                       padding: const EdgeInsets.fromLTRB(
                         Dimen.espacio4,
@@ -267,11 +276,14 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
                         Dimen.espacio6 * 2,
                       ),
                       itemCount: visibles.length,
-                      separatorBuilder: (context, i) => const SizedBox(height: Dimen.espacio2),
+                      separatorBuilder: (context, i) =>
+                          const SizedBox(height: Dimen.espacio2),
                       itemBuilder: (context, i) => _TarjetaAjuste(
                         doc: visibles[i],
                         color: color,
-                        onAnular: visibles[i].anulado ? null : () => _anularAjuste(visibles[i]),
+                        onAnular: visibles[i].anulado
+                            ? null
+                            : () => _anularAjuste(visibles[i]),
                       ),
                     ),
                   ),
@@ -285,7 +297,8 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
     final ok = await confirmarAccion(
       context,
       titulo: 'Anular ${doc.numero}',
-      mensaje: 'Se revierte el movimiento con un documento espejo. No se puede deshacer.',
+      mensaje:
+          'Se revierte el movimiento con un documento espejo. No se puede deshacer.',
       textoConfirmar: 'Anular',
       tono: ConfirmTono.peligro,
     );
@@ -333,7 +346,9 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
             error: (e, _) => AppVacio(
               icono: Icons.wifi_off_outlined,
               titulo: 'No se pudo cargar',
-              detalle: e is ApiExcepcion ? e.texto : 'No pudimos cargar los motivos.',
+              detalle: e is ApiExcepcion
+                  ? e.texto
+                  : 'No pudimos cargar los motivos.',
               accion: FilledButton.icon(
                 onPressed: () => ref.read(motivosProvider.notifier).recargar(),
                 icon: const Icon(Icons.refresh, size: 18),
@@ -344,10 +359,12 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
                 ? const AppVacio(
                     icono: Icons.fact_check_outlined,
                     titulo: 'Sin motivos',
-                    detalle: 'Crea los motivos con los que justificas un ajuste.',
+                    detalle:
+                        'Crea los motivos con los que justificas un ajuste.',
                   )
                 : RefreshIndicator(
-                    onRefresh: () => ref.read(motivosProvider.notifier).recargar(),
+                    onRefresh: () =>
+                        ref.read(motivosProvider.notifier).recargar(),
                     child: ListView.separated(
                       padding: const EdgeInsets.fromLTRB(
                         Dimen.espacio4,
@@ -356,7 +373,8 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
                         Dimen.espacio6 * 2,
                       ),
                       itemCount: visibles.length,
-                      separatorBuilder: (context, i) => const SizedBox(height: Dimen.espacio2),
+                      separatorBuilder: (context, i) =>
+                          const SizedBox(height: Dimen.espacio2),
                       itemBuilder: (context, i) => _TarjetaMotivo(
                         motivo: visibles[i],
                         color: color,
@@ -364,7 +382,11 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
                             visibles[i].delSistema ||
                                 !puede(ref, 'inv.ajustes', Accion.editar)
                             ? null
-                            : () => mostrarFormularioMotivo(context, ref, motivo: visibles[i]),
+                            : () => mostrarFormularioMotivo(
+                                context,
+                                ref,
+                                motivo: visibles[i],
+                              ),
                       ),
                     ),
                   ),
@@ -395,7 +417,8 @@ class _TarjetaAjuste extends StatelessWidget {
     for (final linea in doc.detalle)
       LineaProductoTarjeta(
         titulo: linea.producto,
-        subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
+        subtitulo:
+            '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
         filas: [
           [
             ('Tipo', linea.esEntrada ? 'Entrada' : 'Salida'),
@@ -451,7 +474,11 @@ class _TarjetaAjuste extends StatelessWidget {
 }
 
 class _TarjetaMotivo extends StatelessWidget {
-  const _TarjetaMotivo({required this.motivo, required this.color, this.onEditar});
+  const _TarjetaMotivo({
+    required this.motivo,
+    required this.color,
+    this.onEditar,
+  });
 
   final Motivo motivo;
   final Color color;
@@ -473,7 +500,9 @@ class _TarjetaMotivo extends StatelessWidget {
           motivo.delSistema ? 'Sistema' : 'Manual',
           widget: AppEtiqueta(
             motivo.delSistema ? 'Sistema' : 'Manual',
-            tono: motivo.delSistema ? EtiquetaTono.neutral : EtiquetaTono.modulo,
+            tono: motivo.delSistema
+                ? EtiquetaTono.neutral
+                : EtiquetaTono.modulo,
           ),
         ),
         CampoDetalle('Código', motivo.codigo),
@@ -494,7 +523,11 @@ class _TarjetaMotivo extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
       ],
     );

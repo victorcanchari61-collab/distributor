@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_lineas_producto.dart';
 import '../../../compartido/widgets/app_panel_producto.dart';
@@ -110,7 +110,9 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
       _errorMotivo = _motivo == null ? 'Elige el motivo.' : null;
       _errorLineas = _lineas.isEmpty ? 'Agrega al menos un producto.' : null;
     });
-    return _errorAlmacen == null && _errorMotivo == null && _errorLineas == null;
+    return _errorAlmacen == null &&
+        _errorMotivo == null &&
+        _errorLineas == null;
   }
 
   Future<void> _guardar() async {
@@ -131,10 +133,13 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
     final cuerpo = <String, dynamic>{
       'almacenId': _almacenId,
       'motivoId': motivo?.id,
-      'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
+      'observacion': _observacion.text.trim().isEmpty
+          ? null
+          : _observacion.text.trim(),
       'flete': flete,
       'detalle': [
-        for (final f in _lineas.cast<_LineaAjuste>()) f.aCuerpo(pideCosto: pideCosto),
+        for (final f in _lineas.cast<_LineaAjuste>())
+          f.aCuerpo(pideCosto: pideCosto),
       ],
     };
 
@@ -206,7 +211,8 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
                       firstDate: hoy.subtract(const Duration(days: 365)),
                       lastDate: hoy.add(const Duration(days: 365 * 10)),
                     );
-                    if (elegida != null) setState(() => fila.vencimiento = elegida);
+                    if (elegida != null)
+                      setState(() => fila.vencimiento = elegida);
                   },
             child: InputDecorator(
               decoration: const InputDecoration(
@@ -221,7 +227,9 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
                           '${fila.vencimiento!.year}',
                 style: TextStyle(
                   fontSize: 14,
-                  color: fila.vencimiento == null ? Colores.tintaSuave : Colores.tinta,
+                  color: fila.vencimiento == null
+                      ? Colores.tintaSuave
+                      : Colores.tinta,
                 ),
               ),
             ),
@@ -252,19 +260,27 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
             'Nuevo ajuste',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             AppSelector<int>(
               valor: _almacenId,
               etiqueta: 'Almacén',
               icono: Icons.warehouse_outlined,
               error: _errorAlmacen,
-              opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
+              opciones: [
+                for (final a in almacenes) Opcion<int>(a.id, a.nombre),
+              ],
               onCambio: (v) => setState(() => _almacenId = v),
             ),
             const SizedBox(height: Dimen.espacio4),
@@ -295,7 +311,9 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
               etiqueta: 'Motivo',
               icono: Icons.fact_check_outlined,
               error: _errorMotivo,
-              opciones: [for (final m in motivosDelTipo) Opcion<int>(m.id, m.nombre)],
+              opciones: [
+                for (final m in motivosDelTipo) Opcion<int>(m.id, m.nombre),
+              ],
               onCambio: (v) => setState(() => _motivoElegido = v),
             ),
             if (motivosDelTipo.isEmpty) ...[
@@ -315,7 +333,9 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
                 pista: 'Gastos de la entrada, repartidos entre las líneas',
                 icono: Icons.local_shipping_outlined,
                 opcional: true,
-                tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+                tipoTeclado: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 habilitado: !_guardando,
               ),
               const SizedBox(height: Dimen.espacio4),
@@ -332,9 +352,11 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
             const SizedBox(height: Dimen.espacio5),
 
             AppPanelProducto(
-              productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
-                  .where((p) => p.activo && p.controlaStock)
-                  .toList(),
+              productos:
+                  (ref.watch(productosProvider).valueOrNull ??
+                          const <Producto>[])
+                      .where((p) => p.activo && p.controlaStock)
+                      .toList(),
               cargando: ref.watch(productosProvider).isLoading,
               paraVenta: false,
               habilitado: !_guardando && motivo != null,
@@ -362,12 +384,10 @@ class _AjusteFormularioState extends ConsumerState<AjusteFormulario> {
             ),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(texto: 'Registrar ajuste', cargando: _guardando, onPressed: _guardar),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              cargando: _guardando,
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

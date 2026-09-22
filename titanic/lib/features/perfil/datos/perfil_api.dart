@@ -16,9 +16,10 @@ class PerfilApi {
       Usuario.desdeJson(await _api.get('/perfil') as Map<String, dynamic>);
 
   /// PUT /api/perfil
-  Future<Usuario> actualizar(Map<String, dynamic> cuerpo) async => Usuario.desdeJson(
-    await _api.put('/perfil', cuerpo: cuerpo) as Map<String, dynamic>,
-  );
+  Future<Usuario> actualizar(Map<String, dynamic> cuerpo) async =>
+      Usuario.desdeJson(
+        await _api.put('/perfil', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
 
   /// PUT /api/perfil/password
   Future<void> cambiarPassword({

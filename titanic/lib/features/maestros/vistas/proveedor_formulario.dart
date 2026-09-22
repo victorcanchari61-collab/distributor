@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
@@ -20,17 +20,32 @@ class ProveedorFormulario extends ConsumerStatefulWidget {
   final Proveedor? proveedor;
 
   @override
-  ConsumerState<ProveedorFormulario> createState() => _ProveedorFormularioState();
+  ConsumerState<ProveedorFormulario> createState() =>
+      _ProveedorFormularioState();
 }
 
 class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
-  late final _documento = TextEditingController(text: widget.proveedor?.documento ?? '');
-  late final _nombre = TextEditingController(text: widget.proveedor?.nombre ?? '');
-  late final _comercial = TextEditingController(text: widget.proveedor?.nombreComercial ?? '');
-  late final _rubro = TextEditingController(text: widget.proveedor?.rubro ?? '');
-  late final _direccion = TextEditingController(text: widget.proveedor?.direccion ?? '');
-  late final _distrito = TextEditingController(text: widget.proveedor?.distrito ?? '');
-  late final _telefono = TextEditingController(text: widget.proveedor?.telefono ?? '');
+  late final _documento = TextEditingController(
+    text: widget.proveedor?.documento ?? '',
+  );
+  late final _nombre = TextEditingController(
+    text: widget.proveedor?.nombre ?? '',
+  );
+  late final _comercial = TextEditingController(
+    text: widget.proveedor?.nombreComercial ?? '',
+  );
+  late final _rubro = TextEditingController(
+    text: widget.proveedor?.rubro ?? '',
+  );
+  late final _direccion = TextEditingController(
+    text: widget.proveedor?.direccion ?? '',
+  );
+  late final _distrito = TextEditingController(
+    text: widget.proveedor?.distrito ?? '',
+  );
+  late final _telefono = TextEditingController(
+    text: widget.proveedor?.telefono ?? '',
+  );
 
   late String _tipoDoc = widget.proveedor?.tipoDoc.isNotEmpty == true
       ? widget.proveedor!.tipoDoc
@@ -45,7 +60,15 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
 
   @override
   void dispose() {
-    for (final c in [_documento, _nombre, _comercial, _rubro, _direccion, _distrito, _telefono]) {
+    for (final c in [
+      _documento,
+      _nombre,
+      _comercial,
+      _rubro,
+      _direccion,
+      _distrito,
+      _telefono,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -70,7 +93,9 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
                 : 'Entre ${l.min} y ${l.max} dígitos.'
           : null;
 
-      _errorNombre = _nombre.text.trim().isEmpty ? 'Ingresa la razón social.' : null;
+      _errorNombre = _nombre.text.trim().isEmpty
+          ? 'Ingresa la razón social.'
+          : null;
     });
 
     return _errorDocumento == null && _errorNombre == null;
@@ -106,7 +131,9 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
           .guardar(id: widget.proveedor?.id, cuerpo: cuerpo);
 
       navegador.pop();
-      mensajero.mostrar(_esNuevo ? 'Proveedor creado' : 'Proveedor actualizado');
+      mensajero.mostrar(
+        _esNuevo ? 'Proveedor creado' : 'Proveedor actualizado',
+      );
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;
@@ -128,12 +155,18 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
             _esNuevo ? 'Nuevo proveedor' : 'Editar proveedor',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -239,16 +272,11 @@ class _ProveedorFormularioState extends ConsumerState<ProveedorFormulario> {
             ),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(
-              texto: _esNuevo ? 'Crear proveedor' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

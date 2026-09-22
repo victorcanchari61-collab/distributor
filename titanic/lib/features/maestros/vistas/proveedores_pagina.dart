@@ -223,9 +223,11 @@ class ProveedoresPagina extends ConsumerWidget {
 
     try {
       await ref.read(proveedoresProvider.notifier).cambiarEstado(proveedor);
-      mensajero.mostrar(proveedor.activo
-                ? '${proveedor.nombre} desactivado'
-                : '${proveedor.nombre} activado');
+      mensajero.mostrar(
+        proveedor.activo
+            ? '${proveedor.nombre} desactivado'
+            : '${proveedor.nombre} activado',
+      );
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -294,7 +296,11 @@ class _TarjetaProveedor extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

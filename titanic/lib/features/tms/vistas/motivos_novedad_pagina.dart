@@ -33,7 +33,9 @@ class MotivosNovedadPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final todos = ref.watch(motivosNovedadProvider).valueOrNull ?? const <MotivoNovedad>[];
+    final todos =
+        ref.watch(motivosNovedadProvider).valueOrNull ??
+        const <MotivoNovedad>[];
 
     return AppListaPagina<MotivoNovedad>(
       titulo: 'Motivos de novedad',
@@ -44,7 +46,9 @@ class MotivosNovedadPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaMotivosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar motivo',
       onRecargar: () => ref.read(motivosNovedadProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'tms.motivos', Accion.crear) ? () => _abrirFormulario(context, null) : null,
+      onNuevo: puede(ref, 'tms.motivos', Accion.crear)
+          ? () => _abrirFormulario(context, null)
+          : null,
       textoNuevo: 'Nuevo motivo',
       iconoVacio: Icons.label_outline,
       singular: 'motivo',
@@ -71,8 +75,12 @@ class MotivosNovedadPagina extends ConsumerWidget {
         motivo: motivo,
         color: color,
         onVer: () => _verDetalle(context, motivo, color),
-        onEditar: puede(ref, 'tms.motivos', Accion.editar) ? () => _abrirFormulario(context, motivo) : null,
-        onEstado: puede(ref, 'tms.motivos', Accion.editar) ? () => _cambiarEstado(context, ref, motivo) : null,
+        onEditar: puede(ref, 'tms.motivos', Accion.editar)
+            ? () => _abrirFormulario(context, motivo)
+            : null,
+        onEstado: puede(ref, 'tms.motivos', Accion.editar)
+            ? () => _cambiarEstado(context, ref, motivo)
+            : null,
       ),
     );
   }
@@ -81,7 +89,8 @@ class MotivosNovedadPagina extends ConsumerWidget {
     return mostrarFiltros(
       context,
       activos: ref.read(filtrosMotivosActivosProvider),
-      onLimpiar: () => ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos,
+      onLimpiar: () =>
+          ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos,
       grupos: [
         Consumer(
           builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
@@ -101,11 +110,17 @@ class MotivosNovedadPagina extends ConsumerWidget {
 
   Future<void> _abrirFormulario(BuildContext context, MotivoNovedad? motivo) {
     return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => MotivoNovedadFormulario(motivo: motivo)),
+      MaterialPageRoute(
+        builder: (_) => MotivoNovedadFormulario(motivo: motivo),
+      ),
     );
   }
 
-  Future<void> _cambiarEstado(BuildContext context, WidgetRef ref, MotivoNovedad motivo) async {
+  Future<void> _cambiarEstado(
+    BuildContext context,
+    WidgetRef ref,
+    MotivoNovedad motivo,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: '${motivo.activo ? 'Desactivar' : 'Activar'} ${motivo.nombre}',
@@ -120,14 +135,22 @@ class MotivosNovedadPagina extends ConsumerWidget {
     final mensajero = Aviso.de(context);
     try {
       await ref.read(motivosNovedadProvider.notifier).cambiarEstado(motivo);
-      mensajero.mostrar(motivo.activo ? '${motivo.nombre} desactivado' : '${motivo.nombre} activado');
+      mensajero.mostrar(
+        motivo.activo
+            ? '${motivo.nombre} desactivado'
+            : '${motivo.nombre} activado',
+      );
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
   }
 
   /// Ficha de solo lectura, para consultar sin entrar al formulario.
-  Future<void> _verDetalle(BuildContext context, MotivoNovedad motivo, Color color) {
+  Future<void> _verDetalle(
+    BuildContext context,
+    MotivoNovedad motivo,
+    Color color,
+  ) {
     return mostrarDetalle(
       context,
       icono: Icons.label_outline,
@@ -140,16 +163,23 @@ class MotivosNovedadPagina extends ConsumerWidget {
         CampoDetalle('Descripción', motivo.descripcion),
         CampoDetalle('La mercadería', _textoRegresa(motivo)),
         CampoDetalle('Usos', '${motivo.usos}'),
-        CampoDetalle('Estado', motivo.activo ? 'Activo' : 'Inactivo', widget: _insigniaEstado(motivo.activo)),
+        CampoDetalle(
+          'Estado',
+          motivo.activo ? 'Activo' : 'Inactivo',
+          widget: _insigniaEstado(motivo.activo),
+        ),
       ],
     );
   }
 }
 
-String _textoRegresa(MotivoNovedad m) => m.regresaAlAlmacen ? 'Vuelve al almacén' : 'Nunca salió';
+String _textoRegresa(MotivoNovedad m) =>
+    m.regresaAlAlmacen ? 'Vuelve al almacén' : 'Nunca salió';
 
-AppEtiqueta _insigniaEstado(bool activo) =>
-    AppEtiqueta(activo ? 'Activo' : 'Inactivo', tono: activo ? EtiquetaTono.exito : EtiquetaTono.aviso);
+AppEtiqueta _insigniaEstado(bool activo) => AppEtiqueta(
+  activo ? 'Activo' : 'Inactivo',
+  tono: activo ? EtiquetaTono.exito : EtiquetaTono.aviso,
+);
 
 class _TarjetaMotivo extends StatelessWidget {
   const _TarjetaMotivo({
@@ -176,7 +206,11 @@ class _TarjetaMotivo extends StatelessWidget {
         CampoDetalle('Descripción', motivo.descripcion),
         CampoDetalle('La mercadería', _textoRegresa(motivo)),
         CampoDetalle('Usos', '${motivo.usos}'),
-        CampoDetalle('Estado', motivo.activo ? 'Activo' : 'Inactivo', widget: _insigniaEstado(motivo.activo)),
+        CampoDetalle(
+          'Estado',
+          motivo.activo ? 'Activo' : 'Inactivo',
+          widget: _insigniaEstado(motivo.activo),
+        ),
       ],
       onTap: onVer,
       acciones: [
@@ -184,14 +218,22 @@ class _TarjetaMotivo extends StatelessWidget {
           onPressed: onVer,
           tooltip: 'Ver detalle',
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.visibility_outlined, size: 18, color: Colores.tintaSuave),
+          icon: const Icon(
+            Icons.visibility_outlined,
+            size: 18,
+            color: Colores.tintaSuave,
+          ),
         ),
         if (onEditar != null)
           IconButton(
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

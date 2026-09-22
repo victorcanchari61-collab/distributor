@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
@@ -31,7 +31,9 @@ class VehiculoFormulario extends ConsumerStatefulWidget {
 /// como "1200", no como "1200.0".
 String _textoDecimal(double? valor) {
   if (valor == null) return '';
-  return valor == valor.roundToDouble() ? valor.round().toString() : valor.toString();
+  return valor == valor.roundToDouble()
+      ? valor.round().toString()
+      : valor.toString();
 }
 
 class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario>
@@ -40,14 +42,22 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario>
 
   late final _placa = TextEditingController(text: widget.vehiculo?.placa ?? '');
   late final _marca = TextEditingController(text: widget.vehiculo?.marca ?? '');
-  late final _modelo = TextEditingController(text: widget.vehiculo?.modelo ?? '');
-  late final _anio = TextEditingController(text: widget.vehiculo?.anio?.toString() ?? '');
+  late final _modelo = TextEditingController(
+    text: widget.vehiculo?.modelo ?? '',
+  );
+  late final _anio = TextEditingController(
+    text: widget.vehiculo?.anio?.toString() ?? '',
+  );
   late final _color = TextEditingController(text: widget.vehiculo?.color ?? '');
   late final _capacidad = TextEditingController(
     text: _textoDecimal(widget.vehiculo?.capacidadKg),
   );
-  late final _soatNumero = TextEditingController(text: widget.vehiculo?.soatNumero ?? '');
-  late final _observacion = TextEditingController(text: widget.vehiculo?.observacion ?? '');
+  late final _soatNumero = TextEditingController(
+    text: widget.vehiculo?.soatNumero ?? '',
+  );
+  late final _observacion = TextEditingController(
+    text: widget.vehiculo?.observacion ?? '',
+  );
 
   late int? _tipoVehiculoId = widget.vehiculo?.tipoVehiculoId;
   late int? _conductorId = widget.vehiculo?.conductorId;
@@ -110,7 +120,9 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario>
   bool _validar() {
     setState(() {
       _errorPlaca = _placa.text.trim().isEmpty ? 'Ingresa la placa.' : null;
-      _errorTipo = _tipoVehiculoId == null ? 'Elige el tipo de vehículo.' : null;
+      _errorTipo = _tipoVehiculoId == null
+          ? 'Elige el tipo de vehículo.'
+          : null;
     });
     return _errorPlaca == null && _errorTipo == null;
   }
@@ -141,7 +153,9 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario>
       'modelo': _texto(_modelo),
       'anio': int.tryParse(_anio.text.trim()),
       'color': _texto(_color),
-      'capacidadKg': double.tryParse(_capacidad.text.trim().replaceAll(',', '.')),
+      'capacidadKg': double.tryParse(
+        _capacidad.text.trim().replaceAll(',', '.'),
+      ),
       'soatNumero': _texto(_soatNumero),
       'soatVence': _soatVence?.toIso8601String(),
       'revisionTecnicaVence': _revisionVence?.toIso8601String(),
@@ -153,10 +167,9 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario>
     };
 
     try {
-      final id = await ref.read(vehiculosProvider.notifier).guardar(
-        id: widget.vehiculo?.id,
-        cuerpo: cuerpo,
-      );
+      final id = await ref
+          .read(vehiculosProvider.notifier)
+          .guardar(id: widget.vehiculo?.id, cuerpo: cuerpo);
       // El recorrido va con el vehiculo: se guarda en el mismo paso, ya con el id (nuevo o existente).
       await ref.read(flotaApiProvider).guardarRecorrido(id, _recorrido);
 
@@ -201,186 +214,190 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario>
             ListView(
               padding: const EdgeInsets.all(Dimen.espacio4),
               children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+                if (_error != null) ...[
+                  AppAlerta(_error!),
+                  const SizedBox(height: Dimen.espacio4),
+                ],
 
-            AppCampo(
-              controlador: _placa,
-              etiqueta: 'Placa',
-              pista: 'ABC-123',
-              icono: Icons.confirmation_number_outlined,
-              maxLargo: 15,
-              error: _errorPlaca,
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                AppCampo(
+                  controlador: _placa,
+                  etiqueta: 'Placa',
+                  pista: 'ABC-123',
+                  icono: Icons.confirmation_number_outlined,
+                  maxLargo: 15,
+                  error: _errorPlaca,
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            AppSelector<int>(
-              valor: _tipoVehiculoId,
-              etiqueta: 'Tipo de vehículo',
-              icono: Icons.category_outlined,
-              error: _errorTipo,
-              habilitado: !_guardando,
-              opciones: [for (final t in tipos) Opcion(t.id, t.nombre)],
-              onCambio: (v) => setState(() {
-                _tipoVehiculoId = v;
-                _errorTipo = null;
-              }),
-            ),
-            if (sinTipos) ...[
-              const SizedBox(height: Dimen.espacio2),
-              const AppAlerta(
-                'No hay tipos de vehículo activos. Crea uno en "Tipos de vehículo", '
-                'en la pantalla de Flota, antes de dar de alta un vehículo.',
-              ),
-            ],
-            const SizedBox(height: Dimen.espacio4),
+                AppSelector<int>(
+                  valor: _tipoVehiculoId,
+                  etiqueta: 'Tipo de vehículo',
+                  icono: Icons.category_outlined,
+                  error: _errorTipo,
+                  habilitado: !_guardando,
+                  opciones: [for (final t in tipos) Opcion(t.id, t.nombre)],
+                  onCambio: (v) => setState(() {
+                    _tipoVehiculoId = v;
+                    _errorTipo = null;
+                  }),
+                ),
+                if (sinTipos) ...[
+                  const SizedBox(height: Dimen.espacio2),
+                  const AppAlerta(
+                    'No hay tipos de vehículo activos. Crea uno en "Tipos de vehículo", '
+                    'en la pantalla de Flota, antes de dar de alta un vehículo.',
+                  ),
+                ],
+                const SizedBox(height: Dimen.espacio4),
 
-            AppSelector<int?>(
-              valor: _conductorId,
-              etiqueta: 'Conductor habitual',
-              icono: Icons.person_outline,
-              habilitado: !_guardando,
-              opciones: [
-                const Opcion(null, 'Sin asignar'),
-                for (final c in conductores) Opcion(c.id, c.nombre),
-              ],
-              onCambio: (v) => setState(() => _conductorId = v),
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                AppSelector<int?>(
+                  valor: _conductorId,
+                  etiqueta: 'Conductor habitual',
+                  icono: Icons.person_outline,
+                  habilitado: !_guardando,
+                  opciones: [
+                    const Opcion(null, 'Sin asignar'),
+                    for (final c in conductores) Opcion(c.id, c.nombre),
+                  ],
+                  onCambio: (v) => setState(() => _conductorId = v),
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            AppCampo(
-              controlador: _marca,
-              etiqueta: 'Marca',
-              icono: Icons.badge_outlined,
-              opcional: true,
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                AppCampo(
+                  controlador: _marca,
+                  etiqueta: 'Marca',
+                  icono: Icons.badge_outlined,
+                  opcional: true,
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            AppCampo(
-              controlador: _modelo,
-              etiqueta: 'Modelo',
-              icono: Icons.directions_car_outlined,
-              opcional: true,
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                AppCampo(
+                  controlador: _modelo,
+                  etiqueta: 'Modelo',
+                  icono: Icons.directions_car_outlined,
+                  opcional: true,
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            AppCampo(
-              controlador: _anio,
-              etiqueta: 'Año',
-              icono: Icons.calendar_today_outlined,
-              opcional: true,
-              tipoTeclado: TextInputType.number,
-              formateadores: [FilteringTextInputFormatter.digitsOnly],
-              maxLargo: 4,
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                AppCampo(
+                  controlador: _anio,
+                  etiqueta: 'Año',
+                  icono: Icons.calendar_today_outlined,
+                  opcional: true,
+                  tipoTeclado: TextInputType.number,
+                  formateadores: [FilteringTextInputFormatter.digitsOnly],
+                  maxLargo: 4,
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            AppCampo(
-              controlador: _color,
-              etiqueta: 'Color',
-              icono: Icons.palette_outlined,
-              opcional: true,
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                AppCampo(
+                  controlador: _color,
+                  etiqueta: 'Color',
+                  icono: Icons.palette_outlined,
+                  opcional: true,
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            AppCampo(
-              controlador: _capacidad,
-              etiqueta: 'Capacidad en kg',
-              icono: Icons.scale_outlined,
-              opcional: true,
-              tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                AppCampo(
+                  controlador: _capacidad,
+                  etiqueta: 'Capacidad en kg',
+                  icono: Icons.scale_outlined,
+                  opcional: true,
+                  tipoTeclado: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            AppCampo(
-              controlador: _soatNumero,
-              etiqueta: 'Número de SOAT',
-              icono: Icons.description_outlined,
-              opcional: true,
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                AppCampo(
+                  controlador: _soatNumero,
+                  etiqueta: 'Número de SOAT',
+                  icono: Icons.description_outlined,
+                  opcional: true,
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            CampoFecha(
-              etiqueta: 'Vence el SOAT',
-              valor: _soatVence,
-              onCambio: (v) => setState(() => _soatVence = v),
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                CampoFecha(
+                  etiqueta: 'Vence el SOAT',
+                  valor: _soatVence,
+                  onCambio: (v) => setState(() => _soatVence = v),
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            CampoFecha(
-              etiqueta: 'Vence la revisión técnica',
-              valor: _revisionVence,
-              onCambio: (v) => setState(() => _revisionVence = v),
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                CampoFecha(
+                  etiqueta: 'Vence la revisión técnica',
+                  valor: _revisionVence,
+                  onCambio: (v) => setState(() => _revisionVence = v),
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            CampoFecha(
-              etiqueta: 'Vence el permiso de circulación',
-              valor: _permisoVence,
-              onCambio: (v) => setState(() => _permisoVence = v),
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                CampoFecha(
+                  etiqueta: 'Vence el permiso de circulación',
+                  valor: _permisoVence,
+                  onCambio: (v) => setState(() => _permisoVence = v),
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            CampoFoto(
-              ruta: _foto,
-              carpeta: 'vehiculos',
-              onCambio: (r) => setState(() => _foto = r),
-              onSubiendo: (s) => setState(() => _subiendoFoto = s),
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
+                CampoFoto(
+                  ruta: _foto,
+                  carpeta: 'vehiculos',
+                  onCambio: (r) => setState(() => _foto = r),
+                  onSubiendo: (s) => setState(() => _subiendoFoto = s),
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
 
-            AppCampo(
-              controlador: _observacion,
-              etiqueta: 'Observación',
-              icono: Icons.notes_outlined,
-              opcional: true,
-              maxLargo: 300,
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio3),
+                AppCampo(
+                  controlador: _observacion,
+                  etiqueta: 'Observación',
+                  icono: Icons.notes_outlined,
+                  opcional: true,
+                  maxLargo: 300,
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio3),
 
-            CheckboxListTile(
-              value: _activo,
-              onChanged: _guardando ? null : (v) => setState(() => _activo = v ?? true),
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: const Text(
-                'Activo',
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Colores.tinta),
-              ),
-              subtitle: const Text(
-                'Un vehículo inactivo deja de ofrecerse para repartos, pero conserva su '
-                'historial.',
-                style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
-              ),
-            ),
-            const SizedBox(height: Dimen.espacio6),
+                CheckboxListTile(
+                  value: _activo,
+                  onChanged: _guardando
+                      ? null
+                      : (v) => setState(() => _activo = v ?? true),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text(
+                    'Activo',
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: Colores.tinta,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Un vehículo inactivo deja de ofrecerse para repartos, pero conserva su '
+                    'historial.',
+                    style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                  ),
+                ),
+                const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(
-              texto: _esNuevo ? 'Crear vehículo' : 'Guardar cambios',
-              cargando: _guardando,
-              // Mientras sube la foto no se guarda: se iria con la ruta vieja
-              // o sin ninguna, y quien pulsa creeria que la mando.
-              onPressed: _subiendoFoto || sinTipos ? null : _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
-            ),
-            const SizedBox(height: Dimen.espacio5),
+                AppBotonesFormulario(
+                  onCancelar: () => Navigator.of(context).pop(),
+                  onGuardar: _subiendoFoto || sinTipos ? null : _guardar,
+                  textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
+                  cargando: _guardando,
+                ),
+                const SizedBox(height: Dimen.espacio5),
               ],
             ),
             _RecorridoTab(
@@ -399,7 +416,11 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario>
 /// el sistema anterior tenía escrito en el código. Al armar un despacho, elegir este vehículo y el
 /// día de visita propone las rutas desde aquí.
 class _RecorridoTab extends ConsumerWidget {
-  const _RecorridoTab({required this.cargando, required this.dias, required this.onChange});
+  const _RecorridoTab({
+    required this.cargando,
+    required this.dias,
+    required this.onChange,
+  });
 
   final bool cargando;
   final Map<String, List<int>> dias;
@@ -425,7 +446,8 @@ class _RecorridoTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (cargando) return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+    if (cargando)
+      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
 
     final rutas = (ref.watch(rutasProvider).valueOrNull ?? const <Ruta>[])
         .where((r) => r.activo)
@@ -457,7 +479,11 @@ class _RecorridoTab extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
               etiqueta,
-              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Colores.tinta),
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
+              ),
             ),
           ),
           Wrap(

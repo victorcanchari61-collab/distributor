@@ -48,7 +48,8 @@ class LineaVenta {
   final bool anulado;
 
   /// Cuántas unidades base trae una presentación de esta línea.
-  double get factor => cantidadPresentacion > 0 ? cantidad / cantidadPresentacion : 1;
+  double get factor =>
+      cantidadPresentacion > 0 ? cantidad / cantidadPresentacion : 1;
 
   factory LineaVenta.desdeJson(Map<String, dynamic> json) => LineaVenta(
     id: json['id'] as int,
@@ -58,7 +59,8 @@ class LineaVenta {
     unidadBase: json['unidadBase'] as String? ?? '',
     presentacionId: json['presentacionId'] as int?,
     presentacion: json['presentacion'] as String?,
-    cantidadPresentacion: (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
+    cantidadPresentacion:
+        (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
     cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0,
     precioUnitario: (json['precioUnitario'] as num?)?.toDouble() ?? 0,
     precioPresentacion: (json['precioPresentacion'] as num?)?.toDouble() ?? 0,

@@ -113,9 +113,10 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
   }
 
   /// Lo que hay para elegir ahora mismo, y si todavia falta por llegar.
-  late final _fuente = ValueNotifier<({List<T> items, bool cargando})>(
-    (items: widget.items, cargando: widget.cargando),
-  );
+  late final _fuente = ValueNotifier<({List<T> items, bool cargando})>((
+    items: widget.items,
+    cargando: widget.cargando,
+  ));
 
   @override
   void didUpdateWidget(covariant AppCampoBusqueda<T> viejo) {
@@ -149,7 +150,9 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
   List<T> get _coincidencias {
     final texto = _texto.trim().toLowerCase();
     if (texto.isEmpty) return const [];
-    return widget.items.where((item) => widget.buscable(item).contains(texto)).toList();
+    return widget.items
+        .where((item) => widget.buscable(item).contains(texto))
+        .toList();
   }
 
   void _elegir(T item) {
@@ -194,7 +197,11 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
             prefixIcon: Icon(widget.icono, size: 19, color: Colores.tintaTenue),
             suffixIcon: IconButton(
               onPressed: widget.habilitado ? () => _abrirHoja(context) : null,
-              icon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
+              icon: const Icon(
+                Icons.search,
+                size: 18,
+                color: Colores.tintaTenue,
+              ),
               tooltip: 'Ver la lista completa',
             ),
             constraints: const BoxConstraints(minHeight: Dimen.campoLg),
@@ -295,7 +302,12 @@ class _Sugerencias<T> extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 for (final item in items)
-                  _Fila<T>(item: item, titulo: titulo, subtitulo: subtitulo, onElegir: onElegir),
+                  _Fila<T>(
+                    item: item,
+                    titulo: titulo,
+                    subtitulo: subtitulo,
+                    onElegir: onElegir,
+                  ),
                 if (restantes > 0)
                   InkWell(
                     onTap: onVerTodos,
@@ -337,7 +349,10 @@ class _Fila<T> extends StatelessWidget {
     return InkWell(
       onTap: () => onElegir(item),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3, vertical: Dimen.espacio3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Dimen.espacio3,
+          vertical: Dimen.espacio3,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -352,7 +367,13 @@ class _Fila<T> extends StatelessWidget {
             if (sub != null && sub.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: Text(sub, style: const TextStyle(fontSize: 12, color: Colores.tintaSuave)),
+                child: Text(
+                  sub,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colores.tintaSuave,
+                  ),
+                ),
               ),
           ],
         ),
@@ -394,7 +415,9 @@ class _HojaBusqueda<T> extends StatefulWidget {
 
 class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
   late String _texto = widget.textoInicial;
-  late final TextEditingController _controlador = TextEditingController(text: widget.textoInicial);
+  late final TextEditingController _controlador = TextEditingController(
+    text: widget.textoInicial,
+  );
   late final Map<String, String?> _filtros = Map.of(widget.filtrosIniciales);
   late bool _filtrosAbiertos = _filtros.values.any((v) => v != null);
 
@@ -448,12 +471,19 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
       builder: (context, scroll) => Container(
         decoration: const BoxDecoration(
           color: Colores.fondo,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(Dimen.radioPanel),
+          ),
         ),
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(Dimen.espacio4, Dimen.espacio3, Dimen.espacio4, 0),
+              padding: const EdgeInsets.fromLTRB(
+                Dimen.espacio4,
+                Dimen.espacio3,
+                Dimen.espacio4,
+                0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -482,7 +512,10 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close, color: Colores.tintaSuave),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colores.tintaSuave,
+                        ),
                         tooltip: 'Cerrar',
                       ),
                     ],
@@ -495,7 +528,10 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
                           controller: _controlador,
                           autofocus: true,
                           onChanged: (v) => setState(() => _texto = v),
-                          style: const TextStyle(fontSize: 15, color: Colores.tinta),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Colores.tinta,
+                          ),
                           decoration: InputDecoration(
                             hintText: widget.pista,
                             prefixIcon: const Icon(
@@ -503,15 +539,21 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
                               size: 19,
                               color: Colores.tintaTenue,
                             ),
-                            constraints: const BoxConstraints(minHeight: Dimen.campoMd),
+                            constraints: const BoxConstraints(
+                              minHeight: Dimen.campoMd,
+                            ),
                           ),
                         ),
                       ),
                       if (widget.filtros.isNotEmpty) ...[
                         const SizedBox(width: Dimen.espacio2),
                         BotonFiltrosEnLinea(
-                          activo: _filtrosAbiertos || _filtros.values.any((v) => v != null),
-                          onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+                          activo:
+                              _filtrosAbiertos ||
+                              _filtros.values.any((v) => v != null),
+                          onTap: () => setState(
+                            () => _filtrosAbiertos = !_filtrosAbiertos,
+                          ),
                         ),
                       ],
                     ],
@@ -527,7 +569,8 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
                             etiqueta: f.etiqueta,
                             valor: _filtros[f.etiqueta],
                             opciones: _opcionesDe(f),
-                            onChanged: (v) => setState(() => _filtros[f.etiqueta] = v),
+                            onChanged: (v) =>
+                                setState(() => _filtros[f.etiqueta] = v),
                           ),
                       ],
                     ),
@@ -540,7 +583,10 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
                           ? 'Cargando…'
                           : '${visibles.length} resultado'
                                 '${visibles.length == 1 ? '' : 's'}',
-                      style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colores.tintaSuave,
+                      ),
                     ),
                   ),
                   const SizedBox(height: Dimen.espacio2),
@@ -573,7 +619,8 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
                         Dimen.espacio6,
                       ),
                       itemCount: visibles.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1, color: Colores.linea),
+                      separatorBuilder: (_, _) =>
+                          const Divider(height: 1, color: Colores.linea),
                       itemBuilder: (_, i) => _Fila<T>(
                         item: visibles[i],
                         titulo: widget.titulos,

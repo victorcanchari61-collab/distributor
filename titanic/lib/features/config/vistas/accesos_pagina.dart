@@ -224,10 +224,9 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
 
     // Cuántas esperan respuesta, para el número de la pestaña: sin él, quien
     // no entra a la bandeja no se entera de que alguien está esperando.
-    final pendientes =
-        (ref.watch(solicitudesProvider).valueOrNull ?? const [])
-            .where((s) => s.pendiente)
-            .length;
+    final pendientes = (ref.watch(solicitudesProvider).valueOrNull ?? const [])
+        .where((s) => s.pendiente)
+        .length;
 
     return AppShell(
       titulo: 'Accesos',
@@ -241,7 +240,10 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
             labelColor: color,
             indicatorColor: color,
             unselectedLabelColor: Colores.tintaSuave,
-            labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            labelStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
             tabs: [
               const Tab(text: 'Por rol'),
               const Tab(text: 'Por persona'),

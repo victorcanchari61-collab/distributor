@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -24,9 +24,15 @@ class AlmacenFormulario extends ConsumerStatefulWidget {
 }
 
 class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
-  late final _codigo = TextEditingController(text: widget.almacen?.codigo ?? '');
-  late final _nombre = TextEditingController(text: widget.almacen?.nombre ?? '');
-  late final _direccion = TextEditingController(text: widget.almacen?.direccion ?? '');
+  late final _codigo = TextEditingController(
+    text: widget.almacen?.codigo ?? '',
+  );
+  late final _nombre = TextEditingController(
+    text: widget.almacen?.nombre ?? '',
+  );
+  late final _direccion = TextEditingController(
+    text: widget.almacen?.direccion ?? '',
+  );
 
   late bool _esPrincipal = widget.almacen?.esPrincipal ?? false;
 
@@ -74,7 +80,9 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
     };
 
     try {
-      await ref.read(almacenesProvider.notifier).guardar(id: widget.almacen?.id, cuerpo: cuerpo);
+      await ref
+          .read(almacenesProvider.notifier)
+          .guardar(id: widget.almacen?.id, cuerpo: cuerpo);
 
       navegador.pop();
       mensajero.mostrar(_esNuevo ? 'Almacén creado' : 'Almacén actualizado');
@@ -99,12 +107,18 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
             _esNuevo ? 'Nuevo almacén' : 'Editar almacén',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             AppCampo(
               controlador: _codigo,
@@ -138,13 +152,19 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
 
             CheckboxListTile(
               value: _esPrincipal,
-              onChanged: _guardando ? null : (v) => setState(() => _esPrincipal = v ?? false),
+              onChanged: _guardando
+                  ? null
+                  : (v) => setState(() => _esPrincipal = v ?? false),
               controlAffinity: ListTileControlAffinity.leading,
               contentPadding: EdgeInsets.zero,
               dense: true,
               title: const Text(
                 'Almacén principal',
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Colores.tinta),
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  color: Colores.tinta,
+                ),
               ),
               subtitle: const Text(
                 'Solo uno puede serlo: sale por defecto en pedidos y ventas, y es del que se '
@@ -154,16 +174,11 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
             ),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(
-              texto: _esNuevo ? 'Crear almacén' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

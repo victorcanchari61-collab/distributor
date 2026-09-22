@@ -20,7 +20,8 @@ class Mercado {
   /// Cuántos clientes ya lo usan. Si hay alguno, no se elimina.
   final int clientes;
 
-  String get buscable => '$nombre ${direccion ?? ''} ${distrito ?? ''}'.toLowerCase();
+  String get buscable =>
+      '$nombre ${direccion ?? ''} ${distrito ?? ''}'.toLowerCase();
 
   factory Mercado.desdeJson(Map<String, dynamic> json) => Mercado(
     id: json['id'] as int,

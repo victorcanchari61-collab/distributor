@@ -66,8 +66,7 @@ class RolesPagina extends ConsumerWidget {
       context,
       activos: ref.read(filtrosRolesActivosProvider),
       onLimpiar: () {
-        ref.read(estadoFiltroProvider.notifier).state =
-            FiltroEstado.activos;
+        ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
       },
       grupos: [
         Consumer(
@@ -119,7 +118,9 @@ class RolesPagina extends ConsumerWidget {
 
     try {
       await ref.read(rolesProvider.notifier).cambiarEstado(rol);
-      mensajero.mostrar(rol.activo ? '${rol.nombre} desactivado' : '${rol.nombre} activado');
+      mensajero.mostrar(
+        rol.activo ? '${rol.nombre} desactivado' : '${rol.nombre} activado',
+      );
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -211,7 +212,11 @@ class _TarjetaRol extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

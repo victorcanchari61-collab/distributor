@@ -16,7 +16,9 @@ final ventasApiProvider = Provider(
 final busquedaPedidosProvider = StateProvider.autoDispose((ref) => '');
 
 /// Filtro por estado. Null es "todos".
-final estadoPedidoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+final estadoPedidoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 final clientePedidoFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
@@ -27,10 +29,14 @@ final ventaPedidoFiltroProvider = StateProvider.autoDispose<bool?>(
 );
 
 /// La ruta del cliente. Null es "todas".
-final rutaPedidoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+final rutaPedidoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
 /// El día de visita del cliente. Null es "todos".
-final diaVisitaPedidoFiltroProvider = StateProvider.autoDispose<String?>((ref) => null);
+final diaVisitaPedidoFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
 final filtrosPedidosActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
@@ -123,7 +129,15 @@ final rutasPedidoProvider = Provider.autoDispose<List<String>>((ref) {
 });
 
 /// Los días de visita, en orden de semana, que las rutas de este listado usan.
-const diasVisitaOrden = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+const diasVisitaOrden = [
+  'LUNES',
+  'MARTES',
+  'MIERCOLES',
+  'JUEVES',
+  'VIERNES',
+  'SABADO',
+  'DOMINGO',
+];
 
 // --- Notas de venta ---
 
@@ -135,7 +149,9 @@ class NotasVentaControlador extends AsyncNotifier<List<NotaVenta>> {
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(ventasApiProvider).notasVenta());
+    state = await AsyncValue.guard(
+      () => ref.read(ventasApiProvider).notasVenta(),
+    );
   }
 
   Future<void> crear(Map<String, dynamic> cuerpo) async {
@@ -178,8 +194,11 @@ final filtrosNotasVentaActivosProvider = Provider.autoDispose((ref) {
   return n;
 });
 
-final notasVentaFiltradasProvider = Provider.autoDispose<List<NotaVenta>>((ref) {
-  final todas = ref.watch(notasVentaProvider).valueOrNull ?? const <NotaVenta>[];
+final notasVentaFiltradasProvider = Provider.autoDispose<List<NotaVenta>>((
+  ref,
+) {
+  final todas =
+      ref.watch(notasVentaProvider).valueOrNull ?? const <NotaVenta>[];
   final texto = ref.watch(busquedaNotasVentaProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroDocumentoProvider);
   final forma = ref.watch(formaPagoFiltroProvider);
@@ -197,18 +216,22 @@ final notasVentaFiltradasProvider = Provider.autoDispose<List<NotaVenta>>((ref) 
 
 /// Clientes que existen en las notas de venta, para armar el filtro.
 final clientesNotaVentaProvider = Provider.autoDispose<List<String>>((ref) {
-  final todas = ref.watch(notasVentaProvider).valueOrNull ?? const <NotaVenta>[];
+  final todas =
+      ref.watch(notasVentaProvider).valueOrNull ?? const <NotaVenta>[];
   final valores = todas.map((n) => n.cliente).toSet().toList()..sort();
   return valores;
 });
 
 // --- Cuentas por cobrar ---
 
-final busquedaCuentasPorCobrarProvider = StateProvider.autoDispose<String>((ref) => '');
+final busquedaCuentasPorCobrarProvider = StateProvider.autoDispose<String>(
+  (ref) => '',
+);
 
 class CuentasPorCobrarControlador extends AsyncNotifier<List<NotaVenta>> {
   @override
-  Future<List<NotaVenta>> build() => ref.watch(ventasApiProvider).cuentasPorCobrar();
+  Future<List<NotaVenta>> build() =>
+      ref.watch(ventasApiProvider).cuentasPorCobrar();
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
@@ -217,8 +240,13 @@ class CuentasPorCobrarControlador extends AsyncNotifier<List<NotaVenta>> {
     );
   }
 
-  Future<void> registrarPago(int notaVentaId, Map<String, dynamic> cuerpo) async {
-    await ref.read(ventasApiProvider).registrarPagoNotaVenta(notaVentaId, cuerpo);
+  Future<void> registrarPago(
+    int notaVentaId,
+    Map<String, dynamic> cuerpo,
+  ) async {
+    await ref
+        .read(ventasApiProvider)
+        .registrarPagoNotaVenta(notaVentaId, cuerpo);
     await recargar();
   }
 
@@ -227,7 +255,9 @@ class CuentasPorCobrarControlador extends AsyncNotifier<List<NotaVenta>> {
     int pagoId,
     Map<String, dynamic> cuerpo,
   ) async {
-    await ref.read(ventasApiProvider).actualizarPagoNotaVenta(notaVentaId, pagoId, cuerpo);
+    await ref
+        .read(ventasApiProvider)
+        .actualizarPagoNotaVenta(notaVentaId, pagoId, cuerpo);
     await recargar();
   }
 
@@ -246,7 +276,9 @@ final cuentasPorCobrarProvider =
 /// —es el historial—, pero estorba cuando lo que se quiere es salir a cobrar.
 enum FiltroDeuda { todas, conSaldo, pagadas }
 
-final filtroDeudaProvider = StateProvider.autoDispose((ref) => FiltroDeuda.todas);
+final filtroDeudaProvider = StateProvider.autoDispose(
+  (ref) => FiltroDeuda.todas,
+);
 
 final filtrosDeudaActivosProvider = Provider.autoDispose(
   (ref) => ref.watch(filtroDeudaProvider) == FiltroDeuda.todas ? 0 : 1,
@@ -264,31 +296,40 @@ bool pasaDeuda(double total, double pagado, FiltroDeuda filtro) =>
       FiltroDeuda.pagadas => total - pagado <= 0.01,
     };
 
-final cuentasPorCobrarFiltradasProvider = Provider.autoDispose<List<NotaVenta>>((ref) {
-  final todas = ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
-  final texto = ref.watch(busquedaCuentasPorCobrarProvider).trim().toLowerCase();
-  final filtro = ref.watch(filtroDeudaProvider);
-  final cliente = ref.watch(clienteCuentasPorCobrarFiltroProvider);
+final cuentasPorCobrarFiltradasProvider = Provider.autoDispose<List<NotaVenta>>(
+  (ref) {
+    final todas =
+        ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
+    final texto = ref
+        .watch(busquedaCuentasPorCobrarProvider)
+        .trim()
+        .toLowerCase();
+    final filtro = ref.watch(filtroDeudaProvider);
+    final cliente = ref.watch(clienteCuentasPorCobrarFiltroProvider);
 
-  return todas
-      .where((n) => pasaDeuda(n.total, n.totalPagado, filtro))
-      .where((n) => cliente == null || n.cliente == cliente)
-      .where((n) => texto.isEmpty || n.buscable.contains(texto))
-      .toList();
-});
+    return todas
+        .where((n) => pasaDeuda(n.total, n.totalPagado, filtro))
+        .where((n) => cliente == null || n.cliente == cliente)
+        .where((n) => texto.isEmpty || n.buscable.contains(texto))
+        .toList();
+  },
+);
 
 /// Clientes que existen en las cuentas por cobrar.
 final clientesCuentasPorCobrarProvider = Provider.autoDispose<List<String>>((
   ref,
 ) {
-  final todas = ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
+  final todas =
+      ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
   final valores = todas.map((n) => n.cliente).toSet().toList()..sort();
   return valores;
 });
 
 // --- Mis cobros ---
 
-final busquedaMisCobrosProvider = StateProvider.autoDispose<String>((ref) => '');
+final busquedaMisCobrosProvider = StateProvider.autoDispose<String>(
+  (ref) => '',
+);
 
 class MisCobrosControlador extends AsyncNotifier<List<Cobro>> {
   @override
@@ -296,13 +337,16 @@ class MisCobrosControlador extends AsyncNotifier<List<Cobro>> {
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(ventasApiProvider).misCobros());
+    state = await AsyncValue.guard(
+      () => ref.read(ventasApiProvider).misCobros(),
+    );
   }
 }
 
-final misCobrosProvider = AsyncNotifierProvider<MisCobrosControlador, List<Cobro>>(
-  MisCobrosControlador.new,
-);
+final misCobrosProvider =
+    AsyncNotifierProvider<MisCobrosControlador, List<Cobro>>(
+      MisCobrosControlador.new,
+    );
 
 final clienteMisCobrosFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,

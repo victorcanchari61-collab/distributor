@@ -94,7 +94,10 @@ class AppSelector<T> extends StatelessWidget {
                   etiqueta,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colores.tintaSuave,
+                  ),
                 ),
               ),
               // Mismo boton que en la web: redondo, con el color del modulo

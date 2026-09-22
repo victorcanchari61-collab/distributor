@@ -112,7 +112,9 @@ class ComprasControlador extends AsyncNotifier<List<Compra>> {
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => ref.read(comprasApiProvider).compras());
+    state = await AsyncValue.guard(
+      () => ref.read(comprasApiProvider).compras(),
+    );
   }
 
   Future<void> crear(Map<String, dynamic> cuerpo) async {
@@ -174,13 +176,16 @@ final comprasConPendienteProvider = Provider.autoDispose<List<Compra>>((ref) {
 
 // --- Cuentas por pagar ---
 
-final busquedaCuentasPorPagarProvider = StateProvider.autoDispose<String>((ref) => '');
+final busquedaCuentasPorPagarProvider = StateProvider.autoDispose<String>(
+  (ref) => '',
+);
 final proveedorCuentasPorPagarFiltroProvider =
     StateProvider.autoDispose<String?>((ref) => null);
 
 class CuentasPorPagarControlador extends AsyncNotifier<List<Compra>> {
   @override
-  Future<List<Compra>> build() => ref.watch(comprasApiProvider).cuentasPorPagar();
+  Future<List<Compra>> build() =>
+      ref.watch(comprasApiProvider).cuentasPorPagar();
 
   Future<void> recargar() async {
     state = const AsyncValue.loading();
@@ -199,7 +204,9 @@ class CuentasPorPagarControlador extends AsyncNotifier<List<Compra>> {
     int pagoId,
     Map<String, dynamic> cuerpo,
   ) async {
-    await ref.read(comprasApiProvider).actualizarPagoCompra(compraId, pagoId, cuerpo);
+    await ref
+        .read(comprasApiProvider)
+        .actualizarPagoCompra(compraId, pagoId, cuerpo);
     await recargar();
   }
 
@@ -214,8 +221,11 @@ final cuentasPorPagarProvider =
       CuentasPorPagarControlador.new,
     );
 
-final cuentasPorPagarFiltradasProvider = Provider.autoDispose<List<Compra>>((ref) {
-  final todas = ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
+final cuentasPorPagarFiltradasProvider = Provider.autoDispose<List<Compra>>((
+  ref,
+) {
+  final todas =
+      ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
   final texto = ref.watch(busquedaCuentasPorPagarProvider).trim().toLowerCase();
   final filtro = ref.watch(filtroDeudaProvider);
   final proveedor = ref.watch(proveedorCuentasPorPagarFiltroProvider);
@@ -231,7 +241,8 @@ final cuentasPorPagarFiltradasProvider = Provider.autoDispose<List<Compra>>((ref
 final proveedoresCuentasPorPagarProvider = Provider.autoDispose<List<String>>((
   ref,
 ) {
-  final todas = ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
+  final todas =
+      ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
   final valores = todas.map((c) => c.proveedor).toSet().toList()..sort();
   return valores;
 });

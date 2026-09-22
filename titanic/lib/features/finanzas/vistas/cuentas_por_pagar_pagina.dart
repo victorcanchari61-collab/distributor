@@ -32,8 +32,12 @@ class CuentasPorPagarPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final todas = ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
-    final totalSaldo = todas.fold<double>(0, (n, v) => n + (v.total - v.totalPagado));
+    final todas =
+        ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
+    final totalSaldo = todas.fold<double>(
+      0,
+      (n, v) => n + (v.total - v.totalPagado),
+    );
 
     return AppListaPagina<Compra>(
       titulo: 'Cuentas por pagar',
@@ -41,7 +45,8 @@ class CuentasPorPagarPagina extends ConsumerWidget {
       estado: ref.watch(cuentasPorPagarProvider),
       visibles: ref.watch(cuentasPorPagarFiltradasProvider),
       busqueda: ref.watch(busquedaCuentasPorPagarProvider),
-      onBuscar: (t) => ref.read(busquedaCuentasPorPagarProvider.notifier).state = t,
+      onBuscar: (t) =>
+          ref.read(busquedaCuentasPorPagarProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o proveedor',
       onRecargar: () => ref.read(cuentasPorPagarProvider.notifier).recargar(),
       iconoVacio: Icons.credit_card_outlined,
@@ -79,11 +84,11 @@ class CuentasPorPagarPagina extends ConsumerWidget {
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
     return mostrarFiltros(
       context,
-      activos: ref.read(filtrosDeudaActivosProvider) +
+      activos:
+          ref.read(filtrosDeudaActivosProvider) +
           (ref.read(proveedorCuentasPorPagarFiltroProvider) == null ? 0 : 1),
       onLimpiar: () {
-        ref.read(filtroDeudaProvider.notifier).state =
-            FiltroDeuda.todas;
+        ref.read(filtroDeudaProvider.notifier).state = FiltroDeuda.todas;
         ref.read(proveedorCuentasPorPagarFiltroProvider.notifier).state = null;
       },
       grupos: [
@@ -111,9 +116,11 @@ class CuentasPorPagarPagina extends ConsumerWidget {
                 const OpcionFiltro(null, 'Todos'),
                 for (final p in proveedores) OpcionFiltro(p, p),
               ],
-              onCambio: (v) => ref
-                  .read(proveedorCuentasPorPagarFiltroProvider.notifier)
-                  .state = v,
+              onCambio: (v) =>
+                  ref
+                          .read(proveedorCuentasPorPagarFiltroProvider.notifier)
+                          .state =
+                      v,
             );
           },
         ),
@@ -121,14 +128,20 @@ class CuentasPorPagarPagina extends ConsumerWidget {
     );
   }
 
-  Future<void> _gestionarPagos(BuildContext context, WidgetRef ref, Compra compra) {
+  Future<void> _gestionarPagos(
+    BuildContext context,
+    WidgetRef ref,
+    Compra compra,
+  ) {
     return showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colores.superficie,
       isScrollControlled: true,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Dimen.radioPanel),
+        ),
       ),
       builder: (context) => _HojaPagosPagar(compraId: compra.id),
     );
@@ -178,7 +191,7 @@ class _TarjetaCuentaPagar extends StatelessWidget {
           IconButton(
             onPressed: onGestionarPagos,
             tooltip: 'Gestionar pagos',
-          visualDensity: VisualDensity.compact,
+            visualDensity: VisualDensity.compact,
             icon: Icon(
               Icons.request_quote_outlined,
               size: 18,
@@ -220,7 +233,8 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
 
   @override
   Widget build(BuildContext context) {
-    final compras = ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
+    final compras =
+        ref.watch(cuentasPorPagarProvider).valueOrNull ?? const <Compra>[];
     Compra? compra;
     for (final c in compras) {
       if (c.id == widget.compraId) compra = c;
@@ -228,9 +242,13 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
     if (compra == null) {
       // El saldo llego a cero: la compra salio de la lista. Cierra la hoja.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && Navigator.of(context).canPop()) Navigator.of(context).pop();
+        if (mounted && Navigator.of(context).canPop())
+          Navigator.of(context).pop();
       });
-      return const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()));
+      return const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     final metodos = ref.watch(metodosPagoActivosProvider);
@@ -249,7 +267,11 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
           children: [
             Text(
               'Pagos de ${compra.numero}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
+              ),
             ),
             const SizedBox(height: Dimen.espacio1),
             Text(
@@ -311,7 +333,11 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
 
             const Text(
               'Agregar pago',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colores.tinta),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
+              ),
             ),
             const SizedBox(height: Dimen.espacio3),
 
@@ -319,7 +345,10 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
               valor: _tipoNuevo,
               etiqueta: 'Tipo',
               icono: Icons.category_outlined,
-              opciones: [for (final t in TipoMetodoPago.todos) Opcion(t, TipoMetodoPago.etiqueta(t))],
+              opciones: [
+                for (final t in TipoMetodoPago.todos)
+                  Opcion(t, TipoMetodoPago.etiqueta(t)),
+              ],
               onCambio: (v) => setState(() {
                 _tipoNuevo = v;
                 _metodoNuevoId = null;
@@ -348,11 +377,16 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
                     controlador: _montoCtrl,
                     etiqueta: 'Monto',
                     icono: Icons.attach_money,
-                    tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+                    tipoTeclado: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                   ),
                 ),
                 const SizedBox(width: Dimen.espacio3),
-                AppBoton(texto: 'Agregar', onPressed: () => _registrar(context, compra!)),
+                AppBoton(
+                  texto: 'Agregar',
+                  onPressed: () => _registrar(context, compra!),
+                ),
               ],
             ),
             const SizedBox(height: Dimen.espacio3),
@@ -380,9 +414,10 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
     }
 
     try {
-      await ref
-          .read(cuentasPorPagarProvider.notifier)
-          .registrarPago(compra.id, {'metodoPagoId': _metodoNuevoId, 'monto': monto});
+      await ref.read(cuentasPorPagarProvider.notifier).registrarPago(
+        compra.id,
+        {'metodoPagoId': _metodoNuevoId, 'monto': monto},
+      );
       if (!mounted) return;
       setState(() {
         _error = null;
@@ -395,8 +430,14 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
     }
   }
 
-  Future<void> _guardarEdicion(BuildContext context, Compra compra, PagoCompra pago) async {
-    final monto = double.tryParse(_montoEditarCtrl.text.trim().replaceAll(',', '.'));
+  Future<void> _guardarEdicion(
+    BuildContext context,
+    Compra compra,
+    PagoCompra pago,
+  ) async {
+    final monto = double.tryParse(
+      _montoEditarCtrl.text.trim().replaceAll(',', '.'),
+    );
     if (_metodoEditarId == null) {
       setState(() => _error = 'Elige el método de pago.');
       return;
@@ -407,9 +448,11 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
     }
 
     try {
-      await ref
-          .read(cuentasPorPagarProvider.notifier)
-          .actualizarPago(compra.id, pago.id, {'metodoPagoId': _metodoEditarId, 'monto': monto});
+      await ref.read(cuentasPorPagarProvider.notifier).actualizarPago(
+        compra.id,
+        pago.id,
+        {'metodoPagoId': _metodoEditarId, 'monto': monto},
+      );
       if (!mounted) return;
       setState(() {
         _error = null;
@@ -420,7 +463,11 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
     }
   }
 
-  Future<void> _anular(BuildContext context, Compra compra, PagoCompra pago) async {
+  Future<void> _anular(
+    BuildContext context,
+    Compra compra,
+    PagoCompra pago,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Anular pago de S/ ${pago.monto.toStringAsFixed(2)}',
@@ -432,7 +479,9 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
     if (!ok || !mounted) return;
 
     try {
-      await ref.read(cuentasPorPagarProvider.notifier).anularPago(compra.id, pago.id);
+      await ref
+          .read(cuentasPorPagarProvider.notifier)
+          .anularPago(compra.id, pago.id);
     } on ApiExcepcion catch (e) {
       if (mounted) setState(() => _error = e.texto);
     }
@@ -468,12 +517,19 @@ class _FilaPago extends StatelessWidget {
               children: [
                 Text(
                   '${_fecha(pago.fecha)} · ${pago.metodoPago}',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colores.tinta),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colores.tinta,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Pagado por ${pago.usuario ?? '—'}',
-                  style: const TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Colores.tintaSuave,
+                  ),
                 ),
               ],
             ),
@@ -497,7 +553,11 @@ class _FilaPago extends StatelessWidget {
               onPressed: onEditar,
               tooltip: 'Editar',
               visualDensity: VisualDensity.compact,
-              icon: Icon(Icons.edit_outlined, size: 17, color: Acento.de(context)),
+              icon: Icon(
+                Icons.edit_outlined,
+                size: 17,
+                color: Acento.de(context),
+              ),
             ),
           if (onAnular != null)
             IconButton(
@@ -550,7 +610,10 @@ class _FormularioEdicion extends StatelessWidget {
             valor: tipo,
             etiqueta: 'Tipo',
             icono: Icons.category_outlined,
-            opciones: [for (final t in TipoMetodoPago.todos) Opcion(t, TipoMetodoPago.etiqueta(t))],
+            opciones: [
+              for (final t in TipoMetodoPago.todos)
+                Opcion(t, TipoMetodoPago.etiqueta(t)),
+            ],
             onCambio: onTipo,
           ),
           const SizedBox(height: Dimen.espacio3),
@@ -559,7 +622,9 @@ class _FormularioEdicion extends StatelessWidget {
             etiqueta: 'Método',
             icono: Icons.payments_outlined,
             opciones: [
-              for (final m in metodos.where((m) => tipo == null || m.tipo == tipo))
+              for (final m in metodos.where(
+                (m) => tipo == null || m.tipo == tipo,
+              ))
                 Opcion(m.id, m.nombre),
             ],
             onCambio: onMetodo,
@@ -584,7 +649,11 @@ class _FormularioEdicion extends StatelessWidget {
               ),
               const SizedBox(width: Dimen.espacio2),
               Expanded(
-                child: AppBoton(texto: 'Guardar', expandido: true, onPressed: onGuardar),
+                child: AppBoton(
+                  texto: 'Guardar',
+                  expandido: true,
+                  onPressed: onGuardar,
+                ),
               ),
             ],
           ),

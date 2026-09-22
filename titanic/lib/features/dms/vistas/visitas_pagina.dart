@@ -98,7 +98,8 @@ class VisitasPagina extends ConsumerWidget {
         // Tomar el pedido lleva a Pedidos: la visita no crea nada por su
         // cuenta, y un segundo formulario de pedido aquí sería uno más que
         // mantener igual al de verdad.
-        onTomarPedido: !visita.atendido && puede(ref, 'fact.pedidos', Accion.crear)
+        onTomarPedido:
+            !visita.atendido && puede(ref, 'fact.pedidos', Accion.crear)
             ? () => context.go('/fact/pedidos')
             : null,
       ),
@@ -312,7 +313,10 @@ class _TarjetaVisita extends StatelessWidget {
   ];
 
   Widget get _estado => visita.atendido
-      ? AppEtiqueta(visita.pedidoNumero ?? 'Con pedido', tono: EtiquetaTono.exito)
+      ? AppEtiqueta(
+          visita.pedidoNumero ?? 'Con pedido',
+          tono: EtiquetaTono.exito,
+        )
       : const AppEtiqueta('Pendiente', tono: EtiquetaTono.aviso);
 
   @override

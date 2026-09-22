@@ -106,7 +106,10 @@ class AppTarjetaDato extends StatelessWidget {
                     nota!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 10.5, color: Colores.tintaTenue),
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: Colores.tintaTenue,
+                    ),
                   ),
               ],
             ),

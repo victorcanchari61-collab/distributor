@@ -85,8 +85,7 @@ class MercadosPagina extends ConsumerWidget {
       context,
       activos: ref.read(filtrosMercadosActivosProvider),
       onLimpiar: () {
-        ref.read(estadoFiltroProvider.notifier).state =
-            FiltroEstado.activos;
+        ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
         ref.read(distritoMercadoProvider.notifier).state = null;
         ref.read(direccionMercadoProvider.notifier).state = null;
       },
@@ -143,7 +142,11 @@ class MercadosPagina extends ConsumerWidget {
     );
   }
 
-  Future<void> _cambiarEstado(BuildContext context, WidgetRef ref, Mercado mercado) async {
+  Future<void> _cambiarEstado(
+    BuildContext context,
+    WidgetRef ref,
+    Mercado mercado,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: '${mercado.activo ? 'Desactivar' : 'Activar'} ${mercado.nombre}',
@@ -158,7 +161,11 @@ class MercadosPagina extends ConsumerWidget {
     final mensajero = Aviso.de(context);
     try {
       await ref.read(mercadosProvider.notifier).cambiarEstado(mercado);
-      mensajero.mostrar(mercado.activo ? '${mercado.nombre} desactivado' : '${mercado.nombre} activado');
+      mensajero.mostrar(
+        mercado.activo
+            ? '${mercado.nombre} desactivado'
+            : '${mercado.nombre} activado',
+      );
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -246,7 +253,11 @@ class _TarjetaMercado extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

@@ -67,13 +67,17 @@ class ConductoresPagina extends ConsumerWidget {
           etiqueta: 'Licencia vencida',
           valor: '${resumen?.conLicenciaVencida ?? 0}',
           icono: Icons.gpp_bad_outlined,
-          tono: (resumen?.conLicenciaVencida ?? 0) > 0 ? DatoTono.peligro : DatoTono.neutral,
+          tono: (resumen?.conLicenciaVencida ?? 0) > 0
+              ? DatoTono.peligro
+              : DatoTono.neutral,
         ),
         AppTarjetaDato(
           etiqueta: 'Por vencer',
           valor: '${resumen?.porVencer ?? 0}',
           icono: Icons.schedule_outlined,
-          tono: (resumen?.porVencer ?? 0) > 0 ? DatoTono.aviso : DatoTono.neutral,
+          tono: (resumen?.porVencer ?? 0) > 0
+              ? DatoTono.aviso
+              : DatoTono.neutral,
         ),
       ],
       filtro: BotonFiltros(
@@ -100,10 +104,8 @@ class ConductoresPagina extends ConsumerWidget {
       context,
       activos: ref.read(filtrosConductoresActivosProvider),
       onLimpiar: () {
-        ref.read(estadoFiltroProvider.notifier).state =
-            FiltroEstado.activos;
-        ref.read(filtroPapelesProvider.notifier).state =
-            FiltroPapeles.todos;
+        ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
+        ref.read(filtroPapelesProvider.notifier).state = FiltroPapeles.todos;
       },
       grupos: [
         Consumer(
@@ -128,8 +130,7 @@ class ConductoresPagina extends ConsumerWidget {
               OpcionFiltro(FiltroPapeles.porVencer, 'Por vencer'),
               OpcionFiltro(FiltroPapeles.alDia, 'Al día'),
             ],
-            onCambio: (v) =>
-                ref.read(filtroPapelesProvider.notifier).state = v,
+            onCambio: (v) => ref.read(filtroPapelesProvider.notifier).state = v,
           ),
         ),
       ],
@@ -138,7 +139,9 @@ class ConductoresPagina extends ConsumerWidget {
 
   Future<void> _abrirFormulario(BuildContext context, Conductor? conductor) {
     return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ConductorFormulario(conductor: conductor)),
+      MaterialPageRoute(
+        builder: (_) => ConductorFormulario(conductor: conductor),
+      ),
     );
   }
 
@@ -151,7 +154,8 @@ class ConductoresPagina extends ConsumerWidget {
 
     final ok = await confirmarAccion(
       context,
-      titulo: '${conductor.activo ? 'Desactivar' : 'Activar'} ${conductor.nombre}',
+      titulo:
+          '${conductor.activo ? 'Desactivar' : 'Activar'} ${conductor.nombre}',
       mensaje: conductor.activo
           ? 'Deja de ofrecerse para repartir y sale de las alertas de licencia. '
                 'Su historial se conserva.'
@@ -167,25 +171,29 @@ class ConductoresPagina extends ConsumerWidget {
     try {
       // El PUT reemplaza el registro entero, asi que se reenvia lo que ya
       // tenia: mandar solo `activo` vaciaria el resto de la ficha.
-      await ref.read(conductoresProvider.notifier).guardar(
-        id: conductor.id,
-        cuerpo: {
-          'nombre': conductor.nombre,
-          'documento': conductor.documento,
-          'telefono': conductor.telefono,
-          'direccion': conductor.direccion,
-          'licenciaNumero': conductor.licenciaNumero,
-          'licenciaCategoria': conductor.licenciaCategoria,
-          'licenciaVence': conductor.licenciaVence?.toIso8601String(),
-          'foto': conductor.foto,
-          'fechaIngreso': conductor.fechaIngreso?.toIso8601String(),
-          'observacion': conductor.observacion,
-          'activo': !conductor.activo,
-        },
+      await ref
+          .read(conductoresProvider.notifier)
+          .guardar(
+            id: conductor.id,
+            cuerpo: {
+              'nombre': conductor.nombre,
+              'documento': conductor.documento,
+              'telefono': conductor.telefono,
+              'direccion': conductor.direccion,
+              'licenciaNumero': conductor.licenciaNumero,
+              'licenciaCategoria': conductor.licenciaCategoria,
+              'licenciaVence': conductor.licenciaVence?.toIso8601String(),
+              'foto': conductor.foto,
+              'fechaIngreso': conductor.fechaIngreso?.toIso8601String(),
+              'observacion': conductor.observacion,
+              'activo': !conductor.activo,
+            },
+          );
+      mensajero.mostrar(
+        conductor.activo
+            ? '${conductor.nombre} desactivado'
+            : '${conductor.nombre} activado',
       );
-      mensajero.mostrar(conductor.activo
-                ? '${conductor.nombre} desactivado'
-                : '${conductor.nombre} activado');
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -195,8 +203,14 @@ class ConductoresPagina extends ConsumerWidget {
   ///
   /// Existe para poder consultar al conductor sin entrar al formulario, donde
   /// un toque de mas guarda cambios que nadie queria hacer.
-  Future<void> _verDetalle(BuildContext context, Conductor conductor, Color color) {
-    final licencia = conductor.vencimientos.isEmpty ? null : conductor.vencimientos.first;
+  Future<void> _verDetalle(
+    BuildContext context,
+    Conductor conductor,
+    Color color,
+  ) {
+    final licencia = conductor.vencimientos.isEmpty
+        ? null
+        : conductor.vencimientos.first;
     final estado = etiquetaEstado(conductor.estadoDocumentos);
 
     return mostrarDetalle(
@@ -221,7 +235,9 @@ class ConductoresPagina extends ConsumerWidget {
           ),
         CampoDetalle(
           'Fecha de ingreso',
-          conductor.fechaIngreso == null ? null : fechaCorta(conductor.fechaIngreso!),
+          conductor.fechaIngreso == null
+              ? null
+              : fechaCorta(conductor.fechaIngreso!),
         ),
         CampoDetalle(
           'Vehículos asignados',
@@ -254,7 +270,9 @@ class _TarjetaConductor extends StatelessWidget {
   final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos {
-    final licencia = conductor.vencimientos.isEmpty ? null : conductor.vencimientos.first;
+    final licencia = conductor.vencimientos.isEmpty
+        ? null
+        : conductor.vencimientos.first;
 
     return [
       CampoDetalle('Documento', conductor.documento),
@@ -270,11 +288,16 @@ class _TarjetaConductor extends StatelessWidget {
         CampoDetalle(
           'Vence',
           licencia.plazo,
-          widget: AppEtiqueta(licencia.plazo, tono: etiquetaEstado(licencia.estado).tono),
+          widget: AppEtiqueta(
+            licencia.plazo,
+            tono: etiquetaEstado(licencia.estado).tono,
+          ),
         ),
       CampoDetalle(
         'Vehículos',
-        conductor.vehiculos.isEmpty ? 'sin asignar' : conductor.vehiculos.join(', '),
+        conductor.vehiculos.isEmpty
+            ? 'sin asignar'
+            : conductor.vehiculos.join(', '),
       ),
       CampoDetalle(
         'Estado',
@@ -308,7 +331,11 @@ class _TarjetaConductor extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

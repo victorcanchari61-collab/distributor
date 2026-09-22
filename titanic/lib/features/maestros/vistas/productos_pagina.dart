@@ -30,7 +30,8 @@ class ProductosPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final todos = ref.watch(productosProvider).valueOrNull ?? const <Producto>[];
+    final todos =
+        ref.watch(productosProvider).valueOrNull ?? const <Producto>[];
     final activos = todos.where((p) => p.activo).toList();
     final categorias =
         ref.watch(categoriasProvider).valueOrNull ?? const <Categoria>[];
@@ -191,9 +192,8 @@ class ProductosPagina extends ConsumerWidget {
                 const OpcionFiltro(null, 'Todas'),
                 for (final u in unidades) OpcionFiltro(u, 'Se vende en $u'),
               ],
-              onCambio: (v) => ref
-                  .read(presentacionUnidadFiltroProvider.notifier)
-                  .state = v,
+              onCambio: (v) =>
+                  ref.read(presentacionUnidadFiltroProvider.notifier).state = v,
             );
           },
         ),
@@ -206,7 +206,8 @@ class ProductosPagina extends ConsumerWidget {
               OpcionFiltro(true, 'Con costo'),
               OpcionFiltro(false, 'Sin costo'),
             ],
-            onCambio: (v) => ref.read(conCostoFiltroProvider.notifier).state = v,
+            onCambio: (v) =>
+                ref.read(conCostoFiltroProvider.notifier).state = v,
           ),
         ),
       ],
@@ -226,7 +227,8 @@ class ProductosPagina extends ConsumerWidget {
   ) async {
     final ok = await confirmarAccion(
       context,
-      titulo: '${producto.activo ? 'Desactivar' : 'Activar'} ${producto.nombre}',
+      titulo:
+          '${producto.activo ? 'Desactivar' : 'Activar'} ${producto.nombre}',
       mensaje: producto.activo
           ? 'Deja de aparecer para nuevas operaciones, pero conserva su historial y puedes volver a activarlo.'
           : 'Vuelve a estar disponible para usarse.',
@@ -239,9 +241,11 @@ class ProductosPagina extends ConsumerWidget {
 
     try {
       await ref.read(productosProvider.notifier).cambiarEstado(producto);
-      mensajero.mostrar(producto.activo
-                ? '${producto.nombre} desactivado'
-                : '${producto.nombre} activado');
+      mensajero.mostrar(
+        producto.activo
+            ? '${producto.nombre} desactivado'
+            : '${producto.nombre} activado',
+      );
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -312,7 +316,11 @@ class _TarjetaProducto extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

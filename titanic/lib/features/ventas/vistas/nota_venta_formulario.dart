@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/presentaciones_uso.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_lineas_producto.dart';
 import '../../../compartido/widgets/app_panel_producto.dart';
@@ -28,13 +29,20 @@ import '../estado/ventas_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
 class _FilaPago {
-  _FilaPago({required this.metodoPagoId, required this.metodoPago, required this.monto});
+  _FilaPago({
+    required this.metodoPagoId,
+    required this.metodoPago,
+    required this.monto,
+  });
 
   final int metodoPagoId;
   final String metodoPago;
   final double monto;
 
-  Map<String, dynamic> aCuerpo() => {'metodoPagoId': metodoPagoId, 'monto': monto};
+  Map<String, dynamic> aCuerpo() => {
+    'metodoPagoId': metodoPagoId,
+    'monto': monto,
+  };
 }
 
 /// Alta de una venta directa, sin pedido previo: el stock sale al momento.
@@ -42,7 +50,8 @@ class NotaVentaFormulario extends ConsumerStatefulWidget {
   const NotaVentaFormulario({super.key});
 
   @override
-  ConsumerState<NotaVentaFormulario> createState() => _NotaVentaFormularioState();
+  ConsumerState<NotaVentaFormulario> createState() =>
+      _NotaVentaFormularioState();
 }
 
 class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
@@ -147,7 +156,9 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
       'pagos': _formaPago == FormaPagoVenta.contado
           ? [for (final p in _pagos) p.aCuerpo()]
           : const [],
-      'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
+      'observacion': _observacion.text.trim().isEmpty
+          ? null
+          : _observacion.text.trim(),
       'detalle': [
         for (final f in _lineas)
           {
@@ -212,7 +223,9 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
       isScrollControlled: true,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Dimen.radioPanel),
+        ),
       ),
       builder: (context) {
         String? tipo;
@@ -222,12 +235,16 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
 
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            final metodosDelTipo = metodos.where((m) => m.tipo == tipo).toList();
+            final metodosDelTipo = metodos
+                .where((m) => m.tipo == tipo)
+                .toList();
             final totalPagado = _pagos.fold<double>(0, (n, p) => n + p.monto);
             final excedido = totalPagado > _total + 0.001;
 
             void agregar() {
-              final monto = double.tryParse(montoCtrl.text.trim().replaceAll(',', '.'));
+              final monto = double.tryParse(
+                montoCtrl.text.trim().replaceAll(',', '.'),
+              );
               if (metodoId == null) {
                 setSheetState(() => errorAgregar = 'Elige el método de pago.');
                 return;
@@ -251,7 +268,11 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
               }
               setSheetState(() {
                 _pagos.add(
-                  _FilaPago(metodoPagoId: metodoId!, metodoPago: metodoNombre, monto: monto),
+                  _FilaPago(
+                    metodoPagoId: metodoId!,
+                    metodoPago: metodoNombre,
+                    monto: monto,
+                  ),
                 );
                 tipo = null;
                 metodoId = null;
@@ -265,7 +286,8 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                 left: Dimen.espacio4,
                 right: Dimen.espacio4,
                 top: Dimen.espacio2,
-                bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
+                bottom:
+                    Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -293,17 +315,28 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                           Expanded(
                             child: Text(
                               pago.metodoPago,
-                              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                           Text(
                             'S/ ${pago.monto.toStringAsFixed(2)}',
-                            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           IconButton(
                             visualDensity: VisualDensity.compact,
-                            onPressed: () => setSheetState(() => _pagos.remove(pago)),
-                            icon: const Icon(Icons.close, size: 16, color: Colores.peligro),
+                            onPressed: () =>
+                                setSheetState(() => _pagos.remove(pago)),
+                            icon: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Colores.peligro,
+                            ),
                           ),
                         ],
                       ),
@@ -321,7 +354,8 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                     etiqueta: 'Tipo',
                     icono: Icons.category_outlined,
                     opciones: [
-                      for (final t in TipoMetodoPago.todos) Opcion(t, TipoMetodoPago.etiqueta(t)),
+                      for (final t in TipoMetodoPago.todos)
+                        Opcion(t, TipoMetodoPago.etiqueta(t)),
                     ],
                     onCambio: (v) => setSheetState(() {
                       tipo = v;
@@ -335,7 +369,9 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                     etiqueta: 'Método',
                     icono: Icons.payments_outlined,
                     habilitado: tipo != null,
-                    opciones: [for (final m in metodosDelTipo) Opcion(m.id, m.nombre)],
+                    opciones: [
+                      for (final m in metodosDelTipo) Opcion(m.id, m.nombre),
+                    ],
                     onCambio: (v) => setSheetState(() => metodoId = v),
                   ),
                   const SizedBox(height: Dimen.espacio3),
@@ -348,11 +384,17 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                           controlador: montoCtrl,
                           etiqueta: 'Monto',
                           icono: Icons.attach_money,
-                          tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+                          tipoTeclado: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                         ),
                       ),
                       const SizedBox(width: Dimen.espacio3),
-                      AppBoton(texto: 'Agregar', expandido: false, onPressed: agregar),
+                      AppBoton(
+                        texto: 'Agregar',
+                        expandido: false,
+                        onPressed: agregar,
+                      ),
                     ],
                   ),
                   const SizedBox(height: Dimen.espacio4),
@@ -388,7 +430,6 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
     if (mounted) setState(() {});
   }
 
-
   /*
    * La lista con la que se cobra.
    *
@@ -420,7 +461,8 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
   Widget build(BuildContext context) {
     final almacenes = ref.watch(almacenesActivosProvider);
     _ponerAlmacenPorDefecto(almacenes);
-    final listas = ref.watch(listasPrecioProvider).valueOrNull ?? const <ListaPrecio>[];
+    final listas =
+        ref.watch(listasPrecioProvider).valueOrNull ?? const <ListaPrecio>[];
 
     // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
     // acento del modulo. Sin esto los componentes compartidos y las hojas que
@@ -433,18 +475,30 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
             'Nueva venta',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             campoCliente(
-              clientes: ref.watch(clientesParaVenderProvider('notaventa')).valueOrNull ?? const <Cliente>[],
+              clientes:
+                  ref
+                      .watch(clientesParaVenderProvider('notaventa'))
+                      .valueOrNull ??
+                  const <Cliente>[],
               // Mientras el catalogo viene, el buscador lo dice en vez de
               // afirmar que no hay ningun cliente.
-              cargando: ref.watch(clientesParaVenderProvider('notaventa')).isLoading,
+              cargando: ref
+                  .watch(clientesParaVenderProvider('notaventa'))
+                  .isLoading,
               elegido: _clienteNombre,
               error: _errorCliente,
               habilitado: !_guardando,
@@ -461,7 +515,9 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
               etiqueta: 'Almacén',
               icono: Icons.warehouse_outlined,
               error: _errorAlmacen,
-              opciones: [for (final a in almacenes) Opcion<int>(a.id, a.nombre)],
+              opciones: [
+                for (final a in almacenes) Opcion<int>(a.id, a.nombre),
+              ],
               onCambio: (v) => setState(() => _almacenId = v),
             ),
             const SizedBox(height: Dimen.espacio4),
@@ -495,9 +551,11 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
            * hay.
            */
             AppPanelProducto(
-              productos: (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
-                  .where((p) => p.activo && p.controlaStock)
-                  .toList(),
+              productos:
+                  (ref.watch(productosProvider).valueOrNull ??
+                          const <Producto>[])
+                      .where((p) => p.activo && p.controlaStock)
+                      .toList(),
               cargando: ref.watch(productosProvider).isLoading,
               paraVenta: true,
               uso: UsoPresentacion.venta,
@@ -517,7 +575,9 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
               lineas: _lineas,
               error: _errorLineas,
               habilitado: !_guardando,
-              disponible: ref.watch(stockDisponibleProvider(_almacenId)).valueOrNull,
+              disponible: ref
+                  .watch(stockDisponibleProvider(_almacenId))
+                  .valueOrNull,
               onCambio: () => setState(() {}),
               onEliminar: (l) => setState(() => _lineas.remove(l)),
             ),
@@ -543,7 +603,11 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
            */
             const Text(
               'Pago',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colores.tinta),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
+              ),
             ),
             const SizedBox(height: Dimen.espacio3),
 
@@ -568,7 +632,9 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                 decoration: BoxDecoration(
                   color: Colores.fondo,
                   borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                  border: _errorPagos != null ? Border.all(color: Colores.peligro) : null,
+                  border: _errorPagos != null
+                      ? Border.all(color: Colores.peligro)
+                      : null,
                 ),
                 child: Row(
                   children: [
@@ -580,12 +646,16 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: _errorPagos != null ? Colores.peligro : Colores.tinta,
+                          color: _errorPagos != null
+                              ? Colores.peligro
+                              : Colores.tinta,
                         ),
                       ),
                     ),
                     AppBoton(
-                      texto: _pagos.isEmpty ? 'Agregar pago' : 'Gestionar pagos',
+                      texto: _pagos.isEmpty
+                          ? 'Agregar pago'
+                          : 'Gestionar pagos',
                       variante: BotonVariante.secundario,
                       expandido: false,
                       onPressed: _gestionarPagos,
@@ -595,7 +665,10 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
               ),
               if (_errorPagos != null) ...[
                 const SizedBox(height: Dimen.espacio1),
-                Text(_errorPagos!, style: const TextStyle(fontSize: 12, color: Colores.peligro)),
+                Text(
+                  _errorPagos!,
+                  style: const TextStyle(fontSize: 12, color: Colores.peligro),
+                ),
               ],
             ] else
               const Text(
@@ -605,12 +678,10 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
             const SizedBox(height: Dimen.espacio4),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(texto: 'Registrar venta', cargando: _guardando, onPressed: _guardar),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              cargando: _guardando,
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

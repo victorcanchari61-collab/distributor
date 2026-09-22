@@ -26,7 +26,8 @@ class Aviso {
       Aviso._(Overlay.of(context, rootOverlay: true), Acento.de(context));
 
   /// Algo salio bien. Toma el color del modulo.
-  void mostrar(String mensaje) => _pintar(mensaje, _acento, const Duration(seconds: 3));
+  void mostrar(String mensaje) =>
+      _pintar(mensaje, _acento, const Duration(seconds: 3));
 
   /// Algo fallo. Siempre rojo: el color del modulo dice DONDE estas, no que
   /// algo salio mal, y un error en el rosa de DMS no se lee como error.
@@ -66,7 +67,8 @@ class _Tarjeta extends StatefulWidget {
   State<_Tarjeta> createState() => _TarjetaState();
 }
 
-class _TarjetaState extends State<_Tarjeta> with SingleTickerProviderStateMixin {
+class _TarjetaState extends State<_Tarjeta>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _control = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 180),
@@ -102,9 +104,10 @@ class _TarjetaState extends State<_Tarjeta> with SingleTickerProviderStateMixin 
       child: FadeTransition(
         opacity: _control,
         child: SlideTransition(
-          position: Tween(begin: const Offset(0, -0.3), end: Offset.zero).animate(
-            CurvedAnimation(parent: _control, curve: Curves.easeOut),
-          ),
+          position: Tween(
+            begin: const Offset(0, -0.3),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: _control, curve: Curves.easeOut)),
           child: Material(
             color: Colors.transparent,
             child: GestureDetector(

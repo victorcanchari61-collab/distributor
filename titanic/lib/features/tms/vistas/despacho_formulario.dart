@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_selector_buscable.dart';
@@ -26,8 +26,24 @@ String _fechaTexto(DateTime f) =>
 DateTime _soloDia(DateTime f) => DateTime(f.year, f.month, f.day);
 
 /// Los días como los guarda el backend, en el orden de `DateTime.weekday` (lunes = 1).
-const _dias = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
-const _diasTexto = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+const _dias = [
+  'LUNES',
+  'MARTES',
+  'MIERCOLES',
+  'JUEVES',
+  'VIERNES',
+  'SABADO',
+  'DOMINGO',
+];
+const _diasTexto = [
+  'lunes',
+  'martes',
+  'miércoles',
+  'jueves',
+  'viernes',
+  'sábado',
+  'domingo',
+];
 
 /// Alta y edicion de un despacho: elegir el camion y marcar los pedidos que
 /// suben, entre el rango de fechas en que se tomaron.
@@ -41,7 +57,9 @@ class DespachoFormulario extends ConsumerStatefulWidget {
 }
 
 class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
-  late final _observacion = TextEditingController(text: widget.despacho?.observacion ?? '');
+  late final _observacion = TextEditingController(
+    text: widget.despacho?.observacion ?? '',
+  );
 
   late DateTime _fecha = widget.despacho?.fecha ?? DateTime.now();
   late DateTime _desde = widget.despacho?.pedidosDesde ?? _diaMasTemprano();
@@ -50,7 +68,9 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
   /// Las rutas que carga el camión ese día: el lunes del camión 1 son la 1 y la 7.
   late final Set<int> _rutaIds = {
     if (widget.despacho != null)
-      ...(widget.despacho!.rutaIds.isNotEmpty ? widget.despacho!.rutaIds : [widget.despacho!.rutaId]),
+      ...(widget.despacho!.rutaIds.isNotEmpty
+          ? widget.despacho!.rutaIds
+          : [widget.despacho!.rutaId]),
   };
 
   /// Si las rutas se tocaron a mano, el recorrido del vehículo deja de imponerlas. Al editar, las guardadas
@@ -60,8 +80,12 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
   /// El día de visita que atiende el despacho: UNO solo, como en el reporte del sistema anterior (día de visita +
   /// camión → rutas). Decide qué clientes salen y no tiene por qué ser el día de la fecha del reparto. Mientras
   /// nadie lo elija a mano sigue a la fecha; al editar manda el guardado.
-  late String _diaVisita = widget.despacho?.diaVisita ??
-      widget.despacho?.detalle.map((p) => p.diaVisita).whereType<String>().firstOrNull ??
+  late String _diaVisita =
+      widget.despacho?.diaVisita ??
+      widget.despacho?.detalle
+          .map((p) => p.diaVisita)
+          .whereType<String>()
+          .firstOrNull ??
       _dias[(widget.despacho?.fecha ?? DateTime.now()).weekday - 1];
   late bool _diaTocado = widget.despacho != null;
   late int _vehiculoId = widget.despacho?.vehiculoId ?? 0;
@@ -78,10 +102,11 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
   String? _error;
 
   DateTime _diaMasTemprano() {
-    final dias = (widget.despacho?.detalle ?? const <DespachoPedido>[])
-        .map((p) => _soloDia(p.fecha))
-        .toList()
-      ..sort();
+    final dias =
+        (widget.despacho?.detalle ?? const <DespachoPedido>[])
+            .map((p) => _soloDia(p.fecha))
+            .toList()
+          ..sort();
     return dias.isEmpty ? DateTime.now() : dias.first;
   }
 
@@ -92,7 +117,9 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
   /// Las rutas que el vehículo elegido hace ese día, según su recorrido.
   List<int> get _rutasDelDia {
     if (_vehiculoId == 0) return const [];
-    final recorrido = ref.read(recorridoVehiculoProvider(_vehiculoId)).valueOrNull;
+    final recorrido = ref
+        .read(recorridoVehiculoProvider(_vehiculoId))
+        .valueOrNull;
     return recorrido?[_diaVisita] ?? const [];
   }
 
@@ -100,7 +127,9 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
   Future<void> _proponerRutas() async {
     if (_rutasTocadas || _vehiculoId == 0) return;
     try {
-      final recorrido = await ref.read(recorridoVehiculoProvider(_vehiculoId).future);
+      final recorrido = await ref.read(
+        recorridoVehiculoProvider(_vehiculoId).future,
+      );
       if (!mounted || _rutasTocadas) return;
       final delDia = recorrido[_diaVisita] ?? const <int>[];
       setState(() {
@@ -138,7 +167,8 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
   }
 
   bool _enRango(DespachoPedido p) =>
-      !_soloDia(p.fecha).isBefore(_soloDia(_desde)) && !_soloDia(p.fecha).isAfter(_soloDia(_hasta));
+      !_soloDia(p.fecha).isBefore(_soloDia(_desde)) &&
+      !_soloDia(p.fecha).isAfter(_soloDia(_hasta));
 
   Future<void> _elegirVehiculo() async {
     final vehiculos = await catalogoListo(
@@ -154,7 +184,10 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
       items: activos,
       buscable: (v) => v.buscable,
       pistaBusqueda: 'Buscar por placa',
-      fila: (v) => Text(v.placa, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      fila: (v) => Text(
+        v.placa,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
     );
     if (elegido == null) return;
 
@@ -186,7 +219,10 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
       items: activos,
       buscable: (c) => c.buscable,
       pistaBusqueda: 'Buscar por nombre',
-      fila: (c) => Text(c.nombre, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      fila: (c) => Text(
+        c.nombre,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
     );
     if (elegido != null) {
       setState(() {
@@ -241,11 +277,16 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
     FocusScope.of(context).unfocus();
     setState(() => _error = null);
 
-    if (_rutaIds.isEmpty) return setState(() => _error = 'Elige al menos una ruta.');
+    if (_rutaIds.isEmpty)
+      return setState(() => _error = 'Elige al menos una ruta.');
     if (_vehiculoId == 0) return setState(() => _error = 'Elige el vehículo.');
-    if (_conductorId == 0) return setState(() => _error = 'Elige el conductor.');
+    if (_conductorId == 0)
+      return setState(() => _error = 'Elige el conductor.');
     if (_desde.isAfter(_hasta)) {
-      return setState(() => _error = 'El "desde" de los pedidos no puede ser después del "hasta".');
+      return setState(
+        () => _error =
+            'El "desde" de los pedidos no puede ser después del "hasta".',
+      );
     }
     if (_elegidos.isEmpty) {
       return setState(() => _error = 'Marca al menos un pedido para cargar.');
@@ -267,7 +308,9 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
       'rutaIds': _rutaIds.toList(),
       'vehiculoId': _vehiculoId,
       'conductorId': _conductorId,
-      'observacion': _observacion.text.trim().isEmpty ? null : _observacion.text.trim(),
+      'observacion': _observacion.text.trim().isEmpty
+          ? null
+          : _observacion.text.trim(),
       'pedidoIds': _elegidos.toList(),
     };
 
@@ -275,7 +318,9 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
       if (_esNuevo) {
         await ref.read(despachosProvider.notifier).crear(cuerpo);
       } else {
-        await ref.read(despachosProvider.notifier).actualizar(widget.despacho!.id, cuerpo);
+        await ref
+            .read(despachosProvider.notifier)
+            .actualizar(widget.despacho!.id, cuerpo);
       }
       navegador.pop();
       mensajero.mostrar(_esNuevo ? 'Despacho creado' : 'Despacho actualizado');
@@ -300,16 +345,28 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
               dia: _diaVisita,
             )),
           );
-    final todasLasRutas = (ref.watch(rutasProvider).valueOrNull ?? const <Ruta>[]).where((r) => r.activo).toList();
+    final todasLasRutas =
+        (ref.watch(rutasProvider).valueOrNull ?? const <Ruta>[])
+            .where((r) => r.activo)
+            .toList();
     // Se observa para mantener vivo el recorrido del vehiculo: `_rutasDelDia` lo lee sin suscribirse.
     if (_vehiculoId != 0) ref.watch(recorridoVehiculoProvider(_vehiculoId));
 
-    final disponibles = _completar(disponiblesAsync?.valueOrNull ?? const <DespachoPedido>[]);
+    final disponibles = _completar(
+      disponiblesAsync?.valueOrNull ?? const <DespachoPedido>[],
+    );
 
-    final visibles = disponibles.where((p) => _enRango(p) || _elegidos.contains(p.pedidoId)).toList()
-      ..sort((a, b) => a.fecha.compareTo(b.fecha));
-    final fueraDeRango = disponibles.where((p) => !_enRango(p) && !_elegidos.contains(p.pedidoId)).toList();
-    final todosMarcados = visibles.isNotEmpty && visibles.every((p) => _elegidos.contains(p.pedidoId));
+    final visibles =
+        disponibles
+            .where((p) => _enRango(p) || _elegidos.contains(p.pedidoId))
+            .toList()
+          ..sort((a, b) => a.fecha.compareTo(b.fecha));
+    final fueraDeRango = disponibles
+        .where((p) => !_enRango(p) && !_elegidos.contains(p.pedidoId))
+        .toList();
+    final todosMarcados =
+        visibles.isNotEmpty &&
+        visibles.every((p) => _elegidos.contains(p.pedidoId));
 
     final totalElegido = disponibles
         .where((p) => _elegidos.contains(p.pedidoId))
@@ -323,12 +380,18 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
             _esNuevo ? 'Nuevo despacho' : 'Editar ${widget.despacho!.numero}',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             InkWell(
               onTap: _elegirFecha,
@@ -336,10 +399,17 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
               child: InputDecorator(
                 decoration: const InputDecoration(
                   labelText: 'Fecha del reparto',
-                  prefixIcon: Icon(Icons.event_outlined, size: 19, color: Colores.tintaTenue),
+                  prefixIcon: Icon(
+                    Icons.event_outlined,
+                    size: 19,
+                    color: Colores.tintaTenue,
+                  ),
                   constraints: BoxConstraints(minHeight: Dimen.campoLg),
                 ),
-                child: Text(_fechaTexto(_fecha), style: const TextStyle(fontSize: 15)),
+                child: Text(
+                  _fechaTexto(_fecha),
+                  style: const TextStyle(fontSize: 15),
+                ),
               ),
             ),
             const SizedBox(height: Dimen.espacio4),
@@ -352,7 +422,11 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
               icono: Icons.calendar_view_week_outlined,
               habilitado: !_guardando,
               opciones: [
-                for (var i = 0; i < 6; i++) Opcion<String>(_dias[i], _diasTexto[i][0].toUpperCase() + _diasTexto[i].substring(1)),
+                for (var i = 0; i < 6; i++)
+                  Opcion<String>(
+                    _dias[i],
+                    _diasTexto[i][0].toUpperCase() + _diasTexto[i].substring(1),
+                  ),
               ],
               onCambio: (v) {
                 if (v == null) return;
@@ -372,13 +446,26 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
               child: InputDecorator(
                 decoration: InputDecoration(
                   labelText: 'Vehículo',
-                  prefixIcon: const Icon(Icons.local_shipping_outlined, size: 19, color: Colores.tintaTenue),
-                  suffixIcon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
+                  prefixIcon: const Icon(
+                    Icons.local_shipping_outlined,
+                    size: 19,
+                    color: Colores.tintaTenue,
+                  ),
+                  suffixIcon: const Icon(
+                    Icons.search,
+                    size: 18,
+                    color: Colores.tintaTenue,
+                  ),
                   constraints: const BoxConstraints(minHeight: Dimen.campoLg),
                 ),
                 child: Text(
                   _vehiculoPlaca ?? 'Toca para elegir',
-                  style: TextStyle(fontSize: 15, color: _vehiculoPlaca == null ? Colores.tintaTenue : Colores.tinta),
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: _vehiculoPlaca == null
+                        ? Colores.tintaTenue
+                        : Colores.tinta,
+                  ),
                 ),
               ),
             ),
@@ -390,15 +477,25 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
               child: InputDecorator(
                 decoration: InputDecoration(
                   labelText: 'Conductor',
-                  prefixIcon: const Icon(Icons.badge_outlined, size: 19, color: Colores.tintaTenue),
-                  suffixIcon: const Icon(Icons.search, size: 18, color: Colores.tintaTenue),
+                  prefixIcon: const Icon(
+                    Icons.badge_outlined,
+                    size: 19,
+                    color: Colores.tintaTenue,
+                  ),
+                  suffixIcon: const Icon(
+                    Icons.search,
+                    size: 18,
+                    color: Colores.tintaTenue,
+                  ),
                   constraints: const BoxConstraints(minHeight: Dimen.campoLg),
                 ),
                 child: Text(
                   _conductorNombre ?? 'Toca para elegir',
                   style: TextStyle(
                     fontSize: 15,
-                    color: _conductorNombre == null ? Colores.tintaTenue : Colores.tinta,
+                    color: _conductorNombre == null
+                        ? Colores.tintaTenue
+                        : Colores.tinta,
                   ),
                 ),
               ),
@@ -407,7 +504,10 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
 
             // Las rutas que carga el camión ese día. El vehículo y la fecha las proponen desde su recorrido
             // semanal; se pueden cambiar para este despacho.
-            const Text('Rutas', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            const Text(
+              'Rutas',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: Dimen.espacio2),
             Wrap(
               spacing: 8,
@@ -472,7 +572,10 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
                         labelText: 'Desde',
                         constraints: BoxConstraints(minHeight: Dimen.campoLg),
                       ),
-                      child: Text(_fechaTexto(_desde), style: const TextStyle(fontSize: 14)),
+                      child: Text(
+                        _fechaTexto(_desde),
+                        style: const TextStyle(fontSize: 14),
+                      ),
                     ),
                   ),
                 ),
@@ -486,7 +589,10 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
                         labelText: 'Hasta',
                         constraints: BoxConstraints(minHeight: Dimen.campoLg),
                       ),
-                      child: Text(_fechaTexto(_hasta), style: const TextStyle(fontSize: 14)),
+                      child: Text(
+                        _fechaTexto(_hasta),
+                        style: const TextStyle(fontSize: 14),
+                      ),
                     ),
                   ),
                 ),
@@ -509,7 +615,10 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
                             'No sube al camión; amplía las fechas si debe ir.'
                       : 'Hay ${fueraDeRango.length} pedidos pendientes de esas rutas fuera de '
                             'esas fechas. No suben al camión; amplía las fechas si deben ir.',
-                  style: const TextStyle(fontSize: 12.5, color: Colores.advertencia),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: Colores.advertencia,
+                  ),
                 ),
               ),
 
@@ -556,14 +665,20 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
                 contentPadding: EdgeInsets.zero,
                 dense: true,
                 title: Text(
-                  todosMarcados ? 'Quitar todos' : 'Marcar todos (${visibles.length})',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  todosMarcados
+                      ? 'Quitar todos'
+                      : 'Marcar todos (${visibles.length})',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 onChanged: (_) => setState(() {
                   if (todosMarcados) {
                     // Lo ya entregado no se puede bajar del camión.
                     _elegidos.removeWhere(
-                      (id) => visibles.any((p) => p.pedidoId == id && !p.entregado),
+                      (id) =>
+                          visibles.any((p) => p.pedidoId == id && !p.entregado),
                     );
                   } else {
                     _elegidos.addAll(visibles.map((p) => p.pedidoId));
@@ -593,32 +708,42 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
                       children: [
                         Text(
                           p.numero,
-                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             p.cliente,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                         Text(
                           'S/ ${p.total.toStringAsFixed(2)}',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                     ),
                     subtitle: Text(
                       [
-                            if (p.entregado) 'Ya entregado (${p.notaVentaNumero})',
-                            // Con varias rutas en el camión, dice de cuál es cada cliente.
-                            if (p.rutaCliente != null) 'Ruta ${p.rutaCliente}',
-                            [p.mercado, p.direccion].where((s) => s != null && s.isNotEmpty).join(' — '),
-                            if (p.telefono != null) p.telefono!,
-                          ]
-                          .where((s) => s.isNotEmpty)
-                          .join(' · '),
+                        if (p.entregado) 'Ya entregado (${p.notaVentaNumero})',
+                        // Con varias rutas en el camión, dice de cuál es cada cliente.
+                        if (p.rutaCliente != null) 'Ruta ${p.rutaCliente}',
+                        [
+                          p.mercado,
+                          p.direccion,
+                        ].where((s) => s != null && s.isNotEmpty).join(' — '),
+                        if (p.telefono != null) p.telefono!,
+                      ].where((s) => s.isNotEmpty).join(' · '),
                       style: TextStyle(
                         fontSize: 11.5,
                         color: p.entregado ? Colores.exito : Colores.tintaSuave,
@@ -649,10 +774,16 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Carga del camión', style: TextStyle(fontSize: 12, color: Colores.tintaSuave)),
+                  const Text(
+                    'Carga del camión',
+                    style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                  ),
                   Text(
                     '${_elegidos.length} pedido${_elegidos.length == 1 ? '' : 's'}',
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   Text(
                     'S/ ${totalElegido.toStringAsFixed(2)}',
@@ -663,16 +794,11 @@ class _DespachoFormularioState extends ConsumerState<DespachoFormulario> {
             ),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(
-              texto: _esNuevo ? 'Armar despacho' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

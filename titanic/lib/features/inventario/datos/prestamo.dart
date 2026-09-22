@@ -53,21 +53,23 @@ class PrestamoDetalle {
   final double costoUnitario;
   final double costoTotal;
 
-  factory PrestamoDetalle.desdeJson(Map<String, dynamic> json) => PrestamoDetalle(
-    id: json['id'] as int,
-    productoId: json['productoId'] as int,
-    codigo: json['codigo'] as String? ?? '',
-    producto: json['producto'] as String? ?? '',
-    unidadBase: json['unidadBase'] as String? ?? '',
-    presentacionId: json['presentacionId'] as int?,
-    presentacion: json['presentacion'] as String?,
-    cantidadPresentacion: (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
-    cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0,
-    cantidadDevuelta: (json['cantidadDevuelta'] as num?)?.toDouble() ?? 0,
-    cantidadPendiente: (json['cantidadPendiente'] as num?)?.toDouble() ?? 0,
-    costoUnitario: (json['costoUnitario'] as num?)?.toDouble() ?? 0,
-    costoTotal: (json['costoTotal'] as num?)?.toDouble() ?? 0,
-  );
+  factory PrestamoDetalle.desdeJson(Map<String, dynamic> json) =>
+      PrestamoDetalle(
+        id: json['id'] as int,
+        productoId: json['productoId'] as int,
+        codigo: json['codigo'] as String? ?? '',
+        producto: json['producto'] as String? ?? '',
+        unidadBase: json['unidadBase'] as String? ?? '',
+        presentacionId: json['presentacionId'] as int?,
+        presentacion: json['presentacion'] as String?,
+        cantidadPresentacion:
+            (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
+        cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0,
+        cantidadDevuelta: (json['cantidadDevuelta'] as num?)?.toDouble() ?? 0,
+        cantidadPendiente: (json['cantidadPendiente'] as num?)?.toDouble() ?? 0,
+        costoUnitario: (json['costoUnitario'] as num?)?.toDouble() ?? 0,
+        costoTotal: (json['costoTotal'] as num?)?.toDouble() ?? 0,
+      );
 }
 
 /// Mercaderia que sale o entra desde fuera de la empresa: se presta y se

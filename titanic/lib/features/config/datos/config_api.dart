@@ -142,9 +142,10 @@ class ConfigApi {
 
   /// GET /api/auditoria/resumen. Contadores y valores de filtro de toda la
   /// bitácora: de aquí salen las listas de usuarios y entidades.
-  Future<ResumenAuditoria> resumenAuditoria() async => ResumenAuditoria.desdeJson(
-    await _api.get('/auditoria/resumen') as Map<String, dynamic>,
-  );
+  Future<ResumenAuditoria> resumenAuditoria() async =>
+      ResumenAuditoria.desdeJson(
+        await _api.get('/auditoria/resumen') as Map<String, dynamic>,
+      );
 
   /// POST /api/auditoria/listar, pidiendo una sola fila: solo interesa el
   /// `total`, es decir, cuántos registros deja a la vista esa consulta.

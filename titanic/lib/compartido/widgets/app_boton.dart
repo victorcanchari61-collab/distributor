@@ -58,14 +58,19 @@ class AppBoton extends StatelessWidget {
           const SizedBox(
             width: 18,
             height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
           )
         else if (icono != null)
           Icon(icono, size: 18),
         if (cargando || icono != null) const SizedBox(width: Dimen.espacio2),
         // Flexible: en un boton angosto el texto se recorta en vez de
         // desbordar la fila.
-        Flexible(child: Text(texto, maxLines: 1, overflow: TextOverflow.ellipsis)),
+        Flexible(
+          child: Text(texto, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
         if (iconoDerecha != null && !cargando) ...[
           const SizedBox(width: Dimen.espacio2),
           Icon(iconoDerecha, size: 18),
@@ -73,7 +78,9 @@ class AppBoton extends StatelessWidget {
       ],
     );
 
-    final forma = RoundedRectangleBorder(borderRadius: BorderRadius.circular(Dimen.radioCampo));
+    final forma = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(Dimen.radioCampo),
+    );
     final tamano = expandido ? Size.fromHeight(_alto) : Size(0, _alto);
 
     return switch (variante) {
@@ -87,7 +94,9 @@ class AppBoton extends StatelessWidget {
           // fijado al azul de marca. Un boton apagado se pasa mas tiempo a la
           // vista que uno activo — el de "Agregar producto" esta apagado hasta
           // que se elige algo — asi que era justo el que delataba el color.
-          disabledBackgroundColor: (color ?? Acento.de(context)).withValues(alpha: 0.5),
+          disabledBackgroundColor: (color ?? Acento.de(context)).withValues(
+            alpha: 0.5,
+          ),
         ),
         child: contenido,
       ),

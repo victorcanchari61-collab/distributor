@@ -104,7 +104,9 @@ class ClienteApi {
         accion: mapa['accion'] as String?,
       );
       if (fallo.permisoNegado) alNegarPermiso?.call(fallo);
-      if (respuesta.statusCode == 401 && conAuth && cabeceras.containsKey('Authorization')) {
+      if (respuesta.statusCode == 401 &&
+          conAuth &&
+          cabeceras.containsKey('Authorization')) {
         alSesionVencida?.call();
       }
       throw fallo;

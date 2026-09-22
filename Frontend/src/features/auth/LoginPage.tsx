@@ -108,14 +108,6 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
                 error={errors.password}
                 onChange={(e) => setPassword(e.target.value)}
                 icon={<LockIcon />}
-                hint={
-                  <a
-                    href="#recuperar"
-                    className="text-xs font-medium text-brand hover:underline"
-                  >
-                    ¿Olvidaste tu contraseña?
-                  </a>
-                }
               />
 
               <Checkbox

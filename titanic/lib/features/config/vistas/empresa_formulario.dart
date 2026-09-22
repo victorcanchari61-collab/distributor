@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -24,16 +25,34 @@ class EmpresaFormulario extends ConsumerStatefulWidget {
 
 class _EmpresaFormularioState extends ConsumerState<EmpresaFormulario> {
   late final _ruc = TextEditingController(text: widget.empresa?.ruc ?? '');
-  late final _razonSocial = TextEditingController(text: widget.empresa?.razonSocial ?? '');
-  late final _comercial = TextEditingController(text: widget.empresa?.nombreComercial ?? '');
-  late final _direccion = TextEditingController(text: widget.empresa?.direccion ?? '');
-  late final _departamento = TextEditingController(text: widget.empresa?.departamento ?? '');
-  late final _provincia = TextEditingController(text: widget.empresa?.provincia ?? '');
-  late final _distrito = TextEditingController(text: widget.empresa?.distrito ?? '');
-  late final _telefono = TextEditingController(text: widget.empresa?.telefono ?? '');
+  late final _razonSocial = TextEditingController(
+    text: widget.empresa?.razonSocial ?? '',
+  );
+  late final _comercial = TextEditingController(
+    text: widget.empresa?.nombreComercial ?? '',
+  );
+  late final _direccion = TextEditingController(
+    text: widget.empresa?.direccion ?? '',
+  );
+  late final _departamento = TextEditingController(
+    text: widget.empresa?.departamento ?? '',
+  );
+  late final _provincia = TextEditingController(
+    text: widget.empresa?.provincia ?? '',
+  );
+  late final _distrito = TextEditingController(
+    text: widget.empresa?.distrito ?? '',
+  );
+  late final _telefono = TextEditingController(
+    text: widget.empresa?.telefono ?? '',
+  );
   late final _email = TextEditingController(text: widget.empresa?.email ?? '');
-  late final _sitioWeb = TextEditingController(text: widget.empresa?.sitioWeb ?? '');
-  late final _representante = TextEditingController(text: widget.empresa?.representanteLegal ?? '');
+  late final _sitioWeb = TextEditingController(
+    text: widget.empresa?.sitioWeb ?? '',
+  );
+  late final _representante = TextEditingController(
+    text: widget.empresa?.representanteLegal ?? '',
+  );
 
   bool _guardando = false;
   bool _consultando = false;
@@ -121,9 +140,13 @@ class _EmpresaFormularioState extends ConsumerState<EmpresaFormulario> {
           ? 'Un RUC tiene 11 dígitos.'
           : null;
 
-      _errorRazon = _razonSocial.text.trim().isEmpty ? 'Ingresa la razón social.' : null;
+      _errorRazon = _razonSocial.text.trim().isEmpty
+          ? 'Ingresa la razón social.'
+          : null;
 
-      _errorComercial = _comercial.text.trim().isEmpty ? 'Ingresa el nombre comercial.' : null;
+      _errorComercial = _comercial.text.trim().isEmpty
+          ? 'Ingresa el nombre comercial.'
+          : null;
     });
 
     return _errorRuc == null && _errorRazon == null && _errorComercial == null;
@@ -159,7 +182,9 @@ class _EmpresaFormularioState extends ConsumerState<EmpresaFormulario> {
     };
 
     try {
-      await ref.read(empresasProvider.notifier).guardar(id: widget.empresa?.id, cuerpo: cuerpo);
+      await ref
+          .read(empresasProvider.notifier)
+          .guardar(id: widget.empresa?.id, cuerpo: cuerpo);
 
       navegador.pop();
       mensajero.mostrar(_esNuevo ? 'Empresa creada' : 'Empresa actualizada');
@@ -184,13 +209,22 @@ class _EmpresaFormularioState extends ConsumerState<EmpresaFormulario> {
             _esNuevo ? 'Nueva empresa' : 'Editar empresa',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: const PreferredSize(preferredSize: Size.fromHeight(1), child: Divider(height: 1)),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
-            if (_error != null) ...[AppAlerta(_error!), const SizedBox(height: Dimen.espacio4)],
-            if (_aviso != null) ...[AppAlerta(_aviso!), const SizedBox(height: Dimen.espacio4)],
+            if (_error != null) ...[
+              AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
+            if (_aviso != null) ...[
+              AppAlerta(_aviso!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,16 +356,11 @@ class _EmpresaFormularioState extends ConsumerState<EmpresaFormulario> {
             ),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBoton(
-              texto: _esNuevo ? 'Crear empresa' : 'Guardar cambios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
+              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],

@@ -31,7 +31,8 @@ class MetodosPagoPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final todos = ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[];
+    final todos =
+        ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[];
 
     return AppListaPagina<MetodoPago>(
       titulo: 'Métodos de pago',
@@ -80,8 +81,7 @@ class MetodosPagoPagina extends ConsumerWidget {
       context,
       activos: ref.read(filtrosMetodosPagoActivosProvider),
       onLimpiar: () {
-        ref.read(estadoFiltroProvider.notifier).state =
-            FiltroEstado.activos;
+        ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
         ref.read(tipoMetodoPagoFiltroProvider.notifier).state = null;
         ref.read(bancoMetodoPagoFiltroProvider.notifier).state = null;
       },
@@ -158,9 +158,11 @@ class MetodosPagoPagina extends ConsumerWidget {
 
     try {
       await ref.read(metodosPagoProvider.notifier).cambiarEstado(metodo);
-      mensajero.mostrar(metodo.activo
-                ? '${metodo.nombre} desactivado'
-                : '${metodo.nombre} activado');
+      mensajero.mostrar(
+        metodo.activo
+            ? '${metodo.nombre} desactivado'
+            : '${metodo.nombre} activado',
+      );
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -210,7 +212,11 @@ class _TarjetaMetodoPago extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onEstado != null)
           IconButton(

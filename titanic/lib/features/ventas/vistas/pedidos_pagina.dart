@@ -33,8 +33,12 @@ class PedidosPagina extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final todos = ref.watch(pedidosProvider).valueOrNull ?? const <Pedido>[];
-    final pendientes = todos.where((p) => p.estado == EstadoPedido.pendiente).length;
-    final confirmados = todos.where((p) => p.estado == EstadoPedido.confirmado).length;
+    final pendientes = todos
+        .where((p) => p.estado == EstadoPedido.pendiente)
+        .length;
+    final confirmados = todos
+        .where((p) => p.estado == EstadoPedido.confirmado)
+        .length;
     final filtrosActivos = ref.watch(filtrosPedidosActivosProvider);
 
     return AppListaPagina<Pedido>(
@@ -81,21 +85,25 @@ class PedidosPagina extends ConsumerWidget {
       fila: (context, pedido) => _TarjetaPedido(
         pedido: pedido,
         color: color,
-        onEditar: puede(ref, 'fact.pedidos', Accion.editar) &&
+        onEditar:
+            puede(ref, 'fact.pedidos', Accion.editar) &&
                 pedido.estado == EstadoPedido.pendiente
             ? () => _abrirFormulario(context, pedido)
             : null,
-        onConfirmar: puede(ref, 'fact.pedidos', Accion.confirmar) &&
+        onConfirmar:
+            puede(ref, 'fact.pedidos', Accion.confirmar) &&
                 pedido.estado == EstadoPedido.pendiente
             ? () => _confirmar(context, ref, pedido)
             : null,
-        onNoEntregado: puede(ref, 'fact.pedidos', Accion.confirmar) &&
+        onNoEntregado:
+            puede(ref, 'fact.pedidos', Accion.confirmar) &&
                 pedido.estado == EstadoPedido.pendiente
             ? () => pedido.noEntregadoMotivo != null
                   ? _quitarNoEntregado(context, ref, pedido)
                   : _noEntregado(context, ref, pedido)
             : null,
-        onAnular: puede(ref, 'fact.pedidos', Accion.anular) &&
+        onAnular:
+            puede(ref, 'fact.pedidos', Accion.anular) &&
                 pedido.estado == EstadoPedido.pendiente
             ? () => _anular(context, ref, pedido)
             : null,
@@ -125,7 +133,8 @@ class PedidosPagina extends ConsumerWidget {
               OpcionFiltro(EstadoPedido.confirmado, 'Confirmados'),
               OpcionFiltro(EstadoPedido.anulado, 'Anulados'),
             ],
-            onCambio: (v) => ref.read(estadoPedidoFiltroProvider.notifier).state = v,
+            onCambio: (v) =>
+                ref.read(estadoPedidoFiltroProvider.notifier).state = v,
           ),
         ),
         Consumer(
@@ -154,7 +163,8 @@ class PedidosPagina extends ConsumerWidget {
               OpcionFiltro(true, 'Convertido'),
               OpcionFiltro(false, 'Sin convertir'),
             ],
-            onCambio: (v) => ref.read(ventaPedidoFiltroProvider.notifier).state = v,
+            onCambio: (v) =>
+                ref.read(ventaPedidoFiltroProvider.notifier).state = v,
           ),
         ),
         // La ruta y el día de visita son del CLIENTE del pedido, igual que en la web.
@@ -170,14 +180,18 @@ class PedidosPagina extends ConsumerWidget {
                 const OpcionFiltro(null, 'Todas'),
                 for (final r in rutas) OpcionFiltro(r, 'Ruta $r'),
               ],
-              onCambio: (v) => ref.read(rutaPedidoFiltroProvider.notifier).state = v,
+              onCambio: (v) =>
+                  ref.read(rutaPedidoFiltroProvider.notifier).state = v,
             );
           },
         ),
         Consumer(
           builder: (context, ref, _) {
             final todos = ref.watch(pedidosProvider).valueOrNull ?? const [];
-            final dias = todos.map((p) => p.diaVisita).whereType<String>().toSet();
+            final dias = todos
+                .map((p) => p.diaVisita)
+                .whereType<String>()
+                .toSet();
             if (dias.isEmpty) return const SizedBox.shrink();
             final ordenados = diasVisitaOrden.where(dias.contains).toList();
 
@@ -188,7 +202,8 @@ class PedidosPagina extends ConsumerWidget {
                 const OpcionFiltro(null, 'Todos'),
                 for (final d in ordenados) OpcionFiltro(d, _diaLegible(d)),
               ],
-              onCambio: (v) => ref.read(diaVisitaPedidoFiltroProvider.notifier).state = v,
+              onCambio: (v) =>
+                  ref.read(diaVisitaPedidoFiltroProvider.notifier).state = v,
             );
           },
         ),
@@ -200,23 +215,31 @@ class PedidosPagina extends ConsumerWidget {
       dia.isEmpty ? dia : dia[0] + dia.substring(1).toLowerCase();
 
   Future<void> _abrirFormulario(BuildContext context, Pedido? pedido) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PedidoFormulario(pedido: pedido)),
-    );
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => PedidoFormulario(pedido: pedido)));
   }
 
   /// Convierte el pedido en venta con lo que de verdad se entregó y se cobró:
   /// por defecto todo lo pedido, y si el cliente recibió menos se corrige la
   /// línea y se pide el motivo. El aviso dice qué pasó con el cobro (contado,
   /// parcial o a crédito), igual que en la web.
-  Future<void> _confirmar(BuildContext context, WidgetRef ref, Pedido pedido) async {
+  Future<void> _confirmar(
+    BuildContext context,
+    WidgetRef ref,
+    Pedido pedido,
+  ) async {
     final mensajero = Aviso.de(context);
     final mensaje = await mostrarEntregaPedido(context, pedido);
     if (mensaje != null) mensajero.mostrar(mensaje);
   }
 
   /// El pedido entero no se entregó: no crea venta, deja la novedad con su motivo.
-  Future<void> _noEntregado(BuildContext context, WidgetRef ref, Pedido pedido) async {
+  Future<void> _noEntregado(
+    BuildContext context,
+    WidgetRef ref,
+    Pedido pedido,
+  ) async {
     final mensajero = Aviso.de(context);
     final hecho = await mostrarNoEntregado(context, pedido);
     if (hecho == true) {
@@ -224,11 +247,16 @@ class PedidosPagina extends ConsumerWidget {
     }
   }
 
-  Future<void> _quitarNoEntregado(BuildContext context, WidgetRef ref, Pedido pedido) async {
+  Future<void> _quitarNoEntregado(
+    BuildContext context,
+    WidgetRef ref,
+    Pedido pedido,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Quitar la marca de ${pedido.numero}',
-      mensaje: 'El pedido deja de figurar como no entregado y vuelve a quedar solo pendiente.',
+      mensaje:
+          'El pedido deja de figurar como no entregado y vuelve a quedar solo pendiente.',
       textoConfirmar: 'Quitar marca',
       tono: ConfirmTono.aviso,
     );
@@ -243,7 +271,11 @@ class PedidosPagina extends ConsumerWidget {
     }
   }
 
-  Future<void> _anular(BuildContext context, WidgetRef ref, Pedido pedido) async {
+  Future<void> _anular(
+    BuildContext context,
+    WidgetRef ref,
+    Pedido pedido,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Anular ${pedido.numero}',
@@ -304,11 +336,15 @@ class _TarjetaPedido extends StatelessWidget {
         pedido.noEntregadoObservacion == null
             ? pedido.noEntregadoMotivo
             : '${pedido.noEntregadoMotivo} — ${pedido.noEntregadoObservacion}',
-        widget: AppEtiqueta('No entregado: ${pedido.noEntregadoMotivo}', tono: EtiquetaTono.peligro),
+        widget: AppEtiqueta(
+          'No entregado: ${pedido.noEntregadoMotivo}',
+          tono: EtiquetaTono.peligro,
+        ),
       ),
     if (pedido.reservaStock) CampoDetalle('Stock reservado en', pedido.almacen),
     if (pedido.usuario != null) CampoDetalle('Registrado por', pedido.usuario),
-    if (pedido.observacion != null) CampoDetalle('Observación', pedido.observacion),
+    if (pedido.observacion != null)
+      CampoDetalle('Observación', pedido.observacion),
   ];
 
   /// El estado del pedido; si el repartidor lo marcó como no entregado, además
@@ -326,7 +362,10 @@ class _TarjetaPedido extends StatelessWidget {
       alignment: WrapAlignment.end,
       children: [
         etiqueta,
-        AppEtiqueta('No entregado: ${pedido.noEntregadoMotivo}', tono: EtiquetaTono.peligro),
+        AppEtiqueta(
+          'No entregado: ${pedido.noEntregadoMotivo}',
+          tono: EtiquetaTono.peligro,
+        ),
       ],
     );
   }
@@ -335,7 +374,8 @@ class _TarjetaPedido extends StatelessWidget {
     for (final linea in pedido.detalle.where((l) => !l.anulado))
       LineaProductoTarjeta(
         titulo: linea.producto,
-        subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
+        subtitulo:
+            '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
         filas: [
           [
             ('Cant.', '${linea.cantidadPresentacion}'),
@@ -372,15 +412,23 @@ class _TarjetaPedido extends StatelessWidget {
             onPressed: onConfirmar,
             tooltip: 'Confirmar',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.check_circle_outline, size: 18, color: Colores.exito),
+            icon: const Icon(
+              Icons.check_circle_outline,
+              size: 18,
+              color: Colores.exito,
+            ),
           ),
         if (onNoEntregado != null)
           IconButton(
             onPressed: onNoEntregado,
-            tooltip: pedido.noEntregadoMotivo != null ? 'Quitar la marca de no entregado' : 'No entregado',
+            tooltip: pedido.noEntregadoMotivo != null
+                ? 'Quitar la marca de no entregado'
+                : 'No entregado',
             visualDensity: VisualDensity.compact,
             icon: Icon(
-              pedido.noEntregadoMotivo != null ? Icons.undo : Icons.report_gmailerrorred_outlined,
+              pedido.noEntregadoMotivo != null
+                  ? Icons.undo
+                  : Icons.report_gmailerrorred_outlined,
               size: 18,
               color: Colores.advertencia,
             ),
@@ -390,7 +438,11 @@ class _TarjetaPedido extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         if (onAnular != null)
           IconButton(

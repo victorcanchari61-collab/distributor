@@ -33,7 +33,9 @@ final solicitudesProvider = FutureProvider<List<SolicitudPermiso>>(
 );
 
 /// Persona elegida en la pestaña de excepciones.
-final usuarioExcepcionesProvider = StateProvider.autoDispose<int?>((ref) => null);
+final usuarioExcepcionesProvider = StateProvider.autoDispose<int?>(
+  (ref) => null,
+);
 
 /// Lo que esa persona tiene concedido por fuera de su rol.
 final excepcionesProvider = FutureProvider.autoDispose<List<UsuarioPermiso>>((

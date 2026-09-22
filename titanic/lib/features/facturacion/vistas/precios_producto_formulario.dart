@@ -8,6 +8,7 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo_busqueda.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -210,15 +211,21 @@ class _PreciosProductoFormularioState
    * otro más bajo. Va pegado a los de su presentación, no al final.
    */
   void _agregarTramo(_Fila fila) {
-    final hermanas = _filas.where((f) => f.presentacion.id == fila.presentacion.id);
+    final hermanas = _filas.where(
+      (f) => f.presentacion.id == fila.presentacion.id,
+    );
     final ultimo = hermanas.map((f) => f.desdeNum).fold<double>(1, math.max);
-    final posicion =
-        _filas.lastIndexWhere((f) => f.presentacion.id == fila.presentacion.id);
+    final posicion = _filas.lastIndexWhere(
+      (f) => f.presentacion.id == fila.presentacion.id,
+    );
 
     setState(() {
       _filas.insert(
         posicion + 1,
-        _Fila(presentacion: fila.presentacion, desde: formatoNumero(ultimo + 1)),
+        _Fila(
+          presentacion: fila.presentacion,
+          desde: formatoNumero(ultimo + 1),
+        ),
       );
     });
   }
@@ -340,9 +347,10 @@ class _PreciosProductoFormularioState
 
   @override
   Widget build(BuildContext context) {
-    final productos = (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
-        .where((p) => p.activo)
-        .toList();
+    final productos =
+        (ref.watch(productosProvider).valueOrNull ?? const <Producto>[])
+            .where((p) => p.activo)
+            .toList();
 
     // Si se abre desde un precio, el producto ya viene elegido.
     if (!_sembrado && widget.productoId != null) {
@@ -435,7 +443,10 @@ class _PreciosProductoFormularioState
                 'Costo del ${producto!.unidadBase}: '
                 'S/ ${formatoCosto(producto.costoReferencia!)}. Los tramos por '
                 'volumen no se tocan.',
-                style: const TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Colores.tintaSuave,
+                ),
               ),
             ],
 
@@ -471,7 +482,9 @@ class _PreciosProductoFormularioState
                   // El renglón de "desde 1" es el precio normal: no se quita.
                   puedeQuitar:
                       _filas
-                          .where((f) => f.presentacion.id == fila.presentacion.id)
+                          .where(
+                            (f) => f.presentacion.id == fila.presentacion.id,
+                          )
                           .length >
                       1,
                   onPrecio: () => _escribirPrecio(fila),
@@ -484,16 +497,10 @@ class _PreciosProductoFormularioState
               ],
 
             const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Guardar precios',
+            AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _guardar,
               cargando: _guardando,
-              onPressed: _guardar,
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: Dimen.espacio5),
           ],
@@ -565,7 +572,10 @@ class _TarjetaFila extends StatelessWidget {
                     Wrap(
                       spacing: Dimen.espacio2,
                       children: [
-                        _Chip(texto: 'Equivale ${formatoNumero(factor)} $unidadBase'),
+                        _Chip(
+                          texto:
+                              'Equivale ${formatoNumero(factor)} $unidadBase',
+                        ),
                         if (esTramo)
                           _Chip(
                             texto: 'Desde ${formatoNumero(fila.desdeNum)}',
@@ -683,7 +693,11 @@ class _Chip extends StatelessWidget {
       ),
       child: Text(
         texto,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }

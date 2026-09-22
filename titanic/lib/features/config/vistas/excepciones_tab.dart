@@ -41,7 +41,8 @@ class ExcepcionesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final usuarios = ref.watch(usuariosProvider).valueOrNull ?? const <Usuario>[];
+    final usuarios =
+        ref.watch(usuariosProvider).valueOrNull ?? const <Usuario>[];
     final elegido = ref.watch(usuarioExcepcionesProvider);
 
     // El primero de la lista mientras nadie elija: una pantalla que arranca
@@ -49,7 +50,8 @@ class ExcepcionesTab extends ConsumerWidget {
     if (elegido == null && usuarios.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (ref.read(usuarioExcepcionesProvider) == null) {
-          ref.read(usuarioExcepcionesProvider.notifier).state = usuarios.first.id;
+          ref.read(usuarioExcepcionesProvider.notifier).state =
+              usuarios.first.id;
         }
       });
     }
@@ -140,8 +142,7 @@ class _Tarjeta extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pantalla =
-        vistaPorId(permiso.submodulo)?.titulo ?? permiso.submodulo;
+    final pantalla = vistaPorId(permiso.submodulo)?.titulo ?? permiso.submodulo;
 
     return Container(
       padding: const EdgeInsets.all(Dimen.espacio3),
@@ -170,7 +171,9 @@ class _Tarjeta extends ConsumerWidget {
               // lo que se concedió, y borrarlo esconde a quién se le dio qué.
               AppEtiqueta(
                 permiso.vigente ? 'Vigente' : 'Terminado',
-                tono: permiso.vigente ? EtiquetaTono.exito : EtiquetaTono.neutral,
+                tono: permiso.vigente
+                    ? EtiquetaTono.exito
+                    : EtiquetaTono.neutral,
               ),
             ],
           ),
@@ -217,14 +220,16 @@ class _Tarjeta extends ConsumerWidget {
     if (permiso.revocado) return 'Retirado a mano';
 
     return switch (permiso.alcance) {
-      Alcance.unaVez => permiso.usos > 0
-          ? 'De una sola vez · ya se usó'
-          : 'De una sola vez · sin usar',
-      Alcance.temporal => permiso.expiraEn == null
-          ? 'Por un tiempo'
-          : 'Vence el ${permiso.expiraEn!.day.toString().padLeft(2, '0')}/'
-                '${permiso.expiraEn!.month.toString().padLeft(2, '0')}/'
-                '${permiso.expiraEn!.year}',
+      Alcance.unaVez =>
+        permiso.usos > 0
+            ? 'De una sola vez · ya se usó'
+            : 'De una sola vez · sin usar',
+      Alcance.temporal =>
+        permiso.expiraEn == null
+            ? 'Por un tiempo'
+            : 'Vence el ${permiso.expiraEn!.day.toString().padLeft(2, '0')}/'
+                  '${permiso.expiraEn!.month.toString().padLeft(2, '0')}/'
+                  '${permiso.expiraEn!.year}',
       _ => 'Para siempre',
     };
   }

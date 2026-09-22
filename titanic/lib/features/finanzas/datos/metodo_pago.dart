@@ -45,7 +45,8 @@ class MetodoPago {
   final int usos;
 
   String get buscable =>
-      '$nombre ${banco ?? ''} ${numeroCuenta ?? ''} ${titular ?? ''}'.toLowerCase();
+      '$nombre ${banco ?? ''} ${numeroCuenta ?? ''} ${titular ?? ''}'
+          .toLowerCase();
 
   factory MetodoPago.desdeJson(Map<String, dynamic> json) => MetodoPago(
     id: json['id'] as int,
@@ -68,7 +69,11 @@ class MetodoPago {
 /// Finanzas. Por eso no reutiliza [MetodoPago]: aquí no hay `activo` ni `usos`
 /// que inventar.
 class MetodoPagoOpcion {
-  const MetodoPagoOpcion({required this.id, required this.nombre, required this.tipo});
+  const MetodoPagoOpcion({
+    required this.id,
+    required this.nombre,
+    required this.tipo,
+  });
 
   final int id;
   final String nombre;
@@ -76,9 +81,10 @@ class MetodoPagoOpcion {
   /// EFECTIVO, BILLETERA_DIGITAL o TRANSFERENCIA: ver [TipoMetodoPago].
   final String tipo;
 
-  factory MetodoPagoOpcion.desdeJson(Map<String, dynamic> json) => MetodoPagoOpcion(
-    id: json['id'] as int,
-    nombre: json['nombre'] as String? ?? '',
-    tipo: json['tipo'] as String? ?? TipoMetodoPago.efectivo,
-  );
+  factory MetodoPagoOpcion.desdeJson(Map<String, dynamic> json) =>
+      MetodoPagoOpcion(
+        id: json['id'] as int,
+        nombre: json['nombre'] as String? ?? '',
+        tipo: json['tipo'] as String? ?? TipoMetodoPago.efectivo,
+      );
 }

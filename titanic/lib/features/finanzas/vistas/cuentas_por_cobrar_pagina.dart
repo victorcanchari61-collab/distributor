@@ -31,8 +31,12 @@ class CuentasPorCobrarPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final todas = ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
-    final totalSaldo = todas.fold<double>(0, (n, v) => n + (v.total - v.totalPagado));
+    final todas =
+        ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
+    final totalSaldo = todas.fold<double>(
+      0,
+      (n, v) => n + (v.total - v.totalPagado),
+    );
 
     return AppListaPagina<NotaVenta>(
       titulo: 'Cuentas por cobrar',
@@ -40,7 +44,8 @@ class CuentasPorCobrarPagina extends ConsumerWidget {
       estado: ref.watch(cuentasPorCobrarProvider),
       visibles: ref.watch(cuentasPorCobrarFiltradasProvider),
       busqueda: ref.watch(busquedaCuentasPorCobrarProvider),
-      onBuscar: (t) => ref.read(busquedaCuentasPorCobrarProvider.notifier).state = t,
+      onBuscar: (t) =>
+          ref.read(busquedaCuentasPorCobrarProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o cliente',
       onRecargar: () => ref.read(cuentasPorCobrarProvider.notifier).recargar(),
       iconoVacio: Icons.account_balance_wallet_outlined,
@@ -78,11 +83,11 @@ class CuentasPorCobrarPagina extends ConsumerWidget {
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
     return mostrarFiltros(
       context,
-      activos: ref.read(filtrosDeudaActivosProvider) +
+      activos:
+          ref.read(filtrosDeudaActivosProvider) +
           (ref.read(clienteCuentasPorCobrarFiltroProvider) == null ? 0 : 1),
       onLimpiar: () {
-        ref.read(filtroDeudaProvider.notifier).state =
-            FiltroDeuda.todas;
+        ref.read(filtroDeudaProvider.notifier).state = FiltroDeuda.todas;
         ref.read(clienteCuentasPorCobrarFiltroProvider.notifier).state = null;
       },
       grupos: [
@@ -110,9 +115,11 @@ class CuentasPorCobrarPagina extends ConsumerWidget {
                 const OpcionFiltro(null, 'Todos'),
                 for (final c in clientes) OpcionFiltro(c, c),
               ],
-              onCambio: (v) => ref
-                  .read(clienteCuentasPorCobrarFiltroProvider.notifier)
-                  .state = v,
+              onCambio: (v) =>
+                  ref
+                          .read(clienteCuentasPorCobrarFiltroProvider.notifier)
+                          .state =
+                      v,
             );
           },
         ),
@@ -120,14 +127,20 @@ class CuentasPorCobrarPagina extends ConsumerWidget {
     );
   }
 
-  Future<void> _gestionarPagos(BuildContext context, WidgetRef ref, NotaVenta nota) {
+  Future<void> _gestionarPagos(
+    BuildContext context,
+    WidgetRef ref,
+    NotaVenta nota,
+  ) {
     return showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colores.superficie,
       isScrollControlled: true,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Dimen.radioPanel),
+        ),
       ),
       builder: (context) => _HojaPagosCobrar(notaVentaId: nota.id),
     );
@@ -177,7 +190,7 @@ class _TarjetaCuentaCobrar extends StatelessWidget {
           IconButton(
             onPressed: onGestionarPagos,
             tooltip: 'Gestionar pagos',
-          visualDensity: VisualDensity.compact,
+            visualDensity: VisualDensity.compact,
             icon: Icon(
               Icons.request_quote_outlined,
               size: 18,
@@ -219,7 +232,8 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
 
   @override
   Widget build(BuildContext context) {
-    final notas = ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
+    final notas =
+        ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
     NotaVenta? nota;
     for (final n in notas) {
       if (n.id == widget.notaVentaId) nota = n;
@@ -227,9 +241,13 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
     if (nota == null) {
       // El saldo llego a cero: la nota salio de la lista. Cierra la hoja.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && Navigator.of(context).canPop()) Navigator.of(context).pop();
+        if (mounted && Navigator.of(context).canPop())
+          Navigator.of(context).pop();
       });
-      return const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()));
+      return const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     final metodos = ref.watch(metodosPagoActivosProvider);
@@ -248,7 +266,11 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
           children: [
             Text(
               'Pagos de ${nota.numero}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colores.tinta),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
+              ),
             ),
             const SizedBox(height: Dimen.espacio1),
             Text(
@@ -310,7 +332,11 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
 
             const Text(
               'Agregar pago',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colores.tinta),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
+              ),
             ),
             const SizedBox(height: Dimen.espacio3),
 
@@ -318,7 +344,10 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
               valor: _tipoNuevo,
               etiqueta: 'Tipo',
               icono: Icons.category_outlined,
-              opciones: [for (final t in TipoMetodoPago.todos) Opcion(t, TipoMetodoPago.etiqueta(t))],
+              opciones: [
+                for (final t in TipoMetodoPago.todos)
+                  Opcion(t, TipoMetodoPago.etiqueta(t)),
+              ],
               onCambio: (v) => setState(() {
                 _tipoNuevo = v;
                 _metodoNuevoId = null;
@@ -347,11 +376,17 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
                     controlador: _montoCtrl,
                     etiqueta: 'Monto',
                     icono: Icons.attach_money,
-                    tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+                    tipoTeclado: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                   ),
                 ),
                 const SizedBox(width: Dimen.espacio3),
-                AppBoton(texto: 'Agregar', expandido: false, onPressed: () => _registrar(context, nota!)),
+                AppBoton(
+                  texto: 'Agregar',
+                  expandido: false,
+                  onPressed: () => _registrar(context, nota!),
+                ),
               ],
             ),
             const SizedBox(height: Dimen.espacio3),
@@ -379,9 +414,10 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
     }
 
     try {
-      await ref
-          .read(cuentasPorCobrarProvider.notifier)
-          .registrarPago(nota.id, {'metodoPagoId': _metodoNuevoId, 'monto': monto});
+      await ref.read(cuentasPorCobrarProvider.notifier).registrarPago(nota.id, {
+        'metodoPagoId': _metodoNuevoId,
+        'monto': monto,
+      });
       if (!mounted) return;
       setState(() {
         _error = null;
@@ -394,8 +430,14 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
     }
   }
 
-  Future<void> _guardarEdicion(BuildContext context, NotaVenta nota, PagoVenta pago) async {
-    final monto = double.tryParse(_montoEditarCtrl.text.trim().replaceAll(',', '.'));
+  Future<void> _guardarEdicion(
+    BuildContext context,
+    NotaVenta nota,
+    PagoVenta pago,
+  ) async {
+    final monto = double.tryParse(
+      _montoEditarCtrl.text.trim().replaceAll(',', '.'),
+    );
     if (_metodoEditarId == null) {
       setState(() => _error = 'Elige el método de pago.');
       return;
@@ -406,9 +448,11 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
     }
 
     try {
-      await ref
-          .read(cuentasPorCobrarProvider.notifier)
-          .actualizarPago(nota.id, pago.id, {'metodoPagoId': _metodoEditarId, 'monto': monto});
+      await ref.read(cuentasPorCobrarProvider.notifier).actualizarPago(
+        nota.id,
+        pago.id,
+        {'metodoPagoId': _metodoEditarId, 'monto': monto},
+      );
       if (!mounted) return;
       setState(() {
         _error = null;
@@ -419,7 +463,11 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
     }
   }
 
-  Future<void> _anular(BuildContext context, NotaVenta nota, PagoVenta pago) async {
+  Future<void> _anular(
+    BuildContext context,
+    NotaVenta nota,
+    PagoVenta pago,
+  ) async {
     final ok = await confirmarAccion(
       context,
       titulo: 'Anular pago de S/ ${pago.monto.toStringAsFixed(2)}',
@@ -431,7 +479,9 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
     if (!ok || !mounted) return;
 
     try {
-      await ref.read(cuentasPorCobrarProvider.notifier).anularPago(nota.id, pago.id);
+      await ref
+          .read(cuentasPorCobrarProvider.notifier)
+          .anularPago(nota.id, pago.id);
     } on ApiExcepcion catch (e) {
       if (mounted) setState(() => _error = e.texto);
     }
@@ -467,12 +517,19 @@ class _FilaPago extends StatelessWidget {
               children: [
                 Text(
                   '${_fecha(pago.fecha)} · ${pago.metodoPago}',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colores.tinta),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colores.tinta,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Cobrado por ${pago.usuario ?? '—'}',
-                  style: const TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Colores.tintaSuave,
+                  ),
                 ),
               ],
             ),
@@ -496,7 +553,11 @@ class _FilaPago extends StatelessWidget {
               onPressed: onEditar,
               tooltip: 'Editar',
               visualDensity: VisualDensity.compact,
-              icon: Icon(Icons.edit_outlined, size: 17, color: Acento.de(context)),
+              icon: Icon(
+                Icons.edit_outlined,
+                size: 17,
+                color: Acento.de(context),
+              ),
             ),
           if (onAnular != null)
             IconButton(
@@ -549,7 +610,10 @@ class _FormularioEdicion extends StatelessWidget {
             valor: tipo,
             etiqueta: 'Tipo',
             icono: Icons.category_outlined,
-            opciones: [for (final t in TipoMetodoPago.todos) Opcion(t, TipoMetodoPago.etiqueta(t))],
+            opciones: [
+              for (final t in TipoMetodoPago.todos)
+                Opcion(t, TipoMetodoPago.etiqueta(t)),
+            ],
             onCambio: onTipo,
           ),
           const SizedBox(height: Dimen.espacio3),
@@ -558,7 +622,9 @@ class _FormularioEdicion extends StatelessWidget {
             etiqueta: 'Método',
             icono: Icons.payments_outlined,
             opciones: [
-              for (final m in metodos.where((m) => tipo == null || m.tipo == tipo))
+              for (final m in metodos.where(
+                (m) => tipo == null || m.tipo == tipo,
+              ))
                 Opcion(m.id, m.nombre),
             ],
             onCambio: onMetodo,
@@ -583,7 +649,11 @@ class _FormularioEdicion extends StatelessWidget {
               ),
               const SizedBox(width: Dimen.espacio2),
               Expanded(
-                child: AppBoton(texto: 'Guardar', expandido: true, onPressed: onGuardar),
+                child: AppBoton(
+                  texto: 'Guardar',
+                  expandido: true,
+                  onPressed: onGuardar,
+                ),
               ),
             ],
           ),

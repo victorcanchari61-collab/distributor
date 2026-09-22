@@ -162,9 +162,11 @@ class AlmacenesPagina extends ConsumerWidget {
 
     try {
       await ref.read(almacenesProvider.notifier).cambiarEstado(almacen);
-      mensajero.mostrar(almacen.activo
-                ? '${almacen.nombre} desactivado'
-                : '${almacen.nombre} activado');
+      mensajero.mostrar(
+        almacen.activo
+            ? '${almacen.nombre} desactivado'
+            : '${almacen.nombre} activado',
+      );
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
@@ -215,7 +217,11 @@ class _TarjetaAlmacen extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
         // El principal siempre esta activo: no se ofrece apagarlo.
         if (!almacen.esPrincipal)

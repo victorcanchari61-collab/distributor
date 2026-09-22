@@ -59,9 +59,16 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
     with SingleTickerProviderStateMixin {
   late final _tabController = TabController(length: 2, vsync: this);
 
-  late final _codigo = TextEditingController(text: widget.producto?.codigo ?? '');
-  late final _nombre = TextEditingController(text: widget.producto?.nombre ?? '');
-  late final _descripcion = TextEditingController(text: widget.producto?.descripcion ?? '');
+  late final _codigo = TextEditingController(
+    text: widget.producto?.codigo ?? '',
+  );
+  late final _nombre = TextEditingController(
+    text: widget.producto?.nombre ?? '',
+  );
+  late final _descripcion = TextEditingController(
+    text: widget.producto?.descripcion ?? '',
+  );
+
   /// El costo llega TAL CUAL, sin redondear: es por unidad base y se guarda
   /// con ocho decimales —S/ 289 el saco de 45.6 kg son 6.33771930 el kilo—.
   /// Lo que este campo muestra es lo que se vuelve a enviar al guardar, asi
@@ -72,6 +79,7 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
         ? ''
         : _sinCerosDeMas(widget.producto!.costoReferencia!),
   );
+
   /// Igual que el costo: por unidad base y sin redondear, para que abrir el formulario y guardar no
   /// cambie lo que se puso desde la web.
   late final _precioReferencia = TextEditingController(
@@ -80,7 +88,9 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
         : _sinCerosDeMas(widget.producto!.precioReferencia!),
   );
   late final _stockMinimo = TextEditingController(
-    text: widget.producto == null ? '' : formatoNumero(widget.producto!.stockMinimo),
+    text: widget.producto == null
+        ? ''
+        : formatoNumero(widget.producto!.stockMinimo),
   );
   late final _peso = TextEditingController(
     text: widget.producto?.pesoUnidadBase == null
@@ -111,9 +121,17 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   /// compran y venden por caja o saco: la base sirve para llevar el stock y
   /// descontar (rotos, mermas), no para vender sueltas.
   late bool _baseSeCompra =
-      widget.producto?.presentaciones.where((p) => p.esBase).firstOrNull?.esCompra ?? true;
+      widget.producto?.presentaciones
+          .where((p) => p.esBase)
+          .firstOrNull
+          ?.esCompra ??
+      true;
   late bool _baseSeVende =
-      widget.producto?.presentaciones.where((p) => p.esBase).firstOrNull?.esVenta ?? true;
+      widget.producto?.presentaciones
+          .where((p) => p.esBase)
+          .firstOrNull
+          ?.esVenta ??
+      true;
 
   bool _guardando = false;
   String? _error;
@@ -135,7 +153,15 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   @override
   void dispose() {
     _tabController.dispose();
-    for (final c in [_codigo, _nombre, _descripcion, _costoReferencia, _precioReferencia, _stockMinimo, _peso]) {
+    for (final c in [
+      _codigo,
+      _nombre,
+      _descripcion,
+      _costoReferencia,
+      _precioReferencia,
+      _stockMinimo,
+      _peso,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -150,7 +176,8 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
     return _errorCodigo == null && _errorNombre == null && _errorUnidad == null;
   }
 
-  double? _numero(String texto) => double.tryParse(texto.trim().replaceAll(',', '.'));
+  double? _numero(String texto) =>
+      double.tryParse(texto.trim().replaceAll(',', '.'));
 
   Future<void> _guardar() async {
     FocusScope.of(context).unfocus();
@@ -191,7 +218,9 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
 
     try {
       if (_esNuevo) {
-        cuerpo['presentaciones'] = [for (final f in _filas) _cuerpoPresentacion(f)];
+        cuerpo['presentaciones'] = [
+          for (final f in _filas) _cuerpoPresentacion(f),
+        ];
         final creado = await api.crearProducto(cuerpo);
         // El alta crea la base comprable y vendible: se aplica lo desmarcado.
         final base = creado.presentaciones.where((p) => p.esBase).firstOrNull;
@@ -238,8 +267,11 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   /// ya tenian id se actualizan y las que faltan (se borraron en pantalla) se
   /// eliminan.
   Future<void> _sincronizarPresentaciones(MaestrosApi api) async {
-    final base = widget.producto!.presentaciones.where((p) => p.esBase).firstOrNull;
-    if (base != null && (base.esCompra != _baseSeCompra || base.esVenta != _baseSeVende)) {
+    final base = widget.producto!.presentaciones
+        .where((p) => p.esBase)
+        .firstOrNull;
+    if (base != null &&
+        (base.esCompra != _baseSeCompra || base.esVenta != _baseSeVende)) {
       await _guardarBase(api, base);
     }
 
@@ -254,7 +286,10 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
 
     for (final f in _filas) {
       if (f.id == null) {
-        await api.agregarPresentacion(widget.producto!.id, _cuerpoPresentacion(f));
+        await api.agregarPresentacion(
+          widget.producto!.id,
+          _cuerpoPresentacion(f),
+        );
       } else {
         await api.actualizarPresentacion(f.id!, _cuerpoPresentacion(f));
       }
@@ -262,7 +297,8 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   }
 
   Future<void> _agregarPresentacion() async {
-    final unidades = ref.read(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
+    final unidades =
+        ref.read(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
     if (unidades.isEmpty) {
       Aviso.de(context).mostrar('Todavía no hay unidades registradas.');
       return;
@@ -272,8 +308,13 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   }
 
   Future<void> _editarPresentacion(_FilaPresentacion original) async {
-    final unidades = ref.read(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
-    final fila = await _mostrarHojaPresentacion(context, unidades: unidades, existente: original);
+    final unidades =
+        ref.read(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
+    final fila = await _mostrarHojaPresentacion(
+      context,
+      unidades: unidades,
+      existente: original,
+    );
     if (fila != null) {
       setState(() {
         final i = _filas.indexOf(original);
@@ -335,7 +376,9 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
                       child: AppBoton(
                         texto: 'Cancelar',
                         variante: BotonVariante.secundario,
-                        onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+                        onPressed: _guardando
+                            ? null
+                            : () => Navigator.of(context).pop(),
                       ),
                     ),
                     const SizedBox(width: Dimen.espacio3),
@@ -369,21 +412,26 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
     bool compra = false,
     bool venta = false,
   }) {
-    final base = unidades.where((u) => u.id == _unidadBaseId).firstOrNull?.codigo ?? 'unidad base';
+    final base =
+        unidades.where((u) => u.id == _unidadBaseId).firstOrNull?.codigo ??
+        'unidad base';
     bool sirve(bool esCompra, bool esVenta) =>
         (!compra && !venta) || (compra && esCompra) || (venta && esVenta);
 
     return [
       if (sirve(_baseSeCompra, _baseSeVende)) _OpcionValor(base, 1),
       for (final f in _filas)
-        if (f.factor > 0 && sirve(f.esCompra, f.esVenta)) _OpcionValor(f.nombre, f.factor),
+        if (f.factor > 0 && sirve(f.esCompra, f.esVenta))
+          _OpcionValor(f.nombre, f.factor),
     ];
   }
 
   Widget _datosTab() {
-    final categorias = ref.watch(categoriasProvider).valueOrNull ?? const <Categoria>[];
+    final categorias =
+        ref.watch(categoriasProvider).valueOrNull ?? const <Categoria>[];
     final marcas = ref.watch(marcasProvider).valueOrNull ?? const <Marca>[];
-    final unidades = ref.watch(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
+    final unidades =
+        ref.watch(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
 
     return ListView(
       padding: const EdgeInsets.all(Dimen.espacio4),
@@ -521,7 +569,9 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
             },
             elegir: (id) => _unidadBaseId = id,
           ),
-          opciones: [for (final u in unidades) Opcion(u.id, '${u.nombre} (${u.codigo})')],
+          opciones: [
+            for (final u in unidades) Opcion(u.id, '${u.nombre} (${u.codigo})'),
+          ],
           onCambio: (v) => setState(() => _unidadBaseId = v),
         ),
         // Cambiarla no reescribe el pasado: lo que ya se movio se conto en la
@@ -614,7 +664,9 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
       isScrollControlled: true,
       backgroundColor: Colores.superficie,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Dimen.radioPanel),
+        ),
       ),
       builder: (contexto) => StatefulBuilder(
         builder: (contexto, setHoja) => Padding(
@@ -630,7 +682,10 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
             children: [
               Text(
                 titulo,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: Dimen.espacio4),
               if (error != null) ...[
@@ -671,7 +726,10 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
                   });
 
                   try {
-                    final id = await crear(nombre.text.trim(), codigo.text.trim());
+                    final id = await crear(
+                      nombre.text.trim(),
+                      codigo.text.trim(),
+                    );
                     if (contexto.mounted) Navigator.pop(contexto, id);
                   } on ApiExcepcion catch (e) {
                     setHoja(() {
@@ -695,7 +753,8 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   }
 
   Widget _presentacionesTab() {
-    final unidades = ref.watch(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
+    final unidades =
+        ref.watch(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
     final unidadBase = _buscarUnidad(unidades, _unidadBaseId);
 
     return ListView(
@@ -711,7 +770,11 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
           ),
           child: Row(
             children: [
-              Icon(Icons.inventory_2_outlined, size: 17, color: Acento.de(context)),
+              Icon(
+                Icons.inventory_2_outlined,
+                size: 17,
+                color: Acento.de(context),
+              ),
               const SizedBox(width: Dimen.espacio2),
               Expanded(
                 child: Text(
@@ -729,21 +792,31 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
           dense: true,
           controlAffinity: ListTileControlAffinity.leading,
           contentPadding: EdgeInsets.zero,
-          title: const Text('La unidad base se compra', style: TextStyle(fontSize: 13.5)),
-          onChanged: _guardando ? null : (v) => setState(() => _baseSeCompra = v ?? true),
+          title: const Text(
+            'La unidad base se compra',
+            style: TextStyle(fontSize: 13.5),
+          ),
+          onChanged: _guardando
+              ? null
+              : (v) => setState(() => _baseSeCompra = v ?? true),
         ),
         CheckboxListTile(
           value: _baseSeVende,
           dense: true,
           controlAffinity: ListTileControlAffinity.leading,
           contentPadding: EdgeInsets.zero,
-          title: const Text('La unidad base se vende', style: TextStyle(fontSize: 13.5)),
+          title: const Text(
+            'La unidad base se vende',
+            style: TextStyle(fontSize: 13.5),
+          ),
           subtitle: const Text(
             'Desmárcala si solo se vende por caja o saco: la unidad suelta '
             'queda para llevar el stock y descontar rotos.',
             style: TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
           ),
-          onChanged: _guardando ? null : (v) => setState(() => _baseSeVende = v ?? true),
+          onChanged: _guardando
+              ? null
+              : (v) => setState(() => _baseSeVende = v ?? true),
         ),
         const SizedBox(height: Dimen.espacio4),
 
@@ -824,7 +897,10 @@ class _TarjetaPresentacion extends StatelessWidget {
                 Text(
                   '${formatoNumero(fila.factor)} ${fila.unidad}'
                   '${usos.isEmpty ? '' : ' · ${usos.join(' y ')}'}',
-                  style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colores.tintaSuave,
+                  ),
                 ),
                 // Solo cuando esta puesto: apagado es lo normal y no hace falta
                 // decirlo en cada tarjeta.
@@ -840,13 +916,21 @@ class _TarjetaPresentacion extends StatelessWidget {
             onPressed: onEditar,
             tooltip: 'Editar',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.edit_outlined, size: 18, color: Acento.de(context)),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
           ),
           IconButton(
             onPressed: onEliminar,
             tooltip: 'Quitar',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.delete_outline, size: 18, color: Colores.peligro),
+            icon: const Icon(
+              Icons.delete_outline,
+              size: 18,
+              color: Colores.peligro,
+            ),
           ),
         ],
       ),
@@ -864,7 +948,8 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
   final factorCtrl = TextEditingController(
     text: existente == null ? '' : formatoNumero(existente.factor),
   );
-  int? unidadId = existente?.unidadId ?? (unidades.length == 1 ? unidades.first.id : null);
+  int? unidadId =
+      existente?.unidadId ?? (unidades.length == 1 ? unidades.first.id : null);
   bool esCompra = existente?.esCompra ?? true;
   bool esVenta = existente?.esVenta ?? true;
   bool precioPorPresentacion = existente?.precioPorPresentacion ?? false;
@@ -878,20 +963,31 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Dimen.radioPanel)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(Dimen.radioPanel),
+      ),
     ),
     builder: (context) {
       return StatefulBuilder(
         builder: (context, setSheetState) {
           void guardar() {
-            final factor = double.tryParse(factorCtrl.text.trim().replaceAll(',', '.'));
+            final factor = double.tryParse(
+              factorCtrl.text.trim().replaceAll(',', '.'),
+            );
 
             setSheetState(() {
-              errorNombre = nombreCtrl.text.trim().isEmpty ? 'Ingresa un nombre.' : null;
+              errorNombre = nombreCtrl.text.trim().isEmpty
+                  ? 'Ingresa un nombre.'
+                  : null;
               errorUnidad = unidadId == null ? 'Elige la unidad.' : null;
-              errorFactor = factor == null || factor <= 0 ? 'Debe ser mayor que cero.' : null;
+              errorFactor = factor == null || factor <= 0
+                  ? 'Debe ser mayor que cero.'
+                  : null;
             });
-            if (errorNombre != null || errorUnidad != null || errorFactor != null) return;
+            if (errorNombre != null ||
+                errorUnidad != null ||
+                errorFactor != null)
+              return;
 
             final unidad = _buscarUnidad(unidades, unidadId);
             Navigator.of(context).pop(
@@ -926,7 +1022,9 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    existente == null ? 'Nueva presentación' : 'Editar presentación',
+                    existente == null
+                        ? 'Nueva presentación'
+                        : 'Editar presentación',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -947,7 +1045,10 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
                     etiqueta: 'Unidad',
                     icono: Icons.straighten_outlined,
                     error: errorUnidad,
-                    opciones: [for (final u in unidades) Opcion(u.id, '${u.nombre} (${u.codigo})')],
+                    opciones: [
+                      for (final u in unidades)
+                        Opcion(u.id, '${u.nombre} (${u.codigo})'),
+                    ],
                     onCambio: (v) => setSheetState(() => unidadId = v),
                   ),
                   const SizedBox(height: Dimen.espacio4),
@@ -956,7 +1057,9 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
                     etiqueta: 'Factor',
                     pista: 'Cuántas unidades base equivale',
                     icono: Icons.calculate_outlined,
-                    tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+                    tipoTeclado: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     error: errorFactor,
                   ),
                   const SizedBox(height: Dimen.espacio2),
@@ -965,8 +1068,12 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
                       Expanded(
                         child: CheckboxListTile(
                           value: esCompra,
-                          onChanged: (v) => setSheetState(() => esCompra = v ?? true),
-                          title: const Text('Compra', style: TextStyle(fontSize: 13)),
+                          onChanged: (v) =>
+                              setSheetState(() => esCompra = v ?? true),
+                          title: const Text(
+                            'Compra',
+                            style: TextStyle(fontSize: 13),
+                          ),
                           controlAffinity: ListTileControlAffinity.leading,
                           contentPadding: EdgeInsets.zero,
                           dense: true,
@@ -975,8 +1082,12 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
                       Expanded(
                         child: CheckboxListTile(
                           value: esVenta,
-                          onChanged: (v) => setSheetState(() => esVenta = v ?? true),
-                          title: const Text('Venta', style: TextStyle(fontSize: 13)),
+                          onChanged: (v) =>
+                              setSheetState(() => esVenta = v ?? true),
+                          title: const Text(
+                            'Venta',
+                            style: TextStyle(fontSize: 13),
+                          ),
                           controlAffinity: ListTileControlAffinity.leading,
                           contentPadding: EdgeInsets.zero,
                           dense: true,
@@ -988,13 +1099,20 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
                   // base, donde "por presentacion" y "por unidad base" son lo mismo.
                   CheckboxListTile(
                     value: precioPorPresentacion,
-                    onChanged: (v) => setSheetState(() => precioPorPresentacion = v ?? false),
-                    title: const Text('Por presentación (PDF)', style: TextStyle(fontSize: 13)),
+                    onChanged: (v) =>
+                        setSheetState(() => precioPorPresentacion = v ?? false),
+                    title: const Text(
+                      'Por presentación (PDF)',
+                      style: TextStyle(fontSize: 13),
+                    ),
                     subtitle: const Text(
                       'En los PDF (pedidos, ventas, compras, ajustes, transferencias y '
                       'préstamos) la línea sale en esta presentación. Sin marcar, '
                       'sale en unidad base.',
-                      style: TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Colores.tintaSuave,
+                      ),
                     ),
                     controlAffinity: ListTileControlAffinity.leading,
                     contentPadding: EdgeInsets.zero,
@@ -1062,7 +1180,8 @@ class _ValorPorPresentacionState extends State<_ValorPorPresentacion> {
   final _texto = TextEditingController();
   String? _elegida;
 
-  static String _limpio(double v) => v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
+  static String _limpio(double v) =>
+      v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
 
   _OpcionValor? get _opcion {
     for (final o in widget.opciones) {
@@ -1108,10 +1227,14 @@ class _ValorPorPresentacionState extends State<_ValorPorPresentacion> {
   }
 
   String _deBaseAPresentacion() {
-    final base = double.tryParse(widget.controladorBase.text.replaceAll(',', '.'));
+    final base = double.tryParse(
+      widget.controladorBase.text.replaceAll(',', '.'),
+    );
     if (base == null) return '';
     // Sin ceros de más: 280 y no 280.00.
-    return _limpio(double.parse((base * _factor).toStringAsFixed(widget.decimales)));
+    return _limpio(
+      double.parse((base * _factor).toStringAsFixed(widget.decimales)),
+    );
   }
 
   void _alEscribir() {
@@ -1151,7 +1274,9 @@ class _ValorPorPresentacionState extends State<_ValorPorPresentacion> {
             etiqueta: 'Por',
             icono: Icons.straighten,
             habilitado: widget.habilitado && widget.opciones.length > 1,
-            opciones: [for (final o in widget.opciones) Opcion(o.nombre, o.nombre)],
+            opciones: [
+              for (final o in widget.opciones) Opcion(o.nombre, o.nombre),
+            ],
             onCambio: _cambiar,
           ),
         ),

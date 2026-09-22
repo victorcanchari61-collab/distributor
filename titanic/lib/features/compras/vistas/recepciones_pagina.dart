@@ -32,7 +32,8 @@ class RecepcionesPagina extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final todas =
-        ref.watch(recepcionesProvider).valueOrNull ?? const <DocumentoInventario>[];
+        ref.watch(recepcionesProvider).valueOrNull ??
+        const <DocumentoInventario>[];
     final confirmadas = todas.where((d) => !d.anulado).length;
     final hayPendientes = ref.watch(comprasConPendienteProvider).isNotEmpty;
 
@@ -46,7 +47,9 @@ class RecepcionesPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por número, almacén o compra',
       onRecargar: () => ref.read(recepcionesProvider.notifier).recargar(),
       onNuevo: puede(ref, 'compras.recepciones', Accion.crear)
-          ? hayPendientes ? () => _abrirFormulario(context) : null
+          ? hayPendientes
+                ? () => _abrirFormulario(context)
+                : null
           : null,
       textoNuevo: 'Nueva recepción',
       iconoVacio: Icons.move_to_inbox_outlined,
@@ -77,7 +80,8 @@ class RecepcionesPagina extends ConsumerWidget {
       fila: (context, doc) => _TarjetaRecepcion(
         doc: doc,
         color: color,
-        onAnular: doc.anulado || !puede(ref, 'compras.recepciones', Accion.anular)
+        onAnular:
+            doc.anulado || !puede(ref, 'compras.recepciones', Accion.anular)
             ? null
             : () => _anular(context, ref, doc),
       ),
@@ -147,9 +151,9 @@ class RecepcionesPagina extends ConsumerWidget {
   }
 
   Future<void> _abrirFormulario(BuildContext context) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const RecepcionFormulario()),
-    );
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const RecepcionFormulario()));
   }
 
   Future<void> _anular(
@@ -160,7 +164,8 @@ class RecepcionesPagina extends ConsumerWidget {
     final ok = await confirmarAccion(
       context,
       titulo: 'Anular ${doc.numero}',
-      mensaje: 'Revierte lo recibido: la compra vuelve a quedar pendiente por esa cantidad.',
+      mensaje:
+          'Revierte lo recibido: la compra vuelve a quedar pendiente por esa cantidad.',
       textoConfirmar: 'Anular',
       tono: ConfirmTono.peligro,
     );
@@ -177,7 +182,11 @@ class RecepcionesPagina extends ConsumerWidget {
 }
 
 class _TarjetaRecepcion extends StatelessWidget {
-  const _TarjetaRecepcion({required this.doc, required this.color, this.onAnular});
+  const _TarjetaRecepcion({
+    required this.doc,
+    required this.color,
+    this.onAnular,
+  });
 
   final DocumentoInventario doc;
   final Color color;
@@ -198,7 +207,8 @@ class _TarjetaRecepcion extends StatelessWidget {
     for (final linea in doc.detalle)
       LineaProductoTarjeta(
         titulo: linea.producto,
-        subtitulo: '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
+        subtitulo:
+            '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
         filas: [
           [
             ('Cant.', formatoNumero(linea.cantidadPresentacion)),
