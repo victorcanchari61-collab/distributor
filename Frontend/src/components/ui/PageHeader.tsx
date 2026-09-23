@@ -45,15 +45,25 @@ export function PageHeader({
         </div>
 
         {/*
-          Los botones bajan a su propia linea solo si no entran: con uno
-          comparten fila con el titulo, con dos largos se acomodan debajo.
-          flex-wrap tambien AQUI ADENTRO: con tres o cuatro botones (Editar
-          lista, Eliminar lista, Nueva lista, Agregar precio...) ni su propia
-          linea entera alcanza en un telefono angosto, y sin wrap se salian
-          de la pantalla en vez de partirse en dos filas.
+          Con tres o cuatro botones (Editar lista, Eliminar lista, Nueva
+          lista, Agregar precio...) ni su propia linea entera alcanza en un
+          telefono angosto. En vez de partirlos en filas impredecibles, se
+          desliza como una fila propia —igual que las tarjetas de stats de
+          ListPage—: se ve que hay mas a la derecha y no empuja el titulo.
+          Desde sm vuelven a compartir la fila del titulo, envolviendo si
+          hace falta.
         */}
         {actions && (
-          <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <div
+            className={cn(
+              '-mx-4 flex w-full shrink-0 snap-x snap-mandatory items-center gap-2 overflow-x-auto px-4 pb-1',
+              // Sin esto un boton de texto largo (Eliminar lista) se
+              // encogia hasta partir el texto en vez de dejar que la fila
+              // se deslice, que es justo lo que el scroll esta para evitar.
+              '[&>*]:shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+              'sm:ml-auto sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0 sm:pb-0',
+            )}
+          >
             {actions}
           </div>
         )}
