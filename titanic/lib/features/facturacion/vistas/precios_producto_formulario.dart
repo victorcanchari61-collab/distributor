@@ -504,6 +504,7 @@ class _PreciosProductoFormularioState
                   fila: fila,
                   unidadBase: producto.unidadBase,
                   costo: _costoDe(fila.presentacion),
+                  afectoIgv: producto.afectoIgv,
                   habilitado: !_guardando,
                   // El renglón de "desde 1" es el precio normal: no se quita.
                   puedeQuitar:
@@ -544,6 +545,7 @@ class _TarjetaFila extends StatelessWidget {
     required this.fila,
     required this.unidadBase,
     required this.costo,
+    required this.afectoIgv,
     required this.habilitado,
     required this.puedeQuitar,
     required this.onPrecio,
@@ -556,6 +558,7 @@ class _TarjetaFila extends StatelessWidget {
   final _Fila fila;
   final String unidadBase;
   final double? costo;
+  final bool afectoIgv;
   final bool habilitado;
   final bool puedeQuitar;
   final VoidCallback onPrecio;
@@ -680,6 +683,17 @@ class _TarjetaFila extends StatelessWidget {
                 child: _Dato(
                   etiqueta: 'Costo',
                   valor: costo == null ? '—' : formatoSoles(costo!),
+                ),
+              ),
+              // Cuánto de ese precio es IGV: para ver de un vistazo si
+              // alcanza a cubrir el costo una vez descontado el impuesto.
+              Expanded(
+                child: _Dato(
+                  etiqueta: 'IGV',
+                  valor: afectoIgv && precio > 0
+                      ? formatoSoles(precio - precio / 1.18)
+                      : '—',
+                  alineado: TextAlign.center,
                 ),
               ),
               // La que hace visible el negocio: el saco sale más barato por

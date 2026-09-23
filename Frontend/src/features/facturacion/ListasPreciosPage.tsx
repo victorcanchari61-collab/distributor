@@ -420,7 +420,7 @@ export function ListasPreciosPage() {
     {
       key: 'nombre',
       label: 'Presentación',
-      width: 200,
+      width: 140,
       render: (fila) => (
         <span className="text-sm font-medium text-ink">
           {presentacionDe(fila.presentacionId)?.nombre}
@@ -475,6 +475,7 @@ export function ListasPreciosPage() {
     {
       key: 'precio',
       label: 'Precio',
+      width: 110,
       render: (fila) => (
         <Input
           size="sm"
@@ -488,8 +489,26 @@ export function ListasPreciosPage() {
       ),
     },
     {
+      /*
+       * Cuánto de ese precio es IGV: para ver de un vistazo si el precio
+       * puesto alcanza a cubrir el costo una vez que se le resta el impuesto,
+       * sin tener que hacer la cuenta a mano.
+       */
+      key: 'igv',
+      label: 'IGV',
+      align: 'right',
+      width: 90,
+      render: (fila) => {
+        if (!producto?.afectoIgv) return <span className="text-ink-soft">—</span>
+        const precio = Number(fila.precio)
+        if (!(precio > 0)) return <span className="text-ink-soft">—</span>
+        return <span className="text-sm font-medium text-ink">S/ {(precio - valorVenta(precio, true)).toFixed(2)}</span>
+      },
+    },
+    {
       key: 'margen',
       label: 'Margen %',
+      width: 85,
       render: (fila) => (
         <Input
           size="sm"
@@ -900,7 +919,7 @@ export function ListasPreciosPage() {
         {/* Precios del producto: todas sus presentaciones de una sentada */}
         <Modal
           open={precioAbierto}
-          size="2xl"
+          size="3xl"
           title="Precios del producto"
           description="Elige el producto y pon el precio de cada forma en que lo vendes."
           onClose={() => setPrecioAbierto(false)}

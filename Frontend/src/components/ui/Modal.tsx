@@ -11,13 +11,13 @@ export interface ModalProps {
   onClose: () => void
   /** Botones del pie. */
   footer?: ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
   /** Clases extra en el fondo fijo, ej. "sm:hidden" para una variante que solo se ve en movil. */
   className?: string
   children: ReactNode
 }
 
-const SIZES = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl', '2xl': 'max-w-6xl' }
+const SIZES = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl', '2xl': 'max-w-6xl', '3xl': 'max-w-[90rem]' }
 
 export function Modal({
   open,
