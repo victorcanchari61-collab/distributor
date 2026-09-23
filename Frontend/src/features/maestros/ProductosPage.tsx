@@ -79,7 +79,7 @@ const VACIO = {
   contenidoUnidadId: 0,
   costoReferencia: '',
   precioReferencia: '',
-  afectoIgv: true,
+  afectoIgv: false,
   pesoUnidadBase: '',
   stockMinimo: '',
 }

@@ -20,8 +20,8 @@ public abstract class ProductoRequestBase
     /// <summary>Precio de venta habitual por unidad base. Respaldo cuando la lista no lo tiene. Ya incluye el IGV si el producto es afecto.</summary>
     public decimal? PrecioReferencia { get; set; }
 
-    /// <summary>Si paga IGV. La mayoría sí.</summary>
-    public bool AfectoIgv { get; set; } = true;
+    /// <summary>Si paga IGV.</summary>
+    public bool AfectoIgv { get; set; }
 
     /// <summary>Cuánto pesa una unidad base, en kilos.</summary>
     public decimal? PesoUnidadBase { get; set; }

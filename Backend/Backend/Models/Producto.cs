@@ -85,7 +85,7 @@ public class Producto
     /// — es para separar el IGV al momento de reportar o emitir un
     /// comprobante.
     /// </summary>
-    public bool AfectoIgv { get; set; } = true;
+    public bool AfectoIgv { get; set; }
 
     /// <summary>Servicios y similares no descuentan stock.</summary>
     public bool ControlaStock { get; set; } = true;

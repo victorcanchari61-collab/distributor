@@ -104,7 +104,7 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
 
   /// El precio de venta ya incluye el IGV cuando el producto es afecto: no se
   /// le suma nada encima al cobrar.
-  late bool _afectoIgv = widget.producto?.afectoIgv ?? true;
+  late bool _afectoIgv = widget.producto?.afectoIgv ?? false;
 
   late final List<_FilaPresentacion> _filas = [
     for (final p in widget.producto?.presentaciones ?? const <Presentacion>[])
@@ -633,7 +633,7 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
           title: const Text('Afecto a IGV', style: TextStyle(fontSize: 13.5)),
           onChanged: _guardando
               ? null
-              : (v) => setState(() => _afectoIgv = v ?? true),
+              : (v) => setState(() => _afectoIgv = v ?? false),
         ),
         if (_afectoIgv && (_numero(_precioReferencia.text) ?? 0) > 0)
           Padding(
