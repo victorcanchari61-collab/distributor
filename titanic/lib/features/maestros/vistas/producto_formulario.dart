@@ -102,6 +102,10 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   late int? _marcaId = widget.producto?.marcaId;
   late int? _unidadBaseId = widget.producto?.unidadBaseId;
 
+  /// El precio de venta ya incluye el IGV cuando el producto es afecto: no se
+  /// le suma nada encima al cobrar.
+  late bool _afectoIgv = widget.producto?.afectoIgv ?? true;
+
   late final List<_FilaPresentacion> _filas = [
     for (final p in widget.producto?.presentaciones ?? const <Presentacion>[])
       if (!p.esBase)
@@ -148,6 +152,13 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
   @override
   void initState() {
     super.initState();
+    // Para que "Valor sin IGV" se recalcule mientras se teclea el precio, no
+    // solo al elegir la presentación (que ya dispara un setState propio).
+    _precioReferencia.addListener(_repintar);
+  }
+
+  void _repintar() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -205,6 +216,7 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
       'costoReferencia': _numero(_costoReferencia.text),
       // Viaja SIEMPRE, igual que el peso: el endpoint reemplaza el producto con lo que le llega.
       'precioReferencia': _numero(_precioReferencia.text),
+      'afectoIgv': _afectoIgv,
       // Todo producto controla stock: el formulario ya no pregunta, igual que
       // en la web. El campo sigue viajando porque el backend lo espera.
       'controlaStock': true,
@@ -611,6 +623,27 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
           opciones: _opcionesDePresentacion(unidades, venta: true),
           habilitado: !_guardando,
         ),
+        // El precio se escribe TAL COMO SE COBRA: si el producto paga IGV, ya
+        // viene incluido, no se le suma nada encima al vender.
+        CheckboxListTile(
+          value: _afectoIgv,
+          dense: true,
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Afecto a IGV', style: TextStyle(fontSize: 13.5)),
+          onChanged: _guardando
+              ? null
+              : (v) => setState(() => _afectoIgv = v ?? true),
+        ),
+        if (_afectoIgv && (_numero(_precioReferencia.text) ?? 0) > 0)
+          Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Text(
+              'Valor sin IGV: S/ '
+              '${(_numero(_precioReferencia.text)! / 1.18).toStringAsFixed(2)}',
+              style: const TextStyle(fontSize: 12, color: Colores.tinta),
+            ),
+          ),
         const SizedBox(height: Dimen.espacio3),
 
         AppCampo(

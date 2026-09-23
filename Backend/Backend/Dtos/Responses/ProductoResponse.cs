@@ -29,8 +29,11 @@ public class ProductoResponse
     /// <summary>Costo habitual por unidad base.</summary>
     public decimal? CostoReferencia { get; set; }
 
-    /// <summary>Precio de venta habitual por unidad base. Respaldo cuando la lista no lo tiene.</summary>
+    /// <summary>Precio de venta habitual por unidad base. Respaldo cuando la lista no lo tiene. Ya incluye el IGV si el producto es afecto.</summary>
     public decimal? PrecioReferencia { get; set; }
+
+    /// <summary>Si paga IGV.</summary>
+    public bool AfectoIgv { get; set; }
 
     /// <summary>Cuánto pesa una unidad base, en kilos.</summary>
     public decimal? PesoUnidadBase { get; set; }

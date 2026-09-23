@@ -19,6 +19,7 @@ import {
   Badge,
   BotonMas,
   Button,
+  Checkbox,
   Desplegable,
   ImportarModal,
   Input,
@@ -78,6 +79,7 @@ const VACIO = {
   contenidoUnidadId: 0,
   costoReferencia: '',
   precioReferencia: '',
+  afectoIgv: true,
   pesoUnidadBase: '',
   stockMinimo: '',
 }
@@ -210,6 +212,7 @@ export function ProductosPage() {
       contenidoUnidadId: producto.contenidoUnidadId ?? 0,
       costoReferencia: producto.costoReferencia ? String(producto.costoReferencia) : '',
       precioReferencia: producto.precioReferencia ? String(producto.precioReferencia) : '',
+      afectoIgv: producto.afectoIgv,
       pesoUnidadBase: producto.pesoUnidadBase ? String(producto.pesoUnidadBase) : '',
       stockMinimo: producto.stockMinimo ? String(producto.stockMinimo) : '',
     })
@@ -391,6 +394,7 @@ export function ProductosPage() {
       contenidoUnidadId: form.contenido ? form.contenidoUnidadId || null : null,
       costoReferencia: form.costoReferencia ? Number(form.costoReferencia) : null,
       precioReferencia: form.precioReferencia ? Number(form.precioReferencia) : null,
+      afectoIgv: form.afectoIgv,
       pesoUnidadBase: form.pesoUnidadBase ? Number(form.pesoUnidadBase) : null,
       controlaStock: true,
       stockMinimo: Number(form.stockMinimo || 0),
@@ -932,17 +936,37 @@ export function ProductosPage() {
                     Es el precio que sale cuando el pedido no lleva lista, o cuando la lista no
                     tiene cargada esa presentación: sin esto la línea salía en cero.
                   */}
-                  <ValorPorPresentacionInput
-                    valor={form.precioReferencia}
-                    onChange={(v) => setForm({ ...form, precioReferencia: v })}
-                    presentacionId={presentacionDelPrecio}
-                    onPresentacion={setPresentacionPrecio}
-                    presentaciones={presentacionesDelForm}
-                    unidadBase={unidadBase || 'unidad base'}
-                    disabled={guardando}
-                    uso="venta"
-                    etiqueta="Precio de venta"
-                  />
+                  <div className="flex flex-col gap-1.5">
+                    <ValorPorPresentacionInput
+                      valor={form.precioReferencia}
+                      onChange={(v) => setForm({ ...form, precioReferencia: v })}
+                      presentacionId={presentacionDelPrecio}
+                      onPresentacion={setPresentacionPrecio}
+                      presentaciones={presentacionesDelForm}
+                      unidadBase={unidadBase || 'unidad base'}
+                      disabled={guardando}
+                      uso="venta"
+                      etiqueta="Precio de venta"
+                    />
+
+                    {/*
+                      El precio se escribe TAL COMO SE COBRA: si el producto paga IGV, ya viene
+                      incluido, no se le suma nada encima. Este switch es lo único que distingue un
+                      producto gravado de uno exonerado (varios alimentos de primera necesidad).
+                    */}
+                    <Checkbox
+                      label="Afecto a IGV"
+                      checked={form.afectoIgv}
+                      onChange={(e) => setForm({ ...form, afectoIgv: e.target.checked })}
+                      disabled={guardando}
+                    />
+                    {form.afectoIgv && Number(form.precioReferencia) > 0 && (
+                      <p className="text-xs text-ink-soft">
+                        Valor sin IGV: S/ {(Number(form.precioReferencia) / 1.18).toFixed(2)} por{' '}
+                        {unidadBase || 'unidad base'}
+                      </p>
+                    )}
+                  </div>
 
                   <Input
                     label="Stock mínimo"

@@ -636,6 +636,7 @@ public class AppDbContext : DbContext
             // Ocho decimales por lo mismo que el costo: se teclea por presentación y se guarda por
             // unidad base, así que necesita los decimales para que la vuelta cierre.
             entity.Property(p => p.PrecioReferencia).HasPrecision(18, 8);
+            entity.Property(p => p.AfectoIgv).HasDefaultValue(true);
 
             /*
              * Ocho decimales, no cuatro.

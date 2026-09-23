@@ -77,8 +77,10 @@ export interface ProductoResponse {
   contenidoUnidad: string | null
   /** Lo que suele costar una unidad base. Referencia, no el costo del stock. */
   costoReferencia: number | null
-  /** Precio de venta habitual por unidad base. Respaldo cuando la lista no lo tiene. */
+  /** Precio de venta habitual por unidad base. Respaldo cuando la lista no lo tiene. Ya incluye el IGV si el producto es afecto. */
   precioReferencia: number | null
+  /** Si paga IGV. Los precios ya lo incluyen: no se le suma nada encima. */
+  afectoIgv: boolean
   /** Cuánto pesa una unidad base, en kilos. */
   pesoUnidadBase: number | null
   controlaStock: boolean
@@ -112,6 +114,7 @@ export interface ProductoRequest {
   contenidoUnidadId?: number | null
   costoReferencia?: number | null
   precioReferencia?: number | null
+  afectoIgv: boolean
   pesoUnidadBase?: number | null
   controlaStock: boolean
   stockMinimo: number

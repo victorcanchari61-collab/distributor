@@ -77,6 +77,7 @@ class Producto {
     required this.unidadBase,
     this.costoReferencia,
     this.precioReferencia,
+    this.afectoIgv = true,
     required this.controlaStock,
     required this.stockMinimo,
     this.pesoUnidadBase,
@@ -105,7 +106,11 @@ class Producto {
   final double? costoReferencia;
 
   /// A cuánto suele venderse una unidad base: el respaldo cuando la lista no tiene precio.
+  /// Ya incluye el IGV si el producto es afecto.
   final double? precioReferencia;
+
+  /// Si paga IGV. Los precios ya lo incluyen: no se le suma nada encima.
+  final bool afectoIgv;
 
   final bool controlaStock;
   final double stockMinimo;
@@ -138,6 +143,7 @@ class Producto {
     unidadBase: json['unidadBase'] as String? ?? '',
     costoReferencia: (json['costoReferencia'] as num?)?.toDouble(),
     precioReferencia: (json['precioReferencia'] as num?)?.toDouble(),
+    afectoIgv: json['afectoIgv'] as bool? ?? true,
     controlaStock: json['controlaStock'] as bool? ?? true,
     stockMinimo: (json['stockMinimo'] as num?)?.toDouble() ?? 0,
     pesoUnidadBase: (json['pesoUnidadBase'] as num?)?.toDouble(),

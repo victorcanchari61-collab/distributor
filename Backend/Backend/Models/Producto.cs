@@ -75,6 +75,18 @@ public class Producto
     /// </summary>
     public decimal? PesoUnidadBase { get; set; }
 
+    /// <summary>
+    /// Si el producto paga IGV. La mayoría sí — los exonerados (varios
+    /// alimentos de primera necesidad) son la excepción.
+    ///
+    /// El <see cref="PrecioReferencia"/> y los precios de presentación YA
+    /// incluyen el IGV cuando el producto es afecto: se cobra tal cual se
+    /// escribió, sin sumarle nada encima. Este campo no cambia cómo se cobra
+    /// — es para separar el IGV al momento de reportar o emitir un
+    /// comprobante.
+    /// </summary>
+    public bool AfectoIgv { get; set; } = true;
+
     /// <summary>Servicios y similares no descuentan stock.</summary>
     public bool ControlaStock { get; set; } = true;
 
