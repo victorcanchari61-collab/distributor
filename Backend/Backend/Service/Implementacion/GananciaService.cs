@@ -20,6 +20,9 @@ namespace Backend.Service.Implementacion;
 ///     Se suma por línea vendida sumando sus movimientos: la salida cuenta, la
 ///     devolución que repuso stock resta, y la devolución dañada —que entra y
 ///     sale en el acto— no cambia nada: la pérdida queda a la vista.
+///   - Ganancia: NO es Importe menos Costo. Es <see cref="LineaGanancia.ValorVenta"/>
+///     (el importe SIN el IGV de las líneas afectas) menos Costo — lo cobrado
+///     de más por el IGV no es ganancia, es plata que se le pasa al fisco.
 ///
 /// La base es el producto. Vendedor, venta, categoría, marca y fechas recortan
 /// qué ventas entran en la suma; los gastos de ruta no están aquí porque no
@@ -89,6 +92,7 @@ public class GananciaService : IGananciaService
             {
                 var primera = g.First();
                 var importe = Math.Round(g.Sum(l => l.Importe), 2);
+                var valorVenta = Math.Round(g.Sum(l => l.ValorVenta), 2);
                 var costo = Math.Round(g.Sum(l => l.Costo), 2);
                 return new GananciaProductoResponse
                 {
@@ -105,14 +109,17 @@ public class GananciaService : IGananciaService
                     UltimaVenta = Zona.DiaDe(g.Max(l => l.Fecha)),
                     Importe = importe,
                     Costo = costo,
-                    Ganancia = importe - costo,
-                    Margen = Margen(importe, importe - costo),
+                    // La ganancia sale del valor de venta SIN el IGV: el importe cobrado
+                    // trae ese 18% que no es ingreso, es plata que se le pasa al fisco.
+                    Ganancia = valorVenta - costo,
+                    Margen = Margen(valorVenta, valorVenta - costo),
                     SinCosto = g.Any(l => l.Importe > 0 && l.Costo <= 0),
                 };
             })
             .ToList();
 
         var totalImporte = Math.Round(lineas.Sum(l => l.Importe), 2);
+        var totalValorVenta = Math.Round(lineas.Sum(l => l.ValorVenta), 2);
         var totalCosto = Math.Round(lineas.Sum(l => l.Costo), 2);
 
         var resumen = new GananciaResumenResponse
@@ -124,8 +131,8 @@ public class GananciaService : IGananciaService
             Productos = productos.Count,
             Importe = totalImporte,
             Costo = totalCosto,
-            Ganancia = totalImporte - totalCosto,
-            Margen = Margen(totalImporte, totalImporte - totalCosto),
+            Ganancia = totalValorVenta - totalCosto,
+            Margen = Margen(totalValorVenta, totalValorVenta - totalCosto),
             LineasSinCosto = lineas.Count(l => l.Importe > 0 && l.Costo <= 0),
         };
 
@@ -190,6 +197,7 @@ public class GananciaService : IGananciaService
                     UnidadBase = d.Producto.UnidadBase != null ? d.Producto.UnidadBase.Codigo : string.Empty,
                     Cantidad = d.Anulado ? 0m : d.Cantidad,
                     Importe = d.Anulado ? 0m : d.CantidadPresentacion * d.PrecioPresentacion,
+                    d.AfectoIgv,
                     Costo = _context.Movimientos
                         .Where(m => m.NotaVentaDetalleId == d.Id)
                         .Sum(m => (decimal?)(m.Tipo == TipoMovimiento.Salida ? m.CostoTotal : -m.CostoTotal)) ?? 0m,
@@ -202,7 +210,7 @@ public class GananciaService : IGananciaService
                 l.ProductoId, l.Codigo, l.Producto,
                 l.Categoria ?? SinCategoria,
                 l.Marca ?? SinMarca,
-                l.UnidadBase, l.Cantidad, l.Importe, l.Costo))
+                l.UnidadBase, l.Cantidad, l.Importe, l.Costo, l.AfectoIgv))
             .ToList();
 
         return (lineas, alcance is { SinRestriccion: false });

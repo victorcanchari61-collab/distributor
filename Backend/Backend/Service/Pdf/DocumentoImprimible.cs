@@ -71,6 +71,15 @@ public sealed record DocumentoImprimible
     public IReadOnlyList<LineaImprimible> Lineas { get; init; } = [];
     public decimal Total { get; init; }
 
+    /// <summary>
+    /// Desglose del IGV: Op. Gravada + Igv + Op. Exonerada = Total. Solo una
+    /// nota de venta lo trae — los demás documentos lo dejan en cero y el
+    /// papel no pinta esta fila.
+    /// </summary>
+    public decimal OpGravada { get; init; }
+    public decimal Igv { get; init; }
+    public decimal OpExonerada { get; init; }
+
     /// <summary>Vacío en un pedido y en una orden: ahí todavía no se paga nada.</summary>
     public IReadOnlyList<PagoImprimible> Pagos { get; init; } = [];
 

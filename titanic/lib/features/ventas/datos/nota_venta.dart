@@ -197,6 +197,9 @@ class NotaVenta {
     this.observacion,
     this.usuario,
     required this.total,
+    this.opGravada = 0,
+    this.igv = 0,
+    this.opExonerada = 0,
     required this.detalle,
     required this.pagos,
     required this.totalPagado,
@@ -227,6 +230,16 @@ class NotaVenta {
   final String? observacion;
   final String? usuario;
   final double total;
+
+  /// Op. Gravada: lo cobrado SIN el IGV, de las líneas afectas.
+  final double opGravada;
+
+  /// El IGV de las líneas afectas: opGravada × 18%.
+  final double igv;
+
+  /// Lo cobrado por líneas no afectas (exoneradas). opGravada + igv + opExonerada = total.
+  final double opExonerada;
+
   final List<LineaVenta> detalle;
 
   /// Con que se pago. Puede ser mas de un metodo — un pago mixto.
@@ -258,6 +271,9 @@ class NotaVenta {
     observacion: json['observacion'] as String?,
     usuario: json['usuario'] as String?,
     total: (json['total'] as num?)?.toDouble() ?? 0,
+    opGravada: (json['opGravada'] as num?)?.toDouble() ?? 0,
+    igv: (json['igv'] as num?)?.toDouble() ?? 0,
+    opExonerada: (json['opExonerada'] as num?)?.toDouble() ?? 0,
     detalle: (json['detalle'] as List? ?? const [])
         .map((e) => LineaVenta.desdeJson(e as Map<String, dynamic>))
         .toList(),

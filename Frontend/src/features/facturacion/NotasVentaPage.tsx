@@ -824,6 +824,21 @@ export function NotasVentaPage() {
       ],
       render: (row) => estadoNotaVentaBadge(row.estado),
     },
+    {
+      key: 'formaPago',
+      label: 'Condición de pago',
+      filterType: 'select',
+      filterOptions: FORMAS_PAGO,
+      render: (row) => (FORMAS_PAGO.find((f) => f.value === row.formaPago)?.label ?? row.formaPago),
+    },
+    {
+      key: 'usuario',
+      label: 'Vendedor',
+      filterType: 'select',
+      // Quien la registró: el que confirma el pedido o crea la venta directa.
+      filterOptions: resumen?.vendedores.map((v) => ({ value: v, label: v })) ?? [],
+      render: (row) => row.usuario ?? <span className="text-ink-soft">—</span>,
+    },
   ]
 
   if (vista === 'form') {
@@ -1300,6 +1315,15 @@ export function NotasVentaPage() {
 
             <ResumenDocumento
               pagos={detalleAbierto.pagos.map((p) => ({ id: p.id, label: p.metodoPago, monto: p.monto }))}
+              desglose={[
+                ...(detalleAbierto.opGravada > 0
+                  ? [{ label: 'Op. Gravada', monto: detalleAbierto.opGravada }]
+                  : []),
+                ...(detalleAbierto.igv > 0 ? [{ label: 'IGV (18%)', monto: detalleAbierto.igv }] : []),
+                ...(detalleAbierto.opExonerada > 0
+                  ? [{ label: 'Op. Exonerada', monto: detalleAbierto.opExonerada }]
+                  : []),
+              ]}
               total={detalleAbierto.total}
             />
 

@@ -287,7 +287,20 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
     private void Totales(IContainer container) =>
         container.Border(1).BorderColor(Colores.Linea).Column(col =>
         {
-            col.Item().Element(c => FilaTotal(c, "SUBTOTAL", doc.Total));
+            // Solo la nota de venta trae el desglose de IGV; los demás
+            // documentos (pedido, orden de compra, compra) lo dejan en cero
+            // y siguen mostrando el SUBTOTAL de siempre, igual al total.
+            if (doc.Igv > 0 || doc.OpExonerada > 0)
+            {
+                if (doc.OpGravada > 0) col.Item().Element(c => FilaTotal(c, "OP. GRAVADA", doc.OpGravada));
+                if (doc.Igv > 0) col.Item().Element(c => FilaTotal(c, "IGV (18%)", doc.Igv));
+                if (doc.OpExonerada > 0) col.Item().Element(c => FilaTotal(c, "OP. EXONERADA", doc.OpExonerada));
+            }
+            else
+            {
+                col.Item().Element(c => FilaTotal(c, "SUBTOTAL", doc.Total));
+            }
+
             col.Item().Element(c => FilaTotal(c, "TOTAL", doc.Total, destacado: true));
 
             if (doc.Pagos.Count == 0) return;

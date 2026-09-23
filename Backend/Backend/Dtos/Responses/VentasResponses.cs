@@ -25,6 +25,9 @@ public class LineaVentaResponse
 
     public decimal Subtotal { get; set; }
 
+    /// <summary>Si el producto pagaba IGV al momento de esta línea. El precio ya lo incluye.</summary>
+    public bool AfectoIgv { get; set; }
+
     /// <summary>Solo aplica a líneas de pedido: se quitó al editarlo, sin borrarse.</summary>
     public bool Anulado { get; set; }
 }
@@ -144,6 +147,22 @@ public class NotaVentaResponse
     /// </summary>
     public decimal Total { get; set; }
     public List<LineaVentaResponse> Detalle { get; set; } = [];
+
+    /// <summary>
+    /// Op. Gravada: lo que se cobra SIN el IGV, de las líneas afectas. El
+    /// precio de esas líneas ya lo trae incluido — esto es solo el desglose,
+    /// no cambia lo que se cobra.
+    /// </summary>
+    public decimal OpGravada { get; set; }
+
+    /// <summary>El IGV de las líneas afectas: OpGravada × 18%.</summary>
+    public decimal Igv { get; set; }
+
+    /// <summary>
+    /// Lo que se cobra por líneas de productos NO afectos a IGV (exonerados).
+    /// OpGravada + Igv + OpExonerada = Total.
+    /// </summary>
+    public decimal OpExonerada { get; set; }
 
     /// <summary>Con qué se pagó. Puede ser más de un método — un pago mixto.</summary>
     public List<PagoVentaResponse> Pagos { get; set; } = [];

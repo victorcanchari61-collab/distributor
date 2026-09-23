@@ -16,4 +16,7 @@ public class ResumenNotasVentaResponse
 
     /// <summary>Suma de las confirmadas, sin contar líneas anuladas.</summary>
     public decimal TotalVendido { get; set; }
+
+    /// <summary>Quiénes registraron alguna, para el filtro de Vendedor.</summary>
+    public List<string> Vendedores { get; set; } = [];
 }

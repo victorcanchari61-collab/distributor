@@ -93,10 +93,13 @@ export interface PagoResumen {
 export function ResumenDocumento({
   pagos,
   subtotal,
+  desglose,
   total,
 }: {
   pagos?: PagoResumen[]
   subtotal?: number
+  /** Líneas informativas entre el subtotal y el total: Op. Gravada, IGV, Op. Exonerada, etc. */
+  desglose?: { label: string; monto: number }[]
   total: number
 }) {
   return (
@@ -115,6 +118,16 @@ export function ResumenDocumento({
         <div className="flex items-center justify-between text-[13px] text-ink-soft">
           <span>Subtotal</span>
           <span>S/ {subtotal.toFixed(2)}</span>
+        </div>
+      )}
+      {desglose && desglose.length > 0 && (
+        <div className="mb-1 flex flex-col gap-0.5">
+          {desglose.map((d) => (
+            <div key={d.label} className="flex items-center justify-between text-[12.5px] text-ink-soft">
+              <span>{d.label}</span>
+              <span>S/ {d.monto.toFixed(2)}</span>
+            </div>
+          ))}
         </div>
       )}
       <div className="flex items-center justify-between">

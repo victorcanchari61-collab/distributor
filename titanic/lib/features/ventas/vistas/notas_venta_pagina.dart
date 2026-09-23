@@ -219,6 +219,19 @@ class _TarjetaNotaVenta extends StatelessWidget {
         'Pagado',
         'S/ ${nota.totalPagado.toStringAsFixed(2)} de S/ ${nota.total.toStringAsFixed(2)}',
       ),
+    // Solo se ve cuando hay algo que desglosar: una venta sin IGV
+    // (exonerada del todo, o sin productos afectos) no lo necesita.
+    if (nota.igv > 0 || nota.opExonerada > 0) ...[
+      if (nota.opGravada > 0)
+        CampoDetalle('Op. Gravada', 'S/ ${nota.opGravada.toStringAsFixed(2)}'),
+      if (nota.igv > 0)
+        CampoDetalle('IGV (18%)', 'S/ ${nota.igv.toStringAsFixed(2)}'),
+      if (nota.opExonerada > 0)
+        CampoDetalle(
+          'Op. Exonerada',
+          'S/ ${nota.opExonerada.toStringAsFixed(2)}',
+        ),
+    ],
     CampoDetalle('Total', 'S/ ${nota.total.toStringAsFixed(2)}'),
     if (nota.pedidoNumero != null) CampoDetalle('Pedido', nota.pedidoNumero),
     if (nota.usuario != null) CampoDetalle('Registrada por', nota.usuario),

@@ -122,6 +122,15 @@ public sealed class DocumentoTicket(DocumentoImprimible doc) : IDocument
     private void Totales(IContainer container) =>
         container.Column(col =>
         {
+            // Solo la nota de venta trae el desglose de IGV; los demás
+            // documentos lo dejan en cero y no pintan esta fila.
+            if (doc.Igv > 0 || doc.OpExonerada > 0)
+            {
+                if (doc.OpGravada > 0) col.Item().Element(c => FilaDesglose(c, "OP. GRAVADA", doc.OpGravada));
+                if (doc.Igv > 0) col.Item().Element(c => FilaDesglose(c, "IGV (18%)", doc.Igv));
+                if (doc.OpExonerada > 0) col.Item().Element(c => FilaDesglose(c, "OP. EXONERADA", doc.OpExonerada));
+            }
+
             col.Item().Row(row =>
             {
                 row.RelativeItem().Text("TOTAL").FontSize(11).Bold();
@@ -155,5 +164,12 @@ public sealed class DocumentoTicket(DocumentoImprimible doc) : IDocument
 
             if (doc.Usuario is { Length: > 0 } usuario)
                 col.Item().PaddingTop(3).AlignCenter().Text($"Atendido por {usuario}").FontSize(6.5f);
+        });
+
+    private static void FilaDesglose(IContainer container, string rotulo, decimal monto) =>
+        container.PaddingBottom(1).Row(row =>
+        {
+            row.RelativeItem().Text(rotulo).FontSize(7.5f).FontColor(Colores.Suave);
+            row.ConstantItem(70).AlignRight().Text(Textos.Monto(monto)).FontSize(7.5f).FontColor(Colores.Suave);
         });
 }

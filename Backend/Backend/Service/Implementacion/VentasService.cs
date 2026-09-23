@@ -424,6 +424,11 @@ public class VentasService : IVentasService
         new()
         {
             ProductoId = d.ProductoId,
+            // Se arrastra la navegación, no solo el id: es de donde se lee el
+            // AfectoIgv VIGENTE del producto al armar la nota de venta (ver
+            // CrearNotaVentaInternaAsync) — el de PedidoDetalle es apenas un
+            // snapshot de cuando se armó el pedido, que puede ser viejo.
+            Producto = d.Producto,
             PresentacionId = presentacionId,
             CantidadPresentacion = cantidadPresentacion,
             Cantidad = cantidad,
@@ -733,6 +738,10 @@ public class VentasService : IVentasService
             Cantidad = l.Cantidad,
             PrecioPresentacion = l.PrecioPresentacion,
             PrecioUnitario = l.PrecioUnitario,
+            // Del producto AHORA, no del snapshot de PedidoDetalle: si el pedido nació antes de
+            // marcar el producto como afecto (o al revés), lo que importa es cómo está el
+            // producto al momento de esta venta, que es cuando de verdad se emite el comprobante.
+            AfectoIgv = l.Producto?.AfectoIgv ?? l.AfectoIgv,
             Anulado = l.Anulado
         }));
 
@@ -1144,7 +1153,11 @@ public class VentasService : IVentasService
                 CantidadPresentacion = l.CantidadPresentacion,
                 Cantidad = l.Cantidad,
                 PrecioPresentacion = l.PrecioPresentacion,
-                PrecioUnitario = l.PrecioUnitario
+                PrecioUnitario = l.PrecioUnitario,
+                // Del producto AHORA: al confirmar un pedido, `l` es la línea tal como se guardó
+                // cuando se armó el pedido, que puede ser de antes de marcar el producto como
+                // afecto a IGV. El comprobante se emite hoy, con el estado de hoy.
+                AfectoIgv = l.Producto?.AfectoIgv ?? l.AfectoIgv
             }).ToList(),
             Pagos = pagos.Select(p => new PagoVenta
             {
@@ -1327,6 +1340,7 @@ public class VentasService : IVentasService
                  */
                 PrecioPresentacion = linea.PrecioUnitario,
                 PrecioUnitario = cantidad == 0 ? 0 : Math.Round(linea.PrecioUnitario / factor, 4),
+                AfectoIgv = producto.AfectoIgv,
                 Anulado = linea.Anulado
             });
         }
@@ -1436,6 +1450,7 @@ public class VentasService : IVentasService
         PrecioUnitario = d.PrecioUnitario,
         PrecioPresentacion = d.PrecioPresentacion,
         Subtotal = Math.Round(d.CantidadPresentacion * d.PrecioPresentacion, 2),
+        AfectoIgv = d.AfectoIgv,
         Anulado = d.Anulado
     };
 
@@ -1454,6 +1469,7 @@ public class VentasService : IVentasService
         PrecioUnitario = d.PrecioUnitario,
         PrecioPresentacion = d.PrecioPresentacion,
         Subtotal = Math.Round(d.CantidadPresentacion * d.PrecioPresentacion, 2),
+        AfectoIgv = d.AfectoIgv,
         Anulado = d.Anulado
     };
 
@@ -1492,29 +1508,68 @@ public class VentasService : IVentasService
         Detalle = p.Detalle.Select(MapLinea).ToList()
     };
 
-    private static NotaVentaResponse MapNotaVenta(NotaVenta n) => new()
+    /// <summary>
+    /// Desglosa el Total en Op. Gravada + IGV + Op. Exonerada.
+    ///
+    /// Cada línea ya se cobra con el IGV incluido (si el producto es afecto): esto no agrega
+    /// plata, solo separa lo que ya se cobró. Un recojo se resta ANTES de sacar el IGV, y se
+    /// resta primero de lo gravado —el caso normal— porque es lo que descuenta la venta de hoy;
+    /// si es más grande que lo gravado, el resto se resta de lo exonerado para que la suma
+    /// siga cuadrando con el Total.
+    /// </summary>
+    private static (decimal gravada, decimal igv, decimal exonerada) CalcularIgv(NotaVenta n)
     {
-        Id = n.Id,
-        Numero = n.Numero,
-        ClienteId = n.ClienteId,
-        Cliente = n.Cliente?.Nombre ?? string.Empty,
-        PedidoId = n.PedidoId,
-        PedidoNumero = n.Pedido?.Numero,
-        AlmacenId = n.AlmacenId,
-        Almacen = n.Almacen?.Nombre ?? string.Empty,
-        Fecha = n.Fecha,
-        Estado = n.Estado,
-        FormaPago = n.FormaPago,
-        Observacion = n.Observacion,
-        Usuario = n.Usuario?.Nombre,
-        // Una línea anulada se sigue mostrando (para no perder su rastro),
-        // pero no suma al total. Los recojos vigentes se restan aparte: a
-        // diferencia de una devolución, no encogen ninguna línea de aquí.
-        Total = Math.Round(
-            n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion)
-            - n.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado).Sum(r => r.Importe), 2),
-        Detalle = n.Detalle.Select(MapLinea).ToList(),
-        Pagos = n.Pagos.Select(MapPago).ToList(),
+        var vivas = n.Detalle.Where(d => !d.Anulado);
+        var gravadoConIgv = vivas.Where(d => d.AfectoIgv).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion);
+        var exoneradoBruto = vivas.Where(d => !d.AfectoIgv).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion);
+
+        var recojos = n.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado);
+        var recojoGravado = recojos.Where(r => r.Producto?.AfectoIgv == true).Sum(r => r.Importe);
+        var recojoExonerado = recojos.Where(r => r.Producto?.AfectoIgv != true).Sum(r => r.Importe);
+
+        var netoGravadoConIgv = gravadoConIgv - recojoGravado - recojoExonerado;
+        var netoExonerado = exoneradoBruto;
+        if (netoGravadoConIgv < 0)
+        {
+            netoExonerado += netoGravadoConIgv;
+            netoGravadoConIgv = 0;
+        }
+        if (netoExonerado < 0) netoExonerado = 0;
+
+        var opGravada = Math.Round(netoGravadoConIgv / (1 + Impuestos.TasaIgv), 2);
+        var igv = Math.Round(netoGravadoConIgv - opGravada, 2);
+        return (opGravada, igv, Math.Round(netoExonerado, 2));
+    }
+
+    private static NotaVentaResponse MapNotaVenta(NotaVenta n)
+    {
+        var (opGravada, igv, opExonerada) = CalcularIgv(n);
+        return new()
+        {
+            Id = n.Id,
+            Numero = n.Numero,
+            ClienteId = n.ClienteId,
+            Cliente = n.Cliente?.Nombre ?? string.Empty,
+            PedidoId = n.PedidoId,
+            PedidoNumero = n.Pedido?.Numero,
+            AlmacenId = n.AlmacenId,
+            Almacen = n.Almacen?.Nombre ?? string.Empty,
+            Fecha = n.Fecha,
+            Estado = n.Estado,
+            FormaPago = n.FormaPago,
+            Observacion = n.Observacion,
+            Usuario = n.Usuario?.Nombre,
+            // Una línea anulada se sigue mostrando (para no perder su rastro),
+            // pero no suma al total. Los recojos vigentes se restan aparte: a
+            // diferencia de una devolución, no encogen ninguna línea de aquí.
+            Total = Math.Round(
+                n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion)
+                - n.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado).Sum(r => r.Importe), 2),
+            OpGravada = opGravada,
+            Igv = igv,
+            OpExonerada = opExonerada,
+            Detalle = n.Detalle.Select(MapLinea).ToList(),
+            Pagos = n.Pagos.Select(MapPago).ToList(),
         TotalPagado = Math.Round(n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto), 2),
         // Historico: lo que el cliente trajo de vuelta. Ya NO se le resta al
         // total —el detalle viene descontado al aprobarse—, esta para poder
@@ -1574,7 +1629,8 @@ public class VentasService : IVentasService
                 VerificadoEn = r.VerificadoEn,
             })
             .ToList(),
-    };
+        };
+    }
 
     private static PagoVentaResponse MapPago(PagoVenta p) => new()
     {

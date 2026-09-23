@@ -364,6 +364,16 @@ public class VentasRepository : IVentasRepository
             query = query.Where(n => n.Estado == estado);
         }
 
+        if (consulta.ValorDe("formaPago") is string formaPago)
+        {
+            query = query.Where(n => n.FormaPago == formaPago);
+        }
+
+        if (consulta.ValorDe("usuario") is string usuario)
+        {
+            query = query.Where(n => n.Usuario != null && n.Usuario.Nombre == usuario);
+        }
+
         // El filtro viaja con el nombre de la columna: "pedidoNumero".
         // "Directa" es la que no viene de confirmar un pedido.
         if (consulta.ValorDe("pedidoNumero") is string origen)
@@ -416,6 +426,12 @@ public class VentasRepository : IVentasRepository
                 .SelectMany(n => n.Detalle)
                 .Where(d => !d.Anulado)
                 .SumAsync(d => (decimal?)(d.Cantidad * d.PrecioUnitario)) ?? 0m,
+            Vendedores = await notas
+                .Where(n => n.Usuario != null)
+                .Select(n => n.Usuario!.Nombre)
+                .Distinct()
+                .OrderBy(v => v)
+                .ToListAsync(),
         };
     }
 

@@ -1,5 +1,11 @@
 namespace Backend.Models;
 
+/// <summary>Tasa de IGV vigente en Perú.</summary>
+public static class Impuestos
+{
+    public const decimal TasaIgv = 0.18m;
+}
+
 /// <summary>Estado de un pedido.</summary>
 public static class EstadoPedido
 {
@@ -110,6 +116,13 @@ public class PedidoDetalle
 
     /// <summary>Precio de venta por unidad base.</summary>
     public decimal PrecioUnitario { get; set; }
+
+    /// <summary>
+    /// Si el producto pagaba IGV AL MOMENTO de agregar esta línea. Se copia
+    /// del producto y no se vuelve a mirar: si el producto cambia de
+    /// afecto/exonerado después, esta línea no debe cambiar de golpe.
+    /// </summary>
+    public bool AfectoIgv { get; set; }
 
     /// <summary>
     /// Se quitó del pedido al editarlo: no cuenta para el total ni se
@@ -344,6 +357,13 @@ public class NotaVentaDetalle
 
     /// <summary>Precio de venta por unidad base.</summary>
     public decimal PrecioUnitario { get; set; }
+
+    /// <summary>
+    /// Si el producto pagaba IGV AL MOMENTO de vender esta línea. Se copia
+    /// del producto y no se vuelve a mirar: si el producto cambia de
+    /// afecto/exonerado después, esta venta ya emitida no cambia de IGV.
+    /// </summary>
+    public bool AfectoIgv { get; set; }
 
     /// <summary>
     /// Se quitó de la venta al editarla: no cuenta para el total ni para el

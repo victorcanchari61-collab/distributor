@@ -53,6 +53,17 @@ interface FilaPrecio {
 const precioPorBase = (precio: number, factor: number) =>
   precio > 0 && factor > 0 ? (precio / factor).toFixed(2) : ''
 
+/** Tasa de IGV vigente en Perú. */
+const TASA_IGV = 0.18
+
+/**
+ * Lo que de verdad se gana por un precio: sin el IGV, si el producto es afecto.
+ *
+ * El precio que se escribe ya trae el IGV incluido — compararlo tal cual contra el costo infla el
+ * margen con un 18% que no es ganancia, es plata que se le pasa al fisco.
+ */
+const valorVenta = (precio: number, afectoIgv: boolean) => (afectoIgv ? precio / (1 + TASA_IGV) : precio)
+
 export function ListasPreciosPage() {
   const { puede } = usePermisos()
   const toast = useToast()
@@ -234,6 +245,7 @@ export function ListasPreciosPage() {
         // costo, igual que cuando se teclea el precio a mano. Sin esto la
         // columna salia vacia al editar y parecia rota.
         const costo = elegido?.costoReferencia != null ? elegido.costoReferencia * pres.factor : null
+        const venta = valorVenta(x.precio, elegido?.afectoIgv ?? false)
 
         filas.push({
           clave: idUnico(),
@@ -244,7 +256,7 @@ export function ListasPreciosPage() {
           precioBase: precioPorBase(x.precio, pres.factor),
           margen:
             costo != null && x.precio > 0
-              ? (((x.precio - costo) / x.precio) * 100).toFixed(1)
+              ? (((venta - costo) / venta) * 100).toFixed(1)
               : '',
         })
       }
@@ -269,7 +281,12 @@ export function ListasPreciosPage() {
    */
   const precioPorMargen = (costoBase: number, margen: number, factor: number) => {
     // El toFixed quita el ruido de coma flotante (4.5 * 100 = 450.00000000000006) antes del ceil.
-    const precioBase = Math.ceil(Number(((costoBase / (1 - margen / 100)) * 100).toFixed(6))) / 100
+    const valorVentaBase = Math.ceil(Number(((costoBase / (1 - margen / 100)) * 100).toFixed(6))) / 100
+    // El IGV se suma DESPUÉS de fijar el margen: el margen se pide sobre lo que de verdad se gana,
+    // no sobre lo que se cobra. Se vuelve a redondear al céntimo de arriba para que, otra vez, el
+    // margen real nunca quede por debajo del pedido.
+    const conIgv = producto?.afectoIgv ? valorVentaBase * (1 + TASA_IGV) : valorVentaBase
+    const precioBase = Math.ceil(Number((conIgv * 100).toFixed(6))) / 100
     return (precioBase * factor).toFixed(2)
   }
 
@@ -285,10 +302,11 @@ export function ListasPreciosPage() {
     const factor = presentacionDe(fila.presentacionId)?.factor ?? 0
     const costo = costoDe(factor)
     const precio = Number(valor)
+    const venta = valorVenta(precio, producto?.afectoIgv ?? false)
     actualizarFila(fila.clave, {
       precio: valor,
       precioBase: precioPorBase(precio, factor),
-      margen: costo != null && precio > 0 ? (((precio - costo) / precio) * 100).toFixed(1) : '',
+      margen: costo != null && precio > 0 ? (((venta - costo) / venta) * 100).toFixed(1) : '',
     })
   }
 
@@ -303,10 +321,12 @@ export function ListasPreciosPage() {
     const porBase = Number(valor)
     const precio = valor !== '' && porBase > 0 && factor > 0 ? porBase * factor : 0
 
+    const precioRedondo = Number(precio.toFixed(2))
+    const venta = valorVenta(precioRedondo, producto?.afectoIgv ?? false)
     actualizarFila(fila.clave, {
       precioBase: valor,
       precio: precio > 0 ? precio.toFixed(2) : '',
-      margen: costo != null && precio > 0 ? (((Number(precio.toFixed(2)) - costo) / Number(precio.toFixed(2))) * 100).toFixed(1) : '',
+      margen: costo != null && precio > 0 ? (((venta - costo) / venta) * 100).toFixed(1) : '',
     })
   }
 

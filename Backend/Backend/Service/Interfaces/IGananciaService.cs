@@ -1,5 +1,6 @@
 using Backend.Dtos.Requests;
 using Backend.Dtos.Responses;
+using Backend.Models;
 
 namespace Backend.Service.Interfaces;
 
@@ -17,7 +18,16 @@ public sealed record LineaGanancia(
     string UnidadBase,
     decimal Cantidad,
     decimal Importe,
-    decimal Costo);
+    decimal Costo,
+    bool AfectoIgv)
+{
+    /// <summary>
+    /// Lo vendido SIN el IGV: la ganancia real es esto menos el costo, no
+    /// Importe menos costo — Importe ya trae el 18% que no es ingreso, es
+    /// plata que se cobra para pasársela al fisco.
+    /// </summary>
+    public decimal ValorVenta => AfectoIgv ? Importe / (1 + Impuestos.TasaIgv) : Importe;
+}
 
 /// <summary>Cuánto se ganó con cada producto vendido.</summary>
 public interface IGananciaService

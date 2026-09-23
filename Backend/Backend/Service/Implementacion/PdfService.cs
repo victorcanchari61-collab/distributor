@@ -141,6 +141,9 @@ public class PdfService(
             EtiquetaImporte = "Precio",
             Lineas = [.. venta.Detalle.Where(l => !l.Anulado).Select(Linea)],
             Total = venta.Total,
+            OpGravada = venta.OpGravada,
+            Igv = venta.Igv,
+            OpExonerada = venta.OpExonerada,
             // Un pago anulado no se cobro: sumarlo diria que esta pagada.
             Pagos = [.. venta.Pagos.Where(p => !p.Anulado).Select(p => new PagoImprimible(p.MetodoPago, p.Monto))],
             TotalPagado = venta.TotalPagado,

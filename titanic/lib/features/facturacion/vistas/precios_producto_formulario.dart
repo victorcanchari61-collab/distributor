@@ -96,6 +96,9 @@ class _PreciosProductoFormularioState
   String? _error;
   bool _sembrado = false;
 
+  /// Tasa de IGV vigente en Perú.
+  static const _tasaIgv = 0.18;
+
   @override
   void dispose() {
     for (final f in _filas) {
@@ -121,11 +124,22 @@ class _PreciosProductoFormularioState
    * MENOS de lo pedido. Subiendo el céntimo el margen nunca queda por debajo
    * del que se escribió. La misma regla que la web.
    */
-  static String _precioPorMargen(double costo, double margen) =>
-      ((costo / (1 - margen / 100) * 100).ceil() / 100).toStringAsFixed(2);
+  /// El IGV se suma DESPUÉS de fijar el margen —el margen se pide sobre lo que de verdad se gana,
+  /// no sobre lo que se cobra— y se vuelve a redondear al céntimo de arriba para que el margen
+  /// real nunca quede por debajo del pedido.
+  static String _precioPorMargen(double costo, double margen, bool afectoIgv) {
+    final valorVentaBase = (costo / (1 - margen / 100) * 100).ceil() / 100;
+    final conIgv = afectoIgv ? valorVentaBase * (1 + _tasaIgv) : valorVentaBase;
+    return ((conIgv * 100).ceil() / 100).toStringAsFixed(2);
+  }
 
-  static String _margenDe(double costo, double precio) =>
-      precio > 0 ? ((precio - costo) / precio * 100).toStringAsFixed(1) : '';
+  /// Lo que de verdad se gana: el precio ya trae el IGV incluido si el producto es afecto, y
+  /// compararlo tal cual contra el costo infla el margen con un 18% que no es ganancia.
+  static String _margenDe(double costo, double precio, bool afectoIgv) {
+    if (precio <= 0) return '';
+    final venta = afectoIgv ? precio / (1 + _tasaIgv) : precio;
+    return ((venta - costo) / venta * 100).toStringAsFixed(1);
+  }
 
   // ------------------------------------------------------------- filas
 
@@ -164,7 +178,9 @@ class _PreciosProductoFormularioState
             presentacion: pres,
             desde: formatoNumero(x.cantidadMinima),
             precio: x.precio.toStringAsFixed(2),
-            margen: costo == null ? '' : _margenDe(costo, x.precio),
+            margen: costo == null
+                ? ''
+                : _margenDe(costo, x.precio, producto.afectoIgv),
           ),
         );
       }
@@ -180,7 +196,9 @@ class _PreciosProductoFormularioState
   /// Escriben el precio: el margen de esa fila se recalcula solo.
   void _escribirPrecio(_Fila fila) {
     final costo = _costoDe(fila.presentacion);
-    fila.margen.text = costo == null ? '' : _margenDe(costo, fila.precioNum);
+    fila.margen.text = costo == null
+        ? ''
+        : _margenDe(costo, fila.precioNum, _producto?.afectoIgv ?? false);
     setState(() {});
   }
 
@@ -198,7 +216,11 @@ class _PreciosProductoFormularioState
     } else {
       final margen = double.tryParse(texto);
       if (margen != null && margen < 100) {
-        fila.precio.text = _precioPorMargen(costo, margen);
+        fila.precio.text = _precioPorMargen(
+          costo,
+          margen,
+          _producto?.afectoIgv ?? false,
+        );
       }
     }
     setState(() {});
@@ -252,7 +274,11 @@ class _PreciosProductoFormularioState
         // Los tramos por volumen quedan como están: son un descuento puesto a
         // mano, y llenarlos con el mismo margen los dejaría al precio normal.
         if (costo == null || f.desdeNum > 1) continue;
-        f.precio.text = _precioPorMargen(costo, margen);
+        f.precio.text = _precioPorMargen(
+          costo,
+          margen,
+          _producto?.afectoIgv ?? false,
+        );
         f.margen.text = margen.toStringAsFixed(1);
       }
     });

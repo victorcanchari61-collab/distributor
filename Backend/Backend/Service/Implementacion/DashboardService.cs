@@ -395,14 +395,18 @@ public class DashboardService : IDashboardService
         var lineas = todas.Where(l => Zona.DiaDe(l.Fecha) >= primero).ToList();
         var previas = todas.Where(l => Zona.DiaDe(l.Fecha) < primero).ToList();
 
+        // La ganancia sale del valor de venta SIN el IGV, no del importe cobrado: ese 18% no es
+        // ingreso, es plata que se le pasa al fisco. El Importe que se muestra sigue siendo lo
+        // cobrado de verdad — solo la ganancia y el margen se corrigen.
         var importe = lineas.Sum(l => l.Importe);
+        var valorVenta = lineas.Sum(l => l.ValorVenta);
         var costo = lineas.Sum(l => l.Costo);
-        var importeAnt = previas.Sum(l => l.Importe);
-        var gananciaAnt = importeAnt - previas.Sum(l => l.Costo);
+        var valorVentaAnt = previas.Sum(l => l.ValorVenta);
+        var gananciaAnt = valorVentaAnt - previas.Sum(l => l.Costo);
 
         var porDia = lineas
             .GroupBy(l => Zona.DiaDe(l.Fecha))
-            .ToDictionary(g => g.Key, g => (Importe: g.Sum(l => l.Importe), Costo: g.Sum(l => l.Costo)));
+            .ToDictionary(g => g.Key, g => (Importe: g.Sum(l => l.Importe), ValorVenta: g.Sum(l => l.ValorVenta), Costo: g.Sum(l => l.Costo)));
 
         return new DashboardGananciasResponse
         {
@@ -411,23 +415,23 @@ public class DashboardService : IDashboardService
             SoloPropio = soloPropio,
             Importe = R2(importe),
             Costo = R2(costo),
-            Ganancia = R2(importe - costo),
-            Margen = Margen(importe, importe - costo),
+            Ganancia = R2(valorVenta - costo),
+            Margen = Margen(valorVenta, valorVenta - costo),
             GananciaAnterior = R2(gananciaAnt),
-            MargenAnterior = Margen(importeAnt, gananciaAnt),
+            MargenAnterior = Margen(valorVentaAnt, gananciaAnt),
             LineasSinCosto = lineas.Count(l => l.Importe > 0 && l.Costo <= 0),
 
             Serie = Enumerable.Range(0, dias)
                 .Select(i =>
                 {
                     var dia = primero.AddDays(i);
-                    var (imp, cos) = porDia.TryGetValue(dia, out var v) ? v : (0m, 0m);
+                    var (imp, val, cos) = porDia.TryGetValue(dia, out var v) ? v : (0m, 0m, 0m);
                     return new DashDiaGanancia
                     {
                         Fecha = dia,
                         Importe = R2(imp),
-                        Ganancia = R2(imp - cos),
-                        Margen = Margen(imp, imp - cos),
+                        Ganancia = R2(val - cos),
+                        Margen = Margen(val, val - cos),
                     };
                 })
                 .ToList(),
@@ -439,14 +443,15 @@ public class DashboardService : IDashboardService
                 .Select(g =>
                 {
                     var imp = g.Sum(l => l.Importe);
-                    var gan = imp - g.Sum(l => l.Costo);
+                    var val = g.Sum(l => l.ValorVenta);
+                    var gan = val - g.Sum(l => l.Costo);
                     return new DashProductoGanancia
                     {
                         Nombre = g.First().Producto,
                         Categoria = g.First().Categoria,
                         Importe = R2(imp),
                         Ganancia = R2(gan),
-                        Margen = Margen(imp, gan),
+                        Margen = Margen(val, gan),
                     };
                 })
                 .Where(p => p.Importe > 0)

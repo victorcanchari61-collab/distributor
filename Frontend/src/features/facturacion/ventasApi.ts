@@ -32,6 +32,8 @@ export interface LineaVentaResponse {
   /** Lo que se acordó por cada presentación: S/ 212.50 el saco. */
   precioPresentacion: number
   subtotal: number
+  /** Si el producto pagaba IGV al momento de esta línea. El precio ya lo incluye. */
+  afectoIgv: boolean
   /** Solo aplica a líneas de pedido: se quitó al editarlo, sin borrarse. */
   anulado: boolean
 }
@@ -245,6 +247,8 @@ export interface ResumenNotasVenta {
   total: number
   confirmadas: number
   totalVendido: number
+  /** Quiénes registraron alguna, para el filtro de Vendedor. */
+  vendedores: string[]
 }
 
 export const pedidoApi = {
@@ -290,6 +294,12 @@ export interface NotaVentaResponse {
   usuario: string | null
   /** La suma del detalle MENOS los recojos: es lo que de verdad se cobra. */
   total: number
+  /** Op. Gravada: lo cobrado SIN el IGV, de las líneas afectas. */
+  opGravada: number
+  /** El IGV de las líneas afectas: opGravada × 18%. */
+  igv: number
+  /** Lo cobrado por líneas de productos no afectos (exonerados). opGravada + igv + opExonerada = total. */
+  opExonerada: number
   detalle: LineaVentaResponse[]
   /** Puede ser más de un método — un pago mixto. */
   pagos: PagoVentaResponse[]
