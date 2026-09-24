@@ -283,6 +283,9 @@ export interface NotaVentaResponse {
   numero: string
   clienteId: number
   cliente: string
+  /** La ruta y el mercado del cliente, para filtrar cobranza por zona de reparto. */
+  ruta: string | null
+  mercado: string | null
   pedidoId: number | null
   pedidoNumero: string | null
   almacenId: number

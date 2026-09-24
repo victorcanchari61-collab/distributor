@@ -6,7 +6,22 @@ import type { ConsultaTabla, DataTableColumn, TabItem } from '../../components/u
 import { ApiError } from '../../lib/apiClient'
 import { almacenApi, kardexApi, motivoApi } from './inventarioApi'
 import type { AlmacenResponse, KardexResponse, MotivoResponse, ResumenKardex } from './inventarioApi'
+import { productoApi } from '../maestros'
+import type { ProductoResponse } from '../maestros'
 import { useRealtime } from '../../lib/realtime'
+
+/** Cómo se llama cada tipo de documento en el papel, no el código interno. */
+const TIPOS_DOCUMENTO: Record<string, string> = {
+  AJUSTE: 'Ajuste',
+  TRANSFERENCIA: 'Transferencia',
+  PRESTAMO: 'Préstamo',
+  DEVOLUCION_PRESTAMO: 'Devolución de préstamo',
+  RECEPCION: 'Recepción de compra',
+  NOTA_VENTA: 'Venta',
+  DEVOLUCION_CLIENTE: 'Devolución de cliente',
+  RECOJO: 'Recojo',
+  ANULACION: 'Anulación',
+}
 
 /**
  * El kardex: todo lo que entró y salió, con el saldo que dejó cada línea.
@@ -34,6 +49,7 @@ export function KardexPage() {
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [almacenId, setAlmacenId] = useState(0)
   const [motivos, setMotivos] = useState<MotivoResponse[]>([])
+  const [productos, setProductos] = useState<ProductoResponse[]>([])
 
   const [kardex, setKardex] = useState<KardexResponse[]>([])
   const [cargando, setCargando] = useState(true)
@@ -42,6 +58,7 @@ export function KardexPage() {
   useEffect(() => {
     void almacenApi.getAll().then(setAlmacenes)
     void motivoApi.getAll().then(setMotivos)
+    void productoApi.getAll().then(setProductos)
   }, [])
 
   /*
@@ -109,7 +126,29 @@ export function KardexPage() {
       filterType: 'date',
       render: (row) => fechaHora(row.fecha),
     },
-    { key: 'documento', label: 'Documento', sortable: false, render: (row) => <Badge>{row.documento}</Badge> },
+    {
+      // El numero de documento no se filtra por select (serian cientos de
+      // opciones sin sentido): para buscar uno puntual esta el buscador de
+      // arriba, que ya lo encuentra por texto.
+      key: 'documento',
+      label: 'Documento',
+      sortable: false,
+      filterable: false,
+      render: (row) => <Badge>{row.documento}</Badge>,
+    },
+    {
+      key: 'tipoDocumento',
+      label: 'Tipo de documento',
+      sortable: false,
+      filterType: 'select',
+      filterOptions: Object.entries(TIPOS_DOCUMENTO).map(([value, label]) => ({ value, label })),
+      render: (row) =>
+        row.tipoDocumento ? (
+          TIPOS_DOCUMENTO[row.tipoDocumento] ?? row.tipoDocumento
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
     {
       key: 'tipo',
       label: 'Tipo',
@@ -154,7 +193,15 @@ export function KardexPage() {
         </span>
       ),
     },
-    { key: 'producto', label: 'Producto', sortable: false },
+    {
+      key: 'producto',
+      label: 'Producto',
+      sortable: false,
+      filterType: 'select',
+      filterOptions: [...new Set(productos.map((p) => p.nombre))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+    },
     // El almacén ya se elige con la pestaña de arriba, no aquí de nuevo.
     { key: 'almacen', label: 'Almacén', sortable: false, filterable: false },
     /*

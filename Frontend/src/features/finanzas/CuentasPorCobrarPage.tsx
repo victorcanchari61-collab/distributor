@@ -233,6 +233,27 @@ export function CuentasPorCobrarPage() {
         .map((n) => ({ value: n, label: n })),
     },
     {
+      // La ruta del cliente: sale de los clientes que este usuario puede ver, asi que quien
+      // solo tiene su ruta ve solo esa en el filtro. Mismo patron que Pedidos.
+      key: 'ruta',
+      label: 'Ruta',
+      width: 90,
+      filterType: 'select',
+      filterOptions: [...new Set(clientes.map((c) => c.ruta).filter((r): r is string => Boolean(r)))]
+        .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
+        .map((n) => ({ value: n, label: `Ruta ${n}` })),
+      render: (row) => row.ruta ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'mercado',
+      label: 'Mercado',
+      filterType: 'select',
+      filterOptions: [...new Set(clientes.map((c) => c.mercado).filter((m): m is string => Boolean(m)))]
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map((n) => ({ value: n, label: n })),
+      render: (row) => row.mercado ?? <span className="text-ink-soft">—</span>,
+    },
+    {
       key: 'fecha',
       label: 'Fecha',
       filterType: 'date',

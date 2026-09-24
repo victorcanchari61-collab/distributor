@@ -121,6 +121,10 @@ public class NotaVentaResponse
     public int ClienteId { get; set; }
     public string Cliente { get; set; } = string.Empty;
 
+    /// <summary>La ruta y el mercado del cliente, para filtrar cobranza por zona de reparto.</summary>
+    public string? Ruta { get; set; }
+    public string? Mercado { get; set; }
+
     /// <summary>Si nació de confirmar un pedido, cuál. Null si fue directa.</summary>
     public int? PedidoId { get; set; }
     public string? PedidoNumero { get; set; }

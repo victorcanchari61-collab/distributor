@@ -23,10 +23,12 @@ public record SaldoKardex(decimal Cantidad, decimal Valor);
 /// proyectan a esta forma para poder ordenarlas y paginarlas juntas en la
 /// base, que es lo único que mantiene el saldo bien cuando hay varias páginas.
 /// </summary>
+// TipoDocumento: AJUSTE, TRANSFERENCIA, etc. Vacío en una reserva: no nace de ningún documento.
 public record FilaKardex(
     int Id,
     DateTime Fecha,
     string Documento,
+    string TipoDocumento,
     bool Anulado,
     string Motivo,
     string Tipo,

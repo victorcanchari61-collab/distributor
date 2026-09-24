@@ -296,7 +296,8 @@ public class VentasRepository : IVentasRepository
 
     private IQueryable<NotaVenta> NotasVentaConDetalle() =>
         _context.NotasVenta
-            .Include(n => n.Cliente)
+            .Include(n => n.Cliente).ThenInclude(c => c!.Ruta)
+            .Include(n => n.Cliente).ThenInclude(c => c!.Mercado)
             .Include(n => n.Pedido)
             .Include(n => n.Almacen)
             .Include(n => n.Usuario)
@@ -472,6 +473,13 @@ public class VentasRepository : IVentasRepository
 
         if (consulta.ValorDe("cliente") is string cliente)
             query = query.Where(n => n.Cliente != null && EF.Functions.Like(n.Cliente.Nombre, $"%{cliente}%"));
+
+        // La ruta y el mercado son del CLIENTE de la venta, igual que en Pedidos.
+        if (consulta.ValorDe("ruta") is string ruta)
+            query = query.Where(n => n.Cliente != null && n.Cliente.Ruta != null && n.Cliente.Ruta.Nombre == ruta);
+
+        if (consulta.ValorDe("mercado") is string mercado)
+            query = query.Where(n => n.Cliente != null && n.Cliente.Mercado != null && n.Cliente.Mercado.Nombre == mercado);
 
         var (desde, hasta) = consulta.RangoFechas("fecha");
         if (desde is not null) query = query.Where(n => n.Fecha >= desde);

@@ -254,6 +254,15 @@ public class MovimientoInventario
     public int? RecojoVentaId { get; set; }
     public RecojoVenta? RecojoVenta { get; set; }
 
+    /// <summary>
+    /// Solo en una devolución de préstamo: qué línea del préstamo devolvió.
+    /// Igual que CompraDetalleId, es lo que permite decontar CantidadDevuelta
+    /// de la línea correcta —y recalcular el estado del préstamo— al anular
+    /// esta devolución, sin tener que adivinar cuál era.
+    /// </summary>
+    public int? PrestamoDetalleId { get; set; }
+    public PrestamoDetalle? PrestamoDetalle { get; set; }
+
     public List<ConsumoCapa> Consumos { get; set; } = [];
 }
 
@@ -431,4 +440,7 @@ public class PrestamoDetalle
     /// <summary>Movimiento que registró el préstamo: de ahí sale el costo al devolver.</summary>
     public int MovimientoId { get; set; }
     public MovimientoInventario? Movimiento { get; set; }
+
+    /// <summary>Cada devolución (o su anulación) registrada contra esta línea, más reciente primero.</summary>
+    public List<MovimientoInventario> MovimientosDevolucion { get; set; } = [];
 }

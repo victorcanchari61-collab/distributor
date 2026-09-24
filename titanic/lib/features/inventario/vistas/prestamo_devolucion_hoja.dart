@@ -100,6 +100,40 @@ Future<void> mostrarHojaDevolucion(
                     color: Colores.tinta,
                   ),
                 ),
+                const SizedBox(height: Dimen.espacio2),
+                // Con qué almacén queda: la devolución siempre va al mismo
+                // almacén con el que se registró el préstamo (no se elige
+                // otro), pero hay que verlo antes de confirmar.
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Dimen.espacio3,
+                    vertical: Dimen.espacio2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colores.fondo,
+                    borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                  ),
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colores.tintaSuave,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: prestamo.esDado ? 'Vuelve a ' : 'Sale de ',
+                        ),
+                        TextSpan(
+                          text: prestamo.almacen,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Colores.tinta,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: Dimen.espacio4),
                 if (error != null) ...[
                   AppAlerta(error!),

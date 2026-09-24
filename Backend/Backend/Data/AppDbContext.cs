@@ -863,6 +863,8 @@ public class AppDbContext : DbContext
                 .HasForeignKey(m => m.NotaVentaDetalleId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(m => m.RecojoVenta).WithMany()
                 .HasForeignKey(m => m.RecojoVentaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(m => m.PrestamoDetalle).WithMany(d => d.MovimientosDevolucion)
+                .HasForeignKey(m => m.PrestamoDetalleId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CapaCosto>(entity =>

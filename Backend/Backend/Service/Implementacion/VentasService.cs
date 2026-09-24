@@ -1550,6 +1550,8 @@ public class VentasService : IVentasService
             Numero = n.Numero,
             ClienteId = n.ClienteId,
             Cliente = n.Cliente?.Nombre ?? string.Empty,
+            Ruta = n.Cliente?.Ruta?.Nombre,
+            Mercado = n.Cliente?.Mercado?.Nombre,
             PedidoId = n.PedidoId,
             PedidoNumero = n.Pedido?.Numero,
             AlmacenId = n.AlmacenId,

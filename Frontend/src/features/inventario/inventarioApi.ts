@@ -191,6 +191,8 @@ export interface KardexResponse {
   id: number
   fecha: string
   documento: string
+  /** AJUSTE, TRANSFERENCIA, etc. Vacío en una reserva: no nace de ningún documento. */
+  tipoDocumento: string
   motivo: string
   /** RESERVA no es un movimiento: aparta mercadería sin sacarla del almacén. */
   tipo: TipoMovimiento | 'RESERVA'

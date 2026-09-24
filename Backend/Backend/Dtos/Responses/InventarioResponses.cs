@@ -123,6 +123,10 @@ public class KardexResponse
     public int Id { get; set; }
     public DateTime Fecha { get; set; }
     public string Documento { get; set; } = string.Empty;
+
+    /// <summary>AJUSTE, TRANSFERENCIA, etc. Vacío en una reserva: no nace de ningún documento.</summary>
+    public string TipoDocumento { get; set; } = string.Empty;
+
     public string Motivo { get; set; } = string.Empty;
 
     /// <summary>ENTRADA o SALIDA.</summary>

@@ -624,6 +624,14 @@ export function PrestamosPage() {
       >
         {devolucionAbierta && (
           <div className="flex flex-col gap-3">
+            {/*
+              Con qué almacén queda: la devolución siempre va al mismo almacén con el que se
+              registró el préstamo (no se elige otro), pero hay que verlo antes de confirmar.
+            */}
+            <div className="rounded-field bg-surface-alt px-3 py-2 text-sm text-ink-muted">
+              {devolucionAbierta.tipo === 'DADO' ? 'Vuelve a' : 'Sale de'}{' '}
+              <span className="font-semibold text-ink">{devolucionAbierta.almacen}</span>
+            </div>
 
             {devolucionAbierta.detalle
               .filter((d) => d.cantidadPendiente > 0)

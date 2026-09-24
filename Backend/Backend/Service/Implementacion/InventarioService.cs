@@ -533,6 +533,7 @@ public class InventarioService : IInventarioService
         Id = f.Id,
         Fecha = f.Fecha,
         Documento = f.Documento,
+        TipoDocumento = f.TipoDocumento,
         Motivo = f.Motivo,
         Tipo = f.Tipo,
         ProductoId = f.ProductoId,
@@ -577,6 +578,7 @@ public class InventarioService : IInventarioService
                 Id = m.Id,
                 Fecha = m.Fecha,
                 Documento = m.Documento?.Numero ?? string.Empty,
+                TipoDocumento = m.Documento?.Tipo ?? string.Empty,
                 Motivo = m.Motivo?.Nombre ?? string.Empty,
                 Tipo = m.Tipo,
                 ProductoId = m.ProductoId,
@@ -1859,7 +1861,11 @@ public class InventarioService : IInventarioService
                 // en unidad base, que es lo unico que no cambia de signo.
                 CantidadPresentacion = linea.Cantidad,
                 Cantidad = linea.Cantidad,
-                Fecha = documento.Fecha
+                Fecha = documento.Fecha,
+                // De aqui sale, al anular esta devolucion, saber que linea del
+                // prestamo corregir y cuanto: igual que CompraDetalleId en una
+                // recepcion.
+                PrestamoDetalleId = detalle.Id
             };
 
             await _repository.AddDocumentoMovimientoAsync(movimiento);

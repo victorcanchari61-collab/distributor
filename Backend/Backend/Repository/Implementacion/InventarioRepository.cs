@@ -507,6 +507,9 @@ public class InventarioRepository : IInventarioRepository
         if (consulta.ValorDe("documento") is string documento)
             query = query.Where(m => EF.Functions.Like(m.Documento!.Numero, $"%{documento}%"));
 
+        if (consulta.ValorDe("tipoDocumento") is string tipoDocumento)
+            query = query.Where(m => m.Documento!.Tipo == tipoDocumento);
+
         // Filtrar por RESERVA no deja ningun movimiento: son de la otra fuente.
         if (consulta.ValorDe("tipo") is string tipo)
             query = query.Where(m => m.Tipo == tipo);
@@ -556,6 +559,11 @@ public class InventarioRepository : IInventarioRepository
         if (consulta.ValorDe("documento") is string documento)
             query = query.Where(d => EF.Functions.Like(d.Pedido!.Numero, $"%{documento}%"));
 
+        // Una reserva no nace de ningun documento: si se filtra por tipo de
+        // documento, ninguna reserva puede calzar.
+        if (consulta.ValorDe("tipoDocumento") is string)
+            query = query.Where(d => false);
+
         // El motivo de una reserva es siempre el mismo, y el tipo tambien: si
         // piden otro, esta fuente no aporta nada.
         if (consulta.ValorDe("motivo") is string motivo && motivo != "Reserva de pedido")
@@ -603,6 +611,7 @@ public class InventarioRepository : IInventarioRepository
                 m.Id,
                 m.Fecha,
                 m.Documento!.Numero,
+                m.Documento.Tipo,
                 m.Documento.Estado == EstadoDocumento.Anulado,
                 m.Motivo!.Nombre,
                 m.Tipo,
@@ -629,6 +638,7 @@ public class InventarioRepository : IInventarioRepository
                 -d.Id,
                 d.Pedido!.Fecha,
                 d.Pedido.Numero,
+                string.Empty,
                 d.Pedido.Estado == EstadoPedido.Anulado,
                 "Reserva de pedido",
                 TipoKardex.Reserva,
@@ -749,10 +759,21 @@ public class InventarioRepository : IInventarioRepository
             .Include(p => p.Detalle)
             .ThenInclude(d => d.Presentacion)
             .Include(p => p.Detalle)
-            .ThenInclude(d => d.Movimiento);
+            .ThenInclude(d => d.Movimiento)
+            .Include(p => p.Detalle)
+            .ThenInclude(d => d.MovimientosDevolucion)
+            .ThenInclude(m => m.Documento)
+            .ThenInclude(doc => doc!.Usuario);
 
     public async Task<Prestamo?> GetPrestamoAsync(int id) =>
         await PrestamosConDetalle().FirstOrDefaultAsync(p => p.Id == id);
+
+    /// <summary>Una línea de préstamo con su préstamo y hermanas cargadas, para recalcular el estado al anular una devolución.</summary>
+    public async Task<PrestamoDetalle?> GetPrestamoDetalleConPrestamoAsync(int id) =>
+        await _context.PrestamoDetalles
+            .Include(d => d.Producto)
+            .Include(d => d.Prestamo).ThenInclude(p => p!.Detalle)
+            .FirstOrDefaultAsync(d => d.Id == id);
 
     public async Task<IEnumerable<Prestamo>> GetPrestamosAsync() =>
         await PrestamosConDetalle()
