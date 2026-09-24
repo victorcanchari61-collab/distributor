@@ -120,6 +120,9 @@ builder.Services.AddScoped<IDevolucionService, DevolucionService>();
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 builder.Services.AddScoped<IFinanzasService, FinanzasService>();
 builder.Services.AddScoped<IArqueoService, ArqueoService>();
+builder.Services.AddScoped<ICuentaFinancieraService, CuentaFinancieraService>();
+builder.Services.AddScoped<IConciliacionBancariaService, ConciliacionBancariaService>();
+builder.Services.AddScoped<IGastoOperativoService, GastoOperativoService>();
 builder.Services.AddScoped<IGananciaService, GananciaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 

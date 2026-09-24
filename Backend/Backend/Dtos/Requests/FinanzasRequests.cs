@@ -7,14 +7,8 @@ public abstract class MetodoPagoRequestBase
     /// <summary>EFECTIVO, BILLETERA_DIGITAL o TRANSFERENCIA.</summary>
     public string Tipo { get; set; } = string.Empty;
 
-    /// <summary>Requerido en transferencia; opcional en billetera digital.</summary>
-    public string? Banco { get; set; }
-
-    /// <summary>Cuenta (transferencia) o celular (billetera). Requerido en ambos.</summary>
-    public string? NumeroCuenta { get; set; }
-
-    public string? Cci { get; set; }
-    public string? Titular { get; set; }
+    /// <summary>A qué cuenta financiera va la plata. Obligatorio salvo en Efectivo.</summary>
+    public int? CuentaFinancieraId { get; set; }
 }
 
 public class CreateMetodoPagoRequest : MetodoPagoRequestBase;

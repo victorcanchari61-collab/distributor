@@ -12,11 +12,13 @@ import {
   Tags,
   Trash2,
   Wallet,
+  Wallet2,
 } from 'lucide-react'
 import {
   Alert,
   Badge,
   Button,
+  Desplegable,
   Input,
   ListPage,
   Modal,
@@ -102,7 +104,9 @@ export function ArqueoDiarioPage() {
 
   const [error, setError] = useState('')
   const [cuadrando, setCuadrando] = useState<Cuadrando | null>(null)
+  const [fondoAbierto, setFondoAbierto] = useState(false)
   const { confirmar, dialogo } = useConfirmacion()
+  const toast = useToast()
 
   const cargarCuadres = useCallback(async (inicio: string, fin: string) => {
     setCargandoCuadres(true)
@@ -263,6 +267,14 @@ export function ArqueoDiarioPage() {
       },
       // Los importes quedan fuera del panel: solo hay buscador de texto y "9"
       // contra "S/ 9.00" no encuentra lo que la persona espera.
+      {
+        key: 'montoApertura',
+        label: 'Fondo entregado',
+        align: 'right',
+        filterable: false,
+        render: (row) =>
+          row.montoApertura > 0 ? soles(row.montoApertura) : <span className="text-ink-soft">—</span>,
+      },
       {
         key: 'totalEfectivoReal',
         label: 'Efectivo real',
@@ -477,6 +489,18 @@ export function ArqueoDiarioPage() {
         icon={<Calculator size={20} />}
         title="Arqueo de caja"
         description="Quién cobró qué en la ruta y cuánto trajo de vuelta, día por día."
+        actions={
+          puede('finanzas.arqueo', 'crear') ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setFondoAbierto(true)}
+              iconRight={<Wallet2 size={15} />}
+            >
+              Entregar fondo de ruta
+            </Button>
+          ) : undefined
+        }
         alert={error ? <Alert>{error}</Alert> : undefined}
         stats={
           <>
@@ -529,9 +553,120 @@ export function ArqueoDiarioPage() {
         }
       >
         {modal}
+        {fondoAbierto && (
+          <EntregarFondoModal
+            open
+            usuarios={usuarios}
+            onClose={() => setFondoAbierto(false)}
+            onGuardado={async () => {
+              setFondoAbierto(false)
+              toast.exito('Fondo entregado')
+              await recargarTodo()
+            }}
+          />
+        )}
         {dialogo}
       </ListPage>
     </>
+  )
+}
+
+/** El dueño entrega efectivo a alguien para gastos de ruta, antes de que salga. */
+function EntregarFondoModal({
+  open,
+  usuarios,
+  onClose,
+  onGuardado,
+}: {
+  open: boolean
+  usuarios: UsuarioResponse[]
+  onClose: () => void
+  onGuardado: () => void | Promise<void>
+}) {
+  const [usuarioId, setUsuarioId] = useState(0)
+  const [fecha, setFecha] = useState(desplazarDias(0))
+  const [monto, setMonto] = useState('')
+  const [observacion, setObservacion] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+
+  const guardar = async () => {
+    if (!usuarioId) return setError('Elige a quién le entregas el fondo.')
+    const numero = Number(monto.replace(',', '.'))
+    if (!Number.isFinite(numero) || numero <= 0) return setError('Ingresa un monto mayor a cero.')
+
+    setGuardando(true)
+    setError('')
+    try {
+      await arqueoApi.entregarFondo({
+        usuarioId,
+        fecha,
+        monto: numero,
+        observacion: observacion.trim() || null,
+      })
+      await onGuardado()
+    } catch (e) {
+      setError(
+        e instanceof ApiError
+          ? e.errors.length
+            ? e.errors.join(' ')
+            : e.message
+          : 'No pudimos entregar el fondo.',
+      )
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      size="sm"
+      title="Entregar fondo de ruta"
+      description="Para peaje, combustible u otros gastos del día. Sale de la Caja General."
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+            Entregar
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        {error && <Alert>{error}</Alert>}
+
+        <Desplegable
+          label="A quién"
+          value={usuarioId}
+          onChange={(v) => setUsuarioId(Number(v))}
+          placeholder="Elige a quién sale a la ruta"
+          options={usuarios.filter((u) => u.activo).map((u) => ({ value: u.id, label: u.nombre }))}
+        />
+
+        <Input label="Fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+
+        <Input
+          label="Monto"
+          type="number"
+          step="0.01"
+          placeholder="0.00"
+          value={monto}
+          onChange={(e) => setMonto(e.target.value)}
+        />
+
+        <Input
+          label="Observación"
+          optional
+          placeholder="Peaje y combustible"
+          value={observacion}
+          onChange={(e) => setObservacion(e.target.value)}
+        />
+      </div>
+    </Modal>
   )
 }
 

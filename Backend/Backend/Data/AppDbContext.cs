@@ -76,6 +76,11 @@ public class AppDbContext : DbContext
     public DbSet<MotivoGasto> MotivosGasto => Set<MotivoGasto>();
     public DbSet<MotivoNovedad> MotivosNovedad => Set<MotivoNovedad>();
     public DbSet<NovedadEntrega> NovedadesEntrega => Set<NovedadEntrega>();
+    public DbSet<CuentaFinanciera> CuentasFinancieras => Set<CuentaFinanciera>();
+    public DbSet<MovimientoCuenta> MovimientosCuenta => Set<MovimientoCuenta>();
+    public DbSet<ConciliacionBancaria> ConciliacionesBancarias => Set<ConciliacionBancaria>();
+    public DbSet<GastoRecurrente> GastosRecurrentes => Set<GastoRecurrente>();
+    public DbSet<MovimientoOperativo> MovimientosOperativos => Set<MovimientoOperativo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -1228,18 +1233,109 @@ public class AppDbContext : DbContext
             entity.HasIndex(m => m.Nombre).IsUnique();
             entity.Property(m => m.Nombre).HasMaxLength(60).IsRequired();
             entity.Property(m => m.Tipo).HasMaxLength(20).IsRequired();
-            entity.Property(m => m.Banco).HasMaxLength(60);
-            entity.Property(m => m.NumeroCuenta).HasMaxLength(30);
-            entity.Property(m => m.Cci).HasMaxLength(30);
-            entity.Property(m => m.Titular).HasMaxLength(120);
 
-            // Único dato universal: el efectivo no necesita cuenta ni banco.
-            // Billetera digital y transferencia los crea el propio negocio
-            // desde Finanzas, con su banco, número y titular reales — no hay
-            // uno correcto para adivinar aquí.
+            entity.HasOne(m => m.CuentaFinanciera).WithMany()
+                .HasForeignKey(m => m.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
+
+            // Único dato universal: el efectivo no se enlaza a ninguna cuenta
+            // (se resuelve segun quien cobra). Billetera digital y
+            // transferencia se enlazan a una cuenta real desde Finanzas.
             entity.HasData(
                 new MetodoPago { Id = 1, Nombre = "Efectivo", Tipo = TipoMetodoPago.Efectivo, Activo = true }
             );
+        });
+
+        modelBuilder.Entity<CuentaFinanciera>(entity =>
+        {
+            entity.ToTable("CuentasFinancieras");
+            entity.HasIndex(c => c.Nombre).IsUnique();
+            entity.Property(c => c.Nombre).HasMaxLength(100).IsRequired();
+            entity.Property(c => c.Naturaleza).HasMaxLength(20).IsRequired();
+            entity.Property(c => c.Banco).HasMaxLength(60);
+            entity.Property(c => c.NumeroCuenta).HasMaxLength(30);
+            entity.Property(c => c.Cci).HasMaxLength(30);
+            entity.Property(c => c.Titular).HasMaxLength(120);
+            entity.Property(c => c.SaldoActual).HasPrecision(18, 4);
+
+            // La única cuenta de efectivo de la empresa: sin ella, el arqueo
+            // no tiene a dónde postear la primera liquidación.
+            entity.HasData(
+                new CuentaFinanciera
+                {
+                    Id = 1,
+                    Nombre = "Caja General",
+                    Naturaleza = NaturalezaCuenta.Caja,
+                    SaldoActual = 0,
+                    Activo = true,
+                    FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                });
+        });
+
+        modelBuilder.Entity<MovimientoCuenta>(entity =>
+        {
+            entity.ToTable("MovimientosCuenta");
+            entity.Property(m => m.Tipo).HasMaxLength(20).IsRequired();
+            entity.Property(m => m.Monto).HasPrecision(18, 4);
+            entity.Property(m => m.SaldoResultante).HasPrecision(18, 4);
+            entity.Property(m => m.DocumentoOrigen).HasMaxLength(30).IsRequired();
+            entity.Property(m => m.Observacion).HasMaxLength(250);
+
+            entity.HasIndex(m => new { m.CuentaFinancieraId, m.Fecha });
+
+            entity.HasOne(m => m.CuentaFinanciera).WithMany()
+                .HasForeignKey(m => m.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(m => m.Usuario).WithMany()
+                .HasForeignKey(m => m.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ConciliacionBancaria>(entity =>
+        {
+            entity.ToTable("ConciliacionesBancarias");
+            entity.Property(c => c.SaldoExtracto).HasPrecision(18, 4);
+            entity.Property(c => c.SaldoContable).HasPrecision(18, 4);
+            entity.Property(c => c.Observacion).HasMaxLength(250);
+            entity.Property(c => c.Estado).HasMaxLength(20).IsRequired();
+            entity.Ignore(c => c.Diferencia);
+
+            entity.HasOne(c => c.CuentaFinanciera).WithMany()
+                .HasForeignKey(c => c.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(c => c.Usuario).WithMany()
+                .HasForeignKey(c => c.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<GastoRecurrente>(entity =>
+        {
+            entity.ToTable("GastosRecurrentes");
+            entity.Property(g => g.Nombre).HasMaxLength(100).IsRequired();
+            entity.Property(g => g.MontoEstimado).HasPrecision(18, 4);
+
+            entity.HasOne(g => g.MotivoGasto).WithMany()
+                .HasForeignKey(g => g.MotivoGastoId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(g => g.CuentaFinancieraSugerida).WithMany()
+                .HasForeignKey(g => g.CuentaFinancieraSugeridaId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<MovimientoOperativo>(entity =>
+        {
+            entity.ToTable("MovimientosOperativos");
+            entity.Property(m => m.Tipo).HasMaxLength(20).IsRequired();
+            entity.Property(m => m.Monto).HasPrecision(18, 4);
+            entity.Property(m => m.Descripcion).HasMaxLength(250);
+
+            entity.HasOne(m => m.CuentaFinanciera).WithMany()
+                .HasForeignKey(m => m.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(m => m.MotivoGasto).WithMany()
+                .HasForeignKey(m => m.MotivoGastoId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(m => m.GastoRecurrente).WithMany()
+                .HasForeignKey(m => m.GastoRecurrenteId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(m => m.Usuario).WithMany()
+                .HasForeignKey(m => m.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<MotivoGasto>(entity =>
@@ -1272,8 +1368,10 @@ public class AppDbContext : DbContext
             entity.Property(a => a.Monedas).HasPrecision(18, 4);
             entity.Property(a => a.EfectivoSistema).HasPrecision(18, 4);
             entity.Property(a => a.BancosSistema).HasPrecision(18, 4);
+            entity.Property(a => a.MontoApertura).HasPrecision(18, 4);
             entity.Property(a => a.Observacion).HasMaxLength(250);
             entity.Property(a => a.Estado).HasMaxLength(20).IsRequired();
+            entity.Ignore(a => a.EfectivoEsperado);
 
             // Restrict y no SetNull: el cuadre es DE esa persona, y sin ella no
             // significa nada. Un usuario con cuadres se desactiva, no se borra.
@@ -1282,6 +1380,12 @@ public class AppDbContext : DbContext
 
             entity.HasOne<Usuario>().WithMany()
                 .HasForeignKey(a => a.RegistradoPorId).OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(a => a.MovimientoAperturaId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(a => a.MovimientoCierreId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ArqueoGasto>(entity =>

@@ -19,6 +19,8 @@ import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { metodoPagoApi } from './finanzasApi'
 import type { MetodoPagoResponse, TipoMetodoPago } from './finanzasApi'
+import { cuentaFinancieraApi } from './cuentaFinancieraApi'
+import type { CuentaFinancieraResponse } from './cuentaFinancieraApi'
 
 const TIPOS: { value: TipoMetodoPago; label: string }[] = [
   { value: 'EFECTIVO', label: 'Efectivo' },
@@ -28,11 +30,8 @@ const TIPOS: { value: TipoMetodoPago; label: string }[] = [
 
 const VACIO = {
   nombre: '',
-  tipo: 'EFECTIVO' as TipoMetodoPago,
-  banco: '',
-  numeroCuenta: '',
-  cci: '',
-  titular: '',
+  tipo: 'BILLETERA_DIGITAL' as TipoMetodoPago,
+  cuentaFinancieraId: 0,
 }
 
 /**
@@ -40,14 +39,16 @@ const VACIO = {
  * compartido por compras, cuentas por cobrar, cuentas por pagar, mis cobros y
  * el arqueo diario — se declara una vez aquí y todos lo reusan.
  *
- * El efectivo no identifica nada más; billetera digital y transferencia sí
- * apuntan a una cuenta concreta (banco, número, titular) — "Transferencia" a
- * secas no dice a qué cuenta va la plata.
+ * Es solo un CANAL, no una cuenta con saldo: la plata de verdad vive en la
+ * Cuenta Financiera a la que apunta (ver Bancos). Efectivo es la excepción —
+ * es único y fijo, no se crea otro ni se edita — porque no apunta a ninguna
+ * cuenta en concreto: se resuelve según quién cobra.
  */
 export function MetodosPagoPage() {
   const { puede } = usePermisos()
   const toast = useToast()
   const [metodos, setMetodos] = useState<MetodoPagoResponse[]>([])
+  const [cuentas, setCuentas] = useState<CuentaFinancieraResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -61,7 +62,9 @@ export function MetodosPagoPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      setMetodos(await metodoPagoApi.getAll())
+      const [m, c] = await Promise.all([metodoPagoApi.getAll(), cuentaFinancieraApi.getAll()])
+      setMetodos(m)
+      setCuentas(c)
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los métodos de pago.')
@@ -74,7 +77,11 @@ export function MetodosPagoPage() {
     void cargar()
   }, [cargar])
 
-  useRealtime('metodospago', cargar)
+  useRealtime(['metodospago', 'cuentasfinancieras'], cargar)
+
+  // A qué cuenta puede apuntar un método: bancos y pasarelas, nunca la Caja
+  // General (esa es Efectivo, y Efectivo no elige cuenta).
+  const cuentasElegibles = cuentas.filter((c) => c.naturaleza !== 'CAJA' && c.activo)
 
   const abrirNuevo = () => {
     setEditando(null)
@@ -87,33 +94,23 @@ export function MetodosPagoPage() {
     setForm({
       nombre: m.nombre,
       tipo: m.tipo,
-      banco: m.banco ?? '',
-      numeroCuenta: m.numeroCuenta ?? '',
-      cci: m.cci ?? '',
-      titular: m.titular ?? '',
+      cuentaFinancieraId: m.cuentaFinancieraId ?? 0,
     })
     setAbierto(true)
   }
 
   const guardar = async () => {
     if (!form.nombre.trim()) return toast.error('Ingresa el nombre.')
-    if (form.tipo === 'TRANSFERENCIA' && !form.banco.trim()) return toast.error('Indica el banco.')
-    if (form.tipo !== 'EFECTIVO' && !form.numeroCuenta.trim()) {
-      return toast.error(
-        form.tipo === 'TRANSFERENCIA' ? 'Indica el número de cuenta.' : 'Indica el número de celular.',
-      )
+    if (form.tipo !== 'EFECTIVO' && !form.cuentaFinancieraId) {
+      return toast.error('Elige a qué cuenta financiera va este método.')
     }
 
     setGuardando(true)
     try {
-      const conCuenta = form.tipo !== 'EFECTIVO'
       const cuerpo = {
         nombre: form.nombre.trim(),
         tipo: form.tipo,
-        banco: form.tipo === 'TRANSFERENCIA' ? form.banco.trim() || null : null,
-        numeroCuenta: conCuenta ? form.numeroCuenta.trim() || null : null,
-        cci: form.tipo === 'TRANSFERENCIA' ? form.cci.trim() || null : null,
-        titular: conCuenta ? form.titular.trim() || null : null,
+        cuentaFinancieraId: form.tipo === 'EFECTIVO' ? null : form.cuentaFinancieraId,
       }
       if (editando) {
         await metodoPagoApi.update(editando.id, { ...cuerpo, activo: editando.activo })
@@ -144,10 +141,7 @@ export function MetodosPagoPage() {
           await metodoPagoApi.update(m.id, {
             nombre: m.nombre,
             tipo: m.tipo,
-            banco: m.banco,
-            numeroCuenta: m.numeroCuenta,
-            cci: m.cci,
-            titular: m.titular,
+            cuentaFinancieraId: m.cuentaFinancieraId,
             activo: !m.activo,
           })
           await cargar()
@@ -171,32 +165,13 @@ export function MetodosPagoPage() {
       render: (row) => <Badge>{TIPOS.find((t) => t.value === row.tipo)?.label ?? row.tipo}</Badge>,
     },
     {
-      key: 'banco',
-      label: 'Banco',
+      key: 'cuentaFinanciera',
+      label: 'Cuenta',
       filterType: 'select',
-      filterOptions: [...new Set(metodos.map((m) => m.banco).filter((v): v is string => !!v))]
+      filterOptions: [...new Set(metodos.map((m) => m.cuentaFinanciera).filter((v): v is string => !!v))]
         .sort((a, b) => a.localeCompare(b, 'es'))
         .map((v) => ({ value: v, label: v })),
-      render: (row) => row.banco ?? <span className="text-ink-soft">—</span>,
-    },
-    // Número, CCI y titular son datos únicos por método: no aportan como filtro.
-    {
-      key: 'numeroCuenta',
-      label: 'Número',
-      filterable: false,
-      render: (row) => row.numeroCuenta ?? <span className="text-ink-soft">—</span>,
-    },
-    {
-      key: 'cci',
-      label: 'CCI',
-      filterable: false,
-      render: (row) => row.cci ?? <span className="text-ink-soft">—</span>,
-    },
-    {
-      key: 'titular',
-      label: 'Titular',
-      filterable: false,
-      render: (row) => row.titular ?? <span className="text-ink-soft">—</span>,
+      render: (row) => row.cuentaFinanciera ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'activo',
@@ -235,10 +210,16 @@ export function MetodosPagoPage() {
       cardIcon={Coins}
       searchPlaceholder="Buscar método de pago..."
       empty={cargando ? 'Cargando métodos de pago...' : 'Todavía no hay métodos de pago.'}
+      note="Efectivo es fijo: no se crea otro, no se edita ni se desactiva — se resuelve según quién cobra, no apunta a ninguna cuenta."
       rowActions={(row) => (
         <>
           {puede('finanzas.metodospago', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+            <RowAction
+              label={`Editar ${row.nombre}`}
+              disabled={row.tipo === 'EFECTIVO'}
+              disabledReason="Efectivo es fijo"
+              onClick={() => abrirEdicion(row)}
+            >
               <Pencil size={15} />
             </RowAction>
           )}
@@ -246,6 +227,8 @@ export function MetodosPagoPage() {
             <RowAction
               label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
               tone={row.activo ? 'warning' : 'success'}
+              disabled={row.tipo === 'EFECTIVO'}
+              disabledReason="Efectivo es fijo"
               onClick={() => cambiarEstado(row)}
             >
               {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
@@ -271,12 +254,12 @@ export function MetodosPagoPage() {
         }
       >
         <div className="flex flex-col gap-4">
-
           <Desplegable
             label="Tipo"
             value={form.tipo}
             onChange={(v) => setForm({ ...form, tipo: v as TipoMetodoPago })}
-            options={TIPOS}
+            // Efectivo ya existe y es único: no se ofrece para crear uno nuevo.
+            options={TIPOS.filter((t) => t.value !== 'EFECTIVO')}
           />
 
           <Input
@@ -286,42 +269,22 @@ export function MetodosPagoPage() {
             onChange={(e) => setForm({ ...form, nombre: e.target.value })}
           />
 
-          {form.tipo === 'TRANSFERENCIA' && (
-            <Input
-              label="Banco"
-              placeholder="BCP, Interbank, BBVA..."
-              value={form.banco}
-              onChange={(e) => setForm({ ...form, banco: e.target.value })}
-            />
-          )}
-
-          {form.tipo !== 'EFECTIVO' && (
-            <Input
-              label={form.tipo === 'TRANSFERENCIA' ? 'Número de cuenta' : 'Número de celular'}
-              value={form.numeroCuenta}
-              onChange={(e) => setForm({ ...form, numeroCuenta: e.target.value })}
-            />
-          )}
-
-          {form.tipo === 'TRANSFERENCIA' && (
-            <Input
-              label="CCI"
-              optional
-              placeholder="Código de cuenta interbancario"
-              value={form.cci}
-              onChange={(e) => setForm({ ...form, cci: e.target.value })}
-            />
-          )}
-
-          {form.tipo !== 'EFECTIVO' && (
-            <Input
-              label="Titular"
-              optional
-              placeholder="A nombre de quién está"
-              value={form.titular}
-              onChange={(e) => setForm({ ...form, titular: e.target.value })}
-            />
-          )}
+          <Desplegable
+            label="Cuenta financiera"
+            value={form.cuentaFinancieraId}
+            onChange={(v) => setForm({ ...form, cuentaFinancieraId: Number(v) })}
+            placeholder="A qué cuenta va la plata"
+            hint={
+              cuentasElegibles.length === 0 ? (
+                <span className="text-xs text-amber-600">Crea una cuenta en Bancos primero</span>
+              ) : undefined
+            }
+            options={cuentasElegibles.map((c) => ({
+              value: c.id,
+              label: c.nombre,
+              detalle: c.numeroCuenta ?? undefined,
+            }))}
+          />
         </div>
       </Modal>
 

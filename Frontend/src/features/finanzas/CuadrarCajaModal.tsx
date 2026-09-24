@@ -155,8 +155,11 @@ export function CuadrarCajaModal({
 
   const efectivoSistema = detalle?.efectivoSistema ?? 0
   const bancosSistema = detalle?.bancosSistema ?? 0
+  // Lo que el dueño le entregó para gastos de ruta, si le dieron algo ese día.
+  const montoApertura = detalle?.arqueo?.montoApertura ?? 0
+  const efectivoEsperado = montoApertura + efectivoSistema
 
-  const diferenciaEfectivo = totalEfectivoReal - efectivoSistema
+  const diferenciaEfectivo = totalEfectivoReal - efectivoEsperado
   const diferenciaBancos = totalDigitalReal - bancosSistema
 
   // Los faltantes de cada lado se suman sin dejar que un sobrante compense,
@@ -374,10 +377,17 @@ export function CuadrarCajaModal({
                   ))}
                 </div>
 
+                {montoApertura > 0 && (
+                  <p className="text-xs text-ink-soft">
+                    Se le entregó {soles(montoApertura)} para gastos de ruta ese día: se suma a lo
+                    que debe traer.
+                  </p>
+                )}
+
                 <Totales
                   filas={[
                     { label: 'Total efectivo real', valor: totalEfectivoReal, fuerte: true },
-                    { label: 'Sistema (debe traer)', valor: efectivoSistema },
+                    { label: 'Debe traer', valor: efectivoEsperado },
                     { label: 'Diferencia', valor: diferenciaEfectivo, diferencia: true },
                   ]}
                 />

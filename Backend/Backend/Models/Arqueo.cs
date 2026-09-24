@@ -2,6 +2,12 @@ namespace Backend.Models;
 
 public static class EstadoArqueo
 {
+    /// <summary>
+    /// Se entregó fondo de ruta pero todavía no se cerró el día: existe la
+    /// fila, pero Billetes/Monedas/EfectivoSistema aún no significan nada.
+    /// </summary>
+    public const string Abierto = "ABIERTO";
+
     public const string Cuadrado = "CUADRADO";
 
     /// <summary>Se registró mal. No cuenta, pero se conserva con su rastro.</summary>
@@ -61,6 +67,18 @@ public class ArqueoCaja
     /// <summary>Lo que el sistema dice que le entró por Yape, Plin o transferencia.</summary>
     public decimal BancosSistema { get; set; }
 
+    /// <summary>
+    /// Lo que el dueño le entregó para gastos de ruta (peaje, combustible),
+    /// aparte de lo que cobra. Opcional: 0 si ese día no le dieron nada.
+    /// </summary>
+    public decimal MontoApertura { get; set; }
+
+    /// <summary>El Egreso en Caja General cuando se entregó el fondo de ruta. Null si MontoApertura=0.</summary>
+    public int? MovimientoAperturaId { get; set; }
+
+    /// <summary>El Ingreso en Caja General por lo que se liquidó al cerrar.</summary>
+    public int? MovimientoCierreId { get; set; }
+
     public string? Observacion { get; set; }
 
     public string Estado { get; set; } = EstadoArqueo.Cuadrado;
@@ -85,8 +103,14 @@ public class ArqueoCaja
 
     public decimal TotalDigitalReal => PagosDigitales.Sum(p => p.Monto);
 
+    /// <summary>
+    /// Lo que debería traer: lo que cobró más el fondo de ruta que se le dio
+    /// (si alguno). Ver docs/finanzas-tesoreria.md, sección 1.
+    /// </summary>
+    public decimal EfectivoEsperado => MontoApertura + EfectivoSistema;
+
     /// <summary>Negativa: falta dinero. Positiva: sobra.</summary>
-    public decimal DiferenciaEfectivo => TotalEfectivoReal - EfectivoSistema;
+    public decimal DiferenciaEfectivo => TotalEfectivoReal - EfectivoEsperado;
 
     public decimal DiferenciaBancos => TotalDigitalReal - BancosSistema;
 

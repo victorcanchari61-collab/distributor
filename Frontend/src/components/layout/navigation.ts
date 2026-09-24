@@ -29,6 +29,7 @@ import {
   PackageSearch,
   Receipt,
   ReceiptText,
+  Repeat,
   Route,
   ScrollText,
   Settings,
@@ -170,12 +171,14 @@ export const NAV_GROUPS: NavGroup[] = [
     sys: 'finanzas',
     icon: Landmark,
     items: [
+      { id: 'finanzas.bancos', label: 'Bancos', icon: Landmark },
       { id: 'finanzas.metodospago', label: 'Métodos de pago', icon: Coins },
       { id: 'finanzas.cobrar', label: 'Cuentas por cobrar', icon: Wallet },
       { id: 'finanzas.pagar', label: 'Cuentas por pagar', icon: CreditCard },
       { id: 'finanzas.miscobros', label: 'Mis cobros', icon: HandCoins },
       { id: 'finanzas.ganancias', label: 'Mis ganancias', icon: TrendingUp },
       { id: 'finanzas.arqueo', label: 'Arqueo diario', icon: Calculator },
+      { id: 'finanzas.operativos', label: 'Gastos operativos', icon: Repeat },
     ],
   },
   {

@@ -54,3 +54,12 @@ public class RegistrarArqueoRequest
     public List<ArqueoGastoRequest> Gastos { get; set; } = [];
     public List<ArqueoPagoDigitalRequest> PagosDigitales { get; set; } = [];
 }
+
+/// <summary>El dueño entrega efectivo a alguien para gastos de ruta, antes de que salga.</summary>
+public class EntregarFondoRequest
+{
+    public int UsuarioId { get; set; }
+    public DateTime Fecha { get; set; }
+    public decimal Monto { get; set; }
+    public string? Observacion { get; set; }
+}

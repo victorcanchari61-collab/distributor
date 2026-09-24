@@ -12,10 +12,9 @@ export interface MetodoPagoResponse {
   id: number
   nombre: string
   tipo: TipoMetodoPago
-  banco: string | null
-  numeroCuenta: string | null
-  cci: string | null
-  titular: string | null
+  /** A qué cuenta financiera va la plata. Null solo en Efectivo. */
+  cuentaFinancieraId: number | null
+  cuentaFinanciera: string | null
   activo: boolean
   /** Cuántos documentos ya lo usan. Si hay alguno, no se elimina. */
   usos: number
@@ -24,10 +23,8 @@ export interface MetodoPagoResponse {
 export interface MetodoPagoRequest {
   nombre: string
   tipo: TipoMetodoPago
-  banco?: string | null
-  numeroCuenta?: string | null
-  cci?: string | null
-  titular?: string | null
+  /** A qué cuenta financiera va la plata. Obligatorio salvo en Efectivo. */
+  cuentaFinancieraId?: number | null
 }
 
 /** Lo justo para elegir con cuál se cobra: sin datos de cuenta ni contadores. */

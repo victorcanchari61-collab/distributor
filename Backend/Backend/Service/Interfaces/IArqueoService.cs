@@ -23,11 +23,17 @@ public interface IArqueoService
     /// <summary>Todo lo necesario para cuadrar a una persona en un día.</summary>
     Task<DetalleCuadreResponse> GetDetalleAsync(DateTime fecha, int usuarioId);
 
+    /// <summary>
+    /// El dueño le entrega efectivo a alguien para gastos de ruta, antes de
+    /// que salga. Trazable: postea el Egreso en la Caja General ahí mismo.
+    /// </summary>
+    Task<ArqueoCajaResponse> EntregarFondoAsync(EntregarFondoRequest request, int? entregadoPorId);
+
     /// <summary>Registra o corrige el cuadre de esa persona y ese día.</summary>
     Task<ArqueoCajaResponse> RegistrarAsync(RegistrarArqueoRequest request, int? registradoPorId);
 
     /// <summary>Deja sin efecto un cuadre mal registrado, conservándolo.</summary>
-    Task<ArqueoCajaResponse> AnularAsync(int id);
+    Task<ArqueoCajaResponse> AnularAsync(int id, int? usuarioId);
 
     /// <summary>Una página del historial de cuadres ya registrados.</summary>
     Task<PaginaResponse<ArqueoCajaResponse>> ListarAsync(ConsultaTablaRequest consulta);

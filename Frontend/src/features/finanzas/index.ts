@@ -8,3 +8,23 @@ export type { MetodoPagoOpcion, MetodoPagoResponse, MetodoPagoRequest, TipoMetod
 export { MisGananciasPage } from './MisGananciasPage'
 export { gananciaApi } from './gananciaApi'
 export type { GananciaPagina, GananciaProducto, GananciaResumen } from './gananciaApi'
+export { CuentasFinancierasPage } from './CuentasFinancierasPage'
+export { cuentaFinancieraApi, conciliacionBancariaApi } from './cuentaFinancieraApi'
+export type {
+  CuentaFinancieraRequest,
+  CuentaFinancieraResponse,
+  NaturalezaCuenta,
+  MovimientoCuentaResponse,
+  ConciliacionBancariaRequest,
+  ConciliacionBancariaResponse,
+} from './cuentaFinancieraApi'
+export { GastosOperativosPage } from './GastosOperativosPage'
+export { gastoOperativoApi } from './gastoOperativoApi'
+export type {
+  GastoRecurrenteRequest,
+  GastoRecurrenteResponse,
+  GastoPendienteResponse,
+  MovimientoOperativoRequest,
+  MovimientoOperativoResponse,
+  TipoMovimientoOperativo,
+} from './gastoOperativoApi'

@@ -8,10 +8,9 @@ public class MetodoPagoResponse
     /// <summary>EFECTIVO, BILLETERA_DIGITAL o TRANSFERENCIA.</summary>
     public string Tipo { get; set; } = string.Empty;
 
-    public string? Banco { get; set; }
-    public string? NumeroCuenta { get; set; }
-    public string? Cci { get; set; }
-    public string? Titular { get; set; }
+    /// <summary>A qué cuenta financiera va la plata. Null solo en Efectivo.</summary>
+    public int? CuentaFinancieraId { get; set; }
+    public string? CuentaFinanciera { get; set; }
 
     public bool Activo { get; set; }
 

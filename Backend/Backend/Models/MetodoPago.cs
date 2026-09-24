@@ -20,10 +20,11 @@ public static class TipoMetodoPago
 /// cobrar, cuentas por pagar, mis cobros y el arqueo diario — se declara una
 /// sola vez y todos lo reusan.
 ///
-/// La forma cambia según el tipo: el efectivo no necesita nada más, pero una
-/// billetera digital o una transferencia identifican una cuenta concreta, no
-/// solo un medio genérico — "Transferencia" a secas no dice a qué banco va la
-/// plata.
+/// Es solo un CANAL, no una cuenta con saldo: la plata de verdad vive en la
+/// <see cref="CuentaFinanciera"/> a la que este método apunta. Efectivo no
+/// apunta a ninguna fija — se resuelve según quién cobra (su arqueo del día) —
+/// y por eso es el único tipo que no lleva <see cref="CuentaFinancieraId"/>.
+/// Ver docs/finanzas-tesoreria.md, sección 0.
 /// </summary>
 public class MetodoPago
 {
@@ -33,17 +34,12 @@ public class MetodoPago
 
     public string Tipo { get; set; } = TipoMetodoPago.Efectivo;
 
-    /// <summary>Banco emisor. Solo aplica a transferencia (y a veces a billetera digital).</summary>
-    public string? Banco { get; set; }
-
-    /// <summary>Número de cuenta (transferencia) o de celular (billetera). No aplica a efectivo.</summary>
-    public string? NumeroCuenta { get; set; }
-
-    /// <summary>Código de cuenta interbancario, para transferencias entre bancos distintos.</summary>
-    public string? Cci { get; set; }
-
-    /// <summary>A nombre de quién está la cuenta o la billetera.</summary>
-    public string? Titular { get; set; }
+    /// <summary>
+    /// A qué cuenta financiera va la plata. Obligatorio salvo en Efectivo, que
+    /// no tiene una cuenta fija.
+    /// </summary>
+    public int? CuentaFinancieraId { get; set; }
+    public CuentaFinanciera? CuentaFinanciera { get; set; }
 
     public bool Activo { get; set; } = true;
 }

@@ -38,11 +38,13 @@ public static class EstadoCuadre
 public class ArqueoService : IArqueoService
 {
     private readonly AppDbContext _context;
+    private readonly ICuentaFinancieraService _cuentas;
     private readonly INotificador _notificador;
 
-    public ArqueoService(AppDbContext context, INotificador notificador)
+    public ArqueoService(AppDbContext context, ICuentaFinancieraService cuentas, INotificador notificador)
     {
         _context = context;
+        _cuentas = cuentas;
         _notificador = notificador;
     }
 
@@ -276,6 +278,63 @@ public class ArqueoService : IArqueoService
         };
     }
 
+    public async Task<ArqueoCajaResponse> EntregarFondoAsync(EntregarFondoRequest request, int? entregadoPorId)
+    {
+        if (!await _context.Usuarios.AnyAsync(u => u.Id == request.UsuarioId))
+        {
+            throw new BadRequestException("Elige a quién le entregas el fondo");
+        }
+
+        if (request.Monto <= 0)
+        {
+            throw new BadRequestException("El fondo tiene que ser mayor a cero");
+        }
+
+        var arqueo = await _context.ArqueosCaja
+            .FirstOrDefaultAsync(a => a.Fecha.Date == request.Fecha.Date && a.UsuarioId == request.UsuarioId);
+
+        if (arqueo is not null && arqueo.Estado != EstadoArqueo.Abierto)
+        {
+            throw new BadRequestException(
+                arqueo.Estado == EstadoArqueo.Anulado
+                    ? "Ese día ya está anulado"
+                    : "Ese día ya se cerró: no se le puede entregar fondo después");
+        }
+
+        if (arqueo is not null && arqueo.MontoApertura > 0)
+        {
+            throw new ConflictException("Ya se le entregó un fondo ese día");
+        }
+
+        var caja = await GetCajaGeneralAsync();
+
+        if (arqueo is null)
+        {
+            arqueo = new ArqueoCaja
+            {
+                Fecha = request.Fecha.Date,
+                UsuarioId = request.UsuarioId,
+                Estado = EstadoArqueo.Abierto,
+            };
+            _context.ArqueosCaja.Add(arqueo);
+            await _context.SaveChangesAsync();
+        }
+
+        var movimiento = await _cuentas.PostearAsync(
+            caja.Id, TipoMovimientoCuenta.Egreso, request.Monto,
+            DocumentoOrigenMovimiento.AperturaFondoRuta, arqueo.Id, entregadoPorId, request.Fecha,
+            request.Observacion?.Trim());
+
+        arqueo.MontoApertura = request.Monto;
+        arqueo.MovimientoAperturaId = movimiento.Id;
+        await _context.SaveChangesAsync();
+
+        await _notificador.AvisarAsync("arqueo", "fondoEntregado", new { arqueo.Id });
+        await _notificador.AvisarAsync("cuentasfinancieras", "movimiento", new { caja.Id });
+
+        return await GetAsync(arqueo.Id);
+    }
+
     public async Task<ArqueoCajaResponse> RegistrarAsync(
         RegistrarArqueoRequest request,
         int? registradoPorId)
@@ -300,6 +359,11 @@ public class ArqueoService : IArqueoService
             .FirstOrDefaultAsync(a => a.Fecha.Date == request.Fecha.Date
                                       && a.UsuarioId == request.UsuarioId);
 
+        if (arqueo?.Estado == EstadoArqueo.Anulado)
+        {
+            throw new BadRequestException("Ese día está anulado: registra uno nuevo si hace falta");
+        }
+
         if (arqueo is null)
         {
             arqueo = new ArqueoCaja
@@ -312,7 +376,8 @@ public class ArqueoService : IArqueoService
         else
         {
             // Volver a cuadrar corrige el anterior: se limpian sus lineas en vez
-            // de sumarlas a las nuevas.
+            // de sumarlas a las nuevas. MontoApertura y su movimiento (si hubo
+            // fondo de ruta) NO se tocan: son de la apertura, no del cierre.
             _context.ArqueoGastos.RemoveRange(arqueo.Gastos);
             _context.ArqueoPagosDigitales.RemoveRange(arqueo.PagosDigitales);
             arqueo.Gastos.Clear();
@@ -358,18 +423,53 @@ public class ArqueoService : IArqueoService
         }
 
         await _context.SaveChangesAsync();
+
+        // Corregir un cuadre ya cerrado reversa lo que se había liquidado
+        // antes de postear lo nuevo — si no, la Caja General terminaría con
+        // las dos liquidaciones sumadas.
+        if (arqueo.MovimientoCierreId is int movimientoCierreAnteriorId)
+        {
+            await _cuentas.ReversarAsync(movimientoCierreAnteriorId, registradoPorId);
+            arqueo.MovimientoCierreId = null;
+        }
+
+        if (arqueo.TotalEfectivoReal > 0)
+        {
+            var caja = await GetCajaGeneralAsync();
+            var liquidacion = await _cuentas.PostearAsync(
+                caja.Id, TipoMovimientoCuenta.Ingreso, arqueo.TotalEfectivoReal,
+                DocumentoOrigenMovimiento.LiquidacionArqueo, arqueo.Id, registradoPorId, arqueo.Fecha,
+                $"Liquidación de {arqueo.Fecha:dd/MM/yyyy}");
+
+            arqueo.MovimientoCierreId = liquidacion.Id;
+            await _context.SaveChangesAsync();
+            await _notificador.AvisarAsync("cuentasfinancieras", "movimiento", new { caja.Id });
+        }
+
         await _notificador.AvisarAsync("arqueo", "registrado", new { arqueo.Id });
 
         return await GetAsync(arqueo.Id);
     }
 
-    public async Task<ArqueoCajaResponse> AnularAsync(int id)
+    public async Task<ArqueoCajaResponse> AnularAsync(int id, int? usuarioId)
     {
         var arqueo = await _context.ArqueosCaja.FirstOrDefaultAsync(a => a.Id == id)
             ?? throw new NotFoundException("Cuadre no encontrado");
 
         if (arqueo.Estado == EstadoArqueo.Anulado)
             throw new ConflictException("Ese cuadre ya está anulado");
+
+        // Revierte lo que este día movió de verdad: el fondo que se entregó
+        // (vuelve a la Caja General) y lo que se liquidó (sale de vuelta).
+        if (arqueo.MovimientoAperturaId is int movimientoAperturaId)
+        {
+            await _cuentas.ReversarAsync(movimientoAperturaId, usuarioId);
+        }
+
+        if (arqueo.MovimientoCierreId is int movimientoCierreId)
+        {
+            await _cuentas.ReversarAsync(movimientoCierreId, usuarioId);
+        }
 
         // No se borra: quien cuadro mal y cuando es parte de lo que se revisa
         // cuando aparece un faltante.
@@ -532,13 +632,20 @@ public class ArqueoService : IArqueoService
 
     private static string EstadoDe(ArqueoCaja? arqueo)
     {
-        if (arqueo is null) return EstadoCuadre.Pendiente;
+        // Null o Abierto es lo mismo de cara al listado: se le entregó fondo
+        // o no, pero todavía no cerró el día, así que no hay nada que cuadrar.
+        if (arqueo is null || arqueo.Estado == EstadoArqueo.Abierto) return EstadoCuadre.Pendiente;
         if (arqueo.Estado == EstadoArqueo.Anulado) return EstadoCuadre.Anulado;
 
         return arqueo.DiferenciaEfectivo == 0 && arqueo.DiferenciaBancos == 0
             ? EstadoCuadre.Cuadrado
             : EstadoCuadre.ConDiferencia;
     }
+
+    /// <summary>La única cuenta de efectivo de la empresa. Ver docs/finanzas-tesoreria.md.</summary>
+    private async Task<CuentaFinanciera> GetCajaGeneralAsync() =>
+        await _context.CuentasFinancieras.FirstOrDefaultAsync(c => c.Naturaleza == NaturalezaCuenta.Caja)
+        ?? throw new InvalidOperationException("No existe la Caja General");
 
     private async Task<Dictionary<int, string>> NombresAsync(IEnumerable<int> ids)
     {
@@ -606,6 +713,8 @@ public class ArqueoService : IArqueoService
             Monedas = a.Monedas,
             EfectivoSistema = a.EfectivoSistema,
             BancosSistema = a.BancosSistema,
+            MontoApertura = a.MontoApertura,
+            EfectivoEsperado = a.EfectivoEsperado,
             TotalEfectivoReal = a.TotalEfectivoReal,
             TotalDigitalReal = a.TotalDigitalReal,
             DiferenciaEfectivo = a.DiferenciaEfectivo,

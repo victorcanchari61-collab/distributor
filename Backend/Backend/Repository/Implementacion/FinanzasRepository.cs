@@ -20,16 +20,23 @@ public class FinanzasRepository : IFinanzasRepository
 
     public async Task<IEnumerable<MetodoPago>> GetMetodosPagoAsync() =>
         await _context.MetodosPago
+            .Include(m => m.CuentaFinanciera)
             .OrderByDescending(m => m.Activo)
             .ThenBy(m => m.Nombre)
             .ToListAsync();
 
     public async Task<MetodoPago?> GetMetodoPagoAsync(int id) =>
-        await _context.MetodosPago.FirstOrDefaultAsync(m => m.Id == id);
+        await _context.MetodosPago
+            .Include(m => m.CuentaFinanciera)
+            .FirstOrDefaultAsync(m => m.Id == id);
 
     public async Task<bool> ExisteNombreMetodoPagoAsync(string nombre, int? excepto = null) =>
         await _context.MetodosPago.AnyAsync(m =>
             m.Nombre == nombre && (excepto == null || m.Id != excepto));
+
+    public async Task<bool> ExisteTipoMetodoPagoAsync(string tipo, int? excepto = null) =>
+        await _context.MetodosPago.AnyAsync(m =>
+            m.Tipo == tipo && (excepto == null || m.Id != excepto));
 
     public async Task<MetodoPago> AddMetodoPagoAsync(MetodoPago metodo)
     {

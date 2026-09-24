@@ -131,7 +131,21 @@ public static class CatalogoPermisos
             // mercadería. Es un dato del negocio, no de cualquiera: se da a
             // quien lo necesite, y el alcance lo recorta a lo propio.
             ["finanzas.ganancias"] = [Accion.Ver],
+            // El arqueo ahora también entrega el fondo de ruta (apertura) y
+            // liquida a la Caja General al cerrar — mismo permiso, es la misma
+            // pantalla y el mismo flujo de siempre.
             ["finanzas.arqueo"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Eliminar, Accion.Cobrar, Accion.Exportar],
+            // La Caja General: solo se consulta (saldo, movimientos). No se
+            // crea ni se edita — es una cuenta fija de la empresa.
+            ["finanzas.caja"] = [Accion.Ver],
+            // Cuentas bancarias: catálogo (sin eliminar: una cuenta con
+            // movimientos no se puede borrar sin dejar huérfano su historial)
+            // más la conciliación contra el extracto.
+            ["finanzas.bancos"] = [Accion.Ver, Accion.Crear, Accion.Editar],
+            // Ingresos no ligados a venta (préstamos, aportes) y egresos
+            // operativos (planilla, alquiler, servicios), con sus plantillas
+            // recurrentes.
+            ["finanzas.operativos"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Eliminar],
 
             // --- TMS ---
             /*

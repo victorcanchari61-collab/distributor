@@ -13,19 +13,15 @@ public class MetodoPagoValidator<T> : AbstractValidator<T> where T : MetodoPagoR
             .Must(t => TipoMetodoPago.Todos.Contains(t))
             .WithMessage("El tipo debe ser EFECTIVO, BILLETERA_DIGITAL o TRANSFERENCIA");
 
-        // El efectivo no pide banco ni cuenta: no hay a donde depositar.
-        RuleFor(x => x.Banco)
-            .NotEmpty().WithMessage("Indica el banco")
-            .When(x => x.Tipo == TipoMetodoPago.Transferencia);
+        // El efectivo no apunta a ninguna cuenta fija (se resuelve segun quien
+        // cobra); los demas SI necesitan saber a que cuenta va la plata.
+        RuleFor(x => x.CuentaFinancieraId)
+            .NotNull().WithMessage("Elige a qué cuenta financiera va este método")
+            .When(x => x.Tipo != TipoMetodoPago.Efectivo);
 
-        RuleFor(x => x.NumeroCuenta)
-            .NotEmpty().WithMessage("Indica el número de cuenta o de celular")
-            .When(x => x.Tipo is TipoMetodoPago.Transferencia or TipoMetodoPago.BilleteraDigital);
-
-        RuleFor(x => x.Banco).MaximumLength(60);
-        RuleFor(x => x.NumeroCuenta).MaximumLength(30);
-        RuleFor(x => x.Cci).MaximumLength(30);
-        RuleFor(x => x.Titular).MaximumLength(120);
+        RuleFor(x => x.CuentaFinancieraId)
+            .Null().WithMessage("Efectivo no se enlaza a ninguna cuenta")
+            .When(x => x.Tipo == TipoMetodoPago.Efectivo);
     }
 }
 

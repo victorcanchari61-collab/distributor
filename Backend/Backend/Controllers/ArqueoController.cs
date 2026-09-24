@@ -106,7 +106,13 @@ public class ArqueoController : ControllerBase
 
     [HttpPatch("{id:int}/anular")]
     [Permiso("finanzas.arqueo", Accion.Anular)]
-    public async Task<IActionResult> Anular(int id) => Ok(await _arqueo.AnularAsync(id));
+    public async Task<IActionResult> Anular(int id) => Ok(await _arqueo.AnularAsync(id, UsuarioId));
+
+    /// <summary>El dueño entrega efectivo para gastos de ruta, antes de que salga.</summary>
+    [HttpPost("fondo")]
+    [Permiso("finanzas.arqueo", Accion.Crear)]
+    public async Task<IActionResult> EntregarFondo([FromBody] EntregarFondoRequest request) =>
+        Ok(await _arqueo.EntregarFondoAsync(request, UsuarioId));
 
     /// <summary>Marca que el faltante ya se le descontó o lo repuso.</summary>
     [HttpPatch("{id:int}/saldar")]

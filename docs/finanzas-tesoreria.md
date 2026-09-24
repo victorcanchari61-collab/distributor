@@ -1,8 +1,12 @@
 # Diseño: módulo de Finanzas / Tesorería
 
-> Estado: **en discusión**, paso a paso por submódulo. Este archivo se va
-> actualizando a medida que se confirman decisiones. Nada de esto está
-> implementado todavía — es solo el diseño acordado antes de tocar código.
+> Estado: secciones 0, 1, 1.b, 2 y 4 **implementadas de punta a punta (backend
+> verificado con harness + frontend) y funcionando**: `CuentaFinanciera` +
+> `MovimientoCuenta`, extensión de `ArqueoCaja` con fondo de ruta, corrección
+> de `MetodoPago` (Efectivo único/fijo, enlace a Cuenta Financiera), pantalla
+> "Bancos" (cuentas + movimientos + conciliación), y "Gastos operativos"
+> (pendientes/recurrentes/movimientos). Secciones 3 (Cuentas por pagar) y 5
+> (Tesorería) siguen sin diseñar — son las que quedan.
 
 ## Por qué hace falta
 

@@ -97,6 +97,10 @@ export interface ArqueoCajaResponse {
   monedas: number
   efectivoSistema: number
   bancosSistema: number
+  /** Lo que el dueño entregó para gastos de ruta. 0 si ese día no le dieron nada. */
+  montoApertura: number
+  /** Lo que debería traer: el fondo más lo que cobró. */
+  efectivoEsperado: number
   totalEfectivoReal: number
   totalDigitalReal: number
   diferenciaEfectivo: number
@@ -173,6 +177,14 @@ export interface RegistrarArqueoRequest {
   pagosDigitales: ArqueoPagoDigitalRequest[]
 }
 
+/** El dueño entrega efectivo a alguien para gastos de ruta, antes de que salga. */
+export interface EntregarFondoRequest {
+  usuarioId: number
+  fecha: string
+  monto: number
+  observacion?: string | null
+}
+
 export const arqueoApi = {
   cuadres: (desde: string, hasta: string) =>
     api.get<CuadrePendienteResponse[]>(`/arqueo/cuadres?desde=${desde}&hasta=${hasta}`),
@@ -188,6 +200,9 @@ export const arqueoApi = {
 
   /** Registra o corrige: el mismo día y persona reemplaza el cuadre anterior. */
   registrar: (body: RegistrarArqueoRequest) => api.post<ArqueoCajaResponse>('/arqueo', body),
+
+  /** El dueño entrega efectivo para gastos de ruta, antes de que salga. */
+  entregarFondo: (body: EntregarFondoRequest) => api.post<ArqueoCajaResponse>('/arqueo/fondo', body),
 
   anular: (id: number) => api.patch<ArqueoCajaResponse>(`/arqueo/${id}/anular`),
 

@@ -18,17 +18,20 @@ namespace Backend.Service.Implementacion;
 public class FinanzasService : IFinanzasService
 {
     private readonly IFinanzasRepository _repository;
+    private readonly ICuentaFinancieraService _cuentas;
     private readonly IValidator<CreateMetodoPagoRequest> _createMetodoPago;
     private readonly IValidator<UpdateMetodoPagoRequest> _updateMetodoPago;
     private readonly INotificador _notificador;
 
     public FinanzasService(
         IFinanzasRepository repository,
+        ICuentaFinancieraService cuentas,
         IValidator<CreateMetodoPagoRequest> createMetodoPago,
         IValidator<UpdateMetodoPagoRequest> updateMetodoPago,
         INotificador notificador)
     {
         _repository = repository;
+        _cuentas = cuentas;
         _createMetodoPago = createMetodoPago;
         _updateMetodoPago = updateMetodoPago;
         _notificador = notificador;
@@ -67,8 +70,21 @@ public class FinanzasService : IFinanzasService
             throw new ConflictException("Ya existe un método de pago con ese nombre");
         }
 
+        // Efectivo es único: no se resuelve a una cuenta fija (depende de
+        // quién cobra), así que una segunda instancia no tendría sentido.
+        if (request.Tipo == TipoMetodoPago.Efectivo
+            && await _repository.ExisteTipoMetodoPagoAsync(TipoMetodoPago.Efectivo))
+        {
+            throw new ConflictException("Ya existe el método Efectivo: no se puede crear otro");
+        }
+
+        if (request.Tipo != TipoMetodoPago.Efectivo)
+        {
+            await ValidarCuentaFinancieraAsync(request.CuentaFinancieraId!.Value);
+        }
+
         var metodo = new MetodoPago { Nombre = nombre, Activo = true };
-        AplicarDatosBancarios(metodo, request);
+        AplicarCuentaFinanciera(metodo, request);
 
         await _repository.AddMetodoPagoAsync(metodo);
         var response = MapMetodoPago(metodo, 0);
@@ -81,6 +97,14 @@ public class FinanzasService : IFinanzasService
         await _updateMetodoPago.ValidateAndThrowAsync(request);
 
         var metodo = await GetMetodoPagoOrThrowAsync(id);
+
+        // Es fijo: no cambia de tipo, no se le enlaza ni desenlaza una cuenta,
+        // no se desactiva. Igual que no se crea una segunda instancia.
+        if (metodo.Tipo == TipoMetodoPago.Efectivo)
+        {
+            throw new BadRequestException("Efectivo es fijo: no se puede editar");
+        }
+
         var nombre = request.Nombre.Trim();
 
         if (await _repository.ExisteNombreMetodoPagoAsync(nombre, id))
@@ -88,9 +112,14 @@ public class FinanzasService : IFinanzasService
             throw new ConflictException("Ya existe un método de pago con ese nombre");
         }
 
+        if (request.Tipo != TipoMetodoPago.Efectivo)
+        {
+            await ValidarCuentaFinancieraAsync(request.CuentaFinancieraId!.Value);
+        }
+
         metodo.Nombre = nombre;
         metodo.Activo = request.Activo;
-        AplicarDatosBancarios(metodo, request);
+        AplicarCuentaFinanciera(metodo, request);
 
         await _repository.UpdateMetodoPagoAsync(metodo);
         var response = MapMetodoPago(metodo, await _repository.ContarUsosMetodoPagoAsync(id));
@@ -101,6 +130,12 @@ public class FinanzasService : IFinanzasService
     public async Task DeleteMetodoPagoAsync(int id)
     {
         var metodo = await GetMetodoPagoOrThrowAsync(id);
+
+        if (metodo.Tipo == TipoMetodoPago.Efectivo)
+        {
+            throw new BadRequestException("Efectivo es fijo: no se puede eliminar");
+        }
+
         var usos = await _repository.ContarUsosMetodoPagoAsync(id);
 
         if (usos > 0)
@@ -120,42 +155,30 @@ public class FinanzasService : IFinanzasService
         await _repository.GetMetodoPagoAsync(id)
         ?? throw new NotFoundException($"No existe el método de pago {id}");
 
-    /// <summary>
-    /// El efectivo no guarda banco ni cuenta: aunque llegaran en el request se
-    /// descartan, para que cambiar de tipo no deje datos bancarios huerfanos.
-    /// El CCI solo tiene sentido en transferencia, nunca en billetera digital.
-    /// </summary>
-    private static void AplicarDatosBancarios(MetodoPago metodo, MetodoPagoRequestBase request)
+    /// <summary>No apunta a la Caja General: eso es Efectivo, y ese no se enlaza a nada.</summary>
+    private async Task ValidarCuentaFinancieraAsync(int cuentaFinancieraId)
     {
-        metodo.Tipo = request.Tipo;
-
-        if (request.Tipo == TipoMetodoPago.Efectivo)
+        var cuenta = await _cuentas.GetOrThrowAsync(cuentaFinancieraId);
+        if (cuenta.Naturaleza == NaturalezaCuenta.Caja)
         {
-            metodo.Banco = null;
-            metodo.NumeroCuenta = null;
-            metodo.Cci = null;
-            metodo.Titular = null;
-            return;
+            throw new BadRequestException("Este método no puede apuntar a la Caja General");
         }
-
-        metodo.Banco = Limpiar(request.Banco);
-        metodo.NumeroCuenta = Limpiar(request.NumeroCuenta);
-        metodo.Cci = request.Tipo == TipoMetodoPago.Transferencia ? Limpiar(request.Cci) : null;
-        metodo.Titular = Limpiar(request.Titular);
     }
 
-    private static string? Limpiar(string? texto) =>
-        string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
+    /// <summary>Efectivo no se enlaza a ninguna cuenta: el validador ya exige que venga vacío.</summary>
+    private static void AplicarCuentaFinanciera(MetodoPago metodo, MetodoPagoRequestBase request)
+    {
+        metodo.Tipo = request.Tipo;
+        metodo.CuentaFinancieraId = request.Tipo == TipoMetodoPago.Efectivo ? null : request.CuentaFinancieraId;
+    }
 
     private static MetodoPagoResponse MapMetodoPago(MetodoPago m, int usos) => new()
     {
         Id = m.Id,
         Nombre = m.Nombre,
         Tipo = m.Tipo,
-        Banco = m.Banco,
-        NumeroCuenta = m.NumeroCuenta,
-        Cci = m.Cci,
-        Titular = m.Titular,
+        CuentaFinancieraId = m.CuentaFinancieraId,
+        CuentaFinanciera = m.CuentaFinanciera?.Nombre,
         Activo = m.Activo,
         Usos = usos
     };

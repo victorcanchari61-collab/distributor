@@ -156,6 +156,10 @@ public class ArqueoCajaResponse
     public decimal EfectivoSistema { get; set; }
     public decimal BancosSistema { get; set; }
 
+    /// <summary>Lo que el dueño entregó para gastos de ruta. 0 si ese día no le dieron nada.</summary>
+    public decimal MontoApertura { get; set; }
+    public decimal EfectivoEsperado { get; set; }
+
     public decimal TotalEfectivoReal { get; set; }
     public decimal TotalDigitalReal { get; set; }
     public decimal DiferenciaEfectivo { get; set; }

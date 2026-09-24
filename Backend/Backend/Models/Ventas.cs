@@ -323,6 +323,13 @@ public class PagoVenta
     /// cobros", pero se conserva en el historial en vez de borrarse.
     /// </summary>
     public bool Anulado { get; set; }
+
+    /// <summary>
+    /// Si es en efectivo, el Ingreso posteado en la Caja del cobrador. Null si
+    /// no es efectivo (no hay a qué caja postear: va directo a una cuenta
+    /// bancaria — ver sección 3, todavía sin conectar).
+    /// </summary>
+    public int? MovimientoCuentaId { get; set; }
 }
 
 /// <summary>Un producto de la nota de venta. El stock ya salió por esta línea.</summary>

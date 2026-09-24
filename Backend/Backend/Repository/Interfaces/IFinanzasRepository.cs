@@ -8,6 +8,7 @@ public interface IFinanzasRepository
     Task<IEnumerable<MetodoPago>> GetMetodosPagoAsync();
     Task<MetodoPago?> GetMetodoPagoAsync(int id);
     Task<bool> ExisteNombreMetodoPagoAsync(string nombre, int? excepto = null);
+    Task<bool> ExisteTipoMetodoPagoAsync(string tipo, int? excepto = null);
     Task<MetodoPago> AddMetodoPagoAsync(MetodoPago metodo);
     Task UpdateMetodoPagoAsync(MetodoPago metodo);
     Task DeleteMetodoPagoAsync(MetodoPago metodo);
