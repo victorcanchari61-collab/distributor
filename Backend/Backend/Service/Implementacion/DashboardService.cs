@@ -474,8 +474,17 @@ public class DashboardService : IDashboardService
         var (primero, ultimo) = Rango(desde, hasta);
         var hoy = Zona.Hoy;
 
-        // Lo que todavía se debe: la misma regla de Cuentas por cobrar — crédito
-        // vigente cuyo detalle vale más que lo pagado.
+        /*
+         * Lo que todavía se debe: la misma regla de Cuentas por cobrar — crédito
+         * vigente cuyo detalle vale más que lo pagado.
+         *
+         * El "Total > Pagado" se filtra ACÁ, antes del ToListAsync, para que lo
+         * resuelva MySQL y solo viajen las notas realmente abiertas. Antes se
+         * traía a memoria CADA nota a crédito jamás confirmada —incluida toda
+         * la que ya se pagó hace años— y recién ahí se descartaban las pagadas:
+         * la consulta se ponía más lenta con cada año de historia, sin importar
+         * el rango de fechas pedido al dashboard.
+         */
         var abiertas = (await _context.NotasVenta
                 .Where(n => n.Estado == EstadoNotaVenta.Confirmada && n.FormaPago == FormaPagoVenta.Credito)
                 .Select(n => new
@@ -486,9 +495,11 @@ public class DashboardService : IDashboardService
                     Total = n.Detalle.Where(d => !d.Anulado).Sum(d => (decimal?)(d.Cantidad * d.PrecioUnitario)) ?? 0m,
                     Pagado = n.Pagos.Where(p => !p.Anulado).Sum(p => (decimal?)p.Monto) ?? 0m,
                 })
+                .Where(n => n.Total > n.Pagado)
                 .AsNoTracking()
                 .ToListAsync())
-            .Where(n => n.Total > n.Pagado)
+            // Dias usa Zona.DiaDe, que no se traduce a SQL: de aquí para abajo ya
+            // son las pocas filas abiertas, no todo el historial.
             .Select(n => new
             {
                 n.ClienteId,

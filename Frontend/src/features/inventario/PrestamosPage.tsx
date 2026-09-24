@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
-import { Eye, HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, Eye, HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -11,6 +11,8 @@ import {
   Input,
   ListPage,
   Modal,
+  PageHeader,
+  PageSection,
   ResumenDocumento,
   RowAction,
   StatCard,
@@ -68,7 +70,7 @@ export function PrestamosPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
-  const [abierto, setAbierto] = useState(false)
+  const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [detalleAbierto, setDetalleAbierto] = useState<PrestamoResponse | null>(null)
   const [devolucionAbierta, setDevolucionAbierta] = useState<PrestamoResponse | null>(null)
   const [cantidadesDevolucion, setCantidadesDevolucion] = useState<Record<number, string>>({})
@@ -134,7 +136,7 @@ export function PrestamosPage() {
 
   // Stock del almacén elegido, para mostrarlo mientras se arma cada línea.
   useEffect(() => {
-    if (!abierto || !cabecera.almacenId) return
+    if (vista !== 'form' || !cabecera.almacenId) return
     let cancelado = false
     void stockApi.getAll(cabecera.almacenId).then((filas) => {
       if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.disponible])))
@@ -142,7 +144,7 @@ export function PrestamosPage() {
     return () => {
       cancelado = true
     }
-  }, [abierto, cabecera.almacenId])
+  }, [vista, cabecera.almacenId])
 
   const abrirNuevo = () => {
     setCabecera({
@@ -152,7 +154,7 @@ export function PrestamosPage() {
       observacion: '',
     })
     setFilas([])
-    setAbierto(true)
+    setVista('form')
   }
 
   const actualizarFila = (id: string, cambio: Partial<FilaPrestamo>) =>
@@ -182,7 +184,7 @@ export function PrestamosPage() {
             cabecera.tipo === 'RECIBIDO' && f.costo ? Number(f.costo) : null,
         })),
       })
-      setAbierto(false)
+      setVista('lista')
       await cargar()
       toast.exito('Préstamo registrado')
     } catch (e) {
@@ -378,6 +380,106 @@ export function PrestamosPage() {
     },
   ]
 
+  if (vista === 'form') {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          icon={<HandCoins size={20} />}
+          title="Nuevo préstamo"
+          description="DADO: sale mercadería propia. RECIBIDO: entra la de un tercero."
+          actions={
+            <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+              <ArrowLeft size={15} />
+              Volver
+            </Button>
+          }
+        />
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_360px] xl:items-start">
+          <PageSection
+            title="Productos"
+            description={`${filas.length} producto${filas.length === 1 ? '' : 's'} agregado${filas.length === 1 ? '' : 's'}`}
+          >
+            {cabecera.tipo === 'RECIBIDO' && (
+              <p className="mb-3 text-xs text-ink-soft">Costo vacío usa el costo de referencia.</p>
+            )}
+            <AgregarProductoPanel
+              productos={productos}
+              stock={stockMap}
+              pideCosto={cabecera.tipo === 'RECIBIDO'}
+              onAgregar={(linea) => setFilas((f) => [...f, linea])}
+            />
+
+            <div className="mt-4">
+              <SysDataTable
+                columns={columnasFilas}
+                rows={filas}
+                rowKey="id"
+                toolbar={false}
+                empty="Agrega productos con el buscador de arriba."
+                actions={(fila) => (
+                  <RowAction
+                    label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
+                    tone="danger"
+                    onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
+                  >
+                    <Trash2 size={15} />
+                  </RowAction>
+                )}
+              />
+            </div>
+          </PageSection>
+
+          <PageSection title="Préstamo">
+            <Desplegable
+              label="Tipo"
+              value={cabecera.tipo}
+              onChange={(v) => setCabecera({ ...cabecera, tipo: v as TipoPrestamo })}
+              options={[
+                { value: 'DADO', label: 'Prestado', nota: 'sale mercadería propia' },
+                { value: 'RECIBIDO', label: 'Recibido', nota: 'entra mercadería de un tercero' },
+              ]}
+            />
+
+            <Desplegable
+              className="mt-4"
+              label="Almacén"
+              value={cabecera.almacenId}
+              onChange={(v) => setCabecera({ ...cabecera, almacenId: Number(v) })}
+              options={activos.map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
+            />
+
+            <Input
+              className="mt-4"
+              label={cabecera.tipo === 'DADO' ? 'A quién le prestas' : 'Quién te presta'}
+              placeholder="Bodega Rosa, Distribuidora López..."
+              value={cabecera.contraparte}
+              onChange={(e) => setCabecera({ ...cabecera, contraparte: e.target.value })}
+            />
+
+            <Input
+              className="mt-4"
+              label="Observación"
+              optional
+              placeholder="Motivo, fecha estimada de devolución..."
+              value={cabecera.observacion}
+              onChange={(e) => setCabecera({ ...cabecera, observacion: e.target.value })}
+            />
+          </PageSection>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+            Cancelar
+          </Button>
+          <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+            Registrar préstamo
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <ListPage
       icon={<HandCoins size={20} />}
@@ -447,99 +549,6 @@ export function PrestamosPage() {
         </>
       )}
     >
-      {/* Nuevo préstamo */}
-      <Modal
-        open={abierto}
-        title="Nuevo préstamo"
-        description="DADO: sale mercadería propia. RECIBIDO: entra la de un tercero."
-        onClose={() => setAbierto(false)}
-        footer={
-          <>
-            <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
-              Cancelar
-            </Button>
-            <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-              Registrar préstamo
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-4">
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Desplegable
-              label="Tipo"
-              value={cabecera.tipo}
-              onChange={(v) => setCabecera({ ...cabecera, tipo: v as TipoPrestamo })}
-              options={[
-                { value: 'DADO', label: 'Prestado', nota: 'sale mercadería propia' },
-                { value: 'RECIBIDO', label: 'Recibido', nota: 'entra mercadería de un tercero' },
-              ]}
-            />
-            <Desplegable
-              label="Almacén"
-              value={cabecera.almacenId}
-              onChange={(v) => setCabecera({ ...cabecera, almacenId: Number(v) })}
-              options={activos.map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
-            />
-          </div>
-
-          <Input
-            label={cabecera.tipo === 'DADO' ? 'A quién le prestas' : 'Quién te presta'}
-            placeholder="Bodega Rosa, Distribuidora López..."
-            value={cabecera.contraparte}
-            onChange={(e) => setCabecera({ ...cabecera, contraparte: e.target.value })}
-          />
-
-          <Input
-            label="Observación"
-            optional
-            placeholder="Motivo, fecha estimada de devolución..."
-            value={cabecera.observacion}
-            onChange={(e) => setCabecera({ ...cabecera, observacion: e.target.value })}
-          />
-
-          <hr className="border-line" />
-
-          <p className="text-sm font-semibold text-ink">Agregar producto</p>
-          {cabecera.tipo === 'RECIBIDO' && (
-            <p className="-mt-2 text-xs text-ink-soft">Costo vacío usa el costo de referencia.</p>
-          )}
-          <AgregarProductoPanel
-            productos={productos}
-            stock={stockMap}
-            pideCosto={cabecera.tipo === 'RECIBIDO'}
-            onAgregar={(linea) => setFilas((f) => [...f, linea])}
-          />
-
-          <hr className="border-line" />
-
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-ink">Productos</p>
-            <span className="text-xs text-ink-soft">
-              {filas.length} producto{filas.length === 1 ? '' : 's'} agregado{filas.length === 1 ? '' : 's'}
-            </span>
-          </div>
-
-          <SysDataTable
-            columns={columnasFilas}
-            rows={filas}
-            rowKey="id"
-            toolbar={false}
-            empty="Agrega productos con el buscador de arriba."
-            actions={(fila) => (
-              <RowAction
-                label={`Quitar ${productos.find((p) => p.id === fila.productoId)?.nombre ?? 'línea'}`}
-                tone="danger"
-                onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
-              >
-                <Trash2 size={15} />
-              </RowAction>
-            )}
-          />
-        </div>
-      </Modal>
-
       {/* Ver detalle */}
       <Modal
         open={detalleAbierto !== null}
