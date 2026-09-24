@@ -171,10 +171,14 @@ public static class CatalogoPermisos
             // --- RR. HH. ---
             // La gente que trabaja en el negocio. No se importa: son pocos y se dan de alta a mano.
             ["rrhh.empleados"] = Catalogo,
-            ["rrhh.asistencia"] = Documento,
-            ["rrhh.vacaciones"] = DocumentoConfirmable,
-            ["rrhh.nomina"] = DocumentoConfirmable,
-            ["rrhh.desempeno"] = Documento,
+            /*
+             * Un registro por empleado y día. Se corrige o se anula (marcado
+             * por error), no se borra: es lo que sostiene el historial. Lleva
+             * además "eliminar" porque desde la misma pantalla se administran
+             * los feriados (Feriado.cs), que SÍ se borran sin más — son solo
+             * una referencia para el calendario, no un documento con historial.
+             */
+            ["rrhh.asistencia"] = [.. Documento, Accion.Eliminar],
 
             // --- Configuración ---
             ["config.usuarios"] = Catalogo,

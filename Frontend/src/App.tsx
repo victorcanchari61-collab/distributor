@@ -38,7 +38,7 @@ import {
 } from './features/inventario'
 import { OrdenesCompraPage, MisComprasPage, RecepcionesPage } from './features/compras'
 import { ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
-import { EmpleadosPage } from './features/rrhh'
+import { AsistenciaPage, EmpleadosPage } from './features/rrhh'
 import {
   ConductoresPage,
   DespachosPage,
@@ -64,6 +64,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'maestros.proveedores': ProveedoresPage,
   'maestros.productos': ProductosPage,
   'rrhh.empleados': EmpleadosPage,
+  'rrhh.asistencia': AsistenciaPage,
   'fact.pedidos': PedidosPage,
   'fact.notaventa': NotasVentaPage,
   'fact.precios': ListasPreciosPage,

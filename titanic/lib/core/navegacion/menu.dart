@@ -352,21 +352,6 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Asistencia',
         icono: Icons.event_available_outlined,
       ),
-      MenuItem(
-        id: 'rrhh.vacaciones',
-        titulo: 'Vacaciones',
-        icono: Icons.event_outlined,
-      ),
-      MenuItem(
-        id: 'rrhh.nomina',
-        titulo: 'Nómina',
-        icono: Icons.payments_outlined,
-      ),
-      MenuItem(
-        id: 'rrhh.desempeno',
-        titulo: 'Desempeño',
-        icono: Icons.speed_outlined,
-      ),
     ],
   ),
   MenuGrupo(

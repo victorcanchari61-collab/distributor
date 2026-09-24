@@ -13,7 +13,6 @@ import {
   CreditCard,
   FileMinus,
   FileText,
-  Gauge,
   HandCoins,
   TrendingUp,
   LayoutDashboard,
@@ -212,10 +211,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: Users,
     items: [
       { id: 'rrhh.empleados', label: 'Empleados', icon: Users },
-      { id: 'rrhh.asistencia', label: 'Asistencia', icon: CalendarCheck, pending: true },
-      { id: 'rrhh.vacaciones', label: 'Vacaciones', icon: CalendarDays, pending: true },
-      { id: 'rrhh.nomina', label: 'Nómina', icon: Banknote, pending: true },
-      { id: 'rrhh.desempeno', label: 'Desempeño', icon: Gauge, pending: true },
+      { id: 'rrhh.asistencia', label: 'Asistencia', icon: CalendarCheck },
     ],
   },
   {

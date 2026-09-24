@@ -29,6 +29,8 @@ public class AppDbContext : DbContext
     public DbSet<Distrito> Distritos => Set<Distrito>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
     public DbSet<Empleado> Empleados => Set<Empleado>();
+    public DbSet<Asistencia> Asistencias => Set<Asistencia>();
+    public DbSet<Feriado> Feriados => Set<Feriado>();
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<UsuarioRol> UsuarioRoles => Set<UsuarioRol>();
@@ -553,6 +555,30 @@ public class AppDbContext : DbContext
 
             // Calculada a partir de nombres y apellidos: no es una columna.
             entity.Ignore(e => e.NombreCompleto);
+        });
+
+        modelBuilder.Entity<Asistencia>(entity =>
+        {
+            entity.ToTable("Asistencias");
+            entity.Property(a => a.Estado).HasMaxLength(20).IsRequired();
+            entity.Property(a => a.Observacion).HasMaxLength(300);
+
+            // Por empleado y por rango de fechas es como se consulta siempre:
+            // la lista y el calendario, los dos.
+            entity.HasIndex(a => new { a.EmpleadoId, a.Fecha });
+
+            entity.HasOne(a => a.Empleado).WithMany()
+                .HasForeignKey(a => a.EmpleadoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(a => a.Usuario).WithMany()
+                .HasForeignKey(a => a.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Feriado>(entity =>
+        {
+            entity.ToTable("Feriados");
+            entity.HasIndex(f => f.Fecha).IsUnique();
+            entity.Property(f => f.Nombre).HasMaxLength(100).IsRequired();
+            entity.Property(f => f.Pago).HasMaxLength(20).IsRequired();
         });
 
         modelBuilder.Entity<Proveedor>(entity =>
