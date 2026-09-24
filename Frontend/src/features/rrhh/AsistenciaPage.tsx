@@ -5,8 +5,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Flag,
   Pencil,
   Plus,
+  Table2,
   Undo2,
   UserCheck,
   UserX,
@@ -17,10 +19,12 @@ import {
   Button,
   Desplegable,
   Input,
-  ListPage,
   Modal,
+  PageHeader,
   RowAction,
   StatCard,
+  SysDataTable,
+  Tabs,
   useConfirmacion,
   useToast,
 } from '../../components/ui'
@@ -33,6 +37,9 @@ import { empleadoApi } from './empleadoApi'
 import type { EmpleadoResponse } from './empleadoApi'
 import { asistenciaApi } from './asistenciaApi'
 import type { AsistenciaResponse, EstadoAsistencia, ResumenAsistencia } from './asistenciaApi'
+import { feriadoApi } from './feriadoApi'
+import type { FeriadoResponse } from './feriadoApi'
+import { FeriadosModal } from './FeriadosModal'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const MESES = [
@@ -47,8 +54,11 @@ const ESTADOS: { value: EstadoAsistencia; label: string }[] = [
   { value: 'PERMISO', label: 'Permiso' },
 ]
 
+// Apagados a propósito: PRESENTE (lo esperable, la mayoría de los días) va en
+// gris neutro y no compite por atención. El color se reserva para lo que de
+// verdad hay que mirar: una tardanza, una falta, un permiso.
 const TONO_ESTADO: Record<EstadoAsistencia, BadgeTone> = {
-  PRESENTE: 'success',
+  PRESENTE: 'neutral',
   TARDANZA: 'warning',
   FALTA: 'danger',
   PERMISO: 'sys',
@@ -60,6 +70,8 @@ const ABREVIA: Record<EstadoAsistencia, string> = {
   FALTA: 'F',
   PERMISO: 'PM',
 }
+
+type Pestana = 'calendario' | 'registro'
 
 /** El mes de `cursor` en semanas de lunes a domingo, con huecos como `null`. */
 function semanasDe(cursor: Date): (string | null)[][] {
@@ -96,14 +108,16 @@ const formVacio = (): FormAsistencia => ({
 
 /**
  * Quién vino, quién faltó, quién llegó tarde. Se marca a mano, uno por uno —
- * no hay reloj biométrico detrás. El calendario es para ver el mes de un
- * vistazo; la tabla de abajo es el registro, con lo mismo filtrable y con
- * acciones para corregir o anular una marca hecha por error.
+ * no hay reloj biométrico detrás. Una pestaña para verlo en calendario, otra
+ * para el registro tal cual —filtrable, con acciones para corregir o anular
+ * una marca hecha por error.
  */
 export function AsistenciaPage() {
   const { puede } = usePermisos()
   const toast = useToast()
   const { confirmar, dialogo } = useConfirmacion()
+
+  const [pestana, setPestana] = useState<Pestana>('calendario')
 
   const [cursor, setCursor] = useState(() => {
     const hoy = new Date()
@@ -113,6 +127,7 @@ export function AsistenciaPage() {
   const [empleados, setEmpleados] = useState<EmpleadoResponse[]>([])
   const [marcas, setMarcas] = useState<AsistenciaResponse[]>([])
   const [resumen, setResumen] = useState<ResumenAsistencia | null>(null)
+  const [feriados, setFeriados] = useState<FeriadoResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -120,6 +135,7 @@ export function AsistenciaPage() {
   const [editando, setEditando] = useState<AsistenciaResponse | null>(null)
   const [form, setForm] = useState<FormAsistencia>(formVacio())
   const [guardando, setGuardando] = useState(false)
+  const [feriadosAbierto, setFeriadosAbierto] = useState(false)
 
   const desde = fechaLocal(new Date(cursor.getFullYear(), cursor.getMonth(), 1))
   const hasta = fechaLocal(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0))
@@ -152,6 +168,16 @@ export function AsistenciaPage() {
     void empleadoApi.getAll().then((todos) => setEmpleados(todos.filter((e) => e.activo)))
   }, [])
 
+  const cargarFeriados = useCallback(() => {
+    void feriadoApi.getAll().then(setFeriados)
+  }, [])
+
+  useEffect(() => {
+    cargarFeriados()
+  }, [cargarFeriados])
+
+  useRealtime('feriados', cargarFeriados)
+
   // Solo las activas: una anulada no debería tapar el día en el calendario.
   const marcasPorDia = useMemo(() => {
     const mapa = new Map<string, AsistenciaResponse>()
@@ -160,6 +186,11 @@ export function AsistenciaPage() {
     }
     return mapa
   }, [marcas])
+
+  const feriadosPorDia = useMemo(
+    () => new Map(feriados.map((f) => [f.fecha.slice(0, 10), f])),
+    [feriados],
+  )
 
   const abrirNuevo = (preset?: { empleadoId?: number; fecha?: string }) => {
     setEditando(null)
@@ -272,29 +303,41 @@ export function AsistenciaPage() {
   const semanas = semanasDe(cursor)
 
   return (
-    <ListPage
-      icon={<CalendarCheck size={20} />}
-      title="Asistencia"
-      description="Quién vino, quién faltó, quién llegó tarde. El registro es manual, uno por empleado y por día."
-      actions={
-        puede('rrhh.asistencia', 'crear') ? (
-          <Button size="sm" onClick={() => abrirNuevo()} iconRight={<Plus size={15} />}>
-            Nueva marca
-          </Button>
-        ) : undefined
-      }
-      alert={error ? <Alert>{error}</Alert> : undefined}
-      stats={
-        resumen && (
-          <>
-            <StatCard label="Presentes" value={String(resumen.presentes)} icon={<UserCheck size={18} />} tono="success" />
-            <StatCard label="Tardanzas" value={String(resumen.tardanzas)} icon={<Clock size={18} />} tono="warning" />
-            <StatCard label="Faltas" value={String(resumen.faltas)} icon={<UserX size={18} />} tono="danger" />
-            <StatCard label="Permisos" value={String(resumen.permisos)} icon={<CalendarDays size={18} />} tono="sys" />
-          </>
-        )
-      }
-      banner={
+    <div className="space-y-5">
+      <PageHeader
+        icon={<CalendarCheck size={20} />}
+        title="Asistencia"
+        description="Quién vino, quién faltó, quién llegó tarde. El registro es manual, uno por empleado y por día."
+        actions={
+          puede('rrhh.asistencia', 'crear') ? (
+            <Button size="sm" onClick={() => abrirNuevo()} iconRight={<Plus size={15} />}>
+              Nueva marca
+            </Button>
+          ) : undefined
+        }
+      />
+
+      {error && <Alert>{error}</Alert>}
+
+      {resumen && (
+        <section className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <StatCard label="Presentes" value={String(resumen.presentes)} icon={<UserCheck size={18} />} tono="sys" />
+          <StatCard label="Tardanzas" value={String(resumen.tardanzas)} icon={<Clock size={18} />} tono="warning" />
+          <StatCard label="Faltas" value={String(resumen.faltas)} icon={<UserX size={18} />} tono="danger" />
+          <StatCard label="Permisos" value={String(resumen.permisos)} icon={<CalendarDays size={18} />} tono="neutral" />
+        </section>
+      )}
+
+      <Tabs
+        active={pestana}
+        onChange={(id) => setPestana(id as Pestana)}
+        items={[
+          { id: 'calendario', label: 'Calendario', icon: <CalendarDays size={15} /> },
+          { id: 'registro', label: 'Registro', icon: <Table2 size={15} />, badge: marcas.length },
+        ]}
+      />
+
+      {pestana === 'calendario' ? (
         <div className="rounded-panel border border-line bg-white p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -319,14 +362,21 @@ export function AsistenciaPage() {
               </button>
             </div>
 
-            <div className="w-full sm:w-64">
-              <Desplegable
-                value={empleadoFiltro}
-                onChange={(v) => setEmpleadoFiltro(v === '' ? '' : Number(v))}
-                placeholder="Todos los empleados"
-                optional
-                options={empleados.map((e) => ({ value: e.id, label: e.nombreCompleto, detalle: e.cargo ?? undefined }))}
-              />
+            <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+              <div className="w-full sm:w-64">
+                <Desplegable
+                  value={empleadoFiltro}
+                  onChange={(v) => setEmpleadoFiltro(v === '' ? '' : Number(v))}
+                  placeholder="Todos los empleados"
+                  optional
+                  options={empleados.map((e) => ({ value: e.id, label: e.nombreCompleto, detalle: e.cargo ?? undefined }))}
+                />
+              </div>
+              {puede('rrhh.asistencia', 'ver') && (
+                <Button size="sm" variant="secondary" onClick={() => setFeriadosAbierto(true)} iconRight={<Flag size={15} />}>
+                  Feriados
+                </Button>
+              )}
             </div>
           </div>
 
@@ -342,6 +392,7 @@ export function AsistenciaPage() {
             {semanas.flatMap((semana, si) =>
               semana.map((fecha, di) => {
                 const marca = fecha ? marcasPorDia.get(fecha) : undefined
+                const feriado = fecha ? feriadosPorDia.get(fecha) : undefined
                 const futuro = fecha ? fecha > hoyLocal() : false
                 const clicable = !!fecha && !!empleadoFiltro && !futuro
                 return (
@@ -349,12 +400,18 @@ export function AsistenciaPage() {
                     key={`${si}-${di}`}
                     type="button"
                     disabled={!clicable}
+                    title={feriado?.nombre}
                     onClick={() => alClickDia(fecha)}
-                    className={`flex h-14 flex-col items-center justify-center gap-0.5 rounded-field border text-xs ${
-                      fecha ? 'border-line bg-white' : 'border-transparent'
+                    className={`flex h-16 flex-col items-center justify-center gap-0.5 rounded-field border px-1 text-xs ${
+                      fecha ? (feriado ? 'border-amber-200 bg-amber-50' : 'border-line bg-white') : 'border-transparent'
                     } ${clicable ? 'cursor-pointer hover:border-sys' : ''} ${futuro ? 'opacity-40' : ''}`}
                   >
                     {fecha && <span className="text-ink-soft">{Number(fecha.slice(8, 10))}</span>}
+                    {feriado && (
+                      <span className="w-full truncate text-center text-[10px] font-semibold text-amber-700">
+                        {feriado.nombre}
+                      </span>
+                    )}
                     {marca && (
                       <Badge tone={TONO_ESTADO[marca.estado]} className="px-1.5 py-0">
                         {ABREVIA[marca.estado]}
@@ -370,27 +427,30 @@ export function AsistenciaPage() {
             <p className="mt-2 text-xs text-ink-soft">Elige un empleado para marcar o corregir desde el calendario.</p>
           )}
         </div>
-      }
-      columns={columns}
-      rows={marcas}
-      cardIcon={CalendarCheck}
-      searchPlaceholder="Buscar por empleado..."
-      empty={cargando ? 'Cargando asistencia...' : 'No hay marcas registradas este mes.'}
-      rowActions={(row) => (
-        <>
-          {!row.anulado && puede('rrhh.asistencia', 'editar') && (
-            <RowAction label={`Editar la marca de ${row.empleado}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
+      ) : (
+        <SysDataTable
+          columns={columns}
+          rows={marcas}
+          cardIcon={CalendarCheck}
+          searchPlaceholder="Buscar por empleado..."
+          empty={cargando ? 'Cargando asistencia...' : 'No hay marcas registradas este mes.'}
+          actions={(row) => (
+            <>
+              {!row.anulado && puede('rrhh.asistencia', 'editar') && (
+                <RowAction label={`Editar la marca de ${row.empleado}`} onClick={() => abrirEdicion(row)}>
+                  <Pencil size={15} />
+                </RowAction>
+              )}
+              {!row.anulado && puede('rrhh.asistencia', 'anular') && (
+                <RowAction label={`Anular la marca de ${row.empleado}`} tone="danger" onClick={() => anular(row)}>
+                  <Undo2 size={15} />
+                </RowAction>
+              )}
+            </>
           )}
-          {!row.anulado && puede('rrhh.asistencia', 'anular') && (
-            <RowAction label={`Anular la marca de ${row.empleado}`} tone="danger" onClick={() => anular(row)}>
-              <Undo2 size={15} />
-            </RowAction>
-          )}
-        </>
+        />
       )}
-    >
+
       <Modal
         open={abierto}
         title={editando ? `Editar marca de ${editando.empleado}` : 'Nueva marca de asistencia'}
@@ -457,7 +517,9 @@ export function AsistenciaPage() {
         </div>
       </Modal>
 
+      <FeriadosModal open={feriadosAbierto} onClose={() => setFeriadosAbierto(false)} />
+
       {dialogo}
-    </ListPage>
+    </div>
   )
 }

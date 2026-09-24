@@ -10,3 +10,5 @@ export type {
   EstadoAsistencia,
   ResumenAsistencia,
 } from './asistenciaApi'
+export { feriadoApi } from './feriadoApi'
+export type { FeriadoRequest, FeriadoResponse, PagoFeriado } from './feriadoApi'
