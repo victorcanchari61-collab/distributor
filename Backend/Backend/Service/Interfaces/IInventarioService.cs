@@ -98,6 +98,13 @@ public interface IInventarioService
     Task<PrestamoResponse> DevolverPrestamoAsync(
         int prestamoId, DevolverPrestamoRequest request, int? usuarioId);
 
+    /// <summary>
+    /// Anula el préstamo completo (el documento con el que se creó): revierte
+    /// el stock que movió y lo marca Anulado. Se bloquea si ya se registró
+    /// alguna devolución sobre él.
+    /// </summary>
+    Task<PrestamoResponse> AnularPrestamoAsync(int prestamoId, int? usuarioId);
+
     // --- Recepciones ---
 
     /// <summary>

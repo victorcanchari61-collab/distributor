@@ -368,6 +368,7 @@ public static class EstadoPrestamo
 {
     public const string Pendiente = "PENDIENTE";
     public const string Devuelto = "DEVUELTO";
+    public const string Anulado = "ANULADO";
 }
 
 /// <summary>

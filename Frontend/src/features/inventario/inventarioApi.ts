@@ -373,7 +373,7 @@ export const transferenciaApi = {
 // --- Prestamos ---
 
 export type TipoPrestamo = 'DADO' | 'RECIBIDO'
-export type EstadoPrestamo = 'PENDIENTE' | 'DEVUELTO'
+export type EstadoPrestamo = 'PENDIENTE' | 'DEVUELTO' | 'ANULADO'
 
 export interface LineaPrestamoRequest {
   productoId: number
@@ -477,6 +477,9 @@ export const prestamoApi = {
   /** Anula una devolución registrada por error. El id es el del documento de la devolución. */
   anularDevolucion: (devolucionId: number) =>
     api.patch<DocumentoInventarioResponse>(`/inventario/prestamos/devoluciones/${devolucionId}/anular`),
+  /** Anula el préstamo completo. Se bloquea si ya tiene alguna devolución registrada. */
+  anular: (id: number) =>
+    api.patch<PrestamoResponse>(`/inventario/prestamos/${id}/anular`),
 }
 
 // --- Recepciones ---

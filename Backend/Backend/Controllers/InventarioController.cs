@@ -303,6 +303,15 @@ public class InventarioController : ControllerBase
     public async Task<IActionResult> AnularDevolucionPrestamo(int id) =>
         Ok(await _inventario.AnularAsync(id, UsuarioId));
 
+    /// <summary>
+    /// Anula el préstamo completo: revierte el stock que movió al registrarse
+    /// y lo marca Anulado. Se bloquea si ya tiene alguna devolución registrada.
+    /// </summary>
+    [HttpPatch("prestamos/{id:int}/anular")]
+    [Permiso("inv.prestamos", Accion.Anular)]
+    public async Task<IActionResult> AnularPrestamo(int id) =>
+        Ok(await _inventario.AnularPrestamoAsync(id, UsuarioId));
+
     // --- Recepciones ---
 
     [HttpGet("recepciones")]

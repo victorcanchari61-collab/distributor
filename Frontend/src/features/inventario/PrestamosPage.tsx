@@ -62,11 +62,9 @@ interface FilaDevolucionTabla {
 }
 
 function estadoPrestamoBadge(estado: PrestamoResponse['estado']) {
-  return (
-    <Badge tone={estado === 'DEVUELTO' ? 'neutral' : 'warning'}>
-      {estado === 'DEVUELTO' ? 'Devuelto' : 'Pendiente'}
-    </Badge>
-  )
+  const tono = estado === 'ANULADO' ? 'danger' : estado === 'DEVUELTO' ? 'neutral' : 'warning'
+  const texto = estado === 'ANULADO' ? 'Anulado' : estado === 'DEVUELTO' ? 'Devuelto' : 'Pendiente'
+  return <Badge tone={tono}>{texto}</Badge>
 }
 
 /**
@@ -308,6 +306,24 @@ export function PrestamosPage() {
           toast.exito('Devolución anulada')
         } catch (e) {
           toast.error(e instanceof ApiError ? e.message : 'No pudimos anular la devolución.')
+        }
+      },
+    })
+
+  const anularPrestamo = (p: PrestamoResponse) =>
+    confirmar({
+      titulo: `Anular ${p.numero}`,
+      mensaje:
+        'Revierte el stock que movió este préstamo al registrarse. Se bloquea si ya tiene alguna devolución registrada.',
+      confirmar: 'Anular',
+      tono: 'danger',
+      accion: async () => {
+        try {
+          await prestamoApi.anular(p.id)
+          await cargar()
+          toast.exito(`${p.numero} anulado`)
+        } catch (e) {
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos anular el préstamo.')
         }
       },
     })
@@ -703,6 +719,23 @@ export function PrestamosPage() {
               <Undo2 size={15} />
             </RowAction>
           )}
+          {puede('inv.prestamos', 'anular') && (
+            <RowAction
+              label={`Anular ${row.numero}`}
+              tone="danger"
+              disabled={row.estado !== 'PENDIENTE' || row.detalle.some((d) => d.cantidadDevuelta > 0)}
+              disabledReason={
+                row.estado === 'ANULADO'
+                  ? 'Ya está anulado'
+                  : row.estado === 'DEVUELTO'
+                    ? 'Ya se devolvió'
+                    : 'Ya tiene una devolución registrada'
+              }
+              onClick={() => anularPrestamo(row)}
+            >
+              <Undo2 size={15} />
+            </RowAction>
+          )}
         </>
       )}
     >
@@ -722,7 +755,7 @@ export function PrestamosPage() {
       >
         {detalleAbierto && (
           <div className="flex flex-col gap-3">
-            {detalleAbierto.estado === 'DEVUELTO' && <div>{estadoPrestamoBadge(detalleAbierto.estado)}</div>}
+            {detalleAbierto.estado !== 'PENDIENTE' && <div>{estadoPrestamoBadge(detalleAbierto.estado)}</div>}
 
             <TablaProductosDetalle<PrestamoDetalleResponse>
               filas={detalleAbierto.detalle}

@@ -2000,6 +2000,33 @@ public class InventarioService : IInventarioService
         return response;
     }
 
+    public async Task<PrestamoResponse> AnularPrestamoAsync(int prestamoId, int? usuarioId)
+    {
+        var prestamo = await GetPrestamoOrThrowAsync(prestamoId);
+
+        if (prestamo.Estado == EstadoPrestamo.Anulado)
+        {
+            throw new BadRequestException("Este préstamo ya está anulado.");
+        }
+
+        if (prestamo.Detalle.Any(d => d.CantidadDevuelta > 0))
+        {
+            throw new BadRequestException(
+                "No se puede anular: ya hay una devolución registrada sobre este préstamo. "
+                + "Anula primero esa devolución.");
+        }
+
+        var documentoId = prestamo.Detalle.First().Movimiento!.DocumentoId;
+        await AnularAsync(documentoId, usuarioId);
+
+        prestamo.Estado = EstadoPrestamo.Anulado;
+        await _repository.UpdatePrestamoAsync(prestamo);
+
+        var response = await GetPrestamoAsync(prestamo.Id);
+        await _notificador.AvisarAsync("prestamos", "anulado", response);
+        return response;
+    }
+
     private async Task<Prestamo> GetPrestamoOrThrowAsync(int id) =>
         await _repository.GetPrestamoAsync(id)
         ?? throw new NotFoundException($"No existe el préstamo {id}");
