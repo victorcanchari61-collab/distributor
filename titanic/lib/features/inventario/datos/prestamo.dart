@@ -110,6 +110,8 @@ class PrestamoDevolucion {
     required this.numero,
     required this.fecha,
     required this.estado,
+    this.almacenId = 0,
+    this.almacen = '',
     this.usuario,
     required this.detalle,
   });
@@ -120,6 +122,10 @@ class PrestamoDevolucion {
 
   /// CONFIRMADO o ANULADO.
   final String estado;
+
+  /// A qué almacén entró (DADO) o de cuál salió (RECIBIDO). Hoy siempre el del préstamo.
+  final int almacenId;
+  final String almacen;
 
   final String? usuario;
   final List<LineaDevolucionPrestamo> detalle;
@@ -132,6 +138,8 @@ class PrestamoDevolucion {
         numero: json['numero'] as String? ?? '',
         fecha: fechaDeJson(json['fecha'] as String),
         estado: json['estado'] as String? ?? 'CONFIRMADO',
+        almacenId: json['almacenId'] as int? ?? 0,
+        almacen: json['almacen'] as String? ?? '',
         usuario: json['usuario'] as String?,
         detalle: (json['detalle'] as List? ?? const [])
             .map(

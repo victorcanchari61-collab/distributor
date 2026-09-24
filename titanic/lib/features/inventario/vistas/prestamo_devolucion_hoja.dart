@@ -8,6 +8,7 @@ import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_pdf.dart';
+import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
@@ -39,6 +40,8 @@ Future<void> mostrarHojaDevolucion(
       var prestamoActual = prestamo;
       var guardando = false;
       String? error;
+      String? errorAlmacen;
+      int? almacenId;
       Map<int, TextEditingController> controladores = {
         for (final d in prestamoActual.detalle.where(
           (d) => d.cantidadPendiente > 0,
@@ -51,6 +54,14 @@ Future<void> mostrarHojaDevolucion(
           final pendientes = prestamoActual.detalle
               .where((d) => d.cantidadPendiente > 0)
               .toList();
+
+          final almacenes = ref.watch(almacenesActivosProvider);
+          // Por defecto el principal, pero se puede cambiar: si ahí no hay
+          // stock (o simplemente conviene guardarlo en otro), se elige
+          // cualquier otro. Solo se sugiere una vez, al abrir la hoja.
+          almacenId ??=
+              almacenes.where((a) => a.esPrincipal).firstOrNull?.id ??
+              almacenes.firstOrNull?.id;
 
           Future<void> refrescar() async {
             final fresco = await ref
@@ -70,6 +81,11 @@ Future<void> mostrarHojaDevolucion(
           }
 
           Future<void> guardar() async {
+            if (almacenId == null) {
+              setSheetState(() => errorAlmacen = 'Elige el almacén.');
+              return;
+            }
+
             final lineas = <Map<String, dynamic>>[];
             for (final d in pendientes) {
               final cantidad = double.tryParse(
@@ -90,13 +106,17 @@ Future<void> mostrarHojaDevolucion(
             setSheetState(() {
               guardando = true;
               error = null;
+              errorAlmacen = null;
             });
 
             final mensajero = Aviso.de(context);
             try {
               await ref
                   .read(prestamosProvider.notifier)
-                  .devolver(prestamoActual.id, {'detalle': lineas});
+                  .devolver(prestamoActual.id, {
+                    'almacenId': almacenId,
+                    'detalle': lineas,
+                  });
               await refrescar();
               setSheetState(() => guardando = false);
               mensajero.mostrar('Devolución registrada');
@@ -153,41 +173,6 @@ Future<void> mostrarHojaDevolucion(
                       color: Colores.tinta,
                     ),
                   ),
-                  const SizedBox(height: Dimen.espacio2),
-                  // Con qué almacén queda: la devolución siempre va al mismo
-                  // almacén con el que se registró el préstamo (no se elige
-                  // otro), pero hay que verlo antes de confirmar.
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: Dimen.espacio3,
-                      vertical: Dimen.espacio2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colores.fondo,
-                      borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                    ),
-                    child: RichText(
-                      text: TextSpan(
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colores.tintaSuave,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: prestamoActual.esDado ? 'Vuelve a ' : 'Sale de ',
-                          ),
-                          TextSpan(
-                            text: prestamoActual.almacen,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: Colores.tinta,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
                   if (prestamoActual.devoluciones.isNotEmpty) ...[
                     const SizedBox(height: Dimen.espacio4),
                     const Text(
@@ -221,6 +206,20 @@ Future<void> mostrarHojaDevolucion(
                       ),
                     ),
                     const SizedBox(height: Dimen.espacio2),
+                    AppSelector<int>(
+                      valor: almacenId,
+                      etiqueta: prestamoActual.esDado ? 'Entra a' : 'Sale de',
+                      icono: Icons.warehouse_outlined,
+                      error: errorAlmacen,
+                      opciones: [
+                        for (final a in almacenes) Opcion<int>(a.id, a.nombre),
+                      ],
+                      onCambio: (v) => setSheetState(() {
+                        almacenId = v;
+                        errorAlmacen = null;
+                      }),
+                    ),
+                    const SizedBox(height: Dimen.espacio3),
                     for (final d in pendientes) ...[
                       Text(
                         d.producto,
@@ -315,7 +314,7 @@ class _FilaDevolucion extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$resumen · ${_fecha(devolucion.fecha)}',
+                  '$resumen · ${devolucion.almacen} · ${_fecha(devolucion.fecha)}',
                   style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
                 ),
               ],

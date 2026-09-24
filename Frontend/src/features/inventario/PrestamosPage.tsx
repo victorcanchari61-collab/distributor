@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta, fechaHora } from '../../lib/fechas'
-import { ArrowLeft, Check, Eye, HandCoins, Plus, Trash2, Undo2, X } from 'lucide-react'
+import { ArrowLeft, Boxes, Clock, Eye, HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -44,18 +44,6 @@ import { useRealtime } from '../../lib/realtime'
 
 type FilaPrestamo = LineaProductoNueva
 
-/**
- * Una fila de la tabla de devoluciones: una ya registrada, o la fila nueva
- * que se agrega para registrar una — igual que "Agregar pago" en Cobranza.
- */
-interface FilaDevolucion {
-  clave: string
-  /** null en la fila nueva, mientras todavía no se guarda. */
-  devolucion: PrestamoDevolucionResponse | null
-}
-
-const NUEVA_DEVOLUCION = 'nueva'
-
 function estadoPrestamoBadge(estado: PrestamoResponse['estado']) {
   return (
     <Badge tone={estado === 'DEVUELTO' ? 'neutral' : 'warning'}>
@@ -89,6 +77,7 @@ export function PrestamosPage() {
   const [devolucionAbierta, setDevolucionAbierta] = useState<PrestamoResponse | null>(null)
   const [cantidadesDevolucion, setCantidadesDevolucion] = useState<Record<number, string>>({})
   const [agregandoDevolucion, setAgregandoDevolucion] = useState(false)
+  const [almacenDevolucionId, setAlmacenDevolucionId] = useState(0)
   const [guardando, setGuardando] = useState(false)
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -243,6 +232,9 @@ export function PrestamosPage() {
           .map((d) => [d.id, String(d.cantidadPendiente)]),
       ),
     )
+    // Por defecto el principal, pero se puede cambiar: si ahí no hay stock
+    // (o simplemente conviene guardarlo en otro), se elige cualquier otro.
+    setAlmacenDevolucionId(activos.find((a) => a.esPrincipal)?.id ?? activos[0]?.id ?? 0)
     setAgregandoDevolucion(true)
   }
 
@@ -253,6 +245,7 @@ export function PrestamosPage() {
 
   const registrarDevolucion = async () => {
     if (!devolucionAbierta) return
+    if (!almacenDevolucionId) return toast.error('Elige el almacén.')
 
     const detalle = devolucionAbierta.detalle
       .map((d) => ({
@@ -265,7 +258,7 @@ export function PrestamosPage() {
 
     setGuardando(true)
     try {
-      await prestamoApi.devolver(devolucionAbierta.id, detalle)
+      await prestamoApi.devolver(devolucionAbierta.id, almacenDevolucionId, detalle)
       setAgregandoDevolucion(false)
       setCantidadesDevolucion({})
       await refrescarDevolucion(devolucionAbierta.id)
@@ -308,84 +301,85 @@ export function PrestamosPage() {
    * por los campos para escribir cuánto se devuelve de cada producto
    * pendiente — el mismo lugar que ocupará su resumen una vez guardada.
    */
-  const columnasDevoluciones: DataTableColumn<FilaDevolucion>[] = [
+  /** El historial: solo devoluciones ya registradas, cada una un documento propio. */
+  const columnasDevoluciones: DataTableColumn<PrestamoDevolucionResponse>[] = [
     {
       key: 'numero',
       label: 'Documento',
       sortable: false,
-      render: (f) =>
-        f.devolucion ? (
-          <Badge tone={f.devolucion.estado === 'ANULADO' ? 'neutral' : undefined}>
-            {f.devolucion.numero}
-          </Badge>
-        ) : (
-          <Badge tone="sys">Nueva</Badge>
-        ),
+      render: (d) => <Badge tone={d.estado === 'ANULADO' ? 'neutral' : undefined}>{d.numero}</Badge>,
     },
     {
       key: 'fecha',
       label: 'Fecha',
       sortable: false,
-      render: (f) => (f.devolucion ? fechaHora(f.devolucion.fecha) : <span className="text-ink-soft">—</span>),
+      render: (d) => fechaHora(d.fecha),
     },
     {
       key: 'productos',
       label: 'Productos',
       sortable: false,
-      render: (f) => {
-        if (f.devolucion) {
-          return f.devolucion.detalle.length === 1
-            ? `${f.devolucion.detalle[0].producto} · ${f.devolucion.detalle[0].cantidadPresentacion} ${f.devolucion.detalle[0].presentacion ?? f.devolucion.detalle[0].unidadBase}`
-            : `${f.devolucion.detalle.length} productos`
-        }
-
-        // La fila nueva: un campo por cada producto que todavía tiene saldo pendiente.
-        return (
-          <div className="flex flex-col gap-2 py-1">
-            {(devolucionAbierta?.detalle ?? [])
-              .filter((d) => d.cantidadPendiente > 0)
-              .map((d) => (
-                <div key={d.id} className="grid grid-cols-[1fr_7rem] items-center gap-2">
-                  <span className="text-xs text-ink-muted">
-                    {d.producto}
-                    <span className="block text-[11px] text-ink-soft">
-                      Pendiente: {d.cantidadPendiente} {d.unidadBase} de {d.cantidad}
-                    </span>
-                  </span>
-                  <Input
-                    size="sm"
-                    type="number"
-                    step="0.0001"
-                    max={d.cantidadPendiente}
-                    value={cantidadesDevolucion[d.id] ?? ''}
-                    onChange={(e) =>
-                      setCantidadesDevolucion({ ...cantidadesDevolucion, [d.id]: e.target.value })
-                    }
-                  />
-                </div>
-              ))}
-          </div>
-        )
-      },
+      render: (d) =>
+        d.detalle.length === 1
+          ? `${d.detalle[0].producto} · ${d.detalle[0].cantidadPresentacion} ${d.detalle[0].presentacion ?? d.detalle[0].unidadBase}`
+          : `${d.detalle.length} productos`,
     },
+    { key: 'almacen', label: 'Almacén', sortable: false },
     {
       key: 'usuario',
       label: 'Registrada por',
       sortable: false,
-      render: (f) => f.devolucion?.usuario ?? <span className="text-ink-soft">—</span>,
+      render: (d) => d.usuario ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'estado',
       label: 'Estado',
       sortable: false,
-      render: (f) =>
-        f.devolucion ? (
-          <Badge tone={f.devolucion.estado === 'ANULADO' ? 'danger' : 'success'}>
-            {f.devolucion.estado === 'ANULADO' ? 'Anulada' : 'Confirmada'}
-          </Badge>
-        ) : (
-          <span className="text-ink-soft">—</span>
-        ),
+      render: (d) => (
+        <Badge tone={d.estado === 'ANULADO' ? 'danger' : 'success'}>
+          {d.estado === 'ANULADO' ? 'Anulada' : 'Confirmada'}
+        </Badge>
+      ),
+    },
+  ]
+
+  /** Al agregar una devolución: un producto por fila, con columnas de verdad — no todo apilado en una. */
+  const columnasNuevaDevolucion: DataTableColumn<PrestamoDetalleResponse>[] = [
+    { key: 'producto', label: 'Producto', sortable: false },
+    {
+      key: 'pendiente',
+      label: 'Pendiente',
+      align: 'right',
+      sortable: false,
+      render: (d) => `${d.cantidadPendiente} ${d.unidadBase} de ${d.cantidad}`,
+    },
+    {
+      key: 'almacen',
+      label: 'Almacén',
+      sortable: false,
+      render: () => (
+        <Desplegable
+          size="sm"
+          value={almacenDevolucionId}
+          onChange={(v) => setAlmacenDevolucionId(Number(v))}
+          options={activos.map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
+        />
+      ),
+    },
+    {
+      key: 'devolver',
+      label: 'Devolver',
+      sortable: false,
+      render: (d) => (
+        <Input
+          size="sm"
+          type="number"
+          step="0.0001"
+          max={d.cantidadPendiente}
+          value={cantidadesDevolucion[d.id] ?? ''}
+          onChange={(e) => setCantidadesDevolucion({ ...cantidadesDevolucion, [d.id]: e.target.value })}
+        />
+      ),
     },
   ]
 
@@ -761,7 +755,7 @@ export function PrestamosPage() {
         title={devolucionAbierta ? `Devolución de ${devolucionAbierta.numero}` : ''}
         description="Puede ser parcial: lo que no se devuelva ahora queda pendiente."
         onClose={() => setDevolucionAbierta(null)}
-        size="lg"
+        size="2xl"
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setDevolucionAbierta(null)}>
@@ -784,56 +778,77 @@ export function PrestamosPage() {
         }
       >
         {devolucionAbierta && (
-          <div className="flex flex-col gap-4">
-            {/*
-              Con qué almacén queda: la devolución siempre va al mismo almacén con el que se
-              registró el préstamo (no se elige otro), pero hay que verlo antes de confirmar.
-            */}
-            <div className="rounded-field bg-surface-alt px-3 py-2 text-sm text-ink-muted">
-              {devolucionAbierta.tipo === 'DADO' ? 'Vuelve a' : 'Sale de'}{' '}
-              <span className="font-semibold text-ink">{devolucionAbierta.almacen}</span>
+          <div className="flex flex-col gap-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatCard
+                label="Productos"
+                value={String(devolucionAbierta.detalle.length)}
+                icon={<Boxes size={18} />}
+              />
+              <StatCard
+                label="Pendientes"
+                value={String(devolucionAbierta.detalle.filter((d) => d.cantidadPendiente > 0).length)}
+                icon={<Clock size={18} />}
+                tono={devolucionAbierta.detalle.some((d) => d.cantidadPendiente > 0) ? 'warning' : 'success'}
+              />
+              <StatCard
+                label="Devoluciones"
+                value={String(devolucionAbierta.devoluciones.length)}
+                icon={<Undo2 size={18} />}
+              />
+              <StatCard
+                label="Anuladas"
+                value={String(devolucionAbierta.devoluciones.filter((d) => d.estado === 'ANULADO').length)}
+                icon={<Undo2 size={18} />}
+                tono="neutral"
+              />
             </div>
 
-            <SysDataTable<FilaDevolucion>
+            <SysDataTable<PrestamoDevolucionResponse>
               columns={columnasDevoluciones}
-              rows={[
-                ...(agregandoDevolucion ? [{ clave: NUEVA_DEVOLUCION, devolucion: null }] : []),
-                ...devolucionAbierta.devoluciones.map((d) => ({ clave: String(d.id), devolucion: d })),
-              ]}
-              rowKey="clave"
+              rows={devolucionAbierta.devoluciones}
+              rowKey="id"
               toolbar={false}
+              paginacion={false}
               empty="Todavía no hay devoluciones registradas."
-              actions={(f) =>
-                f.clave === NUEVA_DEVOLUCION ? (
-                  <>
+              actions={(d) => (
+                <>
+                  <AccionPdf documento="devolucionesprestamo" id={d.id} numero={d.numero} />
+                  {d.estado === 'CONFIRMADO' && puede('inv.prestamos', 'anular') && (
                     <RowAction
-                      label="Guardar devolución"
-                      tone="success"
-                      disabled={guardando}
-                      onClick={() => void registrarDevolucion()}
+                      label={`Anular devolución ${d.numero}`}
+                      tone="danger"
+                      onClick={() => anularDevolucion(d)}
                     >
-                      <Check size={15} />
+                      <Undo2 size={15} />
                     </RowAction>
-                    <RowAction label="Cancelar" tone="neutral" disabled={guardando} onClick={cancelarDevolucion}>
-                      <X size={15} />
-                    </RowAction>
-                  </>
-                ) : f.devolucion ? (
-                  <>
-                    <AccionPdf documento="devolucionesprestamo" id={f.devolucion.id} numero={f.devolucion.numero} />
-                    {f.devolucion.estado === 'CONFIRMADO' && puede('inv.prestamos', 'anular') && (
-                      <RowAction
-                        label={`Anular devolución ${f.devolucion.numero}`}
-                        tone="danger"
-                        onClick={() => f.devolucion && anularDevolucion(f.devolucion)}
-                      >
-                        <Undo2 size={15} />
-                      </RowAction>
-                    )}
-                  </>
-                ) : null
-              }
+                  )}
+                </>
+              )}
             />
+
+            {agregandoDevolucion && (
+              <div className="flex flex-col gap-3 rounded-panel border border-line p-4">
+                <p className="text-sm font-semibold text-ink">Nueva devolución</p>
+
+                <SysDataTable<PrestamoDetalleResponse>
+                  columns={columnasNuevaDevolucion}
+                  rows={devolucionAbierta.detalle.filter((d) => d.cantidadPendiente > 0)}
+                  rowKey="id"
+                  toolbar={false}
+                  paginacion={false}
+                />
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" size="sm" disabled={guardando} onClick={cancelarDevolucion}>
+                    Cancelar
+                  </Button>
+                  <Button size="sm" loading={guardando} onClick={() => void registrarDevolucion()}>
+                    Guardar devolución
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>

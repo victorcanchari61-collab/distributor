@@ -766,6 +766,10 @@ public class InventarioRepository : IInventarioRepository
             .ThenInclude(doc => doc!.Usuario)
             .Include(p => p.Detalle)
             .ThenInclude(d => d.MovimientosDevolucion)
+            .ThenInclude(m => m.Documento)
+            .ThenInclude(doc => doc!.Almacen)
+            .Include(p => p.Detalle)
+            .ThenInclude(d => d.MovimientosDevolucion)
             .ThenInclude(m => m.Presentacion);
 
     public async Task<Prestamo?> GetPrestamoAsync(int id) =>

@@ -1011,41 +1011,7 @@ public class InventarioService : IInventarioService
             await _repository.AddDocumentoMovimientoAsync(espejo);
             await _repository.GuardarAsync();
 
-            if (eraEntrada && m.PrestamoDetalleId is int prestamoDetalleIdEntrada)
-            {
-                /*
-                 * Devolución DADO: no creó una capa nueva, repuso las MISMAS
-                 * capas de las que salió el préstamo (ver DevolverPrestamoAsync).
-                 * Por eso no sirve el camino genérico de abajo —que busca una
-                 * capa que esta línea nunca creó—: hay que deshacer justo esa
-                 * reposición, capa por capa, replicando el mismo reparto con el
-                 * que se hizo (los consumos del préstamo original son fijos, así
-                 * que el reparto siempre sale igual).
-                 */
-                var detalleOrigen = await _repository.GetPrestamoDetalleConPrestamoAsync(prestamoDetalleIdEntrada);
-                if (detalleOrigen is not null)
-                {
-                    var restante = m.Cantidad;
-                    foreach (var consumo in await _repository.GetConsumosAsync(detalleOrigen.MovimientoId))
-                    {
-                        if (restante <= 0) break;
-
-                        var capa = await _repository.GetCapaAsync(consumo.CapaId);
-                        if (capa is null) continue;
-
-                        var tomado = Math.Min(consumo.Cantidad, restante);
-                        if (capa.CantidadDisponible < tomado)
-                        {
-                            throw new BadRequestException(
-                                "No se puede anular: ya se usó o se vendió parte de lo que se devolvió.");
-                        }
-
-                        capa.CantidadDisponible -= tomado;
-                        restante -= tomado;
-                    }
-                }
-            }
-            else if (eraEntrada)
+            if (eraEntrada)
             {
                 // Se retiran las capas que creo (una transferencia puede crear
                 // varias, una por cada costo de origen). Si ya se uso algo de
@@ -1859,6 +1825,11 @@ public class InventarioService : IInventarioService
         await _devolucionValidator.ValidateAndThrowAsync(request);
 
         var prestamo = await GetPrestamoOrThrowAsync(prestamoId);
+        var almacenDevolucion = await GetAlmacenOrThrowAsync(request.AlmacenId);
+        if (!almacenDevolucion.Activo)
+        {
+            throw new BadRequestException("El almacén elegido está desactivado.");
+        }
 
         if (prestamo.Estado == EstadoPrestamo.Devuelto)
         {
@@ -1873,7 +1844,7 @@ public class InventarioService : IInventarioService
         {
             Numero = await _repository.SiguienteNumeroAsync(TipoDocumentoInventario.DevolucionPrestamo),
             Tipo = TipoDocumentoInventario.DevolucionPrestamo,
-            AlmacenId = prestamo.AlmacenId,
+            AlmacenId = almacenDevolucion.Id,
             MotivoId = motivo.Id,
             Fecha = DateTime.UtcNow,
             Estado = EstadoDocumento.Confirmado,
@@ -1904,7 +1875,7 @@ public class InventarioService : IInventarioService
             {
                 DocumentoId = documento.Id,
                 ProductoId = detalle.ProductoId,
-                AlmacenId = prestamo.AlmacenId,
+                AlmacenId = almacenDevolucion.Id,
                 MotivoId = motivo.Id,
                 Tipo = motivo.Tipo,
                 PresentacionId = detalle.PresentacionId,
@@ -1924,8 +1895,15 @@ public class InventarioService : IInventarioService
 
             if (esDado)
             {
-                // Vuelve a las MISMAS capas de las que salio en su momento, al
-                // costo que tenian entonces, hasta cubrir lo que se devuelve.
+                /*
+                 * Entra como una capa NUEVA en el almacén elegido, valorizada
+                 * igual que siempre —al costo de las capas que salieron en su
+                 * momento—, pero sin volver a esas capas puntuales: como el
+                 * almacén puede ser otro, no hay una capa "de origen" a la que
+                 * regresar. Así, anular esta devolución después es el mismo
+                 * camino genérico que cualquier entrada (se retira la capa que
+                 * esta línea creó).
+                 */
                 var restante = linea.Cantidad;
                 decimal costoTotal = 0;
 
@@ -1933,11 +1911,7 @@ public class InventarioService : IInventarioService
                 {
                     if (restante <= 0) break;
 
-                    var capa = await _repository.GetCapaAsync(consumo.CapaId);
-                    if (capa is null) continue;
-
                     var tomado = Math.Min(consumo.Cantidad, restante);
-                    capa.CantidadDisponible += tomado;
                     restante -= tomado;
                     costoTotal += tomado * consumo.CostoUnitario;
                 }
@@ -1946,11 +1920,24 @@ public class InventarioService : IInventarioService
                 movimiento.CostoUnitario = linea.Cantidad == 0
                     ? 0
                     : Math.Round(costoTotal / linea.Cantidad, 4);
+
+                await _repository.AddCapaAsync(new CapaCosto
+                {
+                    ProductoId = detalle.ProductoId,
+                    AlmacenId = almacenDevolucion.Id,
+                    MovimientoId = movimiento.Id,
+                    CantidadInicial = linea.Cantidad,
+                    CantidadDisponible = linea.Cantidad,
+                    CostoUnitario = movimiento.CostoUnitario,
+                    Origen = OrigenCapa.Devolucion,
+                    Fecha = documento.Fecha
+                });
             }
-            else
+            else if (almacenDevolucion.Id == prestamo.AlmacenId)
             {
-                // Sale de la capa que ESTE prestamo creo al entrar, no del
-                // stock en general: no hay que devolver mercaderia comprada.
+                // Mismo almacén del préstamo: sale de la capa que ESTE préstamo
+                // creó al entrar, no del stock en general — no hay que devolver
+                // mercadería comprada de más.
                 var capas = await _repository.GetCapasDeMovimientoAsync(detalle.MovimientoId);
                 var disponible = capas.Sum(c => c.CantidadDisponible);
 
@@ -1986,6 +1973,13 @@ public class InventarioService : IInventarioService
                 movimiento.CostoUnitario = linea.Cantidad == 0
                     ? 0
                     : Math.Round(costoTotal / linea.Cantidad, 4);
+            }
+            else
+            {
+                // Otro almacén: ya no es necesariamente lo mismo que entró con
+                // el préstamo —pudo haberse movido internamente—, así que sale
+                // del stock general de ese almacén, como cualquier salida.
+                await ConsumirAsync(movimiento, detalle.Producto!, almacenDevolucion.Id, linea.Cantidad);
             }
 
             detalle.CantidadDevuelta += linea.Cantidad;
@@ -2053,6 +2047,8 @@ public class InventarioService : IInventarioService
                 Numero = g.First().Movimiento.Documento?.Numero ?? string.Empty,
                 Fecha = g.First().Movimiento.Documento?.Fecha ?? default,
                 Estado = g.First().Movimiento.Documento?.Estado ?? string.Empty,
+                AlmacenId = g.First().Movimiento.Documento?.AlmacenId ?? 0,
+                Almacen = g.First().Movimiento.Documento?.Almacen?.Nombre ?? string.Empty,
                 Usuario = g.First().Movimiento.Documento?.Usuario?.Nombre,
                 Detalle = g.Select(x => new LineaDevolucionPrestamoResponse
                 {

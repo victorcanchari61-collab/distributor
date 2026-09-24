@@ -259,6 +259,10 @@ public class PrestamoDevolucionResponse
     /// <summary>CONFIRMADO o ANULADO.</summary>
     public string Estado { get; set; } = string.Empty;
 
+    /// <summary>A qué almacén entró (DADO) o de cuál salió (RECIBIDO). Hoy siempre el del préstamo.</summary>
+    public int AlmacenId { get; set; }
+    public string Almacen { get; set; } = string.Empty;
+
     public string? Usuario { get; set; }
     public List<LineaDevolucionPrestamoResponse> Detalle { get; set; } = [];
 }

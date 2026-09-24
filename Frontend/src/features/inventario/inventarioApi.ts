@@ -432,6 +432,9 @@ export interface PrestamoDevolucionResponse {
   numero: string
   fecha: string
   estado: 'CONFIRMADO' | 'ANULADO'
+  /** A qué almacén entró (DADO) o de cuál salió (RECIBIDO). Hoy siempre el del préstamo. */
+  almacenId: number
+  almacen: string
   usuario: string | null
   detalle: LineaDevolucionPrestamoDetalle[]
 }
@@ -468,9 +471,9 @@ export const prestamoApi = {
   getById: (id: number) => api.get<PrestamoResponse>(`/inventario/prestamos/${id}`),
   create: (body: CrearPrestamoRequest) =>
     api.post<PrestamoResponse>('/inventario/prestamos', body),
-  /** Devolución total o parcial: una o varias líneas a la vez. */
-  devolver: (id: number, detalle: LineaDevolucionPrestamoRequest[]) =>
-    api.post<PrestamoResponse>(`/inventario/prestamos/${id}/devolucion`, { detalle }),
+  /** Devolución total o parcial: una o varias líneas a la vez. No tiene que ser el almacén del préstamo. */
+  devolver: (id: number, almacenId: number, detalle: LineaDevolucionPrestamoRequest[]) =>
+    api.post<PrestamoResponse>(`/inventario/prestamos/${id}/devolucion`, { almacenId, detalle }),
   /** Anula una devolución registrada por error. El id es el del documento de la devolución. */
   anularDevolucion: (devolucionId: number) =>
     api.patch<DocumentoInventarioResponse>(`/inventario/prestamos/devoluciones/${devolucionId}/anular`),

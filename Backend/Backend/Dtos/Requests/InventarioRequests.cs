@@ -129,5 +129,11 @@ public class LineaDevolucionPrestamoRequest
 
 public class DevolverPrestamoRequest
 {
+    /// <summary>
+    /// A qué almacén entra (DADO) o de cuál sale (RECIBIDO). No tiene que ser
+    /// el mismo del préstamo: si ahí no hay stock, se puede elegir otro.
+    /// </summary>
+    public int AlmacenId { get; set; }
+
     public List<LineaDevolucionPrestamoRequest> Detalle { get; set; } = [];
 }

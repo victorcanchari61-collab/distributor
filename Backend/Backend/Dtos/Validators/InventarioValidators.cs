@@ -141,6 +141,7 @@ public class DevolverPrestamoRequestValidator : AbstractValidator<DevolverPresta
 {
     public DevolverPrestamoRequestValidator()
     {
+        RuleFor(x => x.AlmacenId).GreaterThan(0).WithMessage("Elige el almacén");
         RuleFor(x => x.Detalle).NotEmpty().WithMessage("Indica qué se devuelve");
         RuleForEach(x => x.Detalle).SetValidator(new LineaDevolucionPrestamoRequestValidator());
     }

@@ -147,6 +147,14 @@ export interface SysDataTableProps<T> {
   onRowClick?: (row: T) => void
   /** Oculta el buscador general y los botones de filtros/columnas — para tablas chicas (ej. líneas de un documento) donde solo estorban. */
   toolbar?: boolean
+  /**
+   * Oculta el pie de "1–N de M · Por página" y los botones de página.
+   *
+   * Para una tabla que de verdad es chica y acotada —no una lista que se
+   * filtra de un conjunto grande— ese pie no informa nada, solo repite el
+   * conteo de filas que ya se ve a simple vista.
+   */
+  paginacion?: boolean
   className?: string
 }
 
@@ -259,6 +267,7 @@ export function SysDataTable<T>({
   onRowClick,
   className,
   toolbar = true,
+  paginacion = true,
 }: SysDataTableProps<T>) {
   const [order, setOrder] = useState<string[]>(() => columns.map((c) => c.key))
   const [hidden, setHidden] = useState<string[]>([])
@@ -483,8 +492,10 @@ export function SysDataTable<T>({
   const pageCount = Math.max(1, Math.ceil(total / perPage))
   const from = (page - 1) * perPage
   const pageRows = useMemo(
-    () => (enServidor ? data : data.slice(from, from + perPage)),
-    [enServidor, data, from, perPage],
+    // Sin pie de paginación no hay como pasar de página: recortar dejaria
+    // filas invisibles sin aviso, asi que sin `paginacion` se muestran todas.
+    () => (enServidor || !paginacion ? data : data.slice(from, from + perPage)),
+    [enServidor, paginacion, data, from, perPage],
   )
 
   const headRef = useRef<HTMLDivElement>(null)
@@ -1040,90 +1051,92 @@ export function SysDataTable<T>({
         />
       )}
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[12px] text-zinc-500">
-        <div className="flex items-center gap-3">
-          <span>
-            {total === 0
-              ? 'Sin registros'
-              : `${from + 1}–${Math.min(from + perPage, total)} de ${total}`}
-            {/* En modo cliente se aclara sobre cuantas filas se filtro; contra
-                el servidor no aplica: `rows` es solo la pagina que llego. */}
-            {!enServidor && data.length !== rows.length && ` (${rows.length} en total)`}
-          </span>
+      {paginacion && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[12px] text-zinc-500">
+          <div className="flex items-center gap-3">
+            <span>
+              {total === 0
+                ? 'Sin registros'
+                : `${from + 1}–${Math.min(from + perPage, total)} de ${total}`}
+              {/* En modo cliente se aclara sobre cuantas filas se filtro; contra
+                  el servidor no aplica: `rows` es solo la pagina que llego. */}
+              {!enServidor && data.length !== rows.length && ` (${rows.length} en total)`}
+            </span>
 
-          <label className="flex items-center gap-1.5">
-            <span className="hidden sm:inline">Por pagina</span>
-            <select
-              value={perPage}
-              onChange={(e) => setPerPage(Number(e.target.value))}
-              className="rounded-md border border-zinc-200 bg-white py-1 pr-6 pl-2 text-[12px] text-zinc-700 outline-none focus:border-[rgb(var(--sys-rgb)/0.6)]"
-            >
-              {/* El tamaño que declara la vista entra en la lista: si no, el
-                  select mostraria un valor que no es ninguna de sus opciones. */}
-              {[...new Set([pageSize, ...PAGE_SIZES])]
-                .sort((a, b) => a - b)
-                .map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-            </select>
-          </label>
-        </div>
-
-        {pageCount > 1 && (
-          <div className="flex items-center gap-1">
-            <PageButton onClick={() => irAPagina(1)} disabled={page === 1} label="Primera">
-              <ChevronsLeft size={15} />
-            </PageButton>
-            <PageButton
-              onClick={() => irAPagina(page - 1)}
-              disabled={page === 1}
-              label="Anterior"
-            >
-              <ChevronLeft size={15} />
-            </PageButton>
-
-            {pageNumbers(page, pageCount).map((n, i) =>
-              n === '...' ? (
-                <span key={`gap${i}`} className="px-1 text-zinc-400">
-                  ...
-                </span>
-              ) : (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => irAPagina(n as number)}
-                  aria-current={n === page ? 'page' : undefined}
-                  className={cn(
-                    'min-w-[28px] rounded-md px-2 py-1 font-medium transition-colors',
-                    n === page
-                      ? 'bg-[rgb(var(--sys-rgb))] text-[var(--sys-on)]'
-                      : 'text-zinc-600 hover:bg-[rgb(var(--sys-rgb)/0.12)]',
-                  )}
-                >
-                  {n}
-                </button>
-              ),
-            )}
-
-            <PageButton
-              onClick={() => irAPagina(page + 1)}
-              disabled={page === pageCount}
-              label="Siguiente"
-            >
-              <ChevronRight size={15} />
-            </PageButton>
-            <PageButton
-              onClick={() => irAPagina(pageCount)}
-              disabled={page === pageCount}
-              label="Ultima"
-            >
-              <ChevronsRight size={15} />
-            </PageButton>
+            <label className="flex items-center gap-1.5">
+              <span className="hidden sm:inline">Por pagina</span>
+              <select
+                value={perPage}
+                onChange={(e) => setPerPage(Number(e.target.value))}
+                className="rounded-md border border-zinc-200 bg-white py-1 pr-6 pl-2 text-[12px] text-zinc-700 outline-none focus:border-[rgb(var(--sys-rgb)/0.6)]"
+              >
+                {/* El tamaño que declara la vista entra en la lista: si no, el
+                    select mostraria un valor que no es ninguna de sus opciones. */}
+                {[...new Set([pageSize, ...PAGE_SIZES])]
+                  .sort((a, b) => a - b)
+                  .map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+              </select>
+            </label>
           </div>
-        )}
-      </div>
+
+          {pageCount > 1 && (
+            <div className="flex items-center gap-1">
+              <PageButton onClick={() => irAPagina(1)} disabled={page === 1} label="Primera">
+                <ChevronsLeft size={15} />
+              </PageButton>
+              <PageButton
+                onClick={() => irAPagina(page - 1)}
+                disabled={page === 1}
+                label="Anterior"
+              >
+                <ChevronLeft size={15} />
+              </PageButton>
+
+              {pageNumbers(page, pageCount).map((n, i) =>
+                n === '...' ? (
+                  <span key={`gap${i}`} className="px-1 text-zinc-400">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => irAPagina(n as number)}
+                    aria-current={n === page ? 'page' : undefined}
+                    className={cn(
+                      'min-w-[28px] rounded-md px-2 py-1 font-medium transition-colors',
+                      n === page
+                        ? 'bg-[rgb(var(--sys-rgb))] text-[var(--sys-on)]'
+                        : 'text-zinc-600 hover:bg-[rgb(var(--sys-rgb)/0.12)]',
+                    )}
+                  >
+                    {n}
+                  </button>
+                ),
+              )}
+
+              <PageButton
+                onClick={() => irAPagina(page + 1)}
+                disabled={page === pageCount}
+                label="Siguiente"
+              >
+                <ChevronRight size={15} />
+              </PageButton>
+              <PageButton
+                onClick={() => irAPagina(pageCount)}
+                disabled={page === pageCount}
+                label="Ultima"
+              >
+                <ChevronsRight size={15} />
+              </PageButton>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
