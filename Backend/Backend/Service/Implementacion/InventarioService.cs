@@ -1011,7 +1011,41 @@ public class InventarioService : IInventarioService
             await _repository.AddDocumentoMovimientoAsync(espejo);
             await _repository.GuardarAsync();
 
-            if (eraEntrada)
+            if (eraEntrada && m.PrestamoDetalleId is int prestamoDetalleIdEntrada)
+            {
+                /*
+                 * Devolución DADO: no creó una capa nueva, repuso las MISMAS
+                 * capas de las que salió el préstamo (ver DevolverPrestamoAsync).
+                 * Por eso no sirve el camino genérico de abajo —que busca una
+                 * capa que esta línea nunca creó—: hay que deshacer justo esa
+                 * reposición, capa por capa, replicando el mismo reparto con el
+                 * que se hizo (los consumos del préstamo original son fijos, así
+                 * que el reparto siempre sale igual).
+                 */
+                var detalleOrigen = await _repository.GetPrestamoDetalleConPrestamoAsync(prestamoDetalleIdEntrada);
+                if (detalleOrigen is not null)
+                {
+                    var restante = m.Cantidad;
+                    foreach (var consumo in await _repository.GetConsumosAsync(detalleOrigen.MovimientoId))
+                    {
+                        if (restante <= 0) break;
+
+                        var capa = await _repository.GetCapaAsync(consumo.CapaId);
+                        if (capa is null) continue;
+
+                        var tomado = Math.Min(consumo.Cantidad, restante);
+                        if (capa.CantidadDisponible < tomado)
+                        {
+                            throw new BadRequestException(
+                                "No se puede anular: ya se usó o se vendió parte de lo que se devolvió.");
+                        }
+
+                        capa.CantidadDisponible -= tomado;
+                        restante -= tomado;
+                    }
+                }
+            }
+            else if (eraEntrada)
             {
                 // Se retiran las capas que creo (una transferencia puede crear
                 // varias, una por cada costo de origen). Si ya se uso algo de
@@ -1066,6 +1100,22 @@ public class InventarioService : IInventarioService
                 }
             }
 
+            // Era una devolución de préstamo, en cualquiera de los dos sentidos
+            // (vuelve mercadería propia, o sale la que se estaba devolviendo):
+            // la línea deja de contar esto como devuelto, y el préstamo vuelve
+            // a Pendiente si ya se había marcado Devuelto.
+            if (m.PrestamoDetalleId is int prestamoDetalleId)
+            {
+                var detalle = await _repository.GetPrestamoDetalleConPrestamoAsync(prestamoDetalleId);
+                if (detalle?.Prestamo is not null)
+                {
+                    detalle.CantidadDevuelta -= m.Cantidad;
+                    detalle.Prestamo.Estado = detalle.Prestamo.Detalle.All(d => d.CantidadDevuelta >= d.Cantidad)
+                        ? EstadoPrestamo.Devuelto
+                        : EstadoPrestamo.Pendiente;
+                }
+            }
+
             await _repository.GuardarAsync();
         }
 
@@ -1080,6 +1130,7 @@ public class InventarioService : IInventarioService
             TipoDocumentoInventario.Transferencia => "transferencias",
             TipoDocumentoInventario.Recepcion => "recepciones",
             TipoDocumentoInventario.NotaVenta => "notasventa",
+            TipoDocumentoInventario.Prestamo or TipoDocumentoInventario.DevolucionPrestamo => "prestamos",
             _ => "ajustes"
         };
         await _notificador.AvisarAsync(modulo, "anulado", response);
@@ -1988,6 +2039,33 @@ public class InventarioService : IInventarioService
             CantidadPendiente = d.Cantidad - d.CantidadDevuelta,
             CostoUnitario = d.Movimiento?.CostoUnitario ?? 0,
             CostoTotal = d.Movimiento?.CostoTotal ?? 0
-        }).ToList()
+        }).ToList(),
+        // Cada devolucion es un documento propio: se agrupan las lineas de
+        // todas las PrestamoDetalle por el documento que las registro, para
+        // que cada devolucion salga como un solo renglon con sus lineas
+        // adentro, no una fila suelta por producto.
+        Devoluciones = p.Detalle
+            .SelectMany(d => d.MovimientosDevolucion.Select(m => (Detalle: d, Movimiento: m)))
+            .GroupBy(x => x.Movimiento.DocumentoId)
+            .Select(g => new PrestamoDevolucionResponse
+            {
+                Id = g.Key,
+                Numero = g.First().Movimiento.Documento?.Numero ?? string.Empty,
+                Fecha = g.First().Movimiento.Documento?.Fecha ?? default,
+                Estado = g.First().Movimiento.Documento?.Estado ?? string.Empty,
+                Usuario = g.First().Movimiento.Documento?.Usuario?.Nombre,
+                Detalle = g.Select(x => new LineaDevolucionPrestamoResponse
+                {
+                    PrestamoDetalleId = x.Detalle.Id,
+                    Producto = x.Detalle.Producto?.Nombre ?? string.Empty,
+                    Presentacion = x.Movimiento.Presentacion?.Nombre,
+                    UnidadBase = x.Detalle.Producto?.UnidadBase?.Codigo ?? string.Empty,
+                    CantidadPresentacion = x.Movimiento.CantidadPresentacion,
+                    Cantidad = x.Movimiento.Cantidad,
+                }).ToList(),
+            })
+            .OrderByDescending(dv => dv.Fecha)
+            .ThenByDescending(dv => dv.Id)
+            .ToList()
     };
 }

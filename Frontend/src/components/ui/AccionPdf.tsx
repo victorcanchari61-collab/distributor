@@ -18,6 +18,7 @@ export type DocumentoPdf =
   | 'transferencias'
   | 'recepciones'
   | 'prestamos'
+  | 'devolucionesprestamo'
   | 'despacho'
 
 type Formato = 'a4' | 'ticket' | 'copias'
@@ -31,6 +32,7 @@ const TITULOS: Record<DocumentoPdf, string> = {
   transferencias: 'Transferencia',
   recepciones: 'Recepción',
   prestamos: 'Préstamo',
+  devolucionesprestamo: 'Devolución de préstamo',
   despacho: 'Despacho',
 }
 
@@ -60,7 +62,14 @@ const SOLO_A4: DocumentoPdf[] = ['despacho']
 const CON_COPIAS: DocumentoPdf[] = ['pedido']
 
 const rutaDe = (documento: DocumentoPdf) =>
-  INVENTARIO.includes(documento) ? `/inventario/${documento}` : `/${documento}`
+  // La devolución de préstamo cuelga de su propio préstamo, no de /inventario
+  // a secas: comparte tabla y numeración con los otros documentos de
+  // inventario, pero su ruta va anidada bajo prestamos/devoluciones.
+  documento === 'devolucionesprestamo'
+    ? '/inventario/prestamos/devoluciones'
+    : INVENTARIO.includes(documento)
+      ? `/inventario/${documento}`
+      : `/${documento}`
 
 /**
  * Reportes que salen de un documento, aparte de su PDF.

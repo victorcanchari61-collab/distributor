@@ -66,4 +66,6 @@ public interface IPdfService
     Task<(byte[] Contenido, string Nombre)> TransferenciaAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> RecepcionAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> PrestamoAsync(int id, FormatoPdf formato);
+
+    Task<(byte[] Contenido, string Nombre)> DevolucionPrestamoAsync(int id, FormatoPdf formato);
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, Eye, HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
+import { fechaCorta, fechaHora } from '../../lib/fechas'
+import { ArrowLeft, Check, Eye, HandCoins, Plus, Trash2, Undo2, X } from 'lucide-react'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -18,6 +18,7 @@ import {
   StatCard,
   SysDataTable,
   TablaProductosDetalle,
+  useConfirmacion,
   useToast,
 } from '../../components/ui'
 import type {
@@ -33,6 +34,7 @@ import { almacenApi, prestamoApi, stockApi } from './inventarioApi'
 import type {
   AlmacenResponse,
   PrestamoDetalleResponse,
+  PrestamoDevolucionResponse,
   PrestamoResponse,
   TipoPrestamo,
   ResumenPrestamos,
@@ -41,6 +43,18 @@ import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
 type FilaPrestamo = LineaProductoNueva
+
+/**
+ * Una fila de la tabla de devoluciones: una ya registrada, o la fila nueva
+ * que se agrega para registrar una — igual que "Agregar pago" en Cobranza.
+ */
+interface FilaDevolucion {
+  clave: string
+  /** null en la fila nueva, mientras todavía no se guarda. */
+  devolucion: PrestamoDevolucionResponse | null
+}
+
+const NUEVA_DEVOLUCION = 'nueva'
 
 function estadoPrestamoBadge(estado: PrestamoResponse['estado']) {
   return (
@@ -74,7 +88,9 @@ export function PrestamosPage() {
   const [detalleAbierto, setDetalleAbierto] = useState<PrestamoResponse | null>(null)
   const [devolucionAbierta, setDevolucionAbierta] = useState<PrestamoResponse | null>(null)
   const [cantidadesDevolucion, setCantidadesDevolucion] = useState<Record<number, string>>({})
+  const [agregandoDevolucion, setAgregandoDevolucion] = useState(false)
   const [guardando, setGuardando] = useState(false)
+  const { confirmar, dialogo } = useConfirmacion()
 
   const [cabecera, setCabecera] = useState({
     tipo: 'DADO' as TipoPrestamo,
@@ -202,10 +218,37 @@ export function PrestamosPage() {
 
   const abrirDevolucion = (p: PrestamoResponse) => {
     setDevolucionAbierta(p)
-    // Cada línea sale sugerida con lo que falta devolver: es lo mas comun.
+    setAgregandoDevolucion(false)
+    setCantidadesDevolucion({})
+  }
+
+  /*
+   * Refresca lo que se ve tras registrar o anular una devolución.
+   *
+   * El préstamo que se está gestionando se pide por id y no se busca en la
+   * lista: con paginación solo estaría si cayó en la página visible.
+   */
+  const refrescarDevolucion = useCallback(async (id: number) => {
+    await cargar()
+    setDevolucionAbierta(await prestamoApi.getById(id))
+  }, [cargar])
+
+  /** Abre la fila nueva de la tabla, sugerida con lo que falta devolver de cada producto. */
+  const agregarDevolucion = () => {
+    if (!devolucionAbierta) return
     setCantidadesDevolucion(
-      Object.fromEntries(p.detalle.map((d) => [d.id, String(d.cantidadPendiente)])),
+      Object.fromEntries(
+        devolucionAbierta.detalle
+          .filter((d) => d.cantidadPendiente > 0)
+          .map((d) => [d.id, String(d.cantidadPendiente)]),
+      ),
     )
+    setAgregandoDevolucion(true)
+  }
+
+  const cancelarDevolucion = () => {
+    setAgregandoDevolucion(false)
+    setCantidadesDevolucion({})
   }
 
   const registrarDevolucion = async () => {
@@ -223,8 +266,9 @@ export function PrestamosPage() {
     setGuardando(true)
     try {
       await prestamoApi.devolver(devolucionAbierta.id, detalle)
-      setDevolucionAbierta(null)
-      await cargar()
+      setAgregandoDevolucion(false)
+      setCantidadesDevolucion({})
+      await refrescarDevolucion(devolucionAbierta.id)
       toast.exito('Devolución registrada')
     } catch (e) {
       toast.error(
@@ -238,6 +282,112 @@ export function PrestamosPage() {
       setGuardando(false)
     }
   }
+
+  const anularDevolucion = (d: PrestamoDevolucionResponse) =>
+    confirmar({
+      titulo: `Anular devolución ${d.numero}`,
+      mensaje:
+        'Revierte el stock que movió esta devolución y la línea del préstamo vuelve a quedar pendiente por esa cantidad. No se puede deshacer.',
+      confirmar: 'Anular',
+      tono: 'danger',
+      accion: async () => {
+        if (!devolucionAbierta) return
+        try {
+          await prestamoApi.anularDevolucion(d.id)
+          await refrescarDevolucion(devolucionAbierta.id)
+          toast.exito('Devolución anulada')
+        } catch (e) {
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos anular la devolución.')
+        }
+      },
+    })
+
+  /*
+   * Cada devolución es un documento propio: una fila por evento, no por
+   * producto. La fila nueva (sin guardar) reemplaza "Documento"/"Fecha"/etc
+   * por los campos para escribir cuánto se devuelve de cada producto
+   * pendiente — el mismo lugar que ocupará su resumen una vez guardada.
+   */
+  const columnasDevoluciones: DataTableColumn<FilaDevolucion>[] = [
+    {
+      key: 'numero',
+      label: 'Documento',
+      sortable: false,
+      render: (f) =>
+        f.devolucion ? (
+          <Badge tone={f.devolucion.estado === 'ANULADO' ? 'neutral' : undefined}>
+            {f.devolucion.numero}
+          </Badge>
+        ) : (
+          <Badge tone="sys">Nueva</Badge>
+        ),
+    },
+    {
+      key: 'fecha',
+      label: 'Fecha',
+      sortable: false,
+      render: (f) => (f.devolucion ? fechaHora(f.devolucion.fecha) : <span className="text-ink-soft">—</span>),
+    },
+    {
+      key: 'productos',
+      label: 'Productos',
+      sortable: false,
+      render: (f) => {
+        if (f.devolucion) {
+          return f.devolucion.detalle.length === 1
+            ? `${f.devolucion.detalle[0].producto} · ${f.devolucion.detalle[0].cantidadPresentacion} ${f.devolucion.detalle[0].presentacion ?? f.devolucion.detalle[0].unidadBase}`
+            : `${f.devolucion.detalle.length} productos`
+        }
+
+        // La fila nueva: un campo por cada producto que todavía tiene saldo pendiente.
+        return (
+          <div className="flex flex-col gap-2 py-1">
+            {(devolucionAbierta?.detalle ?? [])
+              .filter((d) => d.cantidadPendiente > 0)
+              .map((d) => (
+                <div key={d.id} className="grid grid-cols-[1fr_7rem] items-center gap-2">
+                  <span className="text-xs text-ink-muted">
+                    {d.producto}
+                    <span className="block text-[11px] text-ink-soft">
+                      Pendiente: {d.cantidadPendiente} {d.unidadBase} de {d.cantidad}
+                    </span>
+                  </span>
+                  <Input
+                    size="sm"
+                    type="number"
+                    step="0.0001"
+                    max={d.cantidadPendiente}
+                    value={cantidadesDevolucion[d.id] ?? ''}
+                    onChange={(e) =>
+                      setCantidadesDevolucion({ ...cantidadesDevolucion, [d.id]: e.target.value })
+                    }
+                  />
+                </div>
+              ))}
+          </div>
+        )
+      },
+    },
+    {
+      key: 'usuario',
+      label: 'Registrada por',
+      sortable: false,
+      render: (f) => f.devolucion?.usuario ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'estado',
+      label: 'Estado',
+      sortable: false,
+      render: (f) =>
+        f.devolucion ? (
+          <Badge tone={f.devolucion.estado === 'ANULADO' ? 'danger' : 'success'}>
+            {f.devolucion.estado === 'ANULADO' ? 'Anulada' : 'Confirmada'}
+          </Badge>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
+  ]
 
   const columnasFilas: DataTableColumn<FilaPrestamo>[] = [
     {
@@ -611,19 +761,30 @@ export function PrestamosPage() {
         title={devolucionAbierta ? `Devolución de ${devolucionAbierta.numero}` : ''}
         description="Puede ser parcial: lo que no se devuelva ahora queda pendiente."
         onClose={() => setDevolucionAbierta(null)}
+        size="lg"
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setDevolucionAbierta(null)}>
-              Cancelar
+              Cerrar
             </Button>
-            <Button size="sm" loading={guardando} onClick={() => void registrarDevolucion()}>
-              Registrar devolución
-            </Button>
+            {puede('inv.prestamos', 'confirmar') && (
+              <Button
+                size="sm"
+                disabled={
+                  agregandoDevolucion ||
+                  !devolucionAbierta?.detalle.some((d) => d.cantidadPendiente > 0)
+                }
+                onClick={agregarDevolucion}
+              >
+                <Plus size={15} />
+                Agregar devolución
+              </Button>
+            )}
           </>
         }
       >
         {devolucionAbierta && (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             {/*
               Con qué almacén queda: la devolución siempre va al mismo almacén con el que se
               registró el préstamo (no se elige otro), pero hay que verlo antes de confirmar.
@@ -633,37 +794,51 @@ export function PrestamosPage() {
               <span className="font-semibold text-ink">{devolucionAbierta.almacen}</span>
             </div>
 
-            {devolucionAbierta.detalle
-              .filter((d) => d.cantidadPendiente > 0)
-              .map((d) => (
-                <div
-                  key={d.id}
-                  className="grid grid-cols-[1fr_8rem] items-end gap-2 rounded-field border border-line p-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-ink">{d.producto}</p>
-                    <p className="text-xs text-ink-soft">
-                      Pendiente: {d.cantidadPendiente} {d.unidadBase} de {d.cantidad}
-                    </p>
-                  </div>
-                  <Input
-                    label={`Devolver (${d.unidadBase})`}
-                    type="number"
-                    step="0.0001"
-                    max={d.cantidadPendiente}
-                    value={cantidadesDevolucion[d.id] ?? ''}
-                    onChange={(e) =>
-                      setCantidadesDevolucion({
-                        ...cantidadesDevolucion,
-                        [d.id]: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              ))}
+            <SysDataTable<FilaDevolucion>
+              columns={columnasDevoluciones}
+              rows={[
+                ...(agregandoDevolucion ? [{ clave: NUEVA_DEVOLUCION, devolucion: null }] : []),
+                ...devolucionAbierta.devoluciones.map((d) => ({ clave: String(d.id), devolucion: d })),
+              ]}
+              rowKey="clave"
+              toolbar={false}
+              empty="Todavía no hay devoluciones registradas."
+              actions={(f) =>
+                f.clave === NUEVA_DEVOLUCION ? (
+                  <>
+                    <RowAction
+                      label="Guardar devolución"
+                      tone="success"
+                      disabled={guardando}
+                      onClick={() => void registrarDevolucion()}
+                    >
+                      <Check size={15} />
+                    </RowAction>
+                    <RowAction label="Cancelar" tone="neutral" disabled={guardando} onClick={cancelarDevolucion}>
+                      <X size={15} />
+                    </RowAction>
+                  </>
+                ) : f.devolucion ? (
+                  <>
+                    <AccionPdf documento="devolucionesprestamo" id={f.devolucion.id} numero={f.devolucion.numero} />
+                    {f.devolucion.estado === 'CONFIRMADO' && puede('inv.prestamos', 'anular') && (
+                      <RowAction
+                        label={`Anular devolución ${f.devolucion.numero}`}
+                        tone="danger"
+                        onClick={() => f.devolucion && anularDevolucion(f.devolucion)}
+                      >
+                        <Undo2 size={15} />
+                      </RowAction>
+                    )}
+                  </>
+                ) : null
+              }
+            />
           </div>
         )}
       </Modal>
+
+      {dialogo}
     </ListPage>
   )
 }

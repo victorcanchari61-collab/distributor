@@ -421,6 +421,28 @@ export interface PrestamoResponse {
   usuario: string | null
   total: number
   detalle: PrestamoDetalleResponse[]
+  /** Cada devolución registrada, más reciente primero — con su propio estado, por si se anuló. */
+  devoluciones: PrestamoDevolucionResponse[]
+}
+
+/** Una devolución registrada: el documento que movió stock, con sus líneas. */
+export interface PrestamoDevolucionResponse {
+  /** El id del documento de inventario: por él se anula y se imprime. */
+  id: number
+  numero: string
+  fecha: string
+  estado: 'CONFIRMADO' | 'ANULADO'
+  usuario: string | null
+  detalle: LineaDevolucionPrestamoDetalle[]
+}
+
+export interface LineaDevolucionPrestamoDetalle {
+  prestamoDetalleId: number
+  producto: string
+  presentacion: string | null
+  unidadBase: string
+  cantidadPresentacion: number
+  cantidad: number
 }
 
 export interface LineaDevolucionPrestamoRequest {
@@ -449,6 +471,9 @@ export const prestamoApi = {
   /** Devolución total o parcial: una o varias líneas a la vez. */
   devolver: (id: number, detalle: LineaDevolucionPrestamoRequest[]) =>
     api.post<PrestamoResponse>(`/inventario/prestamos/${id}/devolucion`, { detalle }),
+  /** Anula una devolución registrada por error. El id es el del documento de la devolución. */
+  anularDevolucion: (devolucionId: number) =>
+    api.patch<DocumentoInventarioResponse>(`/inventario/prestamos/devoluciones/${devolucionId}/anular`),
 }
 
 // --- Recepciones ---

@@ -72,6 +72,76 @@ class PrestamoDetalle {
       );
 }
 
+/// Una linea dentro de una devolucion: que producto y cuanto.
+class LineaDevolucionPrestamo {
+  const LineaDevolucionPrestamo({
+    required this.prestamoDetalleId,
+    required this.producto,
+    this.presentacion,
+    required this.unidadBase,
+    required this.cantidadPresentacion,
+    required this.cantidad,
+  });
+
+  final int prestamoDetalleId;
+  final String producto;
+  final String? presentacion;
+  final String unidadBase;
+  final double cantidadPresentacion;
+  final double cantidad;
+
+  factory LineaDevolucionPrestamo.desdeJson(Map<String, dynamic> json) =>
+      LineaDevolucionPrestamo(
+        prestamoDetalleId: json['prestamoDetalleId'] as int,
+        producto: json['producto'] as String? ?? '',
+        presentacion: json['presentacion'] as String?,
+        unidadBase: json['unidadBase'] as String? ?? '',
+        cantidadPresentacion:
+            (json['cantidadPresentacion'] as num?)?.toDouble() ?? 0,
+        cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0,
+      );
+}
+
+/// Una devolucion registrada: el documento que movio stock, con sus lineas.
+/// El id es el del documento de inventario — por el se anula y se imprime.
+class PrestamoDevolucion {
+  const PrestamoDevolucion({
+    required this.id,
+    required this.numero,
+    required this.fecha,
+    required this.estado,
+    this.usuario,
+    required this.detalle,
+  });
+
+  final int id;
+  final String numero;
+  final DateTime fecha;
+
+  /// CONFIRMADO o ANULADO.
+  final String estado;
+
+  final String? usuario;
+  final List<LineaDevolucionPrestamo> detalle;
+
+  bool get anulada => estado == 'ANULADO';
+
+  factory PrestamoDevolucion.desdeJson(Map<String, dynamic> json) =>
+      PrestamoDevolucion(
+        id: json['id'] as int,
+        numero: json['numero'] as String? ?? '',
+        fecha: fechaDeJson(json['fecha'] as String),
+        estado: json['estado'] as String? ?? 'CONFIRMADO',
+        usuario: json['usuario'] as String?,
+        detalle: (json['detalle'] as List? ?? const [])
+            .map(
+              (e) =>
+                  LineaDevolucionPrestamo.desdeJson(e as Map<String, dynamic>),
+            )
+            .toList(),
+      );
+}
+
 /// Mercaderia que sale o entra desde fuera de la empresa: se presta y se
 /// espera de vuelta.
 class Prestamo {
@@ -88,6 +158,7 @@ class Prestamo {
     this.usuario,
     required this.total,
     required this.detalle,
+    this.devoluciones = const [],
   });
 
   final int id;
@@ -111,6 +182,9 @@ class Prestamo {
   final double total;
   final List<PrestamoDetalle> detalle;
 
+  /// Cada devolucion registrada, mas reciente primero — con su propio estado, por si se anulo.
+  final List<PrestamoDevolucion> devoluciones;
+
   bool get esDado => tipo == TipoPrestamo.dado;
 
   String get buscable => '$numero $contraparte $almacen'.toLowerCase();
@@ -129,6 +203,9 @@ class Prestamo {
     total: (json['total'] as num?)?.toDouble() ?? 0,
     detalle: (json['detalle'] as List? ?? const [])
         .map((e) => PrestamoDetalle.desdeJson(e as Map<String, dynamic>))
+        .toList(),
+    devoluciones: (json['devoluciones'] as List? ?? const [])
+        .map((e) => PrestamoDevolucion.desdeJson(e as Map<String, dynamic>))
         .toList(),
   );
 }

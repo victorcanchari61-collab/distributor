@@ -513,6 +513,18 @@ public class PdfService(
         return (Generar(doc, formato), Nombre("prestamo", prestamo.Numero, formato));
     }
 
+    public async Task<(byte[], string)> DevolucionPrestamoAsync(int id, FormatoPdf formato)
+    {
+        var devolucion = await DocumentoDeTipo(id, TipoDocumentoInventario.DevolucionPrestamo, "devolución de préstamo");
+
+        var doc = Base(devolucion, await empresas.GetActivaAsync()) with
+        {
+            Titulo = "DEVOLUCIÓN DE PRÉSTAMO",
+        };
+
+        return (Generar(doc, formato), Nombre("devolucion-prestamo", devolucion.Numero, formato));
+    }
+
     /// <summary>
     /// Lo común de un documento de inventario, que cada tipo completa.
     ///

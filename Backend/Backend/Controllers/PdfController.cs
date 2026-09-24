@@ -130,6 +130,11 @@ public class PdfController(IPdfService pdf) : ControllerBase
     public async Task<IActionResult> Prestamo(int id, [FromQuery] string? formato) =>
         Archivo(await pdf.PrestamoAsync(id, Formato(formato)));
 
+    [HttpGet("api/inventario/prestamos/devoluciones/{id:int}/pdf")]
+    [Permiso("inv.prestamos", Accion.Exportar)]
+    public async Task<IActionResult> DevolucionPrestamo(int id, [FromQuery] string? formato) =>
+        Archivo(await pdf.DevolucionPrestamoAsync(id, Formato(formato)));
+
     /// <summary>
     /// <c>?formato=ticket</c> para el rollo de 80 mm; cualquier otra cosa, A4.
     ///

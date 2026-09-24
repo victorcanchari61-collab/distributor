@@ -23,7 +23,11 @@ enum DocumentoPdf {
   ajuste('inventario/ajustes', 'Ajuste'),
   transferencia('inventario/transferencias', 'Transferencia'),
   recepcion('inventario/recepciones', 'Recepción'),
-  prestamo('inventario/prestamos', 'Préstamo');
+  prestamo('inventario/prestamos', 'Préstamo'),
+  devolucionPrestamo(
+    'inventario/prestamos/devoluciones',
+    'Devolución de préstamo',
+  );
 
   const DocumentoPdf(this.ruta, this.nombre);
 

@@ -685,6 +685,23 @@ class PrestamosControlador extends AsyncNotifier<List<Prestamo>> {
     await ref.read(inventarioApiProvider).registrarDevolucion(id, cuerpo);
     await recargar();
   }
+
+  /// Anula una devolución registrada por error. El id es el del documento de
+  /// la devolución, no el del préstamo.
+  Future<void> anularDevolucion(int devolucionId) async {
+    await ref.read(inventarioApiProvider).anularDevolucionPrestamo(devolucionId);
+    await recargar();
+  }
+
+  /// Trae un préstamo al día y lo deja también en la lista, para que una
+  /// hoja que muestra su detalle (la de devoluciones) se refresque sin cerrar.
+  Future<Prestamo> refrescarUno(int id) async {
+    final fresco = await ref.read(inventarioApiProvider).prestamo(id);
+    state = state.whenData(
+      (lista) => [for (final p in lista) if (p.id == id) fresco else p],
+    );
+    return fresco;
+  }
 }
 
 final prestamosProvider =

@@ -211,6 +211,11 @@ class InventarioApi {
             as Map<String, dynamic>,
       );
 
+  /// GET /api/inventario/prestamos/{id}
+  Future<Prestamo> prestamo(int id) async => Prestamo.desdeJson(
+    await _api.get('/inventario/prestamos/$id') as Map<String, dynamic>,
+  );
+
   /// POST /api/inventario/prestamos/{id}/devolucion
   Future<Prestamo> registrarDevolucion(
     int id,
@@ -219,4 +224,10 @@ class InventarioApi {
     await _api.post('/inventario/prestamos/$id/devolucion', cuerpo: cuerpo)
         as Map<String, dynamic>,
   );
+
+  /// PATCH /api/inventario/prestamos/devoluciones/{id}/anular. El id es el
+  /// del documento de la devolucion, no el del prestamo.
+  Future<void> anularDevolucionPrestamo(int id) async {
+    await _api.patch('/inventario/prestamos/devoluciones/$id/anular');
+  }
 }

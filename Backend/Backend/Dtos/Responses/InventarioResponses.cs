@@ -243,6 +243,34 @@ public class PrestamoResponse
     public decimal Total { get; set; }
 
     public List<PrestamoDetalleResponse> Detalle { get; set; } = [];
+
+    /// <summary>Cada devolución registrada, más reciente primero — con su propio estado, por si se anuló.</summary>
+    public List<PrestamoDevolucionResponse> Devoluciones { get; set; } = [];
+}
+
+/// <summary>Una devolución registrada contra el préstamo: el documento que movió stock, con sus líneas.</summary>
+public class PrestamoDevolucionResponse
+{
+    /// <summary>El id del DocumentoInventario: por él se anula y se imprime.</summary>
+    public int Id { get; set; }
+    public string Numero { get; set; } = string.Empty;
+    public DateTime Fecha { get; set; }
+
+    /// <summary>CONFIRMADO o ANULADO.</summary>
+    public string Estado { get; set; } = string.Empty;
+
+    public string? Usuario { get; set; }
+    public List<LineaDevolucionPrestamoResponse> Detalle { get; set; } = [];
+}
+
+public class LineaDevolucionPrestamoResponse
+{
+    public int PrestamoDetalleId { get; set; }
+    public string Producto { get; set; } = string.Empty;
+    public string? Presentacion { get; set; }
+    public string UnidadBase { get; set; } = string.Empty;
+    public decimal CantidadPresentacion { get; set; }
+    public decimal Cantidad { get; set; }
 }
 
 public class PrestamoDetalleResponse

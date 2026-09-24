@@ -292,6 +292,17 @@ public class InventarioController : ControllerBase
         int id, [FromBody] DevolverPrestamoRequest request) =>
         Ok(await _inventario.DevolverPrestamoAsync(id, request, UsuarioId));
 
+    /// <summary>
+    /// Anula una devolución registrada por error (cantidad equivocada, por
+    /// ejemplo): revierte el stock y la línea del préstamo vuelve a quedar
+    /// pendiente por esa cantidad. El id es el del documento de la devolución,
+    /// no el del préstamo.
+    /// </summary>
+    [HttpPatch("prestamos/devoluciones/{id:int}/anular")]
+    [Permiso("inv.prestamos", Accion.Anular)]
+    public async Task<IActionResult> AnularDevolucionPrestamo(int id) =>
+        Ok(await _inventario.AnularAsync(id, UsuarioId));
+
     // --- Recepciones ---
 
     [HttpGet("recepciones")]

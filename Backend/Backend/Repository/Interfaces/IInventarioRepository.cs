@@ -189,6 +189,9 @@ public interface IInventarioRepository
 
     Task AddPrestamoAsync(Prestamo prestamo);
     Task<Prestamo?> GetPrestamoAsync(int id);
+
+    /// <summary>Una línea de préstamo con su préstamo y hermanas cargadas, para recalcular el estado al anular una devolución.</summary>
+    Task<PrestamoDetalle?> GetPrestamoDetalleConPrestamoAsync(int id);
     Task<IEnumerable<Prestamo>> GetPrestamosAsync();
     Task UpdatePrestamoAsync(Prestamo prestamo);
     Task AddPrestamoDetalleAsync(PrestamoDetalle detalle);
