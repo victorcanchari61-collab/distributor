@@ -113,12 +113,6 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Productos',
         icono: Icons.inventory_2_outlined,
       ),
-      MenuItem(
-        id: 'maestros.empleados',
-        pendiente: false,
-        titulo: 'Empleados',
-        icono: Icons.groups_outlined,
-      ),
     ],
   ),
   MenuGrupo(
@@ -349,6 +343,7 @@ const menuGrupos = <MenuGrupo>[
     items: [
       MenuItem(
         id: 'rrhh.empleados',
+        pendiente: false,
         titulo: 'Empleados',
         icono: Icons.people_outline,
       ),

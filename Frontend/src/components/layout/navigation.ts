@@ -111,7 +111,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'maestros.clientes', label: 'Clientes', icon: Contact },
       { id: 'maestros.proveedores', label: 'Proveedores', icon: Building2 },
       { id: 'maestros.productos', label: 'Productos', icon: Package },
-      { id: 'maestros.empleados', label: 'Empleados', icon: Users },
     ],
   },
   {
@@ -212,7 +211,7 @@ export const NAV_GROUPS: NavGroup[] = [
     sys: 'rrhh',
     icon: Users,
     items: [
-      { id: 'rrhh.empleados', label: 'Empleados', icon: Users, pending: true },
+      { id: 'rrhh.empleados', label: 'Empleados', icon: Users },
       { id: 'rrhh.asistencia', label: 'Asistencia', icon: CalendarCheck, pending: true },
       { id: 'rrhh.vacaciones', label: 'Vacaciones', icon: CalendarDays, pending: true },
       { id: 'rrhh.nomina', label: 'Nómina', icon: Banknote, pending: true },

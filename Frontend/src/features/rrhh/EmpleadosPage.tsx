@@ -268,7 +268,7 @@ export function EmpleadosPage() {
       title="Empleados"
       description="Quién trabaja en el negocio. Al crear un usuario se elige a quién pertenece esa cuenta."
       actions={
-        puede('maestros.empleados', 'crear') ? (
+        puede('rrhh.empleados', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
             Nuevo empleado
           </Button>
@@ -301,12 +301,12 @@ export function EmpleadosPage() {
       empty={cargando ? 'Cargando empleados...' : 'Todavía no hay empleados registrados.'}
       rowActions={(row) => (
         <>
-          {puede('maestros.empleados', 'editar') && (
+          {puede('rrhh.empleados', 'editar') && (
             <RowAction label={`Editar a ${row.nombreCompleto}`} onClick={() => abrirEdicion(row)}>
               <Pencil size={15} />
             </RowAction>
           )}
-          {puede('maestros.empleados', 'editar') && (
+          {puede('rrhh.empleados', 'editar') && (
             <RowAction
               label={`${row.activo ? 'Desactivar' : 'Activar'} a ${row.nombreCompleto}`}
               tone={row.activo ? 'warning' : 'success'}
@@ -315,7 +315,7 @@ export function EmpleadosPage() {
               {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
             </RowAction>
           )}
-          {puede('maestros.empleados', 'eliminar') && (
+          {puede('rrhh.empleados', 'eliminar') && (
             <RowAction
               label={`Eliminar a ${row.nombreCompleto}`}
               tone="danger"

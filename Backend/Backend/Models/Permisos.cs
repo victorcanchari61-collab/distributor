@@ -100,8 +100,6 @@ public static class CatalogoPermisos
             ["maestros.clientes"] = CatalogoImportable,
             ["maestros.proveedores"] = CatalogoImportable,
             ["maestros.productos"] = CatalogoImportable,
-            // La gente que trabaja en el negocio. No se importa: son pocos y se dan de alta a mano.
-            ["maestros.empleados"] = Catalogo,
 
             // --- Compras ---
             ["compras.ordenes"] = DocumentoConfirmable,
@@ -171,7 +169,8 @@ public static class CatalogoPermisos
             ["dms.evidencias"] = Consulta,
 
             // --- RR. HH. ---
-            ["rrhh.empleados"] = CatalogoImportable,
+            // La gente que trabaja en el negocio. No se importa: son pocos y se dan de alta a mano.
+            ["rrhh.empleados"] = Catalogo,
             ["rrhh.asistencia"] = Documento,
             ["rrhh.vacaciones"] = DocumentoConfirmable,
             ["rrhh.nomina"] = DocumentoConfirmable,

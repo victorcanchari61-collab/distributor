@@ -20,7 +20,7 @@ public class EmpleadoController : ControllerBase
     }
 
     [HttpGet]
-    [Permiso("maestros.empleados", Accion.Ver)]
+    [Permiso("rrhh.empleados", Accion.Ver)]
     public async Task<IActionResult> GetAll() => Ok(await _empleados.GetAllAsync());
 
     /// <summary>
@@ -30,15 +30,15 @@ public class EmpleadoController : ControllerBase
     /// podría enlazar la cuenta con su ficha.
     /// </summary>
     [HttpGet("opciones")]
-    [PermisoAlguno("maestros.empleados:ver", "config.usuarios:ver")]
+    [PermisoAlguno("rrhh.empleados:ver", "config.usuarios:ver")]
     public async Task<IActionResult> Opciones() => Ok(await _empleados.OpcionesAsync());
 
     [HttpGet("{id:int}")]
-    [Permiso("maestros.empleados", Accion.Ver)]
+    [Permiso("rrhh.empleados", Accion.Ver)]
     public async Task<IActionResult> GetById(int id) => Ok(await _empleados.GetByIdAsync(id));
 
     [HttpPost]
-    [Permiso("maestros.empleados", Accion.Crear)]
+    [Permiso("rrhh.empleados", Accion.Crear)]
     public async Task<IActionResult> Create([FromBody] CreateEmpleadoRequest request)
     {
         var response = await _empleados.CreateAsync(request);
@@ -46,21 +46,21 @@ public class EmpleadoController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Permiso("maestros.empleados", Accion.Editar)]
+    [Permiso("rrhh.empleados", Accion.Editar)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateEmpleadoRequest request) =>
         Ok(await _empleados.UpdateAsync(id, request));
 
     [HttpPatch("{id:int}/activar")]
-    [Permiso("maestros.empleados", Accion.Editar)]
+    [Permiso("rrhh.empleados", Accion.Editar)]
     public async Task<IActionResult> Activar(int id) => Ok(await _empleados.CambiarEstadoAsync(id, true));
 
     /// <summary>Desactiva sin borrar: el que se fue conserva su historial.</summary>
     [HttpPatch("{id:int}/desactivar")]
-    [Permiso("maestros.empleados", Accion.Editar)]
+    [Permiso("rrhh.empleados", Accion.Editar)]
     public async Task<IActionResult> Desactivar(int id) => Ok(await _empleados.CambiarEstadoAsync(id, false));
 
     [HttpDelete("{id:int}")]
-    [Permiso("maestros.empleados", Accion.Eliminar)]
+    [Permiso("rrhh.empleados", Accion.Eliminar)]
     public async Task<IActionResult> Delete(int id)
     {
         await _empleados.DeleteAsync(id);

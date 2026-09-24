@@ -31,7 +31,7 @@ String _fechaTexto(DateTime f) =>
 class EmpleadosPagina extends ConsumerWidget {
   const EmpleadosPagina({super.key});
 
-  static const ruta = '/maestros/empleados';
+  static const ruta = '/rrhh/empleados';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,7 +52,7 @@ class EmpleadosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaEmpleadosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre, documento o cargo',
       onRecargar: () => ref.read(empleadosProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'maestros.empleados', Accion.crear)
+      onNuevo: puede(ref, 'rrhh.empleados', Accion.crear)
           ? () => _abrirFormulario(context, null)
           : null,
       iconoVacio: Icons.groups_outlined,
@@ -91,13 +91,13 @@ class EmpleadosPagina extends ConsumerWidget {
       fila: (context, empleado) => _TarjetaEmpleado(
         empleado: empleado,
         color: color,
-        onEditar: puede(ref, 'maestros.empleados', Accion.editar)
+        onEditar: puede(ref, 'rrhh.empleados', Accion.editar)
             ? () => _abrirFormulario(context, empleado)
             : null,
-        onEstado: puede(ref, 'maestros.empleados', Accion.editar)
+        onEstado: puede(ref, 'rrhh.empleados', Accion.editar)
             ? () => _cambiarEstado(context, ref, empleado)
             : null,
-        onEliminar: puede(ref, 'maestros.empleados', Accion.eliminar)
+        onEliminar: puede(ref, 'rrhh.empleados', Accion.eliminar)
             ? () => _eliminar(context, ref, empleado)
             : null,
       ),
