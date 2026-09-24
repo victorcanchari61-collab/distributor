@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta, fechaHora } from '../../lib/fechas'
-import { ArrowLeft, Boxes, Clock, Eye, HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, Eye, HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -338,24 +338,19 @@ export function PrestamosPage() {
       render: (f) =>
         f.cantidadGuardada ??
         (f.pendiente && (
-          <div className="flex items-center gap-2">
-            <Input
-              size="sm"
-              type="number"
-              step="0.0001"
-              max={f.pendiente.cantidadPendiente}
-              value={cantidadesDevolucion[f.pendiente.prestamoDetalleId] ?? ''}
-              onChange={(e) =>
-                setCantidadesDevolucion({
-                  ...cantidadesDevolucion,
-                  [f.pendiente!.prestamoDetalleId]: e.target.value,
-                })
-              }
-            />
-            <span className="shrink-0 text-xs text-ink-soft">
-              de {f.pendiente.cantidadPendiente} {f.pendiente.unidadBase}
-            </span>
-          </div>
+          <Input
+            size="sm"
+            type="number"
+            step="0.0001"
+            max={f.pendiente.cantidadPendiente}
+            value={cantidadesDevolucion[f.pendiente.prestamoDetalleId] ?? ''}
+            onChange={(e) =>
+              setCantidadesDevolucion({
+                ...cantidadesDevolucion,
+                [f.pendiente!.prestamoDetalleId]: e.target.value,
+              })
+            }
+          />
         )),
     },
     {
@@ -805,29 +800,34 @@ export function PrestamosPage() {
       >
         {devolucionAbierta && (
           <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatCard
-                label="Productos"
-                value={String(devolucionAbierta.detalle.length)}
-                icon={<Boxes size={18} />}
-              />
-              <StatCard
-                label="Pendientes"
-                value={String(devolucionAbierta.detalle.filter((d) => d.cantidadPendiente > 0).length)}
-                icon={<Clock size={18} />}
-                tono={devolucionAbierta.detalle.some((d) => d.cantidadPendiente > 0) ? 'warning' : 'success'}
-              />
-              <StatCard
-                label="Devoluciones"
-                value={String(devolucionAbierta.devoluciones.length)}
-                icon={<Undo2 size={18} />}
-              />
-              <StatCard
-                label="Anuladas"
-                value={String(devolucionAbierta.devoluciones.filter((d) => d.estado === 'ANULADO').length)}
-                icon={<Undo2 size={18} />}
-                tono="neutral"
-              />
+            {/* Mismo formato compacto que los cards de la pestaña Pago al convertir un pedido: sin icono, solo lo justo. */}
+            <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4 sm:gap-3">
+              <div className="rounded-field border border-line px-2 py-2">
+                <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">Productos</p>
+                <p className="text-base font-semibold text-ink">{devolucionAbierta.detalle.length}</p>
+              </div>
+              <div className="rounded-field border border-line px-2 py-2">
+                <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">Pendientes</p>
+                <p
+                  className={
+                    devolucionAbierta.detalle.some((d) => d.cantidadPendiente > 0)
+                      ? 'text-base font-semibold text-amber-700'
+                      : 'text-base font-semibold text-ink'
+                  }
+                >
+                  {devolucionAbierta.detalle.filter((d) => d.cantidadPendiente > 0).length}
+                </p>
+              </div>
+              <div className="rounded-field border border-line px-2 py-2">
+                <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">Devoluciones</p>
+                <p className="text-base font-semibold text-ink">{devolucionAbierta.devoluciones.length}</p>
+              </div>
+              <div className="rounded-field border border-line px-2 py-2">
+                <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">Anuladas</p>
+                <p className="text-base font-semibold text-ink">
+                  {devolucionAbierta.devoluciones.filter((d) => d.estado === 'ANULADO').length}
+                </p>
+              </div>
             </div>
 
             <SysDataTable<FilaDevolucionTabla>
