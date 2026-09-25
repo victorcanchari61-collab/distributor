@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import {
-  Badge,
   Button,
-  Desplegable,
   Input,
   Modal,
   RowAction,
@@ -11,25 +9,13 @@ import {
   useConfirmacion,
   useToast,
 } from '../../components/ui'
-import type { BadgeTone, DataTableColumn } from '../../components/ui'
+import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaCorta, hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { feriadoApi } from './feriadoApi'
-import type { FeriadoResponse, PagoFeriado } from './feriadoApi'
-
-const PAGOS: { value: PagoFeriado; label: string }[] = [
-  { value: 'NORMAL', label: 'Normal' },
-  { value: 'DOBLE', label: 'Doble' },
-  { value: 'TRIPLE', label: 'Triple' },
-]
-
-const TONO_PAGO: Record<PagoFeriado, BadgeTone> = {
-  NORMAL: 'neutral',
-  DOBLE: 'warning',
-  TRIPLE: 'danger',
-}
+import type { FeriadoResponse } from './feriadoApi'
 
 interface Props {
   open: boolean
@@ -37,7 +23,8 @@ interface Props {
 }
 
 /**
- * Días no laborables o de pago especial. Se administra desde el mismo lugar
+ * Días no laborables. Quien trabaja uno cobra ese día doble en la planilla.
+ * Se administra desde el mismo lugar
  * donde se usa —el calendario de Asistencia— y no tiene entrada propia en el
  * menú: es una lista corta que se toca un par de veces al año.
  */
@@ -50,7 +37,7 @@ export function FeriadosModal({ open, onClose }: Props) {
   const [cargando, setCargando] = useState(true)
   const [editando, setEditando] = useState<FeriadoResponse | null>(null)
   const [agregando, setAgregando] = useState(false)
-  const [form, setForm] = useState({ fecha: hoyLocal(), nombre: '', pago: 'NORMAL' as PagoFeriado })
+  const [form, setForm] = useState({ fecha: hoyLocal(), nombre: '' })
   const [guardando, setGuardando] = useState(false)
 
   const cargar = useCallback(async () => {
@@ -72,13 +59,13 @@ export function FeriadosModal({ open, onClose }: Props) {
 
   const abrirNuevo = () => {
     setEditando(null)
-    setForm({ fecha: hoyLocal(), nombre: '', pago: 'NORMAL' })
+    setForm({ fecha: hoyLocal(), nombre: '' })
     setAgregando(true)
   }
 
   const abrirEdicion = (feriado: FeriadoResponse) => {
     setEditando(feriado)
-    setForm({ fecha: feriado.fecha.slice(0, 10), nombre: feriado.nombre, pago: feriado.pago })
+    setForm({ fecha: feriado.fecha.slice(0, 10), nombre: feriado.nombre })
     setAgregando(true)
   }
 
@@ -88,7 +75,7 @@ export function FeriadosModal({ open, onClose }: Props) {
 
     setGuardando(true)
     try {
-      const cuerpo = { fecha: form.fecha, nombre: form.nombre.trim(), pago: form.pago }
+      const cuerpo = { fecha: form.fecha, nombre: form.nombre.trim() }
       if (editando) await feriadoApi.update(editando.id, cuerpo)
       else await feriadoApi.create(cuerpo)
       setAgregando(false)
@@ -121,16 +108,10 @@ export function FeriadosModal({ open, onClose }: Props) {
   const columns: DataTableColumn<FeriadoResponse>[] = [
     { key: 'fecha', label: 'Fecha', filterable: false, render: (row) => fechaCorta(row.fecha) },
     { key: 'nombre', label: 'Nombre', filterable: false },
-    {
-      key: 'pago',
-      label: 'Se paga',
-      filterable: false,
-      render: (row) => <Badge tone={TONO_PAGO[row.pago]}>{PAGOS.find((p) => p.value === row.pago)?.label}</Badge>,
-    },
   ]
 
   return (
-    <Modal open={open} title="Feriados" description="Días no laborables o de pago especial, para verlos en el calendario." onClose={onClose} size="lg">
+    <Modal open={open} title="Feriados" description="Días no laborables. Si alguien trabaja un feriado, en la planilla se le paga ese día doble." onClose={onClose} size="lg">
       <div className="space-y-4">
         {agregando ? (
           <div className="space-y-3 rounded-field border border-line bg-surface-alt p-3">
@@ -147,12 +128,6 @@ export function FeriadosModal({ open, onClose }: Props) {
                 placeholder="Ej. Día del Trabajo"
                 value={form.nombre}
                 onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-              />
-              <Desplegable
-                label="Se paga"
-                value={form.pago}
-                onChange={(v) => setForm({ ...form, pago: v as PagoFeriado })}
-                options={PAGOS}
               />
             </div>
             <div className="flex justify-end gap-2">

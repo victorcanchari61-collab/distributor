@@ -37,7 +37,7 @@ public class FeriadoService : IFeriadoService
             throw new ConflictException("Ya hay un feriado registrado ese día");
         }
 
-        var feriado = new Feriado { Fecha = fecha, Nombre = request.Nombre.Trim(), Pago = request.Pago };
+        var feriado = new Feriado { Fecha = fecha, Nombre = request.Nombre.Trim() };
         await _repository.AddAsync(feriado);
         var response = Map(feriado);
         await _notificador.AvisarAsync("feriados", "creado", response);
@@ -58,7 +58,6 @@ public class FeriadoService : IFeriadoService
 
         feriado.Fecha = fecha;
         feriado.Nombre = request.Nombre.Trim();
-        feriado.Pago = request.Pago;
 
         await _repository.UpdateAsync(feriado);
         var response = Map(feriado);
@@ -78,7 +77,6 @@ public class FeriadoService : IFeriadoService
         Id = f.Id,
         Fecha = f.Fecha,
         Nombre = f.Nombre,
-        Pago = f.Pago,
     };
 
     private async Task<Feriado> GetOrThrowAsync(int id) =>

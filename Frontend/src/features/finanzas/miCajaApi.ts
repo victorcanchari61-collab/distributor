@@ -1,6 +1,7 @@
 import { api } from '../../lib/apiClient'
 import type { CuentaFinancieraResponse, MovimientoCuentaResponse, NaturalezaCuenta } from './cuentaFinancieraApi'
 import type { TipoMovimientoOperativo, MovimientoOperativoResponse } from './gastoOperativoApi'
+import type { CierreCajaResponse } from './cierreCajaApi'
 
 /** Un ingreso o egreso libre en Mi Caja: la cuenta la decide el servidor, siempre la propia. */
 export interface MovimientoLibreRequest {
@@ -16,20 +17,6 @@ export interface CerrarMiCajaRequest {
   monedas: number
   cuentaDestinoId: number
   observacion?: string | null
-}
-
-export interface CierreCajaResponse {
-  id: number
-  fecha: string
-  saldoSistema: number
-  billetes: number
-  monedas: number
-  contado: number
-  /** Negativa: faltó plata. Positiva: sobró. */
-  diferencia: number
-  cuentaDestinoId: number
-  cuentaDestino: string
-  observacion: string | null
 }
 
 /** Una cuenta a la que se puede entregar lo contado, sin su saldo. */

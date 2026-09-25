@@ -23,6 +23,8 @@ export interface EmpleadoResponse {
   /** Fechas del servidor, en ISO. */
   fechaIngreso: string | null
   fechaCese: string | null
+  /** Lo que cobra por una semana completa. Sin sueldo no entra en la planilla. */
+  sueldoSemanal: number | null
   observacion: string | null
   activo: boolean
   fechaCreacion: string
@@ -44,6 +46,7 @@ export interface EmpleadoRequest {
   area?: string | null
   fechaIngreso?: string | null
   fechaCese?: string | null
+  sueldoSemanal?: number | null
   observacion?: string | null
 }
 

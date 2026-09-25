@@ -20,6 +20,7 @@ import { Button } from './components/ui'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
 import {
   CajasPage,
+  CierresCajaPage,
   CuentasFinancierasPage,
   CuentasPorCobrarPage,
   CuentasPorPagarPage,
@@ -40,7 +41,7 @@ import {
 } from './features/inventario'
 import { OrdenesCompraPage, MisComprasPage, RecepcionesPage } from './features/compras'
 import { ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
-import { AsistenciaPage, EmpleadosPage } from './features/rrhh'
+import { AsistenciaPage, EmpleadosPage, PlanillaPage } from './features/rrhh'
 import {
   ConductoresPage,
   DespachosPage,
@@ -67,6 +68,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'maestros.productos': ProductosPage,
   'rrhh.empleados': EmpleadosPage,
   'rrhh.asistencia': AsistenciaPage,
+  'rrhh.planilla': PlanillaPage,
   'fact.pedidos': PedidosPage,
   'fact.notaventa': NotasVentaPage,
   'fact.precios': ListasPreciosPage,
@@ -92,6 +94,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'dms.devoluciones': DevolucionesPage,
   'finanzas.caja': MiCajaPage,
   'finanzas.cajas': CajasPage,
+  'finanzas.cierres': CierresCajaPage,
   'finanzas.bancos': CuentasFinancierasPage,
   'finanzas.metodospago': MetodosPagoPage,
   'finanzas.cobrar': CuentasPorCobrarPage,

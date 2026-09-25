@@ -11,4 +11,6 @@ export type {
   ResumenAsistencia,
 } from './asistenciaApi'
 export { feriadoApi } from './feriadoApi'
-export type { FeriadoRequest, FeriadoResponse, PagoFeriado } from './feriadoApi'
+export type { FeriadoRequest, FeriadoResponse } from './feriadoApi'
+export { PlanillaPage } from './PlanillaPage'
+export { planillaApi } from './planillaApi'

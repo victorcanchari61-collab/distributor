@@ -71,6 +71,10 @@ public class AppDbContext : DbContext
     public DbSet<RecojoVenta> RecojosVenta => Set<RecojoVenta>();
     public DbSet<RegistroAuditoria> RegistrosAuditoria => Set<RegistroAuditoria>();
     public DbSet<CierreCaja> CierresCaja => Set<CierreCaja>();
+    public DbSet<DescuentoFaltante> DescuentosFaltante => Set<DescuentoFaltante>();
+    public DbSet<PlanillaSemanal> PlanillasSemanales => Set<PlanillaSemanal>();
+    public DbSet<PlanillaDetalle> PlanillaDetalles => Set<PlanillaDetalle>();
+    public DbSet<PlanillaDescuento> PlanillaDescuentos => Set<PlanillaDescuento>();
     public DbSet<MotivoGasto> MotivosGasto => Set<MotivoGasto>();
     public DbSet<MotivoNovedad> MotivosNovedad => Set<MotivoNovedad>();
     public DbSet<NovedadEntrega> NovedadesEntrega => Set<NovedadEntrega>();
@@ -556,9 +560,56 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Cargo).HasMaxLength(80);
             entity.Property(e => e.Area).HasMaxLength(80);
             entity.Property(e => e.Observacion).HasMaxLength(500);
+            entity.Property(e => e.SueldoSemanal).HasPrecision(18, 2);
 
             // Calculada a partir de nombres y apellidos: no es una columna.
             entity.Ignore(e => e.NombreCompleto);
+        });
+
+        modelBuilder.Entity<PlanillaSemanal>(entity =>
+        {
+            entity.ToTable("PlanillasSemanales");
+            entity.HasIndex(p => p.Desde);
+            entity.Property(p => p.Estado).HasMaxLength(20).IsRequired();
+
+            entity.HasOne(p => p.CuentaFinanciera).WithMany()
+                .HasForeignKey(p => p.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.Usuario).WithMany()
+                .HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PlanillaDetalle>(entity =>
+        {
+            entity.ToTable("PlanillaDetalles");
+            entity.Property(d => d.SueldoSemanal).HasPrecision(18, 2);
+            entity.Property(d => d.DescuentoInasistencias).HasPrecision(18, 2);
+            entity.Property(d => d.ExtraFeriados).HasPrecision(18, 2);
+            entity.Property(d => d.Bonos).HasPrecision(18, 2);
+            entity.Property(d => d.OtrosDescuentos).HasPrecision(18, 2);
+            entity.Property(d => d.DescuentoFaltantes).HasPrecision(18, 2);
+            entity.Property(d => d.NotaAjuste).HasMaxLength(250);
+            entity.Ignore(d => d.CostoLaboral);
+            entity.Ignore(d => d.Neto);
+
+            entity.HasOne(d => d.PlanillaSemanal).WithMany(p => p.Detalle)
+                .HasForeignKey(d => d.PlanillaSemanalId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(d => d.Empleado).WithMany()
+                .HasForeignKey(d => d.EmpleadoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MovimientoOperativo>().WithMany()
+                .HasForeignKey(d => d.MovimientoOperativoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(d => d.MovimientoRecuperoId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PlanillaDescuento>(entity =>
+        {
+            entity.ToTable("PlanillaDescuentos");
+            entity.Property(d => d.Monto).HasPrecision(18, 2);
+
+            entity.HasOne(d => d.PlanillaDetalle).WithMany(p => p.Descuentos)
+                .HasForeignKey(d => d.PlanillaDetalleId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(d => d.DescuentoFaltante).WithMany()
+                .HasForeignKey(d => d.DescuentoFaltanteId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Asistencia>(entity =>
@@ -582,7 +633,6 @@ public class AppDbContext : DbContext
             entity.ToTable("Feriados");
             entity.HasIndex(f => f.Fecha).IsUnique();
             entity.Property(f => f.Nombre).HasMaxLength(100).IsRequired();
-            entity.Property(f => f.Pago).HasMaxLength(20).IsRequired();
         });
 
         modelBuilder.Entity<Proveedor>(entity =>
@@ -1410,6 +1460,24 @@ public class AppDbContext : DbContext
                 .HasForeignKey(c => c.MovimientoSalidaId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<MovimientoCuenta>().WithMany()
                 .HasForeignKey(c => c.MovimientoEntradaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(c => c.MovimientoAjusteId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DescuentoFaltante>(entity =>
+        {
+            entity.ToTable("DescuentosFaltante");
+            entity.HasIndex(d => d.CierreCajaId).IsUnique();
+            entity.HasIndex(d => new { d.UsuarioId, d.Estado });
+            entity.Property(d => d.Monto).HasPrecision(18, 2);
+            entity.Property(d => d.MontoAplicado).HasPrecision(18, 2);
+            entity.Property(d => d.Estado).HasMaxLength(20).IsRequired();
+            entity.Ignore(d => d.Saldo);
+
+            entity.HasOne(d => d.CierreCaja).WithOne(c => c.Descuento)
+                .HasForeignKey<DescuentoFaltante>(d => d.CierreCajaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Usuario).WithMany()
+                .HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 

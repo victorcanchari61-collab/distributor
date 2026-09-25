@@ -137,6 +137,9 @@ public static class CatalogoPermisos
             // asigna: no se crea sola, solo quien tiene este permiso decide
             // quién puede cobrar en efectivo.
             ["finanzas.cajas"] = [Accion.Ver, Accion.Crear, Accion.Editar],
+            // Ver los cierres de caja de todos y anular uno mal contado. El
+            // cierre propio se hace en Mi Caja, sin este permiso.
+            ["finanzas.cierres"] = [Accion.Ver, Accion.Anular],
             // Cuentas bancarias: catálogo (sin eliminar: una cuenta con
             // movimientos no se puede borrar sin dejar huérfano su historial)
             // más la conciliación contra el extracto.
@@ -192,6 +195,9 @@ public static class CatalogoPermisos
              * una referencia para el calendario, no un documento con historial.
              */
             ["rrhh.asistencia"] = [.. Documento, Accion.Eliminar],
+            // El pago semanal: armarla y pagarla (crear), ajustar bonos y
+            // descuentos (editar), y anular una pagada por error.
+            ["rrhh.planilla"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular],
 
             // --- Configuración ---
             ["config.usuarios"] = Catalogo,

@@ -33,6 +33,10 @@ public class EmpleadoValidator : AbstractValidator<EmpleadoRequestBase>
             .EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email))
             .MaximumLength(100);
 
+        RuleFor(x => x.SueldoSemanal)
+            .GreaterThanOrEqualTo(0).When(x => x.SueldoSemanal is not null)
+            .WithMessage("El sueldo semanal no puede ser negativo");
+
         // Cesar antes de entrar no es un caso raro: es un dato mal tecleado.
         RuleFor(x => x.FechaCese)
             .GreaterThanOrEqualTo(x => x.FechaIngreso!.Value)

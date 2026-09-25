@@ -32,6 +32,8 @@ const DOCUMENTOS: Record<string, string> = {
   PAGO_VENTA: 'Cobro de venta',
   MOVIMIENTO_OPERATIVO: 'Ingreso o egreso',
   CIERRE_CAJA: 'Cierre de caja',
+  FALTANTE_CAJA: 'Faltante de cierre',
+  SOBRANTE_CAJA: 'Sobrante de cierre',
   REVERSION: 'Anulación',
   SALDO_INICIAL: 'Saldo inicial',
   TRANSFERENCIA_INTERNA: 'Transferencia',

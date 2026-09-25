@@ -18,6 +18,7 @@ public class EmpleadoResponse
     public string? Area { get; set; }
     public DateTime? FechaIngreso { get; set; }
     public DateTime? FechaCese { get; set; }
+    public decimal? SueldoSemanal { get; set; }
     public string? Observacion { get; set; }
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }

@@ -35,6 +35,15 @@ public static class DocumentoOrigenMovimiento
     /// <summary>El cierre de una caja: lo contado pasa de la caja del vendedor/repartidor a otra cuenta.</summary>
     public const string CierreCaja = "CIERRE_CAJA";
 
+    /// <summary>Lo que faltó al cerrar una caja: sale de la caja y se le descuenta al trabajador.</summary>
+    public const string FaltanteCaja = "FALTANTE_CAJA";
+
+    /// <summary>Lo que sobró al cerrar una caja: entra para dejarla en cero.</summary>
+    public const string SobranteCaja = "SOBRANTE_CAJA";
+
+    /// <summary>El faltante que se le descontó al trabajador en su planilla.</summary>
+    public const string RecuperoFaltante = "RECUPERO_FALTANTE";
+
     /// <summary>Un ingreso o egreso registrado a mano, con su categoría (planilla, alquiler, aporte de capital).</summary>
     public const string MovimientoOperativo = "MOVIMIENTO_OPERATIVO";
 
@@ -55,7 +64,8 @@ public static class DocumentoOrigenMovimiento
 
     public static readonly string[] Todos =
     [
-        CierreCaja, MovimientoOperativo, TransferenciaInterna, Reversion, PagoVenta, SaldoInicial,
+        CierreCaja, FaltanteCaja, SobranteCaja, RecuperoFaltante, MovimientoOperativo, TransferenciaInterna,
+        Reversion, PagoVenta, SaldoInicial,
     ];
 }
 

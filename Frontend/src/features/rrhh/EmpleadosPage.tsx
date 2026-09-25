@@ -58,6 +58,7 @@ export function EmpleadosPage() {
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<EmpleadoResponse | null>(null)
   const [form, setForm] = useState<EmpleadoRequest>(VACIO)
+  const [sueldo, setSueldo] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [consultando, setConsultando] = useState(false)
   const { confirmar, dialogo } = useConfirmacion()
@@ -84,6 +85,7 @@ export function EmpleadosPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setForm(VACIO)
+    setSueldo('')
     setAbierto(true)
   }
 
@@ -103,6 +105,7 @@ export function EmpleadosPage() {
       fechaCese: paraCampo(empleado.fechaCese),
       observacion: empleado.observacion ?? '',
     })
+    setSueldo(empleado.sueldoSemanal != null ? String(empleado.sueldoSemanal) : '')
     setAbierto(true)
   }
 
@@ -136,11 +139,17 @@ export function EmpleadosPage() {
       return toast.error('La fecha de cese no puede ser anterior a la de ingreso.')
     }
 
+    const sueldoSemanal = sueldo.trim() ? Number(sueldo.replace(',', '.')) : null
+    if (sueldoSemanal !== null && (!Number.isFinite(sueldoSemanal) || sueldoSemanal < 0)) {
+      return toast.error('El sueldo semanal no puede ser negativo.')
+    }
+
     // Las fechas vacías viajan como null: "" no es una fecha para el servidor.
     const cuerpo: EmpleadoRequest = {
       ...form,
       fechaIngreso: form.fechaIngreso || null,
       fechaCese: form.fechaCese || null,
+      sueldoSemanal: sueldoSemanal === null ? null : Math.round(sueldoSemanal * 100) / 100,
     }
 
     setGuardando(true)
@@ -225,6 +234,13 @@ export function EmpleadosPage() {
     { key: 'cargo', label: 'Cargo', filterType: 'select', filterOptions: distintos('cargo') },
     { key: 'area', label: 'Área', filterType: 'select', filterOptions: distintos('area') },
     { key: 'telefono', label: 'Teléfono', filterable: false },
+    {
+      key: 'sueldoSemanal',
+      label: 'Sueldo semanal',
+      align: 'right',
+      filterable: false,
+      render: (row) => (row.sueldoSemanal != null ? `S/ ${row.sueldoSemanal.toFixed(2)}` : <span className="text-ink-soft">—</span>),
+    },
     {
       key: 'fechaIngreso',
       label: 'Ingreso',
@@ -428,6 +444,17 @@ export function EmpleadosPage() {
             hint={<span className="text-xs text-ink-soft">solo si ya dejó de trabajar</span>}
             value={form.fechaCese ?? ''}
             onChange={(e) => setForm({ ...form, fechaCese: e.target.value })}
+          />
+
+          <Input
+            label="Sueldo semanal"
+            type="number"
+            step="0.01"
+            optional
+            placeholder="0.00"
+            hint={<span className="text-xs text-ink-soft">para la planilla semanal</span>}
+            value={sueldo}
+            onChange={(e) => setSueldo(e.target.value)}
           />
 
           <Input

@@ -9,8 +9,5 @@ public class FeriadoRequestValidator : AbstractValidator<FeriadoRequest>
     public FeriadoRequestValidator()
     {
         RuleFor(x => x.Nombre).NotEmpty().WithMessage("Falta el nombre").MaximumLength(100);
-        RuleFor(x => x.Pago)
-            .Must(p => PagoFeriado.Todos.Contains(p))
-            .WithMessage("Tarifa de pago no válida");
     }
 }

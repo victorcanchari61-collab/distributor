@@ -17,5 +17,9 @@ public abstract class EmpleadoRequestBase
     public string? Area { get; set; }
     public DateTime? FechaIngreso { get; set; }
     public DateTime? FechaCese { get; set; }
+
+    /// <summary>Lo que cobra por una semana completa. Vacío: no entra en la planilla.</summary>
+    public decimal? SueldoSemanal { get; set; }
+
     public string? Observacion { get; set; }
 }

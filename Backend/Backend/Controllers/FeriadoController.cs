@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Backend.Controllers;
 
 /// <summary>
-/// Días no laborables o de pago especial. Vive bajo el mismo permiso que
+/// Días no laborables (quien los trabaja cobra doble). Vive bajo el mismo permiso que
 /// Asistencia: se gestiona desde ahí mismo, no tiene entrada propia en el menú.
 /// </summary>
 [ApiController]

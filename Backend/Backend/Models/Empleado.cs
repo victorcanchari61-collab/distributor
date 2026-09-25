@@ -39,6 +39,9 @@ public class Empleado
     /// <summary>Cuándo dejó de trabajar. Con fecha de cese la ficha queda como histórico.</summary>
     public DateTime? FechaCese { get; set; }
 
+    /// <summary>Lo que cobra por una semana completa (lunes a sábado). Sin sueldo no entra en la planilla.</summary>
+    public decimal? SueldoSemanal { get; set; }
+
     public string? Observacion { get; set; }
 
     public bool Activo { get; set; } = true;

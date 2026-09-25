@@ -1,19 +1,18 @@
 import { api } from '../../lib/apiClient'
 
-export type PagoFeriado = 'NORMAL' | 'DOBLE' | 'TRIPLE'
-
-/** Un día no laborable o de pago especial. Se registra a mano: no hay calendario oficial cargado. */
+/**
+ * Un día no laborable. Se registra a mano: no hay calendario oficial cargado.
+ * Quien trabaja un feriado cobra ese día doble en la planilla.
+ */
 export interface FeriadoResponse {
   id: number
   fecha: string
   nombre: string
-  pago: PagoFeriado
 }
 
 export interface FeriadoRequest {
   fecha: string
   nombre: string
-  pago: PagoFeriado
 }
 
 export const feriadoApi = {

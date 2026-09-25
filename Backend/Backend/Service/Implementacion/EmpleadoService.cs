@@ -161,6 +161,7 @@ public class EmpleadoService : IEmpleadoService
         empleado.Area = Limpiar(request.Area);
         empleado.FechaIngreso = request.FechaIngreso;
         empleado.FechaCese = request.FechaCese;
+        empleado.SueldoSemanal = request.SueldoSemanal is decimal sueldo ? Math.Round(sueldo, 2) : null;
         empleado.Observacion = Limpiar(request.Observacion);
     }
 
@@ -186,6 +187,7 @@ public class EmpleadoService : IEmpleadoService
             Area = e.Area,
             FechaIngreso = e.FechaIngreso,
             FechaCese = e.FechaCese,
+            SueldoSemanal = e.SueldoSemanal,
             Observacion = e.Observacion,
             Activo = e.Activo,
             FechaCreacion = e.FechaCreacion,
