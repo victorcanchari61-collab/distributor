@@ -148,6 +148,9 @@ public static class CatalogoPermisos
             // alquiler, aportes, retiros), su catálogo de categorías y las
             // plantillas recurrentes.
             ["finanzas.operativos"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Eliminar],
+            // Préstamos recibidos: registrarlos, pagarlos (crear) y anular un
+            // préstamo o un pago mal registrado.
+            ["finanzas.financiamiento"] = [Accion.Ver, Accion.Crear, Accion.Anular],
 
             // --- TMS ---
             /*

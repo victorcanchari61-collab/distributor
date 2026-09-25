@@ -37,6 +37,9 @@ const DOCUMENTOS: Record<string, string> = {
   REVERSION: 'Anulación',
   SALDO_INICIAL: 'Saldo inicial',
   TRANSFERENCIA_INTERNA: 'Transferencia',
+  FINANCIAMIENTO: 'Préstamo recibido',
+  PAGO_FINANCIAMIENTO: 'Pago de préstamo',
+  RECUPERO_FALTANTE: 'Recupero de faltante',
 }
 
 const NATURALEZA_LABEL: Record<string, string> = { CAJA: 'Caja', BANCO: 'Banco', PASARELA: 'Pasarela' }

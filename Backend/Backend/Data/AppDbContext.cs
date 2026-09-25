@@ -72,6 +72,8 @@ public class AppDbContext : DbContext
     public DbSet<RegistroAuditoria> RegistrosAuditoria => Set<RegistroAuditoria>();
     public DbSet<CierreCaja> CierresCaja => Set<CierreCaja>();
     public DbSet<DescuentoFaltante> DescuentosFaltante => Set<DescuentoFaltante>();
+    public DbSet<Financiamiento> Financiamientos => Set<Financiamiento>();
+    public DbSet<PagoFinanciamiento> PagosFinanciamiento => Set<PagoFinanciamiento>();
     public DbSet<PlanillaSemanal> PlanillasSemanales => Set<PlanillaSemanal>();
     public DbSet<PlanillaDetalle> PlanillaDetalles => Set<PlanillaDetalle>();
     public DbSet<PlanillaDescuento> PlanillaDescuentos => Set<PlanillaDescuento>();
@@ -1462,6 +1464,41 @@ public class AppDbContext : DbContext
                 .HasForeignKey(c => c.MovimientoEntradaId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<MovimientoCuenta>().WithMany()
                 .HasForeignKey(c => c.MovimientoAjusteId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Financiamiento>(entity =>
+        {
+            entity.ToTable("Financiamientos");
+            entity.Property(f => f.Acreedor).HasMaxLength(120).IsRequired();
+            entity.Property(f => f.Descripcion).HasMaxLength(250);
+            entity.Property(f => f.MontoRecibido).HasPrecision(18, 2);
+            entity.Property(f => f.TotalADevolver).HasPrecision(18, 2);
+            entity.Property(f => f.Estado).HasMaxLength(20).IsRequired();
+            entity.Ignore(f => f.Pagado);
+            entity.Ignore(f => f.Saldo);
+
+            entity.HasOne(f => f.CuentaFinanciera).WithMany()
+                .HasForeignKey(f => f.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(f => f.MovimientoCuentaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(f => f.Usuario).WithMany()
+                .HasForeignKey(f => f.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PagoFinanciamiento>(entity =>
+        {
+            entity.ToTable("PagosFinanciamiento");
+            entity.Property(p => p.Monto).HasPrecision(18, 2);
+            entity.Property(p => p.Observacion).HasMaxLength(250);
+
+            entity.HasOne(p => p.Financiamiento).WithMany(f => f.Pagos)
+                .HasForeignKey(p => p.FinanciamientoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.CuentaFinanciera).WithMany()
+                .HasForeignKey(p => p.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(p => p.MovimientoCuentaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.Usuario).WithMany()
+                .HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<DescuentoFaltante>(entity =>

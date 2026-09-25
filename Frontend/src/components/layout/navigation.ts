@@ -26,6 +26,7 @@ import {
   Tags,
   PackagePlus,
   PackageSearch,
+  PiggyBank,
   Receipt,
   ReceiptText,
   Repeat,
@@ -179,6 +180,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'finanzas.pagar', label: 'Cuentas por pagar', icon: CreditCard },
       { id: 'finanzas.ganancias', label: 'Mis ganancias', icon: TrendingUp },
       { id: 'finanzas.operativos', label: 'Ingresos y egresos', icon: Repeat },
+      { id: 'finanzas.financiamiento', label: 'Préstamos recibidos', icon: PiggyBank },
     ],
   },
   {

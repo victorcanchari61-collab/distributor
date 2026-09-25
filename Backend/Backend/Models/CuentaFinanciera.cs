@@ -44,6 +44,12 @@ public static class DocumentoOrigenMovimiento
     /// <summary>El faltante que se le descontó al trabajador en su planilla.</summary>
     public const string RecuperoFaltante = "RECUPERO_FALTANTE";
 
+    /// <summary>La plata de un préstamo recibido: entra a la cuenta, es no operativa.</summary>
+    public const string Financiamiento = "FINANCIAMIENTO";
+
+    /// <summary>Un pago de un préstamo recibido: sale de la cuenta, es no operativo.</summary>
+    public const string PagoFinanciamiento = "PAGO_FINANCIAMIENTO";
+
     /// <summary>Un ingreso o egreso registrado a mano, con su categoría (planilla, alquiler, aporte de capital).</summary>
     public const string MovimientoOperativo = "MOVIMIENTO_OPERATIVO";
 
@@ -65,7 +71,7 @@ public static class DocumentoOrigenMovimiento
     public static readonly string[] Todos =
     [
         CierreCaja, FaltanteCaja, SobranteCaja, RecuperoFaltante, MovimientoOperativo, TransferenciaInterna,
-        Reversion, PagoVenta, SaldoInicial,
+        Reversion, PagoVenta, SaldoInicial, Financiamiento, PagoFinanciamiento,
     ];
 }
 
