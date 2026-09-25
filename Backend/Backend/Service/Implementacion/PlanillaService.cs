@@ -14,9 +14,6 @@ public class PlanillaService : IPlanillaService
     /// <summary>Lunes a sábado: el sueldo semanal paga estos días, así que uno vale un sexto.</summary>
     private const int DiasLaborables = 6;
 
-    /// <summary>La categoría sembrada "Planilla" (egreso operativo) con la que se registra el pago.</summary>
-    private const int CategoriaPlanilla = 6;
-
     private readonly AppDbContext _context;
     private readonly ICuentaFinancieraService _cuentas;
     private readonly IGastoOperativoService _gastos;
@@ -198,11 +195,11 @@ public class PlanillaService : IPlanillaService
                 {
                     CuentaFinancieraId = cuenta.Id,
                     Tipo = TipoMovimientoOperativo.Egreso,
-                    MotivoGastoId = CategoriaPlanilla,
+                    MotivoGastoId = CategoriaSistema.Planilla,
                     Monto = detalle.CostoLaboral,
                     Fecha = ahora,
                     Descripcion = $"Planilla del {semana}: {empleado}",
-                }, usuarioId);
+                }, usuarioId, delSistema: true);
                 detalle.MovimientoOperativoId = movimiento.Id;
             }
 
@@ -269,7 +266,7 @@ public class PlanillaService : IPlanillaService
             {
                 if (detalle.MovimientoOperativoId is int movimiento)
                 {
-                    await _gastos.AnularAsync(movimiento, usuarioId);
+                    await _gastos.AnularAsync(movimiento, usuarioId, delSistema: true);
                 }
 
                 if (detalle.MovimientoRecuperoId is int recupero)

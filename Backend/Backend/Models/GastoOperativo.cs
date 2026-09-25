@@ -44,8 +44,33 @@ public class MotivoGasto
     /// <summary>OPERATIVO si es del giro del negocio; NO_OPERATIVO si no (aportes, retiros, activos).</summary>
     public string Origen { get; set; } = OrigenMovimiento.Operativo;
 
+    /// <summary>
+    /// De las que el sistema registra solo (ventas, préstamos, planilla,
+    /// faltantes): vienen sembradas, no se editan ni se borran, y no se
+    /// eligen al registrar un movimiento a mano. Ver <see cref="CategoriaSistema"/>.
+    /// </summary>
+    public bool EsSistema { get; set; }
+
     public bool Activo { get; set; } = true;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Los ids sembrados de las categorías del sistema. Clasifican lo que se
+/// registra solo, para que todo movimiento de plata tenga su tipo y su origen.
+/// </summary>
+public static class CategoriaSistema
+{
+    /// <summary>La usa la planilla semanal al pagarse.</summary>
+    public const int Planilla = 6;
+
+    public const int Ventas = 16;
+    public const int SobranteCaja = 17;
+    public const int RecuperoFaltante = 18;
+    public const int PrestamoRecibido = 19;
+    public const int CompraMercaderia = 20;
+    public const int FaltanteCaja = 21;
+    public const int PagoPrestamo = 22;
 }
 
 /// <summary>

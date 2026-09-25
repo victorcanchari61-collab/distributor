@@ -4,6 +4,7 @@ import {
   Ban,
   CalendarClock,
   Coins,
+  Lock,
   Pencil,
   Plus,
   Receipt,
@@ -308,7 +309,13 @@ export function GastosOperativosPage() {
         empty={cargando ? 'Cargando movimientos...' : 'No hay movimientos en este período.'}
         rowActions={(row) =>
           !row.anulado && puede('finanzas.operativos', 'anular') ? (
-            <RowAction label="Anular" tone="danger" onClick={() => anular(row)}>
+            <RowAction
+              label="Anular"
+              tone="danger"
+              disabled={row.esSistema}
+              disabledReason={`Lo registró el sistema (${row.motivoGasto}): se anula desde su módulo`}
+              onClick={() => anular(row)}
+            >
               <Ban size={15} />
             </RowAction>
           ) : null
@@ -499,7 +506,7 @@ function NuevoMovimientoModal({
           onChange={(v) => setMotivoGastoId(Number(v))}
           placeholder="Elige una categoría"
           options={motivos
-            .filter((m) => m.activo && m.tipo === tipo)
+            .filter((m) => m.activo && !m.esSistema && m.tipo === tipo)
             .map((m) => ({ value: m.id, label: m.nombre, detalle: origenLabel(m.origen) }))}
         />
         <Input label="Monto" type="number" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} />
@@ -686,7 +693,7 @@ function RecurrentesTabla({
             onChange={(v) => setForm({ ...form, motivoGastoId: Number(v) })}
             placeholder="Elige una categoría"
             options={motivos
-              .filter((m) => m.activo && m.tipo === 'EGRESO')
+              .filter((m) => m.activo && !m.esSistema && m.tipo === 'EGRESO')
               .map((m) => ({ value: m.id, label: m.nombre, detalle: origenLabel(m.origen) }))}
           />
           <Input
@@ -811,7 +818,17 @@ function CategoriasTabla({
     })
 
   const columns: DataTableColumn<CategoriaMovimientoResponse>[] = [
-    { key: 'nombre', label: 'Nombre', filterable: false },
+    {
+      key: 'nombre',
+      label: 'Nombre',
+      filterable: false,
+      render: (row) => (
+        <div>
+          <p className="font-medium text-ink">{row.nombre}</p>
+          {row.descripcion && <p className="text-xs text-ink-soft">{row.descripcion}</p>}
+        </div>
+      ),
+    },
     {
       key: 'tipo',
       label: 'Tipo',
@@ -827,6 +844,25 @@ function CategoriasTabla({
       filterOptions: ORIGENES,
       value: (row) => row.origen,
       render: (row) => <Badge tone={row.origen === 'OPERATIVO' ? 'sys' : 'warning'}>{origenLabel(row.origen)}</Badge>,
+    },
+    {
+      key: 'esSistema',
+      label: 'Registro',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'SISTEMA', label: 'Sistema' },
+        { value: 'MANUAL', label: 'Manual' },
+      ],
+      value: (row) => (row.esSistema ? 'SISTEMA' : 'MANUAL'),
+      render: (row) =>
+        row.esSistema ? (
+          <Badge tone="sys">
+            <Lock size={11} className="mr-1" />
+            Sistema
+          </Badge>
+        ) : (
+          <Badge>Manual</Badge>
+        ),
     },
     { key: 'usos', label: 'Usos', align: 'right', filterable: false },
     {
@@ -862,7 +898,12 @@ function CategoriasTabla({
       rowActions={(row) => (
         <>
           {puede('finanzas.operativos', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrir(row)}>
+            <RowAction
+              label={`Editar ${row.nombre}`}
+              disabled={row.esSistema}
+              disabledReason="Es del sistema: no se edita"
+              onClick={() => abrir(row)}
+            >
               <Pencil size={15} />
             </RowAction>
           )}
@@ -870,8 +911,8 @@ function CategoriasTabla({
             <RowAction
               label={`Eliminar ${row.nombre}`}
               tone="danger"
-              disabled={row.usos > 0}
-              disabledReason="Ya se usó: desactívala en vez de eliminarla"
+              disabled={row.esSistema || row.usos > 0}
+              disabledReason={row.esSistema ? 'Es del sistema: no se elimina' : 'Ya se usó: desactívala en vez de eliminarla'}
               onClick={() => eliminar(row)}
             >
               <Trash2 size={15} />

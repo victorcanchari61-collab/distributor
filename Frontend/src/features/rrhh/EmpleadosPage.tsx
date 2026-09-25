@@ -406,6 +406,36 @@ export function EmpleadosPage() {
             onChange={(e) => setForm({ ...form, area: e.target.value })}
           />
 
+          {/* Lo laboral junto: con qué sueldo y desde/hasta cuándo trabaja. */}
+          <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-3">
+            <Input
+              label="Sueldo semanal"
+              type="number"
+              step="0.01"
+              optional
+              placeholder="0.00"
+              value={sueldo}
+              onChange={(e) => setSueldo(e.target.value)}
+            />
+
+            <Input
+              label="Fecha de ingreso"
+              type="date"
+              optional
+              value={form.fechaIngreso ?? ''}
+              onChange={(e) => setForm({ ...form, fechaIngreso: e.target.value })}
+            />
+
+            <Input
+              label="Fecha de cese"
+              type="date"
+              optional
+              title="Solo si ya dejó de trabajar"
+              value={form.fechaCese ?? ''}
+              onChange={(e) => setForm({ ...form, fechaCese: e.target.value })}
+            />
+          </div>
+
           <Input
             label="Teléfono"
             optional
@@ -427,34 +457,6 @@ export function EmpleadosPage() {
             optional
             value={form.direccion ?? ''}
             onChange={(e) => setForm({ ...form, direccion: e.target.value })}
-          />
-
-          <Input
-            label="Fecha de ingreso"
-            type="date"
-            optional
-            value={form.fechaIngreso ?? ''}
-            onChange={(e) => setForm({ ...form, fechaIngreso: e.target.value })}
-          />
-
-          <Input
-            label="Fecha de cese"
-            type="date"
-            optional
-            hint={<span className="text-xs text-ink-soft">solo si ya dejó de trabajar</span>}
-            value={form.fechaCese ?? ''}
-            onChange={(e) => setForm({ ...form, fechaCese: e.target.value })}
-          />
-
-          <Input
-            label="Sueldo semanal"
-            type="number"
-            step="0.01"
-            optional
-            placeholder="0.00"
-            hint={<span className="text-xs text-ink-soft">para la planilla semanal</span>}
-            value={sueldo}
-            onChange={(e) => setSueldo(e.target.value)}
           />
 
           <Input

@@ -1429,7 +1429,7 @@ public class AppDbContext : DbContext
                 new MotivoGasto { Id = 3, Nombre = "Menú", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
                 new MotivoGasto { Id = 4, Nombre = "Peaje", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
                 new MotivoGasto { Id = 5, Nombre = "Otro", Descripcion = "Cualquier gasto que no encaje en los demás. Conviene detallarlo.", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
-                new MotivoGasto { Id = 6, Nombre = "Planilla", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 6, Nombre = "Planilla", Descripcion = "Se registra sola al pagar la planilla semanal.", Tipo = egreso, Origen = operativo, EsSistema = true, Activo = true, FechaCreacion = sembrado },
                 new MotivoGasto { Id = 7, Nombre = "Alquiler y servicios", Descripcion = "Alquiler del local o almacén, luz, agua, internet.", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
                 new MotivoGasto { Id = 8, Nombre = "Mantenimiento de vehículos", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
                 new MotivoGasto { Id = 9, Nombre = "Impuestos (SUNAT)", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
@@ -1438,7 +1438,16 @@ public class AppDbContext : DbContext
                 new MotivoGasto { Id = 12, Nombre = "Aporte de capital", Descripcion = "Plata que pone el dueño o un socio.", Tipo = ingreso, Origen = noOperativo, Activo = true, FechaCreacion = sembrado },
                 new MotivoGasto { Id = 13, Nombre = "Venta de activo", Descripcion = "Venta de un vehículo, equipo o mueble del negocio.", Tipo = ingreso, Origen = noOperativo, Activo = true, FechaCreacion = sembrado },
                 new MotivoGasto { Id = 14, Nombre = "Retiro del dueño", Tipo = egreso, Origen = noOperativo, Activo = true, FechaCreacion = sembrado },
-                new MotivoGasto { Id = 15, Nombre = "Compra de activo", Descripcion = "Vehículo, equipo o mueble: no es gasto del mes, es inversión.", Tipo = egreso, Origen = noOperativo, Activo = true, FechaCreacion = sembrado });
+                new MotivoGasto { Id = 15, Nombre = "Compra de activo", Descripcion = "Vehículo, equipo o mueble: no es gasto del mes, es inversión.", Tipo = egreso, Origen = noOperativo, Activo = true, FechaCreacion = sembrado },
+
+                // Las del sistema: lo que se registra solo en otros módulos.
+                new MotivoGasto { Id = CategoriaSistema.Ventas, Nombre = "Ventas", Descripcion = "Lo cobrado de las notas de venta.", Tipo = ingreso, Origen = operativo, EsSistema = true, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = CategoriaSistema.SobranteCaja, Nombre = "Sobrante de caja", Descripcion = "Lo que sobra al cerrar una caja.", Tipo = ingreso, Origen = operativo, EsSistema = true, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = CategoriaSistema.RecuperoFaltante, Nombre = "Recupero de faltante", Descripcion = "Faltante de caja descontado al trabajador en su planilla.", Tipo = ingreso, Origen = operativo, EsSistema = true, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = CategoriaSistema.PrestamoRecibido, Nombre = "Préstamo recibido", Descripcion = "Se registra en Préstamos recibidos.", Tipo = ingreso, Origen = noOperativo, EsSistema = true, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = CategoriaSistema.CompraMercaderia, Nombre = "Compra de mercadería", Descripcion = "Lo pagado a proveedores por las compras.", Tipo = egreso, Origen = operativo, EsSistema = true, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = CategoriaSistema.FaltanteCaja, Nombre = "Faltante de caja", Descripcion = "Lo que falta al cerrar una caja.", Tipo = egreso, Origen = operativo, EsSistema = true, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = CategoriaSistema.PagoPrestamo, Nombre = "Pago de préstamo", Descripcion = "Se registra en Préstamos recibidos.", Tipo = egreso, Origen = noOperativo, EsSistema = true, Activo = true, FechaCreacion = sembrado });
         });
 
         modelBuilder.Entity<CierreCaja>(entity =>

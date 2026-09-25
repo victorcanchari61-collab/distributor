@@ -9,6 +9,9 @@ public class CategoriaMovimientoResponse
     public string Origen { get; set; } = string.Empty;
     public bool Activo { get; set; }
 
+    /// <summary>La registra el sistema solo: no se edita, no se borra, no se elige a mano.</summary>
+    public bool EsSistema { get; set; }
+
     /// <summary>En cuántos movimientos, plantillas o cuadres se usa. Si hay alguno, no se elimina.</summary>
     public int Usos { get; set; }
 }
@@ -59,6 +62,9 @@ public class MovimientoOperativoResponse
 
     /// <summary>OPERATIVO o NO_OPERATIVO, según su categoría.</summary>
     public string Origen { get; set; } = string.Empty;
+
+    /// <summary>Lo generó otro módulo (la planilla): se anula desde allí, no desde aquí.</summary>
+    public bool EsSistema { get; set; }
 
     public decimal Monto { get; set; }
     public DateTime Fecha { get; set; }

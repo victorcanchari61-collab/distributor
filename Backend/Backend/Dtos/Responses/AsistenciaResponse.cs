@@ -22,3 +22,10 @@ public class ResumenAsistenciaResponse
     public int Faltas { get; set; }
     public int Permisos { get; set; }
 }
+
+/// <summary>Qué hizo el pase de lista: cuántas marcas nuevas y cuántas corregidas.</summary>
+public class MarcarDiaAsistenciaResponse
+{
+    public int Creadas { get; set; }
+    public int Corregidas { get; set; }
+}

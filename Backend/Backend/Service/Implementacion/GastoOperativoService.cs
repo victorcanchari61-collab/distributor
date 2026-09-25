@@ -54,7 +54,7 @@ public class GastoOperativoService : IGastoOperativoService
 
     public async Task<IEnumerable<CategoriaOpcionResponse>> GetCategoriasOpcionesAsync(string? tipo)
     {
-        var query = _context.MotivosGasto.AsNoTracking().Where(m => m.Activo);
+        var query = _context.MotivosGasto.AsNoTracking().Where(m => m.Activo && !m.EsSistema);
         if (!string.IsNullOrWhiteSpace(tipo)) query = query.Where(m => m.Tipo == tipo);
 
         return await query
@@ -90,6 +90,7 @@ public class GastoOperativoService : IGastoOperativoService
 
         var categoria = await _context.MotivosGasto.FirstOrDefaultAsync(m => m.Id == id)
             ?? throw new NotFoundException($"No existe la categoría {id}");
+        ExigirNoSistema(categoria);
 
         var nombre = request.Nombre.Trim();
         if (await _context.MotivosGasto.AnyAsync(m => m.Nombre == nombre && m.Id != id))
@@ -119,6 +120,7 @@ public class GastoOperativoService : IGastoOperativoService
     {
         var categoria = await _context.MotivosGasto.FirstOrDefaultAsync(m => m.Id == id)
             ?? throw new NotFoundException($"No existe la categoría {id}");
+        ExigirNoSistema(categoria);
 
         var usos = await ContarUsosCategoriaAsync(id);
         if (usos > 0)
@@ -253,10 +255,10 @@ public class GastoOperativoService : IGastoOperativoService
         return movimientos.Select(Map);
     }
 
-    public async Task<MovimientoOperativoResponse> CrearAsync(MovimientoOperativoRequest request, int? usuarioId)
+    public async Task<MovimientoOperativoResponse> CrearAsync(MovimientoOperativoRequest request, int? usuarioId, bool delSistema = false)
     {
         await _movimientoValidator.ValidateAndThrowAsync(request);
-        await ValidarCategoriaAsync(request.MotivoGastoId, request.Tipo);
+        await ValidarCategoriaAsync(request.MotivoGastoId, request.Tipo, delSistema);
 
         var cuenta = await _cuentas.GetOrThrowAsync(request.CuentaFinancieraId);
         if (!cuenta.Activo) throw new BadRequestException("Esa cuenta está desactivada");
@@ -303,12 +305,21 @@ public class GastoOperativoService : IGastoOperativoService
         return response;
     }
 
-    public async Task<MovimientoOperativoResponse> AnularAsync(int id, int? usuarioId)
+    public async Task<MovimientoOperativoResponse> AnularAsync(int id, int? usuarioId, bool delSistema = false)
     {
-        var movimiento = await _context.MovimientosOperativos.FirstOrDefaultAsync(m => m.Id == id)
+        var movimiento = await _context.MovimientosOperativos
+            .Include(m => m.MotivoGasto)
+            .FirstOrDefaultAsync(m => m.Id == id)
             ?? throw new NotFoundException($"No existe el movimiento {id}");
 
         if (movimiento.Anulado) throw new BadRequestException("Ese movimiento ya está anulado");
+
+        // Anularlo aquí dejaría la planilla como pagada sin su egreso.
+        if (movimiento.MotivoGasto is { EsSistema: true } categoria && !delSistema)
+        {
+            throw new BadRequestException(
+                $"Este movimiento lo registró el sistema ({categoria.Nombre}): se anula desde su módulo.");
+        }
 
         if (movimiento.MovimientoCuentaId is int movimientoCuentaId)
         {
@@ -342,11 +353,20 @@ public class GastoOperativoService : IGastoOperativoService
             .FirstOrDefaultAsync(m => m.Id == id)
             ?? throw new NotFoundException($"No existe el movimiento {id}"));
 
-    /// <summary>Que exista, esté activa y sea del mismo tipo que el movimiento: un egreso no va con una categoría de ingreso.</summary>
-    private async Task ValidarCategoriaAsync(int motivoGastoId, string tipo)
+    /// <summary>
+    /// Que exista, esté activa y sea del mismo tipo que el movimiento: un egreso
+    /// no va con una categoría de ingreso. Una del sistema solo la usa el sistema.
+    /// </summary>
+    private async Task ValidarCategoriaAsync(int motivoGastoId, string tipo, bool delSistema = false)
     {
         var categoria = await _context.MotivosGasto.AsNoTracking().FirstOrDefaultAsync(m => m.Id == motivoGastoId)
             ?? throw new BadRequestException("Esa categoría no existe");
+
+        if (categoria.EsSistema && !delSistema)
+        {
+            throw new BadRequestException(
+                $"{categoria.Nombre} es una categoría del sistema: se registra sola, no a mano");
+        }
 
         if (!categoria.Activo)
         {
@@ -366,6 +386,15 @@ public class GastoOperativoService : IGastoOperativoService
         if (cuentaFinancieraSugeridaId is int id)
         {
             await _cuentas.GetOrThrowAsync(id);
+        }
+    }
+
+    private static void ExigirNoSistema(MotivoGasto categoria)
+    {
+        if (categoria.EsSistema)
+        {
+            throw new BadRequestException(
+                $"{categoria.Nombre} es una categoría del sistema: no se edita ni se elimina");
         }
     }
 
@@ -390,6 +419,7 @@ public class GastoOperativoService : IGastoOperativoService
         Tipo = m.Tipo,
         Origen = m.Origen,
         Activo = m.Activo,
+        EsSistema = m.EsSistema,
         Usos = usos,
     };
 
@@ -425,6 +455,7 @@ public class GastoOperativoService : IGastoOperativoService
         MotivoGastoId = m.MotivoGastoId,
         MotivoGasto = m.MotivoGasto?.Nombre ?? string.Empty,
         Origen = m.MotivoGasto?.Origen ?? string.Empty,
+        EsSistema = m.MotivoGasto?.EsSistema ?? false,
         Monto = m.Monto,
         Fecha = m.Fecha,
         Descripcion = m.Descripcion,

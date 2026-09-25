@@ -13,7 +13,7 @@ public interface IGastoOperativoService
     // --- Categorías ---
     Task<IEnumerable<CategoriaMovimientoResponse>> GetCategoriasAsync();
 
-    /// <summary>Las activas, opcionalmente de un tipo: para elegir al registrar un movimiento.</summary>
+    /// <summary>Las activas que no son del sistema, opcionalmente de un tipo: para elegir al registrar un movimiento a mano.</summary>
     Task<IEnumerable<CategoriaOpcionResponse>> GetCategoriasOpcionesAsync(string? tipo);
 
     Task<CategoriaMovimientoResponse> CrearCategoriaAsync(CategoriaMovimientoRequest request);
@@ -31,6 +31,10 @@ public interface IGastoOperativoService
 
     // --- Movimientos (ingresos sueltos, egresos sueltos, o el pago de una plantilla) ---
     Task<IEnumerable<MovimientoOperativoResponse>> ListarAsync(DateTime desde, DateTime hasta);
-    Task<MovimientoOperativoResponse> CrearAsync(MovimientoOperativoRequest request, int? usuarioId);
-    Task<MovimientoOperativoResponse> AnularAsync(int id, int? usuarioId);
+    /// <param name="delSistema">
+    /// True solo cuando lo registra otro módulo (la planilla): es lo único que
+    /// puede usar una categoría del sistema, y anular lo que esta generó.
+    /// </param>
+    Task<MovimientoOperativoResponse> CrearAsync(MovimientoOperativoRequest request, int? usuarioId, bool delSistema = false);
+    Task<MovimientoOperativoResponse> AnularAsync(int id, int? usuarioId, bool delSistema = false);
 }

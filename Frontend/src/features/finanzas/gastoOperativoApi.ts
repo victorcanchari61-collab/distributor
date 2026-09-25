@@ -19,6 +19,8 @@ export interface CategoriaMovimientoResponse {
   tipo: TipoMovimientoOperativo
   origen: OrigenMovimiento
   activo: boolean
+  /** La registra el sistema solo (ventas, préstamos, planilla...): no se edita, no se borra, no se elige a mano. */
+  esSistema: boolean
   /** En cuántos movimientos o plantillas se usa. Si hay alguno, no se elimina. */
   usos: number
 }
@@ -80,6 +82,8 @@ export interface MovimientoOperativoResponse {
   motivoGastoId: number
   motivoGasto: string
   origen: OrigenMovimiento
+  /** Lo generó otro módulo (la planilla): se anula desde allí. */
+  esSistema: boolean
   monto: number
   fecha: string
   descripcion: string | null
