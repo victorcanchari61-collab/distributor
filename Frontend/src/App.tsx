@@ -20,13 +20,13 @@ import { Button } from './components/ui'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
 import {
   ArqueoDiarioPage,
+  CajasPage,
   CuentasFinancierasPage,
   CuentasPorCobrarPage,
   CuentasPorPagarPage,
   GastosOperativosPage,
   MetodosPagoPage,
   MiCajaPage,
-  MisCobrosPage,
   MisGananciasPage,
 } from './features/finanzas'
 import {
@@ -92,11 +92,11 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'dms.visitas': VisitasPage,
   'dms.devoluciones': DevolucionesPage,
   'finanzas.caja': MiCajaPage,
+  'finanzas.cajas': CajasPage,
   'finanzas.bancos': CuentasFinancierasPage,
   'finanzas.metodospago': MetodosPagoPage,
   'finanzas.cobrar': CuentasPorCobrarPage,
   'finanzas.pagar': CuentasPorPagarPage,
-  'finanzas.miscobros': MisCobrosPage,
   'finanzas.ganancias': MisGananciasPage,
   'finanzas.arqueo': ArqueoDiarioPage,
   'finanzas.operativos': GastosOperativosPage,

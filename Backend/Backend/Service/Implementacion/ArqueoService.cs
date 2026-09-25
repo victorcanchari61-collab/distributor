@@ -307,7 +307,7 @@ public class ArqueoService : IArqueoService
         }
 
         var cajaGeneral = await GetCajaGeneralAsync();
-        var cajaUsuario = await _cuentas.GetOrCrearCajaUsuarioAsync(request.UsuarioId);
+        var cajaUsuario = await _cuentas.ExigirCajaUsuarioAsync(request.UsuarioId);
 
         if (arqueo is null)
         {
@@ -389,7 +389,7 @@ public class ArqueoService : IArqueoService
             arqueo.PagosDigitales.Clear();
         }
 
-        var cajaUsuario = await _cuentas.GetOrCrearCajaUsuarioAsync(request.UsuarioId);
+        var cajaUsuario = await _cuentas.ExigirCajaUsuarioAsync(request.UsuarioId);
 
         // Corregir un cuadre ya cerrado reversa la liquidacion anterior (las
         // dos mitades) ANTES de leer el saldo de la caja: si no, se leería el

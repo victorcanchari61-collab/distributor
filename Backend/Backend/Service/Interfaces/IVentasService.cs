@@ -80,20 +80,6 @@ public interface IVentasService
     /// <summary>Notas de venta con saldo pendiente de cobro: base de "Cuentas por cobrar".</summary>
     Task<IEnumerable<NotaVentaResponse>> GetCuentasPorCobrarAsync();
 
-    /// <summary>
-    /// Los cobros que registró un usuario (el que hizo login si no se indica
-    /// otro), de notas de venta vigentes — no las anuladas, esas revirtieron
-    /// el cobro. Filtrable por rango de fechas.
-    /// </summary>
-    Task<IEnumerable<CobroResponse>> GetMisCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta);
-
-    /// <summary>Una página de los cobros del usuario, en el rango pedido.</summary>
-    Task<PaginaResponse<CobroResponse>> ListarMisCobrosAsync(
-        ConsultaTablaRequest consulta, int? usuarioId, DateTime? desde, DateTime? hasta);
-
-    /// <summary>Totales de esos cobros, calculados sobre todo el rango.</summary>
-    Task<ResumenCobrosResponse> GetResumenCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta);
-
     /// <summary>Qué cambió en esta nota de venta: sobre todo anulaciones y movimientos de pago.</summary>
     Task<IEnumerable<AuditoriaResponse>> GetHistorialNotaVentaAsync(int id);
 }

@@ -172,11 +172,11 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: Landmark,
     items: [
       { id: 'finanzas.caja', label: 'Mi Caja', icon: HandCoins },
+      { id: 'finanzas.cajas', label: 'Cajas', icon: Users },
       { id: 'finanzas.bancos', label: 'Bancos', icon: Landmark },
       { id: 'finanzas.metodospago', label: 'Métodos de pago', icon: Coins },
       { id: 'finanzas.cobrar', label: 'Cuentas por cobrar', icon: Wallet },
       { id: 'finanzas.pagar', label: 'Cuentas por pagar', icon: CreditCard },
-      { id: 'finanzas.miscobros', label: 'Mis cobros', icon: HandCoins },
       { id: 'finanzas.ganancias', label: 'Mis ganancias', icon: TrendingUp },
       { id: 'finanzas.arqueo', label: 'Arqueo diario', icon: Calculator },
       { id: 'finanzas.operativos', label: 'Gastos operativos', icon: Repeat },

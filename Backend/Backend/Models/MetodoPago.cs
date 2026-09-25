@@ -34,6 +34,9 @@ public class MetodoPago
 
     public string Tipo { get; set; } = TipoMetodoPago.Efectivo;
 
+    /// <summary>El número de celular asociado, solo si Tipo es Billetera digital.</summary>
+    public string? Numero { get; set; }
+
     /// <summary>
     /// A qué cuenta financiera va la plata. Obligatorio salvo en Efectivo, que
     /// no tiene una cuenta fija.

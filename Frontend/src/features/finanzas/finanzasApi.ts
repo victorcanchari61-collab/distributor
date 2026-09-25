@@ -12,6 +12,8 @@ export interface MetodoPagoResponse {
   id: number
   nombre: string
   tipo: TipoMetodoPago
+  /** El número de celular asociado, solo si tipo es Billetera digital. */
+  numero: string | null
   /** A qué cuenta financiera va la plata. Null solo en Efectivo. */
   cuentaFinancieraId: number | null
   cuentaFinanciera: string | null
@@ -23,6 +25,8 @@ export interface MetodoPagoResponse {
 export interface MetodoPagoRequest {
   nombre: string
   tipo: TipoMetodoPago
+  /** Obligatorio solo en Billetera digital. */
+  numero?: string | null
   /** A qué cuenta financiera va la plata. Obligatorio salvo en Efectivo. */
   cuentaFinancieraId?: number | null
 }

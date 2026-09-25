@@ -12,6 +12,11 @@ export interface CuentaFinancieraResponse {
   id: number
   nombre: string
   naturaleza: NaturalezaCuenta
+  /** Solo si naturaleza es Caja: de quién es. */
+  usuarioResponsableId: number | null
+  usuarioResponsable: string | null
+  /** Solo si naturaleza es Banco: a qué banco pertenece. */
+  bancoId: number | null
   banco: string | null
   numeroCuenta: string | null
   cci: string | null
@@ -24,10 +29,13 @@ export interface CuentaFinancieraResponse {
 export interface CuentaFinancieraRequest {
   nombre: string
   naturaleza: NaturalezaCuenta
-  banco?: string | null
+  usuarioResponsableId?: number | null
+  bancoId?: number | null
   numeroCuenta?: string | null
   cci?: string | null
   titular?: string | null
+  /** Solo se usa al crear: con cuánto ya venía la cuenta antes de registrarla. */
+  montoInicial?: number
   activo: boolean
 }
 

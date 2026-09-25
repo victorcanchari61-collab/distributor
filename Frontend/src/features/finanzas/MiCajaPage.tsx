@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowDownCircle, ArrowUpCircle, Landmark, Wallet } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, Landmark, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -10,6 +10,7 @@ import {
   PageHeader,
   StatCard,
   SysDataTable,
+  Tabs,
   useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
@@ -24,6 +25,9 @@ import type { CuentaFinancieraResponse, MovimientoCuentaResponse } from './cuent
 import type { TipoMovimientoOperativo } from './gastoOperativoApi'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
+
+const BILLETES = [200, 100, 50, 20, 10]
+const MONEDAS = [5, 2, 1, 0.5, 0.2, 0.1]
 
 /**
  * La Caja de quien está logueado: su propio dinero en la ruta. Las ventas al
@@ -64,6 +68,9 @@ export function MiCajaPage() {
   useRealtime('cuentasfinancieras', cargar)
   useRealtime('arqueo', cargar)
   useRealtime('gastosoperativos', cargar)
+
+  const totalIngresos = movimientos.filter((m) => m.tipo === 'INGRESO').reduce((s, m) => s + m.monto, 0)
+  const totalEgresos = movimientos.filter((m) => m.tipo === 'EGRESO').reduce((s, m) => s + m.monto, 0)
 
   const columns: DataTableColumn<MovimientoCuentaResponse>[] = [
     { key: 'fecha', label: 'Fecha', filterable: false, render: (row) => fechaHora(row.fecha) },
@@ -112,13 +119,17 @@ export function MiCajaPage() {
 
       {error && <Alert>{error}</Alert>}
 
-      <StatCard
-        label="Saldo de tu caja"
-        value={caja ? soles(caja.saldoActual) : '—'}
-        icon={<Wallet size={18} />}
-        tono={caja && caja.saldoActual < 0 ? 'danger' : 'sys'}
-        hint="Lo que deberías tener ahora en la mano"
-      />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <StatCard
+          label="Saldo de tu caja"
+          value={caja ? soles(caja.saldoActual) : '—'}
+          icon={<Wallet size={18} />}
+          tono={caja && caja.saldoActual < 0 ? 'danger' : 'sys'}
+          hint="Lo que deberías tener ahora en la mano"
+        />
+        <StatCard label="Ingresos" value={soles(totalIngresos)} icon={<TrendingUp size={18} />} tono="success" />
+        <StatCard label="Egresos" value={soles(totalEgresos)} icon={<TrendingDown size={18} />} tono="danger" />
+      </div>
 
       <SysDataTable
         columns={columns}
@@ -143,7 +154,6 @@ export function MiCajaPage() {
 
       {cerrarAbierto && caja && (
         <CerrarCajaModal
-          caja={caja}
           onClose={() => setCerrarAbierto(false)}
           onGuardado={async () => {
             setCerrarAbierto(false)
@@ -229,38 +239,38 @@ function MovimientoLibreModal({
 }
 
 function CerrarCajaModal({
-  caja,
   onClose,
   onGuardado,
 }: {
-  caja: CuentaFinancieraResponse
   onClose: () => void
   onGuardado: () => void | Promise<void>
 }) {
-  const [billetes, setBilletes] = useState('')
-  const [monedas, setMonedas] = useState('')
+  const [cantBilletes, setCantBilletes] = useState<Record<number, string>>({})
+  const [cantMonedas, setCantMonedas] = useState<Record<number, string>>({})
+  const [pestana, setPestana] = useState<'billetes' | 'monedas'>('billetes')
   const [observacion, setObservacion] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
-  const numero = (texto: string) => {
-    const n = Number(texto.replace(',', '.'))
-    return Number.isFinite(n) ? n : 0
+  const cantidad = (texto: string | undefined) => {
+    const n = Number(texto)
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
   }
 
-  const total = numero(billetes) + numero(monedas)
-  const diferencia = total - caja.saldoActual
+  const sumar = (denominaciones: number[], cantidades: Record<number, string>) =>
+    denominaciones.reduce((s, v) => s + v * cantidad(cantidades[v]), 0)
+
+  const totalBilletes = sumar(BILLETES, cantBilletes)
+  const totalMonedas = sumar(MONEDAS, cantMonedas)
 
   const guardar = async () => {
-    if (numero(billetes) < 0 || numero(monedas) < 0) return setError('El efectivo no puede ser negativo.')
-
     setGuardando(true)
     setError('')
     try {
       const cuerpo: CerrarMiCajaRequest = {
         fecha: hoyLocal(),
-        billetes: numero(billetes),
-        monedas: numero(monedas),
+        billetes: totalBilletes,
+        monedas: totalMonedas,
         observacion: observacion.trim() || null,
       }
       await miCajaApi.cerrar(cuerpo)
@@ -283,7 +293,7 @@ function CerrarCajaModal({
       open
       size="sm"
       title="Cerrar caja"
-      description="Cuenta lo que tienes de verdad. Se compara contra el saldo de tu caja y se liquida a la Caja General."
+      description="Cuenta billete por billete y moneda por moneda. Se compara contra el saldo de tu caja y se liquida a la Caja General."
       onClose={onClose}
       footer={
         <>
@@ -299,31 +309,77 @@ function CerrarCajaModal({
       <div className="flex flex-col gap-4">
         {error && <Alert>{error}</Alert>}
 
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="Billetes" type="number" step="0.01" placeholder="0.00" value={billetes} onChange={(e) => setBilletes(e.target.value)} />
-          <Input label="Monedas" type="number" step="0.01" placeholder="0.00" value={monedas} onChange={(e) => setMonedas(e.target.value)} />
-        </div>
+        <Tabs
+          active={pestana}
+          onChange={(id) => setPestana(id as 'billetes' | 'monedas')}
+          items={[
+            { id: 'billetes', label: 'Billetes' },
+            { id: 'monedas', label: 'Monedas' },
+          ]}
+        />
 
-        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-panel border border-line bg-line text-center">
-          <div className="bg-white px-2 py-2">
-            <p className="text-[11px] font-semibold uppercase text-ink-soft">Contado</p>
-            <p className="text-base font-bold text-ink">{soles(total)}</p>
+        {pestana === 'billetes' ? (
+          <div>
+            <div className="flex flex-col gap-1.5">
+              {BILLETES.map((v) => (
+                <FilaDenominacion
+                  key={v}
+                  valor={v}
+                  cantidad={cantBilletes[v] ?? ''}
+                  onChange={(texto) => setCantBilletes({ ...cantBilletes, [v]: texto })}
+                />
+              ))}
+            </div>
+            <p className="mt-2 text-right text-sm font-semibold text-ink">Subtotal billetes {soles(totalBilletes)}</p>
           </div>
-          <div className="bg-white px-2 py-2">
-            <p className="text-[11px] font-semibold uppercase text-ink-soft">Debe traer</p>
-            <p className="text-base font-bold text-ink-muted">{soles(caja.saldoActual)}</p>
+        ) : (
+          <div>
+            <div className="flex flex-col gap-1.5">
+              {MONEDAS.map((v) => (
+                <FilaDenominacion
+                  key={v}
+                  valor={v}
+                  cantidad={cantMonedas[v] ?? ''}
+                  onChange={(texto) => setCantMonedas({ ...cantMonedas, [v]: texto })}
+                />
+              ))}
+            </div>
+            <p className="mt-2 text-right text-sm font-semibold text-ink">Subtotal monedas {soles(totalMonedas)}</p>
           </div>
-          <div className="bg-white px-2 py-2">
-            <p className="text-[11px] font-semibold uppercase text-ink-soft">Diferencia</p>
-            <p className={`text-base font-bold ${diferencia === 0 ? 'text-emerald-600' : diferencia > 0 ? 'text-ink-muted' : 'text-red-600'}`}>
-              {diferencia > 0 ? '+' : ''}
-              {soles(diferencia)}
-            </p>
-          </div>
-        </div>
+        )}
 
         <Input label="Observación" optional placeholder="Alguna razón de la diferencia..." value={observacion} onChange={(e) => setObservacion(e.target.value)} />
       </div>
     </Modal>
+  )
+}
+
+/** Una fila de conteo: cuántos billetes/monedas de un valor, y cuánto suman. */
+function FilaDenominacion({
+  valor,
+  cantidad,
+  onChange,
+}: {
+  valor: number
+  cantidad: string
+  onChange: (texto: string) => void
+}) {
+  const subtotal = valor * (Number(cantidad) > 0 ? Math.floor(Number(cantidad)) : 0)
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-16 shrink-0 text-sm text-ink">{soles(valor)}</span>
+      <Input
+        size="sm"
+        type="number"
+        min={0}
+        step={1}
+        placeholder="0"
+        value={cantidad}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-20"
+      />
+      <span className="ml-auto shrink-0 text-sm text-ink-soft">{soles(subtotal)}</span>
+    </div>
   )
 }

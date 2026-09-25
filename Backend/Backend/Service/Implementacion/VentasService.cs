@@ -85,6 +85,27 @@ public class VentasService : IVentasService
     }
 
     /// <summary>
+    /// Si el método es Efectivo, exige que quien cobra ya tenga una Caja
+    /// asignada — ya no se crea sola: la asigna un administrador desde
+    /// Finanzas &gt; Cajas. Se llama ANTES de tocar la base, para que un cobro
+    /// que no se puede postear ni siquiera llegue a guardarse. Cualquier otro
+    /// método no exige nada (todavía no conecta a su cuenta — sección 3).
+    /// </summary>
+    private async Task ValidarPuedeCobrarAsync(int metodoPagoId, int? cobradorId)
+    {
+        if (cobradorId is not int id) return;
+
+        var metodo = await _finanzas.GetMetodoPagoAsync(metodoPagoId);
+        if (metodo.Tipo != TipoMetodoPago.Efectivo) return;
+
+        if (await _cuentas.ObtenerCajaUsuarioAsync(id) is null)
+        {
+            throw new BadRequestException(
+                "No tienes una caja asignada: no puedes cobrar en efectivo. Pídele a un administrador que te cree una en Finanzas > Cajas.");
+        }
+    }
+
+    /// <summary>
     /// Si el pago es en efectivo, entra a la Caja de quien lo cobró — en
     /// tiempo real, no al cuadrar el día. Ver docs/finanzas-tesoreria.md,
     /// "Mi Caja". Si no es efectivo, no hace nada todavía (billeteras y
@@ -97,7 +118,7 @@ public class VentasService : IVentasService
         var metodo = await _finanzas.GetMetodoPagoAsync(pago.MetodoPagoId);
         if (metodo.Tipo != TipoMetodoPago.Efectivo) return;
 
-        var caja = await _cuentas.GetOrCrearCajaUsuarioAsync(cobradorId);
+        var caja = await _cuentas.ExigirCajaUsuarioAsync(cobradorId);
         var movimiento = await _cuentas.PostearAsync(
             caja.Id, TipoMovimientoCuenta.Ingreso, pago.Monto,
             DocumentoOrigenMovimiento.PagoVenta, pago.Id, actorId, pago.Fecha);
@@ -956,6 +977,8 @@ public class VentasService : IVentasService
                 $"El abono (S/ {request.Monto}) supera el saldo pendiente (S/ {saldo}).");
         }
 
+        await ValidarPuedeCobrarAsync(request.MetodoPagoId, usuarioId);
+
         var pago = new PagoVenta
         {
             MetodoPagoId = request.MetodoPagoId,
@@ -1001,6 +1024,8 @@ public class VentasService : IVentasService
             throw new BadRequestException(
                 $"Ese cambio deja lo pagado en S/ {pagadoSinEste + request.Monto}, más que el total de la venta (S/ {total}).");
         }
+
+        await ValidarPuedeCobrarAsync(request.MetodoPagoId, usuarioId);
 
         // Si ya había posteado a una Caja (era efectivo), esa entrada se
         // reversa antes de aplicar el cambio — el monto o el método pueden
@@ -1076,62 +1101,6 @@ public class VentasService : IVentasService
             .Where(n => n.Total - n.TotalPagado > 0);
     }
 
-    public async Task<IEnumerable<CobroResponse>> GetMisCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta)
-    {
-        var notas = await _repository.GetNotasVentaAsync(EstadoNotaVenta.Confirmada);
-
-        return notas
-            .SelectMany(n => n.Pagos.Select(p => (Nota: n, Pago: p)))
-            .Where(x => usuarioId == null || x.Pago.UsuarioId == usuarioId)
-            .Where(x => desde == null || x.Pago.Fecha >= desde)
-            .Where(x => hasta == null || x.Pago.Fecha <= hasta)
-            .OrderByDescending(x => x.Pago.Fecha)
-            .Select(x => new CobroResponse
-            {
-                Id = x.Pago.Id,
-                Fecha = x.Pago.Fecha,
-                NotaVentaId = x.Nota.Id,
-                NotaVentaNumero = x.Nota.Numero,
-                ClienteId = x.Nota.ClienteId,
-                Cliente = x.Nota.Cliente?.Nombre ?? string.Empty,
-                MetodoPagoId = x.Pago.MetodoPagoId,
-                MetodoPago = x.Pago.MetodoPago?.Nombre ?? string.Empty,
-                Monto = x.Pago.Monto,
-                Anulado = x.Pago.Anulado
-            });
-    }
-
-    public async Task<PaginaResponse<CobroResponse>> ListarMisCobrosAsync(
-        ConsultaTablaRequest consulta, int? usuarioId, DateTime? desde, DateTime? hasta)
-    {
-        var (items, total) = await _repository.ListarCobrosAsync(consulta, usuarioId, desde, hasta);
-
-        return new PaginaResponse<CobroResponse>
-        {
-            Items = items.Select(MapCobro).ToList(),
-            Total = total,
-            Pagina = consulta.PaginaSegura,
-            PorPagina = consulta.PorPaginaSegura,
-        };
-    }
-
-    public Task<ResumenCobrosResponse> GetResumenCobrosAsync(int? usuarioId, DateTime? desde, DateTime? hasta) =>
-        _repository.ResumenCobrosAsync(usuarioId, desde, hasta);
-
-    private static CobroResponse MapCobro(PagoVenta p) => new()
-    {
-        Id = p.Id,
-        Fecha = p.Fecha,
-        NotaVentaId = p.NotaVentaId,
-        NotaVentaNumero = p.NotaVenta?.Numero ?? string.Empty,
-        ClienteId = p.NotaVenta?.ClienteId ?? 0,
-        Cliente = p.NotaVenta?.Cliente?.Nombre ?? string.Empty,
-        MetodoPagoId = p.MetodoPagoId,
-        MetodoPago = p.MetodoPago?.Nombre ?? string.Empty,
-        Monto = p.Monto,
-        Anulado = p.Anulado,
-    };
-
     // ------------------------------------------------------------ Auxiliares
 
     /// <summary>
@@ -1192,6 +1161,11 @@ public class VentasService : IVentasService
             throw new BadRequestException(
                 $"El adelanto (S/ {cobrado:N2}) supera el total de la venta (S/ {total:N2}).");
         }
+
+        // Antes de guardar nada: si algún pago es en efectivo y quien cobra no
+        // tiene caja asignada, mejor que falle aquí que crear la venta y
+        // descontar stock para recién ahí toparse con que no se puede postear.
+        foreach (var p in pagos) await ValidarPuedeCobrarAsync(p.MetodoPagoId, usuarioId);
 
         var notaVenta = new NotaVenta
         {

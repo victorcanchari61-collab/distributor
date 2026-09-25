@@ -28,6 +28,7 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         var cuentas = await _context.CuentasFinancieras
             .AsNoTracking()
             .Include(c => c.UsuarioResponsable)
+            .Include(c => c.Banco)
             .OrderByDescending(c => c.Activo)
             .ThenBy(c => c.Naturaleza)
             .ThenBy(c => c.Nombre)
@@ -41,6 +42,7 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         var cuenta = await _context.CuentasFinancieras
             .AsNoTracking()
             .Include(c => c.UsuarioResponsable)
+            .Include(c => c.Banco)
             .FirstOrDefaultAsync(c => c.Id == id)
             ?? throw new NotFoundException($"No existe la cuenta financiera {id}");
 
@@ -51,7 +53,7 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         await _context.CuentasFinancieras.FirstOrDefaultAsync(c => c.Id == id)
         ?? throw new NotFoundException($"No existe la cuenta financiera {id}");
 
-    public async Task<CuentaFinancieraResponse> CreateAsync(CuentaFinancieraRequest request)
+    public async Task<CuentaFinancieraResponse> CreateAsync(CuentaFinancieraRequest request, int? usuarioId = null)
     {
         await _validator.ValidateAndThrowAsync(request);
 
@@ -60,11 +62,31 @@ public class CuentaFinancieraService : ICuentaFinancieraService
             throw new ConflictException("Ya existe una cuenta financiera con ese nombre");
         }
 
+        if (request.Naturaleza == NaturalezaCuenta.Caja)
+        {
+            await ValidarResponsableDeCajaAsync(request.UsuarioResponsableId!.Value, cajaId: null);
+        }
+
+        var banco = request.Naturaleza == NaturalezaCuenta.Banco
+            ? await ValidarBancoAsync(request.BancoId!.Value)
+            : null;
+
         var cuenta = new CuentaFinanciera { Activo = true };
-        Aplicar(cuenta, request);
+        Aplicar(cuenta, request, banco);
 
         _context.CuentasFinancieras.Add(cuenta);
         await _context.SaveChangesAsync();
+
+        // Con lo que ya tenía antes de registrarla: un movimiento más, no un
+        // campo aparte — así el saldo siempre sale de sumar el libro mayor, sin
+        // excepciones para la conciliación ni para "Mi Caja".
+        if (request.MontoInicial > 0)
+        {
+            await PostearAsync(
+                cuenta.Id, TipoMovimientoCuenta.Ingreso, request.MontoInicial,
+                DocumentoOrigenMovimiento.SaldoInicial, null, usuarioId,
+                observacion: "Saldo con el que se registró la cuenta");
+        }
 
         var response = Map(cuenta);
         await _notificador.AvisarAsync("cuentasfinancieras", "creada", response);
@@ -92,7 +114,16 @@ public class CuentaFinancieraService : ICuentaFinancieraService
                 "Esta cuenta ya tiene movimientos: no se le puede cambiar la naturaleza");
         }
 
-        Aplicar(cuenta, request);
+        if (request.Naturaleza == NaturalezaCuenta.Caja)
+        {
+            await ValidarResponsableDeCajaAsync(request.UsuarioResponsableId!.Value, cajaId: id);
+        }
+
+        var banco = request.Naturaleza == NaturalezaCuenta.Banco
+            ? await ValidarBancoAsync(request.BancoId!.Value)
+            : null;
+
+        Aplicar(cuenta, request, banco);
         cuenta.Activo = request.Activo;
 
         await _context.SaveChangesAsync();
@@ -205,27 +236,33 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         return ultimo?.SaldoResultante ?? 0;
     }
 
-    public async Task<CuentaFinanciera> GetOrCrearCajaUsuarioAsync(int usuarioId)
+    public async Task<CuentaFinanciera?> ObtenerCajaUsuarioAsync(int usuarioId) =>
+        await _context.CuentasFinancieras.FirstOrDefaultAsync(c =>
+            c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == usuarioId && c.Activo);
+
+    public async Task<CuentaFinanciera> ExigirCajaUsuarioAsync(int usuarioId) =>
+        await ObtenerCajaUsuarioAsync(usuarioId)
+        ?? throw new BadRequestException(
+            "Este usuario no tiene una caja asignada. Pídele a un administrador que se la cree en Finanzas > Cajas.");
+
+    /// <summary>Que el usuario exista y que nadie más tenga ya una caja activa a su nombre.</summary>
+    private async Task ValidarResponsableDeCajaAsync(int usuarioId, int? cajaId)
     {
-        var existente = await _context.CuentasFinancieras.FirstOrDefaultAsync(c =>
-            c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == usuarioId);
-        if (existente is not null) return existente;
-
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId)
-            ?? throw new NotFoundException($"No existe el usuario {usuarioId}");
-
-        var caja = new CuentaFinanciera
+        if (!await _context.Usuarios.AnyAsync(u => u.Id == usuarioId))
         {
-            Nombre = $"Caja de {usuario.Nombre}",
-            Naturaleza = NaturalezaCuenta.Caja,
-            UsuarioResponsableId = usuarioId,
-            SaldoActual = 0,
-            Activo = true,
-        };
+            throw new NotFoundException($"No existe el usuario {usuarioId}");
+        }
 
-        _context.CuentasFinancieras.Add(caja);
-        await _context.SaveChangesAsync();
-        return caja;
+        var yaTieneOtra = await _context.CuentasFinancieras.AnyAsync(c =>
+            c.Naturaleza == NaturalezaCuenta.Caja
+            && c.UsuarioResponsableId == usuarioId
+            && c.Activo
+            && c.Id != cajaId);
+
+        if (yaTieneOtra)
+        {
+            throw new ConflictException("Ese usuario ya tiene una caja asignada");
+        }
     }
 
     public async Task<(MovimientoCuenta Salida, MovimientoCuenta Entrada)> TransferirAsync(
@@ -252,24 +289,32 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         await ReversarAsync(movimientoEntradaId, usuarioId);
     }
 
-    private static void Aplicar(CuentaFinanciera cuenta, CuentaFinancieraRequest request)
+    private async Task<Banco> ValidarBancoAsync(int bancoId) =>
+        await _context.Bancos.FirstOrDefaultAsync(b => b.Id == bancoId)
+        ?? throw new NotFoundException($"No existe el banco {bancoId}");
+
+    private static void Aplicar(CuentaFinanciera cuenta, CuentaFinancieraRequest request, Banco? banco)
     {
         cuenta.Nombre = request.Nombre.Trim();
         cuenta.Naturaleza = request.Naturaleza;
 
         if (request.Naturaleza == NaturalezaCuenta.Caja)
         {
+            cuenta.BancoId = null;
             cuenta.Banco = null;
             cuenta.NumeroCuenta = null;
             cuenta.Cci = null;
             cuenta.Titular = null;
+            cuenta.UsuarioResponsableId = request.UsuarioResponsableId;
             return;
         }
 
-        cuenta.Banco = Limpiar(request.Banco);
+        cuenta.BancoId = banco?.Id;
+        cuenta.Banco = banco;
         cuenta.NumeroCuenta = Limpiar(request.NumeroCuenta);
         cuenta.Cci = Limpiar(request.Cci);
         cuenta.Titular = Limpiar(request.Titular);
+        cuenta.UsuarioResponsableId = null;
     }
 
     private static string? Limpiar(string? texto) =>
@@ -282,7 +327,8 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         Naturaleza = c.Naturaleza,
         UsuarioResponsableId = c.UsuarioResponsableId,
         UsuarioResponsable = c.UsuarioResponsable?.Nombre,
-        Banco = c.Banco,
+        BancoId = c.BancoId,
+        Banco = c.Banco?.Nombre,
         NumeroCuenta = c.NumeroCuenta,
         Cci = c.Cci,
         Titular = c.Titular,

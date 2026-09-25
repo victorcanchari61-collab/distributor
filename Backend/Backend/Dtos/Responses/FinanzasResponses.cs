@@ -8,6 +8,9 @@ public class MetodoPagoResponse
     /// <summary>EFECTIVO, BILLETERA_DIGITAL o TRANSFERENCIA.</summary>
     public string Tipo { get; set; } = string.Empty;
 
+    /// <summary>El número de celular asociado, solo si Tipo es Billetera digital.</summary>
+    public string? Numero { get; set; }
+
     /// <summary>A qué cuenta financiera va la plata. Null solo en Efectivo.</summary>
     public int? CuentaFinancieraId { get; set; }
     public string? CuentaFinanciera { get; set; }

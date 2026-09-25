@@ -22,6 +22,17 @@ public class MetodoPagoValidator<T> : AbstractValidator<T> where T : MetodoPagoR
         RuleFor(x => x.CuentaFinancieraId)
             .Null().WithMessage("Efectivo no se enlaza a ninguna cuenta")
             .When(x => x.Tipo == TipoMetodoPago.Efectivo);
+
+        // Yape/Plin se identifican por su número: sin él no hay cómo saber a
+        // cuál de varias billeteras de la misma cuenta se refiere.
+        RuleFor(x => x.Numero)
+            .NotEmpty().WithMessage("Indica el número asociado a esta billetera")
+            .MaximumLength(20)
+            .When(x => x.Tipo == TipoMetodoPago.BilleteraDigital);
+
+        RuleFor(x => x.Numero)
+            .Empty().WithMessage("El número solo aplica a billetera digital")
+            .When(x => x.Tipo != TipoMetodoPago.BilleteraDigital);
     }
 }
 

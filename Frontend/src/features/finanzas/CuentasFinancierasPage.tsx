@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Building2, CheckCircle2, History, Landmark, Plus, Scale, ShieldCheck, ShieldOff } from 'lucide-react'
+import { Building2, CheckCircle2, CreditCard, History, Landmark, Plus, Scale, ShieldCheck, ShieldOff } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -11,14 +11,18 @@ import {
   RowAction,
   StatCard,
   SysDataTable,
+  Tabs,
   useConfirmacion,
   useToast,
 } from '../../components/ui'
-import type { BadgeTone, DataTableColumn } from '../../components/ui'
+import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaCorta, fechaHora, hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
+import { bancoApi } from './bancoApi'
+import type { BancoResponse } from './bancoApi'
+import { BancosPage } from './BancosPage'
 import { cuentaFinancieraApi, conciliacionBancariaApi } from './cuentaFinancieraApi'
 import type {
   CuentaFinancieraResponse,
@@ -29,29 +33,55 @@ import type {
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
-const NATURALEZAS: { value: NaturalezaCuenta; label: string }[] = [
-  { value: 'CAJA', label: 'Caja' },
-  { value: 'BANCO', label: 'Banco' },
-  { value: 'PASARELA', label: 'Pasarela' },
-]
-
-const TONO_NATURALEZA: Record<NaturalezaCuenta, BadgeTone> = {
-  CAJA: 'sys',
-  BANCO: 'success',
-  PASARELA: 'warning',
+const VACIO = {
+  nombre: '',
+  bancoId: 0,
+  numeroCuenta: '',
+  cci: '',
+  titular: '',
+  montoInicial: '',
 }
 
-const VACIO = { nombre: '', naturaleza: 'BANCO' as NaturalezaCuenta, banco: '', numeroCuenta: '', cci: '', titular: '' }
+type Pestana = 'bancos' | 'cuentas'
+
+/**
+ * Bancos (catálogo) y Cuentas Bancarias (las que sí tienen saldo real) son
+ * cosas separadas: un banco puede tener varias cuentas. Ver docs/finanzas-tesoreria.md.
+ */
+export function CuentasFinancierasPage() {
+  const [pestana, setPestana] = useState<Pestana>('bancos')
+
+  const cabecera = (
+    <Tabs
+      className="mb-5"
+      active={pestana}
+      onChange={(id) => setPestana(id as Pestana)}
+      items={[
+        { id: 'bancos', label: 'Bancos', icon: <Landmark size={15} /> },
+        { id: 'cuentas', label: 'Cuentas Bancarias', icon: <CreditCard size={15} /> },
+      ]}
+    />
+  )
+
+  return (
+    <>
+      {cabecera}
+      {pestana === 'bancos' ? <BancosPage /> : <CuentasBancariasTab />}
+    </>
+  )
+}
 
 /**
  * Las cuentas que sí tienen saldo real: la Caja General (única, fija) y las
- * cuentas bancarias. Un método de pago (Efectivo, Yape, Transferencia) es solo
- * un canal que apunta a una de estas — la plata de verdad vive aquí.
+ * cuentas bancarias, cada una ligada a un Banco del catálogo. Un método de
+ * pago (Efectivo, Yape, Transferencia) es solo un canal que apunta a una de
+ * estas — la plata de verdad vive aquí.
  */
-export function CuentasFinancierasPage() {
+function CuentasBancariasTab() {
   const { puede } = usePermisos()
   const toast = useToast()
   const [cuentas, setCuentas] = useState<CuentaFinancieraResponse[]>([])
+  const [bancos, setBancos] = useState<BancoResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -68,10 +98,14 @@ export function CuentasFinancierasPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      setCuentas(await cuentaFinancieraApi.getAll())
+      // Las cajas (Caja General y las de vendedores/repartidores) viven en
+      // "Cajas": aquí solo las cuentas bancarias.
+      const [todas, bcos] = await Promise.all([cuentaFinancieraApi.getAll(), bancoApi.getAll()])
+      setCuentas(todas.filter((c) => c.naturaleza === 'BANCO'))
+      setBancos(bcos)
       setError('')
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos cargar las cuentas financieras.')
+      setError(e instanceof ApiError ? e.message : 'No pudimos cargar las cuentas bancarias.')
     } finally {
       setCargando(false)
     }
@@ -82,6 +116,7 @@ export function CuentasFinancierasPage() {
   }, [cargar])
 
   useRealtime('cuentasfinancieras', cargar)
+  useRealtime('bancos', cargar)
 
   const abrirNuevo = () => {
     setEditando(null)
@@ -93,29 +128,36 @@ export function CuentasFinancierasPage() {
     setEditando(c)
     setForm({
       nombre: c.nombre,
-      naturaleza: c.naturaleza,
-      banco: c.banco ?? '',
+      bancoId: c.bancoId ?? 0,
       numeroCuenta: c.numeroCuenta ?? '',
       cci: c.cci ?? '',
       titular: c.titular ?? '',
+      montoInicial: '',
     })
     setAbierto(true)
   }
 
   const guardar = async () => {
     if (!form.nombre.trim()) return toast.error('Ponle un nombre a la cuenta.')
-    if (form.naturaleza !== 'CAJA' && !form.banco.trim()) return toast.error('Indica el banco.')
-    if (form.naturaleza !== 'CAJA' && !form.numeroCuenta.trim()) return toast.error('Indica el número de cuenta.')
+    if (!form.bancoId) return toast.error('Elige a qué banco pertenece.')
+    if (!form.numeroCuenta.trim()) return toast.error('Indica el número de cuenta.')
+
+    const montoInicial = form.montoInicial.trim() ? Number(form.montoInicial.replace(',', '.')) : 0
+    if (!editando && (!Number.isFinite(montoInicial) || montoInicial < 0)) {
+      return toast.error('El monto inicial no puede ser negativo.')
+    }
 
     setGuardando(true)
     try {
       const cuerpo = {
         nombre: form.nombre.trim(),
-        naturaleza: form.naturaleza,
-        banco: form.naturaleza === 'CAJA' ? null : form.banco.trim() || null,
-        numeroCuenta: form.naturaleza === 'CAJA' ? null : form.numeroCuenta.trim() || null,
-        cci: form.naturaleza === 'CAJA' ? null : form.cci.trim() || null,
-        titular: form.naturaleza === 'CAJA' ? null : form.titular.trim() || null,
+        naturaleza: 'BANCO' as NaturalezaCuenta,
+        bancoId: form.bancoId,
+        numeroCuenta: form.numeroCuenta.trim() || null,
+        cci: form.cci.trim() || null,
+        titular: form.titular.trim() || null,
+        // Solo cuenta al crear: ya creada, el saldo se mueve con movimientos.
+        montoInicial: editando ? 0 : Math.round(montoInicial * 100) / 100,
         activo: editando?.activo ?? true,
       }
       if (editando) await cuentaFinancieraApi.update(editando.id, cuerpo)
@@ -143,8 +185,8 @@ export function CuentasFinancierasPage() {
         try {
           await cuentaFinancieraApi.update(c.id, {
             nombre: c.nombre,
-            naturaleza: c.naturaleza,
-            banco: c.banco,
+            naturaleza: 'BANCO',
+            bancoId: c.bancoId,
             numeroCuenta: c.numeroCuenta,
             cci: c.cci,
             titular: c.titular,
@@ -163,17 +205,17 @@ export function CuentasFinancierasPage() {
   const columns: DataTableColumn<CuentaFinancieraResponse>[] = [
     { key: 'nombre', label: 'Nombre', filterable: false },
     {
-      key: 'naturaleza',
-      label: 'Tipo',
+      key: 'banco',
+      label: 'Banco',
       filterType: 'select',
-      filterOptions: NATURALEZAS,
-      render: (row) => <Badge tone={TONO_NATURALEZA[row.naturaleza]}>{NATURALEZAS.find((n) => n.value === row.naturaleza)?.label}</Badge>,
+      filterOptions: bancos.map((b) => ({ value: b.nombre, label: b.nombre })),
+      render: (row) => row.banco ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'numeroCuenta',
       label: 'Número',
       filterable: false,
-      render: (row) => (row.banco ? `${row.banco} · ${row.numeroCuenta ?? '—'}` : <span className="text-ink-soft">—</span>),
+      render: (row) => row.numeroCuenta ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'saldoActual',
@@ -197,9 +239,9 @@ export function CuentasFinancierasPage() {
 
   return (
     <ListPage
-      icon={<Landmark size={20} />}
-      title="Bancos"
-      description="La Caja General y las cuentas bancarias: las que sí tienen saldo real. Un método de pago solo apunta a una de estas."
+      icon={<CreditCard size={20} />}
+      title="Cuentas Bancarias"
+      description="Las cuentas bancarias, cada una ligada a un banco del catálogo. Un método de pago solo apunta a una de estas."
       actions={
         puede('finanzas.bancos', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
@@ -216,7 +258,7 @@ export function CuentasFinancierasPage() {
       }
       columns={columns}
       rows={cuentas}
-      cardIcon={Landmark}
+      cardIcon={CreditCard}
       searchPlaceholder="Buscar cuenta..."
       empty={cargando ? 'Cargando cuentas...' : 'Todavía no hay cuentas registradas.'}
       rowActions={(row) => (
@@ -224,17 +266,17 @@ export function CuentasFinancierasPage() {
           <RowAction label={`Movimientos de ${row.nombre}`} tone="view" onClick={() => setMovimientosDe(row)}>
             <History size={15} />
           </RowAction>
-          {row.naturaleza !== 'CAJA' && puede('finanzas.bancos', 'crear') && (
+          {puede('finanzas.bancos', 'crear') && (
             <RowAction label={`Conciliar ${row.nombre}`} onClick={() => setConciliarDe(row)}>
               <Scale size={15} />
             </RowAction>
           )}
-          {row.naturaleza !== 'CAJA' && puede('finanzas.bancos', 'editar') && (
+          {puede('finanzas.bancos', 'editar') && (
             <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
               <Building2 size={15} />
             </RowAction>
           )}
-          {row.naturaleza !== 'CAJA' && puede('finanzas.bancos', 'editar') && (
+          {puede('finanzas.bancos', 'editar') && (
             <RowAction
               label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
               tone={row.activo ? 'warning' : 'success'}
@@ -249,7 +291,7 @@ export function CuentasFinancierasPage() {
       <Modal
         open={abierto}
         size="sm"
-        title={editando ? `Editar ${editando.nombre}` : 'Nueva cuenta financiera'}
+        title={editando ? `Editar ${editando.nombre}` : 'Nueva cuenta bancaria'}
         onClose={() => setAbierto(false)}
         footer={
           <>
@@ -264,22 +306,17 @@ export function CuentasFinancierasPage() {
       >
         <div className="flex flex-col gap-4">
           <Desplegable
-            label="Tipo"
-            value={form.naturaleza}
-            onChange={(v) => setForm({ ...form, naturaleza: v as NaturalezaCuenta })}
-            options={NATURALEZAS.filter((n) => n.value !== 'CAJA')}
+            label="Banco"
+            value={form.bancoId}
+            onChange={(v) => setForm({ ...form, bancoId: Number(v) })}
+            placeholder="Elige el banco"
+            options={bancos.filter((b) => b.activo).map((b) => ({ value: b.id, label: b.nombre }))}
           />
           <Input
             label="Nombre"
             placeholder="BCP Cuenta Corriente Soles"
             value={form.nombre}
             onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-          />
-          <Input
-            label="Banco"
-            placeholder="BCP, Interbank, BBVA..."
-            value={form.banco}
-            onChange={(e) => setForm({ ...form, banco: e.target.value })}
           />
           <Input
             label="Número de cuenta"
@@ -299,6 +336,17 @@ export function CuentasFinancierasPage() {
             value={form.titular}
             onChange={(e) => setForm({ ...form, titular: e.target.value })}
           />
+          {!editando && (
+            <Input
+              label="Monto inicial"
+              optional
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={form.montoInicial}
+              onChange={(e) => setForm({ ...form, montoInicial: e.target.value })}
+            />
+          )}
         </div>
       </Modal>
 

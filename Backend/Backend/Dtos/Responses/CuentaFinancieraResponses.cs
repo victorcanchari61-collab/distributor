@@ -10,6 +10,7 @@ public class CuentaFinancieraResponse
     public int? UsuarioResponsableId { get; set; }
     public string? UsuarioResponsable { get; set; }
 
+    public int? BancoId { get; set; }
     public string? Banco { get; set; }
     public string? NumeroCuenta { get; set; }
     public string? Cci { get; set; }

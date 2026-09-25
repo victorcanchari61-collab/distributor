@@ -12,7 +12,7 @@ public interface ICuentaFinancieraService
 {
     Task<IEnumerable<CuentaFinancieraResponse>> GetAllAsync();
     Task<CuentaFinancieraResponse> GetByIdAsync(int id);
-    Task<CuentaFinancieraResponse> CreateAsync(CuentaFinancieraRequest request);
+    Task<CuentaFinancieraResponse> CreateAsync(CuentaFinancieraRequest request, int? usuarioId = null);
     Task<CuentaFinancieraResponse> UpdateAsync(int id, CuentaFinancieraRequest request);
     Task<IEnumerable<MovimientoCuentaResponse>> MovimientosAsync(int cuentaFinancieraId, DateTime? desde, DateTime? hasta);
 
@@ -48,12 +48,14 @@ public interface ICuentaFinancieraService
     Task<decimal> SaldoAFechaAsync(int cuentaFinancieraId, DateTime fecha);
 
     /// <summary>
-    /// La Caja de este usuario (un vendedor/repartidor): la busca, y si nunca
-    /// tuvo una, la crea. No se queda con la plata entre días — apertura y
-    /// cierre libres, pero cada movimiento (venta cobrada, gasto, fondo) se
-    /// postea aquí en tiempo real. Ver docs/finanzas-tesoreria.md, "Mi Caja".
+    /// La Caja de este usuario (un vendedor/repartidor), si tiene una
+    /// asignada — null si no. Ya no se crea sola: la asigna un administrador
+    /// desde Finanzas &gt; Cajas. Ver docs/finanzas-tesoreria.md, "Mi Caja".
     /// </summary>
-    Task<CuentaFinanciera> GetOrCrearCajaUsuarioAsync(int usuarioId);
+    Task<CuentaFinanciera?> ObtenerCajaUsuarioAsync(int usuarioId);
+
+    /// <summary>Igual que <see cref="ObtenerCajaUsuarioAsync"/>, pero exige que exista.</summary>
+    Task<CuentaFinanciera> ExigirCajaUsuarioAsync(int usuarioId);
 
     /// <summary>
     /// Mueve plata de una cuenta a otra: un Egreso en origen y un Ingreso en

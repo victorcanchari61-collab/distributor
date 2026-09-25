@@ -37,14 +37,14 @@ public class MiCajaController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Mia()
     {
-        var caja = await _cuentas.GetOrCrearCajaUsuarioAsync(UsuarioId);
+        var caja = await _cuentas.ExigirCajaUsuarioAsync(UsuarioId);
         return Ok(await _cuentas.GetByIdAsync(caja.Id));
     }
 
     [HttpGet("movimientos")]
     public async Task<IActionResult> Movimientos([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
     {
-        var caja = await _cuentas.GetOrCrearCajaUsuarioAsync(UsuarioId);
+        var caja = await _cuentas.ExigirCajaUsuarioAsync(UsuarioId);
         return Ok(await _cuentas.MovimientosAsync(caja.Id, desde, hasta));
     }
 
@@ -52,7 +52,7 @@ public class MiCajaController : ControllerBase
     [HttpPost("movimiento")]
     public async Task<IActionResult> RegistrarMovimiento([FromBody] MovimientoOperativoRequest request)
     {
-        var caja = await _cuentas.GetOrCrearCajaUsuarioAsync(UsuarioId);
+        var caja = await _cuentas.ExigirCajaUsuarioAsync(UsuarioId);
         // La cuenta la decide el servidor: nunca la que venga en el body — así
         // nadie postea a la caja de otro ni a la Caja General por aquí.
         request.CuentaFinancieraId = caja.Id;

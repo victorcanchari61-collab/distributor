@@ -76,6 +76,7 @@ public class AppDbContext : DbContext
     public DbSet<MotivoGasto> MotivosGasto => Set<MotivoGasto>();
     public DbSet<MotivoNovedad> MotivosNovedad => Set<MotivoNovedad>();
     public DbSet<NovedadEntrega> NovedadesEntrega => Set<NovedadEntrega>();
+    public DbSet<Banco> Bancos => Set<Banco>();
     public DbSet<CuentaFinanciera> CuentasFinancieras => Set<CuentaFinanciera>();
     public DbSet<MovimientoCuenta> MovimientosCuenta => Set<MovimientoCuenta>();
     public DbSet<ConciliacionBancaria> ConciliacionesBancarias => Set<ConciliacionBancaria>();
@@ -1230,12 +1231,20 @@ public class AppDbContext : DbContext
 
     private static void ConfigurarFinanzas(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Banco>(entity =>
+        {
+            entity.ToTable("Bancos");
+            entity.HasIndex(b => b.Nombre).IsUnique();
+            entity.Property(b => b.Nombre).HasMaxLength(60).IsRequired();
+        });
+
         modelBuilder.Entity<MetodoPago>(entity =>
         {
             entity.ToTable("MetodosPago");
             entity.HasIndex(m => m.Nombre).IsUnique();
             entity.Property(m => m.Nombre).HasMaxLength(60).IsRequired();
             entity.Property(m => m.Tipo).HasMaxLength(20).IsRequired();
+            entity.Property(m => m.Numero).HasMaxLength(20);
 
             entity.HasOne(m => m.CuentaFinanciera).WithMany()
                 .HasForeignKey(m => m.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
@@ -1254,7 +1263,6 @@ public class AppDbContext : DbContext
             entity.HasIndex(c => c.Nombre).IsUnique();
             entity.Property(c => c.Nombre).HasMaxLength(100).IsRequired();
             entity.Property(c => c.Naturaleza).HasMaxLength(20).IsRequired();
-            entity.Property(c => c.Banco).HasMaxLength(60);
             entity.Property(c => c.NumeroCuenta).HasMaxLength(30);
             entity.Property(c => c.Cci).HasMaxLength(30);
             entity.Property(c => c.Titular).HasMaxLength(120);
@@ -1262,6 +1270,9 @@ public class AppDbContext : DbContext
 
             entity.HasOne(c => c.UsuarioResponsable).WithMany()
                 .HasForeignKey(c => c.UsuarioResponsableId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(c => c.Banco).WithMany()
+                .HasForeignKey(c => c.BancoId).OnDelete(DeleteBehavior.Restrict);
 
             // La única cuenta de efectivo de la empresa: sin ella, el arqueo
             // no tiene a dónde postear la primera liquidación.

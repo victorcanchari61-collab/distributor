@@ -207,28 +207,6 @@ public class NotaVentaController : ControllerBase
     public async Task<IActionResult> AnularPago(int id, int pagoId) =>
         Ok(await _ventas.AnularPagoAsync(id, pagoId, UsuarioId));
 
-    /// <summary>Los cobros que registró el usuario que hizo login, opcionalmente por rango de fechas.</summary>
-    [HttpGet("miscobros")]
-    [Permiso("finanzas.miscobros", Accion.Ver)]
-    public async Task<IActionResult> MisCobros([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
-        Ok(await _ventas.GetMisCobrosAsync(UsuarioId, desde, hasta));
-
-    /// <summary>Una página de los cobros del usuario que hizo login.</summary>
-    [HttpPost("miscobros/listar")]
-    [Permiso("finanzas.miscobros", Accion.Ver)]
-    public async Task<IActionResult> ListarMisCobros(
-        [FromBody] ConsultaTablaRequest consulta,
-        [FromQuery] DateTime? desde,
-        [FromQuery] DateTime? hasta) =>
-        Ok(await _ventas.ListarMisCobrosAsync(consulta, UsuarioId, desde, hasta));
-
-    /// <summary>Totales de esos cobros, sobre todo el rango.</summary>
-    [HttpGet("miscobros/resumen")]
-    [Permiso("finanzas.miscobros", Accion.Ver)]
-    public async Task<IActionResult> ResumenMisCobros(
-        [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
-        Ok(await _ventas.GetResumenCobrosAsync(UsuarioId, desde, hasta));
-
     /// <summary>Qué cambió en esta nota de venta: sobre todo anulaciones y movimientos de pago.</summary>
     [HttpGet("{id:int}/historial")]
     [Permiso("fact.notaventa", Accion.Ver)]

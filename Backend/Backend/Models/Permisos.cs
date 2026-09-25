@@ -126,7 +126,6 @@ public static class CatalogoPermisos
             ["finanzas.metodospago"] = Catalogo,
             ["finanzas.cobrar"] = [Accion.Ver, Accion.Cobrar, Accion.Exportar],
             ["finanzas.pagar"] = [Accion.Ver, Accion.Cobrar, Accion.Exportar],
-            ["finanzas.miscobros"] = Consulta,
             // Cuánto se ganó con cada producto: ventas menos lo que costó la
             // mercadería. Es un dato del negocio, no de cualquiera: se da a
             // quien lo necesite, y el alcance lo recorta a lo propio.
@@ -136,8 +135,13 @@ public static class CatalogoPermisos
             // pantalla y el mismo flujo de siempre.
             ["finanzas.arqueo"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Eliminar, Accion.Cobrar, Accion.Exportar],
             // La Caja General: solo se consulta (saldo, movimientos). No se
-            // crea ni se edita — es una cuenta fija de la empresa.
+            // crea ni se edita — es una cuenta fija de la empresa. "Mi Caja"
+            // (la propia) es autoservicio y no pasa por este permiso.
             ["finanzas.caja"] = [Accion.Ver],
+            // Alta de una Caja para un vendedor/repartidor y a quién se le
+            // asigna: no se crea sola, solo quien tiene este permiso decide
+            // quién puede cobrar en efectivo.
+            ["finanzas.cajas"] = [Accion.Ver, Accion.Crear, Accion.Editar],
             // Cuentas bancarias: catálogo (sin eliminar: una cuenta con
             // movimientos no se puede borrar sin dejar huérfano su historial)
             // más la conciliación contra el extracto.

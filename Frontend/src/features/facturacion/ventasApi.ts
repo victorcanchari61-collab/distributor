@@ -58,21 +58,6 @@ export interface PagoVentaResponse {
   anulado: boolean
 }
 
-/** Un cobro: un pago de una nota de venta, visto desde quién lo cobró. */
-export interface CobroResponse {
-  id: number
-  fecha: string
-  notaVentaId: number
-  notaVentaNumero: string
-  clienteId: number
-  cliente: string
-  metodoPagoId: number
-  metodoPago: string
-  monto: number
-  /** Se anuló después de registrarse: no cuenta para el total cobrado. */
-  anulado: boolean
-}
-
 // --- Pedidos ---
 
 export type EstadoPedido = 'PENDIENTE' | 'CONFIRMADO' | 'ANULADO'
@@ -235,13 +220,6 @@ export interface ResumenCuentas {
   totalCubierto: number
 }
 
-/** Totales de los cobros de un usuario, sobre todo el rango y no una página. */
-export interface ResumenCobros {
-  validos: number
-  anulados: number
-  totalCobrado: number
-}
-
 /** Contadores del listado completo de notas de venta. */
 export interface ResumenNotasVenta {
   total: number
@@ -401,35 +379,6 @@ export const notaVentaApi = {
   /** Quita un pago registrado por error: su monto vuelve al saldo pendiente. */
   anularPago: (id: number, pagoId: number) =>
     api.del<NotaVentaResponse>(`/notaventa/${id}/pagos/${pagoId}`),
-  /** Una página de los cobros del usuario, resuelta en el servidor. */
-  listarCobros: (consulta: ConsultaTabla, desde?: string, hasta?: string) => {
-    const params = new URLSearchParams()
-    if (desde) params.set('desde', desde)
-    if (hasta) params.set('hasta', hasta)
-    const query = params.toString()
-    return api.post<PaginaResponse<CobroResponse>>(
-      `/notaventa/miscobros/listar${query ? `?${query}` : ''}`,
-      consulta,
-    )
-  },
-
-  /** Totales de esos cobros, sobre todo el rango. */
-  resumenCobros: (desde?: string, hasta?: string) => {
-    const params = new URLSearchParams()
-    if (desde) params.set('desde', desde)
-    if (hasta) params.set('hasta', hasta)
-    const query = params.toString()
-    return api.get<ResumenCobros>(`/notaventa/miscobros/resumen${query ? `?${query}` : ''}`)
-  },
-
-  /** Los cobros del usuario que hizo login, opcionalmente por rango de fechas (ISO). */
-  misCobros: (desde?: string, hasta?: string) => {
-    const params = new URLSearchParams()
-    if (desde) params.set('desde', desde)
-    if (hasta) params.set('hasta', hasta)
-    const query = params.toString()
-    return api.get<CobroResponse[]>(`/notaventa/miscobros${query ? `?${query}` : ''}`)
-  },
   /** Qué cambió en esta nota de venta: sobre todo anulaciones y movimientos de pago. */
   historial: (id: number) => api.get<AuditoriaResponse[]>(`/notaventa/${id}/historial`),
 }

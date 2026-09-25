@@ -1,6 +1,6 @@
+using System.Security.Claims;
 using Backend.Dtos.Requests;
 using Backend.Filters;
-using Backend.Models;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,10 +8,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace Backend.Controllers;
 
 /// <summary>
-/// La Caja General y las cuentas bancarias. Ver/crear/editar vive bajo
-/// `finanzas.bancos` — es donde tiene sentido dar de alta una cuenta nueva —
-/// pero también se puede VER desde `finanzas.caja`, que solo necesita
-/// consultar el saldo y los movimientos de la Caja General.
+/// La Caja General, las cajas asignadas a vendedores/repartidores y las
+/// cuentas bancarias — todas son CuentaFinanciera, una misma tabla. Ver vive
+/// bajo `finanzas.caja` (Mi Caja/Caja General), `finanzas.cajas` (el
+/// submódulo que las crea y asigna) o `finanzas.bancos`, según quién
+/// pregunte. Crear/editar exige el permiso del submódulo dueño de esa
+/// naturaleza: Cajas para NaturalezaCuenta.Caja, Bancos para el resto.
 /// </summary>
 [ApiController]
 [Route("api/cuentafinanciera")]
@@ -25,27 +27,32 @@ public class CuentaFinancieraController : ControllerBase
         _cuentas = cuentas;
     }
 
+    private int? UsuarioId =>
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"), out var id)
+            ? id
+            : null;
+
     [HttpGet]
-    [PermisoAlguno("finanzas.caja:ver", "finanzas.bancos:ver")]
+    [PermisoAlguno("finanzas.caja:ver", "finanzas.cajas:ver", "finanzas.bancos:ver")]
     public async Task<IActionResult> GetAll() => Ok(await _cuentas.GetAllAsync());
 
     [HttpGet("{id:int}")]
-    [PermisoAlguno("finanzas.caja:ver", "finanzas.bancos:ver")]
+    [PermisoAlguno("finanzas.caja:ver", "finanzas.cajas:ver", "finanzas.bancos:ver")]
     public async Task<IActionResult> GetById(int id) => Ok(await _cuentas.GetByIdAsync(id));
 
     [HttpGet("{id:int}/movimientos")]
-    [PermisoAlguno("finanzas.caja:ver", "finanzas.bancos:ver")]
+    [PermisoAlguno("finanzas.caja:ver", "finanzas.cajas:ver", "finanzas.bancos:ver")]
     public async Task<IActionResult> Movimientos(
         int id, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
         Ok(await _cuentas.MovimientosAsync(id, desde, hasta));
 
     [HttpPost]
-    [Permiso("finanzas.bancos", Accion.Crear)]
+    [PermisoAlguno("finanzas.cajas:crear", "finanzas.bancos:crear")]
     public async Task<IActionResult> Create([FromBody] CuentaFinancieraRequest request) =>
-        Ok(await _cuentas.CreateAsync(request));
+        Ok(await _cuentas.CreateAsync(request, UsuarioId));
 
     [HttpPut("{id:int}")]
-    [Permiso("finanzas.bancos", Accion.Editar)]
+    [PermisoAlguno("finanzas.cajas:editar", "finanzas.bancos:editar")]
     public async Task<IActionResult> Update(int id, [FromBody] CuentaFinancieraRequest request) =>
         Ok(await _cuentas.UpdateAsync(id, request));
 }

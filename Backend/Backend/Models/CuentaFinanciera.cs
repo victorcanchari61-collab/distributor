@@ -50,10 +50,30 @@ public static class DocumentoOrigenMovimiento
     /// <summary>Una venta cobrada en efectivo: entra a la caja de quien cobró.</summary>
     public const string PagoVenta = "PAGO_VENTA";
 
+    /// <summary>
+    /// El saldo con el que una cuenta bancaria o caja nace al crearla: la
+    /// plata que ya tenía antes de empezar a llevarla en el sistema.
+    /// </summary>
+    public const string SaldoInicial = "SALDO_INICIAL";
+
     public static readonly string[] Todos =
     [
         AperturaFondoRuta, LiquidacionArqueo, MovimientoOperativo, TransferenciaInterna, Reversion, PagoVenta,
+        SaldoInicial,
     ];
+}
+
+/// <summary>
+/// Un banco como entidad propia (BBVA, BCP, Interbank...): un catálogo simple,
+/// sin saldo. Varias CuentaFinanciera (Naturaleza Banco) pueden pertenecer al
+/// mismo Banco — el saldo vive en cada cuenta, no aquí.
+/// </summary>
+public class Banco
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public bool Activo { get; set; } = true;
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>
@@ -79,8 +99,10 @@ public class CuentaFinanciera
     public int? UsuarioResponsableId { get; set; }
     public Usuario? UsuarioResponsable { get; set; }
 
-    /// <summary>Solo aplica si Naturaleza es Banco o Pasarela.</summary>
-    public string? Banco { get; set; }
+    /// <summary>A qué Banco pertenece: solo aplica si Naturaleza es Banco.</summary>
+    public int? BancoId { get; set; }
+    public Banco? Banco { get; set; }
+
     public string? NumeroCuenta { get; set; }
     public string? Cci { get; set; }
     public string? Titular { get; set; }

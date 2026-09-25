@@ -170,6 +170,7 @@ public class FinanzasService : IFinanzasService
     {
         metodo.Tipo = request.Tipo;
         metodo.CuentaFinancieraId = request.Tipo == TipoMetodoPago.Efectivo ? null : request.CuentaFinancieraId;
+        metodo.Numero = request.Tipo == TipoMetodoPago.BilleteraDigital ? request.Numero!.Trim() : null;
     }
 
     private static MetodoPagoResponse MapMetodoPago(MetodoPago m, int usos) => new()
@@ -177,6 +178,7 @@ public class FinanzasService : IFinanzasService
         Id = m.Id,
         Nombre = m.Nombre,
         Tipo = m.Tipo,
+        Numero = m.Numero,
         CuentaFinancieraId = m.CuentaFinancieraId,
         CuentaFinanciera = m.CuentaFinanciera?.Nombre,
         Activo = m.Activo,

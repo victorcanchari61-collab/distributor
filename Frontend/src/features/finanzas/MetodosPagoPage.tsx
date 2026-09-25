@@ -31,6 +31,7 @@ const TIPOS: { value: TipoMetodoPago; label: string }[] = [
 const VACIO = {
   nombre: '',
   tipo: 'BILLETERA_DIGITAL' as TipoMetodoPago,
+  numero: '',
   cuentaFinancieraId: 0,
 }
 
@@ -94,6 +95,7 @@ export function MetodosPagoPage() {
     setForm({
       nombre: m.nombre,
       tipo: m.tipo,
+      numero: m.numero ?? '',
       cuentaFinancieraId: m.cuentaFinancieraId ?? 0,
     })
     setAbierto(true)
@@ -101,6 +103,9 @@ export function MetodosPagoPage() {
 
   const guardar = async () => {
     if (!form.nombre.trim()) return toast.error('Ingresa el nombre.')
+    if (form.tipo === 'BILLETERA_DIGITAL' && !form.numero.trim()) {
+      return toast.error('Indica el número asociado a esta billetera.')
+    }
     if (form.tipo !== 'EFECTIVO' && !form.cuentaFinancieraId) {
       return toast.error('Elige a qué cuenta financiera va este método.')
     }
@@ -110,6 +115,7 @@ export function MetodosPagoPage() {
       const cuerpo = {
         nombre: form.nombre.trim(),
         tipo: form.tipo,
+        numero: form.tipo === 'BILLETERA_DIGITAL' ? form.numero.trim() : null,
         cuentaFinancieraId: form.tipo === 'EFECTIVO' ? null : form.cuentaFinancieraId,
       }
       if (editando) {
@@ -141,6 +147,7 @@ export function MetodosPagoPage() {
           await metodoPagoApi.update(m.id, {
             nombre: m.nombre,
             tipo: m.tipo,
+            numero: m.numero,
             cuentaFinancieraId: m.cuentaFinancieraId,
             activo: !m.activo,
           })
@@ -163,6 +170,12 @@ export function MetodosPagoPage() {
       // El filtro compara contra el valor crudo, no contra la etiqueta del Badge.
       value: (row) => row.tipo,
       render: (row) => <Badge>{TIPOS.find((t) => t.value === row.tipo)?.label ?? row.tipo}</Badge>,
+    },
+    {
+      key: 'numero',
+      label: 'Número',
+      filterable: false,
+      render: (row) => row.numero ?? <span className="text-ink-soft">—</span>,
     },
     {
       key: 'cuentaFinanciera',
@@ -268,6 +281,15 @@ export function MetodosPagoPage() {
             value={form.nombre}
             onChange={(e) => setForm({ ...form, nombre: e.target.value })}
           />
+
+          {form.tipo === 'BILLETERA_DIGITAL' && (
+            <Input
+              label="Número"
+              placeholder="999 999 999"
+              value={form.numero}
+              onChange={(e) => setForm({ ...form, numero: e.target.value })}
+            />
+          )}
 
           <Desplegable
             label="Cuenta financiera"
