@@ -9,6 +9,9 @@ export { MisGananciasPage } from './MisGananciasPage'
 export { gananciaApi } from './gananciaApi'
 export type { GananciaPagina, GananciaProducto, GananciaResumen } from './gananciaApi'
 export { CuentasFinancierasPage } from './CuentasFinancierasPage'
+export { MiCajaPage } from './MiCajaPage'
+export { miCajaApi } from './miCajaApi'
+export type { CerrarMiCajaRequest, MovimientoLibreRequest } from './miCajaApi'
 export { cuentaFinancieraApi, conciliacionBancariaApi } from './cuentaFinancieraApi'
 export type {
   CuentaFinancieraRequest,

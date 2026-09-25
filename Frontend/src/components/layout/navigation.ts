@@ -171,6 +171,7 @@ export const NAV_GROUPS: NavGroup[] = [
     sys: 'finanzas',
     icon: Landmark,
     items: [
+      { id: 'finanzas.caja', label: 'Mi Caja', icon: HandCoins },
       { id: 'finanzas.bancos', label: 'Bancos', icon: Landmark },
       { id: 'finanzas.metodospago', label: 'Métodos de pago', icon: Coins },
       { id: 'finanzas.cobrar', label: 'Cuentas por cobrar', icon: Wallet },

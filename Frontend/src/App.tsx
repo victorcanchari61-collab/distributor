@@ -25,6 +25,7 @@ import {
   CuentasPorPagarPage,
   GastosOperativosPage,
   MetodosPagoPage,
+  MiCajaPage,
   MisCobrosPage,
   MisGananciasPage,
 } from './features/finanzas'
@@ -90,6 +91,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'tms.motivos': MotivosNovedadPage,
   'dms.visitas': VisitasPage,
   'dms.devoluciones': DevolucionesPage,
+  'finanzas.caja': MiCajaPage,
   'finanzas.bancos': CuentasFinancierasPage,
   'finanzas.metodospago': MetodosPagoPage,
   'finanzas.cobrar': CuentasPorCobrarPage,

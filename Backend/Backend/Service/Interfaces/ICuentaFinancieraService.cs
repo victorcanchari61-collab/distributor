@@ -46,4 +46,30 @@ public interface ICuentaFinancieraService
     /// conciliación bancaria.
     /// </summary>
     Task<decimal> SaldoAFechaAsync(int cuentaFinancieraId, DateTime fecha);
+
+    /// <summary>
+    /// La Caja de este usuario (un vendedor/repartidor): la busca, y si nunca
+    /// tuvo una, la crea. No se queda con la plata entre días — apertura y
+    /// cierre libres, pero cada movimiento (venta cobrada, gasto, fondo) se
+    /// postea aquí en tiempo real. Ver docs/finanzas-tesoreria.md, "Mi Caja".
+    /// </summary>
+    Task<CuentaFinanciera> GetOrCrearCajaUsuarioAsync(int usuarioId);
+
+    /// <summary>
+    /// Mueve plata de una cuenta a otra: un Egreso en origen y un Ingreso en
+    /// destino, mismo documento y mismo momento. Se usa para fondear una Caja
+    /// desde la Caja General, y para liquidar una Caja hacia la Caja General.
+    /// </summary>
+    Task<(MovimientoCuenta Salida, MovimientoCuenta Entrada)> TransferirAsync(
+        int cuentaOrigenId,
+        int cuentaDestinoId,
+        decimal monto,
+        string documentoOrigen,
+        int? origenId,
+        int? usuarioId,
+        DateTime? fecha = null,
+        string? observacion = null);
+
+    /// <summary>Reversa las dos mitades de una transferencia hecha con <see cref="TransferirAsync"/>.</summary>
+    Task ReversarTransferenciaAsync(int movimientoSalidaId, int movimientoEntradaId, int? usuarioId);
 }

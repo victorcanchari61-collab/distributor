@@ -27,6 +27,7 @@ public class CuentaFinancieraService : ICuentaFinancieraService
     {
         var cuentas = await _context.CuentasFinancieras
             .AsNoTracking()
+            .Include(c => c.UsuarioResponsable)
             .OrderByDescending(c => c.Activo)
             .ThenBy(c => c.Naturaleza)
             .ThenBy(c => c.Nombre)
@@ -35,7 +36,16 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         return cuentas.Select(Map);
     }
 
-    public async Task<CuentaFinancieraResponse> GetByIdAsync(int id) => Map(await GetOrThrowAsync(id));
+    public async Task<CuentaFinancieraResponse> GetByIdAsync(int id)
+    {
+        var cuenta = await _context.CuentasFinancieras
+            .AsNoTracking()
+            .Include(c => c.UsuarioResponsable)
+            .FirstOrDefaultAsync(c => c.Id == id)
+            ?? throw new NotFoundException($"No existe la cuenta financiera {id}");
+
+        return Map(cuenta);
+    }
 
     public async Task<CuentaFinanciera> GetOrThrowAsync(int id) =>
         await _context.CuentasFinancieras.FirstOrDefaultAsync(c => c.Id == id)
@@ -195,6 +205,53 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         return ultimo?.SaldoResultante ?? 0;
     }
 
+    public async Task<CuentaFinanciera> GetOrCrearCajaUsuarioAsync(int usuarioId)
+    {
+        var existente = await _context.CuentasFinancieras.FirstOrDefaultAsync(c =>
+            c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == usuarioId);
+        if (existente is not null) return existente;
+
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId)
+            ?? throw new NotFoundException($"No existe el usuario {usuarioId}");
+
+        var caja = new CuentaFinanciera
+        {
+            Nombre = $"Caja de {usuario.Nombre}",
+            Naturaleza = NaturalezaCuenta.Caja,
+            UsuarioResponsableId = usuarioId,
+            SaldoActual = 0,
+            Activo = true,
+        };
+
+        _context.CuentasFinancieras.Add(caja);
+        await _context.SaveChangesAsync();
+        return caja;
+    }
+
+    public async Task<(MovimientoCuenta Salida, MovimientoCuenta Entrada)> TransferirAsync(
+        int cuentaOrigenId,
+        int cuentaDestinoId,
+        decimal monto,
+        string documentoOrigen,
+        int? origenId,
+        int? usuarioId,
+        DateTime? fecha = null,
+        string? observacion = null)
+    {
+        var salida = await PostearAsync(
+            cuentaOrigenId, TipoMovimientoCuenta.Egreso, monto, documentoOrigen, origenId, usuarioId, fecha, observacion);
+        var entrada = await PostearAsync(
+            cuentaDestinoId, TipoMovimientoCuenta.Ingreso, monto, documentoOrigen, origenId, usuarioId, fecha, observacion);
+
+        return (salida, entrada);
+    }
+
+    public async Task ReversarTransferenciaAsync(int movimientoSalidaId, int movimientoEntradaId, int? usuarioId)
+    {
+        await ReversarAsync(movimientoSalidaId, usuarioId);
+        await ReversarAsync(movimientoEntradaId, usuarioId);
+    }
+
     private static void Aplicar(CuentaFinanciera cuenta, CuentaFinancieraRequest request)
     {
         cuenta.Nombre = request.Nombre.Trim();
@@ -223,6 +280,8 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         Id = c.Id,
         Nombre = c.Nombre,
         Naturaleza = c.Naturaleza,
+        UsuarioResponsableId = c.UsuarioResponsableId,
+        UsuarioResponsable = c.UsuarioResponsable?.Nombre,
         Banco = c.Banco,
         NumeroCuenta = c.NumeroCuenta,
         Cci = c.Cci,

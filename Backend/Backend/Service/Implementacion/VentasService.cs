@@ -43,6 +43,8 @@ public class VentasService : IVentasService
     private readonly IUsuarioActual _usuarioActual;
     private readonly INotificador _notificador;
     private readonly IDevolucionService _devoluciones;
+    private readonly IFinanzasService _finanzas;
+    private readonly ICuentaFinancieraService _cuentas;
 
     public VentasService(
         IVentasRepository repository,
@@ -59,7 +61,9 @@ public class VentasService : IVentasService
         IPermisoService permisos,
         IUsuarioActual usuarioActual,
         INotificador notificador,
-        IDevolucionService devoluciones)
+        IDevolucionService devoluciones,
+        IFinanzasService finanzas,
+        ICuentaFinancieraService cuentas)
     {
         _repository = repository;
         _productos = productos;
@@ -76,6 +80,39 @@ public class VentasService : IVentasService
         _usuarioActual = usuarioActual;
         _notificador = notificador;
         _devoluciones = devoluciones;
+        _finanzas = finanzas;
+        _cuentas = cuentas;
+    }
+
+    /// <summary>
+    /// Si el pago es en efectivo, entra a la Caja de quien lo cobró — en
+    /// tiempo real, no al cuadrar el día. Ver docs/finanzas-tesoreria.md,
+    /// "Mi Caja". Si no es efectivo, no hace nada todavía (billeteras y
+    /// transferencias siguen sin conectar a su cuenta bancaria — sección 3).
+    /// </summary>
+    private async Task PostearCobroSiEsEfectivoAsync(PagoVenta pago, int? actorId)
+    {
+        if (pago.UsuarioId is not int cobradorId) return;
+
+        var metodo = await _finanzas.GetMetodoPagoAsync(pago.MetodoPagoId);
+        if (metodo.Tipo != TipoMetodoPago.Efectivo) return;
+
+        var caja = await _cuentas.GetOrCrearCajaUsuarioAsync(cobradorId);
+        var movimiento = await _cuentas.PostearAsync(
+            caja.Id, TipoMovimientoCuenta.Ingreso, pago.Monto,
+            DocumentoOrigenMovimiento.PagoVenta, pago.Id, actorId, pago.Fecha);
+
+        pago.MovimientoCuentaId = movimiento.Id;
+        await _notificador.AvisarAsync("cuentasfinancieras", "movimiento", new { CuentaId = caja.Id });
+    }
+
+    /// <summary>Reversa el Ingreso que este pago posteó, si lo tenía (era en efectivo).</summary>
+    private async Task ReversarCobroSiExisteAsync(PagoVenta pago, int? actorId)
+    {
+        if (pago.MovimientoCuentaId is not int movimientoId) return;
+
+        await _cuentas.ReversarAsync(movimientoId, actorId);
+        pago.MovimientoCuentaId = null;
     }
 
     /*
@@ -796,6 +833,14 @@ public class VentasService : IVentasService
             recojo.Estado = EstadoRecojo.Anulado;
         }
 
+        // Los cobros en efectivo que habían entrado a la Caja de quien cobró
+        // se reversan: la venta se está deshaciendo, ese dinero deja de ser
+        // suyo (o de la empresa) por esta venta.
+        foreach (var pago in notaVenta.Pagos.Where(p => !p.Anulado && p.MovimientoCuentaId is not null))
+        {
+            await ReversarCobroSiExisteAsync(pago, usuarioId);
+        }
+
         notaVenta.Estado = EstadoNotaVenta.Anulada;
         await _repository.UpdateNotaVentaAsync(notaVenta);
 
@@ -911,20 +956,24 @@ public class VentasService : IVentasService
                 $"El abono (S/ {request.Monto}) supera el saldo pendiente (S/ {saldo}).");
         }
 
-        notaVenta.Pagos.Add(new PagoVenta
+        var pago = new PagoVenta
         {
             MetodoPagoId = request.MetodoPagoId,
             Monto = request.Monto,
             UsuarioId = usuarioId
-        });
+        };
+        notaVenta.Pagos.Add(pago);
         await _repository.UpdateNotaVentaAsync(notaVenta);
+
+        await PostearCobroSiEsEfectivoAsync(pago, usuarioId);
+        if (pago.MovimientoCuentaId is not null) await _repository.GuardarAsync();
 
         var actualizada = await GetNotaVentaAsync(id);
         await _notificador.AvisarAsync("notasventa", "pago", actualizada);
         return actualizada;
     }
 
-    public async Task<NotaVentaResponse> ActualizarPagoAsync(int id, int pagoId, PagoVentaRequest request)
+    public async Task<NotaVentaResponse> ActualizarPagoAsync(int id, int pagoId, PagoVentaRequest request, int? usuarioId = null)
     {
         await _pagoValidator.ValidateAndThrowAsync(request);
 
@@ -953,9 +1002,17 @@ public class VentasService : IVentasService
                 $"Ese cambio deja lo pagado en S/ {pagadoSinEste + request.Monto}, más que el total de la venta (S/ {total}).");
         }
 
+        // Si ya había posteado a una Caja (era efectivo), esa entrada se
+        // reversa antes de aplicar el cambio — el monto o el método pueden
+        // haber cambiado, así que se vuelve a evaluar desde cero.
+        await ReversarCobroSiExisteAsync(pago, usuarioId);
+
         pago.MetodoPagoId = request.MetodoPagoId;
         pago.Monto = request.Monto;
         await _repository.GuardarAsync();
+
+        await PostearCobroSiEsEfectivoAsync(pago, usuarioId);
+        if (pago.MovimientoCuentaId is not null) await _repository.GuardarAsync();
 
         var actualizada = await GetNotaVentaAsync(id);
         await _notificador.AvisarAsync("notasventa", "pago", actualizada);
@@ -967,7 +1024,7 @@ public class VentasService : IVentasService
     /// borra), pero deja de contar para el total cobrado — su monto vuelve al
     /// saldo pendiente.
     /// </summary>
-    public async Task<NotaVentaResponse> AnularPagoAsync(int id, int pagoId)
+    public async Task<NotaVentaResponse> AnularPagoAsync(int id, int pagoId, int? usuarioId = null)
     {
         var notaVenta = await GetNotaVentaOrThrowAsync(id);
 
@@ -985,6 +1042,7 @@ public class VentasService : IVentasService
         }
 
         pago.Anulado = true;
+        await ReversarCobroSiExisteAsync(pago, usuarioId);
         await _repository.GuardarAsync();
 
         var actualizada = await GetNotaVentaAsync(id);
@@ -1184,6 +1242,17 @@ public class VentasService : IVentasService
             notaVenta.Estado = EstadoNotaVenta.Anulada;
             await _repository.UpdateNotaVentaAsync(notaVenta);
             throw;
+        }
+
+        // Recién con el stock ya descontado (la venta de verdad nació) se
+        // postean los cobros en efectivo a la Caja de quien los recibió.
+        foreach (var pago in notaVenta.Pagos)
+        {
+            await PostearCobroSiEsEfectivoAsync(pago, usuarioId);
+        }
+        if (notaVenta.Pagos.Any(p => p.MovimientoCuentaId is not null))
+        {
+            await _repository.UpdateNotaVentaAsync(notaVenta);
         }
 
         var creada = await GetNotaVentaAsync(notaVenta.Id);

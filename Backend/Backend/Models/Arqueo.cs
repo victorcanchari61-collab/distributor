@@ -69,15 +69,30 @@ public class ArqueoCaja
 
     /// <summary>
     /// Lo que el dueño le entregó para gastos de ruta (peaje, combustible),
-    /// aparte de lo que cobra. Opcional: 0 si ese día no le dieron nada.
+    /// aparte de lo que cobra. Solo informativo: no es lo que decide cuánto
+    /// debe traer (eso ya lo dice el saldo de su Caja, ver
+    /// <see cref="SaldoCajaAlCerrar"/>) — es historial de esa transferencia.
     /// </summary>
     public decimal MontoApertura { get; set; }
 
-    /// <summary>El Egreso en Caja General cuando se entregó el fondo de ruta. Null si MontoApertura=0.</summary>
+    /// <summary>El Egreso en la Caja General cuando se entregó el fondo de ruta (la mitad de esa transferencia).</summary>
     public int? MovimientoAperturaId { get; set; }
 
-    /// <summary>El Ingreso en Caja General por lo que se liquidó al cerrar.</summary>
+    /// <summary>El Ingreso en la Caja del usuario por ese mismo fondo (la otra mitad).</summary>
+    public int? MovimientoAperturaDestinoId { get; set; }
+
+    /// <summary>
+    /// El saldo de la Caja del usuario en el momento de cerrar: es lo que
+    /// debería traer (ya incluye fondo entregado, ventas cobradas y gastos
+    /// registrados en tiempo real en Mi Caja — no se vuelve a sumar nada aquí).
+    /// </summary>
+    public decimal SaldoCajaAlCerrar { get; set; }
+
+    /// <summary>El Egreso en la Caja del usuario al liquidar (entrega lo contado a la Caja General).</summary>
     public int? MovimientoCierreId { get; set; }
+
+    /// <summary>El Ingreso en la Caja General por esa misma liquidación.</summary>
+    public int? MovimientoCierreDestinoId { get; set; }
 
     public string? Observacion { get; set; }
 
@@ -104,10 +119,10 @@ public class ArqueoCaja
     public decimal TotalDigitalReal => PagosDigitales.Sum(p => p.Monto);
 
     /// <summary>
-    /// Lo que debería traer: lo que cobró más el fondo de ruta que se le dio
-    /// (si alguno). Ver docs/finanzas-tesoreria.md, sección 1.
+    /// Lo que debería traer: el saldo de su Caja al momento de cerrar. Ver
+    /// docs/finanzas-tesoreria.md, sección 1 (revisión "Mi Caja").
     /// </summary>
-    public decimal EfectivoEsperado => MontoApertura + EfectivoSistema;
+    public decimal EfectivoEsperado => SaldoCajaAlCerrar;
 
     /// <summary>Negativa: falta dinero. Positiva: sobra.</summary>
     public decimal DiferenciaEfectivo => TotalEfectivoReal - EfectivoEsperado;

@@ -306,7 +306,8 @@ public class ArqueoService : IArqueoService
             throw new ConflictException("Ya se le entregó un fondo ese día");
         }
 
-        var caja = await GetCajaGeneralAsync();
+        var cajaGeneral = await GetCajaGeneralAsync();
+        var cajaUsuario = await _cuentas.GetOrCrearCajaUsuarioAsync(request.UsuarioId);
 
         if (arqueo is null)
         {
@@ -320,17 +321,21 @@ public class ArqueoService : IArqueoService
             await _context.SaveChangesAsync();
         }
 
-        var movimiento = await _cuentas.PostearAsync(
-            caja.Id, TipoMovimientoCuenta.Egreso, request.Monto,
+        // Transferencia real: sale de la Caja General, entra a la Caja del
+        // usuario — desde ahí ya queda disponible para sus ingresos y egresos
+        // en tiempo real, no solo anotado en este cuadre.
+        var (salida, entrada) = await _cuentas.TransferirAsync(
+            cajaGeneral.Id, cajaUsuario.Id, request.Monto,
             DocumentoOrigenMovimiento.AperturaFondoRuta, arqueo.Id, entregadoPorId, request.Fecha,
             request.Observacion?.Trim());
 
         arqueo.MontoApertura = request.Monto;
-        arqueo.MovimientoAperturaId = movimiento.Id;
+        arqueo.MovimientoAperturaId = salida.Id;
+        arqueo.MovimientoAperturaDestinoId = entrada.Id;
         await _context.SaveChangesAsync();
 
         await _notificador.AvisarAsync("arqueo", "fondoEntregado", new { arqueo.Id });
-        await _notificador.AvisarAsync("cuentasfinancieras", "movimiento", new { caja.Id });
+        await _notificador.AvisarAsync("cuentasfinancieras", "movimiento", new { CajaGeneralId = cajaGeneral.Id, CajaUsuarioId = cajaUsuario.Id });
 
         return await GetAsync(arqueo.Id);
     }
@@ -384,10 +389,31 @@ public class ArqueoService : IArqueoService
             arqueo.PagosDigitales.Clear();
         }
 
+        var cajaUsuario = await _cuentas.GetOrCrearCajaUsuarioAsync(request.UsuarioId);
+
+        // Corregir un cuadre ya cerrado reversa la liquidacion anterior (las
+        // dos mitades) ANTES de leer el saldo de la caja: si no, se leería el
+        // saldo ya liquidado (con la plata ya afuera) en vez del que había
+        // antes de esa liquidación, que es lo que hay que volver a cuadrar.
+        if (arqueo.MovimientoCierreId is int movSalidaAnterior && arqueo.MovimientoCierreDestinoId is int movEntradaAnterior)
+        {
+            await _cuentas.ReversarTransferenciaAsync(movSalidaAnterior, movEntradaAnterior, registradoPorId);
+            arqueo.MovimientoCierreId = null;
+            arqueo.MovimientoCierreDestinoId = null;
+        }
+
+        // Lo que debería traer ya no se recalcula sumando cobros: es el saldo
+        // de su Caja ahora mismo, porque cada venta cobrada, gasto e ingreso
+        // libre de "Mi Caja" ya se posteó ahí en tiempo real.
+        var cajaActualizada = await _cuentas.GetByIdAsync(cajaUsuario.Id);
+
         arqueo.Billetes = request.Billetes;
         arqueo.Monedas = request.Monedas;
+        // Se conservan solo como dato informativo de lo que el sistema calculó
+        // ese día (para comparar con lo que hoy manda la Caja, si algo no cuadra).
         arqueo.EfectivoSistema = detalle.EfectivoSistema;
         arqueo.BancosSistema = detalle.BancosSistema;
+        arqueo.SaldoCajaAlCerrar = cajaActualizada.SaldoActual;
         arqueo.Observacion = request.Observacion?.Trim();
         arqueo.Estado = EstadoArqueo.Cuadrado;
 
@@ -424,26 +450,22 @@ public class ArqueoService : IArqueoService
 
         await _context.SaveChangesAsync();
 
-        // Corregir un cuadre ya cerrado reversa lo que se había liquidado
-        // antes de postear lo nuevo — si no, la Caja General terminaría con
-        // las dos liquidaciones sumadas.
-        if (arqueo.MovimientoCierreId is int movimientoCierreAnteriorId)
-        {
-            await _cuentas.ReversarAsync(movimientoCierreAnteriorId, registradoPorId);
-            arqueo.MovimientoCierreId = null;
-        }
-
         if (arqueo.TotalEfectivoReal > 0)
         {
-            var caja = await GetCajaGeneralAsync();
-            var liquidacion = await _cuentas.PostearAsync(
-                caja.Id, TipoMovimientoCuenta.Ingreso, arqueo.TotalEfectivoReal,
+            var cajaGeneral = await GetCajaGeneralAsync();
+            // Liquida: lo que entrega de verdad sale de SU caja y entra a la
+            // Caja General. Si no coincide con SaldoCajaAlCerrar, la diferencia
+            // (faltante o sobrante) se queda como saldo en su propia caja —
+            // no se ajusta sola, sigue siendo su responsabilidad explicarla.
+            var (salida, entrada) = await _cuentas.TransferirAsync(
+                cajaUsuario.Id, cajaGeneral.Id, arqueo.TotalEfectivoReal,
                 DocumentoOrigenMovimiento.LiquidacionArqueo, arqueo.Id, registradoPorId, arqueo.Fecha,
                 $"Liquidación de {arqueo.Fecha:dd/MM/yyyy}");
 
-            arqueo.MovimientoCierreId = liquidacion.Id;
+            arqueo.MovimientoCierreId = salida.Id;
+            arqueo.MovimientoCierreDestinoId = entrada.Id;
             await _context.SaveChangesAsync();
-            await _notificador.AvisarAsync("cuentasfinancieras", "movimiento", new { caja.Id });
+            await _notificador.AvisarAsync("cuentasfinancieras", "movimiento", new { CajaGeneralId = cajaGeneral.Id, CajaUsuarioId = cajaUsuario.Id });
         }
 
         await _notificador.AvisarAsync("arqueo", "registrado", new { arqueo.Id });
@@ -460,15 +482,16 @@ public class ArqueoService : IArqueoService
             throw new ConflictException("Ese cuadre ya está anulado");
 
         // Revierte lo que este día movió de verdad: el fondo que se entregó
-        // (vuelve a la Caja General) y lo que se liquidó (sale de vuelta).
-        if (arqueo.MovimientoAperturaId is int movimientoAperturaId)
+        // (vuelve a la Caja General) y lo que se liquidó (sale de vuelta) —
+        // las dos mitades de cada transferencia.
+        if (arqueo.MovimientoAperturaId is int movAperturaSalida && arqueo.MovimientoAperturaDestinoId is int movAperturaEntrada)
         {
-            await _cuentas.ReversarAsync(movimientoAperturaId, usuarioId);
+            await _cuentas.ReversarTransferenciaAsync(movAperturaSalida, movAperturaEntrada, usuarioId);
         }
 
-        if (arqueo.MovimientoCierreId is int movimientoCierreId)
+        if (arqueo.MovimientoCierreId is int movCierreSalida && arqueo.MovimientoCierreDestinoId is int movCierreEntrada)
         {
-            await _cuentas.ReversarAsync(movimientoCierreId, usuarioId);
+            await _cuentas.ReversarTransferenciaAsync(movCierreSalida, movCierreEntrada, usuarioId);
         }
 
         // No se borra: quien cuadro mal y cuando es parte de lo que se revisa

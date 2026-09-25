@@ -1145,6 +1145,9 @@ public class AppDbContext : DbContext
                 .HasForeignKey(p => p.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(p => p.Usuario).WithMany()
                 .HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(p => p.MovimientoCuentaId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<RecojoVenta>(entity =>
@@ -1256,6 +1259,9 @@ public class AppDbContext : DbContext
             entity.Property(c => c.Cci).HasMaxLength(30);
             entity.Property(c => c.Titular).HasMaxLength(120);
             entity.Property(c => c.SaldoActual).HasPrecision(18, 4);
+
+            entity.HasOne(c => c.UsuarioResponsable).WithMany()
+                .HasForeignKey(c => c.UsuarioResponsableId).OnDelete(DeleteBehavior.Restrict);
 
             // La única cuenta de efectivo de la empresa: sin ella, el arqueo
             // no tiene a dónde postear la primera liquidación.
@@ -1369,6 +1375,7 @@ public class AppDbContext : DbContext
             entity.Property(a => a.EfectivoSistema).HasPrecision(18, 4);
             entity.Property(a => a.BancosSistema).HasPrecision(18, 4);
             entity.Property(a => a.MontoApertura).HasPrecision(18, 4);
+            entity.Property(a => a.SaldoCajaAlCerrar).HasPrecision(18, 4);
             entity.Property(a => a.Observacion).HasMaxLength(250);
             entity.Property(a => a.Estado).HasMaxLength(20).IsRequired();
             entity.Ignore(a => a.EfectivoEsperado);
@@ -1385,7 +1392,13 @@ public class AppDbContext : DbContext
                 .HasForeignKey(a => a.MovimientoAperturaId).OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(a => a.MovimientoAperturaDestinoId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne<MovimientoCuenta>().WithMany()
                 .HasForeignKey(a => a.MovimientoCierreId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(a => a.MovimientoCierreDestinoId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ArqueoGasto>(entity =>

@@ -6,6 +6,10 @@ public class CuentaFinancieraResponse
     public string Nombre { get; set; } = string.Empty;
     public string Naturaleza { get; set; } = string.Empty;
 
+    /// <summary>De quién es esta caja, si es la de un vendedor/repartidor.</summary>
+    public int? UsuarioResponsableId { get; set; }
+    public string? UsuarioResponsable { get; set; }
+
     public string? Banco { get; set; }
     public string? NumeroCuenta { get; set; }
     public string? Cci { get; set; }

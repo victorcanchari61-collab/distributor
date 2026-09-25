@@ -66,10 +66,10 @@ public interface IVentasService
     Task<NotaVentaResponse> RegistrarPagoAsync(int id, PagoVentaRequest request, int? usuarioId);
 
     /// <summary>Corrige un pago ya registrado: método o monto.</summary>
-    Task<NotaVentaResponse> ActualizarPagoAsync(int id, int pagoId, PagoVentaRequest request);
+    Task<NotaVentaResponse> ActualizarPagoAsync(int id, int pagoId, PagoVentaRequest request, int? usuarioId = null);
 
     /// <summary>Quita un pago registrado por error: su monto vuelve al saldo pendiente.</summary>
-    Task<NotaVentaResponse> AnularPagoAsync(int id, int pagoId);
+    Task<NotaVentaResponse> AnularPagoAsync(int id, int pagoId, int? usuarioId = null);
 
     /// <summary>Una página de las cuentas por cobrar, con el saldo resuelto en la base.</summary>
     Task<PaginaResponse<NotaVentaResponse>> ListarCuentasPorCobrarAsync(ConsultaTablaRequest consulta);

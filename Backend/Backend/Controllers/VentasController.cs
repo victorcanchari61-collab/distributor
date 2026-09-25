@@ -199,13 +199,13 @@ public class NotaVentaController : ControllerBase
     [HttpPut("{id:int}/pagos/{pagoId:int}")]
     [Permiso("fact.notaventa", Accion.Cobrar)]
     public async Task<IActionResult> ActualizarPago(int id, int pagoId, [FromBody] PagoVentaRequest request) =>
-        Ok(await _ventas.ActualizarPagoAsync(id, pagoId, request));
+        Ok(await _ventas.ActualizarPagoAsync(id, pagoId, request, UsuarioId));
 
     /// <summary>Quita un pago registrado por error: su monto vuelve al saldo pendiente.</summary>
     [HttpDelete("{id:int}/pagos/{pagoId:int}")]
     [Permiso("fact.notaventa", Accion.Cobrar)]
     public async Task<IActionResult> AnularPago(int id, int pagoId) =>
-        Ok(await _ventas.AnularPagoAsync(id, pagoId));
+        Ok(await _ventas.AnularPagoAsync(id, pagoId, UsuarioId));
 
     /// <summary>Los cobros que registró el usuario que hizo login, opcionalmente por rango de fechas.</summary>
     [HttpGet("miscobros")]
