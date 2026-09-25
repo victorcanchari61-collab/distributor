@@ -29,6 +29,17 @@ export interface EditarAsistenciaRequest {
   observacion?: string | null
 }
 
+/** El pase de lista de un día: a quien ya tiene marca se le corrige, al resto se le registra. */
+export interface MarcarDiaRequest {
+  fecha: string
+  marcas: { empleadoId: number; estado: EstadoAsistencia; observacion?: string | null }[]
+}
+
+export interface MarcarDiaResponse {
+  creadas: number
+  corregidas: number
+}
+
 /** Cuántos hay de cada estado en el rango consultado. */
 export interface ResumenAsistencia {
   presentes: number
@@ -50,6 +61,9 @@ export const asistenciaApi = {
   crear: (body: CrearAsistenciaRequest) => api.post<AsistenciaResponse>('/asistencia', body),
   editar: (id: number, body: EditarAsistenciaRequest) =>
     api.put<AsistenciaResponse>(`/asistencia/${id}`, body),
+
+  /** Todo o nada: si una marca falla, no se guarda ninguna. */
+  marcarDia: (body: MarcarDiaRequest) => api.post<MarcarDiaResponse>('/asistencia/dia', body),
 
   /** Deja sin efecto una marca hecha por error. No se borra: queda el historial. */
   anular: (id: number) => api.patch<AsistenciaResponse>(`/asistencia/${id}/anular`),

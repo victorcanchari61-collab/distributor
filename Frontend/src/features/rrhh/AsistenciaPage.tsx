@@ -33,13 +33,14 @@ import { ApiError } from '../../lib/apiClient'
 import { fechaCorta, fechaLocal, hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
-import { empleadoApi } from './empleadoApi'
+import { empleadoApi, trabajaba } from './empleadoApi'
 import type { EmpleadoResponse } from './empleadoApi'
 import { asistenciaApi } from './asistenciaApi'
 import type { AsistenciaResponse, EstadoAsistencia, ResumenAsistencia } from './asistenciaApi'
 import { feriadoApi } from './feriadoApi'
 import type { FeriadoResponse } from './feriadoApi'
 import { FeriadosModal } from './FeriadosModal'
+import { PaseListaModal } from './PaseListaModal'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const MESES = [
@@ -136,6 +137,7 @@ export function AsistenciaPage() {
   const [form, setForm] = useState<FormAsistencia>(formVacio())
   const [guardando, setGuardando] = useState(false)
   const [feriadosAbierto, setFeriadosAbierto] = useState(false)
+  const [paseFecha, setPaseFecha] = useState<string | null>(null)
 
   const desde = fechaLocal(new Date(cursor.getFullYear(), cursor.getMonth(), 1))
   const hasta = fechaLocal(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0))
@@ -187,6 +189,17 @@ export function AsistenciaPage() {
     return mapa
   }, [marcas])
 
+  // Con "Todos los empleados": todas las marcas activas de cada día, para el pase de lista.
+  const marcasDelDia = useMemo(() => {
+    const mapa = new Map<string, AsistenciaResponse[]>()
+    for (const m of marcas) {
+      if (m.anulado) continue
+      const dia = m.fecha.slice(0, 10)
+      mapa.set(dia, [...(mapa.get(dia) ?? []), m])
+    }
+    return mapa
+  }, [marcas])
+
   const feriadosPorDia = useMemo(
     () => new Map(feriados.map((f) => [f.fecha.slice(0, 10), f])),
     [feriados],
@@ -210,9 +223,14 @@ export function AsistenciaPage() {
   }
 
   // Con un empleado elegido, el día del calendario se puede tocar: si ya
-  // tiene marca la abre para corregirla, si no propone una nueva.
+  // tiene marca la abre para corregirla, si no propone una nueva. Sin
+  // empleado elegido, abre el pase de lista de todos.
   const alClickDia = (fecha: string | null) => {
-    if (!fecha || !empleadoFiltro) return
+    if (!fecha) return
+    if (!empleadoFiltro) {
+      if (fecha <= hoyLocal() && puede('rrhh.asistencia', 'crear')) setPaseFecha(fecha)
+      return
+    }
     const marca = marcasPorDia.get(fecha)
     if (marca) {
       if (puede('rrhh.asistencia', 'editar')) abrirEdicion(marca)
@@ -391,10 +409,13 @@ export function AsistenciaPage() {
           <div className="grid grid-cols-7 gap-1">
             {semanas.flatMap((semana, si) =>
               semana.map((fecha, di) => {
-                const marca = fecha ? marcasPorDia.get(fecha) : undefined
+                const marca = fecha && empleadoFiltro ? marcasPorDia.get(fecha) : undefined
                 const feriado = fecha ? feriadosPorDia.get(fecha) : undefined
                 const futuro = fecha ? fecha > hoyLocal() : false
-                const clicable = !!fecha && !!empleadoFiltro && !futuro
+                const clicable = !!fecha && !futuro && (!!empleadoFiltro || puede('rrhh.asistencia', 'crear'))
+                const marcadosDia = fecha && !empleadoFiltro ? (marcasDelDia.get(fecha)?.length ?? 0) : 0
+                const esperadosDia =
+                  fecha && !empleadoFiltro && !futuro ? empleados.filter((e) => trabajaba(e, fecha)).length : 0
                 return (
                   <button
                     key={`${si}-${di}`}
@@ -417,15 +438,25 @@ export function AsistenciaPage() {
                         {ABREVIA[marca.estado]}
                       </Badge>
                     )}
+                    {(marcadosDia > 0 || esperadosDia > 0) && (
+                      <Badge
+                        tone={marcadosDia >= esperadosDia ? 'neutral' : 'warning'}
+                        className="px-1.5 py-0"
+                      >
+                        {marcadosDia}/{esperadosDia}
+                      </Badge>
+                    )}
                   </button>
                 )
               }),
             )}
           </div>
 
-          {!empleadoFiltro && (
-            <p className="mt-2 text-xs text-ink-soft">Elige un empleado para marcar o corregir desde el calendario.</p>
-          )}
+          <p className="mt-2 text-xs text-ink-soft">
+            {empleadoFiltro
+              ? 'Toca un día para marcar o corregir a este empleado.'
+              : 'Toca un día para pasar lista a todos: marcados / los que trabajaban ese día. Elige un empleado para ver solo sus marcas.'}
+          </p>
         </div>
       ) : (
         <SysDataTable
@@ -518,6 +549,22 @@ export function AsistenciaPage() {
       </Modal>
 
       <FeriadosModal open={feriadosAbierto} onClose={() => setFeriadosAbierto(false)} />
+
+      {paseFecha && (
+        <PaseListaModal
+          fecha={paseFecha}
+          feriado={feriadosPorDia.get(paseFecha)?.nombre}
+          empleados={empleados}
+          marcas={marcasDelDia.get(paseFecha) ?? []}
+          puedeCorregir={puede('rrhh.asistencia', 'editar')}
+          onClose={() => setPaseFecha(null)}
+          onGuardado={async (mensaje) => {
+            setPaseFecha(null)
+            await cargar()
+            toast.exito(mensaje)
+          }}
+        />
+      )}
 
       {dialogo}
     </div>

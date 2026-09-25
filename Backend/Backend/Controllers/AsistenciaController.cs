@@ -14,10 +14,12 @@ namespace Backend.Controllers;
 public class AsistenciaController : ControllerBase
 {
     private readonly IAsistenciaService _asistencia;
+    private readonly IPermisoService _permisos;
 
-    public AsistenciaController(IAsistenciaService asistencia)
+    public AsistenciaController(IAsistenciaService asistencia, IPermisoService permisos)
     {
         _asistencia = asistencia;
+        _permisos = permisos;
     }
 
     private int? UsuarioId =>
@@ -42,6 +44,15 @@ public class AsistenciaController : ControllerBase
     [Permiso("rrhh.asistencia", Accion.Crear)]
     public async Task<IActionResult> Crear([FromBody] CrearAsistenciaRequest request) =>
         Ok(await _asistencia.CrearAsync(request, UsuarioId));
+
+    /// <summary>Pase de lista de un día. Corregir una marca que ya existía pide además "editar".</summary>
+    [HttpPost("dia")]
+    [Permiso("rrhh.asistencia", Accion.Crear)]
+    public async Task<IActionResult> MarcarDia([FromBody] MarcarDiaAsistenciaRequest request)
+    {
+        var puedeCorregir = UsuarioId is int id && await _permisos.PuedeAsync(id, "rrhh.asistencia", Accion.Editar);
+        return Ok(await _asistencia.MarcarDiaAsync(request, UsuarioId, puedeCorregir));
+    }
 
     [HttpPut("{id:int}")]
     [Permiso("rrhh.asistencia", Accion.Editar)]

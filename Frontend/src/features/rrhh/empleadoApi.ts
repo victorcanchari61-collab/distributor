@@ -88,3 +88,7 @@ export const empleadoApi = {
   /** Borrado definitivo. El backend lo rechaza si una cuenta usa la ficha. */
   remove: (id: number) => api.del<void>(`/empleado/${id}`),
 }
+
+/** Si esa persona trabajaba ese día (YYYY-MM-DD): ya había entrado y todavía no había cesado. */
+export const trabajaba = (e: EmpleadoResponse, fecha: string) =>
+  (!e.fechaIngreso || e.fechaIngreso.slice(0, 10) <= fecha) && (!e.fechaCese || e.fechaCese.slice(0, 10) >= fecha)
