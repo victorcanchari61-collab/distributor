@@ -8,6 +8,7 @@ import {
   Plus,
   Receipt,
   Repeat,
+  Tags,
   Trash2,
 } from 'lucide-react'
 import {
@@ -30,27 +31,27 @@ import { ApiError } from '../../lib/apiClient'
 import { desplazarDias, fechaCorta, hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
-import { motivoGastoApi } from './arqueoApi'
-import type { MotivoGastoResponse } from './arqueoApi'
 import { cuentaFinancieraApi } from './cuentaFinancieraApi'
 import type { CuentaFinancieraResponse } from './cuentaFinancieraApi'
-import { gastoOperativoApi } from './gastoOperativoApi'
+import { gastoOperativoApi, ORIGENES, origenLabel } from './gastoOperativoApi'
 import type {
+  CategoriaMovimientoResponse,
   GastoPendienteResponse,
   GastoRecurrenteResponse,
   MovimientoOperativoResponse,
+  OrigenMovimiento,
   TipoMovimientoOperativo,
 } from './gastoOperativoApi'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
-type Pestana = 'pendientes' | 'recurrentes' | 'movimientos'
+type Pestana = 'pendientes' | 'recurrentes' | 'movimientos' | 'categorias'
 
 /**
- * Lo que entra o sale del negocio sin ser una venta ni una compra: préstamos,
- * aportes de capital, planilla, alquiler, servicios. Lo mensual (luz, agua,
- * alquiler) se define una vez como plantilla recurrente y el sistema la
- * recuerda cada mes, en vez de escribirla suelta cada vez.
+ * Lo que entra o sale del negocio sin ser una venta ni una compra: planilla,
+ * alquiler, servicios, aportes de capital, retiros. Cada movimiento lleva una
+ * categoría que dice si es operativo (del giro del negocio) o no. Lo mensual
+ * (luz, agua, alquiler) se define una vez como plantilla recurrente.
  */
 export function GastosOperativosPage() {
   const { puede } = usePermisos()
@@ -60,7 +61,7 @@ export function GastosOperativosPage() {
   const [pendientes, setPendientes] = useState<GastoPendienteResponse[]>([])
   const [recurrentes, setRecurrentes] = useState<GastoRecurrenteResponse[]>([])
   const [movimientos, setMovimientos] = useState<MovimientoOperativoResponse[]>([])
-  const [motivos, setMotivos] = useState<MotivoGastoResponse[]>([])
+  const [motivos, setMotivos] = useState<CategoriaMovimientoResponse[]>([])
   const [cuentas, setCuentas] = useState<CuentaFinancieraResponse[]>([])
 
   const [desde, setDesde] = useState(desplazarDias(-30))
@@ -82,7 +83,7 @@ export function GastosOperativosPage() {
         gastoOperativoApi.getPendientes(),
         gastoOperativoApi.getRecurrentes(),
         gastoOperativoApi.listar(desde, hasta),
-        motivoGastoApi.getAll(),
+        gastoOperativoApi.getCategorias(),
         cuentaFinancieraApi.getAll(),
       ])
       setPendientes(p)
@@ -130,9 +131,19 @@ export function GastosOperativosPage() {
         { id: 'pendientes', label: 'Pendientes', icon: <AlertTriangle size={15} />, badge: pendientes.length },
         { id: 'recurrentes', label: 'Recurrentes', icon: <Repeat size={15} />, badge: recurrentes.length },
         { id: 'movimientos', label: 'Movimientos', icon: <Receipt size={15} />, badge: movimientos.length },
+        { id: 'categorias', label: 'Categorías', icon: <Tags size={15} />, badge: motivos.length },
       ]}
     />
   )
+
+  if (pestana === 'categorias') {
+    return (
+      <>
+        {cabecera}
+        <CategoriasTabla categorias={motivos} onRecargar={cargar} />
+      </>
+    )
+  }
 
   if (pestana === 'recurrentes') {
     return (
@@ -240,6 +251,14 @@ export function GastosOperativosPage() {
       render: (row) => <Badge tone={row.tipo === 'INGRESO' ? 'success' : 'danger'}>{row.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso'}</Badge>,
     },
     { key: 'motivoGasto', label: 'Categoría', filterable: false },
+    {
+      key: 'origen',
+      label: 'Origen',
+      filterType: 'select',
+      filterOptions: ORIGENES,
+      value: (row) => row.origen,
+      render: (row) => <Badge tone={row.origen === 'OPERATIVO' ? 'sys' : 'warning'}>{origenLabel(row.origen)}</Badge>,
+    },
     { key: 'cuentaFinanciera', label: 'Cuenta', filterable: false },
     {
       key: 'monto',
@@ -267,8 +286,8 @@ export function GastosOperativosPage() {
       {cabecera}
       <ListPage
         icon={<Coins size={20} />}
-        title="Movimientos operativos"
-        description="Ingresos no ligados a venta y egresos operativos: planilla, alquiler, servicios, aportes de capital."
+        title="Ingresos y egresos"
+        description="Lo que entra o sale a mano, fuera de ventas y compras. La categoría dice si es operativo o no operativo."
         actions={
           puede('finanzas.operativos', 'crear') ? (
             <Button size="sm" onClick={() => setNuevoAbierto(true)} iconRight={<Plus size={15} />}>
@@ -397,7 +416,7 @@ function NuevoMovimientoModal({
   onGuardado,
 }: {
   cuentas: CuentaFinancieraResponse[]
-  motivos: MotivoGastoResponse[]
+  motivos: CategoriaMovimientoResponse[]
   onClose: () => void
   onGuardado: () => void | Promise<void>
 }) {
@@ -440,7 +459,7 @@ function NuevoMovimientoModal({
       open
       size="sm"
       title="Nuevo movimiento operativo"
-      description="Un ingreso (préstamo, aporte de capital) o un egreso sin plantilla."
+      description="Un ingreso (aporte de capital, venta de un activo) o un egreso sin plantilla."
       onClose={onClose}
       footer={
         <>
@@ -458,7 +477,10 @@ function NuevoMovimientoModal({
         <Desplegable
           label="Tipo"
           value={tipo}
-          onChange={(v) => setTipo(v as TipoMovimientoOperativo)}
+          onChange={(v) => {
+            setTipo(v as TipoMovimientoOperativo)
+            setMotivoGastoId(0)
+          }}
           options={[
             { value: 'INGRESO', label: 'Ingreso' },
             { value: 'EGRESO', label: 'Egreso' },
@@ -476,7 +498,9 @@ function NuevoMovimientoModal({
           value={motivoGastoId}
           onChange={(v) => setMotivoGastoId(Number(v))}
           placeholder="Elige una categoría"
-          options={motivos.filter((m) => m.activo).map((m) => ({ value: m.id, label: m.nombre }))}
+          options={motivos
+            .filter((m) => m.activo && m.tipo === tipo)
+            .map((m) => ({ value: m.id, label: m.nombre, detalle: origenLabel(m.origen) }))}
         />
         <Input label="Monto" type="number" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} />
         <Input label="Fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
@@ -499,7 +523,7 @@ function RecurrentesTabla({
   onRecargar,
 }: {
   recurrentes: GastoRecurrenteResponse[]
-  motivos: MotivoGastoResponse[]
+  motivos: CategoriaMovimientoResponse[]
   cuentas: CuentaFinancieraResponse[]
   abierto: boolean
   editando: GastoRecurrenteResponse | null
@@ -661,7 +685,9 @@ function RecurrentesTabla({
             value={form.motivoGastoId}
             onChange={(v) => setForm({ ...form, motivoGastoId: Number(v) })}
             placeholder="Elige una categoría"
-            options={motivos.filter((m) => m.activo).map((m) => ({ value: m.id, label: m.nombre }))}
+            options={motivos
+              .filter((m) => m.activo && m.tipo === 'EGRESO')
+              .map((m) => ({ value: m.id, label: m.nombre, detalle: origenLabel(m.origen) }))}
           />
           <Input
             label="Monto estimado"
@@ -692,6 +718,208 @@ function RecurrentesTabla({
               checked={form.activo}
               onChange={(e) => setForm({ ...form, activo: e.target.checked })}
             />
+          )}
+        </div>
+      </Modal>
+
+      {dialogo}
+    </ListPage>
+  )
+}
+
+const TIPOS_CATEGORIA: { value: TipoMovimientoOperativo; label: string }[] = [
+  { value: 'EGRESO', label: 'Egreso' },
+  { value: 'INGRESO', label: 'Ingreso' },
+]
+
+const CATEGORIA_VACIA = {
+  nombre: '',
+  descripcion: '',
+  tipo: 'EGRESO' as TipoMovimientoOperativo,
+  origen: 'OPERATIVO' as OrigenMovimiento,
+  activo: true,
+}
+
+/** El catálogo de categorías: con qué tipo de movimiento se usa cada una y si es operativa o no. */
+function CategoriasTabla({
+  categorias,
+  onRecargar,
+}: {
+  categorias: CategoriaMovimientoResponse[]
+  onRecargar: () => Promise<void>
+}) {
+  const { puede } = usePermisos()
+  const toast = useToast()
+  const { confirmar, dialogo } = useConfirmacion()
+  const [abierto, setAbierto] = useState(false)
+  const [editando, setEditando] = useState<CategoriaMovimientoResponse | null>(null)
+  const [form, setForm] = useState(CATEGORIA_VACIA)
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+
+  const abrir = (c: CategoriaMovimientoResponse | null) => {
+    setEditando(c)
+    setError('')
+    setForm(
+      c
+        ? { nombre: c.nombre, descripcion: c.descripcion ?? '', tipo: c.tipo, origen: c.origen, activo: c.activo }
+        : CATEGORIA_VACIA,
+    )
+    setAbierto(true)
+  }
+
+  const guardar = async () => {
+    if (!form.nombre.trim()) return setError('Ponle un nombre.')
+
+    setGuardando(true)
+    setError('')
+    try {
+      const cuerpo = {
+        nombre: form.nombre.trim(),
+        descripcion: form.descripcion.trim() || null,
+        tipo: form.tipo,
+        origen: form.origen,
+        activo: form.activo,
+      }
+      if (editando) await gastoOperativoApi.actualizarCategoria(editando.id, cuerpo)
+      else await gastoOperativoApi.crearCategoria(cuerpo)
+      setAbierto(false)
+      await onRecargar()
+      toast.exito(editando ? 'Categoría actualizada' : 'Categoría creada')
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No pudimos guardar la categoría.')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const eliminar = (c: CategoriaMovimientoResponse) =>
+    confirmar({
+      titulo: `Eliminar ${c.nombre}`,
+      mensaje: 'Se borra definitivamente. Si ya se usó, desactívala en vez de eliminarla.',
+      confirmar: 'Eliminar',
+      tono: 'danger',
+      accion: async () => {
+        try {
+          await gastoOperativoApi.eliminarCategoria(c.id)
+          await onRecargar()
+          toast.exito('Categoría eliminada')
+        } catch (e) {
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos eliminar la categoría.')
+        }
+      },
+    })
+
+  const columns: DataTableColumn<CategoriaMovimientoResponse>[] = [
+    { key: 'nombre', label: 'Nombre', filterable: false },
+    {
+      key: 'tipo',
+      label: 'Tipo',
+      filterType: 'select',
+      filterOptions: TIPOS_CATEGORIA,
+      value: (row) => row.tipo,
+      render: (row) => <Badge tone={row.tipo === 'INGRESO' ? 'success' : 'danger'}>{row.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso'}</Badge>,
+    },
+    {
+      key: 'origen',
+      label: 'Origen',
+      filterType: 'select',
+      filterOptions: ORIGENES,
+      value: (row) => row.origen,
+      render: (row) => <Badge tone={row.origen === 'OPERATIVO' ? 'sys' : 'warning'}>{origenLabel(row.origen)}</Badge>,
+    },
+    { key: 'usos', label: 'Usos', align: 'right', filterable: false },
+    {
+      key: 'activo',
+      label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Activo', label: 'Activo' },
+        { value: 'Inactivo', label: 'Inactivo' },
+      ],
+      value: (row) => (row.activo ? 'Activo' : 'Inactivo'),
+      render: (row) => <Badge tone={row.activo ? 'success' : 'neutral'}>{row.activo ? 'Activo' : 'Inactivo'}</Badge>,
+    },
+  ]
+
+  return (
+    <ListPage
+      icon={<Tags size={20} />}
+      title="Categorías"
+      description="Con qué se clasifica cada ingreso o egreso. Operativo: del giro del negocio. No operativo: aportes, retiros, compra o venta de activos."
+      actions={
+        puede('finanzas.operativos', 'crear') ? (
+          <Button size="sm" onClick={() => abrir(null)} iconRight={<Plus size={15} />}>
+            Nueva categoría
+          </Button>
+        ) : undefined
+      }
+      columns={columns}
+      rows={categorias}
+      cardIcon={Tags}
+      searchPlaceholder="Buscar categoría..."
+      empty="Todavía no hay categorías."
+      rowActions={(row) => (
+        <>
+          {puede('finanzas.operativos', 'editar') && (
+            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrir(row)}>
+              <Pencil size={15} />
+            </RowAction>
+          )}
+          {puede('finanzas.operativos', 'eliminar') && (
+            <RowAction
+              label={`Eliminar ${row.nombre}`}
+              tone="danger"
+              disabled={row.usos > 0}
+              disabledReason="Ya se usó: desactívala en vez de eliminarla"
+              onClick={() => eliminar(row)}
+            >
+              <Trash2 size={15} />
+            </RowAction>
+          )}
+        </>
+      )}
+    >
+      <Modal
+        open={abierto}
+        size="sm"
+        title={editando ? `Editar ${editando.nombre}` : 'Nueva categoría'}
+        onClose={() => setAbierto(false)}
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
+              Cancelar
+            </Button>
+            <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+              {editando ? 'Guardar cambios' : 'Crear categoría'}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          {error && <Alert>{error}</Alert>}
+          <Input label="Nombre" placeholder="Planilla, Aporte de capital..." value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+          <Desplegable
+            label="Tipo"
+            value={form.tipo}
+            onChange={(v) => setForm({ ...form, tipo: v as TipoMovimientoOperativo })}
+            options={TIPOS_CATEGORIA}
+            disabled={!!editando && editando.usos > 0}
+            hint={
+              editando && editando.usos > 0 ? (
+                <span className="text-xs text-ink-soft">Ya se usó: no cambia de tipo</span>
+              ) : undefined
+            }
+          />
+          <Desplegable
+            label="Origen"
+            value={form.origen}
+            onChange={(v) => setForm({ ...form, origen: v as OrigenMovimiento })}
+            options={ORIGENES}
+          />
+          <Input label="Descripción" optional value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
+          {editando && (
+            <Checkbox label="Activa" checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} />
           )}
         </div>
       </Modal>

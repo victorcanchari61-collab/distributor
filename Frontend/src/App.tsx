@@ -19,7 +19,6 @@ import { MiPerfilPage } from './features/perfil'
 import { Button } from './components/ui'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
 import {
-  ArqueoDiarioPage,
   CajasPage,
   CuentasFinancierasPage,
   CuentasPorCobrarPage,
@@ -98,7 +97,6 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'finanzas.cobrar': CuentasPorCobrarPage,
   'finanzas.pagar': CuentasPorPagarPage,
   'finanzas.ganancias': MisGananciasPage,
-  'finanzas.arqueo': ArqueoDiarioPage,
   'finanzas.operativos': GastosOperativosPage,
   'config.usuarios': UsuariosPage,
   'config.accesos': AccesosPage,

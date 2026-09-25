@@ -1,5 +1,27 @@
 namespace Backend.Dtos.Responses;
 
+public class CategoriaMovimientoResponse
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+    public string Tipo { get; set; } = string.Empty;
+    public string Origen { get; set; } = string.Empty;
+    public bool Activo { get; set; }
+
+    /// <summary>En cuántos movimientos, plantillas o cuadres se usa. Si hay alguno, no se elimina.</summary>
+    public int Usos { get; set; }
+}
+
+/// <summary>Lo justo para elegir una categoría al registrar un ingreso o egreso.</summary>
+public class CategoriaOpcionResponse
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string Tipo { get; set; } = string.Empty;
+    public string Origen { get; set; } = string.Empty;
+}
+
 public class GastoRecurrenteResponse
 {
     public int Id { get; set; }
@@ -34,6 +56,10 @@ public class MovimientoOperativoResponse
     public string Tipo { get; set; } = string.Empty;
     public int MotivoGastoId { get; set; }
     public string MotivoGasto { get; set; } = string.Empty;
+
+    /// <summary>OPERATIVO o NO_OPERATIVO, según su categoría.</summary>
+    public string Origen { get; set; } = string.Empty;
+
     public decimal Monto { get; set; }
     public DateTime Fecha { get; set; }
     public string? Descripcion { get; set; }

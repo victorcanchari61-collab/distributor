@@ -3,7 +3,6 @@ import {
   Banknote,
   Boxes,
   Building2,
-  Calculator,
   CalendarCheck,
   CalendarDays,
   ClipboardCheck,
@@ -178,8 +177,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'finanzas.cobrar', label: 'Cuentas por cobrar', icon: Wallet },
       { id: 'finanzas.pagar', label: 'Cuentas por pagar', icon: CreditCard },
       { id: 'finanzas.ganancias', label: 'Mis ganancias', icon: TrendingUp },
-      { id: 'finanzas.arqueo', label: 'Arqueo diario', icon: Calculator },
-      { id: 'finanzas.operativos', label: 'Gastos operativos', icon: Repeat },
+      { id: 'finanzas.operativos', label: 'Ingresos y egresos', icon: Repeat },
     ],
   },
   {

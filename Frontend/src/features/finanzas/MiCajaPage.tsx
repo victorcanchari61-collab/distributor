@@ -15,31 +15,41 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { fechaHora, hoyLocal } from '../../lib/fechas'
+import { fechaHora } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
-import { motivoGastoApi } from './arqueoApi'
-import type { MotivoGastoResponse } from './arqueoApi'
 import { miCajaApi } from './miCajaApi'
-import type { CerrarMiCajaRequest } from './miCajaApi'
+import type { CuentaDestino } from './miCajaApi'
 import type { CuentaFinancieraResponse, MovimientoCuentaResponse } from './cuentaFinancieraApi'
-import type { TipoMovimientoOperativo } from './gastoOperativoApi'
+import { gastoOperativoApi, origenLabel } from './gastoOperativoApi'
+import type { CategoriaOpcion, TipoMovimientoOperativo } from './gastoOperativoApi'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
 const BILLETES = [200, 100, 50, 20, 10]
 const MONEDAS = [5, 2, 1, 0.5, 0.2, 0.1]
 
+const DOCUMENTOS: Record<string, string> = {
+  PAGO_VENTA: 'Cobro de venta',
+  MOVIMIENTO_OPERATIVO: 'Ingreso o egreso',
+  CIERRE_CAJA: 'Cierre de caja',
+  REVERSION: 'Anulación',
+  SALDO_INICIAL: 'Saldo inicial',
+  TRANSFERENCIA_INTERNA: 'Transferencia',
+}
+
+const NATURALEZA_LABEL: Record<string, string> = { CAJA: 'Caja', BANCO: 'Banco', PASARELA: 'Pasarela' }
+
 /**
  * La Caja de quien está logueado: su propio dinero en la ruta. Las ventas al
  * contado que cobra entran solas; acá se registra cualquier otro ingreso o
- * egreso a mano, y se cierra el día (cuenta lo físico y liquida a la Caja
- * General).
+ * egreso a mano, y se cierra la caja (cuenta lo físico y lo entrega a otra
+ * cuenta).
  */
 export function MiCajaPage() {
   const toast = useToast()
   const [caja, setCaja] = useState<CuentaFinancieraResponse | null>(null)
   const [movimientos, setMovimientos] = useState<MovimientoCuentaResponse[]>([])
-  const [motivos, setMotivos] = useState<MotivoGastoResponse[]>([])
+  const [categorias, setCategorias] = useState<CategoriaOpcion[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -49,9 +59,9 @@ export function MiCajaPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [c, mot] = await Promise.all([miCajaApi.mia(), motivoGastoApi.getAll()])
+      const [c, cat] = await Promise.all([miCajaApi.mia(), gastoOperativoApi.categoriasOpciones()])
       setCaja(c)
-      setMotivos(mot)
+      setCategorias(cat)
       setMovimientos(await miCajaApi.movimientos())
       setError('')
     } catch (e) {
@@ -66,7 +76,6 @@ export function MiCajaPage() {
   }, [cargar])
 
   useRealtime('cuentasfinancieras', cargar)
-  useRealtime('arqueo', cargar)
   useRealtime('gastosoperativos', cargar)
 
   const totalIngresos = movimientos.filter((m) => m.tipo === 'INGRESO').reduce((s, m) => s + m.monto, 0)
@@ -92,7 +101,13 @@ export function MiCajaPage() {
       render: (row) => (row.tipo === 'INGRESO' ? `+${soles(row.monto)}` : `-${soles(row.monto)}`),
     },
     { key: 'saldoResultante', label: 'Saldo', align: 'right', filterable: false, render: (row) => soles(row.saldoResultante) },
-    { key: 'documentoOrigen', label: 'Origen', filterable: false },
+    {
+      key: 'documentoOrigen',
+      label: 'Concepto',
+      filterType: 'select',
+      filterOptions: Object.entries(DOCUMENTOS).map(([value, label]) => ({ value, label })),
+      render: (row) => DOCUMENTOS[row.documentoOrigen] ?? row.documentoOrigen,
+    },
     { key: 'observacion', label: 'Detalle', filterable: false, render: (row) => row.observacion ?? '—' },
   ]
 
@@ -135,14 +150,14 @@ export function MiCajaPage() {
         columns={columns}
         rows={movimientos}
         cardIcon={Wallet}
-        searchPlaceholder="Buscar por origen..."
+        searchPlaceholder="Buscar por detalle..."
         empty={cargando ? 'Cargando movimientos...' : 'Todavía no hay movimientos en tu caja.'}
       />
 
       {movimientoAbierto && caja && (
         <MovimientoLibreModal
           tipo={movimientoAbierto}
-          motivos={motivos}
+          categorias={categorias.filter((c) => c.tipo === movimientoAbierto)}
           onClose={() => setMovimientoAbierto(null)}
           onGuardado={async () => {
             setMovimientoAbierto(null)
@@ -158,7 +173,7 @@ export function MiCajaPage() {
           onGuardado={async () => {
             setCerrarAbierto(false)
             await cargar()
-            toast.exito('Caja cerrada y liquidada')
+            toast.exito('Caja cerrada')
           }}
         />
       )}
@@ -168,12 +183,12 @@ export function MiCajaPage() {
 
 function MovimientoLibreModal({
   tipo,
-  motivos,
+  categorias,
   onClose,
   onGuardado,
 }: {
   tipo: TipoMovimientoOperativo
-  motivos: MotivoGastoResponse[]
+  categorias: CategoriaOpcion[]
   onClose: () => void
   onGuardado: () => void | Promise<void>
 }) {
@@ -229,7 +244,7 @@ function MovimientoLibreModal({
           value={motivoGastoId}
           onChange={(v) => setMotivoGastoId(Number(v))}
           placeholder="Elige una categoría"
-          options={motivos.filter((m) => m.activo).map((m) => ({ value: m.id, label: m.nombre }))}
+          options={categorias.map((c) => ({ value: c.id, label: c.nombre, detalle: origenLabel(c.origen) }))}
         />
         <Input label="Monto" type="number" step="0.01" placeholder="0.00" value={monto} onChange={(e) => setMonto(e.target.value)} />
         <Input label="Detalle" optional value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
@@ -248,6 +263,8 @@ function CerrarCajaModal({
   const [cantBilletes, setCantBilletes] = useState<Record<number, string>>({})
   const [cantMonedas, setCantMonedas] = useState<Record<number, string>>({})
   const [pestana, setPestana] = useState<'billetes' | 'monedas'>('billetes')
+  const [destinos, setDestinos] = useState<CuentaDestino[]>([])
+  const [cuentaDestinoId, setCuentaDestinoId] = useState(0)
   const [observacion, setObservacion] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
@@ -263,17 +280,25 @@ function CerrarCajaModal({
   const totalBilletes = sumar(BILLETES, cantBilletes)
   const totalMonedas = sumar(MONEDAS, cantMonedas)
 
+  useEffect(() => {
+    miCajaApi
+      .destinos()
+      .then(setDestinos)
+      .catch((e) => setError(e instanceof ApiError ? e.message : 'No pudimos cargar las cuentas.'))
+  }, [])
+
   const guardar = async () => {
+    if (!cuentaDestinoId) return setError('Elige a quién le entregas lo contado.')
+
     setGuardando(true)
     setError('')
     try {
-      const cuerpo: CerrarMiCajaRequest = {
-        fecha: hoyLocal(),
-        billetes: totalBilletes,
-        monedas: totalMonedas,
+      await miCajaApi.cerrar({
+        billetes: Math.round(totalBilletes * 100) / 100,
+        monedas: Math.round(totalMonedas * 100) / 100,
+        cuentaDestinoId,
         observacion: observacion.trim() || null,
-      }
-      await miCajaApi.cerrar(cuerpo)
+      })
       await onGuardado()
     } catch (e) {
       setError(
@@ -293,7 +318,7 @@ function CerrarCajaModal({
       open
       size="sm"
       title="Cerrar caja"
-      description="Cuenta billete por billete y moneda por moneda. Se compara contra el saldo de tu caja y se liquida a la Caja General."
+      description="Cuenta billete por billete y moneda por moneda, y elige a quién se lo entregas."
       onClose={onClose}
       footer={
         <>
@@ -301,7 +326,7 @@ function CerrarCajaModal({
             Cancelar
           </Button>
           <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-            Cerrar y liquidar
+            Cerrar y entregar
           </Button>
         </>
       }
@@ -347,6 +372,14 @@ function CerrarCajaModal({
             <p className="mt-2 text-right text-sm font-semibold text-ink">Subtotal monedas {soles(totalMonedas)}</p>
           </div>
         )}
+
+        <Desplegable
+          label="Entregar a"
+          value={cuentaDestinoId}
+          onChange={(v) => setCuentaDestinoId(Number(v))}
+          placeholder="Elige la caja o el banco"
+          options={destinos.map((d) => ({ value: d.id, label: d.nombre, detalle: NATURALEZA_LABEL[d.naturaleza] ?? d.naturaleza }))}
+        />
 
         <Input label="Observación" optional placeholder="Alguna razón de la diferencia..." value={observacion} onChange={(e) => setObservacion(e.target.value)} />
       </div>

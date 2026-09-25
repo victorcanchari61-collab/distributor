@@ -26,6 +26,38 @@ public class GastoOperativoController : ControllerBase
             ? id
             : null;
 
+    // --- Categorías ---
+
+    [HttpGet("categorias")]
+    [Permiso("finanzas.operativos", Accion.Ver)]
+    public async Task<IActionResult> GetCategorias() => Ok(await _gastos.GetCategoriasAsync());
+
+    /// <summary>
+    /// Sin permiso de Finanzas: Mi Caja es de todos, y quien registra un gasto
+    /// de su ruta necesita elegir la categoría aunque no vea el catálogo.
+    /// </summary>
+    [HttpGet("categorias/opciones")]
+    public async Task<IActionResult> GetCategoriasOpciones([FromQuery] string? tipo) =>
+        Ok(await _gastos.GetCategoriasOpcionesAsync(tipo));
+
+    [HttpPost("categorias")]
+    [Permiso("finanzas.operativos", Accion.Crear)]
+    public async Task<IActionResult> CrearCategoria([FromBody] CategoriaMovimientoRequest request) =>
+        Ok(await _gastos.CrearCategoriaAsync(request));
+
+    [HttpPut("categorias/{id:int}")]
+    [Permiso("finanzas.operativos", Accion.Editar)]
+    public async Task<IActionResult> ActualizarCategoria(int id, [FromBody] CategoriaMovimientoRequest request) =>
+        Ok(await _gastos.ActualizarCategoriaAsync(id, request));
+
+    [HttpDelete("categorias/{id:int}")]
+    [Permiso("finanzas.operativos", Accion.Eliminar)]
+    public async Task<IActionResult> EliminarCategoria(int id)
+    {
+        await _gastos.EliminarCategoriaAsync(id);
+        return NoContent();
+    }
+
     // --- Plantillas recurrentes ---
 
     [HttpGet("recurrentes")]

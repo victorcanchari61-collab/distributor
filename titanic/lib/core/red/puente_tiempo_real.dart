@@ -4,7 +4,6 @@ import '../../features/compras/estado/compras_controlador.dart';
 import '../../features/dms/estado/dms_controlador.dart';
 import '../../features/config/estado/config_controlador.dart';
 import '../../features/facturacion/estado/facturacion_controlador.dart';
-import '../../features/finanzas/estado/arqueo_controlador.dart';
 import '../../features/finanzas/estado/finanzas_controlador.dart';
 import '../../features/finanzas/estado/ganancia_controlador.dart';
 import '../../features/inventario/estado/inventario_controlador.dart';
@@ -98,7 +97,6 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     tms.resumenConductoresProvider,
     tms.vehiculosProvider,
   ],
-  'arqueo': [cuadresProvider, motivosGastoProvider],
 
   // Los datos de la empresa salen en la cabecera de cada papel: si cambian el
   // RUC o la direccion, lo que se imprima despues tiene que decir lo nuevo.

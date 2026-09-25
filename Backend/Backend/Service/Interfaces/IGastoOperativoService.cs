@@ -4,12 +4,22 @@ using Backend.Dtos.Responses;
 namespace Backend.Service.Interfaces;
 
 /// <summary>
-/// Ingresos no ligados a venta (préstamos, aportes de capital) y egresos
-/// operativos (planilla, alquiler, servicios), con plantillas recurrentes
-/// para lo mensual. Ver docs/finanzas-tesoreria.md, sección 4.
+/// Ingresos y egresos que se registran a mano (no vienen de una venta ni de una
+/// compra), clasificados por categoría en operativos y no operativos, con
+/// plantillas recurrentes para lo mensual.
 /// </summary>
 public interface IGastoOperativoService
 {
+    // --- Categorías ---
+    Task<IEnumerable<CategoriaMovimientoResponse>> GetCategoriasAsync();
+
+    /// <summary>Las activas, opcionalmente de un tipo: para elegir al registrar un movimiento.</summary>
+    Task<IEnumerable<CategoriaOpcionResponse>> GetCategoriasOpcionesAsync(string? tipo);
+
+    Task<CategoriaMovimientoResponse> CrearCategoriaAsync(CategoriaMovimientoRequest request);
+    Task<CategoriaMovimientoResponse> ActualizarCategoriaAsync(int id, CategoriaMovimientoRequest request);
+    Task EliminarCategoriaAsync(int id);
+
     // --- Plantillas recurrentes ---
     Task<IEnumerable<GastoRecurrenteResponse>> GetRecurrentesAsync();
     Task<GastoRecurrenteResponse> CrearRecurrenteAsync(GastoRecurrenteRequest request);

@@ -70,9 +70,7 @@ public class AppDbContext : DbContext
     public DbSet<PagoVenta> PagosVenta => Set<PagoVenta>();
     public DbSet<RecojoVenta> RecojosVenta => Set<RecojoVenta>();
     public DbSet<RegistroAuditoria> RegistrosAuditoria => Set<RegistroAuditoria>();
-    public DbSet<ArqueoCaja> ArqueosCaja => Set<ArqueoCaja>();
-    public DbSet<ArqueoGasto> ArqueoGastos => Set<ArqueoGasto>();
-    public DbSet<ArqueoPagoDigital> ArqueoPagosDigitales => Set<ArqueoPagoDigital>();
+    public DbSet<CierreCaja> CierresCaja => Set<CierreCaja>();
     public DbSet<MotivoGasto> MotivosGasto => Set<MotivoGasto>();
     public DbSet<MotivoNovedad> MotivosNovedad => Set<MotivoNovedad>();
     public DbSet<NovedadEntrega> NovedadesEntrega => Set<NovedadEntrega>();
@@ -1361,89 +1359,57 @@ public class AppDbContext : DbContext
             entity.HasIndex(m => m.Nombre).IsUnique();
             entity.Property(m => m.Nombre).HasMaxLength(60).IsRequired();
             entity.Property(m => m.Descripcion).HasMaxLength(250);
+            entity.Property(m => m.Tipo).HasMaxLength(20).IsRequired();
+            entity.Property(m => m.Origen).HasMaxLength(20).IsRequired();
 
-            // Los de siempre vienen sembrados: son los que aparecen en la
-            // planilla de ruta de cualquier distribuidora, y sin ellos el
-            // primer cuadre no tendria en que clasificar nada.
+            // Los de siempre vienen sembrados: los gastos de ruta de cualquier
+            // distribuidora, los gastos fijos del negocio, y lo no operativo
+            // (aportes, retiros, activos) para no mezclarlo con la ganancia.
+            var sembrado = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            const string egreso = TipoMovimientoOperativo.Egreso;
+            const string ingreso = TipoMovimientoOperativo.Ingreso;
+            const string operativo = OrigenMovimiento.Operativo;
+            const string noOperativo = OrigenMovimiento.NoOperativo;
+
             entity.HasData(
-                new MotivoGasto { Id = 1, Nombre = "Pasaje", Activo = true, FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-                new MotivoGasto { Id = 2, Nombre = "Combustible", Activo = true, FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-                new MotivoGasto { Id = 3, Nombre = "Menú", Activo = true, FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-                new MotivoGasto { Id = 4, Nombre = "Peaje", Activo = true, FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-                new MotivoGasto { Id = 5, Nombre = "Otro", Descripcion = "Cualquier gasto que no encaje en los demás. Conviene detallarlo.", Activo = true, FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) });
+                new MotivoGasto { Id = 1, Nombre = "Pasaje", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 2, Nombre = "Combustible", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 3, Nombre = "Menú", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 4, Nombre = "Peaje", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 5, Nombre = "Otro", Descripcion = "Cualquier gasto que no encaje en los demás. Conviene detallarlo.", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 6, Nombre = "Planilla", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 7, Nombre = "Alquiler y servicios", Descripcion = "Alquiler del local o almacén, luz, agua, internet.", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 8, Nombre = "Mantenimiento de vehículos", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 9, Nombre = "Impuestos (SUNAT)", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 10, Nombre = "Marketing y publicidad", Tipo = egreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 11, Nombre = "Otros ingresos del negocio", Descripcion = "Lo que entra por el negocio sin ser una venta registrada.", Tipo = ingreso, Origen = operativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 12, Nombre = "Aporte de capital", Descripcion = "Plata que pone el dueño o un socio.", Tipo = ingreso, Origen = noOperativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 13, Nombre = "Venta de activo", Descripcion = "Venta de un vehículo, equipo o mueble del negocio.", Tipo = ingreso, Origen = noOperativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 14, Nombre = "Retiro del dueño", Tipo = egreso, Origen = noOperativo, Activo = true, FechaCreacion = sembrado },
+                new MotivoGasto { Id = 15, Nombre = "Compra de activo", Descripcion = "Vehículo, equipo o mueble: no es gasto del mes, es inversión.", Tipo = egreso, Origen = noOperativo, Activo = true, FechaCreacion = sembrado });
         });
 
-        modelBuilder.Entity<ArqueoCaja>(entity =>
+        modelBuilder.Entity<CierreCaja>(entity =>
         {
-            entity.ToTable("ArqueoCaja");
+            entity.ToTable("CierresCaja");
+            entity.HasIndex(c => new { c.CuentaFinancieraId, c.Fecha });
+            entity.Property(c => c.SaldoSistema).HasPrecision(18, 4);
+            entity.Property(c => c.Billetes).HasPrecision(18, 4);
+            entity.Property(c => c.Monedas).HasPrecision(18, 4);
+            entity.Property(c => c.Observacion).HasMaxLength(250);
+            entity.Ignore(c => c.Contado);
+            entity.Ignore(c => c.Diferencia);
 
-            // Uno por persona y dia: volver a cuadrar el mismo dia corrige el
-            // anterior en vez de dejar dos cierres compitiendo.
-            entity.HasIndex(a => new { a.Fecha, a.UsuarioId }).IsUnique();
-
-            entity.Property(a => a.Billetes).HasPrecision(18, 4);
-            entity.Property(a => a.Monedas).HasPrecision(18, 4);
-            entity.Property(a => a.EfectivoSistema).HasPrecision(18, 4);
-            entity.Property(a => a.BancosSistema).HasPrecision(18, 4);
-            entity.Property(a => a.MontoApertura).HasPrecision(18, 4);
-            entity.Property(a => a.SaldoCajaAlCerrar).HasPrecision(18, 4);
-            entity.Property(a => a.Observacion).HasMaxLength(250);
-            entity.Property(a => a.Estado).HasMaxLength(20).IsRequired();
-            entity.Ignore(a => a.EfectivoEsperado);
-
-            // Restrict y no SetNull: el cuadre es DE esa persona, y sin ella no
-            // significa nada. Un usuario con cuadres se desactiva, no se borra.
-            entity.HasOne(a => a.Usuario).WithMany()
-                .HasForeignKey(a => a.UsuarioId).OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne<Usuario>().WithMany()
-                .HasForeignKey(a => a.RegistradoPorId).OnDelete(DeleteBehavior.SetNull);
-
+            entity.HasOne(c => c.CuentaFinanciera).WithMany()
+                .HasForeignKey(c => c.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.CuentaDestino).WithMany()
+                .HasForeignKey(c => c.CuentaDestinoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.Usuario).WithMany()
+                .HasForeignKey(c => c.UsuarioId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<MovimientoCuenta>().WithMany()
-                .HasForeignKey(a => a.MovimientoAperturaId).OnDelete(DeleteBehavior.Restrict);
-
+                .HasForeignKey(c => c.MovimientoSalidaId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<MovimientoCuenta>().WithMany()
-                .HasForeignKey(a => a.MovimientoAperturaDestinoId).OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne<MovimientoCuenta>().WithMany()
-                .HasForeignKey(a => a.MovimientoCierreId).OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne<MovimientoCuenta>().WithMany()
-                .HasForeignKey(a => a.MovimientoCierreDestinoId).OnDelete(DeleteBehavior.Restrict);
-        });
-
-        modelBuilder.Entity<ArqueoGasto>(entity =>
-        {
-            entity.ToTable("ArqueoGastos");
-            entity.Property(g => g.Monto).HasPrecision(18, 4);
-            entity.Property(g => g.Descripcion).HasMaxLength(250);
-
-            entity.HasOne(g => g.ArqueoCaja).WithMany(a => a.Gastos)
-                .HasForeignKey(g => g.ArqueoCajaId).OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(g => g.MotivoGasto).WithMany()
-                .HasForeignKey(g => g.MotivoGastoId).OnDelete(DeleteBehavior.Restrict);
-        });
-
-        modelBuilder.Entity<ArqueoPagoDigital>(entity =>
-        {
-            entity.ToTable("ArqueoPagosDigitales");
-            entity.Property(p => p.Monto).HasPrecision(18, 4);
-            entity.Property(p => p.NumeroOperacion).HasMaxLength(60);
-
-            entity.HasOne(p => p.ArqueoCaja).WithMany(a => a.PagosDigitales)
-                .HasForeignKey(p => p.ArqueoCajaId).OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(p => p.Cliente).WithMany()
-                .HasForeignKey(p => p.ClienteId).OnDelete(DeleteBehavior.SetNull);
-
-            entity.HasOne(p => p.MetodoPago).WithMany()
-                .HasForeignKey(p => p.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
-
-            // SetNull: si el cobro se borra, la linea del cuadre sigue ahi como
-            // rastro de lo que se declaro ese dia.
-            entity.HasOne(p => p.PagoVenta).WithMany()
-                .HasForeignKey(p => p.PagoVentaId).OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(c => c.MovimientoEntradaId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 

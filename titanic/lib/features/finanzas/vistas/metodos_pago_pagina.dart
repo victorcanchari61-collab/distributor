@@ -22,7 +22,7 @@ import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de metodos de pago: efectivo, billetera digital, transferencia...
 /// el mismo catalogo lo usan Compras, Cuentas por cobrar y por pagar, Mis
-/// cobros y el Arqueo diario.
+/// cobros y Mi Caja.
 class MetodosPagoPagina extends ConsumerWidget {
   const MetodosPagoPagina({super.key});
 

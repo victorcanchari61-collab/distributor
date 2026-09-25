@@ -2,11 +2,50 @@ namespace Backend.Models;
 
 public static class TipoMovimientoOperativo
 {
-    /// <summary>Préstamo recibido, aporte de capital: no ligado a una venta.</summary>
+    /// <summary>Plata que entra sin venir de una venta: aporte de capital, venta de un activo, otros.</summary>
     public const string Ingreso = "INGRESO";
 
     /// <summary>Planilla, alquiler, servicios: gasto del negocio, no de una compra de mercadería.</summary>
     public const string Egreso = "EGRESO";
+
+    public static readonly string[] Todos = [Ingreso, Egreso];
+}
+
+/// <summary>
+/// Si un movimiento viene del giro del negocio o no. Lo operativo dice si el
+/// negocio gana; lo no operativo (aportes, retiros, activos, préstamos) mueve
+/// la caja pero no es ganancia ni pérdida.
+/// </summary>
+public static class OrigenMovimiento
+{
+    public const string Operativo = "OPERATIVO";
+    public const string NoOperativo = "NO_OPERATIVO";
+
+    public static readonly string[] Todos = [Operativo, NoOperativo];
+}
+
+/// <summary>
+/// La categoría de un ingreso o egreso registrado a mano (en pantalla,
+/// "Categoría"): pasaje, planilla, aporte de capital... Conserva el nombre de
+/// clase y tabla de cuando solo eran motivos de gasto de ruta.
+///
+/// Es catálogo y no una lista fija porque cada distribuidora gasta en cosas
+/// distintas.
+/// </summary>
+public class MotivoGasto
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+
+    /// <summary>INGRESO o EGRESO: con qué tipo de movimiento se puede usar.</summary>
+    public string Tipo { get; set; } = TipoMovimientoOperativo.Egreso;
+
+    /// <summary>OPERATIVO si es del giro del negocio; NO_OPERATIVO si no (aportes, retiros, activos).</summary>
+    public string Origen { get; set; } = OrigenMovimiento.Operativo;
+
+    public bool Activo { get; set; } = true;
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>

@@ -32,13 +32,10 @@ public static class TipoMovimientoCuenta
 /// </summary>
 public static class DocumentoOrigenMovimiento
 {
-    /// <summary>El dueño entrega efectivo a un vendedor/repartidor para gastos de ruta.</summary>
-    public const string AperturaFondoRuta = "APERTURA_FONDO_RUTA";
+    /// <summary>El cierre de una caja: lo contado pasa de la caja del vendedor/repartidor a otra cuenta.</summary>
+    public const string CierreCaja = "CIERRE_CAJA";
 
-    /// <summary>Liquidación de un arqueo: lo que el vendedor/repartidor entrega de vuelta.</summary>
-    public const string LiquidacionArqueo = "LIQUIDACION_ARQUEO";
-
-    /// <summary>Un ingreso o egreso operativo (planilla, alquiler, aporte de capital, préstamo).</summary>
+    /// <summary>Un ingreso o egreso registrado a mano, con su categoría (planilla, alquiler, aporte de capital).</summary>
     public const string MovimientoOperativo = "MOVIMIENTO_OPERATIVO";
 
     /// <summary>Una de las dos mitades de una transferencia entre cuentas propias.</summary>
@@ -58,8 +55,7 @@ public static class DocumentoOrigenMovimiento
 
     public static readonly string[] Todos =
     [
-        AperturaFondoRuta, LiquidacionArqueo, MovimientoOperativo, TransferenciaInterna, Reversion, PagoVenta,
-        SaldoInicial,
+        CierreCaja, MovimientoOperativo, TransferenciaInterna, Reversion, PagoVenta, SaldoInicial,
     ];
 }
 

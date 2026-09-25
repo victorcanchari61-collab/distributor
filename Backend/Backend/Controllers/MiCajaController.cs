@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Backend.Dtos.Requests;
-using Backend.Exceptions;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +10,7 @@ namespace Backend.Controllers;
 /// La Caja de quien está logueado: su propio dinero en la ruta. Cualquier
 /// usuario ve y maneja la suya sin necesitar un permiso de Finanzas — es "lo
 /// mío", igual que Mi Perfil. Un supervisor ve la de otro desde
-/// `GET /cuentafinanciera` (necesita `finanzas.caja`/`finanzas.bancos`).
+/// `GET /cuentafinanciera` (necesita `finanzas.caja`/`finanzas.cajas`).
 /// </summary>
 [ApiController]
 [Route("api/micaja")]
@@ -20,13 +19,13 @@ public class MiCajaController : ControllerBase
 {
     private readonly ICuentaFinancieraService _cuentas;
     private readonly IGastoOperativoService _gastos;
-    private readonly IArqueoService _arqueo;
+    private readonly ICierreCajaService _cierres;
 
-    public MiCajaController(ICuentaFinancieraService cuentas, IGastoOperativoService gastos, IArqueoService arqueo)
+    public MiCajaController(ICuentaFinancieraService cuentas, IGastoOperativoService gastos, ICierreCajaService cierres)
     {
         _cuentas = cuentas;
         _gastos = gastos;
-        _arqueo = arqueo;
+        _cierres = cierres;
     }
 
     private int UsuarioId =>
@@ -54,19 +53,17 @@ public class MiCajaController : ControllerBase
     {
         var caja = await _cuentas.ExigirCajaUsuarioAsync(UsuarioId);
         // La cuenta la decide el servidor: nunca la que venga en el body — así
-        // nadie postea a la caja de otro ni a la Caja General por aquí.
+        // nadie postea a la caja de otro por aquí.
         request.CuentaFinancieraId = caja.Id;
         return Ok(await _gastos.CrearAsync(request, UsuarioId));
     }
 
-    /// <summary>
-    /// Cierra el día: cuenta lo que tiene físico, lo compara contra el saldo
-    /// de su Caja, y liquida esa plata a la Caja General.
-    /// </summary>
+    /// <summary>A qué cuentas puede entregar lo contado al cerrar.</summary>
+    [HttpGet("destinos")]
+    public async Task<IActionResult> Destinos() => Ok(await _cierres.DestinosAsync(UsuarioId));
+
+    /// <summary>Cierra la caja: cuenta lo que tiene y lo entrega a la cuenta elegida.</summary>
     [HttpPost("cerrar")]
-    public async Task<IActionResult> Cerrar([FromBody] RegistrarArqueoRequest request)
-    {
-        request.UsuarioId = UsuarioId;
-        return Ok(await _arqueo.RegistrarAsync(request, UsuarioId));
-    }
+    public async Task<IActionResult> Cerrar([FromBody] CerrarCajaRequest request) =>
+        Ok(await _cierres.CerrarAsync(UsuarioId, request));
 }

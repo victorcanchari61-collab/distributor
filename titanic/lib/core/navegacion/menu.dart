@@ -255,12 +255,6 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Mis ganancias',
         icono: Icons.trending_up,
       ),
-      MenuItem(
-        id: 'finanzas.arqueo',
-        pendiente: false,
-        titulo: 'Arqueo diario',
-        icono: Icons.calculate_outlined,
-      ),
     ],
   ),
   MenuGrupo(

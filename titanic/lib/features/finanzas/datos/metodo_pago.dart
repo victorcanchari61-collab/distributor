@@ -18,7 +18,7 @@ class TipoMetodoPago {
 
 /// Un metodo de pago del catalogo: efectivo, billetera digital o
 /// transferencia. Lo comparten Compras, Cuentas por cobrar, Cuentas por
-/// pagar, Mis cobros y el Arqueo diario.
+/// pagar y Mis cobros.
 class MetodoPago {
   const MetodoPago({
     required this.id,

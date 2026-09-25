@@ -13,6 +13,7 @@ public class GastoOperativoService : IGastoOperativoService
 {
     private readonly AppDbContext _context;
     private readonly ICuentaFinancieraService _cuentas;
+    private readonly IValidator<CategoriaMovimientoRequest> _categoriaValidator;
     private readonly IValidator<GastoRecurrenteRequest> _recurrenteValidator;
     private readonly IValidator<MovimientoOperativoRequest> _movimientoValidator;
     private readonly INotificador _notificador;
@@ -20,15 +21,115 @@ public class GastoOperativoService : IGastoOperativoService
     public GastoOperativoService(
         AppDbContext context,
         ICuentaFinancieraService cuentas,
+        IValidator<CategoriaMovimientoRequest> categoriaValidator,
         IValidator<GastoRecurrenteRequest> recurrenteValidator,
         IValidator<MovimientoOperativoRequest> movimientoValidator,
         INotificador notificador)
     {
         _context = context;
         _cuentas = cuentas;
+        _categoriaValidator = categoriaValidator;
         _recurrenteValidator = recurrenteValidator;
         _movimientoValidator = movimientoValidator;
         _notificador = notificador;
+    }
+
+    // ---------------------------------------------------------- Categorías
+
+    public async Task<IEnumerable<CategoriaMovimientoResponse>> GetCategoriasAsync()
+    {
+        var categorias = await _context.MotivosGasto
+            .AsNoTracking()
+            .OrderBy(m => m.Tipo).ThenBy(m => m.Nombre)
+            .ToListAsync();
+
+        var respuesta = new List<CategoriaMovimientoResponse>();
+        foreach (var c in categorias)
+        {
+            respuesta.Add(MapCategoria(c, await ContarUsosCategoriaAsync(c.Id)));
+        }
+
+        return respuesta;
+    }
+
+    public async Task<IEnumerable<CategoriaOpcionResponse>> GetCategoriasOpcionesAsync(string? tipo)
+    {
+        var query = _context.MotivosGasto.AsNoTracking().Where(m => m.Activo);
+        if (!string.IsNullOrWhiteSpace(tipo)) query = query.Where(m => m.Tipo == tipo);
+
+        return await query
+            .OrderBy(m => m.Nombre)
+            .Select(m => new CategoriaOpcionResponse { Id = m.Id, Nombre = m.Nombre, Tipo = m.Tipo, Origen = m.Origen })
+            .ToListAsync();
+    }
+
+    public async Task<CategoriaMovimientoResponse> CrearCategoriaAsync(CategoriaMovimientoRequest request)
+    {
+        await _categoriaValidator.ValidateAndThrowAsync(request);
+
+        var nombre = request.Nombre.Trim();
+        if (await _context.MotivosGasto.AnyAsync(m => m.Nombre == nombre))
+        {
+            throw new ConflictException("Ya existe una categoría con ese nombre");
+        }
+
+        var categoria = new MotivoGasto();
+        AplicarCategoria(categoria, request);
+
+        _context.MotivosGasto.Add(categoria);
+        await _context.SaveChangesAsync();
+
+        var response = MapCategoria(categoria, 0);
+        await _notificador.AvisarAsync("gastosoperativos", "categoriaCreada", response);
+        return response;
+    }
+
+    public async Task<CategoriaMovimientoResponse> ActualizarCategoriaAsync(int id, CategoriaMovimientoRequest request)
+    {
+        await _categoriaValidator.ValidateAndThrowAsync(request);
+
+        var categoria = await _context.MotivosGasto.FirstOrDefaultAsync(m => m.Id == id)
+            ?? throw new NotFoundException($"No existe la categoría {id}");
+
+        var nombre = request.Nombre.Trim();
+        if (await _context.MotivosGasto.AnyAsync(m => m.Nombre == nombre && m.Id != id))
+        {
+            throw new ConflictException("Ya existe una categoría con ese nombre");
+        }
+
+        var usos = await ContarUsosCategoriaAsync(id);
+
+        // Lo ya registrado quedaría con una categoría de ingreso en un egreso
+        // (o al revés). El origen sí se puede corregir: solo reclasifica.
+        if (usos > 0 && categoria.Tipo != request.Tipo)
+        {
+            throw new BadRequestException(
+                "Esta categoría ya se usa: no se le puede cambiar el tipo. Crea otra.");
+        }
+
+        AplicarCategoria(categoria, request);
+        await _context.SaveChangesAsync();
+
+        var response = MapCategoria(categoria, usos);
+        await _notificador.AvisarAsync("gastosoperativos", "categoriaActualizada", response);
+        return response;
+    }
+
+    public async Task EliminarCategoriaAsync(int id)
+    {
+        var categoria = await _context.MotivosGasto.FirstOrDefaultAsync(m => m.Id == id)
+            ?? throw new NotFoundException($"No existe la categoría {id}");
+
+        var usos = await ContarUsosCategoriaAsync(id);
+        if (usos > 0)
+        {
+            throw new BadRequestException(
+                $"La categoría se usa en {usos} registro(s). Desactívala en vez de eliminarla.");
+        }
+
+        _context.MotivosGasto.Remove(categoria);
+        await _context.SaveChangesAsync();
+        await _notificador.AvisarAsync("gastosoperativos", "categoriaEliminada", new { id });
     }
 
     // ---------------------------------------------------------- Plantillas
@@ -49,7 +150,8 @@ public class GastoOperativoService : IGastoOperativoService
     public async Task<GastoRecurrenteResponse> CrearRecurrenteAsync(GastoRecurrenteRequest request)
     {
         await _recurrenteValidator.ValidateAndThrowAsync(request);
-        await ValidarReferenciasAsync(request.MotivoGastoId, request.CuentaFinancieraSugeridaId);
+        await ValidarCategoriaAsync(request.MotivoGastoId, TipoMovimientoOperativo.Egreso);
+        await ValidarCuentaSugeridaAsync(request.CuentaFinancieraSugeridaId);
 
         var recurrente = new GastoRecurrente();
         AplicarRecurrente(recurrente, request);
@@ -65,7 +167,8 @@ public class GastoOperativoService : IGastoOperativoService
     public async Task<GastoRecurrenteResponse> ActualizarRecurrenteAsync(int id, GastoRecurrenteRequest request)
     {
         await _recurrenteValidator.ValidateAndThrowAsync(request);
-        await ValidarReferenciasAsync(request.MotivoGastoId, request.CuentaFinancieraSugeridaId);
+        await ValidarCategoriaAsync(request.MotivoGastoId, TipoMovimientoOperativo.Egreso);
+        await ValidarCuentaSugeridaAsync(request.CuentaFinancieraSugeridaId);
 
         var recurrente = await _context.GastosRecurrentes.FirstOrDefaultAsync(g => g.Id == id)
             ?? throw new NotFoundException($"No existe el gasto recurrente {id}");
@@ -153,7 +256,7 @@ public class GastoOperativoService : IGastoOperativoService
     public async Task<MovimientoOperativoResponse> CrearAsync(MovimientoOperativoRequest request, int? usuarioId)
     {
         await _movimientoValidator.ValidateAndThrowAsync(request);
-        await ValidarReferenciasAsync(request.MotivoGastoId, null);
+        await ValidarCategoriaAsync(request.MotivoGastoId, request.Tipo);
 
         var cuenta = await _cuentas.GetOrThrowAsync(request.CuentaFinancieraId);
         if (!cuenta.Activo) throw new BadRequestException("Esa cuenta está desactivada");
@@ -239,18 +342,56 @@ public class GastoOperativoService : IGastoOperativoService
             .FirstOrDefaultAsync(m => m.Id == id)
             ?? throw new NotFoundException($"No existe el movimiento {id}"));
 
-    private async Task ValidarReferenciasAsync(int motivoGastoId, int? cuentaFinancieraSugeridaId)
+    /// <summary>Que exista, esté activa y sea del mismo tipo que el movimiento: un egreso no va con una categoría de ingreso.</summary>
+    private async Task ValidarCategoriaAsync(int motivoGastoId, string tipo)
     {
-        if (!await _context.MotivosGasto.AnyAsync(m => m.Id == motivoGastoId))
+        var categoria = await _context.MotivosGasto.AsNoTracking().FirstOrDefaultAsync(m => m.Id == motivoGastoId)
+            ?? throw new BadRequestException("Esa categoría no existe");
+
+        if (!categoria.Activo)
         {
-            throw new BadRequestException("Esa categoría de gasto no existe");
+            throw new BadRequestException($"La categoría {categoria.Nombre} está desactivada");
         }
 
+        if (categoria.Tipo != tipo)
+        {
+            throw new BadRequestException(tipo == TipoMovimientoOperativo.Ingreso
+                ? $"{categoria.Nombre} es una categoría de egreso: elige una de ingreso"
+                : $"{categoria.Nombre} es una categoría de ingreso: elige una de egreso");
+        }
+    }
+
+    private async Task ValidarCuentaSugeridaAsync(int? cuentaFinancieraSugeridaId)
+    {
         if (cuentaFinancieraSugeridaId is int id)
         {
             await _cuentas.GetOrThrowAsync(id);
         }
     }
+
+    private async Task<int> ContarUsosCategoriaAsync(int id) =>
+        await _context.MovimientosOperativos.CountAsync(m => m.MotivoGastoId == id)
+        + await _context.GastosRecurrentes.CountAsync(g => g.MotivoGastoId == id);
+
+    private static void AplicarCategoria(MotivoGasto categoria, CategoriaMovimientoRequest request)
+    {
+        categoria.Nombre = request.Nombre.Trim();
+        categoria.Descripcion = string.IsNullOrWhiteSpace(request.Descripcion) ? null : request.Descripcion.Trim();
+        categoria.Tipo = request.Tipo;
+        categoria.Origen = request.Origen;
+        categoria.Activo = request.Activo;
+    }
+
+    private static CategoriaMovimientoResponse MapCategoria(MotivoGasto m, int usos) => new()
+    {
+        Id = m.Id,
+        Nombre = m.Nombre,
+        Descripcion = m.Descripcion,
+        Tipo = m.Tipo,
+        Origen = m.Origen,
+        Activo = m.Activo,
+        Usos = usos,
+    };
 
     private static void AplicarRecurrente(GastoRecurrente recurrente, GastoRecurrenteRequest request)
     {
@@ -283,6 +424,7 @@ public class GastoOperativoService : IGastoOperativoService
         Tipo = m.Tipo,
         MotivoGastoId = m.MotivoGastoId,
         MotivoGasto = m.MotivoGasto?.Nombre ?? string.Empty,
+        Origen = m.MotivoGasto?.Origen ?? string.Empty,
         Monto = m.Monto,
         Fecha = m.Fecha,
         Descripcion = m.Descripcion,

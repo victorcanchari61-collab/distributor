@@ -98,10 +98,8 @@ CALL truncate_si_existe('Prestamos');
 CALL truncate_si_existe('DespachoDetalles');
 CALL truncate_si_existe('Despachos');
 
--- --- Caja del día ---
-CALL truncate_si_existe('ArqueoGastos');
-CALL truncate_si_existe('ArqueoPagosDigitales');
-CALL truncate_si_existe('ArqueoCaja');
+-- --- Cierres de caja ---
+CALL truncate_si_existe('CierresCaja');
 
 -- --- Catálogo: productos, presentaciones y listas de precios ---
 CALL truncate_si_existe('Precios');

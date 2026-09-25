@@ -119,8 +119,8 @@ builder.Services.AddScoped<IDevolucionService, DevolucionService>();
 // esta linea — queda aqui a la vista y no escondida en el servicio.
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 builder.Services.AddScoped<IFinanzasService, FinanzasService>();
-builder.Services.AddScoped<IArqueoService, ArqueoService>();
 builder.Services.AddScoped<ICuentaFinancieraService, CuentaFinancieraService>();
+builder.Services.AddScoped<ICierreCajaService, CierreCajaService>();
 builder.Services.AddScoped<IBancoService, BancoService>();
 builder.Services.AddScoped<IConciliacionBancariaService, ConciliacionBancariaService>();
 builder.Services.AddScoped<IGastoOperativoService, GastoOperativoService>();

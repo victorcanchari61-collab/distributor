@@ -197,7 +197,7 @@ export function CajasPage() {
         open={abierto}
         size="sm"
         title="Asignar una caja"
-        description="Se crea con saldo cero: se llena entregándole un fondo de ruta desde Arqueo, o con lo que cobre en efectivo."
+        description="Se crea con saldo cero: se llena con lo que cobre en efectivo y con los ingresos que registre."
         onClose={() => setAbierto(false)}
         footer={
           <>

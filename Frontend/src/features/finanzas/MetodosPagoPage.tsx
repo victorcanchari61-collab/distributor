@@ -38,7 +38,7 @@ const VACIO = {
 /**
  * Métodos de pago: efectivo, billetera digital, transferencia... Catálogo
  * compartido por compras, cuentas por cobrar, cuentas por pagar, mis cobros y
- * el arqueo diario — se declara una vez aquí y todos lo reusan.
+ * Mi Caja — se declara una vez aquí y todos lo reusan.
  *
  * Es solo un CANAL, no una cuenta con saldo: la plata de verdad vive en la
  * Cuenta Financiera a la que apunta (ver Bancos). Efectivo es la excepción —
@@ -206,7 +206,7 @@ export function MetodosPagoPage() {
     <ListPage
       icon={<Coins size={20} />}
       title="Métodos de pago"
-      description="Efectivo, billetera digital, transferencia... el mismo catálogo lo usan compras, cuentas por cobrar y por pagar, mis cobros y el arqueo diario."
+      description="Efectivo, billetera digital, transferencia... el mismo catálogo lo usan ventas, compras y cuentas por cobrar y por pagar."
       actions={
         puede('finanzas.metodospago', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

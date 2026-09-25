@@ -3,7 +3,7 @@ import { api } from '../../lib/apiClient'
 // --- Métodos de pago ---
 //
 // Catálogo compartido: compras, cuentas por cobrar, cuentas por pagar, mis
-// cobros y el arqueo diario lo reusan en vez de declarar cada uno el suyo.
+// cobros y Mi Caja lo reusan en vez de declarar cada uno el suyo.
 
 /** Efectivo no pide cuenta; billetera y transferencia sí identifican una. */
 export type TipoMetodoPago = 'EFECTIVO' | 'BILLETERA_DIGITAL' | 'TRANSFERENCIA'
@@ -51,4 +51,3 @@ export const metodoPagoApi = {
   remove: (id: number) => api.del<void>(`/metodopago/${id}`),
 }
 
-// El cuadre de caja del reparto vive en arqueoApi.ts.

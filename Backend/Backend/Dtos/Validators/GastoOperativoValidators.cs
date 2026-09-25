@@ -4,6 +4,21 @@ using FluentValidation;
 
 namespace Backend.Dtos.Validators;
 
+public class CategoriaMovimientoRequestValidator : AbstractValidator<CategoriaMovimientoRequest>
+{
+    public CategoriaMovimientoRequestValidator()
+    {
+        RuleFor(x => x.Nombre).NotEmpty().WithMessage("Ponle un nombre a la categoría").MaximumLength(60);
+        RuleFor(x => x.Descripcion).MaximumLength(250);
+        RuleFor(x => x.Tipo)
+            .Must(t => TipoMovimientoOperativo.Todos.Contains(t))
+            .WithMessage("El tipo debe ser INGRESO o EGRESO");
+        RuleFor(x => x.Origen)
+            .Must(o => OrigenMovimiento.Todos.Contains(o))
+            .WithMessage("El origen debe ser OPERATIVO o NO_OPERATIVO");
+    }
+}
+
 public class GastoRecurrenteRequestValidator : AbstractValidator<GastoRecurrenteRequest>
 {
     public GastoRecurrenteRequestValidator()
