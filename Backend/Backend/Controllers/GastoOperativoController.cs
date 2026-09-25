@@ -93,12 +93,14 @@ public class GastoOperativoController : ControllerBase
     public async Task<IActionResult> Listar([FromQuery] DateTime desde, [FromQuery] DateTime hasta) =>
         Ok(await _gastos.ListarAsync(desde, hasta));
 
+    // Se registra desde Movimientos, o desde Ingresos y egresos al pagar una
+    // plantilla pendiente: sirve cualquiera de los dos permisos.
     [HttpPost]
-    [Permiso("finanzas.operativos", Accion.Crear)]
+    [PermisoAlguno("finanzas.movimientos:crear", "finanzas.operativos:crear")]
     public async Task<IActionResult> Crear([FromBody] MovimientoOperativoRequest request) =>
         Ok(await _gastos.CrearAsync(request, UsuarioId));
 
     [HttpPatch("{id:int}/anular")]
-    [Permiso("finanzas.operativos", Accion.Anular)]
+    [PermisoAlguno("finanzas.movimientos:anular", "finanzas.operativos:anular")]
     public async Task<IActionResult> Anular(int id) => Ok(await _gastos.AnularAsync(id, UsuarioId));
 }

@@ -21,7 +21,15 @@ public static class OrigenMovimiento
     public const string Operativo = "OPERATIVO";
     public const string NoOperativo = "NO_OPERATIVO";
 
+    /// <summary>Las categorías solo pueden ser una de estas dos.</summary>
     public static readonly string[] Todos = [Operativo, NoOperativo];
+
+    /// <summary>
+    /// Ni una cosa ni la otra: plata que solo cambia de cuenta propia
+    /// (transferencias, cierres de caja) o el saldo con que se abrió una
+    /// cuenta. No es de ninguna categoría: solo aparece en el kardex del dinero.
+    /// </summary>
+    public const string Interno = "INTERNO";
 }
 
 /// <summary>

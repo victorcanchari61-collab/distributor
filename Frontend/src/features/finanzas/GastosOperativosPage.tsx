@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   AlertTriangle,
-  Ban,
   CalendarClock,
-  Coins,
   Lock,
   Pencil,
   Plus,
-  Receipt,
   Repeat,
   Tags,
   Trash2,
@@ -29,7 +26,7 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { desplazarDias, fechaCorta, hoyLocal } from '../../lib/fechas'
+import { fechaCorta, hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { cuentaFinancieraApi } from './cuentaFinancieraApi'
@@ -39,20 +36,19 @@ import type {
   CategoriaMovimientoResponse,
   GastoPendienteResponse,
   GastoRecurrenteResponse,
-  MovimientoOperativoResponse,
   OrigenMovimiento,
   TipoMovimientoOperativo,
 } from './gastoOperativoApi'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
-type Pestana = 'pendientes' | 'recurrentes' | 'movimientos' | 'categorias'
+type Pestana = 'pendientes' | 'recurrentes' | 'categorias'
 
 /**
- * Lo que entra o sale del negocio sin ser una venta ni una compra: planilla,
- * alquiler, servicios, aportes de capital, retiros. Cada movimiento lleva una
- * categoría que dice si es operativo (del giro del negocio) o no. Lo mensual
- * (luz, agua, alquiler) se define una vez como plantilla recurrente.
+ * Lo que se configura de los ingresos y egresos: las categorías (que dicen si
+ * algo es operativo o no) y las plantillas de lo mensual (luz, agua, alquiler),
+ * con lo que falta pagar este mes. Los movimientos mismos están en Movimientos,
+ * el kardex del dinero.
  */
 export function GastosOperativosPage() {
   const { puede } = usePermisos()
@@ -61,35 +57,27 @@ export function GastosOperativosPage() {
 
   const [pendientes, setPendientes] = useState<GastoPendienteResponse[]>([])
   const [recurrentes, setRecurrentes] = useState<GastoRecurrenteResponse[]>([])
-  const [movimientos, setMovimientos] = useState<MovimientoOperativoResponse[]>([])
   const [motivos, setMotivos] = useState<CategoriaMovimientoResponse[]>([])
   const [cuentas, setCuentas] = useState<CuentaFinancieraResponse[]>([])
 
-  const [desde, setDesde] = useState(desplazarDias(-30))
-  const [hasta, setHasta] = useState(hoyLocal())
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
   const [pagando, setPagando] = useState<GastoPendienteResponse | null>(null)
-  const [nuevoAbierto, setNuevoAbierto] = useState(false)
   const [recurrenteAbierto, setRecurrenteAbierto] = useState(false)
   const [editandoRecurrente, setEditandoRecurrente] = useState<GastoRecurrenteResponse | null>(null)
-
-  const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [p, r, m, mot, cta] = await Promise.all([
+      const [p, r, mot, cta] = await Promise.all([
         gastoOperativoApi.getPendientes(),
         gastoOperativoApi.getRecurrentes(),
-        gastoOperativoApi.listar(desde, hasta),
         gastoOperativoApi.getCategorias(),
         cuentaFinancieraApi.getAll(),
       ])
       setPendientes(p)
       setRecurrentes(r)
-      setMovimientos(m)
       setMotivos(mot)
       setCuentas(cta.filter((c) => c.activo))
       setError('')
@@ -98,30 +86,13 @@ export function GastosOperativosPage() {
     } finally {
       setCargando(false)
     }
-  }, [desde, hasta])
+  }, [])
 
   useEffect(() => {
     void cargar()
   }, [cargar])
 
   useRealtime('gastosoperativos', cargar)
-
-  const anular = (m: MovimientoOperativoResponse) =>
-    confirmar({
-      titulo: `Anular movimiento de ${m.motivoGasto}`,
-      mensaje: `Revierte ${soles(m.monto)} en ${m.cuentaFinanciera}. No se puede deshacer.`,
-      confirmar: 'Anular',
-      tono: 'danger',
-      accion: async () => {
-        try {
-          await gastoOperativoApi.anular(m.id)
-          await cargar()
-          toast.exito('Movimiento anulado')
-        } catch (e) {
-          toast.error(e instanceof ApiError ? e.message : 'No pudimos anular el movimiento.')
-        }
-      },
-    })
 
   const cabecera = (
     <Tabs
@@ -131,7 +102,6 @@ export function GastosOperativosPage() {
       items={[
         { id: 'pendientes', label: 'Pendientes', icon: <AlertTriangle size={15} />, badge: pendientes.length },
         { id: 'recurrentes', label: 'Recurrentes', icon: <Repeat size={15} />, badge: recurrentes.length },
-        { id: 'movimientos', label: 'Movimientos', icon: <Receipt size={15} />, badge: movimientos.length },
         { id: 'categorias', label: 'Categorías', icon: <Tags size={15} />, badge: motivos.length },
       ]}
     />
@@ -171,170 +141,66 @@ export function GastosOperativosPage() {
     )
   }
 
-  if (pestana === 'pendientes') {
-    const vencidos = pendientes.filter((p) => p.vencido)
-
-    return (
-      <>
-        {cabecera}
-        <div className="space-y-5">
-          {error && <Alert>{error}</Alert>}
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <StatCard
-              label="Vencidos"
-              value={String(vencidos.length)}
-              icon={<AlertTriangle size={18} />}
-              tono={vencidos.length > 0 ? 'danger' : 'success'}
-            />
-            <StatCard label="Por vencer este mes" value={String(pendientes.length - vencidos.length)} icon={<CalendarClock size={18} />} tono="warning" />
-          </div>
-
-          {cargando ? (
-            <p className="rounded-panel border border-line bg-white px-3 py-8 text-center text-sm text-ink-soft">Cargando...</p>
-          ) : pendientes.length === 0 ? (
-            <p className="rounded-panel border border-line bg-white px-3 py-8 text-center text-sm text-ink-soft">
-              Nada pendiente este mes: todos los gastos recurrentes ya están pagados.
-            </p>
-          ) : (
-            <div className="overflow-hidden rounded-panel border border-line bg-white">
-              {pendientes.map((p) => (
-                <div key={p.gastoRecurrenteId} className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-b-0">
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                      {p.nombre}
-                      <Badge tone={p.vencido ? 'danger' : 'warning'}>
-                        {p.vencido ? 'Vencido' : 'Por vencer'} · {fechaCorta(p.proximoVencimiento)}
-                      </Badge>
-                    </p>
-                    <p className="text-xs text-ink-soft">{p.motivoGasto} · estimado {soles(p.montoEstimado)}</p>
-                  </div>
-                  {puede('finanzas.operativos', 'crear') && (
-                    <Button size="sm" onClick={() => setPagando(p)}>
-                      Pagar
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {pagando && (
-          <PagarPendienteModal
-            pendiente={pagando}
-            cuentas={cuentas}
-            onClose={() => setPagando(null)}
-            onGuardado={async () => {
-              setPagando(null)
-              await cargar()
-              toast.exito('Gasto registrado')
-            }}
-          />
-        )}
-        {dialogo}
-      </>
-    )
-  }
-
-  // --- Movimientos ---
-
-  const columns: DataTableColumn<MovimientoOperativoResponse>[] = [
-    { key: 'fecha', label: 'Fecha', filterType: 'date', render: (row) => fechaCorta(row.fecha) },
-    {
-      key: 'tipo',
-      label: 'Tipo',
-      filterType: 'select',
-      filterOptions: [
-        { value: 'INGRESO', label: 'Ingreso' },
-        { value: 'EGRESO', label: 'Egreso' },
-      ],
-      render: (row) => <Badge tone={row.tipo === 'INGRESO' ? 'success' : 'danger'}>{row.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso'}</Badge>,
-    },
-    { key: 'motivoGasto', label: 'Categoría', filterable: false },
-    {
-      key: 'origen',
-      label: 'Origen',
-      filterType: 'select',
-      filterOptions: ORIGENES,
-      value: (row) => row.origen,
-      render: (row) => <Badge tone={row.origen === 'OPERATIVO' ? 'sys' : 'warning'}>{origenLabel(row.origen)}</Badge>,
-    },
-    { key: 'cuentaFinanciera', label: 'Cuenta', filterable: false },
-    {
-      key: 'monto',
-      label: 'Monto',
-      align: 'right',
-      filterable: false,
-      render: (row) => (row.tipo === 'INGRESO' ? `+${soles(row.monto)}` : `-${soles(row.monto)}`),
-    },
-    { key: 'descripcion', label: 'Descripción', filterable: false, render: (row) => row.descripcion ?? '—' },
-    {
-      key: 'anulado',
-      label: 'Estado',
-      filterType: 'select',
-      filterOptions: [
-        { value: 'Activo', label: 'Activo' },
-        { value: 'Anulado', label: 'Anulado' },
-      ],
-      value: (row) => (row.anulado ? 'Anulado' : 'Activo'),
-      render: (row) => <Badge tone={row.anulado ? 'neutral' : 'success'}>{row.anulado ? 'Anulado' : 'Activo'}</Badge>,
-    },
-  ]
+  const vencidos = pendientes.filter((p) => p.vencido)
 
   return (
     <>
       {cabecera}
-      <ListPage
-        icon={<Coins size={20} />}
-        title="Ingresos y egresos"
-        description="Lo que entra o sale a mano, fuera de ventas y compras. La categoría dice si es operativo o no operativo."
-        actions={
-          puede('finanzas.operativos', 'crear') ? (
-            <Button size="sm" onClick={() => setNuevoAbierto(true)} iconRight={<Plus size={15} />}>
-              Nuevo movimiento
-            </Button>
-          ) : undefined
-        }
-        alert={error ? <Alert>{error}</Alert> : undefined}
-        columns={columns}
-        rows={movimientos}
-        onConsulta={(q) => {
-          const fecha = q.filtros.find((f) => f.columna === 'fecha')
-          setDesde(fecha?.valor || desplazarDias(-30))
-          setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
-        }}
-        cardIcon={Coins}
-        searchPlaceholder="Buscar por categoría..."
-        empty={cargando ? 'Cargando movimientos...' : 'No hay movimientos en este período.'}
-        rowActions={(row) =>
-          !row.anulado && puede('finanzas.operativos', 'anular') ? (
-            <RowAction
-              label="Anular"
-              tone="danger"
-              disabled={row.esSistema}
-              disabledReason={`Lo registró el sistema (${row.motivoGasto}): se anula desde su módulo`}
-              onClick={() => anular(row)}
-            >
-              <Ban size={15} />
-            </RowAction>
-          ) : null
-        }
-      >
-        {nuevoAbierto && (
-          <NuevoMovimientoModal
-            cuentas={cuentas}
-            motivos={motivos}
-            onClose={() => setNuevoAbierto(false)}
-            onGuardado={async () => {
-              setNuevoAbierto(false)
-              await cargar()
-              toast.exito('Movimiento registrado')
-            }}
+      <div className="space-y-5">
+        {error && <Alert>{error}</Alert>}
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <StatCard
+            label="Vencidos"
+            value={String(vencidos.length)}
+            icon={<AlertTriangle size={18} />}
+            tono={vencidos.length > 0 ? 'danger' : 'success'}
           />
+          <StatCard label="Por vencer este mes" value={String(pendientes.length - vencidos.length)} icon={<CalendarClock size={18} />} tono="warning" />
+        </div>
+
+        {cargando ? (
+          <p className="rounded-panel border border-line bg-white px-3 py-8 text-center text-sm text-ink-soft">Cargando...</p>
+        ) : pendientes.length === 0 ? (
+          <p className="rounded-panel border border-line bg-white px-3 py-8 text-center text-sm text-ink-soft">
+            Nada pendiente este mes: todos los gastos recurrentes ya están pagados.
+          </p>
+        ) : (
+          <div className="overflow-hidden rounded-panel border border-line bg-white">
+            {pendientes.map((p) => (
+              <div key={p.gastoRecurrenteId} className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-b-0">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                    {p.nombre}
+                    <Badge tone={p.vencido ? 'danger' : 'warning'}>
+                      {p.vencido ? 'Vencido' : 'Por vencer'} · {fechaCorta(p.proximoVencimiento)}
+                    </Badge>
+                  </p>
+                  <p className="text-xs text-ink-soft">{p.motivoGasto} · estimado {soles(p.montoEstimado)}</p>
+                </div>
+                {puede('finanzas.operativos', 'crear') && (
+                  <Button size="sm" onClick={() => setPagando(p)}>
+                    Pagar
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
         )}
-        {dialogo}
-      </ListPage>
+      </div>
+
+      {pagando && (
+        <PagarPendienteModal
+          pendiente={pagando}
+          cuentas={cuentas}
+          onClose={() => setPagando(null)}
+          onGuardado={async () => {
+            setPagando(null)
+            await cargar()
+            toast.exito('Gasto registrado')
+          }}
+        />
+      )}
     </>
   )
 }
@@ -410,108 +276,6 @@ function PagarPendienteModal({
         />
         <Input label="Monto" type="number" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} />
         <Input label="Fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-      </div>
-    </Modal>
-  )
-}
-
-/** Un movimiento suelto: aporte de capital, préstamo recibido, o un gasto sin plantilla. */
-function NuevoMovimientoModal({
-  cuentas,
-  motivos,
-  onClose,
-  onGuardado,
-}: {
-  cuentas: CuentaFinancieraResponse[]
-  motivos: CategoriaMovimientoResponse[]
-  onClose: () => void
-  onGuardado: () => void | Promise<void>
-}) {
-  const [tipo, setTipo] = useState<TipoMovimientoOperativo>('EGRESO')
-  const [cuentaFinancieraId, setCuentaFinancieraId] = useState(0)
-  const [motivoGastoId, setMotivoGastoId] = useState(0)
-  const [monto, setMonto] = useState('')
-  const [fecha, setFecha] = useState(hoyLocal())
-  const [descripcion, setDescripcion] = useState('')
-  const [guardando, setGuardando] = useState(false)
-  const [error, setError] = useState('')
-
-  const guardar = async () => {
-    const numero = Number(monto.replace(',', '.'))
-    if (!cuentaFinancieraId) return setError('Elige la cuenta.')
-    if (!motivoGastoId) return setError('Elige la categoría.')
-    if (!Number.isFinite(numero) || numero <= 0) return setError('Ingresa un monto mayor a cero.')
-
-    setGuardando(true)
-    setError('')
-    try {
-      await gastoOperativoApi.crear({
-        cuentaFinancieraId,
-        tipo,
-        motivoGastoId,
-        monto: numero,
-        fecha,
-        descripcion: descripcion.trim() || null,
-      })
-      await onGuardado()
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos registrar el movimiento.')
-    } finally {
-      setGuardando(false)
-    }
-  }
-
-  return (
-    <Modal
-      open
-      size="sm"
-      title="Nuevo movimiento operativo"
-      description="Un ingreso (aporte de capital, venta de un activo) o un egreso sin plantilla."
-      onClose={onClose}
-      footer={
-        <>
-          <Button variant="secondary" size="sm" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-            Registrar
-          </Button>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-4">
-        {error && <Alert>{error}</Alert>}
-        <Desplegable
-          label="Tipo"
-          value={tipo}
-          onChange={(v) => {
-            setTipo(v as TipoMovimientoOperativo)
-            setMotivoGastoId(0)
-          }}
-          options={[
-            { value: 'INGRESO', label: 'Ingreso' },
-            { value: 'EGRESO', label: 'Egreso' },
-          ]}
-        />
-        <Desplegable
-          label="Cuenta"
-          value={cuentaFinancieraId}
-          onChange={(v) => setCuentaFinancieraId(Number(v))}
-          placeholder="De dónde sale o a dónde entra"
-          options={cuentas.map((c) => ({ value: c.id, label: c.nombre }))}
-        />
-        <Desplegable
-          label="Categoría"
-          value={motivoGastoId}
-          onChange={(v) => setMotivoGastoId(Number(v))}
-          placeholder="Elige una categoría"
-          options={motivos
-            .filter((m) => m.activo && !m.esSistema && m.tipo === tipo)
-            .map((m) => ({ value: m.id, label: m.nombre, detalle: origenLabel(m.origen) }))}
-        />
-        <Input label="Monto" type="number" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} />
-        <Input label="Fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-        <Input label="Descripción" optional value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
       </div>
     </Modal>
   )

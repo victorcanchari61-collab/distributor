@@ -29,6 +29,9 @@ export type {
   ConciliacionBancariaResponse,
 } from './cuentaFinancieraApi'
 export { GastosOperativosPage } from './GastosOperativosPage'
+export { MovimientosDineroPage } from './MovimientosDineroPage'
+export { movimientoDineroApi } from './movimientoDineroApi'
+export type { MovimientoDineroResponse, OrigenDinero } from './movimientoDineroApi'
 export { gastoOperativoApi } from './gastoOperativoApi'
 export type {
   CategoriaMovimientoRequest,

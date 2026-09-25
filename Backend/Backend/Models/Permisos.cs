@@ -144,10 +144,12 @@ public static class CatalogoPermisos
             // movimientos no se puede borrar sin dejar huérfano su historial)
             // más la conciliación contra el extracto.
             ["finanzas.bancos"] = [Accion.Ver, Accion.Crear, Accion.Editar],
-            // Ingresos y egresos registrados a mano, operativos o no (planilla,
-            // alquiler, aportes, retiros), su catálogo de categorías y las
-            // plantillas recurrentes.
+            // Ingresos y egresos: el catálogo de categorías y las plantillas
+            // recurrentes (con el pago de las pendientes).
             ["finanzas.operativos"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Eliminar],
+            // El kardex del dinero: todo lo que entra y sale de cajas y bancos.
+            // Crear y anular son los ingresos y egresos registrados a mano.
+            ["finanzas.movimientos"] = [Accion.Ver, Accion.Crear, Accion.Anular, Accion.Exportar],
             // Préstamos recibidos: registrarlos, pagarlos (crear) y anular un
             // préstamo o un pago mal registrado.
             ["finanzas.financiamiento"] = [Accion.Ver, Accion.Crear, Accion.Anular],

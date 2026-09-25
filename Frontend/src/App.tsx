@@ -28,6 +28,7 @@ import {
   MetodosPagoPage,
   MiCajaPage,
   MisGananciasPage,
+  MovimientosDineroPage,
   PrestamosRecibidosPage,
 } from './features/finanzas'
 import {
@@ -101,6 +102,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'finanzas.cobrar': CuentasPorCobrarPage,
   'finanzas.pagar': CuentasPorPagarPage,
   'finanzas.ganancias': MisGananciasPage,
+  'finanzas.movimientos': MovimientosDineroPage,
   'finanzas.operativos': GastosOperativosPage,
   'finanzas.financiamiento': PrestamosRecibidosPage,
   'config.usuarios': UsuariosPage,
