@@ -61,6 +61,9 @@ public interface IVentasRepository
     /// </summary>
     Task<(List<NotaVentaFilaResponse> Items, int Total)> ListarCuentasPorCobrarAsync(ConsultaTablaRequest consulta);
 
+    /// <summary>Todas las notas que todavía deben algo, completas (con pagos): lo que usa el APK.</summary>
+    Task<List<NotaVenta>> GetCuentasPorCobrarCompletasAsync();
+
     /// <summary>Totales de todas las cuentas por cobrar, no de una página.</summary>
     Task<ResumenCuentasResponse> ResumenCuentasPorCobrarAsync();
 

@@ -585,11 +585,21 @@ public class InventarioService : IInventarioService
     public async Task<IEnumerable<KardexResponse>> GetKardexAsync(
         int? productoId, int? almacenId, DateTime? desde, DateTime? hasta)
     {
-        var movimientos = await _repository.GetKardexAsync(productoId, almacenId, desde, hasta);
+        /*
+         * Lo pide el APK sin fechas, y antes eso devolvía la tabla de
+         * movimientos entera. Ahora: el último mes por defecto, nunca más de
+         * un año, y cada producto arranca con el saldo que traía antes del
+         * rango (no desde cero), así el saldo de cada fila sigue siendo el real.
+         */
+        var (inicio, fin) = Zona.RangoUtc(desde, hasta);
+        var movimientos = await _repository.GetKardexAsync(productoId, almacenId, inicio, fin.AddTicks(-1));
 
         // El saldo se acumula por producto y almacen: mezclar dos productos en
         // una sola columna daria un numero sin sentido.
-        var saldos = new Dictionary<(int, int), SaldoKardex>();
+        var saldos = movimientos.Count == 0
+            ? new Dictionary<(int, int), SaldoKardex>()
+            : new Dictionary<(int, int), SaldoKardex>(
+                await _repository.GetSaldosAntesAsync(inicio, movimientos.Select(m => m.ProductoId).Distinct(), almacenId));
         var respuesta = new List<KardexResponse>();
 
         foreach (var m in movimientos)

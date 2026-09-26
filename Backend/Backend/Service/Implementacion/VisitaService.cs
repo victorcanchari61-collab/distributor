@@ -72,9 +72,7 @@ public class VisitaService : IVisitaService
                     PedidoNumero = pedido?.Numero,
                     // Una linea quitada al editar el pedido queda anulada, no
                     // se borra: sumarla diria que el cliente pidio mas.
-                    Total = pedido?.Detalle
-                        .Where(d => !d.Anulado)
-                        .Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0m,
+                    Total = pedido?.Total ?? 0m,
                 });
             }
         }
@@ -152,7 +150,10 @@ public class VisitaService : IVisitaService
     }
 
     /// <summary>El pedido de cada cliente en cada día del rango.</summary>
-    private async Task<Dictionary<(int Cliente, DateTime Fecha), Pedido>> PedidosAsync(
+    /// <summary>Lo que la lista necesita de un pedido: cuál es y cuánto suma.</summary>
+    private sealed record PedidoVisita(int Id, int ClienteId, DateTime Fecha, string Numero, decimal Total);
+
+    private async Task<Dictionary<(int Cliente, DateTime Fecha), PedidoVisita>> PedidosAsync(
         List<int> clienteIds, List<DateTime> dias)
     {
         if (clienteIds.Count == 0 || dias.Count == 0) return [];
@@ -165,12 +166,16 @@ public class VisitaService : IVisitaService
 
         // Un pedido anulado no cuenta como visita atendida: si se anulo, ese
         // cliente sigue sin pedido y hay que volver.
+        // El total sumado en la base: antes se traían las líneas de cada pedido
+        // solo para esto. Una línea quitada al editar queda anulada y no suma.
         var pedidos = await _context.Pedidos
             .AsNoTracking()
-            .Include(p => p.Detalle)
             .Where(p => clienteIds.Contains(p.ClienteId)
                         && p.Estado != EstadoPedido.Anulado
                         && p.Fecha >= desde && p.Fecha < hasta)
+            .Select(p => new PedidoVisita(
+                p.Id, p.ClienteId, p.Fecha, p.Numero,
+                p.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario)))
             .ToListAsync();
 
         // Si a un cliente se le tomo mas de un pedido ese dia, vale el ultimo:

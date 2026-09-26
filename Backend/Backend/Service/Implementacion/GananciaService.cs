@@ -69,78 +69,113 @@ public class GananciaService : IGananciaService
         var inicioUtc = Zona.AUtc(primero);
         var finUtc = Zona.AUtc(ultimo.AddDays(1));
 
-        // Lo que ve cada quien: el alcance del submódulo. Sin usuario en el
-        // token (llamada interna) no hay a quién acotar.
-        var (todas, soloPropio) = await LineasAsync(inicioUtc, finUtc);
+        var (notas, soloPropio) = await NotasDelRangoAsync(inicioUtc, finUtc);
+        var todas = Lineas(notas);
 
         // Lo que hay para elegir se arma ANTES de filtrar: si al elegir un
         // vendedor las demás opciones se encogieran, no habría cómo cambiarlo.
+        // Cada lista es un DISTINCT en la base: no se traen las líneas.
         var opciones = new GananciaOpcionesResponse
         {
-            Vendedores = Distintos(todas.Select(l => l.Vendedor)),
-            Categorias = Distintos(todas.Select(l => l.Categoria)),
-            Marcas = Distintos(todas.Select(l => l.Marca)),
-            Productos = Distintos(todas.Select(l => l.Producto)),
-            Ventas = Distintos(todas.Select(l => l.Venta)),
+            Vendedores = Distintos(await todas.Select(l => l.Vendedor).Distinct().ToListAsync()),
+            Categorias = Distintos(await todas.Select(l => l.Categoria).Distinct().ToListAsync()),
+            Marcas = Distintos(await todas.Select(l => l.Marca).Distinct().ToListAsync()),
+            Productos = Distintos(await todas.Select(l => l.Producto).Distinct().ToListAsync()),
+            Ventas = Distintos(await todas.Select(l => l.Venta).Distinct().ToListAsync()),
         };
 
         var lineas = Filtrar(todas, consulta);
 
-        var productos = lineas
+        /*
+         * La suma por producto la hace la base: viaja una fila por producto, no
+         * una por línea vendida. El valor sin IGV se arma aquí con el importe
+         * afecto y el que no lo es: dividir la suma es lo mismo que sumar cada
+         * línea dividida, como se hacía antes.
+         */
+        var grupos = await lineas
             .GroupBy(l => l.ProductoId)
-            .Select(g =>
+            .Select(g => new
             {
-                var primera = g.First();
-                var importe = Math.Round(g.Sum(l => l.Importe), 2);
-                var valorVenta = Math.Round(g.Sum(l => l.ValorVenta), 2);
-                var costo = Math.Round(g.Sum(l => l.Costo), 2);
-                return new GananciaProductoResponse
-                {
-                    ProductoId = g.Key,
-                    Codigo = primera.Codigo,
-                    Producto = primera.Producto,
-                    Categoria = primera.Categoria,
-                    Marca = primera.Marca,
-                    Cantidad = g.Sum(l => l.Cantidad),
-                    UnidadBase = primera.UnidadBase,
-                    Ventas = g.Select(l => l.NotaVentaId).Distinct().Count(),
-                    Notas = g.OrderBy(l => l.Fecha).Select(l => l.Venta).Distinct().ToList(),
-                    Vendedores = Distintos(g.Select(l => l.Vendedor)),
-                    UltimaVenta = Zona.DiaDe(g.Max(l => l.Fecha)),
-                    Importe = importe,
-                    Costo = costo,
-                    // La ganancia sale del valor de venta SIN el IGV: el importe cobrado
-                    // trae ese 18% que no es ingreso, es plata que se le pasa al fisco.
-                    Ganancia = valorVenta - costo,
-                    Margen = Margen(valorVenta, valorVenta - costo),
-                    SinCosto = g.Any(l => l.Importe > 0 && l.Costo <= 0),
-                };
+                ProductoId = g.Key,
+                Codigo = g.Max(l => l.Codigo),
+                Producto = g.Max(l => l.Producto),
+                Categoria = g.Max(l => l.Categoria),
+                Marca = g.Max(l => l.Marca),
+                UnidadBase = g.Max(l => l.UnidadBase),
+                Cantidad = g.Sum(l => l.Cantidad),
+                Importe = g.Sum(l => l.Importe),
+                ImporteAfecto = g.Sum(l => l.AfectoIgv ? l.Importe : 0m),
+                Costo = g.Sum(l => l.Costo),
+                Ventas = g.Select(l => l.NotaVentaId).Distinct().Count(),
+                UltimaVenta = g.Max(l => l.Fecha),
+                LineasSinCosto = g.Sum(l => l.Importe > 0 && l.Costo <= 0 ? 1 : 0),
             })
-            .ToList();
+            .ToListAsync();
 
-        var totalImporte = Math.Round(lineas.Sum(l => l.Importe), 2);
-        var totalValorVenta = Math.Round(lineas.Sum(l => l.ValorVenta), 2);
-        var totalCosto = Math.Round(lineas.Sum(l => l.Costo), 2);
+        var productos = grupos.Select(g =>
+        {
+            var importe = Math.Round(g.Importe, 2);
+            var valorVenta = Math.Round(ValorVenta(g.Importe, g.ImporteAfecto), 2);
+            var costo = Math.Round(g.Costo, 2);
+            return new GananciaProductoResponse
+            {
+                ProductoId = g.ProductoId,
+                Codigo = g.Codigo,
+                Producto = g.Producto,
+                Categoria = g.Categoria,
+                Marca = g.Marca,
+                Cantidad = g.Cantidad,
+                UnidadBase = g.UnidadBase,
+                Ventas = g.Ventas,
+                UltimaVenta = Zona.DiaDe(g.UltimaVenta),
+                Importe = importe,
+                Costo = costo,
+                // La ganancia sale del valor de venta SIN el IGV: el importe cobrado
+                // trae ese 18% que no es ingreso, es plata que se le pasa al fisco.
+                Ganancia = valorVenta - costo,
+                Margen = Margen(valorVenta, valorVenta - costo),
+                SinCosto = g.LineasSinCosto > 0,
+            };
+        }).ToList();
+
+        var totalImporte = Math.Round(grupos.Sum(g => g.Importe), 2);
+        var totalValorVenta = Math.Round(grupos.Sum(g => ValorVenta(g.Importe, g.ImporteAfecto)), 2);
+        var totalCosto = Math.Round(grupos.Sum(g => g.Costo), 2);
 
         var resumen = new GananciaResumenResponse
         {
             Desde = primero,
             Hasta = ultimo,
             SoloPropio = soloPropio,
-            Ventas = lineas.Select(l => l.NotaVentaId).Distinct().Count(),
+            Ventas = await lineas.Select(l => l.NotaVentaId).Distinct().CountAsync(),
             Productos = productos.Count,
             Importe = totalImporte,
             Costo = totalCosto,
             Ganancia = totalValorVenta - totalCosto,
             Margen = Margen(totalValorVenta, totalValorVenta - totalCosto),
-            LineasSinCosto = lineas.Count(l => l.Importe > 0 && l.Costo <= 0),
+            LineasSinCosto = grupos.Sum(g => g.LineasSinCosto),
         };
 
-        var ordenados = Ordenar(productos, consulta);
-        var pagina = ordenados
+        // Ordenar y paginar sobre los productos (unos cientos), no sobre las líneas.
+        var pagina = Ordenar(productos, consulta)
             .Skip((consulta.PaginaSegura - 1) * consulta.PorPaginaSegura)
             .Take(consulta.PorPaginaSegura)
             .ToList();
+
+        // En qué ventas y con qué vendedores salió cada producto: solo los de la página.
+        var ids = pagina.Select(p => p.ProductoId).ToList();
+        var dondeSalio = await lineas
+            .Where(l => ids.Contains(l.ProductoId))
+            .Select(l => new { l.ProductoId, l.Venta, l.Fecha, l.Vendedor })
+            .Distinct()
+            .ToListAsync();
+        var porProducto = dondeSalio.ToLookup(x => x.ProductoId);
+        foreach (var p in pagina)
+        {
+            var suyas = porProducto[p.ProductoId];
+            p.Notas = suyas.OrderBy(x => x.Fecha).Select(x => x.Venta).Distinct().ToList();
+            p.Vendedores = Distintos(suyas.Select(x => x.Vendedor));
+        }
 
         return new GananciaPaginaResponse
         {
@@ -163,8 +198,25 @@ public class GananciaService : IGananciaService
     public async Task<(List<LineaGanancia> Lineas, bool SoloPropio)> LineasAsync(
         DateTime inicioUtc, DateTime finUtc)
     {
-        // Lo que ve cada quien: el alcance del submódulo. Sin usuario en el
-        // token (llamada interna) no hay a quién acotar.
+        var (notas, soloPropio) = await NotasDelRangoAsync(inicioUtc, finUtc);
+
+        var lineas = (await Lineas(notas).AsNoTracking().ToListAsync())
+            .Select(l => new LineaGanancia(
+                l.NotaVentaId, l.Venta, l.Fecha, l.Vendedor,
+                l.ProductoId, l.Codigo, l.Producto, l.Categoria, l.Marca,
+                l.UnidadBase, l.Cantidad, l.Importe, l.Costo, l.AfectoIgv))
+            .ToList();
+
+        return (lineas, soloPropio);
+    }
+
+    /// <summary>
+    /// Las notas vigentes del rango, recortadas al alcance de quien pregunta.
+    /// Sin usuario en el token (llamada interna) no hay a quién acotar.
+    /// </summary>
+    private async Task<(IQueryable<NotaVenta> Notas, bool SoloPropio)> NotasDelRangoAsync(
+        DateTime inicioUtc, DateTime finUtc)
+    {
         var alcance = _usuarioActual.Id is int uid
             ? await _permisos.AlcanceFiltroAsync(uid, "finanzas.ganancias")
             : null;
@@ -181,45 +233,59 @@ public class GananciaService : IGananciaService
                                    || (ruta != null && n.Cliente != null && n.Cliente.RutaId == ruta));
         }
 
-        var lineas = (await notas
-                .SelectMany(n => n.Detalle)
-                .Select(d => new
-                {
-                    d.NotaVentaId,
-                    Venta = d.NotaVenta!.Numero,
-                    d.NotaVenta.Fecha,
-                    Vendedor = d.NotaVenta.Usuario != null ? d.NotaVenta.Usuario.Nombre : null,
-                    d.ProductoId,
-                    Codigo = d.Producto!.Codigo,
-                    Producto = d.Producto.Nombre,
-                    Categoria = d.Producto.Categoria != null ? d.Producto.Categoria.Nombre : null,
-                    Marca = d.Producto.Marca != null ? d.Producto.Marca.Nombre : null,
-                    UnidadBase = d.Producto.UnidadBase != null ? d.Producto.UnidadBase.Codigo : string.Empty,
-                    Cantidad = d.Anulado ? 0m : d.Cantidad,
-                    Importe = d.Anulado ? 0m : d.CantidadPresentacion * d.PrecioPresentacion,
-                    d.AfectoIgv,
-                    Costo = _context.Movimientos
-                        .Where(m => m.NotaVentaDetalleId == d.Id)
-                        .Sum(m => (decimal?)(m.Tipo == TipoMovimiento.Salida ? m.CostoTotal : -m.CostoTotal)) ?? 0m,
-                })
-                .AsNoTracking()
-                .ToListAsync())
-            .Select(l => new LineaGanancia(
-                l.NotaVentaId, l.Venta, l.Fecha,
-                l.Vendedor ?? SinVendedor,
-                l.ProductoId, l.Codigo, l.Producto,
-                l.Categoria ?? SinCategoria,
-                l.Marca ?? SinMarca,
-                l.UnidadBase, l.Cantidad, l.Importe, l.Costo, l.AfectoIgv))
-            .ToList();
-
-        return (lineas, alcance is { SinRestriccion: false });
+        return (notas, alcance is { SinRestriccion: false });
     }
 
-    /// <summary>Los filtros del panel y el buscador, sobre las líneas del rango.</summary>
-    private static List<LineaGanancia> Filtrar(List<LineaGanancia> lineas, ConsultaTablaRequest consulta)
+    /// <summary>Una línea vendida con su costo, tal como la ve la base (sin traerla todavía).</summary>
+    private sealed class LineaVendida
     {
-        IEnumerable<LineaGanancia> query = lineas;
+        public int NotaVentaId { get; set; }
+        public string Venta { get; set; } = string.Empty;
+        public DateTime Fecha { get; set; }
+        public string Vendedor { get; set; } = string.Empty;
+        public int ProductoId { get; set; }
+        public string Codigo { get; set; } = string.Empty;
+        public string Producto { get; set; } = string.Empty;
+        public string Categoria { get; set; } = string.Empty;
+        public string Marca { get; set; } = string.Empty;
+        public string UnidadBase { get; set; } = string.Empty;
+        public decimal Cantidad { get; set; }
+        public decimal Importe { get; set; }
+        public bool AfectoIgv { get; set; }
+        public decimal Costo { get; set; }
+    }
+
+    /// <summary>
+    /// Las líneas de esas notas. El costo es el de sus movimientos: la salida
+    /// suma y la devolución que repuso stock resta.
+    /// </summary>
+    private IQueryable<LineaVendida> Lineas(IQueryable<NotaVenta> notas) =>
+        notas
+            .SelectMany(n => n.Detalle)
+            .Select(d => new LineaVendida
+            {
+                NotaVentaId = d.NotaVentaId,
+                Venta = d.NotaVenta!.Numero,
+                Fecha = d.NotaVenta.Fecha,
+                Vendedor = d.NotaVenta.Usuario != null ? d.NotaVenta.Usuario.Nombre : SinVendedor,
+                ProductoId = d.ProductoId,
+                Codigo = d.Producto!.Codigo,
+                Producto = d.Producto.Nombre,
+                Categoria = d.Producto.Categoria != null ? d.Producto.Categoria.Nombre : SinCategoria,
+                Marca = d.Producto.Marca != null ? d.Producto.Marca.Nombre : SinMarca,
+                UnidadBase = d.Producto.UnidadBase != null ? d.Producto.UnidadBase.Codigo : string.Empty,
+                Cantidad = d.Anulado ? 0m : d.Cantidad,
+                Importe = d.Anulado ? 0m : d.CantidadPresentacion * d.PrecioPresentacion,
+                AfectoIgv = d.AfectoIgv,
+                Costo = _context.Movimientos
+                    .Where(m => m.NotaVentaDetalleId == d.Id)
+                    .Sum(m => (decimal?)(m.Tipo == TipoMovimiento.Salida ? m.CostoTotal : -m.CostoTotal)) ?? 0m,
+            });
+
+    /// <summary>Los filtros del panel y el buscador, resueltos en la base.</summary>
+    private static IQueryable<LineaVendida> Filtrar(IQueryable<LineaVendida> lineas, ConsultaTablaRequest consulta)
+    {
+        var query = lineas;
 
         if (consulta.ValorDe("vendedor") is string vendedor)
             query = query.Where(l => l.Vendedor == vendedor);
@@ -239,14 +305,18 @@ public class GananciaService : IGananciaService
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
-            var texto = consulta.Buscar.Trim();
+            var texto = $"%{consulta.Buscar.Trim()}%";
             query = query.Where(l =>
-                Contiene(l.Producto, texto) || Contiene(l.Codigo, texto)
-                || Contiene(l.Categoria, texto) || Contiene(l.Marca, texto));
+                EF.Functions.Like(l.Producto, texto) || EF.Functions.Like(l.Codigo, texto)
+                || EF.Functions.Like(l.Categoria, texto) || EF.Functions.Like(l.Marca, texto));
         }
 
-        return query.ToList();
+        return query;
     }
+
+    /// <summary>El importe sin IGV: la parte afecta sin el impuesto, más la que no lo lleva.</summary>
+    private static decimal ValorVenta(decimal importe, decimal importeAfecto) =>
+        importeAfecto / (1 + Impuestos.TasaIgv) + (importe - importeAfecto);
 
     private static IEnumerable<GananciaProductoResponse> Ordenar(
         List<GananciaProductoResponse> productos, ConsultaTablaRequest consulta)
@@ -278,9 +348,6 @@ public class GananciaService : IGananciaService
 
     private static List<string> Distintos(IEnumerable<string> valores) =>
         valores.Distinct().OrderBy(v => v, StringComparer.OrdinalIgnoreCase).ToList();
-
-    private static bool Contiene(string texto, string buscado) =>
-        texto.Contains(buscado, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Un día como lo manda el panel de filtros: yyyy-MM-dd.</summary>
     private static DateTime? Dia(string? valor) =>

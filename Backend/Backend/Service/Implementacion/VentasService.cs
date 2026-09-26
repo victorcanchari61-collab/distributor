@@ -1105,11 +1105,8 @@ public class VentasService : IVentasService
 
     public async Task<IEnumerable<NotaVentaResponse>> GetCuentasPorCobrarAsync()
     {
-        var notas = await _repository.GetNotasVentaAsync(EstadoNotaVenta.Confirmada);
-        return notas
-            .Where(n => n.FormaPago == FormaPagoVenta.Credito)
-            .Select(MapNotaVenta)
-            .Where(n => n.Total - n.TotalPagado > 0);
+        var notas = await _repository.GetCuentasPorCobrarCompletasAsync();
+        return notas.Select(MapNotaVenta).ToList();
     }
 
     // ------------------------------------------------------------ Auxiliares

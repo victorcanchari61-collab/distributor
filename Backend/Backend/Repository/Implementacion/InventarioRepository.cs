@@ -819,6 +819,25 @@ public class InventarioRepository : IInventarioRepository
         await KardexBase(almacenId).CountAsync(m => m.Tipo == TipoMovimiento.Entrada),
         await KardexBase(almacenId).CountAsync(m => m.Tipo == TipoMovimiento.Salida));
 
+    public async Task<Dictionary<(int Producto, int Almacen), SaldoKardex>> GetSaldosAntesAsync(
+        DateTime antes, IEnumerable<int> productoIds, int? almacenId)
+    {
+        var ids = productoIds.ToList();
+        var filas = await _context.Movimientos
+            .Where(m => m.Fecha < antes && ids.Contains(m.ProductoId)
+                        && (almacenId == null || m.AlmacenId == almacenId))
+            .GroupBy(m => new { m.ProductoId, m.AlmacenId })
+            .Select(g => new
+            {
+                g.Key.ProductoId,
+                g.Key.AlmacenId,
+                Cantidad = g.Sum(m => m.Tipo == TipoMovimiento.Entrada ? m.Cantidad : -m.Cantidad),
+                Valor = g.Sum(m => m.Tipo == TipoMovimiento.Entrada ? m.CostoTotal : -m.CostoTotal),
+            })
+            .ToListAsync();
+        return filas.ToDictionary(f => (f.ProductoId, f.AlmacenId), f => new SaldoKardex(f.Cantidad, f.Valor));
+    }
+
     public async Task<List<MovimientoInventario>> GetKardexAsync(
         int? productoId, int? almacenId, DateTime? desde, DateTime? hasta) =>
         await _context.Movimientos

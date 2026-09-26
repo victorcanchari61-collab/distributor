@@ -584,6 +584,19 @@ public class VentasRepository : IVentasRepository
         return Redondear(await query.Select(AFila).PaginarAsync(consulta));
     }
 
+    public async Task<List<NotaVenta>> GetCuentasPorCobrarCompletasAsync()
+    {
+        // Las mismas que la web: con saldo según la cuenta de la nota. Antes se
+        // tomaban las 300 notas más recientes y recién ahí se veía cuáles
+        // debían, así que una deuda más vieja se perdía.
+        var ids = CuentasPorCobrarBase().Select(n => n.Id);
+        return await NotasVentaConDetalle()
+            .AsNoTracking()
+            .Where(n => ids.Contains(n.Id))
+            .OrderBy(n => n.Fecha).ThenBy(n => n.Id)
+            .ToListAsync();
+    }
+
     public async Task<ResumenCuentasResponse> ResumenCuentasPorCobrarAsync()
     {
         // Una fila por cuenta abierta, con los totales ya como en la tabla: así

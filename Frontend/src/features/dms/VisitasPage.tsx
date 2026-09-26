@@ -52,12 +52,17 @@ export function VisitasPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [lista, res] = await Promise.all([
-        visitaApi.listar(consulta),
-        visitaApi.resumen(consulta),
-      ])
+      // El resumen sale de la misma lista: pedírselo al servidor era hacer
+      // dos veces el mismo trabajo (programadas, atendidas y total).
+      const lista = await visitaApi.listar(consulta)
+      const atendidas = lista.filter((v) => v.atendido).length
       setVisitas(lista)
-      setResumen(res)
+      setResumen({
+        programadas: lista.length,
+        atendidas,
+        pendientes: lista.length - atendidas,
+        total: Math.round(lista.reduce((s, v) => s + v.total, 0) * 100) / 100,
+      })
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las visitas.')

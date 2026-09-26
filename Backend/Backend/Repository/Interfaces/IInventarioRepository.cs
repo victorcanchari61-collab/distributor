@@ -194,6 +194,13 @@ public interface IInventarioRepository
     /// <summary>Cuántas entradas y salidas hay en todo el kardex del almacén.</summary>
     Task<(int Entradas, int Salidas)> ResumenKardexAsync(int? almacenId);
 
+    /// <summary>
+    /// Con cuánto (cantidad y valor) llega cada producto de la lista a un
+    /// instante: la suma de sus movimientos anteriores, por producto y almacén.
+    /// </summary>
+    Task<Dictionary<(int Producto, int Almacen), SaldoKardex>> GetSaldosAntesAsync(
+        DateTime antes, IEnumerable<int> productoIds, int? almacenId);
+
     Task<List<MovimientoInventario>> GetKardexAsync(
         int? productoId, int? almacenId, DateTime? desde, DateTime? hasta);
 
