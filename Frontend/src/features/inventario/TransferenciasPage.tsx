@@ -136,7 +136,8 @@ export function TransferenciasPage() {
   useEffect(() => {
     if (vista !== 'form' || !cabecera.almacenOrigenId) return
     let cancelado = false
-    void stockApi.getAll(cabecera.almacenOrigenId).then((filas) => {
+    // Solo cuánto hay disponible: /disponible no trae catálogo ni costos.
+    void stockApi.disponible(cabecera.almacenOrigenId).then((filas) => {
       if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.disponible])))
     })
     return () => {

@@ -22,6 +22,12 @@ public interface IProductoRepository
     /// </summary>
     Task<(List<Producto> Items, int Total)> ListarConStockAsync(ConsultaTablaRequest consulta, int? almacenId);
 
+    /// <summary>
+    /// Los productos que controlan stock y entraron a ese almacén (o a alguno),
+    /// con solo lo que pinta una fila de stock: categoría, marca y unidad.
+    /// </summary>
+    Task<List<Producto>> GetConCapasAsync(int? almacenId);
+
     /// <summary>Contadores y valores de filtro del catálogo completo.</summary>
     Task<ResumenProductosResponse> ResumenAsync();
 

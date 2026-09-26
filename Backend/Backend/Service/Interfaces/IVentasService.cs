@@ -39,7 +39,7 @@ public interface IVentasService
     Task<NotaVentaResponse> GetNotaVentaAsync(int id);
 
     /// <summary>Una página del listado de notas de venta.</summary>
-    Task<PaginaResponse<NotaVentaResponse>> ListarNotasVentaAsync(ConsultaTablaRequest consulta);
+    Task<PaginaResponse<NotaVentaFilaResponse>> ListarNotasVentaAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Contadores del listado completo de notas de venta.</summary>
     Task<ResumenNotasVentaResponse> GetResumenNotasVentaAsync();
@@ -72,7 +72,7 @@ public interface IVentasService
     Task<NotaVentaResponse> AnularPagoAsync(int id, int pagoId, int? usuarioId = null);
 
     /// <summary>Una página de las cuentas por cobrar, con el saldo resuelto en la base.</summary>
-    Task<PaginaResponse<NotaVentaResponse>> ListarCuentasPorCobrarAsync(ConsultaTablaRequest consulta);
+    Task<PaginaResponse<NotaVentaFilaResponse>> ListarCuentasPorCobrarAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Totales de todas las cuentas por cobrar.</summary>
     Task<ResumenCuentasResponse> GetResumenCuentasPorCobrarAsync();

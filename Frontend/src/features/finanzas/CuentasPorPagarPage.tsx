@@ -21,7 +21,7 @@ import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { compraApi } from '../compras/comprasApi'
-import type { CompraResponse, PagoCompraResponse } from '../compras/comprasApi'
+import type { CompraFila, CompraResponse, PagoCompraResponse } from '../compras/comprasApi'
 import type { ResumenCuentas } from '../facturacion/ventasApi'
 import { proveedorApi } from '../maestros'
 import type { ProveedorResponse } from '../maestros'
@@ -48,7 +48,7 @@ interface FilaPago extends PagoCompraResponse {
 }
 
 /** Filas de Compra a las que ya se les puede calcular el saldo. */
-function saldo(c: CompraResponse) {
+function saldo(c: { total: number; totalPagado: number }) {
   return Math.round((c.total - c.totalPagado) * 100) / 100
 }
 
@@ -63,7 +63,7 @@ function saldo(c: CompraResponse) {
 export function CuentasPorPagarPage() {
   const { puede } = usePermisos()
   const toast = useToast()
-  const [cuentas, setCuentas] = useState<CompraResponse[]>([])
+  const [cuentas, setCuentas] = useState<CompraFila[]>([])
   const [metodosPago, setMetodosPago] = useState<MetodoPagoResponse[]>([])
   const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
   const [cargando, setCargando] = useState(true)
@@ -154,9 +154,14 @@ export function CuentasPorPagarPage() {
     setMonto('')
   }
 
-  const abrirGestion = (c: CompraResponse) => {
-    setGestionando(c)
-    cancelarEdicion()
+  // La fila no trae los pagos: se pide la compra completa al abrir.
+  const abrirGestion = async (c: CompraFila) => {
+    try {
+      setGestionando(await compraApi.getById(c.id))
+      cancelarEdicion()
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir la cuenta.')
+    }
   }
 
   const agregarFila = () => {
@@ -216,7 +221,7 @@ export function CuentasPorPagarPage() {
     }
   }
 
-  const columns: DataTableColumn<CompraResponse>[] = [
+  const columns: DataTableColumn<CompraFila>[] = [
     // El número se busca con el buscador de arriba, no en el panel.
     { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
@@ -422,7 +427,7 @@ export function CuentasPorPagarPage() {
       searchPlaceholder="Buscar por número, proveedor..."
       empty={cargando ? 'Cargando cuentas por pagar...' : 'No hay cuentas pendientes de pago.'}
       rowActions={(row) => (
-        <RowAction label={`Gestionar pagos de ${row.numero}`} tone="success" onClick={() => abrirGestion(row)}>
+        <RowAction label={`Gestionar pagos de ${row.numero}`} tone="success" onClick={() => void abrirGestion(row)}>
           <HandCoins size={15} />
         </RowAction>
       )}

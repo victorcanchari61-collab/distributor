@@ -169,7 +169,10 @@ public class ComprasRepository : IComprasRepository
             .Include(c => c.Pagos).ThenInclude(p => p.MetodoPago)
             .Include(c => c.Pagos).ThenInclude(p => p.Usuario)
             .Include(c => c.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
-            .Include(c => c.Detalle).ThenInclude(d => d.Presentacion);
+            .Include(c => c.Detalle).ThenInclude(d => d.Presentacion)
+            // Detalle y pagos en consultas separadas: en una sola, cada línea
+            // se repetía por cada pago.
+            .AsSplitQuery();
 
     /*
      * Lo que ya se compro y no ha llegado.
@@ -179,11 +182,14 @@ public class ComprasRepository : IComprasRepository
      * entero, y con eso alcanza para lo que sirve: no volver a comprar algo
      * que ya viene en camino.
      */
-    public async Task<Dictionary<int, decimal>> GetEnTransitoPorProductoAsync() =>
-        await _context.CompraDetalles
+    public async Task<Dictionary<int, decimal>> GetEnTransitoPorProductoAsync(IEnumerable<int>? productoIds = null)
+    {
+        var ids = productoIds?.ToList();
+        return await _context.CompraDetalles
             .Where(d => (d.Compra!.Estado == EstadoCompra.Pendiente
                          || d.Compra.Estado == EstadoCompra.RecibidaParcial)
-                        && d.Cantidad > d.CantidadRecibida)
+                        && d.Cantidad > d.CantidadRecibida
+                        && (ids == null || ids.Contains(d.ProductoId)))
             .GroupBy(d => d.ProductoId)
             .Select(g => new
             {
@@ -191,6 +197,7 @@ public class ComprasRepository : IComprasRepository
                 Cantidad = g.Sum(d => d.Cantidad - d.CantidadRecibida)
             })
             .ToDictionaryAsync(x => x.ProductoId, x => x.Cantidad);
+    }
 
     public async Task<Compra?> GetCompraAsync(int id) =>
         await ComprasConDetalle().FirstOrDefaultAsync(c => c.Id == id);
@@ -203,9 +210,10 @@ public class ComprasRepository : IComprasRepository
             .Take(300)
             .ToListAsync();
 
-    public async Task<(List<Compra> Items, int Total)> ListarComprasAsync(ConsultaTablaRequest consulta)
+    public async Task<(List<CompraFilaResponse> Items, int Total)> ListarComprasAsync(ConsultaTablaRequest consulta)
     {
-        var query = ComprasConDetalle().AsNoTracking().AsQueryable();
+        // Sin Include: la fila se proyecta al final, sin detalle ni pagos.
+        var query = _context.Compras.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
@@ -256,7 +264,7 @@ public class ComprasRepository : IComprasRepository
                       : query.OrderBy(c => c.Fecha).ThenBy(c => c.Id),
         };
 
-        return await query.PaginarAsync(consulta);
+        return Redondear(await query.Select(AFila).PaginarAsync(consulta));
     }
 
     public async Task<ResumenComprasResponse> ResumenComprasAsync() => new()
@@ -273,14 +281,17 @@ public class ComprasRepository : IComprasRepository
     /// subconsulta para que la base resuelva el "debe algo".
     /// </summary>
     private IQueryable<Compra> CuentasPorPagarBase() =>
-        ComprasConDetalle()
+        _context.Compras
+            // Redondeado a centavos, como el total que se muestra: un costo por
+            // caja repartido entre 12 deja fracciones de céntimo, y sin esto
+            // una compra pagada exacta seguía "debiendo" S/ 0.00.
             .Where(c => c.Estado != EstadoCompra.Anulada
                         && c.FormaPago == FormaPagoCompra.Credito
-                        && c.Detalle.Sum(d => d.Cantidad * d.CostoUnitario)
+                        && Math.Round(c.Detalle.Sum(d => d.Cantidad * d.CostoUnitario), 2)
                            > c.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto))
             .AsNoTracking();
 
-    public async Task<(List<Compra> Items, int Total)> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta)
+    public async Task<(List<CompraFilaResponse> Items, int Total)> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta)
     {
         var query = CuentasPorPagarBase();
 
@@ -320,36 +331,76 @@ public class ComprasRepository : IComprasRepository
                       : query.OrderBy(c => c.Fecha).ThenBy(c => c.Id),
         };
 
-        return await query.PaginarAsync(consulta);
+        return Redondear(await query.Select(AFila).PaginarAsync(consulta));
     }
 
     public async Task<ResumenCuentasResponse> ResumenCuentasPorPagarAsync()
     {
-        var cuentas = CuentasPorPagarBase();
-
-        var facturado = await cuentas
-            .SelectMany(c => c.Detalle)
-            .SumAsync(d => (decimal?)(d.Cantidad * d.CostoUnitario)) ?? 0m;
-
-        var cubierto = await cuentas
-            .SelectMany(c => c.Pagos).Where(p => !p.Anulado)
-            .SumAsync(p => (decimal?)p.Monto) ?? 0m;
+        // Una fila por cuenta abierta, con los totales como en la tabla.
+        var cuentas = await CuentasPorPagarBase().Select(AFila).ToListAsync();
+        var facturado = cuentas.Sum(c => Math.Round(c.Total, 2));
+        var cubierto = cuentas.Sum(c => Math.Round(c.TotalPagado, 2));
 
         return new ResumenCuentasResponse
         {
-            Cuentas = await cuentas.CountAsync(),
+            Cuentas = cuentas.Count,
             TotalFacturado = facturado,
             TotalCubierto = cubierto,
             TotalPendiente = facturado - cubierto,
         };
     }
 
+    /// <summary>
+    /// Lo que usa el modal de recepción: la compra con sus líneas. Sin pagos,
+    /// usuario ni orden: no se muestran ahí.
+    /// </summary>
     public async Task<List<Compra>> GetComprasAbiertasAsync() =>
-        await ComprasConDetalle()
+        await _context.Compras
+            .AsNoTracking()
+            .Include(c => c.Proveedor)
+            .Include(c => c.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
+            .Include(c => c.Detalle).ThenInclude(d => d.Presentacion)
             .Where(c => c.Estado == EstadoCompra.Pendiente || c.Estado == EstadoCompra.RecibidaParcial)
             .OrderByDescending(c => c.Fecha)
             .ThenByDescending(c => c.Id)
             .ToListAsync();
+
+    public async Task<List<string>> GetNumerosConRecepcionAsync() =>
+        await _context.DocumentosInventario
+            .Where(d => d.Tipo == TipoDocumentoInventario.Recepcion && d.Compra != null)
+            .Select(d => d.Compra!.Numero)
+            .Distinct()
+            .OrderByDescending(n => n)
+            .ToListAsync();
+
+    /// <summary>La fila de un listado de compras, resuelta por la base.</summary>
+    private static readonly System.Linq.Expressions.Expression<Func<Compra, CompraFilaResponse>> AFila = c => new CompraFilaResponse
+    {
+        Id = c.Id,
+        Numero = c.Numero,
+        ProveedorId = c.ProveedorId,
+        Proveedor = c.Proveedor != null ? c.Proveedor.Nombre : string.Empty,
+        OrdenCompraNumero = c.OrdenCompra != null ? c.OrdenCompra.Numero : null,
+        Fecha = c.Fecha,
+        Estado = c.Estado,
+        TipoComprobante = c.TipoComprobante,
+        SerieComprobante = c.SerieComprobante,
+        NumeroComprobante = c.NumeroComprobante,
+        FormaPago = c.FormaPago,
+        Total = c.Detalle.Sum(d => d.Cantidad * d.CostoUnitario),
+        TotalPagado = c.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto),
+    };
+
+    private static (List<CompraFilaResponse> Items, int Total) Redondear(
+        (List<CompraFilaResponse> Items, int Total) pagina)
+    {
+        foreach (var f in pagina.Items)
+        {
+            f.Total = Math.Round(f.Total, 2);
+            f.TotalPagado = Math.Round(f.TotalPagado, 2);
+        }
+        return pagina;
+    }
 
     public async Task UpdateCompraAsync(Compra compra)
     {

@@ -928,6 +928,11 @@ public class AppDbContext : DbContext
             // El kardex siempre pregunta lo mismo: que paso con este producto
             // en este almacen, ordenado por fecha.
             entity.HasIndex(m => new { m.ProductoId, m.AlmacenId, m.Fecha });
+            // El kardex se lee por fecha (lo más reciente primero): sin este
+            // índice cada página ordenaba la tabla entera.
+            entity.HasIndex(m => m.Fecha);
+            // Última entrada/salida de cada producto sin leer todo su historial.
+            entity.HasIndex(m => new { m.ProductoId, m.Tipo, m.AlmacenId, m.Fecha });
 
             entity.HasOne(m => m.Documento).WithMany(d => d.Movimientos)
                 .HasForeignKey(m => m.DocumentoId).OnDelete(DeleteBehavior.Cascade);

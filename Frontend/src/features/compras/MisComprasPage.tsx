@@ -44,6 +44,7 @@ import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
 import { compraApi } from './comprasApi'
 import type {
   CompraDetalleResponse,
+  CompraFila,
   CompraResponse,
   CrearCompraRequest,
   FormaPagoCompra,
@@ -107,7 +108,7 @@ function estadoCompraBadge(estado: CompraResponse['estado']) {
 }
 
 /** "Factura F001-00000123", o solo el tipo si no se registró serie/número. */
-function textoComprobante(compra: CompraResponse) {
+function textoComprobante(compra: Pick<CompraResponse, 'tipoComprobante' | 'serieComprobante' | 'numeroComprobante'>) {
   const tipo = TIPOS_COMPROBANTE.find((t) => t.value === compra.tipoComprobante)?.label ?? compra.tipoComprobante
   const serie = compra.serieComprobante
   const numero = compra.numeroComprobante
@@ -139,7 +140,7 @@ export function MisComprasPage() {
   const { puede } = usePermisos()
   const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
-  const [compras, setCompras] = useState<CompraResponse[]>([])
+  const [compras, setCompras] = useState<CompraFila[]>([])
   const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
@@ -248,6 +249,15 @@ export function MisComprasPage() {
     setObservacion('')
     setFilas([])
     setVista('form')
+  }
+
+  // La fila del listado es liviana: el detalle y los pagos se piden al abrir.
+  const conCompraCompleta = async (id: number, abrir: (compra: CompraResponse) => void) => {
+    try {
+      abrir(await compraApi.getById(id))
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir la compra.')
+    }
   }
 
   const abrirEdicion = (compra: CompraResponse) => {
@@ -467,7 +477,7 @@ export function MisComprasPage() {
     }
   }
 
-  const anularCompra = (compra: CompraResponse) =>
+  const anularCompra = (compra: CompraFila) =>
     confirmar({
       titulo: `Anular ${compra.numero}`,
       mensaje: 'Se anula la compra. No se puede deshacer.',
@@ -574,7 +584,7 @@ export function MisComprasPage() {
     { key: 'distrito', label: 'Distrito' },
   ]
 
-  const columns: DataTableColumn<CompraResponse>[] = [
+  const columns: DataTableColumn<CompraFila>[] = [
     // Número y proveedor se buscan con el buscador de arriba, no en el panel.
     { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
@@ -949,7 +959,7 @@ export function MisComprasPage() {
       actionsWidth={180}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conCompraCompleta(row.id, setDetalleAbierto)}>
             <Eye size={15} />
           </RowAction>
           {puede('compras.compras', 'exportar') && (
@@ -960,7 +970,7 @@ export function MisComprasPage() {
               label={`Editar ${row.numero}`}
               disabled={row.estado !== 'PENDIENTE'}
               disabledReason={row.estado === 'ANULADA' ? 'Está anulada' : 'Ya tiene mercadería recibida'}
-              onClick={() => abrirEdicion(row)}
+              onClick={() => void conCompraCompleta(row.id, abrirEdicion)}
             >
               <Pencil size={15} />
             </RowAction>
@@ -976,7 +986,7 @@ export function MisComprasPage() {
               tone="success"
               disabled={row.estado !== 'PENDIENTE' && row.estado !== 'RECIBIDA_PARCIAL'}
               disabledReason={row.estado === 'ANULADA' ? 'Está anulada' : 'Ya se recibió completa'}
-              onClick={() => setRecepcionAbierta(row)}
+              onClick={() => void conCompraCompleta(row.id, setRecepcionAbierta)}
             >
               <PackageCheck size={15} />
             </RowAction>

@@ -39,7 +39,7 @@ public interface IVentasRepository
     /// confirmar o anular uno libera su reserva solo con dejar de cumplir el
     /// filtro.
     /// </summary>
-    Task<Dictionary<int, decimal>> GetReservadoPorProductoAsync(int? almacenId);
+    Task<Dictionary<int, decimal>> GetReservadoPorProductoAsync(int? almacenId, IEnumerable<int>? productoIds = null);
 
     // --- Notas de venta ---
     Task<string> SiguienteNumeroNotaVentaAsync();
@@ -49,7 +49,7 @@ public interface IVentasRepository
     Task UpdateNotaVentaAsync(NotaVenta notaVenta);
 
     /// <summary>Una página del listado de notas de venta.</summary>
-    Task<(List<NotaVenta> Items, int Total)> ListarNotasVentaAsync(ConsultaTablaRequest consulta, AlcanceFiltro? alcance = null);
+    Task<(List<NotaVentaFilaResponse> Items, int Total)> ListarNotasVentaAsync(ConsultaTablaRequest consulta, AlcanceFiltro? alcance = null);
 
     /// <summary>Contadores del listado completo de notas de venta.</summary>
     Task<ResumenNotasVentaResponse> ResumenNotasVentaAsync(AlcanceFiltro? alcance = null);
@@ -59,7 +59,7 @@ public interface IVentasRepository
     /// calcula en la base (detalle menos pagos vigentes): traerlas todas para
     /// filtrarlas en memoria era justamente lo que se quería evitar.
     /// </summary>
-    Task<(List<NotaVenta> Items, int Total)> ListarCuentasPorCobrarAsync(ConsultaTablaRequest consulta);
+    Task<(List<NotaVentaFilaResponse> Items, int Total)> ListarCuentasPorCobrarAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Totales de todas las cuentas por cobrar, no de una página.</summary>
     Task<ResumenCuentasResponse> ResumenCuentasPorCobrarAsync();

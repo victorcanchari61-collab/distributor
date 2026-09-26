@@ -117,6 +117,26 @@ export interface PagoCompraRequest {
   monto: number
 }
 
+/**
+ * Una compra como fila de un listado (Compras, Cuentas por pagar): solo lo que
+ * muestra la tabla. El detalle y los pagos vienen con getById al abrirla.
+ */
+export interface CompraFila {
+  id: number
+  numero: string
+  proveedorId: number
+  proveedor: string
+  ordenCompraNumero: string | null
+  fecha: string
+  estado: CompraResponse['estado']
+  tipoComprobante: CompraResponse['tipoComprobante']
+  serieComprobante: string | null
+  numeroComprobante: string | null
+  formaPago: CompraResponse['formaPago']
+  total: number
+  totalPagado: number
+}
+
 export interface CompraResponse {
   id: number
   numero: string
@@ -156,18 +176,21 @@ export interface CrearCompraRequest {
 export const compraApi = {
   /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
   listar: (consulta: ConsultaTabla) =>
-    api.post<PaginaResponse<CompraResponse>>('/compra/listar', consulta),
+    api.post<PaginaResponse<CompraFila>>('/compra/listar', consulta),
 
   resumen: () => api.get<ResumenCompras>('/compra/resumen'),
 
   /** Una página de las cuentas por pagar, con el saldo resuelto en el servidor. */
   listarCuentasPorPagar: (consulta: ConsultaTabla) =>
-    api.post<PaginaResponse<CompraResponse>>('/compra/cuentasporpagar/listar', consulta),
+    api.post<PaginaResponse<CompraFila>>('/compra/cuentasporpagar/listar', consulta),
 
   resumenCuentasPorPagar: () => api.get<ResumenCuentas>('/compra/cuentasporpagar/resumen'),
 
   /** Las compras que todavía esperan mercadería, sin paginar: son pocas. */
   abiertas: () => api.get<CompraResponse[]>('/compra/abiertas'),
+
+  /** Solo los números de las compras que ya tienen recepción: el filtro de Recepciones. */
+  conRecepcion: () => api.get<string[]>('/compra/con-recepcion'),
 
   getAll: (estado?: string) =>
     api.get<CompraResponse[]>(`/compra${estado ? `?estado=${estado}` : ''}`),

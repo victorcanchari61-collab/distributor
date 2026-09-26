@@ -105,12 +105,26 @@ public class ProductoRepository : IProductoRepository
         return await query.PaginarAsync(consulta);
     }
 
+    private IQueryable<Producto> ParaStock() => _context.Productos
+        .Include(p => p.Categoria)
+        .Include(p => p.Marca)
+        .Include(p => p.UnidadBase);
+
+    public async Task<List<Producto>> GetConCapasAsync(int? almacenId) =>
+        await ParaStock()
+            .AsNoTracking()
+            .Where(p => p.ControlaStock
+                        && _context.CapasCosto.Any(c => c.ProductoId == p.Id
+                                                        && (almacenId == null || c.AlmacenId == almacenId)))
+            .ToListAsync();
+
     public async Task<(List<Producto> Items, int Total)> ListarConStockAsync(
         ConsultaTablaRequest consulta, int? almacenId)
     {
         // Solo lo que ya entró a ese almacén: el catálogo recién importado no
-        // cuenta como stock hasta que se recibe mercadería.
-        var query = ConDetalle()
+        // cuenta como stock hasta que se recibe mercadería. Sin presentaciones
+        // ni unidad de contenido: una fila de stock no las muestra.
+        var query = ParaStock()
             .Where(p => p.ControlaStock
                         && _context.CapasCosto.Any(c => c.ProductoId == p.Id
                                                         && (almacenId == null || c.AlmacenId == almacenId)))

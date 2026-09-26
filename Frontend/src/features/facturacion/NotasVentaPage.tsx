@@ -56,6 +56,7 @@ import type {
   FormaPagoVenta,
   LineaDevuelta,
   LineaVentaResponse,
+  NotaVentaFila,
   NotaVentaResponse,
   RecojoRequest,
   ResumenNotasVenta,
@@ -116,7 +117,7 @@ interface RecojoLinea extends LineaProductoNueva {
 export function NotasVentaPage() {
   const { puede } = usePermisos()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
-  const [notas, setNotas] = useState<NotaVentaResponse[]>([])
+  const [notas, setNotas] = useState<NotaVentaFila[]>([])
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
@@ -129,7 +130,7 @@ export function NotasVentaPage() {
   const [detalleAbierto, setDetalleAbierto] = useState<NotaVentaResponse | null>(null)
   const [rechazando, setRechazando] = useState<DevolucionDeVenta | null>(null)
   const [motivoRechazo, setMotivoRechazo] = useState('')
-  const [historialAbierto, setHistorialAbierto] = useState<NotaVentaResponse | null>(null)
+  const [historialAbierto, setHistorialAbierto] = useState<NotaVentaFila | null>(null)
   const [historial, setHistorial] = useState<AuditoriaResponse[]>([])
   const [historialCargando, setHistorialCargando] = useState(false)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
@@ -278,7 +279,17 @@ export function NotasVentaPage() {
     setVista('form')
   }
 
-  const abrirHistorial = (nota: NotaVentaResponse) => {
+  // La fila del listado es liviana: el detalle, los pagos y las
+  // devoluciones se piden recién al abrir la nota.
+  const conNotaCompleta = async (id: number, abrir: (nota: NotaVentaResponse) => void) => {
+    try {
+      abrir(await notaVentaApi.getById(id))
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir la venta.')
+    }
+  }
+
+  const abrirHistorial = (nota: NotaVentaFila) => {
     setHistorialAbierto(nota)
     setHistorial([])
     setHistorialCargando(true)
@@ -599,7 +610,7 @@ export function NotasVentaPage() {
     }
   }
 
-  const anularNota = (nota: NotaVentaResponse) =>
+  const anularNota = (nota: NotaVentaFila) =>
     confirmar({
       titulo: `Anular ${nota.numero}`,
       mensaje: 'Se anula la venta y el stock que salió vuelve al almacén. No se puede deshacer.',
@@ -775,7 +786,7 @@ export function NotasVentaPage() {
     { key: 'ruta', label: 'Ruta' },
   ]
 
-  const columns: DataTableColumn<NotaVentaResponse>[] = [
+  const columns: DataTableColumn<NotaVentaFila>[] = [
     // El número se busca con el buscador de arriba, no en el panel.
     { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
@@ -1238,7 +1249,7 @@ export function NotasVentaPage() {
       empty={cargando ? 'Cargando notas de venta...' : 'Todavía no hay notas de venta registradas.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conNotaCompleta(row.id, setDetalleAbierto)}>
             <Eye size={15} />
           </RowAction>
           <RowAction tone="view" label={`Ver historial de ${row.numero}`} onClick={() => abrirHistorial(row)}>
@@ -1252,7 +1263,7 @@ export function NotasVentaPage() {
               label={`Editar ${row.numero}`}
               disabled={row.estado !== 'CONFIRMADA'}
               disabledReason="Ya está anulada"
-              onClick={() => abrirEdicion(row)}
+              onClick={() => void conNotaCompleta(row.id, abrirEdicion)}
             >
               <Pencil size={15} />
             </RowAction>

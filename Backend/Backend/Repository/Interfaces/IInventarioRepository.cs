@@ -43,6 +43,14 @@ public record FilaKardex(
     decimal CostoUnitario,
     decimal CostoTotal);
 
+/// <summary>
+/// Lo justo de un movimiento para seguir el saldo: sin nombres ni documento.
+/// Son los movimientos reales entre la primera y la última fila de una página
+/// del kardex, estén o no en la página por los filtros.
+/// </summary>
+public record MovimientoSaldo(
+    int Id, DateTime Fecha, int ProductoId, int AlmacenId, string Tipo, decimal Cantidad, decimal CostoTotal);
+
 /// <summary>Lo que aparta un pedido sin sacarlo del almacén.</summary>
 public static class TipoKardex
 {
@@ -120,9 +128,18 @@ public interface IInventarioRepository
     Task<Dictionary<int, ResumenStock>> GetResumenAsync(
         IEnumerable<int> productoIds, int? almacenId = null);
 
-    /// <summary>Ultimo movimiento y salida por venta de varios productos.</summary>
+    /// <summary>Ultimo movimiento y salida por venta de varios productos. Sin ids, de todos.</summary>
     Task<Dictionary<int, ActividadStock>> GetActividadAsync(
-        IEnumerable<int> productoIds, int? almacenId, int dias);
+        IEnumerable<int>? productoIds, int? almacenId, int dias);
+
+    /// <summary>Las capas con saldo de varios productos, la que sale primero adelante.</summary>
+    Task<List<CapaCosto>> GetCapasDisponiblesAsync(IEnumerable<int> productoIds, int? almacenId);
+
+    /// <summary>
+    /// Cuánto hay de cada producto que controla stock: la suma de sus capas con
+    /// saldo. Solo el número, sin catálogo ni costos.
+    /// </summary>
+    Task<Dictionary<int, decimal>> GetStockPorProductoAsync(int? almacenId);
 
     // --- Documentos y movimientos ---
 
@@ -138,7 +155,7 @@ public interface IInventarioRepository
     Task<IEnumerable<DocumentoInventario>> GetDocumentosAsync(string? familia = null);
 
     /// <summary>Una página de documentos de inventario de una familia (ajustes, transferencias...).</summary>
-    Task<(List<DocumentoInventario> Items, int Total)> ListarDocumentosAsync(
+    Task<(List<Dtos.Responses.DocumentoInventarioResponse> Items, int Total)> ListarDocumentosAsync(
         Dtos.Requests.ConsultaTablaRequest consulta, string? familia);
 
     /// <summary>Cuántos documentos confirmados y anulados hay en esa familia.</summary>
@@ -162,7 +179,13 @@ public interface IInventarioRepository
     /// lo que dejaron los movimientos anteriores a esta página. Sin eso, la
     /// página 2 arrancaría el saldo desde cero.
     /// </summary>
-    Task<(List<FilaKardex> Items, int Total, Dictionary<(int Producto, int Almacen), SaldoKardex> Aperturas)>
+    /// <remarks>
+    /// El saldo es del libro entero, no de lo filtrado: por eso también vienen
+    /// los movimientos reales entre la primera y la última fila (Intermedios),
+    /// aunque los filtros los dejen fuera de la página.
+    /// </remarks>
+    Task<(List<FilaKardex> Items, int Total, Dictionary<(int Producto, int Almacen), SaldoKardex> Aperturas,
+            List<MovimientoSaldo> Intermedios)>
         ListarKardexAsync(Dtos.Requests.ConsultaTablaRequest consulta, int? almacenId);
 
     /// <summary>Cuántas entradas y salidas hay en todo el kardex del almacén.</summary>

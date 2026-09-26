@@ -115,3 +115,25 @@ public class CompraResponse
     /// <summary>Suma de Pagos. Si es menor que Total, falta esa diferencia por pagar.</summary>
     public decimal TotalPagado { get; set; }
 }
+
+/// <summary>
+/// Una compra como fila de un listado (Compras, Cuentas por pagar): solo lo
+/// que muestran las tablas. El detalle y los pagos vienen con la compra
+/// completa (GET /compra/{id}) al abrirla.
+/// </summary>
+public class CompraFilaResponse
+{
+    public int Id { get; set; }
+    public string Numero { get; set; } = string.Empty;
+    public int ProveedorId { get; set; }
+    public string Proveedor { get; set; } = string.Empty;
+    public string? OrdenCompraNumero { get; set; }
+    public DateTime Fecha { get; set; }
+    public string Estado { get; set; } = string.Empty;
+    public string TipoComprobante { get; set; } = string.Empty;
+    public string? SerieComprobante { get; set; }
+    public string? NumeroComprobante { get; set; }
+    public string FormaPago { get; set; } = string.Empty;
+    public decimal Total { get; set; }
+    public decimal TotalPagado { get; set; }
+}

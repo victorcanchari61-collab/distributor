@@ -48,9 +48,9 @@ export function RecepcionesPage() {
   const [recepciones, setRecepciones] = useState<DocumentoInventarioResponse[]>([])
   const [compras, setCompras] = useState<CompraResponse[]>([])
   // Aparte de las abiertas (para elegir en "Nueva recepción"), el filtro del
-  // panel necesita TODAS las compras que ya tienen su mercadería recibida
-  // entera: esas ya no salen en `compras` (abiertas) pero siguen en la tabla.
-  const [todasCompras, setTodasCompras] = useState<CompraResponse[]>([])
+  // panel necesita los números de TODAS las compras con alguna recepción,
+  // también las ya recibidas enteras. Solo los números, no las compras.
+  const [comprasConRecepcion, setComprasConRecepcion] = useState<string[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -87,15 +87,15 @@ export function RecepcionesPage() {
 
   const cargarApoyo = useCallback(async () => {
     try {
-      const [res, abiertas, todas, alms] = await Promise.all([
+      const [res, abiertas, numeros, alms] = await Promise.all([
         recepcionApi.resumen(),
         compraApi.abiertas(),
-        compraApi.getAll(),
+        compraApi.conRecepcion(),
         almacenApi.opciones(),
       ])
       setResumen(res)
       setCompras(abiertas)
-      setTodasCompras(todas)
+      setComprasConRecepcion(numeros)
       setAlmacenes(alms)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
@@ -144,7 +144,7 @@ export function RecepcionesPage() {
       key: 'compra',
       label: 'Compra',
       filterType: 'select',
-      filterOptions: todasCompras.map((c) => ({ value: c.numero, label: c.numero })),
+      filterOptions: comprasConRecepcion.map((n) => ({ value: n, label: n })),
       render: (row) => row.compra ?? '—',
     },
     {

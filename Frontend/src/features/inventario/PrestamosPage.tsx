@@ -158,7 +158,8 @@ export function PrestamosPage() {
   useEffect(() => {
     if (vista !== 'form' || !cabecera.almacenId) return
     let cancelado = false
-    void stockApi.getAll(cabecera.almacenId).then((filas) => {
+    // Solo cuánto hay disponible: /disponible no trae catálogo ni costos.
+    void stockApi.disponible(cabecera.almacenId).then((filas) => {
       if (!cancelado) setStockMap(Object.fromEntries(filas.map((f) => [f.productoId, f.disponible])))
     })
     return () => {

@@ -145,14 +145,10 @@ public class InventarioController : ControllerBase
     [PermisoAlguno(
         "inv.stock:ver",
         "fact.pedidos:ver", "fact.notaventa:ver",
-        "compras.compras:ver", "compras.ordenes:ver")]
+        "compras.compras:ver", "compras.ordenes:ver",
+        "inv.ajustes:ver", "inv.transferencias:ver", "inv.prestamos:ver")]
     public async Task<IActionResult> Disponible([FromQuery] int? almacenId) =>
-        // Sumado por producto: sin almacén el stock viene una fila por almacén,
-        // y quien pregunta "cuánto hay" quiere el total, no la lista.
-        Ok((await _inventario.GetStockAsync(almacenId))
-            .GroupBy(s => s.ProductoId)
-            // "reservado" va aparte solo para informar: quien toma un pedido ve cuánto hay ya comprometido.
-            .Select(g => new { productoId = g.Key, disponible = g.Sum(s => s.Disponible), reservado = g.Sum(s => s.Reservado) }));
+        Ok(await _inventario.GetDisponibleAsync(almacenId));
 
     /// <summary>Stock y capas de costo de un producto.</summary>
     [HttpGet("stock/{productoId:int}")]

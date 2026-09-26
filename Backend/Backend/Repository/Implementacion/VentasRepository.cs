@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Backend.Data;
 using Backend.Dtos.Requests;
 using Backend.Dtos.Responses;
@@ -259,15 +260,20 @@ public class VentasRepository : IVentasRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<Dictionary<int, decimal>> GetReservadoPorProductoAsync(int? almacenId) =>
-        await _context.PedidoDetalles
+    public async Task<Dictionary<int, decimal>> GetReservadoPorProductoAsync(
+        int? almacenId, IEnumerable<int>? productoIds = null)
+    {
+        var ids = productoIds?.ToList();
+        return await _context.PedidoDetalles
             .Where(d => d.Pedido!.Estado == EstadoPedido.Pendiente
                         && d.Pedido.ReservaStock
                         && !d.Anulado
-                        && (almacenId == null || d.Pedido.AlmacenId == almacenId))
+                        && (almacenId == null || d.Pedido.AlmacenId == almacenId)
+                        && (ids == null || ids.Contains(d.ProductoId)))
             .GroupBy(d => d.ProductoId)
             .Select(g => new { ProductoId = g.Key, Cantidad = g.Sum(d => d.Cantidad) })
             .ToDictionaryAsync(x => x.ProductoId, x => x.Cantidad);
+    }
 
     // ---------------------------------------------------------- Notas de venta
 
@@ -316,7 +322,10 @@ public class VentasRepository : IVentasRepository
             .Include(n => n.Recojos).ThenInclude(r => r.Presentacion)
             .Include(n => n.Recojos).ThenInclude(r => r.Almacen)
             .Include(n => n.Recojos).ThenInclude(r => r.Motivo)
-            .Include(n => n.Recojos).ThenInclude(r => r.Usuario);
+            .Include(n => n.Recojos).ThenInclude(r => r.Usuario)
+            // Cuatro colecciones (detalle, pagos, devoluciones, recojos): en una
+            // sola consulta se multiplicaban entre sí. Así va una por colección.
+            .AsSplitQuery();
 
     public async Task<NotaVenta?> GetNotaVentaAsync(int id, AlcanceFiltro? alcance = null) =>
         await Acotar(NotasVentaConDetalle(), alcance).FirstOrDefaultAsync(n => n.Id == id);
@@ -335,10 +344,12 @@ public class VentasRepository : IVentasRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<(List<NotaVenta> Items, int Total)> ListarNotasVentaAsync(
+    public async Task<(List<NotaVentaFilaResponse> Items, int Total)> ListarNotasVentaAsync(
         ConsultaTablaRequest consulta, AlcanceFiltro? alcance = null)
     {
-        var query = Acotar(NotasVentaConDetalle().AsNoTracking().AsQueryable(), alcance);
+        // Sin Include: la fila se proyecta al final, así la base lee solo las
+        // columnas que muestra la tabla y no el detalle, pagos ni devoluciones.
+        var query = Acotar(_context.NotasVenta.AsNoTracking(), alcance);
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
@@ -411,7 +422,41 @@ public class VentasRepository : IVentasRepository
                 : query.OrderBy(n => n.Fecha).ThenBy(n => n.Id),
         };
 
-        return await query.PaginarAsync(consulta);
+        return Redondear(await query.Select(AFila).PaginarAsync(consulta));
+    }
+
+    /// <summary>
+    /// La fila de un listado de notas, resuelta por la base: las sumas van como
+    /// subconsultas, así no viaja ni una línea de detalle.
+    /// </summary>
+    private static readonly Expression<Func<NotaVenta, NotaVentaFilaResponse>> AFila = n => new NotaVentaFilaResponse
+    {
+        Id = n.Id,
+        Numero = n.Numero,
+        ClienteId = n.ClienteId,
+        Cliente = n.Cliente != null ? n.Cliente.Nombre : string.Empty,
+        Ruta = n.Cliente != null && n.Cliente.Ruta != null ? n.Cliente.Ruta.Nombre : null,
+        Mercado = n.Cliente != null && n.Cliente.Mercado != null ? n.Cliente.Mercado.Nombre : null,
+        PedidoId = n.PedidoId,
+        PedidoNumero = n.Pedido != null ? n.Pedido.Numero : null,
+        Fecha = n.Fecha,
+        Estado = n.Estado,
+        FormaPago = n.FormaPago,
+        Usuario = n.Usuario != null ? n.Usuario.Nombre : null,
+        Total = n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion)
+                - n.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado).Sum(r => r.Importe),
+        TotalPagado = n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto),
+    };
+
+    private static (List<NotaVentaFilaResponse> Items, int Total) Redondear(
+        (List<NotaVentaFilaResponse> Items, int Total) pagina)
+    {
+        foreach (var f in pagina.Items)
+        {
+            f.Total = Math.Round(f.Total, 2);
+            f.TotalPagado = Math.Round(f.TotalPagado, 2);
+        }
+        return pagina;
     }
 
     public async Task<ResumenNotasVentaResponse> ResumenNotasVentaAsync(AlcanceFiltro? alcance = null)
@@ -444,17 +489,22 @@ public class VentasRepository : IVentasRepository
      * "debe algo" lo resuelva la base y no haya que traerse todo.
      */
     private IQueryable<NotaVenta> CuentasPorCobrarBase() =>
-        NotasVentaConDetalle()
+        _context.NotasVenta
             // El detalle ya trae descontado lo devuelto: al aprobar una
             // devolucion se le baja la cantidad a la linea, asi que restarlo
             // otra vez aqui seria restarlo dos veces.
+            // Con la misma cuenta que el total de la nota: líneas menos recojos,
+            // redondeado a centavos. Sin el redondeo, una nota pagada exacta
+            // seguía "debiendo" fracciones de céntimo; sin restar los recojos,
+            // seguía debiendo lo que el cliente devolvió al recoger.
             .Where(n => n.Estado == EstadoNotaVenta.Confirmada
                         && n.FormaPago == FormaPagoVenta.Credito
-                        && n.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario)
+                        && Math.Round(n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion)
+                                      - n.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado).Sum(r => r.Importe), 2)
                            > n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto))
             .AsNoTracking();
 
-    public async Task<(List<NotaVenta> Items, int Total)> ListarCuentasPorCobrarAsync(
+    public async Task<(List<NotaVentaFilaResponse> Items, int Total)> ListarCuentasPorCobrarAsync(
         ConsultaTablaRequest consulta)
     {
         var query = CuentasPorCobrarBase();
@@ -494,33 +544,31 @@ public class VentasRepository : IVentasRepository
             "cliente" => desc ? query.OrderByDescending(n => n.Cliente!.Nombre).ThenByDescending(n => n.Id)
                               : query.OrderBy(n => n.Cliente!.Nombre).ThenBy(n => n.Id),
             "saldo" => desc
-                ? query.OrderByDescending(n => n.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario)
+                ? query.OrderByDescending(n => n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion)
+                        - n.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado).Sum(r => r.Importe)
                         - n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto)).ThenByDescending(n => n.Id)
-                : query.OrderBy(n => n.Detalle.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario)
+                : query.OrderBy(n => n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion)
+                        - n.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado).Sum(r => r.Importe)
                         - n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto)).ThenBy(n => n.Id),
             // Por defecto la mas vieja primero: es la que lleva mas tiempo sin cobrarse.
             _ => desc ? query.OrderByDescending(n => n.Fecha).ThenByDescending(n => n.Id)
                       : query.OrderBy(n => n.Fecha).ThenBy(n => n.Id),
         };
 
-        return await query.PaginarAsync(consulta);
+        return Redondear(await query.Select(AFila).PaginarAsync(consulta));
     }
 
     public async Task<ResumenCuentasResponse> ResumenCuentasPorCobrarAsync()
     {
-        var cuentas = CuentasPorCobrarBase();
-
-        var facturado = await cuentas
-            .SelectMany(n => n.Detalle).Where(d => !d.Anulado)
-            .SumAsync(d => (decimal?)(d.Cantidad * d.PrecioUnitario)) ?? 0m;
-
-        var cubierto = await cuentas
-            .SelectMany(n => n.Pagos).Where(p => !p.Anulado)
-            .SumAsync(p => (decimal?)p.Monto) ?? 0m;
+        // Una fila por cuenta abierta, con los totales ya como en la tabla: así
+        // el resumen suma lo mismo que se ve, centavo por centavo.
+        var cuentas = await CuentasPorCobrarBase().Select(AFila).ToListAsync();
+        var facturado = cuentas.Sum(c => Math.Round(c.Total, 2));
+        var cubierto = cuentas.Sum(c => Math.Round(c.TotalPagado, 2));
 
         return new ResumenCuentasResponse
         {
-            Cuentas = await cuentas.CountAsync(),
+            Cuentas = cuentas.Count,
             TotalFacturado = facturado,
             TotalCubierto = cubierto,
             TotalPendiente = facturado - cubierto,

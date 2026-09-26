@@ -33,14 +33,14 @@ public interface IComprasRepository
     Task<string> SiguienteNumeroCompraAsync();
     Task<Compra> AddCompraAsync(Compra compra);
     /// <summary>Lo comprado que todavía no llega, por producto y en unidad base.</summary>
-    Task<Dictionary<int, decimal>> GetEnTransitoPorProductoAsync();
+    Task<Dictionary<int, decimal>> GetEnTransitoPorProductoAsync(IEnumerable<int>? productoIds = null);
 
     Task<Compra?> GetCompraAsync(int id);
     Task<IEnumerable<Compra>> GetComprasAsync(string? estado = null);
     Task UpdateCompraAsync(Compra compra);
 
     /// <summary>Una página del listado de compras.</summary>
-    Task<(List<Compra> Items, int Total)> ListarComprasAsync(ConsultaTablaRequest consulta);
+    Task<(List<CompraFilaResponse> Items, int Total)> ListarComprasAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Contadores del listado completo de compras.</summary>
     Task<ResumenComprasResponse> ResumenComprasAsync();
@@ -49,7 +49,7 @@ public interface IComprasRepository
     /// Una página de las compras a crédito con saldo pendiente. El saldo se
     /// calcula en la base: detalle menos pagos vigentes.
     /// </summary>
-    Task<(List<Compra> Items, int Total)> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta);
+    Task<(List<CompraFilaResponse> Items, int Total)> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Totales de todas las cuentas por pagar, no de una página.</summary>
     Task<ResumenCuentasResponse> ResumenCuentasPorPagarAsync();
@@ -60,6 +60,9 @@ public interface IComprasRepository
     /// y por definición son pocas — una compra deja la lista al recibirse.
     /// </summary>
     Task<List<Compra>> GetComprasAbiertasAsync();
+
+    /// <summary>Los números de las compras que ya tienen alguna recepción: el filtro de Recepciones.</summary>
+    Task<List<string>> GetNumerosConRecepcionAsync();
 
     /// <summary>
     /// Una línea de compra con su cabecera y hermanas cargadas, para poder

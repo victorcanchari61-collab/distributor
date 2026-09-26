@@ -222,39 +222,65 @@ public class InventarioRepository : IInventarioRepository
     }
 
     public async Task<Dictionary<int, ActividadStock>> GetActividadAsync(
-        IEnumerable<int> productoIds, int? almacenId, int dias)
+        IEnumerable<int>? productoIds, int? almacenId, int dias)
     {
-        var ids = productoIds.ToList();
+        var ids = productoIds?.ToList();
         var desde = DateTime.UtcNow.AddDays(-dias);
 
-        var filas = await _context.Movimientos
-            .Where(m => ids.Contains(m.ProductoId)
-                        && (almacenId == null || m.AlmacenId == almacenId))
-            .GroupBy(m => m.ProductoId)
-            .Select(g => new
-            {
-                ProductoId = g.Key,
-                // Agregados con condicion adentro y no un Where antes del
-                // Max/Sum: asi es como SQL los sabe hacer de una pasada, y es
-                // lo que EF traduce sin rendirse.
-                UltimaEntrada = g.Max(m => m.Tipo == TipoMovimiento.Entrada
-                    ? (DateTime?)m.Fecha
-                    : null),
-                UltimaSalida = g.Max(m => m.Tipo == TipoMovimiento.Salida
-                    ? (DateTime?)m.Fecha
-                    : null),
-                // Solo lo que salio POR VENTA: un traslado entre almacenes o un
-                // ajuste no dicen nada de cuanto dura el stock.
-                Vendido = g.Sum(m => m.MotivoId == Motivos.Venta && m.Fecha >= desde
-                    ? m.Cantidad
-                    : 0)
-            })
+        var movimientos = _context.Movimientos
+            .Where(m => (ids == null || ids.Contains(m.ProductoId))
+                        && (almacenId == null || m.AlmacenId == almacenId));
+
+        /*
+         * La última entrada y la última salida. Agrupado por producto, tipo y
+         * almacén —y no solo por producto con un MAX condicional— para que la
+         * base lo resuelva saltando por el índice (ProductoId, Tipo, AlmacenId,
+         * Fecha) en vez de leer todo el historial de cada producto.
+         */
+        var ultimas = await movimientos
+            .GroupBy(m => new { m.ProductoId, m.Tipo, m.AlmacenId })
+            .Select(g => new { g.Key.ProductoId, g.Key.Tipo, Fecha = g.Max(m => m.Fecha) })
             .ToListAsync();
 
-        return filas.ToDictionary(
-            f => f.ProductoId,
-            f => new ActividadStock(f.UltimaEntrada, f.UltimaSalida, f.Vendido));
+        // Solo lo que salio POR VENTA en el ultimo mes: un traslado o un ajuste
+        // no dicen nada de cuanto dura el stock, y lo viejo tampoco.
+        var vendido = await movimientos
+            .Where(m => m.MotivoId == Motivos.Venta && m.Fecha >= desde)
+            .GroupBy(m => m.ProductoId)
+            .Select(g => new { ProductoId = g.Key, Cantidad = g.Sum(m => m.Cantidad) })
+            .ToDictionaryAsync(x => x.ProductoId, x => x.Cantidad);
+
+        return ultimas
+            .GroupBy(u => u.ProductoId)
+            .ToDictionary(
+                g => g.Key,
+                g => new ActividadStock(
+                    g.Where(u => u.Tipo == TipoMovimiento.Entrada).Select(u => (DateTime?)u.Fecha).Max(),
+                    g.Where(u => u.Tipo == TipoMovimiento.Salida).Select(u => (DateTime?)u.Fecha).Max(),
+                    vendido.GetValueOrDefault(g.Key)));
     }
+
+    public async Task<List<CapaCosto>> GetCapasDisponiblesAsync(IEnumerable<int> productoIds, int? almacenId)
+    {
+        var ids = productoIds.ToList();
+        return await _context.CapasCosto
+            .AsNoTracking()
+            .Where(c => ids.Contains(c.ProductoId)
+                        && c.CantidadDisponible > 0
+                        && (almacenId == null || c.AlmacenId == almacenId))
+            .OrderBy(c => c.Fecha)
+            .ThenBy(c => c.Id)
+            .ToListAsync();
+    }
+
+    public async Task<Dictionary<int, decimal>> GetStockPorProductoAsync(int? almacenId) =>
+        await _context.CapasCosto
+            .Where(c => c.CantidadDisponible > 0
+                        && (almacenId == null || c.AlmacenId == almacenId)
+                        && c.Producto!.ControlaStock)
+            .GroupBy(c => c.ProductoId)
+            .Select(g => new { ProductoId = g.Key, Stock = g.Sum(c => c.CantidadDisponible) })
+            .ToDictionaryAsync(x => x.ProductoId, x => x.Stock);
 
     // ------------------------------------------------- Documentos y kardex
 
@@ -323,15 +349,17 @@ public class InventarioRepository : IInventarioRepository
             .ToListAsync();
 
     /// <summary>Los documentos de una familia, sin ordenar ni paginar todavia.</summary>
+    // Sin Include: el listado se proyecta y el resumen solo cuenta. El detalle
+    // viene con el documento completo (DocumentosConDetalle) al abrirlo.
     private IQueryable<DocumentoInventario> DocumentosDe(string? familia) =>
-        DocumentosConDetalle()
+        _context.DocumentosInventario
             .Where(d => familia == null
                         || d.Tipo == familia
                         || (d.Tipo == TipoDocumentoInventario.Anulacion
                             && d.DocumentoAnulado!.Tipo == familia))
             .AsNoTracking();
 
-    public async Task<(List<DocumentoInventario> Items, int Total)> ListarDocumentosAsync(
+    public async Task<(List<DocumentoInventarioResponse> Items, int Total)> ListarDocumentosAsync(
         ConsultaTablaRequest consulta, string? familia)
     {
         var query = DocumentosDe(familia);
@@ -385,7 +413,35 @@ public class InventarioRepository : IInventarioRepository
                       : query.OrderBy(d => d.Fecha).ThenBy(d => d.Id),
         };
 
-        return await query.PaginarAsync(consulta);
+        // El total y las líneas como subconsultas, y "anulado por" también: ni
+        // se cargan los movimientos ni se hace una consulta por cada anulado.
+        var documentos = _context.DocumentosInventario;
+        return await query
+            .Select(d => new DocumentoInventarioResponse
+            {
+                Id = d.Id,
+                Numero = d.Numero,
+                Tipo = d.Tipo,
+                Fecha = d.Fecha,
+                AlmacenId = d.AlmacenId,
+                Almacen = d.Almacen != null ? d.Almacen.Nombre : string.Empty,
+                AlmacenDestinoId = d.AlmacenDestinoId,
+                AlmacenDestino = d.AlmacenDestino != null ? d.AlmacenDestino.Nombre : null,
+                CompraId = d.CompraId,
+                Compra = d.Compra != null ? d.Compra.Numero : null,
+                MotivoId = d.MotivoId,
+                Motivo = d.Motivo != null ? d.Motivo.Nombre : string.Empty,
+                MotivoTipo = d.Motivo != null ? d.Motivo.Tipo : string.Empty,
+                Estado = d.Estado,
+                Observacion = d.Observacion,
+                Usuario = d.Usuario != null ? d.Usuario.Nombre : null,
+                AnuladoPor = d.Estado == EstadoDocumento.Anulado
+                    ? documentos.Where(x => x.DocumentoAnuladoId == d.Id).Select(x => x.Numero).FirstOrDefault()
+                    : null,
+                Total = d.Movimientos.Sum(m => m.CostoTotal),
+                Lineas = d.Movimientos.Count(),
+            })
+            .PaginarAsync(consulta);
     }
 
     public async Task<(int Total, int Confirmados, int Anulados)> ResumenDocumentosAsync(string? familia) => (
@@ -588,7 +644,8 @@ public class InventarioRepository : IInventarioRepository
      * la ventana que la pagina necesita esta contenida ahi, porque ninguna
      * fuente puede aportar mas de esa cantidad antes del corte.
      */
-    public async Task<(List<FilaKardex> Items, int Total, Dictionary<(int Producto, int Almacen), SaldoKardex> Aperturas)>
+    public async Task<(List<FilaKardex> Items, int Total, Dictionary<(int Producto, int Almacen), SaldoKardex> Aperturas,
+            List<MovimientoSaldo> Intermedios)>
         ListarKardexAsync(ConsultaTablaRequest consulta, int? almacenId)
     {
         var movimientos = MovimientosFiltrados(almacenId, consulta);
@@ -663,14 +720,37 @@ public class InventarioRepository : IInventarioRepository
             .ToList();
 
         var aperturas = new Dictionary<(int, int), SaldoKardex>();
+        var intermedios = new List<MovimientoSaldo>();
         if (items.Count > 0)
         {
+            var cronologico = items.OrderBy(f => f.Fecha).ThenBy(f => f.Id).ToList();
+            var primera = cronologico[0];
+            var ultima = cronologico[^1];
+
+            /*
+             * El saldo es del libro entero, no de lo filtrado: si se filtra por
+             * "salidas", el saldo de cada salida igual tiene que contar las
+             * entradas de antes. Por eso se lee sin los filtros de la tabla,
+             * pero SOLO para los productos y almacenes que aparecen en la
+             * página: así no se recorre el historial de todo el catálogo.
+             */
+            var productos = items.Select(f => f.ProductoId).Distinct().ToList();
+            var almacenes = items.Select(f => f.AlmacenId).Distinct().ToList();
+            var libro = KardexBase(almacenId)
+                .Where(m => productos.Contains(m.ProductoId) && almacenes.Contains(m.AlmacenId));
+
+            // Los movimientos reales entre la primera y la última fila, estén o
+            // no en la página: con ellos cada fila lleva el saldo verdadero.
+            intermedios = await libro
+                .Where(m => (m.Fecha > primera.Fecha || (m.Fecha == primera.Fecha && m.Id >= primera.Id))
+                            && (m.Fecha < ultima.Fecha || (m.Fecha == ultima.Fecha && m.Id <= ultima.Id)))
+                .Select(m => new MovimientoSaldo(m.Id, m.Fecha, m.ProductoId, m.AlmacenId, m.Tipo, m.Cantidad, m.CostoTotal))
+                .ToListAsync();
+
             // Saldo con el que entra la pagina: todo lo anterior al renglon
             // mas viejo que se va a mostrar, sumado por producto y almacen.
             // Solo cuentan los movimientos: una reserva no mueve stock.
-            var primera = items.OrderBy(f => f.Fecha).ThenBy(f => f.Id).First();
-
-            var previos = await movimientos
+            var previos = await libro
                 .Where(m => m.Fecha < primera.Fecha
                             || (m.Fecha == primera.Fecha && m.Id < primera.Id))
                 .GroupBy(m => new { m.ProductoId, m.AlmacenId })
@@ -693,7 +773,7 @@ public class InventarioRepository : IInventarioRepository
             }
         }
 
-        return (items, total, aperturas);
+        return (items, total, aperturas, intermedios);
     }
 
     public async Task<(int Entradas, int Salidas)> ResumenKardexAsync(int? almacenId) => (

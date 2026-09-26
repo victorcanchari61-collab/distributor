@@ -21,7 +21,7 @@ import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { notaVentaApi } from '../facturacion/ventasApi'
-import type { NotaVentaResponse, PagoVentaResponse, ResumenCuentas } from '../facturacion/ventasApi'
+import type { NotaVentaFila, NotaVentaResponse, PagoVentaResponse, ResumenCuentas } from '../facturacion/ventasApi'
 import { clienteApi } from '../maestros'
 import type { ClienteResponse } from '../maestros'
 import { metodoPagoApi } from './finanzasApi'
@@ -47,7 +47,7 @@ interface FilaPago extends PagoVentaResponse {
 }
 
 /** Filas de NotaVenta a las que ya se les puede calcular el saldo. */
-function saldo(n: NotaVentaResponse) {
+function saldo(n: { total: number; totalPagado: number }) {
   return Math.round((n.total - n.totalPagado) * 100) / 100
 }
 
@@ -67,7 +67,7 @@ function saldo(n: NotaVentaResponse) {
 export function CuentasPorCobrarPage() {
   const { puede } = usePermisos()
   const toast = useToast()
-  const [cuentas, setCuentas] = useState<NotaVentaResponse[]>([])
+  const [cuentas, setCuentas] = useState<NotaVentaFila[]>([])
   const [metodosPago, setMetodosPago] = useState<MetodoPagoOpcion[]>([])
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [cargando, setCargando] = useState(true)
@@ -160,9 +160,14 @@ export function CuentasPorCobrarPage() {
     setMonto('')
   }
 
-  const abrirGestion = (n: NotaVentaResponse) => {
-    setGestionando(n)
-    cancelarEdicion()
+  // La fila no trae los pagos: se pide la nota completa al abrir.
+  const abrirGestion = async (n: NotaVentaFila) => {
+    try {
+      setGestionando(await notaVentaApi.getById(n.id))
+      cancelarEdicion()
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir la cuenta.')
+    }
   }
 
   const agregarFila = () => {
@@ -222,7 +227,7 @@ export function CuentasPorCobrarPage() {
     }
   }
 
-  const columns: DataTableColumn<NotaVentaResponse>[] = [
+  const columns: DataTableColumn<NotaVentaFila>[] = [
     // El número se busca con el buscador de arriba, no en el panel.
     { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
@@ -451,7 +456,7 @@ export function CuentasPorCobrarPage() {
       searchPlaceholder="Buscar por número, cliente..."
       empty={cargando ? 'Cargando cuentas por cobrar...' : 'No hay cuentas pendientes de cobro.'}
       rowActions={(row) => (
-        <RowAction label={`Gestionar pagos de ${row.numero}`} tone="success" onClick={() => abrirGestion(row)}>
+        <RowAction label={`Gestionar pagos de ${row.numero}`} tone="success" onClick={() => void abrirGestion(row)}>
           <HandCoins size={15} />
         </RowAction>
       )}

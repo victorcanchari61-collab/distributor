@@ -12,19 +12,22 @@ public interface IComprasService
     Task<ResumenOrdenesCompraResponse> GetResumenOrdenesAsync();
 
     /// <summary>Una página del listado de compras.</summary>
-    Task<PaginaResponse<CompraResponse>> ListarComprasAsync(ConsultaTablaRequest consulta);
+    Task<PaginaResponse<CompraFilaResponse>> ListarComprasAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Contadores del listado completo de compras.</summary>
     Task<ResumenComprasResponse> GetResumenComprasAsync();
 
     /// <summary>Una página de las cuentas por pagar, con el saldo resuelto en la base.</summary>
-    Task<PaginaResponse<CompraResponse>> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta);
+    Task<PaginaResponse<CompraFilaResponse>> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Totales de todas las cuentas por pagar.</summary>
     Task<ResumenCuentasResponse> GetResumenCuentasPorPagarAsync();
 
     /// <summary>Las compras que todavía esperan mercadería, sin paginar.</summary>
     Task<IEnumerable<CompraResponse>> GetComprasAbiertasAsync();
+
+    /// <summary>Los números de las compras que ya tienen alguna recepción.</summary>
+    Task<IEnumerable<string>> GetNumerosConRecepcionAsync();
 
     // --- Ordenes de compra ---
     Task<IEnumerable<OrdenCompraResponse>> GetOrdenesAsync(string? estado = null);

@@ -256,6 +256,28 @@ export const pedidoApi = {
 
 export type EstadoNotaVenta = 'CONFIRMADA' | 'ANULADA'
 
+/**
+ * Una nota como fila de un listado (Notas de venta, Cuentas por cobrar): solo
+ * lo que muestra la tabla. La nota completa —detalle, pagos, devoluciones,
+ * recojos— se pide con getById al abrirla.
+ */
+export interface NotaVentaFila {
+  id: number
+  numero: string
+  clienteId: number
+  cliente: string
+  ruta: string | null
+  mercado: string | null
+  pedidoId: number | null
+  pedidoNumero: string | null
+  fecha: string
+  estado: EstadoNotaVenta
+  formaPago: FormaPagoVenta
+  usuario: string | null
+  total: number
+  totalPagado: number
+}
+
 export interface NotaVentaResponse {
   id: number
   numero: string
@@ -350,7 +372,7 @@ export const devolucionVentaApi = {
 export const notaVentaApi = {
   /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
   listar: (consulta: ConsultaTabla) =>
-    api.post<PaginaResponse<NotaVentaResponse>>('/notaventa/listar', consulta),
+    api.post<PaginaResponse<NotaVentaFila>>('/notaventa/listar', consulta),
 
   resumen: () => api.get<ResumenNotasVenta>('/notaventa/resumen'),
 
@@ -363,7 +385,7 @@ export const notaVentaApi = {
   anular: (id: number) => api.patch<void>(`/notaventa/${id}/anular`),
   /** Una página de las cuentas por cobrar, con el saldo resuelto en el servidor. */
   listarCuentasPorCobrar: (consulta: ConsultaTabla) =>
-    api.post<PaginaResponse<NotaVentaResponse>>('/notaventa/cuentasporcobrar/listar', consulta),
+    api.post<PaginaResponse<NotaVentaFila>>('/notaventa/cuentasporcobrar/listar', consulta),
 
   resumenCuentasPorCobrar: () =>
     api.get<ResumenCuentas>('/notaventa/cuentasporcobrar/resumen'),

@@ -261,3 +261,28 @@ public class LineaDevueltaResponse
     public string Unidad { get; set; } = string.Empty;
     public decimal Importe { get; set; }
 }
+
+/// <summary>
+/// Una nota de venta como fila de un listado: solo lo que muestran las tablas
+/// de Notas de venta y Cuentas por cobrar. El detalle, los pagos, devoluciones
+/// y recojos se piden con la nota completa (GET /notaventa/{id}) al abrirla.
+/// </summary>
+public class NotaVentaFilaResponse
+{
+    public int Id { get; set; }
+    public string Numero { get; set; } = string.Empty;
+    public int ClienteId { get; set; }
+    public string Cliente { get; set; } = string.Empty;
+    public string? Ruta { get; set; }
+    public string? Mercado { get; set; }
+    public int? PedidoId { get; set; }
+    public string? PedidoNumero { get; set; }
+    public DateTime Fecha { get; set; }
+    public string Estado { get; set; } = string.Empty;
+    public string FormaPago { get; set; } = string.Empty;
+    public string? Usuario { get; set; }
+
+    /// <summary>Líneas vigentes menos recojos vigentes: la misma cuenta que la nota completa.</summary>
+    public decimal Total { get; set; }
+    public decimal TotalPagado { get; set; }
+}

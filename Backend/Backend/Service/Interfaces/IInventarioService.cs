@@ -51,6 +51,9 @@ public interface IInventarioService
     /// <summary>Una página del listado de préstamos.</summary>
     Task<PaginaResponse<PrestamoResponse>> ListarPrestamosAsync(ConsultaTablaRequest consulta);
 
+    /// <summary>Stock menos lo reservado, por producto: lo que usan pedidos, ventas, compras y los formularios.</summary>
+    Task<IEnumerable<DisponibleResponse>> GetDisponibleAsync(int? almacenId);
+
     /// <summary>Una página del kardex, con el saldo acumulado ya resuelto.</summary>
     Task<PaginaResponse<KardexResponse>> ListarKardexAsync(ConsultaTablaRequest consulta, int? almacenId);
 

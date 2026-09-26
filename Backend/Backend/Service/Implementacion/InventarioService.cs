@@ -309,16 +309,14 @@ public class InventarioService : IInventarioService
     {
         // Solo lo que de verdad entró al almacén: un producto recién importado
         // al catálogo no está "en" ningún almacén hasta que recibe mercadería.
-        var conCapas = await _repository.GetProductoIdsConCapasAsync(almacenId);
-        var productos = (await _productos.GetAllConDetalleAsync())
-            .Where(p => p.ControlaStock && conCapas.Contains(p.Id))
-            .ToList();
+        var productos = await _productos.GetConCapasAsync(almacenId);
 
         var ids = productos.Select(p => p.Id).ToList();
         var resumen = await _repository.GetResumenAsync(ids, almacenId);
         var almacen = almacenId is int id ? await _repository.GetAlmacenAsync(id) : null;
         var reservado = await _ventas.GetReservadoPorProductoAsync(almacenId);
-        var actividad = await _repository.GetActividadAsync(ids, almacenId, DiasDeRitmo);
+        // Son todos los que tienen capas: se agrupa sin mandar la lista de ids.
+        var actividad = await _repository.GetActividadAsync(null, almacenId, DiasDeRitmo);
         var transito = await _compras.GetEnTransitoPorProductoAsync();
 
         return productos.Select(p => MapStock(
@@ -347,17 +345,23 @@ public class InventarioService : IInventarioService
         var ids = productos.Select(p => p.Id).ToList();
         var resumen = await _repository.GetResumenAsync(ids, almacenId);
         var almacen = almacenId is int id ? await _repository.GetAlmacenAsync(id) : null;
-        var reservado = await _ventas.GetReservadoPorProductoAsync(almacenId);
+        var reservado = await _ventas.GetReservadoPorProductoAsync(almacenId, ids);
         var actividad = await _repository.GetActividadAsync(ids, almacenId, DiasDeRitmo);
-        var transito = await _compras.GetEnTransitoPorProductoAsync();
+        var transito = await _compras.GetEnTransitoPorProductoAsync(ids);
+        var capas = (await _repository.GetCapasDisponiblesAsync(ids, almacenId)).ToLookup(c => c.ProductoId);
 
         return new PaginaResponse<StockResponse>
         {
-            Items = productos.Select(p => MapStock(p, resumen.GetValueOrDefault(p.Id),
-                                                  reservado.GetValueOrDefault(p.Id),
-                                                  almacenId, almacen?.Nombre,
-                                                  actividad.GetValueOrDefault(p.Id),
-                                                  transito.GetValueOrDefault(p.Id))).ToList(),
+            Items = productos.Select(p =>
+            {
+                var fila = MapStock(p, resumen.GetValueOrDefault(p.Id),
+                                    reservado.GetValueOrDefault(p.Id),
+                                    almacenId, almacen?.Nombre,
+                                    actividad.GetValueOrDefault(p.Id),
+                                    transito.GetValueOrDefault(p.Id));
+                fila.Capas = capas[p.Id].Select(MapCapa).ToList();
+                return fila;
+            }).ToList(),
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,
@@ -476,18 +480,26 @@ public class InventarioService : IInventarioService
     public async Task<PaginaResponse<KardexResponse>> ListarKardexAsync(
         ConsultaTablaRequest consulta, int? almacenId)
     {
-        var (items, total, aperturas) = await _repository.ListarKardexAsync(consulta, almacenId);
+        var (items, total, aperturas, intermedios) = await _repository.ListarKardexAsync(consulta, almacenId);
 
         var saldos = new Dictionary<(int, int), SaldoKardex>(aperturas);
         var porId = new Dictionary<int, (SaldoKardex Antes, SaldoKardex Despues)>();
 
+        // Se recorre el libro real (los movimientos intermedios, estén o no en
+        // la página) más las reservas de la página, que no mueven nada. Así el
+        // saldo de cada fila es el verdadero aunque haya filtros.
+        var recorrido = intermedios
+            .Select(m => (m.Id, m.Fecha, m.ProductoId, m.AlmacenId, m.Tipo, m.Cantidad, m.CostoTotal))
+            .Concat(items.Where(f => f.Tipo == TipoKardex.Reserva)
+                .Select(f => (f.Id, f.Fecha, f.ProductoId, f.AlmacenId, f.Tipo, f.Cantidad, f.CostoTotal)));
+
         // Siempre de lo mas viejo a lo mas nuevo: es el unico orden en el que
         // un acumulado tiene sentido, sin importar como se pidio la pagina.
-        foreach (var m in items.OrderBy(m => m.Fecha).ThenBy(m => m.Id))
+        foreach (var m in recorrido.OrderBy(m => m.Fecha).ThenBy(m => m.Id))
         {
             var clave = (m.ProductoId, m.AlmacenId);
             var antes = saldos.GetValueOrDefault(clave, new SaldoKardex(0, 0));
-            var despues = Aplicar(antes, m);
+            var despues = Aplicar(antes, m.Tipo, m.Cantidad, m.CostoTotal);
 
             saldos[clave] = despues;
             porId[m.Id] = (antes, despues);
@@ -515,17 +527,40 @@ public class InventarioService : IInventarioService
      * que se consumio —no el precio al que se vendio—, que es lo que deja que
      * el valorizado del kardex cuadre con el del stock.
      */
-    private static SaldoKardex Aplicar(SaldoKardex antes, FilaKardex f) =>
-        f.Tipo switch
+    private static SaldoKardex Aplicar(SaldoKardex antes, string tipo, decimal cantidad, decimal costoTotal) =>
+        tipo switch
         {
             // Una reserva no mueve nada: aparta. El stock queda igual antes y
             // despues, y por eso la fila se lee como un aviso y no como un
             // movimiento.
             TipoKardex.Reserva => antes,
             TipoMovimiento.Entrada =>
-                new SaldoKardex(antes.Cantidad + f.Cantidad, antes.Valor + f.CostoTotal),
-            _ => new SaldoKardex(antes.Cantidad - f.Cantidad, antes.Valor - f.CostoTotal),
+                new SaldoKardex(antes.Cantidad + cantidad, antes.Valor + costoTotal),
+            _ => new SaldoKardex(antes.Cantidad - cantidad, antes.Valor - costoTotal),
         };
+
+    /// <summary>
+    /// Cuánto se puede prometer de cada producto: stock (capas con saldo) menos
+    /// lo que apartan los pedidos pendientes. Nada de catálogo ni costos.
+    /// </summary>
+    public async Task<IEnumerable<DisponibleResponse>> GetDisponibleAsync(int? almacenId)
+    {
+        var stock = await _repository.GetStockPorProductoAsync(almacenId);
+        var reservado = await _ventas.GetReservadoPorProductoAsync(almacenId);
+
+        return stock.Keys.Union(reservado.Keys)
+            .Select(id =>
+            {
+                var r = reservado.GetValueOrDefault(id);
+                return new DisponibleResponse
+                {
+                    ProductoId = id,
+                    Disponible = stock.GetValueOrDefault(id) - r,
+                    Reservado = r,
+                };
+            })
+            .ToList();
+    }
 
     private static KardexResponse MapKardex(
         FilaKardex f, SaldoKardex antes, SaldoKardex despues) => new()
@@ -627,19 +662,11 @@ public class InventarioService : IInventarioService
         ConsultaTablaRequest consulta, string? familia)
     {
         var (items, total) = await _repository.ListarDocumentosAsync(consulta, familia);
-
-        var respuesta = new List<DocumentoInventarioResponse>();
-        foreach (var d in items)
-        {
-            var anuladoPor = d.Estado == EstadoDocumento.Anulado
-                ? await _repository.GetNumeroAnulacionAsync(d.Id)
-                : null;
-            respuesta.Add(MapDocumento(d, conDetalle: false, anuladoPor));
-        }
+        foreach (var d in items) d.Total = Math.Round(d.Total, 2);
 
         return new PaginaResponse<DocumentoInventarioResponse>
         {
-            Items = respuesta,
+            Items = items,
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,

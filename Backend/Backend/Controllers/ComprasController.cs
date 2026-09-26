@@ -118,6 +118,11 @@ public class CompraController : ControllerBase
     [Permiso("compras.compras", Accion.Ver)]
     public async Task<IActionResult> Abiertas() => Ok(await _compras.GetComprasAbiertasAsync());
 
+    /// <summary>Solo los números de las compras con recepción: las opciones del filtro de Recepciones.</summary>
+    [HttpGet("con-recepcion")]
+    [PermisoAlguno("compras.recepciones:ver", "compras.compras:ver")]
+    public async Task<IActionResult> ConRecepcion() => Ok(await _compras.GetNumerosConRecepcionAsync());
+
     /// <summary>Compras a crédito con saldo pendiente: base de "Cuentas por pagar".</summary>
     /// <summary>Una página de las cuentas por pagar.</summary>
     [HttpPost("cuentasporpagar/listar")]

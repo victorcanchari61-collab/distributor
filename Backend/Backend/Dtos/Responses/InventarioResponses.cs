@@ -301,3 +301,13 @@ public class PrestamoDetalleResponse
     public decimal CostoUnitario { get; set; }
     public decimal CostoTotal { get; set; }
 }
+
+/// <summary>Cuánto se puede prometer de un producto: sin costos ni catálogo.</summary>
+public class DisponibleResponse
+{
+    public int ProductoId { get; set; }
+    public decimal Disponible { get; set; }
+
+    /// <summary>Lo ya comprometido en pedidos pendientes: se informa a quien toma otro.</summary>
+    public decimal Reservado { get; set; }
+}

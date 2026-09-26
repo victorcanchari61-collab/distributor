@@ -71,13 +71,13 @@ public class ComprasService : IComprasService
 
     public Task<ResumenOrdenesCompraResponse> GetResumenOrdenesAsync() => _repository.ResumenOrdenesAsync();
 
-    public async Task<PaginaResponse<CompraResponse>> ListarComprasAsync(ConsultaTablaRequest consulta)
+    public async Task<PaginaResponse<CompraFilaResponse>> ListarComprasAsync(ConsultaTablaRequest consulta)
     {
         var (items, total) = await _repository.ListarComprasAsync(consulta);
 
-        return new PaginaResponse<CompraResponse>
+        return new PaginaResponse<CompraFilaResponse>
         {
-            Items = items.Select(MapCompra).ToList(),
+            Items = items,
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,
@@ -88,6 +88,9 @@ public class ComprasService : IComprasService
 
     public async Task<IEnumerable<CompraResponse>> GetComprasAbiertasAsync() =>
         (await _repository.GetComprasAbiertasAsync()).Select(MapCompra);
+
+    public async Task<IEnumerable<string>> GetNumerosConRecepcionAsync() =>
+        await _repository.GetNumerosConRecepcionAsync();
 
     public async Task<OrdenCompraResponse> GetOrdenAsync(int id) =>
         MapOrden(await GetOrdenOrThrowAsync(id));
@@ -462,13 +465,13 @@ public class ComprasService : IComprasService
         return actualizada;
     }
 
-    public async Task<PaginaResponse<CompraResponse>> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta)
+    public async Task<PaginaResponse<CompraFilaResponse>> ListarCuentasPorPagarAsync(ConsultaTablaRequest consulta)
     {
         var (items, total) = await _repository.ListarCuentasPorPagarAsync(consulta);
 
-        return new PaginaResponse<CompraResponse>
+        return new PaginaResponse<CompraFilaResponse>
         {
-            Items = items.Select(MapCompra).ToList(),
+            Items = items,
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,

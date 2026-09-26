@@ -222,13 +222,13 @@ public class VentasService : IVentasService
     public async Task<ResumenPedidosResponse> GetResumenPedidosAsync() =>
         await _repository.ResumenPedidosAsync(await AlcancePedidosAsync());
 
-    public async Task<PaginaResponse<NotaVentaResponse>> ListarNotasVentaAsync(ConsultaTablaRequest consulta)
+    public async Task<PaginaResponse<NotaVentaFilaResponse>> ListarNotasVentaAsync(ConsultaTablaRequest consulta)
     {
         var (items, total) = await _repository.ListarNotasVentaAsync(consulta, await AlcanceVentasAsync());
 
-        return new PaginaResponse<NotaVentaResponse>
+        return new PaginaResponse<NotaVentaFilaResponse>
         {
-            Items = items.Select(MapNotaVenta).ToList(),
+            Items = items,
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,
@@ -1075,14 +1075,14 @@ public class VentasService : IVentasService
         return actualizada;
     }
 
-    public async Task<PaginaResponse<NotaVentaResponse>> ListarCuentasPorCobrarAsync(
+    public async Task<PaginaResponse<NotaVentaFilaResponse>> ListarCuentasPorCobrarAsync(
         ConsultaTablaRequest consulta)
     {
         var (items, total) = await _repository.ListarCuentasPorCobrarAsync(consulta);
 
-        return new PaginaResponse<NotaVentaResponse>
+        return new PaginaResponse<NotaVentaFilaResponse>
         {
-            Items = items.Select(MapNotaVenta).ToList(),
+            Items = items,
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,
