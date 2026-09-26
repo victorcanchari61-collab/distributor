@@ -12,7 +12,7 @@ public interface IProductoService
     Task<IEnumerable<ProductoResponse>> GetAllAsync();
 
     /// <summary>Una página del catálogo, resuelta en la base.</summary>
-    Task<PaginaResponse<ProductoResponse>> ListarAsync(ConsultaTablaRequest consulta);
+    Task<PaginaResponse<ProductoFilaResponse>> ListarAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Contadores y valores de filtro del catálogo completo.</summary>
     Task<ResumenProductosResponse> GetResumenAsync();

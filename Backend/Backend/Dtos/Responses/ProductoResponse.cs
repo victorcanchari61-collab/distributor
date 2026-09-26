@@ -71,3 +71,30 @@ public class PresentacionResponse
     public string? CodigoBarras { get; set; }
     public bool Activo { get; set; }
 }
+
+/// <summary>
+/// Un producto como fila del listado: solo lo que muestra la tabla. La ficha
+/// completa (para editarlo) viene con GET /producto/{id}.
+/// </summary>
+public class ProductoFilaResponse
+{
+    public int Id { get; set; }
+    public string Codigo { get; set; } = string.Empty;
+    public string Nombre { get; set; } = string.Empty;
+    public string? Categoria { get; set; }
+    public string? Marca { get; set; }
+    public string UnidadBase { get; set; } = string.Empty;
+    public decimal? CostoReferencia { get; set; }
+    public bool Activo { get; set; }
+
+    /// <summary>Lo que lista el desplegable de la columna: nombre y equivalencia.</summary>
+    public List<PresentacionFilaResponse> Presentaciones { get; set; } = [];
+}
+
+public class PresentacionFilaResponse
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public decimal Factor { get; set; }
+    public bool EsBase { get; set; }
+}

@@ -46,6 +46,7 @@ import type {
   CategoriaResponse,
   MarcaResponse,
   ProductoImportRequest,
+  ProductoFila,
   ProductoResponse,
   UnidadResponse,
   ResumenProductos,
@@ -98,7 +99,7 @@ export function ProductosPage() {
   const toast = useToast()
   const [pestana, setPestana] = useState<Pestana>('productos')
 
-  const [productos, setProductos] = useState<ProductoResponse[]>([])
+  const [productos, setProductos] = useState<ProductoFila[]>([])
   const [categorias, setCategorias] = useState<CategoriaResponse[]>([])
   const [marcas, setMarcas] = useState<MarcaResponse[]>([])
   const [unidades, setUnidades] = useState<UnidadResponse[]>([])
@@ -197,6 +198,15 @@ export function ProductosPage() {
     setBaseSeVende(true)
     setPestanaForm('datos')
     setAbierto(true)
+  }
+
+  // La fila no trae la ficha completa: se pide el producto al abrir Editar.
+  const editarProducto = async (id: number) => {
+    try {
+      abrirEdicion(await productoApi.getById(id))
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir el producto.')
+    }
   }
 
   const abrirEdicion = (producto: ProductoResponse) => {
@@ -535,7 +545,7 @@ export function ProductosPage() {
     }
   }
 
-  const cambiarEstado = (producto: ProductoResponse) =>
+  const cambiarEstado = (producto: ProductoFila) =>
     confirmar({
       titulo: `${producto.activo ? 'Desactivar' : 'Activar'} ${producto.nombre}`,
       mensaje: producto.activo
@@ -573,7 +583,7 @@ export function ProductosPage() {
     )
   }
 
-  const eliminar = (producto: ProductoResponse) =>
+  const eliminar = (producto: ProductoFila) =>
     confirmar({
       titulo: `Eliminar ${producto.nombre}`,
       mensaje:
@@ -592,7 +602,7 @@ export function ProductosPage() {
       },
     })
 
-  const columns: DataTableColumn<ProductoResponse>[] = [
+  const columns: DataTableColumn<ProductoFila>[] = [
     { key: 'codigo', label: 'Código', filterable: false },
     { key: 'nombre', label: 'Nombre', filterable: false },
     {
@@ -804,7 +814,7 @@ export function ProductosPage() {
         rowActions={(row) => (
           <>
             {puede('maestros.productos', 'editar') && (
-              <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+              <RowAction label={`Editar ${row.nombre}`} onClick={() => void editarProducto(row.id)}>
                 <Pencil size={15} />
               </RowAction>
             )}

@@ -59,19 +59,15 @@ public class ProductoService : IProductoService
         return (await _repository.GetAllConDetalleAsync()).Select(MapToResponse);
     }
 
-    public async Task<PaginaResponse<ProductoResponse>> ListarAsync(ConsultaTablaRequest consulta)
+    public async Task<PaginaResponse<ProductoFilaResponse>> ListarAsync(ConsultaTablaRequest consulta)
     {
+        // "Tiene movimientos" ya no va aquí: solo lo usa el formulario de
+        // edición, y viene con el producto por id (GetByIdAsync).
         var (items, total) = await _repository.ListarAsync(consulta);
-        var conMovimientos = await _repository.GetIdsConMovimientosAsync(items.Select(p => p.Id));
 
-        return new PaginaResponse<ProductoResponse>
+        return new PaginaResponse<ProductoFilaResponse>
         {
-            Items = items.Select(p =>
-            {
-                var r = MapToResponse(p);
-                r.TieneMovimientos = conMovimientos.Contains(p.Id);
-                return r;
-            }).ToList(),
+            Items = items,
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,

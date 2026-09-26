@@ -58,6 +58,23 @@ export interface PresentacionResponse {
   activo: boolean
 }
 
+/**
+ * Un producto como fila del listado: solo lo que muestra la tabla. La ficha
+ * completa, para editarlo, viene con getById.
+ */
+export interface ProductoFila {
+  id: number
+  codigo: string
+  nombre: string
+  categoria: string | null
+  marca: string | null
+  unidadBase: string
+  costoReferencia: number | null
+  activo: boolean
+  /** Lo que lista el desplegable de la columna. */
+  presentaciones: { id: number; nombre: string; factor: number; esBase: boolean }[]
+}
+
 export interface ProductoResponse {
   id: number
   /** Ya tiene stock, kardex o costos: cambiar la unidad base no los convierte. */
@@ -153,7 +170,7 @@ export interface ResumenProductos {
 export const productoApi = {
   /** Una página del catálogo, resuelta en el servidor. */
   listar: (consulta: ConsultaTabla) =>
-    api.post<PaginaResponse<ProductoResponse>>('/producto/listar', consulta),
+    api.post<PaginaResponse<ProductoFila>>('/producto/listar', consulta),
 
   resumen: () => api.get<ResumenProductos>('/producto/resumen'),
 

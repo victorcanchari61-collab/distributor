@@ -13,7 +13,7 @@ public interface IProductoRepository
     Task<HashSet<int>> GetIdsConMovimientosAsync(IEnumerable<int> ids);
 
     /// <summary>Una página del catálogo, buscada, filtrada y ordenada en la base.</summary>
-    Task<(List<Producto> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta);
+    Task<(List<Dtos.Responses.ProductoFilaResponse> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta);
 
     /// <summary>
     /// Una página de los productos que controlan stock, para la pantalla de

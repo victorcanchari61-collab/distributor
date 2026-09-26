@@ -43,9 +43,11 @@ public class ProductoRepository : IProductoRepository
             .ToListAsync();
     }
 
-    public async Task<(List<Producto> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta)
+    public async Task<(List<Dtos.Responses.ProductoFilaResponse> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta)
     {
-        var query = ConDetalle().AsNoTracking().AsQueryable();
+        // Sin Include: la fila se proyecta al final con solo lo que muestra la
+        // tabla. La ficha completa, para editar, viene con el producto por id.
+        var query = _context.Productos.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
@@ -104,7 +106,29 @@ public class ProductoRepository : IProductoRepository
             _ => query.OrderByDescending(p => p.Activo).ThenBy(p => p.Nombre).ThenBy(p => p.Id),
         };
 
-        return await query.PaginarAsync(consulta);
+        return await query
+            .Select(p => new Dtos.Responses.ProductoFilaResponse
+            {
+                Id = p.Id,
+                Codigo = p.Codigo,
+                Nombre = p.Nombre,
+                Categoria = p.Categoria != null ? p.Categoria.Nombre : null,
+                Marca = p.Marca != null ? p.Marca.Nombre : null,
+                UnidadBase = p.UnidadBase != null ? p.UnidadBase.Codigo : string.Empty,
+                CostoReferencia = p.CostoReferencia,
+                Activo = p.Activo,
+                Presentaciones = p.Presentaciones
+                    .OrderBy(pr => pr.Factor)
+                    .Select(pr => new Dtos.Responses.PresentacionFilaResponse
+                    {
+                        Id = pr.Id,
+                        Nombre = pr.Nombre,
+                        Factor = pr.Factor,
+                        EsBase = pr.Factor == 1m,
+                    })
+                    .ToList(),
+            })
+            .PaginarAsync(consulta);
     }
 
     private IQueryable<Producto> ParaStock() => _context.Productos
