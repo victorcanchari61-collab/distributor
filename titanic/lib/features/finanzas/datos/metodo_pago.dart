@@ -17,8 +17,12 @@ class TipoMetodoPago {
 }
 
 /// Un metodo de pago del catalogo: efectivo, billetera digital o
-/// transferencia. Lo comparten Compras, Cuentas por cobrar, Cuentas por
-/// pagar y Mis cobros.
+/// transferencia. Lo comparten Compras, Cuentas por cobrar y Cuentas por
+/// pagar.
+///
+/// Los datos del banco (numero de cuenta, CCI, titular) ya no viven aqui sino
+/// en la cuenta financiera a la que apunta: un metodo solo dice a que cuenta
+/// va la plata y, en una billetera, con que numero de celular se cobra.
 class MetodoPago {
   const MetodoPago({
     required this.id,
@@ -26,39 +30,88 @@ class MetodoPago {
     required this.tipo,
     required this.activo,
     required this.usos,
-    this.banco,
-    this.numeroCuenta,
-    this.cci,
-    this.titular,
+    this.numero,
+    this.cuentaFinancieraId,
+    this.cuentaFinanciera,
   });
 
   final int id;
   final String nombre;
   final String tipo;
-  final String? banco;
-  final String? numeroCuenta;
-  final String? cci;
-  final String? titular;
+
+  /// El numero de celular, solo en billetera digital (Yape, Plin).
+  final String? numero;
+
+  /// A que cuenta va la plata. Null solo en Efectivo, que entra a la caja de
+  /// quien cobra.
+  final int? cuentaFinancieraId;
+
+  /// Nombre de esa cuenta, solo para mostrar.
+  final String? cuentaFinanciera;
+
   final bool activo;
 
   /// Cuantos documentos ya lo usan.
   final int usos;
 
   String get buscable =>
-      '$nombre ${banco ?? ''} ${numeroCuenta ?? ''} ${titular ?? ''}'
-          .toLowerCase();
+      '$nombre ${numero ?? ''} ${cuentaFinanciera ?? ''}'.toLowerCase();
 
   factory MetodoPago.desdeJson(Map<String, dynamic> json) => MetodoPago(
     id: json['id'] as int,
     nombre: json['nombre'] as String? ?? '',
     tipo: json['tipo'] as String? ?? TipoMetodoPago.efectivo,
-    banco: json['banco'] as String?,
-    numeroCuenta: json['numeroCuenta'] as String?,
-    cci: json['cci'] as String?,
-    titular: json['titular'] as String?,
+    numero: json['numero'] as String?,
+    cuentaFinancieraId: json['cuentaFinancieraId'] as int?,
+    cuentaFinanciera: json['cuentaFinanciera'] as String?,
     activo: json['activo'] as bool? ?? true,
     usos: json['usos'] as int? ?? 0,
   );
+
+  /// Lo que acepta el backend al editar: el metodo tal cual, con su estado.
+  Map<String, dynamic> aJson({required bool activo}) => {
+    'nombre': nombre,
+    'tipo': tipo,
+    'numero': numero,
+    'cuentaFinancieraId': cuentaFinancieraId,
+    'activo': activo,
+  };
+}
+
+/// Una cuenta financiera a la que puede apuntar un metodo de pago.
+class CuentaFinancieraOpcion {
+  const CuentaFinancieraOpcion({
+    required this.id,
+    required this.nombre,
+    required this.naturaleza,
+    required this.activo,
+    this.banco,
+  });
+
+  final int id;
+  final String nombre;
+
+  /// CAJA, BANCO u otra. Las cajas no se eligen: esas son del Efectivo.
+  final String naturaleza;
+
+  final String? banco;
+  final bool activo;
+
+  /// Bancos y pasarelas activos, nunca una caja: el Efectivo no elige cuenta.
+  bool get elegible => naturaleza != 'CAJA' && activo;
+
+  /// "Cuenta corriente — BCP", como se lee en el desplegable.
+  String get etiqueta =>
+      banco == null || banco!.trim().isEmpty ? nombre : '$nombre — $banco';
+
+  factory CuentaFinancieraOpcion.desdeJson(Map<String, dynamic> json) =>
+      CuentaFinancieraOpcion(
+        id: json['id'] as int,
+        nombre: json['nombre'] as String? ?? '',
+        naturaleza: json['naturaleza'] as String? ?? '',
+        banco: json['banco'] as String?,
+        activo: json['activo'] as bool? ?? true,
+      );
 }
 
 /// Lo justo para elegir con cuál se cobra: nombre y tipo, sin datos de cuenta

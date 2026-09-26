@@ -1,5 +1,4 @@
 import '../../../core/red/cliente_api.dart';
-import 'cobro.dart';
 import 'nota_venta.dart';
 import 'pedido.dart';
 
@@ -91,14 +90,6 @@ class VentasApi {
     final datos = await _api.get('/notaventa/cuentasporcobrar') as List;
     return datos
         .map((e) => NotaVenta.desdeJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  /// GET /api/notaventa/miscobros
-  Future<List<Cobro>> misCobros() async {
-    final datos = await _api.get('/notaventa/miscobros') as List;
-    return datos
-        .map((e) => Cobro.desdeJson(e as Map<String, dynamic>))
         .toList();
   }
 

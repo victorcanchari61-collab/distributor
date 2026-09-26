@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/estado/filtro_documento.dart';
 import '../../auth/estado/auth_controlador.dart';
-import '../datos/cobro.dart';
 import '../datos/nota_venta.dart';
 import '../datos/pedido.dart';
 import '../datos/ventas_api.dart';
@@ -322,71 +321,6 @@ final clientesCuentasPorCobrarProvider = Provider.autoDispose<List<String>>((
   final todas =
       ref.watch(cuentasPorCobrarProvider).valueOrNull ?? const <NotaVenta>[];
   final valores = todas.map((n) => n.cliente).toSet().toList()..sort();
-  return valores;
-});
-
-// --- Mis cobros ---
-
-final busquedaMisCobrosProvider = StateProvider.autoDispose<String>(
-  (ref) => '',
-);
-
-class MisCobrosControlador extends AsyncNotifier<List<Cobro>> {
-  @override
-  Future<List<Cobro>> build() => ref.watch(ventasApiProvider).misCobros();
-
-  Future<void> recargar() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(
-      () => ref.read(ventasApiProvider).misCobros(),
-    );
-  }
-}
-
-final misCobrosProvider =
-    AsyncNotifierProvider<MisCobrosControlador, List<Cobro>>(
-      MisCobrosControlador.new,
-    );
-
-final clienteMisCobrosFiltroProvider = StateProvider.autoDispose<String?>(
-  (ref) => null,
-);
-final metodoMisCobrosFiltroProvider = StateProvider.autoDispose<String?>(
-  (ref) => null,
-);
-
-final filtrosMisCobrosActivosProvider = Provider.autoDispose((ref) {
-  var n = ref.watch(filtroDocumentoProvider) == FiltroDocumento.todos ? 0 : 1;
-  if (ref.watch(clienteMisCobrosFiltroProvider) != null) n++;
-  if (ref.watch(metodoMisCobrosFiltroProvider) != null) n++;
-  return n;
-});
-
-final misCobrosFiltradosProvider = Provider.autoDispose<List<Cobro>>((ref) {
-  final todos = ref.watch(misCobrosProvider).valueOrNull ?? const <Cobro>[];
-  final texto = ref.watch(busquedaMisCobrosProvider).trim().toLowerCase();
-  final filtro = ref.watch(filtroDocumentoProvider);
-  final cliente = ref.watch(clienteMisCobrosFiltroProvider);
-  final metodo = ref.watch(metodoMisCobrosFiltroProvider);
-
-  return todos
-      .where((c) => pasaDocumento(c.anulado, filtro))
-      .where((c) => cliente == null || c.cliente == cliente)
-      .where((c) => metodo == null || c.metodoPago == metodo)
-      .where((c) => texto.isEmpty || c.buscable.contains(texto))
-      .toList();
-});
-
-/// Clientes y métodos que existen en los cobros, para armar el filtro.
-final clientesMisCobrosProvider = Provider.autoDispose<List<String>>((ref) {
-  final todos = ref.watch(misCobrosProvider).valueOrNull ?? const <Cobro>[];
-  final valores = todos.map((c) => c.cliente).toSet().toList()..sort();
-  return valores;
-});
-
-final metodosMisCobrosProvider = Provider.autoDispose<List<String>>((ref) {
-  final todos = ref.watch(misCobrosProvider).valueOrNull ?? const <Cobro>[];
-  final valores = todos.map((c) => c.metodoPago).toSet().toList()..sort();
   return valores;
 });
 

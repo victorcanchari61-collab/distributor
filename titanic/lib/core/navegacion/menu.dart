@@ -226,6 +226,12 @@ const menuGrupos = <MenuGrupo>[
     icono: Icons.account_balance_outlined,
     items: [
       MenuItem(
+        id: 'finanzas.caja',
+        pendiente: false,
+        titulo: 'Mi Caja',
+        icono: Icons.point_of_sale_outlined,
+      ),
+      MenuItem(
         id: 'finanzas.metodospago',
         pendiente: false,
         titulo: 'Métodos de pago',
@@ -242,12 +248,6 @@ const menuGrupos = <MenuGrupo>[
         pendiente: false,
         titulo: 'Cuentas por pagar',
         icono: Icons.credit_card_outlined,
-      ),
-      MenuItem(
-        id: 'finanzas.miscobros',
-        pendiente: false,
-        titulo: 'Mis cobros',
-        icono: Icons.savings_outlined,
       ),
       MenuItem(
         id: 'finanzas.ganancias',

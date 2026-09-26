@@ -35,15 +35,9 @@ class MetodosPagoControlador extends AsyncNotifier<List<MetodoPago>> {
   }
 
   Future<void> cambiarEstado(MetodoPago metodo) async {
-    await ref.read(finanzasApiProvider).actualizarMetodoPago(metodo.id, {
-      'nombre': metodo.nombre,
-      'tipo': metodo.tipo,
-      'banco': metodo.banco,
-      'numeroCuenta': metodo.numeroCuenta,
-      'cci': metodo.cci,
-      'titular': metodo.titular,
-      'activo': !metodo.activo,
-    });
+    await ref
+        .read(finanzasApiProvider)
+        .actualizarMetodoPago(metodo.id, metodo.aJson(activo: !metodo.activo));
     await recargar();
   }
 }
@@ -57,7 +51,7 @@ final metodosPagoProvider =
 final tipoMetodoPagoFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
-final bancoMetodoPagoFiltroProvider = StateProvider.autoDispose<String?>(
+final cuentaMetodoPagoFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
 
@@ -65,7 +59,7 @@ final filtrosMetodosPagoActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
   if (ref.watch(estadoFiltroProvider) != FiltroEstado.activos) n++;
   if (ref.watch(tipoMetodoPagoFiltroProvider) != null) n++;
-  if (ref.watch(bancoMetodoPagoFiltroProvider) != null) n++;
+  if (ref.watch(cuentaMetodoPagoFiltroProvider) != null) n++;
   return n;
 });
 
@@ -77,23 +71,23 @@ final metodosPagoFiltradosProvider = Provider.autoDispose<List<MetodoPago>>((
   final texto = ref.watch(busquedaMetodosPagoProvider).trim().toLowerCase();
   final estado = ref.watch(estadoFiltroProvider);
   final tipo = ref.watch(tipoMetodoPagoFiltroProvider);
-  final banco = ref.watch(bancoMetodoPagoFiltroProvider);
+  final cuenta = ref.watch(cuentaMetodoPagoFiltroProvider);
 
   return todos
       .where((m) => pasaEstado(m.activo, estado))
       .where((m) => tipo == null || m.tipo == tipo)
-      .where((m) => banco == null || m.banco == banco)
+      .where((m) => cuenta == null || m.cuentaFinanciera == cuenta)
       .where((m) => texto.isEmpty || m.buscable.contains(texto))
       .toList();
 });
 
-/// Bancos que existen en los datos, para armar el filtro sin listas fijas.
-final bancosMetodoPagoProvider = Provider.autoDispose<List<String>>((ref) {
+/// Cuentas a las que apuntan los metodos, para armar el filtro sin listas fijas.
+final cuentasMetodoPagoProvider = Provider.autoDispose<List<String>>((ref) {
   final todos =
       ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[];
   final valores =
       todos
-          .map((m) => m.banco)
+          .map((m) => m.cuentaFinanciera)
           .whereType<String>()
           .where((v) => v.trim().isNotEmpty)
           .toSet()
@@ -101,6 +95,13 @@ final bancosMetodoPagoProvider = Provider.autoDispose<List<String>>((ref) {
         ..sort();
   return valores;
 });
+
+/// Las cuentas a las que puede apuntar un método nuevo o editado.
+final cuentasElegiblesProvider =
+    FutureProvider.autoDispose<List<CuentaFinancieraOpcion>>((ref) async {
+      final todas = await ref.watch(finanzasApiProvider).cuentasFinancieras();
+      return todas.where((c) => c.elegible).toList();
+    });
 
 /// Los métodos activos para cobrar al convertir un pedido en venta.
 ///

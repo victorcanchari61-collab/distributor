@@ -83,7 +83,7 @@ class MetodosPagoPagina extends ConsumerWidget {
       onLimpiar: () {
         ref.read(estadoFiltroProvider.notifier).state = FiltroEstado.activos;
         ref.read(tipoMetodoPagoFiltroProvider.notifier).state = null;
-        ref.read(bancoMetodoPagoFiltroProvider.notifier).state = null;
+        ref.read(cuentaMetodoPagoFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -113,18 +113,18 @@ class MetodosPagoPagina extends ConsumerWidget {
         ),
         Consumer(
           builder: (context, ref, _) {
-            final bancos = ref.watch(bancosMetodoPagoProvider);
-            if (bancos.isEmpty) return const SizedBox.shrink();
+            final cuentas = ref.watch(cuentasMetodoPagoProvider);
+            if (cuentas.isEmpty) return const SizedBox.shrink();
 
             return GrupoFiltro<String?>(
-              titulo: 'Banco',
-              valor: ref.watch(bancoMetodoPagoFiltroProvider),
+              titulo: 'Cuenta',
+              valor: ref.watch(cuentaMetodoPagoFiltroProvider),
               opciones: [
                 const OpcionFiltro(null, 'Todos'),
-                for (final b in bancos) OpcionFiltro(b, b),
+                for (final c in cuentas) OpcionFiltro(c, c),
               ],
               onCambio: (v) =>
-                  ref.read(bancoMetodoPagoFiltroProvider.notifier).state = v,
+                  ref.read(cuentaMetodoPagoFiltroProvider.notifier).state = v,
             );
           },
         ),
@@ -183,10 +183,14 @@ class _TarjetaMetodoPago extends StatelessWidget {
   final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos => [
-    CampoDetalle('Banco', metodo.banco),
-    CampoDetalle('Número', metodo.numeroCuenta),
-    CampoDetalle('CCI', metodo.cci),
-    CampoDetalle('Titular', metodo.titular),
+    CampoDetalle(
+      'Cuenta',
+      metodo.cuentaFinanciera ??
+          (metodo.tipo == TipoMetodoPago.efectivo
+              ? 'Caja de quien cobra'
+              : null),
+    ),
+    CampoDetalle('Celular', metodo.numero),
     CampoDetalle(
       'Estado',
       metodo.activo ? 'Activo' : 'Inactivo',

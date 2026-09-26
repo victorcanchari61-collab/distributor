@@ -24,6 +24,7 @@ class Empleado {
     this.area,
     this.fechaIngreso,
     this.fechaCese,
+    this.sueldoSemanal,
     this.observacion,
     this.usuarioId,
     this.usuario,
@@ -55,6 +56,10 @@ class Empleado {
 
   /// Cuando dejo de trabajar. Con fecha de cese la ficha queda como historico.
   final DateTime? fechaCese;
+
+  /// Lo que se le paga por semana, con lo que se arma la planilla semanal.
+  /// Sin sueldo el empleado no entra en ella.
+  final double? sueldoSemanal;
 
   final String? observacion;
 
@@ -90,6 +95,7 @@ class Empleado {
     area: json['area'] as String?,
     fechaIngreso: fechaDeJsonOpcional(json['fechaIngreso']),
     fechaCese: fechaDeJsonOpcional(json['fechaCese']),
+    sueldoSemanal: (json['sueldoSemanal'] as num?)?.toDouble(),
     observacion: json['observacion'] as String?,
     activo: json['activo'] as bool? ?? true,
     usuarioId: json['usuarioId'] as int?,
@@ -112,6 +118,9 @@ class Empleado {
     'area': area,
     'fechaIngreso': fechaIngreso?.toIso8601String(),
     'fechaCese': fechaCese?.toIso8601String(),
+    // Siempre se envia, aunque no se haya tocado: el backend guarda lo que
+    // llega, y sin este campo editar la ficha le borraba el sueldo.
+    'sueldoSemanal': sueldoSemanal,
     'observacion': observacion,
   };
 }

@@ -5,6 +5,7 @@ import '../../features/dms/estado/dms_controlador.dart';
 import '../../features/config/estado/config_controlador.dart';
 import '../../features/facturacion/estado/facturacion_controlador.dart';
 import '../../features/finanzas/estado/finanzas_controlador.dart';
+import '../../features/finanzas/estado/mi_caja_controlador.dart';
 import '../../features/finanzas/estado/ganancia_controlador.dart';
 import '../../features/inventario/estado/inventario_controlador.dart';
 import '../../features/maestros/estado/maestros_controlador.dart';
@@ -52,7 +53,8 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   'notasventa': [
     notasVentaProvider,
     cuentasPorCobrarProvider,
-    misCobrosProvider,
+    miCajaProvider,
+    movimientosMiCajaProvider,
     gananciasProvider,
     stockProvider,
     kardexProvider,
@@ -89,6 +91,8 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   'almacenes': [almacenesProvider, almacenesOpcionesProvider, stockProvider],
   'motivos': [motivosProvider, ajustesProvider],
   'metodospago': [metodosPagoProvider],
+  'cuentasfinancieras': [miCajaProvider, movimientosMiCajaProvider],
+  'gastosoperativos': [miCajaProvider, movimientosMiCajaProvider],
   'mercados': [tms.mercadosProvider, clientesProvider],
   'rutas': [tms.rutasProvider, rutasProvider, clientesProvider],
   'flota': [tms.vehiculosProvider, tms.resumenFlotaProvider],

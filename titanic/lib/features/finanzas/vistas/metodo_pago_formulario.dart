@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
@@ -13,6 +14,11 @@ import '../estado/finanzas_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
 /// Alta y edicion de un metodo de pago.
+///
+/// Igual que en el panel web: el Efectivo no elige cuenta (entra a la caja de
+/// quien cobra); la billetera digital y la transferencia si, porque hay que
+/// saber a que cuenta llega la plata. La billetera ademas lleva su numero de
+/// celular, que es con lo que se la reconoce entre varias de la misma cuenta.
 class MetodoPagoFormulario extends ConsumerStatefulWidget {
   const MetodoPagoFormulario({super.key, this.metodo});
 
@@ -26,50 +32,39 @@ class MetodoPagoFormulario extends ConsumerStatefulWidget {
 
 class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
   late final _nombre = TextEditingController(text: widget.metodo?.nombre ?? '');
-  late final _banco = TextEditingController(text: widget.metodo?.banco ?? '');
-  late final _numeroCuenta = TextEditingController(
-    text: widget.metodo?.numeroCuenta ?? '',
-  );
-  late final _cci = TextEditingController(text: widget.metodo?.cci ?? '');
-  late final _titular = TextEditingController(
-    text: widget.metodo?.titular ?? '',
-  );
+  late final _numero = TextEditingController(text: widget.metodo?.numero ?? '');
 
   late String _tipo = widget.metodo?.tipo ?? TipoMetodoPago.efectivo;
+  late int? _cuentaId = widget.metodo?.cuentaFinancieraId;
 
   bool _guardando = false;
   String? _error;
   String? _errorNombre;
-  String? _errorBanco;
-  String? _errorNumeroCuenta;
+  String? _errorNumero;
+  String? _errorCuenta;
 
   bool get _esNuevo => widget.metodo == null;
-  bool get _esTransferencia => _tipo == TipoMetodoPago.transferencia;
-  bool get _tieneCuenta => _tipo != TipoMetodoPago.efectivo;
+  bool get _esBilletera => _tipo == TipoMetodoPago.billeteraDigital;
+  bool get _llevaCuenta => _tipo != TipoMetodoPago.efectivo;
 
   @override
   void dispose() {
-    for (final c in [_nombre, _banco, _numeroCuenta, _cci, _titular]) {
-      c.dispose();
-    }
+    _nombre.dispose();
+    _numero.dispose();
     super.dispose();
   }
 
   bool _validar() {
     setState(() {
       _errorNombre = _nombre.text.trim().isEmpty ? 'Ingresa el nombre.' : null;
-      _errorBanco = _esTransferencia && _banco.text.trim().isEmpty
-          ? 'Indica el banco.'
+      _errorNumero = _esBilletera && _numero.text.trim().isEmpty
+          ? 'Indica el número de celular de esta billetera.'
           : null;
-      _errorNumeroCuenta = _tieneCuenta && _numeroCuenta.text.trim().isEmpty
-          ? (_esTransferencia
-                ? 'Indica el número de cuenta.'
-                : 'Indica el número de celular.')
+      _errorCuenta = _llevaCuenta && _cuentaId == null
+          ? 'Elige a qué cuenta va la plata.'
           : null;
     });
-    return _errorNombre == null &&
-        _errorBanco == null &&
-        _errorNumeroCuenta == null;
+    return _errorNombre == null && _errorNumero == null && _errorCuenta == null;
   }
 
   Future<void> _guardar() async {
@@ -87,18 +82,11 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
     final cuerpo = <String, dynamic>{
       'nombre': _nombre.text.trim(),
       'tipo': _tipo,
-      'banco': _esTransferencia && _banco.text.trim().isNotEmpty
-          ? _banco.text.trim()
-          : null,
-      'numeroCuenta': _tieneCuenta && _numeroCuenta.text.trim().isNotEmpty
-          ? _numeroCuenta.text.trim()
-          : null,
-      'cci': _esTransferencia && _cci.text.trim().isNotEmpty
-          ? _cci.text.trim()
-          : null,
-      'titular': _tieneCuenta && _titular.text.trim().isNotEmpty
-          ? _titular.text.trim()
-          : null,
+      // El backend rechaza el numero fuera de la billetera y la cuenta en el
+      // Efectivo: se mandan vacios en vez de arrastrar lo que quedo escrito
+      // antes de cambiar el tipo.
+      'numero': _esBilletera ? _numero.text.trim() : null,
+      'cuentaFinancieraId': _llevaCuenta ? _cuentaId : null,
       if (!_esNuevo) 'activo': widget.metodo!.activo,
     };
 
@@ -169,51 +157,26 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
             ),
             const SizedBox(height: Dimen.espacio4),
 
-            if (_esTransferencia) ...[
+            if (_esBilletera) ...[
               AppCampo(
-                controlador: _banco,
-                etiqueta: 'Banco',
-                pista: 'BCP, Interbank, BBVA...',
-                icono: Icons.account_balance_outlined,
-                error: _errorBanco,
+                controlador: _numero,
+                etiqueta: 'Número de celular',
+                icono: Icons.smartphone_outlined,
+                tipoTeclado: TextInputType.phone,
+                formateadores: [FilteringTextInputFormatter.digitsOnly],
+                maxLargo: 20,
+                error: _errorNumero,
                 habilitado: !_guardando,
               ),
               const SizedBox(height: Dimen.espacio4),
             ],
 
-            if (_tieneCuenta) ...[
-              AppCampo(
-                controlador: _numeroCuenta,
-                etiqueta: _esTransferencia
-                    ? 'Número de cuenta'
-                    : 'Número de celular',
-                icono: Icons.numbers_outlined,
-                error: _errorNumeroCuenta,
+            if (_llevaCuenta) ...[
+              _SelectorCuenta(
+                valor: _cuentaId,
+                error: _errorCuenta,
                 habilitado: !_guardando,
-              ),
-              const SizedBox(height: Dimen.espacio4),
-            ],
-
-            if (_esTransferencia) ...[
-              AppCampo(
-                controlador: _cci,
-                etiqueta: 'CCI',
-                pista: 'Código de cuenta interbancario',
-                icono: Icons.tag,
-                opcional: true,
-                habilitado: !_guardando,
-              ),
-              const SizedBox(height: Dimen.espacio4),
-            ],
-
-            if (_tieneCuenta) ...[
-              AppCampo(
-                controlador: _titular,
-                etiqueta: 'Titular',
-                pista: 'A nombre de quién está',
-                icono: Icons.person_outline,
-                opcional: true,
-                habilitado: !_guardando,
+                onCambio: (v) => setState(() => _cuentaId = v),
               ),
               const SizedBox(height: Dimen.espacio4),
             ],
@@ -229,6 +192,50 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A que cuenta va la plata: bancos y pasarelas activos, nunca una caja.
+class _SelectorCuenta extends ConsumerWidget {
+  const _SelectorCuenta({
+    required this.valor,
+    required this.error,
+    required this.habilitado,
+    required this.onCambio,
+  });
+
+  final int? valor;
+  final String? error;
+  final bool habilitado;
+  final ValueChanged<int?> onCambio;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cuentas = ref.watch(cuentasElegiblesProvider);
+
+    return cuentas.when(
+      loading: () => const LinearProgressIndicator(),
+      // Leer las cuentas pide permiso de Finanzas (cajas o bancos): sin el,
+      // se dice claro en vez de mostrar un desplegable vacio.
+      error: (e, _) => AppAlerta(
+        e is ApiExcepcion
+            ? e.texto
+            : 'No pudimos cargar las cuentas financieras.',
+      ),
+      data: (lista) => lista.isEmpty
+          ? const AppAlerta(
+              'No hay cuentas de banco activas. Créala primero en el panel web, en Bancos.',
+            )
+          : AppSelector<int>(
+              valor: lista.any((c) => c.id == valor) ? valor : null,
+              etiqueta: 'Cuenta a la que va la plata',
+              icono: Icons.account_balance_outlined,
+              habilitado: habilitado,
+              error: error,
+              opciones: [for (final c in lista) Opcion(c.id, c.etiqueta)],
+              onCambio: onCambio,
+            ),
     );
   }
 }

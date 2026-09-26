@@ -47,6 +47,9 @@ class _EmpleadoFormularioState extends ConsumerState<EmpleadoFormulario> {
   late final _observacion = TextEditingController(
     text: widget.empleado?.observacion ?? '',
   );
+  late final _sueldo = TextEditingController(
+    text: widget.empleado?.sueldoSemanal?.toStringAsFixed(2) ?? '',
+  );
 
   // Un empleado es una persona: DNI, o un codigo interno si es extranjero sin
   // DNI. RUC no, a diferencia de clientes y proveedores.
@@ -62,6 +65,7 @@ class _EmpleadoFormularioState extends ConsumerState<EmpleadoFormulario> {
   String? _errorDocumento;
   String? _errorNombres;
   String? _errorApellidos;
+  String? _errorSueldo;
 
   bool get _esNuevo => widget.empleado == null;
 
@@ -77,6 +81,7 @@ class _EmpleadoFormularioState extends ConsumerState<EmpleadoFormulario> {
       _email,
       _direccion,
       _observacion,
+      _sueldo,
     ]) {
       c.dispose();
     }
@@ -107,6 +112,11 @@ class _EmpleadoFormularioState extends ConsumerState<EmpleadoFormulario> {
           ? 'Ingresa los apellidos.'
           : null;
 
+      final sueldo = _sueldo.text.trim();
+      _errorSueldo = sueldo.isNotEmpty && double.tryParse(sueldo) == null
+          ? 'Ingresa un monto válido.'
+          : null;
+
       // El backend tambien lo rechaza, pero decirlo aqui evita el viaje y deja
       // el aviso junto a las fechas que hay que corregir.
       _error =
@@ -120,6 +130,7 @@ class _EmpleadoFormularioState extends ConsumerState<EmpleadoFormulario> {
     return _errorDocumento == null &&
         _errorNombres == null &&
         _errorApellidos == null &&
+        _errorSueldo == null &&
         _error == null;
   }
 
@@ -171,6 +182,7 @@ class _EmpleadoFormularioState extends ConsumerState<EmpleadoFormulario> {
       area: _area.text.trim(),
       fechaIngreso: _fechaIngreso,
       fechaCese: _fechaCese,
+      sueldoSemanal: double.tryParse(_sueldo.text.trim()),
       observacion: _observacion.text.trim(),
       activo: widget.empleado?.activo ?? true,
     ).aJson();
@@ -333,6 +345,22 @@ class _EmpleadoFormularioState extends ConsumerState<EmpleadoFormulario> {
               etiqueta: 'Dirección',
               icono: Icons.place_outlined,
               opcional: true,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppCampo(
+              controlador: _sueldo,
+              etiqueta: 'Sueldo semanal',
+              icono: Icons.payments_outlined,
+              pista: 'Ej. 600.00',
+              opcional: true,
+              tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+              // Dinero: como mucho dos decimales.
+              formateadores: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
+              error: _errorSueldo,
               habilitado: !_guardando,
             ),
             const SizedBox(height: Dimen.espacio4),

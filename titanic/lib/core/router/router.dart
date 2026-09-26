@@ -20,9 +20,9 @@ import '../../features/dashboard/vistas/ventas_dashboard_pagina.dart';
 import '../../features/facturacion/vistas/listas_precios_pagina.dart';
 import '../../features/finanzas/vistas/cuentas_por_cobrar_pagina.dart';
 import '../../features/finanzas/vistas/cuentas_por_pagar_pagina.dart';
-import '../../features/finanzas/vistas/mis_cobros_pagina.dart';
 import '../../features/finanzas/vistas/mis_ganancias_pagina.dart';
 import '../../features/finanzas/vistas/metodos_pago_pagina.dart';
+import '../../features/finanzas/vistas/mi_caja_pagina.dart';
 import '../../features/inicio/vistas/inicio_pagina.dart';
 import '../../features/inicio/vistas/pendiente_pagina.dart';
 import '../../features/inventario/vistas/ajustes_pagina.dart';
@@ -227,14 +227,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             const PuertaPermiso(child: CuentasPorCobrarPagina()),
       ),
       GoRoute(
+        path: MiCajaPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: MiCajaPagina()),
+      ),
+      GoRoute(
         path: CuentasPorPagarPagina.ruta,
         builder: (context, estado) =>
             const PuertaPermiso(child: CuentasPorPagarPagina()),
-      ),
-      GoRoute(
-        path: MisCobrosPagina.ruta,
-        builder: (context, estado) =>
-            const PuertaPermiso(child: MisCobrosPagina()),
       ),
       GoRoute(
         path: MisGananciasPagina.ruta,
@@ -340,7 +340,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != NotasVentaPagina.ruta &&
               item.ruta != CuentasPorCobrarPagina.ruta &&
               item.ruta != CuentasPorPagarPagina.ruta &&
-              item.ruta != MisCobrosPagina.ruta &&
+              item.ruta != MiCajaPagina.ruta &&
               item.ruta != MisGananciasPagina.ruta &&
               item.ruta != MercadosPagina.ruta &&
               item.ruta != RutasPagina.ruta &&

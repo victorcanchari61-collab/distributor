@@ -25,6 +25,14 @@ class FinanzasApi {
         .toList();
   }
 
+  /// GET /api/cuentafinanciera: las cuentas a las que puede apuntar un metodo.
+  Future<List<CuentaFinancieraOpcion>> cuentasFinancieras() async {
+    final datos = await _api.get('/cuentafinanciera') as List;
+    return datos
+        .map((e) => CuentaFinancieraOpcion.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   /// POST /api/metodopago
   Future<MetodoPago> crearMetodoPago(Map<String, dynamic> cuerpo) async =>
       MetodoPago.desdeJson(
