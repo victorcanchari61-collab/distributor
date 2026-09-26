@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, CheckCircle2, ClipboardList, Contact, Eye, History, PackageX, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ClipboardList, Eye, History, PackageX, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
 import {
   AccionPdf,
   AgregarProductoPanel,
   Alert,
   Badge,
-  BuscadorCampo,
-  BuscadorModal,
   Button,
   Checkbox,
   Desplegable,
@@ -32,14 +30,13 @@ import type {
   ConsultaTabla,
   DataTableColumn,
   LineaProductoNueva,
-  OpcionBuscador,
 } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { presentacionInicialDe } from '../../lib/presentaciones'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
-import { clienteApi, productoApi } from '../maestros'
-import type { ClienteResponse, ProductoResponse } from '../maestros'
+import { productoApi, SelectorCliente } from '../maestros'
+import type { ClienteOpcion, ProductoResponse } from '../maestros'
 import { almacenApi, stockApi } from '../inventario'
 import type { AlmacenOpcion } from '../inventario'
 import { listaPrecioApi } from './listaPrecioApi'
@@ -47,7 +44,7 @@ import type { ListaPrecioResponse } from './listaPrecioApi'
 import { pedidoApi } from './ventasApi'
 import { EntregaPedidoModal, NoEntregadoModal } from './EntregaPedidoModal'
 import type { AuditoriaResponse } from '../config'
-import type { CrearPedidoRequest, FormaPagoVenta, LineaVentaResponse, PedidoFila, PedidoResponse, ResumenPedidos } from './ventasApi'
+import type { CrearPedidoRequest, FormaPagoVenta, LineaVentaResponse, OpcionesFiltroVentas, PedidoFila, PedidoResponse, ResumenPedidos } from './ventasApi'
 
 function estadoPedidoBadge(estado: PedidoResponse['estado']) {
   const tono = estado === 'CONFIRMADO' ? 'success' : estado === 'ANULADO' ? 'danger' : 'warning'
@@ -80,7 +77,10 @@ export function PedidosPage() {
   const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [pedidos, setPedidos] = useState<PedidoFila[]>([])
-  const [clientes, setClientes] = useState<ClienteResponse[]>([])
+  // El padrón no se descarga: el selector busca en el servidor, y los filtros
+  // ofrecen solo los clientes que aparecen en esta tabla.
+  const [opcionesFiltro, setOpcionesFiltro] = useState<OpcionesFiltroVentas>({ clientes: [], rutas: [], mercados: [] })
+  const [clienteNombre, setClienteNombre] = useState('')
   const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
   const [listas, setListas] = useState<ListaPrecioResponse[]>([])
@@ -92,7 +92,6 @@ export function PedidosPage() {
   const [historialAbierto, setHistorialAbierto] = useState<PedidoFila | null>(null)
   const [historial, setHistorial] = useState<AuditoriaResponse[]>([])
   const [historialCargando, setHistorialCargando] = useState(false)
-  const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
 
   const [clienteId, setClienteId] = useState(0)
@@ -139,15 +138,15 @@ export function PedidosPage() {
   /** Catalogos del formulario y contadores: no cambian al paginar. */
   const cargarApoyo = useCallback(async () => {
     try {
-      const [res, clis, prods, alms, lis] = await Promise.all([
+      const [res, opciones, prods, alms, lis] = await Promise.all([
         pedidoApi.resumen(),
-        clienteApi.getAll('pedidos'),
+        pedidoApi.opciones(),
         productoApi.getAll(),
         almacenApi.opciones(),
         listaPrecioApi.getAll(),
       ])
       setResumen(res)
-      setClientes(clis.filter((c) => c.activo))
+      setOpcionesFiltro(opciones)
       setProductos(prods.filter((p) => p.activo && p.controlaStock))
       setAlmacenes(alms.filter((a) => a.activo))
       setListas(lis.filter((l) => l.activo))
@@ -190,6 +189,7 @@ export function PedidosPage() {
   const abrirNuevo = () => {
     setEditando(null)
     setClienteId(0)
+    setClienteNombre('')
     setListaPrecioId(0)
     setCondicionPago('CONTADO')
     setObservacion('')
@@ -202,6 +202,7 @@ export function PedidosPage() {
   const abrirEdicion = (pedido: PedidoResponse) => {
     setEditando(pedido)
     setClienteId(pedido.clienteId)
+    setClienteNombre(pedido.cliente)
     setListaPrecioId(pedido.listaPrecioId ?? 0)
     setCondicionPago(pedido.condicionPago)
     setObservacion(pedido.observacion ?? '')
@@ -281,9 +282,10 @@ export function PedidosPage() {
    * para cobrarle precio de menudeo. Si el cliente no tiene lista propia se
    * vuelve a "la predeterminada", no se queda la del cliente anterior.
    */
-  const elegirCliente = (id: number) => {
-    setClienteId(id)
-    setListaPrecioId(clientes.find((c) => c.id === id)?.listaPrecioId ?? 0)
+  const elegirCliente = (cliente: ClienteOpcion | null) => {
+    setClienteId(cliente?.id ?? 0)
+    setClienteNombre(cliente?.nombre ?? '')
+    setListaPrecioId(cliente?.listaPrecioId ?? 0)
   }
 
   const guardar = async () => {
@@ -506,29 +508,6 @@ export function PedidosPage() {
     },
   ]
 
-  const opcionesCliente: OpcionBuscador<number>[] = clientes.map((c) => ({
-    item: c.id,
-    label: c.nombre,
-    detalle: c.documento,
-    nota: c.distrito ?? undefined,
-  }))
-
-  const columnasCliente: DataTableColumn<ClienteResponse>[] = [
-    {
-      key: 'documento',
-      label: 'Documento',
-      render: (row) => (
-        <span className="flex items-center gap-2">
-          <span className="font-medium text-ink">{row.documento}</span>
-          <Badge>{row.tipoDoc}</Badge>
-        </span>
-      ),
-    },
-    { key: 'nombre', label: 'Nombre' },
-    { key: 'distrito', label: 'Distrito' },
-    { key: 'ruta', label: 'Ruta' },
-  ]
-
   const columns: DataTableColumn<PedidoFila>[] = [
     // El número se busca con el buscador de arriba, no en el panel.
     { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
@@ -536,7 +515,7 @@ export function PedidosPage() {
       key: 'cliente',
       label: 'Cliente',
       filterType: 'select',
-      filterOptions: [...new Set(clientes.map((c) => c.nombre))]
+      filterOptions: [...opcionesFiltro.clientes]
         .sort((a, b) => a.localeCompare(b, 'es'))
         .map((n) => ({ value: n, label: n })),
     },
@@ -547,7 +526,7 @@ export function PedidosPage() {
       label: 'Ruta',
       width: 90,
       filterType: 'select',
-      filterOptions: [...new Set(clientes.map((c) => c.ruta).filter((r): r is string => Boolean(r)))]
+      filterOptions: [...opcionesFiltro.rutas]
         .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
         .map((n) => ({ value: n, label: `Ruta ${n}` })),
       render: (row) => row.ruta ?? <span className="text-ink-soft">—</span>,
@@ -695,15 +674,11 @@ export function PedidosPage() {
 
           <div className="flex flex-col gap-5">
             <PageSection title="Pedido">
-              <BuscadorCampo
-                label="Cliente"
+              <SelectorCliente
+                para="pedidos"
                 value={clienteId || null}
-                onChange={(id) => elegirCliente(id ?? 0)}
-                opciones={opcionesCliente}
-                placeholder="Buscar cliente..."
-                vacio="Ningún cliente coincide"
-                onAvanzado={() => setBuscadorAbierto(true)}
-                avanzadoLabel="Búsqueda avanzada de clientes"
+                nombre={clienteNombre}
+                onChange={elegirCliente}
               />
 
               {/*
@@ -787,18 +762,6 @@ export function PedidosPage() {
             {editando ? 'Guardar cambios' : 'Registrar pedido'}
           </Button>
         </div>
-
-        <BuscadorModal
-          open={buscadorAbierto}
-          onClose={() => setBuscadorAbierto(false)}
-          title="Elegir cliente"
-          description="Busca por documento, nombre o distrito."
-          columns={columnasCliente}
-          rows={clientes}
-          cardIcon={Contact}
-          searchPlaceholder="Buscar cliente..."
-          onSeleccionar={(c) => elegirCliente(c.id)}
-        />
 
         {dialogo}
       </div>

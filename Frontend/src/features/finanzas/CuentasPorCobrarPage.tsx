@@ -21,9 +21,13 @@ import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { notaVentaApi } from '../facturacion/ventasApi'
-import type { NotaVentaFila, NotaVentaResponse, PagoVentaResponse, ResumenCuentas } from '../facturacion/ventasApi'
-import { clienteApi } from '../maestros'
-import type { ClienteResponse } from '../maestros'
+import type {
+  NotaVentaFila,
+  NotaVentaResponse,
+  OpcionesFiltroVentas,
+  PagoVentaResponse,
+  ResumenCuentas,
+} from '../facturacion/ventasApi'
 import { metodoPagoApi } from './finanzasApi'
 import type { MetodoPagoOpcion, TipoMetodoPago } from './finanzasApi'
 
@@ -69,7 +73,7 @@ export function CuentasPorCobrarPage() {
   const toast = useToast()
   const [cuentas, setCuentas] = useState<NotaVentaFila[]>([])
   const [metodosPago, setMetodosPago] = useState<MetodoPagoOpcion[]>([])
-  const [clientes, setClientes] = useState<ClienteResponse[]>([])
+  const [opcionesFiltro, setOpcionesFiltro] = useState<OpcionesFiltroVentas>({ clientes: [], rutas: [], mercados: [] })
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -107,16 +111,17 @@ export function CuentasPorCobrarPage() {
 
   const cargarApoyo = useCallback(async () => {
     try {
-      const [res, metodos, clis] = await Promise.all([
+      const [res, metodos, opciones] = await Promise.all([
         notaVentaApi.resumenCuentasPorCobrar(),
         // Las opciones y no el catalogo: quien cobra no tiene por que poder ver el catalogo de Finanzas,
         // y con el catalogo un cajero se quedaba sin metodos para elegir.
         metodoPagoApi.opciones(),
-        clienteApi.getAll(),
+        // Solo los clientes, rutas y mercados con deuda: no el padrón entero.
+        notaVentaApi.opcionesCuentasPorCobrar(),
       ])
       setResumen(res)
       setMetodosPago(metodos)
-      setClientes(clis)
+      setOpcionesFiltro(opciones)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')
     }
@@ -234,7 +239,7 @@ export function CuentasPorCobrarPage() {
       key: 'cliente',
       label: 'Cliente',
       filterType: 'select',
-      filterOptions: [...new Set(clientes.map((c) => c.nombre))]
+      filterOptions: [...opcionesFiltro.clientes]
         .sort((a, b) => a.localeCompare(b, 'es'))
         .map((n) => ({ value: n, label: n })),
     },
@@ -245,7 +250,7 @@ export function CuentasPorCobrarPage() {
       label: 'Ruta',
       width: 90,
       filterType: 'select',
-      filterOptions: [...new Set(clientes.map((c) => c.ruta).filter((r): r is string => Boolean(r)))]
+      filterOptions: [...opcionesFiltro.rutas]
         .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
         .map((n) => ({ value: n, label: `Ruta ${n}` })),
       render: (row) => row.ruta ?? <span className="text-ink-soft">—</span>,
@@ -254,7 +259,7 @@ export function CuentasPorCobrarPage() {
       key: 'mercado',
       label: 'Mercado',
       filterType: 'select',
-      filterOptions: [...new Set(clientes.map((c) => c.mercado).filter((m): m is string => Boolean(m)))]
+      filterOptions: [...opcionesFiltro.mercados]
         .sort((a, b) => a.localeCompare(b, 'es'))
         .map((n) => ({ value: n, label: n })),
       render: (row) => row.mercado ?? <span className="text-ink-soft">—</span>,

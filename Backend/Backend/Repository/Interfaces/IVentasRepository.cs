@@ -7,6 +7,15 @@ namespace Backend.Repository.Interfaces;
 
 public interface IVentasRepository
 {
+    /// <summary>Clientes y rutas que aparecen en los pedidos que la persona puede ver.</summary>
+    Task<OpcionesFiltroVentasResponse> OpcionesPedidosAsync(AlcanceFiltro? alcance = null);
+
+    /// <summary>Clientes que aparecen en las notas de venta que la persona puede ver.</summary>
+    Task<OpcionesFiltroVentasResponse> OpcionesNotasVentaAsync(AlcanceFiltro? alcance = null);
+
+    /// <summary>Clientes, rutas y mercados de las cuentas que todavía deben algo.</summary>
+    Task<OpcionesFiltroVentasResponse> OpcionesCuentasPorCobrarAsync();
+
     Task<IDbContextTransaction> IniciarTransaccionAsync();
     Task GuardarAsync();
 

@@ -258,6 +258,8 @@ export const pedidoApi = {
   /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
   listar: (consulta: ConsultaTabla) =>
     api.post<PaginaResponse<PedidoFila>>('/pedido/listar', consulta),
+  /** Clientes y rutas que aparecen en los pedidos, para los filtros. */
+  opciones: () => api.get<OpcionesFiltroVentas>('/pedido/opciones'),
 
   resumen: () => api.get<ResumenPedidos>('/pedido/resumen'),
 
@@ -275,6 +277,13 @@ export const pedidoApi = {
   anular: (id: number) => api.patch<void>(`/pedido/${id}/anular`),
   /** Qué cambió en este pedido y sus líneas. */
   historial: (id: number) => api.get<AuditoriaResponse[]>(`/pedido/${id}/historial`),
+}
+
+/** Lo que se ofrece en los filtros de cliente, ruta y mercado: solo lo que aparece en esa tabla. */
+export interface OpcionesFiltroVentas {
+  clientes: string[]
+  rutas: string[]
+  mercados: string[]
 }
 
 // --- Notas de venta ---
@@ -398,6 +407,8 @@ export const notaVentaApi = {
   /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
   listar: (consulta: ConsultaTabla) =>
     api.post<PaginaResponse<NotaVentaFila>>('/notaventa/listar', consulta),
+  /** Clientes que aparecen en las notas de venta, para el filtro. */
+  opciones: () => api.get<OpcionesFiltroVentas>('/notaventa/opciones'),
 
   resumen: () => api.get<ResumenNotasVenta>('/notaventa/resumen'),
 
@@ -411,6 +422,8 @@ export const notaVentaApi = {
   /** Una página de las cuentas por cobrar, con el saldo resuelto en el servidor. */
   listarCuentasPorCobrar: (consulta: ConsultaTabla) =>
     api.post<PaginaResponse<NotaVentaFila>>('/notaventa/cuentasporcobrar/listar', consulta),
+  /** Clientes, rutas y mercados de las cuentas pendientes, para los filtros. */
+  opcionesCuentasPorCobrar: () => api.get<OpcionesFiltroVentas>('/notaventa/cuentasporcobrar/opciones'),
 
   resumenCuentasPorCobrar: () =>
     api.get<ResumenCuentas>('/notaventa/cuentasporcobrar/resumen'),

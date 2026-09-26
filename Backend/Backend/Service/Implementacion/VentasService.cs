@@ -230,6 +230,15 @@ public class VentasService : IVentasService
         };
     }
 
+    public async Task<OpcionesFiltroVentasResponse> GetOpcionesPedidosAsync() =>
+        await _repository.OpcionesPedidosAsync(await AlcancePedidosAsync());
+
+    public async Task<OpcionesFiltroVentasResponse> GetOpcionesNotasVentaAsync() =>
+        await _repository.OpcionesNotasVentaAsync(await AlcanceVentasAsync());
+
+    public async Task<OpcionesFiltroVentasResponse> GetOpcionesCuentasPorCobrarAsync() =>
+        await _repository.OpcionesCuentasPorCobrarAsync();
+
     public async Task<ResumenPedidosResponse> GetResumenPedidosAsync() =>
         await _repository.ResumenPedidosAsync(await AlcancePedidosAsync());
 

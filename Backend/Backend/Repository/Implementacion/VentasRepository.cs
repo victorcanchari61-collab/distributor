@@ -597,6 +597,41 @@ public class VentasRepository : IVentasRepository
             .ToListAsync();
     }
 
+    // Las opciones de los filtros salen de cada tabla, con DISTINCT en la base:
+    // antes se descargaba el padrón completo de clientes solo para esto.
+    public async Task<OpcionesFiltroVentasResponse> OpcionesPedidosAsync(AlcanceFiltro? alcance = null)
+    {
+        var pedidos = Acotar(_context.Pedidos.AsNoTracking(), alcance);
+        return new OpcionesFiltroVentasResponse
+        {
+            Clientes = await pedidos.Select(p => p.Cliente!.Nombre).Distinct().OrderBy(n => n).ToListAsync(),
+            Rutas = await pedidos.Where(p => p.Cliente!.Ruta != null)
+                .Select(p => p.Cliente!.Ruta!.Nombre).Distinct().OrderBy(n => n).ToListAsync(),
+        };
+    }
+
+    public async Task<OpcionesFiltroVentasResponse> OpcionesNotasVentaAsync(AlcanceFiltro? alcance = null)
+    {
+        var notas = Acotar(_context.NotasVenta.AsNoTracking(), alcance);
+        return new OpcionesFiltroVentasResponse
+        {
+            Clientes = await notas.Select(n => n.Cliente!.Nombre).Distinct().OrderBy(n => n).ToListAsync(),
+        };
+    }
+
+    public async Task<OpcionesFiltroVentasResponse> OpcionesCuentasPorCobrarAsync()
+    {
+        var cuentas = CuentasPorCobrarBase();
+        return new OpcionesFiltroVentasResponse
+        {
+            Clientes = await cuentas.Select(n => n.Cliente!.Nombre).Distinct().OrderBy(n => n).ToListAsync(),
+            Rutas = await cuentas.Where(n => n.Cliente!.Ruta != null)
+                .Select(n => n.Cliente!.Ruta!.Nombre).Distinct().OrderBy(n => n).ToListAsync(),
+            Mercados = await cuentas.Where(n => n.Cliente!.Mercado != null)
+                .Select(n => n.Cliente!.Mercado!.Nombre).Distinct().OrderBy(n => n).ToListAsync(),
+        };
+    }
+
     public async Task<ResumenCuentasResponse> ResumenCuentasPorCobrarAsync()
     {
         // Una fila por cuenta abierta, con los totales ya como en la tabla: así

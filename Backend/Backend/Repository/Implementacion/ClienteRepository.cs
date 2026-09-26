@@ -23,6 +23,73 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
             .Include(c => c.Distrito!).ThenInclude(d => d.Provincia!).ThenInclude(p => p.Departamento)
             .ToListAsync();
 
+    public async Task<(List<Dtos.Responses.ClienteOpcionResponse> Items, int Total)> BuscarAsync(
+        ConsultaTablaRequest consulta, bool acotarARuta, int? rutaId)
+    {
+        var query = DbSet.AsNoTracking()
+            .Where(c => c.Activo && (!acotarARuta || (rutaId != null && c.RutaId == rutaId)));
+
+        if (!string.IsNullOrWhiteSpace(consulta.Buscar))
+        {
+            var texto = $"%{consulta.Buscar.Trim()}%";
+            query = query.Where(c =>
+                EF.Functions.Like(c.Nombre, texto) || EF.Functions.Like(c.Documento, texto)
+                || (c.Distrito != null && EF.Functions.Like(c.Distrito.Nombre, texto))
+                || (c.Ruta != null && EF.Functions.Like(c.Ruta.Nombre, texto)));
+        }
+
+        if (consulta.ValorDe("documento") is string documento)
+            query = query.Where(c => EF.Functions.Like(c.Documento, $"%{documento}%"));
+        if (consulta.ValorDe("nombre") is string nombre)
+            query = query.Where(c => EF.Functions.Like(c.Nombre, $"%{nombre}%"));
+        if (consulta.ValorDe("distrito") is string distrito)
+            query = query.Where(c => c.Distrito != null && EF.Functions.Like(c.Distrito.Nombre, $"%{distrito}%"));
+        if (consulta.ValorDe("ruta") is string ruta)
+            query = query.Where(c => c.Ruta != null && EF.Functions.Like(c.Ruta.Nombre, $"%{ruta}%"));
+
+        var desc = string.Equals(consulta.Sentido, "desc", StringComparison.OrdinalIgnoreCase);
+        query = consulta.Orden switch
+        {
+            "documento" => desc ? query.OrderByDescending(c => c.Documento) : query.OrderBy(c => c.Documento),
+            "distrito" => desc ? query.OrderByDescending(c => c.Distrito!.Nombre) : query.OrderBy(c => c.Distrito!.Nombre),
+            "ruta" => desc ? query.OrderByDescending(c => c.Ruta!.Nombre) : query.OrderBy(c => c.Ruta!.Nombre),
+            _ => desc ? query.OrderByDescending(c => c.Nombre) : query.OrderBy(c => c.Nombre),
+        };
+
+        return await ((IOrderedQueryable<Cliente>)query).ThenBy(c => c.Id)
+            .Select(c => new Dtos.Responses.ClienteOpcionResponse
+            {
+                Id = c.Id,
+                Documento = c.Documento,
+                TipoDoc = c.TipoDoc,
+                Nombre = c.Nombre,
+                Distrito = c.Distrito != null ? c.Distrito.Nombre : null,
+                Ruta = c.Ruta != null ? c.Ruta.Nombre : null,
+                Mercado = c.Mercado != null ? c.Mercado.Nombre : null,
+                ListaPrecioId = c.ListaPrecioId,
+            })
+            .PaginarAsync(consulta);
+    }
+
+    public async Task<List<Dtos.Responses.ClienteOpcionResponse>> GetSelectorAsync(bool acotarARuta, int? rutaId) =>
+        await DbSet.AsNoTracking()
+            .Where(c => c.Activo && (!acotarARuta || (rutaId != null && c.RutaId == rutaId)))
+            .OrderBy(c => c.Nombre)
+            .Select(c => new Dtos.Responses.ClienteOpcionResponse
+            {
+                Id = c.Id,
+                Documento = c.Documento,
+                TipoDoc = c.TipoDoc,
+                Nombre = c.Nombre,
+                Distrito = c.Distrito != null ? c.Distrito.Nombre : null,
+                Ruta = c.Ruta != null ? c.Ruta.Nombre : null,
+                Mercado = c.Mercado != null ? c.Mercado.Nombre : null,
+                ListaPrecioId = c.ListaPrecioId,
+                Direccion = c.Direccion,
+                DiaVisita = c.DiaVisita,
+            })
+            .ToListAsync();
+
     public async Task<List<Cliente>> GetCatalogoAsync(bool acotarARuta, int? rutaId) =>
         await DbSet.AsNoTracking()
             .Include(c => c.Mercado)

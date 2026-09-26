@@ -13,6 +13,16 @@ public interface IClienteService
     /// <param name="para">"pedidos" o "notaventa": deja solo los clientes que quien pide puede vender.</param>
     Task<IEnumerable<ClienteResponse>> GetAllAsync(string? para = null);
 
+    /// <summary>
+    /// Clientes activos para elegir en un pedido o una nota de venta, buscados
+    /// en la base y paginados. Con <paramref name="para"/>, solo los de la ruta
+    /// de quien vende, igual que el padrón completo.
+    /// </summary>
+    Task<PaginaResponse<ClienteOpcionResponse>> BuscarAsync(ConsultaTablaRequest consulta, string? para);
+
+    /// <summary>Los clientes activos que se pueden elegir, livianos: el selector del APK.</summary>
+    Task<IEnumerable<ClienteOpcionResponse>> SelectorAsync(string? para);
+
     /// <summary>Una página del listado, ya buscada, filtrada y ordenada en la base.</summary>
     Task<PaginaResponse<ClienteResponse>> ListarAsync(ConsultaTablaRequest consulta);
 

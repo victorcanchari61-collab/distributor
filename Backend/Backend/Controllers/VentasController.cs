@@ -47,6 +47,11 @@ public class PedidoController : ControllerBase
     [Permiso("fact.pedidos", Accion.Ver)]
     public async Task<IActionResult> Resumen() => Ok(await _ventas.GetResumenPedidosAsync());
 
+    /// <summary>Clientes y rutas que aparecen en los pedidos: las opciones de los filtros.</summary>
+    [HttpGet("opciones")]
+    [Permiso("fact.pedidos", Accion.Ver)]
+    public async Task<IActionResult> Opciones() => Ok(await _ventas.GetOpcionesPedidosAsync());
+
     [HttpPost]
     [Permiso("fact.pedidos", Accion.Crear)]
     public async Task<IActionResult> Create([FromBody] CrearPedidoRequest request)
@@ -138,6 +143,11 @@ public class NotaVentaController : ControllerBase
     [Permiso("fact.notaventa", Accion.Ver)]
     public async Task<IActionResult> Resumen() => Ok(await _ventas.GetResumenNotasVentaAsync());
 
+    /// <summary>Clientes que aparecen en las notas de venta: las opciones del filtro.</summary>
+    [HttpGet("opciones")]
+    [Permiso("fact.notaventa", Accion.Ver)]
+    public async Task<IActionResult> Opciones() => Ok(await _ventas.GetOpcionesNotasVentaAsync());
+
     /// <summary>Notas de venta a crédito con saldo pendiente: base de "Cuentas por cobrar".</summary>
     /// <summary>Una página de las cuentas por cobrar.</summary>
     [HttpPost("cuentasporcobrar/listar")]
@@ -150,6 +160,12 @@ public class NotaVentaController : ControllerBase
     [Permiso("finanzas.cobrar", Accion.Ver)]
     public async Task<IActionResult> ResumenCuentasPorCobrar() =>
         Ok(await _ventas.GetResumenCuentasPorCobrarAsync());
+
+    /// <summary>Clientes, rutas y mercados de las cuentas pendientes: las opciones de los filtros.</summary>
+    [HttpGet("cuentasporcobrar/opciones")]
+    [Permiso("finanzas.cobrar", Accion.Ver)]
+    public async Task<IActionResult> OpcionesCuentasPorCobrar() =>
+        Ok(await _ventas.GetOpcionesCuentasPorCobrarAsync());
 
     [HttpGet("cuentasporcobrar")]
     [Permiso("finanzas.cobrar", Accion.Ver)]

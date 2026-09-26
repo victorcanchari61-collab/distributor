@@ -312,3 +312,14 @@ public class PedidoFilaResponse
     public string? NoEntregadoObservacion { get; set; }
     public decimal Total { get; set; }
 }
+
+/// <summary>
+/// Lo que se ofrece en los filtros de cliente, ruta y mercado de una tabla de
+/// ventas: solo lo que aparece en esa tabla, no el padrón entero.
+/// </summary>
+public class OpcionesFiltroVentasResponse
+{
+    public List<string> Clientes { get; set; } = [];
+    public List<string> Rutas { get; set; } = [];
+    public List<string> Mercados { get; set; } = [];
+}

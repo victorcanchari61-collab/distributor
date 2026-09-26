@@ -7,10 +7,23 @@ namespace Backend.Repository.Interfaces;
 public interface IClienteRepository : IRepository<Cliente>
 {
     /// <summary>
+    /// Una página de clientes activos para un selector, ya buscada en la base.
+    /// Con <paramref name="acotarARuta"/>, solo los de esa ruta (ninguno si es null).
+    /// </summary>
+    Task<(List<Dtos.Responses.ClienteOpcionResponse> Items, int Total)> BuscarAsync(
+        Dtos.Requests.ConsultaTablaRequest consulta, bool acotarARuta, int? rutaId);
+
+    /// <summary>
     /// El padrón para los selectores, sin seguimiento de cambios. Con
     /// <paramref name="acotarARuta"/>, solo los de esa ruta (ninguno si es null).
     /// </summary>
     Task<List<Cliente>> GetCatalogoAsync(bool acotarARuta, int? rutaId);
+
+    /// <summary>
+    /// Todos los clientes activos que se pueden elegir, con solo lo que usa el
+    /// selector del APK (que filtra en el teléfono, aun con poca señal).
+    /// </summary>
+    Task<List<Dtos.Responses.ClienteOpcionResponse>> GetSelectorAsync(bool acotarARuta, int? rutaId);
 
     Task<Cliente?> GetByDocumentoAsync(string documento);
     Task<bool> ExistsByDocumentoAsync(string documento, int? excludeId = null);

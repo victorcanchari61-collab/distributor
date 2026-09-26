@@ -13,13 +13,18 @@ class MaestrosApi {
 
   // --- Clientes ---
 
-  /// GET /api/cliente
+  /// GET /api/cliente, o GET /api/cliente/selector con [para].
   ///
-  /// Con [para] ("pedidos" o "notaventa") el servidor deja solo los clientes que quien pide puede
-  /// vender: los de su ruta si tiene el alcance "mis clientes".
+  /// Sin [para] es el padrón completo, con la ficha entera: lo usa la pantalla
+  /// de Clientes, que la edita. Con [para] ("pedidos" o "notaventa") es el
+  /// selector de esos formularios: solo los activos que quien pide puede
+  /// vender (los de su ruta si tiene el alcance "mis clientes") y solo con lo
+  /// que el selector muestra y filtra, no la ficha completa.
   Future<List<Cliente>> clientes({String? para}) async {
     final datos =
-        await _api.get(para == null ? '/cliente' : '/cliente?para=$para')
+        await _api.get(
+              para == null ? '/cliente' : '/cliente/selector?para=$para',
+            )
             as List;
     return datos
         .map((e) => Cliente.desdeJson(e as Map<String, dynamic>))

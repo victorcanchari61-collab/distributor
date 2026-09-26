@@ -16,7 +16,20 @@ export interface BuscadorCampoProps<T> {
   label?: string
   value: T | null
   onChange: (value: T | null) => void
-  opciones: OpcionBuscador<T>[]
+  /** Las opciones, si se tienen todas a mano. Con `buscar` no hace falta. */
+  opciones?: OpcionBuscador<T>[]
+  /**
+   * Busca en el servidor lo que se va escribiendo (con una pequeña espera
+   * entre teclas), para listas que no conviene traer enteras: el padrón de
+   * clientes. Si está, las opciones son lo que devuelve, no `opciones`.
+   */
+  buscar?: (texto: string) => Promise<OpcionBuscador<T>[]>
+  /**
+   * Lo que se muestra para el valor elegido cuando no está entre las
+   * opciones a mano: al editar, el cliente del documento, que todavía no
+   * salió en ninguna búsqueda.
+   */
+  seleccionado?: OpcionBuscador<T> | null
   placeholder?: string
   optional?: boolean
   disabled?: boolean
@@ -45,7 +58,9 @@ export function BuscadorCampo<T>({
   label,
   value,
   onChange,
-  opciones,
+  opciones = [],
+  buscar,
+  seleccionado,
   placeholder = 'Buscar...',
   optional,
   disabled,
@@ -61,8 +76,17 @@ export function BuscadorCampo<T>({
   const campoRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [remotas, setRemotas] = useState<OpcionBuscador<T>[]>([])
+  const [buscando, setBuscando] = useState(false)
+  const buscarRef = useRef(buscar)
+  useEffect(() => {
+    buscarRef.current = buscar
+  })
 
-  const elegido = opciones.find((o) => o.item === value)
+  const elegido =
+    opciones.find((o) => o.item === value) ??
+    remotas.find((o) => o.item === value) ??
+    (seleccionado && seleccionado.item === value ? seleccionado : undefined)
 
   // Lo que se ve en el input: mientras se escribe, lo tipeado; si no, el
   // nombre de lo elegido.
@@ -73,9 +97,30 @@ export function BuscadorCampo<T>({
   const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
   const term = normalizar(texto.trim())
-  const visibles = term
-    ? opciones.filter((o) => normalizar(`${o.label} ${o.detalle ?? ''} ${o.nota ?? ''}`).includes(term))
-    : opciones
+  const visibles = buscar
+    ? remotas
+    : term
+      ? opciones.filter((o) => normalizar(`${o.label} ${o.detalle ?? ''} ${o.nota ?? ''}`).includes(term))
+      : opciones
+
+  // Con búsqueda en el servidor: se pide lo tipeado cuando se deja de escribir
+  // un momento, y una respuesta vieja no pisa a la más nueva.
+  useEffect(() => {
+    if (!abierto || !buscarRef.current) return
+    let vigente = true
+    const espera = setTimeout(() => {
+      setBuscando(true)
+      buscarRef
+        .current!(texto.trim())
+        .then((r) => vigente && setRemotas(r))
+        .catch(() => vigente && setRemotas([]))
+        .finally(() => vigente && setBuscando(false))
+    }, 250)
+    return () => {
+      vigente = false
+      clearTimeout(espera)
+    }
+  }, [abierto, texto])
 
   useEffect(() => {
     if (!abierto) return
@@ -182,7 +227,7 @@ export function BuscadorCampo<T>({
             className="fixed z-50 max-h-[16rem] overflow-y-auto rounded-panel bg-white py-1 shadow-xl shadow-zinc-900/20 ring-1 ring-zinc-200"
           >
             {visibles.length === 0 ? (
-              <p className="px-3 py-4 text-center text-xs text-ink-soft">{vacio}</p>
+              <p className="px-3 py-4 text-center text-xs text-ink-soft">{buscando ? 'Buscando...' : vacio}</p>
             ) : (
               visibles.map((o, i) => (
                 <div

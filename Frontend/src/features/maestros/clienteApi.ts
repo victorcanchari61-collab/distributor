@@ -35,6 +35,19 @@ export interface ClienteResponse {
   fechaCreacion: string
 }
 
+/** Un cliente para elegirlo en un pedido o una nota: lo justo para reconocerlo. */
+export interface ClienteOpcion {
+  id: number
+  documento: string
+  tipoDoc: string
+  nombre: string
+  distrito: string | null
+  ruta: string | null
+  mercado: string | null
+  /** Con qué lista de precios se le vende; null usa la predeterminada. */
+  listaPrecioId: number | null
+}
+
 export interface ClienteRequest {
   documento: string
   /** DNI, RUC o CODIGO. Si va vacío el backend lo deduce del largo. */
@@ -81,6 +94,14 @@ export const clienteApi = {
    */
   getAll: (para?: 'pedidos' | 'notaventa') =>
     api.get<ClienteResponse[]>(para ? `/cliente?para=${para}` : '/cliente'),
+
+  /**
+   * Clientes activos para el selector de Pedidos y Notas de venta, buscados en
+   * el servidor: una página de coincidencias, no el padrón entero. Con `para`,
+   * solo los que quien pide puede vender.
+   */
+  buscar: (consulta: ConsultaTabla, para?: 'pedidos' | 'notaventa') =>
+    api.post<PaginaResponse<ClienteOpcion>>(`/cliente/buscar${para ? `?para=${para}` : ''}`, consulta),
 
   /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
   listar: (consulta: ConsultaTabla) =>

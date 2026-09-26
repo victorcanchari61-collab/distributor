@@ -14,6 +14,9 @@ public interface IVentasService
 
     /// <summary>Contadores del listado completo de pedidos.</summary>
     Task<ResumenPedidosResponse> GetResumenPedidosAsync();
+
+    /// <summary>Clientes y rutas para los filtros de la tabla de pedidos.</summary>
+    Task<OpcionesFiltroVentasResponse> GetOpcionesPedidosAsync();
     Task<PedidoResponse> CrearPedidoAsync(CrearPedidoRequest request, int? usuarioId);
     Task<PedidoResponse> ActualizarPedidoAsync(int id, CrearPedidoRequest request);
 
@@ -43,6 +46,9 @@ public interface IVentasService
 
     /// <summary>Contadores del listado completo de notas de venta.</summary>
     Task<ResumenNotasVentaResponse> GetResumenNotasVentaAsync();
+
+    /// <summary>Clientes para el filtro de la tabla de notas de venta.</summary>
+    Task<OpcionesFiltroVentasResponse> GetOpcionesNotasVentaAsync();
 
     /// <summary>Venta directa, sin pedido previo: el stock sale al momento.</summary>
     Task<NotaVentaResponse> CrearNotaVentaAsync(CrearNotaVentaRequest request, int? usuarioId);
@@ -76,6 +82,9 @@ public interface IVentasService
 
     /// <summary>Totales de todas las cuentas por cobrar.</summary>
     Task<ResumenCuentasResponse> GetResumenCuentasPorCobrarAsync();
+
+    /// <summary>Clientes, rutas y mercados para los filtros de cuentas por cobrar.</summary>
+    Task<OpcionesFiltroVentasResponse> GetOpcionesCuentasPorCobrarAsync();
 
     /// <summary>Notas de venta con saldo pendiente de cobro: base de "Cuentas por cobrar".</summary>
     Task<IEnumerable<NotaVentaResponse>> GetCuentasPorCobrarAsync();

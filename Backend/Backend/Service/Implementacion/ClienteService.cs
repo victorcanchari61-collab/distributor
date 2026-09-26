@@ -89,18 +89,7 @@ public class ClienteService : IClienteService
             "notaventa" => "fact.notaventa",
             _ => null,
         };
-        var acotarARuta = false;
-        int? ruta = null;
-        if (submodulo is not null && _usuarioActual.Id is int uid)
-        {
-            var alcance = await _permisos.AlcanceFiltroAsync(uid, submodulo);
-            if (!alcance.SinRestriccion && !alcance.SoloPropios)
-            {
-                acotarARuta = true;
-                ruta = alcance.RutaId;
-            }
-        }
-
+        var (acotarARuta, ruta) = await AlcanceSelectorAsync(submodulo);
         var clientes = await _repository.GetCatalogoAsync(acotarARuta, ruta);
 
         // Se devuelven tambien los inactivos: si no, un registro desactivado
@@ -108,6 +97,50 @@ public class ClienteService : IClienteService
         return clientes.OrderByDescending(c => c.Activo)
             .ThenBy(c => c.Nombre)
             .Select(c => MapToResponse(c, vendedores));
+    }
+
+    public async Task<PaginaResponse<ClienteOpcionResponse>> BuscarAsync(ConsultaTablaRequest consulta, string? para)
+    {
+        var submodulo = para switch
+        {
+            "pedidos" => "fact.pedidos",
+            "notaventa" => "fact.notaventa",
+            _ => null,
+        };
+        var (acotarARuta, ruta) = await AlcanceSelectorAsync(submodulo);
+        var (items, total) = await _repository.BuscarAsync(consulta, acotarARuta, ruta);
+
+        return new PaginaResponse<ClienteOpcionResponse>
+        {
+            Items = items,
+            Total = total,
+            Pagina = consulta.PaginaSegura,
+            PorPagina = consulta.PorPaginaSegura,
+        };
+    }
+
+    public async Task<IEnumerable<ClienteOpcionResponse>> SelectorAsync(string? para)
+    {
+        var submodulo = para switch
+        {
+            "pedidos" => "fact.pedidos",
+            "notaventa" => "fact.notaventa",
+            _ => null,
+        };
+        var (acotarARuta, ruta) = await AlcanceSelectorAsync(submodulo);
+        return await _repository.GetSelectorAsync(acotarARuta, ruta);
+    }
+
+    /// <summary>
+    /// Si el selector de ese submódulo se acota a la ruta de quien vende: con
+    /// alcance "mis clientes", solo los de su ruta (ninguno si no tiene).
+    /// </summary>
+    private async Task<(bool Acotar, int? Ruta)> AlcanceSelectorAsync(string? submodulo)
+    {
+        if (submodulo is null || _usuarioActual.Id is not int uid) return (false, null);
+
+        var alcance = await _permisos.AlcanceFiltroAsync(uid, submodulo);
+        return !alcance.SinRestriccion && !alcance.SoloPropios ? (true, alcance.RutaId) : (false, null);
     }
 
     public async Task<PaginaResponse<ClienteResponse>> ListarAsync(ConsultaTablaRequest consulta)

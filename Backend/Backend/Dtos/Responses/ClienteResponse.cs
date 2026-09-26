@@ -28,3 +28,28 @@ public class ClienteResponse
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 }
+
+/// <summary>
+/// Un cliente para elegirlo en un selector (pedido, nota de venta): lo justo
+/// para reconocerlo y la lista de precios con que se le vende.
+/// </summary>
+public class ClienteOpcionResponse
+{
+    public int Id { get; set; }
+    public string Documento { get; set; } = string.Empty;
+    public string TipoDoc { get; set; } = string.Empty;
+    public string Nombre { get; set; } = string.Empty;
+    public string? Distrito { get; set; }
+    public string? Ruta { get; set; }
+    public string? Mercado { get; set; }
+    public int? ListaPrecioId { get; set; }
+
+    /// <summary>Por dónde se lo encuentra en la calle: el APK también busca por dirección.</summary>
+    public string? Direccion { get; set; }
+
+    /// <summary>El día que se lo visita: el APK filtra el selector por día.</summary>
+    public string? DiaVisita { get; set; }
+
+    /// <summary>Siempre true: el selector solo ofrece activos (el APK lo lee para filtrar).</summary>
+    public bool Activo { get; set; } = true;
+}
