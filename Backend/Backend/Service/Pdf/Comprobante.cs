@@ -161,8 +161,8 @@ public static class Comprobante
     /// </summary>
     private static float?[] Anchos(DocumentoImprimible doc, float e) =>
         (doc.MostrarCodigo
-            ? new float?[] { 28, 55, null, 52, 72, 58, 66 }
-            : new float?[] { 28, null, 52, 72, 58, 66 })
+            ? new float?[] { 28, 55, null, 52, 58, 66 }
+            : new float?[] { 28, null, 52, 58, 66 })
         .Select(a => a * e).ToArray();
 
     /*
@@ -208,7 +208,6 @@ public static class Comprobante
                     if (doc.MostrarCodigo) cab.Cell().Element(c => Encabezado(c, e)).Text("CÓDIGO");
                     cab.Cell().Element(c => Encabezado(c, e)).Text("DESCRIPCIÓN");
                     cab.Cell().Element(c => Encabezado(c, e)).Text("CANTIDAD");
-                    cab.Cell().Element(c => Encabezado(c, e)).Text("MEDIDA");
                     cab.Cell().Element(c => Encabezado(c, e)).Text(doc.EtiquetaImporte.ToUpperInvariant());
                     cab.Cell().Element(c => Encabezado(c, e)).Text("SUB TOTAL");
                 });
@@ -222,11 +221,16 @@ public static class Comprobante
                     numero++;
                     tabla.Cell().Element(Celda).AlignCenter().Text($"{numero}");
                     if (doc.MostrarCodigo) tabla.Cell().Element(Celda).AlignCenter().Text(linea.Codigo);
-                    tabla.Cell().Element(Celda).Text(linea.Producto);
+                    // La presentación va entre paréntesis pegada al nombre y no
+                    // en su columna: es parte de qué se vendió —"Atún Cama
+                    // (Caja x24)"— y aparte obliga a leer dos sitios. Manda
+                    // sobre la unidad base: si se vendió por cajas, "UND" dice
+                    // otra cosa que lo que se acordó.
+                    tabla.Cell().Element(Celda).Text(
+                        (linea.Presentacion ?? linea.Unidad) is { Length: > 0 } medida
+                            ? $"{linea.Producto} ({medida})"
+                            : linea.Producto);
                     tabla.Cell().Element(Celda).AlignCenter().Text(Textos.Cantidad(linea.Cantidad));
-                    // La unidad en que va la cantidad: la presentación si se
-                    // vendió por cajas, la unidad base si se vendió suelto.
-                    tabla.Cell().Element(Celda).AlignCenter().Text(linea.Unidad);
                     tabla.Cell().Element(Celda).AlignCenter().Text(Textos.Numero(linea.PrecioUnitario));
                     tabla.Cell().Element(Celda).AlignCenter().Text(Textos.Numero(linea.Importe));
                 }
