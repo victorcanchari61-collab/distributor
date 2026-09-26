@@ -28,4 +28,10 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- El logo de los documentos A4: dentro del ensamblado, así viaja con el
+         despliegue y no depende de una ruta en el servidor. -->
+    <EmbeddedResource Include="Recursos\Pdf\logo-titanic.png" LogicalName="Pdf.logo-titanic.png" />
+  </ItemGroup>
+
 </Project>

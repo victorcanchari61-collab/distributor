@@ -35,6 +35,21 @@ public static class Colores
     public const string AnuladoFondo = "#FEF2F2";
 }
 
+/// <summary>El logo de la empresa para los documentos A4, leído una sola vez.</summary>
+public static class Marca
+{
+    private static readonly Lazy<byte[]> LogoLeido = new(() =>
+    {
+        using var flujo = typeof(Marca).Assembly.GetManifestResourceStream("Pdf.logo-titanic.png")
+            ?? throw new InvalidOperationException("Falta el logo de los PDF (Recursos/Pdf/logo-titanic.png).");
+        using var memoria = new MemoryStream();
+        flujo.CopyTo(memoria);
+        return memoria.ToArray();
+    });
+
+    public static byte[] Logo => LogoLeido.Value;
+}
+
 /// <summary>Cómo se escriben los números y los datos sueltos en el papel.</summary>
 public static class Textos
 {

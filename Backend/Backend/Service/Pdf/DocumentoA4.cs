@@ -45,7 +45,10 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
         {
             col.Item().Row(row =>
             {
-                row.RelativeItem().PaddingRight(10).Column(emisor =>
+                // El logo a la izquierda, a la altura del recuadro del documento.
+                row.ConstantItem(125).AlignMiddle().Height(56).Image(Marca.Logo).FitArea();
+
+                row.RelativeItem().PaddingHorizontal(10).AlignMiddle().Column(emisor =>
                 {
                     emisor.Item().AlignCenter().Text(doc.Empresa.RazonSocial)
                         .FontSize(13).Bold().FontColor(Colores.Fuerte);
