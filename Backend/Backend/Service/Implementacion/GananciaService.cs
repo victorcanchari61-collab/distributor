@@ -120,12 +120,15 @@ public class GananciaService : IGananciaService
             return new GananciaProductoResponse
             {
                 ProductoId = g.ProductoId,
-                Codigo = g.Codigo,
-                Producto = g.Producto,
-                Categoria = g.Categoria,
-                Marca = g.Marca,
+                // Max() sobre texto se declara anulable, pero ninguno llega
+                // nulo: la categoría y la marca ya traen su "Sin ..." desde la
+                // línea, y los otros son obligatorios en el producto.
+                Codigo = g.Codigo ?? string.Empty,
+                Producto = g.Producto ?? string.Empty,
+                Categoria = g.Categoria ?? SinCategoria,
+                Marca = g.Marca ?? SinMarca,
                 Cantidad = g.Cantidad,
-                UnidadBase = g.UnidadBase,
+                UnidadBase = g.UnidadBase ?? string.Empty,
                 Ventas = g.Ventas,
                 UltimaVenta = Zona.DiaDe(g.UltimaVenta),
                 Importe = importe,
