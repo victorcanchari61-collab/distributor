@@ -19,12 +19,13 @@ namespace Backend.Service.Pdf;
 /// resto de los papeles de reparto.
 /// </summary>
 public sealed class NovedadesA4(
+    EmpresaResponse empresa,
     IReadOnlyList<NovedadResponse> filas,
     int total,
     string? filtros,
     DateTime emitido) : IDocument
 {
-    private const float Linea = 0.75f;
+    private const float Linea = Comprobante.Linea;
 
     private static readonly CultureInfo Peru = CultureInfo.GetCultureInfo("es-PE");
 
@@ -33,12 +34,12 @@ public sealed class NovedadesA4(
         {
             page.Size(PageSizes.A4.Landscape());
             page.Margin(1.2f, Unit.Centimetre);
-            // Semibold de base: la letra fina se pierde al fotocopiar la hoja o
-            // al mandarla por foto, que es como circula de verdad.
-            page.DefaultTextStyle(x => x.FontSize(8.5f).SemiBold().FontColor(Colores.Texto));
+            page.DefaultTextStyle(x => Comprobante.Estilo(x, 8));
 
             page.Header().Element(Cabecera);
-            page.Content().PaddingVertical(8).Element(Contenido);
+            // En una columna: puesto directo en el cuerpo de la hoja, el marco
+            // se estiraba hasta el pie aunque las filas acabaran antes.
+            page.Content().PaddingVertical(8).Column(col => col.Item().Element(Contenido));
             page.Footer().AlignCenter().Text(t =>
             {
                 t.DefaultTextStyle(x => x.FontSize(7.5f));
@@ -52,33 +53,31 @@ public sealed class NovedadesA4(
     private void Cabecera(IContainer container) =>
         container.Column(col =>
         {
-            col.Item().Text("Reporte de Novedades de Entrega")
-                .FontSize(14).Bold().FontColor(Colores.Fuerte);
-
-            col.Item().PaddingTop(2).Text($"Emitido {emitido:dd/MM/yyyy HH:mm}").FontSize(9);
-
-            col.Item().PaddingTop(3).Text(filtros is null ? "Sin filtros: todas las novedades vigentes." : $"Filtrado: {filtros}")
-                .FontSize(8).Bold();
-
-            col.Item().PaddingTop(3).Text(Resumen()).FontSize(8);
+            col.Item().Element(c => Comprobante.Membrete(c, empresa,
+                ["REPORTE DE NOVEDADES", "DE ENTREGA", $"{emitido:dd/MM/yyyy HH:mm}"]));
 
             if (total > filas.Count)
-                col.Item().PaddingTop(4).Background(Colores.AnuladoFondo)
-                    .Border(1).BorderColor(Colores.Anulado).Padding(3)
-                    .Text($"Se muestran las primeras {filas.Count} de {total}. Acota con los filtros para ver el resto.")
-                    .Bold().FontColor(Colores.Anulado);
+                col.Item().PaddingTop(6).Element(c => Comprobante.Anulado(c,
+                    $"Se muestran las primeras {filas.Count} de {total}. Acota con los filtros para ver el resto."));
+
+            col.Item().PaddingTop(8).Element(c => Comprobante.Datos(c, Resumen(), columnas: 6,
+                nota: filtros is null ? "SIN FILTROS: todas las novedades vigentes." : $"FILTRADO: {filtros}"));
         });
 
     /// <summary>Cuántas hay y cuánto valen, con el estado de la revisión.</summary>
-    private string Resumen()
+    private List<DatoImprimible> Resumen()
     {
         string Cuenta(string estado) => filas.Count(f => f.Estado == estado).ToString(Peru);
 
-        return $"{filas.Count.ToString(Peru)} novedades   ·   No entregado {Textos.Monto(filas.Sum(f => f.Importe))}"
-               + $"   ·   Por revisar {Cuenta(EstadoNovedad.Pendiente)}"
-               + $"   ·   Recibidas {Cuenta(EstadoNovedad.Recibida)}"
-               + $"   ·   Faltantes {Cuenta(EstadoNovedad.Faltante)}"
-               + $"   ·   Sin retorno {Cuenta(EstadoNovedad.SinRetorno)}";
+        return
+        [
+            new("NOVEDADES", filas.Count.ToString(Peru)),
+            new("NO ENTREGADO", Textos.Monto(filas.Sum(f => f.Importe))),
+            new("POR REVISAR", Cuenta(EstadoNovedad.Pendiente)),
+            new("RECIBIDAS", Cuenta(EstadoNovedad.Recibida)),
+            new("FALTANTES", Cuenta(EstadoNovedad.Faltante)),
+            new("SIN RETORNO", Cuenta(EstadoNovedad.SinRetorno)),
+        ];
     }
 
     private void Contenido(IContainer container)
@@ -90,7 +89,7 @@ public sealed class NovedadesA4(
             return;
         }
 
-        container.Border(Linea).BorderColor(Colores.Linea).Table(tabla =>
+        container.Border(Linea).BorderColor(Colores.BordeTabla).Table(tabla =>
         {
             tabla.ColumnsDefinition(c =>
             {
@@ -108,10 +107,10 @@ public sealed class NovedadesA4(
             // lista de números sin decir cuál es cuál.
             tabla.Header(h =>
             {
-                Encabezado(h.Cell(), "FECHA");
+                Encabezado(h.Cell(), "FECHA", primera: true);
                 Encabezado(h.Cell(), "PRODUCTO");
                 Encabezado(h.Cell(), "NO ENTREGADO");
-                Encabezado(h.Cell(), "IMPORTE", derecha: true);
+                Encabezado(h.Cell(), "IMPORTE");
                 Encabezado(h.Cell(), "MOTIVO");
                 Encabezado(h.Cell(), "PEDIDO / CLIENTE");
                 Encabezado(h.Cell(), "DESPACHO");
@@ -120,7 +119,7 @@ public sealed class NovedadesA4(
 
             foreach (var f in filas)
             {
-                Celda(tabla.Cell(), Zona.ALocal(f.Fecha).ToString("dd/MM/yy", Peru));
+                Celda(tabla.Cell(), Zona.ALocal(f.Fecha).ToString("dd/MM/yy", Peru), primera: true);
 
                 Celda(tabla.Cell(), f.Producto, f.Codigo);
 
@@ -138,12 +137,12 @@ public sealed class NovedadesA4(
             }
 
             // El total va en la propia tabla, en la misma columna que el importe.
-            tabla.Cell().ColumnSpan(3).BorderTop(Linea).BorderColor(Colores.Linea)
-                .PaddingVertical(4).PaddingHorizontal(4).AlignRight().Text("TOTAL").Bold();
-            tabla.Cell().BorderTop(Linea).BorderColor(Colores.Linea)
+            tabla.Cell().ColumnSpan(3).BorderTop(Linea).BorderColor(Colores.BordeTabla)
+                .PaddingVertical(4).PaddingHorizontal(4).AlignRight().Text("TOTAL");
+            tabla.Cell().BorderTop(Linea).BorderLeft(Linea).BorderColor(Colores.BordeTabla)
                 .PaddingVertical(4).PaddingHorizontal(4).AlignRight()
-                .Text(Textos.Monto(filas.Sum(f => f.Importe))).Bold();
-            tabla.Cell().ColumnSpan(4).BorderTop(Linea).BorderColor(Colores.Linea).Text(string.Empty);
+                .Text(Textos.Monto(filas.Sum(f => f.Importe)));
+            tabla.Cell().ColumnSpan(4).BorderTop(Linea).BorderLeft(Linea).BorderColor(Colores.BordeTabla).Text(string.Empty);
         });
     }
 
@@ -184,24 +183,29 @@ public sealed class NovedadesA4(
         _ => estado,
     };
 
-    private static void Encabezado(IContainer celda, string texto, bool derecha = false)
-    {
-        var c = celda.BorderBottom(Linea).BorderColor(Colores.Linea).PaddingVertical(4).PaddingHorizontal(4);
-        (derecha ? c.AlignRight() : c.AlignLeft()).Text(texto).Bold().FontSize(8);
-    }
+    // Cada casilla lleva su vertical a la izquierda, menos la primera: el
+    // borde de la tabla ya la pone.
+    private static IContainer Vertical(IContainer celda, bool primera) =>
+        primera ? celda : celda.BorderLeft(Linea).BorderColor(Colores.BordeTabla);
+
+    private static void Encabezado(IContainer celda, string texto, bool primera = false) =>
+        Comprobante.Encabezado(Vertical(celda, primera)).Text(texto);
 
     /// <summary>Una celda con su dato y, debajo, una línea de apoyo más chica.</summary>
     private static void Celda(
         IContainer celda, string texto, string? apoyo = null,
-        bool derecha = false, bool fuerte = false, bool anulada = false)
+        bool derecha = false, bool fuerte = false, bool anulada = false, bool primera = false)
     {
-        var c = celda.BorderBottom(Linea).BorderColor(Colores.LineaSuave).PaddingVertical(2.5f).PaddingHorizontal(4);
+        // Aquí sí hay una línea fina entre filas: cada novedad ocupa dos
+        // renglones, y sin ella no se sabe a qué fila va la línea de apoyo.
+        var c = Vertical(celda, primera).BorderBottom(0.5f).BorderColor(Colores.BordeTabla)
+            .PaddingVertical(2.5f).PaddingHorizontal(4);
         var alineada = derecha ? c.AlignRight() : c.AlignLeft();
 
         alineada.Column(col =>
         {
             var t = col.Item().Text(texto);
-            if (fuerte) t.Bold();
+            if (fuerte) t.FontSize(9);
             if (anulada) t.FontColor(Colores.Anulado);
 
             if (!string.IsNullOrWhiteSpace(apoyo))

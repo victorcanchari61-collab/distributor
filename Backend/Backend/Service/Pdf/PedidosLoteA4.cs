@@ -25,7 +25,13 @@ public sealed class PedidosLoteA4(IReadOnlyList<DocumentoImprimible> pedidos) : 
     /// rejilla de datos y el pie. Fijarlo aquí es lo que hace que todas las
     /// copias salgan con la misma geometría.
     /// </summary>
-    private const float TablaMm = 140;
+    private const float TablaMm = 125;
+
+    /// <summary>
+    /// La escala del dibujo en cada mitad: la media hoja tiene tres cuartos
+    /// del ancho de la hoja vertical, y a tamaño completo no entraría.
+    /// </summary>
+    private const float Escala = 0.8f;
 
     public void Compose(IDocumentContainer container)
     {
@@ -36,7 +42,7 @@ public sealed class PedidosLoteA4(IReadOnlyList<DocumentoImprimible> pedidos) : 
                 // Apaisada: es lo que permite las dos mitades de ancho util.
                 page.Size(PageSizes.A4.Landscape());
                 page.Margin(8, Unit.Millimetre);
-                page.DefaultTextStyle(x => x.FontSize(7.5f).SemiBold().FontColor(Colores.Texto));
+                page.DefaultTextStyle(x => Comprobante.Estilo(x, 9 * Escala));
 
                 page.Content().Row(row =>
                 {
@@ -51,5 +57,5 @@ public sealed class PedidosLoteA4(IReadOnlyList<DocumentoImprimible> pedidos) : 
 
     /// <summary>Una de las dos mitades de la hoja.</summary>
     private static void Media(IContainer container, DocumentoImprimible doc, bool copia) =>
-        HojaPedido.Dibujar(container, doc, TablaMm, escala: 1f, copia: copia);
+        Comprobante.Dibujar(container, doc, TablaMm, Escala, copia);
 }

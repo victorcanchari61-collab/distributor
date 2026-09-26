@@ -22,13 +22,14 @@ namespace Backend.Service.Pdf;
 /// última hora ya se ve al volver a sacarlo.
 /// </summary>
 public sealed class CargaDespachoA4(
+    EmpresaResponse empresa,
     DespachoResponse despacho,
     IReadOnlyList<LineaCargaResponse> lineas,
     string? filtros,
     bool porMercado,
     bool aumentos = false) : IDocument
 {
-    private const float Linea = 0.75f;
+    private const float Linea = Comprobante.Linea;
 
     private static readonly CultureInfo Peru = CultureInfo.GetCultureInfo("es-PE");
 
@@ -37,10 +38,12 @@ public sealed class CargaDespachoA4(
         {
             page.Size(PageSizes.A4);
             page.Margin(1.2f, Unit.Centimetre);
-            page.DefaultTextStyle(x => x.FontSize(8.5f).SemiBold().FontColor(Colores.Texto));
+            page.DefaultTextStyle(x => Comprobante.Estilo(x, 8));
 
             page.Header().Element(Cabecera);
-            page.Content().PaddingVertical(8).Element(Contenido);
+            // En una columna: puesto directo en el cuerpo de la hoja, el marco
+            // se estiraba hasta el pie aunque las filas acabaran antes.
+            page.Content().PaddingVertical(8).Column(col => col.Item().Element(Contenido));
             page.Footer().AlignCenter().Text(t =>
             {
                 t.DefaultTextStyle(x => x.FontSize(7.5f));
@@ -54,27 +57,20 @@ public sealed class CargaDespachoA4(
     private void Cabecera(IContainer container) =>
         container.Column(col =>
         {
-            col.Item().Text($"Reporte de Carga - {(despacho.Rutas.Count > 1 ? "RUTAS" : "CAMIÓN")} {despacho.Ruta}")
-                .FontSize(14).Bold().FontColor(Colores.Fuerte);
-
-            col.Item().Text($"REPARTO {despacho.Fecha:dd/MM/yyyy}").FontSize(10).Bold();
-
-            col.Item().PaddingTop(4).Text(t =>
-            {
-                t.DefaultTextStyle(x => x.FontSize(8));
-                t.Span($"Despacho {despacho.Numero}");
-                t.Span($"   ·   Vehículo {despacho.Vehiculo}");
-                t.Span($"   ·   Conductor {despacho.Conductor}");
-            });
-
-            if (filtros is not null)
-                col.Item().PaddingTop(3).Text($"Filtrado: {filtros}").FontSize(8).Bold();
+            col.Item().Element(c => Comprobante.Membrete(c, empresa,
+                ["REPORTE DE CARGA", $"{(despacho.Rutas.Count > 1 ? "RUTAS" : "CAMIÓN")} {despacho.Ruta}", $"#: {despacho.Numero}"]));
 
             if (despacho.Estado == "ANULADO")
-                col.Item().PaddingTop(6).Background(Colores.AnuladoFondo)
-                    .Border(1).BorderColor(Colores.Anulado).Padding(4)
-                    .AlignCenter().Text("DESPACHO ANULADO — SIN VALIDEZ")
-                    .Bold().FontColor(Colores.Anulado);
+                col.Item().PaddingTop(6).Element(c => Comprobante.Anulado(c, "DESPACHO ANULADO — SIN VALIDEZ"));
+
+            col.Item().PaddingTop(8).Element(c => Comprobante.Datos(c,
+                [
+                    new DatoImprimible("REPARTO", despacho.Fecha.ToString("dd/MM/yyyy")),
+                    new DatoImprimible("VEHÍCULO", despacho.Vehiculo),
+                    new DatoImprimible("CONDUCTOR", despacho.Conductor),
+                ],
+                columnas: 3,
+                nota: filtros is null ? null : $"FILTRADO: {filtros}"));
         });
 
     private void Contenido(IContainer container)
@@ -105,7 +101,7 @@ public sealed class CargaDespachoA4(
             foreach (var mercado in mercados)
             {
                 col.Item().PaddingTop(primero ? 0 : 10).PaddingBottom(3)
-                    .Text($"MERCADO {mercado.Key.Mercado}").FontSize(10).Bold();
+                    .Text($"MERCADO {mercado.Key.Mercado}").FontSize(10);
                 col.Item().Element(c => Tabla(c, mercado.ToList(), aumentos));
                 primero = false;
             }
@@ -129,7 +125,7 @@ public sealed class CargaDespachoA4(
             .ThenByDescending(l => l.Factor)
             .ToList();
 
-        container.Border(Linea).BorderColor(Colores.Linea).Table(tabla =>
+        container.Border(Linea).BorderColor(Colores.BordeTabla).Table(tabla =>
         {
             tabla.ColumnsDefinition(c =>
             {
@@ -144,12 +140,12 @@ public sealed class CargaDespachoA4(
             // Se repite en cada hoja.
             tabla.Header(h =>
             {
-                Encabezado(h.Cell(), "ITEM", derecha: true);
+                Encabezado(h.Cell(), "ITEM", primera: true);
                 Encabezado(h.Cell(), "CÓDIGO");
                 Encabezado(h.Cell(), "PRODUCTO");
                 Encabezado(h.Cell(), "PRESENTACIÓN");
-                Encabezado(h.Cell(), "CANTIDAD", derecha: true);
-                Encabezado(h.Cell(), "EQUIVALE", derecha: true);
+                Encabezado(h.Cell(), "CANTIDAD");
+                Encabezado(h.Cell(), "EQUIVALE");
             });
 
             var item = 0;
@@ -158,7 +154,7 @@ public sealed class CargaDespachoA4(
                 foreach (var l in producto)
                 {
                     item++;
-                    Celda(tabla.Cell(), item.ToString(Peru), derecha: true);
+                    Celda(tabla.Cell(), item.ToString(Peru), centro: true, primera: true);
                     Celda(tabla.Cell(), l.Codigo);
                     Celda(tabla.Cell(), l.Producto);
                     Celda(tabla.Cell(), l.Presentacion);
@@ -177,16 +173,21 @@ public sealed class CargaDespachoA4(
     private static string Cifra(decimal valor, bool aumentos) =>
         aumentos && valor > 0 ? "+" + Textos.Cantidad(valor) : Textos.Cantidad(valor);
 
-    private static void Encabezado(IContainer celda, string texto, bool derecha = false)
-    {
-        var c = celda.BorderBottom(Linea).BorderColor(Colores.Linea).PaddingVertical(4).PaddingHorizontal(4);
-        (derecha ? c.AlignRight() : c.AlignLeft()).Text(texto).Bold().FontSize(8);
-    }
+    // Cada casilla lleva su vertical a la izquierda, menos la primera: el
+    // borde de la tabla ya la pone. Sin líneas entre filas, como el resto.
+    private static IContainer Vertical(IContainer celda, bool primera) =>
+        primera ? celda : celda.BorderLeft(Linea).BorderColor(Colores.BordeTabla);
 
-    private static void Celda(IContainer celda, string texto, bool derecha = false, bool fuerte = false)
+    private static void Encabezado(IContainer celda, string texto, bool primera = false) =>
+        Comprobante.Encabezado(Vertical(celda, primera)).Text(texto);
+
+    private static void Celda(
+        IContainer celda, string texto, bool derecha = false, bool fuerte = false,
+        bool centro = false, bool primera = false)
     {
-        var c = celda.PaddingVertical(2.5f).PaddingHorizontal(4);
-        var t = (derecha ? c.AlignRight() : c.AlignLeft()).Text(texto);
-        if (fuerte) t.Bold().FontSize(9.5f);
+        var c = Vertical(celda, primera).PaddingVertical(2.5f).PaddingHorizontal(4);
+        c = derecha ? c.AlignRight() : centro ? c.AlignCenter() : c.AlignLeft();
+        var t = c.Text(texto);
+        if (fuerte) t.FontSize(9);
     }
 }

@@ -44,10 +44,9 @@ public class PdfService(
         var contenido = formato switch
         {
             FormatoPdf.Copias => new PedidosLoteA4([doc]).GeneratePdf(),
-            FormatoPdf.Ticket => Generar(doc, formato),
-            // La hoja vertical del pedido usa el mismo dibujo que la de dos
-            // copias, no la maqueta generica: son el mismo documento.
-            _ => new PedidoA4(doc).GeneratePdf(),
+            // La hoja vertical es la misma de los demás documentos, que ya
+            // usa el mismo dibujo que cada mitad de la de dos copias.
+            _ => Generar(doc, formato),
         };
 
         return (contenido, Nombre("pedido", doc.Numero, formato));
@@ -261,7 +260,7 @@ public class PdfService(
         var despacho = await despachos.GetAsync(id);
         if (despacho.Detalle.Count == 0) throw new BadRequestException("Este despacho no tiene pedidos");
 
-        var contenido = new DetalleClientesA4(despacho).GeneratePdf();
+        var contenido = new DetalleClientesA4(await empresas.GetActivaAsync(), despacho).GeneratePdf();
         return (contenido, Nombre("detalle-clientes", despacho.Numero, FormatoPdf.A4));
     }
 
@@ -312,7 +311,7 @@ public class PdfService(
                 .Select(l => l.UnidadNombre).Distinct()));
 
         var contenido = new CargaDespachoA4(
-            despacho, lineas, partes.Count == 0 ? null : string.Join("   ·   ", partes), porMercado,
+            await empresas.GetActivaAsync(), despacho, lineas, partes.Count == 0 ? null : string.Join("   ·   ", partes), porMercado,
             aumentos: conCorte && CortesCarga.EsAumento(corte!.Value)).GeneratePdf();
         return (contenido, Nombre("carga", conCorte ? $"{despacho.Numero}-corte{corte}" : despacho.Numero, FormatoPdf.A4));
     }
@@ -323,7 +322,7 @@ public class PdfService(
         var (filas, total) = await novedades.ExportarAsync(consulta);
 
         var contenido = new NovedadesA4(
-            filas, total, DescribirFiltrosNovedades(consulta), Zona.ALocal(DateTime.UtcNow)).GeneratePdf();
+            await empresas.GetActivaAsync(), filas, total, DescribirFiltrosNovedades(consulta), Zona.ALocal(DateTime.UtcNow)).GeneratePdf();
 
         return (contenido, $"novedades-{Zona.Hoy:yyyy-MM-dd}.pdf");
     }

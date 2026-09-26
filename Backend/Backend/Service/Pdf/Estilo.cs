@@ -33,6 +33,34 @@ public static class Colores
     /// <summary>Lo anulado sí va en rojo: es lo único que no puede pasar inadvertido.</summary>
     public const string Anulado = "#B91C1C";
     public const string AnuladoFondo = "#FEF2F2";
+
+    /// <summary>Los bordes de la tabla de los A4, el gris casi negro del sistema anterior.</summary>
+    public const string BordeTabla = "#363636";
+
+    /// <summary>El recuadro del RUC y el número en los A4, más oscuro y más grueso que la tabla.</summary>
+    public const string BordeRuc = "#1E1E1E";
+}
+
+/// <summary>
+/// La letra de los documentos A4: DejaVu Serif en negrita, la misma del
+/// sistema anterior, para que el papel se vea como el que ya conocen.
+///
+/// Va dentro del ensamblado y se registra con un nombre propio: así sale
+/// igual en la PC y en el VPS, tenga o no el servidor esa fuente instalada.
+/// Solo la negrita, porque en esos documentos todo el texto va en negrita.
+/// </summary>
+public static class Letra
+{
+    private static readonly Lazy<string> Registrada = new(() =>
+    {
+        const string nombre = "Serif Documento";
+        using var flujo = typeof(Letra).Assembly.GetManifestResourceStream("Pdf.DejaVuSerif-Bold.ttf")
+            ?? throw new InvalidOperationException("Falta la letra de los PDF (Recursos/Pdf/DejaVuSerif-Bold.ttf).");
+        QuestPDF.Drawing.FontManager.RegisterFontWithCustomName(nombre, flujo);
+        return nombre;
+    });
+
+    public static string Serif => Registrada.Value;
 }
 
 /// <summary>El logo de la empresa para los documentos A4, leído una sola vez.</summary>
@@ -58,6 +86,9 @@ public static class Textos
     /// <summary>Un importe, siempre con dos decimales y su símbolo.</summary>
     public static string Monto(decimal valor) => "S/ " + valor.ToString("N2", Peru);
 
+    /// <summary>Un importe sin símbolo, para las columnas de la tabla: 1,250.00.</summary>
+    public static string Numero(decimal valor) => valor.ToString("N2", Peru);
+
     /// <summary>
     /// Una cantidad sin decimales de adorno.
     ///
@@ -68,6 +99,15 @@ public static class Textos
     {
         var limpio = valor == decimal.Truncate(valor) ? valor.ToString("N0", Peru) : valor.ToString("0.###", Peru);
         return limpio;
+    }
+
+    /// <summary>La web como se escribe en un papel: sin "https://" ni barra final.</summary>
+    public static string Web(string sitio)
+    {
+        var limpio = sitio.Trim().ToLowerInvariant();
+        foreach (var esquema in new[] { "https://", "http://" })
+            if (limpio.StartsWith(esquema)) limpio = limpio[esquema.Length..];
+        return limpio.TrimEnd('/');
     }
 
     /// <summary>Une lo que exista y devuelve null si no quedó nada que escribir.</summary>
