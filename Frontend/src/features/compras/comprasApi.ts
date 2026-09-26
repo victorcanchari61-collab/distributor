@@ -70,7 +70,7 @@ export interface ResumenCompras {
 export const ordenCompraApi = {
   /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
   listar: (consulta: ConsultaTabla) =>
-    api.post<PaginaResponse<OrdenCompraResponse>>('/ordencompra/listar', consulta),
+    api.post<PaginaResponse<OrdenCompraFila>>('/ordencompra/listar', consulta),
 
   resumen: () => api.get<ResumenOrdenesCompra>('/ordencompra/resumen'),
 
@@ -121,6 +121,19 @@ export interface PagoCompraRequest {
  * Una compra como fila de un listado (Compras, Cuentas por pagar): solo lo que
  * muestra la tabla. El detalle y los pagos vienen con getById al abrirla.
  */
+/** Una orden como fila del listado: sin sus líneas (vienen con getById). */
+export interface OrdenCompraFila {
+  id: number
+  numero: string
+  proveedorId: number
+  proveedor: string
+  fecha: string
+  fechaEsperada: string | null
+  estado: OrdenCompraResponse['estado']
+  usuario: string | null
+  total: number
+}
+
 export interface CompraFila {
   id: number
   numero: string

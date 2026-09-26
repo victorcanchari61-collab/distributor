@@ -17,7 +17,7 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { fechaCorta, fechaHora, hoyLocal } from '../../lib/fechas'
+import { desplazarDias, fechaCorta, fechaHora, hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { bancoApi } from './bancoApi'
@@ -361,13 +361,16 @@ function CuentasBancariasTab() {
 function MovimientosModal({ cuenta, onClose }: { cuenta: CuentaFinancieraResponse; onClose: () => void }) {
   const [movimientos, setMovimientos] = useState<MovimientoCuentaResponse[]>([])
   const [cargando, setCargando] = useState(true)
+  // Por rango, el último mes por defecto: una cuenta junta movimientos todos los días.
+  const [desde, setDesde] = useState(desplazarDias(-30))
+  const [hasta, setHasta] = useState(hoyLocal())
   const toast = useToast()
 
   useEffect(() => {
     let activo = true
     setCargando(true)
     cuentaFinancieraApi
-      .movimientos(cuenta.id)
+      .movimientos(cuenta.id, desde, hasta)
       .then((m) => activo && setMovimientos(m))
       .catch((e) => toast.error(e instanceof ApiError ? e.message : 'No pudimos cargar los movimientos.'))
       .finally(() => activo && setCargando(false))
@@ -375,10 +378,10 @@ function MovimientosModal({ cuenta, onClose }: { cuenta: CuentaFinancieraRespons
       activo = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cuenta.id])
+  }, [cuenta.id, desde, hasta])
 
   const columns: DataTableColumn<MovimientoCuentaResponse>[] = [
-    { key: 'fecha', label: 'Fecha', filterable: false, render: (row) => fechaHora(row.fecha) },
+    { key: 'fecha', label: 'Fecha', filterType: 'date', render: (row) => fechaHora(row.fecha) },
     {
       key: 'tipo',
       label: 'Tipo',
@@ -402,8 +405,12 @@ function MovimientosModal({ cuenta, onClose }: { cuenta: CuentaFinancieraRespons
       <SysDataTable
         columns={columns}
         rows={movimientos}
-        toolbar={false}
-        empty={cargando ? 'Cargando movimientos...' : 'Todavía no hay movimientos en esta cuenta.'}
+        onConsulta={(q) => {
+          const fecha = q.filtros.find((f) => f.columna === 'fecha')
+          setDesde(fecha?.valor || desplazarDias(-30))
+          setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
+        }}
+        empty={cargando ? 'Cargando movimientos...' : 'No hay movimientos en esta cuenta en estas fechas.'}
       />
     </Modal>
   )

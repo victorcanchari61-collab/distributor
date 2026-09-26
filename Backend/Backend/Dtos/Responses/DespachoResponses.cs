@@ -159,3 +159,23 @@ public class ResumenDespachosResponse
     public int Armados { get; set; }
     public int PedidosEnRuta { get; set; }
 }
+
+/// <summary>
+/// Un despacho como fila del listado: los conteos y el total ya sumados, sin
+/// los pedidos. El despacho completo (GET /despacho/{id}) se pide al abrirlo.
+/// </summary>
+public class DespachoFilaResponse
+{
+    public int Id { get; set; }
+    public string Numero { get; set; } = string.Empty;
+    public DateTime Fecha { get; set; }
+    public string Ruta { get; set; } = string.Empty;
+    public string? DiaVisita { get; set; }
+    public string Vehiculo { get; set; } = string.Empty;
+    public string Conductor { get; set; } = string.Empty;
+    public string Estado { get; set; } = string.Empty;
+    public int Pedidos { get; set; }
+    public int Entregados { get; set; }
+    public int NoEntregados { get; set; }
+    public decimal Total { get; set; }
+}

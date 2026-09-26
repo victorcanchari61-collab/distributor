@@ -49,6 +49,9 @@ export interface ResumenDevoluciones {
 export const devolucionApi = {
   getAll: (estado?: string) =>
     api.get<DevolucionResponse[]>(`/devolucion${estado ? `?estado=${estado}` : ''}`),
+  /** Las de ese rango y todas las pendientes de aprobar: nada se corta en silencio. */
+  delRango: (desde: string, hasta: string) =>
+    api.get<DevolucionResponse[]>(`/devolucion?desde=${desde}&hasta=${hasta}`),
   getById: (id: number) => api.get<DevolucionResponse>(`/devolucion/${id}`),
   resumen: () => api.get<ResumenDevoluciones>('/devolucion/resumen'),
 

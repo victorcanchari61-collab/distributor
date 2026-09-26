@@ -29,6 +29,22 @@ public class RutaRepository : IRutaRepository
     public async Task<int> ContarClientesAsync(int id) =>
         await _context.Clientes.CountAsync(c => c.RutaId == id);
 
+    public async Task<Dictionary<int, int>> ContarClientesPorRutaAsync() =>
+        await _context.Clientes
+            .Where(c => c.RutaId != null)
+            .GroupBy(c => c.RutaId!.Value)
+            .Select(g => new { RutaId = g.Key, Cantidad = g.Count() })
+            .ToDictionaryAsync(x => x.RutaId, x => x.Cantidad);
+
+    public async Task<Dictionary<int, List<string>>> VendedoresPorRutaAsync() =>
+        (await _context.Usuarios.AsNoTracking()
+            .Where(u => u.RutaId != null)
+            .OrderByDescending(u => u.Activo).ThenBy(u => u.Nombre)
+            .Select(u => new { RutaId = u.RutaId!.Value, u.Nombre })
+            .ToListAsync())
+        .GroupBy(x => x.RutaId)
+        .ToDictionary(g => g.Key, g => g.Select(x => x.Nombre).ToList());
+
     public async Task<int> ContarUsosEnRepartoAsync(int id) =>
         await _context.RecorridosVehiculo.CountAsync(r => r.RutaId == id)
         + await _context.Set<DespachoRuta>().CountAsync(d => d.RutaId == id)

@@ -34,8 +34,9 @@ public class DevolucionController : ControllerBase
 
     [HttpGet]
     [Permiso("dms.devoluciones", Accion.Ver)]
-    public async Task<IActionResult> GetAll([FromQuery] string? estado) =>
-        Ok(await _devoluciones.GetAllAsync(estado));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? estado, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
+        Ok(await _devoluciones.GetAllAsync(estado, desde, hasta));
 
     [HttpGet("resumen")]
     [Permiso("dms.devoluciones", Accion.Ver)]

@@ -6,7 +6,7 @@ namespace Backend.Service.Interfaces;
 public interface IComprasService
 {
     /// <summary>Una página del listado de órdenes de compra.</summary>
-    Task<PaginaResponse<OrdenCompraResponse>> ListarOrdenesAsync(ConsultaTablaRequest consulta);
+    Task<PaginaResponse<OrdenCompraFilaResponse>> ListarOrdenesAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Contadores del listado completo de órdenes.</summary>
     Task<ResumenOrdenesCompraResponse> GetResumenOrdenesAsync();

@@ -20,6 +20,19 @@ export interface AuditoriaResponse {
   descripcion?: string | null
 }
 
+/** Un registro como fila del listado: cuántos campos tocó, sin los valores. */
+export interface AuditoriaFila {
+  id: number
+  fecha: string
+  usuarioId: number | null
+  usuario: string
+  entidad: string
+  entidadId: string
+  accion: AccionAuditoria
+  /** En una edición, los que cambiaron; en un alta o una baja, el registro entero. */
+  campos: number
+}
+
 export interface FiltrosAuditoria {
   entidad?: string
   accion?: AccionAuditoria | ''
@@ -41,7 +54,10 @@ export interface ResumenAuditoria {
 export const auditoriaApi = {
   /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
   listar: (consulta: ConsultaTabla) =>
-    api.post<PaginaResponse<AuditoriaResponse>>('/auditoria/listar', consulta),
+    api.post<PaginaResponse<AuditoriaFila>>('/auditoria/listar', consulta),
+
+  /** Un registro con sus valores anteriores y nuevos: para "Ver cambios". */
+  getById: (id: number) => api.get<AuditoriaResponse>(`/auditoria/${id}`),
 
   resumen: () => api.get<ResumenAuditoria>('/auditoria/resumen'),
 

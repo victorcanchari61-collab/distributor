@@ -79,22 +79,17 @@ public class InventarioService : IInventarioService
 
     public async Task<IEnumerable<AlmacenResponse>> GetAlmacenesAsync()
     {
-        var almacenes = (await _repository.GetAlmacenesAsync()).ToList();
-        var respuesta = new List<AlmacenResponse>();
-
-        foreach (var almacen in almacenes)
-        {
-            var capas = await _repository.GetCapasDisponiblesAsync(0, almacen.Id);
-            respuesta.Add(MapAlmacen(almacen, capas));
-        }
-
-        return respuesta;
+        var almacenes = await _repository.GetAlmacenesAsync();
+        // Productos y valorizado de todos en una consulta. Antes era una por
+        // almacén, y encima filtrando "producto 0": siempre daban cero.
+        var totales = await _repository.GetTotalesPorAlmacenAsync();
+        return almacenes.Select(a => MapAlmacen(a, totales.GetValueOrDefault(a.Id))).ToList();
     }
 
     public async Task<AlmacenResponse> GetAlmacenAsync(int id)
     {
         var almacen = await GetAlmacenOrThrowAsync(id);
-        return MapAlmacen(almacen, await _repository.GetCapasDisponiblesAsync(0, id));
+        return MapAlmacen(almacen, (await _repository.GetTotalesPorAlmacenAsync(id)).GetValueOrDefault(id));
     }
 
     public async Task<AlmacenResponse> CreateAlmacenAsync(CreateAlmacenRequest request)
@@ -126,7 +121,7 @@ public class InventarioService : IInventarioService
         }
 
         await _repository.AddAlmacenAsync(almacen);
-        var response = MapAlmacen(almacen, []);
+        var response = MapAlmacen(almacen, (0, 0m));
         await _notificador.AvisarAsync("almacenes", "creado", response);
         return response;
     }
@@ -167,7 +162,7 @@ public class InventarioService : IInventarioService
         almacen.Activo = request.Activo;
 
         await _repository.UpdateAlmacenAsync(almacen);
-        var response = MapAlmacen(almacen, await _repository.GetCapasDisponiblesAsync(0, id));
+        var response = MapAlmacen(almacen, (await _repository.GetTotalesPorAlmacenAsync(id)).GetValueOrDefault(id));
         await _notificador.AvisarAsync("almacenes", "actualizado", response);
         return response;
     }
@@ -686,13 +681,13 @@ public class InventarioService : IInventarioService
 
     public Task<ResumenPrestamosResponse> GetResumenPrestamosAsync() => _repository.ResumenPrestamosAsync();
 
-    public async Task<PaginaResponse<PrestamoResponse>> ListarPrestamosAsync(ConsultaTablaRequest consulta)
+    public async Task<PaginaResponse<PrestamoFilaResponse>> ListarPrestamosAsync(ConsultaTablaRequest consulta)
     {
         var (items, total) = await _repository.ListarPrestamosAsync(consulta);
 
-        return new PaginaResponse<PrestamoResponse>
+        return new PaginaResponse<PrestamoFilaResponse>
         {
-            Items = items.Select(MapPrestamo).ToList(),
+            Items = items,
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,
@@ -1626,7 +1621,7 @@ public class InventarioService : IInventarioService
     private static string? Limpiar(string? texto) =>
         string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
 
-    private static AlmacenResponse MapAlmacen(Almacen a, List<CapaCosto> capas) => new()
+    private static AlmacenResponse MapAlmacen(Almacen a, (int Productos, decimal Valorizado) totales) => new()
     {
         Id = a.Id,
         Codigo = a.Codigo,
@@ -1634,8 +1629,8 @@ public class InventarioService : IInventarioService
         Direccion = a.Direccion,
         EsPrincipal = a.EsPrincipal,
         Activo = a.Activo,
-        Productos = capas.Select(c => c.ProductoId).Distinct().Count(),
-        Valorizado = Math.Round(capas.Sum(c => c.CantidadDisponible * c.CostoUnitario), 2)
+        Productos = totales.Productos,
+        Valorizado = Math.Round(totales.Valorizado, 2)
     };
 
     private static MotivoResponse MapMotivo(MotivoMovimiento m, int movimientos) => new()

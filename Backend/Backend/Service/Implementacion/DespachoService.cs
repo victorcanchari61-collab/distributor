@@ -27,8 +27,13 @@ public class DespachoService : IDespachoService
             .Include(d => d.Conductor)
             .Include(d => d.Usuario)
             .Include(d => d.Detalle).ThenInclude(x => x.Pedido!).ThenInclude(p => p.Cliente!).ThenInclude(c => c.Mercado)
+            // La ruta del cliente sale en cada pedido: sin esto llegaba vacía.
+            .Include(d => d.Detalle).ThenInclude(x => x.Pedido!).ThenInclude(p => p.Cliente!).ThenInclude(c => c.Ruta)
             .Include(d => d.Detalle).ThenInclude(x => x.Pedido!).ThenInclude(p => p.Detalle)
-            .Include(d => d.Detalle).ThenInclude(x => x.Pedido!).ThenInclude(p => p.Ventas);
+            .Include(d => d.Detalle).ThenInclude(x => x.Pedido!).ThenInclude(p => p.Ventas)
+            // Rutas, pedidos, sus líneas y sus ventas en consultas separadas: en
+            // una sola se multiplicaban entre sí.
+            .AsSplitQuery();
 
     public async Task<IEnumerable<DespachoResponse>> GetAllAsync(string? estado = null)
     {
@@ -44,6 +49,64 @@ public class DespachoService : IDespachoService
 
         await AnotarNovedadesAsync(despachos);
         return despachos;
+    }
+
+    public async Task<IEnumerable<DespachoFilaResponse>> ListarAsync(DateTime? desde, DateTime? hasta)
+    {
+        // La fecha de un despacho es el día de reparto (sin hora). Por defecto
+        // el último mes y todo lo programado de ahí en adelante; con las dos
+        // fechas, nunca más de un año.
+        var inicio = (desde ?? Zona.Hoy.AddDays(-30)).Date;
+        var fin = hasta?.Date;
+        if (fin is DateTime f && (f - inicio).TotalDays > 366) inicio = f.AddDays(-366);
+
+        var novedades = _context.NovedadesEntrega;
+        var filas = await _context.Despachos
+            .AsNoTracking()
+            .Where(d => d.Fecha >= inicio && (fin == null || d.Fecha <= fin))
+            .OrderByDescending(d => d.Fecha).ThenByDescending(d => d.Id)
+            .Select(d => new
+            {
+                d.Id,
+                d.Numero,
+                d.Fecha,
+                RutaPrincipal = d.Ruta != null ? d.Ruta.Nombre : null,
+                Rutas = d.Rutas.OrderBy(r => r.Id).Select(r => r.Ruta!.Nombre).ToList(),
+                d.DiaVisita,
+                Vehiculo = d.Vehiculo != null ? d.Vehiculo.Placa : string.Empty,
+                Conductor = d.Conductor != null ? d.Conductor.Nombre : string.Empty,
+                d.Estado,
+                Pedidos = d.Detalle.Count(),
+                Entregados = d.Detalle.Count(x => x.Pedido!.Ventas.Any(v => v.Estado != EstadoNotaVenta.Anulada)),
+                // Entero sin entregar: marcado así y todavía sin venta.
+                NoEntregados = d.Detalle.Count(x =>
+                    !x.Pedido!.Ventas.Any(v => v.Estado != EstadoNotaVenta.Anulada)
+                    && novedades.Any(n => n.DespachoId == d.Id && n.PedidoId == x.PedidoId
+                                          && n.Tipo == TipoNovedad.Pedido && n.Estado != EstadoNovedad.Anulada)),
+                // Con el precio por presentación, como el total del pedido.
+                Total = d.Detalle.SelectMany(x => x.Pedido!.Detalle)
+                    .Where(l => !l.Anulado)
+                    .Sum(l => l.CantidadPresentacion * l.PrecioPresentacion),
+            })
+            .AsSplitQuery()
+            .ToListAsync();
+
+        return filas.Select(d => new DespachoFilaResponse
+        {
+            Id = d.Id,
+            Numero = d.Numero,
+            Fecha = d.Fecha,
+            // Los de antes no tienen lista de rutas: queda la principal.
+            Ruta = d.Rutas.Count > 0 ? string.Join(" · ", d.Rutas) : d.RutaPrincipal ?? string.Empty,
+            DiaVisita = d.DiaVisita,
+            Vehiculo = d.Vehiculo,
+            Conductor = d.Conductor,
+            Estado = d.Estado,
+            Pedidos = d.Pedidos,
+            Entregados = d.Entregados,
+            NoEntregados = d.NoEntregados,
+            Total = Math.Round(d.Total, 2),
+        }).ToList();
     }
 
     public async Task<DespachoResponse> GetAsync(int id)

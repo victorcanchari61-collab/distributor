@@ -29,6 +29,13 @@ public class MercadoRepository : IMercadoRepository
     public async Task<int> ContarClientesAsync(int id) =>
         await _context.Clientes.CountAsync(c => c.MercadoId == id);
 
+    public async Task<Dictionary<int, int>> ContarClientesPorMercadoAsync() =>
+        await _context.Clientes
+            .Where(c => c.MercadoId != null)
+            .GroupBy(c => c.MercadoId!.Value)
+            .Select(g => new { MercadoId = g.Key, Cantidad = g.Count() })
+            .ToDictionaryAsync(x => x.MercadoId, x => x.Cantidad);
+
     public async Task<Mercado> AddAsync(Mercado mercado)
     {
         await _context.Mercados.AddAsync(mercado);

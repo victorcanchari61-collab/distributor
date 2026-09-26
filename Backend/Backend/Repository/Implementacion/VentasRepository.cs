@@ -58,7 +58,9 @@ public class VentasRepository : IVentasRepository
             // Para saber si ya se convirtio, y a que venta.
             .Include(p => p.Ventas)
             .Include(p => p.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
-            .Include(p => p.Detalle).ThenInclude(d => d.Presentacion);
+            .Include(p => p.Detalle).ThenInclude(d => d.Presentacion)
+            // Ventas y líneas en consultas separadas: juntas se multiplicaban.
+            .AsSplitQuery();
 
 
     /*
@@ -120,10 +122,11 @@ public class VentasRepository : IVentasRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<(List<Pedido> Items, int Total)> ListarPedidosAsync(
+    public async Task<(List<PedidoFilaResponse> Items, int Total)> ListarPedidosAsync(
         ConsultaTablaRequest consulta, AlcanceFiltro? alcance = null)
     {
-        var query = Acotar(PedidosConDetalle().AsNoTracking().AsQueryable(), alcance);
+        // Sin Include: la fila se proyecta al final, sin líneas ni ventas.
+        var query = Acotar(_context.Pedidos.AsNoTracking(), alcance);
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
@@ -199,7 +202,30 @@ public class VentasRepository : IVentasRepository
                 : query.OrderBy(p => p.Fecha).ThenBy(p => p.Id),
         };
 
-        return await query.PaginarAsync(consulta);
+        var pagina = await query.Select(p => new PedidoFilaResponse
+            {
+                Id = p.Id,
+                Numero = p.Numero,
+                ClienteId = p.ClienteId,
+                Cliente = p.Cliente != null ? p.Cliente.Nombre : string.Empty,
+                Ruta = p.Cliente != null && p.Cliente.Ruta != null ? p.Cliente.Ruta.Nombre : null,
+                DiaVisita = p.Cliente != null ? p.Cliente.DiaVisita : null,
+                Fecha = p.Fecha,
+                Estado = p.Estado,
+                CondicionPago = p.CondicionPago,
+                Usuario = p.Usuario != null ? p.Usuario.Nombre : null,
+                ReservaStock = p.ReservaStock,
+                AlmacenId = p.AlmacenId,
+                Almacen = p.Almacen != null ? p.Almacen.Nombre : null,
+                // La venta vigente: la que no se anuló. Una subconsulta, no todas las ventas.
+                NotaVentaId = p.Ventas.Where(v => v.Estado != EstadoNotaVenta.Anulada).Select(v => (int?)v.Id).FirstOrDefault(),
+                NotaVentaNumero = p.Ventas.Where(v => v.Estado != EstadoNotaVenta.Anulada).Select(v => v.Numero).FirstOrDefault(),
+                Total = p.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion),
+            })
+            .PaginarAsync(consulta);
+
+        foreach (var f in pagina.Items) f.Total = Math.Round(f.Total, 2);
+        return pagina;
     }
 
     // Los contadores se acotan igual que la lista: si no, arriba diria "40

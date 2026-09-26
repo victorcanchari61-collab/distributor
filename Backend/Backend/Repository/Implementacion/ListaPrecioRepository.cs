@@ -33,6 +33,12 @@ public class ListaPrecioRepository : IListaPrecioRepository
     public async Task<int> ContarPreciosAsync(int listaId) =>
         await _context.Precios.CountAsync(p => p.ListaPrecioId == listaId);
 
+    public async Task<Dictionary<int, int>> ContarPreciosPorListaAsync() =>
+        await _context.Precios
+            .GroupBy(p => p.ListaPrecioId)
+            .Select(g => new { ListaPrecioId = g.Key, Cantidad = g.Count() })
+            .ToDictionaryAsync(x => x.ListaPrecioId, x => x.Cantidad);
+
     public async Task<ListaPrecio> AddAsync(ListaPrecio lista)
     {
         await _context.ListasPrecio.AddAsync(lista);

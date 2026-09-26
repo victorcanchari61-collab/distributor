@@ -35,7 +35,9 @@ public class ProductoRepository : IProductoRepository
 
     public async Task<IEnumerable<Producto>> GetAllConDetalleAsync()
     {
+        // Solo lectura: es el catálogo de los selectores, no se modifica.
         return await ConDetalle()
+            .AsNoTracking()
             .OrderByDescending(p => p.Activo)
             .ThenBy(p => p.Nombre)
             .ToListAsync();

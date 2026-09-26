@@ -33,13 +33,11 @@ public class RutaService : IRutaService
 
     public async Task<IEnumerable<RutaResponse>> GetAllAsync()
     {
+        // Clientes y vendedores de todas las rutas en dos consultas, no dos por ruta.
         var rutas = await _repository.GetAllAsync();
-        var respuesta = new List<RutaResponse>();
-        foreach (var ruta in rutas)
-        {
-            respuesta.Add(await MapAsync(ruta));
-        }
-        return respuesta;
+        var clientes = await _repository.ContarClientesPorRutaAsync();
+        var vendedores = await _repository.VendedoresPorRutaAsync();
+        return rutas.Select(r => MapToResponse(r, clientes.GetValueOrDefault(r.Id), vendedores.GetValueOrDefault(r.Id))).ToList();
     }
 
     public async Task<RutaResponse> GetByIdAsync(int id)

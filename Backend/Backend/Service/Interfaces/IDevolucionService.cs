@@ -11,7 +11,11 @@ namespace Backend.Service.Interfaces;
 /// </summary>
 public interface IDevolucionService
 {
-    Task<IEnumerable<DevolucionResponse>> GetAllAsync(string? estado = null);
+    /// <summary>
+    /// Con fechas: las de ese rango más todas las pendientes de aprobar. Sin
+    /// fechas (el APK), las 300 más recientes, como siempre.
+    /// </summary>
+    Task<IEnumerable<DevolucionResponse>> GetAllAsync(string? estado = null, DateTime? desde = null, DateTime? hasta = null);
     Task<DevolucionResponse> GetAsync(int id);
     Task<ResumenDevolucionesResponse> GetResumenAsync();
 

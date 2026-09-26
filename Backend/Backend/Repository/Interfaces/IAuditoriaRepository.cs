@@ -16,7 +16,10 @@ public interface IAuditoriaRepository
     /// cada cambio del sistema y quedaba fuera de alcance todo lo anterior a
     /// los últimos 300 registros.
     /// </summary>
-    Task<(List<RegistroAuditoria> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta);
+    Task<(List<Dtos.Responses.AuditoriaFilaResponse> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Un registro con sus valores, para verlo entero.</summary>
+    Task<RegistroAuditoria?> GetPorIdAsync(int id);
 
     /// <summary>
     /// Borra, en lotes, todo lo que el buscador y los filtros de la consulta

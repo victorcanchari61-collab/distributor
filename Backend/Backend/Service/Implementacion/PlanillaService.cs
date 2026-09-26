@@ -46,22 +46,27 @@ public class PlanillaService : IPlanillaService
 
     public async Task<IEnumerable<PlanillaResumenResponse>> HistorialAsync()
     {
-        var planillas = await _context.PlanillasSemanales
+        // Contado y sumado en la base: antes se cargaba cada planilla con todo
+        // su detalle solo para esto. El neto va con la misma cuenta que
+        // PlanillaDetalle.Neto (costo laboral sin bajar de cero, menos faltantes).
+        return await _context.PlanillasSemanales
             .AsNoTracking()
-            .Include(p => p.Detalle)
             .OrderByDescending(p => p.Desde).ThenByDescending(p => p.Id)
+            .Select(p => new PlanillaResumenResponse
+            {
+                Id = p.Id,
+                Desde = p.Desde,
+                Hasta = p.Hasta,
+                Estado = p.Estado,
+                Empleados = p.Detalle.Count(),
+                TotalNeto = p.Detalle.Sum(d =>
+                    (d.SueldoSemanal - d.DescuentoInasistencias + d.ExtraFeriados + d.Bonos - d.OtrosDescuentos > 0
+                        ? d.SueldoSemanal - d.DescuentoInasistencias + d.ExtraFeriados + d.Bonos - d.OtrosDescuentos
+                        : 0)
+                    - d.DescuentoFaltantes),
+                FechaPago = p.FechaPago,
+            })
             .ToListAsync();
-
-        return planillas.Select(p => new PlanillaResumenResponse
-        {
-            Id = p.Id,
-            Desde = p.Desde,
-            Hasta = p.Hasta,
-            Estado = p.Estado,
-            Empleados = p.Detalle.Count,
-            TotalNeto = p.Detalle.Sum(d => d.Neto),
-            FechaPago = p.FechaPago,
-        });
     }
 
     public async Task<PlanillaResponse> GenerarAsync(DateTime semana, int? usuarioId)

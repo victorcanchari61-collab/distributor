@@ -4,6 +4,12 @@ namespace Backend.Repository.Interfaces;
 
 public interface IRutaRepository
 {
+    /// <summary>Cuántos clientes tiene cada ruta, de una sola consulta.</summary>
+    Task<Dictionary<int, int>> ContarClientesPorRutaAsync();
+
+    /// <summary>Quiénes atienden cada ruta, de una sola consulta.</summary>
+    Task<Dictionary<int, List<string>>> VendedoresPorRutaAsync();
+
     Task<IEnumerable<Ruta>> GetAllAsync();
     Task<Ruta?> GetByIdAsync(int id);
     Task<bool> ExisteNombreAsync(string nombre, int? excepto = null);

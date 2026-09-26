@@ -42,16 +42,8 @@ public class FinanzasService : IFinanzasService
     public async Task<IEnumerable<MetodoPagoResponse>> GetMetodosPagoAsync()
     {
         var metodos = await _repository.GetMetodosPagoAsync();
-
-        var respuesta = new List<MetodoPagoResponse>();
-        foreach (var metodo in metodos)
-        {
-            respuesta.Add(MapMetodoPago(
-                metodo,
-                await _repository.ContarUsosMetodoPagoAsync(metodo.Id)));
-        }
-
-        return respuesta;
+        var usos = await _repository.ContarUsosPorMetodoPagoAsync();
+        return metodos.Select(m => MapMetodoPago(m, usos.GetValueOrDefault(m.Id))).ToList();
     }
 
     public async Task<MetodoPagoResponse> GetMetodoPagoAsync(int id)

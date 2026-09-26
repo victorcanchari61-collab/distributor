@@ -10,7 +10,7 @@ public interface IVentasService
     Task<PedidoResponse> GetPedidoAsync(int id);
 
     /// <summary>Una página del listado de pedidos, resuelta en la base.</summary>
-    Task<PaginaResponse<PedidoResponse>> ListarPedidosAsync(ConsultaTablaRequest consulta);
+    Task<PaginaResponse<PedidoFilaResponse>> ListarPedidosAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Contadores del listado completo de pedidos.</summary>
     Task<ResumenPedidosResponse> GetResumenPedidosAsync();

@@ -273,6 +273,21 @@ public class InventarioRepository : IInventarioRepository
             .ToListAsync();
     }
 
+    public async Task<Dictionary<int, (int Productos, decimal Valorizado)>> GetTotalesPorAlmacenAsync(int? almacenId = null)
+    {
+        var filas = await _context.CapasCosto
+            .Where(c => c.CantidadDisponible > 0 && (almacenId == null || c.AlmacenId == almacenId))
+            .GroupBy(c => c.AlmacenId)
+            .Select(g => new
+            {
+                AlmacenId = g.Key,
+                Productos = g.Select(c => c.ProductoId).Distinct().Count(),
+                Valorizado = g.Sum(c => c.CantidadDisponible * c.CostoUnitario),
+            })
+            .ToListAsync();
+        return filas.ToDictionary(f => f.AlmacenId, f => (f.Productos, f.Valorizado));
+    }
+
     public async Task<Dictionary<int, decimal>> GetStockPorProductoAsync(int? almacenId) =>
         await _context.CapasCosto
             .Where(c => c.CantidadDisponible > 0
@@ -326,6 +341,8 @@ public class InventarioRepository : IInventarioRepository
             .Include(d => d.Compra)
             .Include(d => d.Movimientos)
             .ThenInclude(m => m.Producto)
+            // La unidad de cada línea: sin esto salía vacía en el detalle.
+            .ThenInclude(p => p!.UnidadBase)
             .Include(d => d.Movimientos)
             .ThenInclude(m => m.Presentacion)
             .Include(d => d.Movimientos)
@@ -456,9 +473,10 @@ public class InventarioRepository : IInventarioRepository
         Devueltos = await _context.Prestamos.CountAsync(p => p.Estado == EstadoPrestamo.Devuelto),
     };
 
-    public async Task<(List<Prestamo> Items, int Total)> ListarPrestamosAsync(ConsultaTablaRequest consulta)
+    public async Task<(List<PrestamoFilaResponse> Items, int Total)> ListarPrestamosAsync(ConsultaTablaRequest consulta)
     {
-        var query = PrestamosConDetalle().AsNoTracking().AsQueryable();
+        // Sin Include: la fila se proyecta al final, sin detalle ni devoluciones.
+        var query = _context.Prestamos.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
@@ -479,6 +497,10 @@ public class InventarioRepository : IInventarioRepository
         if (consulta.ValorDe("tipo") is string tipo)
             query = query.Where(p => p.Tipo == tipo);
 
+        // La tabla lo ofrece como filtro: sin esto se ignoraba.
+        if (consulta.ValorDe("almacen") is string almacen)
+            query = query.Where(p => p.Almacen != null && p.Almacen.Nombre == almacen);
+
         var (desde, hasta) = consulta.RangoFechas("fecha");
         if (desde is not null) query = query.Where(p => p.Fecha >= desde);
         if (hasta is not null) query = query.Where(p => p.Fecha <= hasta);
@@ -497,7 +519,24 @@ public class InventarioRepository : IInventarioRepository
                       : query.OrderBy(p => p.Fecha).ThenBy(p => p.Id),
         };
 
-        return await query.PaginarAsync(consulta);
+        var pagina = await query
+            .Select(p => new PrestamoFilaResponse
+            {
+                Id = p.Id,
+                Numero = p.Numero,
+                Tipo = p.Tipo,
+                Contraparte = p.Contraparte,
+                AlmacenId = p.AlmacenId,
+                Almacen = p.Almacen != null ? p.Almacen.Nombre : string.Empty,
+                Fecha = p.Fecha,
+                Estado = p.Estado,
+                Total = p.Detalle.Sum(d => d.Movimiento != null ? d.Movimiento.CostoTotal : 0),
+                TieneDevolucion = p.Detalle.Any(d => d.CantidadDevuelta > 0),
+            })
+            .PaginarAsync(consulta);
+
+        foreach (var f in pagina.Items) f.Total = Math.Round(f.Total, 2);
+        return pagina;
     }
 
     public async Task UpdateDocumentoAsync(DocumentoInventario documento)

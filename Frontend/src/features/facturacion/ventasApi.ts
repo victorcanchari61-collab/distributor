@@ -62,6 +62,31 @@ export interface PagoVentaResponse {
 
 export type EstadoPedido = 'PENDIENTE' | 'CONFIRMADO' | 'ANULADO'
 
+/**
+ * Un pedido como fila del listado: sin sus líneas. El pedido completo se pide
+ * con getById al verlo, editarlo o convertirlo en venta.
+ */
+export interface PedidoFila {
+  id: number
+  numero: string
+  clienteId: number
+  cliente: string
+  ruta: string | null
+  diaVisita: string | null
+  fecha: string
+  estado: PedidoResponse['estado']
+  condicionPago: PedidoResponse['condicionPago']
+  usuario: string | null
+  reservaStock: boolean
+  almacenId: number | null
+  almacen: string | null
+  notaVentaId: number | null
+  notaVentaNumero: string | null
+  noEntregadoMotivo: string | null
+  noEntregadoObservacion: string | null
+  total: number
+}
+
 export interface PedidoResponse {
   id: number
   numero: string
@@ -232,7 +257,7 @@ export interface ResumenNotasVenta {
 export const pedidoApi = {
   /** Una página del listado, ya buscada, filtrada y ordenada en el servidor. */
   listar: (consulta: ConsultaTabla) =>
-    api.post<PaginaResponse<PedidoResponse>>('/pedido/listar', consulta),
+    api.post<PaginaResponse<PedidoFila>>('/pedido/listar', consulta),
 
   resumen: () => api.get<ResumenPedidos>('/pedido/resumen'),
 

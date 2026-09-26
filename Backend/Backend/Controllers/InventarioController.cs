@@ -113,10 +113,12 @@ public class MotivoController : ControllerBase
 public class InventarioController : ControllerBase
 {
     private readonly IInventarioService _inventario;
+    private readonly IPermisoService _permisos;
 
-    public InventarioController(IInventarioService inventario)
+    public InventarioController(IInventarioService inventario, IPermisoService permisos)
     {
         _inventario = inventario;
+        _permisos = permisos;
     }
 
     /// <summary>Quién registra el documento, tomado del token.</summary>
@@ -175,17 +177,35 @@ public class InventarioController : ControllerBase
         Ok(await _inventario.GetResumenStockAsync(almacenId));
 
     /// <summary>Una página de documentos de una familia (ajustes, transferencias, recepciones).</summary>
+    // El permiso depende de la familia: Recepciones no es Ajustes. Antes todo
+    // pedía inv.ajustes, así que quien solo recibía mercadería no veía la lista.
     [HttpPost("documentos/listar")]
-    [Permiso("inv.ajustes", Accion.Ver)]
+    [PermisoAlguno("inv.ajustes:ver", "inv.transferencias:ver", "compras.recepciones:ver")]
     public async Task<IActionResult> ListarDocumentos(
         [FromBody] ConsultaTablaRequest consulta, [FromQuery] string? familia) =>
-        Ok(await _inventario.ListarDocumentosAsync(consulta, familia));
+        await PuedeVerFamiliaAsync(familia)
+            ? Ok(await _inventario.ListarDocumentosAsync(consulta, familia))
+            : Forbid();
 
     /// <summary>Contadores del listado completo de esa familia.</summary>
     [HttpGet("documentos/resumen")]
-    [Permiso("inv.ajustes", Accion.Ver)]
+    [PermisoAlguno("inv.ajustes:ver", "inv.transferencias:ver", "compras.recepciones:ver")]
     public async Task<IActionResult> ResumenDocumentos([FromQuery] string? familia) =>
-        Ok(await _inventario.GetResumenDocumentosAsync(familia));
+        await PuedeVerFamiliaAsync(familia)
+            ? Ok(await _inventario.GetResumenDocumentosAsync(familia))
+            : Forbid();
+
+    /// <summary>El submódulo que da permiso para ver esa familia de documentos.</summary>
+    private async Task<bool> PuedeVerFamiliaAsync(string? familia)
+    {
+        var submodulo = familia switch
+        {
+            TipoDocumentoInventario.Recepcion => "compras.recepciones",
+            TipoDocumentoInventario.Transferencia => "inv.transferencias",
+            _ => "inv.ajustes",
+        };
+        return UsuarioId is int id && await _permisos.PuedeAsync(id, submodulo, Accion.Ver);
+    }
 
     /// <summary>Contadores del listado completo de préstamos.</summary>
     [HttpGet("prestamos/resumen")]

@@ -46,7 +46,8 @@ public class RolService : IRolService
     public async Task<IEnumerable<RolResponse>> GetAllAsync()
     {
         var roles = await _repository.GetAllConDetalleAsync();
-        return roles.Select(r => MapToResponse(r));
+        var usuarios = await _repository.ContarUsuariosPorRolAsync();
+        return roles.Select(r => MapToResponse(r, usuarios.GetValueOrDefault(r.Id)));
     }
 
     public async Task<RolResponse> GetByIdAsync(int id)

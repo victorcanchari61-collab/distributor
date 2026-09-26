@@ -47,14 +47,8 @@ public class ListaPrecioService : IListaPrecioService
     public async Task<IEnumerable<ListaPrecioResponse>> GetAllAsync()
     {
         var listas = await _repository.GetAllAsync();
-
-        var respuesta = new List<ListaPrecioResponse>();
-        foreach (var lista in listas)
-        {
-            respuesta.Add(MapLista(lista, await _repository.ContarPreciosAsync(lista.Id)));
-        }
-
-        return respuesta;
+        var precios = await _repository.ContarPreciosPorListaAsync();
+        return listas.Select(l => MapLista(l, precios.GetValueOrDefault(l.Id))).ToList();
     }
 
     public async Task<ListaPrecioResponse> GetByIdAsync(int id)

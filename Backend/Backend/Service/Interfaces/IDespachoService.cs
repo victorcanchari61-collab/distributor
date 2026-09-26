@@ -12,6 +12,12 @@ namespace Backend.Service.Interfaces;
 public interface IDespachoService
 {
     Task<IEnumerable<DespachoResponse>> GetAllAsync(string? estado = null);
+
+    /// <summary>
+    /// El listado de la web: filas livianas por fecha de reparto. Sin "desde",
+    /// los últimos 30 días; sin "hasta", también los programados a futuro.
+    /// </summary>
+    Task<IEnumerable<DespachoFilaResponse>> ListarAsync(DateTime? desde, DateTime? hasta);
     Task<DespachoResponse> GetAsync(int id);
 
     /// <summary>

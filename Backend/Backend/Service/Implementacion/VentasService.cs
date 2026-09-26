@@ -206,13 +206,24 @@ public class VentasService : IVentasService
         return pedidos;
     }
 
-    public async Task<PaginaResponse<PedidoResponse>> ListarPedidosAsync(ConsultaTablaRequest consulta)
+    public async Task<PaginaResponse<PedidoFilaResponse>> ListarPedidosAsync(ConsultaTablaRequest consulta)
     {
         var (items, total) = await _repository.ListarPedidosAsync(consulta, await AlcancePedidosAsync());
 
-        return new PaginaResponse<PedidoResponse>
+        // Las marcas de "no entregado", de una sola consulta para la página.
+        var marcas = await _novedades.GetNoEntregadosAsync(items.Select(p => p.Id));
+        foreach (var pedido in items)
         {
-            Items = await ConNoEntregadosAsync(items.Select(MapPedido).ToList()),
+            if (pedido.NotaVentaId is null && marcas.TryGetValue(pedido.Id, out var marca))
+            {
+                pedido.NoEntregadoMotivo = marca.Motivo;
+                pedido.NoEntregadoObservacion = marca.Observacion;
+            }
+        }
+
+        return new PaginaResponse<PedidoFilaResponse>
+        {
+            Items = items,
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,

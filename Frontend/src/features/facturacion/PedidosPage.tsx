@@ -47,7 +47,7 @@ import type { ListaPrecioResponse } from './listaPrecioApi'
 import { pedidoApi } from './ventasApi'
 import { EntregaPedidoModal, NoEntregadoModal } from './EntregaPedidoModal'
 import type { AuditoriaResponse } from '../config'
-import type { CrearPedidoRequest, FormaPagoVenta, LineaVentaResponse, PedidoResponse, ResumenPedidos } from './ventasApi'
+import type { CrearPedidoRequest, FormaPagoVenta, LineaVentaResponse, PedidoFila, PedidoResponse, ResumenPedidos } from './ventasApi'
 
 function estadoPedidoBadge(estado: PedidoResponse['estado']) {
   const tono = estado === 'CONFIRMADO' ? 'success' : estado === 'ANULADO' ? 'danger' : 'warning'
@@ -79,7 +79,7 @@ export function PedidosPage() {
   const { puede } = usePermisos()
   const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
-  const [pedidos, setPedidos] = useState<PedidoResponse[]>([])
+  const [pedidos, setPedidos] = useState<PedidoFila[]>([])
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
@@ -89,7 +89,7 @@ export function PedidosPage() {
 
   const [editando, setEditando] = useState<PedidoResponse | null>(null)
   const [detalleAbierto, setDetalleAbierto] = useState<PedidoResponse | null>(null)
-  const [historialAbierto, setHistorialAbierto] = useState<PedidoResponse | null>(null)
+  const [historialAbierto, setHistorialAbierto] = useState<PedidoFila | null>(null)
   const [historial, setHistorial] = useState<AuditoriaResponse[]>([])
   const [historialCargando, setHistorialCargando] = useState(false)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
@@ -226,7 +226,16 @@ export function PedidosPage() {
     setVista('form')
   }
 
-  const abrirHistorial = (pedido: PedidoResponse) => {
+  // La fila del listado no trae las líneas: el pedido completo se pide al abrirlo.
+  const conPedidoCompleto = async (id: number, abrir: (pedido: PedidoResponse) => void) => {
+    try {
+      abrir(await pedidoApi.getById(id))
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir el pedido.')
+    }
+  }
+
+  const abrirHistorial = (pedido: PedidoFila) => {
     setHistorialAbierto(pedido)
     setHistorial([])
     setHistorialCargando(true)
@@ -327,7 +336,7 @@ export function PedidosPage() {
     }
   }
 
-  const anularPedido = (pedido: PedidoResponse) =>
+  const anularPedido = (pedido: PedidoFila) =>
     confirmar({
       titulo: `Anular ${pedido.numero}`,
       mensaje: 'Se anula el pedido. No se puede deshacer.',
@@ -345,7 +354,7 @@ export function PedidosPage() {
       },
     })
 
-  const quitarNoEntregado = (pedido: PedidoResponse) =>
+  const quitarNoEntregado = (pedido: PedidoFila) =>
     confirmar({
       titulo: `Quitar la marca de ${pedido.numero}`,
       mensaje: 'El pedido deja de figurar como no entregado y vuelve a quedar solo pendiente.',
@@ -520,7 +529,7 @@ export function PedidosPage() {
     { key: 'ruta', label: 'Ruta' },
   ]
 
-  const columns: DataTableColumn<PedidoResponse>[] = [
+  const columns: DataTableColumn<PedidoFila>[] = [
     // El número se busca con el buscador de arriba, no en el panel.
     { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
@@ -844,7 +853,7 @@ export function PedidosPage() {
       empty={cargando ? 'Cargando pedidos...' : 'Todavía no hay pedidos registrados.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conPedidoCompleto(row.id, setDetalleAbierto)}>
             <Eye size={15} />
           </RowAction>
           <RowAction tone="view" label={`Ver historial de ${row.numero}`} onClick={() => abrirHistorial(row)}>
@@ -858,7 +867,7 @@ export function PedidosPage() {
               label={`Editar ${row.numero}`}
               disabled={row.estado !== 'PENDIENTE'}
               disabledReason="Solo se edita un pedido pendiente"
-              onClick={() => abrirEdicion(row)}
+              onClick={() => void conPedidoCompleto(row.id, abrirEdicion)}
             >
               <Pencil size={15} />
             </RowAction>
@@ -874,7 +883,7 @@ export function PedidosPage() {
                   ? `Ya es la venta ${row.notaVentaNumero}. Anúlala para rehacerla.`
                   : 'Está anulado'
               }
-              onClick={() => setConfirmando(row)}
+              onClick={() => void conPedidoCompleto(row.id, setConfirmando)}
             >
               <ShoppingBag size={15} />
             </RowAction>
@@ -889,7 +898,7 @@ export function PedidosPage() {
               tone="warning"
               disabled={row.estado !== 'PENDIENTE'}
               disabledReason="Solo un pedido pendiente puede marcarse como no entregado"
-              onClick={() => (row.noEntregadoMotivo ? quitarNoEntregado(row) : setNoEntregando(row))}
+              onClick={() => (row.noEntregadoMotivo ? quitarNoEntregado(row) : void conPedidoCompleto(row.id, setNoEntregando))}
             >
               <PackageX size={15} />
             </RowAction>

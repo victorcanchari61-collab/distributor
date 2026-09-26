@@ -29,6 +29,22 @@ export interface DespachoPedidoResponse {
   lineasConNovedad: number
 }
 
+/** Un despacho como fila del listado: conteos y total ya sumados, sin los pedidos. */
+export interface DespachoFila {
+  id: number
+  numero: string
+  fecha: string
+  ruta: string
+  diaVisita: string | null
+  vehiculo: string
+  conductor: string
+  estado: DespachoResponse['estado']
+  pedidos: number
+  entregados: number
+  noEntregados: number
+  total: number
+}
+
 export interface DespachoResponse {
   id: number
   numero: string
@@ -95,6 +111,14 @@ export const despachoApi = {
 
   getAll: (estado?: string) =>
     api.get<DespachoResponse[]>(`/despacho${estado ? `?estado=${estado}` : ''}`),
+  /** Filas livianas por fecha de reparto. Sin "desde", el último mes; sin "hasta", también lo que viene. */
+  lista: (desde?: string, hasta?: string) => {
+    const q = new URLSearchParams()
+    if (desde) q.set('desde', desde)
+    if (hasta) q.set('hasta', hasta)
+    const s = q.toString()
+    return api.get<DespachoFila[]>(`/despacho/lista${s ? `?${s}` : ''}`)
+  },
   getById: (id: number) => api.get<DespachoResponse>(`/despacho/${id}`),
   resumen: () => api.get<ResumenDespachos>('/despacho/resumen'),
 

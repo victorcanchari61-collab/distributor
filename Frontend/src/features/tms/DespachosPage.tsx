@@ -32,6 +32,7 @@ import { despachoApi } from './despachoApi'
 import { AccionCargaDespacho } from './AccionCargaDespacho'
 import type {
   DespachoPedidoResponse,
+  DespachoFila,
   DespachoResponse,
   ResumenDespachos,
 } from './despachoApi'
@@ -57,7 +58,10 @@ export function DespachosPage() {
   const { puede } = usePermisos()
   const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
-  const [despachos, setDespachos] = useState<DespachoResponse[]>([])
+  const [despachos, setDespachos] = useState<DespachoFila[]>([])
+  // Por fecha de reparto: el último mes y lo programado, o lo que se filtre.
+  const [listaDesde, setListaDesde] = useState<string | undefined>(undefined)
+  const [listaHasta, setListaHasta] = useState<string | undefined>(undefined)
   const [resumen, setResumen] = useState<ResumenDespachos | null>(null)
   const [rutas, setRutas] = useState<RutaResponse[]>([])
   const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
@@ -118,7 +122,7 @@ export function DespachosPage() {
     setCargando(true)
     try {
       const [lista, res, rts, vhs, cds] = await Promise.all([
-        despachoApi.getAll(),
+        despachoApi.lista(listaDesde, listaHasta),
         despachoApi.resumen(),
         rutaApi.getAll(),
         vehiculoApi.getAll(),
@@ -135,7 +139,7 @@ export function DespachosPage() {
     } finally {
       setCargando(false)
     }
-  }, [])
+  }, [listaDesde, listaHasta])
 
   useEffect(() => {
     void cargar()
@@ -253,6 +257,15 @@ export function DespachosPage() {
     setVista('form')
   }
 
+  // La fila no trae los pedidos: el despacho completo se pide al abrirlo.
+  const conDespachoCompleto = async (id: number, abrir: (d: DespachoResponse) => void) => {
+    try {
+      abrir(await despachoApi.getById(id))
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir el despacho.')
+    }
+  }
+
   const abrirEdicion = (d: DespachoResponse) => {
     setEditando(d)
     setFecha(d.fecha.slice(0, 10))
@@ -328,7 +341,7 @@ export function DespachosPage() {
     }
   }
 
-  const anular = (d: DespachoResponse) =>
+  const anular = (d: DespachoFila) =>
     confirmar({
       titulo: `Anular ${d.numero}`,
       mensaje: 'Sus pedidos vuelven a quedar libres para otro despacho.',
@@ -380,7 +393,7 @@ export function DespachosPage() {
     .filter((p) => elegidos.includes(p.pedidoId))
     .reduce((n, p) => n + p.total, 0)
 
-  const columns: DataTableColumn<DespachoResponse>[] = [
+  const columns: DataTableColumn<DespachoFila>[] = [
     // El número se busca con el buscador de arriba, no en el panel.
     { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
@@ -727,13 +740,18 @@ export function DespachosPage() {
       }
       columns={columns}
       rows={despachos}
+      onConsulta={(q) => {
+        const fecha = q.filtros.find((f) => f.columna === 'fecha')
+        setListaDesde(fecha?.valor || undefined)
+        setListaHasta(fecha?.valorHasta || fecha?.valor || undefined)
+      }}
       cardIcon={Truck}
       searchPlaceholder="Buscar por número, ruta, placa..."
       empty={cargando ? 'Cargando despachos...' : 'Todavía no hay despachos armados.'}
       actionsWidth={220}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalle(row)}>
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conDespachoCompleto(row.id, setDetalle)}>
             <Eye size={15} />
           </RowAction>
           {/* Los papeles de la carga: dos copias por hoja, para el repartidor. */}
@@ -753,7 +771,7 @@ export function DespachosPage() {
               label={`Editar ${row.numero}`}
               disabled={row.estado === 'ANULADO'}
               disabledReason="Está anulado"
-              onClick={() => abrirEdicion(row)}
+              onClick={() => void conDespachoCompleto(row.id, abrirEdicion)}
             >
               <Pencil size={15} />
             </RowAction>

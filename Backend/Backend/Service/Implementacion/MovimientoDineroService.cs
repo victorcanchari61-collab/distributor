@@ -28,8 +28,8 @@ public class MovimientoDineroService : IMovimientoDineroService
 
     public async Task<IEnumerable<MovimientoDineroResponse>> ListarAsync(DateTime desde, DateTime hasta, int? cuentaId)
     {
-        var inicio = Zona.AUtc(desde.Date);
-        var fin = Zona.AUtc(hasta.Date.AddDays(1));
+        // Nunca más de un año de una vez: el kardex del dinero crece todos los días.
+        var (inicio, fin) = Zona.RangoUtc(desde, hasta);
 
         var query = _context.MovimientosCuenta
             .AsNoTracking()

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fechaCorta } from '../../lib/fechas'
+import { desplazarDias, fechaCorta, hoyLocal } from '../../lib/fechas'
 import { Check, Eye, Undo2, X } from 'lucide-react'
 import {
   Alert,
@@ -53,6 +53,9 @@ export function DevolucionesPage() {
   const [error, setError] = useState('')
 
   const [detalle, setDetalle] = useState<DevolucionResponse | null>(null)
+  // Por rango: el último mes por defecto, más las pendientes aunque sean viejas.
+  const [desde, setDesde] = useState(desplazarDias(-30))
+  const [hasta, setHasta] = useState(hoyLocal())
 
 
   const { confirmar, dialogo } = useConfirmacion()
@@ -60,7 +63,7 @@ export function DevolucionesPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [lista, res] = await Promise.all([devolucionApi.getAll(), devolucionApi.resumen()])
+      const [lista, res] = await Promise.all([devolucionApi.delRango(desde, hasta), devolucionApi.resumen()])
       setDevoluciones(lista)
       setResumen(res)
       setError('')
@@ -69,7 +72,7 @@ export function DevolucionesPage() {
     } finally {
       setCargando(false)
     }
-  }, [])
+  }, [desde, hasta])
 
   useEffect(() => {
     void cargar()
@@ -202,6 +205,11 @@ export function DevolucionesPage() {
       }
       columns={columns}
       rows={devoluciones}
+      onConsulta={(q) => {
+        const fecha = q.filtros.find((f) => f.columna === 'fecha')
+        setDesde(fecha?.valor || desplazarDias(-30))
+        setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
+      }}
       cardIcon={Undo2}
       searchPlaceholder="Buscar por número, venta, cliente..."
       empty={cargando ? 'Cargando devoluciones...' : 'Todavía no hay devoluciones.'}

@@ -66,10 +66,22 @@ export function suscribirCambios(modulos: string | string[], onCambio: (evento: 
 }
 
 /**
+ * Cuánto se espera a que termine una ráfaga de avisos antes de recargar. Una
+ * venta avisa a la vez "notasventa", "stock", "kardex" y "cuentasfinancieras":
+ * una pantalla que escucha varios recargaba una vez por cada aviso.
+ */
+const ESPERA_RAFAGA_MS = 400
+
+/** Pero nunca más que esto: una seguidilla de cambios no puede dejarla sin recargar. */
+const ESPERA_MAXIMA_MS = 2000
+
+/**
  * Vuelve a llamar `recargar` cuando algún otro cliente cambia algo en
  * `modulos`. Se usa junto al cargar() que cada página ya tiene:
  *
  *   useRealtime('clientes', cargar)
+ *
+ * Los avisos que llegan juntos se juntan en una sola recarga.
  */
 export function useRealtime(modulos: string | string[], recargar: () => void) {
   const recargarRef = useRef(recargar)
@@ -80,7 +92,28 @@ export function useRealtime(modulos: string | string[], recargar: () => void) {
   const clave = Array.isArray(modulos) ? modulos.join(',') : modulos
 
   useEffect(() => {
-    return suscribirCambios(clave.split(','), () => recargarRef.current())
+    let temporizador: ReturnType<typeof setTimeout> | undefined
+    let primerAviso = 0
+
+    const disparar = () => {
+      temporizador = undefined
+      primerAviso = 0
+      recargarRef.current()
+    }
+
+    const cancelar = suscribirCambios(clave.split(','), () => {
+      const ahora = Date.now()
+      if (!primerAviso) primerAviso = ahora
+      clearTimeout(temporizador)
+      // Si la ráfaga ya lleva el máximo, se recarga ahora; si no, se espera un poco más.
+      const espera = ahora - primerAviso >= ESPERA_MAXIMA_MS ? 0 : ESPERA_RAFAGA_MS
+      temporizador = setTimeout(disparar, espera)
+    })
+
+    return () => {
+      clearTimeout(temporizador)
+      cancelar()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clave])
 }

@@ -25,4 +25,22 @@ public static class Zona
 
     /// <summary>Hoy, como lo cuenta quien está en la calle.</summary>
     public static DateTime Hoy => DiaDe(DateTime.UtcNow);
+
+    /// <summary>
+    /// Un rango de días locales como límites en UTC para una consulta: desde el
+    /// inicio del primer día hasta antes del día siguiente al último.
+    ///
+    /// Sin "hasta" es hoy; sin "desde", los últimos <paramref name="diasPorDefecto"/>
+    /// días. Y nunca más de <paramref name="maxDias"/> de una vez: un historial
+    /// que crece todos los días no se pide entero.
+    /// </summary>
+    public static (DateTime Inicio, DateTime Fin) RangoUtc(
+        DateTime? desde, DateTime? hasta, int diasPorDefecto = 30, int maxDias = 366)
+    {
+        var ultimo = (hasta ?? Hoy).Date;
+        var primero = (desde ?? ultimo.AddDays(-diasPorDefecto)).Date;
+        if (primero > ultimo) (primero, ultimo) = (ultimo, primero);
+        if ((ultimo - primero).TotalDays > maxDias) primero = ultimo.AddDays(-maxDias);
+        return (AUtc(primero), AUtc(ultimo.AddDays(1)));
+    }
 }

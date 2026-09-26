@@ -18,7 +18,7 @@ public interface IComprasRepository
     Task UpdateOrdenAsync(OrdenCompra orden);
 
     /// <summary>Una página del listado de órdenes de compra.</summary>
-    Task<(List<OrdenCompra> Items, int Total)> ListarOrdenesAsync(ConsultaTablaRequest consulta);
+    Task<(List<OrdenCompraFilaResponse> Items, int Total)> ListarOrdenesAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Contadores del listado completo de órdenes.</summary>
     Task<ResumenOrdenesCompraResponse> ResumenOrdenesAsync();

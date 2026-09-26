@@ -311,3 +311,20 @@ public class DisponibleResponse
     /// <summary>Lo ya comprometido en pedidos pendientes: se informa a quien toma otro.</summary>
     public decimal Reservado { get; set; }
 }
+
+/// <summary>Un préstamo como fila del listado: sin su detalle ni sus devoluciones.</summary>
+public class PrestamoFilaResponse
+{
+    public int Id { get; set; }
+    public string Numero { get; set; } = string.Empty;
+    public string Tipo { get; set; } = string.Empty;
+    public string Contraparte { get; set; } = string.Empty;
+    public int AlmacenId { get; set; }
+    public string Almacen { get; set; } = string.Empty;
+    public DateTime Fecha { get; set; }
+    public string Estado { get; set; } = string.Empty;
+    public decimal Total { get; set; }
+
+    /// <summary>Si ya se devolvió algo: entonces no se puede anular.</summary>
+    public bool TieneDevolucion { get; set; }
+}

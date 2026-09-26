@@ -13,9 +13,9 @@ public class RolRepository : Repository<Rol>, IRolRepository
 
     public async Task<IEnumerable<Rol>> GetAllConDetalleAsync()
     {
+        // Sin Include de usuarios: se cargaban enteros solo para contarlos.
         return await DbSet
             .Include(r => r.Permisos)
-            .Include(r => r.Usuarios)
             .OrderByDescending(r => r.DelSistema)
             .ThenBy(r => r.Nombre)
             .ToListAsync();
@@ -57,4 +57,10 @@ public class RolRepository : Repository<Rol>, IRolRepository
         DbSet.Remove(rol);
         await Context.SaveChangesAsync();
     }
+
+    public async Task<Dictionary<int, int>> ContarUsuariosPorRolAsync() =>
+        await Context.Usuarios
+            .GroupBy(u => u.RolId)
+            .Select(g => new { RolId = g.Key, Cantidad = g.Count() })
+            .ToDictionaryAsync(x => x.RolId, x => x.Cantidad);
 }

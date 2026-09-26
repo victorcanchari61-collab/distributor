@@ -27,3 +27,21 @@ public class AuditoriaResponse
     /// </summary>
     public string? Descripcion { get; set; }
 }
+
+/// <summary>
+/// Un registro de la bitácora como fila del listado: cuántos campos tocó, sin
+/// los valores. El registro completo (GET /auditoria/{id}) se pide al verlo.
+/// </summary>
+public class AuditoriaFilaResponse
+{
+    public int Id { get; set; }
+    public DateTime Fecha { get; set; }
+    public int? UsuarioId { get; set; }
+    public string Usuario { get; set; } = "Sistema";
+    public string Entidad { get; set; } = string.Empty;
+    public string EntidadId { get; set; } = string.Empty;
+    public string Accion { get; set; } = string.Empty;
+
+    /// <summary>En una edición, los que cambiaron; en un alta o una baja, el registro entero.</summary>
+    public int Campos { get; set; }
+}

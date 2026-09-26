@@ -39,30 +39,53 @@ public class DevolucionService : IDevolucionService
                 .ThenInclude(p => p.UnidadBase)
             .Include(d => d.Detalle).ThenInclude(x => x.NotaVentaDetalle!).ThenInclude(l => l.Presentacion);
 
-    public async Task<IEnumerable<DevolucionResponse>> GetAllAsync(string? estado = null) =>
-        (await Completas()
+    public async Task<IEnumerable<DevolucionResponse>> GetAllAsync(
+        string? estado = null, DateTime? desde = null, DateTime? hasta = null)
+    {
+        var query = Completas()
             .AsNoTracking()
-            .Where(d => estado == null || d.Estado == estado)
-            .OrderByDescending(d => d.Fecha)
-            .ThenByDescending(d => d.Id)
-            .Take(300)
-            .ToListAsync())
-        .Select(Map);
+            .Where(d => estado == null || d.Estado == estado);
+
+        if (desde is null && hasta is null)
+        {
+            // Sin rango (lo que pide el APK): las más recientes, como antes.
+            query = query.OrderByDescending(d => d.Fecha).ThenByDescending(d => d.Id).Take(300);
+        }
+        else
+        {
+            // Con rango: nada se corta en silencio. Las pendientes salen siempre,
+            // aunque sean viejas: son las que hay que resolver.
+            var (inicio, fin) = Zona.RangoUtc(desde, hasta);
+            query = query
+                .Where(d => (d.Fecha >= inicio && d.Fecha < fin) || d.Estado == EstadoDevolucion.Solicitada)
+                .OrderByDescending(d => d.Fecha).ThenByDescending(d => d.Id);
+        }
+
+        return (await query.ToListAsync()).Select(Map);
+    }
 
     public async Task<DevolucionResponse> GetAsync(int id) => Map(await BuscarAsync(id));
 
     public async Task<ResumenDevolucionesResponse> GetResumenAsync()
     {
-        var devoluciones = await Completas().AsNoTracking().ToListAsync();
+        // Contado y sumado en la base: antes se cargaba la tabla entera, con
+        // todo su detalle, solo para esto.
+        var porEstado = await _context.Devoluciones
+            .GroupBy(d => d.Estado)
+            .Select(g => new { Estado = g.Key, Cantidad = g.Count() })
+            .ToDictionaryAsync(x => x.Estado, x => x.Cantidad);
+
+        var importe = await _context.Devoluciones
+            .Where(d => d.Estado == EstadoDevolucion.Aprobada)
+            .SelectMany(d => d.Detalle)
+            .SumAsync(l => (decimal?)(l.Cantidad * l.PrecioUnitario)) ?? 0m;
 
         return new ResumenDevolucionesResponse
         {
-            Total = devoluciones.Count,
-            Solicitadas = devoluciones.Count(d => d.Estado == EstadoDevolucion.Solicitada),
-            Aprobadas = devoluciones.Count(d => d.Estado == EstadoDevolucion.Aprobada),
-            Importe = devoluciones
-                .Where(d => d.Estado == EstadoDevolucion.Aprobada)
-                .Sum(d => d.Detalle.Sum(l => l.Cantidad * l.PrecioUnitario)),
+            Total = porEstado.Values.Sum(),
+            Solicitadas = porEstado.GetValueOrDefault(EstadoDevolucion.Solicitada),
+            Aprobadas = porEstado.GetValueOrDefault(EstadoDevolucion.Aprobada),
+            Importe = importe,
         };
     }
 

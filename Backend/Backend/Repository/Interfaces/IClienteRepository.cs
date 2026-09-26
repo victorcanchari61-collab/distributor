@@ -6,6 +6,12 @@ namespace Backend.Repository.Interfaces;
 
 public interface IClienteRepository : IRepository<Cliente>
 {
+    /// <summary>
+    /// El padrón para los selectores, sin seguimiento de cambios. Con
+    /// <paramref name="acotarARuta"/>, solo los de esa ruta (ninguno si es null).
+    /// </summary>
+    Task<List<Cliente>> GetCatalogoAsync(bool acotarARuta, int? rutaId);
+
     Task<Cliente?> GetByDocumentoAsync(string documento);
     Task<bool> ExistsByDocumentoAsync(string documento, int? excludeId = null);
 

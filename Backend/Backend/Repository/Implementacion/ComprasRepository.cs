@@ -66,9 +66,10 @@ public class ComprasRepository : IComprasRepository
             .Take(300)
             .ToListAsync();
 
-    public async Task<(List<OrdenCompra> Items, int Total)> ListarOrdenesAsync(ConsultaTablaRequest consulta)
+    public async Task<(List<OrdenCompraFilaResponse> Items, int Total)> ListarOrdenesAsync(ConsultaTablaRequest consulta)
     {
-        var query = OrdenesConDetalle().AsNoTracking().AsQueryable();
+        // Sin Include: la fila se proyecta al final, sin las líneas.
+        var query = _context.OrdenesCompra.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
@@ -109,7 +110,23 @@ public class ComprasRepository : IComprasRepository
                       : query.OrderBy(o => o.Fecha).ThenBy(o => o.Id),
         };
 
-        return await query.PaginarAsync(consulta);
+        var pagina = await query
+            .Select(o => new OrdenCompraFilaResponse
+            {
+                Id = o.Id,
+                Numero = o.Numero,
+                ProveedorId = o.ProveedorId,
+                Proveedor = o.Proveedor != null ? o.Proveedor.Nombre : string.Empty,
+                Fecha = o.Fecha,
+                FechaEsperada = o.FechaEsperada,
+                Estado = o.Estado,
+                Usuario = o.Usuario != null ? o.Usuario.Nombre : null,
+                Total = o.Detalle.Sum(d => d.Cantidad * d.CostoUnitario),
+            })
+            .PaginarAsync(consulta);
+
+        foreach (var f in pagina.Items) f.Total = Math.Round(f.Total, 2);
+        return pagina;
     }
 
     public async Task<ResumenOrdenesCompraResponse> ResumenOrdenesAsync() => new()

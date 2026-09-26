@@ -4,6 +4,9 @@ namespace Backend.Repository.Interfaces;
 
 public interface IRolRepository : IRepository<Rol>
 {
+    /// <summary>Cuántos usuarios tiene cada rol (como rol principal), de una sola consulta.</summary>
+    Task<Dictionary<int, int>> ContarUsuariosPorRolAsync();
+
     /// <summary>Roles con sus permisos y el conteo de usuarios asignados.</summary>
     Task<IEnumerable<Rol>> GetAllConDetalleAsync();
 

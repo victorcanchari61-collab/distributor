@@ -56,13 +56,13 @@ public class ComprasService : IComprasService
         return ordenes.Select(MapOrden);
     }
 
-    public async Task<PaginaResponse<OrdenCompraResponse>> ListarOrdenesAsync(ConsultaTablaRequest consulta)
+    public async Task<PaginaResponse<OrdenCompraFilaResponse>> ListarOrdenesAsync(ConsultaTablaRequest consulta)
     {
         var (items, total) = await _repository.ListarOrdenesAsync(consulta);
 
-        return new PaginaResponse<OrdenCompraResponse>
+        return new PaginaResponse<OrdenCompraFilaResponse>
         {
-            Items = items.Select(MapOrden).ToList(),
+            Items = items,
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,

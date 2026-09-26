@@ -38,11 +38,11 @@ public class AuditoriaRepository : IAuditoriaRepository
     /// </summary>
     private const int LoteBorrado = 5000;
 
-    public async Task<(List<RegistroAuditoria> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta)
+    public async Task<(List<AuditoriaFilaResponse> Items, int Total)> ListarAsync(ConsultaTablaRequest consulta)
     {
-        var query = Filtrar(
-            _context.RegistrosAuditoria.Include(r => r.Usuario).AsNoTracking(),
-            consulta);
+        // Sin Include: la fila se proyecta al final y no trae los valores (el
+        // registro entero en un alta o una baja), solo cuántos campos son.
+        var query = Filtrar(_context.RegistrosAuditoria.AsNoTracking(), consulta);
 
         var desc = !string.Equals(consulta.Sentido, "asc", StringComparison.OrdinalIgnoreCase);
 
@@ -69,7 +69,20 @@ public class AuditoriaRepository : IAuditoriaRepository
                 : query.OrderBy(r => r.Fecha).ThenBy(r => r.Id),
         };
 
-        return await query.PaginarAsync(consulta);
+        return await query
+            .Select(r => new AuditoriaFilaResponse
+            {
+                Id = r.Id,
+                Fecha = r.Fecha,
+                UsuarioId = r.UsuarioId,
+                Usuario = r.Usuario != null ? r.Usuario.Nombre : "Sistema",
+                Entidad = r.Entidad,
+                EntidadId = r.EntidadId,
+                Accion = r.Accion,
+                // Las claves del JSON, contadas en la base.
+                Campos = FuncionesSql.JsonLength(r.ValoresNuevos ?? r.ValoresAnteriores) ?? 0,
+            })
+            .PaginarAsync(consulta);
     }
 
     /// <summary>
@@ -170,21 +183,36 @@ public class AuditoriaRepository : IAuditoriaRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<ResumenAuditoriaResponse> ResumenAsync() => new()
+    public async Task<ResumenAuditoriaResponse> ResumenAsync()
     {
-        Total = await _context.RegistrosAuditoria.CountAsync(),
-        Creados = await _context.RegistrosAuditoria.CountAsync(r => r.Accion == AccionAuditoria.Creado),
-        Actualizados = await _context.RegistrosAuditoria
-            .CountAsync(r => r.Accion == AccionAuditoria.Actualizado),
-        Eliminados = await _context.RegistrosAuditoria
-            .CountAsync(r => r.Accion == AccionAuditoria.Eliminado),
-        Entidades = await _context.RegistrosAuditoria
-            .Select(r => r.Entidad).Distinct().OrderBy(e => e).ToListAsync(),
-        Usuarios = await _context.RegistrosAuditoria
-            .Where(r => r.Usuario != null)
-            .Select(r => r.Usuario!.Nombre)
-            .Distinct().OrderBy(u => u).ToListAsync(),
-    };
+        // Los cuatro contadores de una pasada, agrupando por acción.
+        var porAccion = await _context.RegistrosAuditoria
+            .GroupBy(r => r.Accion)
+            .Select(g => new { Accion = g.Key, Cantidad = g.Count() })
+            .ToDictionaryAsync(x => x.Accion, x => x.Cantidad);
+
+        return new ResumenAuditoriaResponse
+        {
+            Total = porAccion.Values.Sum(),
+            Creados = porAccion.GetValueOrDefault(AccionAuditoria.Creado),
+            Actualizados = porAccion.GetValueOrDefault(AccionAuditoria.Actualizado),
+            Eliminados = porAccion.GetValueOrDefault(AccionAuditoria.Eliminado),
+            // Por el índice (Entidad, EntidadId): no recorre los valores.
+            Entidades = await _context.RegistrosAuditoria
+                .Select(r => r.Entidad).Distinct().OrderBy(e => e).ToListAsync(),
+            // Desde los usuarios, que son pocos: "¿tiene algún registro?" va por el índice.
+            Usuarios = await _context.Usuarios
+                .Where(u => _context.RegistrosAuditoria.Any(r => r.UsuarioId == u.Id))
+                .Select(u => u.Nombre)
+                .Distinct().OrderBy(u => u).ToListAsync(),
+        };
+    }
+
+    public async Task<RegistroAuditoria?> GetPorIdAsync(int id) =>
+        await _context.RegistrosAuditoria
+            .AsNoTracking()
+            .Include(r => r.Usuario)
+            .FirstOrDefaultAsync(r => r.Id == id);
 
     public async Task<IEnumerable<string>> GetEntidadesAsync() =>
         await _context.RegistrosAuditoria

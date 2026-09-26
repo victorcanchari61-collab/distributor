@@ -4,6 +4,9 @@ namespace Backend.Repository.Interfaces;
 
 public interface IFinanzasRepository
 {
+    /// <summary>En cuántos pagos de compra se usó cada método, de una sola consulta.</summary>
+    Task<Dictionary<int, int>> ContarUsosPorMetodoPagoAsync();
+
     // --- Métodos de pago ---
     Task<IEnumerable<MetodoPago>> GetMetodosPagoAsync();
     Task<MetodoPago?> GetMetodoPagoAsync(int id);

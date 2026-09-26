@@ -15,7 +15,7 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { fechaHora } from '../../lib/fechas'
+import { desplazarDias, fechaHora, hoyLocal } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { miCajaApi } from './miCajaApi'
 import type { CuentaDestino } from './miCajaApi'
@@ -57,6 +57,10 @@ export function MiCajaPage() {
   const [categorias, setCategorias] = useState<CategoriaOpcion[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  // El historial de una caja crece todos los días: se pide por rango, el
+  // último mes por defecto, y se cambia desde el filtro de fecha de la tabla.
+  const [desde, setDesde] = useState(desplazarDias(-30))
+  const [hasta, setHasta] = useState(hoyLocal())
 
   const [movimientoAbierto, setMovimientoAbierto] = useState<TipoMovimientoOperativo | null>(null)
   const [cerrarAbierto, setCerrarAbierto] = useState(false)
@@ -67,14 +71,14 @@ export function MiCajaPage() {
       const [c, cat] = await Promise.all([miCajaApi.mia(), gastoOperativoApi.categoriasOpciones()])
       setCaja(c)
       setCategorias(cat)
-      setMovimientos(await miCajaApi.movimientos())
+      setMovimientos(await miCajaApi.movimientos(desde, hasta))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar tu caja.')
     } finally {
       setCargando(false)
     }
-  }, [])
+  }, [desde, hasta])
 
   useEffect(() => {
     void cargar()
@@ -87,7 +91,7 @@ export function MiCajaPage() {
   const totalEgresos = movimientos.filter((m) => m.tipo === 'EGRESO').reduce((s, m) => s + m.monto, 0)
 
   const columns: DataTableColumn<MovimientoCuentaResponse>[] = [
-    { key: 'fecha', label: 'Fecha', filterable: false, render: (row) => fechaHora(row.fecha) },
+    { key: 'fecha', label: 'Fecha', filterType: 'date', render: (row) => fechaHora(row.fecha) },
     {
       key: 'tipo',
       label: 'Tipo',
@@ -147,16 +151,21 @@ export function MiCajaPage() {
           tono={caja && caja.saldoActual < 0 ? 'danger' : 'sys'}
           hint="Lo que deberías tener ahora en la mano"
         />
-        <StatCard label="Ingresos" value={soles(totalIngresos)} icon={<TrendingUp size={18} />} tono="success" />
-        <StatCard label="Egresos" value={soles(totalEgresos)} icon={<TrendingDown size={18} />} tono="danger" />
+        <StatCard label="Ingresos" value={soles(totalIngresos)} icon={<TrendingUp size={18} />} tono="success" hint="En las fechas de la tabla" />
+        <StatCard label="Egresos" value={soles(totalEgresos)} icon={<TrendingDown size={18} />} tono="danger" hint="En las fechas de la tabla" />
       </div>
 
       <SysDataTable
         columns={columns}
         rows={movimientos}
+        onConsulta={(q) => {
+          const fecha = q.filtros.find((f) => f.columna === 'fecha')
+          setDesde(fecha?.valor || desplazarDias(-30))
+          setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
+        }}
         cardIcon={Wallet}
         searchPlaceholder="Buscar por detalle..."
-        empty={cargando ? 'Cargando movimientos...' : 'Todavía no hay movimientos en tu caja.'}
+        empty={cargando ? 'Cargando movimientos...' : 'No hay movimientos en tu caja en estas fechas.'}
       />
 
       {movimientoAbierto && caja && (

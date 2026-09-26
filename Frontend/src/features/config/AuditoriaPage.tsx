@@ -16,7 +16,7 @@ import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { auditoriaApi } from './auditoriaApi'
-import type { AccionAuditoria, AuditoriaResponse, ResumenAuditoria } from './auditoriaApi'
+import type { AccionAuditoria, AuditoriaFila, AuditoriaResponse, ResumenAuditoria } from './auditoriaApi'
 
 function accionBadge(accion: AccionAuditoria) {
   const tono = accion === 'CREADO' ? 'success' : accion === 'ELIMINADO' ? 'danger' : 'warning'
@@ -64,7 +64,7 @@ export function AuditoriaPage() {
   // una tabla vacía sin explicación.
   const [version, setVersion] = useState(0)
 
-  const [registros, setRegistros] = useState<AuditoriaResponse[]>([])
+  const [registros, setRegistros] = useState<AuditoriaFila[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -112,7 +112,16 @@ export function AuditoriaPage() {
     void cargarResumen()
   }, [cargarResumen])
 
-  const columns: DataTableColumn<AuditoriaResponse>[] = [
+  // La fila no trae los valores: el registro completo se pide al abrirlo.
+  const verCambios = async (id: number) => {
+    try {
+      setDetalleAbierto(await auditoriaApi.getById(id))
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir el registro.')
+    }
+  }
+
+  const columns: DataTableColumn<AuditoriaFila>[] = [
     {
       key: 'fecha',
       label: 'Fecha',
@@ -148,12 +157,11 @@ export function AuditoriaPage() {
       key: 'cambios',
       label: 'Campos',
       align: 'right',
-      // Se cuenta sobre el JSON ya cargado: la base no puede ordenar ni
-      // filtrar por esto, asi que no se ofrece.
+      // Lo cuenta la base; ordenar o filtrar por esto no se ofrece.
       sortable: false,
       filterable: false,
-      value: (row) => Object.keys(row.valoresNuevos ?? row.valoresAnteriores ?? {}).length,
-      render: (row) => String(Object.keys(row.valoresNuevos ?? row.valoresAnteriores ?? {}).length),
+      value: (row) => row.campos,
+      render: (row) => String(row.campos),
     },
   ]
 
@@ -272,7 +280,7 @@ export function AuditoriaPage() {
       searchPlaceholder="Buscar por usuario, entidad, registro..."
       empty={cargando ? 'Cargando auditoría...' : 'No hay cambios registrados con esos filtros.'}
       rowActions={(row) => (
-        <RowAction label={`Ver cambios de ${row.entidad} #${row.entidadId}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+        <RowAction label={`Ver cambios de ${row.entidad} #${row.entidadId}`} tone="view" onClick={() => void verCambios(row.id)}>
           <Eye size={15} />
         </RowAction>
       )}

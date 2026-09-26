@@ -24,13 +24,13 @@ public class AuditoriaService : IAuditoriaService
         return registros.Select(Map);
     }
 
-    public async Task<PaginaResponse<AuditoriaResponse>> ListarAsync(ConsultaTablaRequest consulta)
+    public async Task<PaginaResponse<AuditoriaFilaResponse>> ListarAsync(ConsultaTablaRequest consulta)
     {
         var (items, total) = await _repository.ListarAsync(consulta);
 
-        return new PaginaResponse<AuditoriaResponse>
+        return new PaginaResponse<AuditoriaFilaResponse>
         {
-            Items = items.Select(Map).ToList(),
+            Items = items,
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,
@@ -100,6 +100,10 @@ public class AuditoriaService : IAuditoriaService
             entidadPrincipal, id, entidadDetalle, idsDetalleActuales);
         return registros.Select(Map);
     }
+
+    public async Task<AuditoriaResponse> GetPorIdAsync(int id) =>
+        Map(await _repository.GetPorIdAsync(id)
+            ?? throw new Exceptions.NotFoundException($"No existe el registro de auditoría {id}"));
 
     private static AuditoriaResponse Map(RegistroAuditoria r) => new()
     {

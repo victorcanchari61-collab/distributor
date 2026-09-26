@@ -4,6 +4,9 @@ namespace Backend.Repository.Interfaces;
 
 public interface IListaPrecioRepository
 {
+    /// <summary>Cuántos precios tiene cada lista, de una sola consulta.</summary>
+    Task<Dictionary<int, int>> ContarPreciosPorListaAsync();
+
     Task<IEnumerable<ListaPrecio>> GetAllAsync();
     Task<ListaPrecio?> GetAsync(int id);
     Task<bool> ExisteNombreAsync(string nombre, int? excepto = null);

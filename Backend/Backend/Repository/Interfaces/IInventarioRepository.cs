@@ -132,6 +132,9 @@ public interface IInventarioRepository
     Task<Dictionary<int, ActividadStock>> GetActividadAsync(
         IEnumerable<int>? productoIds, int? almacenId, int dias);
 
+    /// <summary>Cuántos productos con saldo y cuánto vale lo que hay, por almacén: una sola consulta.</summary>
+    Task<Dictionary<int, (int Productos, decimal Valorizado)>> GetTotalesPorAlmacenAsync(int? almacenId = null);
+
     /// <summary>Las capas con saldo de varios productos, la que sale primero adelante.</summary>
     Task<List<CapaCosto>> GetCapasDisponiblesAsync(IEnumerable<int> productoIds, int? almacenId);
 
@@ -165,7 +168,7 @@ public interface IInventarioRepository
     Task<Dtos.Responses.ResumenPrestamosResponse> ResumenPrestamosAsync();
 
     /// <summary>Una página de préstamos.</summary>
-    Task<(List<Prestamo> Items, int Total)> ListarPrestamosAsync(Dtos.Requests.ConsultaTablaRequest consulta);
+    Task<(List<Dtos.Responses.PrestamoFilaResponse> Items, int Total)> ListarPrestamosAsync(Dtos.Requests.ConsultaTablaRequest consulta);
 
     Task UpdateDocumentoAsync(DocumentoInventario documento);
     Task<string?> GetNumeroAnulacionAsync(int documentoId);

@@ -286,3 +286,29 @@ public class NotaVentaFilaResponse
     public decimal Total { get; set; }
     public decimal TotalPagado { get; set; }
 }
+
+/// <summary>
+/// Un pedido como fila del listado: sin sus líneas. El pedido completo
+/// (GET /pedido/{id}) se pide al verlo, editarlo o convertirlo en venta.
+/// </summary>
+public class PedidoFilaResponse
+{
+    public int Id { get; set; }
+    public string Numero { get; set; } = string.Empty;
+    public int ClienteId { get; set; }
+    public string Cliente { get; set; } = string.Empty;
+    public string? Ruta { get; set; }
+    public string? DiaVisita { get; set; }
+    public DateTime Fecha { get; set; }
+    public string Estado { get; set; } = string.Empty;
+    public string CondicionPago { get; set; } = string.Empty;
+    public string? Usuario { get; set; }
+    public bool ReservaStock { get; set; }
+    public int? AlmacenId { get; set; }
+    public string? Almacen { get; set; }
+    public int? NotaVentaId { get; set; }
+    public string? NotaVentaNumero { get; set; }
+    public string? NoEntregadoMotivo { get; set; }
+    public string? NoEntregadoObservacion { get; set; }
+    public decimal Total { get; set; }
+}

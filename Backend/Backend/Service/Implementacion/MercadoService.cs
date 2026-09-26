@@ -35,12 +35,8 @@ public class MercadoService : IMercadoService
     public async Task<IEnumerable<MercadoResponse>> GetAllAsync()
     {
         var mercados = await _repository.GetAllAsync();
-        var respuesta = new List<MercadoResponse>();
-        foreach (var mercado in mercados)
-        {
-            respuesta.Add(MapToResponse(mercado, await _repository.ContarClientesAsync(mercado.Id)));
-        }
-        return respuesta;
+        var clientes = await _repository.ContarClientesPorMercadoAsync();
+        return mercados.Select(m => MapToResponse(m, clientes.GetValueOrDefault(m.Id))).ToList();
     }
 
     public async Task<MercadoResponse> GetByIdAsync(int id)

@@ -53,6 +53,7 @@ import { ordenCompraApi } from './comprasApi'
 import type {
   CrearOrdenCompraRequest,
   LineaCompraResponse,
+  OrdenCompraFila,
   OrdenCompraResponse,
   ResumenOrdenesCompra,
 } from './comprasApi'
@@ -77,7 +78,7 @@ export function OrdenesCompraPage() {
   const { puede } = usePermisos()
   const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
-  const [ordenes, setOrdenes] = useState<OrdenCompraResponse[]>([])
+  const [ordenes, setOrdenes] = useState<OrdenCompraFila[]>([])
   const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [cargando, setCargando] = useState(true)
@@ -157,6 +158,15 @@ export function OrdenesCompraPage() {
     setVista('form')
   }
 
+  // La fila no trae las líneas: la orden completa se pide al abrirla.
+  const conOrdenCompleta = async (id: number, abrir: (orden: OrdenCompraResponse) => void) => {
+    try {
+      abrir(await ordenCompraApi.getById(id))
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir la orden.')
+    }
+  }
+
   const abrirEdicion = (orden: OrdenCompraResponse) => {
     setEditando(orden)
     setProveedorId(orden.proveedorId)
@@ -229,7 +239,7 @@ export function OrdenesCompraPage() {
     }
   }
 
-  const confirmarOrden = (orden: OrdenCompraResponse) =>
+  const confirmarOrden = (orden: OrdenCompraFila) =>
     confirmar({
       titulo: `Confirmar ${orden.numero}`,
       mensaje:
@@ -247,7 +257,7 @@ export function OrdenesCompraPage() {
       },
     })
 
-  const anularOrden = (orden: OrdenCompraResponse) =>
+  const anularOrden = (orden: OrdenCompraFila) =>
     confirmar({
       titulo: `Anular ${orden.numero}`,
       mensaje: 'Se anula la orden. No se puede deshacer.',
@@ -354,7 +364,7 @@ export function OrdenesCompraPage() {
     { key: 'distrito', label: 'Distrito' },
   ]
 
-  const columns: DataTableColumn<OrdenCompraResponse>[] = [
+  const columns: DataTableColumn<OrdenCompraFila>[] = [
     // Número y proveedor se buscan con el buscador de arriba, no en el panel.
     { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
@@ -569,7 +579,7 @@ export function OrdenesCompraPage() {
       actionsWidth={180}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conOrdenCompleta(row.id, setDetalleAbierto)}>
             <Eye size={15} />
           </RowAction>
           {puede('compras.ordenes', 'exportar') && (
@@ -580,7 +590,7 @@ export function OrdenesCompraPage() {
               label={`Editar ${row.numero}`}
               disabled={row.estado !== 'PENDIENTE'}
               disabledReason="Solo se edita una orden pendiente"
-              onClick={() => abrirEdicion(row)}
+              onClick={() => void conOrdenCompleta(row.id, abrirEdicion)}
             >
               <Pencil size={15} />
             </RowAction>

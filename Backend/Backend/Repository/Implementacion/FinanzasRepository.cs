@@ -60,6 +60,12 @@ public class FinanzasRepository : IFinanzasRepository
     public async Task<int> ContarUsosMetodoPagoAsync(int metodoPagoId) =>
         await _context.CompraPagos.CountAsync(p => p.MetodoPagoId == metodoPagoId);
 
+    public async Task<Dictionary<int, int>> ContarUsosPorMetodoPagoAsync() =>
+        await _context.CompraPagos
+            .GroupBy(p => p.MetodoPagoId)
+            .Select(g => new { MetodoPagoId = g.Key, Cantidad = g.Count() })
+            .ToDictionaryAsync(x => x.MetodoPagoId, x => x.Cantidad);
+
     // --- Arqueo de caja ---
 
     public async Task<decimal> GetCobradoEfectivoAsync(DateTime fecha) =>

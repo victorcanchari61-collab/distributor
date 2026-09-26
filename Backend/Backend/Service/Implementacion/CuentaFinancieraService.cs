@@ -136,13 +136,13 @@ public class CuentaFinancieraService : ICuentaFinancieraService
     public async Task<IEnumerable<MovimientoCuentaResponse>> MovimientosAsync(
         int cuentaFinancieraId, DateTime? desde, DateTime? hasta)
     {
+        // Días en hora de Perú, 30 por defecto y nunca más de un año: una caja
+        // o un banco acumula movimientos todos los días, no se pide el libro entero.
+        var (inicio, fin) = Zona.RangoUtc(desde, hasta);
+
         var query = _context.MovimientosCuenta
             .AsNoTracking()
-            .Include(m => m.Usuario)
-            .Where(m => m.CuentaFinancieraId == cuentaFinancieraId);
-
-        if (desde is not null) query = query.Where(m => m.Fecha >= desde.Value.Date);
-        if (hasta is not null) query = query.Where(m => m.Fecha < hasta.Value.Date.AddDays(1));
+            .Where(m => m.CuentaFinancieraId == cuentaFinancieraId && m.Fecha >= inicio && m.Fecha < fin);
 
         return await query
             .OrderByDescending(m => m.Fecha).ThenByDescending(m => m.Id)

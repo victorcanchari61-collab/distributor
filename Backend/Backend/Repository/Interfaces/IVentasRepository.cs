@@ -21,7 +21,7 @@ public interface IVentasRepository
     Task UpdatePedidoAsync(Pedido pedido);
 
     /// <summary>Una página del listado de pedidos, buscada, filtrada y ordenada en la base.</summary>
-    Task<(List<Pedido> Items, int Total)> ListarPedidosAsync(ConsultaTablaRequest consulta, AlcanceFiltro? alcance = null);
+    Task<(List<PedidoFilaResponse> Items, int Total)> ListarPedidosAsync(ConsultaTablaRequest consulta, AlcanceFiltro? alcance = null);
 
     /// <summary>Contadores del listado completo de pedidos.</summary>
     Task<ResumenPedidosResponse> ResumenPedidosAsync(AlcanceFiltro? alcance = null);

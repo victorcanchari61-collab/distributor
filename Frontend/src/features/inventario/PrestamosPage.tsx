@@ -35,6 +35,7 @@ import type {
   AlmacenResponse,
   PrestamoDetalleResponse,
   PrestamoDevolucionResponse,
+  PrestamoFila,
   PrestamoResponse,
   TipoPrestamo,
   ResumenPrestamos,
@@ -80,7 +81,7 @@ function estadoPrestamoBadge(estado: PrestamoResponse['estado']) {
 export function PrestamosPage() {
   const { puede } = usePermisos()
   const toast = useToast()
-  const [prestamos, setPrestamos] = useState<PrestamoResponse[]>([])
+  const [prestamos, setPrestamos] = useState<PrestamoFila[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
 
@@ -221,6 +222,15 @@ export function PrestamosPage() {
     }
   }
 
+  // La fila no trae detalle ni devoluciones: el préstamo completo se pide al abrirlo.
+  const conPrestamoCompleto = async (id: number, abrir: (p: PrestamoResponse) => void) => {
+    try {
+      abrir(await prestamoApi.getById(id))
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir el préstamo.')
+    }
+  }
+
   const abrirDevolucion = (p: PrestamoResponse) => {
     setDevolucionAbierta(p)
     setAgregandoDevolucion(false)
@@ -311,7 +321,7 @@ export function PrestamosPage() {
       },
     })
 
-  const anularPrestamo = (p: PrestamoResponse) =>
+  const anularPrestamo = (p: PrestamoFila) =>
     confirmar({
       titulo: `Anular ${p.numero}`,
       mensaje:
@@ -503,7 +513,7 @@ export function PrestamosPage() {
       : []),
   ]
 
-  const columns: DataTableColumn<PrestamoResponse>[] = [
+  const columns: DataTableColumn<PrestamoFila>[] = [
     // Número y contraparte se buscan con el buscador de arriba, no en el panel.
     { key: 'numero', label: 'Número', filterable: false, render: (row) => <Badge>{row.numero}</Badge> },
     {
@@ -703,7 +713,7 @@ export function PrestamosPage() {
       empty={cargando ? 'Cargando préstamos...' : 'Todavía no hay préstamos registrados.'}
       rowActions={(row) => (
         <>
-          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalleAbierto(row)}>
+          <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conPrestamoCompleto(row.id, setDetalleAbierto)}>
             <Eye size={15} />
           </RowAction>
           {puede('inv.prestamos', 'exportar') && (
@@ -715,7 +725,7 @@ export function PrestamosPage() {
               tone="warning"
               disabled={row.estado !== 'PENDIENTE'}
               disabledReason="Ya fue devuelto"
-              onClick={() => abrirDevolucion(row)}
+              onClick={() => void conPrestamoCompleto(row.id, abrirDevolucion)}
             >
               <Undo2 size={15} />
             </RowAction>
@@ -724,7 +734,7 @@ export function PrestamosPage() {
             <RowAction
               label={`Anular ${row.numero}`}
               tone="danger"
-              disabled={row.estado !== 'PENDIENTE' || row.detalle.some((d) => d.cantidadDevuelta > 0)}
+              disabled={row.estado !== 'PENDIENTE' || row.tieneDevolucion}
               disabledReason={
                 row.estado === 'ANULADO'
                   ? 'Ya está anulado'

@@ -14,13 +14,24 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
     }
 
     public override async Task<Cliente?> GetByIdAsync(int id) =>
-        await DbSet.Include(c => c.Mercado).Include(c => c.Ruta).Include(c => c.Vendedor)
+        await DbSet.Include(c => c.Mercado).Include(c => c.Ruta).Include(c => c.Vendedor).Include(c => c.ListaPrecio)
             .Include(c => c.Distrito!).ThenInclude(d => d.Provincia!).ThenInclude(p => p.Departamento)
             .FirstOrDefaultAsync(c => c.Id == id);
 
     public override async Task<IEnumerable<Cliente>> GetAllAsync() =>
         await DbSet.Include(c => c.Mercado).Include(c => c.Ruta).Include(c => c.Vendedor)
             .Include(c => c.Distrito!).ThenInclude(d => d.Provincia!).ThenInclude(p => p.Departamento)
+            .ToListAsync();
+
+    public async Task<List<Cliente>> GetCatalogoAsync(bool acotarARuta, int? rutaId) =>
+        await DbSet.AsNoTracking()
+            .Include(c => c.Mercado)
+            .Include(c => c.Ruta)
+            .Include(c => c.ListaPrecio)
+            .Include(c => c.Distrito!).ThenInclude(d => d.Provincia!).ThenInclude(p => p.Departamento)
+            // La ruta se filtra en la base: antes se traía el padrón entero y se
+            // descartaba en memoria lo ajeno.
+            .Where(c => !acotarARuta || (rutaId != null && c.RutaId == rutaId))
             .ToListAsync();
 
     public async Task<Cliente?> GetByDocumentoAsync(string documento)
@@ -46,6 +57,8 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
         var query = DbSet
             .Include(c => c.Mercado)
             .Include(c => c.Ruta)
+            // Sin esto la columna "Lista de precio" salía siempre vacía.
+            .Include(c => c.ListaPrecio)
             .Include(c => c.Distrito!).ThenInclude(d => d.Provincia!).ThenInclude(p => p.Departamento)
             .AsNoTracking()
             .AsQueryable();

@@ -91,6 +91,10 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.HasDbFunction(typeof(FuncionesSql).GetMethod(nameof(FuncionesSql.JsonLength))!)
+            .HasName("JSON_LENGTH")
+            .IsBuiltIn();
+
         ConfigurarCatalogo(modelBuilder);
         ConfigurarInventario(modelBuilder);
         ConfigurarCompras(modelBuilder);

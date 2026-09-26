@@ -408,6 +408,21 @@ export interface PrestamoDetalleResponse {
   costoTotal: number
 }
 
+/** Un préstamo como fila del listado: sin su detalle ni sus devoluciones (vienen con getById). */
+export interface PrestamoFila {
+  id: number
+  numero: string
+  tipo: PrestamoResponse['tipo']
+  contraparte: string
+  almacenId: number
+  almacen: string
+  fecha: string
+  estado: PrestamoResponse['estado']
+  total: number
+  /** Si ya se devolvió algo: entonces no se puede anular. */
+  tieneDevolucion: boolean
+}
+
 export interface PrestamoResponse {
   id: number
   numero: string
@@ -466,7 +481,7 @@ export const prestamoApi = {
 
   /** Una página del listado, resuelta en el servidor. */
   listar: (consulta: ConsultaTabla) =>
-    api.post<PaginaResponse<PrestamoResponse>>('/inventario/prestamos/listar', consulta),
+    api.post<PaginaResponse<PrestamoFila>>('/inventario/prestamos/listar', consulta),
   getAll: () => api.get<PrestamoResponse[]>('/inventario/prestamos'),
   getById: (id: number) => api.get<PrestamoResponse>(`/inventario/prestamos/${id}`),
   create: (body: CrearPrestamoRequest) =>

@@ -9,7 +9,10 @@ public interface IAuditoriaService
         string? entidad, string? accion, int? usuarioId, DateTime? desde, DateTime? hasta);
 
     /// <summary>Una página del listado, ya buscada, filtrada y ordenada en la base.</summary>
-    Task<PaginaResponse<AuditoriaResponse>> ListarAsync(ConsultaTablaRequest consulta);
+    Task<PaginaResponse<AuditoriaFilaResponse>> ListarAsync(ConsultaTablaRequest consulta);
+
+    /// <summary>Un registro con sus valores anteriores y nuevos.</summary>
+    Task<AuditoriaResponse> GetPorIdAsync(int id);
 
     /// <summary>
     /// Depura la bitácora: borra todo lo que la consulta deja a la vista y

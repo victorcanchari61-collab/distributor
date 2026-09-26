@@ -31,6 +31,12 @@ public class DespachoController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] string? estado) =>
         Ok(await _despachos.GetAllAsync(estado));
 
+    /// <summary>El listado de la web: filas livianas por fecha de reparto.</summary>
+    [HttpGet("lista")]
+    [Permiso("tms.despachos", Accion.Ver)]
+    public async Task<IActionResult> Lista([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
+        Ok(await _despachos.ListarAsync(desde, hasta));
+
     [HttpGet("resumen")]
     [Permiso("tms.despachos", Accion.Ver)]
     public async Task<IActionResult> Resumen() => Ok(await _despachos.GetResumenAsync());

@@ -49,7 +49,7 @@ public interface IInventarioService
     Task<ResumenPrestamosResponse> GetResumenPrestamosAsync();
 
     /// <summary>Una página del listado de préstamos.</summary>
-    Task<PaginaResponse<PrestamoResponse>> ListarPrestamosAsync(ConsultaTablaRequest consulta);
+    Task<PaginaResponse<PrestamoFilaResponse>> ListarPrestamosAsync(ConsultaTablaRequest consulta);
 
     /// <summary>Stock menos lo reservado, por producto: lo que usan pedidos, ventas, compras y los formularios.</summary>
     Task<IEnumerable<DisponibleResponse>> GetDisponibleAsync(int? almacenId);

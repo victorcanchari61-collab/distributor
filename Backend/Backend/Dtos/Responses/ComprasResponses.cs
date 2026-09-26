@@ -137,3 +137,17 @@ public class CompraFilaResponse
     public decimal Total { get; set; }
     public decimal TotalPagado { get; set; }
 }
+
+/// <summary>Una orden de compra como fila del listado: sin sus líneas.</summary>
+public class OrdenCompraFilaResponse
+{
+    public int Id { get; set; }
+    public string Numero { get; set; } = string.Empty;
+    public int ProveedorId { get; set; }
+    public string Proveedor { get; set; } = string.Empty;
+    public DateTime Fecha { get; set; }
+    public DateTime? FechaEsperada { get; set; }
+    public string Estado { get; set; } = string.Empty;
+    public string? Usuario { get; set; }
+    public decimal Total { get; set; }
+}

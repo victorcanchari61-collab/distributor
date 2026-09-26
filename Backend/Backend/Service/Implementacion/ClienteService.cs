@@ -74,7 +74,6 @@ public class ClienteService : IClienteService
 
     public async Task<IEnumerable<ClienteResponse>> GetAllAsync(string? para = null)
     {
-        var clientes = await _repository.GetAllAsync();
         var vendedores = await _usuarios.VendedoresPorRutaAsync();
 
         /*
@@ -90,15 +89,19 @@ public class ClienteService : IClienteService
             "notaventa" => "fact.notaventa",
             _ => null,
         };
+        var acotarARuta = false;
+        int? ruta = null;
         if (submodulo is not null && _usuarioActual.Id is int uid)
         {
             var alcance = await _permisos.AlcanceFiltroAsync(uid, submodulo);
             if (!alcance.SinRestriccion && !alcance.SoloPropios)
             {
-                var ruta = alcance.RutaId;
-                clientes = clientes.Where(c => ruta != null && c.RutaId == ruta);
+                acotarARuta = true;
+                ruta = alcance.RutaId;
             }
         }
+
+        var clientes = await _repository.GetCatalogoAsync(acotarARuta, ruta);
 
         // Se devuelven tambien los inactivos: si no, un registro desactivado
         // desaparece de la pantalla y ya no hay forma de reactivarlo.

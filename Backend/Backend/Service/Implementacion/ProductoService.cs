@@ -53,14 +53,10 @@ public class ProductoService : IProductoService
 
     public async Task<IEnumerable<ProductoResponse>> GetAllAsync()
     {
-        var productos = (await _repository.GetAllConDetalleAsync()).ToList();
-        var conMovimientos = await _repository.GetIdsConMovimientosAsync(productos.Select(p => p.Id));
-        return productos.Select(p =>
-        {
-            var r = MapToResponse(p);
-            r.TieneMovimientos = conMovimientos.Contains(p.Id);
-            return r;
-        });
+        // Sin "tiene movimientos": era una consulta a la tabla de movimientos
+        // por todo el catálogo, y ningún selector la usa. Lo necesita solo el
+        // formulario de productos, que lo recibe de /producto/listar.
+        return (await _repository.GetAllConDetalleAsync()).Select(MapToResponse);
     }
 
     public async Task<PaginaResponse<ProductoResponse>> ListarAsync(ConsultaTablaRequest consulta)

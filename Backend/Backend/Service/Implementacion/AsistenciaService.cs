@@ -43,16 +43,23 @@ public class AsistenciaService : IAsistenciaService
 
     public async Task<ResumenAsistenciaResponse> ResumenAsync(DateTime desde, DateTime hasta, int? empleadoId)
     {
-        var activas = (await _repository.ListarAsync(desde.Date, hasta.Date, empleadoId))
-            .Where(a => !a.Anulado)
-            .ToList();
+        // Contado en la base: antes se volvía a traer la lista entera, con
+        // empleado y usuario, solo para contarla.
+        var d = desde.Date;
+        var h = hasta.Date;
+        var porEstado = await _context.Asistencias
+            .Where(a => !a.Anulado && a.Fecha >= d && a.Fecha <= h
+                        && (empleadoId == null || a.EmpleadoId == empleadoId))
+            .GroupBy(a => a.Estado)
+            .Select(g => new { Estado = g.Key, Cantidad = g.Count() })
+            .ToDictionaryAsync(x => x.Estado, x => x.Cantidad);
 
         return new ResumenAsistenciaResponse
         {
-            Presentes = activas.Count(a => a.Estado == EstadoAsistencia.Presente),
-            Tardanzas = activas.Count(a => a.Estado == EstadoAsistencia.Tardanza),
-            Faltas = activas.Count(a => a.Estado == EstadoAsistencia.Falta),
-            Permisos = activas.Count(a => a.Estado == EstadoAsistencia.Permiso),
+            Presentes = porEstado.GetValueOrDefault(EstadoAsistencia.Presente),
+            Tardanzas = porEstado.GetValueOrDefault(EstadoAsistencia.Tardanza),
+            Faltas = porEstado.GetValueOrDefault(EstadoAsistencia.Falta),
+            Permisos = porEstado.GetValueOrDefault(EstadoAsistencia.Permiso),
         };
     }
 

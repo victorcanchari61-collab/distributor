@@ -35,6 +35,11 @@ public class AuditoriaController : ControllerBase
     /// objetos: armarlos en la query string obligaría a inventar una
     /// codificación propia y a mantenerla en los dos lados.
     /// </summary>
+    /// <summary>Un registro con sus valores: lo que muestra "Ver cambios".</summary>
+    [HttpGet("{id:int}")]
+    [Permiso("config.auditoria", Accion.Ver)]
+    public async Task<IActionResult> GetPorId(int id) => Ok(await _auditoria.GetPorIdAsync(id));
+
     [HttpPost("listar")]
     [Permiso("config.auditoria", Accion.Ver)]
     public async Task<IActionResult> Listar([FromBody] ConsultaTablaRequest consulta) =>
