@@ -59,8 +59,17 @@ public static class DocumentoOrigenMovimiento
     /// <summary>Reversa un movimiento anterior (corrección o anulación).</summary>
     public const string Reversion = "REVERSION";
 
-    /// <summary>Una venta cobrada en efectivo: entra a la caja de quien cobró.</summary>
+    /// <summary>
+    /// Un cobro de venta: el efectivo entra a la caja de quien cobró; Yape,
+    /// Plin o transferencia, a la cuenta a la que apunta su método de pago.
+    /// </summary>
     public const string PagoVenta = "PAGO_VENTA";
+
+    /// <summary>
+    /// Un pago a un proveedor: el efectivo sale de la caja de quien paga; los
+    /// demás métodos, de la cuenta a la que apuntan.
+    /// </summary>
+    public const string PagoCompra = "PAGO_COMPRA";
 
     /// <summary>
     /// El saldo con el que una cuenta bancaria o caja nace al crearla: la
@@ -71,7 +80,7 @@ public static class DocumentoOrigenMovimiento
     public static readonly string[] Todos =
     [
         CierreCaja, FaltanteCaja, SobranteCaja, RecuperoFaltante, MovimientoOperativo, TransferenciaInterna,
-        Reversion, PagoVenta, SaldoInicial, Financiamiento, PagoFinanciamiento,
+        Reversion, PagoVenta, PagoCompra, SaldoInicial, Financiamiento, PagoFinanciamiento,
     ];
 }
 

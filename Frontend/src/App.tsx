@@ -30,6 +30,7 @@ import {
   MisGananciasPage,
   MovimientosDineroPage,
   PrestamosRecibidosPage,
+  EstadoResultadosPage,
 } from './features/finanzas'
 import {
   AlmacenesPage,
@@ -105,6 +106,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'finanzas.movimientos': MovimientosDineroPage,
   'finanzas.operativos': GastosOperativosPage,
   'finanzas.financiamiento': PrestamosRecibidosPage,
+  'finanzas.resultados': EstadoResultadosPage,
   'config.usuarios': UsuariosPage,
   'config.accesos': AccesosPage,
   'config.roles': RolesPage,

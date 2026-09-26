@@ -22,6 +22,9 @@ namespace Backend.Service.Implementacion;
 ///     para que Recepciones las vaya descargando.
 ///   - Una compra con algo ya recibido no se anula entera: hay que anular las
 ///     recepciones una por una (eso sí revierte el stock correctamente).
+///   - Cada pago al proveedor saca la plata de su cuenta en el momento: el
+///     efectivo de la caja de quien paga, lo demás de la cuenta del método.
+///     Anularlo, o anular la compra, lo devuelve con una reversa.
 /// </summary>
 public class ComprasService : IComprasService
 {
@@ -31,6 +34,9 @@ public class ComprasService : IComprasService
     private readonly IValidator<CrearCompraRequest> _compraValidator;
     private readonly IValidator<PagoCompraRequest> _pagoValidator;
     private readonly INotificador _notificador;
+    private readonly IFinanzasService _finanzas;
+    private readonly ICuentaFinancieraService _cuentas;
+    private readonly IUsuarioActual _usuarioActual;
 
     public ComprasService(
         IComprasRepository repository,
@@ -38,7 +44,10 @@ public class ComprasService : IComprasService
         IValidator<CrearOrdenCompraRequest> ordenValidator,
         IValidator<CrearCompraRequest> compraValidator,
         IValidator<PagoCompraRequest> pagoValidator,
-        INotificador notificador)
+        INotificador notificador,
+        IFinanzasService finanzas,
+        ICuentaFinancieraService cuentas,
+        IUsuarioActual usuarioActual)
     {
         _repository = repository;
         _productos = productos;
@@ -46,7 +55,82 @@ public class ComprasService : IComprasService
         _compraValidator = compraValidator;
         _pagoValidator = pagoValidator;
         _notificador = notificador;
+        _finanzas = finanzas;
+        _cuentas = cuentas;
+        _usuarioActual = usuarioActual;
     }
+
+    // --------------------------------------------- Pagos en el libro de caja
+
+    /// <summary>
+    /// Que cada pago tenga de dónde salir, ANTES de guardar nada: el efectivo
+    /// sale de la caja de quien paga, y los demás métodos de la cuenta a la
+    /// que apuntan. Un pago que no se puede postear ni siquiera se guarda.
+    /// </summary>
+    private async Task ValidarPuedePagarAsync(IEnumerable<int> metodoPagoIds, int? pagadorId)
+    {
+        foreach (var metodoId in metodoPagoIds.Distinct())
+        {
+            var metodo = await _finanzas.GetMetodoPagoAsync(metodoId);
+            if (metodo.Tipo == TipoMetodoPago.Efectivo)
+            {
+                if (pagadorId is not int id || await _cuentas.ObtenerCajaUsuarioAsync(id) is null)
+                {
+                    throw new BadRequestException(
+                        "No tienes una caja asignada: no puedes pagar en efectivo. Pídele a un administrador que te cree una en Finanzas > Cajas.");
+                }
+            }
+            else if (metodo.CuentaFinancieraId is null)
+            {
+                throw new BadRequestException(
+                    $"El método {metodo.Nombre} no tiene una cuenta asignada: elígela en Finanzas > Métodos de pago.");
+            }
+        }
+    }
+
+    /// <summary>Saca el pago de su cuenta: un Egreso en el libro, enlazado al pago.</summary>
+    private async Task PostearPagoAsync(CompraPago pago, string numeroCompra, int? actorId)
+    {
+        var metodo = await _finanzas.GetMetodoPagoAsync(pago.MetodoPagoId);
+
+        int cuentaId;
+        if (metodo.Tipo == TipoMetodoPago.Efectivo)
+        {
+            if ((pago.UsuarioId ?? actorId) is not int pagadorId) return;
+            cuentaId = (await _cuentas.ExigirCajaUsuarioAsync(pagadorId)).Id;
+        }
+        else
+        {
+            // Sin cuenta no hay de dónde salir. No debería pasar: se rechaza
+            // antes, en ValidarPuedePagarAsync.
+            if (metodo.CuentaFinancieraId is not int cuenta) return;
+            cuentaId = cuenta;
+        }
+
+        var movimiento = await _cuentas.PostearAsync(
+            cuentaId, TipoMovimientoCuenta.Egreso, pago.Monto,
+            DocumentoOrigenMovimiento.PagoCompra, pago.Id, actorId, pago.Fecha,
+            $"Pago de la compra {numeroCompra}");
+
+        pago.MovimientoCuentaId = movimiento.Id;
+    }
+
+    /// <summary>Devuelve a su cuenta lo que este pago sacó, si lo había sacado.</summary>
+    private async Task ReversarPagoAsync(CompraPago pago, int? actorId)
+    {
+        if (pago.MovimientoCuentaId is not int movimientoId) return;
+
+        await _cuentas.ReversarAsync(movimientoId, actorId);
+        pago.MovimientoCuentaId = null;
+    }
+
+    /// <summary>Los pagos como conjunto (método y monto), para saber si una edición los cambia.</summary>
+    private static string FirmaPagos(IEnumerable<(int MetodoPagoId, decimal Monto)> pagos) =>
+        // Con formato fijo: un decimal guarda su escala, y el 10.0000 de la
+        // base se escribiría distinto que el 10 que llega en la edición.
+        string.Join("|", pagos
+            .Select(p => $"{p.MetodoPagoId}:{Math.Round(p.Monto, 2).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}")
+            .OrderBy(x => x, StringComparer.Ordinal));
 
     // ------------------------------------------------------- Ordenes de compra
 
@@ -261,6 +345,8 @@ public class ComprasService : IComprasService
                 $"Los pagos suman S/ {totalPagado}, más que el total de la compra (S/ {total}).");
         }
 
+        await ValidarPuedePagarAsync(request.Pagos.Select(p => p.MetodoPagoId), usuarioId);
+
         compra.Pagos = request.Pagos.Select(p => new CompraPago
         {
             MetodoPagoId = p.MetodoPagoId,
@@ -269,6 +355,13 @@ public class ComprasService : IComprasService
         }).ToList();
 
         await _repository.AddCompraAsync(compra);
+
+        // Con la compra guardada los pagos ya tienen id: el egreso los enlaza.
+        foreach (var pago in compra.Pagos)
+        {
+            await PostearPagoAsync(pago, compra.Numero, usuarioId);
+        }
+        if (compra.Pagos.Count > 0) await _repository.GuardarAsync();
 
         var creada = await GetCompraAsync(compra.Id);
         await _notificador.AvisarAsync("compras", "creado", creada);
@@ -296,6 +389,18 @@ public class ComprasService : IComprasService
                 $"Los pagos suman S/ {totalPagado}, más que el total de la compra (S/ {total}).");
         }
 
+        // Los pagos solo se tocan si cambian: reemplazarlos igual en cada
+        // edición llenaría el libro de reversas de plata que nunca se movió.
+        var actor = _usuarioActual.Id;
+        var vigentes = compra.Pagos.Where(p => !p.Anulado).ToList();
+        var cambianPagos =
+            FirmaPagos(vigentes.Select(p => (p.MetodoPagoId, p.Monto)))
+            != FirmaPagos(request.Pagos.Select(p => (p.MetodoPagoId, p.Monto)));
+        if (cambianPagos)
+        {
+            await ValidarPuedePagarAsync(request.Pagos.Select(p => p.MetodoPagoId), actor);
+        }
+
         compra.ProveedorId = request.ProveedorId;
         compra.Fecha = request.Fecha ?? compra.Fecha;
         compra.TipoComprobante = string.IsNullOrWhiteSpace(request.TipoComprobante)
@@ -321,12 +426,28 @@ public class ComprasService : IComprasService
             CantidadRecibida = 0
         }));
 
-        await _repository.ReemplazarPagosCompraAsync(id, request.Pagos.Select(p => new CompraPago
+        if (cambianPagos)
         {
-            CompraId = id,
-            MetodoPagoId = p.MetodoPagoId,
-            Monto = p.Monto
-        }));
+            foreach (var pago in vigentes)
+            {
+                await ReversarPagoAsync(pago, actor);
+            }
+
+            var nuevos = request.Pagos.Select(p => new CompraPago
+            {
+                CompraId = id,
+                MetodoPagoId = p.MetodoPagoId,
+                Monto = p.Monto,
+                UsuarioId = actor
+            }).ToList();
+            await _repository.ReemplazarPagosCompraAsync(id, nuevos);
+
+            foreach (var pago in nuevos)
+            {
+                await PostearPagoAsync(pago, compra.Numero, actor);
+            }
+            if (nuevos.Count > 0) await _repository.GuardarAsync();
+        }
 
         var actualizada = await GetCompraAsync(id);
         await _notificador.AvisarAsync("compras", "actualizado", actualizada);
@@ -346,6 +467,13 @@ public class ComprasService : IComprasService
         {
             throw new BadRequestException(
                 "Esta compra ya tiene mercadería recibida: anula las recepciones, no la compra completa.");
+        }
+
+        // Lo que se le pagó al proveedor vuelve a sus cuentas.
+        var actor = _usuarioActual.Id;
+        foreach (var pago in compra.Pagos.Where(p => !p.Anulado))
+        {
+            await ReversarPagoAsync(pago, actor);
         }
 
         compra.Estado = EstadoCompra.Anulada;
@@ -384,13 +512,19 @@ public class ComprasService : IComprasService
                 $"El abono (S/ {request.Monto}) supera el saldo pendiente (S/ {saldo}).");
         }
 
-        compra.Pagos.Add(new CompraPago
+        await ValidarPuedePagarAsync([request.MetodoPagoId], usuarioId);
+
+        var nuevo = new CompraPago
         {
             MetodoPagoId = request.MetodoPagoId,
             Monto = request.Monto,
             UsuarioId = usuarioId
-        });
+        };
+        compra.Pagos.Add(nuevo);
         await _repository.UpdateCompraAsync(compra);
+
+        await PostearPagoAsync(nuevo, compra.Numero, usuarioId);
+        await _repository.GuardarAsync();
 
         var actualizada = await GetCompraAsync(id);
         await _notificador.AvisarAsync("compras", "pago", actualizada);
@@ -426,9 +560,25 @@ public class ComprasService : IComprasService
                 $"Ese cambio deja lo pagado en S/ {pagadoSinEste + request.Monto}, más que el total de la compra (S/ {total}).");
         }
 
+        // Si cambia el método o el monto, lo que salió se devuelve y sale de
+        // nuevo como corresponde; si no, el libro queda como estaba.
+        var actor = _usuarioActual.Id;
+        var cambia = pago.MetodoPagoId != request.MetodoPagoId || pago.Monto != request.Monto;
+        if (cambia)
+        {
+            await ValidarPuedePagarAsync([request.MetodoPagoId], pago.UsuarioId ?? actor);
+            await ReversarPagoAsync(pago, actor);
+        }
+
         pago.MetodoPagoId = request.MetodoPagoId;
         pago.Monto = request.Monto;
         await _repository.GuardarAsync();
+
+        if (cambia)
+        {
+            await PostearPagoAsync(pago, compra.Numero, actor);
+            await _repository.GuardarAsync();
+        }
 
         var actualizada = await GetCompraAsync(id);
         await _notificador.AvisarAsync("compras", "pago", actualizada);
@@ -457,6 +607,7 @@ public class ComprasService : IComprasService
             throw new BadRequestException("Este pago ya está anulado.");
         }
 
+        await ReversarPagoAsync(pago, _usuarioActual.Id);
         pago.Anulado = true;
         await _repository.GuardarAsync();
 

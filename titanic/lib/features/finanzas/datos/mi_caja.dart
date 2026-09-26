@@ -27,6 +27,7 @@ class DocumentoMovimiento {
 
   static const etiquetas = <String, String>{
     'PAGO_VENTA': 'Cobro de venta',
+    'PAGO_COMPRA': 'Pago a proveedor',
     'MOVIMIENTO_OPERATIVO': 'Ingreso o egreso',
     'CIERRE_CAJA': 'Cierre de caja',
     'FALTANTE_CAJA': 'Faltante de cierre',

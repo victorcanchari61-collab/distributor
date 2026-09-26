@@ -179,6 +179,13 @@ public class CompraPago
     /// conserva en el historial en vez de borrarse.
     /// </summary>
     public bool Anulado { get; set; }
+
+    /// <summary>
+    /// El Egreso que este pago sacó de su cuenta: de la caja de quien pagó si
+    /// fue en efectivo, o de la cuenta del método si no. Null si se anuló (el
+    /// egreso ya se revirtió) o si es de antes de llevarse en el libro.
+    /// </summary>
+    public int? MovimientoCuentaId { get; set; }
 }
 
 /// <summary>Un producto de la compra, con cuánto ya llegó.</summary>

@@ -6,9 +6,12 @@ import '../../features/config/estado/config_controlador.dart';
 import '../../features/facturacion/estado/facturacion_controlador.dart';
 import '../../features/finanzas/estado/finanzas_controlador.dart';
 import '../../features/finanzas/estado/mi_caja_controlador.dart';
+import '../../features/finanzas/estado/tesoreria_controlador.dart';
 import '../../features/finanzas/estado/ganancia_controlador.dart';
 import '../../features/inventario/estado/inventario_controlador.dart';
 import '../../features/maestros/estado/maestros_controlador.dart';
+import '../../features/rrhh/estado/asistencia_controlador.dart';
+import '../../features/rrhh/estado/planilla_controlador.dart';
 // Dos modulos declaran rutasProvider —el de clientes y el de reparto—: aqui se
 // usa el de TMS con prefijo para no confundirlos.
 import '../../features/tms/estado/tms_controlador.dart' as tms;
@@ -55,6 +58,7 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     cuentasPorCobrarProvider,
     miCajaProvider,
     movimientosMiCajaProvider,
+    estadoResultadosProvider,
     gananciasProvider,
     stockProvider,
     kardexProvider,
@@ -84,15 +88,42 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   // El selector del formulario de usuario sale de `opciones`, no del listado:
   // se invalidan los dos o el que acaban de dar de alta no se podria elegir
   // hasta salir y volver a entrar.
-  'empleados': [empleadosProvider, empleadosOpcionesProvider, usuariosProvider],
+  'empleados': [
+    empleadosProvider,
+    empleadosOpcionesProvider,
+    usuariosProvider,
+    planillaSemanaProvider,
+  ],
+
+  // --- RR. HH. ---
+  'asistencia': [asistenciasProvider, resumenAsistenciaProvider],
+  'feriados': [feriadosProvider],
+  'planillas': [planillaSemanaProvider, historialPlanillasProvider],
   'categorias': [categoriasProvider, productosProvider],
   'marcas': [marcasProvider, productosProvider],
   'unidades': [unidadesProvider, productosProvider],
   'almacenes': [almacenesProvider, almacenesOpcionesProvider, stockProvider],
   'motivos': [motivosProvider, ajustesProvider],
   'metodospago': [metodosPagoProvider],
-  'cuentasfinancieras': [miCajaProvider, movimientosMiCajaProvider],
-  'gastosoperativos': [miCajaProvider, movimientosMiCajaProvider],
+  'cuentasfinancieras': [
+    miCajaProvider,
+    movimientosMiCajaProvider,
+    movimientosDineroProvider,
+    estadoResultadosProvider,
+    cuentasFinancierasProvider,
+  ],
+  'gastosoperativos': [
+    miCajaProvider,
+    movimientosMiCajaProvider,
+    movimientosDineroProvider,
+    estadoResultadosProvider,
+    pendientesProvider,
+    recurrentesProvider,
+    categoriasFinanzasProvider,
+  ],
+  'bancos': [bancosCatalogoProvider, cuentasFinancierasProvider],
+  'cierrescaja': [cierresCajaProvider],
+  'financiamientos': [prestamosRecibidosProvider],
   'mercados': [tms.mercadosProvider, clientesProvider],
   'rutas': [tms.rutasProvider, rutasProvider, clientesProvider],
   'flota': [tms.vehiculosProvider, tms.resumenFlotaProvider],

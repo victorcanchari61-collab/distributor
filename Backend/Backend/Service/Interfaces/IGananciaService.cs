@@ -29,6 +29,24 @@ public sealed record LineaGanancia(
     public decimal ValorVenta => AfectoIgv ? Importe / (1 + Impuestos.TasaIgv) : Importe;
 }
 
+/// <summary>
+/// Lo vendido en un rango, sumado en la base: importe, costo y cuántas ventas.
+/// Los recojos ya vienen restados.
+/// </summary>
+public sealed record TotalesVenta(
+    decimal Importe,
+    decimal ImporteAfecto,
+    decimal Costo,
+    int Ventas,
+    int LineasSinCosto)
+{
+    /// <summary>Lo vendido SIN el IGV de las líneas afectas: la venta real del negocio.</summary>
+    public decimal ValorVenta => ImporteAfecto / (1 + Impuestos.TasaIgv) + (Importe - ImporteAfecto);
+
+    /// <summary>El IGV cobrado: plata que se le pasa al fisco, no ingreso.</summary>
+    public decimal Igv => Importe - ValorVenta;
+}
+
 /// <summary>Cuánto se ganó con cada producto vendido.</summary>
 public interface IGananciaService
 {
@@ -46,4 +64,11 @@ public interface IGananciaService
     /// ganancia por su cuenta.
     /// </summary>
     Task<(List<LineaGanancia> Lineas, bool SoloPropio)> LineasAsync(DateTime inicioUtc, DateTime finUtc);
+
+    /// <summary>
+    /// Lo vendido en [inicioUtc, finUtc) de TODO el negocio, sin recortar por
+    /// el alcance de quien pregunta: lo usa el estado de resultados, que es el
+    /// resultado de la empresa y no el de un vendedor.
+    /// </summary>
+    Task<TotalesVenta> TotalesAsync(DateTime inicioUtc, DateTime finUtc);
 }

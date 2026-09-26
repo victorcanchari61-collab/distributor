@@ -15,6 +15,8 @@ namespace Backend.Service.Implementacion;
 ///
 ///   - Importe: lo que valen las líneas de las notas de venta vigentes. Una
 ///     devolución aprobada ya bajó la línea, así que no hay que restarla otra vez.
+///     Un recojo sí se resta: es mercadería de antes que se descontó de esta
+///     venta, y entra como una línea negativa del producto recogido.
 ///   - Costo: lo que costó la mercadería que salió, que es el costo real que
 ///     dejó cada salida (la más antigua primero), no un costo de referencia.
 ///     Se suma por línea vendida sumando sus movimientos: la salida cuenta, la
@@ -218,9 +220,9 @@ public class GananciaService : IGananciaService
     /// Sin usuario en el token (llamada interna) no hay a quién acotar.
     /// </summary>
     private async Task<(IQueryable<NotaVenta> Notas, bool SoloPropio)> NotasDelRangoAsync(
-        DateTime inicioUtc, DateTime finUtc)
+        DateTime inicioUtc, DateTime finUtc, bool conAlcance = true)
     {
-        var alcance = _usuarioActual.Id is int uid
+        var alcance = conAlcance && _usuarioActual.Id is int uid
             ? await _permisos.AlcanceFiltroAsync(uid, "finanzas.ganancias")
             : null;
 
@@ -258,11 +260,32 @@ public class GananciaService : IGananciaService
         public decimal Costo { get; set; }
     }
 
+    public async Task<TotalesVenta> TotalesAsync(DateTime inicioUtc, DateTime finUtc)
+    {
+        var (notas, _) = await NotasDelRangoAsync(inicioUtc, finUtc, conAlcance: false);
+        var lineas = Lineas(notas);
+
+        // Cada suma es una consulta en la base: no se trae ni una línea.
+        return new TotalesVenta(
+            Importe: await lineas.SumAsync(l => l.Importe),
+            ImporteAfecto: await lineas.SumAsync(l => l.AfectoIgv ? l.Importe : 0m),
+            Costo: await lineas.SumAsync(l => l.Costo),
+            Ventas: await lineas.Select(l => l.NotaVentaId).Distinct().CountAsync(),
+            LineasSinCosto: await lineas.CountAsync(l => l.Importe > 0 && l.Costo <= 0));
+    }
+
     /// <summary>
-    /// Las líneas de esas notas. El costo es el de sus movimientos: la salida
-    /// suma y la devolución que repuso stock resta.
+    /// Las líneas de esas notas, con sus recojos restados. Una sola base para
+    /// esta pantalla, el dashboard y el estado de resultados.
     /// </summary>
     private IQueryable<LineaVendida> Lineas(IQueryable<NotaVenta> notas) =>
+        LineasDetalle(notas).Concat(LineasRecojo(notas));
+
+    /// <summary>
+    /// Lo vendido. El costo es el de sus movimientos: la salida suma y la
+    /// devolución que repuso stock resta.
+    /// </summary>
+    private IQueryable<LineaVendida> LineasDetalle(IQueryable<NotaVenta> notas) =>
         notas
             .SelectMany(n => n.Detalle)
             .Select(d => new LineaVendida
@@ -283,6 +306,39 @@ public class GananciaService : IGananciaService
                 Costo = _context.Movimientos
                     .Where(m => m.NotaVentaDetalleId == d.Id)
                     .Sum(m => (decimal?)(m.Tipo == TipoMovimiento.Salida ? m.CostoTotal : -m.CostoTotal)) ?? 0m,
+            });
+
+    /*
+     * Lo recogido, en negativo.
+     *
+     * El importe baja la venta —se le descontó al cliente— y el costo baja lo
+     * que costó lo vendido solo cuando la mercadería ya volvió al stock (el
+     * recojo verificado): hasta entonces sigue afuera, en el camión. Con esto
+     * Mis ganancias, el dashboard y el estado de resultados cuentan lo mismo
+     * que cuentas por cobrar, que ya restaba los recojos.
+     */
+    private IQueryable<LineaVendida> LineasRecojo(IQueryable<NotaVenta> notas) =>
+        notas
+            .SelectMany(n => n.Recojos)
+            .Where(r => r.Estado != EstadoRecojo.Anulado)
+            .Select(r => new LineaVendida
+            {
+                NotaVentaId = r.NotaVentaId,
+                Venta = r.NotaVenta!.Numero,
+                Fecha = r.NotaVenta.Fecha,
+                Vendedor = r.NotaVenta.Usuario != null ? r.NotaVenta.Usuario.Nombre : SinVendedor,
+                ProductoId = r.ProductoId,
+                Codigo = r.Producto!.Codigo,
+                Producto = r.Producto.Nombre,
+                Categoria = r.Producto.Categoria != null ? r.Producto.Categoria.Nombre : SinCategoria,
+                Marca = r.Producto.Marca != null ? r.Producto.Marca.Nombre : SinMarca,
+                UnidadBase = r.Producto.UnidadBase != null ? r.Producto.UnidadBase.Codigo : string.Empty,
+                Cantidad = -r.Cantidad,
+                Importe = -r.Importe,
+                AfectoIgv = r.Producto.AfectoIgv,
+                Costo = -(_context.Movimientos
+                    .Where(m => m.RecojoVentaId == r.Id)
+                    .Sum(m => (decimal?)(m.Tipo == TipoMovimiento.Entrada ? m.CostoTotal : -m.CostoTotal)) ?? 0m),
             });
 
     /// <summary>Los filtros del panel y el buscador, resueltos en la base.</summary>

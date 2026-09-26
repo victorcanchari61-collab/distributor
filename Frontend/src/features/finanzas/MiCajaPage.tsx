@@ -30,6 +30,7 @@ const MONEDAS = [5, 2, 1, 0.5, 0.2, 0.1]
 
 const DOCUMENTOS: Record<string, string> = {
   PAGO_VENTA: 'Cobro de venta',
+  PAGO_COMPRA: 'Pago a proveedor',
   MOVIMIENTO_OPERATIVO: 'Ingreso o egreso',
   CIERRE_CAJA: 'Cierre de caja',
   FALTANTE_CAJA: 'Faltante de cierre',

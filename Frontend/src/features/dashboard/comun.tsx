@@ -38,9 +38,9 @@ function diasDe(desde: string, hasta: string): number {
  * El período que mira un dashboard y el contador con el que "Actualizar" vuelve a pedir los
  * datos. Cada dashboard tiene el suyo: cambiar el rango de Ventas no mueve el de Cobranza.
  */
-export function useTablero() {
+export function useTablero(inicial: 'ultimos30' | 'mes' = 'ultimos30') {
   const opciones = useMemo(periodos, [])
-  const [periodo, setPeriodo] = useState<Periodo>(opciones[1])
+  const [periodo, setPeriodo] = useState<Periodo>(opciones[inicial === 'mes' ? 2 : 1])
   const [version, setVersion] = useState(0)
 
   const cambiarRango = useCallback((d: string, h: string) => {
@@ -114,6 +114,7 @@ export function Encabezado({
   descripcion,
   tablero,
   sinPeriodo = false,
+  acciones,
 }: {
   icono: ReactNode
   titulo: string
@@ -121,6 +122,8 @@ export function Encabezado({
   tablero: Tablero
   /** Inventario es una foto de hoy: no tiene rango que elegir. */
   sinPeriodo?: boolean
+  /** Botones propios de la pantalla, junto a "Actualizar" (exportar, por ejemplo). */
+  acciones?: ReactNode
 }) {
   return (
     <div className="space-y-4">
@@ -129,10 +132,13 @@ export function Encabezado({
         title={titulo}
         description={descripcion}
         actions={
-          <Button variant="secondary" size="sm" onClick={tablero.refrescar}>
-            <RefreshCw size={14} />
-            Actualizar
-          </Button>
+          <>
+            {acciones}
+            <Button variant="secondary" size="sm" onClick={tablero.refrescar}>
+              <RefreshCw size={14} />
+              Actualizar
+            </Button>
+          </>
         }
       />
 

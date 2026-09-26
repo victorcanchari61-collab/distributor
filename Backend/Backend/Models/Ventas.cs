@@ -325,9 +325,9 @@ public class PagoVenta
     public bool Anulado { get; set; }
 
     /// <summary>
-    /// Si es en efectivo, el Ingreso posteado en la Caja del cobrador. Null si
-    /// no es efectivo (no hay a qué caja postear: va directo a una cuenta
-    /// bancaria — ver sección 3, todavía sin conectar).
+    /// El Ingreso que este cobro posteó: en la Caja del cobrador si fue en
+    /// efectivo, o en la cuenta del método (Yape, transferencia) si no. Null si
+    /// se anuló (el ingreso ya se revirtió) o si es de antes del libro.
     /// </summary>
     public int? MovimientoCuentaId { get; set; }
 }

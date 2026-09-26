@@ -124,6 +124,7 @@ builder.Services.AddScoped<ICierreCajaService, CierreCajaService>();
 builder.Services.AddScoped<IPlanillaService, PlanillaService>();
 builder.Services.AddScoped<IFinanciamientoService, FinanciamientoService>();
 builder.Services.AddScoped<IMovimientoDineroService, MovimientoDineroService>();
+builder.Services.AddScoped<IEstadoResultadosService, EstadoResultadosService>();
 builder.Services.AddScoped<IBancoService, BancoService>();
 builder.Services.AddScoped<IConciliacionBancariaService, ConciliacionBancariaService>();
 builder.Services.AddScoped<IGastoOperativoService, GastoOperativoService>();

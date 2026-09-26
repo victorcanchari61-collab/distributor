@@ -153,6 +153,8 @@ public static class CatalogoPermisos
             // Préstamos recibidos: registrarlos, pagarlos (crear) y anular un
             // préstamo o un pago mal registrado.
             ["finanzas.financiamiento"] = [Accion.Ver, Accion.Crear, Accion.Anular],
+            // Estado de resultados: si el negocio gana, en un rango de fechas.
+            ["finanzas.resultados"] = [Accion.Ver, Accion.Exportar],
 
             // --- TMS ---
             /*

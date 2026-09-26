@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   ArrowLeftRight,
+  FileBarChart,
   Banknote,
   Boxes,
   Building2,
@@ -180,6 +181,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'finanzas.cobrar', label: 'Cuentas por cobrar', icon: Wallet },
       { id: 'finanzas.pagar', label: 'Cuentas por pagar', icon: CreditCard },
       { id: 'finanzas.ganancias', label: 'Mis ganancias', icon: TrendingUp },
+      { id: 'finanzas.resultados', label: 'Estado de resultados', icon: FileBarChart },
       { id: 'finanzas.movimientos', label: 'Movimientos', icon: ArrowLeftRight },
       { id: 'finanzas.operativos', label: 'Ingresos y egresos', icon: Repeat },
       { id: 'finanzas.financiamiento', label: 'Préstamos recibidos', icon: PiggyBank },

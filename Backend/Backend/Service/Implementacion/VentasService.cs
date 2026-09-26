@@ -85,18 +85,26 @@ public class VentasService : IVentasService
     }
 
     /// <summary>
-    /// Si el método es Efectivo, exige que quien cobra ya tenga una Caja
-    /// asignada — ya no se crea sola: la asigna un administrador desde
-    /// Finanzas &gt; Cajas. Se llama ANTES de tocar la base, para que un cobro
-    /// que no se puede postear ni siquiera llegue a guardarse. Cualquier otro
-    /// método no exige nada (todavía no conecta a su cuenta — sección 3).
+    /// Que el cobro tenga a dónde entrar. El efectivo exige que quien cobra ya
+    /// tenga una Caja asignada — ya no se crea sola: la asigna un administrador
+    /// desde Finanzas &gt; Cajas —; Yape, Plin o transferencia, que su método
+    /// apunte a una cuenta. Se llama ANTES de tocar la base, para que un cobro
+    /// que no se puede postear ni siquiera llegue a guardarse.
     /// </summary>
     private async Task ValidarPuedeCobrarAsync(int metodoPagoId, int? cobradorId)
     {
-        if (cobradorId is not int id) return;
-
         var metodo = await _finanzas.GetMetodoPagoAsync(metodoPagoId);
-        if (metodo.Tipo != TipoMetodoPago.Efectivo) return;
+        if (metodo.Tipo != TipoMetodoPago.Efectivo)
+        {
+            if (metodo.CuentaFinancieraId is null)
+            {
+                throw new BadRequestException(
+                    $"El método {metodo.Nombre} no tiene una cuenta asignada: elígela en Finanzas > Métodos de pago.");
+            }
+            return;
+        }
+
+        if (cobradorId is not int id) return;
 
         if (await _cuentas.ObtenerCajaUsuarioAsync(id) is null)
         {
@@ -106,28 +114,36 @@ public class VentasService : IVentasService
     }
 
     /// <summary>
-    /// Si el pago es en efectivo, entra a la Caja de quien lo cobró — en
-    /// tiempo real, no al cuadrar el día. Ver docs/finanzas-tesoreria.md,
-    /// "Mi Caja". Si no es efectivo, no hace nada todavía (billeteras y
-    /// transferencias siguen sin conectar a su cuenta bancaria — sección 3).
+    /// El cobro entra en tiempo real, no al cuadrar el día: el efectivo a la
+    /// Caja de quien lo cobró (ver docs/finanzas-tesoreria.md, "Mi Caja"), y
+    /// Yape, Plin o transferencia a la cuenta a la que apunta su método.
     /// </summary>
-    private async Task PostearCobroSiEsEfectivoAsync(PagoVenta pago, int? actorId)
+    private async Task PostearCobroAsync(PagoVenta pago, int? actorId)
     {
-        if (pago.UsuarioId is not int cobradorId) return;
-
         var metodo = await _finanzas.GetMetodoPagoAsync(pago.MetodoPagoId);
-        if (metodo.Tipo != TipoMetodoPago.Efectivo) return;
 
-        var caja = await _cuentas.ExigirCajaUsuarioAsync(cobradorId);
+        int cuentaId;
+        if (metodo.Tipo == TipoMetodoPago.Efectivo)
+        {
+            if (pago.UsuarioId is not int cobradorId) return;
+            cuentaId = (await _cuentas.ExigirCajaUsuarioAsync(cobradorId)).Id;
+        }
+        else
+        {
+            // Sin cuenta no hay a dónde entrar. No debería pasar: se rechaza
+            // antes, en ValidarPuedeCobrarAsync.
+            if (metodo.CuentaFinancieraId is not int cuenta) return;
+            cuentaId = cuenta;
+        }
+
         var movimiento = await _cuentas.PostearAsync(
-            caja.Id, TipoMovimientoCuenta.Ingreso, pago.Monto,
+            cuentaId, TipoMovimientoCuenta.Ingreso, pago.Monto,
             DocumentoOrigenMovimiento.PagoVenta, pago.Id, actorId, pago.Fecha);
 
         pago.MovimientoCuentaId = movimiento.Id;
-        await _notificador.AvisarAsync("cuentasfinancieras", "movimiento", new { CuentaId = caja.Id });
     }
 
-    /// <summary>Reversa el Ingreso que este pago posteó, si lo tenía (era en efectivo).</summary>
+    /// <summary>Reversa el Ingreso que este cobro posteó, si lo tenía.</summary>
     private async Task ReversarCobroSiExisteAsync(PagoVenta pago, int? actorId)
     {
         if (pago.MovimientoCuentaId is not int movimientoId) return;
@@ -1008,7 +1024,7 @@ public class VentasService : IVentasService
         notaVenta.Pagos.Add(pago);
         await _repository.UpdateNotaVentaAsync(notaVenta);
 
-        await PostearCobroSiEsEfectivoAsync(pago, usuarioId);
+        await PostearCobroAsync(pago, usuarioId);
         if (pago.MovimientoCuentaId is not null) await _repository.GuardarAsync();
 
         var actualizada = await GetNotaVentaAsync(id);
@@ -1056,7 +1072,7 @@ public class VentasService : IVentasService
         pago.Monto = request.Monto;
         await _repository.GuardarAsync();
 
-        await PostearCobroSiEsEfectivoAsync(pago, usuarioId);
+        await PostearCobroAsync(pago, usuarioId);
         if (pago.MovimientoCuentaId is not null) await _repository.GuardarAsync();
 
         var actualizada = await GetNotaVentaAsync(id);
@@ -1239,7 +1255,7 @@ public class VentasService : IVentasService
         // postean los cobros en efectivo a la Caja de quien los recibió.
         foreach (var pago in notaVenta.Pagos)
         {
-            await PostearCobroSiEsEfectivoAsync(pago, usuarioId);
+            await PostearCobroAsync(pago, usuarioId);
         }
         if (notaVenta.Pagos.Any(p => p.MovimientoCuentaId is not null))
         {

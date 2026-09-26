@@ -23,6 +23,13 @@ import '../../features/finanzas/vistas/cuentas_por_pagar_pagina.dart';
 import '../../features/finanzas/vistas/mis_ganancias_pagina.dart';
 import '../../features/finanzas/vistas/metodos_pago_pagina.dart';
 import '../../features/finanzas/vistas/mi_caja_pagina.dart';
+import '../../features/finanzas/vistas/bancos_pagina.dart';
+import '../../features/finanzas/vistas/cajas_pagina.dart';
+import '../../features/finanzas/vistas/cierres_caja_pagina.dart';
+import '../../features/finanzas/vistas/ingresos_egresos_pagina.dart';
+import '../../features/finanzas/vistas/estado_resultados_pagina.dart';
+import '../../features/finanzas/vistas/movimientos_dinero_pagina.dart';
+import '../../features/finanzas/vistas/prestamos_recibidos_pagina.dart';
 import '../../features/inicio/vistas/inicio_pagina.dart';
 import '../../features/inicio/vistas/pendiente_pagina.dart';
 import '../../features/inventario/vistas/ajustes_pagina.dart';
@@ -37,6 +44,8 @@ import '../../features/inventario/vistas/stock_pagina.dart';
 import '../../features/inventario/vistas/transferencias_pagina.dart';
 import '../../features/maestros/vistas/clientes_pagina.dart';
 import '../../features/maestros/vistas/empleados_pagina.dart';
+import '../../features/rrhh/vistas/asistencia_pagina.dart';
+import '../../features/rrhh/vistas/planilla_pagina.dart';
 import '../../features/maestros/vistas/productos_pagina.dart';
 import '../../features/maestros/vistas/proveedores_pagina.dart';
 import '../../features/perfil/vistas/perfil_pagina.dart';
@@ -113,6 +122,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: EmpleadosPagina.ruta,
         builder: (context, estado) =>
             const PuertaPermiso(child: EmpleadosPagina()),
+      ),
+      GoRoute(
+        path: AsistenciaPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: AsistenciaPagina()),
+      ),
+      GoRoute(
+        path: PlanillaPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: PlanillaPagina()),
       ),
       GoRoute(
         path: AlmacenesPagina.ruta,
@@ -232,6 +251,40 @@ final routerProvider = Provider<GoRouter>((ref) {
             const PuertaPermiso(child: MiCajaPagina()),
       ),
       GoRoute(
+        path: CajasPagina.ruta,
+        builder: (context, estado) => const PuertaPermiso(child: CajasPagina()),
+      ),
+      GoRoute(
+        path: BancosPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: BancosPagina()),
+      ),
+      GoRoute(
+        path: IngresosEgresosPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: IngresosEgresosPagina()),
+      ),
+      GoRoute(
+        path: CierresCajaPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: CierresCajaPagina()),
+      ),
+      GoRoute(
+        path: EstadoResultadosPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: EstadoResultadosPagina()),
+      ),
+      GoRoute(
+        path: MovimientosDineroPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: MovimientosDineroPagina()),
+      ),
+      GoRoute(
+        path: PrestamosRecibidosPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: PrestamosRecibidosPagina()),
+      ),
+      GoRoute(
         path: CuentasPorPagarPagina.ruta,
         builder: (context, estado) =>
             const PuertaPermiso(child: CuentasPorPagarPagina()),
@@ -321,6 +374,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != ProveedoresPagina.ruta &&
               item.ruta != ProductosPagina.ruta &&
               item.ruta != EmpleadosPagina.ruta &&
+              item.ruta != AsistenciaPagina.ruta &&
+              item.ruta != PlanillaPagina.ruta &&
               item.ruta != AlmacenesPagina.ruta &&
               item.ruta != StockPagina.ruta &&
               item.ruta != KardexPagina.ruta &&
@@ -341,6 +396,13 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != CuentasPorCobrarPagina.ruta &&
               item.ruta != CuentasPorPagarPagina.ruta &&
               item.ruta != MiCajaPagina.ruta &&
+              item.ruta != CierresCajaPagina.ruta &&
+              item.ruta != CajasPagina.ruta &&
+              item.ruta != BancosPagina.ruta &&
+              item.ruta != IngresosEgresosPagina.ruta &&
+              item.ruta != EstadoResultadosPagina.ruta &&
+              item.ruta != MovimientosDineroPagina.ruta &&
+              item.ruta != PrestamosRecibidosPagina.ruta &&
               item.ruta != MisGananciasPagina.ruta &&
               item.ruta != MercadosPagina.ruta &&
               item.ruta != RutasPagina.ruta &&

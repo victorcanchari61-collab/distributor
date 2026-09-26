@@ -31,3 +31,11 @@ DateTime fechaDeJson(String valor) {
 /// Lo mismo, pero tolerando que el campo no venga.
 DateTime? fechaDeJsonOpcional(Object? valor) =>
     valor is String && valor.isNotEmpty ? fechaDeJson(valor) : null;
+
+/// Un dia como lo pide el backend: yyyy-MM-dd, sin hora ni zona.
+String diaIso(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+/// El mismo dia, sin importar la hora.
+bool mismoDia(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;

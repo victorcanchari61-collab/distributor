@@ -19,6 +19,7 @@ public class MovimientoDineroService : IMovimientoDineroService
     private static readonly Dictionary<string, int> CategoriaDeDocumento = new()
     {
         [DocumentoOrigenMovimiento.PagoVenta] = CategoriaSistema.Ventas,
+        [DocumentoOrigenMovimiento.PagoCompra] = CategoriaSistema.CompraMercaderia,
         [DocumentoOrigenMovimiento.SobranteCaja] = CategoriaSistema.SobranteCaja,
         [DocumentoOrigenMovimiento.FaltanteCaja] = CategoriaSistema.FaltanteCaja,
         [DocumentoOrigenMovimiento.RecuperoFaltante] = CategoriaSistema.RecuperoFaltante,
@@ -115,6 +116,7 @@ public class MovimientoDineroService : IMovimientoDineroService
     private sealed class Documentos
     {
         public Dictionary<int, PagoVenta> Cobros { get; init; } = [];
+        public Dictionary<int, CompraPago> PagosCompra { get; init; } = [];
         public Dictionary<int, MovimientoOperativo> Manuales { get; init; } = [];
         public Dictionary<int, Financiamiento> Prestamos { get; init; } = [];
         public Dictionary<int, PagoFinanciamiento> PagosPrestamo { get; init; } = [];
@@ -132,6 +134,7 @@ public class MovimientoDineroService : IMovimientoDineroService
             .ToList();
 
         var cobros = De(DocumentoOrigenMovimiento.PagoVenta);
+        var pagosCompra = De(DocumentoOrigenMovimiento.PagoCompra);
         var manuales = De(DocumentoOrigenMovimiento.MovimientoOperativo);
         var prestamos = De(DocumentoOrigenMovimiento.Financiamiento);
         var pagosPrestamo = De(DocumentoOrigenMovimiento.PagoFinanciamiento);
@@ -146,6 +149,9 @@ public class MovimientoDineroService : IMovimientoDineroService
             Cobros = await _context.PagosVenta.AsNoTracking()
                 .Include(p => p.NotaVenta).ThenInclude(n => n!.Cliente)
                 .Where(p => cobros.Contains(p.Id)).ToDictionaryAsync(p => p.Id),
+            PagosCompra = await _context.CompraPagos.AsNoTracking()
+                .Include(p => p.Compra).ThenInclude(c => c!.Proveedor)
+                .Where(p => pagosCompra.Contains(p.Id)).ToDictionaryAsync(p => p.Id),
             Manuales = await _context.MovimientosOperativos.AsNoTracking()
                 .Include(m => m.MotivoGasto)
                 .Where(m => manuales.Contains(m.Id)).ToDictionaryAsync(m => m.Id),
@@ -187,6 +193,13 @@ public class MovimientoDineroService : IMovimientoDineroService
             {
                 var nota = Doc(d.Cobros)?.NotaVenta;
                 return DelSistema(nota is null ? "Cobro de venta" : $"Cobro {nota.Numero} — {nota.Cliente?.Nombre}");
+            }
+            case DocumentoOrigenMovimiento.PagoCompra:
+            {
+                var compra = Doc(d.PagosCompra)?.Compra;
+                return DelSistema(compra is null
+                    ? "Pago a proveedor"
+                    : $"Pago {compra.Numero} — {compra.Proveedor?.Nombre}");
             }
             case DocumentoOrigenMovimiento.MovimientoOperativo:
             {
