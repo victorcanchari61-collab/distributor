@@ -5,6 +5,7 @@ import {
   Alert,
   Badge,
   Button,
+  CifrasPago,
   Desplegable,
   Input,
   ListPage,
@@ -481,6 +482,13 @@ export function CuentasPorCobrarPage() {
       >
         {gestionando && (
           <div className="flex flex-col gap-3">
+            <CifrasPago
+              cifras={[
+                { label: 'Total de la venta', monto: gestionando.total },
+                { label: 'Cobrado', monto: gestionando.totalPagado, tono: 'exito' },
+                { label: 'Saldo pendiente', monto: saldo(gestionando), tono: saldo(gestionando) > 0 ? 'pendiente' : 'normal' },
+              ]}
+            />
 
             <p className="text-sm font-semibold text-ink">Pagos</p>
 

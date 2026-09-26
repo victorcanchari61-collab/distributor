@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Check, CheckCircle2, Pencil, Plus, Trash2, Wallet, X } from 'lucide-react'
-import { Alert, Badge, Button, Desplegable, Input, RowAction, SysDataTable } from '../../components/ui'
+import { Alert, Badge, Button, CifrasPago, Desplegable, Input, RowAction, SysDataTable } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import type { MetodoPagoOpcion, TipoMetodoPago } from '../finanzas/finanzasApi'
 import type { PedidoResponse } from './ventasApi'
@@ -229,22 +229,13 @@ export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFi
         <span>Es solo una referencia: manda lo que se cobre ahora. Lo que no se cobre queda a crédito.</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-center sm:gap-3">
-        <div className="rounded-field border border-line px-2 py-2">
-          <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">A cobrar</p>
-          <p className="text-base font-semibold text-ink">{soles(total)}</p>
-        </div>
-        <div className="rounded-field border border-line px-2 py-2">
-          <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">Cobrado ahora</p>
-          <p className="text-base font-semibold text-emerald-700">{soles(r.pagado)}</p>
-        </div>
-        <div className="rounded-field border border-line px-2 py-2">
-          <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">Queda a crédito</p>
-          <p className={r.saldo > 0 ? 'text-base font-semibold text-amber-700' : 'text-base font-semibold text-ink'}>
-            {soles(Math.max(r.saldo, 0))}
-          </p>
-        </div>
-      </div>
+      <CifrasPago
+        cifras={[
+          { label: 'A cobrar', monto: total },
+          { label: 'Cobrado ahora', monto: r.pagado, tono: 'exito' },
+          { label: 'Queda a crédito', monto: Math.max(r.saldo, 0), tono: r.saldo > 0 ? 'pendiente' : 'normal' },
+        ]}
+      />
 
       {/* Sin cobro no se dice nada: los cards ya muestran que todo queda a crédito. */}
       {r.sobra ? (
