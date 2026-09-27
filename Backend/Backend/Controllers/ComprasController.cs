@@ -66,6 +66,15 @@ public class OrdenCompraController : ControllerBase
     [Permiso("compras.ordenes", Accion.Confirmar)]
     public async Task<IActionResult> Confirmar(int id) => Ok(await _compras.ConfirmarOrdenAsync(id));
 
+    /// <summary>
+    /// Convertir a compra, como un pedido a venta: la orden se cierra y nace su
+    /// compra con el comprobante, las cantidades y los pagos que se revisaron.
+    /// </summary>
+    [HttpPost("{id:int}/convertir")]
+    [Permiso("compras.ordenes", Accion.Confirmar)]
+    public async Task<IActionResult> Convertir(int id, [FromBody] CrearCompraRequest request) =>
+        Ok(await _compras.ConvertirOrdenAsync(id, request, UsuarioId));
+
     [HttpPatch("{id:int}/anular")]
     [Permiso("compras.ordenes", Accion.Anular)]
     public async Task<IActionResult> Anular(int id)

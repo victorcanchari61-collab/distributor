@@ -301,7 +301,45 @@ public class ComprasService : IComprasService
     public async Task<CompraResponse> GetCompraAsync(int id) =>
         MapCompra(await GetCompraOrThrowAsync(id));
 
-    public async Task<CompraResponse> CrearCompraAsync(CrearCompraRequest request, int? usuarioId)
+    public Task<CompraResponse> CrearCompraAsync(CrearCompraRequest request, int? usuarioId) =>
+        CrearCompraInternaAsync(request, usuarioId, ordenCompraId: null, avisar: true);
+
+    /// <summary>
+    /// Convierte la orden en compra, igual que un pedido se convierte en venta:
+    /// se revisan las cantidades y costos con los que de verdad llegó, se pone
+    /// el comprobante del proveedor y cómo se pagó, y la orden queda cerrada.
+    ///
+    /// El proveedor es el de la orden: no se cambia al convertir.
+    /// </summary>
+    public async Task<CompraResponse> ConvertirOrdenAsync(int id, CrearCompraRequest request, int? usuarioId)
+    {
+        var orden = await GetOrdenOrThrowAsync(id);
+
+        if (orden.Estado != EstadoOrdenCompra.Pendiente)
+        {
+            throw new BadRequestException("Esta orden ya fue confirmada o anulada.");
+        }
+
+        request.ProveedorId = orden.ProveedorId;
+
+        // Todo o nada: si la compra no se puede registrar (un pago en
+        // efectivo sin caja, por ejemplo), la orden sigue Pendiente.
+        await using var transaccion = await _repository.IniciarTransaccionAsync();
+
+        orden.Estado = EstadoOrdenCompra.Confirmada;
+        await _repository.UpdateOrdenAsync(orden);
+
+        var compra = await CrearCompraInternaAsync(request, usuarioId, orden.Id, avisar: false);
+
+        await transaccion.CommitAsync();
+
+        await _notificador.AvisarAsync("ordenescompra", "confirmada", await GetOrdenAsync(id));
+        await _notificador.AvisarAsync("compras", "creado", compra);
+        return compra;
+    }
+
+    private async Task<CompraResponse> CrearCompraInternaAsync(
+        CrearCompraRequest request, int? usuarioId, int? ordenCompraId, bool avisar)
     {
         await _compraValidator.ValidateAndThrowAsync(request);
 
@@ -309,7 +347,7 @@ public class ComprasService : IComprasService
         {
             Numero = await _repository.SiguienteNumeroCompraAsync(),
             ProveedorId = request.ProveedorId,
-            OrdenCompraId = null,
+            OrdenCompraId = ordenCompraId,
             Fecha = request.Fecha ?? DateTime.UtcNow,
             Estado = EstadoCompra.Pendiente,
             TipoComprobante = string.IsNullOrWhiteSpace(request.TipoComprobante)
@@ -364,7 +402,7 @@ public class ComprasService : IComprasService
         if (compra.Pagos.Count > 0) await _repository.GuardarAsync();
 
         var creada = await GetCompraAsync(compra.Id);
-        await _notificador.AvisarAsync("compras", "creado", creada);
+        if (avisar) await _notificador.AvisarAsync("compras", "creado", creada);
         return creada;
     }
 

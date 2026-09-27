@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
 import { ArrowLeft, Building2, Check, Eye, PackageCheck, Pencil, Plus, ShoppingBag, Trash2, Undo2, X } from 'lucide-react'
@@ -32,6 +33,7 @@ import type {
   OpcionBuscador,
 } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { navPath } from '../../components/layout/navigation'
 import { opcionesPresentacion, presentacionInicialDe } from '../../lib/presentaciones'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
@@ -41,13 +43,14 @@ import { almacenApi, stockApi } from '../inventario'
 import type { AlmacenOpcion } from '../inventario'
 import { metodoPagoApi } from '../finanzas'
 import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
-import { compraApi } from './comprasApi'
+import { compraApi, ordenCompraApi } from './comprasApi'
 import type {
   CompraDetalleResponse,
   CompraFila,
   CompraResponse,
   CrearCompraRequest,
   FormaPagoCompra,
+  OrdenCompraResponse,
   ResumenCompras,
   TipoComprobanteCompra,
 } from './comprasApi'
@@ -139,6 +142,8 @@ function enPresentacionCompra(l: CompraDetalleResponse, base: number) {
 export function MisComprasPage() {
   const { puede } = usePermisos()
   const toast = useToast()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
   const [compras, setCompras] = useState<CompraFila[]>([])
   const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
@@ -149,6 +154,8 @@ export function MisComprasPage() {
   const [error, setError] = useState('')
 
   const [editando, setEditando] = useState<CompraResponse | null>(null)
+  // La orden que se está convirtiendo en compra: llega desde Órdenes de compra.
+  const [convirtiendo, setConvirtiendo] = useState<OrdenCompraResponse | null>(null)
   const [detalleAbierto, setDetalleAbierto] = useState<CompraResponse | null>(null)
   const [recepcionAbierta, setRecepcionAbierta] = useState<CompraResponse | null>(null)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
@@ -236,6 +243,7 @@ export function MisComprasPage() {
 
   const abrirNueva = () => {
     setEditando(null)
+    setConvirtiendo(null)
     setProveedorId(0)
     setFecha('')
     setTipoComprobante('FACTURA')
@@ -262,6 +270,7 @@ export function MisComprasPage() {
 
   const abrirEdicion = (compra: CompraResponse) => {
     setEditando(compra)
+    setConvirtiendo(null)
     setProveedorId(compra.proveedorId)
     setFecha(compra.fecha.slice(0, 10))
     setTipoComprobante(compra.tipoComprobante)
@@ -285,6 +294,58 @@ export function MisComprasPage() {
       })),
     )
     setVista('form')
+  }
+
+  /**
+   * Convertir una orden en compra, como un pedido en venta: el formulario
+   * arranca con su proveedor, sus productos y sus costos, y aquí se corrige
+   * lo que de verdad llegó y se pone el comprobante y cómo se pagó.
+   */
+  const abrirConversion = (orden: OrdenCompraResponse) => {
+    abrirNueva()
+    setConvirtiendo(orden)
+    setProveedorId(orden.proveedorId)
+    setObservacion(orden.observacion ?? '')
+    setFilas(
+      orden.detalle.map((l) => ({
+        id: idUnico(),
+        productoId: l.productoId,
+        presentacionId: l.presentacionId ?? 0,
+        cantidad: String(l.cantidadPresentacion),
+        costo: String(l.costoUnitario * (l.cantidadPresentacion ? l.cantidad / l.cantidadPresentacion : 1)),
+        lote: '',
+        fechaVencimiento: '',
+      })),
+    )
+  }
+
+  // Llega de "Convertir a compra": se abre una vez y se borra la marca, para
+  // que recargar la página no la vuelva a abrir.
+  const convertirOrdenId = (location.state as { convertirOrdenId?: number } | null)?.convertirOrdenId
+  useEffect(() => {
+    if (!convertirOrdenId) return
+    navigate(location.pathname, { replace: true, state: null })
+    ordenCompraApi
+      .getById(convertirOrdenId)
+      .then((orden) => {
+        if (orden.estado !== 'PENDIENTE') {
+          toast.error(`${orden.numero} ya no está pendiente: no se puede convertir.`)
+          return
+        }
+        abrirConversion(orden)
+      })
+      .catch((e) => toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir la orden.'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convertirOrdenId])
+
+  /** Salir del formulario: si venía de una orden, se vuelve a las órdenes. */
+  const salirDelFormulario = () => {
+    if (convirtiendo) {
+      setConvirtiendo(null)
+      navigate(navPath('compras.ordenes'))
+      return
+    }
+    setVista('lista')
   }
 
   const actualizarFila = (id: string, cambio: Partial<FilaCompra>) =>
@@ -456,6 +517,14 @@ export function MisComprasPage() {
 
     setGuardando(true)
     try {
+      if (convirtiendo) {
+        const compra = await ordenCompraApi.convertir(convirtiendo.id, body)
+        setConvirtiendo(null)
+        setVista('lista')
+        await cargar()
+        toast.exito(`${convirtiendo.numero} convertida en la compra ${compra.numero}`)
+        return
+      }
       if (editando) {
         await compraApi.update(editando.id, body)
       } else {
@@ -653,14 +722,22 @@ export function MisComprasPage() {
       <div className="space-y-5">
         <PageHeader
           icon={<ShoppingBag size={20} />}
-          title={editando ? `Editar ${editando.numero}` : 'Nueva compra directa'}
+          title={
+            convirtiendo
+              ? `Convertir ${convirtiendo.numero} a compra`
+              : editando
+                ? `Editar ${editando.numero}`
+                : 'Nueva compra directa'
+          }
           description={
-            editando
-              ? 'Solo se puede editar mientras siga Pendiente: nada recibido todavía.'
-              : 'Al contado, en el momento: sin pasar por una orden formal al proveedor primero.'
+            convirtiendo
+              ? 'Revisa lo que de verdad llegó —cantidades y costos—, pon el comprobante del proveedor y cómo se pagó. Al registrarla, la orden se cierra.'
+              : editando
+                ? 'Solo se puede editar mientras siga Pendiente: nada recibido todavía.'
+                : 'Al contado, en el momento: sin pasar por una orden formal al proveedor primero.'
           }
           actions={
-            <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+            <Button variant="secondary" size="sm" onClick={salirDelFormulario}>
               <ArrowLeft size={15} />
               Volver
             </Button>
@@ -715,6 +792,8 @@ export function MisComprasPage() {
                 vacio="Ningún proveedor coincide"
                 onAvanzado={() => setBuscadorAbierto(true)}
                 avanzadoLabel="Búsqueda avanzada de proveedores"
+                // Es el de la orden: la compra no cambia de proveedor al convertirla.
+                disabled={convirtiendo !== null}
               />
 
               <Desplegable
@@ -812,11 +891,11 @@ export function MisComprasPage() {
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+          <Button variant="secondary" size="sm" onClick={salirDelFormulario}>
             Cancelar
           </Button>
           <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-            {editando ? 'Guardar cambios' : 'Registrar compra'}
+            {convirtiendo ? 'Convertir a compra' : editando ? 'Guardar cambios' : 'Registrar compra'}
           </Button>
         </div>
 

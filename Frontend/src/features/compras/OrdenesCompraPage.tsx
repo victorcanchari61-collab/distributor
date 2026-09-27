@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
 import {
@@ -43,6 +44,7 @@ import type {
   OpcionBuscador,
 } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { navPath } from '../../components/layout/navigation'
 import { opcionesPresentacion, presentacionInicialDe } from '../../lib/presentaciones'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
@@ -71,10 +73,12 @@ type FilaOrden = LineaProductoNueva
  * compromiso firme.
  *
  * Crear y editar son una vista completa, no un modal: la cabecera más las
- * líneas de productos no entran cómodas en un cajón chico. Confirmar cierra
- * la orden y hace nacer la Compra correspondiente, visible en "Mis compras".
+ * líneas de productos no entran cómodas en un cajón chico. Convertir a compra
+ * lleva al formulario de "Mis compras" ya lleno con la orden, igual que un
+ * pedido se convierte en venta: ahí se revisa lo que llegó y cómo se pagó.
  */
 export function OrdenesCompraPage() {
+  const navigate = useNavigate()
   const { puede } = usePermisos()
   const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
@@ -239,23 +243,9 @@ export function OrdenesCompraPage() {
     }
   }
 
-  const confirmarOrden = (orden: OrdenCompraFila) =>
-    confirmar({
-      titulo: `Confirmar ${orden.numero}`,
-      mensaje:
-        'El proveedor aceptó despachar: la orden se cierra y aparece en "Mis compras" lista para recibir. No se puede deshacer.',
-      confirmar: 'Confirmar',
-      accion: async () => {
-        setError('')
-        try {
-          await ordenCompraApi.confirmar(orden.id)
-          await cargar()
-          toast.exito(`${orden.numero} confirmada: se creó la compra.`)
-        } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos confirmar la orden.')
-        }
-      },
-    })
+  // Se registra en "Mis compras": ahí está el formulario con el comprobante y los pagos.
+  const convertirOrden = (orden: OrdenCompraFila) =>
+    navigate(navPath('compras.compras'), { state: { convertirOrdenId: orden.id } })
 
   const anularOrden = (orden: OrdenCompraFila) =>
     confirmar({
@@ -415,7 +405,7 @@ export function OrdenesCompraPage() {
         <PageHeader
           icon={<ClipboardList size={20} />}
           title={editando ? `Editar ${editando.numero}` : 'Nueva orden de compra'}
-          description="Lo que se le pide al proveedor. Mientras esté Pendiente se puede editar; al confirmarla, ya no."
+          description="Lo que se le pide al proveedor. Mientras esté Pendiente se puede editar; al convertirla en compra, ya no."
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
               <ArrowLeft size={15} />
@@ -537,7 +527,7 @@ export function OrdenesCompraPage() {
     <ListPage
       icon={<ClipboardList size={20} />}
       title="Órdenes de compra"
-      description="Lo que se le pide a un proveedor. Al confirmarla nace la compra correspondiente."
+      description="Lo que se le pide a un proveedor. Cuando llega, se convierte en compra con su comprobante y sus pagos."
       actions={
         puede('compras.ordenes', 'crear') ? (
           <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
@@ -597,11 +587,11 @@ export function OrdenesCompraPage() {
           )}
           {puede('compras.ordenes', 'confirmar') && (
             <RowAction
-              label={`Confirmar y convertir a compra ${row.numero}`}
+              label={`Convertir ${row.numero} a compra`}
               tone="success"
               disabled={row.estado !== 'PENDIENTE'}
-              disabledReason={row.estado === 'CONFIRMADA' ? 'Ya fue confirmada' : 'Está anulada'}
-              onClick={() => confirmarOrden(row)}
+              disabledReason={row.estado === 'CONFIRMADA' ? 'Ya se convirtió en compra' : 'Está anulada'}
+              onClick={() => convertirOrden(row)}
             >
               <ShoppingBag size={15} />
             </RowAction>

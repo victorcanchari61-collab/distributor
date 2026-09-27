@@ -38,6 +38,12 @@ public interface IComprasService
     /// <summary>El proveedor aceptó despachar: la orden se cierra y nace la Compra.</summary>
     Task<OrdenCompraResponse> ConfirmarOrdenAsync(int id);
 
+    /// <summary>
+    /// Cierra la orden y registra su compra con lo que de verdad llegó: las
+    /// cantidades y costos revisados, el comprobante y los pagos.
+    /// </summary>
+    Task<CompraResponse> ConvertirOrdenAsync(int id, CrearCompraRequest request, int? usuarioId);
+
     Task AnularOrdenAsync(int id);
 
     // --- Compras ---

@@ -82,6 +82,9 @@ export const ordenCompraApi = {
   update: (id: number, body: CrearOrdenCompraRequest) =>
     api.put<OrdenCompraResponse>(`/ordencompra/${id}`, body),
   confirmar: (id: number) => api.patch<OrdenCompraResponse>(`/ordencompra/${id}/confirmar`),
+  /** Como un pedido a venta: la orden se cierra y nace su compra con lo revisado. */
+  convertir: (id: number, body: CrearCompraRequest) =>
+    api.post<CompraResponse>(`/ordencompra/${id}/convertir`, body),
   anular: (id: number) => api.patch<void>(`/ordencompra/${id}/anular`),
 }
 
