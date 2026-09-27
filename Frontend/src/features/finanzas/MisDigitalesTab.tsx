@@ -3,7 +3,7 @@ import { ArrowLeftRight, Smartphone, Wallet } from 'lucide-react'
 import { Alert, Badge, FilaStats, StatCard, SysDataTable, useToast } from '../../components/ui'
 import type { BadgeTone, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { desplazarDias, fechaHora, hoyLocal } from '../../lib/fechas'
+import { fechaHora, hoyLocal } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { miCajaApi } from './miCajaApi'
 import type { MovimientoDigital } from './miCajaApi'
@@ -40,7 +40,7 @@ export function MisDigitalesTab() {
   const toast = useToast()
   const [movimientos, setMovimientos] = useState<MovimientoDigital[]>([])
   const [cargando, setCargando] = useState(true)
-  const [desde, setDesde] = useState(desplazarDias(-30))
+  const [desde, setDesde] = useState(hoyLocal())
   const [hasta, setHasta] = useState(hoyLocal())
   const [recarga, setRecarga] = useState(0)
 
@@ -168,7 +168,7 @@ export function MisDigitalesTab() {
         rows={movimientos}
         onConsulta={(q) => {
           const fecha = q.filtros.find((f) => f.columna === 'fecha')
-          setDesde(fecha?.valor || desplazarDias(-30))
+          setDesde(fecha?.valor || hoyLocal())
           setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
         }}
         cardIcon={Smartphone}

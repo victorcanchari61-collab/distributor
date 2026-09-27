@@ -16,7 +16,7 @@ import {
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { desplazarDias, fechaHora, hoyLocal } from '../../lib/fechas'
+import { fechaHora, hoyLocal } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { miCajaApi } from './miCajaApi'
 import type { CuentaDestino } from './miCajaApi'
@@ -62,7 +62,7 @@ export function MiCajaPage() {
   const [error, setError] = useState('')
   // El historial de una caja crece todos los días: se pide por rango, el
   // último mes por defecto, y se cambia desde el filtro de fecha de la tabla.
-  const [desde, setDesde] = useState(desplazarDias(-30))
+  const [desde, setDesde] = useState(hoyLocal())
   const [hasta, setHasta] = useState(hoyLocal())
 
   const [movimientoAbierto, setMovimientoAbierto] = useState<TipoMovimientoOperativo | null>(null)
@@ -205,7 +205,7 @@ export function MiCajaPage() {
             rows={movimientos}
             onConsulta={(q) => {
               const fecha = q.filtros.find((f) => f.columna === 'fecha')
-              setDesde(fecha?.valor || desplazarDias(-30))
+              setDesde(fecha?.valor || hoyLocal())
               setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
             }}
             cardIcon={Wallet}

@@ -56,6 +56,7 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   'notasventa': [
     notasVentaProvider,
     cuentasPorCobrarProvider,
+    cobrosDigitalesProvider,
     miCajaProvider,
     movimientosMiCajaProvider,
     movimientosDigitalesProvider,
@@ -127,7 +128,7 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     categoriasFinanzasProvider,
   ],
   'bancos': [bancosCatalogoProvider, cuentasFinancierasProvider],
-  'cierrescaja': [cierresCajaProvider],
+  'cierrescaja': [cierresCajaProvider, cobrosDigitalesProvider],
   'financiamientos': [prestamosRecibidosProvider],
   'mercados': [tms.mercadosProvider, clientesProvider],
   'rutas': [tms.rutasProvider, rutasProvider, clientesProvider],

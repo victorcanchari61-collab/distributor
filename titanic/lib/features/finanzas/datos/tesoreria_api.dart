@@ -73,6 +73,36 @@ class TesoreriaApi {
   /// PATCH /api/cierrecaja/{id}/anular: revierte la entrega y el ajuste.
   Future<void> anularCierre(int id) => _api.patch('/cierrecaja/$id/anular');
 
+  /// GET /api/cierrecaja/cobrosdigitales?desde&hasta: los del rango, mas los
+  /// pendientes de cualquier fecha.
+  Future<List<CobroDigital>> cobrosDigitales(
+    DateTime desde,
+    DateTime hasta,
+  ) async {
+    final datos =
+        await _api.get(
+              '/cierrecaja/cobrosdigitales?desde=${diaIso(desde)}&hasta=${diaIso(hasta)}',
+            )
+            as List;
+    return datos
+        .map((e) => CobroDigital.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Aparecio en el banco por ese monto.
+  Future<void> verificarCobro(int pagoId) =>
+      _api.patch('/cierrecaja/cobrosdigitales/$pagoId/verificar');
+
+  /// Se verifico por error: vuelve a pendiente.
+  Future<void> quitarVerificacion(int pagoId) =>
+      _api.patch('/cierrecaja/cobrosdigitales/$pagoId/pendiente');
+
+  /// No aparecio: sale del banco y se le descuenta a quien lo cobro.
+  Future<void> rechazarCobro(int pagoId, String observacion) => _api.patch(
+    '/cierrecaja/cobrosdigitales/$pagoId/rechazar',
+    cuerpo: {'observacion': observacion},
+  );
+
   // --- Prestamos recibidos ---
 
   /// GET /api/financiamiento

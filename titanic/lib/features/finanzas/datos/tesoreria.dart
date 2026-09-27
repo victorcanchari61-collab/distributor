@@ -291,6 +291,93 @@ class CierreRegistrado {
   }
 }
 
+/// Un cobro por Yape, Plin o transferencia, para buscarlo en el banco por su
+/// numero de operacion: si aparece se verifica; si no, se rechaza y se le
+/// descuenta a quien lo cobro.
+class CobroDigital {
+  const CobroDigital({
+    required this.id,
+    required this.fecha,
+    required this.documento,
+    required this.metodoPago,
+    required this.metodoTipo,
+    required this.monto,
+    required this.estado,
+    required this.sinEmpleado,
+    this.cliente,
+    this.usuarioId,
+    this.usuario,
+    this.cuenta,
+    this.numeroOperacion,
+    this.verificadoPor,
+    this.verificadoEn,
+    this.observacion,
+    this.estadoDescuento,
+    this.saldoDescuento,
+  });
+
+  /// El id del pago de la venta.
+  final int id;
+  final DateTime fecha;
+  final String documento;
+  final String? cliente;
+
+  /// Quien lo cobro: a quien se le descuenta si no aparece.
+  final int? usuarioId;
+  final String? usuario;
+  final String metodoPago;
+
+  /// BILLETERA_DIGITAL o TRANSFERENCIA.
+  final String metodoTipo;
+
+  /// La cuenta donde tiene que aparecer.
+  final String? cuenta;
+  final String? numeroOperacion;
+  final double monto;
+
+  /// PENDIENTE, VERIFICADO o RECHAZADO.
+  final String estado;
+  final String? verificadoPor;
+  final DateTime? verificadoEn;
+  final String? observacion;
+
+  /// Solo si se rechazo: PENDIENTE, DESCONTADO o ANULADO.
+  final String? estadoDescuento;
+  final double? saldoDescuento;
+
+  /// Se rechazo pero quien cobro no tiene empleado: no entra en planilla.
+  final bool sinEmpleado;
+
+  String get buscable =>
+      '$documento ${cliente ?? ''} ${usuario ?? ''} ${numeroOperacion ?? ''}'
+          .toLowerCase();
+
+  factory CobroDigital.desdeJson(Map<String, dynamic> json) {
+    final descuento = json['descuento'] as Map<String, dynamic>?;
+    final verificadoEn = json['verificadoEn'] as String?;
+    return CobroDigital(
+      id: json['id'] as int,
+      fecha: fechaDeJson(json['fecha'] as String),
+      documento: json['documento'] as String? ?? '',
+      cliente: json['cliente'] as String?,
+      usuarioId: json['usuarioId'] as int?,
+      usuario: json['usuario'] as String?,
+      metodoPago: json['metodoPago'] as String? ?? '',
+      metodoTipo: json['metodoTipo'] as String? ?? '',
+      cuenta: json['cuenta'] as String?,
+      numeroOperacion: json['numeroOperacion'] as String?,
+      monto: _monto(json['monto']),
+      estado: json['estado'] as String? ?? '',
+      verificadoPor: json['verificadoPor'] as String?,
+      verificadoEn: verificadoEn == null ? null : fechaDeJson(verificadoEn),
+      observacion: json['observacion'] as String?,
+      sinEmpleado: json['sinEmpleado'] as bool? ?? false,
+      estadoDescuento: descuento?['estado'] as String?,
+      saldoDescuento: descuento == null ? null : _monto(descuento['saldo']),
+    );
+  }
+}
+
 /// Estados de un prestamo recibido.
 class EstadoPrestamo {
   const EstadoPrestamo._();
