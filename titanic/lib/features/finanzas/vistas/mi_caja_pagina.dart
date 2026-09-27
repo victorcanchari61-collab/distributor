@@ -675,21 +675,13 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
               AppAlerta(_error!),
               const SizedBox(height: Dimen.espacio3),
             ],
-            _Conteo(
-              titulo: 'Billetes',
-              valores: _billetes,
+            _Desglose(
+              billetes: _billetes,
+              monedas: _monedas,
               cantidades: _cantidades,
               habilitado: !_guardando,
-              subtotal: _suma(_billetes),
-              onCambio: () => setState(() {}),
-            ),
-            const SizedBox(height: Dimen.espacio4),
-            _Conteo(
-              titulo: 'Monedas',
-              valores: _monedas,
-              cantidades: _cantidades,
-              habilitado: !_guardando,
-              subtotal: _suma(_monedas),
+              subtotalBilletes: _suma(_billetes),
+              subtotalMonedas: _suma(_monedas),
               onCambio: () => setState(() {}),
             ),
             const SizedBox(height: Dimen.espacio3),
@@ -747,81 +739,163 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
   }
 }
 
-/// Una tabla de conteo: cuántos hay de cada valor y cuánto suman.
-class _Conteo extends StatelessWidget {
-  const _Conteo({
-    required this.titulo,
-    required this.valores,
+/// El conteo del cierre en una sola lista, igual que en la web: billetes y
+/// luego monedas, numerados, con la cantidad al medio y lo que suma a la
+/// derecha. Con dos bloques separados, lo contado en uno quedaba fuera de
+/// la vista al revisar el otro.
+class _Desglose extends StatelessWidget {
+  const _Desglose({
+    required this.billetes,
+    required this.monedas,
     required this.cantidades,
     required this.habilitado,
-    required this.subtotal,
+    required this.subtotalBilletes,
+    required this.subtotalMonedas,
     required this.onCambio,
   });
 
-  final String titulo;
-  final List<double> valores;
+  final List<double> billetes;
+  final List<double> monedas;
   final Map<double, TextEditingController> cantidades;
   final bool habilitado;
-  final double subtotal;
+  final double subtotalBilletes;
+  final double subtotalMonedas;
   final VoidCallback onCambio;
+
+  // Simetricas: lo mismo a cada lado de la cantidad, que queda al medio.
+  static const _flexNumero = 8;
+  static const _flexNombre = 32;
+  static const _flexCantidad = 20;
+  static const _flexTotal = 40;
+
+  static const _texto = TextStyle(fontSize: 12.5, color: Colores.tinta);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          titulo,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: Dimen.espacio2),
-        for (final v in valores)
-          Padding(
-            padding: const EdgeInsets.only(bottom: Dimen.espacio2),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 76,
-                  child: Text(
-                    formatoSoles(v),
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ),
-                SizedBox(
-                  width: 84,
-                  child: TextField(
-                    controller: cantidades[v],
-                    enabled: habilitado,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    textAlign: TextAlign.center,
-                    decoration: const InputDecoration(
-                      hintText: '0',
-                      isDense: true,
+    final filas = [
+      for (final v in billetes) (tipo: 'Billete', valor: v),
+      for (final v in monedas) (tipo: 'Moneda', valor: v),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colores.linea),
+        borderRadius: BorderRadius.circular(Dimen.radioCampo),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < filas.length; i++)
+            Container(
+              color: i.isOdd ? Colores.fondo : null,
+              padding: const EdgeInsets.symmetric(
+                horizontal: Dimen.espacio3,
+                vertical: 5,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: _flexNumero,
+                    child: Text(
+                      '${i + 1}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colores.tintaSuave,
+                      ),
                     ),
-                    onChanged: (_) => onCambio(),
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  formatoSoles(
-                    ((v * 100).round() *
-                            (int.tryParse(cantidades[v]!.text) ?? 0)) /
-                        100,
+                  Expanded(
+                    flex: _flexNombre,
+                    child: Text(
+                      '${filas[i].tipo} ${formatoSoles(filas[i].valor)}',
+                      style: _texto,
+                    ),
                   ),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colores.tintaSuave,
+                  Expanded(
+                    flex: _flexCantidad,
+                    child: SizedBox(
+                      height: 32,
+                      child: TextField(
+                        controller: cantidades[filas[i].valor],
+                        enabled: habilitado,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        textAlign: TextAlign.center,
+                        style: _texto,
+                        decoration: const InputDecoration(
+                          hintText: '0',
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 8,
+                          ),
+                        ),
+                        onChanged: (_) => onCambio(),
+                      ),
+                    ),
                   ),
-                ),
+                  Expanded(
+                    flex: _flexTotal,
+                    child: Text(
+                      (((filas[i].valor * 100).round() *
+                                  (int.tryParse(
+                                        cantidades[filas[i].valor]!.text,
+                                      ) ??
+                                      0)) /
+                              100)
+                          .toStringAsFixed(2),
+                      textAlign: TextAlign.right,
+                      style: _texto.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Dimen.espacio3,
+              Dimen.espacio2,
+              Dimen.espacio3,
+              Dimen.espacio2,
+            ),
+            child: Column(
+              children: [
+                _Subtotal('Billetes', subtotalBilletes),
+                const SizedBox(height: 2),
+                _Subtotal('Monedas', subtotalMonedas),
               ],
             ),
           ),
-        Align(
-          alignment: Alignment.centerRight,
+        ],
+      ),
+    );
+  }
+}
+
+class _Subtotal extends StatelessWidget {
+  const _Subtotal(this.etiqueta, this.monto);
+
+  final String etiqueta;
+  final double monto;
+
+  @override
+  Widget build(BuildContext context) {
+    const estilo = TextStyle(fontSize: 12, color: Colores.tintaSuave);
+    return Row(
+      children: [
+        const Spacer(),
+        Text(etiqueta, style: estilo),
+        const SizedBox(width: Dimen.espacio4),
+        SizedBox(
+          width: 90,
           child: Text(
-            'Subtotal ${titulo.toLowerCase()} ${formatoSoles(subtotal)}',
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            formatoSoles(monto),
+            textAlign: TextAlign.right,
+            style: estilo,
           ),
         ),
       ],
