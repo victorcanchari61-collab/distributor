@@ -48,11 +48,12 @@ class MiCajaPagina extends ConsumerWidget {
         ref.watch(movimientosMiCajaProvider).valueOrNull ??
         const <MovimientoCaja>[];
 
+    // Solo lo vigente: un cobro anulado y su reversa no movieron plata.
     final ingresos = movimientos
-        .where((m) => m.esIngreso)
+        .where((m) => m.vigente && m.esIngreso)
         .fold<double>(0, (s, m) => s + m.monto);
     final egresos = movimientos
-        .where((m) => !m.esIngreso)
+        .where((m) => m.vigente && !m.esIngreso)
         .fold<double>(0, (s, m) => s + m.monto);
 
     return AppListaPagina<MovimientoCaja>(
@@ -423,10 +424,14 @@ class _TarjetaMovimiento extends StatelessWidget {
       icono: m.esIngreso ? Icons.arrow_upward : Icons.arrow_downward,
       color: color,
       titulo: m.concepto,
-      insignia: AppEtiqueta(
-        m.esIngreso ? 'Ingreso' : 'Egreso',
-        tono: m.esIngreso ? EtiquetaTono.exito : EtiquetaTono.peligro,
-      ),
+      insignia: m.esReversa
+          ? const AppEtiqueta('Reversa', tono: EtiquetaTono.neutral)
+          : m.anulado
+          ? const AppEtiqueta('Anulado', tono: EtiquetaTono.neutral)
+          : AppEtiqueta(
+              m.esIngreso ? 'Ingreso' : 'Egreso',
+              tono: m.esIngreso ? EtiquetaTono.exito : EtiquetaTono.peligro,
+            ),
       campos: [
         CampoDetalle(
           'Monto',

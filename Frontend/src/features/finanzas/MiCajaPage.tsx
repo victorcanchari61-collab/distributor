@@ -93,8 +93,12 @@ export function MiCajaPage() {
   useRealtime('cuentasfinancieras', cargar)
   useRealtime('gastosoperativos', cargar)
 
-  const totalIngresos = movimientos.filter((m) => m.tipo === 'INGRESO').reduce((s, m) => s + m.monto, 0)
-  const totalEgresos = movimientos.filter((m) => m.tipo === 'EGRESO').reduce((s, m) => s + m.monto, 0)
+  // Solo lo vigente: un cobro anulado y su reversa no movieron plata, y
+  // contarlos inflaba a la vez los ingresos y los egresos.
+  const vigentes = movimientos.filter((m) => !m.anulado && !m.esReversa)
+  const totalIngresos = vigentes.filter((m) => m.tipo === 'INGRESO').reduce((s, m) => s + m.monto, 0)
+  const totalEgresos = vigentes.filter((m) => m.tipo === 'EGRESO').reduce((s, m) => s + m.monto, 0)
+  const estadoDe = (m: MovimientoCuentaResponse) => (m.esReversa ? 'Reversa' : m.anulado ? 'Anulado' : 'Vigente')
 
   const columns: DataTableColumn<MovimientoCuentaResponse>[] = [
     { key: 'fecha', label: 'Fecha', filterType: 'date', render: (row) => fechaHora(row.fecha) },
@@ -121,9 +125,29 @@ export function MiCajaPage() {
       label: 'Concepto',
       filterType: 'select',
       filterOptions: Object.entries(DOCUMENTOS).map(([value, label]) => ({ value, label })),
-      render: (row) => DOCUMENTOS[row.documentoOrigen] ?? row.documentoOrigen,
+      // Lo escrito a mano (el detalle de un egreso, "Pasaje") va debajo del concepto.
+      render: (row) => (
+        <div>
+          <p>{DOCUMENTOS[row.documentoOrigen] ?? row.documentoOrigen}</p>
+          {row.observacion && <p className="text-xs text-ink-soft">{row.observacion}</p>}
+        </div>
+      ),
     },
-    { key: 'observacion', label: 'Detalle', filterable: false, render: (row) => row.observacion ?? '—' },
+    {
+      key: 'anulado',
+      label: 'Estado',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Vigente', label: 'Vigente' },
+        { value: 'Anulado', label: 'Anulado' },
+        { value: 'Reversa', label: 'Reversa' },
+      ],
+      value: (row) => estadoDe(row),
+      render: (row) => {
+        const estado = estadoDe(row)
+        return <Badge tone={estado === 'Vigente' ? 'success' : 'neutral'}>{estado}</Badge>
+      },
+    },
   ]
 
   return (

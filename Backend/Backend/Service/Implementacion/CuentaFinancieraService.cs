@@ -328,6 +328,10 @@ public class CuentaFinancieraService : ICuentaFinancieraService
                 MovimientoOrigenId = m.MovimientoOrigenId,
                 Usuario = m.Usuario!.Nombre,
                 Observacion = m.Observacion,
+                // Anulado: alguna reversa lo apunta. Se resuelve en la misma consulta.
+                Anulado = _context.MovimientosCuenta.Any(r =>
+                    r.DocumentoOrigen == DocumentoOrigenMovimiento.Reversion && r.MovimientoOrigenId == m.Id),
+                EsReversa = m.DocumentoOrigen == DocumentoOrigenMovimiento.Reversion,
             })
             .ToListAsync();
     }

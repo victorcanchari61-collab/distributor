@@ -53,6 +53,8 @@ class MovimientoCaja {
     required this.fecha,
     required this.documentoOrigen,
     this.observacion,
+    this.anulado = false,
+    this.esReversa = false,
   });
 
   final int id;
@@ -68,6 +70,15 @@ class MovimientoCaja {
 
   final String? observacion;
 
+  /// Tiene una reversa: ya no cuenta, pero queda en el historial.
+  final bool anulado;
+
+  /// Es la reversa de otro movimiento.
+  final bool esReversa;
+
+  /// Movio plata de verdad: ni lo anulado ni su reversa.
+  bool get vigente => !anulado && !esReversa;
+
   bool get esIngreso => tipo == 'INGRESO';
 
   String get concepto => DocumentoMovimiento.etiqueta(documentoOrigen);
@@ -82,6 +93,8 @@ class MovimientoCaja {
     fecha: fechaDeJson(json['fecha'] as String),
     documentoOrigen: json['documentoOrigen'] as String? ?? '',
     observacion: json['observacion'] as String?,
+    anulado: json['anulado'] as bool? ?? false,
+    esReversa: json['esReversa'] as bool? ?? false,
   );
 }
 

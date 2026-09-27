@@ -37,6 +37,12 @@ public class MovimientoCuentaResponse
     public int? MovimientoOrigenId { get; set; }
     public string? Usuario { get; set; }
     public string? Observacion { get; set; }
+
+    /// <summary>Tiene una reversa: ya no cuenta, pero queda en el historial.</summary>
+    public bool Anulado { get; set; }
+
+    /// <summary>Es la reversa de otro movimiento.</summary>
+    public bool EsReversa { get; set; }
 }
 
 /// <summary>

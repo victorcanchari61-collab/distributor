@@ -63,6 +63,10 @@ export interface MovimientoCuentaResponse {
   movimientoOrigenId: number | null
   usuario: string | null
   observacion: string | null
+  /** Tiene una reversa: ya no cuenta, pero queda en el historial. */
+  anulado: boolean
+  /** Es la reversa de otro movimiento. */
+  esReversa: boolean
 }
 
 export type EstadoConciliacion = 'PENDIENTE' | 'CONCILIADO'
