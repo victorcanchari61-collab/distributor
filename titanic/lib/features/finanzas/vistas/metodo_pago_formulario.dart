@@ -34,7 +34,9 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
   late final _nombre = TextEditingController(text: widget.metodo?.nombre ?? '');
   late final _numero = TextEditingController(text: widget.metodo?.numero ?? '');
 
-  late String _tipo = widget.metodo?.tipo ?? TipoMetodoPago.efectivo;
+  // Efectivo es fijo —lo trae el sistema y hay uno solo—: aqui solo se crean
+  // billeteras y transferencias.
+  late String _tipo = widget.metodo?.tipo ?? TipoMetodoPago.billeteraDigital;
   late int? _cuentaId = widget.metodo?.cuentaFinancieraId;
 
   bool _guardando = false;
@@ -139,11 +141,12 @@ class _MetodoPagoFormularioState extends ConsumerState<MetodoPagoFormulario> {
               icono: Icons.category_outlined,
               habilitado: !_guardando,
               opciones: [
-                for (final t in TipoMetodoPago.todos)
+                for (final t in TipoMetodoPago.todos.where(
+                  (t) => t != TipoMetodoPago.efectivo,
+                ))
                   Opcion(t, TipoMetodoPago.etiqueta(t)),
               ],
-              onCambio: (v) =>
-                  setState(() => _tipo = v ?? TipoMetodoPago.efectivo),
+              onCambio: (v) => setState(() => _tipo = v ?? _tipo),
             ),
             const SizedBox(height: Dimen.espacio4),
 

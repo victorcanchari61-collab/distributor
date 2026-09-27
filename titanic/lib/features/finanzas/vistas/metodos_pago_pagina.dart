@@ -66,10 +66,15 @@ class MetodosPagoPagina extends ConsumerWidget {
       fila: (context, metodo) => _TarjetaMetodoPago(
         metodo: metodo,
         color: color,
-        onEditar: puede(ref, 'finanzas.metodospago', Accion.editar)
+        // Efectivo es fijo: no se edita ni se desactiva.
+        onEditar:
+            metodo.tipo != TipoMetodoPago.efectivo &&
+                puede(ref, 'finanzas.metodospago', Accion.editar)
             ? () => _abrirFormulario(context, metodo)
             : null,
-        onEstado: puede(ref, 'finanzas.metodospago', Accion.editar)
+        onEstado:
+            metodo.tipo != TipoMetodoPago.efectivo &&
+                puede(ref, 'finanzas.metodospago', Accion.editar)
             ? () => _cambiarEstado(context, ref, metodo)
             : null,
       ),
