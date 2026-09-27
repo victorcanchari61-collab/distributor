@@ -30,20 +30,29 @@ class FilaPagoEntrega {
     this.metodoPagoId,
     String montoInicial = '',
     this.guardado = false,
-  }) : monto = TextEditingController(text: montoInicial);
+  }) : monto = TextEditingController(text: montoInicial),
+       numero = TextEditingController();
 
   String? tipo;
   int? metodoPagoId;
   final TextEditingController monto;
+
+  /// Del Yape o la transferencia: con él se busca en el banco. Vacío en efectivo.
+  final TextEditingController numero;
   bool guardado;
 
   /// Lo que valía antes de empezar a editarla, para poder cancelar.
-  ({String? tipo, int? metodoPagoId, String monto})? previo;
+  ({String? tipo, int? metodoPagoId, String monto, String numero})? previo;
 
   /// Lo tecleado, ya como número y a centavos.
   double get valor => _centavos(_numero(monto.text));
 
-  void dispose() => monto.dispose();
+  String get numeroOperacion => numero.text.trim();
+
+  void dispose() {
+    monto.dispose();
+    numero.dispose();
+  }
 }
 
 /// Lo que dicen los pagos guardados frente al total a cobrar.
@@ -194,6 +203,7 @@ class _PagoEntregaState extends State<PagoEntrega> {
         tipo: fila.tipo,
         metodoPagoId: fila.metodoPagoId,
         monto: fila.monto.text,
+        numero: fila.numero.text,
       );
       fila.guardado = false;
     });
@@ -210,6 +220,7 @@ class _PagoEntregaState extends State<PagoEntrega> {
     fila.tipo = previo.tipo;
     fila.metodoPagoId = previo.metodoPagoId;
     fila.monto.text = previo.monto;
+    fila.numero.text = previo.numero;
     fila.guardado = true;
     fila.previo = null;
   });
@@ -229,6 +240,21 @@ class _PagoEntregaState extends State<PagoEntrega> {
       return _avisar('Elige el tipo y el método de pago.');
     }
     if (!(fila.valor > 0)) return _avisar('El monto debe ser mayor que cero.');
+
+    // Sin el número no hay cómo buscarlo en el banco.
+    final numero = fila.numeroOperacion;
+    if (fila.tipo != TipoMetodoPago.efectivo && numero.isEmpty) {
+      return _avisar(
+        'Pon el número de operación del Yape o la transferencia: con él se '
+        'comprueba en el banco.',
+      );
+    }
+    if (numero.isNotEmpty &&
+        widget.filas.any(
+          (f) => f.guardado && f != fila && f.numeroOperacion == numero,
+        )) {
+      return _avisar('La operación $numero ya está en otro pago.');
+    }
 
     // Lo ya guardado más esta fila no puede pasarse del total.
     final otros = widget.filas
@@ -285,6 +311,8 @@ class _PagoEntregaState extends State<PagoEntrega> {
       // Con un solo método de ese tipo —el efectivo casi siempre— no hay nada
       // que elegir: se completa solo. Con varios, se elige a mano.
       fila.metodoPagoId = delTipo.length == 1 ? delTipo.first.id : null;
+      // El efectivo no tiene operación que buscar.
+      if (tipo == TipoMetodoPago.efectivo) fila.numero.clear();
     });
   }
 
@@ -511,6 +539,16 @@ class _PagoEntregaState extends State<PagoEntrega> {
                       tono: EtiquetaTono.modulo,
                     ),
                   ],
+                  if (fila.numeroOperacion.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Op. ${fila.numeroOperacion}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colores.tintaSuave,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -580,6 +618,16 @@ class _PagoEntregaState extends State<PagoEntrega> {
             opciones: [for (final m in delTipo) Opcion(m.id, m.nombre)],
             onCambio: (v) => _cambiar(() => fila.metodoPagoId = v),
           ),
+          if (fila.tipo != null && fila.tipo != TipoMetodoPago.efectivo) ...[
+            const SizedBox(height: Dimen.espacio3),
+            AppCampo(
+              controlador: fila.numero,
+              etiqueta: 'N° de operación',
+              icono: Icons.tag,
+              pista: 'Del voucher del Yape o la transferencia',
+              maxLargo: 30,
+            ),
+          ],
           const SizedBox(height: Dimen.espacio3),
           AppCampo(
             controlador: fila.monto,

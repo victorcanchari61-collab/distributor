@@ -327,9 +327,50 @@ public class PagoVenta
     /// <summary>
     /// El Ingreso que este cobro posteó: en la Caja del cobrador si fue en
     /// efectivo, o en la cuenta del método (Yape, transferencia) si no. Null si
-    /// se anuló (el ingreso ya se revirtió) o si es de antes del libro.
+    /// se anuló o se rechazó (el ingreso ya se revirtió) o si es de antes del libro.
     /// </summary>
     public int? MovimientoCuentaId { get; set; }
+
+    /// <summary>
+    /// El número de operación del Yape, Plin o transferencia: con él se busca
+    /// en el banco. Obligatorio en esos métodos, nulo en efectivo.
+    /// </summary>
+    public string? NumeroOperacion { get; set; }
+
+    /// <summary>
+    /// Si ya se comprobó en el banco que la plata llegó (ver
+    /// <see cref="EstadoVerificacionCobro"/>). Nulo en efectivo: ese se cuadra
+    /// contando, en el cierre de caja.
+    /// </summary>
+    public string? EstadoVerificacion { get; set; }
+
+    /// <summary>Quién lo verificó o lo rechazó, y cuándo.</summary>
+    public int? VerificadoPorId { get; set; }
+    public Usuario? VerificadoPor { get; set; }
+    public DateTime? VerificadoEn { get; set; }
+
+    /// <summary>Por qué se rechazó: no apareció en el banco, llegó otro monto...</summary>
+    public string? ObservacionVerificacion { get; set; }
+}
+
+/// <summary>
+/// Un cobro por Yape, Plin o transferencia no se da por bueno solo porque el
+/// vendedor lo registró: alguien lo busca en el banco por su número de operación.
+/// </summary>
+public static class EstadoVerificacionCobro
+{
+    /// <summary>Recién registrado: falta buscarlo en el banco.</summary>
+    public const string Pendiente = "PENDIENTE";
+
+    /// <summary>Apareció en el banco por ese monto.</summary>
+    public const string Verificado = "VERIFICADO";
+
+    /// <summary>
+    /// No apareció. La plata no está en el banco: su ingreso se reversa y el
+    /// monto se le descuenta a quien lo cobró, como un faltante de caja. La
+    /// venta sigue cobrada: ahora quien la debe es el trabajador, no el cliente.
+    /// </summary>
+    public const string Rechazado = "RECHAZADO";
 }
 
 /// <summary>Un producto de la nota de venta. El stock ya salió por esta línea.</summary>

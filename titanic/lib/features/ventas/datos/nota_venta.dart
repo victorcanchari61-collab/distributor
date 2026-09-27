@@ -15,6 +15,22 @@ class FormaPagoVenta {
   static const todas = [contado, credito];
 }
 
+/// Si un cobro por Yape, Plin o transferencia ya se busco en el banco. Nulo
+/// en efectivo: ese se cuadra contando, en el cierre de caja.
+class EstadoVerificacionPago {
+  const EstadoVerificacionPago._();
+  static const pendiente = 'PENDIENTE';
+  static const verificado = 'VERIFICADO';
+  static const rechazado = 'RECHAZADO';
+
+  static String etiqueta(String estado) => switch (estado) {
+    pendiente => 'Por verificar',
+    verificado => 'Verificado',
+    rechazado => 'Rechazado',
+    _ => estado,
+  };
+}
+
 /// Un pago parcial dentro de una nota de venta: un metodo y cuanto se pago.
 class PagoVenta {
   const PagoVenta({
@@ -25,6 +41,8 @@ class PagoVenta {
     required this.fecha,
     this.usuario,
     this.anulado = false,
+    this.numeroOperacion,
+    this.estadoVerificacion,
   });
 
   final int id;
@@ -35,6 +53,14 @@ class PagoVenta {
   final String? usuario;
   final bool anulado;
 
+  /// Del Yape, Plin o transferencia. Nulo en efectivo.
+  final String? numeroOperacion;
+
+  /// Ver [EstadoVerificacionPago]. Nulo en efectivo.
+  final String? estadoVerificacion;
+
+  bool get rechazado => estadoVerificacion == EstadoVerificacionPago.rechazado;
+
   factory PagoVenta.desdeJson(Map<String, dynamic> json) => PagoVenta(
     id: json['id'] as int,
     metodoPagoId: json['metodoPagoId'] as int,
@@ -43,6 +69,8 @@ class PagoVenta {
     fecha: fechaDeJson(json['fecha'] as String),
     usuario: json['usuario'] as String?,
     anulado: json['anulado'] as bool? ?? false,
+    numeroOperacion: json['numeroOperacion'] as String?,
+    estadoVerificacion: json['estadoVerificacion'] as String?,
   );
 }
 

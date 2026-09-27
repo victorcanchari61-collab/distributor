@@ -82,6 +82,7 @@ export function CuentasPorCobrarPage() {
   const [tipo, setTipo] = useState<TipoMetodoPago | ''>('')
   const [metodoPagoId, setMetodoPagoId] = useState(0)
   const [monto, setMonto] = useState('')
+  const [numero, setNumero] = useState('')
   const [guardando, setGuardando] = useState(false)
 
   const { confirmar, dialogo } = useConfirmacion()
@@ -180,6 +181,7 @@ export function CuentasPorCobrarPage() {
     setTipo('')
     setMetodoPagoId(0)
     setMonto('')
+    setNumero('')
   }
 
   const editarFila = (pago: FilaPago) => {
@@ -187,12 +189,16 @@ export function CuentasPorCobrarPage() {
     setTipo(metodosPago.find((m) => m.id === pago.metodoPagoId)?.tipo ?? '')
     setMetodoPagoId(pago.metodoPagoId)
     setMonto(String(pago.monto))
+    setNumero(pago.numeroOperacion ?? '')
   }
 
   const anularFila = (pago: FilaPago) =>
     confirmar({
       titulo: `Anular pago de S/ ${pago.monto.toFixed(2)}`,
-      mensaje: 'Queda en el historial marcado como anulado y su monto vuelve al saldo pendiente. No se puede revertir.',
+      mensaje:
+        pago.estadoVerificacion === 'RECHAZADO'
+          ? 'No apareció en el banco y se le iba a descontar a quien lo cobró. Anúlalo solo si el cliente de verdad no pagó: la venta vuelve a deber ese monto y el descuento se cae. No se puede revertir.'
+          : 'Queda en el historial marcado como anulado y su monto vuelve al saldo pendiente. No se puede revertir.',
       confirmar: 'Anular pago',
       tono: 'danger',
       accion: async () => {
@@ -214,12 +220,19 @@ export function CuentasPorCobrarPage() {
     const valor = Number(monto)
     if (!valor || valor <= 0) return toast.error('Ingresa el monto.')
 
+    // Sin el número no hay cómo buscarlo en el banco.
+    const numeroOperacion = tipo === 'EFECTIVO' ? null : numero.trim()
+    if (tipo !== 'EFECTIVO' && !numeroOperacion) {
+      return toast.error('Pon el número de operación del Yape o la transferencia: con él se comprueba en el banco.')
+    }
+
     setGuardando(true)
     try {
+      const body = { metodoPagoId, monto: valor, numeroOperacion }
       if (editandoClave === NUEVA) {
-        await notaVentaApi.registrarPago(gestionando.id, { metodoPagoId, monto: valor })
+        await notaVentaApi.registrarPago(gestionando.id, body)
       } else {
-        await notaVentaApi.actualizarPago(gestionando.id, Number(editandoClave), { metodoPagoId, monto: valor })
+        await notaVentaApi.actualizarPago(gestionando.id, Number(editandoClave), body)
       }
       await refrescar(gestionando.id)
       await cargar()
@@ -310,7 +323,20 @@ export function CuentasPorCobrarPage() {
     ? [
         ...gestionando.pagos.map((p) => ({ ...p, clave: String(p.id) })),
         ...(editandoClave === NUEVA
-          ? [{ id: 0, clave: NUEVA, fecha: '', metodoPagoId: 0, metodoPago: '', monto: 0, usuario: null, anulado: false }]
+          ? [
+              {
+                id: 0,
+                clave: NUEVA,
+                fecha: '',
+                metodoPagoId: 0,
+                metodoPago: '',
+                monto: 0,
+                usuario: null,
+                anulado: false,
+                numeroOperacion: null,
+                estadoVerificacion: null,
+              },
+            ]
           : []),
       ]
     : []
@@ -334,6 +360,7 @@ export function CuentasPorCobrarPage() {
                 // Si ese tipo tiene un solo metodo (el efectivo casi siempre), no hay nada que elegir.
                 const delTipo = metodosPago.filter((m) => m.tipo === v)
                 setMetodoPagoId(delTipo.length === 1 ? delTipo[0].id : 0)
+                if (v === 'EFECTIVO') setNumero('')
               }}
               placeholder="Elige el tipo"
               options={TIPOS_METODO_PAGO}
@@ -364,6 +391,24 @@ export function CuentasPorCobrarPage() {
           <span className="text-ink-soft line-through">{fila.metodoPago}</span>
         ) : (
           fila.metodoPago
+        ),
+    },
+    {
+      key: 'numeroOperacion',
+      label: 'N° operación',
+      render: (fila) =>
+        fila.clave === editandoClave && tipo && tipo !== 'EFECTIVO' ? (
+          <Input
+            size="sm"
+            placeholder="Del voucher"
+            maxLength={30}
+            value={numero}
+            onChange={(e) => setNumero(e.target.value)}
+          />
+        ) : fila.clave !== editandoClave && fila.numeroOperacion ? (
+          <span className={fila.anulado ? 'font-mono text-ink-soft line-through' : 'font-mono'}>{fila.numeroOperacion}</span>
+        ) : (
+          <span className="text-ink-soft">—</span>
         ),
     },
     {
@@ -400,6 +445,12 @@ export function CuentasPorCobrarPage() {
           <span className="text-ink-soft">—</span>
         ) : fila.anulado ? (
           <Badge tone="danger">Anulado</Badge>
+        ) : fila.estadoVerificacion === 'RECHAZADO' ? (
+          <Badge tone="danger">Rechazado en banco</Badge>
+        ) : fila.estadoVerificacion === 'PENDIENTE' ? (
+          <Badge tone="warning">Por verificar</Badge>
+        ) : fila.estadoVerificacion === 'VERIFICADO' ? (
+          <Badge tone="success">Verificado</Badge>
         ) : (
           <Badge tone="success">Válido</Badge>
         ),
@@ -529,7 +580,10 @@ export function CuentasPorCobrarPage() {
                       <RowAction
                         label={`Editar pago de S/ ${fila.monto.toFixed(2)}`}
                         tone="edit"
-                        disabled={editandoClave !== null}
+                        disabled={editandoClave !== null || fila.estadoVerificacion === 'RECHAZADO'}
+                        disabledReason={
+                          fila.estadoVerificacion === 'RECHAZADO' ? 'Se rechazó en el banco: no se edita' : undefined
+                        }
                         onClick={() => editarFila(fila)}
                       >
                         <Pencil size={15} />

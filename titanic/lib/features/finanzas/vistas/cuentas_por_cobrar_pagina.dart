@@ -218,16 +218,31 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
   String? _tipoNuevo;
   int? _metodoNuevoId;
   final _montoCtrl = TextEditingController();
+  final _numeroCtrl = TextEditingController();
   String? _tipoEditar;
   int? _metodoEditarId;
   final _montoEditarCtrl = TextEditingController();
+  final _numeroEditarCtrl = TextEditingController();
   String? _error;
 
   @override
   void dispose() {
     _montoCtrl.dispose();
+    _numeroCtrl.dispose();
     _montoEditarCtrl.dispose();
+    _numeroEditarCtrl.dispose();
     super.dispose();
+  }
+
+  /// Todo lo que no es efectivo se busca en el banco: pide su número.
+  bool _pideNumero(String? tipo, int? metodoId) {
+    var t = tipo;
+    if (t == null && metodoId != null) {
+      for (final m in ref.read(metodosPagoActivosProvider)) {
+        if (m.id == metodoId) t = m.tipo;
+      }
+    }
+    return t != null && t != TipoMetodoPago.efectivo;
   }
 
   @override
@@ -288,13 +303,16 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
               _FilaPago(
                 pago: pago,
                 enEdicion: _editando?.id == pago.id,
-                onEditar: pago.anulado
+                // Un cobro rechazado en el banco no se edita: si el cliente no
+                // pagó, se anula.
+                onEditar: pago.anulado || pago.rechazado
                     ? null
                     : () => setState(() {
                         _editando = pago;
                         _tipoEditar = null;
                         _metodoEditarId = pago.metodoPagoId;
                         _montoEditarCtrl.text = pago.monto.toStringAsFixed(2);
+                        _numeroEditarCtrl.text = pago.numeroOperacion ?? '';
                         _error = null;
                       }),
                 onAnular: pago.anulado
@@ -307,9 +325,12 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
                   tipo: _tipoEditar,
                   metodoId: _metodoEditarId,
                   montoCtrl: _montoEditarCtrl,
+                  numeroCtrl: _numeroEditarCtrl,
+                  pideNumero: _pideNumero(_tipoEditar, _metodoEditarId),
                   onTipo: (v) => setState(() {
                     _tipoEditar = v;
                     _metodoEditarId = null;
+                    if (v == TipoMetodoPago.efectivo) _numeroEditarCtrl.clear();
                   }),
                   onMetodo: (v) => setState(() => _metodoEditarId = v),
                   onCancelar: () => setState(() => _editando = null),
@@ -351,6 +372,8 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
               onCambio: (v) => setState(() {
                 _tipoNuevo = v;
                 _metodoNuevoId = null;
+                // El efectivo no tiene operación que buscar.
+                if (v == TipoMetodoPago.efectivo) _numeroCtrl.clear();
               }),
             ),
             const SizedBox(height: Dimen.espacio3),
@@ -367,6 +390,17 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
               onCambio: (v) => setState(() => _metodoNuevoId = v),
             ),
             const SizedBox(height: Dimen.espacio3),
+
+            if (_pideNumero(_tipoNuevo, _metodoNuevoId)) ...[
+              AppCampo(
+                controlador: _numeroCtrl,
+                etiqueta: 'N° de operación',
+                icono: Icons.tag,
+                pista: 'Del voucher del Yape o la transferencia',
+                maxLargo: 30,
+              ),
+              const SizedBox(height: Dimen.espacio3),
+            ],
 
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,10 +447,19 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
       return;
     }
 
+    // Sin el número no hay cómo buscarlo en el banco.
+    final pideNumero = _pideNumero(_tipoNuevo, _metodoNuevoId);
+    final numero = pideNumero ? _numeroCtrl.text.trim() : '';
+    if (pideNumero && numero.isEmpty) {
+      setState(() => _error = _faltaNumero);
+      return;
+    }
+
     try {
       await ref.read(cuentasPorCobrarProvider.notifier).registrarPago(nota.id, {
         'metodoPagoId': _metodoNuevoId,
         'monto': monto,
+        'numeroOperacion': numero.isEmpty ? null : numero,
       });
       if (!mounted) return;
       setState(() {
@@ -424,6 +467,7 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
         _tipoNuevo = null;
         _metodoNuevoId = null;
         _montoCtrl.clear();
+        _numeroCtrl.clear();
       });
     } on ApiExcepcion catch (e) {
       setState(() => _error = e.texto);
@@ -447,12 +491,21 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
       return;
     }
 
+    final pideNumero = _pideNumero(_tipoEditar, _metodoEditarId);
+    final numero = pideNumero ? _numeroEditarCtrl.text.trim() : '';
+    if (pideNumero && numero.isEmpty) {
+      setState(() => _error = _faltaNumero);
+      return;
+    }
+
     try {
-      await ref.read(cuentasPorCobrarProvider.notifier).actualizarPago(
-        nota.id,
-        pago.id,
-        {'metodoPagoId': _metodoEditarId, 'monto': monto},
-      );
+      await ref
+          .read(cuentasPorCobrarProvider.notifier)
+          .actualizarPago(nota.id, pago.id, {
+            'metodoPagoId': _metodoEditarId,
+            'monto': monto,
+            'numeroOperacion': numero.isEmpty ? null : numero,
+          });
       if (!mounted) return;
       setState(() {
         _error = null;
@@ -471,8 +524,11 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
     final ok = await confirmarAccion(
       context,
       titulo: 'Anular pago de S/ ${pago.monto.toStringAsFixed(2)}',
-      mensaje:
-          'Queda en el historial marcado como anulado y su monto vuelve al saldo pendiente. No se puede revertir.',
+      mensaje: pago.rechazado
+          ? 'No apareció en el banco y se le iba a descontar a quien lo cobró. '
+                'Anúlalo solo si el cliente de verdad no pagó: la venta vuelve a '
+                'deber ese monto y el descuento se cae. No se puede revertir.'
+          : 'Queda en el historial marcado como anulado y su monto vuelve al saldo pendiente. No se puede revertir.',
       textoConfirmar: 'Anular',
       tono: ConfirmTono.peligro,
     );
@@ -525,7 +581,9 @@ class _FilaPago extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Cobrado por ${pago.usuario ?? '—'}',
+                  pago.numeroOperacion == null
+                      ? 'Cobrado por ${pago.usuario ?? '—'}'
+                      : 'Op. ${pago.numeroOperacion} · ${pago.usuario ?? '—'}',
                   style: const TextStyle(
                     fontSize: 11.5,
                     color: Colores.tintaSuave,
@@ -545,8 +603,16 @@ class _FilaPago extends StatelessWidget {
           ),
           const SizedBox(width: Dimen.espacio2),
           AppEtiqueta(
-            pago.anulado ? 'Anulado' : 'Válido',
-            tono: pago.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,
+            pago.anulado
+                ? 'Anulado'
+                : pago.estadoVerificacion == null
+                ? 'Válido'
+                : EstadoVerificacionPago.etiqueta(pago.estadoVerificacion!),
+            tono: pago.anulado || pago.rechazado
+                ? EtiquetaTono.peligro
+                : pago.estadoVerificacion == EstadoVerificacionPago.pendiente
+                ? EtiquetaTono.aviso
+                : EtiquetaTono.exito,
           ),
           if (onEditar != null)
             IconButton(
@@ -578,6 +644,8 @@ class _FormularioEdicion extends StatelessWidget {
     required this.tipo,
     required this.metodoId,
     required this.montoCtrl,
+    required this.numeroCtrl,
+    required this.pideNumero,
     required this.onTipo,
     required this.onMetodo,
     required this.onCancelar,
@@ -588,6 +656,10 @@ class _FormularioEdicion extends StatelessWidget {
   final String? tipo;
   final int? metodoId;
   final TextEditingController montoCtrl;
+  final TextEditingController numeroCtrl;
+
+  /// El método elegido no es efectivo: se busca en el banco por su número.
+  final bool pideNumero;
   final ValueChanged<String?> onTipo;
   final ValueChanged<int?> onMetodo;
   final VoidCallback onCancelar;
@@ -630,6 +702,16 @@ class _FormularioEdicion extends StatelessWidget {
             onCambio: onMetodo,
           ),
           const SizedBox(height: Dimen.espacio3),
+          if (pideNumero) ...[
+            AppCampo(
+              controlador: numeroCtrl,
+              etiqueta: 'N° de operación',
+              icono: Icons.tag,
+              pista: 'Del voucher del Yape o la transferencia',
+              maxLargo: 30,
+            ),
+            const SizedBox(height: Dimen.espacio3),
+          ],
           AppCampo(
             controlador: montoCtrl,
             etiqueta: 'Monto',
@@ -662,6 +744,10 @@ class _FormularioEdicion extends StatelessWidget {
     );
   }
 }
+
+const _faltaNumero =
+    'Pon el número de operación del Yape o la transferencia: con él se '
+    'comprueba en el banco.';
 
 String _fecha(DateTime f) =>
     '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';

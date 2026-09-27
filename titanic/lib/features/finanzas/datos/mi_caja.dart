@@ -199,6 +199,8 @@ class MovimientoDigital {
     required this.anulado,
     this.contraparte,
     this.cuenta,
+    this.numeroOperacion,
+    this.estadoVerificacion,
   });
 
   final int id;
@@ -222,10 +224,20 @@ class MovimientoDigital {
   final String? cuenta;
   final bool anulado;
 
+  /// Solo en cobros: con el se busca en el banco.
+  final String? numeroOperacion;
+
+  /// PENDIENTE, VERIFICADO o RECHAZADO en el banco. Nulo en pagos.
+  final String? estadoVerificacion;
+
   bool get esCobro => tipo == 'COBRO';
 
+  /// No aparecio en el banco: no cuenta como cobrado, se le descuenta.
+  bool get rechazado => estadoVerificacion == 'RECHAZADO';
+
   String get buscable =>
-      '$documento ${contraparte ?? ''} $metodoPago'.toLowerCase();
+      '$documento ${contraparte ?? ''} $metodoPago ${numeroOperacion ?? ''}'
+          .toLowerCase();
 
   factory MovimientoDigital.desdeJson(Map<String, dynamic> json) =>
       MovimientoDigital(
@@ -239,5 +251,7 @@ class MovimientoDigital {
         monto: (json['monto'] as num? ?? 0).toDouble(),
         cuenta: json['cuenta'] as String?,
         anulado: json['anulado'] as bool? ?? false,
+        numeroOperacion: json['numeroOperacion'] as String?,
+        estadoVerificacion: json['estadoVerificacion'] as String?,
       );
 }

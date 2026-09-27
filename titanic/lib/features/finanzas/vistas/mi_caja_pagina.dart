@@ -19,6 +19,7 @@ import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
+import '../../ventas/datos/nota_venta.dart' show EstadoVerificacionPago;
 import '../datos/mi_caja.dart';
 import '../estado/mi_caja_controlador.dart';
 
@@ -141,7 +142,11 @@ class MiCajaPagina extends ConsumerWidget {
     final estado = ref.watch(movimientosDigitalesProvider);
     final todos = estado.valueOrNull ?? const <MovimientoDigital>[];
     final texto = ref.watch(busquedaDigitalesProvider).trim().toLowerCase();
-    final cobros = todos.where((m) => m.esCobro && !m.anulado);
+    // Lo rechazado no llegó al banco: no cuenta como cobrado, se descuenta.
+    final cobros = todos.where((m) => m.esCobro && !m.anulado && !m.rechazado);
+    final porVerificar = cobros
+        .where((m) => m.estadoVerificacion == EstadoVerificacionPago.pendiente)
+        .length;
     double suma(Iterable<MovimientoDigital> l) =>
         l.fold<double>(0, (s, m) => s + m.monto);
 
@@ -154,7 +159,7 @@ class MiCajaPagina extends ConsumerWidget {
           .toList(),
       busqueda: ref.watch(busquedaDigitalesProvider),
       onBuscar: (t) => ref.read(busquedaDigitalesProvider.notifier).state = t,
-      pistaBusqueda: 'Buscar documento o cliente',
+      pistaBusqueda: 'Buscar documento, cliente u operación',
       onRecargar: () async {
         ref.invalidate(movimientosDigitalesProvider);
         try {
@@ -175,7 +180,9 @@ class MiCajaPagina extends ConsumerWidget {
           valor: formatoSoles(suma(cobros)),
           icono: Icons.account_balance_wallet_outlined,
           color: color,
-          nota: 'Va directo al banco',
+          nota: porVerificar > 0
+              ? '$porVerificar por verificar en el banco'
+              : 'Va directo al banco',
         ),
         AppTarjetaDato(
           etiqueta: 'Por billetera',
@@ -218,7 +225,16 @@ class MiCajaPagina extends ConsumerWidget {
         titulo: '${m.esCobro ? 'Cobro' : 'Pago'} ${m.documento}',
         insignia: m.anulado
             ? const AppEtiqueta('Anulado', tono: EtiquetaTono.neutral)
-            : AppEtiqueta(m.metodoPago),
+            : m.estadoVerificacion == null
+            ? AppEtiqueta(m.metodoPago)
+            : AppEtiqueta(
+                EstadoVerificacionPago.etiqueta(m.estadoVerificacion!),
+                tono: m.rechazado
+                    ? EtiquetaTono.peligro
+                    : m.estadoVerificacion == EstadoVerificacionPago.pendiente
+                    ? EtiquetaTono.aviso
+                    : EtiquetaTono.exito,
+              ),
         campos: [
           CampoDetalle(
             'Monto',
@@ -228,8 +244,10 @@ class MiCajaPagina extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                decoration: m.anulado ? TextDecoration.lineThrough : null,
-                color: m.anulado
+                decoration: m.anulado || m.rechazado
+                    ? TextDecoration.lineThrough
+                    : null,
+                color: m.anulado || m.rechazado
                     ? Colores.tintaSuave
                     : m.esCobro
                     ? Colores.exito
@@ -238,6 +256,10 @@ class MiCajaPagina extends ConsumerWidget {
             ),
           ),
           CampoDetalle(m.esCobro ? 'Cliente' : 'Proveedor', m.contraparte),
+          if (m.estadoVerificacion != null)
+            CampoDetalle('Método', m.metodoPago),
+          if (m.numeroOperacion != null)
+            CampoDetalle('N° operación', m.numeroOperacion),
           CampoDetalle(m.esCobro ? 'Entró a' : 'Salió de', m.cuenta),
           CampoDetalle('Fecha', _fechaHora(m.fecha)),
         ],

@@ -44,6 +44,9 @@ export interface MovimientoDigital {
   /** A qué cuenta entró (o de cuál salió). */
   cuenta: string | null
   anulado: boolean
+  /** Solo en cobros: el número de operación y si ya se buscó en el banco. */
+  numeroOperacion: string | null
+  estadoVerificacion: 'PENDIENTE' | 'VERIFICADO' | 'RECHAZADO' | null
 }
 
 export const miCajaApi = {

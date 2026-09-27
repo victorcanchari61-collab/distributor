@@ -270,7 +270,11 @@ public class CuentaFinancieraService : ICuentaFinancieraService
                              .Select(m => m.CuentaFinanciera!.Nombre)
                              .FirstOrDefault()
                          ?? (p.MetodoPago.CuentaFinanciera != null ? p.MetodoPago.CuentaFinanciera.Nombre : null),
-                Anulado = p.Anulado,
+                // Anular la venta reversa sus cobros sin marcarlos: para quien
+                // cobró es lo mismo, ese cobro ya no vale.
+                Anulado = p.Anulado || p.NotaVenta.Estado == EstadoNotaVenta.Anulada,
+                NumeroOperacion = p.NumeroOperacion,
+                EstadoVerificacion = p.EstadoVerificacion,
             })
             .ToListAsync();
 

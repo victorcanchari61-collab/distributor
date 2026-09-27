@@ -329,7 +329,11 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
       await pedidoApi.confirmar(pedido.id, {
         almacenId: pedido.reservaStock ? null : almacenId,
         lineas: lineasEntrega,
-        pagos: cobro.usadas.map((f) => ({ metodoPagoId: f.metodoPagoId, monto: Number(f.monto) })),
+        pagos: cobro.usadas.map((f) => ({
+          metodoPagoId: f.metodoPagoId,
+          monto: Number(f.monto),
+          numeroOperacion: f.tipo === 'EFECTIVO' ? null : f.numeroOperacion.trim() || null,
+        })),
         recojos: recojosEnvio,
       })
 

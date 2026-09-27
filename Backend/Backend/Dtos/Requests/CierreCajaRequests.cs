@@ -8,3 +8,9 @@ public class CerrarCajaRequest
     public int CuentaDestinoId { get; set; }
     public string? Observacion { get; set; }
 }
+
+/// <summary>El cobro digital no apareció en el banco: por qué.</summary>
+public class RechazarCobroRequest
+{
+    public string Observacion { get; set; } = string.Empty;
+}

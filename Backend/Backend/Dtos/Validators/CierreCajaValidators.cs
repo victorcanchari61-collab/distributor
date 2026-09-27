@@ -13,3 +13,13 @@ public class CerrarCajaRequestValidator : AbstractValidator<CerrarCajaRequest>
         RuleFor(x => x.Observacion).MaximumLength(250);
     }
 }
+
+public class RechazarCobroRequestValidator : AbstractValidator<RechazarCobroRequest>
+{
+    public RechazarCobroRequestValidator()
+    {
+        RuleFor(x => x.Observacion)
+            .NotEmpty().WithMessage("Di por qué se rechaza: no apareció, llegó otro monto...")
+            .MaximumLength(250).WithMessage("La observación es muy larga (máx. 250)");
+    }
+}

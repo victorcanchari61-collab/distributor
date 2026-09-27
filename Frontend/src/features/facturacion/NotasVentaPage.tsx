@@ -79,6 +79,7 @@ interface FilaPagoVenta {
   clave: number
   metodoPagoId: number
   monto: string
+  numeroOperacion: string
 }
 
 const TIPOS_METODO_PAGO: { value: TipoMetodoPago; label: string }[] = [
@@ -133,10 +134,11 @@ export function NotasVentaPage() {
   const [almacenId, setAlmacenId] = useState(0)
   const [listaPrecioId, setListaPrecioId] = useState(0)
   const [formaPago, setFormaPago] = useState<FormaPagoVenta>('CONTADO')
-  const [pagos, setPagos] = useState<{ metodoPagoId: number; monto: string }[]>([])
+  const [pagos, setPagos] = useState<{ metodoPagoId: number; monto: string; numeroOperacion: string }[]>([])
   const [pagoTipo, setPagoTipo] = useState<TipoMetodoPago | ''>('')
   const [pagoMetodoId, setPagoMetodoId] = useState(0)
   const [pagoMonto, setPagoMonto] = useState('')
+  const [pagoNumero, setPagoNumero] = useState('')
   const [observacion, setObservacion] = useState('')
   const [filas, setFilas] = useState<FilaVenta[]>([])
   // Mercadería de OTRA venta que se recoge al registrar esta: solo al crear, no al editar.
@@ -314,6 +316,7 @@ export function NotasVentaPage() {
     setPagoTipo('')
     setPagoMetodoId(0)
     setPagoMonto('')
+    setPagoNumero('')
   }
 
   const editarFilaPago = (i: number) => {
@@ -322,6 +325,7 @@ export function NotasVentaPage() {
     setPagoTipo(metodosPago.find((m) => m.id === pago.metodoPagoId)?.tipo ?? '')
     setPagoMetodoId(pago.metodoPagoId)
     setPagoMonto(String(pago.monto))
+    setPagoNumero(pago.numeroOperacion)
   }
 
   const cerrarFilaPago = () => {
@@ -329,6 +333,7 @@ export function NotasVentaPage() {
     setPagoTipo('')
     setPagoMetodoId(0)
     setPagoMonto('')
+    setPagoNumero('')
   }
 
   /** Guarda la fila en edicion: la nueva se agrega, una existente se reemplaza. */
@@ -337,6 +342,15 @@ export function NotasVentaPage() {
 
     const monto = Number(pagoMonto)
     if (!monto || monto <= 0) return toast.error('Pon cuánto se pagó.')
+
+    // Sin el número no hay cómo buscarlo en el banco.
+    const numero = pagoTipo === 'EFECTIVO' ? '' : pagoNumero.trim()
+    if (pagoTipo !== 'EFECTIVO' && !numero) {
+      return toast.error('Pon el número de operación del Yape o la transferencia: con él se comprueba en el banco.')
+    }
+    if (numero && pagos.some((p, i) => i !== filaPago && p.numeroOperacion === numero)) {
+      return toast.error(`La operación ${numero} ya está en otro pago.`)
+    }
 
     // Lo ya cargado sin contar la fila que se esta editando.
     const otros = pagos.reduce(
@@ -350,11 +364,8 @@ export function NotasVentaPage() {
       )
     }
 
-    setPagos((prev) =>
-      filaPago === NUEVA_FILA
-        ? [...prev, { metodoPagoId: pagoMetodoId, monto: pagoMonto }]
-        : prev.map((p, i) => (i === filaPago ? { metodoPagoId: pagoMetodoId, monto: pagoMonto } : p)),
-    )
+    const pago = { metodoPagoId: pagoMetodoId, monto: pagoMonto, numeroOperacion: numero }
+    setPagos((prev) => (filaPago === NUEVA_FILA ? [...prev, pago] : prev.map((p, i) => (i === filaPago ? pago : p))))
     cerrarFilaPago()
   }
 
@@ -407,8 +418,13 @@ export function NotasVentaPage() {
 
   /** Filas del modal de pagos: las cargadas, más la nueva mientras se escribe. */
   const filasPago: FilaPagoVenta[] = [
-    ...pagos.map((p, i) => ({ clave: i, metodoPagoId: p.metodoPagoId, monto: String(p.monto) })),
-    ...(filaPago === NUEVA_FILA ? [{ clave: NUEVA_FILA, metodoPagoId: 0, monto: '' }] : []),
+    ...pagos.map((p, i) => ({
+      clave: i,
+      metodoPagoId: p.metodoPagoId,
+      monto: String(p.monto),
+      numeroOperacion: p.numeroOperacion,
+    })),
+    ...(filaPago === NUEVA_FILA ? [{ clave: NUEVA_FILA, metodoPagoId: 0, monto: '', numeroOperacion: '' }] : []),
   ]
 
   const columnasPagos: DataTableColumn<FilaPagoVenta>[] = [
@@ -423,6 +439,7 @@ export function NotasVentaPage() {
               onChange={(v) => {
                 setPagoTipo(v as TipoMetodoPago)
                 setPagoMetodoId(0)
+                if (v === 'EFECTIVO') setPagoNumero('')
               }}
               placeholder="Elige el tipo"
               options={TIPOS_METODO_PAGO}
@@ -466,6 +483,23 @@ export function NotasVentaPage() {
           />
         ) : (
           `S/ ${(Number(fila.monto) || 0).toFixed(2)}`
+        ),
+    },
+    {
+      key: 'numeroOperacion',
+      label: 'N° operación',
+      render: (fila) =>
+        fila.clave === filaPago && pagoTipo && pagoTipo !== 'EFECTIVO' ? (
+          <Input
+            placeholder="Del voucher"
+            maxLength={30}
+            value={pagoNumero}
+            onChange={(e) => setPagoNumero(e.target.value)}
+          />
+        ) : fila.clave !== filaPago && fila.numeroOperacion ? (
+          <span className="font-mono">{fila.numeroOperacion}</span>
+        ) : (
+          <span className="text-ink-soft">—</span>
         ),
     },
   ]
@@ -566,7 +600,13 @@ export function NotasVentaPage() {
       almacenId,
       listaPrecioId: listaPrecioId || null,
       formaPago,
-      pagos: editando ? [] : pagos.map((p) => ({ metodoPagoId: p.metodoPagoId, monto: Number(p.monto) })),
+      pagos: editando
+        ? []
+        : pagos.map((p) => ({
+            metodoPagoId: p.metodoPagoId,
+            monto: Number(p.monto),
+            numeroOperacion: p.numeroOperacion || null,
+          })),
       observacion: observacion.trim() || null,
       detalle: validas.map((f) => ({
         id: f.lineaId ?? null,

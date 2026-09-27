@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Ban, ClipboardCheck, UserX } from 'lucide-react'
-import { Alert, Badge, ListPage, RowAction, StatCard, useConfirmacion, useToast } from '../../components/ui'
+import { AlertTriangle, Ban, ClipboardCheck, Smartphone, UserX } from 'lucide-react'
+import { Alert, Badge, ListPage, RowAction, StatCard, Tabs, useConfirmacion, useToast } from '../../components/ui'
 import type { BadgeTone, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { desplazarDias, fechaHora, hoyLocal } from '../../lib/fechas'
@@ -8,6 +8,7 @@ import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { cierreCajaApi } from './cierreCajaApi'
 import type { CierreCajaResponse } from './cierreCajaApi'
+import { CobrosDigitalesTab } from './CobrosDigitalesTab'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
@@ -33,6 +34,9 @@ const DESCUENTOS = [
  * Los cierres de caja de todos los trabajadores. Cada faltante se descuenta
  * solo en la planilla semanal del trabajador; aquí se ve cómo va ese descuento
  * y se anula un cierre mal contado.
+ *
+ * Lo cobrado por Yape, Plin o transferencia no pasa por la caja: se cuadra en
+ * la pestaña Cobros digitales, buscándolo en el banco.
  */
 export function CierresCajaPage() {
   const { puede } = usePermisos()
@@ -43,6 +47,25 @@ export function CierresCajaPage() {
   const [hasta, setHasta] = useState(hoyLocal())
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  const [pestana, setPestana] = useState<'cierres' | 'digitales'>('cierres')
+  const [porVerificar, setPorVerificar] = useState<number | undefined>(undefined)
+
+  // Los pendientes salen en cualquier rango: con el de hoy basta para contarlos.
+  const contarPorVerificar = useCallback(async () => {
+    try {
+      const hoy = hoyLocal()
+      const lista = await cierreCajaApi.cobrosDigitales(hoy, hoy)
+      setPorVerificar(lista.filter((c) => c.estado === 'PENDIENTE').length)
+    } catch {
+      setPorVerificar(undefined)
+    }
+  }, [])
+
+  useEffect(() => {
+    void contarPorVerificar()
+  }, [contarPorVerificar])
+
+  useRealtime(['cierrescaja', 'notasventa'], contarPorVerificar)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -155,52 +178,69 @@ export function CierresCajaPage() {
     },
   ]
 
+  const cabecera = (
+    <Tabs
+      className="mb-5"
+      active={pestana}
+      onChange={(id) => setPestana(id as 'cierres' | 'digitales')}
+      items={[
+        { id: 'cierres', label: 'Cierres', icon: <ClipboardCheck size={15} /> },
+        { id: 'digitales', label: 'Cobros digitales', icon: <Smartphone size={15} />, badge: porVerificar || undefined },
+      ]}
+    />
+  )
+
+  if (pestana === 'digitales') return <CobrosDigitalesTab cabecera={cabecera} />
+
   return (
-    <ListPage
-      icon={<ClipboardCheck size={20} />}
-      title="Cierres de caja"
-      description="Los cierres de todas las cajas. Cada faltante se descuenta solo en la planilla semanal del trabajador."
-      alert={
-        error ? (
-          <Alert>{error}</Alert>
-        ) : sinEmpleado > 0 ? (
-          <Alert tone="warning">
-            {sinEmpleado} faltante(s) de usuarios sin empleado vinculado: no entran en ninguna planilla hasta vincularlos en
-            Configuración → Usuarios.
-          </Alert>
-        ) : undefined
-      }
-      stats={
-        <>
-          <StatCard label="Faltantes por descontar" value={soles(faltantePendiente)} icon={<AlertTriangle size={18} />} tono="danger" />
-          <StatCard label="Cierres del periodo" value={String(vigentes.length)} icon={<ClipboardCheck size={18} />} tono="sys" />
-        </>
-      }
-      columns={columns}
-      rows={cierres}
-      onConsulta={(q) => {
-        const fecha = q.filtros.find((f) => f.columna === 'fecha')
-        setDesde(fecha?.valor || desplazarDias(-30))
-        setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
-      }}
-      cardIcon={ClipboardCheck}
-      searchPlaceholder="Buscar por trabajador..."
-      empty={cargando ? 'Cargando cierres...' : 'No hay cierres en este periodo.'}
-      rowActions={(row) =>
-        !row.anulado && puede('finanzas.cierres', 'anular') ? (
-          <RowAction
-            label="Anular cierre"
-            tone="danger"
-            disabled={(row.descuento?.montoAplicado ?? 0) > 0}
-            disabledReason="Su faltante ya se descontó en una planilla pagada"
-            onClick={() => anular(row)}
-          >
-            <Ban size={15} />
-          </RowAction>
-        ) : null
-      }
-    >
-      {dialogo}
-    </ListPage>
+    <>
+      {cabecera}
+      <ListPage
+        icon={<ClipboardCheck size={20} />}
+        title="Cierres de caja"
+        description="Los cierres de todas las cajas. Cada faltante se descuenta solo en la planilla semanal del trabajador."
+        alert={
+          error ? (
+            <Alert>{error}</Alert>
+          ) : sinEmpleado > 0 ? (
+            <Alert tone="warning">
+              {sinEmpleado} faltante(s) de usuarios sin empleado vinculado: no entran en ninguna planilla hasta vincularlos en
+              Configuración → Usuarios.
+            </Alert>
+          ) : undefined
+        }
+        stats={
+          <>
+            <StatCard label="Faltantes por descontar" value={soles(faltantePendiente)} icon={<AlertTriangle size={18} />} tono="danger" />
+            <StatCard label="Cierres del periodo" value={String(vigentes.length)} icon={<ClipboardCheck size={18} />} tono="sys" />
+          </>
+        }
+        columns={columns}
+        rows={cierres}
+        onConsulta={(q) => {
+          const fecha = q.filtros.find((f) => f.columna === 'fecha')
+          setDesde(fecha?.valor || desplazarDias(-30))
+          setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
+        }}
+        cardIcon={ClipboardCheck}
+        searchPlaceholder="Buscar por trabajador..."
+        empty={cargando ? 'Cargando cierres...' : 'No hay cierres en este periodo.'}
+        rowActions={(row) =>
+          !row.anulado && puede('finanzas.cierres', 'anular') ? (
+            <RowAction
+              label="Anular cierre"
+              tone="danger"
+              disabled={(row.descuento?.montoAplicado ?? 0) > 0}
+              disabledReason="Su faltante ya se descontó en una planilla pagada"
+              onClick={() => anular(row)}
+            >
+              <Ban size={15} />
+            </RowAction>
+          ) : null
+        }
+      >
+        {dialogo}
+      </ListPage>
+    </>
   )
 }

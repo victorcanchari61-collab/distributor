@@ -64,16 +64,24 @@ public static class EstadoDescuentoFaltante
 }
 
 /// <summary>
-/// Lo que un trabajador debe por un faltante de caja. Se le descuenta en la
-/// planilla semanal; si no alcanza lo que cobra esa semana, el resto queda
-/// pendiente para la siguiente.
+/// Lo que un trabajador debe por un faltante: de su caja al cerrarla, o de un
+/// cobro digital que no apareció en el banco. Se le descuenta en la planilla
+/// semanal; si no alcanza lo que cobra esa semana, el resto queda pendiente
+/// para la siguiente.
+///
+/// Nace de uno de los dos: <see cref="CierreCajaId"/> o <see cref="PagoVentaId"/>.
 /// </summary>
 public class DescuentoFaltante
 {
     public int Id { get; set; }
 
-    public int CierreCajaId { get; set; }
+    /// <summary>El cierre que dio faltante.</summary>
+    public int? CierreCajaId { get; set; }
     public CierreCaja? CierreCaja { get; set; }
+
+    /// <summary>El cobro digital que se rechazó al buscarlo en el banco.</summary>
+    public int? PagoVentaId { get; set; }
+    public PagoVenta? PagoVenta { get; set; }
 
     /// <summary>De quién es la deuda: el usuario de la caja. Su empleado se resuelve al armar la planilla.</summary>
     public int UsuarioId { get; set; }

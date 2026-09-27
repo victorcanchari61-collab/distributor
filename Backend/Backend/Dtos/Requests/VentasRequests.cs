@@ -118,6 +118,9 @@ public class PagoVentaRequest
 {
     public int MetodoPagoId { get; set; }
     public decimal Monto { get; set; }
+
+    /// <summary>Obligatorio si el método no es efectivo: con él se busca en el banco.</summary>
+    public string? NumeroOperacion { get; set; }
 }
 
 /// <summary>

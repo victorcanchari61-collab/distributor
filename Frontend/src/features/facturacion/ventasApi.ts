@@ -45,7 +45,12 @@ export type FormaPagoVenta = 'CONTADO' | 'CREDITO'
 export interface PagoVentaRequest {
   metodoPagoId: number
   monto: number
+  /** Obligatorio si no es efectivo: con él se busca en el banco. */
+  numeroOperacion?: string | null
 }
+
+/** Si un cobro por Yape, Plin o transferencia ya se buscó en el banco. */
+export type EstadoVerificacionPago = 'PENDIENTE' | 'VERIFICADO' | 'RECHAZADO'
 
 export interface PagoVentaResponse {
   id: number
@@ -56,6 +61,10 @@ export interface PagoVentaResponse {
   usuario: string | null
   /** Se registró por error: no cuenta para el total cobrado, pero se conserva en el historial. */
   anulado: boolean
+  /** Del Yape, Plin o transferencia. Nulo en efectivo. */
+  numeroOperacion: string | null
+  /** Nulo en efectivo: ese se cuadra en el cierre de caja. */
+  estadoVerificacion: EstadoVerificacionPago | null
 }
 
 // --- Pedidos ---

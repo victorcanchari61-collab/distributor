@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeftRight, Smartphone, Wallet } from 'lucide-react'
-import { Badge, FilaStats, StatCard, SysDataTable, useToast } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import { Alert, Badge, FilaStats, StatCard, SysDataTable, useToast } from '../../components/ui'
+import type { BadgeTone, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { desplazarDias, fechaHora, hoyLocal } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
@@ -14,6 +14,22 @@ const METODOS: Record<string, string> = {
   BILLETERA_DIGITAL: 'Billetera digital',
   TRANSFERENCIA: 'Transferencia',
 }
+
+/*
+ * Un cobro digital se busca en el banco por su número de operación: queda por
+ * verificar hasta que alguien lo encuentra, y si no aparece se rechaza y se
+ * descuenta en la planilla de quien lo cobró. Un pago a proveedor no se
+ * verifica: solo está vigente o anulado.
+ */
+const ESTADOS: { value: string; label: string; tono: BadgeTone }[] = [
+  { value: 'PENDIENTE', label: 'Por verificar', tono: 'warning' },
+  { value: 'VERIFICADO', label: 'Verificado', tono: 'success' },
+  { value: 'RECHAZADO', label: 'Rechazado', tono: 'danger' },
+  { value: 'VIGENTE', label: 'Vigente', tono: 'success' },
+  { value: 'ANULADO', label: 'Anulado', tono: 'neutral' },
+]
+
+const estadoDe = (m: MovimientoDigital) => (m.anulado ? 'ANULADO' : (m.estadoVerificacion ?? 'VIGENTE'))
 
 /**
  * Lo que la persona cobró o pagó por Yape, Plin o transferencia. No está en su
@@ -45,7 +61,10 @@ export function MisDigitalesTab() {
   // Un cobro o pago nuevo, o uno anulado, cambia la lista.
   useRealtime(['notasventa', 'compras', 'cuentasfinancieras'], () => setRecarga((n) => n + 1))
 
-  const cobros = movimientos.filter((m) => m.tipo === 'COBRO' && !m.anulado)
+  // Lo rechazado no llegó al banco: no cuenta como cobrado, se te descuenta.
+  const cobros = movimientos.filter((m) => m.tipo === 'COBRO' && !m.anulado && m.estadoVerificacion !== 'RECHAZADO')
+  const porVerificar = cobros.filter((m) => m.estadoVerificacion === 'PENDIENTE').length
+  const rechazados = movimientos.filter((m) => !m.anulado && m.estadoVerificacion === 'RECHAZADO')
   const pagos = movimientos.filter((m) => m.tipo === 'PAGO' && !m.anulado)
   const suma = (lista: MovimientoDigital[]) => lista.reduce((s, m) => s + m.monto, 0)
 
@@ -76,7 +95,7 @@ export function MisDigitalesTab() {
       align: 'right',
       filterable: false,
       render: (row) => (
-        <span className={row.anulado ? 'text-ink-soft line-through' : ''}>
+        <span className={row.anulado || row.estadoVerificacion === 'RECHAZADO' ? 'text-ink-soft line-through' : ''}>
           {row.tipo === 'COBRO' ? '+' : '-'}
           {soles(row.monto)}
         </span>
@@ -84,15 +103,21 @@ export function MisDigitalesTab() {
     },
     { key: 'cuenta', label: 'Cuenta', filterable: false, render: (row) => row.cuenta ?? '—' },
     {
+      key: 'numeroOperacion',
+      label: 'N° operación',
+      filterable: false,
+      render: (row) => (row.numeroOperacion ? <span className="font-mono">{row.numeroOperacion}</span> : '—'),
+    },
+    {
       key: 'anulado',
       label: 'Estado',
       filterType: 'select',
-      filterOptions: [
-        { value: 'Vigente', label: 'Vigente' },
-        { value: 'Anulado', label: 'Anulado' },
-      ],
-      value: (row) => (row.anulado ? 'Anulado' : 'Vigente'),
-      render: (row) => (row.anulado ? <Badge tone="neutral">Anulado</Badge> : <Badge tone="success">Vigente</Badge>),
+      filterOptions: ESTADOS.map(({ value, label }) => ({ value, label })),
+      value: (row) => estadoDe(row),
+      render: (row) => {
+        const e = ESTADOS.find((x) => x.value === estadoDe(row))!
+        return <Badge tone={e.tono}>{e.label}</Badge>
+      },
     },
   ]
 
@@ -100,8 +125,15 @@ export function MisDigitalesTab() {
     <div className="space-y-5">
       <p className="text-sm text-ink-soft">
         Lo que cobraste o pagaste por Yape, Plin o transferencia. No está en tu caja —esa plata entra directo a la cuenta del
-        banco— y por eso no cuenta para tu cierre.
+        banco— y por eso no cuenta para tu cierre. Cada cobro se busca en el banco por su número de operación.
       </p>
+
+      {rechazados.length > 0 && (
+        <Alert tone="warning">
+          {rechazados.length === 1 ? 'Un cobro no apareció' : `${rechazados.length} cobros no aparecieron`} en el banco:{' '}
+          {soles(suma(rechazados))} se te descuentan en tu planilla.
+        </Alert>
+      )}
 
       <FilaStats>
         <StatCard
@@ -109,7 +141,11 @@ export function MisDigitalesTab() {
           value={soles(suma(cobros))}
           icon={<Wallet size={18} />}
           tono="sys"
-          hint={`${cobros.length} ${cobros.length === 1 ? 'cobro' : 'cobros'} en estas fechas`}
+          hint={
+            porVerificar > 0
+              ? `${cobros.length} ${cobros.length === 1 ? 'cobro' : 'cobros'}, ${porVerificar} por verificar`
+              : `${cobros.length} ${cobros.length === 1 ? 'cobro' : 'cobros'} en estas fechas`
+          }
         />
         <StatCard
           label="Por billetera"

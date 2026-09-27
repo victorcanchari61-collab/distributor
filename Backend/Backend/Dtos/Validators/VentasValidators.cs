@@ -60,6 +60,7 @@ public class PagoVentaRequestValidator : AbstractValidator<PagoVentaRequest>
     {
         RuleFor(x => x.MetodoPagoId).GreaterThan(0).WithMessage("Elige el método de pago");
         RuleFor(x => x.Monto).GreaterThan(0).WithMessage("El monto debe ser mayor que cero");
+        RuleFor(x => x.NumeroOperacion).MaximumLength(30).WithMessage("El número de operación es muy largo (máx. 30)");
     }
 }
 

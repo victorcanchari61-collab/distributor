@@ -75,4 +75,8 @@ public class MovimientoDigitalResponse
     public string? Cuenta { get; set; }
 
     public bool Anulado { get; set; }
+
+    /// <summary>Solo en cobros: el número de operación y si ya se verificó en el banco.</summary>
+    public string? NumeroOperacion { get; set; }
+    public string? EstadoVerificacion { get; set; }
 }

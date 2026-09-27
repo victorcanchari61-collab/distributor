@@ -121,6 +121,7 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 builder.Services.AddScoped<IFinanzasService, FinanzasService>();
 builder.Services.AddScoped<ICuentaFinancieraService, CuentaFinancieraService>();
 builder.Services.AddScoped<ICierreCajaService, CierreCajaService>();
+builder.Services.AddScoped<ICobroDigitalService, CobroDigitalService>();
 builder.Services.AddScoped<IPlanillaService, PlanillaService>();
 builder.Services.AddScoped<IFinanciamientoService, FinanciamientoService>();
 builder.Services.AddScoped<IMovimientoDineroService, MovimientoDineroService>();

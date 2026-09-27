@@ -138,8 +138,10 @@ public static class CatalogoPermisos
             // quién puede cobrar en efectivo.
             ["finanzas.cajas"] = [Accion.Ver, Accion.Crear, Accion.Editar],
             // Ver los cierres de caja de todos y anular uno mal contado. El
-            // cierre propio se hace en Mi Caja, sin este permiso.
-            ["finanzas.cierres"] = [Accion.Ver, Accion.Anular],
+            // cierre propio se hace en Mi Caja, sin este permiso. Confirmar es
+            // verificar en el banco los cobros por Yape, Plin o transferencia
+            // (o rechazarlos, y se le descuentan a quien cobró).
+            ["finanzas.cierres"] = [Accion.Ver, Accion.Confirmar, Accion.Anular],
             // Cuentas bancarias: catálogo (sin eliminar: una cuenta con
             // movimientos no se puede borrar sin dejar huérfano su historial)
             // más la conciliación contra el extracto.

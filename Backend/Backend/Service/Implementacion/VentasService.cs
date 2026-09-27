@@ -45,6 +45,7 @@ public class VentasService : IVentasService
     private readonly IDevolucionService _devoluciones;
     private readonly IFinanzasService _finanzas;
     private readonly ICuentaFinancieraService _cuentas;
+    private readonly ICobroDigitalService _cobrosDigitales;
 
     public VentasService(
         IVentasRepository repository,
@@ -63,7 +64,8 @@ public class VentasService : IVentasService
         INotificador notificador,
         IDevolucionService devoluciones,
         IFinanzasService finanzas,
-        ICuentaFinancieraService cuentas)
+        ICuentaFinancieraService cuentas,
+        ICobroDigitalService cobrosDigitales)
     {
         _repository = repository;
         _productos = productos;
@@ -82,35 +84,51 @@ public class VentasService : IVentasService
         _devoluciones = devoluciones;
         _finanzas = finanzas;
         _cuentas = cuentas;
+        _cobrosDigitales = cobrosDigitales;
     }
 
     /// <summary>
     /// Que el cobro tenga a dónde entrar. El efectivo exige que quien cobra ya
     /// tenga una Caja asignada — ya no se crea sola: la asigna un administrador
     /// desde Finanzas &gt; Cajas —; Yape, Plin o transferencia, que su método
-    /// apunte a una cuenta. Se llama ANTES de tocar la base, para que un cobro
-    /// que no se puede postear ni siquiera llegue a guardarse.
+    /// apunte a una cuenta y traiga su número de operación, que no se haya
+    /// cobrado ya en otra venta. Se llama ANTES de tocar la base, para que un
+    /// cobro que no se puede postear ni siquiera llegue a guardarse.
+    ///
+    /// Devuelve el número de operación limpio: nulo en efectivo.
     /// </summary>
-    private async Task ValidarPuedeCobrarAsync(int metodoPagoId, int? cobradorId)
+    private async Task<string?> ValidarPuedeCobrarAsync(PagoVentaRequest pago, int? cobradorId, int? pagoId = null)
     {
-        var metodo = await _finanzas.GetMetodoPagoAsync(metodoPagoId);
+        var metodo = await _finanzas.GetMetodoPagoAsync(pago.MetodoPagoId);
         if (metodo.Tipo != TipoMetodoPago.Efectivo)
         {
-            if (metodo.CuentaFinancieraId is null)
+            if (metodo.CuentaFinancieraId is not int cuentaId)
             {
                 throw new BadRequestException(
                     $"El método {metodo.Nombre} no tiene una cuenta asignada: elígela en Finanzas > Métodos de pago.");
             }
-            return;
+
+            // Sin él no hay cómo buscarlo en el banco, y cualquiera podría
+            // decir que cobró por Yape lo que nunca llegó.
+            var numero = pago.NumeroOperacion?.Trim();
+            if (string.IsNullOrEmpty(numero))
+            {
+                throw new BadRequestException(
+                    $"Pon el número de operación del pago por {metodo.Nombre}: con él se comprueba en el banco que la plata llegó.");
+            }
+
+            await _cobrosDigitales.ExigirNumeroLibreAsync(cuentaId, numero, pagoId);
+            return numero;
         }
 
-        if (cobradorId is not int id) return;
+        if (cobradorId is not int id) return null;
 
         if (await _cuentas.ObtenerCajaUsuarioAsync(id) is null)
         {
             throw new BadRequestException(
                 "No tienes una caja asignada: no puedes cobrar en efectivo. Pídele a un administrador que te cree una en Finanzas > Cajas.");
         }
+        return null;
     }
 
     /// <summary>
@@ -871,6 +889,14 @@ public class VentasService : IVentasService
             throw new BadRequestException("Esta nota de venta ya está anulada.");
         }
 
+        // Un cobro rechazado se le iba a descontar a quien lo cobró: sin venta
+        // ya no debe nada. Va primero porque falla si ya se le descontó, y
+        // así no queda la venta anulada a medias.
+        foreach (var pago in notaVenta.Pagos.Where(p => !p.Anulado && p.EstadoVerificacion == EstadoVerificacionCobro.Rechazado))
+        {
+            await _cobrosDigitales.LiberarDescuentoAsync(pago.Id);
+        }
+
         // Si el descuento de stock nunca llegó a completarse al crearla, no
         // hay nada que revertir: solo queda cerrar el estado.
         if (notaVenta.DocumentoInventarioId is int documentoId)
@@ -1013,13 +1039,15 @@ public class VentasService : IVentasService
                 $"El abono (S/ {request.Monto}) supera el saldo pendiente (S/ {saldo}).");
         }
 
-        await ValidarPuedeCobrarAsync(request.MetodoPagoId, usuarioId);
+        var numero = await ValidarPuedeCobrarAsync(request, usuarioId);
 
         var pago = new PagoVenta
         {
             MetodoPagoId = request.MetodoPagoId,
             Monto = request.Monto,
-            UsuarioId = usuarioId
+            UsuarioId = usuarioId,
+            NumeroOperacion = numero,
+            EstadoVerificacion = numero is null ? null : EstadoVerificacionCobro.Pendiente,
         };
         notaVenta.Pagos.Add(pago);
         await _repository.UpdateNotaVentaAsync(notaVenta);
@@ -1051,6 +1079,12 @@ public class VentasService : IVentasService
             throw new BadRequestException("Este pago está anulado: no se puede editar.");
         }
 
+        if (pago.EstadoVerificacion == EstadoVerificacionCobro.Rechazado)
+        {
+            throw new BadRequestException(
+                "Este cobro se rechazó al buscarlo en el banco: no se puede editar. Si el cliente no pagó, anúlalo.");
+        }
+
         var total = Math.Round(notaVenta.Detalle.Sum(d => d.CantidadPresentacion * d.PrecioPresentacion), 2);
         var pagadoSinEste = Math.Round(
             notaVenta.Pagos.Where(p => p.Id != pagoId && !p.Anulado).Sum(p => p.Monto), 2);
@@ -1061,15 +1095,33 @@ public class VentasService : IVentasService
                 $"Ese cambio deja lo pagado en S/ {pagadoSinEste + request.Monto}, más que el total de la venta (S/ {total}).");
         }
 
-        await ValidarPuedeCobrarAsync(request.MetodoPagoId, usuarioId);
+        var numero = await ValidarPuedeCobrarAsync(request, usuarioId, pago.Id);
 
         // Si ya había posteado a una Caja (era efectivo), esa entrada se
         // reversa antes de aplicar el cambio — el monto o el método pueden
         // haber cambiado, así que se vuelve a evaluar desde cero.
         await ReversarCobroSiExisteAsync(pago, usuarioId);
 
+        // Si cambió lo que se buscó en el banco, esa verificación ya no vale.
+        var cambio = pago.MetodoPagoId != request.MetodoPagoId
+                     || pago.Monto != request.Monto
+                     || pago.NumeroOperacion != numero;
+
         pago.MetodoPagoId = request.MetodoPagoId;
         pago.Monto = request.Monto;
+        pago.NumeroOperacion = numero;
+        if (numero is null)
+        {
+            pago.EstadoVerificacion = null;
+            pago.VerificadoPorId = null;
+            pago.VerificadoEn = null;
+        }
+        else if (cambio || pago.EstadoVerificacion is null)
+        {
+            pago.EstadoVerificacion = EstadoVerificacionCobro.Pendiente;
+            pago.VerificadoPorId = null;
+            pago.VerificadoEn = null;
+        }
         await _repository.GuardarAsync();
 
         await PostearCobroAsync(pago, usuarioId);
@@ -1100,6 +1152,14 @@ public class VentasService : IVentasService
         if (pago.Anulado)
         {
             throw new BadRequestException("Este pago ya está anulado.");
+        }
+
+        // Rechazado es que se le iba a descontar a quien lo cobró. Si se anula
+        // es que el cliente no pagó: la venta vuelve a deberse y el trabajador
+        // ya no debe nada.
+        if (pago.EstadoVerificacion == EstadoVerificacionCobro.Rechazado)
+        {
+            await _cobrosDigitales.LiberarDescuentoAsync(pago.Id);
         }
 
         pago.Anulado = true;
@@ -1198,7 +1258,15 @@ public class VentasService : IVentasService
         // Antes de guardar nada: si algún pago es en efectivo y quien cobra no
         // tiene caja asignada, mejor que falle aquí que crear la venta y
         // descontar stock para recién ahí toparse con que no se puede postear.
-        foreach (var p in pagos) await ValidarPuedeCobrarAsync(p.MetodoPagoId, usuarioId);
+        var numeros = new List<string?>();
+        foreach (var p in pagos) numeros.Add(await ValidarPuedeCobrarAsync(p, usuarioId));
+
+        var repetido = numeros.OfType<string>().GroupBy(n => n).FirstOrDefault(g => g.Count() > 1);
+        if (repetido is not null)
+        {
+            throw new BadRequestException(
+                $"La operación {repetido.Key} está en dos pagos: cada Yape o transferencia tiene su propio número.");
+        }
 
         var notaVenta = new NotaVenta
         {
@@ -1224,11 +1292,13 @@ public class VentasService : IVentasService
                 // afecto a IGV. El comprobante se emite hoy, con el estado de hoy.
                 AfectoIgv = l.Producto?.AfectoIgv ?? l.AfectoIgv
             }).ToList(),
-            Pagos = pagos.Select(p => new PagoVenta
+            Pagos = pagos.Select((p, i) => new PagoVenta
             {
                 MetodoPagoId = p.MetodoPagoId,
                 Monto = p.Monto,
-                UsuarioId = usuarioId
+                UsuarioId = usuarioId,
+                NumeroOperacion = numeros[i],
+                EstadoVerificacion = numeros[i] is null ? null : EstadoVerificacionCobro.Pendiente,
             }).ToList(),
             Recojos = recojosResueltos,
         };
@@ -1718,6 +1788,8 @@ public class VentasService : IVentasService
         Monto = p.Monto,
         Fecha = p.Fecha,
         Usuario = p.Usuario?.Nombre,
-        Anulado = p.Anulado
+        Anulado = p.Anulado,
+        NumeroOperacion = p.NumeroOperacion,
+        EstadoVerificacion = p.EstadoVerificacion,
     };
 }

@@ -33,15 +33,20 @@ class _FilaPago {
     required this.metodoPagoId,
     required this.metodoPago,
     required this.monto,
+    this.numeroOperacion,
   });
 
   final int metodoPagoId;
   final String metodoPago;
   final double monto;
 
+  /// Del Yape o la transferencia: con él se busca en el banco. Nulo en efectivo.
+  final String? numeroOperacion;
+
   Map<String, dynamic> aCuerpo() => {
     'metodoPagoId': metodoPagoId,
     'monto': monto,
+    'numeroOperacion': numeroOperacion,
   };
 }
 
@@ -231,6 +236,7 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
         String? tipo;
         int? metodoId;
         final montoCtrl = TextEditingController();
+        final numeroCtrl = TextEditingController();
         String? errorAgregar;
 
         return StatefulBuilder(
@@ -253,6 +259,26 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                 setSheetState(() => errorAgregar = 'Ingresa un monto válido.');
                 return;
               }
+
+              // Sin el número no hay cómo buscarlo en el banco.
+              final efectivo = tipo == TipoMetodoPago.efectivo;
+              final numero = efectivo ? '' : numeroCtrl.text.trim();
+              if (!efectivo && numero.isEmpty) {
+                setSheetState(
+                  () => errorAgregar =
+                      'Pon el número de operación del Yape o la transferencia: '
+                      'con él se comprueba en el banco.',
+                );
+                return;
+              }
+              if (numero.isNotEmpty &&
+                  _pagos.any((p) => p.numeroOperacion == numero)) {
+                setSheetState(
+                  () => errorAgregar =
+                      'La operación $numero ya está en otro pago.',
+                );
+                return;
+              }
               if (totalPagado + monto > _total + 0.001) {
                 setSheetState(
                   () => errorAgregar =
@@ -272,11 +298,13 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                     metodoPagoId: metodoId!,
                     metodoPago: metodoNombre,
                     monto: monto,
+                    numeroOperacion: numero.isEmpty ? null : numero,
                   ),
                 );
                 tipo = null;
                 metodoId = null;
                 montoCtrl.clear();
+                numeroCtrl.clear();
                 errorAgregar = null;
               });
             }
@@ -313,12 +341,25 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                       child: Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              pago.metodoPago,
-                              style: const TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  pago.metodoPago,
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (pago.numeroOperacion != null)
+                                  Text(
+                                    'Op. ${pago.numeroOperacion}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colores.tintaSuave,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                           Text(
@@ -360,6 +401,8 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                     onCambio: (v) => setSheetState(() {
                       tipo = v;
                       metodoId = null;
+                      // El efectivo no tiene operación que buscar.
+                      if (v == TipoMetodoPago.efectivo) numeroCtrl.clear();
                     }),
                   ),
                   const SizedBox(height: Dimen.espacio3),
@@ -375,6 +418,17 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                     onCambio: (v) => setSheetState(() => metodoId = v),
                   ),
                   const SizedBox(height: Dimen.espacio3),
+
+                  if (tipo != null && tipo != TipoMetodoPago.efectivo) ...[
+                    AppCampo(
+                      controlador: numeroCtrl,
+                      etiqueta: 'N° de operación',
+                      icono: Icons.tag,
+                      pista: 'Del voucher del Yape o la transferencia',
+                      maxLargo: 30,
+                    ),
+                    const SizedBox(height: Dimen.espacio3),
+                  ],
 
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,

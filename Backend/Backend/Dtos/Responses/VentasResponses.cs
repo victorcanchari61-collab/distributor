@@ -87,6 +87,12 @@ public class PagoVentaResponse
     public DateTime Fecha { get; set; }
     public string? Usuario { get; set; }
     public bool Anulado { get; set; }
+
+    /// <summary>Del Yape, Plin o transferencia. Nulo en efectivo.</summary>
+    public string? NumeroOperacion { get; set; }
+
+    /// <summary>PENDIENTE, VERIFICADO o RECHAZADO en el banco. Nulo en efectivo.</summary>
+    public string? EstadoVerificacion { get; set; }
 }
 
 public class NotaVentaResponse

@@ -14,6 +14,8 @@ export interface FilaPagoEntrega {
   tipo: TipoMetodoPago | ''
   metodoPagoId: number
   monto: string
+  /** Del Yape, Plin o transferencia: con él se busca en el banco. Vacío en efectivo. */
+  numeroOperacion: string
   guardado: boolean
   /** Lo que valía antes de empezar a editarla, para poder cancelar. */
   previo?: Omit<FilaPagoEntrega, 'previo'>
@@ -92,7 +94,7 @@ export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFi
 
   const agregar = () => {
     setAviso('')
-    onFilas([...filas, { clave: nuevaClave(), tipo: '', metodoPagoId: 0, monto: '', guardado: false }])
+    onFilas([...filas, { clave: nuevaClave(), tipo: '', metodoPagoId: 0, monto: '', numeroOperacion: '', guardado: false }])
   }
 
   /** Pasa una fila guardada a modo edición, recordando lo que tenía. */
@@ -116,6 +118,15 @@ export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFi
   const guardar = (fila: FilaPagoEntrega) => {
     if (!fila.tipo || !fila.metodoPagoId) return setAviso('Elige el tipo y el método de pago.')
     if (!(monto(fila) > 0)) return setAviso('El monto debe ser mayor que cero.')
+
+    // Sin el número no hay cómo buscarlo en el banco.
+    const numero = fila.numeroOperacion.trim()
+    if (fila.tipo !== 'EFECTIVO' && !numero) {
+      return setAviso('Pon el número de operación del Yape o la transferencia: con él se comprueba en el banco.')
+    }
+    if (numero && filas.some((f) => f.guardado && f.clave !== fila.clave && f.numeroOperacion.trim() === numero)) {
+      return setAviso(`La operación ${numero} ya está en otro pago.`)
+    }
 
     // Lo ya guardado más esta fila no puede pasarse del total.
     const otros = filas.filter((f) => f.guardado && f.clave !== fila.clave).reduce((s, f) => s + monto(f), 0)
@@ -150,6 +161,7 @@ export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFi
         tipo: efectivo ? 'EFECTIVO' : '',
         metodoPagoId: efectivo?.id ?? 0,
         monto: falta > 0 ? falta.toFixed(2) : '',
+        numeroOperacion: '',
         guardado: !!efectivo && falta > 0,
       },
     ])
@@ -171,6 +183,8 @@ export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFi
               cambiar(fila.clave, {
                 tipo: tipoElegido,
                 metodoPagoId: delTipo.length === 1 ? delTipo[0].id : 0,
+                // El efectivo no tiene operación que buscar.
+                numeroOperacion: tipoElegido === 'EFECTIVO' ? '' : fila.numeroOperacion,
               })
             }}
             placeholder="Elige el tipo"
@@ -196,6 +210,24 @@ export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFi
           />
         ) : (
           (metodos.find((m) => m.id === fila.metodoPagoId)?.nombre ?? '—')
+        ),
+    },
+    {
+      key: 'numeroOperacion',
+      label: 'N° operación',
+      render: (fila) =>
+        !fila.guardado && fila.tipo && fila.tipo !== 'EFECTIVO' ? (
+          <Input
+            size="sm"
+            placeholder="Del voucher"
+            maxLength={30}
+            value={fila.numeroOperacion}
+            onChange={(e) => cambiar(fila.clave, { numeroOperacion: e.target.value })}
+          />
+        ) : fila.numeroOperacion ? (
+          <span className="font-mono">{fila.numeroOperacion}</span>
+        ) : (
+          <span className="text-ink-soft">—</span>
         ),
     },
     {

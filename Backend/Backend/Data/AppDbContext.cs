@@ -1211,6 +1211,16 @@ public class AppDbContext : DbContext
 
             entity.HasOne<MovimientoCuenta>().WithMany()
                 .HasForeignKey(p => p.MovimientoCuentaId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(p => p.NumeroOperacion).HasMaxLength(30);
+            entity.Property(p => p.EstadoVerificacion).HasMaxLength(20);
+            entity.Property(p => p.ObservacionVerificacion).HasMaxLength(250);
+            // Para no cobrar dos veces la misma operación, y para la bandeja de verificación.
+            entity.HasIndex(p => p.NumeroOperacion);
+            entity.HasIndex(p => new { p.EstadoVerificacion, p.Fecha });
+
+            entity.HasOne(p => p.VerificadoPor).WithMany()
+                .HasForeignKey(p => p.VerificadoPorId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<RecojoVenta>(entity =>
@@ -1534,6 +1544,9 @@ public class AppDbContext : DbContext
 
             entity.HasOne(d => d.CierreCaja).WithOne(c => c.Descuento)
                 .HasForeignKey<DescuentoFaltante>(d => d.CierreCajaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(d => d.PagoVentaId).IsUnique();
+            entity.HasOne(d => d.PagoVenta).WithMany()
+                .HasForeignKey(d => d.PagoVentaId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(d => d.Usuario).WithMany()
                 .HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         });

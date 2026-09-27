@@ -360,7 +360,13 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
       // quien deriva la forma de pago de lo cobrado.
       'pagos': [
         for (final p in cobro.usadas)
-          {'metodoPagoId': p.metodoPagoId, 'monto': p.valor},
+          {
+            'metodoPagoId': p.metodoPagoId,
+            'monto': p.valor,
+            'numeroOperacion': p.numeroOperacion.isEmpty
+                ? null
+                : p.numeroOperacion,
+          },
       ],
       'recojos': [
         for (final r in _recojos)
