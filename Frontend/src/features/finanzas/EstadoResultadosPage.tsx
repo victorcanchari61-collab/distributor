@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Calculator, Download, FileBarChart, Receipt, TrendingDown, TrendingUp } from 'lucide-react'
-import { Alert, Button, StatCard, cn } from '../../components/ui'
+import { Alert, Button, FilaStats, StatCard, cn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { exportarExcel } from '../../lib/excel'
 import { fechaCorta } from '../../lib/fechas'
@@ -108,7 +108,7 @@ export function EstadoResultadosPage() {
         </Alert>
       )}
 
-      <div className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4', cargando && !e && 'opacity-60')}>
+      <FilaStats className={cn(cargando && !e && 'opacity-60')}>
         <StatCard
           label="Ventas netas"
           value={e ? soles(e.ventasNetas) : '—'}
@@ -137,7 +137,7 @@ export function EstadoResultadosPage() {
           tono={e && e.utilidadOperativa < 0 ? 'danger' : 'success'}
           hint={e ? `Margen ${pct(e.margenOperativo)}` : undefined}
         />
-      </div>
+      </FilaStats>
 
       {e && (
         <div className="grid gap-4 lg:grid-cols-3">

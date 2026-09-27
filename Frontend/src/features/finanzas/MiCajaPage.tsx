@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   Desplegable,
+  FilaStats,
   Input,
   Modal,
   PageHeader,
@@ -163,7 +164,7 @@ export function MiCajaPage() {
         <>
           {error && <Alert>{error}</Alert>}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <FilaStats>
             <StatCard
               label="Saldo de tu caja"
               value={caja ? soles(caja.saldoActual) : '—'}
@@ -173,7 +174,7 @@ export function MiCajaPage() {
             />
             <StatCard label="Ingresos" value={soles(totalIngresos)} icon={<TrendingUp size={18} />} tono="success" hint="En las fechas de la tabla" />
             <StatCard label="Egresos" value={soles(totalEgresos)} icon={<TrendingDown size={18} />} tono="danger" hint="En las fechas de la tabla" />
-          </div>
+          </FilaStats>
 
           <SysDataTable
             columns={columns}

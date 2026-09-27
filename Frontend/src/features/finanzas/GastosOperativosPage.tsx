@@ -15,6 +15,7 @@ import {
   Button,
   Checkbox,
   Desplegable,
+  FilaStats,
   Input,
   ListPage,
   Modal,
@@ -149,7 +150,7 @@ export function GastosOperativosPage() {
       <div className="space-y-5">
         {error && <Alert>{error}</Alert>}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <FilaStats>
           <StatCard
             label="Vencidos"
             value={String(vencidos.length)}
@@ -157,7 +158,7 @@ export function GastosOperativosPage() {
             tono={vencidos.length > 0 ? 'danger' : 'success'}
           />
           <StatCard label="Por vencer este mes" value={String(pendientes.length - vencidos.length)} icon={<CalendarClock size={18} />} tono="warning" />
-        </div>
+        </FilaStats>
 
         {cargando ? (
           <p className="rounded-panel border border-line bg-white px-3 py-8 text-center text-sm text-ink-soft">Cargando...</p>

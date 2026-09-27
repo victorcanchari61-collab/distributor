@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeftRight, Smartphone, Wallet } from 'lucide-react'
-import { Badge, StatCard, SysDataTable, useToast } from '../../components/ui'
+import { Badge, FilaStats, StatCard, SysDataTable, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { desplazarDias, fechaHora, hoyLocal } from '../../lib/fechas'
@@ -103,7 +103,7 @@ export function MisDigitalesTab() {
         banco— y por eso no cuenta para tu cierre.
       </p>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <FilaStats>
         <StatCard
           label="Cobrado digital"
           value={soles(suma(cobros))}
@@ -125,7 +125,7 @@ export function MisDigitalesTab() {
           tono="success"
           hint={pagos.length > 0 ? `Pagaste ${soles(suma(pagos))} a proveedores` : 'Directo al banco'}
         />
-      </div>
+      </FilaStats>
 
       <SysDataTable
         columns={columns}

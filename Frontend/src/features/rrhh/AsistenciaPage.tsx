@@ -18,6 +18,7 @@ import {
   Badge,
   Button,
   Desplegable,
+  FilaStats,
   Input,
   Modal,
   PageHeader,
@@ -338,12 +339,12 @@ export function AsistenciaPage() {
       {error && <Alert>{error}</Alert>}
 
       {resumen && (
-        <section className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <FilaStats>
           <StatCard label="Presentes" value={String(resumen.presentes)} icon={<UserCheck size={18} />} tono="sys" />
           <StatCard label="Tardanzas" value={String(resumen.tardanzas)} icon={<Clock size={18} />} tono="warning" />
           <StatCard label="Faltas" value={String(resumen.faltas)} icon={<UserX size={18} />} tono="danger" />
           <StatCard label="Permisos" value={String(resumen.permisos)} icon={<CalendarDays size={18} />} tono="neutral" />
-        </section>
+        </FilaStats>
       )}
 
       <Tabs
