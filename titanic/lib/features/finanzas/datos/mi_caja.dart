@@ -171,3 +171,60 @@ class CierreCaja {
     sinEmpleado: json['sinEmpleado'] as bool? ?? false,
   );
 }
+
+/// Un cobro o pago que hizo por Yape, Plin o transferencia: no pasa por su
+/// caja —la plata va directo al banco—, pero es suyo.
+class MovimientoDigital {
+  const MovimientoDigital({
+    required this.id,
+    required this.fecha,
+    required this.tipo,
+    required this.documento,
+    required this.metodoPago,
+    required this.metodoTipo,
+    required this.monto,
+    required this.anulado,
+    this.contraparte,
+    this.cuenta,
+  });
+
+  final int id;
+  final DateTime fecha;
+
+  /// COBRO (de una venta) o PAGO (a un proveedor).
+  final String tipo;
+
+  /// La nota de venta o la compra.
+  final String documento;
+
+  /// El cliente o el proveedor.
+  final String? contraparte;
+  final String metodoPago;
+
+  /// BILLETERA_DIGITAL o TRANSFERENCIA.
+  final String metodoTipo;
+  final double monto;
+
+  /// A que cuenta entro (o de cual salio).
+  final String? cuenta;
+  final bool anulado;
+
+  bool get esCobro => tipo == 'COBRO';
+
+  String get buscable =>
+      '$documento ${contraparte ?? ''} $metodoPago'.toLowerCase();
+
+  factory MovimientoDigital.desdeJson(Map<String, dynamic> json) =>
+      MovimientoDigital(
+        id: json['id'] as int,
+        fecha: fechaDeJson(json['fecha'] as String),
+        tipo: json['tipo'] as String? ?? '',
+        documento: json['documento'] as String? ?? '',
+        contraparte: json['contraparte'] as String?,
+        metodoPago: json['metodoPago'] as String? ?? '',
+        metodoTipo: json['metodoTipo'] as String? ?? '',
+        monto: (json['monto'] as num? ?? 0).toDouble(),
+        cuenta: json['cuenta'] as String?,
+        anulado: json['anulado'] as bool? ?? false,
+      );
+}

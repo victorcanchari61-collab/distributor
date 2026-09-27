@@ -58,6 +58,7 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     cuentasPorCobrarProvider,
     miCajaProvider,
     movimientosMiCajaProvider,
+    movimientosDigitalesProvider,
     estadoResultadosProvider,
     gananciasProvider,
     stockProvider,
@@ -69,7 +70,11 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     stockProvider,
     kardexProvider,
   ],
-  'compras': [comprasProvider, cuentasPorPagarProvider],
+  'compras': [
+    comprasProvider,
+    cuentasPorPagarProvider,
+    movimientosDigitalesProvider,
+  ],
   'ordenescompra': [ordenesCompraProvider, comprasProvider],
   'recepciones': [
     recepcionesProvider,

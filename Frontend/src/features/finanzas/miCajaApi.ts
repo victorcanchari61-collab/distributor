@@ -26,6 +26,26 @@ export interface CuentaDestino {
   naturaleza: NaturalezaCuenta
 }
 
+/**
+ * Un cobro o pago que hizo por Yape, Plin o transferencia: no pasa por su
+ * caja —la plata va directo al banco—, pero es suyo.
+ */
+export interface MovimientoDigital {
+  id: number
+  fecha: string
+  tipo: 'COBRO' | 'PAGO'
+  /** La nota de venta o la compra. */
+  documento: string
+  /** El cliente o el proveedor. */
+  contraparte: string | null
+  metodoPago: string
+  metodoTipo: 'BILLETERA_DIGITAL' | 'TRANSFERENCIA'
+  monto: number
+  /** A qué cuenta entró (o de cuál salió). */
+  cuenta: string | null
+  anulado: boolean
+}
+
 export const miCajaApi = {
   /** La Caja de quien está logueado. Si no tiene una asignada, el servidor responde con error. */
   mia: () => api.get<CuentaFinancieraResponse>('/micaja'),
@@ -39,6 +59,10 @@ export const miCajaApi = {
     api.post<MovimientoOperativoResponse>('/micaja/movimiento', { ...body, cuentaFinancieraId: 0 }),
 
   destinos: () => api.get<CuentaDestino[]>('/micaja/destinos'),
+
+  /** Lo que cobró o pagó por Yape, Plin o transferencia en esas fechas. */
+  digitales: (desde: string, hasta: string) =>
+    api.get<MovimientoDigital[]>(`/micaja/digitales?desde=${desde}&hasta=${hasta}`),
 
   cerrar: (body: CerrarMiCajaRequest) => api.post<CierreCajaResponse>('/micaja/cerrar', body),
 }

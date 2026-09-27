@@ -27,6 +27,19 @@ class MiCajaApi {
         .toList();
   }
 
+  /// GET /api/micaja/digitales?desde&hasta: lo que cobro o pago por Yape,
+  /// Plin o transferencia.
+  Future<List<MovimientoDigital>> digitales({
+    required String desde,
+    required String hasta,
+  }) async {
+    final datos =
+        await _api.get('/micaja/digitales?desde=$desde&hasta=$hasta') as List;
+    return datos
+        .map((e) => MovimientoDigital.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   /// GET /api/gastooperativo/categorias/opciones?tipo=INGRESO|EGRESO
   Future<List<CategoriaMovimiento>> categorias(String tipo) async {
     final datos =

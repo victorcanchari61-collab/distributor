@@ -35,6 +35,13 @@ class MiCajaPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
+    final pestanas = _PestanasMiCaja(
+      digital: ref.watch(verDigitalMiCajaProvider),
+      onCambio: (v) => ref.read(verDigitalMiCajaProvider.notifier).state = v,
+    );
+    if (ref.watch(verDigitalMiCajaProvider)) {
+      return _paginaDigital(context, ref, color, pestanas);
+    }
     final estadoCaja = ref.watch(miCajaProvider);
     final caja = estadoCaja.valueOrNull;
     final movimientos =
@@ -104,6 +111,7 @@ class MiCajaPagina extends ConsumerWidget {
         ),
       ],
       encabezado: _Encabezado(
+        pestanas: pestanas,
         rango: ref.watch(rangoMiCajaProvider),
         onRango: (r) => ref.read(rangoMiCajaProvider.notifier).state = r,
         // Sin caja no hay nada que registrar ni cerrar.
@@ -118,6 +126,121 @@ class MiCajaPagina extends ConsumerWidget {
         onAbrir: () => _abrirFiltros(context, ref),
       ),
       fila: (context, m) => _TarjetaMovimiento(movimiento: m, color: color),
+    );
+  }
+
+  /// La pestaña Digital: lo cobrado o pagado por Yape, Plin o transferencia.
+  /// No esta en la caja ni cuenta para el cierre, pero es suyo.
+  Widget _paginaDigital(
+    BuildContext context,
+    WidgetRef ref,
+    Color color,
+    Widget pestanas,
+  ) {
+    final estado = ref.watch(movimientosDigitalesProvider);
+    final todos = estado.valueOrNull ?? const <MovimientoDigital>[];
+    final texto = ref.watch(busquedaDigitalesProvider).trim().toLowerCase();
+    final cobros = todos.where((m) => m.esCobro && !m.anulado);
+    double suma(Iterable<MovimientoDigital> l) =>
+        l.fold<double>(0, (s, m) => s + m.monto);
+
+    return AppListaPagina<MovimientoDigital>(
+      titulo: 'Mi Caja',
+      ruta: ruta,
+      estado: estado,
+      visibles: todos
+          .where((m) => texto.isEmpty || m.buscable.contains(texto))
+          .toList(),
+      busqueda: ref.watch(busquedaDigitalesProvider),
+      onBuscar: (t) => ref.read(busquedaDigitalesProvider.notifier).state = t,
+      pistaBusqueda: 'Buscar documento o cliente',
+      onRecargar: () async {
+        ref.invalidate(movimientosDigitalesProvider);
+        try {
+          await ref.read(movimientosDigitalesProvider.future);
+        } catch (_) {
+          // El fallo ya se ve en la pantalla, con su botón de reintentar.
+        }
+      },
+      iconoVacio: Icons.smartphone_outlined,
+      singular: 'movimiento',
+      plural: 'movimientos',
+      tituloVacio: 'Sin cobros digitales',
+      detalleVacio:
+          'No cobraste ni pagaste por Yape o transferencia en estas fechas.',
+      indicadores: [
+        AppTarjetaDato(
+          etiqueta: 'Cobrado digital',
+          valor: formatoSoles(suma(cobros)),
+          icono: Icons.account_balance_wallet_outlined,
+          color: color,
+          nota: 'Va directo al banco',
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Por billetera',
+          valor: formatoSoles(
+            suma(cobros.where((m) => m.metodoTipo == 'BILLETERA_DIGITAL')),
+          ),
+          icono: Icons.smartphone_outlined,
+          tono: DatoTono.exito,
+          nota: 'Yape, Plin',
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Por transferencia',
+          valor: formatoSoles(
+            suma(cobros.where((m) => m.metodoTipo == 'TRANSFERENCIA')),
+          ),
+          icono: Icons.swap_horiz,
+          tono: DatoTono.exito,
+        ),
+      ],
+      encabezado: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            pestanas,
+            const SizedBox(height: Dimen.espacio2),
+            AppSelectorRango(
+              rango: ref.watch(rangoMiCajaProvider),
+              textoVacio: 'Últimos 30 días',
+              onCambio: (r) => ref.read(rangoMiCajaProvider.notifier).state = r,
+            ),
+          ],
+        ),
+      ),
+      fila: (context, m) => AppTarjetaRegistro(
+        icono: m.metodoTipo == 'TRANSFERENCIA'
+            ? Icons.swap_horiz
+            : Icons.smartphone_outlined,
+        color: color,
+        titulo: '${m.esCobro ? 'Cobro' : 'Pago'} ${m.documento}',
+        insignia: m.anulado
+            ? const AppEtiqueta('Anulado', tono: EtiquetaTono.neutral)
+            : AppEtiqueta(m.metodoPago),
+        campos: [
+          CampoDetalle(
+            'Monto',
+            null,
+            widget: Text(
+              '${m.esCobro ? '+' : '-'}${formatoSoles(m.monto)}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                decoration: m.anulado ? TextDecoration.lineThrough : null,
+                color: m.anulado
+                    ? Colores.tintaSuave
+                    : m.esCobro
+                    ? Colores.exito
+                    : Colores.peligro,
+              ),
+            ),
+          ),
+          CampoDetalle(m.esCobro ? 'Cliente' : 'Proveedor', m.contraparte),
+          CampoDetalle(m.esCobro ? 'Entró a' : 'Salió de', m.cuenta),
+          CampoDetalle('Fecha', _fechaHora(m.fecha)),
+        ],
+      ),
     );
   }
 
@@ -184,9 +307,40 @@ class MiCajaPagina extends ConsumerWidget {
   }
 }
 
+/// Las dos pestañas de Mi Caja: el efectivo y lo cobrado por Yape o
+/// transferencia.
+class _PestanasMiCaja extends StatelessWidget {
+  const _PestanasMiCaja({required this.digital, required this.onCambio});
+
+  final bool digital;
+  final ValueChanged<bool> onCambio;
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<bool>(
+      showSelectedIcon: false,
+      segments: const [
+        ButtonSegment(
+          value: false,
+          label: Text('Efectivo'),
+          icon: Icon(Icons.payments_outlined, size: 18),
+        ),
+        ButtonSegment(
+          value: true,
+          label: Text('Digital'),
+          icon: Icon(Icons.smartphone_outlined, size: 18),
+        ),
+      ],
+      selected: {digital},
+      onSelectionChanged: (s) => onCambio(s.first),
+    );
+  }
+}
+
 /// Las fechas que se miran y lo que se puede hacer con la caja.
 class _Encabezado extends StatelessWidget {
   const _Encabezado({
+    required this.pestanas,
     required this.rango,
     required this.onRango,
     required this.habilitado,
@@ -195,6 +349,7 @@ class _Encabezado extends StatelessWidget {
     required this.onCerrar,
   });
 
+  final Widget pestanas;
   final DateTimeRange? rango;
   final ValueChanged<DateTimeRange?> onRango;
   final bool habilitado;
@@ -209,6 +364,8 @@ class _Encabezado extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          pestanas,
+          const SizedBox(height: Dimen.espacio2),
           AppSelectorRango(
             rango: rango,
             textoVacio: 'Últimos 30 días',

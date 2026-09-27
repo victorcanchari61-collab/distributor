@@ -28,6 +28,12 @@ public interface ICuentaFinancieraService
     Task AnularTransferenciaAsync(int movimientoId, int? usuarioId);
     Task<IEnumerable<MovimientoCuentaResponse>> MovimientosAsync(int cuentaFinancieraId, DateTime? desde, DateTime? hasta);
 
+    /// <summary>
+    /// Los cobros y pagos que esa persona hizo por Yape, Plin o transferencia
+    /// en el rango: lo que no pasó por su caja. 30 días por defecto.
+    /// </summary>
+    Task<IEnumerable<MovimientoDigitalResponse>> MovimientosDigitalesAsync(int usuarioId, DateTime? desde, DateTime? hasta);
+
     /// <summary>Para que otros servicios validen que la cuenta existe (y su naturaleza) antes de postear.</summary>
     Task<CuentaFinanciera> GetOrThrowAsync(int id);
 

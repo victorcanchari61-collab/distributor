@@ -85,3 +85,20 @@ final categoriasMiCajaProvider = FutureProvider.autoDispose
 final destinosMiCajaProvider = FutureProvider.autoDispose<List<CuentaDestino>>(
   (ref) => ref.watch(miCajaApiProvider).destinos(),
 );
+
+/// En Mi Caja: false es el efectivo, true lo cobrado por Yape o transferencia.
+final verDigitalMiCajaProvider = StateProvider.autoDispose<bool>(
+  (ref) => false,
+);
+
+final busquedaDigitalesProvider = StateProvider.autoDispose((ref) => '');
+
+/// Lo que cobro o pago por Yape, Plin o transferencia en las mismas fechas
+/// que se miran en el efectivo.
+final movimientosDigitalesProvider =
+    FutureProvider.autoDispose<List<MovimientoDigital>>((ref) {
+      final rango = rangoEfectivo(ref.watch(rangoMiCajaProvider));
+      return ref
+          .watch(miCajaApiProvider)
+          .digitales(desde: _dia(rango.start), hasta: _dia(rango.end));
+    });

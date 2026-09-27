@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowDownCircle, ArrowUpCircle, Landmark, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, Landmark, Smartphone, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -21,6 +21,7 @@ import { miCajaApi } from './miCajaApi'
 import type { CuentaDestino } from './miCajaApi'
 import type { CuentaFinancieraResponse, MovimientoCuentaResponse } from './cuentaFinancieraApi'
 import { gastoOperativoApi, origenLabel } from './gastoOperativoApi'
+import { MisDigitalesTab } from './MisDigitalesTab'
 import type { CategoriaOpcion, TipoMovimientoOperativo } from './gastoOperativoApi'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
@@ -65,6 +66,9 @@ export function MiCajaPage() {
 
   const [movimientoAbierto, setMovimientoAbierto] = useState<TipoMovimientoOperativo | null>(null)
   const [cerrarAbierto, setCerrarAbierto] = useState(false)
+  // Efectivo: la caja y su cierre. Digital: lo cobrado por Yape o transferencia,
+  // que no pasa por la caja pero también es suyo.
+  const [pestana, setPestana] = useState<'efectivo' | 'digital'>('efectivo')
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -128,46 +132,63 @@ export function MiCajaPage() {
         title="Mi Caja"
         description="Lo que cobras al contado entra solo. Aquí registras cualquier otro ingreso o egreso, y cierras el día."
         actions={
-          <>
-            <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('INGRESO')} iconRight={<ArrowUpCircle size={15} />}>
-              Ingreso
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('EGRESO')} iconRight={<ArrowDownCircle size={15} />}>
-              Egreso
-            </Button>
-            <Button size="sm" onClick={() => setCerrarAbierto(true)} iconRight={<Landmark size={15} />}>
-              Cerrar caja
-            </Button>
-          </>
+          pestana === 'efectivo' && (
+            <>
+              <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('INGRESO')} iconRight={<ArrowUpCircle size={15} />}>
+                Ingreso
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('EGRESO')} iconRight={<ArrowDownCircle size={15} />}>
+                Egreso
+              </Button>
+              <Button size="sm" onClick={() => setCerrarAbierto(true)} iconRight={<Landmark size={15} />}>
+                Cerrar caja
+              </Button>
+            </>
+          )
         }
       />
 
-      {error && <Alert>{error}</Alert>}
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard
-          label="Saldo de tu caja"
-          value={caja ? soles(caja.saldoActual) : '—'}
-          icon={<Wallet size={18} />}
-          tono={caja && caja.saldoActual < 0 ? 'danger' : 'sys'}
-          hint="Lo que deberías tener ahora en la mano"
-        />
-        <StatCard label="Ingresos" value={soles(totalIngresos)} icon={<TrendingUp size={18} />} tono="success" hint="En las fechas de la tabla" />
-        <StatCard label="Egresos" value={soles(totalEgresos)} icon={<TrendingDown size={18} />} tono="danger" hint="En las fechas de la tabla" />
-      </div>
-
-      <SysDataTable
-        columns={columns}
-        rows={movimientos}
-        onConsulta={(q) => {
-          const fecha = q.filtros.find((f) => f.columna === 'fecha')
-          setDesde(fecha?.valor || desplazarDias(-30))
-          setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
-        }}
-        cardIcon={Wallet}
-        searchPlaceholder="Buscar por detalle..."
-        empty={cargando ? 'Cargando movimientos...' : 'No hay movimientos en tu caja en estas fechas.'}
+      <Tabs
+        active={pestana}
+        onChange={(id) => setPestana(id as 'efectivo' | 'digital')}
+        items={[
+          { id: 'efectivo', label: 'Efectivo', icon: <Wallet size={15} /> },
+          { id: 'digital', label: 'Digital', icon: <Smartphone size={15} /> },
+        ]}
       />
+
+      {pestana === 'digital' ? (
+        <MisDigitalesTab />
+      ) : (
+        <>
+          {error && <Alert>{error}</Alert>}
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <StatCard
+              label="Saldo de tu caja"
+              value={caja ? soles(caja.saldoActual) : '—'}
+              icon={<Wallet size={18} />}
+              tono={caja && caja.saldoActual < 0 ? 'danger' : 'sys'}
+              hint="Lo que deberías tener ahora en la mano"
+            />
+            <StatCard label="Ingresos" value={soles(totalIngresos)} icon={<TrendingUp size={18} />} tono="success" hint="En las fechas de la tabla" />
+            <StatCard label="Egresos" value={soles(totalEgresos)} icon={<TrendingDown size={18} />} tono="danger" hint="En las fechas de la tabla" />
+          </div>
+
+          <SysDataTable
+            columns={columns}
+            rows={movimientos}
+            onConsulta={(q) => {
+              const fecha = q.filtros.find((f) => f.columna === 'fecha')
+              setDesde(fecha?.valor || desplazarDias(-30))
+              setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
+            }}
+            cardIcon={Wallet}
+            searchPlaceholder="Buscar por detalle..."
+            empty={cargando ? 'Cargando movimientos...' : 'No hay movimientos en tu caja en estas fechas.'}
+          />
+        </>
+      )}
 
       {movimientoAbierto && caja && (
         <MovimientoLibreModal

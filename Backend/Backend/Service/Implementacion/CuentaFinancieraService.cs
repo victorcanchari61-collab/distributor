@@ -244,6 +244,64 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         await ReversarTransferenciaAsync(salida.Id, entrada.Id, usuarioId);
     }
 
+    public async Task<IEnumerable<MovimientoDigitalResponse>> MovimientosDigitalesAsync(
+        int usuarioId, DateTime? desde, DateTime? hasta)
+    {
+        var (inicio, fin) = Zona.RangoUtc(desde, hasta);
+
+        // La cuenta es la del movimiento que dejó en el libro; si ya se anuló
+        // (el movimiento se revirtió), la que tiene su método de pago.
+        var cobros = await _context.PagosVenta
+            .AsNoTracking()
+            .Where(p => p.UsuarioId == usuarioId && p.Fecha >= inicio && p.Fecha < fin
+                        && p.MetodoPago!.Tipo != TipoMetodoPago.Efectivo)
+            .Select(p => new MovimientoDigitalResponse
+            {
+                Id = p.Id,
+                Fecha = p.Fecha,
+                Tipo = "COBRO",
+                Documento = p.NotaVenta!.Numero,
+                Contraparte = p.NotaVenta.Cliente != null ? p.NotaVenta.Cliente.Nombre : null,
+                MetodoPago = p.MetodoPago!.Nombre,
+                MetodoTipo = p.MetodoPago.Tipo,
+                Monto = p.Monto,
+                Cuenta = _context.MovimientosCuenta
+                             .Where(m => m.Id == p.MovimientoCuentaId)
+                             .Select(m => m.CuentaFinanciera!.Nombre)
+                             .FirstOrDefault()
+                         ?? (p.MetodoPago.CuentaFinanciera != null ? p.MetodoPago.CuentaFinanciera.Nombre : null),
+                Anulado = p.Anulado,
+            })
+            .ToListAsync();
+
+        var pagos = await _context.CompraPagos
+            .AsNoTracking()
+            .Where(p => p.UsuarioId == usuarioId && p.Fecha >= inicio && p.Fecha < fin
+                        && p.MetodoPago!.Tipo != TipoMetodoPago.Efectivo)
+            .Select(p => new MovimientoDigitalResponse
+            {
+                Id = p.Id,
+                Fecha = p.Fecha,
+                Tipo = "PAGO",
+                Documento = p.Compra!.Numero,
+                Contraparte = p.Compra.Proveedor != null ? p.Compra.Proveedor.Nombre : null,
+                MetodoPago = p.MetodoPago!.Nombre,
+                MetodoTipo = p.MetodoPago.Tipo,
+                Monto = p.Monto,
+                Cuenta = _context.MovimientosCuenta
+                             .Where(m => m.Id == p.MovimientoCuentaId)
+                             .Select(m => m.CuentaFinanciera!.Nombre)
+                             .FirstOrDefault()
+                         ?? (p.MetodoPago.CuentaFinanciera != null ? p.MetodoPago.CuentaFinanciera.Nombre : null),
+                Anulado = p.Anulado,
+            })
+            .ToListAsync();
+
+        return cobros.Concat(pagos)
+            .OrderByDescending(m => m.Fecha).ThenByDescending(m => m.Id)
+            .ToList();
+    }
+
     public async Task<IEnumerable<MovimientoCuentaResponse>> MovimientosAsync(
         int cuentaFinancieraId, DateTime? desde, DateTime? hasta)
     {

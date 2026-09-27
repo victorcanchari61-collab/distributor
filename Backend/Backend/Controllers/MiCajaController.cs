@@ -47,6 +47,14 @@ public class MiCajaController : ControllerBase
         return Ok(await _cuentas.MovimientosAsync(caja.Id, desde, hasta));
     }
 
+    /// <summary>
+    /// Lo que cobró o pagó por Yape, Plin o transferencia: no pasa por su caja,
+    /// pero es suyo y lo tiene que poder ver.
+    /// </summary>
+    [HttpGet("digitales")]
+    public async Task<IActionResult> Digitales([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
+        Ok(await _cuentas.MovimientosDigitalesAsync(UsuarioId, desde, hasta));
+
     /// <summary>Un ingreso o egreso libre: no hace falta que sea una venta ni un gasto de ruta.</summary>
     [HttpPost("movimiento")]
     public async Task<IActionResult> RegistrarMovimiento([FromBody] MovimientoOperativoRequest request)
