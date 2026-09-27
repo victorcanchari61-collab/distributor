@@ -14,6 +14,18 @@ public interface ICuentaFinancieraService
     Task<CuentaFinancieraResponse> GetByIdAsync(int id);
     Task<CuentaFinancieraResponse> CreateAsync(CuentaFinancieraRequest request, int? usuarioId = null);
     Task<CuentaFinancieraResponse> UpdateAsync(int id, CuentaFinancieraRequest request);
+
+    /// <summary>Crea la Bóveda, la única caja sin responsable. Una sola por empresa.</summary>
+    Task<CuentaFinancieraResponse> CrearBovedaAsync(CrearBovedaRequest request, int? usuarioId);
+
+    /// <summary>
+    /// Mueve plata de una cuenta propia a otra. Deja las dos mitades enlazadas
+    /// para poder anularla entera. Devuelve el id de la salida.
+    /// </summary>
+    Task<int> TransferirEntreCuentasAsync(TransferenciaCuentasRequest request, int? usuarioId);
+
+    /// <summary>Anula una transferencia hecha a mano, dada cualquiera de sus dos mitades.</summary>
+    Task AnularTransferenciaAsync(int movimientoId, int? usuarioId);
     Task<IEnumerable<MovimientoCuentaResponse>> MovimientosAsync(int cuentaFinancieraId, DateTime? desde, DateTime? hasta);
 
     /// <summary>Para que otros servicios validen que la cuenta existe (y su naturaleza) antes de postear.</summary>

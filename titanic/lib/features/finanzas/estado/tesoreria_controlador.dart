@@ -252,6 +252,20 @@ final cuentasBancariasProvider =
           .whenData((l) => l.where((c) => c.naturaleza == 'BANCO').toList()),
     );
 
+/// En Cajas: false es la pestaña de las cajas, true la de la Boveda.
+final verBovedaProvider = StateProvider.autoDispose<bool>((ref) => false);
+
+final busquedaBovedaProvider = StateProvider.autoDispose((ref) => '');
+
+/// La Boveda, si ya se creo.
+final bovedaProvider = Provider.autoDispose<CuentaFinanciera?>(
+  (ref) =>
+      (ref.watch(cuentasFinancierasProvider).valueOrNull ??
+              const <CuentaFinanciera>[])
+          .where((c) => c.esBoveda)
+          .firstOrNull,
+);
+
 final cuentasBancariasFiltradasProvider =
     Provider.autoDispose<List<CuentaFinanciera>>((ref) {
       final todas =

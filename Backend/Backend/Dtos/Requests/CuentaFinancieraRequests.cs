@@ -30,3 +30,21 @@ public class CuentaFinancieraRequest
 
     public bool Activo { get; set; } = true;
 }
+
+/// <summary>Crear la Bóveda: con cuánto efectivo arranca.</summary>
+public class CrearBovedaRequest
+{
+    public decimal MontoInicial { get; set; }
+}
+
+/// <summary>
+/// Mover plata de una cuenta propia a otra: un depósito de la Bóveda al banco,
+/// el sencillo para un repartidor, un retiro del banco. No es ingreso ni gasto.
+/// </summary>
+public class TransferenciaCuentasRequest
+{
+    public int CuentaOrigenId { get; set; }
+    public int CuentaDestinoId { get; set; }
+    public decimal Monto { get; set; }
+    public string? Observacion { get; set; }
+}

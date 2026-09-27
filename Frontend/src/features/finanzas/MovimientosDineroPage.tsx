@@ -21,6 +21,8 @@ import type { CategoriaOpcion } from './gastoOperativoApi'
 import { movimientoDineroApi } from './movimientoDineroApi'
 import type { CuentaMovimiento, MovimientoDineroResponse, OrigenDinero } from './movimientoDineroApi'
 import { NuevoMovimientoModal } from './NuevoMovimientoModal'
+import { MoverPlataModal } from './MoverPlataModal'
+import { cuentaFinancieraApi } from './cuentaFinancieraApi'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 const redondear = (n: number) => Math.round(n * 100) / 100
@@ -61,6 +63,7 @@ export function MovimientosDineroPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [nuevoAbierto, setNuevoAbierto] = useState(false)
+  const [moverAbierto, setMoverAbierto] = useState(false)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -91,15 +94,30 @@ export function MovimientosDineroPage() {
     }
   }
 
+  const abrirMover = async () => {
+    try {
+      setCuentas(await movimientoDineroApi.cuentas())
+      setMoverAbierto(true)
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos cargar las cuentas.')
+    }
+  }
+
+  // Una transferencia entre cuentas se anula entera, con sus dos mitades.
+  const esTransferencia = (m: MovimientoDineroResponse) => m.documentoOrigen === 'TRANSFERENCIA_INTERNA'
+
   const anular = (m: MovimientoDineroResponse) =>
     confirmar({
       titulo: 'Anular movimiento',
-      mensaje: `${m.concepto}: revierte ${soles(m.monto)} en ${m.cuenta}. No se puede deshacer.`,
+      mensaje: esTransferencia(m)
+        ? `${m.observacion ?? m.concepto}: la plata vuelve a su cuenta de origen. No se puede deshacer.`
+        : `${m.concepto}: revierte ${soles(m.monto)} en ${m.cuenta}. No se puede deshacer.`,
       confirmar: 'Anular',
       tono: 'danger',
       accion: async () => {
         try {
-          await gastoOperativoApi.anular(m.movimientoOperativoId!)
+          if (esTransferencia(m)) await cuentaFinancieraApi.anularTransferencia(m.id)
+          else await gastoOperativoApi.anular(m.movimientoOperativoId!)
           await cargar()
           toast.exito('Movimiento anulado')
         } catch (e) {
@@ -223,6 +241,11 @@ export function MovimientosDineroPage() {
             </Button>
           )}
           {puede('finanzas.movimientos', 'crear') && (
+            <Button size="sm" variant="secondary" onClick={() => void abrirMover()} iconRight={<ArrowLeftRight size={15} />}>
+              Mover plata
+            </Button>
+          )}
+          {puede('finanzas.movimientos', 'crear') && (
             <Button size="sm" onClick={() => void abrirNuevo()} iconRight={<Plus size={15} />}>
               Nuevo movimiento
             </Button>
@@ -277,6 +300,17 @@ export function MovimientosDineroPage() {
             setNuevoAbierto(false)
             await cargar()
             toast.exito('Movimiento registrado')
+          }}
+        />
+      )}
+      {moverAbierto && (
+        <MoverPlataModal
+          cuentas={cuentas}
+          onClose={() => setMoverAbierto(false)}
+          onHecho={async () => {
+            setMoverAbierto(false)
+            await cargar()
+            toast.exito('Plata movida')
           }}
         />
       )}

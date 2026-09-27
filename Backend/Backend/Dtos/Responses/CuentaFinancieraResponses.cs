@@ -19,6 +19,9 @@ public class CuentaFinancieraResponse
     public decimal SaldoActual { get; set; }
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
+
+    /// <summary>La caja de la empresa, sin responsable: solo efectivo.</summary>
+    public bool EsBoveda { get; set; }
 }
 
 public class MovimientoCuentaResponse

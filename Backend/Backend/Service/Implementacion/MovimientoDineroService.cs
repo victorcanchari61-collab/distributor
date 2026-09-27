@@ -230,7 +230,9 @@ public class MovimientoDineroService : IMovimientoDineroService
             case DocumentoOrigenMovimiento.CierreCaja:
                 return new Clasificacion(DelCierre("Cierre de caja"), null, OrigenMovimiento.Interno);
             case DocumentoOrigenMovimiento.TransferenciaInterna:
-                return new Clasificacion("Transferencia entre cuentas", null, OrigenMovimiento.Interno);
+                // Las hechas a mano llevan enlazadas sus dos mitades: se anulan enteras.
+                return new Clasificacion("Transferencia entre cuentas", null, OrigenMovimiento.Interno,
+                    Anulable: m.OrigenId is not null);
             case DocumentoOrigenMovimiento.SaldoInicial:
                 return new Clasificacion("Saldo inicial", null, OrigenMovimiento.Interno);
             default:

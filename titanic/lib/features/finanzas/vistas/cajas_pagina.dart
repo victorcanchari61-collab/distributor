@@ -20,9 +20,11 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../config/estado/config_controlador.dart';
+import '../datos/mi_caja.dart';
 import '../datos/tesoreria.dart';
 import '../estado/tesoreria_controlador.dart';
 import 'hoja_movimientos_cuenta.dart';
+import 'hoja_mover_plata.dart';
 import 'hojas_finanzas.dart';
 
 /// La caja de cada persona que cobra en la calle: con cuanto anda y que se
@@ -36,6 +38,14 @@ class CajasPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
+    final pestanas = _Pestanas(
+      boveda: ref.watch(verBovedaProvider),
+      onCambio: (v) => ref.read(verBovedaProvider.notifier).state = v,
+    );
+    if (ref.watch(verBovedaProvider)) {
+      return _paginaBoveda(context, ref, color, pestanas);
+    }
+
     final activas =
         (ref.watch(cajasProvider).valueOrNull ?? const <CuentaFinanciera>[])
             .where((c) => c.activo);
@@ -73,6 +83,7 @@ class CajasPagina extends ConsumerWidget {
           nota: '${activas.length} activas',
         ),
       ],
+      encabezado: pestanas,
       filtro: BotonFiltros(
         activos: ref.watch(verInactivasCajasProvider) ? 1 : 0,
         color: color,
@@ -107,6 +118,143 @@ class CajasPagina extends ConsumerWidget {
     );
   }
 
+  /// La pestaña de la Boveda: su saldo, lo que entro y salio, y sus
+  /// movimientos de los ultimos 30 dias.
+  Widget _paginaBoveda(
+    BuildContext context,
+    WidgetRef ref,
+    Color color,
+    Widget pestanas,
+  ) {
+    final cuentas = ref.watch(cuentasFinancierasProvider);
+    final boveda = ref.watch(bovedaProvider);
+    final AsyncValue<List<MovimientoCaja>> estado = boveda == null
+        ? cuentas.whenData((_) => const <MovimientoCaja>[])
+        : ref.watch(movimientosCuentaProvider(boveda.id));
+    final movimientos = estado.valueOrNull ?? const <MovimientoCaja>[];
+    final texto = ref.watch(busquedaBovedaProvider).trim().toLowerCase();
+    final entro = movimientos
+        .where((m) => m.esIngreso)
+        .fold<double>(0, (s, m) => s + m.monto);
+    final salio = movimientos
+        .where((m) => !m.esIngreso)
+        .fold<double>(0, (s, m) => s + m.monto);
+    final puedeMover =
+        puede(ref, 'finanzas.movimientos', Accion.crear) ||
+        puede(ref, 'finanzas.cajas', Accion.editar);
+
+    return AppListaPagina<MovimientoCaja>(
+      titulo: 'Cajas',
+      ruta: ruta,
+      estado: estado,
+      visibles: movimientos
+          .where((m) => texto.isEmpty || m.buscable.contains(texto))
+          .toList(),
+      busqueda: ref.watch(busquedaBovedaProvider),
+      onBuscar: (t) => ref.read(busquedaBovedaProvider.notifier).state = t,
+      pistaBusqueda: 'Buscar por detalle',
+      onRecargar: () async {
+        ref.invalidate(cuentasFinancierasProvider);
+        if (boveda != null) {
+          ref.invalidate(movimientosCuentaProvider(boveda.id));
+        }
+      },
+      // El boton principal: crearla si falta, o mover plata si ya existe.
+      onNuevo: boveda == null
+          ? (puede(ref, 'finanzas.cajas', Accion.crear)
+                ? () => abrirHojaFinanzas(context, (_) => const _HojaBoveda())
+                : null)
+          : (puedeMover ? () => _mover(context, ref) : null),
+      textoNuevo: boveda == null ? 'Crear bóveda' : 'Mover plata',
+      iconoVacio: Icons.account_balance,
+      singular: 'movimiento',
+      plural: 'movimientos',
+      tituloVacio: boveda == null ? 'Sin Bóveda' : 'Sin movimientos',
+      detalleVacio: boveda == null
+          ? 'Créala para que los cierres de caja tengan adónde entregar el efectivo.'
+          : 'No hay movimientos en la Bóveda en los últimos 30 días.',
+      indicadores: boveda == null
+          ? null
+          : [
+              AppTarjetaDato(
+                etiqueta: 'En la Bóveda',
+                valor: formatoSoles(boveda.saldoActual),
+                icono: Icons.account_balance,
+                color: color,
+                nota: 'Solo efectivo',
+              ),
+              AppTarjetaDato(
+                etiqueta: 'Entró',
+                valor: formatoSoles(entro),
+                icono: Icons.trending_up,
+                tono: DatoTono.exito,
+                nota: 'Últimos 30 días',
+              ),
+              AppTarjetaDato(
+                etiqueta: 'Salió',
+                valor: formatoSoles(salio),
+                icono: Icons.trending_down,
+                tono: DatoTono.peligro,
+                nota: 'Últimos 30 días',
+              ),
+            ],
+      encabezado: pestanas,
+      fila: (context, m) => AppTarjetaRegistro(
+        icono: m.esIngreso ? Icons.arrow_downward : Icons.arrow_upward,
+        color: color,
+        titulo: m.concepto,
+        insignia: AppEtiqueta(
+          m.esIngreso ? 'Entra' : 'Sale',
+          tono: m.esIngreso ? EtiquetaTono.exito : EtiquetaTono.peligro,
+        ),
+        campos: [
+          CampoDetalle(
+            'Monto',
+            null,
+            widget: Text(
+              '${m.esIngreso ? '+' : '-'}${formatoSoles(m.monto)}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: m.esIngreso ? Colores.exito : Colores.peligro,
+              ),
+            ),
+          ),
+          CampoDetalle('Saldo', formatoSoles(m.saldoResultante)),
+          CampoDetalle('Fecha', fechaHora(m.fecha)),
+          CampoDetalle('Detalle', m.observacion),
+        ],
+      ),
+    );
+  }
+
+  /// Mover plata desde la Boveda (u otra cuenta) a donde haga falta.
+  void _mover(BuildContext context, WidgetRef ref) {
+    final cuentas =
+        (ref.read(cuentasFinancierasProvider).valueOrNull ??
+                const <CuentaFinanciera>[])
+            .where((c) => c.activo)
+            .map(
+              (c) => CuentaParaMover(
+                id: c.id,
+                etiqueta: c.esBoveda
+                    ? c.nombre
+                    : c.naturaleza == 'CAJA'
+                    ? '${c.nombre} · Caja'
+                    : '${c.nombre} · Banco',
+                saldo: c.saldoActual,
+              ),
+            )
+            .toList();
+    abrirHojaFinanzas(
+      context,
+      (_) => HojaMoverPlata(
+        cuentas: cuentas,
+        origenInicial: ref.read(bovedaProvider)?.id,
+      ),
+    );
+  }
+
   Future<void> _cambiarEstado(
     BuildContext context,
     WidgetRef ref,
@@ -133,6 +281,120 @@ class CajasPagina extends ConsumerWidget {
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
+  }
+}
+
+/// Las dos pestañas de Cajas: las cajas de cada persona y la Boveda.
+class _Pestanas extends StatelessWidget {
+  const _Pestanas({required this.boveda, required this.onCambio});
+
+  final bool boveda;
+  final ValueChanged<bool> onCambio;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+      child: SegmentedButton<bool>(
+        showSelectedIcon: false,
+        segments: const [
+          ButtonSegment(
+            value: false,
+            label: Text('Cajas'),
+            icon: Icon(Icons.groups_outlined, size: 18),
+          ),
+          ButtonSegment(
+            value: true,
+            label: Text('Bóveda'),
+            icon: Icon(Icons.account_balance, size: 18),
+          ),
+        ],
+        selected: {boveda},
+        onSelectionChanged: (s) => onCambio(s.first),
+      ),
+    );
+  }
+}
+
+/// Crear la Boveda: con cuanto efectivo arranca.
+class _HojaBoveda extends ConsumerStatefulWidget {
+  const _HojaBoveda();
+
+  @override
+  ConsumerState<_HojaBoveda> createState() => _HojaBovedaState();
+}
+
+class _HojaBovedaState extends ConsumerState<_HojaBoveda> {
+  final _inicial = TextEditingController();
+  bool _guardando = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _inicial.dispose();
+    super.dispose();
+  }
+
+  Future<void> _crear() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _guardando = true;
+      _error = null;
+    });
+    final navegador = Navigator.of(context);
+    final mensajero = Aviso.de(context);
+
+    try {
+      await ref
+          .read(tesoreriaApiProvider)
+          .crearBoveda(double.tryParse(_inicial.text.trim()) ?? 0);
+      ref.invalidate(cuentasFinancierasProvider);
+      navegador.pop();
+      mensajero.mostrar('Bóveda creada');
+    } on ApiExcepcion catch (e) {
+      setState(() {
+        _guardando = false;
+        _error = e.texto;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: margenHoja(context),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const TituloHoja(
+            'Crear la Bóveda',
+            apoyo:
+                'La caja de la empresa: no es de nadie y solo guarda efectivo. Una sola.',
+          ),
+          if (_error != null) ...[
+            AppAlerta(_error!),
+            const SizedBox(height: Dimen.espacio3),
+          ],
+          AppCampo(
+            controlador: _inicial,
+            etiqueta: 'Efectivo que ya hay',
+            icono: Icons.payments_outlined,
+            pista: '0.00',
+            opcional: true,
+            tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
+            formateadores: [soloMonto],
+            habilitado: !_guardando,
+          ),
+          const SizedBox(height: Dimen.espacio5),
+          AppBoton(
+            texto: 'Crear bóveda',
+            cargando: _guardando,
+            onPressed: _crear,
+          ),
+        ],
+      ),
+    );
   }
 }
 

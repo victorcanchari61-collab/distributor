@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Backend.Dtos.Requests;
 using Backend.Filters;
+using Backend.Models;
 using Backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -55,4 +56,25 @@ public class CuentaFinancieraController : ControllerBase
     [PermisoAlguno("finanzas.cajas:editar", "finanzas.bancos:editar")]
     public async Task<IActionResult> Update(int id, [FromBody] CuentaFinancieraRequest request) =>
         Ok(await _cuentas.UpdateAsync(id, request));
+
+    /// <summary>Crea la Bóveda de la empresa: la única caja sin responsable.</summary>
+    [HttpPost("boveda")]
+    [Permiso("finanzas.cajas", Accion.Crear)]
+    public async Task<IActionResult> CrearBoveda([FromBody] CrearBovedaRequest request) =>
+        Ok(await _cuentas.CrearBovedaAsync(request, UsuarioId));
+
+    /// <summary>Mueve plata entre cuentas propias: depósito, sencillo, retiro.</summary>
+    [HttpPost("transferir")]
+    [PermisoAlguno("finanzas.movimientos:crear", "finanzas.cajas:editar")]
+    public async Task<IActionResult> Transferir([FromBody] TransferenciaCuentasRequest request) =>
+        Ok(new { salidaId = await _cuentas.TransferirEntreCuentasAsync(request, UsuarioId) });
+
+    /// <summary>Anula una transferencia entre cuentas, dada cualquiera de sus mitades.</summary>
+    [HttpPatch("transferencias/{movimientoId:int}/anular")]
+    [PermisoAlguno("finanzas.movimientos:anular", "finanzas.cajas:editar")]
+    public async Task<IActionResult> AnularTransferencia(int movimientoId)
+    {
+        await _cuentas.AnularTransferenciaAsync(movimientoId, UsuarioId);
+        return NoContent();
+    }
 }

@@ -79,6 +79,9 @@ class MovimientoDinero {
 
   bool get esIngreso => tipo == 'INGRESO';
 
+  /// Una de las dos mitades de una transferencia entre cuentas propias.
+  bool get esTransferencia => documentoOrigen == 'TRANSFERENCIA_INTERNA';
+
   /// Cuenta para los totales: ni lo anulado ni su reversa movieron plata.
   bool get vigente => !anulado && !esReversa;
 
@@ -409,6 +412,7 @@ class CuentaFinanciera {
     required this.naturaleza,
     required this.saldoActual,
     required this.activo,
+    this.esBoveda = false,
     this.usuarioResponsableId,
     this.usuarioResponsable,
     this.bancoId,
@@ -425,6 +429,10 @@ class CuentaFinanciera {
   final String naturaleza;
   final double saldoActual;
   final bool activo;
+
+  /// La caja de la empresa, sin responsable: adonde va el efectivo de los
+  /// cierres. Solo efectivo.
+  final bool esBoveda;
 
   /// Solo en una caja: de quien es.
   final int? usuarioResponsableId;
@@ -448,6 +456,7 @@ class CuentaFinanciera {
         naturaleza: json['naturaleza'] as String? ?? '',
         saldoActual: _monto(json['saldoActual']),
         activo: json['activo'] as bool? ?? true,
+        esBoveda: json['esBoveda'] as bool? ?? false,
         usuarioResponsableId: json['usuarioResponsableId'] as int?,
         usuarioResponsable: json['usuarioResponsable'] as String?,
         bancoId: json['bancoId'] as int?,

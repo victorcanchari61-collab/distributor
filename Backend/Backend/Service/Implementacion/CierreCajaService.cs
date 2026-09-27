@@ -35,7 +35,9 @@ public class CierreCajaService : ICierreCajaService
         return await _context.CuentasFinancieras
             .AsNoTracking()
             .Where(c => c.Activo && c.Id != caja.Id)
-            .OrderBy(c => c.Naturaleza).ThenBy(c => c.Nombre)
+            // La Bóveda primero: es adonde va el efectivo de un cierre normal.
+            .OrderBy(c => c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == null ? 0 : 1)
+            .ThenBy(c => c.Naturaleza).ThenBy(c => c.Nombre)
             .Select(c => new CuentaDestinoResponse { Id = c.Id, Nombre = c.Nombre, Naturaleza = c.Naturaleza })
             .ToListAsync();
     }

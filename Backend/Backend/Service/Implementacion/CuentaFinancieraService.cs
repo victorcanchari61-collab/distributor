@@ -12,14 +12,17 @@ namespace Backend.Service.Implementacion;
 public class CuentaFinancieraService : ICuentaFinancieraService
 {
     private readonly AppDbContext _context;
+    private readonly IValidator<TransferenciaCuentasRequest> _transferenciaValidator;
     private readonly IValidator<CuentaFinancieraRequest> _validator;
     private readonly INotificador _notificador;
 
     public CuentaFinancieraService(
-        AppDbContext context, IValidator<CuentaFinancieraRequest> validator, INotificador notificador)
+        AppDbContext context, IValidator<CuentaFinancieraRequest> validator,
+        IValidator<TransferenciaCuentasRequest> transferenciaValidator, INotificador notificador)
     {
         _context = context;
         _validator = validator;
+        _transferenciaValidator = transferenciaValidator;
         _notificador = notificador;
     }
 
@@ -131,6 +134,114 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         var response = Map(cuenta);
         await _notificador.AvisarAsync("cuentasfinancieras", "actualizada", response);
         return response;
+    }
+
+    public async Task<CuentaFinancieraResponse> CrearBovedaAsync(CrearBovedaRequest request, int? usuarioId)
+    {
+        if (request.MontoInicial < 0)
+            throw new BadRequestException("El monto inicial no puede ser negativo");
+
+        // Una sola: la plata de los cierres tiene que ir a un único lugar, o el
+        // efectivo de la empresa queda repartido sin saber dónde está.
+        if (await _context.CuentasFinancieras.AnyAsync(c =>
+                c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == null))
+        {
+            throw new ConflictException("La Bóveda ya existe");
+        }
+
+        if (await _context.CuentasFinancieras.AnyAsync(c => c.Nombre == CuentaFinanciera.NombreBoveda))
+        {
+            throw new ConflictException(
+                $"Ya hay una cuenta llamada \"{CuentaFinanciera.NombreBoveda}\": renómbrala antes de crear la Bóveda");
+        }
+
+        var boveda = new CuentaFinanciera
+        {
+            Nombre = CuentaFinanciera.NombreBoveda,
+            Naturaleza = NaturalezaCuenta.Caja,
+            UsuarioResponsableId = null,
+            Activo = true,
+        };
+        _context.CuentasFinancieras.Add(boveda);
+        await _context.SaveChangesAsync();
+
+        // El efectivo que ya había guardado, como su primer movimiento.
+        if (request.MontoInicial > 0)
+        {
+            await PostearAsync(
+                boveda.Id, TipoMovimientoCuenta.Ingreso, Math.Round(request.MontoInicial, 2),
+                DocumentoOrigenMovimiento.SaldoInicial, null, usuarioId,
+                observacion: "Efectivo con el que se abrió la Bóveda");
+        }
+
+        var response = Map(boveda);
+        await _notificador.AvisarAsync("cuentasfinancieras", "creada", response);
+        return response;
+    }
+
+    public async Task<int> TransferirEntreCuentasAsync(TransferenciaCuentasRequest request, int? usuarioId)
+    {
+        await _transferenciaValidator.ValidateAndThrowAsync(request);
+
+        var origen = await GetOrThrowAsync(request.CuentaOrigenId);
+        var destino = await GetOrThrowAsync(request.CuentaDestinoId);
+        if (!origen.Activo) throw new BadRequestException($"{origen.Nombre} está desactivada");
+        if (!destino.Activo) throw new BadRequestException($"{destino.Nombre} está desactivada");
+
+        // No se mueve plata que no hay: una caja no tiene efectivo de más.
+        var monto = Math.Round(request.Monto, 2);
+        if (origen.SaldoActual < monto)
+        {
+            throw new BadRequestException(
+                $"{origen.Nombre} tiene S/ {Soles(origen.SaldoActual)}: no alcanza para mover S/ {Soles(monto)}");
+        }
+
+        var detalle = $"De {origen.Nombre} a {destino.Nombre}";
+        if (!string.IsNullOrWhiteSpace(request.Observacion)) detalle += $" — {request.Observacion.Trim()}";
+
+        var (salida, entrada) = await TransferirAsync(
+            origen.Id, destino.Id, monto, DocumentoOrigenMovimiento.TransferenciaInterna,
+            null, usuarioId, observacion: detalle);
+
+        // Las dos mitades apuntan a la salida: con cualquiera se encuentra la otra.
+        salida.OrigenId = salida.Id;
+        entrada.OrigenId = salida.Id;
+        await _context.SaveChangesAsync();
+
+        return salida.Id;
+    }
+
+    public async Task AnularTransferenciaAsync(int movimientoId, int? usuarioId)
+    {
+        var mitad = await _context.MovimientosCuenta.AsNoTracking().FirstOrDefaultAsync(m => m.Id == movimientoId)
+            ?? throw new NotFoundException($"No existe el movimiento {movimientoId}");
+
+        if (mitad.DocumentoOrigen != DocumentoOrigenMovimiento.TransferenciaInterna || mitad.OrigenId is not int salidaId)
+            throw new BadRequestException("Ese movimiento no es una transferencia entre cuentas");
+
+        var mitades = await _context.MovimientosCuenta.AsNoTracking()
+            .Where(m => m.DocumentoOrigen == DocumentoOrigenMovimiento.TransferenciaInterna && m.OrigenId == salidaId)
+            .ToListAsync();
+        var salida = mitades.FirstOrDefault(m => m.Tipo == TipoMovimientoCuenta.Egreso);
+        var entrada = mitades.FirstOrDefault(m => m.Tipo == TipoMovimientoCuenta.Ingreso);
+        if (salida is null || entrada is null)
+            throw new BadRequestException("No se encontraron las dos mitades de esta transferencia");
+
+        if (await _context.MovimientosCuenta.AnyAsync(m =>
+                m.DocumentoOrigen == DocumentoOrigenMovimiento.Reversion && m.MovimientoOrigenId == salida.Id))
+        {
+            throw new BadRequestException("Esta transferencia ya está anulada");
+        }
+
+        // Devolverla no puede dejar sin saldo al destino: esa plata ya pudo moverse.
+        var cuentaDestino = await GetOrThrowAsync(entrada.CuentaFinancieraId);
+        if (cuentaDestino.SaldoActual < entrada.Monto)
+        {
+            throw new BadRequestException(
+                $"{cuentaDestino.Nombre} ya no tiene los S/ {Soles(entrada.Monto)} para devolverlos");
+        }
+
+        await ReversarTransferenciaAsync(salida.Id, entrada.Id, usuarioId);
     }
 
     public async Task<IEnumerable<MovimientoCuentaResponse>> MovimientosAsync(
@@ -317,6 +428,10 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         cuenta.UsuarioResponsableId = null;
     }
 
+    /// <summary>Un monto como se lee en el sistema: 1250.50, con punto.</summary>
+    private static string Soles(decimal monto) =>
+        monto.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+
     private static string? Limpiar(string? texto) =>
         string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
 
@@ -335,5 +450,6 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         SaldoActual = c.SaldoActual,
         Activo = c.Activo,
         FechaCreacion = c.FechaCreacion,
+        EsBoveda = c.EsBoveda,
     };
 }

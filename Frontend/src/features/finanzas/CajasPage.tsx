@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { History, ShieldCheck, ShieldOff, UserPlus, Users } from 'lucide-react'
+import { History, Landmark, ShieldCheck, ShieldOff, UserPlus, Users } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -11,6 +11,7 @@ import {
   RowAction,
   StatCard,
   SysDataTable,
+  Tabs,
   useConfirmacion,
   useToast,
 } from '../../components/ui'
@@ -23,6 +24,7 @@ import { usuarioApi } from '../config/usuarioApi'
 import type { UsuarioResponse } from '../config/usuarioApi'
 import { cuentaFinancieraApi } from './cuentaFinancieraApi'
 import type { CuentaFinancieraResponse, MovimientoCuentaResponse } from './cuentaFinancieraApi'
+import { BovedaTab } from './BovedaTab'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
@@ -35,6 +37,8 @@ export function CajasPage() {
   const { puede } = usePermisos()
   const toast = useToast()
   const [cajas, setCajas] = useState<CuentaFinancieraResponse[]>([])
+  const [todas, setTodas] = useState<CuentaFinancieraResponse[]>([])
+  const [pestana, setPestana] = useState<'cajas' | 'boveda'>('cajas')
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -51,8 +55,9 @@ export function CajasPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [todas, u] = await Promise.all([cuentaFinancieraApi.getAll(), usuarioApi.getAll()])
-      setCajas(todas.filter((c) => c.naturaleza === 'CAJA' && c.usuarioResponsableId != null))
+      const [cuentas, u] = await Promise.all([cuentaFinancieraApi.getAll(), usuarioApi.getAll()])
+      setTodas(cuentas)
+      setCajas(cuentas.filter((c) => c.naturaleza === 'CAJA' && c.usuarioResponsableId != null))
       setUsuarios(u)
       setError('')
     } catch (e) {
@@ -79,6 +84,9 @@ export function CajasPage() {
   }
 
   const usuarioElegido = usuarios.find((u) => u.id === usuarioId)
+
+  // La Bóveda: la caja de la empresa, sin responsable. Una sola, en su pestaña.
+  const boveda = todas.find((c) => c.esBoveda) ?? null
 
   const guardar = async () => {
     if (!usuarioId) return toast.error('Elige a quién se le asigna la caja.')
@@ -148,90 +156,114 @@ export function CajasPage() {
     },
   ]
 
+  const cabecera = (
+    <Tabs
+      className="mb-5"
+      active={pestana}
+      onChange={(id) => setPestana(id as 'cajas' | 'boveda')}
+      items={[
+        { id: 'cajas', label: 'Cajas', icon: <Users size={15} />, badge: cajas.length },
+        { id: 'boveda', label: 'Bóveda', icon: <Landmark size={15} /> },
+      ]}
+    />
+  )
+
+  if (pestana === 'boveda') {
+    return (
+      <>
+        {cabecera}
+        <BovedaTab boveda={boveda} cuentas={todas.filter((c) => c.activo)} onCambio={cargar} />
+      </>
+    )
+  }
+
   return (
-    <ListPage
-      icon={<Users size={20} />}
-      title="Cajas"
-      description="A quién se le asigna una Caja: sin una asignada acá, no puede cobrar ventas en efectivo."
-      actions={
-        puede('finanzas.cajas', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<UserPlus size={15} />}>
-            Asignar caja
-          </Button>
-        ) : undefined
-      }
-      alert={error ? <Alert>{error}</Alert> : undefined}
-      stats={
-        <>
-          <StatCard label="Cajas activas" value={String(cajas.filter((c) => c.activo).length)} icon={<Users size={18} />} tono="sys" />
-          <StatCard
-            label="Saldo en cajas"
-            value={soles(cajas.filter((c) => c.activo).reduce((s, c) => s + c.saldoActual, 0))}
-            icon={<Users size={18} />}
-          />
-        </>
-      }
-      columns={columns}
-      rows={cajas}
-      cardIcon={Users}
-      searchPlaceholder="Buscar por usuario..."
-      empty={cargando ? 'Cargando cajas...' : 'Todavía no hay ninguna caja asignada.'}
-      rowActions={(row) => (
-        <>
-          <RowAction label={`Movimientos de ${row.nombre}`} tone="view" onClick={() => setMovimientosDe(row)}>
-            <History size={15} />
-          </RowAction>
-          {puede('finanzas.cajas', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-          )}
-        </>
-      )}
-    >
-      <Modal
-        open={abierto}
-        size="sm"
-        title="Asignar una caja"
-        description="Se crea con saldo cero: se llena con lo que cobre en efectivo y con los ingresos que registre."
-        onClose={() => setAbierto(false)}
-        footer={
+    <>
+      {cabecera}
+      <ListPage
+        icon={<Users size={20} />}
+        title="Cajas"
+        description="A quién se le asigna una Caja: sin una asignada acá, no puede cobrar ventas en efectivo."
+        actions={
+          puede('finanzas.cajas', 'crear') ? (
+            <Button size="sm" onClick={abrirNuevo} iconRight={<UserPlus size={15} />}>
+              Asignar caja
+            </Button>
+          ) : undefined
+        }
+        alert={error ? <Alert>{error}</Alert> : undefined}
+        stats={
           <>
-            <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
-              Cancelar
-            </Button>
-            <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-              Crear caja
-            </Button>
+            <StatCard label="Cajas activas" value={String(cajas.filter((c) => c.activo).length)} icon={<Users size={18} />} tono="sys" />
+            <StatCard
+              label="Saldo en cajas"
+              value={soles(cajas.filter((c) => c.activo).reduce((s, c) => s + c.saldoActual, 0))}
+              icon={<Users size={18} />}
+            />
           </>
         }
+        columns={columns}
+        rows={cajas}
+        cardIcon={Users}
+        searchPlaceholder="Buscar por usuario..."
+        empty={cargando ? 'Cargando cajas...' : 'Todavía no hay ninguna caja asignada.'}
+        rowActions={(row) => (
+          <>
+            <RowAction label={`Movimientos de ${row.nombre}`} tone="view" onClick={() => setMovimientosDe(row)}>
+              <History size={15} />
+            </RowAction>
+            {puede('finanzas.cajas', 'editar') && (
+              <RowAction
+                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+                tone={row.activo ? 'warning' : 'success'}
+                onClick={() => cambiarEstado(row)}
+              >
+                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+              </RowAction>
+            )}
+          </>
+        )}
       >
-        <div className="flex flex-col gap-4">
-          <Desplegable
-            label="Usuario"
-            value={usuarioId}
-            onChange={(v) => setUsuarioId(Number(v))}
-            placeholder="Elige a quién se le asigna"
-            options={disponibles.map((u) => ({ value: u.id, label: u.nombre }))}
-          />
-          <Input
-            label="Nombre"
-            optional
-            placeholder={usuarioElegido ? `Caja de ${usuarioElegido.nombre}` : 'Caja de...'}
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-          />
-        </div>
-      </Modal>
+        <Modal
+          open={abierto}
+          size="sm"
+          title="Asignar una caja"
+          description="Se crea con saldo cero: se llena con lo que cobre en efectivo y con los ingresos que registre."
+          onClose={() => setAbierto(false)}
+          footer={
+            <>
+              <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
+                Cancelar
+              </Button>
+              <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+                Crear caja
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <Desplegable
+              label="Usuario"
+              value={usuarioId}
+              onChange={(v) => setUsuarioId(Number(v))}
+              placeholder="Elige a quién se le asigna"
+              options={disponibles.map((u) => ({ value: u.id, label: u.nombre }))}
+            />
+            <Input
+              label="Nombre"
+              optional
+              placeholder={usuarioElegido ? `Caja de ${usuarioElegido.nombre}` : 'Caja de...'}
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+            />
+          </div>
+        </Modal>
 
-      {movimientosDe && <MovimientosModal cuenta={movimientosDe} onClose={() => setMovimientosDe(null)} />}
+        {movimientosDe && <MovimientosModal cuenta={movimientosDe} onClose={() => setMovimientosDe(null)} />}
 
-      {dialogo}
-    </ListPage>
+        {dialogo}
+      </ListPage>
+    </>
   )
 }
 

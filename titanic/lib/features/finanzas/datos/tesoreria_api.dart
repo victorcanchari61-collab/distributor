@@ -141,6 +141,33 @@ class TesoreriaApi {
         .toList();
   }
 
+  /// POST /api/cuentafinanciera/boveda: la caja de la empresa, una sola.
+  Future<void> crearBoveda(double montoInicial) => _api.post(
+    '/cuentafinanciera/boveda',
+    cuerpo: {'montoInicial': montoInicial},
+  );
+
+  /// POST /api/cuentafinanciera/transferir: mover plata entre cuentas propias.
+  Future<void> transferir({
+    required int origenId,
+    required int destinoId,
+    required double monto,
+    String? observacion,
+  }) => _api.post(
+    '/cuentafinanciera/transferir',
+    cuerpo: {
+      'cuentaOrigenId': origenId,
+      'cuentaDestinoId': destinoId,
+      'monto': monto,
+      'observacion': observacion,
+    },
+  );
+
+  /// PATCH /api/cuentafinanciera/transferencias/{id}/anular: con cualquiera
+  /// de sus dos mitades se anula la transferencia entera.
+  Future<void> anularTransferencia(int movimientoId) =>
+      _api.patch('/cuentafinanciera/transferencias/$movimientoId/anular');
+
   /// GET /api/banco
   Future<List<Banco>> bancos() async {
     final datos = await _api.get('/banco') as List;

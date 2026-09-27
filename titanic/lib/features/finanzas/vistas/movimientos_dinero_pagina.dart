@@ -22,6 +22,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../datos/tesoreria.dart';
 import '../estado/mi_caja_controlador.dart';
 import '../estado/tesoreria_controlador.dart';
+import 'hoja_mover_plata.dart';
 import 'hojas_finanzas.dart';
 
 /// El kardex del dinero: todo lo que entra y sale de cajas y bancos, con de
@@ -93,11 +94,26 @@ class MovimientosDineroPagina extends ConsumerWidget {
       ],
       encabezado: Padding(
         padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-        child: AppSelectorRango(
-          rango: ref.watch(rangoMovimientosProvider),
-          textoVacio: 'Últimos 30 días',
-          onCambio: (r) =>
-              ref.read(rangoMovimientosProvider.notifier).state = r,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppSelectorRango(
+              rango: ref.watch(rangoMovimientosProvider),
+              textoVacio: 'Últimos 30 días',
+              onCambio: (r) =>
+                  ref.read(rangoMovimientosProvider.notifier).state = r,
+            ),
+            if (puede(ref, 'finanzas.movimientos', Accion.crear)) ...[
+              const SizedBox(height: Dimen.espacio2),
+              AppBoton(
+                texto: 'Mover plata',
+                icono: Icons.swap_horiz,
+                variante: BotonVariante.secundario,
+                tam: BotonTam.md,
+                onPressed: () => _mover(context, ref),
+              ),
+            ],
+          ],
         ),
       ),
       filtro: BotonFiltros(
@@ -110,12 +126,32 @@ class MovimientosDineroPagina extends ConsumerWidget {
         color: color,
         onAnular:
             m.anulable &&
-                m.movimientoOperativoId != null &&
+                (m.esTransferencia || m.movimientoOperativoId != null) &&
                 puede(ref, 'finanzas.movimientos', Accion.anular)
             ? () => _anular(context, ref, m)
             : null,
       ),
     );
+  }
+
+  /// Mover plata entre cuentas propias: la Boveda, las cajas y los bancos.
+  Future<void> _mover(BuildContext context, WidgetRef ref) async {
+    final mensajero = Aviso.de(context);
+    try {
+      final cuentas = await ref.read(cuentasMovimientoProvider.future);
+      if (!context.mounted) return;
+      await abrirHojaFinanzas(
+        context,
+        (_) => HojaMoverPlata(
+          cuentas: [
+            for (final c in cuentas)
+              CuentaParaMover(id: c.id, etiqueta: c.etiqueta),
+          ],
+        ),
+      );
+    } on ApiExcepcion catch (e) {
+      mensajero.error(e.texto);
+    }
   }
 
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
@@ -205,9 +241,14 @@ class MovimientosDineroPagina extends ConsumerWidget {
 
     final mensajero = Aviso.de(context);
     try {
-      await ref
-          .read(tesoreriaApiProvider)
-          .anularMovimiento(m.movimientoOperativoId!);
+      final api = ref.read(tesoreriaApiProvider);
+      // Una transferencia se anula entera, con sus dos mitades.
+      if (m.esTransferencia) {
+        await api.anularTransferencia(m.id);
+      } else {
+        await api.anularMovimiento(m.movimientoOperativoId!);
+      }
+      ref.invalidate(cuentasFinancierasProvider);
       ref.invalidate(movimientosDineroProvider);
       mensajero.mostrar('Movimiento anulado');
     } on ApiExcepcion catch (e) {

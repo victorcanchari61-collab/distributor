@@ -24,6 +24,16 @@ export interface CuentaFinancieraResponse {
   saldoActual: number
   activo: boolean
   fechaCreacion: string
+  /** La caja de la empresa, sin responsable: adonde va el efectivo de los cierres. */
+  esBoveda: boolean
+}
+
+/** Mover plata entre cuentas propias: un depósito, el sencillo de un repartidor, un retiro. */
+export interface TransferenciaRequest {
+  cuentaOrigenId: number
+  cuentaDestinoId: number
+  monto: number
+  observacion?: string | null
 }
 
 export interface CuentaFinancieraRequest {
@@ -84,6 +94,14 @@ export const cuentaFinancieraApi = {
   create: (body: CuentaFinancieraRequest) => api.post<CuentaFinancieraResponse>('/cuentafinanciera', body),
   update: (id: number, body: CuentaFinancieraRequest) =>
     api.put<CuentaFinancieraResponse>(`/cuentafinanciera/${id}`, body),
+  /** Crea la Bóveda: una sola por empresa, con el efectivo que ya hay guardado. */
+  crearBoveda: (montoInicial: number) =>
+    api.post<CuentaFinancieraResponse>('/cuentafinanciera/boveda', { montoInicial }),
+  /** No es ingreso ni gasto: la plata solo cambia de cuenta. */
+  transferir: (body: TransferenciaRequest) => api.post<{ salidaId: number }>('/cuentafinanciera/transferir', body),
+  /** Con cualquiera de sus dos mitades se anula la transferencia entera. */
+  anularTransferencia: (movimientoId: number) =>
+    api.patch<void>(`/cuentafinanciera/transferencias/${movimientoId}/anular`),
   movimientos: (id: number, desde?: string, hasta?: string) =>
     api.get<MovimientoCuentaResponse[]>(
       `/cuentafinanciera/${id}/movimientos${desde ? `?desde=${desde}&hasta=${hasta ?? desde}` : ''}`,

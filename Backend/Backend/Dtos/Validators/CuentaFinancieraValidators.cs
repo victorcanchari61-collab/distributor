@@ -33,3 +33,25 @@ public class CuentaFinancieraRequestValidator : AbstractValidator<CuentaFinancie
         RuleFor(x => x.Titular).MaximumLength(120);
     }
 }
+
+public class CrearBovedaRequestValidator : AbstractValidator<CrearBovedaRequest>
+{
+    public CrearBovedaRequestValidator()
+    {
+        RuleFor(x => x.MontoInicial).GreaterThanOrEqualTo(0).WithMessage("El monto inicial no puede ser negativo");
+    }
+}
+
+public class TransferenciaCuentasRequestValidator : AbstractValidator<TransferenciaCuentasRequest>
+{
+    public TransferenciaCuentasRequestValidator()
+    {
+        RuleFor(x => x.CuentaOrigenId).GreaterThan(0).WithMessage("Elige de dónde sale la plata");
+        RuleFor(x => x.CuentaDestinoId).GreaterThan(0).WithMessage("Elige a dónde va la plata");
+        RuleFor(x => x.CuentaDestinoId)
+            .NotEqual(x => x.CuentaOrigenId).WithMessage("El origen y el destino no pueden ser la misma cuenta");
+        RuleFor(x => x.Monto).GreaterThan(0).WithMessage("El monto tiene que ser mayor a cero")
+            .PrecisionScale(18, 2, true).WithMessage("El monto va con dos decimales como mucho");
+        RuleFor(x => x.Observacion).MaximumLength(250);
+    }
+}

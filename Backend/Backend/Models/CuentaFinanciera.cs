@@ -2,7 +2,10 @@ namespace Backend.Models;
 
 public static class NaturalezaCuenta
 {
-    /// <summary>Efectivo físico: hoy solo existe una, la Caja General.</summary>
+    /// <summary>
+    /// Efectivo físico: la caja de cada persona que cobra en la calle, y la
+    /// Bóveda de la empresa (la única sin responsable).
+    /// </summary>
     public const string Caja = "CAJA";
 
     /// <summary>Una cuenta bancaria real, con banco/número/CCI.</summary>
@@ -137,6 +140,16 @@ public class CuentaFinanciera
 
     public bool Activo { get; set; } = true;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// La Bóveda: la caja de la empresa, sin responsable, adonde va el
+    /// efectivo de los cierres. Solo efectivo: ningún método de pago apunta a
+    /// una caja, así que Yape o transferencia nunca entran aquí.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public bool EsBoveda => Naturaleza == NaturalezaCuenta.Caja && UsuarioResponsableId == null;
+
+    public const string NombreBoveda = "Bóveda";
 }
 
 /// <summary>
