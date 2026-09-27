@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowDownCircle, ArrowUpCircle, Landmark, Smartphone, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, Calculator, Landmark, Smartphone, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -11,7 +11,6 @@ import {
   PageHeader,
   StatCard,
   SysDataTable,
-  Tabs,
   useToast,
 } from '../../components/ui'
 import type { BadgeTone, DataTableColumn } from '../../components/ui'
@@ -28,6 +27,12 @@ const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
 const BILLETES = [200, 100, 50, 20, 10]
 const MONEDAS = [5, 2, 1, 0.5, 0.2, 0.1]
+
+/** El desglose del cierre, en el orden en que se cuenta: billetes y luego monedas. */
+const DENOMINACIONES = [
+  ...BILLETES.map((valor) => ({ tipo: 'Billete' as const, valor })),
+  ...MONEDAS.map((valor) => ({ tipo: 'Moneda' as const, valor })),
+]
 
 const DOCUMENTOS: Record<string, string> = {
   PAGO_VENTA: 'Cobro de venta',
@@ -442,7 +447,6 @@ function CerrarCajaModal({
 }) {
   const [cantBilletes, setCantBilletes] = useState<Record<number, string>>({})
   const [cantMonedas, setCantMonedas] = useState<Record<number, string>>({})
-  const [pestana, setPestana] = useState<'billetes' | 'monedas'>('billetes')
   const [destinos, setDestinos] = useState<CuentaDestino[]>([])
   const [cuentaDestinoId, setCuentaDestinoId] = useState(0)
   const [observacion, setObservacion] = useState('')
@@ -496,7 +500,7 @@ function CerrarCajaModal({
   return (
     <Modal
       open
-      size="sm"
+      size="lg"
       title="Cerrar caja"
       description="Cuenta billete por billete y moneda por moneda, y elige a quién se lo entregas."
       onClose={onClose}
@@ -514,85 +518,97 @@ function CerrarCajaModal({
       <div className="flex flex-col gap-4">
         {error && <Alert>{error}</Alert>}
 
-        <Tabs
-          active={pestana}
-          onChange={(id) => setPestana(id as 'billetes' | 'monedas')}
-          items={[
-            { id: 'billetes', label: 'Billetes' },
-            { id: 'monedas', label: 'Monedas' },
-          ]}
-        />
-
-        {pestana === 'billetes' ? (
-          <div>
-            <div className="flex flex-col gap-1.5">
-              {BILLETES.map((v) => (
-                <FilaDenominacion
-                  key={v}
-                  valor={v}
-                  cantidad={cantBilletes[v] ?? ''}
-                  onChange={(texto) => setCantBilletes({ ...cantBilletes, [v]: texto })}
-                />
-              ))}
-            </div>
-            <p className="mt-2 text-right text-sm font-semibold text-ink">Subtotal billetes {soles(totalBilletes)}</p>
+        {/* Una sola tabla, billetes arriba y monedas abajo: con pestañas, lo
+            contado en la otra quedaba escondido al momento de entregar. */}
+        <div>
+          <p className="flex items-center gap-2 rounded-t-field border border-line bg-surface-alt px-3 py-2 text-[11px] font-semibold tracking-wide text-ink uppercase">
+            <Calculator size={14} className="text-[rgb(var(--sys-rgb))]" />
+            Desglose de billetes y monedas
+          </p>
+          <div className="overflow-x-auto rounded-b-field border border-t-0 border-line">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-line text-[10px] tracking-wide text-ink-soft uppercase">
+                  <th className="w-8 px-3 py-1.5 text-left font-medium">#</th>
+                  <th className="px-3 py-1.5 text-left font-medium">Denominación</th>
+                  <th className="w-28 px-3 py-1.5 text-center font-medium">Cant.</th>
+                  <th className="w-24 px-3 py-1.5 text-right font-medium">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DENOMINACIONES.map((d, i) => {
+                  const cantidades = d.tipo === 'Billete' ? cantBilletes : cantMonedas
+                  const poner = d.tipo === 'Billete' ? setCantBilletes : setCantMonedas
+                  return (
+                    <tr key={`${d.tipo}-${d.valor}`} className="border-b border-line/60 last:border-b-0 even:bg-surface-alt/60">
+                      <td className="px-3 py-1 text-ink-soft">{i + 1}</td>
+                      <td className="px-3 py-1 text-ink">
+                        {d.tipo} S/ {d.valor.toFixed(2)}
+                      </td>
+                      <td className="px-3 py-1">
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          inputMode="numeric"
+                          placeholder="0"
+                          aria-label={`Cantidad de ${d.tipo.toLowerCase()}s de S/ ${d.valor.toFixed(2)}`}
+                          value={cantidades[d.valor] ?? ''}
+                          onChange={(e) => poner({ ...cantidades, [d.valor]: e.target.value })}
+                          className="h-7 w-full rounded-field border border-line bg-surface px-2 text-center text-xs text-ink outline-none placeholder:text-ink-soft focus:border-ink-soft"
+                        />
+                      </td>
+                      <td className="px-3 py-1 text-right font-medium tabular-nums text-ink">
+                        {(d.valor * cantidad(cantidades[d.valor])).toFixed(2)}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot className="border-t border-line text-ink-soft">
+                <tr>
+                  <td colSpan={3} className="px-3 pt-2 text-right">
+                    Billetes
+                  </td>
+                  <td className="px-3 pt-2 text-right tabular-nums">{soles(totalBilletes)}</td>
+                </tr>
+                <tr>
+                  <td colSpan={3} className="px-3 pb-2 text-right">
+                    Monedas
+                  </td>
+                  <td className="px-3 pb-2 text-right tabular-nums">{soles(totalMonedas)}</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
-        ) : (
-          <div>
-            <div className="flex flex-col gap-1.5">
-              {MONEDAS.map((v) => (
-                <FilaDenominacion
-                  key={v}
-                  valor={v}
-                  cantidad={cantMonedas[v] ?? ''}
-                  onChange={(texto) => setCantMonedas({ ...cantMonedas, [v]: texto })}
-                />
-              ))}
-            </div>
-            <p className="mt-2 text-right text-sm font-semibold text-ink">Subtotal monedas {soles(totalMonedas)}</p>
-          </div>
-        )}
+        </div>
 
-        <Desplegable
-          label="Entregar a"
-          value={cuentaDestinoId}
-          onChange={(v) => setCuentaDestinoId(Number(v))}
-          placeholder="Elige la caja o el banco"
-          options={destinos.map((d) => ({ value: d.id, label: d.nombre, detalle: NATURALEZA_LABEL[d.naturaleza] ?? d.naturaleza }))}
-        />
+        <div className="flex items-center justify-between rounded-field bg-surface-alt px-3 py-2">
+          <span className="text-sm font-semibold text-ink">Total contado</span>
+          <span className="text-lg font-bold text-[rgb(var(--sys-rgb))]">{soles(totalBilletes + totalMonedas)}</span>
+        </div>
 
-        <Input label="Observación" optional placeholder="Alguna razón de la diferencia..." value={observacion} onChange={(e) => setObservacion(e.target.value)} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Desplegable
+            label="Entregar a"
+            value={cuentaDestinoId}
+            onChange={(v) => setCuentaDestinoId(Number(v))}
+            placeholder="Elige la caja o el banco"
+            options={destinos.map((d) => ({ value: d.id, label: d.nombre, detalle: NATURALEZA_LABEL[d.naturaleza] ?? d.naturaleza }))}
+          />
+
+          {/* Sin autocompletar: el navegador lo llenaba con el correo de la sesión. */}
+          <Input
+            label="Observación"
+            optional
+            autoComplete="off"
+            name="observacion-cierre"
+            placeholder="Alguna razón de la diferencia..."
+            value={observacion}
+            onChange={(e) => setObservacion(e.target.value)}
+          />
+        </div>
       </div>
     </Modal>
-  )
-}
-
-/** Una fila de conteo: cuántos billetes/monedas de un valor, y cuánto suman. */
-function FilaDenominacion({
-  valor,
-  cantidad,
-  onChange,
-}: {
-  valor: number
-  cantidad: string
-  onChange: (texto: string) => void
-}) {
-  const subtotal = valor * (Number(cantidad) > 0 ? Math.floor(Number(cantidad)) : 0)
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="w-16 shrink-0 text-sm text-ink">{soles(valor)}</span>
-      <Input
-        size="sm"
-        type="number"
-        min={0}
-        step={1}
-        placeholder="0"
-        value={cantidad}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-20"
-      />
-      <span className="ml-auto shrink-0 text-sm text-ink-soft">{soles(subtotal)}</span>
-    </div>
   )
 }
