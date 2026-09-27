@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Ban, ClipboardCheck, Smartphone, UserX } from 'lucide-react'
-import { Alert, Badge, ListPage, RowAction, StatCard, Tabs, useConfirmacion, useToast } from '../../components/ui'
+import { AlertTriangle, Ban, ClipboardCheck, Eye, Smartphone, UserX } from 'lucide-react'
+import { Alert, Badge, ListPage, RowAction, StatCard, useConfirmacion, useToast } from '../../components/ui'
 import type { BadgeTone, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { desplazarDias, fechaHora, hoyLocal } from '../../lib/fechas'
@@ -8,11 +8,21 @@ import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { cierreCajaApi } from './cierreCajaApi'
 import type { CierreCajaResponse } from './cierreCajaApi'
-import { CobrosDigitalesTab } from './CobrosDigitalesTab'
+import { CierreDetalleModal } from './CierreDetalleModal'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
 type Resultado = 'FALTANTE' | 'SOBRANTE' | 'CUADRO'
+
+/** Cómo va lo digital del cierre: lo que falta buscar en el banco manda. */
+const verificacionDe = (c: CierreCajaResponse) =>
+  c.digitalPorVerificar > 0
+    ? 'PENDIENTE'
+    : c.digitalRechazados > 0
+      ? 'RECHAZADO'
+      : c.digital > 0
+        ? 'VERIFICADO'
+        : 'NINGUNO'
 
 const resultadoDe = (c: CierreCajaResponse): Resultado =>
   c.diferencia < 0 ? 'FALTANTE' : c.diferencia > 0 ? 'SOBRANTE' : 'CUADRO'
@@ -35,8 +45,9 @@ const DESCUENTOS = [
  * solo en la planilla semanal del trabajador; aquí se ve cómo va ese descuento
  * y se anula un cierre mal contado.
  *
- * Lo cobrado por Yape, Plin o transferencia no pasa por la caja: se cuadra en
- * la pestaña Cobros digitales, buscándolo en el banco.
+ * Cada cierre se revisa entero en su detalle: el efectivo que pasó por la
+ * caja, lo cobrado por Yape o transferencia —que se verifica ahí contra el
+ * banco— y los billetes y monedas que se contaron.
  */
 export function CierresCajaPage() {
   const { puede } = usePermisos()
@@ -47,25 +58,7 @@ export function CierresCajaPage() {
   const [hasta, setHasta] = useState(hoyLocal())
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
-  const [pestana, setPestana] = useState<'cierres' | 'digitales'>('cierres')
-  const [porVerificar, setPorVerificar] = useState<number | undefined>(undefined)
-
-  // Los pendientes salen en cualquier rango: con el de hoy basta para contarlos.
-  const contarPorVerificar = useCallback(async () => {
-    try {
-      const hoy = hoyLocal()
-      const lista = await cierreCajaApi.cobrosDigitales(hoy, hoy)
-      setPorVerificar(lista.filter((c) => c.estado === 'PENDIENTE').length)
-    } catch {
-      setPorVerificar(undefined)
-    }
-  }, [])
-
-  useEffect(() => {
-    void contarPorVerificar()
-  }, [contarPorVerificar])
-
-  useRealtime(['cierrescaja', 'notasventa'], contarPorVerificar)
+  const [abierto, setAbierto] = useState<CierreCajaResponse | null>(null)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -148,6 +141,41 @@ export function CierresCajaPage() {
         )
       },
     },
+    {
+      key: 'digital',
+      label: 'Digital',
+      align: 'right',
+      filterable: false,
+      render: (row) => (row.digital > 0 ? soles(row.digital) : <span className="text-ink-soft">—</span>),
+    },
+    {
+      // Lo digital no se cuenta: se busca en el banco. Aquí se ve si falta.
+      key: 'verificacion',
+      label: 'Verificación',
+      filterType: 'select',
+      filterOptions: [
+        { value: 'PENDIENTE', label: 'Por verificar' },
+        { value: 'RECHAZADO', label: 'Con rechazados' },
+        { value: 'VERIFICADO', label: 'Verificado' },
+        { value: 'NINGUNO', label: 'Sin cobros digitales' },
+      ],
+      value: (row) => verificacionDe(row),
+      render: (row) => {
+        const v = verificacionDe(row)
+        if (v === 'NINGUNO') return <span className="text-ink-soft">—</span>
+        return (
+          <div className="flex flex-wrap gap-1">
+            {row.digitalPorVerificar > 0 && <Badge tone="warning">{row.digitalPorVerificar} por verificar</Badge>}
+            {row.digitalRechazados > 0 && (
+              <Badge tone="danger">
+                {row.digitalRechazados} {row.digitalRechazados === 1 ? 'rechazado' : 'rechazados'}
+              </Badge>
+            )}
+            {v === 'VERIFICADO' && <Badge tone="success">Verificado</Badge>}
+          </div>
+        )
+      },
+    },
     { key: 'cuentaDestino', label: 'Entregado a', filterable: false },
     {
       key: 'descuento',
@@ -178,55 +206,50 @@ export function CierresCajaPage() {
     },
   ]
 
-  const cabecera = (
-    <Tabs
-      className="mb-5"
-      active={pestana}
-      onChange={(id) => setPestana(id as 'cierres' | 'digitales')}
-      items={[
-        { id: 'cierres', label: 'Cierres', icon: <ClipboardCheck size={15} /> },
-        { id: 'digitales', label: 'Cobros digitales', icon: <Smartphone size={15} />, badge: porVerificar || undefined },
-      ]}
-    />
-  )
-
-  if (pestana === 'digitales') return <CobrosDigitalesTab cabecera={cabecera} />
-
   return (
-    <>
-      {cabecera}
-      <ListPage
-        icon={<ClipboardCheck size={20} />}
-        title="Cierres de caja"
-        description="Los cierres de todas las cajas. Cada faltante se descuenta solo en la planilla semanal del trabajador."
-        alert={
-          error ? (
-            <Alert>{error}</Alert>
-          ) : sinEmpleado > 0 ? (
-            <Alert tone="warning">
-              {sinEmpleado} faltante(s) de usuarios sin empleado vinculado: no entran en ninguna planilla hasta vincularlos en
-              Configuración → Usuarios.
-            </Alert>
-          ) : undefined
-        }
-        stats={
-          <>
-            <StatCard label="Faltantes por descontar" value={soles(faltantePendiente)} icon={<AlertTriangle size={18} />} tono="danger" />
-            <StatCard label="Cierres del periodo" value={String(vigentes.length)} icon={<ClipboardCheck size={18} />} tono="sys" />
-          </>
-        }
-        columns={columns}
-        rows={cierres}
-        onConsulta={(q) => {
-          const fecha = q.filtros.find((f) => f.columna === 'fecha')
-          setDesde(fecha?.valor || desplazarDias(-30))
-          setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
-        }}
-        cardIcon={ClipboardCheck}
-        searchPlaceholder="Buscar por trabajador..."
-        empty={cargando ? 'Cargando cierres...' : 'No hay cierres en este periodo.'}
-        rowActions={(row) =>
-          !row.anulado && puede('finanzas.cierres', 'anular') ? (
+    <ListPage
+      icon={<ClipboardCheck size={20} />}
+      title="Cierres de caja"
+      description="Los cierres de todas las cajas. Cada faltante se descuenta solo en la planilla semanal del trabajador."
+      alert={
+        error ? (
+          <Alert>{error}</Alert>
+        ) : sinEmpleado > 0 ? (
+          <Alert tone="warning">
+            {sinEmpleado} faltante(s) de usuarios sin empleado vinculado: no entran en ninguna planilla hasta vincularlos en
+            Configuración → Usuarios.
+          </Alert>
+        ) : undefined
+      }
+      stats={
+        <>
+          <StatCard label="Faltantes por descontar" value={soles(faltantePendiente)} icon={<AlertTriangle size={18} />} tono="danger" />
+          <StatCard label="Cierres del periodo" value={String(vigentes.length)} icon={<ClipboardCheck size={18} />} tono="sys" />
+        <StatCard
+          label="Digital por verificar"
+          value={String(vigentes.reduce((n, c) => n + c.digitalPorVerificar, 0))}
+          icon={<Smartphone size={18} />}
+          tono="warning"
+          hint="Cobros por Yape o transferencia a buscar en el banco"
+        />
+        </>
+      }
+      columns={columns}
+      rows={cierres}
+      onConsulta={(q) => {
+        const fecha = q.filtros.find((f) => f.columna === 'fecha')
+        setDesde(fecha?.valor || desplazarDias(-30))
+        setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
+      }}
+      cardIcon={ClipboardCheck}
+      searchPlaceholder="Buscar por trabajador..."
+      empty={cargando ? 'Cargando cierres...' : 'No hay cierres en este periodo.'}
+      rowActions={(row) => (
+        <>
+          <RowAction label="Ver el detalle del cierre" tone="view" onClick={() => setAbierto(row)}>
+            <Eye size={15} />
+          </RowAction>
+          {!row.anulado && puede('finanzas.cierres', 'anular') && (
             <RowAction
               label="Anular cierre"
               tone="danger"
@@ -236,11 +259,12 @@ export function CierresCajaPage() {
             >
               <Ban size={15} />
             </RowAction>
-          ) : null
-        }
-      >
-        {dialogo}
-      </ListPage>
-    </>
+          )}
+        </>
+      )}
+    >
+      {dialogo}
+      {abierto && <CierreDetalleModal cierreId={abierto.id} onClose={() => setAbierto(null)} onCambio={cargar} />}
+    </ListPage>
   )
 }

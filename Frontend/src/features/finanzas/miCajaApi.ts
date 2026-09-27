@@ -17,6 +17,8 @@ export interface CerrarMiCajaRequest {
   monedas: number
   cuentaDestinoId: number
   observacion?: string | null
+  /** Cuántos de cada billete y moneda: queda guardado para revisar el cierre. */
+  denominaciones?: { valor: number; cantidad: number }[]
 }
 
 /** Una cuenta a la que se puede entregar lo contado, sin su saldo. */

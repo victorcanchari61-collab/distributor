@@ -19,4 +19,10 @@ public interface ICierreCajaService
     /// descuento. No se puede si ese descuento ya entró en una planilla pagada.
     /// </summary>
     Task<CierreCajaResponse> AnularAsync(int id, int? usuarioId);
+
+    /// <summary>
+    /// Todo lo del cierre para revisar si cuadra: el efectivo y lo digital
+    /// cobrado desde el cierre anterior de esa caja, y los billetes y monedas.
+    /// </summary>
+    Task<CierreDetalleResponse> DetalleAsync(int id);
 }

@@ -47,6 +47,10 @@ public class CobroDigitalService : ICobroDigitalService
             (p.Fecha >= inicio && p.Fecha < fin) || p.EstadoVerificacion == EstadoVerificacionCobro.Pendiente));
     }
 
+    public Task<List<CobroDigitalResponse>> DelPeriodoAsync(int usuarioId, DateTime? desdeExclusivo, DateTime hasta) =>
+        FilasAsync(Vigentes().Where(p =>
+            p.UsuarioId == usuarioId && p.Fecha <= hasta && (desdeExclusivo == null || p.Fecha > desdeExclusivo)));
+
     public async Task<CobroDigitalResponse> VerificarAsync(int pagoId, int? usuarioId)
     {
         var pago = await ExigirVigenteAsync(pagoId);

@@ -30,6 +30,60 @@ public class CierreCajaResponse
     /// ninguna planilla hasta que se lo vincule en Usuarios.
     /// </summary>
     public bool SinEmpleado { get; set; }
+
+    /// <summary>
+    /// Lo cobrado por Yape, Plin o transferencia desde el cierre anterior hasta
+    /// este: no pasa por la caja, se verifica en el banco. Sin lo rechazado.
+    /// </summary>
+    public decimal Digital { get; set; }
+    public int DigitalPorVerificar { get; set; }
+    public int DigitalRechazados { get; set; }
+}
+
+/// <summary>
+/// Todo lo de un cierre para revisar si cuadra: el efectivo que pasó por la
+/// caja, lo cobrado digital que tiene que aparecer en el banco y los billetes
+/// y monedas que se contaron.
+/// </summary>
+public class CierreDetalleResponse
+{
+    public CierreCajaResponse Cierre { get; set; } = new();
+
+    /// <summary>Desde cuándo cuenta: el cierre anterior de esa caja. Nulo si es el primero.</summary>
+    public DateTime? Desde { get; set; }
+
+    /// <summary>Lo que la caja ya tenía al empezar el periodo (venía de antes).</summary>
+    public decimal SaldoAnterior { get; set; }
+
+    /// <summary>Vacío en los cierres de antes de guardar el desglose.</summary>
+    public List<DenominacionResponse> Denominaciones { get; set; } = [];
+
+    public List<MovimientoCierreResponse> Efectivo { get; set; } = [];
+    public List<CobroDigitalResponse> Digitales { get; set; } = [];
+}
+
+public class DenominacionResponse
+{
+    public decimal Valor { get; set; }
+    public int Cantidad { get; set; }
+    public decimal Total { get; set; }
+    public bool EsBillete { get; set; }
+}
+
+/// <summary>Un movimiento de la caja dentro del periodo de un cierre.</summary>
+public class MovimientoCierreResponse
+{
+    public int Id { get; set; }
+    public DateTime Fecha { get; set; }
+    public string Tipo { get; set; } = string.Empty;
+    public decimal Monto { get; set; }
+    public string DocumentoOrigen { get; set; } = string.Empty;
+
+    /// <summary>La venta y el cliente, la categoría del gasto o lo escrito a mano.</summary>
+    public string? Detalle { get; set; }
+
+    public bool Anulado { get; set; }
+    public bool EsReversa { get; set; }
 }
 
 public class DescuentoFaltanteResponse

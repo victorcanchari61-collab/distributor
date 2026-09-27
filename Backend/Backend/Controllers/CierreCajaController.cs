@@ -33,6 +33,11 @@ public class CierreCajaController : ControllerBase
     public async Task<IActionResult> Listar([FromQuery] DateTime desde, [FromQuery] DateTime hasta) =>
         Ok(await _cierres.ListarAsync(desde, hasta));
 
+    /// <summary>Todo lo del cierre para revisar si cuadra: efectivo, digital y billetes.</summary>
+    [HttpGet("{id:int}/detalle")]
+    [Permiso("finanzas.cierres", Accion.Ver)]
+    public async Task<IActionResult> Detalle(int id) => Ok(await _cierres.DetalleAsync(id));
+
     [HttpPatch("{id:int}/anular")]
     [Permiso("finanzas.cierres", Accion.Anular)]
     public async Task<IActionResult> Anular(int id) => Ok(await _cierres.AnularAsync(id, UsuarioId));

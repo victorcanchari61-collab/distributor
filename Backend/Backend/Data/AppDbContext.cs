@@ -72,6 +72,7 @@ public class AppDbContext : DbContext
     public DbSet<RegistroAuditoria> RegistrosAuditoria => Set<RegistroAuditoria>();
     public DbSet<CierreCaja> CierresCaja => Set<CierreCaja>();
     public DbSet<DescuentoFaltante> DescuentosFaltante => Set<DescuentoFaltante>();
+    public DbSet<CierreCajaDenominacion> CierreCajaDenominaciones => Set<CierreCajaDenominacion>();
     public DbSet<Financiamiento> Financiamientos => Set<Financiamiento>();
     public DbSet<PagoFinanciamiento> PagosFinanciamiento => Set<PagoFinanciamiento>();
     public DbSet<PlanillaSemanal> PlanillasSemanales => Set<PlanillaSemanal>();
@@ -1530,6 +1531,15 @@ public class AppDbContext : DbContext
                 .HasForeignKey(p => p.MovimientoCuentaId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(p => p.Usuario).WithMany()
                 .HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<CierreCajaDenominacion>(entity =>
+        {
+            entity.ToTable("CierreCajaDenominaciones");
+            entity.Property(d => d.Valor).HasPrecision(10, 2);
+            entity.Ignore(d => d.EsBillete);
+            entity.HasOne(d => d.CierreCaja).WithMany(c => c.Denominaciones)
+                .HasForeignKey(d => d.CierreCajaId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DescuentoFaltante>(entity =>

@@ -1,4 +1,6 @@
+using System.Globalization;
 using Backend.Dtos.Requests;
+using Backend.Models;
 using FluentValidation;
 
 namespace Backend.Dtos.Validators;
@@ -11,6 +13,13 @@ public class CerrarCajaRequestValidator : AbstractValidator<CerrarCajaRequest>
         RuleFor(x => x.Monedas).GreaterThanOrEqualTo(0).WithMessage("Las monedas no pueden ser negativas");
         RuleFor(x => x.CuentaDestinoId).GreaterThan(0).WithMessage("Elige a quién le entregas lo contado");
         RuleFor(x => x.Observacion).MaximumLength(250);
+        RuleForEach(x => x.Denominaciones).ChildRules(d =>
+        {
+            d.RuleFor(x => x.Valor)
+                .Must(v => Denominacion.Todas.Contains(v))
+                .WithMessage(x => $"No hay billete ni moneda de S/ {x.Valor.ToString("0.00", CultureInfo.InvariantCulture)}");
+            d.RuleFor(x => x.Cantidad).GreaterThanOrEqualTo(0).WithMessage("La cantidad no puede ser negativa");
+        });
     }
 }
 

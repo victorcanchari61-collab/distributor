@@ -49,6 +49,36 @@ public class CierreCaja
     public bool Anulado { get; set; }
 
     public DescuentoFaltante? Descuento { get; set; }
+
+    /// <summary>Cuántos se contaron de cada billete y moneda. Vacío en los cierres de antes del desglose.</summary>
+    public List<CierreCajaDenominacion> Denominaciones { get; set; } = [];
+}
+
+/// <summary>Cuántos billetes o monedas de un valor se contaron en un cierre.</summary>
+public class CierreCajaDenominacion
+{
+    public int Id { get; set; }
+
+    public int CierreCajaId { get; set; }
+    public CierreCaja? CierreCaja { get; set; }
+
+    /// <summary>200, 0.50... Ver <see cref="Denominacion"/>.</summary>
+    public decimal Valor { get; set; }
+
+    public int Cantidad { get; set; }
+
+    public bool EsBillete => Denominacion.EsBillete(Valor);
+}
+
+/// <summary>Los billetes y monedas en soles que se cuentan al cerrar caja.</summary>
+public static class Denominacion
+{
+    public static readonly decimal[] Billetes = [200m, 100m, 50m, 20m, 10m];
+    public static readonly decimal[] Monedas = [5m, 2m, 1m, 0.5m, 0.2m, 0.1m];
+    public static readonly decimal[] Todas = [.. Billetes, .. Monedas];
+
+    /// <summary>De S/ 10 para arriba es billete; lo demás, moneda.</summary>
+    public static bool EsBillete(decimal valor) => valor >= 10m;
 }
 
 public static class EstadoDescuentoFaltante

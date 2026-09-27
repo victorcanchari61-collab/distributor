@@ -482,6 +482,10 @@ function CerrarCajaModal({
         monedas: Math.round(totalMonedas * 100) / 100,
         cuentaDestinoId,
         observacion: observacion.trim() || null,
+        denominaciones: DENOMINACIONES.map((d) => ({
+          valor: d.valor,
+          cantidad: cantidad((d.tipo === 'Billete' ? cantBilletes : cantMonedas)[d.valor]),
+        })),
       })
       await onGuardado()
     } catch (e) {
