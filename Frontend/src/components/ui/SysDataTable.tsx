@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { cn } from './cn'
 import { useDismiss } from './useDismiss'
+import { instanteMs } from '../../lib/fechas'
 import { FiltersButton } from './FiltersButton'
 import { describeFilter } from './dataTableFilters'
 import type { DataTableFilter, FilterType } from './dataTableFilters'
@@ -127,6 +128,15 @@ export interface SysDataTableProps<T> {
    * tabla, y la vista sigue sin tener que reimplementar búsqueda y orden.
    */
   onConsulta?: (consulta: ConsultaTabla) => void
+  /**
+   * Filtros con los que la tabla arranca, a la vista en el panel y como chip.
+   *
+   * Es para el filtro que la vista aplica igual aunque nadie lo toque —el
+   * rango de fechas de hoy, por ejemplo—: sin esto los datos salían filtrados
+   * pero el panel decía "sin filtros". Restablecer y quitar el chip vuelven a
+   * estos, no a vacío.
+   */
+  filtrosIniciales?: Omit<DataTableFilter, 'id'>[]
   /** Propiedad que identifica cada fila. */
   rowKey?: keyof T & string
   searchPlaceholder?: string
@@ -239,6 +249,17 @@ function matchesFilter<T>(row: T, filter: DataTableFilter, col?: DataTableColumn
     case 'equals':
       return value === term
     case 'between': {
+      // Sin column.value() llega el texto del servidor: se lee como instante
+      // (o como día suelto) y se compara contra los días LOCALES del filtro.
+      // Antes Number() de ese texto daba NaN y el rango vaciaba la tabla.
+      if (typeof raw === 'string') {
+        const ms = raw ? instanteMs(raw) : Number.NaN
+        const desdeLocal = filter.value ? new Date(`${filter.value}T00:00:00`).getTime() : -Infinity
+        const hastaLocal = filter.valueTo
+          ? new Date(`${filter.valueTo}T00:00:00`).getTime() + 86_400_000 - 1
+          : Infinity
+        return ms >= desdeLocal && ms <= hastaLocal
+      }
       // Fecha, guardada como epoch por column.value(): el filtro llega como
       // fecha (yyyy-mm-dd) de un <input type="date">, así que "hasta" se
       // extiende al final de ese día para que incluya todo lo del dia elegido.
@@ -264,6 +285,7 @@ export function SysDataTable<T>({
   actionsWidth = ACTIONS_WIDTH,
   servidor,
   onConsulta,
+  filtrosIniciales,
   onRowClick,
   className,
   toolbar = true,
@@ -282,7 +304,15 @@ export function SysDataTable<T>({
   // un portal anclado a ella, porque la cabecera lleva overflow-hidden y ahi
   // dentro quedaria recortado.
   const [anchorSearch, setAnchorSearch] = useState<HTMLElement | null>(null)
-  const [filters, setFilters] = useState<DataTableFilter[]>([])
+  // Se fijan al montar: la vista suele pasarlos inline y cambiarían en cada render.
+  const [iniciales] = useState<DataTableFilter[]>(() =>
+    (filtrosIniciales ?? []).map((f) => ({ ...f, id: f.column })),
+  )
+  const [filters, setFilters] = useState<DataTableFilter[]>(iniciales)
+  const inicialDe = (column: string) => iniciales.find((f) => f.column === column)
+  const igual = (a: DataTableFilter, b?: DataTableFilter) =>
+    !!b && a.operator === b.operator && a.value === b.value && (a.valueTo ?? '') === (b.valueTo ?? '')
+  const enInicio = filters.length === iniciales.length && filters.every((f) => igual(f, inicialDe(f.column)))
   const [panel, setPanel] = useState<'columns' | 'filters' | null>(null)
   const [dragging, setDragging] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)
@@ -679,6 +709,7 @@ export function SysDataTable<T>({
                 columns={columns}
                 filters={filters}
                 setFilters={setFilters}
+                iniciales={iniciales}
                 open={panel === 'filters'}
                 onToggle={() => setPanel((p) => (p === 'filters' ? null : 'filters'))}
                 onClose={() => setPanel(null)}
@@ -707,14 +738,22 @@ export function SysDataTable<T>({
             >
               <span className="font-medium">{byKey[f.column]?.label}</span>
               <span>{describeFilter(f)}</span>
-              <button
-                type="button"
-                onClick={() => setFilters((prev) => prev.filter((x) => x.id !== f.id))}
-                aria-label="Quitar filtro"
-                className="rounded-full p-0.5 transition-colors hover:bg-[rgb(var(--sys-rgb)/0.2)]"
-              >
-                <X size={11} />
-              </button>
+              {/* El de inicio no se quita: quitarlo volvería a él mismo. */}
+              {!igual(f, inicialDe(f.column)) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const inicial = inicialDe(f.column)
+                    setFilters((prev) =>
+                      inicial ? prev.map((x) => (x.id === f.id ? inicial : x)) : prev.filter((x) => x.id !== f.id),
+                    )
+                  }}
+                  aria-label="Quitar filtro"
+                  className="rounded-full p-0.5 transition-colors hover:bg-[rgb(var(--sys-rgb)/0.2)]"
+                >
+                  <X size={11} />
+                </button>
+              )}
             </span>
           ))}
 
@@ -739,16 +778,18 @@ export function SysDataTable<T>({
               </span>
             ))}
 
-          <button
-            type="button"
-            onClick={() => {
-              setFilters([])
-              setColumnSearch({})
-            }}
-            className="ml-auto text-[11px] font-medium text-zinc-500 transition-colors hover:text-zinc-800"
-          >
-            Limpiar todo
-          </button>
+          {(!enInicio || activeColumnSearches > 0) && (
+            <button
+              type="button"
+              onClick={() => {
+                setFilters(iniciales)
+                setColumnSearch({})
+              }}
+              className="ml-auto text-[11px] font-medium text-zinc-500 transition-colors hover:text-zinc-800"
+            >
+              Limpiar todo
+            </button>
+          )}
         </div>
           )}
         </>

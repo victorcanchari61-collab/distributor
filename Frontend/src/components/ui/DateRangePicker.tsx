@@ -55,7 +55,12 @@ function presets(): { label: string; from: string; to: string }[] {
   const mesPasadoFin = new Date(y, hoy.getMonth(), 0)
   const mesPasadoInicio = new Date(mesPasadoFin.getFullYear(), mesPasadoFin.getMonth(), 1)
 
+  const ayer = new Date(hoy)
+  ayer.setDate(ayer.getDate() - 1)
+
   return [
+    { label: 'Hoy', from: toIso(hoy), to: toIso(hoy) },
+    { label: 'Ayer', from: toIso(ayer), to: toIso(ayer) },
     { label: 'Esta semana', from: toIso(esteInicioSemana), to: toIso(hoy) },
     { label: 'Última semana', from: toIso(semanaPasadaInicio), to: toIso(semanaPasadaFin) },
     { label: 'Este mes', from: toIso(esteMesInicio), to: toIso(hoy) },

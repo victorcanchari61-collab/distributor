@@ -208,6 +208,7 @@ export function MiCajaPage() {
               setDesde(fecha?.valor || hoyLocal())
               setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
             }}
+            filtrosIniciales={[{ column: 'fecha', operator: 'between', value: hoyLocal(), valueTo: hoyLocal() }]}
             cardIcon={Wallet}
             searchPlaceholder="Buscar por detalle..."
             empty={cargando ? 'Cargando movimientos...' : 'No hay movimientos en tu caja en estas fechas.'}

@@ -47,8 +47,11 @@ export interface DataTableFilter {
 /** Texto legible de lo que compara un filtro, para el chip y la lista del panel. */
 export function describeFilter(f: DataTableFilter): ReactNode {
   if (f.operator === 'between') {
-    if (f.value && f.valueTo) return <><b>{f.value}</b> — <b>{f.valueTo}</b></>
-    return <b>{f.value ? `desde ${f.value}` : `hasta ${f.valueTo}`}</b>
+    // yyyy-mm-dd del calendario, mostrado como se lee aquí: 27/09/2026.
+    const dia = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-').reverse().join('/') : iso)
+    if (f.value && f.valueTo && f.value === f.valueTo) return <b>{dia(f.value)}</b>
+    if (f.value && f.valueTo) return <><b>{dia(f.value)}</b> — <b>{dia(f.valueTo)}</b></>
+    return <b>{f.value ? `desde ${dia(f.value)}` : `hasta ${dia(f.valueTo ?? '')}`}</b>
   }
   return (
     <>

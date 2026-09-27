@@ -171,6 +171,7 @@ export function MisDigitalesTab() {
           setDesde(fecha?.valor || hoyLocal())
           setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
         }}
+        filtrosIniciales={[{ column: 'fecha', operator: 'between', value: hoyLocal(), valueTo: hoyLocal() }]}
         cardIcon={Smartphone}
         searchPlaceholder="Buscar por documento o cliente..."
         empty={cargando ? 'Cargando...' : 'No hiciste cobros ni pagos digitales en estas fechas.'}

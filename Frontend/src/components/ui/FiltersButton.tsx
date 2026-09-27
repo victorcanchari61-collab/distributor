@@ -30,6 +30,7 @@ export function FiltersButton<T>({
   columns,
   filters,
   setFilters,
+  iniciales = [],
   open,
   onToggle,
   onClose,
@@ -37,6 +38,8 @@ export function FiltersButton<T>({
   columns: DataTableColumn<T>[]
   filters: DataTableFilter[]
   setFilters: React.Dispatch<React.SetStateAction<DataTableFilter[]>>
+  /** Con los que arranca la tabla: Restablecer vuelve a estos. */
+  iniciales?: DataTableFilter[]
   open: boolean
   onToggle: () => void
   onClose: () => void
@@ -74,6 +77,7 @@ export function FiltersButton<T>({
             filterable={filterable}
             filters={filters}
             setFilters={setFilters}
+            iniciales={iniciales}
             open={open}
             onClose={onClose}
           />
@@ -89,12 +93,14 @@ function PanelFiltros<T>({
   filterable,
   filters,
   setFilters,
+  iniciales,
   open,
   onClose,
 }: {
   filterable: DataTableColumn<T>[]
   filters: DataTableFilter[]
   setFilters: React.Dispatch<React.SetStateAction<DataTableFilter[]>>
+  iniciales: DataTableFilter[]
   open: boolean
   onClose: () => void
 }) {
@@ -133,13 +139,20 @@ function PanelFiltros<T>({
         })
       }
     }
+    // Un filtro de inicio que se dejó vacío vuelve a su valor: la vista lo
+    // aplica igual, y así se sigue viendo cuál es.
+    for (const inicial of iniciales) {
+      if (!nuevos.some((f) => f.column === inicial.column)) nuevos.push(inicial)
+    }
     setFilters(nuevos)
     onClose()
   }
 
   const restablecer = () => {
-    setDraft({})
-    setFilters([])
+    const inicial: Record<string, { value: string; valueTo: string }> = {}
+    for (const f of iniciales) inicial[f.column] = { value: f.value, valueTo: f.valueTo ?? '' }
+    setDraft(inicial)
+    setFilters(iniciales)
   }
 
   return (

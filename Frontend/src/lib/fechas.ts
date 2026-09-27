@@ -37,6 +37,11 @@ export function desplazarDias(dias: number): string {
  * documento— no lleva hora ni zona y se muestra tal cual: tratarla como UTC
  * la correría al día anterior.
  */
+/** Una fecha del servidor como epoch, leída igual que para mostrarla. */
+export function instanteMs(valor: string): number {
+  return comoInstante(valor).getTime()
+}
+
 export function fechaHora(valor: string): string {
   return comoInstante(valor).toLocaleString('es-PE')
 }
