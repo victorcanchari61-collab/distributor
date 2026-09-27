@@ -255,3 +255,31 @@ class MovimientoDigital {
         estadoVerificacion: json['estadoVerificacion'] as String?,
       );
 }
+
+/// Una fila de Mi Caja: un movimiento de la caja (efectivo) o un cobro o pago
+/// por Yape o transferencia, que no pasa por la caja pero tambien es suyo.
+class FilaMiCaja {
+  const FilaMiCaja.efectivo(MovimientoCaja this.efectivo) : digital = null;
+  const FilaMiCaja.digital(MovimientoDigital this.digital) : efectivo = null;
+
+  final MovimientoCaja? efectivo;
+  final MovimientoDigital? digital;
+
+  bool get esEfectivo => efectivo != null;
+  DateTime get fecha => efectivo?.fecha ?? digital!.fecha;
+  bool get esIngreso => efectivo?.esIngreso ?? digital!.esCobro;
+  double get monto => efectivo?.monto ?? digital!.monto;
+
+  /// Movio plata de verdad: ni anulado, ni reversa, ni rechazado en el banco.
+  bool get cuenta => efectivo != null
+      ? efectivo!.vigente
+      : !digital!.anulado && !digital!.rechazado;
+
+  /// De donde viene, con las mismas claves que el efectivo: un cobro digital
+  /// es un cobro de venta igual.
+  String get concepto =>
+      efectivo?.documentoOrigen ??
+      (digital!.esCobro ? 'PAGO_VENTA' : 'PAGO_COMPRA');
+
+  String get buscable => efectivo?.buscable ?? digital!.buscable;
+}

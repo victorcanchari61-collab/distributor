@@ -14,15 +14,14 @@ import {
   Tabs,
   useToast,
 } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import type { BadgeTone, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaHora, hoyLocal } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { miCajaApi } from './miCajaApi'
-import type { CuentaDestino } from './miCajaApi'
+import type { CuentaDestino, MovimientoDigital } from './miCajaApi'
 import type { CuentaFinancieraResponse, MovimientoCuentaResponse } from './cuentaFinancieraApi'
 import { gastoOperativoApi, origenLabel } from './gastoOperativoApi'
-import { MisDigitalesTab } from './MisDigitalesTab'
 import type { CategoriaOpcion, TipoMovimientoOperativo } from './gastoOperativoApi'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
@@ -47,37 +46,125 @@ const DOCUMENTOS: Record<string, string> = {
 
 const NATURALEZA_LABEL: Record<string, string> = { CAJA: 'Caja', BANCO: 'Banco', PASARELA: 'Pasarela' }
 
+type Medio = 'EFECTIVO' | 'BILLETERA_DIGITAL' | 'TRANSFERENCIA'
+
+const MEDIOS: Record<Medio, string> = {
+  EFECTIVO: 'Efectivo',
+  BILLETERA_DIGITAL: 'Billetera digital',
+  TRANSFERENCIA: 'Transferencia',
+}
+
+type Estado = 'VIGENTE' | 'ANULADO' | 'REVERSA' | 'PENDIENTE' | 'VERIFICADO' | 'RECHAZADO'
+
+/*
+ * El efectivo solo vale o se anuló. Lo digital, además, se busca en el banco
+ * por su número de operación: queda por verificar hasta que alguien lo
+ * encuentra, y si no aparece se rechaza y se descuenta en planilla.
+ */
+const ESTADOS: Record<Estado, { label: string; tono: BadgeTone }> = {
+  VIGENTE: { label: 'Vigente', tono: 'success' },
+  PENDIENTE: { label: 'Por verificar', tono: 'warning' },
+  VERIFICADO: { label: 'Verificado', tono: 'success' },
+  RECHAZADO: { label: 'Rechazado', tono: 'danger' },
+  ANULADO: { label: 'Anulado', tono: 'neutral' },
+  REVERSA: { label: 'Reversa', tono: 'neutral' },
+}
+
 /**
- * La Caja de quien está logueado: su propio dinero en la ruta. Las ventas al
- * contado que cobra entran solas; acá se registra cualquier otro ingreso o
- * egreso a mano, y se cierra la caja (cuenta lo físico y lo entrega a otra
- * cuenta).
+ * Una fila de Mi Caja: un movimiento de la caja (efectivo) o un cobro o pago
+ * por Yape o transferencia, que no pasa por la caja pero también es suyo.
+ */
+interface FilaMiCaja {
+  clave: string
+  fecha: string
+  medio: Medio
+  /** "Efectivo", o el método: "Yape-Victor". */
+  metodo: string
+  tipo: 'INGRESO' | 'EGRESO'
+  monto: number
+  /** Solo en efectivo: cómo quedó la caja. Lo digital no la toca. */
+  saldo: number | null
+  /** La clave de DOCUMENTOS, para filtrar por concepto. */
+  concepto: string
+  /** Lo que va debajo del concepto: el documento y el cliente, o lo escrito a mano. */
+  detalle: string | null
+  numeroOperacion: string | null
+  estado: Estado
+}
+
+/** Movió plata de verdad: ni lo anulado, ni su reversa, ni lo que no llegó al banco. */
+const cuenta = (f: FilaMiCaja) => f.estado !== 'ANULADO' && f.estado !== 'REVERSA' && f.estado !== 'RECHAZADO'
+
+const deEfectivo = (m: MovimientoCuentaResponse): FilaMiCaja => ({
+  clave: `E-${m.id}`,
+  fecha: m.fecha,
+  medio: 'EFECTIVO',
+  metodo: 'Efectivo',
+  tipo: m.tipo,
+  monto: m.monto,
+  saldo: m.saldoResultante,
+  concepto: m.documentoOrigen,
+  detalle: m.observacion ?? null,
+  numeroOperacion: null,
+  estado: m.esReversa ? 'REVERSA' : m.anulado ? 'ANULADO' : 'VIGENTE',
+})
+
+const deDigital = (m: MovimientoDigital): FilaMiCaja => ({
+  clave: `D-${m.tipo}-${m.id}`,
+  fecha: m.fecha,
+  medio: m.metodoTipo,
+  metodo: m.metodoPago,
+  tipo: m.tipo === 'COBRO' ? 'INGRESO' : 'EGRESO',
+  monto: m.monto,
+  saldo: null,
+  concepto: m.tipo === 'COBRO' ? 'PAGO_VENTA' : 'PAGO_COMPRA',
+  detalle: [m.documento, m.contraparte, m.cuenta && `${m.tipo === 'COBRO' ? 'entró a' : 'salió de'} ${m.cuenta}`]
+    .filter(Boolean)
+    .join(' · '),
+  numeroOperacion: m.numeroOperacion,
+  estado: m.anulado ? 'ANULADO' : (m.estadoVerificacion ?? 'VIGENTE'),
+})
+
+/**
+ * La Caja de quien está logueado: su propio dinero en la ruta, y lo que cobró
+ * o pagó por Yape o transferencia.
+ *
+ * Todo va en una sola lista, pero las tarjetas separan lo que tiene en la mano
+ * —el efectivo, lo único que se cuenta al cerrar caja— de lo que entró directo
+ * al banco. Un solo total haría creer que el Yape también se entrega, y el
+ * cierre saldría con faltante sin faltar nada.
  */
 export function MiCajaPage() {
   const toast = useToast()
   const [caja, setCaja] = useState<CuentaFinancieraResponse | null>(null)
-  const [movimientos, setMovimientos] = useState<MovimientoCuentaResponse[]>([])
+  const [filas, setFilas] = useState<FilaMiCaja[]>([])
   const [categorias, setCategorias] = useState<CategoriaOpcion[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
-  // El historial de una caja crece todos los días: se pide por rango, el
-  // último mes por defecto, y se cambia desde el filtro de fecha de la tabla.
+  // El historial crece todos los días: se pide por rango, hoy por defecto, y
+  // se cambia desde el filtro de fecha de la tabla.
   const [desde, setDesde] = useState(hoyLocal())
   const [hasta, setHasta] = useState(hoyLocal())
 
   const [movimientoAbierto, setMovimientoAbierto] = useState<TipoMovimientoOperativo | null>(null)
   const [cerrarAbierto, setCerrarAbierto] = useState(false)
-  // Efectivo: la caja y su cierre. Digital: lo cobrado por Yape o transferencia,
-  // que no pasa por la caja pero también es suyo.
-  const [pestana, setPestana] = useState<'efectivo' | 'digital'>('efectivo')
 
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [c, cat] = await Promise.all([miCajaApi.mia(), gastoOperativoApi.categoriasOpciones()])
+      const [c, cat, efectivo, digitales] = await Promise.all([
+        miCajaApi.mia(),
+        gastoOperativoApi.categoriasOpciones(),
+        miCajaApi.movimientos(desde, hasta),
+        miCajaApi.digitales(desde, hasta),
+      ])
       setCaja(c)
       setCategorias(cat)
-      setMovimientos(await miCajaApi.movimientos(desde, hasta))
+      setFilas(
+        [...efectivo.map(deEfectivo), ...digitales.map(deDigital)].sort(
+          (a, b) => b.fecha.localeCompare(a.fecha) || b.clave.localeCompare(a.clave),
+        ),
+      )
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar tu caja.')
@@ -90,18 +177,31 @@ export function MiCajaPage() {
     void cargar()
   }, [cargar])
 
-  useRealtime('cuentasfinancieras', cargar)
-  useRealtime('gastosoperativos', cargar)
+  // Un cobro, un gasto, un cierre o una verificación en el banco cambian la lista.
+  useRealtime(['cuentasfinancieras', 'gastosoperativos', 'notasventa', 'compras', 'cierrescaja'], cargar)
 
-  // Solo lo vigente: un cobro anulado y su reversa no movieron plata, y
-  // contarlos inflaba a la vez los ingresos y los egresos.
-  const vigentes = movimientos.filter((m) => !m.anulado && !m.esReversa)
-  const totalIngresos = vigentes.filter((m) => m.tipo === 'INGRESO').reduce((s, m) => s + m.monto, 0)
-  const totalEgresos = vigentes.filter((m) => m.tipo === 'EGRESO').reduce((s, m) => s + m.monto, 0)
-  const estadoDe = (m: MovimientoCuentaResponse) => (m.esReversa ? 'Reversa' : m.anulado ? 'Anulado' : 'Vigente')
+  const suma = (lista: FilaMiCaja[]) => lista.reduce((s, f) => s + f.monto, 0)
+  const efectivo = filas.filter((f) => f.medio === 'EFECTIVO' && cuenta(f))
+  const ingresos = efectivo.filter((f) => f.tipo === 'INGRESO')
+  const egresos = efectivo.filter((f) => f.tipo === 'EGRESO')
+  const cobrosDigitales = filas.filter((f) => f.medio !== 'EFECTIVO' && f.tipo === 'INGRESO' && cuenta(f))
+  const porVerificar = cobrosDigitales.filter((f) => f.estado === 'PENDIENTE').length
+  const rechazados = filas.filter((f) => f.estado === 'RECHAZADO')
 
-  const columns: DataTableColumn<MovimientoCuentaResponse>[] = [
+  const columns: DataTableColumn<FilaMiCaja>[] = [
     { key: 'fecha', label: 'Fecha', filterType: 'date', render: (row) => fechaHora(row.fecha) },
+    {
+      key: 'medio',
+      label: 'Medio',
+      filterType: 'select',
+      filterOptions: Object.entries(MEDIOS).map(([value, label]) => ({ value, label })),
+      render: (row) => (
+        <Badge tone={row.medio === 'EFECTIVO' ? 'sys' : 'neutral'}>
+          {row.medio === 'EFECTIVO' ? <Wallet size={12} /> : <Smartphone size={12} />}
+          {row.metodo}
+        </Badge>
+      ),
+    },
     {
       key: 'tipo',
       label: 'Tipo',
@@ -113,40 +213,49 @@ export function MiCajaPage() {
       render: (row) => <Badge tone={row.tipo === 'INGRESO' ? 'success' : 'danger'}>{row.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso'}</Badge>,
     },
     {
-      key: 'monto',
-      label: 'Monto',
-      align: 'right',
-      filterable: false,
-      render: (row) => (row.tipo === 'INGRESO' ? `+${soles(row.monto)}` : `-${soles(row.monto)}`),
-    },
-    { key: 'saldoResultante', label: 'Saldo', align: 'right', filterable: false, render: (row) => soles(row.saldoResultante) },
-    {
-      key: 'documentoOrigen',
+      key: 'concepto',
       label: 'Concepto',
       filterType: 'select',
       filterOptions: Object.entries(DOCUMENTOS).map(([value, label]) => ({ value, label })),
-      // Lo escrito a mano (el detalle de un egreso, "Pasaje") va debajo del concepto.
       render: (row) => (
         <div>
-          <p>{DOCUMENTOS[row.documentoOrigen] ?? row.documentoOrigen}</p>
-          {row.observacion && <p className="text-xs text-ink-soft">{row.observacion}</p>}
+          <p>{DOCUMENTOS[row.concepto] ?? row.concepto}</p>
+          {row.detalle && <p className="text-xs text-ink-soft">{row.detalle}</p>}
         </div>
       ),
     },
     {
-      key: 'anulado',
+      key: 'monto',
+      label: 'Monto',
+      align: 'right',
+      filterable: false,
+      render: (row) => (
+        <span className={cuenta(row) ? '' : 'text-ink-soft line-through'}>
+          {row.tipo === 'INGRESO' ? '+' : '-'}
+          {soles(row.monto)}
+        </span>
+      ),
+    },
+    {
+      key: 'saldo',
+      label: 'Saldo en caja',
+      align: 'right',
+      filterable: false,
+      render: (row) => (row.saldo === null ? <span className="text-ink-soft">—</span> : soles(row.saldo)),
+    },
+    {
+      key: 'numeroOperacion',
+      label: 'N° operación',
+      filterable: false,
+      render: (row) =>
+        row.numeroOperacion ? <span className="font-mono">{row.numeroOperacion}</span> : <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'estado',
       label: 'Estado',
       filterType: 'select',
-      filterOptions: [
-        { value: 'Vigente', label: 'Vigente' },
-        { value: 'Anulado', label: 'Anulado' },
-        { value: 'Reversa', label: 'Reversa' },
-      ],
-      value: (row) => estadoDe(row),
-      render: (row) => {
-        const estado = estadoDe(row)
-        return <Badge tone={estado === 'Vigente' ? 'success' : 'neutral'}>{estado}</Badge>
-      },
+      filterOptions: Object.entries(ESTADOS).map(([value, e]) => ({ value, label: e.label })),
+      render: (row) => <Badge tone={ESTADOS[row.estado].tono}>{ESTADOS[row.estado].label}</Badge>,
     },
   ]
 
@@ -155,66 +264,75 @@ export function MiCajaPage() {
       <PageHeader
         icon={<Wallet size={20} />}
         title="Mi Caja"
-        description="Lo que cobras al contado entra solo. Aquí registras cualquier otro ingreso o egreso, y cierras el día."
+        description="Lo que cobras al contado entra a tu caja; lo de Yape o transferencia va directo al banco. Aquí registras cualquier otro ingreso o egreso, y cierras el día."
         actions={
-          pestana === 'efectivo' && (
-            <>
-              <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('INGRESO')} iconRight={<ArrowUpCircle size={15} />}>
-                Ingreso
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('EGRESO')} iconRight={<ArrowDownCircle size={15} />}>
-                Egreso
-              </Button>
-              <Button size="sm" onClick={() => setCerrarAbierto(true)} iconRight={<Landmark size={15} />}>
-                Cerrar caja
-              </Button>
-            </>
-          )
+          <>
+            <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('INGRESO')} iconRight={<ArrowUpCircle size={15} />}>
+              Ingreso
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('EGRESO')} iconRight={<ArrowDownCircle size={15} />}>
+              Egreso
+            </Button>
+            <Button size="sm" onClick={() => setCerrarAbierto(true)} iconRight={<Landmark size={15} />}>
+              Cerrar caja
+            </Button>
+          </>
         }
       />
 
-      <Tabs
-        active={pestana}
-        onChange={(id) => setPestana(id as 'efectivo' | 'digital')}
-        items={[
-          { id: 'efectivo', label: 'Efectivo', icon: <Wallet size={15} /> },
-          { id: 'digital', label: 'Digital', icon: <Smartphone size={15} /> },
-        ]}
-      />
-
-      {pestana === 'digital' ? (
-        <MisDigitalesTab />
-      ) : (
-        <>
-          {error && <Alert>{error}</Alert>}
-
-          <FilaStats>
-            <StatCard
-              label="Saldo de tu caja"
-              value={caja ? soles(caja.saldoActual) : '—'}
-              icon={<Wallet size={18} />}
-              tono={caja && caja.saldoActual < 0 ? 'danger' : 'sys'}
-              hint="Lo que deberías tener ahora en la mano"
-            />
-            <StatCard label="Ingresos" value={soles(totalIngresos)} icon={<TrendingUp size={18} />} tono="success" hint="En las fechas de la tabla" />
-            <StatCard label="Egresos" value={soles(totalEgresos)} icon={<TrendingDown size={18} />} tono="danger" hint="En las fechas de la tabla" />
-          </FilaStats>
-
-          <SysDataTable
-            columns={columns}
-            rows={movimientos}
-            onConsulta={(q) => {
-              const fecha = q.filtros.find((f) => f.columna === 'fecha')
-              setDesde(fecha?.valor || hoyLocal())
-              setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
-            }}
-            filtrosIniciales={[{ column: 'fecha', operator: 'between', value: hoyLocal(), valueTo: hoyLocal() }]}
-            cardIcon={Wallet}
-            searchPlaceholder="Buscar por detalle..."
-            empty={cargando ? 'Cargando movimientos...' : 'No hay movimientos en tu caja en estas fechas.'}
-          />
-        </>
+      {error && <Alert>{error}</Alert>}
+      {rechazados.length > 0 && (
+        <Alert tone="warning">
+          {rechazados.length === 1 ? 'Un cobro no apareció' : `${rechazados.length} cobros no aparecieron`} en el banco:{' '}
+          {soles(suma(rechazados))} se te descuentan en tu planilla.
+        </Alert>
       )}
+
+      <FilaStats>
+        <StatCard
+          label="Efectivo en tu mano"
+          value={caja ? soles(caja.saldoActual) : '—'}
+          icon={<Wallet size={18} />}
+          tono={caja && caja.saldoActual < 0 ? 'danger' : 'sys'}
+          hint="Lo que se cuenta al cerrar caja"
+        />
+        <StatCard
+          label="Ingresos en efectivo"
+          value={soles(suma(ingresos))}
+          icon={<TrendingUp size={18} />}
+          tono="success"
+          hint="En las fechas de la tabla"
+        />
+        <StatCard
+          label="Egresos en efectivo"
+          value={soles(suma(egresos))}
+          icon={<TrendingDown size={18} />}
+          tono="danger"
+          hint="En las fechas de la tabla"
+        />
+        <StatCard
+          label="Cobrado digital"
+          value={soles(suma(cobrosDigitales))}
+          icon={<Smartphone size={18} />}
+          tono="warning"
+          hint={porVerificar > 0 ? `Va al banco · ${porVerificar} por verificar` : 'Va directo al banco, no a tu caja'}
+        />
+      </FilaStats>
+
+      <SysDataTable
+        columns={columns}
+        rows={filas}
+        rowKey="clave"
+        onConsulta={(q) => {
+          const fecha = q.filtros.find((f) => f.columna === 'fecha')
+          setDesde(fecha?.valor || hoyLocal())
+          setHasta(fecha?.valorHasta || fecha?.valor || hoyLocal())
+        }}
+        filtrosIniciales={[{ column: 'fecha', operator: 'between', value: hoyLocal(), valueTo: hoyLocal() }]}
+        cardIcon={Wallet}
+        searchPlaceholder="Buscar por operación, monto o estado..."
+        empty={cargando ? 'Cargando movimientos...' : 'No hay movimientos en estas fechas.'}
+      />
 
       {movimientoAbierto && caja && (
         <MovimientoLibreModal

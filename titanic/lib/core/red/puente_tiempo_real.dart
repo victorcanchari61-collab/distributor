@@ -128,7 +128,12 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     categoriasFinanzasProvider,
   ],
   'bancos': [bancosCatalogoProvider, cuentasFinancierasProvider],
-  'cierrescaja': [cierresCajaProvider, cobrosDigitalesProvider],
+  // Verificar o rechazar un cobro cambia su estado en Mi Caja.
+  'cierrescaja': [
+    cierresCajaProvider,
+    cobrosDigitalesProvider,
+    movimientosDigitalesProvider,
+  ],
   'financiamientos': [prestamosRecibidosProvider],
   'mercados': [tms.mercadosProvider, clientesProvider],
   'rutas': [tms.rutasProvider, rutasProvider, clientesProvider],

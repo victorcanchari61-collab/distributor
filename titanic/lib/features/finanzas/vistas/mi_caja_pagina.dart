@@ -23,11 +23,14 @@ import '../../ventas/datos/nota_venta.dart' show EstadoVerificacionPago;
 import '../datos/mi_caja.dart';
 import '../estado/mi_caja_controlador.dart';
 
-/// La caja de quien esta logueado: su propio dinero en la ruta.
+/// La caja de quien esta logueado: su propio dinero en la ruta, y lo que
+/// cobro o pago por Yape o transferencia.
 ///
-/// Lo que cobra al contado entra solo. Aqui registra cualquier otro ingreso o
-/// egreso y cierra el dia: cuenta billete por billete lo que tiene y se lo
-/// entrega a una caja o a un banco. Es la misma pantalla del panel web.
+/// Todo va en una sola lista, pero los indicadores separan lo que tiene en la
+/// mano —el efectivo, lo unico que se cuenta al cerrar caja— de lo que entro
+/// directo al banco. Un solo total haria creer que el Yape tambien se entrega,
+/// y el cierre saldria con faltante sin faltar nada. Es la misma pantalla del
+/// panel web.
 class MiCajaPagina extends ConsumerWidget {
   const MiCajaPagina({super.key});
 
@@ -36,47 +39,48 @@ class MiCajaPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final pestanas = _PestanasMiCaja(
-      digital: ref.watch(verDigitalMiCajaProvider),
-      onCambio: (v) => ref.read(verDigitalMiCajaProvider.notifier).state = v,
-    );
-    if (ref.watch(verDigitalMiCajaProvider)) {
-      return _paginaDigital(context, ref, color, pestanas);
-    }
     final estadoCaja = ref.watch(miCajaProvider);
     final caja = estadoCaja.valueOrNull;
-    final movimientos =
-        ref.watch(movimientosMiCajaProvider).valueOrNull ??
-        const <MovimientoCaja>[];
+    final filas = ref.watch(filasMiCajaProvider).valueOrNull ?? const [];
 
-    // Solo lo vigente: un cobro anulado y su reversa no movieron plata.
-    final ingresos = movimientos
-        .where((m) => m.vigente && m.esIngreso)
-        .fold<double>(0, (s, m) => s + m.monto);
-    final egresos = movimientos
-        .where((m) => m.vigente && !m.esIngreso)
-        .fold<double>(0, (s, m) => s + m.monto);
+    double suma(Iterable<FilaMiCaja> l) =>
+        l.fold<double>(0, (s, f) => s + f.monto);
+    final efectivo = filas.where((f) => f.esEfectivo && f.cuenta);
+    final cobrosDigitales = filas.where(
+      (f) => !f.esEfectivo && f.esIngreso && f.cuenta,
+    );
+    final porVerificar = cobrosDigitales
+        .where(
+          (f) =>
+              f.digital!.estadoVerificacion == EstadoVerificacionPago.pendiente,
+        )
+        .length;
+    final rechazados = filas.where((f) => f.digital?.rechazado ?? false);
 
-    return AppListaPagina<MovimientoCaja>(
+    return AppListaPagina<FilaMiCaja>(
       titulo: 'Mi Caja',
       ruta: ruta,
       // Sin caja asignada el servidor lo dice al pedirla: ese error es el que
       // se muestra, no una lista vacia que no explica nada.
       estado: estadoCaja.hasError
-          ? AsyncValue<List<MovimientoCaja>>.error(
+          ? AsyncValue<List<FilaMiCaja>>.error(
               estadoCaja.error!,
               estadoCaja.stackTrace ?? StackTrace.current,
             )
-          : ref.watch(movimientosMiCajaProvider),
-      visibles: ref.watch(movimientosMiCajaFiltradosProvider),
+          : ref.watch(filasMiCajaProvider),
+      visibles: ref.watch(filasMiCajaFiltradasProvider),
       busqueda: ref.watch(busquedaMiCajaProvider),
       onBuscar: (t) => ref.read(busquedaMiCajaProvider.notifier).state = t,
-      pistaBusqueda: 'Buscar por detalle',
+      pistaBusqueda: 'Buscar detalle, documento u operación',
       onRecargar: () async {
         ref.invalidate(miCajaProvider);
         ref.invalidate(movimientosMiCajaProvider);
+        ref.invalidate(movimientosDigitalesProvider);
         try {
-          await ref.read(movimientosMiCajaProvider.future);
+          await Future.wait([
+            ref.read(movimientosMiCajaProvider.future),
+            ref.read(movimientosDigitalesProvider.future),
+          ]);
         } catch (_) {
           // El fallo ya se ve en la pantalla, con su botón de reintentar.
         }
@@ -85,37 +89,50 @@ class MiCajaPagina extends ConsumerWidget {
       singular: 'movimiento',
       plural: 'movimientos',
       tituloVacio: 'Sin movimientos',
-      detalleVacio: 'No hay movimientos en tu caja en estas fechas.',
+      detalleVacio: 'No hay movimientos en estas fechas.',
       indicadores: [
         AppTarjetaDato(
-          etiqueta: 'Saldo de tu caja',
+          etiqueta: 'Efectivo en tu mano',
           valor: caja == null ? '—' : formatoSoles(caja.saldoActual),
           icono: Icons.account_balance_wallet_outlined,
           tono: caja != null && caja.saldoActual < 0
               ? DatoTono.peligro
               : DatoTono.modulo,
-          nota: 'Lo que deberías tener ahora',
+          nota: 'Lo que se cuenta al cerrar caja',
           color: color,
         ),
         AppTarjetaDato(
-          etiqueta: 'Ingresos',
-          valor: formatoSoles(ingresos),
+          etiqueta: 'Ingresos en efectivo',
+          valor: formatoSoles(suma(efectivo.where((f) => f.esIngreso))),
           icono: Icons.trending_up,
           tono: DatoTono.exito,
           nota: 'En estas fechas',
         ),
         AppTarjetaDato(
-          etiqueta: 'Egresos',
-          valor: formatoSoles(egresos),
+          etiqueta: 'Egresos en efectivo',
+          valor: formatoSoles(suma(efectivo.where((f) => !f.esIngreso))),
           icono: Icons.trending_down,
           tono: DatoTono.peligro,
           nota: 'En estas fechas',
         ),
+        AppTarjetaDato(
+          etiqueta: 'Cobrado digital',
+          valor: formatoSoles(suma(cobrosDigitales)),
+          icono: Icons.smartphone_outlined,
+          tono: DatoTono.aviso,
+          nota: porVerificar > 0
+              ? 'Va al banco · $porVerificar por verificar'
+              : 'Va directo al banco',
+        ),
       ],
       encabezado: _Encabezado(
-        pestanas: pestanas,
         rango: ref.watch(rangoMiCajaProvider),
         onRango: (r) => ref.read(rangoMiCajaProvider.notifier).state = r,
+        aviso: rechazados.isEmpty
+            ? null
+            : '${rechazados.length == 1 ? 'Un cobro no apareció' : '${rechazados.length} cobros no aparecieron'} '
+                  'en el banco: ${formatoSoles(suma(rechazados))} se te '
+                  'descuentan en tu planilla.',
         // Sin caja no hay nada que registrar ni cerrar.
         habilitado: caja != null,
         onIngreso: () => _abrirMovimiento(context, 'INGRESO'),
@@ -127,143 +144,9 @@ class MiCajaPagina extends ConsumerWidget {
         color: color,
         onAbrir: () => _abrirFiltros(context, ref),
       ),
-      fila: (context, m) => _TarjetaMovimiento(movimiento: m, color: color),
-    );
-  }
-
-  /// La pestaña Digital: lo cobrado o pagado por Yape, Plin o transferencia.
-  /// No esta en la caja ni cuenta para el cierre, pero es suyo.
-  Widget _paginaDigital(
-    BuildContext context,
-    WidgetRef ref,
-    Color color,
-    Widget pestanas,
-  ) {
-    final estado = ref.watch(movimientosDigitalesProvider);
-    final todos = estado.valueOrNull ?? const <MovimientoDigital>[];
-    final texto = ref.watch(busquedaDigitalesProvider).trim().toLowerCase();
-    // Lo rechazado no llegó al banco: no cuenta como cobrado, se descuenta.
-    final cobros = todos.where((m) => m.esCobro && !m.anulado && !m.rechazado);
-    final porVerificar = cobros
-        .where((m) => m.estadoVerificacion == EstadoVerificacionPago.pendiente)
-        .length;
-    double suma(Iterable<MovimientoDigital> l) =>
-        l.fold<double>(0, (s, m) => s + m.monto);
-
-    return AppListaPagina<MovimientoDigital>(
-      titulo: 'Mi Caja',
-      ruta: ruta,
-      estado: estado,
-      visibles: todos
-          .where((m) => texto.isEmpty || m.buscable.contains(texto))
-          .toList(),
-      busqueda: ref.watch(busquedaDigitalesProvider),
-      onBuscar: (t) => ref.read(busquedaDigitalesProvider.notifier).state = t,
-      pistaBusqueda: 'Buscar documento, cliente u operación',
-      onRecargar: () async {
-        ref.invalidate(movimientosDigitalesProvider);
-        try {
-          await ref.read(movimientosDigitalesProvider.future);
-        } catch (_) {
-          // El fallo ya se ve en la pantalla, con su botón de reintentar.
-        }
-      },
-      iconoVacio: Icons.smartphone_outlined,
-      singular: 'movimiento',
-      plural: 'movimientos',
-      tituloVacio: 'Sin cobros digitales',
-      detalleVacio:
-          'No cobraste ni pagaste por Yape o transferencia en estas fechas.',
-      indicadores: [
-        AppTarjetaDato(
-          etiqueta: 'Cobrado digital',
-          valor: formatoSoles(suma(cobros)),
-          icono: Icons.account_balance_wallet_outlined,
-          color: color,
-          nota: porVerificar > 0
-              ? '$porVerificar por verificar en el banco'
-              : 'Va directo al banco',
-        ),
-        AppTarjetaDato(
-          etiqueta: 'Por billetera',
-          valor: formatoSoles(
-            suma(cobros.where((m) => m.metodoTipo == 'BILLETERA_DIGITAL')),
-          ),
-          icono: Icons.smartphone_outlined,
-          tono: DatoTono.exito,
-          nota: 'Yape, Plin',
-        ),
-        AppTarjetaDato(
-          etiqueta: 'Por transferencia',
-          valor: formatoSoles(
-            suma(cobros.where((m) => m.metodoTipo == 'TRANSFERENCIA')),
-          ),
-          icono: Icons.swap_horiz,
-          tono: DatoTono.exito,
-        ),
-      ],
-      encabezado: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            pestanas,
-            const SizedBox(height: Dimen.espacio2),
-            AppSelectorRango(
-              rango: ref.watch(rangoMiCajaProvider),
-              textoVacio: 'Últimos 30 días',
-              onCambio: (r) => ref.read(rangoMiCajaProvider.notifier).state = r,
-            ),
-          ],
-        ),
-      ),
-      fila: (context, m) => AppTarjetaRegistro(
-        icono: m.metodoTipo == 'TRANSFERENCIA'
-            ? Icons.swap_horiz
-            : Icons.smartphone_outlined,
-        color: color,
-        titulo: '${m.esCobro ? 'Cobro' : 'Pago'} ${m.documento}',
-        insignia: m.anulado
-            ? const AppEtiqueta('Anulado', tono: EtiquetaTono.neutral)
-            : m.estadoVerificacion == null
-            ? AppEtiqueta(m.metodoPago)
-            : AppEtiqueta(
-                EstadoVerificacionPago.etiqueta(m.estadoVerificacion!),
-                tono: m.rechazado
-                    ? EtiquetaTono.peligro
-                    : m.estadoVerificacion == EstadoVerificacionPago.pendiente
-                    ? EtiquetaTono.aviso
-                    : EtiquetaTono.exito,
-              ),
-        campos: [
-          CampoDetalle(
-            'Monto',
-            null,
-            widget: Text(
-              '${m.esCobro ? '+' : '-'}${formatoSoles(m.monto)}',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                decoration: m.anulado || m.rechazado
-                    ? TextDecoration.lineThrough
-                    : null,
-                color: m.anulado || m.rechazado
-                    ? Colores.tintaSuave
-                    : m.esCobro
-                    ? Colores.exito
-                    : Colores.peligro,
-              ),
-            ),
-          ),
-          CampoDetalle(m.esCobro ? 'Cliente' : 'Proveedor', m.contraparte),
-          if (m.estadoVerificacion != null)
-            CampoDetalle('Método', m.metodoPago),
-          if (m.numeroOperacion != null)
-            CampoDetalle('N° operación', m.numeroOperacion),
-          CampoDetalle(m.esCobro ? 'Entró a' : 'Salió de', m.cuenta),
-          CampoDetalle('Fecha', _fechaHora(m.fecha)),
-        ],
-      ),
+      fila: (context, f) => f.esEfectivo
+          ? _TarjetaMovimiento(movimiento: f.efectivo!, color: color)
+          : _TarjetaDigital(movimiento: f.digital!, color: color),
     );
   }
 
@@ -274,8 +157,22 @@ class MiCajaPagina extends ConsumerWidget {
       onLimpiar: () {
         ref.read(tipoMiCajaFiltroProvider.notifier).state = null;
         ref.read(conceptoMiCajaFiltroProvider.notifier).state = null;
+        ref.read(medioMiCajaFiltroProvider.notifier).state = null;
       },
       grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Medio',
+            valor: ref.watch(medioMiCajaFiltroProvider),
+            opciones: const [
+              OpcionFiltro(null, 'Todos'),
+              OpcionFiltro('EFECTIVO', 'Efectivo'),
+              OpcionFiltro('DIGITAL', 'Yape o transferencia'),
+            ],
+            onCambio: (v) =>
+                ref.read(medioMiCajaFiltroProvider.notifier).state = v,
+          ),
+        ),
         Consumer(
           builder: (context, ref, _) => GrupoFiltro<String?>(
             titulo: 'Tipo',
@@ -330,51 +227,23 @@ class MiCajaPagina extends ConsumerWidget {
   }
 }
 
-/// Las dos pestañas de Mi Caja: el efectivo y lo cobrado por Yape o
-/// transferencia.
-class _PestanasMiCaja extends StatelessWidget {
-  const _PestanasMiCaja({required this.digital, required this.onCambio});
-
-  final bool digital;
-  final ValueChanged<bool> onCambio;
-
-  @override
-  Widget build(BuildContext context) {
-    return SegmentedButton<bool>(
-      showSelectedIcon: false,
-      segments: const [
-        ButtonSegment(
-          value: false,
-          label: Text('Efectivo'),
-          icon: Icon(Icons.payments_outlined, size: 18),
-        ),
-        ButtonSegment(
-          value: true,
-          label: Text('Digital'),
-          icon: Icon(Icons.smartphone_outlined, size: 18),
-        ),
-      ],
-      selected: {digital},
-      onSelectionChanged: (s) => onCambio(s.first),
-    );
-  }
-}
-
 /// Las fechas que se miran y lo que se puede hacer con la caja.
 class _Encabezado extends StatelessWidget {
   const _Encabezado({
-    required this.pestanas,
     required this.rango,
     required this.onRango,
+    required this.aviso,
     required this.habilitado,
     required this.onIngreso,
     required this.onEgreso,
     required this.onCerrar,
   });
 
-  final Widget pestanas;
   final DateTimeRange? rango;
   final ValueChanged<DateTimeRange?> onRango;
+
+  /// Cobros que no aparecieron en el banco: se le descuentan.
+  final String? aviso;
   final bool habilitado;
   final VoidCallback onIngreso;
   final VoidCallback onEgreso;
@@ -387,8 +256,10 @@ class _Encabezado extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          pestanas,
-          const SizedBox(height: Dimen.espacio2),
+          if (aviso != null) ...[
+            AppAlerta(aviso!, tono: AlertaTono.aviso),
+            const SizedBox(height: Dimen.espacio2),
+          ],
           AppSelectorRango(
             rango: rango,
             textoVacio: 'Últimos 30 días',
@@ -467,9 +338,70 @@ class _TarjetaMovimiento extends StatelessWidget {
             ),
           ),
         ),
-        CampoDetalle('Saldo', formatoSoles(m.saldoResultante)),
+        CampoDetalle('Medio', 'Efectivo'),
+        CampoDetalle('Saldo en caja', formatoSoles(m.saldoResultante)),
         CampoDetalle('Fecha', _fechaHora(m.fecha)),
         CampoDetalle('Detalle', m.observacion),
+      ],
+    );
+  }
+}
+
+/// Un cobro o pago por Yape o transferencia: no esta en la caja ni cuenta
+/// para el cierre, pero es suyo.
+class _TarjetaDigital extends StatelessWidget {
+  const _TarjetaDigital({required this.movimiento, required this.color});
+
+  final MovimientoDigital movimiento;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = movimiento;
+    return AppTarjetaRegistro(
+      icono: m.metodoTipo == 'TRANSFERENCIA'
+          ? Icons.swap_horiz
+          : Icons.smartphone_outlined,
+      color: color,
+      titulo: '${m.esCobro ? 'Cobro' : 'Pago'} ${m.documento}',
+      insignia: m.anulado
+          ? const AppEtiqueta('Anulado', tono: EtiquetaTono.neutral)
+          : m.estadoVerificacion == null
+          ? AppEtiqueta(m.metodoPago)
+          : AppEtiqueta(
+              EstadoVerificacionPago.etiqueta(m.estadoVerificacion!),
+              tono: m.rechazado
+                  ? EtiquetaTono.peligro
+                  : m.estadoVerificacion == EstadoVerificacionPago.pendiente
+                  ? EtiquetaTono.aviso
+                  : EtiquetaTono.exito,
+            ),
+      campos: [
+        CampoDetalle(
+          'Monto',
+          null,
+          widget: Text(
+            '${m.esCobro ? '+' : '-'}${formatoSoles(m.monto)}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              decoration: m.anulado || m.rechazado
+                  ? TextDecoration.lineThrough
+                  : null,
+              color: m.anulado || m.rechazado
+                  ? Colores.tintaSuave
+                  : m.esCobro
+                  ? Colores.exito
+                  : Colores.peligro,
+            ),
+          ),
+        ),
+        CampoDetalle('Método', m.metodoPago),
+        CampoDetalle(m.esCobro ? 'Cliente' : 'Proveedor', m.contraparte),
+        if (m.numeroOperacion != null)
+          CampoDetalle('N° operación', m.numeroOperacion),
+        CampoDetalle(m.esCobro ? 'Entró a' : 'Salió de', m.cuenta),
+        CampoDetalle('Fecha', _fechaHora(m.fecha)),
       ],
     );
   }
