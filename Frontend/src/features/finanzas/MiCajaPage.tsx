@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowDownCircle, ArrowUpCircle, Calculator, Landmark, Smartphone, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, Landmark, Smartphone, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -521,20 +521,16 @@ function CerrarCajaModal({
         {/* Una sola tabla, billetes arriba y monedas abajo: con pestañas, lo
             contado en la otra quedaba escondido al momento de entregar. */}
         <div>
-          <p className="flex items-center gap-2 rounded-t-field border border-line bg-surface-alt px-3 py-2 text-[11px] font-semibold tracking-wide text-ink uppercase">
-            <Calculator size={14} className="text-[rgb(var(--sys-rgb))]" />
-            Desglose de billetes y monedas
-          </p>
-          <div className="overflow-x-auto rounded-b-field border border-t-0 border-line">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-line text-[10px] tracking-wide text-ink-soft uppercase">
-                  <th className="w-8 px-3 py-1.5 text-left font-medium">#</th>
-                  <th className="px-3 py-1.5 text-left font-medium">Denominación</th>
-                  <th className="w-28 px-3 py-1.5 text-center font-medium">Cant.</th>
-                  <th className="w-24 px-3 py-1.5 text-right font-medium">Total</th>
-                </tr>
-              </thead>
+          <div className="overflow-x-auto rounded-field border border-line">
+            {/* Columnas simétricas —35% a cada lado de la cantidad— para que las
+                casillas queden justo al medio de la tabla. */}
+            <table className="w-full table-fixed text-xs">
+              <colgroup>
+                <col className="w-[6%]" />
+                <col className="w-[29%]" />
+                <col className="w-[30%]" />
+                <col className="w-[35%]" />
+              </colgroup>
               <tbody>
                 {DENOMINACIONES.map((d, i) => {
                   const cantidades = d.tipo === 'Billete' ? cantBilletes : cantMonedas
@@ -555,7 +551,7 @@ function CerrarCajaModal({
                           aria-label={`Cantidad de ${d.tipo.toLowerCase()}s de S/ ${d.valor.toFixed(2)}`}
                           value={cantidades[d.valor] ?? ''}
                           onChange={(e) => poner({ ...cantidades, [d.valor]: e.target.value })}
-                          className="h-7 w-full rounded-field border border-line bg-surface px-2 text-center text-xs text-ink outline-none placeholder:text-ink-soft focus:border-ink-soft"
+                          className="mx-auto block h-7 w-24 rounded-field border border-line bg-surface px-2 text-center text-xs text-ink outline-none placeholder:text-ink-soft focus:border-ink-soft"
                         />
                       </td>
                       <td className="px-3 py-1 text-right font-medium tabular-nums text-ink">
