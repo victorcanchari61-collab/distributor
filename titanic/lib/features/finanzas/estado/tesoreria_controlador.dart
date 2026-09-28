@@ -120,41 +120,13 @@ final cierresCajaProvider = FutureProvider.autoDispose<List<CierreRegistrado>>((
 
 final busquedaCierresProvider = StateProvider.autoDispose((ref) => '');
 
-/// La pestaña de Cierres de caja: los cierres o los cobros digitales.
-final verCobrosDigitalesProvider = StateProvider.autoDispose<bool>(
-  (ref) => false,
-);
+/// El detalle de un cierre: se pide al abrirlo y se vuelve a pedir cuando se
+/// verifica o se rechaza uno de sus cobros digitales.
+final detalleCierreProvider = FutureProvider.autoDispose
+    .family<CierreDetalle, int>(
+      (ref, id) => ref.watch(tesoreriaApiProvider).detalleCierre(id),
+    );
 
-/// Los del rango de Cierres, mas los pendientes de cualquier fecha.
-final cobrosDigitalesProvider = FutureProvider.autoDispose<List<CobroDigital>>((
-  ref,
-) async {
-  final r = rangoOTreinta(ref.watch(rangoCierresProvider));
-  return ref.watch(tesoreriaApiProvider).cobrosDigitales(r.start, r.end);
-});
-
-final busquedaCobrosDigitalesProvider = StateProvider.autoDispose((ref) => '');
-
-/// PENDIENTE, VERIFICADO o RECHAZADO.
-final estadoCobrosDigitalesFiltroProvider = StateProvider.autoDispose<String?>(
-  (ref) => null,
-);
-
-final cobrosDigitalesFiltradosProvider =
-    Provider.autoDispose<List<CobroDigital>>((ref) {
-      final todos =
-          ref.watch(cobrosDigitalesProvider).valueOrNull ??
-          const <CobroDigital>[];
-      final texto = ref
-          .watch(busquedaCobrosDigitalesProvider)
-          .trim()
-          .toLowerCase();
-      final estado = ref.watch(estadoCobrosDigitalesFiltroProvider);
-      return todos
-          .where((c) => estado == null || c.estado == estado)
-          .where((c) => texto.isEmpty || c.buscable.contains(texto))
-          .toList();
-    });
 final trabajadorCierresFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );

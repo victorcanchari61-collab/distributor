@@ -19,6 +19,7 @@ import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../ventas/datos/nota_venta.dart' show EstadoVerificacionPago;
+import '../datos/mi_caja.dart' show DocumentoMovimiento;
 import '../datos/tesoreria.dart';
 import '../estado/tesoreria_controlador.dart';
 import 'hojas_finanzas.dart';
@@ -34,9 +35,9 @@ const _descuentos = <String, String>{
 /// quien se entrego. Un faltante se descuenta en la planilla del trabajador;
 /// un cierre mal contado se anula desde aqui. Igual que el panel web.
 ///
-/// Lo cobrado por Yape, Plin o transferencia no pasa por la caja: se cuadra en
-/// la pestaña Cobros digitales, buscandolo en el banco por su numero de
-/// operacion.
+/// Cada cierre se revisa entero en su detalle: el efectivo que paso por la
+/// caja, lo cobrado por Yape o transferencia —que se verifica ahi contra el
+/// banco— y los billetes y monedas que se contaron.
 class CierresCajaPagina extends ConsumerWidget {
   const CierresCajaPagina({super.key});
 
@@ -45,14 +46,6 @@ class CierresCajaPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final encabezado = _Encabezado(
-      digitales: ref.watch(verCobrosDigitalesProvider),
-      onPestana: (v) => ref.read(verCobrosDigitalesProvider.notifier).state = v,
-    );
-    if (ref.watch(verCobrosDigitalesProvider)) {
-      return _paginaDigitales(context, ref, color, encabezado);
-    }
-
     final vigentes =
         (ref.watch(cierresCajaProvider).valueOrNull ??
                 const <CierreRegistrado>[])
@@ -63,6 +56,10 @@ class CierresCajaPagina extends ConsumerWidget {
     final faltantes = vigentes
         .where((c) => c.resultado == ResultadoCierre.faltante)
         .length;
+    final porVerificar = vigentes.fold<int>(
+      0,
+      (n, c) => n + c.digitalPorVerificar,
+    );
 
     return AppListaPagina<CierreRegistrado>(
       titulo: 'Cierres de caja',
@@ -99,8 +96,22 @@ class CierresCajaPagina extends ConsumerWidget {
           color: color,
           nota: '$faltantes con faltante',
         ),
+        AppTarjetaDato(
+          etiqueta: 'Digital por verificar',
+          valor: '$porVerificar',
+          icono: Icons.smartphone_outlined,
+          tono: porVerificar > 0 ? DatoTono.aviso : DatoTono.neutral,
+          nota: 'Cobros a buscar en el banco',
+        ),
       ],
-      encabezado: encabezado,
+      encabezado: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+        child: AppSelectorRango(
+          rango: ref.watch(rangoCierresProvider),
+          textoVacio: 'Últimos 30 días',
+          onCambio: (r) => ref.read(rangoCierresProvider.notifier).state = r,
+        ),
+      ),
       filtro: BotonFiltros(
         activos: ref.watch(filtrosCierresActivosProvider),
         color: color,
@@ -109,161 +120,15 @@ class CierresCajaPagina extends ConsumerWidget {
       fila: (context, c) => _TarjetaCierre(
         cierre: c,
         color: color,
+        onVer: () => abrirHojaFinanzas(
+          context,
+          (_) => _HojaDetalleCierre(cierreId: c.id),
+        ),
         onAnular: !c.anulado && puede(ref, 'finanzas.cierres', Accion.anular)
             ? () => _anular(context, ref, c)
             : null,
       ),
     );
-  }
-
-  Widget _paginaDigitales(
-    BuildContext context,
-    WidgetRef ref,
-    Color color,
-    Widget encabezado,
-  ) {
-    final estado = ref.watch(cobrosDigitalesProvider);
-    final todos = estado.valueOrNull ?? const <CobroDigital>[];
-    Iterable<CobroDigital> de(String e) => todos.where((c) => c.estado == e);
-    double suma(Iterable<CobroDigital> l) =>
-        l.fold<double>(0, (s, c) => s + c.monto);
-    final pendientes = de(EstadoVerificacionPago.pendiente);
-    final confirma = puede(ref, 'finanzas.cierres', Accion.confirmar);
-
-    return AppListaPagina<CobroDigital>(
-      titulo: 'Cierres de caja',
-      ruta: ruta,
-      estado: estado,
-      visibles: ref.watch(cobrosDigitalesFiltradosProvider),
-      busqueda: ref.watch(busquedaCobrosDigitalesProvider),
-      onBuscar: (t) =>
-          ref.read(busquedaCobrosDigitalesProvider.notifier).state = t,
-      pistaBusqueda: 'Buscar operación, venta o trabajador',
-      onRecargar: () async {
-        ref.invalidate(cobrosDigitalesProvider);
-        try {
-          await ref.read(cobrosDigitalesProvider.future);
-        } catch (_) {
-          // El fallo ya se ve en la pantalla, con su botón de reintentar.
-        }
-      },
-      iconoVacio: Icons.smartphone_outlined,
-      singular: 'cobro',
-      plural: 'cobros',
-      tituloVacio: 'Sin cobros digitales',
-      detalleVacio: 'No hay cobros por Yape o transferencia en estas fechas.',
-      indicadores: [
-        AppTarjetaDato(
-          etiqueta: 'Por verificar',
-          valor: formatoSoles(suma(pendientes)),
-          icono: Icons.schedule,
-          tono: pendientes.isEmpty ? DatoTono.neutral : DatoTono.aviso,
-          nota: '${pendientes.length}, de cualquier fecha',
-        ),
-        AppTarjetaDato(
-          etiqueta: 'Verificado',
-          valor: formatoSoles(suma(de(EstadoVerificacionPago.verificado))),
-          icono: Icons.verified_outlined,
-          tono: DatoTono.exito,
-        ),
-        AppTarjetaDato(
-          etiqueta: 'Rechazado',
-          valor: formatoSoles(suma(de(EstadoVerificacionPago.rechazado))),
-          icono: Icons.cancel_outlined,
-          tono: DatoTono.peligro,
-          nota: 'Se descuenta a quien cobró',
-        ),
-      ],
-      encabezado: encabezado,
-      filtro: BotonFiltros(
-        activos: ref.watch(estadoCobrosDigitalesFiltroProvider) == null ? 0 : 1,
-        color: color,
-        onAbrir: () => _abrirFiltrosDigitales(context, ref),
-      ),
-      fila: (context, c) => _TarjetaCobro(
-        cobro: c,
-        color: color,
-        onVerificar: confirma && c.estado == EstadoVerificacionPago.pendiente
-            ? () => _verificar(context, ref, c)
-            : null,
-        onRechazar: confirma && c.estado == EstadoVerificacionPago.pendiente
-            ? () => abrirHojaFinanzas(context, (_) => _HojaRechazo(cobro: c))
-            : null,
-        onQuitar: confirma && c.estado == EstadoVerificacionPago.verificado
-            ? () => _quitarVerificacion(context, ref, c)
-            : null,
-      ),
-    );
-  }
-
-  Future<void> _abrirFiltrosDigitales(BuildContext context, WidgetRef ref) {
-    return mostrarFiltros(
-      context,
-      activos: ref.read(estadoCobrosDigitalesFiltroProvider) == null ? 0 : 1,
-      onLimpiar: () =>
-          ref.read(estadoCobrosDigitalesFiltroProvider.notifier).state = null,
-      grupos: [
-        Consumer(
-          builder: (context, ref, _) => GrupoFiltro<String?>(
-            titulo: 'Estado',
-            valor: ref.watch(estadoCobrosDigitalesFiltroProvider),
-            opciones: [
-              const OpcionFiltro<String?>(null, 'Todos'),
-              for (final e in const [
-                EstadoVerificacionPago.pendiente,
-                EstadoVerificacionPago.verificado,
-                EstadoVerificacionPago.rechazado,
-              ])
-                OpcionFiltro<String?>(e, EstadoVerificacionPago.etiqueta(e)),
-            ],
-            onCambio: (v) =>
-                ref.read(estadoCobrosDigitalesFiltroProvider.notifier).state =
-                    v,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _verificar(
-    BuildContext context,
-    WidgetRef ref,
-    CobroDigital c,
-  ) async {
-    final mensajero = Aviso.de(context);
-    try {
-      await ref.read(tesoreriaApiProvider).verificarCobro(c.id);
-      ref.invalidate(cobrosDigitalesProvider);
-      mensajero.mostrar('Operación ${c.numeroOperacion ?? ''} verificada');
-    } on ApiExcepcion catch (e) {
-      mensajero.error(e.texto);
-    }
-  }
-
-  Future<void> _quitarVerificacion(
-    BuildContext context,
-    WidgetRef ref,
-    CobroDigital c,
-  ) async {
-    final ok = await confirmarAccion(
-      context,
-      titulo: 'Quitar la verificación',
-      mensaje:
-          'El cobro de ${formatoSoles(c.monto)} de la ${c.documento} vuelve a '
-          'quedar por verificar.',
-      textoConfirmar: 'Quitar',
-      tono: ConfirmTono.pregunta,
-    );
-    if (!ok || !context.mounted) return;
-
-    final mensajero = Aviso.de(context);
-    try {
-      await ref.read(tesoreriaApiProvider).quitarVerificacion(c.id);
-      ref.invalidate(cobrosDigitalesProvider);
-      mensajero.mostrar('Vuelve a quedar por verificar');
-    } on ApiExcepcion catch (e) {
-      mensajero.error(e.texto);
-    }
   }
 
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
@@ -348,49 +213,6 @@ class CierresCajaPagina extends ConsumerWidget {
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
-  }
-}
-
-/// Las pestañas y el rango de fechas, que comparten las dos listas.
-class _Encabezado extends ConsumerWidget {
-  const _Encabezado({required this.digitales, required this.onPestana});
-
-  final bool digitales;
-  final ValueChanged<bool> onPestana;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SegmentedButton<bool>(
-            showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(
-                value: false,
-                label: Text('Cierres'),
-                icon: Icon(Icons.lock_outline, size: 18),
-              ),
-              ButtonSegment(
-                value: true,
-                label: Text('Cobros digitales'),
-                icon: Icon(Icons.smartphone_outlined, size: 18),
-              ),
-            ],
-            selected: {digitales},
-            onSelectionChanged: (s) => onPestana(s.first),
-          ),
-          const SizedBox(height: Dimen.espacio2),
-          AppSelectorRango(
-            rango: ref.watch(rangoCierresProvider),
-            textoVacio: 'Últimos 30 días',
-            onCambio: (r) => ref.read(rangoCierresProvider.notifier).state = r,
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -545,7 +367,8 @@ class _HojaRechazoState extends ConsumerState<_HojaRechazo> {
       await ref
           .read(tesoreriaApiProvider)
           .rechazarCobro(widget.cobro.id, motivo);
-      ref.invalidate(cobrosDigitalesProvider);
+      ref.invalidate(detalleCierreProvider);
+      ref.invalidate(cierresCajaProvider);
       navegador.pop();
       mensajero.mostrar('Cobro rechazado');
     } on ApiExcepcion catch (e) {
@@ -611,11 +434,13 @@ class _TarjetaCierre extends StatelessWidget {
   const _TarjetaCierre({
     required this.cierre,
     required this.color,
+    required this.onVer,
     this.onAnular,
   });
 
   final CierreRegistrado cierre;
   final Color color;
+  final VoidCallback onVer;
   final VoidCallback? onAnular;
 
   @override
@@ -627,6 +452,7 @@ class _TarjetaCierre extends StatelessWidget {
       icono: Icons.lock_outline,
       color: color,
       titulo: c.usuario,
+      onTap: onVer,
       insignia: c.anulado
           ? const AppEtiqueta('Anulado', tono: EtiquetaTono.neutral)
           : AppEtiqueta(
@@ -660,6 +486,33 @@ class _TarjetaCierre extends StatelessWidget {
         ),
         CampoDetalle('Entregado a', c.cuentaDestino),
         CampoDetalle(
+          'Digital',
+          c.digital == 0 && c.digitalRechazados == 0
+              ? null
+              : formatoSoles(c.digital),
+        ),
+        if (c.digitalPorVerificar > 0 || c.digitalRechazados > 0)
+          CampoDetalle(
+            'Verificación',
+            null,
+            widget: Wrap(
+              spacing: Dimen.espacio1,
+              runSpacing: Dimen.espacio1,
+              children: [
+                if (c.digitalPorVerificar > 0)
+                  AppEtiqueta(
+                    '${c.digitalPorVerificar} por verificar',
+                    tono: EtiquetaTono.aviso,
+                  ),
+                if (c.digitalRechazados > 0)
+                  AppEtiqueta(
+                    '${c.digitalRechazados} ${c.digitalRechazados == 1 ? 'rechazado' : 'rechazados'}',
+                    tono: EtiquetaTono.peligro,
+                  ),
+              ],
+            ),
+          ),
+        CampoDetalle(
           'Descuento',
           c.estadoDescuento == null
               ? null
@@ -670,6 +523,12 @@ class _TarjetaCierre extends StatelessWidget {
         CampoDetalle('Observación', c.observacion),
       ],
       acciones: [
+        IconButton(
+          onPressed: onVer,
+          tooltip: 'Ver el detalle del cierre',
+          visualDensity: VisualDensity.compact,
+          icon: Icon(Icons.visibility_outlined, size: 18, color: color),
+        ),
         if (onAnular != null)
           IconButton(
             onPressed: onAnular,
@@ -678,6 +537,487 @@ class _TarjetaCierre extends StatelessWidget {
             icon: const Icon(Icons.block, size: 18, color: Colores.advertencia),
           ),
       ],
+    );
+  }
+}
+
+/// Un cierre entero, para revisar si cuadra: el efectivo que paso por la caja
+/// desde el cierre anterior, lo cobrado por Yape o transferencia —que se busca
+/// en el banco y se verifica o se rechaza aqui mismo— y los billetes y monedas
+/// que se contaron. Igual que el detalle del panel web.
+class _HojaDetalleCierre extends ConsumerStatefulWidget {
+  const _HojaDetalleCierre({required this.cierreId});
+
+  final int cierreId;
+
+  @override
+  ConsumerState<_HojaDetalleCierre> createState() => _HojaDetalleCierreState();
+}
+
+enum _Parte { efectivo, digital, billetes }
+
+class _HojaDetalleCierreState extends ConsumerState<_HojaDetalleCierre> {
+  _Parte _parte = _Parte.efectivo;
+
+  void _refrescar() {
+    ref.invalidate(detalleCierreProvider(widget.cierreId));
+    ref.invalidate(cierresCajaProvider);
+  }
+
+  Future<void> _verificar(CobroDigital c) async {
+    final mensajero = Aviso.de(context);
+    try {
+      await ref.read(tesoreriaApiProvider).verificarCobro(c.id);
+      _refrescar();
+      mensajero.mostrar('Operación ${c.numeroOperacion ?? ''} verificada');
+    } on ApiExcepcion catch (e) {
+      mensajero.error(e.texto);
+    }
+  }
+
+  Future<void> _quitarVerificacion(CobroDigital c) async {
+    final ok = await confirmarAccion(
+      context,
+      titulo: 'Quitar la verificación',
+      mensaje:
+          'El cobro de ${formatoSoles(c.monto)} de la ${c.documento} vuelve a '
+          'quedar por verificar.',
+      textoConfirmar: 'Quitar',
+      tono: ConfirmTono.pregunta,
+    );
+    if (!ok || !mounted) return;
+
+    final mensajero = Aviso.de(context);
+    try {
+      await ref.read(tesoreriaApiProvider).quitarVerificacion(c.id);
+      _refrescar();
+      mensajero.mostrar('Vuelve a quedar por verificar');
+    } on ApiExcepcion catch (e) {
+      mensajero.error(e.texto);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final detalle = ref.watch(detalleCierreProvider(widget.cierreId));
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+      ),
+      child: Padding(
+        padding: margenHoja(context),
+        child: detalle.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(Dimen.espacio5),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, _) => AppAlerta(
+            e is ApiExcepcion ? e.texto : 'No pudimos cargar el cierre.',
+          ),
+          data: _contenido,
+        ),
+      ),
+    );
+  }
+
+  Widget _contenido(CierreDetalle d) {
+    final c = d.cierre;
+    final vigentes = d.efectivo.where((m) => m.vigente);
+    final entro = vigentes
+        .where((m) => m.esIngreso)
+        .fold<double>(0, (s, m) => s + m.monto);
+    final salio = vigentes
+        .where((m) => !m.esIngreso)
+        .fold<double>(0, (s, m) => s + m.monto);
+    final dif = c.diferencia;
+    final confirma = puede(ref, 'finanzas.cierres', Accion.confirmar);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TituloHoja(
+          'Cierre de ${c.usuario}',
+          apoyo:
+              '${c.caja} · ${d.desde == null ? 'desde el inicio' : 'del ${fechaHora(d.desde!)}'} '
+              'al ${fechaHora(c.fecha)}',
+        ),
+        if (c.anulado) ...[
+          const AppAlerta(
+            'Este cierre está anulado: la plata volvió a la caja y entra en el siguiente.',
+            tono: AlertaTono.aviso,
+          ),
+          const SizedBox(height: Dimen.espacio3),
+        ],
+        // Lo que se revisa de un vistazo: si cuadró y cuánto fue digital.
+        Wrap(
+          spacing: Dimen.espacio2,
+          runSpacing: Dimen.espacio2,
+          children: [
+            _Cifra(
+              'Debía tener',
+              formatoSoles(c.saldoSistema),
+              d.saldoAnterior != 0
+                  ? 'Venía ${formatoSoles(d.saldoAnterior)} de antes'
+                  : 'Entró ${formatoSoles(entro)} · salió ${formatoSoles(salio)}',
+            ),
+            _Cifra('Contado', formatoSoles(c.contado), 'A ${c.cuentaDestino}'),
+            _Cifra(
+              ResultadoCierre.etiqueta(c.resultado),
+              dif == 0
+                  ? formatoSoles(0)
+                  : '${dif > 0 ? '+' : '-'}${formatoSoles(dif.abs())}',
+              c.estadoDescuento == null ? null : _descuentos[c.estadoDescuento],
+              color: dif < 0
+                  ? Colores.peligro
+                  : dif > 0
+                  ? Colores.advertencia
+                  : Colores.exito,
+            ),
+            _Cifra(
+              'Cobrado digital',
+              formatoSoles(c.digital),
+              c.digitalPorVerificar > 0
+                  ? '${c.digitalPorVerificar} por verificar'
+                  : d.digitales.isEmpty
+                  ? 'Sin cobros digitales'
+                  : 'Todo revisado',
+              color: c.digitalPorVerificar > 0 ? Colores.advertencia : null,
+            ),
+          ],
+        ),
+        const SizedBox(height: Dimen.espacio3),
+        SegmentedButton<_Parte>(
+          showSelectedIcon: false,
+          segments: [
+            ButtonSegment(
+              value: _Parte.efectivo,
+              label: Text('Efectivo (${d.efectivo.length})'),
+            ),
+            ButtonSegment(
+              value: _Parte.digital,
+              label: Text('Digital (${d.digitales.length})'),
+            ),
+            const ButtonSegment(
+              value: _Parte.billetes,
+              label: Text('Billetes'),
+            ),
+          ],
+          selected: {_parte},
+          onSelectionChanged: (s) => setState(() => _parte = s.first),
+        ),
+        const SizedBox(height: Dimen.espacio3),
+        Flexible(
+          child: SingleChildScrollView(
+            child: switch (_parte) {
+              _Parte.efectivo => _Efectivo(movimientos: d.efectivo),
+              _Parte.digital => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (d.digitales.isEmpty)
+                    const _Vacio(
+                      'No cobró nada por Yape o transferencia en este periodo.',
+                    ),
+                  for (final cobro in d.digitales) ...[
+                    _TarjetaCobro(
+                      cobro: cobro,
+                      color: Colores.marca,
+                      onVerificar:
+                          confirma &&
+                              cobro.estado == EstadoVerificacionPago.pendiente
+                          ? () => _verificar(cobro)
+                          : null,
+                      onRechazar:
+                          confirma &&
+                              cobro.estado == EstadoVerificacionPago.pendiente
+                          ? () => abrirHojaFinanzas(
+                              context,
+                              (_) => _HojaRechazo(cobro: cobro),
+                            )
+                          : null,
+                      onQuitar:
+                          confirma &&
+                              cobro.estado == EstadoVerificacionPago.verificado
+                          ? () => _quitarVerificacion(cobro)
+                          : null,
+                    ),
+                    const SizedBox(height: Dimen.espacio2),
+                  ],
+                ],
+              ),
+              _Parte.billetes => _Billetes(detalle: d),
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Un numero del resumen del cierre: que es, cuanto y una linea de apoyo.
+class _Cifra extends StatelessWidget {
+  const _Cifra(this.etiqueta, this.valor, this.nota, {this.color});
+
+  final String etiqueta;
+  final String valor;
+  final String? nota;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    // Dos por fila en el telefono.
+    final ancho =
+        (MediaQuery.sizeOf(context).width - Dimen.espacio4 * 2 - 8) / 2;
+    return Container(
+      width: ancho,
+      padding: const EdgeInsets.all(Dimen.espacio2),
+      decoration: BoxDecoration(
+        color: Colores.fondo,
+        borderRadius: BorderRadius.circular(Dimen.radioCampo),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            etiqueta,
+            style: const TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            valor,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: color ?? Colores.tinta,
+            ),
+          ),
+          if (nota != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              nota!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, color: Colores.tintaSuave),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// El efectivo del periodo: cada cobro, pago o gasto que paso por la caja.
+class _Efectivo extends StatelessWidget {
+  const _Efectivo({required this.movimientos});
+
+  final List<MovimientoCierre> movimientos;
+
+  @override
+  Widget build(BuildContext context) {
+    if (movimientos.isEmpty) {
+      return const _Vacio('No hubo movimientos de efectivo en este periodo.');
+    }
+    return Column(
+      children: [
+        for (var i = 0; i < movimientos.length; i++) ...[
+          if (i > 0) const Divider(height: 1),
+          _FilaEfectivo(m: movimientos[i]),
+        ],
+      ],
+    );
+  }
+}
+
+class _FilaEfectivo extends StatelessWidget {
+  const _FilaEfectivo({required this.m});
+
+  final MovimientoCierre m;
+
+  @override
+  Widget build(BuildContext context) {
+    final tachado = !m.vigente;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Dimen.espacio2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  DocumentoMovimiento.etiqueta(m.documentoOrigen),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  [
+                    fechaHora(m.fecha),
+                    if (m.detalle != null) m.detalle!,
+                  ].join(' · '),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Colores.tintaSuave,
+                  ),
+                ),
+                if (tachado) ...[
+                  const SizedBox(height: 2),
+                  AppEtiqueta(
+                    m.esReversa ? 'Reversa' : 'Anulado',
+                    tono: EtiquetaTono.neutral,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: Dimen.espacio2),
+          Text(
+            '${m.esIngreso ? '+' : '-'}${formatoSoles(m.monto)}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              decoration: tachado ? TextDecoration.lineThrough : null,
+              color: tachado
+                  ? Colores.tintaSuave
+                  : m.esIngreso
+                  ? Colores.exito
+                  : Colores.peligro,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Los billetes y monedas que se contaron, con el mismo formato que al cerrar.
+class _Billetes extends StatelessWidget {
+  const _Billetes({required this.detalle});
+
+  final CierreDetalle detalle;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = detalle.cierre;
+    const suave = TextStyle(fontSize: 12, color: Colores.tintaSuave);
+    const texto = TextStyle(fontSize: 12.5, color: Colores.tinta);
+
+    Widget linea(String etiqueta, double monto, {bool fuerte = false}) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  etiqueta,
+                  textAlign: TextAlign.right,
+                  style: fuerte
+                      ? texto.copyWith(fontWeight: FontWeight.w700)
+                      : suave,
+                ),
+              ),
+              const SizedBox(width: Dimen.espacio4),
+              SizedBox(
+                width: 96,
+                child: Text(
+                  formatoSoles(monto),
+                  textAlign: TextAlign.right,
+                  style: fuerte
+                      ? texto.copyWith(fontWeight: FontWeight.w800)
+                      : suave,
+                ),
+              ),
+            ],
+          ),
+        );
+
+    if (detalle.denominaciones.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Vacio(
+            c.contado == 0
+                ? 'No contó efectivo en este cierre.'
+                : 'Este cierre se hizo antes de guardar el desglose: solo se sabe el total.',
+          ),
+          linea('Billetes', c.billetes),
+          linea('Monedas', c.monedas),
+        ],
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colores.linea),
+        borderRadius: BorderRadius.circular(Dimen.radioCampo),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < detalle.denominaciones.length; i++)
+            Container(
+              color: i.isOdd ? Colores.fondo : null,
+              padding: const EdgeInsets.symmetric(
+                horizontal: Dimen.espacio3,
+                vertical: 6,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${detalle.denominaciones[i].esBillete ? 'Billete' : 'Moneda'} '
+                      '${formatoSoles(detalle.denominaciones[i].valor)}',
+                      style: texto,
+                    ),
+                  ),
+                  Text('× ${detalle.denominaciones[i].cantidad}', style: suave),
+                  const SizedBox(width: Dimen.espacio4),
+                  SizedBox(
+                    width: 80,
+                    child: Text(
+                      detalle.denominaciones[i].total.toStringAsFixed(2),
+                      textAlign: TextAlign.right,
+                      style: texto.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(Dimen.espacio3),
+            child: Column(
+              children: [
+                linea('Billetes', c.billetes),
+                linea('Monedas', c.monedas),
+                linea('Total contado', c.contado, fuerte: true),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Vacio extends StatelessWidget {
+  const _Vacio(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(Dimen.espacio4),
+      child: Text(
+        texto,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
+      ),
     );
   }
 }

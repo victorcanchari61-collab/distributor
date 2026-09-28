@@ -14,17 +14,17 @@ final miCajaProvider = FutureProvider.autoDispose<MiCaja>(
   (ref) => ref.watch(miCajaApiProvider).mia(),
 );
 
-/// Las fechas que se miran. Null es "los últimos 30 días", como en la web: el
-/// historial de una caja crece todos los días y no se pide entero.
+/// Las fechas que se miran. Null es "hoy", como en la web: lo que se revisa
+/// en Mi Caja es el día, y el historial se pide eligiendo un rango.
 final rangoMiCajaProvider = StateProvider.autoDispose<DateTimeRange?>(
   (ref) => null,
 );
 
-/// El rango que de verdad se pide, con el de 30 días resuelto.
+/// El rango que de verdad se pide: sin elegir, el día de hoy.
 DateTimeRange rangoEfectivo(DateTimeRange? rango) {
   if (rango != null) return rango;
   final hoy = DateUtils.dateOnly(DateTime.now());
-  return DateTimeRange(start: hoy.subtract(const Duration(days: 29)), end: hoy);
+  return DateTimeRange(start: hoy, end: hoy);
 }
 
 String _dia(DateTime d) =>

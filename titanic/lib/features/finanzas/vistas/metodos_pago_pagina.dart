@@ -33,6 +33,15 @@ class MetodosPagoPagina extends ConsumerWidget {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final todos =
         ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[];
+    final activos = todos.where((m) => m.activo).toList();
+    int deTipo(String tipo) => activos.where((m) => m.tipo == tipo).length;
+    // Yape o transferencia sin cuenta: el servidor rechaza cobrar con ellos.
+    final sinCuenta = activos
+        .where(
+          (m) =>
+              m.tipo != TipoMetodoPago.efectivo && m.cuentaFinancieraId == null,
+        )
+        .length;
 
     return AppListaPagina<MetodoPago>(
       titulo: 'Métodos de pago',
@@ -52,10 +61,32 @@ class MetodosPagoPagina extends ConsumerWidget {
       plural: 'métodos de pago',
       indicadores: [
         AppTarjetaDato(
-          etiqueta: 'Métodos de pago',
-          valor: '${todos.length}',
+          etiqueta: 'Métodos activos',
+          valor: '${activos.length}',
           icono: Icons.payments_outlined,
           color: color,
+          nota: 'De ${todos.length} registrados',
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Billeteras digitales',
+          valor: '${deTipo(TipoMetodoPago.billeteraDigital)}',
+          icono: Icons.smartphone_outlined,
+          tono: DatoTono.exito,
+          nota: 'Yape, Plin...',
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Transferencias',
+          valor: '${deTipo(TipoMetodoPago.transferencia)}',
+          icono: Icons.swap_horiz,
+          tono: DatoTono.exito,
+          nota: 'A una cuenta bancaria',
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Sin cuenta',
+          valor: '$sinCuenta',
+          icono: Icons.warning_amber_outlined,
+          tono: sinCuenta > 0 ? DatoTono.peligro : DatoTono.neutral,
+          nota: 'No sirven para cobrar hasta asignarles una cuenta',
         ),
       ],
       filtro: BotonFiltros(

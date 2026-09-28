@@ -260,11 +260,7 @@ class _Encabezado extends StatelessWidget {
             AppAlerta(aviso!, tono: AlertaTono.aviso),
             const SizedBox(height: Dimen.espacio2),
           ],
-          AppSelectorRango(
-            rango: rango,
-            textoVacio: 'Últimos 30 días',
-            onCambio: onRango,
-          ),
+          AppSelectorRango(rango: rango, textoVacio: 'Hoy', onCambio: onRango),
           const SizedBox(height: Dimen.espacio2),
           Row(
             children: [
@@ -620,6 +616,11 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
       final cierre = await ref.read(miCajaApiProvider).cerrar({
         'billetes': _suma(_billetes),
         'monedas': _suma(_monedas),
+        // Cuántos de cada uno: queda guardado para revisar el cierre.
+        'denominaciones': [
+          for (final v in [..._billetes, ..._monedas])
+            {'valor': v, 'cantidad': _cantidad(v)},
+        ],
         'cuentaDestinoId': _destinoId,
         'observacion': _observacion.text.trim().isEmpty
             ? null

@@ -56,7 +56,7 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   'notasventa': [
     notasVentaProvider,
     cuentasPorCobrarProvider,
-    cobrosDigitalesProvider,
+    detalleCierreProvider,
     miCajaProvider,
     movimientosMiCajaProvider,
     movimientosDigitalesProvider,
@@ -131,7 +131,7 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   // Verificar o rechazar un cobro cambia su estado en Mi Caja.
   'cierrescaja': [
     cierresCajaProvider,
-    cobrosDigitalesProvider,
+    detalleCierreProvider,
     movimientosDigitalesProvider,
   ],
   'financiamientos': [prestamosRecibidosProvider],

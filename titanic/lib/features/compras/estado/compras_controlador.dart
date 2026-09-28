@@ -122,6 +122,20 @@ class ComprasControlador extends AsyncNotifier<List<Compra>> {
     await recargar();
   }
 
+  /// Convierte la orden en compra: la orden se cierra, asi que su lista
+  /// tambien se vuelve a pedir.
+  Future<Compra> convertirOrden(
+    int ordenId,
+    Map<String, dynamic> cuerpo,
+  ) async {
+    final compra = await ref
+        .read(comprasApiProvider)
+        .convertirOrdenCompra(ordenId, cuerpo);
+    await recargar();
+    ref.invalidate(ordenesCompraProvider);
+    return compra;
+  }
+
   Future<void> actualizar(int id, Map<String, dynamic> cuerpo) async {
     await ref.read(comprasApiProvider).actualizarCompra(id, cuerpo);
     await recargar();

@@ -38,6 +38,17 @@ class ComprasApi {
         await _api.patch('/ordencompra/$id/confirmar') as Map<String, dynamic>,
       );
 
+  /// POST /api/ordencompra/{id}/convertir. Como un pedido a venta: cierra la
+  /// orden y crea su compra con lo revisado (cantidades, costos, comprobante
+  /// y pagos).
+  Future<Compra> convertirOrdenCompra(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => Compra.desdeJson(
+    await _api.post('/ordencompra/$id/convertir', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
+
   /// PATCH /api/ordencompra/{id}/anular
   Future<void> anularOrdenCompra(int id) async {
     await _api.patch('/ordencompra/$id/anular');

@@ -81,7 +81,7 @@ interface PagoEntregaProps {
  * uno o varios métodos, y la venta queda al contado si eso cubre el total o a
  * crédito con ese adelanto si no.
  */
-export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFilas }: PagoEntregaProps) {
+export function PagoEntrega({ metodos, metodosListos, filas, total, onFilas }: PagoEntregaProps) {
   const r = resumenPago(filas, total)
   const [aviso, setAviso] = useState('')
 
@@ -251,16 +251,9 @@ export function PagoEntrega({ pedido, metodos, metodosListos, filas, total, onFi
     },
   ]
 
-  const acordado = pedido?.condicionPago === 'CREDITO' ? 'Crédito' : 'Contado'
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2 rounded-field bg-surface-alt px-3 py-2 text-xs text-ink-soft">
-        <span>Acordado con el cliente:</span>
-        <Badge tone={pedido?.condicionPago === 'CREDITO' ? 'warning' : 'success'}>{acordado}</Badge>
-        <span>Es solo una referencia: manda lo que se cobre ahora. Lo que no se cobre queda a crédito.</span>
-      </div>
-
       <CifrasPago
         cifras={[
           { label: 'A cobrar', monto: total },

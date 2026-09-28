@@ -19,11 +19,12 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/orden_compra.dart';
 import '../estado/compras_controlador.dart';
+import 'compra_formulario.dart';
 import 'orden_compra_formulario.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
-/// Listado de ordenes de compra: lo que se le pide a un proveedor. Al
-/// confirmarse nace una Compra.
+/// Listado de ordenes de compra: lo que se le pide a un proveedor. Cuando
+/// llega, se convierte en compra con su comprobante y sus pagos.
 class OrdenesCompraPagina extends ConsumerWidget {
   const OrdenesCompraPagina({super.key});
 
@@ -159,28 +160,16 @@ class OrdenesCompraPagina extends ConsumerWidget {
     );
   }
 
+  /// Como un pedido a venta: abre el formulario de compra ya lleno con la
+  /// orden, para revisar lo que llegó y poner el comprobante y los pagos.
   Future<void> _confirmar(
     BuildContext context,
     WidgetRef ref,
     OrdenCompra orden,
-  ) async {
-    final ok = await confirmarAccion(
+  ) {
+    return Navigator.of(
       context,
-      titulo: 'Confirmar ${orden.numero}',
-      mensaje:
-          'El proveedor aceptó despachar: se cierra la orden y se crea la compra.',
-      textoConfirmar: 'Confirmar',
-      tono: ConfirmTono.pregunta,
-    );
-    if (!ok || !context.mounted) return;
-
-    final mensajero = Aviso.de(context);
-    try {
-      await ref.read(ordenesCompraProvider.notifier).confirmar(orden.id);
-      mensajero.mostrar('${orden.numero} confirmada: se creó la compra.');
-    } on ApiExcepcion catch (e) {
-      mensajero.error(e.texto);
-    }
+    ).push(MaterialPageRoute(builder: (_) => CompraFormulario(orden: orden)));
   }
 
   Future<void> _anular(
@@ -291,10 +280,10 @@ class _TarjetaOrden extends StatelessWidget {
         if (onConfirmar != null)
           IconButton(
             onPressed: onConfirmar,
-            tooltip: 'Confirmar',
+            tooltip: 'Convertir a compra',
             visualDensity: VisualDensity.compact,
             icon: const Icon(
-              Icons.check_circle_outline,
+              Icons.shopping_bag_outlined,
               size: 18,
               color: Colores.exito,
             ),
@@ -337,7 +326,7 @@ class _TarjetaOrden extends StatelessWidget {
       acciones: [
         if (onConfirmar != null)
           AppBoton(
-            texto: 'Confirmar',
+            texto: 'Convertir a compra',
             variante: BotonVariante.secundario,
             expandido: true,
             onPressed: () {

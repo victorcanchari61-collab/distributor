@@ -35,11 +35,17 @@ class BancosPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final activas =
-        (ref.watch(cuentasBancariasProvider).valueOrNull ??
-                const <CuentaFinanciera>[])
-            .where((c) => c.activo);
+    final todas =
+        ref.watch(cuentasBancariasProvider).valueOrNull ??
+        const <CuentaFinanciera>[];
+    final activas = todas.where((c) => c.activo).toList();
     final total = activas.fold<double>(0, (s, c) => s + c.saldoActual);
+    // La que más plata tiene: de ahí suele salir lo que se paga.
+    CuentaFinanciera? mayor;
+    for (final c in activas) {
+      if (mayor == null || c.saldoActual > mayor.saldoActual) mayor = c;
+    }
+    final bancos = activas.map((c) => c.bancoId).toSet().length;
     final puedeEditar = puede(ref, 'finanzas.bancos', Accion.editar);
 
     return AppListaPagina<CuentaFinanciera>(
@@ -71,7 +77,30 @@ class BancosPagina extends ConsumerWidget {
           valor: formatoSoles(total),
           icono: Icons.account_balance_outlined,
           color: color,
-          nota: '${activas.length} cuentas activas',
+          nota: 'Lo que hay en las cuentas activas',
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Cuentas activas',
+          valor: '${activas.length}',
+          icono: Icons.credit_card_outlined,
+          tono: DatoTono.exito,
+          nota: 'En $bancos ${bancos == 1 ? 'banco' : 'bancos'}',
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Mayor saldo',
+          valor: mayor == null ? '—' : formatoSoles(mayor.saldoActual),
+          icono: Icons.trending_up,
+          tono: DatoTono.aviso,
+          nota: mayor == null
+              ? 'Sin cuentas activas'
+              : '${mayor.nombre}${mayor.banco == null ? '' : ' · ${mayor.banco}'}',
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Inactivas',
+          valor: '${todas.length - activas.length}',
+          icono: Icons.block,
+          tono: DatoTono.neutral,
+          nota: 'No reciben cobros ni pagos',
         ),
       ],
       filtro: BotonFiltros(

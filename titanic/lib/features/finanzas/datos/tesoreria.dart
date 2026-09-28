@@ -239,6 +239,11 @@ class CierreRegistrado {
     this.observacion,
     this.estadoDescuento,
     this.saldoDescuento,
+    this.billetes = 0,
+    this.monedas = 0,
+    this.digital = 0,
+    this.digitalPorVerificar = 0,
+    this.digitalRechazados = 0,
   });
 
   final int id;
@@ -247,6 +252,14 @@ class CierreRegistrado {
   final String caja;
   final double saldoSistema;
   final double contado;
+  final double billetes;
+  final double monedas;
+
+  /// Lo cobrado por Yape o transferencia desde el cierre anterior hasta este,
+  /// sin lo rechazado. No pasa por la caja: se verifica en el banco.
+  final double digital;
+  final int digitalPorVerificar;
+  final int digitalRechazados;
 
   /// Negativa: falto plata. Positiva: sobro.
   final double diferencia;
@@ -287,6 +300,121 @@ class CierreRegistrado {
       sinEmpleado: json['sinEmpleado'] as bool? ?? false,
       estadoDescuento: descuento?['estado'] as String?,
       saldoDescuento: descuento == null ? null : _monto(descuento['saldo']),
+      billetes: _monto(json['billetes']),
+      monedas: _monto(json['monedas']),
+      digital: _monto(json['digital']),
+      digitalPorVerificar: json['digitalPorVerificar'] as int? ?? 0,
+      digitalRechazados: json['digitalRechazados'] as int? ?? 0,
+    );
+  }
+}
+
+/// Un billete o una moneda contada en un cierre.
+class DenominacionContada {
+  const DenominacionContada({
+    required this.valor,
+    required this.cantidad,
+    required this.total,
+    required this.esBillete,
+  });
+
+  final double valor;
+  final int cantidad;
+  final double total;
+  final bool esBillete;
+
+  factory DenominacionContada.desdeJson(Map<String, dynamic> json) =>
+      DenominacionContada(
+        valor: _monto(json['valor']),
+        cantidad: json['cantidad'] as int? ?? 0,
+        total: _monto(json['total']),
+        esBillete: json['esBillete'] as bool? ?? false,
+      );
+}
+
+/// Un movimiento de la caja dentro del periodo de un cierre.
+class MovimientoCierre {
+  const MovimientoCierre({
+    required this.id,
+    required this.fecha,
+    required this.tipo,
+    required this.monto,
+    required this.documentoOrigen,
+    required this.anulado,
+    required this.esReversa,
+    this.detalle,
+  });
+
+  final int id;
+  final DateTime fecha;
+  final String tipo;
+  final double monto;
+  final String documentoOrigen;
+
+  /// La venta y el cliente, la categoria del gasto o lo escrito a mano.
+  final String? detalle;
+  final bool anulado;
+  final bool esReversa;
+
+  bool get esIngreso => tipo == 'INGRESO';
+
+  /// Movio plata de verdad: ni lo anulado ni su reversa.
+  bool get vigente => !anulado && !esReversa;
+
+  factory MovimientoCierre.desdeJson(Map<String, dynamic> json) =>
+      MovimientoCierre(
+        id: json['id'] as int,
+        fecha: fechaDeJson(json['fecha'] as String),
+        tipo: json['tipo'] as String? ?? '',
+        monto: _monto(json['monto']),
+        documentoOrigen: json['documentoOrigen'] as String? ?? '',
+        detalle: json['detalle'] as String?,
+        anulado: json['anulado'] as bool? ?? false,
+        esReversa: json['esReversa'] as bool? ?? false,
+      );
+}
+
+/// Todo lo de un cierre para revisar si cuadra: el efectivo que paso por la
+/// caja, lo cobrado digital que tiene que aparecer en el banco y los billetes
+/// y monedas que se contaron.
+class CierreDetalle {
+  const CierreDetalle({
+    required this.cierre,
+    required this.saldoAnterior,
+    required this.denominaciones,
+    required this.efectivo,
+    required this.digitales,
+    this.desde,
+  });
+
+  final CierreRegistrado cierre;
+
+  /// El cierre anterior de esa caja. Nulo si es el primero.
+  final DateTime? desde;
+
+  /// Lo que la caja ya tenia al empezar el periodo.
+  final double saldoAnterior;
+
+  /// Vacio en los cierres de antes de guardar el desglose.
+  final List<DenominacionContada> denominaciones;
+  final List<MovimientoCierre> efectivo;
+  final List<CobroDigital> digitales;
+
+  factory CierreDetalle.desdeJson(Map<String, dynamic> json) {
+    final desde = json['desde'] as String?;
+    List<Map<String, dynamic>> lista(String clave) =>
+        (json[clave] as List? ?? const []).cast<Map<String, dynamic>>();
+    return CierreDetalle(
+      cierre: CierreRegistrado.desdeJson(
+        json['cierre'] as Map<String, dynamic>,
+      ),
+      desde: desde == null ? null : fechaDeJson(desde),
+      saldoAnterior: _monto(json['saldoAnterior']),
+      denominaciones: lista(
+        'denominaciones',
+      ).map(DenominacionContada.desdeJson).toList(),
+      efectivo: lista('efectivo').map(MovimientoCierre.desdeJson).toList(),
+      digitales: lista('digitales').map(CobroDigital.desdeJson).toList(),
     );
   }
 }

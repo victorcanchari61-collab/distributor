@@ -21,6 +21,7 @@ import '../../maestros/datos/producto.dart';
 import '../../maestros/datos/proveedor.dart';
 import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/compra.dart';
+import '../datos/orden_compra.dart';
 import '../estado/compras_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
@@ -41,15 +42,21 @@ class _FilaPago {
   };
 }
 
-/// Alta y edicion de una compra directa, sin orden previa.
+/// Alta y edicion de una compra directa, sin orden previa, y la conversion de
+/// una orden de compra en compra.
 ///
 /// Solo se edita mientras sigue Pendiente (nada recibido): en cuanto entra
 /// mercaderia contra ella, solo se puede anular o seguir recibiendo.
 class CompraFormulario extends ConsumerStatefulWidget {
-  const CompraFormulario({super.key, this.compra});
+  const CompraFormulario({super.key, this.compra, this.orden});
 
   /// Null cuando es una compra nueva.
   final Compra? compra;
+
+  /// La orden que se convierte en compra, como un pedido en venta: el
+  /// formulario arranca con su proveedor, productos y costos, y aqui se
+  /// corrige lo que de verdad llego y se pone el comprobante y los pagos.
+  final OrdenCompra? orden;
 
   @override
   ConsumerState<CompraFormulario> createState() => _CompraFormularioState();
@@ -63,11 +70,13 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
     text: widget.compra?.numeroComprobante ?? '',
   );
   late final _observacion = TextEditingController(
-    text: widget.compra?.observacion ?? '',
+    text: widget.compra?.observacion ?? widget.orden?.observacion ?? '',
   );
 
-  late int? _proveedorId = widget.compra?.proveedorId;
-  late String? _proveedorNombre = widget.compra?.proveedor;
+  late int? _proveedorId =
+      widget.compra?.proveedorId ?? widget.orden?.proveedorId;
+  late String? _proveedorNombre =
+      widget.compra?.proveedor ?? widget.orden?.proveedor;
   late String _tipoComprobante =
       widget.compra?.tipoComprobante ?? TipoComprobanteCompra.factura;
   late String _formaPago = widget.compra?.formaPago ?? FormaPagoCompra.contado;
@@ -82,7 +91,29 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
   bool _lineasPuestas = false;
 
   void _ponerLineasExistentes(List<Producto> catalogo) {
-    final detalle = widget.compra?.detalle ?? const <CompraDetalle>[];
+    // Las de la compra que se edita, o las de la orden que se convierte.
+    final detalle = [
+      for (final l in widget.compra?.detalle ?? const <CompraDetalle>[])
+        (
+          productoId: l.productoId,
+          producto: l.producto,
+          codigo: l.codigo,
+          unidadBase: l.unidadBase,
+          presentacionId: l.presentacionId,
+          cantidadPresentacion: l.cantidadPresentacion,
+          costoTotal: l.costoTotal,
+        ),
+      for (final l in widget.orden?.detalle ?? const <LineaCompra>[])
+        (
+          productoId: l.productoId,
+          producto: l.producto,
+          codigo: l.codigo,
+          unidadBase: l.unidadBase,
+          presentacionId: l.presentacionId,
+          cantidadPresentacion: l.cantidadPresentacion,
+          costoTotal: l.costoTotal,
+        ),
+    ];
     if (_lineasPuestas || detalle.isEmpty || catalogo.isEmpty) return;
     _lineasPuestas = true;
 
@@ -124,6 +155,9 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
   ];
 
   bool get _esNuevo => widget.compra == null;
+
+  /// Viene de "Convertir a compra" en una orden.
+  bool get _convierte => widget.orden != null;
 
   bool _guardando = false;
   String? _error;
@@ -196,6 +230,16 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
     };
 
     try {
+      if (_convierte) {
+        final compra = await ref
+            .read(comprasProvider.notifier)
+            .convertirOrden(widget.orden!.id, cuerpo);
+        navegador.pop();
+        mensajero.mostrar(
+          '${widget.orden!.numero} convertida en la compra ${compra.numero}',
+        );
+        return;
+      }
       if (_esNuevo) {
         await ref.read(comprasProvider.notifier).crear(cuerpo);
       } else {
@@ -495,7 +539,11 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
       (context) => Scaffold(
         appBar: AppBar(
           title: Text(
-            _esNuevo ? 'Nueva compra' : 'Editar ${widget.compra!.numero}',
+            _convierte
+                ? 'Convertir ${widget.orden!.numero}'
+                : _esNuevo
+                ? 'Nueva compra'
+                : 'Editar ${widget.compra!.numero}',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
           bottom: const PreferredSize(
@@ -510,9 +558,19 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
               AppAlerta(_error!),
               const SizedBox(height: Dimen.espacio4),
             ],
+            if (_convierte) ...[
+              const AppAlerta(
+                'Revisa lo que de verdad llegó —cantidades y costos—, pon el '
+                'comprobante del proveedor y cómo se pagó. Al registrarla, la '
+                'orden se cierra.',
+                tono: AlertaTono.aviso,
+              ),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             InkWell(
-              onTap: _elegirProveedor,
+              // Es el de la orden: la compra no cambia de proveedor.
+              onTap: _convierte ? null : _elegirProveedor,
               borderRadius: BorderRadius.circular(Dimen.radioCampo),
               child: InputDecorator(
                 decoration: InputDecoration(
@@ -716,7 +774,11 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
             AppBotonesFormulario(
               onCancelar: () => Navigator.of(context).pop(),
               onGuardar: _guardar,
-              textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
+              textoGuardar: _convierte
+                  ? 'Convertir a compra'
+                  : _esNuevo
+                  ? 'Registrar'
+                  : 'Guardar',
               cargando: _guardando,
             ),
             const SizedBox(height: Dimen.espacio5),

@@ -8,9 +8,10 @@ import {
   Desplegable,
   Input,
   Modal,
+  SysDataTable,
   Tabs,
 } from '../../components/ui'
-import type { LineaProductoNueva, ProductoBuscable } from '../../components/ui'
+import type { DataTableColumn, LineaProductoNueva, ProductoBuscable } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { motivoNovedadApi } from '../tms/motivoNovedadApi'
 import type { MotivoNovedadOpcion } from '../tms/motivoNovedadApi'
@@ -248,10 +249,133 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
       .reduce((s, o) => s + o.entregada, 0)
     return {
       ...c,
+      id: c.linea.id,
       hay,
       sinStock: hay !== null && pedidoDelProducto > hay + 1e-6,
     }
   })
+
+  /*
+   * Lo que se entregó, como la tabla de productos de cualquier formulario:
+   * una fila por producto, la cantidad se corrige en la propia fila y, si se
+   * entrega menos, el motivo va en la misma fila.
+   */
+  const columnasEntrega: DataTableColumn<(typeof calculo)[number]>[] = [
+    {
+      key: 'producto',
+      label: 'Producto',
+      render: (c) => <span className="font-medium text-ink">{c.linea.producto}</span>,
+    },
+    {
+      key: 'pedido',
+      label: 'Pedido',
+      render: (c) => (
+        <span className="whitespace-nowrap text-ink-soft">
+          {cantidadTexto(c.linea.cantidadPresentacion)} {c.linea.presentacion ?? c.linea.unidadBase}
+        </span>
+      ),
+    },
+    {
+      key: 'entregado',
+      label: 'Entregado',
+      render: (c) => {
+        const l = c.linea
+        const conSueltas = c.factor > 1
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <Input
+                size="sm"
+                type="number"
+                min={0}
+                step={conSueltas ? 1 : 'any'}
+                className="w-20"
+                aria-label={`Cantidad de ${l.producto}`}
+                value={c.entrega.pres}
+                onChange={(e) => cambiar(l.id, { pres: e.target.value })}
+              />
+              <span className="text-xs whitespace-nowrap text-ink-soft">
+                {conSueltas ? (l.presentacion ?? l.unidadBase) : l.unidadBase}
+              </span>
+              {conSueltas && (
+                <>
+                  <span className="text-xs text-ink-soft">+</span>
+                  <Input
+                    size="sm"
+                    type="number"
+                    min={0}
+                    step="any"
+                    className="w-20"
+                    aria-label={`${l.unidadBase} sueltos de ${l.producto}`}
+                    value={c.entrega.sueltas}
+                    onChange={(e) => cambiar(l.id, { sueltas: e.target.value })}
+                  />
+                  <span className="text-xs text-ink-soft">{l.unidadBase}</span>
+                </>
+              )}
+            </div>
+            {c.excede && (
+              <p className="text-[11px] font-medium text-red-600">
+                Máximo lo pedido: {cantidadTexto(l.cantidad)} {l.unidadBase}
+              </p>
+            )}
+            {c.sinStock && !c.excede && (
+              <p className="text-[11px] font-medium text-red-600">
+                Solo hay {cantidadTexto(c.hay ?? 0)} {l.unidadBase} ·{' '}
+                <button
+                  type="button"
+                  className="cursor-pointer underline"
+                  onClick={() => cambiar(l.id, { ...partirBase(l, Math.min(l.cantidad, c.hay ?? 0)) })}
+                >
+                  entregar lo que hay
+                </button>
+              </p>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      // Solo si se entrega menos: queda como novedad, con su motivo.
+      key: 'motivo',
+      label: 'Si falta',
+      render: (c) => {
+        const l = c.linea
+        if (!c.reducida || c.excede) return <span className="text-ink-soft">—</span>
+        return (
+          <div className="flex min-w-48 flex-col gap-1.5">
+            <p className="text-[11px] font-medium text-amber-700">
+              Falta {cantidadTexto(l.cantidad - c.entregada)} {l.unidadBase}
+            </p>
+            <Desplegable
+              size="sm"
+              value={c.entrega.motivoId}
+              onChange={(v) => cambiar(l.id, { motivoId: Number(v) })}
+              placeholder="¿Por qué?"
+              options={motivos.map((m) => ({
+                value: m.id,
+                label: m.nombre,
+                nota: m.descripcion ?? undefined,
+              }))}
+            />
+            <Input
+              size="sm"
+              maxLength={250}
+              placeholder="Observación (opcional)"
+              value={c.entrega.observacion}
+              onChange={(e) => cambiar(l.id, { observacion: e.target.value })}
+            />
+          </div>
+        )
+      },
+    },
+    {
+      key: 'subtotal',
+      label: 'Subtotal',
+      align: 'right',
+      render: (c) => <span className="font-semibold whitespace-nowrap text-ink">{soles(c.subtotal)}</span>,
+    },
+  ]
 
   const total = calculo.reduce((suma, c) => suma + c.subtotal, 0)
   const hayRecortes = calculo.some((c) => c.reducida)
@@ -409,144 +533,14 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
 
             <div>
               <span className="ui-label mb-1.5 block">Lo que se entregó</span>
-              <p className="mb-2 text-xs text-ink-soft">
-                Por defecto sale todo lo pedido. Si el cliente recibió menos, corrige la cantidad y elige el motivo: la
-                venta cobra solo lo entregado.
-              </p>
-
-              <div className="divide-y divide-line rounded-field border border-line">
-                {calculo.map((c) => {
-                  const l = c.linea
-                  const conSueltas = c.factor > 1
-                  const nombrePres = l.presentacion ?? l.unidadBase
-                  const alcanzaTodo = c.hay === null || c.hay >= l.cantidad - 1e-6
-                  return (
-                    <div key={l.id} className="flex flex-col gap-2 px-3 py-2.5">
-                      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                        <div className="min-w-0 flex-1 basis-56">
-                          <p className="truncate text-sm font-semibold text-ink">{l.producto}</p>
-                          <p className="text-xs text-ink-soft">
-                            {l.codigo} · Pedido: {cantidadTexto(l.cantidadPresentacion)} {nombrePres}
-                            {conSueltas && ` (${cantidadTexto(l.cantidad)} ${l.unidadBase})`}
-                          </p>
-                          {c.hay !== null && (
-                            <p className={alcanzaTodo ? 'text-xs text-ink-soft' : 'text-xs font-medium text-red-600'}>
-                              Hay en el almacén: {enPresentaciones(c.hay, c.factor, nombrePres, l.unidadBase)}
-                              {conSueltas && c.hay > 0 && ` (${cantidadTexto(c.hay)} ${l.unidadBase})`}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-end gap-2">
-                          <div className="w-24">
-                            <Input
-                              label={conSueltas ? nombrePres : l.unidadBase}
-                              size="sm"
-                              type="number"
-                              min={0}
-                              step={conSueltas ? 1 : 'any'}
-                              value={c.entrega.pres}
-                              onChange={(e) => cambiar(l.id, { pres: e.target.value })}
-                            />
-                          </div>
-                          {conSueltas && (
-                            <>
-                              <span className="pb-2 text-sm text-ink-soft">+</span>
-                              <div className="w-24">
-                                <Input
-                                  label={`${l.unidadBase} sueltos`}
-                                  size="sm"
-                                  type="number"
-                                  min={0}
-                                  step="any"
-                                  value={c.entrega.sueltas}
-                                  onChange={(e) => cambiar(l.id, { sueltas: e.target.value })}
-                                />
-                              </div>
-                            </>
-                          )}
-                          <div className="w-24 pb-2 text-right text-sm font-semibold text-ink">
-                            {soles(c.subtotal)}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Lo que se entrega, dicho de una vez: cuenta lo que sale sin que haya que multiplicar. */}
-                      {conSueltas && !c.excede && !c.sinStock && c.entregada > 0 && (
-                        <p className="text-xs text-ink-soft">
-                          Entrega {enPresentaciones(c.entregada, c.factor, nombrePres, l.unidadBase)} ={' '}
-                          {cantidadTexto(c.entregada)} {l.unidadBase}
-                        </p>
-                      )}
-
-                      {c.excede && (
-                        <p className="text-xs font-medium text-red-600">
-                          No puede ser más de lo pedido ({cantidadTexto(l.cantidad)} {l.unidadBase}).
-                        </p>
-                      )}
-
-                      {c.sinStock && !c.excede && (
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-red-600">
-                          <span>
-                            No alcanza el stock: se quieren entregar {cantidadTexto(c.entregada)} {l.unidadBase} y hay{' '}
-                            {cantidadTexto(c.hay ?? 0)}.
-                          </span>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() =>
-                              cambiar(l.id, { ...partirBase(l, Math.min(l.cantidad, c.hay ?? 0)) })
-                            }
-                          >
-                            Entregar lo que hay
-                          </Button>
-                        </div>
-                      )}
-
-                      {c.reducida && !c.excede && (
-                        <div className="flex flex-col gap-2 rounded-field border border-line bg-slate-50 p-2.5">
-                          <p className="text-xs text-ink-muted">
-                            {c.entregada <= 0 ? (
-                              'No se entrega este producto.'
-                            ) : (
-                              <>
-                                Se entrega {cantidadTexto(c.entregada)} de {cantidadTexto(l.cantidad)} {l.unidadBase}
-                              </>
-                            )}{' '}
-                            ·{' '}
-                            <span className="font-semibold text-ink">
-                              falta {cantidadTexto(l.cantidad - c.entregada)} {l.unidadBase}
-                            </span>
-                            . Se registra como novedad: elige el motivo.
-                          </p>
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            <Desplegable
-                              label="Motivo"
-                              size="sm"
-                              value={c.entrega.motivoId}
-                              onChange={(v) => cambiar(l.id, { motivoId: Number(v) })}
-                              placeholder="¿Por qué se entrega menos?"
-                              options={motivos.map((m) => ({
-                                value: m.id,
-                                label: m.nombre,
-                                nota: m.descripcion ?? undefined,
-                              }))}
-                            />
-                            <Input
-                              label="Observación"
-                              optional
-                              size="sm"
-                              maxLength={250}
-                              value={c.entrega.observacion}
-                              onChange={(e) => cambiar(l.id, { observacion: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+              <SysDataTable
+                columns={columnasEntrega}
+                rows={calculo}
+                rowKey="id"
+                toolbar={false}
+                paginacion={false}
+                empty="Este pedido no tiene productos."
+              />
 
               {hayRecortes && motivosListos && motivos.length === 0 && (
                 <div className="mt-2">
@@ -566,12 +560,6 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
 
         {pestana === 'recojo' && (
           <>
-            <p className="text-xs text-ink-soft">
-              Mercadería de OTRA venta que el repartidor recoge al entregar esta —malograda, no la pidió, lo que sea—.
-              Se descuenta del total. A qué almacén entra lo decide quien lo revise en Novedades de entrega, cuando
-              el camión vuelva.
-            </p>
-
             <AgregarProductoPanel
               productos={productos}
               uso="venta"
