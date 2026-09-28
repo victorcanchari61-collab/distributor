@@ -10,10 +10,13 @@
  * que entró o salió por ellas. Las ventas y compras se conservan y quedan con
  * todo su saldo, por cobrar y por pagar.
  *
+ * Los métodos de pago se borran todos menos Efectivo: es fijo, sembrado por el
+ * sistema, y sin él no se puede cobrar al contado.
+ *
  * Se conservan:
  *   - Las categorías (MotivosGasto).
  *   - Las cuentas —cajas de cada vendedor, bancos, la Bóveda— con saldo 0.
- *   - Los métodos de pago (Efectivo, Yape, transferencias) y el catálogo de bancos.
+ *   - El método Efectivo y el catálogo de bancos.
  *   - Ventas, compras, pedidos, stock y todo lo demás.
  *
  * Los nombres van en el PascalCase de EF Core: en Linux —como el VPS— MySQL
@@ -83,5 +86,9 @@ DROP PROCEDURE truncate_si_existe;
 
 -- Las cuentas se quedan, pero sin plata: su saldo salía de los movimientos.
 UPDATE CuentasFinancieras SET SaldoActual = 0;
+
+-- Métodos de pago: solo Efectivo. Los cobros y pagos que los usaban ya se
+-- vaciaron arriba, así que no queda nada que los señale.
+DELETE FROM MetodosPago WHERE Tipo <> 'EFECTIVO';
 
 SET FOREIGN_KEY_CHECKS = 1;
