@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Coins, Pencil, Plus, ShieldCheck, ShieldOff } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, Coins, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -202,6 +202,11 @@ export function MetodosPagoPage() {
     },
   ]
 
+
+  const activos = metodos.filter((m) => m.activo)
+  // Yape o transferencia sin cuenta: el backend rechaza cobrar con ellos.
+  const sinCuenta = activos.filter((m) => m.tipo !== 'EFECTIVO' && m.cuentaFinancieraId === null).length
+
   return (
     <ListPage
       icon={<Coins size={20} />}
@@ -216,7 +221,36 @@ export function MetodosPagoPage() {
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
-        <StatCard label="Métodos de pago" value={String(metodos.length)} icon={<Coins size={18} />} />
+        <>
+          <StatCard
+            label="Métodos activos"
+            value={String(activos.length)}
+            icon={<Coins size={18} />}
+            tono="sys"
+            hint={`De ${metodos.length} registrados`}
+          />
+          <StatCard
+            label="Billeteras digitales"
+            value={String(activos.filter((m) => m.tipo === 'BILLETERA_DIGITAL').length)}
+            icon={<Smartphone size={18} />}
+            tono="success"
+            hint="Yape, Plin..."
+          />
+          <StatCard
+            label="Transferencias"
+            value={String(activos.filter((m) => m.tipo === 'TRANSFERENCIA').length)}
+            icon={<ArrowLeftRight size={18} />}
+            tono="success"
+            hint="A una cuenta bancaria"
+          />
+          <StatCard
+            label="Sin cuenta"
+            value={String(sinCuenta)}
+            icon={<AlertTriangle size={18} />}
+            tono={sinCuenta > 0 ? 'danger' : 'neutral'}
+            hint="No sirven para cobrar hasta asignarles una cuenta"
+          />
+        </>
       }
       columns={columns}
       rows={metodos}
