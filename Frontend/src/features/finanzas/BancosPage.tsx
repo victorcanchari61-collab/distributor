@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Landmark, Pencil, Plus, ShieldCheck, ShieldOff } from 'lucide-react'
+import { AlertTriangle, CreditCard, Landmark, Pencil, Plus, ShieldCheck, ShieldOff } from 'lucide-react'
 import { Alert, Badge, Button, Input, ListPage, Modal, RowAction, StatCard, useConfirmacion, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -113,6 +113,10 @@ export function BancosPage() {
     },
   ]
 
+  const activos = bancos.filter((b) => b.activo)
+  const totalCuentas = bancos.reduce((n, b) => n + b.cantidadCuentas, 0)
+  const sinCuentas = activos.filter((b) => b.cantidadCuentas === 0).length
+
   return (
     <ListPage
       icon={<Landmark size={20} />}
@@ -127,7 +131,36 @@ export function BancosPage() {
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
-        <StatCard label="Bancos activos" value={String(bancos.filter((b) => b.activo).length)} icon={<Landmark size={18} />} tono="sys" />
+        <>
+          <StatCard
+            label="Bancos activos"
+            value={String(activos.length)}
+            icon={<Landmark size={18} />}
+            tono="sys"
+            hint={`De ${bancos.length} en el catálogo`}
+          />
+          <StatCard
+            label="Cuentas bancarias"
+            value={String(totalCuentas)}
+            icon={<CreditCard size={18} />}
+            tono="success"
+            hint={`Repartidas en ${bancos.filter((b) => b.cantidadCuentas > 0).length} bancos`}
+          />
+          <StatCard
+            label="Sin cuentas"
+            value={String(sinCuentas)}
+            icon={<AlertTriangle size={18} />}
+            tono="warning"
+            hint="Bancos activos sin ninguna cuenta registrada"
+          />
+          <StatCard
+            label="Inactivos"
+            value={String(bancos.length - activos.length)}
+            icon={<ShieldOff size={18} />}
+            tono="neutral"
+            hint="No se pueden elegir en una cuenta nueva"
+          />
+        </>
       }
       columns={columns}
       rows={bancos}

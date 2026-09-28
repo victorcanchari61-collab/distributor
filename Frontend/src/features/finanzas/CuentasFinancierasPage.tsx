@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Building2, CheckCircle2, CreditCard, History, Landmark, Plus, Scale, ShieldCheck, ShieldOff } from 'lucide-react'
+import { Building2, CheckCircle2, CreditCard, History, Landmark, Plus, Scale, ShieldCheck, ShieldOff, TrendingUp } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -200,7 +200,13 @@ function CuentasBancariasTab() {
       },
     })
 
-  const saldoTotal = cuentas.filter((c) => c.activo).reduce((s, c) => s + c.saldoActual, 0)
+  const activas = cuentas.filter((c) => c.activo)
+  const saldoTotal = activas.reduce((s, c) => s + c.saldoActual, 0)
+  // La que más plata tiene: de ahí suele salir lo que se paga.
+  const mayor = activas.reduce<CuentaFinancieraResponse | null>(
+    (m, c) => (m === null || c.saldoActual > m.saldoActual ? c : m),
+    null,
+  )
 
   const columns: DataTableColumn<CuentaFinancieraResponse>[] = [
     { key: 'nombre', label: 'Nombre', filterable: false },
@@ -252,8 +258,34 @@ function CuentasBancariasTab() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Saldo total" value={soles(saldoTotal)} icon={<Landmark size={18} />} tono="sys" />
-          <StatCard label="Cuentas activas" value={String(cuentas.filter((c) => c.activo).length)} icon={<Building2 size={18} />} />
+          <StatCard
+            label="Saldo total"
+            value={soles(saldoTotal)}
+            icon={<Landmark size={18} />}
+            tono="sys"
+            hint="Lo que hay en todas las cuentas activas"
+          />
+          <StatCard
+            label="Cuentas activas"
+            value={String(activas.length)}
+            icon={<Building2 size={18} />}
+            tono="success"
+            hint={`En ${new Set(activas.map((c) => c.bancoId)).size} bancos`}
+          />
+          <StatCard
+            label="Mayor saldo"
+            value={mayor ? soles(mayor.saldoActual) : '—'}
+            icon={<TrendingUp size={18} />}
+            tono="warning"
+            hint={mayor ? `${mayor.nombre}${mayor.banco ? ` · ${mayor.banco}` : ''}` : 'Sin cuentas activas'}
+          />
+          <StatCard
+            label="Inactivas"
+            value={String(cuentas.length - activas.length)}
+            icon={<ShieldOff size={18} />}
+            tono="neutral"
+            hint="No reciben cobros ni pagos"
+          />
         </>
       }
       columns={columns}
