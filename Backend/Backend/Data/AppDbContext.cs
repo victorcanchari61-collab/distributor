@@ -1347,13 +1347,13 @@ public class AppDbContext : DbContext
             entity.HasOne(c => c.Banco).WithMany()
                 .HasForeignKey(c => c.BancoId).OnDelete(DeleteBehavior.Restrict);
 
-            // La única cuenta de efectivo de la empresa: sin ella, el arqueo
-            // no tiene a dónde postear la primera liquidación.
+            // La Bóveda: la caja de la empresa, sin responsable. Adonde va el
+            // efectivo de los cierres. Antes se llamaba "Caja General".
             entity.HasData(
                 new CuentaFinanciera
                 {
                     Id = 1,
-                    Nombre = "Caja General",
+                    Nombre = CuentaFinanciera.NombreBoveda,
                     Naturaleza = NaturalezaCuenta.Caja,
                     SaldoActual = 0,
                     Activo = true,

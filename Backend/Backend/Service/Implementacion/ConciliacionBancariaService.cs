@@ -48,7 +48,7 @@ public class ConciliacionBancariaService : IConciliacionBancariaService
         var cuenta = await _cuentas.GetOrThrowAsync(request.CuentaFinancieraId);
         if (cuenta.Naturaleza == NaturalezaCuenta.Caja)
         {
-            throw new BadRequestException("La Caja General no se concilia contra un extracto bancario");
+            throw new BadRequestException("Una caja no se concilia contra un extracto bancario");
         }
 
         var saldoContable = await _cuentas.SaldoAFechaAsync(cuenta.Id, request.Fecha);
