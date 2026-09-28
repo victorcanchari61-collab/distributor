@@ -257,9 +257,17 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
 
   /*
    * Lo que se entregó, como la tabla de productos de cualquier formulario:
-   * una fila por producto, la cantidad se corrige en la propia fila y, si se
-   * entrega menos, el motivo va en la misma fila.
+   * una fila por producto y un dato por columna. La cantidad se corrige en la
+   * propia fila y, si se entrega menos, el motivo va en sus columnas.
+   *
+   * Las columnas son fijas —la tabla agrega al final las que aparecen
+   * después—: las del faltante muestran "—" mientras no falte nada. Sueltos
+   * sí depende del pedido, que no cambia mientras el modal está abierto.
    */
+  const conSueltas = calculo.some((c) => c.factor > 1)
+  const faltante = (c: (typeof calculo)[number]) => c.reducida && !c.excede
+  const guion = <span className="text-ink-soft">—</span>
+
   const columnasEntrega: DataTableColumn<(typeof calculo)[number]>[] = [
     {
       key: 'producto',
@@ -269,6 +277,7 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
     {
       key: 'pedido',
       label: 'Pedido',
+      width: 120,
       render: (c) => (
         <span className="whitespace-nowrap text-ink-soft">
           {cantidadTexto(c.linea.cantidadPresentacion)} {c.linea.presentacion ?? c.linea.unidadBase}
@@ -278,9 +287,10 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
     {
       key: 'entregado',
       label: 'Entregado',
+      width: 170,
       render: (c) => {
         const l = c.linea
-        const conSueltas = c.factor > 1
+        const enPres = c.factor > 1
         return (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
@@ -288,35 +298,17 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
                 size="sm"
                 type="number"
                 min={0}
-                step={conSueltas ? 1 : 'any'}
-                className="w-20"
+                step={enPres ? 1 : 'any'}
+                className="w-16 shrink-0"
                 aria-label={`Cantidad de ${l.producto}`}
                 value={c.entrega.pres}
                 onChange={(e) => cambiar(l.id, { pres: e.target.value })}
               />
-              <span className="text-xs whitespace-nowrap text-ink-soft">
-                {conSueltas ? (l.presentacion ?? l.unidadBase) : l.unidadBase}
-              </span>
-              {conSueltas && (
-                <>
-                  <span className="text-xs text-ink-soft">+</span>
-                  <Input
-                    size="sm"
-                    type="number"
-                    min={0}
-                    step="any"
-                    className="w-20"
-                    aria-label={`${l.unidadBase} sueltos de ${l.producto}`}
-                    value={c.entrega.sueltas}
-                    onChange={(e) => cambiar(l.id, { sueltas: e.target.value })}
-                  />
-                  <span className="text-xs text-ink-soft">{l.unidadBase}</span>
-                </>
-              )}
+              <span className="truncate text-xs text-ink-soft">{enPres ? (l.presentacion ?? l.unidadBase) : l.unidadBase}</span>
             </div>
             {c.excede && (
               <p className="text-[11px] font-medium text-red-600">
-                Máximo lo pedido: {cantidadTexto(l.cantidad)} {l.unidadBase}
+                Máximo {cantidadTexto(l.cantidad)} {l.unidadBase}
               </p>
             )}
             {c.sinStock && !c.excede && (
@@ -335,44 +327,87 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
         )
       },
     },
+    ...(conSueltas
+      ? [
+          {
+            key: 'sueltas',
+            label: 'Sueltos',
+            width: 130,
+            render: (c: (typeof calculo)[number]) =>
+              c.factor > 1 ? (
+                <Input
+                  size="sm"
+                  type="number"
+                  min={0}
+                  step="any"
+                  className="w-16"
+                  aria-label={`${c.linea.unidadBase} sueltos de ${c.linea.producto}`}
+                  value={c.entrega.sueltas}
+                  onChange={(e) => cambiar(c.linea.id, { sueltas: e.target.value })}
+                />
+              ) : (
+                guion
+              ),
+          },
+        ]
+      : []),
     {
-      // Solo si se entrega menos: queda como novedad, con su motivo.
+      key: 'falta',
+      label: 'Falta',
+      width: 90,
+      render: (c) =>
+        faltante(c) ? (
+          <span className="font-medium whitespace-nowrap text-amber-700">
+            {cantidadTexto(c.linea.cantidad - c.entregada)} {c.linea.unidadBase}
+          </span>
+        ) : (
+          guion
+        ),
+    },
+    {
+      // Si se entrega menos queda como novedad: el motivo es obligatorio.
       key: 'motivo',
-      label: 'Si falta',
-      render: (c) => {
-        const l = c.linea
-        if (!c.reducida || c.excede) return <span className="text-ink-soft">—</span>
-        return (
-          <div className="flex min-w-48 flex-col gap-1.5">
-            <p className="text-[11px] font-medium text-amber-700">
-              Falta {cantidadTexto(l.cantidad - c.entregada)} {l.unidadBase}
-            </p>
-            <Desplegable
-              size="sm"
-              value={c.entrega.motivoId}
-              onChange={(v) => cambiar(l.id, { motivoId: Number(v) })}
-              placeholder="¿Por qué?"
-              options={motivos.map((m) => ({
-                value: m.id,
-                label: m.nombre,
-                nota: m.descripcion ?? undefined,
-              }))}
-            />
-            <Input
-              size="sm"
-              maxLength={250}
-              placeholder="Observación (opcional)"
-              value={c.entrega.observacion}
-              onChange={(e) => cambiar(l.id, { observacion: e.target.value })}
-            />
-          </div>
-        )
-      },
+      label: 'Motivo',
+      width: 190,
+      render: (c) =>
+        faltante(c) ? (
+          <Desplegable
+            size="sm"
+            value={c.entrega.motivoId}
+            onChange={(v) => cambiar(c.linea.id, { motivoId: Number(v) })}
+            placeholder="¿Por qué?"
+            options={motivos.map((m) => ({
+              value: m.id,
+              label: m.nombre,
+              nota: m.descripcion ?? undefined,
+            }))}
+          />
+        ) : (
+          guion
+        ),
+    },
+    {
+      key: 'observacion',
+      label: 'Observación',
+      width: 170,
+      render: (c) =>
+        faltante(c) ? (
+          <Input
+            size="sm"
+            maxLength={250}
+            placeholder="Opcional"
+            value={c.entrega.observacion}
+            onChange={(e) => cambiar(c.linea.id, { observacion: e.target.value })}
+          />
+        ) : (
+          guion
+        ),
     },
     {
       key: 'subtotal',
       label: 'Subtotal',
       align: 'right',
+      width: 110,
       render: (c) => <span className="font-semibold whitespace-nowrap text-ink">{soles(c.subtotal)}</span>,
     },
   ]
@@ -481,7 +516,7 @@ export function EntregaPedidoModal({ pedido, almacenes, productos, onClose, onHe
     <Modal
       open={pedido !== null}
       onClose={onClose}
-      size="xl"
+      size="2xl"
       title={pedido ? `Convertir ${pedido.numero} en venta` : ''}
       description={pedido ? pedido.cliente : undefined}
       footer={

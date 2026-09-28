@@ -240,17 +240,11 @@ export function MotivosNovedadPage() {
             onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
           />
 
-          <div className="flex flex-col gap-1.5">
-            <Checkbox
-              label="La mercadería viaja en el camión y vuelve al almacén"
-              checked={form.regresaAlAlmacen}
-              onChange={(e) => setForm({ ...form, regresaAlAlmacen: e.target.checked })}
-            />
-            <p className="pl-7 text-xs text-ink-soft">
-              Márcalo cuando el producto salió y hay que contarlo al volver (el cliente lo rechazó, llegó dañado).
-              Déjalo sin marcar si nunca salió del almacén (se olvidó cargar, no alcanzó).
-            </p>
-          </div>
+          <Checkbox
+            label="La mercadería viaja en el camión y vuelve al almacén"
+            checked={form.regresaAlAlmacen}
+            onChange={(e) => setForm({ ...form, regresaAlAlmacen: e.target.checked })}
+          />
         </div>
       </Modal>
 
