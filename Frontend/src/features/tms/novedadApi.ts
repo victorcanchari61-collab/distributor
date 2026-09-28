@@ -10,7 +10,12 @@ import type { PaginaResponse } from '../../lib/paginacion'
 // lo que el encargado encontró al contarla.
 
 /** LINEA: un producto se entregó en menos. PEDIDO: no se entregó el pedido entero. */
-export type TipoNovedad = 'LINEA' | 'PEDIDO'
+/**
+ * LINEA: se entregó en menos. PEDIDO: el pedido entero no se entregó.
+ * RECOJO: mercadería de otra venta que el repartidor recogió: también vuelve
+ * al almacén y se revisa en el mismo listado.
+ */
+export type TipoNovedad = 'LINEA' | 'PEDIDO' | 'RECOJO'
 
 /**
  * PENDIENTE: volvió en el camión y nadie la contó. RECIBIDA: se contó y está.

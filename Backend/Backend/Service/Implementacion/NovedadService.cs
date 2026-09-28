@@ -102,7 +102,7 @@ public class NovedadService : INovedadService
 
     public async Task<PaginaResponse<NovedadResponse>> ListarAsync(ConsultaTablaRequest consulta)
     {
-        var (items, total) = await Proyectar(Filtradas(consulta)).PaginarAsync(consulta);
+        var (items, total) = await Filtradas(consulta).PaginarAsync(consulta);
 
         return new PaginaResponse<NovedadResponse>
         {
@@ -121,47 +121,54 @@ public class NovedadService : INovedadService
     {
         var query = Filtradas(consulta);
         var total = await query.CountAsync();
-        var filas = await Proyectar(query).Take(MaximoExportar).ToListAsync();
+        var filas = await query.Take(MaximoExportar).ToListAsync();
         return (filas, total);
     }
 
     /// <summary>Un papel de más de un par de miles de filas ya no lo lee nadie.</summary>
     private const int MaximoExportar = 2000;
 
-    /// <summary>Búsqueda, filtros y orden del listado. Lo comparten la pantalla y el PDF.</summary>
-    private IQueryable<NovedadEntrega> Filtradas(ConsultaTablaRequest consulta)
+    /// <summary>
+    /// Búsqueda, filtros y orden del listado. Lo comparten la pantalla y el PDF.
+    ///
+    /// El listado junta las novedades de entrega con los recojos: los dos son
+    /// mercadería que vuelve en el camión y se revisa aquí. Se filtra sobre la
+    /// fila ya armada, así un mismo filtro sirve para los dos.
+    /// </summary>
+    private IQueryable<NovedadResponse> Filtradas(ConsultaTablaRequest consulta)
     {
-        var query = _context.NovedadesEntrega.AsNoTracking().AsQueryable();
+        var query = Proyectar(_context.NovedadesEntrega.AsNoTracking())
+            .Concat(ProyectarRecojos(_context.RecojosVenta.AsNoTracking()));
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
             var texto = consulta.Buscar.Trim();
             query = query.Where(n =>
-                EF.Functions.Like(n.Producto!.Nombre, $"%{texto}%")
-                || EF.Functions.Like(n.Producto!.Codigo, $"%{texto}%")
-                || EF.Functions.Like(n.Pedido!.Numero, $"%{texto}%")
-                || EF.Functions.Like(n.Pedido!.Cliente!.Nombre, $"%{texto}%")
-                || EF.Functions.Like(n.Motivo!.Nombre, $"%{texto}%")
-                || (n.Despacho != null && EF.Functions.Like(n.Despacho.Numero, $"%{texto}%")));
+                EF.Functions.Like(n.Producto, $"%{texto}%")
+                || EF.Functions.Like(n.Codigo, $"%{texto}%")
+                || EF.Functions.Like(n.Pedido, $"%{texto}%")
+                || EF.Functions.Like(n.Cliente, $"%{texto}%")
+                || EF.Functions.Like(n.Motivo, $"%{texto}%")
+                || (n.Despacho != null && EF.Functions.Like(n.Despacho, $"%{texto}%")));
         }
 
         // Producto, pedido, cliente y despacho se eligen de una lista (ver
         // OpcionesAsync), así que llegan exactos: contra "contiene", elegir
         // "ACEITE" traería también todo lo que lleve esa palabra.
         if (consulta.ValorDe("pedido") is string pedido)
-            query = query.Where(n => n.Pedido!.Numero == pedido);
+            query = query.Where(n => n.Pedido == pedido);
 
         if (consulta.ValorDe("cliente") is string cliente)
-            query = query.Where(n => n.Pedido!.Cliente!.Nombre == cliente);
+            query = query.Where(n => n.Cliente == cliente);
 
         if (consulta.ValorDe("despacho") is string despacho)
-            query = query.Where(n => n.Despacho != null && n.Despacho.Numero == despacho);
+            query = query.Where(n => n.Despacho == despacho);
 
         if (consulta.ValorDe("producto") is string producto)
-            query = query.Where(n => n.Producto!.Nombre == producto);
+            query = query.Where(n => n.Producto == producto);
 
         if (consulta.ValorDe("motivo") is string motivo)
-            query = query.Where(n => n.Motivo!.Nombre == motivo);
+            query = query.Where(n => n.Motivo == motivo);
 
         if (consulta.ValorDe("tipo") is string tipo)
             query = query.Where(n => n.Tipo == tipo);
@@ -180,14 +187,14 @@ public class NovedadService : INovedadService
 
         query = consulta.Orden switch
         {
-            "pedido" => desc ? query.OrderByDescending(n => n.Pedido!.Numero).ThenByDescending(n => n.Id)
-                             : query.OrderBy(n => n.Pedido!.Numero).ThenBy(n => n.Id),
-            "cliente" => desc ? query.OrderByDescending(n => n.Pedido!.Cliente!.Nombre).ThenByDescending(n => n.Id)
-                              : query.OrderBy(n => n.Pedido!.Cliente!.Nombre).ThenBy(n => n.Id),
-            "producto" => desc ? query.OrderByDescending(n => n.Producto!.Nombre).ThenByDescending(n => n.Id)
-                               : query.OrderBy(n => n.Producto!.Nombre).ThenBy(n => n.Id),
-            "motivo" => desc ? query.OrderByDescending(n => n.Motivo!.Nombre).ThenByDescending(n => n.Id)
-                             : query.OrderBy(n => n.Motivo!.Nombre).ThenBy(n => n.Id),
+            "pedido" => desc ? query.OrderByDescending(n => n.Pedido).ThenByDescending(n => n.Id)
+                             : query.OrderBy(n => n.Pedido).ThenBy(n => n.Id),
+            "cliente" => desc ? query.OrderByDescending(n => n.Cliente).ThenByDescending(n => n.Id)
+                              : query.OrderBy(n => n.Cliente).ThenBy(n => n.Id),
+            "producto" => desc ? query.OrderByDescending(n => n.Producto).ThenByDescending(n => n.Id)
+                               : query.OrderBy(n => n.Producto).ThenBy(n => n.Id),
+            "motivo" => desc ? query.OrderByDescending(n => n.Motivo).ThenByDescending(n => n.Id)
+                             : query.OrderBy(n => n.Motivo).ThenBy(n => n.Id),
             "estado" => desc ? query.OrderByDescending(n => n.Estado).ThenByDescending(n => n.Id)
                              : query.OrderBy(n => n.Estado).ThenBy(n => n.Id),
             "importe" => desc ? query.OrderByDescending(n => n.Importe).ThenByDescending(n => n.Id)
@@ -234,6 +241,52 @@ public class NovedadService : INovedadService
             ObservacionVerificacion = n.ObservacionVerificacion,
         });
 
+    /*
+     * Un recojo como fila del listado. Mismas columnas y en el mismo orden que
+     * Proyectar: la unión (UNION ALL) las empareja por posición.
+     *
+     * Su estado se dice como el de una novedad: pendiente hasta que se cuenta,
+     * recibida cuando ya entró a un almacén. Siempre vuelve al almacén.
+     */
+    private static IQueryable<NovedadResponse> ProyectarRecojos(IQueryable<RecojoVenta> query) =>
+        query.Select(r => new NovedadResponse
+        {
+            Id = r.Id,
+            Tipo = TipoNovedad.Recojo,
+            Fecha = r.Fecha,
+            Estado = r.Estado == EstadoRecojo.Verificado
+                ? EstadoNovedad.Recibida
+                : r.Estado == EstadoRecojo.Anulado
+                    ? EstadoNovedad.Anulada
+                    : EstadoNovedad.Pendiente,
+            PedidoId = r.NotaVenta!.PedidoId ?? 0,
+            Pedido = r.NotaVenta.Pedido != null ? r.NotaVenta.Pedido.Numero : r.NotaVenta.Numero,
+            Cliente = r.NotaVenta.Cliente!.Nombre,
+            DespachoId = null,
+            Despacho = null,
+            NotaVentaId = r.NotaVentaId,
+            NotaVenta = r.NotaVenta.Numero,
+            ProductoId = r.ProductoId,
+            Codigo = r.Producto!.Codigo,
+            Producto = r.Producto.Nombre,
+            Presentacion = r.Presentacion != null ? r.Presentacion.Nombre : null,
+            Factor = r.Presentacion != null ? r.Presentacion.Factor : 1,
+            UnidadBase = r.Producto.UnidadBase != null ? r.Producto.UnidadBase.Codigo : string.Empty,
+            CantidadPedida = r.Cantidad,
+            CantidadEntregada = 0,
+            CantidadNoEntregada = r.Cantidad,
+            Importe = r.Importe,
+            MotivoId = r.MotivoId,
+            Motivo = r.Motivo!.Nombre,
+            RegresaAlAlmacen = true,
+            Observacion = r.Observacion,
+            Usuario = r.Usuario != null ? r.Usuario.Nombre : null,
+            CantidadRegresada = r.Estado == EstadoRecojo.Verificado ? r.Cantidad : null,
+            VerificadoPor = r.VerificadoPor != null ? r.VerificadoPor.Nombre : null,
+            VerificadoEn = r.VerificadoEn,
+            ObservacionVerificacion = r.Almacen != null ? "Entró a " + r.Almacen.Nombre : null,
+        });
+
     private async Task<NovedadResponse> UnaAsync(int id) =>
         await Proyectar(_context.NovedadesEntrega.AsNoTracking().Where(n => n.Id == id)).FirstOrDefaultAsync()
         ?? throw new NotFoundException("Novedad no encontrada");
@@ -247,28 +300,48 @@ public class NovedadService : INovedadService
     public async Task<NovedadOpcionesResponse> OpcionesAsync()
     {
         var todas = _context.NovedadesEntrega.AsNoTracking();
+        var recojos = _context.RecojosVenta.AsNoTracking();
+
+        // Lo de las novedades más lo de los recojos, sin repetir.
+        static List<string> Juntar(List<string> a, List<string> b) =>
+            a.Concat(b).Distinct().OrderBy(x => x).ToList();
 
         return new NovedadOpcionesResponse
         {
-            Productos = await todas.Select(n => n.Producto!.Nombre).Distinct().OrderBy(x => x).ToListAsync(),
-            Pedidos = await todas.Select(n => n.Pedido!.Numero).Distinct().OrderBy(x => x).ToListAsync(),
-            Clientes = await todas.Select(n => n.Pedido!.Cliente!.Nombre).Distinct().OrderBy(x => x).ToListAsync(),
+            Productos = Juntar(
+                await todas.Select(n => n.Producto!.Nombre).Distinct().ToListAsync(),
+                await recojos.Select(r => r.Producto!.Nombre).Distinct().ToListAsync()),
+            Pedidos = Juntar(
+                await todas.Select(n => n.Pedido!.Numero).Distinct().ToListAsync(),
+                await recojos
+                    .Select(r => r.NotaVenta!.Pedido != null ? r.NotaVenta.Pedido.Numero : r.NotaVenta.Numero)
+                    .Distinct().ToListAsync()),
+            Clientes = Juntar(
+                await todas.Select(n => n.Pedido!.Cliente!.Nombre).Distinct().ToListAsync(),
+                await recojos.Select(r => r.NotaVenta!.Cliente!.Nombre).Distinct().ToListAsync()),
             Despachos = await todas
                 .Where(n => n.Despacho != null)
                 .Select(n => n.Despacho!.Numero).Distinct().OrderBy(x => x).ToListAsync(),
-            Motivos = await todas.Select(n => n.Motivo!.Nombre).Distinct().OrderBy(x => x).ToListAsync(),
+            Motivos = Juntar(
+                await todas.Select(n => n.Motivo!.Nombre).Distinct().ToListAsync(),
+                await recojos.Select(r => r.Motivo!.Nombre).Distinct().ToListAsync()),
         };
     }
 
     public async Task<ResumenNovedadesResponse> ResumenAsync()
     {
         var vigentes = _context.NovedadesEntrega.Where(n => n.Estado != EstadoNovedad.Anulada);
+        // Los recojos también se revisan aquí: cuentan como por revisar hasta
+        // que entran a un almacén, y como recibidos después.
+        var recojos = _context.RecojosVenta.Where(r => r.Estado != EstadoRecojo.Anulado);
 
         return new ResumenNovedadesResponse
         {
-            Total = await vigentes.CountAsync(),
-            PorRevisar = await vigentes.CountAsync(n => n.Estado == EstadoNovedad.Pendiente),
-            Recibidas = await vigentes.CountAsync(n => n.Estado == EstadoNovedad.Recibida),
+            Total = await vigentes.CountAsync() + await recojos.CountAsync(),
+            PorRevisar = await vigentes.CountAsync(n => n.Estado == EstadoNovedad.Pendiente)
+                         + await recojos.CountAsync(r => r.Estado == EstadoRecojo.Pendiente),
+            Recibidas = await vigentes.CountAsync(n => n.Estado == EstadoNovedad.Recibida)
+                        + await recojos.CountAsync(r => r.Estado == EstadoRecojo.Verificado),
             Faltantes = await vigentes.CountAsync(n => n.Estado == EstadoNovedad.Faltante),
             Importe = await vigentes.SumAsync(n => (decimal?)n.Importe) ?? 0,
         };

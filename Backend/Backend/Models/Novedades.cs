@@ -15,6 +15,13 @@ public static class TipoNovedad
     /// recibirlo. No nace ninguna venta y el pedido sigue Pendiente.
     /// </summary>
     public const string Pedido = "PEDIDO";
+
+    /// <summary>
+    /// Mercadería de OTRA venta que el repartidor recogió al entregar. No se
+    /// guarda como novedad —es un <see cref="RecojoVenta"/>—, pero se revisa en
+    /// el mismo listado: vuelve en el camión y aquí se dice a qué almacén entra.
+    /// </summary>
+    public const string Recojo = "RECOJO";
 }
 
 /// <summary>En qué va la revisión de lo que no se entregó.</summary>

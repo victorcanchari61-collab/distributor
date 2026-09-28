@@ -38,11 +38,20 @@ class MotivoNovedad {
   );
 }
 
-/// LINEA: un producto se entregó en menos. PEDIDO: no se entregó el pedido entero.
+/// LINEA: un producto se entregó en menos. PEDIDO: no se entregó el pedido
+/// entero. RECOJO: mercadería de otra venta que el repartidor recogió; tambien
+/// vuelve al almacén y se revisa en la misma lista.
 class TipoNovedad {
   const TipoNovedad._();
   static const linea = 'LINEA';
   static const pedido = 'PEDIDO';
+  static const recojo = 'RECOJO';
+
+  static String etiqueta(String tipo) => switch (tipo) {
+    pedido => 'Pedido sin entregar',
+    recojo => 'Recojo',
+    _ => 'Entregado en menos',
+  };
 }
 
 /// En qué va la revisión de lo que no se entregó.
@@ -175,6 +184,9 @@ class Novedad {
   final String? observacionVerificacion;
 
   bool get porRevisar => estado == EstadoNovedad.pendiente;
+
+  /// No es una novedad sino un recojo: se verifica eligiendo el almacén.
+  bool get esRecojo => tipo == TipoNovedad.recojo;
   bool get revisada =>
       estado == EstadoNovedad.recibida || estado == EstadoNovedad.faltante;
 

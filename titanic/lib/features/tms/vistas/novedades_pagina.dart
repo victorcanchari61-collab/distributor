@@ -27,12 +27,13 @@ import '../../ventas/estado/ventas_controlador.dart';
 import '../datos/novedad.dart';
 import '../estado/novedades_controlador.dart';
 
-/// Novedades de entrega: lo que no llegó al cliente y por qué.
+/// Novedades de entrega: lo que no llegó al cliente y por qué, y lo que el
+/// repartidor recogió de otras ventas.
 ///
-/// Sale de dos lugares: un producto que se entregó en menos al convertir el
-/// pedido en venta, o un pedido entero que no se pudo entregar. Cuando la
-/// mercadería viajaba en el camión, el encargado la cuenta al volver y deja
-/// constancia: llegó completa, o faltó algo.
+/// Sale de tres lugares: un producto que se entregó en menos al convertir el
+/// pedido en venta, un pedido entero que no se pudo entregar, o un recojo.
+/// Cuando la mercadería viajaba en el camión, el encargado la cuenta al volver
+/// y deja constancia; un recojo, además, entra al almacén que se elija.
 class NovedadesPagina extends ConsumerWidget {
   const NovedadesPagina({super.key});
 
@@ -94,7 +95,6 @@ class NovedadesPagina extends ConsumerWidget {
             color: color,
             onAbrir: () => _abrirFiltros(context, ref),
           ),
-          if (puedeRevisar) const _BotonRecojos(),
           if (puedeExportar) const _BotonReporte(),
         ],
       ),
@@ -103,9 +103,12 @@ class NovedadesPagina extends ConsumerWidget {
         color: color,
         onVer: () => _verDetalle(context, ref, novedad, color, puedeRevisar),
         onRevisar: puedeRevisar && novedad.porRevisar
-            ? () => _revisar(context, ref, novedad)
+            ? () => novedad.esRecojo
+                  ? _verificarRecojo(context, ref, _comoRecojo(novedad))
+                  : _revisar(context, ref, novedad)
             : null,
-        onReabrir: puedeRevisar && novedad.revisada
+        // Un recojo verificado ya sumó stock: no se reabre.
+        onReabrir: puedeRevisar && novedad.revisada && !novedad.esRecojo
             ? () => _reabrir(context, ref, novedad)
             : null,
       ),
@@ -149,6 +152,7 @@ class NovedadesPagina extends ConsumerWidget {
               OpcionFiltro(null, 'Todos'),
               OpcionFiltro(TipoNovedad.linea, 'Entregado en menos'),
               OpcionFiltro(TipoNovedad.pedido, 'Pedido sin entregar'),
+              OpcionFiltro(TipoNovedad.recojo, 'Recojo'),
             ],
             onCambio: (v) =>
                 ref.read(tipoNovedadFiltroProvider.notifier).state = v,
@@ -366,15 +370,14 @@ class NovedadesPagina extends ConsumerWidget {
       subtitulo: '${n.pedido} · ${n.cliente}',
       estado: _etiquetaEstado(n),
       campos: [
-        CampoDetalle(
-          'Qué pasó',
-          n.tipo == TipoNovedad.pedido
-              ? 'Pedido sin entregar'
-              : 'Entregado en menos',
-        ),
-        CampoDetalle('Pedido', n.cantidad(n.cantidadPedida)),
-        CampoDetalle('Se entregó', n.cantidad(n.cantidadEntregada)),
-        CampoDetalle('No se entregó', n.cantidad(n.cantidadNoEntregada)),
+        CampoDetalle('Qué pasó', TipoNovedad.etiqueta(n.tipo)),
+        if (n.esRecojo)
+          CampoDetalle('Recogido', n.cantidad(n.cantidadNoEntregada))
+        else ...[
+          CampoDetalle('Pedido', n.cantidad(n.cantidadPedida)),
+          CampoDetalle('Se entregó', n.cantidad(n.cantidadEntregada)),
+          CampoDetalle('No se entregó', n.cantidad(n.cantidadNoEntregada)),
+        ],
         CampoDetalle('Importe', 'S/ ${n.importe.toStringAsFixed(2)}'),
         CampoDetalle('Motivo', n.motivo),
         CampoDetalle(
@@ -412,11 +415,15 @@ class NovedadesPagina extends ConsumerWidget {
       acciones: [
         if (puedeRevisar && n.porRevisar)
           AppBoton(
-            texto: 'Revisar',
+            texto: n.esRecojo ? 'Verificar' : 'Revisar',
             expandido: true,
             onPressed: () {
               Navigator.of(context).pop();
-              _revisar(context, ref, n);
+              if (n.esRecojo) {
+                _verificarRecojo(context, ref, _comoRecojo(n));
+              } else {
+                _revisar(context, ref, n);
+              }
             },
           ),
       ],
@@ -488,221 +495,25 @@ class _BotonReporteState extends ConsumerState<_BotonReporte> {
   }
 }
 
-/// Cuántos recojos hay por revisar — mercadería de otra venta que el
-/// repartidor recogió y que todavía no entró a ningún almacén — con acceso a
-/// la hoja donde se verifican.
-class _BotonRecojos extends ConsumerWidget {
-  const _BotonRecojos();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pendientes =
-        ref.watch(recojosPendientesProvider).valueOrNull ??
-        const <RecojoPendiente>[];
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconButton(
-          onPressed: () => _abrirRecojosPendientes(context, ref),
-          tooltip: 'Recojos por revisar',
-          icon: const Icon(
-            Icons.assignment_return_outlined,
-            size: 22,
-            color: Colores.tintaSuave,
-          ),
-        ),
-        if (pendientes.isNotEmpty)
-          Positioned(
-            top: 4,
-            right: 4,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              constraints: const BoxConstraints(minWidth: 15),
-              decoration: BoxDecoration(
-                color: Colores.advertencia,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                pendientes.length > 9 ? '9+' : '${pendientes.length}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-Future<void> _abrirRecojosPendientes(BuildContext context, WidgetRef ref) {
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (context) => const _HojaRecojosPendientes(),
-  );
-}
-
-class _HojaRecojosPendientes extends ConsumerWidget {
-  const _HojaRecojosPendientes();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final estado = ref.watch(recojosPendientesProvider);
-    final pendientes = estado.valueOrNull ?? const <RecojoPendiente>[];
-
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Recojos por revisar',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Colores.tinta,
-              ),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              'Mercadería de otra venta que el repartidor recogió. Cuenta lo que volvió y di a qué '
-              'almacén entra.',
-              style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            Flexible(
-              child: estado.isLoading && pendientes.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: Dimen.espacio6),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : pendientes.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: Dimen.espacio6),
-                      child: Center(
-                        child: Text(
-                          'No hay recojos pendientes.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colores.tintaSuave,
-                          ),
-                        ),
-                      ),
-                    )
-                  : ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: pendientes.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, i) => _FilaRecojoPendiente(
-                        recojo: pendientes[i],
-                        onVerificar: () =>
-                            _verificarRecojo(context, ref, pendientes[i]),
-                      ),
-                    ),
-            ),
-            const SizedBox(height: Dimen.espacio3),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FilaRecojoPendiente extends StatelessWidget {
-  const _FilaRecojoPendiente({required this.recojo, required this.onVerificar});
-
-  final RecojoPendiente recojo;
-  final VoidCallback onVerificar;
-
-  @override
-  Widget build(BuildContext context) {
-    final r = recojo;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Dimen.espacio3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  r.producto,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: Colores.tinta,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${r.cantidadPresentacion} ${r.presentacion ?? r.unidadBase} · ${r.motivo}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colores.tintaSuave,
-                  ),
-                ),
-                Text(
-                  '${r.notaVenta} · ${r.cliente}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colores.tintaSuave,
-                  ),
-                ),
-                if (r.observacion != null)
-                  Text(
-                    r.observacion!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colores.tintaSuave,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: Dimen.espacio2),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'S/ ${r.importe.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colores.tinta,
-                ),
-              ),
-              const SizedBox(height: Dimen.espacio2),
-              AppBoton(
-                texto: 'Verificar',
-                tam: BotonTam.sm,
-                expandido: false,
-                onPressed: onVerificar,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+/// Un recojo de la lista, con lo que pide la hoja para verificarlo.
+RecojoPendiente _comoRecojo(Novedad n) => RecojoPendiente(
+  id: n.id,
+  fecha: n.fecha,
+  notaVentaId: 0,
+  notaVenta: n.notaVenta ?? n.pedido,
+  cliente: n.cliente,
+  productoId: n.productoId,
+  producto: n.producto,
+  presentacion: n.presentacion,
+  unidadBase: n.unidadBase,
+  cantidadPresentacion: n.factor == 0
+      ? n.cantidadNoEntregada
+      : n.cantidadNoEntregada / n.factor,
+  motivo: n.motivo,
+  observacion: n.observacion,
+  usuario: n.usuario,
+  importe: n.importe,
+);
 
 /// El encargado cuenta lo que volvió y dice a qué almacén entra: recién ahí
 /// el recojo suma stock de verdad.
@@ -808,6 +619,8 @@ Future<void> _verificarRecojo(
     await ref.read(recojosPendientesProvider.notifier).verificar(recojo.id, {
       'almacenId': almacenId,
     });
+    // Va en la lista de novedades: que se vea ya recibido.
+    await ref.read(novedadesProvider.notifier).recargar();
     mensajero.mostrar('Recojo verificado');
   } on ApiExcepcion catch (e) {
     mensajero.error(e.texto);
@@ -849,7 +662,11 @@ class _TarjetaNovedad extends StatelessWidget {
       titulo: n.producto,
       estado: _etiquetaEstado(n),
       campos: [
-        CampoDetalle('No entregado', n.cantidad(n.cantidadNoEntregada)),
+        CampoDetalle('Qué pasó', TipoNovedad.etiqueta(n.tipo)),
+        CampoDetalle(
+          n.esRecojo ? 'Recogido' : 'No entregado',
+          n.cantidad(n.cantidadNoEntregada),
+        ),
         CampoDetalle('Importe', 'S/ ${n.importe.toStringAsFixed(2)}'),
         CampoDetalle(
           'Motivo',
@@ -874,7 +691,7 @@ class _TarjetaNovedad extends StatelessWidget {
         if (onRevisar != null)
           IconButton(
             onPressed: onRevisar,
-            tooltip: 'Revisar',
+            tooltip: n.esRecojo ? 'Verificar' : 'Revisar',
             visualDensity: VisualDensity.compact,
             icon: const Icon(
               Icons.fact_check_outlined,

@@ -17,7 +17,6 @@ import {
   Input,
   ListPage,
   Modal,
-  PageSection,
   RowAction,
   StatCard,
   useConfirmacion,
@@ -81,9 +80,7 @@ export function NovedadesPage() {
   const [revisando, setRevisando] = useState<NovedadResponse | null>(null)
   const [reporteAbierto, setReporteAbierto] = useState(false)
 
-  // Mercadería recogida de otra venta, todavía sin almacén: el repartidor no
-  // lo elige, se revisa aquí igual que las novedades de entrega.
-  const [recojosPendientes, setRecojosPendientes] = useState<RecojoPendiente[]>([])
+  // Los recojos van en la misma tabla: al verificarlos se elige el almacén.
   const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
   const [verificandoRecojo, setVerificandoRecojo] = useState<RecojoPendiente | null>(null)
 
@@ -116,11 +113,6 @@ export function NovedadesPage() {
       setOpciones(await novedadApi.opciones())
     } catch {
       /* sin opciones el listado igual sirve; solo faltan las listas */
-    }
-    try {
-      setRecojosPendientes(await recojoApi.pendientes())
-    } catch {
-      /* si falla, la lista de novedades igual sirve */
     }
     try {
       setAlmacenes((await almacenApi.opciones()).filter((a) => a.activo))
@@ -193,9 +185,10 @@ export function NovedadesPage() {
       ),
     },
     {
-      // Lo que el cliente no recibió, dicho como se cuenta: "9 Caja + 5 UND".
+      // Lo que vuelve en el camión, dicho como se cuenta: "9 Caja + 5 UND".
+      // En un recojo es lo que se recogió.
       key: 'cantidadNoEntregada',
-      label: 'No entregado',
+      label: 'Cantidad',
       filterable: false,
       render: (row) => <span className="font-semibold text-ink">{cantidadNoEntregada(row)}</span>,
     },
@@ -225,9 +218,9 @@ export function NovedadesPage() {
       filterOptions: [
         { value: 'LINEA', label: 'Entregado en menos' },
         { value: 'PEDIDO', label: 'Pedido sin entregar' },
+        { value: 'RECOJO', label: 'Recojo' },
       ],
-      render: (row) =>
-        row.tipo === 'PEDIDO' ? <Badge tone="danger">Pedido sin entregar</Badge> : <Badge tone="warning">Entregado en menos</Badge>,
+      render: (row) => <TipoBadge tipo={row.tipo} />,
     },
     { key: 'pedido', label: 'Pedido', filterType: 'select', filterOptions: opcionesDe(opciones.pedidos) },
     { key: 'cliente', label: 'Cliente', filterType: 'select', filterOptions: opcionesDe(opciones.clientes) },
@@ -249,41 +242,10 @@ export function NovedadesPage() {
 
   return (
     <div className="space-y-5">
-      {recojosPendientes.length > 0 && (
-        <PageSection
-          title="Recojos por revisar"
-          description="Mercadería de otra venta que el repartidor recogió: cuenta lo que volvió y di a qué almacén entra."
-        >
-          <div className="divide-y divide-line rounded-field border border-line">
-            {recojosPendientes.map((r) => (
-              <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-ink">
-                    {r.producto} <span className="font-normal text-ink-soft">· {r.cantidadPresentacion} {r.presentacion ?? r.unidadBase}</span>
-                  </p>
-                  <p className="text-xs text-ink-soft">
-                    {r.motivo} · {r.notaVenta} · {r.cliente}
-                    {r.observacion && ` · ${r.observacion}`}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-sm font-semibold text-ink">S/ {r.importe.toFixed(2)}</span>
-                  {puede('tms.novedades', 'confirmar') && (
-                    <Button size="sm" onClick={() => setVerificandoRecojo(r)}>
-                      Verificar
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </PageSection>
-      )}
-
       <ListPage
       icon={<PackageX size={20} />}
       title="Novedades de entrega"
-      description="Lo que no llegó al cliente y el motivo. Cuando la mercadería vuelve en el camión, aquí se cuenta y se deja constancia."
+      description="Lo que no llegó al cliente y lo que el repartidor recogió de otras ventas. Cuando la mercadería vuelve en el camión, aquí se cuenta y entra al almacén."
       actions={
         puede('tms.novedades', 'exportar') ? (
           <Button
@@ -322,7 +284,8 @@ export function NovedadesPage() {
       }
       columns={columns}
       actionsWidth={130}
-      rows={novedades}
+      rows={novedades.map((n) => ({ ...n, clave: `${n.tipo}-${n.id}` }))}
+      rowKey="clave"
       servidor={{
         total,
         cargando,
@@ -339,6 +302,20 @@ export function NovedadesPage() {
           <RowAction tone="view" label={`Ver la novedad de ${row.producto}`} onClick={() => setDetalle(row)}>
             <Eye size={15} />
           </RowAction>
+          {/* Un recojo se verifica eligiendo a qué almacén entra; no se reabre. */}
+          {row.tipo === 'RECOJO' ? (
+            puede('tms.novedades', 'confirmar') &&
+            row.estado === 'PENDIENTE' && (
+              <RowAction
+                tone="success"
+                label={`Verificar el recojo de ${row.producto}`}
+                onClick={() => setVerificandoRecojo(comoRecojo(row))}
+              >
+                <ClipboardCheck size={15} />
+              </RowAction>
+            )
+          ) : (
+          <>
           {puede('tms.novedades', 'confirmar') && row.estado === 'PENDIENTE' && (
             <RowAction tone="success" label={`Revisar ${row.producto}`} onClick={() => setRevisando(row)}>
               <ClipboardCheck size={15} />
@@ -348,6 +325,8 @@ export function NovedadesPage() {
             <RowAction tone="warning" label={`Reabrir la revisión de ${row.producto}`} onClick={() => reabrir(row)}>
               <RotateCcw size={15} />
             </RowAction>
+          )}
+          </>
           )}
         </>
       )}
@@ -401,6 +380,33 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor?: string | null }) 
   )
 }
 
+/** Qué pasó con la mercadería: entregada en menos, pedido sin entregar o recojo. */
+function TipoBadge({ tipo }: { tipo: NovedadResponse['tipo'] }) {
+  if (tipo === 'PEDIDO') return <Badge tone="danger">Pedido sin entregar</Badge>
+  if (tipo === 'RECOJO') return <Badge tone="sys">Recojo</Badge>
+  return <Badge tone="warning">Entregado en menos</Badge>
+}
+
+/** Un recojo de la tabla, con lo que pide el modal para verificarlo. */
+function comoRecojo(n: NovedadResponse): RecojoPendiente {
+  return {
+    id: n.id,
+    fecha: n.fecha,
+    notaVentaId: n.notaVentaId ?? 0,
+    notaVenta: n.notaVenta ?? n.pedido,
+    cliente: n.cliente,
+    productoId: n.productoId,
+    producto: n.producto,
+    presentacion: n.presentacion,
+    unidadBase: n.unidadBase,
+    cantidadPresentacion: n.factor ? n.cantidadNoEntregada / n.factor : n.cantidadNoEntregada,
+    motivo: n.motivo,
+    observacion: n.observacion,
+    usuario: n.usuario,
+    importe: n.importe,
+  }
+}
+
 function DetalleNovedad({ novedad: n, onClose }: { novedad: NovedadResponse | null; onClose: () => void }) {
   return (
     <Modal
@@ -419,11 +425,7 @@ function DetalleNovedad({ novedad: n, onClose }: { novedad: NovedadResponse | nu
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={ESTADOS[n.estado].tono}>{ESTADOS[n.estado].texto}</Badge>
-            {n.tipo === 'PEDIDO' ? (
-              <Badge tone="danger">Pedido sin entregar</Badge>
-            ) : (
-              <Badge tone="warning">Entregado en menos</Badge>
-            )}
+            <TipoBadge tipo={n.tipo} />
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
