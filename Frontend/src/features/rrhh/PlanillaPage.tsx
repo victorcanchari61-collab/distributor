@@ -27,6 +27,7 @@ import type {
   PlanillaResponse,
   PlanillaResumenResponse,
 } from './planillaApi'
+import { tipoDeCuenta } from '../finanzas/cuentaFinancieraApi'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 const menos = (n: number) => (n > 0 ? `-${soles(n)}` : '—')
@@ -398,7 +399,6 @@ function AjusteModal({
   )
 }
 
-const NATURALEZA: Record<string, string> = { CAJA: 'Caja', BANCO: 'Banco', PASARELA: 'Pasarela' }
 
 function PagarModal({
   planilla,
@@ -460,7 +460,7 @@ function PagarModal({
           value={cuentaId}
           onChange={(v) => setCuentaId(Number(v))}
           placeholder="Elige la caja o el banco"
-          options={cuentas.map((c) => ({ value: c.id, label: c.nombre, detalle: NATURALEZA[c.naturaleza] ?? c.naturaleza }))}
+          options={cuentas.map((c) => ({ value: c.id, label: c.nombre, detalle: tipoDeCuenta(c) }))}
         />
       </div>
     </Modal>

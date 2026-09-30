@@ -134,13 +134,18 @@ class CuentaDestino {
     required this.id,
     required this.nombre,
     required this.naturaleza,
+    this.esBoveda = false,
   });
 
   final int id;
   final String nombre;
   final String naturaleza;
 
+  /// La Boveda: el efectivo de la empresa. No es una caja.
+  final bool esBoveda;
+
   String get etiqueta => switch (naturaleza) {
+    _ when esBoveda => nombre == 'Bóveda' ? nombre : '$nombre · Bóveda',
     'CAJA' => '$nombre · Caja',
     'BANCO' => '$nombre · Banco',
     'PASARELA' => '$nombre · Pasarela',
@@ -151,6 +156,7 @@ class CuentaDestino {
     id: json['id'] as int,
     nombre: json['nombre'] as String? ?? '',
     naturaleza: json['naturaleza'] as String? ?? '',
+    esBoveda: json['esBoveda'] as bool? ?? false,
   );
 }
 

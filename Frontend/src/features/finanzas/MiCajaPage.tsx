@@ -19,6 +19,7 @@ import { fechaHora, hoyLocal } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { miCajaApi } from './miCajaApi'
 import type { CuentaDestino, MovimientoDigital } from './miCajaApi'
+import { tipoDeCuenta } from './cuentaFinancieraApi'
 import type { CuentaFinancieraResponse, MovimientoCuentaResponse } from './cuentaFinancieraApi'
 import { gastoOperativoApi, origenLabel } from './gastoOperativoApi'
 import type { CategoriaOpcion, TipoMovimientoOperativo } from './gastoOperativoApi'
@@ -49,7 +50,6 @@ const DOCUMENTOS: Record<string, string> = {
   RECUPERO_FALTANTE: 'Recupero de faltante',
 }
 
-const NATURALEZA_LABEL: Record<string, string> = { CAJA: 'Caja', BANCO: 'Banco', PASARELA: 'Pasarela' }
 
 type Medio = 'EFECTIVO' | 'BILLETERA_DIGITAL' | 'TRANSFERENCIA'
 
@@ -594,7 +594,7 @@ function CerrarCajaModal({
             value={cuentaDestinoId}
             onChange={(v) => setCuentaDestinoId(Number(v))}
             placeholder="Elige la caja o el banco"
-            options={destinos.map((d) => ({ value: d.id, label: d.nombre, detalle: NATURALEZA_LABEL[d.naturaleza] ?? d.naturaleza }))}
+            options={destinos.map((d) => ({ value: d.id, label: d.nombre, detalle: tipoDeCuenta(d) }))}
           />
 
           {/* Sin autocompletar: el navegador lo llenaba con el correo de la sesión. */}

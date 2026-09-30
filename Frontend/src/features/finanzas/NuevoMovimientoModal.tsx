@@ -5,8 +5,8 @@ import { hoyLocal } from '../../lib/fechas'
 import { gastoOperativoApi, origenLabel } from './gastoOperativoApi'
 import type { CategoriaOpcion, TipoMovimientoOperativo } from './gastoOperativoApi'
 import type { CuentaMovimiento } from './movimientoDineroApi'
+import { tipoDeCuenta } from './cuentaFinancieraApi'
 
-const NATURALEZA: Record<string, string> = { CAJA: 'Caja', BANCO: 'Banco', PASARELA: 'Pasarela' }
 
 /**
  * Un ingreso o egreso registrado a mano: un aporte de capital, un gasto sin
@@ -95,7 +95,7 @@ export function NuevoMovimientoModal({
           value={cuentaFinancieraId}
           onChange={(v) => setCuentaFinancieraId(Number(v))}
           placeholder="De dónde sale o a dónde entra"
-          options={cuentas.map((c) => ({ value: c.id, label: c.nombre, detalle: NATURALEZA[c.naturaleza] ?? c.naturaleza }))}
+          options={cuentas.map((c) => ({ value: c.id, label: c.nombre, detalle: tipoDeCuenta(c) }))}
         />
         <Desplegable
           label="Categoría"

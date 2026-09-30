@@ -34,6 +34,8 @@ export interface CuentaMovimiento {
   id: number
   nombre: string
   naturaleza: string
+  /** La Bóveda: no es una caja. */
+  esBoveda?: boolean
 }
 
 export const movimientoDineroApi = {

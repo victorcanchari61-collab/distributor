@@ -20,6 +20,7 @@ import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { financiamientoApi } from './financiamientoApi'
 import type { CuentaOpcion, EstadoFinanciamiento, FinanciamientoResponse } from './financiamientoApi'
+import { tipoDeCuenta } from './cuentaFinancieraApi'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
@@ -29,7 +30,6 @@ const ESTADOS: Record<EstadoFinanciamiento, { label: string; tono: BadgeTone }> 
   ANULADO: { label: 'Anulado', tono: 'neutral' },
 }
 
-const NATURALEZA: Record<string, string> = { CAJA: 'Caja', BANCO: 'Banco', PASARELA: 'Pasarela' }
 
 const numero = (texto: string) => (texto.trim() ? Number(texto.replace(',', '.')) : NaN)
 
@@ -298,7 +298,7 @@ function NuevoPrestamoModal({
           value={cuentaId}
           onChange={(v) => setCuentaId(Number(v))}
           placeholder="Elige la caja o el banco"
-          options={cuentas.map((c) => ({ value: c.id, label: c.nombre, detalle: NATURALEZA[c.naturaleza] ?? c.naturaleza }))}
+          options={cuentas.map((c) => ({ value: c.id, label: c.nombre, detalle: tipoDeCuenta(c) }))}
         />
       </div>
     </Modal>
@@ -385,7 +385,7 @@ function PagoModal({
           value={cuentaId}
           onChange={(v) => setCuentaId(Number(v))}
           placeholder="Elige la caja o el banco"
-          options={cuentas.map((c) => ({ value: c.id, label: c.nombre, detalle: NATURALEZA[c.naturaleza] ?? c.naturaleza }))}
+          options={cuentas.map((c) => ({ value: c.id, label: c.nombre, detalle: tipoDeCuenta(c) }))}
         />
         <Input label="Observación" optional placeholder="Cuota 3 de 12..." value={observacion} onChange={(e) => setObservacion(e.target.value)} />
       </div>

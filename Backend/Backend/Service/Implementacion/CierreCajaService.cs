@@ -41,7 +41,13 @@ public class CierreCajaService : ICierreCajaService
             // La Bóveda primero: es adonde va el efectivo de un cierre normal.
             .OrderBy(c => c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == null ? 0 : 1)
             .ThenBy(c => c.Naturaleza).ThenBy(c => c.Nombre)
-            .Select(c => new CuentaDestinoResponse { Id = c.Id, Nombre = c.Nombre, Naturaleza = c.Naturaleza })
+            .Select(c => new CuentaDestinoResponse
+            {
+                Id = c.Id,
+                Nombre = c.Nombre,
+                Naturaleza = c.Naturaleza,
+                EsBoveda = c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == null,
+            })
             .ToListAsync();
     }
 

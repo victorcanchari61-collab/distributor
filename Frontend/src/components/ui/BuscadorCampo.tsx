@@ -43,6 +43,12 @@ export interface BuscadorCampoProps<T> {
    */
   onAvanzado?: () => void
   avanzadoLabel?: string
+  /**
+   * Resalta el campo: fondo amarillo y el botón de búsqueda avanzada en el
+   * color del sistema. Para el buscador que se usa todo el tiempo —el de
+   * productos al armar un documento—, que tiene que encontrarse de un vistazo.
+   */
+  destacado?: boolean
 }
 
 /**
@@ -66,6 +72,7 @@ export function BuscadorCampo<T>({
   disabled,
   error,
   className,
+  destacado = false,
   vacio = 'Nada coincide',
   onAvanzado,
   avanzadoLabel = 'Búsqueda avanzada',
@@ -183,12 +190,14 @@ export function BuscadorCampo<T>({
 
       <div
         className={cn(
-          'flex h-[var(--height-field-md)] items-center gap-2 rounded-field border bg-surface px-3',
-          'focus-within:border-ink-soft',
-          error ? 'border-red-600' : 'border-line',
+          'flex h-[var(--height-field-md)] items-center gap-2 rounded-field border px-3',
+          destacado
+            ? 'bg-amber-50 pr-1 focus-within:border-amber-500'
+            : 'bg-surface focus-within:border-ink-soft',
+          error ? 'border-red-600' : destacado ? 'border-amber-300' : 'border-line',
         )}
       >
-        <Search size={15} className="shrink-0 text-ink-soft" />
+        <Search size={15} className={cn('shrink-0', destacado ? 'text-amber-600' : 'text-ink-soft')} />
         <input
           ref={inputRef}
           type="text"
@@ -209,7 +218,12 @@ export function BuscadorCampo<T>({
             onClick={onAvanzado}
             aria-label={avanzadoLabel}
             title={avanzadoLabel}
-            className="shrink-0 text-ink-soft transition-colors hover:text-[rgb(var(--sys-rgb))]"
+            className={cn(
+              'shrink-0 transition-colors',
+              destacado
+                ? 'flex h-8 w-8 cursor-pointer items-center justify-center rounded-field bg-[rgb(var(--sys-rgb))] text-[var(--sys-on)] hover:opacity-90'
+                : 'text-ink-soft hover:text-[rgb(var(--sys-rgb))]',
+            )}
           >
             <ListFilter size={16} />
           </button>

@@ -210,6 +210,7 @@ export function AgregarProductoPanel({
         vacio="Ningún producto coincide"
         onAvanzado={() => setBuscadorAbierto(true)}
         avanzadoLabel="Búsqueda avanzada de productos"
+        destacado
       />
 
       {/* Siempre visible, aunque no haya producto elegido todavía: así el

@@ -143,4 +143,10 @@ public class CuentaDestinoResponse
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string Naturaleza { get; set; } = string.Empty;
+
+    /// <summary>
+    /// La Bóveda: el efectivo de la empresa. Se guarda como una cuenta de
+    /// efectivo sin responsable, pero NO es una caja y no se muestra como tal.
+    /// </summary>
+    public bool EsBoveda { get; set; }
 }

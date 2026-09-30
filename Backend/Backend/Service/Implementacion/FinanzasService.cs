@@ -147,13 +147,13 @@ public class FinanzasService : IFinanzasService
         await _repository.GetMetodoPagoAsync(id)
         ?? throw new NotFoundException($"No existe el método de pago {id}");
 
-    /// <summary>No apunta a una caja (la Bóveda o la de un vendedor): eso es Efectivo, y ese no se enlaza a nada.</summary>
+    /// <summary>No apunta a la Bóveda ni a la caja de un vendedor: eso es Efectivo, y ese no se enlaza a nada.</summary>
     private async Task ValidarCuentaFinancieraAsync(int cuentaFinancieraId)
     {
         var cuenta = await _cuentas.GetOrThrowAsync(cuentaFinancieraId);
         if (cuenta.Naturaleza == NaturalezaCuenta.Caja)
         {
-            throw new BadRequestException("Este método no puede apuntar a una caja: elige una cuenta bancaria");
+            throw new BadRequestException("Este método no puede apuntar a la Bóveda ni a una caja: elige una cuenta bancaria");
         }
     }
 

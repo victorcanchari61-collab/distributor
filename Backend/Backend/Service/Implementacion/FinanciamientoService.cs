@@ -184,7 +184,13 @@ public class FinanciamientoService : IFinanciamientoService
             .AsNoTracking()
             .Where(c => c.Activo)
             .OrderBy(c => c.Naturaleza).ThenBy(c => c.Nombre)
-            .Select(c => new CuentaDestinoResponse { Id = c.Id, Nombre = c.Nombre, Naturaleza = c.Naturaleza })
+            .Select(c => new CuentaDestinoResponse
+            {
+                Id = c.Id,
+                Nombre = c.Nombre,
+                Naturaleza = c.Naturaleza,
+                EsBoveda = c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == null,
+            })
             .ToListAsync();
 
     // ------------------------------------------------------------ Auxiliares

@@ -26,6 +26,8 @@ export interface CuentaDestino {
   id: number
   nombre: string
   naturaleza: NaturalezaCuenta
+  /** La Bóveda: no es una caja. */
+  esBoveda?: boolean
 }
 
 /**

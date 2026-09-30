@@ -2,16 +2,18 @@ import { useState } from 'react'
 import { Alert, Button, Desplegable, Input, Modal } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { cuentaFinancieraApi } from './cuentaFinancieraApi'
+import { tipoDeCuenta } from './cuentaFinancieraApi'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
-const NATURALEZA: Record<string, string> = { CAJA: 'Caja', BANCO: 'Banco', PASARELA: 'Pasarela' }
 
 /** Una cuenta que se puede elegir; el saldo solo si quien abre el modal lo conoce. */
 export interface CuentaParaMover {
   id: number
   nombre: string
   naturaleza: string
+  /** La Bóveda: no es una caja. */
+  esBoveda?: boolean
   saldoActual?: number
 }
 
@@ -45,7 +47,7 @@ export function MoverPlataModal({
       .map((c) => ({
         value: c.id,
         label: c.nombre,
-        detalle: [NATURALEZA[c.naturaleza] ?? c.naturaleza, c.saldoActual !== undefined ? soles(c.saldoActual) : null]
+        detalle: [tipoDeCuenta(c), c.saldoActual !== undefined ? soles(c.saldoActual) : null]
           .filter(Boolean)
           .join(' · '),
       }))

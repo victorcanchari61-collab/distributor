@@ -4,6 +4,17 @@ import { api } from '../../lib/apiClient'
 export type NaturalezaCuenta = 'CAJA' | 'BANCO' | 'PASARELA'
 
 /**
+ * Qué es una cuenta, dicho para mostrar al lado de su nombre.
+ *
+ * La Bóveda se guarda como una cuenta de efectivo sin responsable, pero no es
+ * una caja: es el efectivo de la empresa. Nunca se muestra como "Caja".
+ */
+export function tipoDeCuenta(c: { naturaleza: string; esBoveda?: boolean }): string {
+  if (c.esBoveda) return 'Bóveda'
+  return { CAJA: 'Caja', BANCO: 'Banco', PASARELA: 'Pasarela' }[c.naturaleza] ?? c.naturaleza
+}
+
+/**
  * La entidad que sí tiene saldo real: la Caja General, una cuenta BCP, una
  * cuenta Interbank. Un método de pago (Efectivo, Yape, Transferencia) es solo
  * un canal que apunta a una de estas — nunca tiene saldo propio.
