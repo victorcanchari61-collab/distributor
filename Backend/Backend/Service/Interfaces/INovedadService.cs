@@ -19,6 +19,15 @@ public interface INovedadService
     Task<MotivoNovedadResponse> CrearMotivoAsync(MotivoNovedadRequest request);
     Task<MotivoNovedadResponse> ActualizarMotivoAsync(int id, MotivoNovedadRequest request);
 
+    // --- Resultados de la revision ---
+    Task<IEnumerable<ResultadoRevisionResponse>> GetResultadosAsync();
+
+    /// <summary>Los activos, para elegir uno al revisar.</summary>
+    Task<IEnumerable<ResultadoRevisionOpcionResponse>> GetResultadosOpcionesAsync();
+
+    Task<ResultadoRevisionResponse> CrearResultadoAsync(ResultadoRevisionRequest request);
+    Task<ResultadoRevisionResponse> ActualizarResultadoAsync(int id, ResultadoRevisionRequest request);
+
     // --- Listado y revisión ---
 
     /// <summary>Una página de novedades, ya buscada, filtrada y ordenada en el servidor.</summary>

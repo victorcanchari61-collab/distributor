@@ -31,6 +31,46 @@ export interface MotivoNovedadRequest {
   activo: boolean
 }
 
+// --- Resultados de la revisión ---
+//
+// Lo que encontró el encargado al contar lo que volvió en el camión: "Volvió
+// completa", "Faltó algo", "Pesaron mal el producto". Los crea el dueño, como
+// los motivos. Cada uno dice si volvió todo: si no, se pide cuánto volvió.
+
+export interface ResultadoRevisionResponse {
+  id: number
+  nombre: string
+  descripcion: string | null
+  /** Volvió todo lo que no se entregó: la novedad queda Recibida. Si no, Faltante. */
+  volvioTodo: boolean
+  activo: boolean
+  /** En cuántas revisiones se usó. */
+  usos: number
+}
+
+export interface ResultadoRevisionOpcion {
+  id: number
+  nombre: string
+  descripcion: string | null
+  volvioTodo: boolean
+}
+
+export interface ResultadoRevisionRequest {
+  nombre: string
+  descripcion?: string | null
+  volvioTodo: boolean
+  activo: boolean
+}
+
+export const resultadoRevisionApi = {
+  getAll: () => api.get<ResultadoRevisionResponse[]>('/resultadorevision'),
+  /** Los activos, para elegir uno al revisar. */
+  opciones: () => api.get<ResultadoRevisionOpcion[]>('/resultadorevision/opciones'),
+  create: (body: ResultadoRevisionRequest) => api.post<ResultadoRevisionResponse>('/resultadorevision', body),
+  update: (id: number, body: ResultadoRevisionRequest) =>
+    api.put<ResultadoRevisionResponse>(`/resultadorevision/${id}`, body),
+}
+
 export const motivoNovedadApi = {
   getAll: () => api.get<MotivoNovedadResponse[]>('/motivonovedad'),
   /** Los activos, para quien convierte pedidos en venta: no necesita ver el catálogo. */

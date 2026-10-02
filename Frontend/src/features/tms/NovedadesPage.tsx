@@ -12,6 +12,7 @@ import {
 import {
   Alert,
   Badge,
+  BotonMas,
   Button,
   Desplegable,
   Input,
@@ -29,6 +30,9 @@ import { fechaCorta } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { novedadApi, textoCantidad } from './novedadApi'
+import { resultadoRevisionApi } from './motivoNovedadApi'
+import type { ResultadoRevisionOpcion } from './motivoNovedadApi'
+import { ResultadoRevisionModal } from './ResultadoRevisionModal'
 import type { EstadoNovedad, NovedadOpciones, NovedadResponse, ResumenNovedades } from './novedadApi'
 import { almacenApi } from '../inventario'
 import type { AlmacenOpcion } from '../inventario'
@@ -236,7 +240,12 @@ export function NovedadesPage() {
       label: 'Estado',
       filterType: 'select',
       filterOptions: (Object.keys(ESTADOS) as EstadoNovedad[]).map((e) => ({ value: e, label: ESTADOS[e].texto })),
-      render: (row) => <Badge tone={ESTADOS[row.estado].tono}>{ESTADOS[row.estado].texto}</Badge>,
+      render: (row) => (
+        <div>
+          <Badge tone={ESTADOS[row.estado].tono}>{ESTADOS[row.estado].texto}</Badge>
+          {row.resultado && <div className="mt-0.5 text-xs text-ink-soft">{row.resultado}</div>}
+        </div>
+      ),
     },
   ]
 
@@ -449,6 +458,7 @@ function DetalleNovedad({ novedad: n, onClose }: { novedad: NovedadResponse | nu
             <div className="rounded-field border border-line p-3">
               <p className="mb-2 text-xs font-semibold tracking-wide text-ink-soft uppercase">Revisión del encargado</p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {n.resultado && <Dato etiqueta="Resultado" valor={n.resultado} />}
                 <Dato
                   etiqueta="Volvió"
                   valor={textoCantidad(n.cantidadRegresada ?? 0, n.factor, n.presentacion, n.unidadBase)}
@@ -490,25 +500,40 @@ function RevisarModal({
   onClose: () => void
   onHecho: () => void
 }) {
-  const [resultado, setResultado] = useState<'RECIBIDA' | 'FALTANTE'>('RECIBIDA')
+  const { puede } = usePermisos()
+  // Los resultados los arma el dueño (Motivos de novedad → Resultados de revisión).
+  const [resultados, setResultados] = useState<ResultadoRevisionOpcion[]>([])
+  const [resultadoId, setResultadoId] = useState(0)
+  const [creandoResultado, setCreandoResultado] = useState(false)
   const [regresada, setRegresada] = useState('0')
   const [observacion, setObservacion] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
+  const elegido = resultados.find((r) => r.id === resultadoId)
+  // Si no volvió todo, se pregunta cuánto volvió.
+  const pideCantidad = elegido !== undefined && !elegido.volvioTodo
+
   useEffect(() => {
     if (!n) return
-    setResultado('RECIBIDA')
     setRegresada('0')
     setObservacion('')
     setError('')
+    resultadoRevisionApi
+      .opciones()
+      .then((lista) => {
+        setResultados(lista)
+        setResultadoId(lista[0]?.id ?? 0)
+      })
+      .catch((e) => setError(e instanceof ApiError ? e.message : 'No pudimos cargar los resultados.'))
   }, [n])
 
   const guardar = async () => {
     if (!n) return
+    if (!resultadoId) return setError('Elige el resultado.')
 
     const volvio = Number(regresada === '' ? 0 : regresada)
-    if (resultado === 'FALTANTE' && (volvio < 0 || volvio >= n.cantidadNoEntregada)) {
+    if (pideCantidad && (volvio < 0 || volvio >= n.cantidadNoEntregada)) {
       return setError(`Lo que volvió tiene que ser menos de ${n.cantidadNoEntregada} ${n.unidadBase}.`)
     }
 
@@ -516,8 +541,8 @@ function RevisarModal({
     setError('')
     try {
       await novedadApi.verificar(n.id, {
-        estado: resultado,
-        cantidadRegresada: resultado === 'FALTANTE' ? volvio : null,
+        resultadoId,
+        cantidadRegresada: pideCantidad ? volvio : null,
         observacion: observacion.trim() || null,
       })
       onHecho()
@@ -555,20 +580,28 @@ function RevisarModal({
             encontraste al contar lo que volvió?
           </p>
 
+          {/* El + crea un resultado sin salir de la revisión. */}
           <Desplegable
             label="Resultado"
-            value={resultado}
+            hint={
+              puede('tms.motivos', 'crear') ? (
+                <BotonMas label="Nuevo resultado" onClick={() => setCreandoResultado(true)} />
+              ) : undefined
+            }
+            value={resultadoId}
             onChange={(v) => {
-              setResultado(v as 'RECIBIDA' | 'FALTANTE')
+              setResultadoId(Number(v))
               setError('')
             }}
-            options={[
-              { value: 'RECIBIDA', label: 'Volvió completa', nota: 'Está de vuelta en el almacén' },
-              { value: 'FALTANTE', label: 'Faltó algo', nota: 'No volvió todo lo que no se entregó' },
-            ]}
+            placeholder="Elige el resultado"
+            options={resultados.map((r) => ({
+              value: r.id,
+              label: r.nombre,
+              nota: r.descripcion ?? (r.volvioTodo ? 'Volvió todo' : 'Se pide cuánto volvió'),
+            }))}
           />
 
-          {resultado === 'FALTANTE' && (
+          {pideCantidad && (
             <Input
               label={`Cuánto volvió (${n.unidadBase})`}
               type="number"
@@ -591,6 +624,18 @@ function RevisarModal({
           />
         </div>
       )}
+
+      <ResultadoRevisionModal
+        abierto={creandoResultado}
+        editando={null}
+        onClose={() => setCreandoResultado(false)}
+        onGuardado={async (nuevo) => {
+          setCreandoResultado(false)
+          // Ya queda elegido: para eso se creó.
+          setResultados(await resultadoRevisionApi.opciones())
+          setResultadoId(nuevo.id)
+        }}
+      />
     </Modal>
   )
 }

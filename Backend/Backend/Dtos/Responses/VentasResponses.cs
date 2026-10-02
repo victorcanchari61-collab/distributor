@@ -58,6 +58,12 @@ public class PedidoResponse
     public string? Observacion { get; set; }
     public string? Usuario { get; set; }
 
+    /// <summary>
+    /// El teléfono de quien atendió, para el papel: el cliente lo llama a él.
+    /// El del usuario; si no tiene, el de su ficha de empleado.
+    /// </summary>
+    public string? UsuarioTelefono { get; set; }
+
     public bool ReservaStock { get; set; }
     public int? AlmacenId { get; set; }
     public string? Almacen { get; set; }
@@ -124,6 +130,12 @@ public class NotaVentaResponse
 
     public string? Observacion { get; set; }
     public string? Usuario { get; set; }
+
+    /// <summary>
+    /// El teléfono de quien atendió, para el papel: el cliente lo llama a él.
+    /// El del usuario; si no tiene, el de su ficha de empleado.
+    /// </summary>
+    public string? UsuarioTelefono { get; set; }
 
     /// <summary>
     /// Lo que de verdad se cobra: la suma del Detalle MENOS los Recojos. A

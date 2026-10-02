@@ -97,6 +97,92 @@ public class NovedadService : INovedadService
     }
 
     // ------------------------------------------------------------------
+    // Resultados de la revisión
+    // ------------------------------------------------------------------
+
+    public async Task<IEnumerable<ResultadoRevisionResponse>> GetResultadosAsync() =>
+        await _context.ResultadosRevision
+            .AsNoTracking()
+            .OrderByDescending(r => r.Activo)
+            .ThenBy(r => r.Id)
+            .Select(r => new ResultadoRevisionResponse
+            {
+                Id = r.Id,
+                Nombre = r.Nombre,
+                Descripcion = r.Descripcion,
+                VolvioTodo = r.VolvioTodo,
+                Activo = r.Activo,
+                Usos = _context.NovedadesEntrega.Count(n => n.ResultadoRevisionId == r.Id),
+            })
+            .ToListAsync();
+
+    public async Task<IEnumerable<ResultadoRevisionOpcionResponse>> GetResultadosOpcionesAsync() =>
+        await _context.ResultadosRevision
+            .AsNoTracking()
+            .Where(r => r.Activo)
+            .OrderBy(r => r.Id)
+            .Select(r => new ResultadoRevisionOpcionResponse
+            {
+                Id = r.Id,
+                Nombre = r.Nombre,
+                Descripcion = r.Descripcion,
+                VolvioTodo = r.VolvioTodo,
+            })
+            .ToListAsync();
+
+    public async Task<ResultadoRevisionResponse> CrearResultadoAsync(ResultadoRevisionRequest request)
+    {
+        var nombre = Exigir(request.Nombre, "Ponle un nombre al resultado");
+
+        if (await _context.ResultadosRevision.AnyAsync(r => r.Nombre == nombre))
+            throw new ConflictException("Ya existe un resultado con ese nombre");
+
+        var resultado = new ResultadoRevision
+        {
+            Nombre = nombre,
+            Descripcion = Limpiar(request.Descripcion),
+            VolvioTodo = request.VolvioTodo,
+            Activo = request.Activo,
+        };
+
+        _context.ResultadosRevision.Add(resultado);
+        await _context.SaveChangesAsync();
+        await _notificador.AvisarAsync("novedades", "resultadoCreado", new { resultado.Id });
+
+        return (await GetResultadosAsync()).First(r => r.Id == resultado.Id);
+    }
+
+    public async Task<ResultadoRevisionResponse> ActualizarResultadoAsync(int id, ResultadoRevisionRequest request)
+    {
+        var resultado = await _context.ResultadosRevision.FirstOrDefaultAsync(r => r.Id == id)
+            ?? throw new NotFoundException("Resultado no encontrado");
+
+        var nombre = Exigir(request.Nombre, "Ponle un nombre al resultado");
+
+        if (await _context.ResultadosRevision.AnyAsync(r => r.Nombre == nombre && r.Id != id))
+            throw new ConflictException("Ya existe un resultado con ese nombre");
+
+        // Cambiar si "volvió todo" dejaría revisiones con un estado que ya no
+        // corresponde a su resultado: con usos, eso no se toca.
+        if (resultado.VolvioTodo != request.VolvioTodo
+            && await _context.NovedadesEntrega.AnyAsync(n => n.ResultadoRevisionId == id))
+        {
+            throw new BadRequestException(
+                "Este resultado ya se usó en revisiones: no se puede cambiar si volvió todo. Crea otro resultado.");
+        }
+
+        resultado.Nombre = nombre;
+        resultado.Descripcion = Limpiar(request.Descripcion);
+        resultado.VolvioTodo = request.VolvioTodo;
+        resultado.Activo = request.Activo;
+
+        await _context.SaveChangesAsync();
+        await _notificador.AvisarAsync("novedades", "resultadoActualizado", new { resultado.Id });
+
+        return (await GetResultadosAsync()).First(r => r.Id == id);
+    }
+
+    // ------------------------------------------------------------------
     // Listado y revisión
     // ------------------------------------------------------------------
 
@@ -239,6 +325,8 @@ public class NovedadService : INovedadService
             VerificadoPor = n.VerificadoPor != null ? n.VerificadoPor.Nombre : null,
             VerificadoEn = n.VerificadoEn,
             ObservacionVerificacion = n.ObservacionVerificacion,
+            ResultadoId = n.ResultadoRevisionId,
+            Resultado = n.ResultadoRevision != null ? n.ResultadoRevision.Nombre : null,
         });
 
     /*
@@ -285,6 +373,8 @@ public class NovedadService : INovedadService
             VerificadoPor = r.VerificadoPor != null ? r.VerificadoPor.Nombre : null,
             VerificadoEn = r.VerificadoEn,
             ObservacionVerificacion = r.Almacen != null ? "Entró a " + r.Almacen.Nombre : null,
+            ResultadoId = null,
+            Resultado = null,
         });
 
     private async Task<NovedadResponse> UnaAsync(int id) =>
@@ -364,28 +454,37 @@ public class NovedadService : INovedadService
 
         var noEntregada = novedad.CantidadNoEntregada;
 
-        switch (request.Estado)
+        // El resultado del catálogo; sin él, el estado de antes (lo que manda
+        // el APK viejo) se traduce a uno de los dos sembrados.
+        var resultadoId = request.ResultadoId ?? request.Estado switch
         {
-            case EstadoNovedad.Recibida:
-                // Volvió todo lo que no se entregó.
-                novedad.CantidadRegresada = noEntregada;
-                break;
+            EstadoNovedad.Recibida => ResultadoRevision.VolvioCompleta,
+            EstadoNovedad.Faltante => ResultadoRevision.FaltoAlgo,
+            _ => throw new BadRequestException("Elige el resultado de la revisión."),
+        };
+        var resultado = await _context.ResultadosRevision.FirstOrDefaultAsync(r => r.Id == resultadoId)
+            ?? throw new NotFoundException("Resultado no encontrado");
+        if (!resultado.Activo && request.ResultadoId is not null)
+            throw new BadRequestException($"El resultado {resultado.Nombre} está desactivado.");
 
-            case EstadoNovedad.Faltante:
-                var regresada = Math.Round(request.CantidadRegresada ?? 0, 4);
-                if (regresada < 0 || regresada >= noEntregada)
-                {
-                    throw new BadRequestException(
-                        "Lo que volvió tiene que ser menos de lo que no se entregó. Si volvió todo, márcala como recibida.");
-                }
-                novedad.CantidadRegresada = regresada;
-                break;
-
-            default:
-                throw new BadRequestException("Elige si la mercadería volvió (RECIBIDA) o faltó (FALTANTE).");
+        if (resultado.VolvioTodo)
+        {
+            // Volvió todo lo que no se entregó.
+            novedad.CantidadRegresada = noEntregada;
+        }
+        else
+        {
+            var regresada = Math.Round(request.CantidadRegresada ?? 0, 4);
+            if (regresada < 0 || regresada >= noEntregada)
+            {
+                throw new BadRequestException(
+                    "Lo que volvió tiene que ser menos de lo que no se entregó. Si volvió todo, elige un resultado en que vuelva todo.");
+            }
+            novedad.CantidadRegresada = regresada;
         }
 
-        novedad.Estado = request.Estado;
+        novedad.ResultadoRevisionId = resultado.Id;
+        novedad.Estado = resultado.VolvioTodo ? EstadoNovedad.Recibida : EstadoNovedad.Faltante;
         novedad.VerificadoPorId = usuarioId;
         novedad.VerificadoEn = DateTime.UtcNow;
         novedad.ObservacionVerificacion = Limpiar(request.Observacion);
@@ -405,6 +504,7 @@ public class NovedadService : INovedadService
             throw new BadRequestException("Solo se puede reabrir una novedad ya revisada.");
 
         novedad.Estado = EstadoNovedad.Pendiente;
+        novedad.ResultadoRevisionId = null;
         novedad.CantidadRegresada = null;
         novedad.VerificadoPorId = null;
         novedad.VerificadoEn = null;

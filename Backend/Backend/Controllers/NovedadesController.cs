@@ -46,6 +46,39 @@ public class MotivoNovedadController : ControllerBase
         Ok(await _novedades.ActualizarMotivoAsync(id, request));
 }
 
+/// <summary>Lo que encontró el encargado al contar lo que volvió: el catálogo lo arma el dueño.</summary>
+[ApiController]
+[Route("api/resultadorevision")]
+[Authorize]
+public class ResultadoRevisionController : ControllerBase
+{
+    private readonly INovedadService _novedades;
+
+    public ResultadoRevisionController(INovedadService novedades)
+    {
+        _novedades = novedades;
+    }
+
+    [HttpGet]
+    [Permiso("tms.motivos", Accion.Ver)]
+    public async Task<IActionResult> GetAll() => Ok(await _novedades.GetResultadosAsync());
+
+    /// <summary>Los activos, para elegir uno al revisar una novedad.</summary>
+    [HttpGet("opciones")]
+    [PermisoAlguno("tms.novedades:confirmar", "tms.motivos:ver")]
+    public async Task<IActionResult> Opciones() => Ok(await _novedades.GetResultadosOpcionesAsync());
+
+    [HttpPost]
+    [Permiso("tms.motivos", Accion.Crear)]
+    public async Task<IActionResult> Create([FromBody] ResultadoRevisionRequest request) =>
+        Ok(await _novedades.CrearResultadoAsync(request));
+
+    [HttpPut("{id:int}")]
+    [Permiso("tms.motivos", Accion.Editar)]
+    public async Task<IActionResult> Update(int id, [FromBody] ResultadoRevisionRequest request) =>
+        Ok(await _novedades.ActualizarResultadoAsync(id, request));
+}
+
 /// <summary>Lo que no se entregó completo, y la revisión de lo que vuelve en el camión.</summary>
 [ApiController]
 [Route("api/novedad")]

@@ -54,7 +54,7 @@ public class VentasRepository : IVentasRepository
             .Include(p => p.Cliente).ThenInclude(c => c!.Ruta)
             .Include(p => p.ListaPrecio)
             .Include(p => p.Almacen)
-            .Include(p => p.Usuario)
+            .Include(p => p.Usuario).ThenInclude(u => u!.Empleado)
             // Para saber si ya se convirtio, y a que venta.
             .Include(p => p.Ventas)
             .Include(p => p.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
@@ -332,7 +332,7 @@ public class VentasRepository : IVentasRepository
             .Include(n => n.Cliente).ThenInclude(c => c!.Mercado)
             .Include(n => n.Pedido)
             .Include(n => n.Almacen)
-            .Include(n => n.Usuario)
+            .Include(n => n.Usuario).ThenInclude(u => u!.Empleado)
             .Include(n => n.Pagos).ThenInclude(p => p.MetodoPago)
             .Include(n => n.Devoluciones).ThenInclude(d => d.Usuario)
             .Include(n => n.Devoluciones).ThenInclude(d => d.AprobadoPor)

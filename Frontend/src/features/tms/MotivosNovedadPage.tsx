@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Plus, ShieldCheck, ShieldOff, Tags } from 'lucide-react'
+import { ClipboardCheck, Pencil, Plus, ShieldCheck, ShieldOff, Tags } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -10,6 +10,7 @@ import {
   Modal,
   RowAction,
   StatCard,
+  Tabs,
   useConfirmacion,
   useToast,
 } from '../../components/ui'
@@ -19,6 +20,7 @@ import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { motivoNovedadApi } from './motivoNovedadApi'
 import type { MotivoNovedadRequest, MotivoNovedadResponse } from './motivoNovedadApi'
+import { ResultadosRevisionTab } from './ResultadosRevisionTab'
 
 const VACIO: MotivoNovedadRequest = { nombre: '', descripcion: '', regresaAlAlmacen: true, activo: true }
 
@@ -41,6 +43,8 @@ export function MotivosNovedadPage() {
   const [editando, setEditando] = useState<MotivoNovedadResponse | null>(null)
   const [form, setForm] = useState<MotivoNovedadRequest>(VACIO)
   const [guardando, setGuardando] = useState(false)
+  // Motivos: por qué no se entregó. Resultados: qué se encontró al contar lo que volvió.
+  const [pestana, setPestana] = useState<'motivos' | 'resultados'>('motivos')
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -161,94 +165,111 @@ export function MotivosNovedadPage() {
     },
   ]
 
+  const cabecera = (
+    <Tabs
+      className="mb-5"
+      active={pestana}
+      onChange={(id) => setPestana(id as 'motivos' | 'resultados')}
+      items={[
+        { id: 'motivos', label: 'Motivos', icon: <Tags size={15} /> },
+        { id: 'resultados', label: 'Resultados de revisión', icon: <ClipboardCheck size={15} /> },
+      ]}
+    />
+  )
+
+  if (pestana === 'resultados') return <ResultadosRevisionTab cabecera={cabecera} />
+
   return (
-    <ListPage
-      icon={<Tags size={20} />}
-      title="Motivos de novedad"
-      description="Por qué no se entregó algo. Los eliges al convertir un pedido en venta cuando el cliente recibe menos de lo pedido."
-      actions={
-        puede('tms.motivos', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo motivo
-          </Button>
-        ) : undefined
-      }
-      alert={error ? <Alert>{error}</Alert> : undefined}
-      stats={
-        <>
-          <StatCard label="Motivos" value={String(motivos.length)} icon={<Tags size={18} />} />
-          <StatCard
-            label="Activos"
-            value={String(motivos.filter((m) => m.activo).length)}
-            icon={<ShieldCheck size={18} />}
-            tono="success"
-          />
-        </>
-      }
-      columns={columns}
-      rows={motivos}
-      cardIcon={Tags}
-      searchPlaceholder="Buscar motivo..."
-      empty={cargando ? 'Cargando motivos...' : 'Todavía no hay motivos: crea el primero.'}
-      rowActions={(row) => (
-        <>
-          {puede('tms.motivos', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('tms.motivos', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-          )}
-        </>
-      )}
-    >
-      <Modal
-        open={abierto}
-        size="sm"
-        title={editando ? `Editar ${editando.nombre}` : 'Nuevo motivo'}
-        onClose={() => setAbierto(false)}
-        footer={
+    <>
+      {cabecera}
+      <ListPage
+        icon={<Tags size={20} />}
+        title="Motivos de novedad"
+        description="Por qué no se entregó algo. Los eliges al convertir un pedido en venta cuando el cliente recibe menos de lo pedido."
+        actions={
+          puede('tms.motivos', 'crear') ? (
+            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+              Nuevo motivo
+            </Button>
+          ) : undefined
+        }
+        alert={error ? <Alert>{error}</Alert> : undefined}
+        stats={
           <>
-            <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
-              Cancelar
-            </Button>
-            <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-              {editando ? 'Guardar cambios' : 'Crear motivo'}
-            </Button>
+            <StatCard label="Motivos" value={String(motivos.length)} icon={<Tags size={18} />} />
+            <StatCard
+              label="Activos"
+              value={String(motivos.filter((m) => m.activo).length)}
+              icon={<ShieldCheck size={18} />}
+              tono="success"
+            />
           </>
         }
+        columns={columns}
+        rows={motivos}
+        cardIcon={Tags}
+        searchPlaceholder="Buscar motivo..."
+        empty={cargando ? 'Cargando motivos...' : 'Todavía no hay motivos: crea el primero.'}
+        rowActions={(row) => (
+          <>
+            {puede('tms.motivos', 'editar') && (
+              <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
+                <Pencil size={15} />
+              </RowAction>
+            )}
+            {puede('tms.motivos', 'editar') && (
+              <RowAction
+                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+                tone={row.activo ? 'warning' : 'success'}
+                onClick={() => cambiarEstado(row)}
+              >
+                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+              </RowAction>
+            )}
+          </>
+        )}
       >
-        <div className="flex flex-col gap-4">
-          <Input
-            label="Nombre"
-            placeholder="Cliente no quiso, Producto dañado, Faltó en el carro..."
-            value={form.nombre}
-            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-          />
+        <Modal
+          open={abierto}
+          size="sm"
+          title={editando ? `Editar ${editando.nombre}` : 'Nuevo motivo'}
+          onClose={() => setAbierto(false)}
+          footer={
+            <>
+              <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
+                Cancelar
+              </Button>
+              <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+                {editando ? 'Guardar cambios' : 'Crear motivo'}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <Input
+              label="Nombre"
+              placeholder="Cliente no quiso, Producto dañado, Faltó en el carro..."
+              value={form.nombre}
+              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+            />
 
-          <Input
-            label="Descripción"
-            optional
-            value={form.descripcion ?? ''}
-            onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-          />
+            <Input
+              label="Descripción"
+              optional
+              value={form.descripcion ?? ''}
+              onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+            />
 
-          <Checkbox
-            label="La mercadería viaja en el camión y vuelve al almacén"
-            checked={form.regresaAlAlmacen}
-            onChange={(e) => setForm({ ...form, regresaAlAlmacen: e.target.checked })}
-          />
-        </div>
-      </Modal>
+            <Checkbox
+              label="La mercadería viaja en el camión y vuelve al almacén"
+              checked={form.regresaAlAlmacen}
+              onChange={(e) => setForm({ ...form, regresaAlAlmacen: e.target.checked })}
+            />
+          </div>
+        </Modal>
 
-      {dialogo}
-    </ListPage>
+        {dialogo}
+      </ListPage>
+    </>
   )
 }

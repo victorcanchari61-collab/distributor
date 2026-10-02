@@ -19,9 +19,26 @@ public class NoEntregadoRequest
 }
 
 /// <summary>Lo que el encargado encontró al contar lo que volvió en el camión.</summary>
+public class ResultadoRevisionRequest
+{
+    public string Nombre { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+
+    /// <summary>Volvió todo lo que no se entregó (Recibida). Si no, se pide cuánto volvió (Faltante).</summary>
+    public bool VolvioTodo { get; set; }
+
+    public bool Activo { get; set; } = true;
+}
+
 public class VerificarNovedadRequest
 {
-    /// <summary>RECIBIDA (volvió completa) o FALTANTE (no volvió toda).</summary>
+    /// <summary>El resultado del catálogo. Si viene, manda sobre <see cref="Estado"/>.</summary>
+    public int? ResultadoId { get; set; }
+
+    /// <summary>
+    /// RECIBIDA (volvió completa) o FALTANTE (no volvió toda). Lo que mandaba
+    /// el APK antes del catálogo de resultados: se sigue aceptando.
+    /// </summary>
     public string Estado { get; set; } = string.Empty;
 
     /// <summary>

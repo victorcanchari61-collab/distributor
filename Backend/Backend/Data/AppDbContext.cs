@@ -80,6 +80,7 @@ public class AppDbContext : DbContext
     public DbSet<PlanillaDescuento> PlanillaDescuentos => Set<PlanillaDescuento>();
     public DbSet<MotivoGasto> MotivosGasto => Set<MotivoGasto>();
     public DbSet<MotivoNovedad> MotivosNovedad => Set<MotivoNovedad>();
+    public DbSet<ResultadoRevision> ResultadosRevision => Set<ResultadoRevision>();
     public DbSet<NovedadEntrega> NovedadesEntrega => Set<NovedadEntrega>();
     public DbSet<Banco> Bancos => Set<Banco>();
     public DbSet<CuentaFinanciera> CuentasFinancieras => Set<CuentaFinanciera>();
@@ -1266,6 +1267,36 @@ public class AppDbContext : DbContext
             // negocio pierde entregas por razones distintas.
         });
 
+        modelBuilder.Entity<ResultadoRevision>(entity =>
+        {
+            entity.ToTable("ResultadosRevision");
+            entity.HasIndex(r => r.Nombre).IsUnique();
+            entity.Property(r => r.Nombre).HasMaxLength(60).IsRequired();
+            entity.Property(r => r.Descripcion).HasMaxLength(250);
+
+            // Los dos que había antes del catálogo: las revisiones ya hechas
+            // se enlazan a ellos. Los demás los crea el dueño.
+            entity.HasData(
+                new ResultadoRevision
+                {
+                    Id = ResultadoRevision.VolvioCompleta,
+                    Nombre = "Volvió completa",
+                    Descripcion = "Está de vuelta en el almacén",
+                    VolvioTodo = true,
+                    Activo = true,
+                    FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                },
+                new ResultadoRevision
+                {
+                    Id = ResultadoRevision.FaltoAlgo,
+                    Nombre = "Faltó algo",
+                    Descripcion = "No volvió todo lo que no se entregó",
+                    VolvioTodo = false,
+                    Activo = true,
+                    FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                });
+        });
+
         modelBuilder.Entity<NovedadEntrega>(entity =>
         {
             entity.ToTable("NovedadesEntrega");
@@ -1295,6 +1326,8 @@ public class AppDbContext : DbContext
                 .HasForeignKey(n => n.PresentacionId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(n => n.Motivo).WithMany()
                 .HasForeignKey(n => n.MotivoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(n => n.ResultadoRevision).WithMany()
+                .HasForeignKey(n => n.ResultadoRevisionId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(n => n.Usuario).WithMany()
                 .HasForeignKey(n => n.UsuarioId).OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(n => n.VerificadoPor).WithMany()

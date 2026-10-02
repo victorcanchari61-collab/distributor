@@ -60,6 +60,9 @@ export interface NovedadResponse {
   verificadoPor: string | null
   verificadoEn: string | null
   observacionVerificacion: string | null
+  /** El resultado que eligió el encargado al revisar. */
+  resultadoId: number | null
+  resultado: string | null
 }
 
 export interface ResumenNovedades {
@@ -82,7 +85,8 @@ export interface NovedadOpciones {
 }
 
 export interface VerificarNovedadRequest {
-  estado: 'RECIBIDA' | 'FALTANTE'
+  /** El resultado del catálogo: si volvió todo, queda Recibida; si no, Faltante. */
+  resultadoId: number
   /** Cuánto volvió, en unidad base. Solo cuenta en FALTANTE. */
   cantidadRegresada?: number | null
   observacion?: string | null

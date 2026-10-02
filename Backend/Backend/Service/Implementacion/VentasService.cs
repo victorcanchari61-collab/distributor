@@ -1643,6 +1643,7 @@ public class VentasService : IVentasService
         CondicionPago = p.CondicionPago,
         Observacion = p.Observacion,
         Usuario = p.Usuario?.Nombre,
+        UsuarioTelefono = TelefonoDe(p.Usuario),
         ReservaStock = p.ReservaStock,
         NotaVentaId = VentaVigente(p)?.Id,
         NotaVentaNumero = VentaVigente(p)?.Numero,
@@ -1707,6 +1708,7 @@ public class VentasService : IVentasService
             FormaPago = n.FormaPago,
             Observacion = n.Observacion,
             Usuario = n.Usuario?.Nombre,
+            UsuarioTelefono = TelefonoDe(n.Usuario),
             // Una línea anulada se sigue mostrando (para no perder su rastro),
             // pero no suma al total. Los recojos vigentes se restan aparte: a
             // diferencia de una devolución, no encogen ninguna línea de aquí.
@@ -1779,6 +1781,12 @@ public class VentasService : IVentasService
             .ToList(),
         };
     }
+
+    /// <summary>El teléfono de quien atendió: el suyo o, si no tiene, el de su ficha de empleado.</summary>
+    private static string? TelefonoDe(Usuario? u) =>
+        string.IsNullOrWhiteSpace(u?.Telefono)
+            ? (string.IsNullOrWhiteSpace(u?.Empleado?.Telefono) ? null : u.Empleado.Telefono.Trim())
+            : u.Telefono.Trim();
 
     private static PagoVentaResponse MapPago(PagoVenta p) => new()
     {

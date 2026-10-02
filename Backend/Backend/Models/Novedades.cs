@@ -148,6 +148,35 @@ public class NovedadEntrega
     public DateTime? VerificadoEn { get; set; }
     public string? ObservacionVerificacion { get; set; }
 
+    /// <summary>Lo que encontró el encargado al contar. Nulo mientras no se revisa.</summary>
+    public int? ResultadoRevisionId { get; set; }
+    public ResultadoRevision? ResultadoRevision { get; set; }
+
     /// <summary>Lo que quedó sin entregar.</summary>
     public decimal CantidadNoEntregada => CantidadPedida - CantidadEntregada;
+}
+
+/// <summary>
+/// Lo que el encargado encontró al contar lo que volvió en el camión: "Volvió
+/// completa", "Faltó algo", "Pesaron mal el producto"... Lo arma el dueño,
+/// como los motivos.
+///
+/// Cada uno dice si volvió todo lo que no se entregó: con eso la novedad queda
+/// Recibida; si no, se pide cuánto volvió y queda Faltante.
+/// </summary>
+public class ResultadoRevision
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+
+    /// <summary>Volvió todo lo que no se entregó: la novedad queda Recibida sin pedir cantidad.</summary>
+    public bool VolvioTodo { get; set; }
+
+    public bool Activo { get; set; } = true;
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Los dos de siempre, sembrados: los usan las revisiones de antes del catálogo.</summary>
+    public const int VolvioCompleta = 1;
+    public const int FaltoAlgo = 2;
 }

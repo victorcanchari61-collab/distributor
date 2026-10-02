@@ -23,6 +23,28 @@ public class MotivoNovedadOpcionResponse
     public string? Descripcion { get; set; }
 }
 
+public class ResultadoRevisionResponse
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+    public bool VolvioTodo { get; set; }
+    public bool Activo { get; set; }
+
+    /// <summary>En cuántas revisiones se usó.</summary>
+    public int Usos { get; set; }
+}
+
+public class ResultadoRevisionOpcionResponse
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+
+    /// <summary>Si es falso, al elegirlo se pide cuánto volvió.</summary>
+    public bool VolvioTodo { get; set; }
+}
+
 /// <summary>Una diferencia entre lo pedido y lo entregado: un producto que quedó corto o sin entregar.</summary>
 public class NovedadResponse
 {
@@ -78,6 +100,10 @@ public class NovedadResponse
     public string? VerificadoPor { get; set; }
     public DateTime? VerificadoEn { get; set; }
     public string? ObservacionVerificacion { get; set; }
+
+    /// <summary>El resultado que eligió el encargado al revisar. Nulo mientras no se revisa.</summary>
+    public int? ResultadoId { get; set; }
+    public string? Resultado { get; set; }
 }
 
 /// <summary>Contadores del listado completo, sin anuladas.</summary>
