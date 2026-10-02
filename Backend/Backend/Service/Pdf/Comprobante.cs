@@ -142,6 +142,9 @@ public static class Comprobante
             datos.Add(new DatoImprimible("DIRECCIÓN", doc.ParteDireccion));
         if (doc.Usuario is { Length: > 0 } usuario)
             datos.Add(new DatoImprimible(doc.EtiquetaUsuario, usuario));
+        // Aparte del nombre: pegado a él, un nombre largo partía la línea en dos.
+        if (doc.Usuario is { Length: > 0 } && doc.UsuarioTelefono is { Length: > 0 } telefono)
+            datos.Add(new DatoImprimible($"CEL. {doc.EtiquetaUsuario}", telefono));
         datos.Add(new DatoImprimible("FECHA", doc.Fecha.ToString("dd/MM/yyyy HH:mm")));
         // La moneda solo cuando hay importes: en una transferencia sin
         // precios no dice nada.

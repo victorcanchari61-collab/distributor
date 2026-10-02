@@ -103,19 +103,14 @@ public class PdfService(
             Lineas = [.. pedido.Detalle.Where(l => !l.Anulado).Select(Linea)],
             Total = pedido.Total,
             Observacion = pedido.Observacion,
-            Usuario = ConTelefono(pedido.Usuario, pedido.UsuarioTelefono),
+            Usuario = pedido.Usuario,
+            UsuarioTelefono = pedido.UsuarioTelefono,
             EtiquetaUsuario = "VENDEDOR",
             Empresa = empresa,
         };
 
         return doc;
     }
-
-    /// <summary>El vendedor con su teléfono, si lo tiene: el cliente lo llama a él.</summary>
-    private static string? ConTelefono(string? nombre, string? telefono) =>
-        string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(telefono)
-            ? nombre
-            : $"{nombre} · TELF. {telefono}";
 
     public async Task<(byte[], string)> NotaVentaAsync(int id, FormatoPdf formato)
     {
@@ -153,7 +148,8 @@ public class PdfService(
             Pagos = [.. venta.Pagos.Where(p => !p.Anulado).Select(p => new PagoImprimible(p.MetodoPago, p.Monto))],
             TotalPagado = venta.TotalPagado,
             Observacion = venta.Observacion,
-            Usuario = ConTelefono(venta.Usuario, venta.UsuarioTelefono),
+            Usuario = venta.Usuario,
+            UsuarioTelefono = venta.UsuarioTelefono,
             EtiquetaUsuario = "VENDEDOR",
             Empresa = empresa,
         };

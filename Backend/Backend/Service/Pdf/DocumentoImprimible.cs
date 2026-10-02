@@ -89,6 +89,9 @@ public sealed record DocumentoImprimible
     public string? Observacion { get; init; }
     public string? Usuario { get; init; }
 
+    /// <summary>El celular de quien atendió: va como dato aparte, no pegado al nombre.</summary>
+    public string? UsuarioTelefono { get; init; }
+
     /// <summary>
     /// Cómo se llama en el papel quien registró el documento.
     ///
