@@ -44,6 +44,40 @@ class NovedadApi {
         as Map<String, dynamic>,
   );
 
+  // --- Resultados de la revisión ---
+
+  /// GET /api/resultadorevision. El catálogo completo, para quien lo administra.
+  Future<List<ResultadoRevision>> resultados() async {
+    final datos = await _api.get('/resultadorevision') as List;
+    return datos
+        .map((e) => ResultadoRevision.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// GET /api/resultadorevision/opciones. Los activos, para elegir al revisar.
+  Future<List<ResultadoRevision>> opcionesResultado() async {
+    final datos = await _api.get('/resultadorevision/opciones') as List;
+    return datos
+        .map((e) => ResultadoRevision.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// POST /api/resultadorevision
+  Future<ResultadoRevision> crearResultado(Map<String, dynamic> cuerpo) async =>
+      ResultadoRevision.desdeJson(
+        await _api.post('/resultadorevision', cuerpo: cuerpo)
+            as Map<String, dynamic>,
+      );
+
+  /// PUT /api/resultadorevision/{id}
+  Future<ResultadoRevision> actualizarResultado(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => ResultadoRevision.desdeJson(
+    await _api.put('/resultadorevision/$id', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
+
   // --- Novedades ---
 
   /// POST /api/novedad/listar. Las últimas 200, ya ordenadas de la más nueva a

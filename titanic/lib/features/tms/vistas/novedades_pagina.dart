@@ -26,6 +26,7 @@ import '../../ventas/datos/nota_venta.dart';
 import '../../ventas/estado/ventas_controlador.dart';
 import '../datos/novedad.dart';
 import '../estado/novedades_controlador.dart';
+import 'resultado_revision_hoja.dart';
 
 /// Novedades de entrega: lo que no llegó al cliente y por qué, y lo que el
 /// repartidor recogió de otras ventas.
@@ -209,10 +210,29 @@ class NovedadesPagina extends ConsumerWidget {
     WidgetRef ref,
     Novedad novedad,
   ) async {
-    String resultado = EstadoNovedad.recibida;
+    // Los resultados los arma el dueño (Motivos de novedad → Resultados).
+    List<ResultadoRevision> resultados;
+    try {
+      resultados = [...await ref.read(opcionesResultadoProvider.future)];
+    } on ApiExcepcion catch (e) {
+      if (context.mounted) Aviso.de(context).error(e.texto);
+      return;
+    }
+    if (!context.mounted) return;
+    final puedeCrear = puede(ref, 'tms.motivos', Accion.crear);
+
+    int? resultadoId = resultados.isEmpty ? null : resultados.first.id;
     final regresada = TextEditingController(text: '0');
     final observacion = TextEditingController();
     String? error;
+
+    // Si el elegido no es "volvió todo", se pregunta cuánto volvió.
+    bool pideCantidad() {
+      for (final r in resultados) {
+        if (r.id == resultadoId) return !r.volvioTodo;
+      }
+      return false;
+    }
 
     final guardar = await showModalBottomSheet<bool>(
       context: context,
@@ -268,20 +288,33 @@ class NovedadesPagina extends ConsumerWidget {
                       ),
                       const SizedBox(height: Dimen.espacio2),
                     ],
-                    AppSelector<String>(
-                      valor: resultado,
+                    AppSelector<int>(
+                      valor: resultadoId,
                       etiqueta: 'Resultado',
                       icono: Icons.fact_check_outlined,
-                      opciones: const [
-                        Opcion(EstadoNovedad.recibida, 'Volvió completa'),
-                        Opcion(EstadoNovedad.faltante, 'Faltó algo'),
+                      opciones: [
+                        for (final r in resultados) Opcion(r.id, r.nombre),
                       ],
                       onCambio: (v) => setSheetState(() {
-                        resultado = v ?? EstadoNovedad.recibida;
+                        resultadoId = v;
                         error = null;
                       }),
+                      // El + crea un resultado sin salir de la revisión, y
+                      // lo deja elegido.
+                      onCrear: puedeCrear
+                          ? () async {
+                              final nuevo = await abrirHojaResultado(context);
+                              if (nuevo == null) return;
+                              setSheetState(() {
+                                resultados = [...resultados, nuevo];
+                                resultadoId = nuevo.id;
+                                error = null;
+                              });
+                            }
+                          : null,
+                      etiquetaCrear: 'Nuevo resultado',
                     ),
-                    if (resultado == EstadoNovedad.faltante) ...[
+                    if (pideCantidad()) ...[
                       const SizedBox(height: Dimen.espacio4),
                       AppCampo(
                         controlador: regresada,
@@ -304,7 +337,11 @@ class NovedadesPagina extends ConsumerWidget {
                     AppBoton(
                       texto: 'Guardar revisión',
                       onPressed: () {
-                        if (resultado == EstadoNovedad.faltante) {
+                        if (resultadoId == null) {
+                          setSheetState(() => error = 'Elige el resultado.');
+                          return;
+                        }
+                        if (pideCantidad()) {
                           final volvio =
                               double.tryParse(
                                 regresada.text.replaceAll(',', '.'),
@@ -333,8 +370,8 @@ class NovedadesPagina extends ConsumerWidget {
     );
 
     final cuerpo = <String, dynamic>{
-      'estado': resultado,
-      'cantidadRegresada': resultado == EstadoNovedad.faltante
+      'resultadoId': resultadoId,
+      'cantidadRegresada': pideCantidad()
           ? double.tryParse(regresada.text.replaceAll(',', '.')) ?? 0
           : null,
       'observacion': observacion.text.trim().isEmpty
@@ -394,6 +431,7 @@ class NovedadesPagina extends ConsumerWidget {
           '${_fecha(n.fecha)}${n.usuario != null ? ' · ${n.usuario}' : ''}',
         ),
         if (n.verificadoEn != null) ...[
+          if (n.resultado != null) CampoDetalle('Resultado', n.resultado),
           CampoDetalle('Volvió', n.cantidad(n.cantidadRegresada ?? 0)),
           CampoDetalle(
             'Faltó',

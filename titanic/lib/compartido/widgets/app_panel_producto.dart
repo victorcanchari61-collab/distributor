@@ -470,6 +470,7 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
             // La lupa lleva a la hoja de selección múltiple, que es lo que
             // sirve para cargar un documento largo de una sentada.
             onBusquedaAmpliada: widget.habilitado ? _abrirHoja : null,
+            destacado: true,
           ),
           const SizedBox(height: Dimen.espacio3),
 

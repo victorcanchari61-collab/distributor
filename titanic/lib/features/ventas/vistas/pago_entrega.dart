@@ -12,7 +12,6 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../finanzas/datos/metodo_pago.dart';
-import '../datos/pedido.dart';
 
 double _numero(String texto) =>
     double.tryParse(texto.trim().replaceAll(',', '.')) ?? 0;
@@ -322,7 +321,6 @@ class _PagoEntregaState extends State<PagoEntrega> {
     final editando = widget.filas.any((f) => !f.guardado);
     final cargando = widget.metodos.isLoading && !widget.metodos.hasValue;
     final sinMetodos = widget.metodos.hasValue && _metodos.isEmpty;
-    final credito = widget.condicionPago == CondicionPago.credito;
     // Solo una fila se edita a la vez, pero la clave global no admite repetirse:
     // se le da a la primera y no a "las que estén abiertas".
     FilaPagoEntrega? enEdicion;
@@ -339,39 +337,6 @@ class _PagoEntregaState extends State<PagoEntrega> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: Dimen.espacio3,
-              vertical: Dimen.espacio2,
-            ),
-            decoration: BoxDecoration(
-              color: Colores.fondo,
-              borderRadius: BorderRadius.circular(Dimen.radioCampo),
-            ),
-            child: Wrap(
-              spacing: Dimen.espacio2,
-              runSpacing: Dimen.espacio1,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                const Text(
-                  'Acordado con el cliente:',
-                  style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
-                ),
-                AppEtiqueta(
-                  credito ? 'Crédito' : 'Contado',
-                  tono: credito ? EtiquetaTono.aviso : EtiquetaTono.exito,
-                ),
-                const Text(
-                  'Es solo una referencia: manda lo que se cobre ahora. Lo que no se cobre '
-                  'queda a crédito.',
-                  style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: Dimen.espacio3),
-
           // Tres a la vez, como en la web: en una fila que se desliza, "Queda a
           // crédito" —lo que más pesa al cobrar— quedaba fuera de pantalla.
           IntrinsicHeight(

@@ -776,14 +776,6 @@ class _RecojoTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        const Text(
-          'Mercadería de OTRA venta que el repartidor recoge al entregar esta —malograda, no la pidió, lo '
-          'que sea—. Se descuenta del total. A qué almacén entra lo decide quien lo revise en Novedades '
-          'de entrega, cuando el camión vuelva.',
-          style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
-        ),
-        const SizedBox(height: Dimen.espacio3),
-
         AppBoton(
           texto: 'Agregar productos',
           variante: BotonVariante.secundario,
@@ -953,7 +945,7 @@ class _TarjetaEntrega extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${l.codigo} · Pedido: $pedido',
+                      'Pedido: $pedido',
                       style: const TextStyle(
                         fontSize: 11.5,
                         color: Colores.tintaSuave,

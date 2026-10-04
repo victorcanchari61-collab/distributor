@@ -147,12 +147,6 @@ class _MotivoNovedadFormularioState
                   color: Colores.tinta,
                 ),
               ),
-              subtitle: const Text(
-                'Márcalo cuando el producto salió y hay que contarlo al volver (el cliente lo '
-                'rechazó, llegó dañado). Déjalo sin marcar si nunca salió del almacén (se '
-                'olvidó cargar, no alcanzó).',
-                style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
-              ),
             ),
             const SizedBox(height: Dimen.espacio6),
 

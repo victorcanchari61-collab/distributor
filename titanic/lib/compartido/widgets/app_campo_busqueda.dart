@@ -48,6 +48,7 @@ class AppCampoBusqueda<T> extends StatefulWidget {
     this.maximoSugerencias = 8,
     this.onBusquedaAmpliada,
     this.cargando = false,
+    this.destacado = false,
   });
 
   final String etiqueta;
@@ -90,9 +91,26 @@ class AppCampoBusqueda<T> extends StatefulWidget {
   /// formulario en el móvil.
   final Future<void> Function()? onBusquedaAmpliada;
 
+  /// Resalta el campo, como en la web: fondo amarillo y la lupa en un botón
+  /// del color del módulo. Para el buscador que se usa todo el tiempo —el de
+  /// productos al armar un documento—, que tiene que encontrarse de un vistazo.
+  final bool destacado;
+
   @override
   State<AppCampoBusqueda<T>> createState() => _AppCampoBusquedaState<T>();
 }
+
+// El amarillo del buscador destacado: el mismo de la web (amber-50/300/500/600).
+const _ambarFondo = Color(0xFFFFFBEB);
+const _ambarBorde = Color(0xFFFCD34D);
+const _ambarFoco = Color(0xFFF59E0B);
+const _ambarIcono = Color(0xFFD97706);
+
+OutlineInputBorder _borde(Color color, {double ancho = 1}) =>
+    OutlineInputBorder(
+      borderRadius: BorderRadius.circular(Dimen.radioCampo),
+      borderSide: BorderSide(color: color, width: ancho),
+    );
 
 class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
   late final TextEditingController _controlador = TextEditingController(
@@ -194,16 +212,46 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
             labelText: widget.etiqueta,
             hintText: widget.pista,
             errorText: widget.error,
-            prefixIcon: Icon(widget.icono, size: 19, color: Colores.tintaTenue),
-            suffixIcon: IconButton(
-              onPressed: widget.habilitado ? () => _abrirHoja(context) : null,
-              icon: const Icon(
-                Icons.search,
-                size: 18,
-                color: Colores.tintaTenue,
-              ),
-              tooltip: 'Ver la lista completa',
+            prefixIcon: Icon(
+              widget.icono,
+              size: 19,
+              color: widget.destacado ? _ambarIcono : Colores.tintaTenue,
             ),
+            suffixIcon: widget.destacado
+                ? Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: IconButton.filled(
+                      onPressed: widget.habilitado
+                          ? () => _abrirHoja(context)
+                          : null,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Acento.de(context),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                        ),
+                      ),
+                      icon: const Icon(Icons.search, size: 18),
+                      tooltip: 'Ver la lista completa',
+                    ),
+                  )
+                : IconButton(
+                    onPressed: widget.habilitado
+                        ? () => _abrirHoja(context)
+                        : null,
+                    icon: const Icon(
+                      Icons.search,
+                      size: 18,
+                      color: Colores.tintaTenue,
+                    ),
+                    tooltip: 'Ver la lista completa',
+                  ),
+            filled: widget.destacado ? true : null,
+            fillColor: widget.destacado ? _ambarFondo : null,
+            enabledBorder: widget.destacado ? _borde(_ambarBorde) : null,
+            focusedBorder: widget.destacado
+                ? _borde(_ambarFoco, ancho: 1.5)
+                : null,
             constraints: const BoxConstraints(minHeight: Dimen.campoLg),
           ),
         ),

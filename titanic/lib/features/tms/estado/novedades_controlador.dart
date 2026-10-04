@@ -47,6 +47,62 @@ class MotivosNovedadControlador extends AsyncNotifier<List<MotivoNovedad>> {
   }
 }
 
+/// El catálogo de resultados de la revisión, para quien lo administra.
+class ResultadosRevisionControlador
+    extends AsyncNotifier<List<ResultadoRevision>> {
+  @override
+  Future<List<ResultadoRevision>> build() =>
+      ref.watch(novedadApiProvider).resultados();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(novedadApiProvider).resultados(),
+    );
+  }
+
+  /// Crea o actualiza, y devuelve como quedó: el "+" de la revisión lo deja
+  /// elegido.
+  Future<ResultadoRevision> guardar({
+    int? id,
+    required Map<String, dynamic> cuerpo,
+  }) async {
+    final api = ref.read(novedadApiProvider);
+    final guardado = id == null
+        ? await api.crearResultado(cuerpo)
+        : await api.actualizarResultado(id, cuerpo);
+    ref.invalidate(opcionesResultadoProvider);
+    await recargar();
+    return guardado;
+  }
+
+  Future<void> cambiarEstado(ResultadoRevision r) async {
+    await ref.read(novedadApiProvider).actualizarResultado(r.id, {
+      'nombre': r.nombre,
+      'descripcion': r.descripcion,
+      'volvioTodo': r.volvioTodo,
+      'activo': !r.activo,
+    });
+    ref.invalidate(opcionesResultadoProvider);
+    await recargar();
+  }
+}
+
+final resultadosRevisionProvider =
+    AsyncNotifierProvider<
+      ResultadosRevisionControlador,
+      List<ResultadoRevision>
+    >(ResultadosRevisionControlador.new);
+
+/// Los activos, para elegir uno al revisar una novedad.
+final opcionesResultadoProvider =
+    FutureProvider.autoDispose<List<ResultadoRevision>>(
+      (ref) => ref.watch(novedadApiProvider).opcionesResultado(),
+    );
+
+/// En Motivos de novedad: false son los motivos, true los resultados.
+final verResultadosProvider = StateProvider.autoDispose<bool>((ref) => false);
+
 final motivosNovedadProvider =
     AsyncNotifierProvider<MotivosNovedadControlador, List<MotivoNovedad>>(
       MotivosNovedadControlador.new,

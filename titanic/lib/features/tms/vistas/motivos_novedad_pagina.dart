@@ -15,9 +15,11 @@ import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
+import '../../../core/tema/dimensiones.dart';
 import '../datos/novedad.dart';
 import '../estado/novedades_controlador.dart';
 import 'motivo_novedad_formulario.dart';
+import 'resultado_revision_hoja.dart';
 
 /// Por qué no se entregó algo. El dueño arma su propia lista: cada negocio
 /// pierde entregas por razones distintas.
@@ -33,6 +35,33 @@ class MotivosNovedadPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
+    // Motivos: por qué no se entregó. Resultados: qué se encontró al contar
+    // lo que volvió en el camión.
+    final pestanas = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+      child: SegmentedButton<bool>(
+        showSelectedIcon: false,
+        segments: const [
+          ButtonSegment(
+            value: false,
+            label: Text('Motivos'),
+            icon: Icon(Icons.label_outline, size: 18),
+          ),
+          ButtonSegment(
+            value: true,
+            label: Text('Resultados'),
+            icon: Icon(Icons.fact_check_outlined, size: 18),
+          ),
+        ],
+        selected: {ref.watch(verResultadosProvider)},
+        onSelectionChanged: (s) =>
+            ref.read(verResultadosProvider.notifier).state = s.first,
+      ),
+    );
+    if (ref.watch(verResultadosProvider)) {
+      return _paginaResultados(context, ref, color, pestanas);
+    }
+
     final todos =
         ref.watch(motivosNovedadProvider).valueOrNull ??
         const <MotivoNovedad>[];
@@ -66,6 +95,7 @@ class MotivosNovedadPagina extends ConsumerWidget {
           icono: Icons.check_circle_outline,
         ),
       ],
+      encabezado: pestanas,
       filtro: BotonFiltros(
         activos: ref.watch(filtrosMotivosActivosProvider),
         color: color,
@@ -83,6 +113,129 @@ class MotivosNovedadPagina extends ConsumerWidget {
             : null,
       ),
     );
+  }
+
+  /// Lo que el encargado puede encontrar al contar lo que volvió en el camión.
+  Widget _paginaResultados(
+    BuildContext context,
+    WidgetRef ref,
+    Color color,
+    Widget pestanas,
+  ) {
+    final estado = ref.watch(resultadosRevisionProvider);
+    final todos = estado.valueOrNull ?? const <ResultadoRevision>[];
+    final texto = ref.watch(busquedaMotivosProvider).trim().toLowerCase();
+    final puedeEditar = puede(ref, 'tms.motivos', Accion.editar);
+
+    return AppListaPagina<ResultadoRevision>(
+      titulo: 'Motivos de novedad',
+      ruta: ruta,
+      estado: estado,
+      visibles: todos
+          .where((r) => texto.isEmpty || r.buscable.contains(texto))
+          .toList(),
+      busqueda: ref.watch(busquedaMotivosProvider),
+      onBuscar: (t) => ref.read(busquedaMotivosProvider.notifier).state = t,
+      pistaBusqueda: 'Buscar resultado',
+      onRecargar: () =>
+          ref.read(resultadosRevisionProvider.notifier).recargar(),
+      onNuevo: puede(ref, 'tms.motivos', Accion.crear)
+          ? () => abrirHojaResultado(context)
+          : null,
+      textoNuevo: 'Nuevo resultado',
+      iconoVacio: Icons.fact_check_outlined,
+      singular: 'resultado',
+      plural: 'resultados',
+      indicadores: [
+        AppTarjetaDato(
+          etiqueta: 'Resultados',
+          valor: '${todos.length}',
+          icono: Icons.fact_check_outlined,
+          color: color,
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Activos',
+          valor: '${todos.where((r) => r.activo).length}',
+          icono: Icons.check_circle_outline,
+        ),
+      ],
+      encabezado: pestanas,
+      fila: (context, r) => AppTarjetaRegistro(
+        icono: Icons.fact_check_outlined,
+        color: color,
+        titulo: r.nombre,
+        campos: [
+          CampoDetalle('Descripción', r.descripcion),
+          CampoDetalle(
+            'Queda como',
+            null,
+            widget: AppEtiqueta(
+              r.volvioTodo
+                  ? 'Recibida · volvió todo'
+                  : 'Faltante · pide cuánto volvió',
+              tono: r.volvioTodo ? EtiquetaTono.exito : EtiquetaTono.peligro,
+            ),
+          ),
+          CampoDetalle('Usos', '${r.usos}'),
+          CampoDetalle(
+            'Estado',
+            r.activo ? 'Activo' : 'Inactivo',
+            widget: _insigniaEstado(r.activo),
+          ),
+        ],
+        acciones: [
+          if (puedeEditar)
+            IconButton(
+              onPressed: () => abrirHojaResultado(context, editando: r),
+              tooltip: 'Editar',
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                Icons.edit_outlined,
+                size: 18,
+                color: Acento.de(context),
+              ),
+            ),
+          if (puedeEditar)
+            IconButton(
+              onPressed: () => _cambiarEstadoResultado(context, ref, r),
+              tooltip: r.activo ? 'Desactivar' : 'Activar',
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                r.activo ? Icons.block : Icons.check_circle_outline,
+                size: 18,
+                color: r.activo ? Colores.advertencia : Colores.exito,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cambiarEstadoResultado(
+    BuildContext context,
+    WidgetRef ref,
+    ResultadoRevision r,
+  ) async {
+    final ok = await confirmarAccion(
+      context,
+      titulo: '${r.activo ? 'Desactivar' : 'Activar'} ${r.nombre}',
+      mensaje: r.activo
+          ? 'Deja de ofrecerse al revisar una novedad. Las revisiones que ya lo usan lo conservan.'
+          : 'Vuelve a estar disponible para elegirse.',
+      textoConfirmar: r.activo ? 'Desactivar' : 'Activar',
+      tono: r.activo ? ConfirmTono.aviso : ConfirmTono.pregunta,
+    );
+    if (!ok || !context.mounted) return;
+
+    final mensajero = Aviso.de(context);
+    try {
+      await ref.read(resultadosRevisionProvider.notifier).cambiarEstado(r);
+      mensajero.mostrar(
+        r.activo ? '${r.nombre} desactivado' : '${r.nombre} activado',
+      );
+    } on ApiExcepcion catch (e) {
+      mensajero.error(e.texto);
+    }
   }
 
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {

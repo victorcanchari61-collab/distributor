@@ -136,6 +136,8 @@ class Novedad {
     this.verificadoPor,
     this.verificadoEn,
     this.observacionVerificacion,
+    this.resultadoId,
+    this.resultado,
   });
 
   final int id;
@@ -183,6 +185,10 @@ class Novedad {
   final DateTime? verificadoEn;
   final String? observacionVerificacion;
 
+  /// El resultado que eligió el encargado al revisar.
+  final int? resultadoId;
+  final String? resultado;
+
   bool get porRevisar => estado == EstadoNovedad.pendiente;
 
   /// No es una novedad sino un recojo: se verifica eligiendo el almacén.
@@ -229,7 +235,46 @@ class Novedad {
         ? null
         : fechaDeJson(json['verificadoEn'] as String),
     observacionVerificacion: json['observacionVerificacion'] as String?,
+    resultadoId: json['resultadoId'] as int?,
+    resultado: json['resultado'] as String?,
   );
+}
+
+/// Lo que el encargado encontró al contar lo que volvió en el camión: "Volvió
+/// completa", "Faltó algo", "Pesaron mal el producto". Lo arma el dueño, como
+/// los motivos. Si volvió todo, la novedad queda Recibida; si no, se pide
+/// cuánto volvió y queda Faltante.
+class ResultadoRevision {
+  const ResultadoRevision({
+    required this.id,
+    required this.nombre,
+    required this.volvioTodo,
+    this.descripcion,
+    this.activo = true,
+    this.usos = 0,
+  });
+
+  final int id;
+  final String nombre;
+  final String? descripcion;
+  final bool volvioTodo;
+  final bool activo;
+
+  /// En cuántas revisiones se usó: con usos no se cambia si volvió todo.
+  final int usos;
+
+  String get buscable => '$nombre ${descripcion ?? ''}'.toLowerCase();
+
+  factory ResultadoRevision.desdeJson(Map<String, dynamic> json) =>
+      ResultadoRevision(
+        id: json['id'] as int,
+        nombre: json['nombre'] as String? ?? '',
+        descripcion: json['descripcion'] as String?,
+        volvioTodo: json['volvioTodo'] as bool? ?? false,
+        // Las opciones para elegir al revisar no traen estos dos.
+        activo: json['activo'] as bool? ?? true,
+        usos: json['usos'] as int? ?? 0,
+      );
 }
 
 /// Contadores del listado completo, sin anuladas.
