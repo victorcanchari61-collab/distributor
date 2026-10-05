@@ -525,7 +525,7 @@ export function AccesosPage() {
 
       {/*
         Qué FILAS ve, no qué botones tiene: el permiso de arriba dice si entra a Pedidos; esto dice de
-        qué clientes. "Solo mi ruta" limita a los clientes de la ruta que la persona tiene a cargo
+        qué clientes. "Solo mis rutas" limita a los clientes de las rutas que la persona tiene a cargo
         (se asigna en Usuarios); sin ruta no ve ninguno.
       */}
       {pantallasAlcance.length > 0 && (

@@ -4,15 +4,15 @@ import { resolveNav } from '../../components/layout'
 /**
  * Los niveles de alcance de datos, tal como los guarda el backend (`AlcanceDatos`).
  *
- * El texto de pantalla no es el nombre interno: "misclientes" se lee "Solo mi ruta" porque eso es lo
- * que hace ahora — los clientes de la ruta que la persona tiene a cargo—.
+ * El texto de pantalla no es el nombre interno: "misclientes" se lee "Solo mis rutas" porque eso es lo
+ * que hace ahora — los clientes de las rutas que la persona tiene a cargo—.
  */
 export const NIVELES_ALCANCE: { value: string; label: string; nota: string }[] = [
   { value: 'todos', label: 'Todos', nota: 'Sin restricción: ve lo de todas las rutas' },
   {
     value: 'misclientes',
-    label: 'Solo mi ruta',
-    nota: 'Los clientes de la ruta que tiene a cargo, más lo que él mismo registró. Sin ruta no ve ninguno',
+    label: 'Solo mis rutas',
+    nota: 'Los clientes de las rutas que tiene a cargo, más lo que él mismo registró. Sin ruta no ve ninguno',
   },
   { value: 'propios', label: 'Solo lo que registré', nota: 'Únicamente lo que registró él, de cualquier cliente' },
 ]
