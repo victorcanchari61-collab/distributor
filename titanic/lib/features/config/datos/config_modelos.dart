@@ -17,8 +17,8 @@ class Usuario {
     this.nombreUsuario,
     this.empleadoId,
     this.empleado,
-    this.rutaId,
-    this.ruta,
+    this.rutaIds = const [],
+    this.rutas = const [],
   });
 
   final int id;
@@ -45,15 +45,16 @@ class Usuario {
   /// Nombre de ese empleado, solo para mostrar.
   final String? empleado;
 
-  /// La ruta que tiene a cargo: su cartera de clientes. Es de la PERSONA, no del rol: el dueño
-  /// también vende y tiene la suya. Por sí sola no restringe nada; lo hace el alcance del rol.
-  final int? rutaId;
-  final String? ruta;
+  /// Las rutas que tiene a cargo: su cartera de clientes. Pueden ser varias. Son de la PERSONA, no
+  /// del rol: el dueño también vende y tiene la suya. Solas no restringen nada; lo hace el alcance
+  /// del rol, y con él ve los clientes de todas sus rutas.
+  final List<int> rutaIds;
+  final List<String> rutas;
 
   final bool activo;
 
   String get buscable =>
-      '$nombre ${nombreUsuario ?? ''} $email ${dni ?? ''} $rol ${empleado ?? ''} ${ruta ?? ''}'
+      '$nombre ${nombreUsuario ?? ''} $email ${dni ?? ''} $rol ${empleado ?? ''} ${rutas.join(' ')}'
           .toLowerCase();
 
   factory Usuario.desdeJson(Map<String, dynamic> json) => Usuario(
@@ -67,8 +68,8 @@ class Usuario {
     rol: json['rol'] as String? ?? '',
     empleadoId: json['empleadoId'] as int?,
     empleado: json['empleado'] as String?,
-    rutaId: json['rutaId'] as int?,
-    ruta: json['ruta'] as String?,
+    rutaIds: [for (final r in (json['rutaIds'] as List? ?? const [])) r as int],
+    rutas: [for (final r in (json['rutas'] as List? ?? const [])) r as String],
     activo: json['activo'] as bool? ?? true,
   );
 }

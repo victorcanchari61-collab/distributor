@@ -194,9 +194,9 @@ public class VentasService : IVentasService
         if (alcance is null || alcance.SinRestriccion || alcance.SoloPropios) return;
 
         var rutaDelCliente = await _repository.RutaDeClienteAsync(clienteId);
-        if (alcance.RutaId is null || rutaDelCliente != alcance.RutaId)
+        if (!alcance.EsDeMisRutas(rutaDelCliente))
         {
-            throw new ForbiddenException("Solo puedes vender a los clientes de tu ruta");
+            throw new ForbiddenException("Solo puedes vender a los clientes de tus rutas");
         }
     }
 

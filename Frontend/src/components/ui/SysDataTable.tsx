@@ -69,6 +69,11 @@ export interface DataTableColumn<T> {
   filterOptions?: { value: string; label: string }[]
   /** Escape hatch: valor a usar para buscar, ordenar y filtrar. */
   value?: (row: T) => string | number
+  /**
+   * Para una fila con VARIOS valores en la columna (una persona con varias rutas): el filtro
+   * "es igual a" acierta si alguno coincide. Sin esto, un select solo encuentra la combinación exacta.
+   */
+  valores?: (row: T) => string[]
   render?: (row: T) => ReactNode
 
   /**
@@ -247,6 +252,7 @@ function matchesFilter<T>(row: T, filter: DataTableFilter, col?: DataTableColumn
 
   switch (filter.operator) {
     case 'equals':
+      if (col?.valores) return col.valores(row).some((v) => asText(v) === term)
       return value === term
     case 'between': {
       // Sin column.value() llega el texto del servidor: se lee como instante

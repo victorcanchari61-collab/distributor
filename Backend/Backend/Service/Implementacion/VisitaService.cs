@@ -36,9 +36,9 @@ public class VisitaService : IVisitaService
         var pedidos = await PedidosAsync(clientes.Select(c => c.Id).ToList(), dias);
 
         // Quien tiene cada ruta a cargo, para rotular la visita: una ruta puede tener mas de una persona.
-        var vendedoresPorRuta = (await _context.Usuarios.AsNoTracking()
-                .Where(u => u.Activo && u.RutaId != null)
-                .Select(u => new { RutaId = u.RutaId!.Value, u.Nombre })
+        var vendedoresPorRuta = (await _context.UsuarioRutas.AsNoTracking()
+                .Where(r => r.Usuario!.Activo)
+                .Select(r => new { r.RutaId, r.Usuario!.Nombre })
                 .ToListAsync())
             .GroupBy(u => u.RutaId)
             .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(u => u.Nombre).OrderBy(n => n)));
@@ -121,12 +121,12 @@ public class VisitaService : IVisitaService
             .Where(c => c.Activo && c.DiaVisita != null && dias.Contains(c.DiaVisita));
 
         if (rutaId is int ruta) clientes = clientes.Where(c => c.RutaId == ruta);
-        // "El vendedor" es quien tiene la ruta a cargo: sus clientes son los de su ruta.
+        // "El vendedor" es quien tiene las rutas a cargo: sus clientes son los de sus rutas.
         if (vendedorId is int vendedor)
         {
-            var rutaDelVendedor = await _context.Usuarios.AsNoTracking()
-                .Where(u => u.Id == vendedor).Select(u => u.RutaId).FirstOrDefaultAsync();
-            clientes = clientes.Where(c => rutaDelVendedor != null && c.RutaId == rutaDelVendedor);
+            var rutasDelVendedor = await _context.UsuarioRutas.AsNoTracking()
+                .Where(r => r.UsuarioId == vendedor).Select(r => r.RutaId).ToListAsync();
+            clientes = clientes.Where(c => c.RutaId != null && rutasDelVendedor.Contains(c.RutaId.Value));
         }
 
         /*
@@ -141,8 +141,8 @@ public class VisitaService : IVisitaService
             var alcance = await _permisos.AlcanceFiltroAsync(usuarioId, "fact.pedidos");
             if (!alcance.SinRestriccion)
             {
-                var miRuta = alcance.RutaId;
-                clientes = clientes.Where(c => miRuta != null && c.RutaId == miRuta);
+                var misRutas = alcance.RutaIds;
+                clientes = clientes.Where(c => c.RutaId != null && misRutas.Contains(c.RutaId.Value));
             }
         }
 

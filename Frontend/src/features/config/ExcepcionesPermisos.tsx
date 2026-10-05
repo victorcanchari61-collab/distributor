@@ -306,7 +306,7 @@ export function ExcepcionesPermisos() {
               <h3 className="text-base font-bold text-ink">Qué clientes y ventas ve</h3>
               <p className="mt-0.5 text-sm text-ink-muted">
                 Manda sobre el alcance de su rol. Déjalo en <b>Igual que su rol</b> para no cambiar nada.
-                {usuario && !usuario.rutaId && ' Esta persona todavía no tiene ruta asignada (se asigna en Usuarios).'}
+                {usuario && !usuario.rutaIds?.length && ' Esta persona todavía no tiene ruta asignada (se asigna en Usuarios).'}
               </p>
             </div>
             <Button

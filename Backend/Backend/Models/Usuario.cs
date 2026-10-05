@@ -56,14 +56,14 @@ public class Usuario
     public int? EmpleadoId { get; set; }
 
     /// <summary>
-    /// La ruta que tiene a cargo: su cartera de clientes de la semana.
+    /// Las rutas que tiene a cargo: su cartera de clientes de la semana. Pueden ser varias.
     ///
     /// Es un dato de la PERSONA y no del rol, a propósito: el dueño también vende y tiene la suya sin
-    /// ser Vendedor. Por sí sola no restringe nada; lo que limita a "mis clientes" es el alcance de
-    /// datos del rol o del usuario. Con ese alcance, quien no tiene ruta no ve ningún cliente.
+    /// ser Vendedor. Por sí solas no restringen nada; lo que limita a "mis clientes" es el alcance de
+    /// datos del rol o del usuario. Con ese alcance ve los clientes de TODAS sus rutas, y quien no
+    /// tiene ninguna no ve ningún cliente.
     /// </summary>
-    public int? RutaId { get; set; }
-    public Ruta? Ruta { get; set; }
+    public ICollection<UsuarioRuta> Rutas { get; set; } = [];
     public Empleado? Empleado { get; set; }
 
     public bool Activo { get; set; } = true;

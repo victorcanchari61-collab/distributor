@@ -37,10 +37,9 @@ public class RutaRepository : IRutaRepository
             .ToDictionaryAsync(x => x.RutaId, x => x.Cantidad);
 
     public async Task<Dictionary<int, List<string>>> VendedoresPorRutaAsync() =>
-        (await _context.Usuarios.AsNoTracking()
-            .Where(u => u.RutaId != null)
-            .OrderByDescending(u => u.Activo).ThenBy(u => u.Nombre)
-            .Select(u => new { RutaId = u.RutaId!.Value, u.Nombre })
+        (await _context.UsuarioRutas.AsNoTracking()
+            .OrderByDescending(r => r.Usuario!.Activo).ThenBy(r => r.Usuario!.Nombre)
+            .Select(r => new { r.RutaId, r.Usuario!.Nombre })
             .ToListAsync())
         .GroupBy(x => x.RutaId)
         .ToDictionary(g => g.Key, g => g.Select(x => x.Nombre).ToList());
@@ -51,10 +50,10 @@ public class RutaRepository : IRutaRepository
         + await _context.Despachos.CountAsync(d => d.RutaId == id);
 
     public async Task<List<string>> VendedoresAsync(int id) =>
-        await _context.Usuarios.AsNoTracking()
-            .Where(u => u.RutaId == id)
-            .OrderByDescending(u => u.Activo).ThenBy(u => u.Nombre)
-            .Select(u => u.Nombre)
+        await _context.UsuarioRutas.AsNoTracking()
+            .Where(r => r.RutaId == id)
+            .OrderByDescending(r => r.Usuario!.Activo).ThenBy(r => r.Usuario!.Nombre)
+            .Select(r => r.Usuario!.Nombre)
             .ToListAsync();
 
     public async Task<Ruta> AddAsync(Ruta ruta)

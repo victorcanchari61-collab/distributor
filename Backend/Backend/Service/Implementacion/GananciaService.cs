@@ -231,11 +231,12 @@ public class GananciaService : IGananciaService
 
         if (alcance is { SinRestriccion: false })
         {
-            var ruta = alcance.RutaId;
+            var rutas = alcance.RutaIds;
             notas = alcance.SoloPropios
                 ? notas.Where(n => n.UsuarioId == alcance.UsuarioId)
                 : notas.Where(n => n.UsuarioId == alcance.UsuarioId
-                                   || (ruta != null && n.Cliente != null && n.Cliente.RutaId == ruta));
+                                   || (n.Cliente != null && n.Cliente.RutaId != null
+                                       && rutas.Contains(n.Cliente.RutaId.Value)));
         }
 
         return (notas, alcance is { SinRestriccion: false });

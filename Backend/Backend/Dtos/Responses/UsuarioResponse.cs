@@ -28,9 +28,9 @@ public class UsuarioResponse
     public int? EmpleadoId { get; set; }
     public string? Empleado { get; set; }
 
-    /// <summary>La ruta que tiene a cargo, si tiene.</summary>
-    public int? RutaId { get; set; }
-    public string? Ruta { get; set; }
+    /// <summary>Las rutas que tiene a cargo, por nombre. Vacías si no tiene ninguna.</summary>
+    public List<int> RutaIds { get; set; } = [];
+    public List<string> Rutas { get; set; } = [];
 
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }

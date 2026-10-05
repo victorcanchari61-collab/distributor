@@ -90,7 +90,7 @@ public class UsuarioService : IUsuarioService
         var rol = roles[0];
 
         var empleado = await ResolverEmpleadoAsync(request.EmpleadoId, null);
-        var ruta = await ResolverRutaAsync(request.RutaId);
+        var rutas = await ResolverRutasAsync(request.RutaIds ?? []);
 
         var usuario = new Usuario
         {
@@ -101,14 +101,13 @@ public class UsuarioService : IUsuarioService
             RolId = rol.Id,
             RolesAdicionales = roles.Skip(1).Select(r => new UsuarioRol { RolId = r.Id }).ToList(),
             EmpleadoId = empleado?.Id,
-            RutaId = ruta?.Id
+            Rutas = rutas.Select(r => new UsuarioRuta { RutaId = r.Id, Ruta = r }).ToList()
         };
         usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.Password);
 
         await _repository.AddAsync(usuario);
         usuario.Rol = rol;
         usuario.Empleado = empleado;
-        usuario.Ruta = ruta;
         var response = MapToResponse(usuario);
         await _notificador.AvisarAsync("usuarios", "creado", response);
         return response;
@@ -146,7 +145,7 @@ public class UsuarioService : IUsuarioService
         var rol = roles[0];
 
         var empleado = await ResolverEmpleadoAsync(request.EmpleadoId, id);
-        var ruta = await ResolverRutaAsync(request.RutaId);
+        var rutas = request.RutaIds is null ? null : await ResolverRutasAsync(request.RutaIds);
 
         usuario.Nombre = request.Nombre;
         usuario.Email = email;
@@ -166,9 +165,20 @@ public class UsuarioService : IUsuarioService
         }
         // Null desenlaza la ficha: la cuenta deja de ser de esa persona.
         usuario.EmpleadoId = empleado?.Id;
-        // Null la quita: deja de tener cartera. Con alcance "mis clientes" pasa a no ver ninguno.
-        usuario.RutaId = ruta?.Id;
-        usuario.Ruta = ruta;
+        // Las rutas se sincronizan igual que los roles. Sin ninguna deja de tener cartera: con alcance
+        // "mis clientes" pasa a no ver ningún cliente. Null no las toca.
+        if (rutas is not null)
+        {
+            var nuevas = rutas.Select(r => r.Id).ToHashSet();
+            foreach (var quitar in usuario.Rutas.Where(r => !nuevas.Contains(r.RutaId)).ToList())
+            {
+                usuario.Rutas.Remove(quitar);
+            }
+            foreach (var agregar in rutas.Where(r => usuario.Rutas.All(x => x.RutaId != r.Id)))
+            {
+                usuario.Rutas.Add(new UsuarioRuta { UsuarioId = usuario.Id, RutaId = agregar.Id, Ruta = agregar });
+            }
+        }
         usuario.Activo = request.Activo;
 
         if (!string.IsNullOrWhiteSpace(request.Password))
@@ -307,12 +317,16 @@ public class UsuarioService : IUsuarioService
     /// base de datos. Una ruta desactivada no se asigna, pero tampoco se le quita a quien ya la tiene
     /// por editar otra cosa: eso lo decide quien la desactiva.
     /// </summary>
-    private async Task<Ruta?> ResolverRutaAsync(int? rutaId)
+    private async Task<List<Ruta>> ResolverRutasAsync(List<int> rutaIds)
     {
-        if (rutaId is not int id || id <= 0) return null;
+        var ids = rutaIds.Where(id => id > 0).Distinct().ToList();
+        if (ids.Count == 0) return [];
 
-        return await _repository.GetRutaAsync(id)
-            ?? throw new BadRequestException("La ruta indicada no existe");
+        var rutas = await _repository.GetRutasAsync(ids);
+        if (rutas.Count != ids.Count) throw new BadRequestException("Una de las rutas indicadas no existe");
+
+        // En el orden en que se eligieron.
+        return ids.Select(id => rutas.First(r => r.Id == id)).ToList();
     }
 
     /// <summary>Vacío es "sin correo": se guarda como nulo, no como texto vacío, para que el índice único no lo cuente.</summary>
@@ -403,8 +417,8 @@ public class UsuarioService : IUsuarioService
             Roles = RolesDe(usuario).Select(r => r.Nombre).ToList(),
             EmpleadoId = usuario.EmpleadoId,
             Empleado = usuario.Empleado?.NombreCompleto,
-            RutaId = usuario.RutaId,
-            Ruta = usuario.Ruta?.Nombre,
+            RutaIds = usuario.Rutas.Where(r => r.Ruta is not null).OrderBy(r => r.Ruta!.Nombre).Select(r => r.RutaId).ToList(),
+            Rutas = usuario.Rutas.Where(r => r.Ruta is not null).Select(r => r.Ruta!.Nombre).OrderBy(n => n).ToList(),
             Activo = usuario.Activo,
             FechaCreacion = usuario.FechaCreacion
         };

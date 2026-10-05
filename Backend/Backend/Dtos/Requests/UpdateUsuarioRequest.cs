@@ -18,8 +18,11 @@ public class UpdateUsuarioRequest
     /// <summary>Su ficha en Empleados. Null la desenlaza.</summary>
     public int? EmpleadoId { get; set; }
 
-    /// <summary>La ruta que tiene a cargo. Null la quita.</summary>
-    public int? RutaId { get; set; }
+    /// <summary>
+    /// Las rutas que tiene a cargo. Vacía se las quita todas; null no las toca, para que un APK
+    /// anterior (que solo conocía una ruta) no le borre las demás al guardar otro cambio.
+    /// </summary>
+    public List<int>? RutaIds { get; set; }
 
     public bool Activo { get; set; } = true;
 

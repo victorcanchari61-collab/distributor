@@ -66,9 +66,9 @@ public class ClienteService : IClienteService
         var alcance = await _permisos.AlcanceFiltroAsync(id, "maestros.clientes");
         if (alcance.SinRestriccion) return;
 
-        if (alcance.RutaId is null || cliente.RutaId != alcance.RutaId)
+        if (!alcance.EsDeMisRutas(cliente.RutaId))
         {
-            throw new ForbiddenException("Solo puedes modificar los clientes de tu ruta");
+            throw new ForbiddenException("Solo puedes modificar los clientes de tus rutas");
         }
     }
 
@@ -132,15 +132,15 @@ public class ClienteService : IClienteService
     }
 
     /// <summary>
-    /// Si el selector de ese submódulo se acota a la ruta de quien vende: con
-    /// alcance "mis clientes", solo los de su ruta (ninguno si no tiene).
+    /// Si el selector de ese submódulo se acota a las rutas de quien vende: con
+    /// alcance "mis clientes", solo los de sus rutas (ninguno si no tiene).
     /// </summary>
-    private async Task<(bool Acotar, int? Ruta)> AlcanceSelectorAsync(string? submodulo)
+    private async Task<(bool Acotar, List<int> Rutas)> AlcanceSelectorAsync(string? submodulo)
     {
-        if (submodulo is null || _usuarioActual.Id is not int uid) return (false, null);
+        if (submodulo is null || _usuarioActual.Id is not int uid) return (false, []);
 
         var alcance = await _permisos.AlcanceFiltroAsync(uid, submodulo);
-        return !alcance.SinRestriccion && !alcance.SoloPropios ? (true, alcance.RutaId) : (false, null);
+        return !alcance.SinRestriccion && !alcance.SoloPropios ? (true, alcance.RutaIds) : (false, []);
     }
 
     public async Task<PaginaResponse<ClienteResponse>> ListarAsync(ConsultaTablaRequest consulta)

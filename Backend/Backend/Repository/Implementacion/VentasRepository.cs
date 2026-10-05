@@ -78,28 +78,30 @@ public class VentasRepository : IVentasRepository
     {
         if (alcance is null || alcance.SinRestriccion) return query;
 
-        // Local y no alcance.RutaId dentro de la consulta: asi EF la manda como parametro y el
-        // "sin ruta" (null) queda descartado antes de comparar, en vez de emparejar con clientes sin ruta.
-        var ruta = alcance.RutaId;
+        // Local y no alcance.RutaIds dentro de la consulta: asi EF la manda como parametro. Un
+        // cliente sin ruta no es de nadie: se descarta antes de buscarlo entre las rutas.
+        var rutas = alcance.RutaIds;
 
         return alcance.SoloPropios
             ? query.Where(p => p.UsuarioId == alcance.UsuarioId)
             : query.Where(p => p.UsuarioId == alcance.UsuarioId
-                               || (ruta != null && p.Cliente != null && p.Cliente.RutaId == ruta));
+                               || (p.Cliente != null && p.Cliente.RutaId != null
+                                   && rutas.Contains(p.Cliente.RutaId.Value)));
     }
 
     private static IQueryable<NotaVenta> Acotar(IQueryable<NotaVenta> query, AlcanceFiltro? alcance)
     {
         if (alcance is null || alcance.SinRestriccion) return query;
 
-        // Local y no alcance.RutaId dentro de la consulta: asi EF la manda como parametro y el
-        // "sin ruta" (null) queda descartado antes de comparar, en vez de emparejar con clientes sin ruta.
-        var ruta = alcance.RutaId;
+        // Local y no alcance.RutaIds dentro de la consulta: asi EF la manda como parametro. Un
+        // cliente sin ruta no es de nadie: se descarta antes de buscarlo entre las rutas.
+        var rutas = alcance.RutaIds;
 
         return alcance.SoloPropios
             ? query.Where(n => n.UsuarioId == alcance.UsuarioId)
             : query.Where(n => n.UsuarioId == alcance.UsuarioId
-                               || (ruta != null && n.Cliente != null && n.Cliente.RutaId == ruta));
+                               || (n.Cliente != null && n.Cliente.RutaId != null
+                                   && rutas.Contains(n.Cliente.RutaId.Value)));
     }
 
     public async Task<int?> RutaDeClienteAsync(int clienteId) =>

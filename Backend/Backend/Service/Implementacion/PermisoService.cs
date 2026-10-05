@@ -259,11 +259,11 @@ public class PermisoService : IPermisoService
     public async Task<AlcanceFiltro> AlcanceFiltroAsync(int usuarioId, string submodulo)
     {
         var alcance = await AlcanceAsync(usuarioId, submodulo);
-        var ruta = await _context.Usuarios.AsNoTracking()
-            .Where(u => u.Id == usuarioId)
-            .Select(u => u.RutaId)
-            .FirstOrDefaultAsync();
-        return new AlcanceFiltro(alcance, usuarioId, ruta);
+        var rutas = await _context.UsuarioRutas.AsNoTracking()
+            .Where(r => r.UsuarioId == usuarioId)
+            .Select(r => r.RutaId)
+            .ToListAsync();
+        return new AlcanceFiltro(alcance, usuarioId, rutas);
     }
 
     public async Task<string> AlcanceAsync(int usuarioId, string submodulo)

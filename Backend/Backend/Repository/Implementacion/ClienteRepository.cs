@@ -24,10 +24,10 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
             .ToListAsync();
 
     public async Task<(List<Dtos.Responses.ClienteOpcionResponse> Items, int Total)> BuscarAsync(
-        ConsultaTablaRequest consulta, bool acotarARuta, int? rutaId)
+        ConsultaTablaRequest consulta, bool acotarARuta, List<int> rutaIds)
     {
         var query = DbSet.AsNoTracking()
-            .Where(c => c.Activo && (!acotarARuta || (rutaId != null && c.RutaId == rutaId)));
+            .Where(c => c.Activo && (!acotarARuta || (c.RutaId != null && rutaIds.Contains(c.RutaId.Value))));
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
@@ -71,9 +71,9 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
             .PaginarAsync(consulta);
     }
 
-    public async Task<List<Dtos.Responses.ClienteOpcionResponse>> GetSelectorAsync(bool acotarARuta, int? rutaId) =>
+    public async Task<List<Dtos.Responses.ClienteOpcionResponse>> GetSelectorAsync(bool acotarARuta, List<int> rutaIds) =>
         await DbSet.AsNoTracking()
-            .Where(c => c.Activo && (!acotarARuta || (rutaId != null && c.RutaId == rutaId)))
+            .Where(c => c.Activo && (!acotarARuta || (c.RutaId != null && rutaIds.Contains(c.RutaId.Value))))
             .OrderBy(c => c.Nombre)
             .Select(c => new Dtos.Responses.ClienteOpcionResponse
             {
@@ -90,7 +90,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
             })
             .ToListAsync();
 
-    public async Task<List<Cliente>> GetCatalogoAsync(bool acotarARuta, int? rutaId) =>
+    public async Task<List<Cliente>> GetCatalogoAsync(bool acotarARuta, List<int> rutaIds) =>
         await DbSet.AsNoTracking()
             .Include(c => c.Mercado)
             .Include(c => c.Ruta)
@@ -98,7 +98,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
             .Include(c => c.Distrito!).ThenInclude(d => d.Provincia!).ThenInclude(p => p.Departamento)
             // La ruta se filtra en la base: antes se traía el padrón entero y se
             // descartaba en memoria lo ajeno.
-            .Where(c => !acotarARuta || (rutaId != null && c.RutaId == rutaId))
+            .Where(c => !acotarARuta || (c.RutaId != null && rutaIds.Contains(c.RutaId.Value)))
             .ToListAsync();
 
     public async Task<Cliente?> GetByDocumentoAsync(string documento)
@@ -134,7 +134,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
 
         foreach (var filtro in consulta.Filtros)
         {
-            query = AplicarFiltro(query, filtro, Context.Usuarios);
+            query = AplicarFiltro(query, filtro, Context.UsuarioRutas);
         }
 
         // El total se cuenta ANTES de paginar: es cuántas filas hay en todo el
@@ -179,7 +179,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
     /// que un nombre de columna inventado no llegue nunca a la consulta.
     /// </summary>
     private static IQueryable<Cliente> AplicarFiltro(
-        IQueryable<Cliente> query, FiltroTablaRequest filtro, IQueryable<Usuario> usuarios)
+        IQueryable<Cliente> query, FiltroTablaRequest filtro, IQueryable<UsuarioRuta> aCargo)
     {
         var valor = filtro.Valor?.Trim();
 
@@ -226,7 +226,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
                 (exacto ? c.Ruta.Nombre == valor : EF.Functions.Like(c.Ruta.Nombre, $"%{valor}%"))),
             // El vendedor de un cliente es quien tiene a cargo su ruta.
             "vendedor" => query.Where(c => c.RutaId != null &&
-                usuarios.Any(u => u.Activo && u.RutaId == c.RutaId && u.Nombre == valor)),
+                aCargo.Any(r => r.RutaId == c.RutaId && r.Usuario!.Activo && r.Usuario.Nombre == valor)),
             "mercado" => query.Where(c => c.Mercado != null &&
                 (exacto ? c.Mercado.Nombre == valor : EF.Functions.Like(c.Mercado.Nombre, $"%{valor}%"))),
             // En pantalla el estado se lee "Activo" / "Inactivo", no true/false.

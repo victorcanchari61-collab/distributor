@@ -40,7 +40,8 @@ const VACIO = {
   // Todos sus roles; el primero es el principal.
   rolIds: [] as number[],
   empleadoId: 0,
-  rutaId: 0,
+  // Las rutas que tiene a cargo: pueden ser varias.
+  rutaIds: [] as number[],
 }
 
 export function UsuariosPage() {
@@ -134,7 +135,7 @@ export function UsuariosPage() {
       dni: usuario.dni ?? '',
       rolIds: usuario.rolIds?.length ? usuario.rolIds : [usuario.rolId],
       empleadoId: usuario.empleadoId ?? 0,
-      rutaId: usuario.rutaId ?? 0,
+      rutaIds: usuario.rutaIds ?? [],
     })
     setAbierto(true)
   }
@@ -215,8 +216,8 @@ export function UsuariosPage() {
           rolIds: form.rolIds,
           // 0 es "sin empleado": desenlaza la ficha.
           empleadoId: form.empleadoId || null,
-          // 0 es "sin ruta": la quita.
-          rutaId: form.rutaId || null,
+          // Vacía le quita todas.
+          rutaIds: form.rutaIds,
           activo: editando.activo,
           // Vacio: el backend deja la contraseña que ya tenia.
           password: form.password || null,
@@ -230,7 +231,7 @@ export function UsuariosPage() {
           dni: form.dni || null,
           rolIds: form.rolIds,
           empleadoId: form.empleadoId || null,
-          rutaId: form.rutaId || null,
+          rutaIds: form.rutaIds,
         })
       }
 
@@ -262,9 +263,9 @@ export function UsuariosPage() {
         dni: usuario.dni,
         rolIds: usuario.rolIds?.length ? usuario.rolIds : [usuario.rolId],
         // El PUT REEMPLAZA el usuario: lo que no viaje se borra. Sin esto, desactivar a alguien le quitaba
-        // su ruta y el enlace con su ficha de empleado.
+        // sus rutas y el enlace con su ficha de empleado.
         empleadoId: usuario.empleadoId,
-        rutaId: usuario.rutaId,
+        rutaIds: usuario.rutaIds ?? [],
         activo: !usuario.activo,
       })
       await cargarUsuarios()
@@ -305,8 +306,21 @@ export function UsuariosPage() {
         { value: 'Sin ruta', label: 'Sin ruta' },
         ...rutas.map((r) => ({ value: r.nombre, label: `Ruta ${r.nombre}` })),
       ],
-      value: (row) => row.ruta ?? 'Sin ruta',
-      render: (row) => (row.ruta ? <Badge tone="neutral">Ruta {row.ruta}</Badge> : <span className="text-ink-soft">—</span>),
+      value: (row) => (row.rutas?.length ? row.rutas.join(', ') : 'Sin ruta'),
+      // Con varias rutas, el filtro encuentra a quien tenga esa entre las suyas.
+      valores: (row) => (row.rutas?.length ? row.rutas : ['Sin ruta']),
+      render: (row) =>
+        row.rutas?.length ? (
+          <span className="inline-flex flex-wrap gap-1">
+            {row.rutas.map((nombre) => (
+              <Badge key={nombre} tone="neutral">
+                Ruta {nombre}
+              </Badge>
+            ))}
+          </span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
     },
     {
       key: 'rol',
@@ -549,26 +563,24 @@ export function UsuariosPage() {
 
           {/*
             La cartera de clientes que atiende, para cualquier usuario y sin depender del rol: el dueño
-            también vende y tiene la suya. Sola no restringe nada; lo que limita a "mis clientes" es el
-            alcance del rol. Con ese alcance, sin ruta no ve ningún cliente.
+            también vende y tiene la suya. Puede tener varias rutas. Solas no restringen nada; lo que limita
+            a "mis clientes" es el alcance del rol: con ese alcance ve los clientes de todas sus rutas, y sin
+            ninguna no ve ningún cliente.
           */}
-          <Desplegable
-            label="Ruta"
+          <DesplegableMultiple
+            label="Rutas"
             optional
             placeholder="Sin ruta"
-            value={form.rutaId}
-            onChange={(v) => setForm({ ...form, rutaId: Number(v) })}
-            options={[
-              { value: 0, label: 'Sin ruta' },
-              ...rutas
-                // Una ruta desactivada no se asigna, pero se sigue mostrando a quien ya la tiene.
-                .filter((r) => r.activo || r.id === form.rutaId)
-                .map((r) => ({
-                  value: r.id,
-                  label: `Ruta ${r.nombre}`,
-                  detalle: r.vendedores.length ? r.vendedores.join(', ') : 'sin vendedor',
-                })),
-            ]}
+            value={form.rutaIds}
+            onChange={(v) => setForm({ ...form, rutaIds: v.map(Number) })}
+            options={rutas
+              // Una ruta desactivada no se asigna, pero se sigue mostrando a quien ya la tiene.
+              .filter((r) => r.activo || form.rutaIds.includes(r.id))
+              .map((r) => ({
+                value: r.id,
+                label: `Ruta ${r.nombre}`,
+                detalle: r.vendedores.length ? r.vendedores.join(', ') : 'sin vendedor',
+              }))}
           />
 
         </div>

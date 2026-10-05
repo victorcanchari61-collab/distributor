@@ -34,6 +34,7 @@ public class AppDbContext : DbContext
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<UsuarioRol> UsuarioRoles => Set<UsuarioRol>();
+    public DbSet<UsuarioRuta> UsuarioRutas => Set<UsuarioRuta>();
     public DbSet<RolPermiso> RolPermisos => Set<RolPermiso>();
     public DbSet<UsuarioPermiso> UsuarioPermisos => Set<UsuarioPermiso>();
     public DbSet<Despacho> Despachos => Set<Despacho>();
@@ -375,13 +376,19 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(u => u.EmpleadoId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
 
+        modelBuilder.Entity<UsuarioRuta>(entity =>
+        {
+            entity.ToTable("UsuarioRutas");
+            entity.HasKey(x => new { x.UsuarioId, x.RutaId });
+
+            entity.HasOne(x => x.Usuario).WithMany(u => u.Rutas)
+                .HasForeignKey(x => x.UsuarioId).OnDelete(DeleteBehavior.Cascade);
             // Varias cuentas pueden compartir ruta (el titular y su reemplazo). Restrict: una ruta
             // con gente a cargo no se borra; el servicio lo explica antes de llegar aqui.
-            entity.HasOne(u => u.Ruta)
-                .WithMany()
-                .HasForeignKey(u => u.RutaId)
-                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Ruta).WithMany()
+                .HasForeignKey(x => x.RutaId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<UsuarioRol>(entity =>

@@ -48,8 +48,8 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
   /// De quien es esta cuenta. Null es "sin empleado".
   late int? _empleadoId = widget.usuario?.empleadoId;
 
-  /// La ruta que tiene a cargo. Null es "sin ruta".
-  late int? _rutaId = widget.usuario?.rutaId;
+  /// Las rutas que tiene a cargo. Vacía es "sin ruta".
+  late List<int> _rutaIds = List.of(widget.usuario?.rutaIds ?? const []);
 
   bool _guardando = false;
   String? _error;
@@ -171,8 +171,8 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
       // el registro, asi que no mandarlo desenlazaria la ficha de quien ya la
       // tenia solo por haber cambiado el nombre.
       'empleadoId': _empleadoId,
-      // Igual: viaja siempre, o guardar cualquier otro cambio le quitaria la ruta.
-      'rutaId': _rutaId,
+      // Igual: viajan siempre, o guardar cualquier otro cambio le quitaria las rutas.
+      'rutaIds': _rutaIds,
       if (_esNuevo) 'password': _password.text,
       if (!_esNuevo) ...{
         'activo': widget.usuario!.activo,
@@ -318,8 +318,10 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
 
             // Uno o varios roles: el primero que se marca es el principal. Sus permisos son la union de los de
             // todos, asi que agregar un rol nunca le quita nada de lo que ya tenia.
-            _SelectorRoles(
-              roles: roles,
+            _SelectorMarcables(
+              etiqueta: 'Roles',
+              icono: Icons.verified_user_outlined,
+              opciones: [for (final r in roles) (r.id, r.nombre)],
               elegidos: _rolIds,
               error: _errorRol,
               habilitado: !_guardando,
@@ -342,26 +344,21 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
             const SizedBox(height: Dimen.espacio4),
 
             // La cartera de clientes que atiende, para cualquier usuario y sin depender del rol: el
-            // dueño también vende. Sola no restringe nada; lo que limita a "mis clientes" es el
-            // alcance del rol, y con ese alcance sin ruta no se ve ningún cliente.
-            AppSelector<int?>(
-              valor: _rutaId,
-              etiqueta: 'Ruta (opcional)',
+            // dueño también vende. Puede tener varias rutas. Solas no restringen nada; lo que limita a
+            // "mis clientes" es el alcance del rol: con él ve los clientes de todas sus rutas, y sin
+            // ninguna no ve ningún cliente.
+            _SelectorMarcables(
+              etiqueta: 'Rutas (opcional)',
               icono: Icons.alt_route,
-              habilitado: !_guardando,
               opciones: [
-                const Opcion<int?>(null, 'Sin ruta'),
                 for (final r in rutas)
                   // Una ruta desactivada no se asigna, pero se sigue mostrando a quien ya la tiene.
-                  if (r.activo || r.id == _rutaId)
-                    Opcion<int?>(
-                      r.id,
-                      r.vendedores.isEmpty
-                          ? 'Ruta ${r.nombre}'
-                          : 'Ruta ${r.nombre} · ${r.vendedores.join(', ')}',
-                    ),
+                  if (r.activo || _rutaIds.contains(r.id))
+                    (r.id, 'Ruta ${r.nombre}'),
               ],
-              onCambio: (v) => setState(() => _rutaId = v),
+              elegidos: _rutaIds,
+              habilitado: !_guardando,
+              onCambio: (v) => setState(() => _rutaIds = v),
             ),
             if (roles.isEmpty) ...[
               const SizedBox(height: Dimen.espacio2),
@@ -403,25 +400,34 @@ class _UsuarioFormularioState extends ConsumerState<UsuarioFormulario> {
 
 /// Uno o varios roles: cada uno se marca sin cerrar nada, y el orden en que se marcan importa (el
 /// primero es el principal). Hermano de AppSelector, pero de varios.
-class _SelectorRoles extends StatelessWidget {
-  const _SelectorRoles({
-    required this.roles,
+/// Varios de una lista, como chips que se marcan y desmarcan: los roles y las rutas.
+///
+/// Conserva el orden en que se marcaron: el primer rol es el principal.
+class _SelectorMarcables extends StatelessWidget {
+  const _SelectorMarcables({
+    required this.etiqueta,
+    required this.icono,
+    required this.opciones,
     required this.elegidos,
     required this.onCambio,
     this.error,
     this.habilitado = true,
   });
 
-  final List<Rol> roles;
+  final String etiqueta;
+  final IconData icono;
+
+  /// Id y nombre de cada opción.
+  final List<(int, String)> opciones;
   final List<int> elegidos;
   final ValueChanged<List<int>> onCambio;
   final String? error;
   final bool habilitado;
 
-  void _alternar(int rolId) {
-    final siguientes = elegidos.contains(rolId)
-        ? elegidos.where((id) => id != rolId).toList()
-        : [...elegidos, rolId];
+  void _alternar(int id) {
+    final siguientes = elegidos.contains(id)
+        ? elegidos.where((e) => e != id).toList()
+        : [...elegidos, id];
     onCambio(siguientes);
   }
 
@@ -429,12 +435,8 @@ class _SelectorRoles extends StatelessWidget {
   Widget build(BuildContext context) {
     return InputDecorator(
       decoration: InputDecoration(
-        labelText: 'Roles',
-        prefixIcon: const Icon(
-          Icons.verified_user_outlined,
-          size: 19,
-          color: Colores.tintaTenue,
-        ),
+        labelText: etiqueta,
+        prefixIcon: Icon(icono, size: 19, color: Colores.tintaTenue),
         errorText: error,
         enabled: habilitado,
       ),
@@ -444,11 +446,11 @@ class _SelectorRoles extends StatelessWidget {
           spacing: 8,
           runSpacing: 6,
           children: [
-            for (final rol in roles)
+            for (final (id, nombre) in opciones)
               FilterChip(
-                label: Text(rol.nombre),
-                selected: elegidos.contains(rol.id),
-                onSelected: habilitado ? (_) => _alternar(rol.id) : null,
+                label: Text(nombre),
+                selected: elegidos.contains(id),
+                onSelected: habilitado ? (_) => _alternar(id) : null,
               ),
           ],
         ),

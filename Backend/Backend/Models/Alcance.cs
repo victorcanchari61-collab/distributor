@@ -95,14 +95,17 @@ public class UsuarioAlcance
 /// consulta: filtrar en memoria despues de paginar daria paginas incompletas
 /// — "mostrando 3 de 40" con dos filas visibles.
 /// </summary>
-/// <param name="RutaId">
-/// La ruta que tiene a cargo quien pide. "Mis clientes" son los de ESA ruta; sin ruta no hay
-/// ninguno, y no "todos": null nunca debe compararse contra la ruta de un cliente sin ruta.
+/// <param name="RutaIds">
+/// Las rutas que tiene a cargo quien pide. "Mis clientes" son los de ESAS rutas; sin ninguna no
+/// hay ninguno, y no "todos". Es List y no array: EF no traduce el Contains de un array.
 /// </param>
-public sealed record AlcanceFiltro(string Alcance, int UsuarioId, int? RutaId = null)
+public sealed record AlcanceFiltro(string Alcance, int UsuarioId, List<int> RutaIds)
 {
     public bool SinRestriccion => Alcance == AlcanceDatos.Todos;
 
     /// <summary>Solo lo que registro esa persona.</summary>
     public bool SoloPropios => Alcance == AlcanceDatos.Propios;
+
+    /// <summary>Si un cliente de esa ruta es suyo. Un cliente sin ruta no es de nadie.</summary>
+    public bool EsDeMisRutas(int? rutaId) => rutaId is int id && RutaIds.Contains(id);
 }

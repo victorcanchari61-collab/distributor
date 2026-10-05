@@ -40,7 +40,8 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
         // Activos primero: los desactivados siguen listandose para poder
         // volver a habilitarlos, igual que en clientes y proveedores.
         return await DbSet.Include(u => u.Rol).Include(u => u.RolesAdicionales).ThenInclude(r => r.Rol)
-            .Include(u => u.Empleado).Include(u => u.Ruta)
+            .Include(u => u.Empleado).Include(u => u.Rutas).ThenInclude(r => r.Ruta)
+            .AsSplitQuery()
             .OrderByDescending(u => u.Activo)
             .ThenBy(u => u.Nombre)
             .ToListAsync();
@@ -49,7 +50,8 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
     public async Task<Usuario?> GetByIdConRolAsync(int id)
     {
         return await DbSet.Include(u => u.Rol).Include(u => u.RolesAdicionales).ThenInclude(r => r.Rol)
-            .Include(u => u.Empleado).Include(u => u.Ruta)
+            .Include(u => u.Empleado).Include(u => u.Rutas).ThenInclude(r => r.Ruta)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(u => u.Id == id);
     }
 
@@ -65,17 +67,17 @@ public class UsuarioRepository : Repository<Usuario>, IUsuarioRepository
 
     public async Task<Dictionary<int, string>> VendedoresPorRutaAsync()
     {
-        var filas = await DbSet.AsNoTracking()
-            .Where(u => u.Activo && u.RutaId != null)
-            .Select(u => new { RutaId = u.RutaId!.Value, u.Nombre })
+        var filas = await Context.UsuarioRutas.AsNoTracking()
+            .Where(r => r.Usuario!.Activo)
+            .Select(r => new { r.RutaId, r.Usuario!.Nombre })
             .ToListAsync();
         return filas.GroupBy(f => f.RutaId)
             .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(f => f.Nombre).OrderBy(n => n)));
     }
 
-    public async Task<Ruta?> GetRutaAsync(int rutaId)
+    public async Task<List<Ruta>> GetRutasAsync(List<int> rutaIds)
     {
-        return await Context.Rutas.FirstOrDefaultAsync(r => r.Id == rutaId);
+        return await Context.Rutas.Where(r => rutaIds.Contains(r.Id)).ToListAsync();
     }
 
     public async Task<Usuario?> GetUsuarioDeEmpleadoAsync(int empleadoId, int? excluirUsuarioId = null)
