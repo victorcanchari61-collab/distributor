@@ -6,6 +6,8 @@ export interface PlanillaDetalleResponse {
   id: number
   empleadoId: number
   empleado: string
+  /** Su DNI o código, para la boleta. */
+  documento: string | null
   cargo: string | null
   sueldoSemanal: number
   diasNoPagados: number
@@ -85,4 +87,7 @@ export const planillaApi = {
   pagar: (id: number, cuentaFinancieraId: number, conDiasSinMarcar = false) =>
     api.post<PlanillaResponse>(`/planilla/${id}/pagar`, { cuentaFinancieraId, conDiasSinMarcar }),
   anular: (id: number) => api.patch<PlanillaResponse>(`/planilla/${id}/anular`),
+  /** La ruta de las boletas en PDF: de todos, o de un empleado. */
+  rutaBoletas: (id: number, empleadoId?: number) =>
+    `/planilla/${id}/pdf${empleadoId ? `?empleadoId=${empleadoId}` : ''}`,
 }

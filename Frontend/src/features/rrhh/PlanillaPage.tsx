@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Ban, Calculator, Coins, Eye, HandCoins, History, Pencil, RefreshCw, Wallet } from 'lucide-react'
+import { Ban, Calculator, Coins, Eye, FileText, HandCoins, History, Pencil, RefreshCw, Wallet } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -14,6 +14,7 @@ import {
   Tabs,
   useConfirmacion,
   useToast,
+  VisorReportePdf,
 } from '../../components/ui'
 import type { BadgeTone, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -67,6 +68,8 @@ export function PlanillaPage() {
   const [error, setError] = useState('')
   const [ajustando, setAjustando] = useState<PlanillaDetalleResponse | null>(null)
   const [pagarAbierto, setPagarAbierto] = useState(false)
+  // Las boletas en PDF: de todos, o de un empleado.
+  const [boletas, setBoletas] = useState<{ ruta: string; titulo: string; nombre: string } | null>(null)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -287,6 +290,22 @@ export function PlanillaPage() {
                 Pagar
               </Button>
             )}
+            {planilla && planilla.detalle.length > 0 && puede('rrhh.planilla', 'exportar') && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() =>
+                  setBoletas({
+                    ruta: planillaApi.rutaBoletas(planilla.id),
+                    titulo: `Boletas del ${fechaCorta(planilla.desde)} al ${fechaCorta(planilla.hasta)}`,
+                    nombre: `boletas-${planilla.desde.slice(0, 10)}.pdf`,
+                  })
+                }
+                iconRight={<FileText size={15} />}
+              >
+                Boletas
+              </Button>
+            )}
             {planilla && puede('rrhh.planilla', 'anular') && (
               <Button size="sm" variant="secondary" onClick={() => anular(planilla)} iconRight={<Ban size={15} />}>
                 Anular
@@ -334,13 +353,30 @@ export function PlanillaPage() {
               ? 'Ningún empleado activo tiene sueldo semanal.'
               : 'Esta semana todavía no tiene planilla: usa "Armar planilla".'
         }
-        rowActions={(row) =>
-          borrador && puede('rrhh.planilla', 'editar') ? (
-            <RowAction label={`Ajustar ${row.empleado}`} onClick={() => setAjustando(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          ) : null
-        }
+        rowActions={(row) => (
+          <>
+            {planilla && puede('rrhh.planilla', 'exportar') && (
+              <RowAction
+                label={`Boleta de ${row.empleado}`}
+                tone="neutral"
+                onClick={() =>
+                  setBoletas({
+                    ruta: planillaApi.rutaBoletas(planilla.id, row.empleadoId),
+                    titulo: `Boleta de ${row.empleado}`,
+                    nombre: `boleta-${planilla.desde.slice(0, 10)}.pdf`,
+                  })
+                }
+              >
+                <FileText size={15} />
+              </RowAction>
+            )}
+            {borrador && puede('rrhh.planilla', 'editar') && (
+              <RowAction label={`Ajustar ${row.empleado}`} onClick={() => setAjustando(row)}>
+                <Pencil size={15} />
+              </RowAction>
+            )}
+          </>
+        )}
       >
         {ajustando && (
           <AjusteModal
@@ -364,6 +400,14 @@ export function PlanillaPage() {
             }}
             // Si el servidor la recalculó (cambió la asistencia, un sueldo...), se ven los montos nuevos.
             onRefrescar={cargar}
+          />
+        )}
+        {boletas && (
+          <VisorReportePdf
+            ruta={boletas.ruta}
+            titulo={boletas.titulo}
+            nombreArchivo={boletas.nombre}
+            onCerrar={() => setBoletas(null)}
           />
         )}
         {dialogo}

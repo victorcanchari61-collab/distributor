@@ -213,4 +213,15 @@ class RrhhApi {
         .map((e) => Feriado.desdeJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// POST /api/feriado
+  Future<void> crearFeriado(Map<String, dynamic> cuerpo) =>
+      _api.post('/feriado', cuerpo: cuerpo);
+
+  /// PUT /api/feriado/{id}
+  Future<void> actualizarFeriado(int id, Map<String, dynamic> cuerpo) =>
+      _api.put('/feriado/$id', cuerpo: cuerpo);
+
+  /// DELETE /api/feriado/{id}
+  Future<void> eliminarFeriado(int id) => _api.delete('/feriado/$id');
 }

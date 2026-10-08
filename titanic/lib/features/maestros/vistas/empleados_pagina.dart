@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_boton.dart';
@@ -277,6 +278,13 @@ class _TarjetaEmpleado extends StatelessWidget {
               tono: EtiquetaTono.modulo,
               color: color,
             ),
+    ),
+    // Sin sueldo no entra en la planilla: se dice, no se deja en blanco.
+    CampoDetalle(
+      'Sueldo semanal',
+      empleado.sueldoSemanal == null
+          ? 'Sin sueldo (no entra en planilla)'
+          : formatoSoles(empleado.sueldoSemanal!),
     ),
     CampoDetalle('Área', empleado.area, enTarjeta: false),
     CampoDetalle('Teléfono', empleado.telefono),

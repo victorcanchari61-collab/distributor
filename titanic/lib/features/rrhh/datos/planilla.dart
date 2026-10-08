@@ -106,6 +106,7 @@ class PlanillaDetalle {
     required this.costoLaboral,
     required this.neto,
     this.cargo,
+    this.documento,
     this.notaAjuste,
   });
 
@@ -113,6 +114,9 @@ class PlanillaDetalle {
   final int empleadoId;
   final String empleado;
   final String? cargo;
+
+  /// Su DNI o codigo.
+  final String? documento;
   final double sueldoSemanal;
 
   /// Faltas y permisos de lunes a sabado: cada uno resta un dia de sueldo.
@@ -157,6 +161,7 @@ class PlanillaDetalle {
         empleadoId: json['empleadoId'] as int,
         empleado: json['empleado'] as String? ?? '',
         cargo: json['cargo'] as String?,
+        documento: json['documento'] as String?,
         sueldoSemanal: _monto(json['sueldoSemanal']),
         diasNoPagados: json['diasNoPagados'] as int? ?? 0,
         diasSinMarcar: json['diasSinMarcar'] as int? ?? 0,

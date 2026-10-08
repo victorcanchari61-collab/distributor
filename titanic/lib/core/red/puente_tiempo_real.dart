@@ -100,6 +100,7 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     empleadosOpcionesProvider,
     usuariosProvider,
     planillaSemanaProvider,
+    empleadosAsistenciaProvider,
   ],
 
   // --- RR. HH. ---

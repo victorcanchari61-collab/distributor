@@ -35,6 +35,29 @@ enum DocumentoPdf {
   final String nombre;
 }
 
+/// Baja un PDF de esa ruta y lo abre en el visor del telefono, sin preguntar
+/// formato: para los papeles que solo existen en hoja, como las boletas de
+/// pago. Devuelve el error para mostrarlo, o null si se abrio.
+Future<String?> abrirPdfDeRuta({
+  required String ruta,
+  required String nombre,
+  ClienteApi? api,
+}) async {
+  try {
+    final bytes = await (api ?? ClienteApi()).archivo(ruta);
+    final limpio = nombre.replaceAll(RegExp(r'[^A-Za-z0-9.-]'), '-');
+    final carpeta = await getTemporaryDirectory();
+    final archivo = File('${carpeta.path}/$limpio');
+    await archivo.writeAsBytes(bytes);
+    await OpenFilex.open(archivo.path);
+    return null;
+  } on ApiExcepcion catch (e) {
+    return e.mensaje;
+  } catch (_) {
+    return 'No pudimos abrir el PDF.';
+  }
+}
+
 /// Pregunta el formato y abre el PDF en el visor del telefono.
 ///
 /// El archivo se guarda en la carpeta temporal y se abre con el visor del

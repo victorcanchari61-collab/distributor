@@ -40,6 +40,18 @@ final resumenAsistenciaProvider = FutureProvider.autoDispose<ResumenAsistencia>(
   },
 );
 
+/// Todos los empleados con sus fechas de ingreso y cese: los que trabajaban
+/// cada dia, para el calendario y el pase de lista.
+final empleadosAsistenciaProvider =
+    FutureProvider.autoDispose<List<EmpleadoAsistencia>>(
+      (ref) => ref.watch(rrhhApiProvider).empleadosAsistencia(),
+    );
+
+/// Si se ve el calendario del mes arriba de la lista.
+final verCalendarioAsistenciaProvider = StateProvider.autoDispose<bool>(
+  (ref) => true,
+);
+
 /// Los dias no laborables, para avisar en el pase de lista.
 final feriadosProvider = FutureProvider.autoDispose<List<Feriado>>(
   (ref) => ref.watch(rrhhApiProvider).feriados(),

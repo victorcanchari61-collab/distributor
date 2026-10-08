@@ -10,6 +10,7 @@ import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -191,6 +192,12 @@ class _PlanillaPaginaState extends ConsumerState<PlanillaPagina> {
             ? () => _anular(planilla)
             : null,
         onHistorial: () => _hoja((_) => const _HojaHistorial()),
+        onBoletas:
+            planilla != null &&
+                planilla.detalle.isNotEmpty &&
+                puede(ref, 'rrhh.planilla', Accion.exportar)
+            ? () => _boletas(planilla)
+            : null,
       ),
       fila: (context, d) => _TarjetaDetalle(
         detalle: d,
@@ -198,8 +205,28 @@ class _PlanillaPaginaState extends ConsumerState<PlanillaPagina> {
         onAjustar: borrador && puede(ref, 'rrhh.planilla', Accion.editar)
             ? () => _hoja((_) => _HojaAjuste(detalle: d))
             : null,
+        onBoleta:
+            planilla != null && puede(ref, 'rrhh.planilla', Accion.exportar)
+            ? () => _boletas(planilla, empleado: d)
+            : null,
       ),
     );
+  }
+
+  /// Las boletas en PDF: de todos, o de un empleado. Se abren en el visor del
+  /// telefono, desde donde se imprimen o se mandan por WhatsApp.
+  Future<void> _boletas(Planilla p, {PlanillaDetalle? empleado}) async {
+    final mensajero = Aviso.de(context);
+    mensajero.mostrar(
+      empleado == null ? 'Armando las boletas...' : 'Armando la boleta...',
+    );
+    final error = await abrirPdfDeRuta(
+      ruta:
+          '/planilla/${p.id}/pdf${empleado != null ? '?empleadoId=${empleado.empleadoId}' : ''}',
+      nombre:
+          '${empleado == null ? 'boletas' : 'boleta-${empleado.empleado}'}-${_dia(p.desde)}.pdf',
+    );
+    if (error != null) mensajero.error(error);
   }
 }
 
@@ -214,6 +241,7 @@ class _Encabezado extends StatelessWidget {
     required this.onPagar,
     required this.onAnular,
     required this.onHistorial,
+    this.onBoletas,
   });
 
   final DateTime semana;
@@ -224,6 +252,9 @@ class _Encabezado extends StatelessWidget {
   final VoidCallback? onPagar;
   final VoidCallback? onAnular;
   final VoidCallback onHistorial;
+
+  /// Las boletas de pago de todos, en PDF.
+  final VoidCallback? onBoletas;
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +366,12 @@ class _Encabezado extends StatelessWidget {
                 ),
               ],
               const SizedBox(width: Dimen.espacio1),
+              if (onBoletas != null)
+                IconButton(
+                  tooltip: 'Boletas de pago',
+                  onPressed: onBoletas,
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                ),
               IconButton(
                 tooltip: 'Historial',
                 onPressed: onHistorial,
@@ -353,11 +390,13 @@ class _TarjetaDetalle extends StatelessWidget {
     required this.detalle,
     required this.color,
     this.onAjustar,
+    this.onBoleta,
   });
 
   final PlanillaDetalle detalle;
   final Color color;
   final VoidCallback? onAjustar;
+  final VoidCallback? onBoleta;
 
   @override
   Widget build(BuildContext context) {
@@ -421,6 +460,17 @@ class _TarjetaDetalle extends StatelessWidget {
         CampoDetalle('A pagar', formatoSoles(d.neto)),
       ],
       acciones: [
+        if (onBoleta != null)
+          IconButton(
+            onPressed: onBoleta,
+            tooltip: 'Boleta',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              Icons.picture_as_pdf_outlined,
+              size: 18,
+              color: Acento.de(context),
+            ),
+          ),
         if (onAjustar != null)
           IconButton(
             onPressed: onAjustar,

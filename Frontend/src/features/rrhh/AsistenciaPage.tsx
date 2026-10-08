@@ -436,8 +436,11 @@ export function AsistenciaPage() {
                 const futuro = fecha ? fecha > hoyLocal() : false
                 const clicable = !!fecha && !futuro && (!!empleadoFiltro || puede('rrhh.asistencia', 'crear'))
                 const marcadosDia = fecha && !empleadoFiltro ? (marcasDelDia.get(fecha)?.length ?? 0) : 0
+                // Los domingos y feriados no se esperan (no se pagan ni se descuentan): no son "incompletos".
+                const domingo = fecha ? new Date(`${fecha}T00:00:00`).getDay() === 0 : false
+                const seEspera = !domingo && !feriado
                 const esperadosDia =
-                  fecha && !empleadoFiltro && !futuro ? empleados.filter((e) => trabajaba(e, fecha)).length : 0
+                  fecha && !empleadoFiltro && !futuro && seEspera ? empleados.filter((e) => trabajaba(e, fecha)).length : 0
                 return (
                   <button
                     key={`${si}-${di}`}
@@ -462,10 +465,10 @@ export function AsistenciaPage() {
                     )}
                     {(marcadosDia > 0 || esperadosDia > 0) && (
                       <Badge
-                        tone={marcadosDia >= esperadosDia ? 'neutral' : 'warning'}
+                        tone={!seEspera || marcadosDia >= esperadosDia ? 'neutral' : 'warning'}
                         className="px-1.5 py-0"
                       >
-                        {marcadosDia}/{esperadosDia}
+                        {seEspera ? `${marcadosDia}/${esperadosDia}` : marcadosDia}
                       </Badge>
                     )}
                   </button>

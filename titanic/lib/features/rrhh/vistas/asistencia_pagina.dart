@@ -21,6 +21,7 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/asistencia.dart';
 import '../estado/asistencia_controlador.dart';
+import 'asistencia_calendario.dart';
 import 'pase_lista_pagina.dart';
 
 const _meses = [
@@ -40,8 +41,9 @@ EtiquetaTono tonoAsistencia(String estado) => switch (estado) {
 ///
 /// Se marca con el pase de lista de un dia —todos juntos— y aqui queda el
 /// registro del mes, donde se corrige o se anula una marca puesta por error.
-/// Es lo mismo que el panel web, con el calendario cambiado por la lista del
-/// mes, que en un telefono se lee mejor.
+/// Es lo mismo que el panel web: el calendario del mes arriba (marcados de los
+/// que trabajaban cada dia; tocar uno abre su pase de lista), la lista debajo y
+/// los feriados en su hoja.
 class AsistenciaPagina extends ConsumerWidget {
   const AsistenciaPagina({super.key});
 
@@ -107,6 +109,15 @@ class AsistenciaPagina extends ConsumerWidget {
         onPaseLista: puede(ref, 'rrhh.asistencia', Accion.crear)
             ? () => _abrirPaseLista(context, ref)
             : null,
+        verCalendario: ref.watch(verCalendarioAsistenciaProvider),
+        onCalendario: () =>
+            ref.read(verCalendarioAsistenciaProvider.notifier).state = !ref
+                .read(verCalendarioAsistenciaProvider),
+        onFeriados: () => abrirFeriados(context),
+        // Tocar un dia del calendario abre su pase de lista.
+        onDia: puede(ref, 'rrhh.asistencia', Accion.crear)
+            ? (dia) => _pasarLista(context, ref, dia)
+            : null,
       ),
       filtro: BotonFiltros(
         activos: ref.watch(filtrosAsistenciaActivosProvider),
@@ -136,7 +147,14 @@ class AsistenciaPagina extends ConsumerWidget {
       lastDate: hoy,
     );
     if (fecha == null || !context.mounted) return;
+    await _pasarLista(context, ref, fecha);
+  }
 
+  Future<void> _pasarLista(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime fecha,
+  ) async {
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => PaseListaPagina(fecha: fecha)));
@@ -259,11 +277,19 @@ class _Encabezado extends StatelessWidget {
     required this.mes,
     required this.onMes,
     required this.onPaseLista,
+    required this.verCalendario,
+    required this.onCalendario,
+    required this.onFeriados,
+    required this.onDia,
   });
 
   final DateTime mes;
   final ValueChanged<DateTime> onMes;
   final VoidCallback? onPaseLista;
+  final bool verCalendario;
+  final VoidCallback onCalendario;
+  final VoidCallback onFeriados;
+  final ValueChanged<DateTime>? onDia;
 
   @override
   Widget build(BuildContext context) {
@@ -302,15 +328,46 @@ class _Encabezado extends StatelessWidget {
               ),
             ],
           ),
-          if (onPaseLista != null) ...[
-            const SizedBox(height: Dimen.espacio1),
-            AppBoton(
-              texto: 'Pasar lista',
-              icono: Icons.fact_check_outlined,
-              tam: BotonTam.md,
-              onPressed: onPaseLista,
-            ),
+          if (verCalendario) ...[
+            CalendarioAsistencia(onDia: onDia),
+            const SizedBox(height: Dimen.espacio2),
           ],
+          Row(
+            children: [
+              if (onPaseLista != null) ...[
+                Expanded(
+                  child: AppBoton(
+                    texto: 'Pasar lista',
+                    icono: Icons.fact_check_outlined,
+                    tam: BotonTam.md,
+                    onPressed: onPaseLista,
+                  ),
+                ),
+                const SizedBox(width: Dimen.espacio2),
+              ],
+              Expanded(
+                child: AppBoton(
+                  texto: 'Feriados',
+                  icono: Icons.flag_outlined,
+                  variante: BotonVariante.secundario,
+                  tam: BotonTam.md,
+                  onPressed: onFeriados,
+                ),
+              ),
+              const SizedBox(width: Dimen.espacio1),
+              IconButton(
+                tooltip: verCalendario
+                    ? 'Ocultar calendario'
+                    : 'Ver calendario',
+                onPressed: onCalendario,
+                icon: Icon(
+                  verCalendario
+                      ? Icons.calendar_view_month
+                      : Icons.calendar_month_outlined,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

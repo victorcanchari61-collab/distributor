@@ -211,8 +211,9 @@ class _EmpleadoFormularioState extends ConsumerState<EmpleadoFormulario> {
     // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
     // acento del modulo. Sin esto los componentes compartidos y las hojas que
     // se abran desde dentro saldrian con el azul de marca.
+    // Empleados es de RR. HH. (menú y permiso rrhh.empleados), aunque viva en esta carpeta.
     return Acento.modulo(
-      'maestros',
+      'rrhh',
       (context) => Scaffold(
         appBar: AppBar(
           title: Text(
