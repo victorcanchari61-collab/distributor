@@ -206,7 +206,10 @@ public static class CatalogoPermisos
             ["rrhh.asistencia"] = [.. Documento, Accion.Eliminar],
             // El pago semanal: armarla y pagarla (crear), ajustar bonos y
             // descuentos (editar), y anular una pagada por error.
-            ["rrhh.planilla"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular],
+            // Exportar: las boletas de pago en PDF.
+            ["rrhh.planilla"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Exportar],
+            // Plata a cuenta del sueldo: se da (crear), se cambia cómo se descuenta (editar) o se anula.
+            ["rrhh.adelantos"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular],
 
             // --- Configuración ---
             ["config.usuarios"] = Catalogo,

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Ban, Calculator, Eye, HandCoins, History, Pencil, RefreshCw, Wallet } from 'lucide-react'
+import { Ban, Calculator, Coins, Eye, HandCoins, History, Pencil, RefreshCw, Wallet } from 'lucide-react'
 import {
   Alert,
   Badge,
   Button,
+  Checkbox,
   Desplegable,
   Input,
   ListPage,
@@ -30,6 +31,13 @@ import type {
 import { tipoDeCuenta } from '../finanzas/cuentaFinancieraApi'
 
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
+
+/** "mar 07/10": el día de la semana ayuda a ubicar cuál falta. */
+const diaCorto = (fecha: string) => {
+  const [a, m, d] = fecha.slice(0, 10).split('-').map(Number)
+  const dia = new Date(a, m - 1, d).toLocaleDateString('es-PE', { weekday: 'short' }).replace('.', '')
+  return `${dia} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`
+}
 const menos = (n: number) => (n > 0 ? `-${soles(n)}` : '—')
 const mas = (n: number) => (n > 0 ? `+${soles(n)}` : '—')
 
@@ -78,7 +86,8 @@ export function PlanillaPage() {
     void cargar()
   }, [cargar])
 
-  useRealtime(['planillas', 'empleados'], cargar)
+  // La asistencia y los feriados recalculan el borrador en el servidor, que avisa por 'planillas'.
+  useRealtime(['planillas', 'empleados', 'asistencia', 'feriados'], cargar)
 
   const generar = async () => {
     setTrabajando(true)
@@ -175,6 +184,8 @@ export function PlanillaPage() {
   }
 
   const borrador = planilla?.estado === 'BORRADOR'
+  // Días de la semana en que a alguien le falta su marca: se pagarían como trabajados.
+  const sinMarcar = borrador ? (planilla?.fechasSinMarcar ?? []) : []
 
   const columns: DataTableColumn<PlanillaDetalleResponse>[] = [
     {
@@ -194,7 +205,16 @@ export function PlanillaPage() {
       label: 'Faltas y permisos',
       align: 'right',
       filterable: false,
-      render: (row) => (row.diasNoPagados > 0 ? `${menos(row.descuentoInasistencias)} (${row.diasNoPagados} d)` : '—'),
+      render: (row) => (
+        <div>
+          <p>{row.diasNoPagados > 0 ? `${menos(row.descuentoInasistencias)} (${row.diasNoPagados} d)` : '—'}</p>
+          {borrador && row.diasSinMarcar > 0 && (
+            <p className="text-xs text-amber-700">
+              {row.diasSinMarcar} {row.diasSinMarcar === 1 ? 'día' : 'días'} sin marcar
+            </p>
+          )}
+        </div>
+      ),
     },
     { key: 'extraFeriados', label: 'Feriados', align: 'right', filterable: false, render: (row) => mas(row.extraFeriados) },
     { key: 'bonos', label: 'Bonos', align: 'right', filterable: false, render: (row) => mas(row.bonos) },
@@ -215,6 +235,21 @@ export function PlanillaPage() {
       render: (row) => (row.descuentoFaltantes > 0 ? <span className="text-red-600">{menos(row.descuentoFaltantes)}</span> : '—'),
     },
     {
+      key: 'descuentoAdelantos',
+      label: 'Adelantos',
+      align: 'right',
+      filterable: false,
+      render: (row) => (
+        <div>
+          <p>{menos(row.descuentoAdelantos)}</p>
+          {borrador && row.adelantosSaldo > row.descuentoAdelantos && (
+            <p className="text-xs text-ink-soft">Debe {soles(row.adelantosSaldo)}</p>
+          )}
+          {borrador && row.adelantosManual !== null && <p className="text-xs text-amber-700">Ajustado a mano</p>}
+        </div>
+      ),
+    },
+    {
       key: 'neto',
       label: 'A pagar',
       align: 'right',
@@ -232,10 +267,12 @@ export function PlanillaPage() {
         description="Sueldo semanal menos faltas y permisos (un día = sueldo ÷ 6), más feriados trabajados (se pagan doble), bonos, descuentos y faltantes de caja."
         actions={
           <div className="flex flex-wrap items-end gap-2">
+            {/* Hasta hoy: una semana que no empezó no tiene asistencia y se pagaría completa. */}
             <Input
               size="sm"
               type="date"
               aria-label="Semana"
+              max={hoyLocal()}
               value={fecha}
               onChange={(e) => e.target.value && setFecha(e.target.value)}
               className="w-40"
@@ -261,19 +298,28 @@ export function PlanillaPage() {
           error ? (
             <Alert>{error}</Alert>
           ) : planilla ? (
-            <Alert tone="info">
-              Semana del {fechaCorta(planilla.desde)} al {fechaCorta(planilla.hasta)} ·{' '}
-              <strong>{ESTADOS[planilla.estado].label}</strong>
-              {planilla.estado === 'PAGADA' && planilla.cuentaFinanciera
-                ? ` desde ${planilla.cuentaFinanciera}${planilla.fechaPago ? ` el ${fechaHora(planilla.fechaPago)}` : ''}`
-                : ''}
-            </Alert>
+            <div className="flex flex-col gap-2">
+              <Alert tone="info">
+                Semana del {fechaCorta(planilla.desde)} al {fechaCorta(planilla.hasta)} ·{' '}
+                <strong>{ESTADOS[planilla.estado].label}</strong>
+                {planilla.estado === 'PAGADA' && planilla.cuentaFinanciera
+                  ? ` desde ${planilla.cuentaFinanciera}${planilla.fechaPago ? ` el ${fechaHora(planilla.fechaPago)}` : ''}`
+                  : ''}
+              </Alert>
+              {sinMarcar.length > 0 && (
+                <Alert tone="warning">
+                  Falta pasar lista el {sinMarcar.map(diaCorto).join(', ')}. Esos días se pagan como trabajados: márcalos
+                  en Asistencia antes de pagar (la planilla se recalcula sola).
+                </Alert>
+              )}
+            </div>
           ) : undefined
         }
         stats={
           <>
             <StatCard label="Costo de planilla" value={soles(planilla?.totalCostoLaboral ?? 0)} icon={<Calculator size={18} />} tono="sys" />
             <StatCard label="Faltantes descontados" value={soles(planilla?.totalFaltantes ?? 0)} icon={<Ban size={18} />} tono="danger" />
+            <StatCard label="Adelantos descontados" value={soles(planilla?.totalAdelantos ?? 0)} icon={<Coins size={18} />} tono="warning" />
             <StatCard label="Neto a pagar" value={soles(planilla?.totalNeto ?? 0)} icon={<Wallet size={18} />} tono="success" />
           </>
         }
@@ -316,6 +362,8 @@ export function PlanillaPage() {
               await cargar()
               toast.exito('Planilla pagada')
             }}
+            // Si el servidor la recalculó (cambió la asistencia, un sueldo...), se ven los montos nuevos.
+            onRefrescar={cargar}
           />
         )}
         {dialogo}
@@ -336,6 +384,8 @@ function AjusteModal({
   const [bonos, setBonos] = useState(detalle.bonos ? String(detalle.bonos) : '')
   const [descuentos, setDescuentos] = useState(detalle.otrosDescuentos ? String(detalle.otrosDescuentos) : '')
   const [nota, setNota] = useState(detalle.notaAjuste ?? '')
+  // Vacío: lo que le toca según sus adelantos.
+  const [adelantos, setAdelantos] = useState(detalle.adelantosManual !== null ? String(detalle.adelantosManual) : '')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
@@ -345,6 +395,9 @@ function AjusteModal({
     const b = numero(bonos)
     const d = numero(descuentos)
     if (!Number.isFinite(b) || b < 0 || !Number.isFinite(d) || d < 0) return setError('Los montos no pueden ser negativos.')
+    const ad = adelantos.trim() ? numero(adelantos) : null
+    if (ad !== null && (!Number.isFinite(ad) || ad < 0)) return setError('El descuento de adelantos no puede ser negativo.')
+    if (ad !== null && ad > detalle.adelantosSaldo) return setError(`Solo debe ${soles(detalle.adelantosSaldo)} de adelantos.`)
 
     setGuardando(true)
     setError('')
@@ -354,6 +407,7 @@ function AjusteModal({
           bonos: Math.round(b * 100) / 100,
           otrosDescuentos: Math.round(d * 100) / 100,
           nota: nota.trim() || null,
+          adelantos: ad === null ? null : Math.round(ad * 100) / 100,
         }),
       )
     } catch (e) {
@@ -368,7 +422,7 @@ function AjusteModal({
       open
       size="sm"
       title={`Ajustar a ${detalle.empleado}`}
-      description="Un bono suma a lo que cobra; un descuento (adelanto, otro) resta."
+      description="Un bono suma a lo que cobra; otro descuento resta. Los adelantos se dan en RR. HH. → Adelantos."
       onClose={onClose}
       footer={
         <>
@@ -393,7 +447,24 @@ function AjusteModal({
           value={descuentos}
           onChange={(e) => setDescuentos(e.target.value)}
         />
-        <Input label="Nota" optional placeholder="Adelanto del jueves, horas extra..." value={nota} onChange={(e) => setNota(e.target.value)} />
+        <Input label="Nota" optional placeholder="Horas extra, uniforme..." value={nota} onChange={(e) => setNota(e.target.value)} />
+        {detalle.adelantosSaldo > 0 && (
+          <>
+            <Input
+              label="Adelantos a descontar esta semana"
+              type="number"
+              step="0.01"
+              optional
+              placeholder={detalle.adelantosSugerido.toFixed(2)}
+              value={adelantos}
+              onChange={(e) => setAdelantos(e.target.value)}
+            />
+            <p className="-mt-2 text-xs text-ink-soft">
+              Debe {soles(detalle.adelantosSaldo)}; esta semana le toca {soles(detalle.adelantosSugerido)}. Vacío es lo que le
+              toca, 0 es nada. Lo que no se descuente queda para la semana siguiente.
+            </p>
+          </>
+        )}
       </div>
     </Modal>
   )
@@ -404,15 +475,19 @@ function PagarModal({
   planilla,
   onClose,
   onPagado,
+  onRefrescar,
 }: {
   planilla: PlanillaResponse
   onClose: () => void
   onPagado: () => void | Promise<void>
+  onRefrescar: () => void | Promise<void>
 }) {
   const [cuentas, setCuentas] = useState<CuentaPagoOpcion[]>([])
   const [cuentaId, setCuentaId] = useState(0)
+  const [pagarIgual, setPagarIgual] = useState(false)
   const [pagando, setPagando] = useState(false)
   const [error, setError] = useState('')
+  const sinMarcar = planilla.fechasSinMarcar ?? []
 
   useEffect(() => {
     planillaApi
@@ -423,13 +498,15 @@ function PagarModal({
 
   const pagar = async () => {
     if (!cuentaId) return setError('Elige de qué cuenta sale el pago.')
+    if (sinMarcar.length > 0 && !pagarIgual) return setError('Marca la asistencia que falta, o confirma que quieres pagar igual.')
     setPagando(true)
     setError('')
     try {
-      await planillaApi.pagar(planilla.id, cuentaId)
+      await planillaApi.pagar(planilla.id, cuentaId, pagarIgual)
       await onPagado()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos pagar la planilla.')
+      await onRefrescar()
     } finally {
       setPagando(false)
     }
@@ -447,7 +524,7 @@ function PagarModal({
           <Button variant="secondary" size="sm" onClick={onClose}>
             Cancelar
           </Button>
-          <Button size="sm" loading={pagando} onClick={() => void pagar()}>
+          <Button size="sm" loading={pagando} disabled={sinMarcar.length > 0 && !pagarIgual} onClick={() => void pagar()}>
             Pagar {soles(planilla.totalNeto)}
           </Button>
         </>
@@ -462,6 +539,19 @@ function PagarModal({
           placeholder="Elige la caja o el banco"
           options={cuentas.map((c) => ({ value: c.id, label: c.nombre, detalle: tipoDeCuenta(c) }))}
         />
+        {sinMarcar.length > 0 && (
+          <>
+            <Alert tone="warning">
+              Falta pasar lista el {sinMarcar.map(diaCorto).join(', ')}. Si pagas ahora, esos días se pagan como
+              trabajados.
+            </Alert>
+            <Checkbox
+              label="Pagar igual, sin esas marcas"
+              checked={pagarIgual}
+              onChange={(e) => setPagarIgual(e.target.checked)}
+            />
+          </>
+        )}
       </div>
     </Modal>
   )

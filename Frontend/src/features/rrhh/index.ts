@@ -13,4 +13,6 @@ export type {
 export { feriadoApi } from './feriadoApi'
 export type { FeriadoRequest, FeriadoResponse } from './feriadoApi'
 export { PlanillaPage } from './PlanillaPage'
+export { AdelantosPage } from './AdelantosPage'
+export { adelantoApi } from './adelantoApi'
 export { planillaApi } from './planillaApi'

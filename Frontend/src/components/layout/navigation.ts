@@ -222,6 +222,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'rrhh.empleados', label: 'Empleados', icon: Users },
       { id: 'rrhh.asistencia', label: 'Asistencia', icon: CalendarCheck },
       { id: 'rrhh.planilla', label: 'Planilla semanal', icon: Wallet },
+      { id: 'rrhh.adelantos', label: 'Adelantos', icon: HandCoins },
     ],
   },
   {

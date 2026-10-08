@@ -41,6 +41,8 @@ const DOCUMENTOS: Record<string, string> = {
   SALDO_INICIAL: 'Saldo inicial',
   TRANSFERENCIA_INTERNA: 'Transferencia',
   RECUPERO_FALTANTE: 'Recupero de faltante',
+  ADELANTO_EMPLEADO: 'Adelanto a trabajador',
+  RECUPERO_ADELANTO: 'Adelanto descontado',
 }
 
 const ESTADOS_DIGITAL: Record<EstadoVerificacionCobro, { label: string; tono: BadgeTone }> = {

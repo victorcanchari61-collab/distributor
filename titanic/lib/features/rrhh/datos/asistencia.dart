@@ -90,6 +90,36 @@ class ResumenAsistencia {
       );
 }
 
+/// Un empleado para pasar lista. Lo da Asistencia con su propio permiso (no hace falta ver
+/// Empleados), e incluye a los desactivados: quien ceso a mitad de semana se marca hasta su cese.
+class EmpleadoAsistencia {
+  const EmpleadoAsistencia({
+    required this.id,
+    required this.nombreCompleto,
+    required this.activo,
+    this.cargo,
+    this.fechaIngreso,
+    this.fechaCese,
+  });
+
+  final int id;
+  final String nombreCompleto;
+  final String? cargo;
+  final bool activo;
+  final DateTime? fechaIngreso;
+  final DateTime? fechaCese;
+
+  factory EmpleadoAsistencia.desdeJson(Map<String, dynamic> json) =>
+      EmpleadoAsistencia(
+        id: json['id'] as int,
+        nombreCompleto: json['nombreCompleto'] as String? ?? '',
+        cargo: json['cargo'] as String?,
+        activo: json['activo'] as bool? ?? true,
+        fechaIngreso: fechaDeJsonOpcional(json['fechaIngreso']),
+        fechaCese: fechaDeJsonOpcional(json['fechaCese']),
+      );
+}
+
 /// Un dia no laborable. Quien lo trabaja cobra ese dia doble en la planilla.
 class Feriado {
   const Feriado({required this.id, required this.fecha, required this.nombre});

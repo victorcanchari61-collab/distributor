@@ -7,6 +7,9 @@ namespace Backend.Service.Interfaces;
 public interface IAsistenciaService
 {
     Task<IEnumerable<AsistenciaResponse>> ListarAsync(DateTime desde, DateTime hasta, int? empleadoId);
+
+    /// <summary>Todos los empleados, con sus fechas de ingreso y cese, para pasar lista y filtrar.</summary>
+    Task<IEnumerable<EmpleadoAsistenciaResponse>> EmpleadosAsync();
     Task<ResumenAsistenciaResponse> ResumenAsync(DateTime desde, DateTime hasta, int? empleadoId);
 
     Task<AsistenciaResponse> CrearAsync(CrearAsistenciaRequest request, int? usuarioId);

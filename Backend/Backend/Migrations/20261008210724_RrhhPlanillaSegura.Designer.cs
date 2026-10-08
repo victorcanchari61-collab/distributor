@@ -4,16 +4,19 @@ using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Backend.Data.Migrations
+namespace Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261008210724_RrhhPlanillaSegura")]
+    partial class RrhhPlanillaSegura
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,69 +24,6 @@ namespace Backend.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
-
-            modelBuilder.Entity("Backend.Models.AdelantoEmpleado", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CuentaFinancieraId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("CuotaSemanal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("DescontarDesde")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("EmpleadoId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Estado")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)");
-
-                    b.Property<DateTime>("Fecha")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<decimal>("Monto")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("MontoDescontado")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("MovimientoCuentaId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Observacion")
-                        .HasMaxLength(250)
-                        .HasColumnType("varchar(250)");
-
-                    b.Property<int?>("UsuarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CuentaFinancieraId");
-
-                    b.HasIndex("MovimientoCuentaId");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.HasIndex("EmpleadoId", "Estado");
-
-                    b.ToTable("AdelantosEmpleado", (string)null);
-                });
 
             modelBuilder.Entity("Backend.Models.Almacen", b =>
                 {
@@ -2960,33 +2900,6 @@ namespace Backend.Data.Migrations
                     b.ToTable("PedidoDetalle", (string)null);
                 });
 
-            modelBuilder.Entity("Backend.Models.PlanillaAdelanto", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AdelantoEmpleadoId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Monto")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("PlanillaDetalleId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AdelantoEmpleadoId");
-
-                    b.HasIndex("PlanillaDetalleId");
-
-                    b.ToTable("PlanillaAdelantos", (string)null);
-                });
-
             modelBuilder.Entity("Backend.Models.PlanillaDescuento", b =>
                 {
                     b.Property<int>("Id")
@@ -3022,23 +2935,7 @@ namespace Backend.Data.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal?>("AdelantosManual")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("AdelantosSaldo")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("AdelantosSugerido")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<decimal>("Bonos")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("DescuentoAdelantos")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -3062,9 +2959,6 @@ namespace Backend.Data.Migrations
                     b.Property<decimal>("ExtraFeriados")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("MovimientoAdelantoId")
-                        .HasColumnType("int");
 
                     b.Property<int?>("MovimientoOperativoId")
                         .HasColumnType("int");
@@ -3090,8 +2984,6 @@ namespace Backend.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EmpleadoId");
-
-                    b.HasIndex("MovimientoAdelantoId");
 
                     b.HasIndex("MovimientoOperativoId");
 
@@ -4411,37 +4303,6 @@ namespace Backend.Data.Migrations
                     b.ToTable("Vehiculos", (string)null);
                 });
 
-            modelBuilder.Entity("Backend.Models.AdelantoEmpleado", b =>
-                {
-                    b.HasOne("Backend.Models.CuentaFinanciera", "CuentaFinanciera")
-                        .WithMany()
-                        .HasForeignKey("CuentaFinancieraId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Backend.Models.Empleado", "Empleado")
-                        .WithMany()
-                        .HasForeignKey("EmpleadoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Backend.Models.MovimientoCuenta", null)
-                        .WithMany()
-                        .HasForeignKey("MovimientoCuentaId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Backend.Models.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("CuentaFinanciera");
-
-                    b.Navigation("Empleado");
-
-                    b.Navigation("Usuario");
-                });
-
             modelBuilder.Entity("Backend.Models.Asistencia", b =>
                 {
                     b.HasOne("Backend.Models.Empleado", "Empleado")
@@ -5413,25 +5274,6 @@ namespace Backend.Data.Migrations
                     b.Navigation("Producto");
                 });
 
-            modelBuilder.Entity("Backend.Models.PlanillaAdelanto", b =>
-                {
-                    b.HasOne("Backend.Models.AdelantoEmpleado", "AdelantoEmpleado")
-                        .WithMany()
-                        .HasForeignKey("AdelantoEmpleadoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Backend.Models.PlanillaDetalle", "PlanillaDetalle")
-                        .WithMany("Adelantos")
-                        .HasForeignKey("PlanillaDetalleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("AdelantoEmpleado");
-
-                    b.Navigation("PlanillaDetalle");
-                });
-
             modelBuilder.Entity("Backend.Models.PlanillaDescuento", b =>
                 {
                     b.HasOne("Backend.Models.DescuentoFaltante", "DescuentoFaltante")
@@ -5458,11 +5300,6 @@ namespace Backend.Data.Migrations
                         .HasForeignKey("EmpleadoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("Backend.Models.MovimientoCuenta", null)
-                        .WithMany()
-                        .HasForeignKey("MovimientoAdelantoId")
-                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Backend.Models.MovimientoOperativo", null)
                         .WithMany()
@@ -5941,8 +5778,6 @@ namespace Backend.Data.Migrations
 
             modelBuilder.Entity("Backend.Models.PlanillaDetalle", b =>
                 {
-                    b.Navigation("Adelantos");
-
                     b.Navigation("Descuentos");
                 });
 

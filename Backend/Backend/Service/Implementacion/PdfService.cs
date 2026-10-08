@@ -26,8 +26,35 @@ public class PdfService(
     INovedadService novedades,
     IEmpresaService empresas,
     IClienteRepository clientes,
-    IProveedorRepository proveedores) : IPdfService
+    IProveedorRepository proveedores,
+    IPlanillaService planillas) : IPdfService
 {
+    public async Task<(byte[], string)> BoletasPlanillaAsync(int planillaId, int? empleadoId)
+    {
+        var planilla = await planillas.GetAsync(planillaId);
+        var detalles = planilla.Detalle
+            .Where(d => empleadoId is null || d.EmpleadoId == empleadoId)
+            .ToList();
+
+        if (detalles.Count == 0)
+        {
+            throw new BadRequestException(empleadoId is null
+                ? "Esta planilla no tiene a nadie"
+                : "Ese empleado no está en esta planilla");
+        }
+
+        var contenido = new BoletasPlanillaA4(await empresas.GetActivaAsync(), planilla, detalles).GeneratePdf();
+        var quien = detalles.Count == 1 ? $"-{Archivo(detalles[0].Empleado)}" : string.Empty;
+        return (contenido, $"boleta{(detalles.Count == 1 ? "" : "s")}{quien}-{planilla.Desde:yyyy-MM-dd}.pdf");
+    }
+
+    /// <summary>Un nombre que sirve en un archivo: sin tildes raras ni espacios.</summary>
+    private static string Archivo(string texto) =>
+        string.Concat(texto.Trim().ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-'))
+            .Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+            .Aggregate(new System.Text.StringBuilder(), (sb, c) => sb.Append(c)).ToString();
+
     public async Task<(byte[], string)> PedidoAsync(int id, FormatoPdf formato)
     {
         var doc = await ArmarPedidoAsync(id);

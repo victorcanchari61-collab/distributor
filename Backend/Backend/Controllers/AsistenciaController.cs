@@ -34,6 +34,10 @@ public class AsistenciaController : ControllerBase
         [FromQuery] DateTime desde, [FromQuery] DateTime hasta, [FromQuery] int? empleadoId) =>
         Ok(await _asistencia.ListarAsync(desde, hasta, empleadoId));
 
+    [HttpGet("empleados")]
+    [Permiso("rrhh.asistencia", Accion.Ver)]
+    public async Task<IActionResult> Empleados() => Ok(await _asistencia.EmpleadosAsync());
+
     [HttpGet("resumen")]
     [Permiso("rrhh.asistencia", Accion.Ver)]
     public async Task<IActionResult> Resumen(

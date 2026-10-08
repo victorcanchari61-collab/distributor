@@ -38,6 +38,8 @@ class DocumentoMovimiento {
     'FINANCIAMIENTO': 'Préstamo recibido',
     'PAGO_FINANCIAMIENTO': 'Pago de préstamo',
     'RECUPERO_FALTANTE': 'Recupero de faltante',
+    'ADELANTO_EMPLEADO': 'Adelanto a trabajador',
+    'RECUPERO_ADELANTO': 'Adelanto descontado',
   };
 
   static String etiqueta(String documento) => etiquetas[documento] ?? documento;

@@ -1,5 +1,6 @@
 import '../../../compartido/fechas.dart';
 import '../../../core/red/cliente_api.dart';
+import 'adelanto.dart';
 import 'asistencia.dart';
 import 'planilla.dart';
 
@@ -10,6 +11,14 @@ class RrhhApi {
   final ClienteApi _api;
 
   // --- Asistencia ---
+
+  /// GET /api/asistencia/empleados: todos, con sus fechas de ingreso y cese.
+  Future<List<EmpleadoAsistencia>> empleadosAsistencia() async {
+    final datos = await _api.get('/asistencia/empleados') as List;
+    return datos
+        .map((e) => EmpleadoAsistencia.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
 
   /// GET /api/asistencia?desde&hasta: las marcas del rango, anuladas incluidas.
   Future<List<Asistencia>> asistencias(DateTime desde, DateTime hasta) async {
@@ -99,12 +108,14 @@ class RrhhApi {
         as Map<String, dynamic>,
   );
 
-  /// PUT /api/planilla/detalle/{id}: bonos y otros descuentos de un empleado.
+  /// PUT /api/planilla/detalle/{id}: bonos, otros descuentos y cuanto de sus
+  /// adelantos se le descuenta esta semana (null: lo que le toca).
   Future<Planilla> ajustarPlanilla(
     int detalleId, {
     required double bonos,
     required double otrosDescuentos,
     String? nota,
+    double? adelantos,
   }) async => Planilla.desdeJson(
     await _api.put(
           '/planilla/detalle/$detalleId',
@@ -112,23 +123,86 @@ class RrhhApi {
             'bonos': bonos,
             'otrosDescuentos': otrosDescuentos,
             'nota': nota,
+            'adelantos': adelantos,
           },
         )
         as Map<String, dynamic>,
   );
 
-  /// POST /api/planilla/{id}/pagar
-  Future<Planilla> pagarPlanilla(int id, int cuentaFinancieraId) async =>
-      Planilla.desdeJson(
-        await _api.post(
-              '/planilla/$id/pagar',
-              cuerpo: {'cuentaFinancieraId': cuentaFinancieraId},
-            )
-            as Map<String, dynamic>,
-      );
+  /// POST /api/planilla/{id}/pagar. Con dias sin marcar, el servidor no paga salvo que se
+  /// confirme con [conDiasSinMarcar].
+  Future<Planilla> pagarPlanilla(
+    int id,
+    int cuentaFinancieraId, {
+    bool conDiasSinMarcar = false,
+  }) async => Planilla.desdeJson(
+    await _api.post(
+          '/planilla/$id/pagar',
+          cuerpo: {
+            'cuentaFinancieraId': cuentaFinancieraId,
+            'conDiasSinMarcar': conDiasSinMarcar,
+          },
+        )
+        as Map<String, dynamic>,
+  );
 
   /// PATCH /api/planilla/{id}/anular: revierte el pago si ya estaba pagada.
   Future<void> anularPlanilla(int id) => _api.patch('/planilla/$id/anular');
+
+  // --- Adelantos ---
+
+  /// GET /api/adelanto
+  Future<List<Adelanto>> adelantos() async {
+    final datos = await _api.get('/adelanto') as List;
+    return datos
+        .map((e) => Adelanto.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// GET /api/adelanto/resumen
+  Future<ResumenAdelantos> resumenAdelantos() async =>
+      ResumenAdelantos.desdeJson(
+        await _api.get('/adelanto/resumen') as Map<String, dynamic>,
+      );
+
+  /// GET /api/adelanto/{id}: con lo descontado semana por semana.
+  Future<Adelanto> adelanto(int id) async => Adelanto.desdeJson(
+    await _api.get('/adelanto/$id') as Map<String, dynamic>,
+  );
+
+  /// GET /api/adelanto/empleados: los activos, con su sueldo y lo que deben.
+  Future<List<EmpleadoAdelanto>> empleadosAdelanto() async {
+    final datos = await _api.get('/adelanto/empleados') as List;
+    return datos
+        .map((e) => EmpleadoAdelanto.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// GET /api/adelanto/cuentas
+  Future<List<CuentaPago>> cuentasAdelanto() async {
+    final datos = await _api.get('/adelanto/cuentas') as List;
+    return datos
+        .map((e) => CuentaPago.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// POST /api/adelanto
+  Future<Adelanto> crearAdelanto(Map<String, dynamic> cuerpo) async =>
+      Adelanto.desdeJson(
+        await _api.post('/adelanto', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
+
+  /// PUT /api/adelanto/{id}/plan: desde que semana y de a cuanto.
+  Future<Adelanto> cambiarPlanAdelanto(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => Adelanto.desdeJson(
+    await _api.put('/adelanto/$id/plan', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
+
+  /// PATCH /api/adelanto/{id}/anular: solo sin descuentos.
+  Future<void> anularAdelanto(int id) => _api.patch('/adelanto/$id/anular');
 
   // --- Feriados ---
 

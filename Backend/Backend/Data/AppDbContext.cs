@@ -79,6 +79,8 @@ public class AppDbContext : DbContext
     public DbSet<PlanillaSemanal> PlanillasSemanales => Set<PlanillaSemanal>();
     public DbSet<PlanillaDetalle> PlanillaDetalles => Set<PlanillaDetalle>();
     public DbSet<PlanillaDescuento> PlanillaDescuentos => Set<PlanillaDescuento>();
+    public DbSet<AdelantoEmpleado> AdelantosEmpleado => Set<AdelantoEmpleado>();
+    public DbSet<PlanillaAdelanto> PlanillaAdelantos => Set<PlanillaAdelanto>();
     public DbSet<MotivoGasto> MotivosGasto => Set<MotivoGasto>();
     public DbSet<MotivoNovedad> MotivosNovedad => Set<MotivoNovedad>();
     public DbSet<ResultadoRevision> ResultadosRevision => Set<ResultadoRevision>();
@@ -587,6 +589,11 @@ public class AppDbContext : DbContext
             entity.HasIndex(p => p.Desde);
             entity.Property(p => p.Estado).HasMaxLength(20).IsRequired();
 
+            // Una sola vigente por semana: las anuladas quedan en nulo y el índice único no las cuenta.
+            entity.Property(p => p.SemanaVigente)
+                .HasComputedColumnSql("CASE WHEN `Estado` <> 'ANULADA' THEN `Desde` END", stored: true);
+            entity.HasIndex(p => p.SemanaVigente).IsUnique();
+
             entity.HasOne(p => p.CuentaFinanciera).WithMany()
                 .HasForeignKey(p => p.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(p => p.Usuario).WithMany()
@@ -602,6 +609,10 @@ public class AppDbContext : DbContext
             entity.Property(d => d.Bonos).HasPrecision(18, 2);
             entity.Property(d => d.OtrosDescuentos).HasPrecision(18, 2);
             entity.Property(d => d.DescuentoFaltantes).HasPrecision(18, 2);
+            entity.Property(d => d.DescuentoAdelantos).HasPrecision(18, 2);
+            entity.Property(d => d.AdelantosSugerido).HasPrecision(18, 2);
+            entity.Property(d => d.AdelantosManual).HasPrecision(18, 2);
+            entity.Property(d => d.AdelantosSaldo).HasPrecision(18, 2);
             entity.Property(d => d.NotaAjuste).HasMaxLength(250);
             entity.Ignore(d => d.CostoLaboral);
             entity.Ignore(d => d.Neto);
@@ -614,6 +625,42 @@ public class AppDbContext : DbContext
                 .HasForeignKey(d => d.MovimientoOperativoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<MovimientoCuenta>().WithMany()
                 .HasForeignKey(d => d.MovimientoRecuperoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(d => d.MovimientoAdelantoId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AdelantoEmpleado>(entity =>
+        {
+            entity.ToTable("AdelantosEmpleado");
+            entity.Property(a => a.Monto).HasPrecision(18, 2);
+            entity.Property(a => a.CuotaSemanal).HasPrecision(18, 2);
+            entity.Property(a => a.MontoDescontado).HasPrecision(18, 2);
+            entity.Property(a => a.Estado).HasMaxLength(20).IsRequired();
+            entity.Property(a => a.Observacion).HasMaxLength(250);
+            entity.Ignore(a => a.Saldo);
+
+            // Lo que se consulta siempre: los pendientes de cada empleado al armar la planilla.
+            entity.HasIndex(a => new { a.EmpleadoId, a.Estado });
+
+            entity.HasOne(a => a.Empleado).WithMany()
+                .HasForeignKey(a => a.EmpleadoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(a => a.CuentaFinanciera).WithMany()
+                .HasForeignKey(a => a.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(a => a.MovimientoCuentaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(a => a.Usuario).WithMany()
+                .HasForeignKey(a => a.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PlanillaAdelanto>(entity =>
+        {
+            entity.ToTable("PlanillaAdelantos");
+            entity.Property(p => p.Monto).HasPrecision(18, 2);
+
+            entity.HasOne(p => p.PlanillaDetalle).WithMany(d => d.Adelantos)
+                .HasForeignKey(p => p.PlanillaDetalleId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(p => p.AdelantoEmpleado).WithMany()
+                .HasForeignKey(p => p.AdelantoEmpleadoId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PlanillaDescuento>(entity =>
@@ -636,6 +683,11 @@ public class AppDbContext : DbContext
             // Por empleado y por rango de fechas es como se consulta siempre:
             // la lista y el calendario, los dos.
             entity.HasIndex(a => new { a.EmpleadoId, a.Fecha });
+
+            // Una sola marca vigente por empleado y día: las anuladas quedan en nulo y no cuentan.
+            entity.Property(a => a.FechaVigente)
+                .HasComputedColumnSql("CASE WHEN `Anulado` = 0 THEN `Fecha` END", stored: true);
+            entity.HasIndex(a => new { a.EmpleadoId, a.FechaVigente }).IsUnique();
 
             entity.HasOne(a => a.Empleado).WithMany()
                 .HasForeignKey(a => a.EmpleadoId).OnDelete(DeleteBehavior.Restrict);

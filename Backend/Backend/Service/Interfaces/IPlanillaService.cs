@@ -15,6 +15,8 @@ public interface IPlanillaService
 
     Task<IEnumerable<PlanillaResumenResponse>> HistorialAsync();
 
+    Task<PlanillaResponse> GetAsync(int id);
+
     /// <summary>Arma la planilla de la semana, o la recalcula si está en borrador (conserva los ajustes a mano).</summary>
     Task<PlanillaResponse> GenerarAsync(DateTime semana, int? usuarioId);
 
@@ -27,4 +29,16 @@ public interface IPlanillaService
 
     /// <summary>Las cuentas activas de las que puede salir el pago.</summary>
     Task<IEnumerable<CuentaDestinoResponse>> CuentasAsync();
+
+    /// <summary>
+    /// Corre un cambio de asistencia o de feriados de esos días. Si su semana ya está pagada, lo
+    /// rechaza; si está en borrador, la recalcula en la misma transacción.
+    /// </summary>
+    Task<T> CambiarDiasAsync<T>(IEnumerable<DateTime> dias, Func<Task<T>> cambio);
+
+    /// <summary>
+    /// Corre un cambio de adelantos (darlo, cambiar cómo se descuenta, anularlo) con los borradores
+    /// bloqueados, y los recalcula en la misma transacción.
+    /// </summary>
+    Task<T> CambiarAdelantosAsync<T>(Func<Task<T>> cambio);
 }

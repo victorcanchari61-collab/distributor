@@ -35,4 +35,10 @@ public class Asistencia
 
     public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
     public bool Anulado { get; set; }
+
+    /// <summary>
+    /// La fecha mientras no esté anulada; nula si lo está. La calcula la base y, con el empleado, lleva
+    /// un índice único: una sola marca vigente por empleado y día, aunque dos personas pasen lista a la vez.
+    /// </summary>
+    public DateTime? FechaVigente { get; set; }
 }

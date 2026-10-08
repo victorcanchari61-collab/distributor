@@ -10,8 +10,6 @@ import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
-import '../../maestros/datos/empleado.dart';
-import '../../maestros/estado/maestros_controlador.dart';
 import '../datos/asistencia.dart';
 import '../estado/asistencia_controlador.dart';
 
@@ -43,7 +41,7 @@ class _PaseListaPaginaState extends ConsumerState<PaseListaPagina> {
   String? _error;
   String? _feriado;
 
-  List<Empleado> _lista = const [];
+  List<EmpleadoAsistencia> _lista = const [];
   Map<int, Asistencia> _marcaDe = const {};
   final Map<int, _Fila> _filas = {};
   final Map<int, TextEditingController> _observaciones = {};
@@ -62,12 +60,14 @@ class _PaseListaPaginaState extends ConsumerState<PaseListaPagina> {
     super.dispose();
   }
 
-  /// Si esa persona trabajaba ese dia: ya habia entrado y todavia no cesaba.
-  bool _trabajaba(Empleado e) {
+  /// Si esa persona trabajaba ese dia: ya habia entrado y todavia no cesaba. Desactivado sin
+  /// fecha de cese no cuenta: no se sabe hasta cuando trabajo (el servidor tampoco lo deja marcar).
+  bool _trabajaba(EmpleadoAsistencia e) {
     final dia = DateUtils.dateOnly(widget.fecha);
     final ingreso = e.fechaIngreso;
     final cese = e.fechaCese;
-    return (ingreso == null || !DateUtils.dateOnly(ingreso).isAfter(dia)) &&
+    return (e.activo || cese != null) &&
+        (ingreso == null || !DateUtils.dateOnly(ingreso).isAfter(dia)) &&
         (cese == null || !DateUtils.dateOnly(cese).isBefore(dia));
   }
 
@@ -75,11 +75,12 @@ class _PaseListaPaginaState extends ConsumerState<PaseListaPagina> {
     final api = ref.read(rrhhApiProvider);
     try {
       final resultados = await Future.wait([
-        ref.read(empleadosProvider.future),
+        // Los de Asistencia, con su propio permiso: no hace falta poder ver Empleados.
+        api.empleadosAsistencia(),
         api.asistencias(widget.fecha, widget.fecha),
         api.feriados(),
       ]);
-      final empleados = resultados[0] as List<Empleado>;
+      final empleados = resultados[0] as List<EmpleadoAsistencia>;
       final marcas = (resultados[1] as List<Asistencia>).where(
         (m) => !m.anulado,
       );
@@ -88,9 +89,7 @@ class _PaseListaPaginaState extends ConsumerState<PaseListaPagina> {
       final marcaDe = {for (final m in marcas) m.empleadoId: m};
       final lista =
           empleados
-              .where(
-                (e) => (e.activo && _trabajaba(e)) || marcaDe.containsKey(e.id),
-              )
+              .where((e) => _trabajaba(e) || marcaDe.containsKey(e.id))
               .toList()
             ..sort((a, b) => a.nombreCompleto.compareTo(b.nombreCompleto));
 
@@ -327,7 +326,7 @@ class _FilaEmpleado extends StatelessWidget {
     required this.onElegir,
   });
 
-  final Empleado empleado;
+  final EmpleadoAsistencia empleado;
   final _Fila fila;
   final TextEditingController observacion;
 

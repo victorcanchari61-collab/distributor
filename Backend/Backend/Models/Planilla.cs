@@ -38,6 +38,12 @@ public class PlanillaSemanal
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// El lunes mientras no esté anulada; nulo si lo está. Lo calcula la base y lleva un índice único:
+    /// así no puede haber dos planillas vigentes de la misma semana aunque dos personas la armen a la vez.
+    /// </summary>
+    public DateTime? SemanaVigente { get; set; }
+
     public List<PlanillaDetalle> Detalle { get; set; } = [];
 }
 
@@ -57,9 +63,15 @@ public class PlanillaDetalle
 
     /// <summary>Días de lunes a sábado que no se pagan: faltas, permisos o fuera de contrato.</summary>
     public int DiasNoPagados { get; set; }
+
+    /// <summary>
+    /// Días de lunes a sábado, dentro de su contrato y que no son feriado, en que no tiene marca de
+    /// asistencia. Esos días se pagan como trabajados: por eso se avisa antes de pagar.
+    /// </summary>
+    public int DiasSinMarcar { get; set; }
     public decimal DescuentoInasistencias { get; set; }
 
-    /// <summary>Lo que se suma por trabajar un feriado que paga doble o triple.</summary>
+    /// <summary>Lo que se suma por trabajar un feriado: ese día se paga doble.</summary>
     public decimal ExtraFeriados { get; set; }
 
     public decimal Bonos { get; set; }
@@ -69,11 +81,26 @@ public class PlanillaDetalle
     /// <summary>Lo que se le descuenta por faltantes de caja pendientes.</summary>
     public decimal DescuentoFaltantes { get; set; }
 
+    /// <summary>Lo que se le descuenta esta semana de sus adelantos.</summary>
+    public decimal DescuentoAdelantos { get; set; }
+
+    /// <summary>Lo que le toca descontar esta semana según cómo se pactó cada adelanto.</summary>
+    public decimal AdelantosSugerido { get; set; }
+
+    /// <summary>
+    /// Lo que se decidió descontarle esta semana, a mano: más, menos o nada. Nulo: lo sugerido.
+    /// Lo que no se descuenta queda para la semana siguiente.
+    /// </summary>
+    public decimal? AdelantosManual { get; set; }
+
+    /// <summary>Todo lo que debe de adelantos, para saber hasta dónde se puede descontar.</summary>
+    public decimal AdelantosSaldo { get; set; }
+
     /// <summary>Lo que le cuesta al negocio su trabajo de la semana: es el gasto de planilla.</summary>
     public decimal CostoLaboral => Math.Max(0, SueldoSemanal - DescuentoInasistencias + ExtraFeriados + Bonos - OtrosDescuentos);
 
     /// <summary>Lo que se le paga de verdad.</summary>
-    public decimal Neto => CostoLaboral - DescuentoFaltantes;
+    public decimal Neto => CostoLaboral - DescuentoFaltantes - DescuentoAdelantos;
 
     /// <summary>El egreso de planilla (movimiento operativo) al pagar.</summary>
     public int? MovimientoOperativoId { get; set; }
@@ -81,7 +108,13 @@ public class PlanillaDetalle
     /// <summary>El ingreso por el faltante descontado, en la misma cuenta del pago.</summary>
     public int? MovimientoRecuperoId { get; set; }
 
+    /// <summary>El ingreso por lo descontado de sus adelantos, en la misma cuenta del pago.</summary>
+    public int? MovimientoAdelantoId { get; set; }
+
     public List<PlanillaDescuento> Descuentos { get; set; } = [];
+
+    /// <summary>Lo que se descontó de cada adelanto al pagar.</summary>
+    public List<PlanillaAdelanto> Adelantos { get; set; } = [];
 }
 
 /// <summary>Cuánto de un faltante se descontó en una línea de planilla pagada.</summary>

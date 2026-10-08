@@ -29,9 +29,11 @@ class Planilla {
     required this.totalCostoLaboral,
     required this.totalFaltantes,
     required this.totalNeto,
+    this.totalAdelantos = 0,
     required this.detalle,
     this.cuentaFinanciera,
     this.fechaPago,
+    this.fechasSinMarcar = const [],
   });
 
   final int id;
@@ -47,10 +49,17 @@ class Planilla {
   final double totalCostoLaboral;
   final double totalFaltantes;
 
+  /// Lo que se descuenta de adelantos esta semana, de todos.
+  final double totalAdelantos;
+
   /// Lo que sale de la cuenta al pagar.
   final double totalNeto;
 
   final List<PlanillaDetalle> detalle;
+
+  /// En borrador: los dias (lunes a sabado) en que a alguien le falta su marca. Se pagarian
+  /// como trabajados, asi que hay que pasar lista antes de pagar.
+  final List<DateTime> fechasSinMarcar;
 
   bool get esBorrador => estado == EstadoPlanilla.borrador;
 
@@ -63,10 +72,15 @@ class Planilla {
     fechaPago: fechaDeJsonOpcional(json['fechaPago']),
     totalCostoLaboral: _monto(json['totalCostoLaboral']),
     totalFaltantes: _monto(json['totalFaltantes']),
+    totalAdelantos: _monto(json['totalAdelantos']),
     totalNeto: _monto(json['totalNeto']),
     detalle: [
       for (final d in json['detalle'] as List? ?? const [])
         PlanillaDetalle.desdeJson(d as Map<String, dynamic>),
+    ],
+    fechasSinMarcar: [
+      for (final f in json['fechasSinMarcar'] as List? ?? const [])
+        fechaDeJson(f as String),
     ],
   );
 }
@@ -80,6 +94,11 @@ class PlanillaDetalle {
     required this.sueldoSemanal,
     required this.diasNoPagados,
     required this.descuentoInasistencias,
+    this.diasSinMarcar = 0,
+    this.descuentoAdelantos = 0,
+    this.adelantosSugerido = 0,
+    this.adelantosManual,
+    this.adelantosSaldo = 0,
     required this.extraFeriados,
     required this.bonos,
     required this.otrosDescuentos,
@@ -100,6 +119,9 @@ class PlanillaDetalle {
   final int diasNoPagados;
   final double descuentoInasistencias;
 
+  /// Dias que se le pagan sin tener marca de asistencia.
+  final int diasSinMarcar;
+
   /// Lo que se suma por trabajar un feriado.
   final double extraFeriados;
 
@@ -109,6 +131,18 @@ class PlanillaDetalle {
 
   /// Los faltantes de caja que se le descuentan esta semana.
   final double descuentoFaltantes;
+
+  /// Lo que se le descuenta esta semana de sus adelantos.
+  final double descuentoAdelantos;
+
+  /// Lo que le toca segun como se pactaron sus adelantos.
+  final double adelantosSugerido;
+
+  /// Lo que se decidio a mano para esta semana; null si va lo sugerido.
+  final double? adelantosManual;
+
+  /// Todo lo que debe de adelantos.
+  final double adelantosSaldo;
 
   final double costoLaboral;
 
@@ -125,12 +159,17 @@ class PlanillaDetalle {
         cargo: json['cargo'] as String?,
         sueldoSemanal: _monto(json['sueldoSemanal']),
         diasNoPagados: json['diasNoPagados'] as int? ?? 0,
+        diasSinMarcar: json['diasSinMarcar'] as int? ?? 0,
         descuentoInasistencias: _monto(json['descuentoInasistencias']),
         extraFeriados: _monto(json['extraFeriados']),
         bonos: _monto(json['bonos']),
         otrosDescuentos: _monto(json['otrosDescuentos']),
         notaAjuste: json['notaAjuste'] as String?,
         descuentoFaltantes: _monto(json['descuentoFaltantes']),
+        descuentoAdelantos: _monto(json['descuentoAdelantos']),
+        adelantosSugerido: _monto(json['adelantosSugerido']),
+        adelantosManual: (json['adelantosManual'] as num?)?.toDouble(),
+        adelantosSaldo: _monto(json['adelantosSaldo']),
         costoLaboral: _monto(json['costoLaboral']),
         neto: _monto(json['neto']),
       );

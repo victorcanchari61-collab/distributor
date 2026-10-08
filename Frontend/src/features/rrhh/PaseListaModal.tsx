@@ -6,7 +6,7 @@ import { fechaCorta } from '../../lib/fechas'
 import { asistenciaApi } from './asistenciaApi'
 import type { AsistenciaResponse, EstadoAsistencia } from './asistenciaApi'
 import { trabajaba } from './empleadoApi'
-import type { EmpleadoResponse } from './empleadoApi'
+import type { EmpleadoAsistencia } from './asistenciaApi'
 
 const OPCIONES: { value: EstadoAsistencia; label: string; activo: string }[] = [
   { value: 'PRESENTE', label: 'Presente', activo: 'border-emerald-600 bg-emerald-600 text-white' },
@@ -35,7 +35,7 @@ export function PaseListaModal({
 }: {
   fecha: string
   feriado?: string
-  empleados: EmpleadoResponse[]
+  empleados: EmpleadoAsistencia[]
   /** Las marcas activas de ese día. */
   marcas: AsistenciaResponse[]
   puedeCorregir: boolean

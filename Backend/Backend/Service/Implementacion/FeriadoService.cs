@@ -13,12 +13,18 @@ public class FeriadoService : IFeriadoService
     private readonly IFeriadoRepository _repository;
     private readonly IValidator<FeriadoRequest> _validator;
     private readonly INotificador _notificador;
+    private readonly IPlanillaService _planillas;
 
-    public FeriadoService(IFeriadoRepository repository, IValidator<FeriadoRequest> validator, INotificador notificador)
+    public FeriadoService(
+        IFeriadoRepository repository,
+        IValidator<FeriadoRequest> validator,
+        INotificador notificador,
+        IPlanillaService planillas)
     {
         _repository = repository;
         _validator = validator;
         _notificador = notificador;
+        _planillas = planillas;
     }
 
     public async Task<IEnumerable<FeriadoResponse>> GetAllAsync()
@@ -37,8 +43,14 @@ public class FeriadoService : IFeriadoService
             throw new ConflictException("Ya hay un feriado registrado ese día");
         }
 
-        var feriado = new Feriado { Fecha = fecha, Nombre = request.Nombre.Trim() };
-        await _repository.AddAsync(feriado);
+        // Un feriado cambia lo que se paga esa semana: si ya está pagada no se agrega, y si está
+        // en borrador se recalcula.
+        var feriado = await _planillas.CambiarDiasAsync([fecha], async () =>
+        {
+            var nuevo = new Feriado { Fecha = fecha, Nombre = request.Nombre.Trim() };
+            await _repository.AddAsync(nuevo);
+            return nuevo;
+        });
         var response = Map(feriado);
         await _notificador.AvisarAsync("feriados", "creado", response);
         return response;
@@ -56,10 +68,14 @@ public class FeriadoService : IFeriadoService
             throw new ConflictException("Ya hay un feriado registrado ese día");
         }
 
-        feriado.Fecha = fecha;
-        feriado.Nombre = request.Nombre.Trim();
-
-        await _repository.UpdateAsync(feriado);
+        // Toca dos semanas si se mueve de fecha: la que deja y la que recibe.
+        await _planillas.CambiarDiasAsync([feriado.Fecha, fecha], async () =>
+        {
+            feriado.Fecha = fecha;
+            feriado.Nombre = request.Nombre.Trim();
+            await _repository.UpdateAsync(feriado);
+            return feriado;
+        });
         var response = Map(feriado);
         await _notificador.AvisarAsync("feriados", "actualizado", response);
         return response;
@@ -68,7 +84,11 @@ public class FeriadoService : IFeriadoService
     public async Task DeleteAsync(int id)
     {
         var feriado = await GetOrThrowAsync(id);
-        await _repository.DeleteAsync(feriado);
+        await _planillas.CambiarDiasAsync([feriado.Fecha], async () =>
+        {
+            await _repository.DeleteAsync(feriado);
+            return feriado;
+        });
         await _notificador.AvisarAsync("feriados", "eliminado", new { id });
     }
 

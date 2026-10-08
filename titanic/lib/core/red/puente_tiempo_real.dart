@@ -10,6 +10,7 @@ import '../../features/finanzas/estado/tesoreria_controlador.dart';
 import '../../features/finanzas/estado/ganancia_controlador.dart';
 import '../../features/inventario/estado/inventario_controlador.dart';
 import '../../features/maestros/estado/maestros_controlador.dart';
+import '../../features/rrhh/estado/adelantos_controlador.dart';
 import '../../features/rrhh/estado/asistencia_controlador.dart';
 import '../../features/rrhh/estado/planilla_controlador.dart';
 // Dos modulos declaran rutasProvider —el de clientes y el de reparto—: aqui se
@@ -105,6 +106,12 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   'asistencia': [asistenciasProvider, resumenAsistenciaProvider],
   'feriados': [feriadosProvider],
   'planillas': [planillaSemanaProvider, historialPlanillasProvider],
+  'adelantos': [
+    adelantosProvider,
+    resumenAdelantosProvider,
+    adelantoProvider,
+    empleadosAdelantoProvider,
+  ],
   'categorias': [categoriasProvider, productosProvider],
   'marcas': [marcasProvider, productosProvider],
   'unidades': [unidadesProvider, productosProvider],

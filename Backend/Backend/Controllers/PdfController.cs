@@ -81,6 +81,12 @@ public class PdfController(IPdfService pdf) : ControllerBase
     /// parámetro: son una lista de columna, operador y valor, y armar un
     /// parámetro por columna sería tener que enseñarle al servidor cada uno.
     /// </summary>
+    /// <summary>Las boletas de pago de una planilla; con <c>empleadoId</c>, solo la de esa persona.</summary>
+    [HttpGet("api/planilla/{id:int}/pdf")]
+    [Permiso("rrhh.planilla", Accion.Exportar)]
+    public async Task<IActionResult> Boletas(int id, [FromQuery] int? empleadoId) =>
+        Archivo(await pdf.BoletasPlanillaAsync(id, empleadoId));
+
     [HttpGet("api/novedad/pdf")]
     [Permiso("tms.novedades", Accion.Exportar)]
     public async Task<IActionResult> Novedades([FromQuery] string? consulta) =>

@@ -128,6 +128,7 @@ public class MovimientoDineroService : IMovimientoDineroService
         public Dictionary<int, PagoFinanciamiento> PagosPrestamo { get; init; } = [];
         public Dictionary<int, CierreCaja> Cierres { get; init; } = [];
         public Dictionary<int, PlanillaDetalle> Planillas { get; init; } = [];
+        public Dictionary<int, AdelantoEmpleado> Adelantos { get; init; } = [];
         public Dictionary<int, MotivoGasto> Categorias { get; init; } = [];
     }
 
@@ -148,7 +149,10 @@ public class MovimientoDineroService : IMovimientoDineroService
             .Concat(De(DocumentoOrigenMovimiento.FaltanteCaja))
             .Concat(De(DocumentoOrigenMovimiento.SobranteCaja))
             .Distinct().ToList();
-        var planillas = De(DocumentoOrigenMovimiento.RecuperoFaltante);
+        var planillas = De(DocumentoOrigenMovimiento.RecuperoFaltante)
+            .Concat(De(DocumentoOrigenMovimiento.RecuperoAdelanto))
+            .Distinct().ToList();
+        var adelantos = De(DocumentoOrigenMovimiento.AdelantoEmpleado);
 
         return new Documentos
         {
@@ -172,6 +176,9 @@ public class MovimientoDineroService : IMovimientoDineroService
             Planillas = await _context.PlanillaDetalles.AsNoTracking()
                 .Include(d => d.Empleado)
                 .Where(d => planillas.Contains(d.Id)).ToDictionaryAsync(d => d.Id),
+            Adelantos = await _context.AdelantosEmpleado.AsNoTracking()
+                .Include(a => a.Empleado)
+                .Where(a => adelantos.Contains(a.Id)).ToDictionaryAsync(a => a.Id),
             Categorias = await _context.MotivosGasto.AsNoTracking()
                 .Where(c => c.EsSistema).ToDictionaryAsync(c => c.Id),
         };
@@ -233,6 +240,18 @@ public class MovimientoDineroService : IMovimientoDineroService
                 return DelSistema(Doc(d.Planillas)?.Empleado is { } e
                     ? $"Faltante descontado a {e.NombreCompleto} en planilla"
                     : "Recupero de faltante");
+            // Plata a cuenta del sueldo: no es un gasto (el gasto es la planilla). Sale al darla y
+            // vuelve al descontarla, así que entre las dos quedan en cero.
+            case DocumentoOrigenMovimiento.AdelantoEmpleado:
+                return new Clasificacion(
+                    Doc(d.Adelantos)?.Empleado is { } ae ? $"Adelanto a {ae.NombreCompleto}" : "Adelanto a trabajador",
+                    "Adelanto a trabajador", OrigenMovimiento.NoOperativo);
+            case DocumentoOrigenMovimiento.RecuperoAdelanto:
+                return new Clasificacion(
+                    Doc(d.Planillas)?.Empleado is { } re
+                        ? $"Adelanto descontado a {re.NombreCompleto} en planilla"
+                        : "Adelanto descontado en planilla",
+                    "Adelanto descontado", OrigenMovimiento.NoOperativo);
             case DocumentoOrigenMovimiento.CierreCaja:
                 return new Clasificacion(DelCierre("Cierre de caja"), null, OrigenMovimiento.Interno);
             case DocumentoOrigenMovimiento.TransferenciaInterna:

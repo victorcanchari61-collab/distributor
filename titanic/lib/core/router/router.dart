@@ -45,6 +45,7 @@ import '../../features/inventario/vistas/transferencias_pagina.dart';
 import '../../features/maestros/vistas/clientes_pagina.dart';
 import '../../features/maestros/vistas/empleados_pagina.dart';
 import '../../features/rrhh/vistas/asistencia_pagina.dart';
+import '../../features/rrhh/vistas/adelantos_pagina.dart';
 import '../../features/rrhh/vistas/planilla_pagina.dart';
 import '../../features/maestros/vistas/productos_pagina.dart';
 import '../../features/maestros/vistas/proveedores_pagina.dart';
@@ -132,6 +133,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: PlanillaPagina.ruta,
         builder: (context, estado) =>
             const PuertaPermiso(child: PlanillaPagina()),
+      ),
+      GoRoute(
+        path: AdelantosPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: AdelantosPagina()),
       ),
       GoRoute(
         path: AlmacenesPagina.ruta,
@@ -376,6 +382,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != EmpleadosPagina.ruta &&
               item.ruta != AsistenciaPagina.ruta &&
               item.ruta != PlanillaPagina.ruta &&
+              item.ruta != AdelantosPagina.ruta &&
               item.ruta != AlmacenesPagina.ruta &&
               item.ruta != StockPagina.ruta &&
               item.ruta != KardexPagina.ruta &&

@@ -47,6 +47,12 @@ public static class DocumentoOrigenMovimiento
     /// <summary>El faltante que se le descontó al trabajador en su planilla.</summary>
     public const string RecuperoFaltante = "RECUPERO_FALTANTE";
 
+    /// <summary>Plata que se le da a un trabajador a cuenta de su sueldo: sale de la cuenta.</summary>
+    public const string AdelantoEmpleado = "ADELANTO_EMPLEADO";
+
+    /// <summary>Lo que se le descontó de un adelanto en su planilla: vuelve a la cuenta del pago.</summary>
+    public const string RecuperoAdelanto = "RECUPERO_ADELANTO";
+
     /// <summary>La plata de un préstamo recibido: entra a la cuenta, es no operativa.</summary>
     public const string Financiamiento = "FINANCIAMIENTO";
 
@@ -84,6 +90,7 @@ public static class DocumentoOrigenMovimiento
     [
         CierreCaja, FaltanteCaja, SobranteCaja, RecuperoFaltante, MovimientoOperativo, TransferenciaInterna,
         Reversion, PagoVenta, PagoCompra, SaldoInicial, Financiamiento, PagoFinanciamiento,
+        AdelantoEmpleado, RecuperoAdelanto,
     ];
 }
 

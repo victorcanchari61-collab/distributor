@@ -34,16 +34,23 @@ import { ApiError } from '../../lib/apiClient'
 import { fechaCorta, fechaLocal, hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
-import { empleadoApi, trabajaba } from './empleadoApi'
-import type { EmpleadoResponse } from './empleadoApi'
+import { trabajaba } from './empleadoApi'
 import { asistenciaApi } from './asistenciaApi'
-import type { AsistenciaResponse, EstadoAsistencia, ResumenAsistencia } from './asistenciaApi'
+import type { AsistenciaResponse, EmpleadoAsistencia, EstadoAsistencia, ResumenAsistencia } from './asistenciaApi'
 import { feriadoApi } from './feriadoApi'
 import type { FeriadoResponse } from './feriadoApi'
 import { FeriadosModal } from './FeriadosModal'
 import { PaseListaModal } from './PaseListaModal'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+
+/** Su cargo, y si ya no está: cesado con su fecha, o desactivado. */
+const detalleEmpleado = (e: EmpleadoAsistencia) =>
+  e.activo
+    ? (e.cargo ?? undefined)
+    : e.fechaCese
+      ? `Cesó el ${fechaCorta(e.fechaCese)}`
+      : 'Desactivado'
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
@@ -126,7 +133,7 @@ export function AsistenciaPage() {
     return new Date(hoy.getFullYear(), hoy.getMonth(), 1)
   })
   const [empleadoFiltro, setEmpleadoFiltro] = useState<number | ''>('')
-  const [empleados, setEmpleados] = useState<EmpleadoResponse[]>([])
+  const [empleados, setEmpleados] = useState<EmpleadoAsistencia[]>([])
   const [marcas, setMarcas] = useState<AsistenciaResponse[]>([])
   const [resumen, setResumen] = useState<ResumenAsistencia | null>(null)
   const [feriados, setFeriados] = useState<FeriadoResponse[]>([])
@@ -167,12 +174,26 @@ export function AsistenciaPage() {
 
   useRealtime('asistencia', cargar)
 
-  useEffect(() => {
-    void empleadoApi.getAll().then((todos) => setEmpleados(todos.filter((e) => e.activo)))
+  // Todos, también los desactivados: quien cesó se sigue marcando hasta su fecha de cese, y sus
+  // marcas viejas se siguen pudiendo filtrar.
+  const cargarEmpleados = useCallback(() => {
+    asistenciaApi
+      .empleados()
+      .then(setEmpleados)
+      .catch((e) => setError(e instanceof ApiError ? e.message : 'No pudimos cargar los empleados.'))
   }, [])
 
+  useEffect(() => {
+    cargarEmpleados()
+  }, [cargarEmpleados])
+
+  useRealtime('empleados', cargarEmpleados)
+
   const cargarFeriados = useCallback(() => {
-    void feriadoApi.getAll().then(setFeriados)
+    feriadoApi
+      .getAll()
+      .then(setFeriados)
+      .catch((e) => setError(e instanceof ApiError ? e.message : 'No pudimos cargar los feriados.'))
   }, [])
 
   useEffect(() => {
@@ -388,7 +409,7 @@ export function AsistenciaPage() {
                   onChange={(v) => setEmpleadoFiltro(v === '' ? '' : Number(v))}
                   placeholder="Todos los empleados"
                   optional
-                  options={empleados.map((e) => ({ value: e.id, label: e.nombreCompleto, detalle: e.cargo ?? undefined }))}
+                  options={empleados.map((e) => ({ value: e.id, label: e.nombreCompleto, detalle: detalleEmpleado(e) }))}
                 />
               </div>
               {puede('rrhh.asistencia', 'ver') && (
@@ -519,7 +540,9 @@ export function AsistenciaPage() {
                 value={form.empleadoId}
                 onChange={(v) => setForm({ ...form, empleadoId: Number(v) })}
                 placeholder="Elige un empleado"
-                options={empleados.map((e) => ({ value: e.id, label: e.nombreCompleto, detalle: e.cargo ?? undefined }))}
+                options={empleados
+                  .filter((e) => trabajaba(e, form.fecha))
+                  .map((e) => ({ value: e.id, label: e.nombreCompleto, detalle: detalleEmpleado(e) }))}
               />
               <Input
                 label="Fecha"

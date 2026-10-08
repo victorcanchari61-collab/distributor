@@ -89,6 +89,14 @@ export const empleadoApi = {
   remove: (id: number) => api.del<void>(`/empleado/${id}`),
 }
 
-/** Si esa persona trabajaba ese día (YYYY-MM-DD): ya había entrado y todavía no había cesado. */
-export const trabajaba = (e: EmpleadoResponse, fecha: string) =>
-  (!e.fechaIngreso || e.fechaIngreso.slice(0, 10) <= fecha) && (!e.fechaCese || e.fechaCese.slice(0, 10) >= fecha)
+/**
+ * Si esa persona trabajaba ese día (YYYY-MM-DD): ya había entrado y todavía no había cesado. Quien está
+ * desactivado sin fecha de cese no cuenta: no se sabe hasta cuándo trabajó (el servidor tampoco lo deja marcar).
+ */
+export const trabajaba = (
+  e: { activo: boolean; fechaIngreso: string | null; fechaCese: string | null },
+  fecha: string,
+) =>
+  (e.activo || !!e.fechaCese) &&
+  (!e.fechaIngreso || e.fechaIngreso.slice(0, 10) <= fecha) &&
+  (!e.fechaCese || e.fechaCese.slice(0, 10) >= fecha)

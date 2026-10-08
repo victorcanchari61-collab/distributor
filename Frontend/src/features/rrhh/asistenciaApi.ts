@@ -40,6 +40,19 @@ export interface MarcarDiaResponse {
   corregidas: number
 }
 
+/**
+ * Un empleado para pasar lista o filtrar. Lo da Asistencia con su propio permiso (no hace falta ver
+ * Empleados), e incluye a los desactivados: quien cesó a mitad de semana se marca hasta su fecha de cese.
+ */
+export interface EmpleadoAsistencia {
+  id: number
+  nombreCompleto: string
+  cargo: string | null
+  activo: boolean
+  fechaIngreso: string | null
+  fechaCese: string | null
+}
+
 /** Cuántos hay de cada estado en el rango consultado. */
 export interface ResumenAsistencia {
   presentes: number
@@ -52,6 +65,9 @@ const rango = (desde: string, hasta: string, empleadoId?: number | null) =>
   `?desde=${desde}&hasta=${hasta}${empleadoId ? `&empleadoId=${empleadoId}` : ''}`
 
 export const asistenciaApi = {
+  /** Todos, los activos primero, con sus fechas de ingreso y cese. */
+  empleados: () => api.get<EmpleadoAsistencia[]>('/asistencia/empleados'),
+
   listar: (desde: string, hasta: string, empleadoId?: number | null) =>
     api.get<AsistenciaResponse[]>(`/asistencia${rango(desde, hasta, empleadoId)}`),
 

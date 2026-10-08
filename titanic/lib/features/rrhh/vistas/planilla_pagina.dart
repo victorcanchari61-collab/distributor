@@ -26,6 +26,11 @@ import '../estado/planilla_controlador.dart';
 String _dia(DateTime f) =>
     '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';
 
+/// "mar 07/10": el dia de la semana ayuda a ubicar cual falta.
+String _diaSemana(DateTime f) =>
+    '${const ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'][f.weekday - 1]} '
+    '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}';
+
 String _diaHora(DateTime f) =>
     '${_dia(f)} ${f.hour.toString().padLeft(2, '0')}:${f.minute.toString().padLeft(2, '0')}';
 
@@ -159,6 +164,12 @@ class _PlanillaPaginaState extends ConsumerState<PlanillaPagina> {
           tono: DatoTono.peligro,
         ),
         AppTarjetaDato(
+          etiqueta: 'Adelantos descontados',
+          valor: formatoSoles(planilla?.totalAdelantos ?? 0),
+          icono: Icons.payments_outlined,
+          tono: DatoTono.aviso,
+        ),
+        AppTarjetaDato(
           etiqueta: 'Neto a pagar',
           valor: formatoSoles(planilla?.totalNeto ?? 0),
           icono: Icons.account_balance_wallet_outlined,
@@ -278,6 +289,15 @@ class _Encabezado extends StatelessWidget {
                 ],
               ),
             ),
+          if (p != null && p.esBorrador && p.fechasSinMarcar.isNotEmpty) ...[
+            AppAlerta(
+              'Falta pasar lista el ${p.fechasSinMarcar.map(_diaSemana).join(', ')}. '
+              'Esos días se pagan como trabajados: márcalos en Asistencia antes de pagar '
+              '(la planilla se recalcula sola).',
+              tono: AlertaTono.aviso,
+            ),
+            const SizedBox(height: Dimen.espacio2),
+          ],
           Row(
             children: [
               if (onGenerar != null)
@@ -363,6 +383,15 @@ class _TarjetaDetalle extends StatelessWidget {
               ? '${_menos(d.descuentoInasistencias)} (${d.diasNoPagados} d)'
               : '—',
         ),
+        if (d.diasSinMarcar > 0)
+          CampoDetalle(
+            'Sin marcar',
+            null,
+            widget: Text(
+              '${d.diasSinMarcar} ${d.diasSinMarcar == 1 ? 'día' : 'días'} (se pagan)',
+              style: const TextStyle(fontSize: 13, color: Colores.advertencia),
+            ),
+          ),
         CampoDetalle('Feriados', _mas(d.extraFeriados)),
         CampoDetalle('Bonos', _mas(d.bonos)),
         CampoDetalle(
@@ -382,6 +411,13 @@ class _TarjetaDetalle extends StatelessWidget {
             ),
           ),
         ),
+        if (d.descuentoAdelantos > 0 || d.adelantosSaldo > 0)
+          CampoDetalle(
+            'Adelantos',
+            '${_menos(d.descuentoAdelantos)}'
+                '${d.adelantosSaldo > d.descuentoAdelantos ? ' · debe ${formatoSoles(d.adelantosSaldo)}' : ''}'
+                '${d.adelantosManual != null ? ' · a mano' : ''}',
+          ),
         CampoDetalle('A pagar', formatoSoles(d.neto)),
       ],
       acciones: [
@@ -435,6 +471,11 @@ class _HojaAjusteState extends ConsumerState<_HojaAjuste> {
   late final _nota = TextEditingController(
     text: widget.detalle.notaAjuste ?? '',
   );
+
+  /// Vacio: lo que le toca segun sus adelantos.
+  late final _adelantos = TextEditingController(
+    text: widget.detalle.adelantosManual?.toStringAsFixed(2) ?? '',
+  );
   bool _guardando = false;
   String? _error;
 
@@ -443,6 +484,7 @@ class _HojaAjusteState extends ConsumerState<_HojaAjuste> {
     _bonos.dispose();
     _descuentos.dispose();
     _nota.dispose();
+    _adelantos.dispose();
     super.dispose();
   }
 
@@ -450,6 +492,14 @@ class _HojaAjusteState extends ConsumerState<_HojaAjuste> {
     FocusScope.of(context).unfocus();
     final bonos = double.tryParse(_bonos.text.trim()) ?? 0;
     final descuentos = double.tryParse(_descuentos.text.trim()) ?? 0;
+    final adelantos = double.tryParse(_adelantos.text.trim());
+    if (adelantos != null && adelantos > widget.detalle.adelantosSaldo) {
+      setState(
+        () => _error =
+            'Solo debe ${formatoSoles(widget.detalle.adelantosSaldo)} de adelantos.',
+      );
+      return;
+    }
 
     setState(() {
       _guardando = true;
@@ -466,6 +516,7 @@ class _HojaAjusteState extends ConsumerState<_HojaAjuste> {
             bonos: bonos,
             otrosDescuentos: descuentos,
             nota: _nota.text.trim().isEmpty ? null : _nota.text.trim(),
+            adelantos: adelantos,
           );
       ref.invalidate(planillaSemanaProvider);
       ref.invalidate(historialPlanillasProvider);
@@ -532,6 +583,28 @@ class _HojaAjusteState extends ConsumerState<_HojaAjuste> {
               opcional: true,
               habilitado: !_guardando,
             ),
+            if (widget.detalle.adelantosSaldo > 0) ...[
+              const SizedBox(height: Dimen.espacio4),
+              AppCampo(
+                controlador: _adelantos,
+                etiqueta: 'Adelantos a descontar esta semana',
+                icono: Icons.payments_outlined,
+                pista: widget.detalle.adelantosSugerido.toStringAsFixed(2),
+                opcional: true,
+                tipoTeclado: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                formateadores: [_soloMonto],
+                habilitado: !_guardando,
+              ),
+              const SizedBox(height: Dimen.espacio1),
+              Text(
+                'Debe ${formatoSoles(widget.detalle.adelantosSaldo)}; esta semana le toca '
+                '${formatoSoles(widget.detalle.adelantosSugerido)}. Vacío es lo que le toca, '
+                '0 es nada. Lo que no se descuente queda para la semana siguiente.',
+                style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+              ),
+            ],
             const SizedBox(height: Dimen.espacio5),
             AppBoton(
               texto: 'Guardar',
@@ -557,12 +630,24 @@ class _HojaPagar extends ConsumerStatefulWidget {
 
 class _HojaPagarState extends ConsumerState<_HojaPagar> {
   int? _cuentaId;
+  bool _pagarIgual = false;
   bool _pagando = false;
   String? _error;
+
+  /// La de ahora: si el servidor la recalculo al intentar pagar, se ven los montos nuevos.
+  Planilla get _planilla =>
+      ref.watch(planillaSemanaProvider).valueOrNull ?? widget.planilla;
 
   Future<void> _pagar() async {
     if (_cuentaId == null) {
       setState(() => _error = 'Elige de qué cuenta sale el pago.');
+      return;
+    }
+    if (_planilla.fechasSinMarcar.isNotEmpty && !_pagarIgual) {
+      setState(
+        () => _error =
+            'Marca la asistencia que falta, o confirma que quieres pagar igual.',
+      );
       return;
     }
     setState(() {
@@ -575,12 +660,18 @@ class _HojaPagarState extends ConsumerState<_HojaPagar> {
     try {
       await ref
           .read(rrhhApiProvider)
-          .pagarPlanilla(widget.planilla.id, _cuentaId!);
+          .pagarPlanilla(
+            widget.planilla.id,
+            _cuentaId!,
+            conDiasSinMarcar: _pagarIgual,
+          );
       ref.invalidate(planillaSemanaProvider);
       ref.invalidate(historialPlanillasProvider);
       navegador.pop();
       mensajero.mostrar('Planilla pagada');
     } on ApiExcepcion catch (e) {
+      // Pudo haberla recalculado (cambio la asistencia, un sueldo...): se vuelve a leer.
+      ref.invalidate(planillaSemanaProvider);
       setState(() {
         _pagando = false;
         _error = e.texto;
@@ -591,7 +682,8 @@ class _HojaPagarState extends ConsumerState<_HojaPagar> {
   @override
   Widget build(BuildContext context) {
     final cuentas = ref.watch(cuentasPlanillaProvider);
-    final p = widget.planilla;
+    final p = _planilla;
+    final sinMarcar = p.fechasSinMarcar;
 
     return Padding(
       padding: _margenHoja(context),
@@ -650,11 +742,32 @@ class _HojaPagarState extends ConsumerState<_HojaPagar> {
               onCambio: (v) => setState(() => _cuentaId = v),
             ),
           ),
+          if (sinMarcar.isNotEmpty) ...[
+            const SizedBox(height: Dimen.espacio3),
+            AppAlerta(
+              'Falta pasar lista el ${sinMarcar.map(_diaSemana).join(', ')}. '
+              'Si pagas ahora, esos días se pagan como trabajados.',
+              tono: AlertaTono.aviso,
+            ),
+            CheckboxListTile(
+              value: _pagarIgual,
+              onChanged: _pagando
+                  ? null
+                  : (v) => setState(() => _pagarIgual = v ?? false),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text(
+                'Pagar igual, sin esas marcas',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
           const SizedBox(height: Dimen.espacio5),
           AppBoton(
             texto: 'Pagar ${formatoSoles(p.totalNeto)}',
             cargando: _pagando,
-            onPressed: _pagar,
+            onPressed: sinMarcar.isNotEmpty && !_pagarIgual ? null : _pagar,
           ),
         ],
       ),

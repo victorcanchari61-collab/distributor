@@ -395,6 +395,12 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Planilla semanal',
         icono: Icons.account_balance_wallet_outlined,
       ),
+      MenuItem(
+        id: 'rrhh.adelantos',
+        pendiente: false,
+        titulo: 'Adelantos',
+        icono: Icons.payments_outlined,
+      ),
     ],
   ),
   MenuGrupo(
