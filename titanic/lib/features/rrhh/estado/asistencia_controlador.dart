@@ -32,11 +32,18 @@ final asistenciasProvider = FutureProvider.autoDispose<List<Asistencia>>((
   });
 });
 
-/// Cuantos hay de cada estado en el mes, para las tarjetas de arriba.
+/// Cuantos hay de cada estado en el mes, para las tarjetas de arriba. Con un
+/// empleado elegido en el filtro, solo los suyos: igual que la web.
 final resumenAsistenciaProvider = FutureProvider.autoDispose<ResumenAsistencia>(
   (ref) {
     final r = rangoDelMes(ref.watch(mesAsistenciaProvider));
-    return ref.watch(rrhhApiProvider).resumenAsistencia(r.desde, r.hasta);
+    return ref
+        .watch(rrhhApiProvider)
+        .resumenAsistencia(
+          r.desde,
+          r.hasta,
+          empleadoId: ref.watch(empleadoAsistenciaFiltroProvider),
+        );
   },
 );
 
@@ -59,8 +66,9 @@ final feriadosProvider = FutureProvider.autoDispose<List<Feriado>>(
 
 final busquedaAsistenciaProvider = StateProvider.autoDispose((ref) => '');
 
-/// Empleado elegido en el filtro. Null es "todos".
-final empleadoAsistenciaFiltroProvider = StateProvider.autoDispose<String?>(
+/// El id del empleado elegido en el filtro. Null es "todos". Es el id y no el
+/// nombre: con el se piden al servidor las tarjetas de esa persona.
+final empleadoAsistenciaFiltroProvider = StateProvider.autoDispose<int?>(
   (ref) => null,
 );
 
@@ -106,15 +114,19 @@ final asistenciasFiltradasProvider = Provider.autoDispose<List<Asistencia>>((
           RegistroAsistencia.todas => true,
         },
       )
-      .where((a) => empleado == null || a.empleado == empleado)
+      .where((a) => empleado == null || a.empleadoId == empleado)
       .where((a) => estado == null || a.estado == estado)
       .where((a) => texto.isEmpty || a.buscable.contains(texto))
       .toList();
 });
 
-/// Los empleados que aparecen en las marcas del mes, para el filtro.
-final empleadosEnAsistenciaProvider = Provider.autoDispose<List<String>>((ref) {
-  final todas =
-      ref.watch(asistenciasProvider).valueOrNull ?? const <Asistencia>[];
-  return todas.map((a) => a.empleado).toSet().toList()..sort();
-});
+/// Los empleados que aparecen en las marcas del mes, para el filtro: id y
+/// nombre, ordenados por nombre.
+final empleadosEnAsistenciaProvider =
+    Provider.autoDispose<List<({int id, String nombre})>>((ref) {
+      final todas =
+          ref.watch(asistenciasProvider).valueOrNull ?? const <Asistencia>[];
+      final porId = {for (final a in todas) a.empleadoId: a.empleado};
+      return [for (final e in porId.entries) (id: e.key, nombre: e.value)]
+        ..sort((a, b) => a.nombre.compareTo(b.nombre));
+    });

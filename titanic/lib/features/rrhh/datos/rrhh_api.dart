@@ -33,12 +33,15 @@ class RrhhApi {
   }
 
   /// GET /api/asistencia/resumen?desde&hasta
+  /// Con [empleadoId], solo las de esa persona.
   Future<ResumenAsistencia> resumenAsistencia(
     DateTime desde,
-    DateTime hasta,
-  ) async => ResumenAsistencia.desdeJson(
+    DateTime hasta, {
+    int? empleadoId,
+  }) async => ResumenAsistencia.desdeJson(
     await _api.get(
-          '/asistencia/resumen?desde=${diaIso(desde)}&hasta=${diaIso(hasta)}',
+          '/asistencia/resumen?desde=${diaIso(desde)}&hasta=${diaIso(hasta)}'
+          '${empleadoId != null ? '&empleadoId=$empleadoId' : ''}',
         )
         as Map<String, dynamic>,
   );

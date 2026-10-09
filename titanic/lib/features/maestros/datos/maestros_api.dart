@@ -11,6 +11,22 @@ class MaestrosApi {
 
   final ClienteApi _api;
 
+  // --- Consulta de documentos ---
+
+  /// GET /api/consulta/dni/{dni}: nombres y apellidos de RENIEC, para no
+  /// teclearlos. Va contra el backend: el token del proveedor no sale de ahi.
+  Future<({String nombres, String apellidos})> consultarDni(String dni) async {
+    final datos = await _api.get('/consulta/dni/$dni') as Map<String, dynamic>;
+    final apellidos =
+        '${datos['apellidoPaterno'] ?? ''} ${datos['apellidoMaterno'] ?? ''}'
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+    return (
+      nombres: (datos['nombres'] as String? ?? '').trim(),
+      apellidos: apellidos,
+    );
+  }
+
   // --- Clientes ---
 
   /// GET /api/cliente, o GET /api/cliente/selector con [para].

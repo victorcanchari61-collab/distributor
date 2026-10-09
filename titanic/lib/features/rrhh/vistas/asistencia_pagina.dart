@@ -195,12 +195,12 @@ class AsistenciaPagina extends ConsumerWidget {
           builder: (context, ref, _) {
             final empleados = ref.watch(empleadosEnAsistenciaProvider);
             if (empleados.isEmpty) return const SizedBox.shrink();
-            return GrupoFiltro<String?>(
+            return GrupoFiltro<int?>(
               titulo: 'Empleado',
               valor: ref.watch(empleadoAsistenciaFiltroProvider),
               opciones: [
-                const OpcionFiltro<String?>(null, 'Todos'),
-                for (final e in empleados) OpcionFiltro<String?>(e, e),
+                const OpcionFiltro<int?>(null, 'Todos'),
+                for (final e in empleados) OpcionFiltro<int?>(e.id, e.nombre),
               ],
               onCambio: (v) =>
                   ref.read(empleadoAsistenciaFiltroProvider.notifier).state = v,

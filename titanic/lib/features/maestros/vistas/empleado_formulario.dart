@@ -61,6 +61,7 @@ class _EmpleadoFormularioState extends ConsumerState<EmpleadoFormulario> {
   late DateTime? _fechaCese = widget.empleado?.fechaCese;
 
   bool _guardando = false;
+  bool _consultando = false;
   String? _error;
   String? _errorDocumento;
   String? _errorNombres;
@@ -153,6 +154,39 @@ class _EmpleadoFormularioState extends ConsumerState<EmpleadoFormulario> {
         _fechaCese = elegida;
       }
     });
+  }
+
+  /// Trae de RENIEC los nombres y apellidos, igual que la web: escribirlos a
+  /// mano en el celular es donde mas se equivoca uno.
+  Future<void> _consultarDni() async {
+    FocusScope.of(context).unfocus();
+    final dni = _documento.text.trim();
+    if (dni.length != 8) {
+      setState(() => _errorDocumento = 'Un DNI tiene 8 dígitos.');
+      return;
+    }
+
+    setState(() {
+      _consultando = true;
+      _errorDocumento = null;
+      _error = null;
+    });
+
+    try {
+      final datos = await ref.read(maestrosApiProvider).consultarDni(dni);
+      setState(() {
+        _nombres.text = datos.nombres;
+        _apellidos.text = datos.apellidos;
+        _errorNombres = null;
+        _errorApellidos = null;
+        _consultando = false;
+      });
+    } on ApiExcepcion catch (e) {
+      setState(() {
+        _consultando = false;
+        _error = e.texto;
+      });
+    }
   }
 
   Future<void> _guardar() async {
@@ -267,9 +301,40 @@ class _EmpleadoFormularioState extends ConsumerState<EmpleadoFormulario> {
                     formateadores: [FilteringTextInputFormatter.digitsOnly],
                     maxLargo: _largo.max,
                     error: _errorDocumento,
-                    habilitado: !_guardando,
+                    habilitado: !_guardando && !_consultando,
                   ),
                 ),
+                // Solo el DNI se consulta en RENIEC: un codigo interno no existe alla.
+                if (_tipoDoc == 'DNI') ...[
+                  const SizedBox(width: Dimen.espacio2),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: IconButton.filled(
+                      tooltip: 'Buscar en RENIEC',
+                      onPressed: _guardando || _consultando
+                          ? null
+                          : _consultarDni,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Acento.de(context),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(48, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                        ),
+                      ),
+                      icon: _consultando
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.search, size: 20),
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: Dimen.espacio4),
