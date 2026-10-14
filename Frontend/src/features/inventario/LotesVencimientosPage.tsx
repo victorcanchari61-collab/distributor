@@ -122,7 +122,7 @@ export function LotesVencimientosPage() {
     <ListPage
       icon={<CalendarClock size={20} />}
       title="Lotes y vencimientos"
-      description="Lo que tiene fecha de vencimiento y todavía tiene stock. Avisa, no bloquea: la baja se registra con un ajuste."
+      description="Lo que vence y todavía tiene stock."
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>

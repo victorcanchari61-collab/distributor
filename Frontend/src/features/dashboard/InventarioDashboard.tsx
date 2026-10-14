@@ -17,7 +17,7 @@ export function InventarioDashboard() {
       <Encabezado
         icono={<Boxes size={20} />}
         titulo="Dashboard de inventario"
-        descripcion="Cuánto dura lo que hay, dónde está la plata y qué vence. Es la foto de hoy, al ritmo de venta de los últimos 30 días."
+        descripcion="Cuánto dura el stock, cuánto vale y qué vence."
         tablero={t}
         sinPeriodo
       />

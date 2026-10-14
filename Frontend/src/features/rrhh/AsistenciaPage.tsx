@@ -347,7 +347,7 @@ export function AsistenciaPage() {
       <PageHeader
         icon={<CalendarCheck size={20} />}
         title="Asistencia"
-        description="Quién vino, quién faltó, quién llegó tarde. El registro es manual, uno por empleado y por día."
+        description="Quién vino, quién faltó y quién llegó tarde."
         actions={
           puede('rrhh.asistencia', 'crear') ? (
             <Button size="sm" onClick={() => abrirNuevo()} iconRight={<Plus size={15} />}>

@@ -241,7 +241,7 @@ export function EmpresaPage() {
     <ListPage
       icon={<Building2 size={20} />}
       title="Empresas"
-      description="Puedes registrar varias, pero solo una opera el sistema a la vez."
+      description="Solo una empresa opera el sistema a la vez."
       actions={
         puede('config.empresa', 'crear') ? (
           <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>

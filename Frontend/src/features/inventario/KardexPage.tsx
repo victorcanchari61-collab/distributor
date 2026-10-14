@@ -319,8 +319,8 @@ export function KardexPage() {
         title="Kardex"
         description={
           almacenActivo
-            ? `Movimientos de ${almacenActivo.nombre}, con el saldo que dejó cada uno.`
-            : 'Todo lo que entró y salió, con el saldo que dejó cada movimiento.'
+            ? `Movimientos de ${almacenActivo.nombre} y su saldo.`
+            : 'Entradas y salidas, con el saldo de cada una.'
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
         columns={columns}

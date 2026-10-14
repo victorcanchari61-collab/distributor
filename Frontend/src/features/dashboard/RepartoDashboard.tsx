@@ -19,7 +19,7 @@ export function RepartoDashboard() {
       <Encabezado
         icono={<PackageCheck size={20} />}
         titulo="Dashboard de pedidos y reparto"
-        descripcion="Cuántos pedidos se toman, cuántos llegan completos y por qué no. Cada gráfico dice su conclusión debajo del título."
+        descripcion="Pedidos tomados, entregados completos y por qué no."
         tablero={t}
       />
 

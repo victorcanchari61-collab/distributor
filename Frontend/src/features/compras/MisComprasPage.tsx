@@ -731,10 +731,10 @@ export function MisComprasPage() {
           }
           description={
             convirtiendo
-              ? 'Revisa lo que de verdad llegó —cantidades y costos—, pon el comprobante del proveedor y cómo se pagó. Al registrarla, la orden se cierra.'
+              ? 'Confirma lo que llegó, el comprobante y el pago.'
               : editando
-                ? 'Solo se puede editar mientras siga Pendiente: nada recibido todavía.'
-                : 'Al contado, en el momento: sin pasar por una orden formal al proveedor primero.'
+                ? 'Se edita solo mientras siga Pendiente.'
+                : 'Compra directa, sin orden de compra previa.'
           }
           actions={
             <Button variant="secondary" size="sm" onClick={salirDelFormulario}>
@@ -996,7 +996,7 @@ export function MisComprasPage() {
     <ListPage
       icon={<ShoppingBag size={20} />}
       title="Mis compras"
-      description="Listas para recibir: nacieron de confirmar una orden o se registraron directas."
+      description="Compras registradas, de una orden o directas."
       actions={
         puede('compras.compras', 'crear') ? (
           <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>

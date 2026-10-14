@@ -405,7 +405,7 @@ export function OrdenesCompraPage() {
         <PageHeader
           icon={<ClipboardList size={20} />}
           title={editando ? `Editar ${editando.numero}` : 'Nueva orden de compra'}
-          description="Lo que se le pide al proveedor. Mientras esté Pendiente se puede editar; al convertirla en compra, ya no."
+          description="Lo que se le pide al proveedor."
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
               <ArrowLeft size={15} />
@@ -527,7 +527,7 @@ export function OrdenesCompraPage() {
     <ListPage
       icon={<ClipboardList size={20} />}
       title="Órdenes de compra"
-      description="Lo que se le pide a un proveedor. Cuando llega, se convierte en compra con su comprobante y sus pagos."
+      description="Lo que se le pide a un proveedor antes de comprar."
       actions={
         puede('compras.ordenes', 'crear') ? (
           <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>

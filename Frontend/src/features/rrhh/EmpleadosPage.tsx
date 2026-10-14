@@ -282,7 +282,7 @@ export function EmpleadosPage() {
     <ListPage
       icon={<Users size={20} />}
       title="Empleados"
-      description="Quién trabaja en el negocio. Al crear un usuario se elige a quién pertenece esa cuenta."
+      description="Quién trabaja en el negocio."
       actions={
         puede('rrhh.empleados', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

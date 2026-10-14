@@ -289,7 +289,7 @@ export function ConductoresPage() {
     <ListPage
       icon={<IdCard size={20} />}
       title="Conductores"
-      description="Quiénes conducen, con su licencia y los vehículos que tienen asignados."
+      description="Quiénes conducen, su licencia y su vehículo."
       actions={
         puede('tms.conductores', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

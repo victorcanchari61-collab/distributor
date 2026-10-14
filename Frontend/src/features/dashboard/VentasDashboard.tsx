@@ -48,7 +48,7 @@ export function VentasDashboard() {
       <Encabezado
         icono={<ShoppingCart size={20} />}
         titulo="Dashboard de ventas"
-        descripcion="Cuánto se vende, a quién, quién lo vende y cuándo. Cada gráfico dice su conclusión debajo del título."
+        descripcion="Cuánto se vende, a quién, quién lo vende y cuándo."
         tablero={t}
       />
 

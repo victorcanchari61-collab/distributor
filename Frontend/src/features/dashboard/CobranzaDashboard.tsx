@@ -19,7 +19,7 @@ export function CobranzaDashboard() {
       <Encabezado
         icono={<Wallet size={20} />}
         titulo="Dashboard de cobranza"
-        descripcion="Lo que se debe, hace cuánto y lo que se ha cobrado. Cada gráfico dice su conclusión debajo del título."
+        descripcion="Lo que se debe, hace cuánto y lo que se ha cobrado."
         tablero={t}
       />
 

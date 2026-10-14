@@ -869,8 +869,8 @@ export function NotasVentaPage() {
           title={editando ? `Editar ${editando.numero}` : 'Nueva venta directa'}
           description={
             editando
-              ? 'Lo que le quites queda como devolución y no baja nada hasta que la aprueben. Los pagos se gestionan desde Finanzas → Cuentas por cobrar.'
-              : 'Sin pasar por un pedido primero. El stock sale del almacén elegido al momento de registrarla.'
+              ? 'Lo que quites queda como devolución por aprobar.'
+              : 'Venta sin pedido previo; descuenta stock al registrarla.'
           }
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
@@ -1017,7 +1017,7 @@ export function NotasVentaPage() {
             {!editando && (
               <PageSection
                 title="Recojo"
-                description="Mercadería de otra venta que se recoge al registrar esta: se descuenta del total. A qué almacén entra lo decide quien lo revise en Novedades de entrega."
+                description="Lo que se recoge de otra venta; se descuenta del total."
               >
                 <div>
                   <AgregarProductoPanel
@@ -1199,7 +1199,7 @@ export function NotasVentaPage() {
     <ListPage
       icon={<ShoppingBag size={20} />}
       title="Notas de venta"
-      description="La venta lista tal cual: nació de confirmar un pedido o se registró directa."
+      description="Las ventas, de un pedido o directas."
       actions={
         puede('fact.notaventa', 'crear') ? (
           <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>

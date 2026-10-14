@@ -712,7 +712,7 @@ export function ProductosPage() {
         {pestana === 'categorias' && (
           <CatalogoSimple
             titulo="Categorías"
-            descripcion="Familias comerciales del catálogo: abarrotes, aceites, fideos."
+            descripcion="Familias del catálogo: abarrotes, aceites, fideos."
             icono={<Boxes size={20} />}
             filas={categorias}
             conDescripcion
@@ -1326,7 +1326,7 @@ function UnidadesTabla({
     <ListPage
       icon={<Ruler size={20} />}
       title="Unidades de medida"
-      description="Kilo, unidad, saco, caja. Cuántos kilos trae un saco se define en cada producto."
+      description="Kilo, unidad, saco, caja."
       actions={
         puede('maestros.productos', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

@@ -272,7 +272,7 @@ function CuentasBancariasTab() {
     <ListPage
       icon={<CreditCard size={20} />}
       title="Cuentas Bancarias"
-      description="Las cuentas bancarias, cada una ligada a un banco del catálogo. Un método de pago solo apunta a una de estas."
+      description="Las cuentas de la empresa en cada banco."
       actions={
         puede('finanzas.bancos', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

@@ -211,7 +211,7 @@ export function MetodosPagoPage() {
     <ListPage
       icon={<Coins size={20} />}
       title="Métodos de pago"
-      description="Efectivo, billetera digital, transferencia... el mismo catálogo lo usan ventas, compras y cuentas por cobrar y por pagar."
+      description="Cómo se cobra y se paga: efectivo, Yape, transferencia."
       actions={
         puede('finanzas.metodospago', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

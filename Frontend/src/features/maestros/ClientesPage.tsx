@@ -444,7 +444,7 @@ export function ClientesPage() {
     <ListPage
       icon={<Contact size={20} />}
         title="Clientes"
-        description="Bodegas y puestos a los que se vende. El documento puede ser DNI, RUC o un código interno."
+        description="Bodegas y puestos a los que se vende."
         actions={
           <>
             {puede('maestros.clientes', 'importar') && (

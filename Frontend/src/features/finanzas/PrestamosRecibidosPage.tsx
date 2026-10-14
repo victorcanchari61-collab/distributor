@@ -131,7 +131,7 @@ export function PrestamosRecibidosPage() {
     <ListPage
       icon={<PiggyBank size={20} />}
       title="Préstamos recibidos"
-      description="La plata que te prestan entra a una cuenta como no operativa (no es ganancia) y queda como deuda hasta que la terminas de pagar."
+      description="Plata prestada a la empresa y lo que falta pagar."
       actions={
         puede('finanzas.financiamiento', 'crear') ? (
           <Button size="sm" onClick={() => setNuevoAbierto(true)} iconRight={<Plus size={15} />}>

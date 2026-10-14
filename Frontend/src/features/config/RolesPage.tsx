@@ -168,7 +168,7 @@ export function RolesPage() {
     <ListPage
       icon={<IdCard size={20} />}
       title="Roles"
-      description="Define los perfiles de trabajo. Lo que cada rol puede tocar se configura en Accesos."
+      description="Los perfiles de trabajo; sus permisos van en Accesos."
       actions={
         puede('config.roles', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

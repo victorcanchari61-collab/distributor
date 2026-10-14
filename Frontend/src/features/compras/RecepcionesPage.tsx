@@ -186,7 +186,7 @@ export function RecepcionesPage() {
     <ListPage
       icon={<PackageCheck size={20} />}
       title="Recepciones"
-      description="Mercadería que llegó contra una compra. Puede ser total o parcial."
+      description="Mercadería que llegó de una compra."
       actions={
         puede('compras.recepciones', 'crear') ? (
           <Button

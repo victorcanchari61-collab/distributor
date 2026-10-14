@@ -112,7 +112,7 @@ export function ResultadosRevisionTab({ cabecera }: { cabecera: ReactNode }) {
       <ListPage
         icon={<ClipboardCheck size={20} />}
         title="Resultados de revisión"
-        description="Lo que puedes encontrar al contar lo que volvió en el camión. Los eliges al revisar una novedad de entrega."
+        description="Qué se encontró al contar lo que volvió en el camión."
         actions={
           puede('tms.motivos', 'crear') ? (
             <Button

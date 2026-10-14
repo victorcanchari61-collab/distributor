@@ -164,7 +164,7 @@ export function MercadosPage() {
     <ListPage
       icon={<Store size={20} />}
       title="Mercados"
-      description="Dónde se entrega: un mercado de abastos, una zona con tiendas o una empresa."
+      description="Dónde se entrega: mercados, zonas o empresas."
       actions={
         puede('tms.mercados', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

@@ -271,7 +271,7 @@ export function MiCajaPage() {
       <PageHeader
         icon={<Wallet size={20} />}
         title="Mi Caja"
-        description="Lo que cobras al contado entra a tu caja; lo de Yape o transferencia va directo al banco. Aquí registras cualquier otro ingreso o egreso, y cierras el día."
+        description="Tu efectivo del día: cobros, movimientos y cierre."
         actions={
           <>
             <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('INGRESO')} iconRight={<ArrowUpCircle size={15} />}>

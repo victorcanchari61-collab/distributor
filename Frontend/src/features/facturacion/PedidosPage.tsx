@@ -619,7 +619,7 @@ export function PedidosPage() {
         <PageHeader
           icon={<ClipboardList size={20} />}
           title={editando ? `Editar ${editando.numero}` : 'Nuevo pedido'}
-          description="Lo que pide el cliente. Mientras esté Pendiente se puede editar; al confirmarlo, ya no."
+          description="Lo que pide el cliente."
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
               <ArrowLeft size={15} />
@@ -772,7 +772,7 @@ export function PedidosPage() {
     <ListPage
       icon={<ClipboardList size={20} />}
       title="Pedidos"
-      description="Lo que pide un cliente. Al convertirlo nace su nota de venta."
+      description="Lo que pide un cliente; al convertirlo nace su venta."
       actions={
         puede('fact.pedidos', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

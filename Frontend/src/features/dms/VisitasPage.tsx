@@ -217,7 +217,7 @@ export function VisitasPage() {
     <ListPage
       icon={<Store size={20} />}
       title="Visitas"
-      description="Los clientes que toca visitar y a cuáles ya se les tomó pedido. Por defecto, los de hoy."
+      description="Clientes por visitar y a cuáles ya se les tomó pedido."
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>

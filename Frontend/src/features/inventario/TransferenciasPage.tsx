@@ -426,7 +426,7 @@ export function TransferenciasPage() {
     <ListPage
       icon={<Truck size={20} />}
       title="Transferencias"
-      description="Mueve mercadería entre tus almacenes. El costo viaja con ella: no se vuelve a declarar."
+      description="Mercadería que pasa de un almacén a otro."
       actions={
         puede('inv.transferencias', 'crear') ? (
           <Button

@@ -317,7 +317,7 @@ export function ProveedoresPage() {
     <ListPage
       icon={<Building2 size={20} />}
       title="Proveedores"
-      description="A quién se le compra. El documento puede ser RUC, DNI o un código interno."
+      description="A quién se le compra."
       actions={
         <>
           {puede('maestros.proveedores', 'importar') && (

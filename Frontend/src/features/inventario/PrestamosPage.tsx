@@ -570,7 +570,7 @@ export function PrestamosPage() {
         <PageHeader
           icon={<HandCoins size={20} />}
           title="Nuevo préstamo"
-          description="DADO: sale mercadería propia. RECIBIDO: entra la de un tercero."
+          description="Dado: sale lo tuyo. Recibido: entra lo de un tercero."
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
               <ArrowLeft size={15} />
@@ -668,7 +668,7 @@ export function PrestamosPage() {
     <ListPage
       icon={<HandCoins size={20} />}
       title="Préstamos"
-      description="Mercadería que sale o entra desde fuera de la empresa: se presta y se espera de vuelta."
+      description="Mercadería prestada a terceros o de terceros."
       actions={
         puede('inv.prestamos', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

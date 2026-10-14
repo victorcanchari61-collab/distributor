@@ -206,7 +206,7 @@ export function MotivosTabla({
     <ListPage
       icon={<Plus size={20} />}
       title="Motivos"
-      description="Los manuales son los que eliges al registrar un ajuste. Los del sistema los pone cada documento —venta, recepción de compra, sus anulaciones— y no se tocan."
+      description="Por qué se ajusta el stock. Los del sistema no se editan."
       actions={
         puede('inv.ajustes', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

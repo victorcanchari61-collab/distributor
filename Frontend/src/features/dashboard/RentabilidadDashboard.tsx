@@ -45,7 +45,7 @@ export function RentabilidadDashboard() {
       <Encabezado
         icono={<TrendingUp size={20} />}
         titulo="Dashboard de rentabilidad"
-        descripcion="Cuánto deja lo que se vende, con el costo real de cada salida. Cada gráfico dice su conclusión debajo del título."
+        descripcion="Cuánto deja lo que se vende, con su costo real."
         tablero={t}
       />
 

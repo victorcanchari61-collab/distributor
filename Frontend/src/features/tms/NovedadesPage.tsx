@@ -254,7 +254,7 @@ export function NovedadesPage() {
       <ListPage
       icon={<PackageX size={20} />}
       title="Novedades de entrega"
-      description="Lo que no llegó al cliente y lo que el repartidor recogió de otras ventas. Cuando la mercadería vuelve en el camión, aquí se cuenta y entra al almacén."
+      description="Lo que no se entregó o se recogió, para contarlo al volver."
       actions={
         puede('tms.novedades', 'exportar') ? (
           <Button

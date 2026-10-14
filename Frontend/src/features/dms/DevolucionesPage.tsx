@@ -172,7 +172,7 @@ export function DevolucionesPage() {
     <ListPage
       icon={<Undo2 size={20} />}
       title="Devoluciones"
-      description="Lo que el cliente devuelve, registrado al editarle la cantidad a su nota de venta. Entra al stock y se le descuenta cuando se aprueba."
+      description="Lo que el cliente devuelve; entra al stock al aprobarse."
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>

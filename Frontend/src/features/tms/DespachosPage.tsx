@@ -481,7 +481,7 @@ export function DespachosPage() {
         <PageHeader
           icon={<Truck size={20} />}
           title={editando ? `Editar ${editando.numero}` : 'Nuevo despacho'}
-          description="Arma la carga del camión: elige el vehículo y el día, y marca los pedidos que salen."
+          description="Elige el vehículo, el día y los pedidos que salen."
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')} iconRight={<ArrowLeft size={15} />}>
               Volver
@@ -493,7 +493,7 @@ export function DespachosPage() {
         <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
           <PageSection
             title="Pedidos"
-            description="Los pendientes de los clientes de esas rutas, tomados entre esas fechas."
+            description="Pedidos pendientes de esas rutas y fechas."
           >
             <div className="mb-3 grid gap-3 sm:grid-cols-2">
               <Input
@@ -711,7 +711,7 @@ export function DespachosPage() {
     <ListPage
       icon={<Truck size={20} />}
       title="Despachos"
-      description="La carga de cada camión. Los pedidos se convierten en venta cuando el repartidor los entrega."
+      description="La carga de cada camión y sus pedidos."
       actions={
         puede('tms.despachos', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

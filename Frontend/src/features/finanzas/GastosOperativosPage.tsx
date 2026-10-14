@@ -149,7 +149,7 @@ export function GastosOperativosPage() {
         <PageHeader
           icon={<AlertTriangle size={20} />}
           title="Pendientes de pago"
-          description="Los gastos recurrentes de este mes que todavía no se pagan."
+          description="Los gastos de este mes que faltan pagar."
         />
 
         {error && <Alert>{error}</Alert>}
@@ -409,7 +409,7 @@ function RecurrentesTabla({
     <ListPage
       icon={<Repeat size={20} />}
       title="Gastos recurrentes"
-      description="Lo que se paga cada mes: alquiler, luz, agua, internet. Se define una vez y el sistema lo recuerda."
+      description="Lo que se paga cada mes: alquiler, luz, agua, internet."
       actions={
         puede('finanzas.operativos', 'crear') ? (
           <Button size="sm" onClick={onAbrirNuevo} iconRight={<Plus size={15} />}>
@@ -651,7 +651,7 @@ function CategoriasTabla({
     <ListPage
       icon={<Tags size={20} />}
       title="Categorías"
-      description="Con qué se clasifica cada ingreso o egreso. Operativo: del giro del negocio. No operativo: aportes, retiros, compra o venta de activos."
+      description="Cómo se clasifica cada ingreso o egreso."
       actions={
         puede('finanzas.operativos', 'crear') ? (
           <Button size="sm" onClick={() => abrir(null)} iconRight={<Plus size={15} />}>

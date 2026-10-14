@@ -159,8 +159,8 @@ export function MisGananciasPage() {
       title="Mis ganancias"
       description={
         resumen?.soloPropio
-          ? 'Lo que ganaste con cada producto que vendiste: lo vendido menos lo que costó la mercadería.'
-          : 'Cuánto se ganó con cada producto: lo vendido menos lo que costó la mercadería.'
+          ? 'Lo que ganaste por producto: venta menos costo.'
+          : 'Ganancia por producto: venta menos costo.'
       }
       alert={
         error ? (

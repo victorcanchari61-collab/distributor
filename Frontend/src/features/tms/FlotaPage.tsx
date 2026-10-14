@@ -401,7 +401,7 @@ export function FlotaPage() {
       <ListPage
         icon={<Truck size={20} />}
         title="Flota"
-        description="Los vehículos de reparto, con sus documentos al día y quién los conduce."
+        description="Los vehículos de reparto y quién los conduce."
         actions={
           puede('tms.flota', 'crear') ? (
             <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
@@ -886,7 +886,7 @@ function TiposVehiculoTabla({
     <ListPage
       icon={<Wrench size={20} />}
       title="Tipos de vehículo"
-      description="Furgón, camioneta, moto. De aquí sale el tipo que se elige en cada vehículo."
+      description="Furgón, camioneta, moto."
       actions={
         puede('tms.flota', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

@@ -265,7 +265,7 @@ export function PlanillaPage() {
       <ListPage
         icon={<Wallet size={20} />}
         title="Planilla semanal"
-        description="Sueldo semanal menos faltas y permisos (un día = sueldo ÷ 6), más feriados trabajados (se pagan doble), bonos, descuentos y faltantes de caja."
+        description="Pago semanal: sueldo, faltas, feriados, bonos y descuentos."
         actions={
           <div className="flex flex-wrap items-end gap-2">
             {/* Hasta hoy: una semana que no empezó no tiene asistencia y se pagaría completa. */}

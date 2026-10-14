@@ -383,7 +383,7 @@ export function CuentasPorPagarPage() {
     <ListPage
       icon={<CreditCard size={20} />}
       title="Cuentas por pagar"
-      description="Compras al crédito que todavía tienen saldo pendiente de pago a los proveedores."
+      description="Compras al crédito con saldo por pagar."
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>

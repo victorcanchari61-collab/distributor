@@ -127,7 +127,7 @@ export function BovedaTab({
     <ListPage
       icon={<Landmark size={20} />}
       title="Bóveda"
-      description="El efectivo de la empresa: aquí llega lo de los cierres de caja y de aquí sale lo que se deposita o se le da a un repartidor. Solo efectivo."
+      description="El efectivo de la empresa, donde llegan los cierres."
       actions={
         boveda
           ? puedeMover && (

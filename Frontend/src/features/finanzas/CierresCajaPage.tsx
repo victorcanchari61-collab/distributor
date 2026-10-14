@@ -210,7 +210,7 @@ export function CierresCajaPage() {
     <ListPage
       icon={<ClipboardCheck size={20} />}
       title="Cierres de caja"
-      description="Los cierres de todas las cajas. Cada faltante se descuenta solo en la planilla semanal del trabajador."
+      description="Los cierres de todas las cajas y sus faltantes."
       alert={
         error ? (
           <Alert>{error}</Alert>

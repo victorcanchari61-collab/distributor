@@ -184,7 +184,7 @@ export function MotivosNovedadPage() {
       <ListPage
         icon={<Tags size={20} />}
         title="Motivos de novedad"
-        description="Por qué no se entregó algo. Los eliges al convertir un pedido en venta cuando el cliente recibe menos de lo pedido."
+        description="Por qué no se entregó algo al cliente."
         actions={
           puede('tms.motivos', 'crear') ? (
             <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

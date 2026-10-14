@@ -179,7 +179,7 @@ export function AlmacenesPage() {
     <ListPage
       icon={<Warehouse size={20} />}
       title="Almacenes"
-      description="Dónde se guarda la mercadería. El principal es donde va todo movimiento sin indicar otro."
+      description="Dónde se guarda la mercadería."
       actions={
         puede('inv.almacenes', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

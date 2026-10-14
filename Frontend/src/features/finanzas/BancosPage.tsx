@@ -121,7 +121,7 @@ export function BancosPage() {
     <ListPage
       icon={<Landmark size={20} />}
       title="Bancos"
-      description="El catálogo de bancos: BBVA, BCP, Interbank... De cada uno cuelgan sus cuentas bancarias."
+      description="Los bancos donde la empresa tiene cuentas."
       actions={
         puede('finanzas.bancos', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

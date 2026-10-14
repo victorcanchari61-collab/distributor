@@ -293,10 +293,10 @@ export function AccesosPage() {
           pestana === 'solicitudes'
             ? 'Lo que la gente pidió al toparse con una acción bloqueada.'
             : pestana === 'usuario'
-            ? 'Lo que alguien necesita hacer y su rol no le da, sin tener que subirlo de rol.'
+            ? 'Permisos extra para una persona, sin cambiarle el rol.'
             : rol
               ? `${pantallasActivas} de ${catalogo.length} pantallas habilitadas. ${rol.descripcion ?? ''}`
-              : 'Elige un rol para configurar qué puede hacer en cada pantalla.'
+              : 'Elige un rol para configurar sus permisos.'
         }
         actions={
           pestana === 'rol' ? (
@@ -534,7 +534,7 @@ export function AccesosPage() {
           description={
             rol?.protegido
               ? 'El Administrador ve siempre todo.'
-              : 'Todos, solo los de su ruta asignada, o solo lo que él mismo registró. Se guarda con el botón Guardar de arriba.'
+              : 'Todo, solo su ruta o solo lo suyo. Se guarda con Guardar.'
           }
         >
           <AlcanceDatosEditor

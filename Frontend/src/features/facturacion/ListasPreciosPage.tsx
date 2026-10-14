@@ -689,7 +689,7 @@ export function ListasPreciosPage() {
         title={lista ? lista.nombre : 'Listas de precios'}
         description={
           lista?.descripcion ??
-          'El precio se pone por presentación: así el saco sale más barato por kilo que el kilo suelto.'
+          'Los precios de venta por presentación.'
         }
         actions={
           <>

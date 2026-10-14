@@ -232,7 +232,7 @@ export function MovimientosDineroPage() {
     <ListPage
       icon={<ArrowLeftRight size={20} />}
       title="Movimientos"
-      description="Todo lo que entra y sale de las cajas y los bancos, venga de donde venga, con el saldo de la cuenta después de cada movimiento."
+      description="Todo lo que entra y sale de cajas y bancos, con su saldo."
       actions={
         <>
           {puede('finanzas.movimientos', 'exportar') && (

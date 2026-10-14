@@ -444,7 +444,7 @@ export function AjustesPage() {
         <PageHeader
           icon={<ClipboardCheck size={20} />}
           title="Nuevo ajuste de inventario"
-          description="Registra qué cambió y por qué. Confirmado, no se edita: se anula con otro documento."
+          description="Qué cambió en el stock y por qué."
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
               <ArrowLeft size={15} />
@@ -584,7 +584,7 @@ export function AjustesPage() {
       <ListPage
       icon={<ClipboardCheck size={20} />}
       title="Ajustes de inventario"
-      description="Carga inicial, mermas, sobrantes y faltantes. Ventas y compras generan su propio movimiento."
+      description="Carga inicial, mermas, sobrantes y faltantes."
       actions={
         puede('inv.ajustes', 'crear') ? (
           <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>

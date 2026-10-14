@@ -245,7 +245,7 @@ export function ConteosPage() {
     <ListPage
       icon={<ClipboardCheck size={20} />}
       title="Conteos cíclicos"
-      description="Cuánto hay en el sistema contra cuánto hay en el anaquel. La diferencia se registra sola como ajuste."
+      description="Lo del sistema contra lo del anaquel."
       actions={
         puede('inv.conteos', 'crear') ? (
           <Button size="sm" onClick={() => void registrarConteo()} loading={guardando}>

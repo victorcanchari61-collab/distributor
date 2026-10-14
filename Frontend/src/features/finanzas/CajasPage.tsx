@@ -181,7 +181,7 @@ export function CajasPage() {
       <ListPage
         icon={<Users size={20} />}
         title="Cajas"
-        description="A quién se le asigna una Caja: sin una asignada acá, no puede cobrar ventas en efectivo."
+        description="Quién tiene caja para cobrar en efectivo."
         actions={
           puede('finanzas.cajas', 'crear') ? (
             <Button size="sm" onClick={abrirNuevo} iconRight={<UserPlus size={15} />}>

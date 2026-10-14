@@ -143,7 +143,7 @@ export function AdelantosPage() {
     <ListPage
       icon={<HandCoins size={20} />}
       title="Adelantos"
-      description="Plata a cuenta del sueldo. Sale de una cuenta al darla y se descuenta en la planilla: todo de una vez o en partes, desde la semana que elijas."
+      description="Plata a cuenta del sueldo, que se descuenta en la planilla."
       actions={
         puede('rrhh.adelantos', 'crear') ? (
           <Button size="sm" onClick={() => setNuevoAbierto(true)} iconRight={<Plus size={15} />}>

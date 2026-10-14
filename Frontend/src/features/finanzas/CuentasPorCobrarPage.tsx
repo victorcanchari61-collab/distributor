@@ -468,7 +468,7 @@ export function CuentasPorCobrarPage() {
     <ListPage
       icon={<Wallet size={20} />}
       title="Cuentas por cobrar"
-      description="Notas de venta al crédito que todavía tienen saldo pendiente de cobro."
+      description="Ventas al crédito con saldo por cobrar."
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>

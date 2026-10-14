@@ -222,7 +222,7 @@ export function AuditoriaPage() {
       key={version}
       icon={<ScrollText size={20} />}
       title="Auditoría"
-      description="Qué cambió en el sistema, quién lo hizo y cuándo. Se registra solo, al guardar cualquier dato."
+      description="Qué cambió en el sistema, quién lo hizo y cuándo."
       actions={
         <>
           {puede('config.auditoria', 'eliminar') && (

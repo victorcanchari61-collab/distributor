@@ -89,7 +89,7 @@ export function EstadoResultadosPage() {
       <Encabezado
         icono={<FileBarChart size={20} />}
         titulo="Estado de resultados"
-        descripcion="Si el negocio gana: lo vendido sin IGV, menos lo que costó, menos los gastos de operar. Préstamos, aportes y retiros van aparte y no suman."
+        descripcion="Si el negocio gana: ventas menos costos y gastos."
         tablero={tablero}
         acciones={
           puede('finanzas.resultados', 'exportar') && (
