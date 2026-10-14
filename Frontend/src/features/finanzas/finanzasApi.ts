@@ -11,6 +11,8 @@ export type TipoMetodoPago = 'EFECTIVO' | 'BILLETERA_DIGITAL' | 'TRANSFERENCIA'
 export interface MetodoPagoResponse {
   id: number
   nombre: string
+  /** Como se muestra al elegirlo: con banco, cuenta, número y titular (o titular y celular en una billetera). */
+  etiqueta: string
   tipo: TipoMetodoPago
   /** El número de celular asociado, solo si tipo es Billetera digital. */
   numero: string | null
@@ -31,12 +33,20 @@ export interface MetodoPagoRequest {
   cuentaFinancieraId?: number | null
 }
 
-/** Lo justo para elegir con cuál se cobra: sin datos de cuenta ni contadores. */
+/** Lo justo para elegir con cuál se cobra: sin saldos ni contadores. */
 export interface MetodoPagoOpcion {
   id: number
   nombre: string
+  /** Como se muestra al elegirlo: con banco, cuenta, número y titular (o titular y celular en una billetera). */
+  etiqueta: string
   tipo: TipoMetodoPago
 }
+
+/**
+ * El texto de un método en una lista para elegir: el completo, que dice a qué cuenta y a qué
+ * titular va la plata. El nombre solo ("BCP-Víctor") no lo dice.
+ */
+export const etiquetaMetodo = (m: { nombre: string; etiqueta?: string | null }) => m.etiqueta || m.nombre
 
 export const metodoPagoApi = {
   getAll: () => api.get<MetodoPagoResponse[]>('/metodopago'),

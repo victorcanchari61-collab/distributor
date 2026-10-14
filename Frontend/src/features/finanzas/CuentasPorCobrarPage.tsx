@@ -28,7 +28,7 @@ import type {
   PagoVentaResponse,
   ResumenCuentas,
 } from '../facturacion/ventasApi'
-import { metodoPagoApi } from './finanzasApi'
+import { etiquetaMetodo, metodoPagoApi } from './finanzasApi'
 import type { MetodoPagoOpcion, TipoMetodoPago } from './finanzasApi'
 
 const NOTA_TIPO: Record<TipoMetodoPago, string> = {
@@ -385,7 +385,7 @@ export function CuentasPorCobrarPage() {
             onChange={(v) => setMetodoPagoId(Number(v))}
             placeholder={tipo ? 'Elige el método' : 'Elige el tipo primero'}
             disabled={!tipo}
-            options={metodosPago.filter((m) => m.tipo === tipo).map((m) => ({ value: m.id, label: m.nombre }))}
+            options={metodosPago.filter((m) => m.tipo === tipo).map((m) => ({ value: m.id, label: etiquetaMetodo(m) }))}
           />
         ) : fila.anulado ? (
           <span className="text-ink-soft line-through">{fila.metodoPago}</span>

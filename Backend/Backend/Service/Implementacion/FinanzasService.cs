@@ -165,10 +165,40 @@ public class FinanzasService : IFinanzasService
         metodo.Numero = request.Tipo == TipoMetodoPago.BilleteraDigital ? request.Numero!.Trim() : null;
     }
 
+    /// <summary>
+    /// El método con el dato completo de a dónde va la plata, para elegirlo sin dudar: el nombre
+    /// solo ("BCP-Víctor") no dice qué cuenta es ni de quién.
+    ///
+    /// Transferencia: banco · cuenta · número de cuenta · titular. Billetera: nombre · titular ·
+    /// celular. Efectivo, o un método que todavía no tiene cuenta: el nombre.
+    /// </summary>
+    private static string EtiquetaDe(MetodoPago m)
+    {
+        var cuenta = m.CuentaFinanciera;
+
+        var partes = m.Tipo switch
+        {
+            TipoMetodoPago.BilleteraDigital => new[] { m.Nombre, cuenta?.Titular, m.Numero },
+            TipoMetodoPago.Transferencia when cuenta is not null =>
+                [cuenta.Banco?.Nombre, cuenta.Nombre, cuenta.NumeroCuenta, cuenta.Titular],
+            _ => [m.Nombre],
+        };
+
+        // Sin vacíos ni repetidos: una cuenta que se llama igual que su banco no se dice dos veces.
+        var limpias = partes
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => p!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return limpias.Count == 0 ? m.Nombre : string.Join(" · ", limpias);
+    }
+
     private static MetodoPagoResponse MapMetodoPago(MetodoPago m, int usos) => new()
     {
         Id = m.Id,
         Nombre = m.Nombre,
+        Etiqueta = EtiquetaDe(m),
         Tipo = m.Tipo,
         Numero = m.Numero,
         CuentaFinancieraId = m.CuentaFinancieraId,

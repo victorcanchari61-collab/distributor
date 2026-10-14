@@ -41,7 +41,7 @@ import { productoApi, SelectorCliente } from '../maestros'
 import type { ClienteOpcion, ProductoResponse } from '../maestros'
 import { almacenApi, stockApi } from '../inventario'
 import type { AlmacenOpcion } from '../inventario'
-import { metodoPagoApi } from '../finanzas'
+import { etiquetaMetodo, metodoPagoApi } from '../finanzas'
 import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
@@ -462,7 +462,7 @@ export function NotasVentaPage() {
             disabled={!pagoTipo}
             options={metodosPago
               .filter((m) => m.tipo === pagoTipo)
-              .map((m) => ({ value: m.id, label: m.nombre }))}
+              .map((m) => ({ value: m.id, label: etiquetaMetodo(m) }))}
           />
         ) : (
           (metodosPago.find((m) => m.id === fila.metodoPagoId)?.nombre ?? '—')

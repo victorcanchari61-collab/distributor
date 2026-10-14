@@ -579,8 +579,9 @@ class _PagoEntregaState extends State<PagoEntrega> {
             valor: fila.metodoPagoId,
             etiqueta: 'Método',
             icono: Icons.payments_outlined,
+            lineasOpcion: 2,
             habilitado: fila.tipo != null,
-            opciones: [for (final m in delTipo) Opcion(m.id, m.nombre)],
+            opciones: [for (final m in delTipo) Opcion(m.id, m.etiqueta)],
             onCambio: (v) => _cambiar(() => fila.metodoPagoId = v),
           ),
           if (fila.tipo != null && fila.tipo != TipoMetodoPago.efectivo) ...[

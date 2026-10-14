@@ -468,9 +468,10 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                     valor: metodoId,
                     etiqueta: 'Método',
                     icono: Icons.payments_outlined,
+                    lineasOpcion: 2,
                     habilitado: tipo != null,
                     opciones: [
-                      for (final m in metodosDelTipo) Opcion(m.id, m.nombre),
+                      for (final m in metodosDelTipo) Opcion(m.id, m.etiqueta),
                     ],
                     onCambio: (v) => setSheetState(() => metodoId = v),
                   ),

@@ -33,10 +33,17 @@ class MetodoPago {
     this.numero,
     this.cuentaFinancieraId,
     this.cuentaFinanciera,
-  });
+    String? etiqueta,
+  }) : etiqueta = etiqueta ?? nombre;
 
   final int id;
   final String nombre;
+
+  /// Como se muestra al elegirlo para cobrar o pagar, con el dato completo de a
+  /// donde va la plata: "BCP · Cuenta corriente · 191-123 · Titular" en una
+  /// transferencia, "Yape · Titular · 987654321" en una billetera. Lo arma el
+  /// servidor; si no lo manda, es el nombre.
+  final String etiqueta;
   final String tipo;
 
   /// El numero de celular, solo en billetera digital (Yape, Plin).
@@ -60,6 +67,9 @@ class MetodoPago {
   factory MetodoPago.desdeJson(Map<String, dynamic> json) => MetodoPago(
     id: json['id'] as int,
     nombre: json['nombre'] as String? ?? '',
+    etiqueta: (json['etiqueta'] as String?)?.trim().isNotEmpty == true
+        ? json['etiqueta'] as String
+        : null,
     tipo: json['tipo'] as String? ?? TipoMetodoPago.efectivo,
     numero: json['numero'] as String?,
     cuentaFinancieraId: json['cuentaFinancieraId'] as int?,
@@ -126,10 +136,15 @@ class MetodoPagoOpcion {
     required this.id,
     required this.nombre,
     required this.tipo,
-  });
+    String? etiqueta,
+  }) : etiqueta = etiqueta ?? nombre;
 
   final int id;
   final String nombre;
+
+  /// Como se muestra al elegirlo, con el dato completo de a donde va la plata;
+  /// si el servidor no lo manda, es el nombre. Ver [MetodoPago.etiqueta].
+  final String etiqueta;
 
   /// EFECTIVO, BILLETERA_DIGITAL o TRANSFERENCIA: ver [TipoMetodoPago].
   final String tipo;
@@ -138,6 +153,9 @@ class MetodoPagoOpcion {
       MetodoPagoOpcion(
         id: json['id'] as int,
         nombre: json['nombre'] as String? ?? '',
+        etiqueta: (json['etiqueta'] as String?)?.trim().isNotEmpty == true
+            ? json['etiqueta'] as String
+            : null,
         tipo: json['tipo'] as String? ?? TipoMetodoPago.efectivo,
       );
 }

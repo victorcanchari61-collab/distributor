@@ -360,10 +360,11 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
               valor: _metodoNuevoId,
               etiqueta: 'Método',
               icono: Icons.payments_outlined,
+              lineasOpcion: 2,
               habilitado: _tipoNuevo != null,
               opciones: [
                 for (final m in metodos.where((m) => m.tipo == _tipoNuevo))
-                  Opcion(m.id, m.nombre),
+                  Opcion(m.id, m.etiqueta),
               ],
               onCambio: (v) => setState(() => _metodoNuevoId = v),
             ),
@@ -621,11 +622,12 @@ class _FormularioEdicion extends StatelessWidget {
             valor: metodoId,
             etiqueta: 'Método',
             icono: Icons.payments_outlined,
+            lineasOpcion: 2,
             opciones: [
               for (final m in metodos.where(
                 (m) => tipo == null || m.tipo == tipo,
               ))
-                Opcion(m.id, m.nombre),
+                Opcion(m.id, m.etiqueta),
             ],
             onCambio: onMetodo,
           ),

@@ -1,7 +1,7 @@
 export { MetodosPagoPage } from './MetodosPagoPage'
 export { CuentasPorCobrarPage } from './CuentasPorCobrarPage'
 export { CuentasPorPagarPage } from './CuentasPorPagarPage'
-export { metodoPagoApi } from './finanzasApi'
+export { metodoPagoApi, etiquetaMetodo } from './finanzasApi'
 export type { MetodoPagoOpcion, MetodoPagoResponse, MetodoPagoRequest, TipoMetodoPago } from './finanzasApi'
 export { MisGananciasPage } from './MisGananciasPage'
 export { gananciaApi } from './gananciaApi'

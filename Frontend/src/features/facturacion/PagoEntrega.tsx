@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Check, CheckCircle2, Pencil, Plus, Trash2, Wallet, X } from 'lucide-react'
 import { Alert, Badge, Button, CifrasPago, Desplegable, Input, RowAction, SysDataTable } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
+import { etiquetaMetodo } from '../finanzas/finanzasApi'
 import type { MetodoPagoOpcion, TipoMetodoPago } from '../finanzas/finanzasApi'
 import type { PedidoResponse } from './ventasApi'
 
@@ -206,7 +207,7 @@ export function PagoEntrega({ metodos, metodosListos, filas, total, onFilas }: P
             onChange={(v) => cambiar(fila.clave, { metodoPagoId: Number(v) })}
             placeholder={fila.tipo ? 'Elige el método' : 'Elige el tipo primero'}
             disabled={!fila.tipo}
-            options={metodos.filter((m) => m.tipo === fila.tipo).map((m) => ({ value: m.id, label: m.nombre }))}
+            options={metodos.filter((m) => m.tipo === fila.tipo).map((m) => ({ value: m.id, label: etiquetaMetodo(m) }))}
           />
         ) : (
           (metodos.find((m) => m.id === fila.metodoPagoId)?.nombre ?? '—')
