@@ -64,7 +64,8 @@ public class PdfController(IPdfService pdf) : ControllerBase
         [FromQuery] string? mercados,
         [FromQuery] string? unidades,
         [FromQuery] bool porMercado = false,
-        [FromQuery] int? corte = null) =>
+        [FromQuery] int? corte = null,
+        [FromQuery] string? categorias = null) =>
         Archivo(await pdf.CargaDespachoAsync(
             id,
             // "1,7,11": lo que manda el modal de filtros.
@@ -72,7 +73,9 @@ public class PdfController(IPdfService pdf) : ControllerBase
                 .Select(x => int.TryParse(x, out var n) ? n : -1).Where(n => n >= 0).ToList(),
             unidades?.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
             porMercado,
-            corte));
+            corte,
+            categorias?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => int.TryParse(x, out var n) ? n : -1).Where(n => n >= 0).ToList()));
 
     /// <summary>Las boletas de pago de una planilla; con <c>empleadoId</c>, solo la de esa persona.</summary>
     [HttpGet("api/planilla/{id:int}/pdf")]

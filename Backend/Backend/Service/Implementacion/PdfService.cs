@@ -295,7 +295,7 @@ public class PdfService(
 
     public async Task<(byte[], string)> CargaDespachoAsync(
         int id, IReadOnlyCollection<int>? mercados, IReadOnlyCollection<string>? unidades, bool porMercado,
-        int? corte = null)
+        int? corte = null, IReadOnlyCollection<int>? categorias = null)
     {
         var despacho = await despachos.GetAsync(id);
         if (despacho.Detalle.Count == 0) throw new BadRequestException("Este despacho no tiene pedidos");
@@ -320,6 +320,7 @@ public class PdfService(
             .Where(l => mercados is null || mercados.Count == 0 || mercados.Contains(l.MercadoId))
             .Where(l => unidades is null || unidades.Count == 0
                         || unidades.Contains(l.UnidadCodigo, StringComparer.OrdinalIgnoreCase))
+            .Where(l => categorias is null || categorias.Count == 0 || categorias.Contains(l.CategoriaId))
             .ToList();
 
         // Lo que se filtró, dicho con los nombres y no con los ids.
@@ -334,6 +335,10 @@ public class PdfService(
             partes.Add("Mercado " + string.Join(", ", todas
                 .Where(l => mercados.Contains(l.MercadoId))
                 .Select(l => l.Mercado).Distinct()));
+        if (categorias is { Count: > 0 })
+            partes.Add("Categoría " + string.Join(", ", todas
+                .Where(l => categorias.Contains(l.CategoriaId))
+                .Select(l => l.Categoria).Distinct()));
         if (unidades is { Count: > 0 })
             partes.Add(string.Join(", ", todas
                 .Where(l => unidades.Contains(l.UnidadCodigo, StringComparer.OrdinalIgnoreCase))

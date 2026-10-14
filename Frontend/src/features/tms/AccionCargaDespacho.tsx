@@ -13,9 +13,9 @@ interface Props {
 /**
  * El reporte de carga, con sus filtros antes de generarlo.
  *
- * Primero se elige qué mercados y qué unidades de medida entran —solo las
- * bolsas, solo el mercado 7— y si va un bloque por mercado; recién entonces se
- * abre el PDF. Sin marcar nada sale el camión completo.
+ * Primero se elige qué mercados, qué categorías y qué unidades de medida entran
+ * —solo las bolsas, solo el mercado 7, solo los abarrotes— y si va un bloque por
+ * mercado; recién entonces se abre el PDF. Sin marcar nada sale el camión completo.
  *
  * El corte de horario recorta por CUÁNDO se registró cada pedido, no por el día
  * del reparto: el primero es la carga base (hasta las 15:00) y los otros dos son
@@ -26,6 +26,7 @@ export function AccionCargaDespacho({ id, numero }: Props) {
   const [opciones, setOpciones] = useState<OpcionesCarga | null>(null)
   const [error, setError] = useState('')
   const [mercados, setMercados] = useState<number[]>([])
+  const [categorias, setCategorias] = useState<number[]>([])
   const [unidades, setUnidades] = useState<string[]>([])
   const [porMercado, setPorMercado] = useState(false)
   // 0 es todo el camión; 1, 2 y 3 son los cortes de horario.
@@ -44,6 +45,7 @@ export function AccionCargaDespacho({ id, numero }: Props) {
 
   const consulta = [
     mercados.length ? `mercados=${mercados.join(',')}` : '',
+    categorias.length ? `categorias=${categorias.join(',')}` : '',
     unidades.length ? `unidades=${unidades.map(encodeURIComponent).join(',')}` : '',
     porMercado ? 'porMercado=true' : '',
     corte ? `corte=${corte}` : '',
@@ -91,11 +93,6 @@ export function AccionCargaDespacho({ id, numero }: Props) {
                     pedidos nuevos—, para sumarlo a lo que ya se cargó. Lo que bajó sale en negativo.
                   </p>
                 )}
-                {corte === 1 && (
-                  <p className="text-xs text-ink-soft">
-                    La carga base: los pedidos como quedaron hasta las 15:00, incluido lo registrado en días anteriores.
-                  </p>
-                )}
               </div>
 
               <Grupo
@@ -109,6 +106,21 @@ export function AccionCargaDespacho({ id, numero }: Props) {
                     label={`Mercado ${m.nombre} (${m.pedidos} ${m.pedidos === 1 ? 'pedido' : 'pedidos'})`}
                     checked={mercados.includes(m.id)}
                     onChange={() => setMercados((p) => alternar(p, m.id))}
+                  />
+                ))}
+              </Grupo>
+
+              <Grupo
+                titulo="Categorías"
+                todos={categorias.length === 0}
+                onTodos={() => setCategorias([])}
+              >
+                {(opciones.categorias ?? []).map((c) => (
+                  <Checkbox
+                    key={c.id}
+                    label={`${c.nombre} (${c.productos} ${c.productos === 1 ? 'producto' : 'productos'})`}
+                    checked={categorias.includes(c.id)}
+                    onChange={() => setCategorias((p) => alternar(p, c.id))}
                   />
                 ))}
               </Grupo>
@@ -135,11 +147,6 @@ export function AccionCargaDespacho({ id, numero }: Props) {
                   onChange={(e) => setPorMercado(e.target.checked)}
                 />
               </div>
-
-              <p className="text-xs text-ink-soft">
-                Los cortes cuentan por la fecha y hora en que se registró cada pedido o aumento; el día del reparto no
-                influye.
-              </p>
             </div>
           )}
         </Modal>

@@ -101,6 +101,8 @@ export interface DespachoRequest {
 /** Lo que lleva el camión, para recortar el reporte de carga. */
 export interface OpcionesCarga {
   mercados: { id: number; nombre: string; pedidos: number }[]
+  /** Las categorías de los productos que van; el id 0 es "Sin categoría". */
+  categorias: { id: number; nombre: string; productos: number }[]
   unidades: { codigo: string; nombre: string; productos: number }[]
   /** Todos (0), primer, segundo y tercer corte, con el texto con que se muestran. */
   cortes: { codigo: number; nombre: string }[]

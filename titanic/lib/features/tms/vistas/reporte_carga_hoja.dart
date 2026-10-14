@@ -58,6 +58,7 @@ class _HojaReporteCarga extends ConsumerStatefulWidget {
 
 class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
   final Set<int> _mercados = {};
+  final Set<int> _categorias = {};
   final Set<String> _unidades = {};
   bool _porMercado = false;
 
@@ -74,6 +75,7 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
 
     final query = [
       if (_mercados.isNotEmpty) 'mercados=${_mercados.join(',')}',
+      if (_categorias.isNotEmpty) 'categorias=${_categorias.join(',')}',
       if (_unidades.isNotEmpty)
         'unidades=${_unidades.map(Uri.encodeComponent).join(',')}',
       if (_porMercado) 'porMercado=true',
@@ -191,11 +193,6 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
                           ],
                           onCambio: (v) => setState(() => _corte = v ?? 0),
                         ),
-                        if (_corte == 1)
-                          const _NotaCorte(
-                            'La carga base: los pedidos como quedaron hasta las 15:00, '
-                            'incluido lo registrado en días anteriores.',
-                          ),
                         if (_corte > 1)
                           const _NotaCorte(
                             'Aumentos: sale solo lo que se agregó en esa franja —lo que subió de '
@@ -227,6 +224,34 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
                                 _mercados.add(m.id);
                               } else {
                                 _mercados.remove(m.id);
+                              }
+                            }),
+                          ),
+                        const SizedBox(height: Dimen.espacio3),
+                      ],
+                      if (opciones.categorias.isNotEmpty) ...[
+                        const Text(
+                          'Categorías',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        for (final c in opciones.categorias)
+                          CheckboxListTile(
+                            value: _categorias.contains(c.id),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              '${c.nombre} (${c.productos} ${c.productos == 1 ? 'producto' : 'productos'})',
+                              style: const TextStyle(fontSize: 13.5),
+                            ),
+                            onChanged: (v) => setState(() {
+                              if (v ?? false) {
+                                _categorias.add(c.id);
+                              } else {
+                                _categorias.remove(c.id);
                               }
                             }),
                           ),

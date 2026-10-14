@@ -245,6 +245,26 @@ class OpcionUnidadCarga {
       );
 }
 
+/// Una categoría de producto que va en el camión; el id 0 es "Sin categoría".
+class OpcionCategoriaCarga {
+  const OpcionCategoriaCarga({
+    required this.id,
+    required this.nombre,
+    required this.productos,
+  });
+
+  final int id;
+  final String nombre;
+  final int productos;
+
+  factory OpcionCategoriaCarga.desdeJson(Map<String, dynamic> json) =>
+      OpcionCategoriaCarga(
+        id: json['id'] as int? ?? 0,
+        nombre: json['nombre'] as String? ?? '',
+        productos: json['productos'] as int? ?? 0,
+      );
+}
+
 /// Un corte de horario del reporte de carga: el camión se sube en tandas y cada
 /// corte muestra solo lo que cambió respecto al anterior. El código 0 es todo
 /// el camión, sin recortar.
@@ -268,11 +288,15 @@ class OpcionesCarga {
   const OpcionesCarga({
     required this.mercados,
     required this.unidades,
+    this.categorias = const [],
     this.cortes = const [],
   });
 
   final List<OpcionMercadoCarga> mercados;
   final List<OpcionUnidadCarga> unidades;
+
+  /// Vacío si el servidor no las ofrece: entonces la hoja no muestra ese filtro.
+  final List<OpcionCategoriaCarga> categorias;
 
   /// Vacío si el servidor no ofrece cortes: entonces la hoja no muestra el
   /// selector y el reporte sale del camión completo, como antes.
@@ -284,6 +308,9 @@ class OpcionesCarga {
         .toList(),
     unidades: (json['unidades'] as List? ?? const [])
         .map((e) => OpcionUnidadCarga.desdeJson(e as Map<String, dynamic>))
+        .toList(),
+    categorias: (json['categorias'] as List? ?? const [])
+        .map((e) => OpcionCategoriaCarga.desdeJson(e as Map<String, dynamic>))
         .toList(),
     cortes: (json['cortes'] as List? ?? const [])
         .map((e) => OpcionCorteCarga.desdeJson(e as Map<String, dynamic>))

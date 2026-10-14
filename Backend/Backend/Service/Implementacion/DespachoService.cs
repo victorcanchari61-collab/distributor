@@ -176,6 +176,8 @@ public class DespachoService : IDespachoService
         public int ProductoId { get; init; }
         public string Codigo { get; init; } = string.Empty;
         public string Producto { get; init; } = string.Empty;
+        public int? CategoriaId { get; init; }
+        public string? Categoria { get; init; }
         public int? PresentacionId { get; init; }
         public string? Presentacion { get; init; }
         public decimal Factor { get; init; }
@@ -204,6 +206,8 @@ public class DespachoService : IDespachoService
                 ProductoId = l.ProductoId,
                 Codigo = l.Producto!.Codigo,
                 Producto = l.Producto.Nombre,
+                CategoriaId = l.Producto.CategoriaId,
+                Categoria = l.Producto.Categoria != null ? l.Producto.Categoria.Nombre : null,
                 PresentacionId = l.PresentacionId,
                 Presentacion = l.Presentacion != null ? l.Presentacion.Nombre : null,
                 Factor = l.Presentacion != null ? l.Presentacion.Factor : 1m,
@@ -235,6 +239,8 @@ public class DespachoService : IDespachoService
                     ProductoId = l.ProductoId,
                     Codigo = l.Codigo,
                     Producto = l.Producto,
+                    CategoriaId = l.CategoriaId ?? 0,
+                    Categoria = l.Categoria ?? "Sin categoría",
                     PresentacionId = l.PresentacionId,
                     Presentacion = l.Presentacion ?? l.UnidadBase,
                     Factor = l.Factor,
@@ -458,6 +464,18 @@ public class DespachoService : IDespachoService
                 .OrderBy(m => int.TryParse(m.Nombre, out _) ? 0 : 1)
                 .ThenBy(m => int.TryParse(m.Nombre, out var n) ? n : int.MaxValue)
                 .ThenBy(m => m.Nombre)
+                .ToList(),
+            Categorias = lineas
+                .GroupBy(l => (l.CategoriaId, l.Categoria))
+                .Select(g => new OpcionCategoriaCarga
+                {
+                    Id = g.Key.CategoriaId,
+                    Nombre = g.Key.Categoria,
+                    Productos = g.Select(l => l.ProductoId).Distinct().Count(),
+                })
+                // "Sin categoría" al final: es lo que quedó sin clasificar, no una más.
+                .OrderBy(c => c.Id == 0)
+                .ThenBy(c => c.Nombre)
                 .ToList(),
             Unidades = lineas
                 .GroupBy(l => (l.UnidadCodigo, l.UnidadNombre))

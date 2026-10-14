@@ -106,6 +106,10 @@ public class LineaCargaResponse
     public string Codigo { get; set; } = string.Empty;
     public string Producto { get; set; } = string.Empty;
 
+    /// <summary>0 cuando el producto no tiene categoría.</summary>
+    public int CategoriaId { get; set; }
+    public string Categoria { get; set; } = string.Empty;
+
     public int? PresentacionId { get; set; }
     public string Presentacion { get; set; } = string.Empty;
 
@@ -143,10 +147,19 @@ public class OpcionUnidadCarga
     public int Productos { get; set; }
 }
 
+/// <summary>Una categoría de producto que va en el camión; 0 es "Sin categoría".</summary>
+public class OpcionCategoriaCarga
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public int Productos { get; set; }
+}
+
 /// <summary>Lo que se puede elegir para el reporte de carga: solo lo que ese camión lleva.</summary>
 public class OpcionesCargaResponse
 {
     public List<OpcionMercadoCarga> Mercados { get; set; } = [];
+    public List<OpcionCategoriaCarga> Categorias { get; set; } = [];
     public List<OpcionUnidadCarga> Unidades { get; set; } = [];
 
     /// <summary>Todos, primer, segundo y tercer corte, con el texto con que se muestran.</summary>
