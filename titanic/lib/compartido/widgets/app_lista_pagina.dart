@@ -36,6 +36,7 @@ class AppListaPagina<T> extends StatelessWidget {
     this.filtro,
     this.indicadores,
     this.encabezado,
+    this.pestanas,
     this.tituloVacio,
     this.detalleVacio,
   });
@@ -73,6 +74,10 @@ class AppListaPagina<T> extends StatelessWidget {
   /// de almacén, cuando cambiar de contexto es más que un filtro más.
   final Widget? encabezado;
 
+  /// Las pestañas de la vista (`AppPestanas`), arriba de todo, como en el panel
+  /// web: Productos con sus categorías, marcas y unidades; Cajas con la Bóveda.
+  final Widget? pestanas;
+
   final IconData iconoVacio;
   final String singular;
   final String plural;
@@ -100,6 +105,7 @@ class AppListaPagina<T> extends StatelessWidget {
             ),
       child: Column(
         children: [
+          ?pestanas,
           if (indicadores != null && indicadores!.isNotEmpty) ...[
             const SizedBox(height: Dimen.espacio3),
             AppFilaDatos(tarjetas: indicadores!),

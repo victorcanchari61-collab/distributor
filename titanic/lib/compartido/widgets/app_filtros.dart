@@ -5,6 +5,7 @@ import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import 'app_boton.dart';
 import 'app_selector.dart';
+import 'app_selector_rango.dart';
 
 /// Una opcion dentro de un grupo de filtros.
 class OpcionFiltro<T> {
@@ -45,6 +46,51 @@ class GrupoFiltro<T> extends StatelessWidget {
       onCambio: (v) {
         if (v is T) onCambio(v);
       },
+    );
+  }
+}
+
+/// Un rango de fechas dentro de la hoja de filtros, igual que en el panel web:
+/// las fechas se filtran con el embudo, no con un control aparte arriba de la
+/// lista.
+class GrupoFiltroFechas extends StatelessWidget {
+  const GrupoFiltroFechas({
+    super.key,
+    required this.rango,
+    required this.onCambio,
+    this.titulo = 'Fechas',
+    this.textoVacio = 'Todas las fechas',
+  });
+
+  final DateTimeRange? rango;
+  final ValueChanged<DateTimeRange?> onCambio;
+  final String titulo;
+
+  /// Lo que se lee sin rango elegido: "Hoy", "Todas las fechas".
+  final String textoVacio;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(
+            titulo,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: Colores.tintaSuave,
+            ),
+          ),
+        ),
+        AppSelectorRango(
+          rango: rango,
+          textoVacio: textoVacio,
+          onCambio: onCambio,
+        ),
+      ],
     );
   }
 }

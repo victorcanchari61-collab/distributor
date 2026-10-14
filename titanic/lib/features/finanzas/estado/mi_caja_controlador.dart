@@ -59,6 +59,8 @@ final medioMiCajaFiltroProvider = StateProvider.autoDispose<String?>(
 
 final filtrosMiCajaActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
+  // Las fechas cuentan solo si no son las de hoy, que es lo que se ve al entrar.
+  if (ref.watch(rangoMiCajaProvider) != null) n++;
   if (ref.watch(tipoMiCajaFiltroProvider) != null) n++;
   if (ref.watch(conceptoMiCajaFiltroProvider) != null) n++;
   if (ref.watch(medioMiCajaFiltroProvider) != null) n++;

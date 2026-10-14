@@ -11,7 +11,6 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_selector_rango.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -56,6 +55,9 @@ class MiCajaPagina extends ConsumerWidget {
         )
         .length;
     final rechazados = filas.where((f) => f.digital?.rechazado ?? false);
+
+    // De qué fechas son las tarjetas: el rango se elige en los filtros.
+    final fechas = _textoFechas(ref.watch(rangoMiCajaProvider));
 
     return AppListaPagina<FilaMiCaja>(
       titulo: 'Mi Caja',
@@ -106,14 +108,14 @@ class MiCajaPagina extends ConsumerWidget {
           valor: formatoSoles(suma(efectivo.where((f) => f.esIngreso))),
           icono: Icons.trending_up,
           tono: DatoTono.exito,
-          nota: 'En estas fechas',
+          nota: fechas,
         ),
         AppTarjetaDato(
           etiqueta: 'Egresos en efectivo',
           valor: formatoSoles(suma(efectivo.where((f) => !f.esIngreso))),
           icono: Icons.trending_down,
           tono: DatoTono.peligro,
-          nota: 'En estas fechas',
+          nota: fechas,
         ),
         AppTarjetaDato(
           etiqueta: 'Cobrado digital',
@@ -126,8 +128,6 @@ class MiCajaPagina extends ConsumerWidget {
         ),
       ],
       encabezado: _Encabezado(
-        rango: ref.watch(rangoMiCajaProvider),
-        onRango: (r) => ref.read(rangoMiCajaProvider.notifier).state = r,
         aviso: rechazados.isEmpty
             ? null
             : '${rechazados.length == 1 ? 'Un cobro no apareció' : '${rechazados.length} cobros no aparecieron'} '
@@ -155,11 +155,20 @@ class MiCajaPagina extends ConsumerWidget {
       context,
       activos: ref.read(filtrosMiCajaActivosProvider),
       onLimpiar: () {
+        ref.read(rangoMiCajaProvider.notifier).state = null;
         ref.read(tipoMiCajaFiltroProvider.notifier).state = null;
         ref.read(conceptoMiCajaFiltroProvider.notifier).state = null;
         ref.read(medioMiCajaFiltroProvider.notifier).state = null;
       },
       grupos: [
+        // Las fechas van aquí, como en el panel web, y no con un control aparte.
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltroFechas(
+            rango: ref.watch(rangoMiCajaProvider),
+            textoVacio: 'Hoy',
+            onCambio: (r) => ref.read(rangoMiCajaProvider.notifier).state = r,
+          ),
+        ),
         Consumer(
           builder: (context, ref, _) => GrupoFiltro<String?>(
             titulo: 'Medio',
@@ -230,17 +239,12 @@ class MiCajaPagina extends ConsumerWidget {
 /// Las fechas que se miran y lo que se puede hacer con la caja.
 class _Encabezado extends StatelessWidget {
   const _Encabezado({
-    required this.rango,
-    required this.onRango,
     required this.aviso,
     required this.habilitado,
     required this.onIngreso,
     required this.onEgreso,
     required this.onCerrar,
   });
-
-  final DateTimeRange? rango;
-  final ValueChanged<DateTimeRange?> onRango;
 
   /// Cobros que no aparecieron en el banco: se le descuentan.
   final String? aviso;
@@ -260,8 +264,6 @@ class _Encabezado extends StatelessWidget {
             AppAlerta(aviso!, tono: AlertaTono.aviso),
             const SizedBox(height: Dimen.espacio2),
           ],
-          AppSelectorRango(rango: rango, textoVacio: 'Hoy', onCambio: onRango),
-          const SizedBox(height: Dimen.espacio2),
           Row(
             children: [
               Expanded(
@@ -902,4 +904,14 @@ class _Subtotal extends StatelessWidget {
       ],
     );
   }
+}
+
+/// "Hoy", "05/10" o "05/10 al 13/10": de qué días son las cifras.
+String _textoFechas(DateTimeRange? rango) {
+  if (rango == null) return 'Hoy';
+  String dm(DateTime f) =>
+      '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}';
+  return DateUtils.isSameDay(rango.start, rango.end)
+      ? dm(rango.start)
+      : '${dm(rango.start)} al ${dm(rango.end)}';
 }
