@@ -15,6 +15,7 @@ import {
   Tabs,
   useConfirmacion,
   useToast,
+  PestanasVista,
 } from '../../components/ui'
 import type { DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -667,21 +668,22 @@ export function ListasPreciosPage() {
   ]
 
   return (
-    <>
-      {listas.length > 0 && (
-        <Tabs
-          className="mb-5"
-          active={String(listaActiva ?? '')}
-          onChange={(id) => setListaActiva(Number(id))}
-          items={listas.map((l) => ({
-            id: String(l.id),
-            label: l.nombre,
-            icon: l.esPredeterminada ? <Star size={14} /> : <Tag size={14} />,
-            badge: l.precios,
-          }))}
-        />
-      )}
-
+    <PestanasVista
+      pestanas={
+        listas.length > 0 ? (
+          <Tabs
+            active={String(listaActiva ?? '')}
+            onChange={(id) => setListaActiva(Number(id))}
+            items={listas.map((l) => ({
+              id: String(l.id),
+              label: l.nombre,
+              icon: l.esPredeterminada ? <Star size={14} /> : <Tag size={14} />,
+              badge: l.precios,
+            }))}
+          />
+        ) : null
+      }
+    >
       <ListPage
         icon={<Banknote size={20} />}
         title={lista ? lista.nombre : 'Listas de precios'}
@@ -1010,6 +1012,6 @@ export function ListasPreciosPage() {
 
         {dialogo}
       </ListPage>
-    </>
+    </PestanasVista>
   )
 }

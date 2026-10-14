@@ -15,6 +15,7 @@ import {
   useConfirmacion,
   useToast,
   VisorReportePdf,
+  PestanasVista,
 } from '../../components/ui'
 import type { BadgeTone, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -126,7 +127,6 @@ export function PlanillaPage() {
 
   const cabecera = (
     <Tabs
-      className="mb-5"
       active={pestana}
       onChange={(id) => setPestana(id as Pestana)}
       items={[
@@ -158,8 +158,7 @@ export function PlanillaPage() {
     ]
 
     return (
-      <>
-        {cabecera}
+      <PestanasVista pestanas={cabecera}>
         <ListPage
           icon={<History size={20} />}
           title="Historial de planillas"
@@ -182,7 +181,7 @@ export function PlanillaPage() {
             </RowAction>
           )}
         />
-      </>
+      </PestanasVista>
     )
   }
 
@@ -262,8 +261,7 @@ export function PlanillaPage() {
   ]
 
   return (
-    <>
-      {cabecera}
+    <PestanasVista pestanas={cabecera}>
       <ListPage
         icon={<Wallet size={20} />}
         title="Planilla semanal"
@@ -412,7 +410,7 @@ export function PlanillaPage() {
         )}
         {dialogo}
       </ListPage>
-    </>
+    </PestanasVista>
   )
 }
 

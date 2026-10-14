@@ -15,6 +15,7 @@ import {
   Tabs,
   useConfirmacion,
   useToast,
+  PestanasVista,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -69,7 +70,6 @@ export function CuentasFinancierasPage() {
 
   const cabecera = (
     <Tabs
-      className="mb-5"
       active={pestana}
       onChange={(id) => setPestana(id as Pestana)}
       items={[
@@ -85,10 +85,9 @@ export function CuentasFinancierasPage() {
   )
 
   return (
-    <>
-      {cabecera}
+    <PestanasVista pestanas={cabecera}>
       {pestana === 'bancos' ? <BancosPage /> : pestana === 'cuentas' ? <CuentasBancariasTab /> : <MetodosPagoPage />}
-    </>
+    </PestanasVista>
   )
 }
 

@@ -21,6 +21,7 @@ import {
   Tabs,
   useConfirmacion,
   useToast,
+  PestanasVista,
 } from '../../components/ui'
 import type {
   ColumnaDetalleProducto,
@@ -414,7 +415,6 @@ export function AjustesPage() {
 
   const cabeceraPestanas = (
     <Tabs
-      className="mb-5"
       active={pestana}
       onChange={(id) => setPestana(id as Pestana)}
       items={[
@@ -432,10 +432,9 @@ export function AjustesPage() {
 
   if (pestana === 'motivos') {
     return (
-      <>
-        {cabeceraPestanas}
+      <PestanasVista pestanas={cabeceraPestanas}>
         <MotivosTabla motivos={motivos} onRecargar={cargar} />
-      </>
+      </PestanasVista>
     )
   }
 
@@ -581,8 +580,7 @@ export function AjustesPage() {
   }
 
   return (
-    <>
-      {cabeceraPestanas}
+    <PestanasVista pestanas={cabeceraPestanas}>
       <ListPage
       icon={<ClipboardCheck size={20} />}
       title="Ajustes de inventario"
@@ -704,6 +702,6 @@ export function AjustesPage() {
 
       {dialogo}
       </ListPage>
-    </>
+    </PestanasVista>
   )
 }

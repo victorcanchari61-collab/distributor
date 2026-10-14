@@ -19,6 +19,8 @@ import {
   Input,
   ListPage,
   Modal,
+  PageHeader,
+  PestanasVista,
   RowAction,
   StatCard,
   Tabs,
@@ -97,7 +99,6 @@ export function GastosOperativosPage() {
 
   const cabecera = (
     <Tabs
-      className="mb-5"
       active={pestana}
       onChange={(id) => setPestana(id as Pestana)}
       items={[
@@ -110,17 +111,15 @@ export function GastosOperativosPage() {
 
   if (pestana === 'categorias') {
     return (
-      <>
-        {cabecera}
+      <PestanasVista pestanas={cabecera}>
         <CategoriasTabla categorias={motivos} onRecargar={cargar} />
-      </>
+      </PestanasVista>
     )
   }
 
   if (pestana === 'recurrentes') {
     return (
-      <>
-        {cabecera}
+      <PestanasVista pestanas={cabecera}>
         <RecurrentesTabla
           recurrentes={recurrentes}
           motivos={motivos}
@@ -138,16 +137,21 @@ export function GastosOperativosPage() {
           onCerrar={() => setRecurrenteAbierto(false)}
           onRecargar={cargar}
         />
-      </>
+      </PestanasVista>
     )
   }
 
   const vencidos = pendientes.filter((p) => p.vencido)
 
   return (
-    <>
-      {cabecera}
+    <PestanasVista pestanas={cabecera}>
       <div className="space-y-5">
+        <PageHeader
+          icon={<AlertTriangle size={20} />}
+          title="Pendientes de pago"
+          description="Los gastos recurrentes de este mes que todavía no se pagan."
+        />
+
         {error && <Alert>{error}</Alert>}
 
         <FilaStats>
@@ -202,7 +206,7 @@ export function GastosOperativosPage() {
           }}
         />
       )}
-    </>
+    </PestanasVista>
   )
 }
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from './cn'
 import { useCabeceraGlobal } from './cabeceraGlobal'
+import { usePestanasVista } from './contextoPestanas'
 
 export interface PageHeaderProps {
   title: string
@@ -25,6 +26,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   // La cuenta y la campana van en esta misma fila: ya no hay barra superior.
   const { izquierda, derecha } = useCabeceraGlobal()
+  const pestanas = usePestanasVista()
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
@@ -83,6 +85,9 @@ export function PageHeader({
       </div>
 
       {description && <p className="text-sm text-ink-muted">{description}</p>}
+
+      {/* Las pestañas de la vista, bajo el título y la descripción (ver PestanasVista). */}
+      {pestanas && <div className="mt-1">{pestanas}</div>}
     </div>
   )
 }

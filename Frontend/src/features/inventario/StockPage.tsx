@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
 import { AlertTriangle, Boxes, Layers, PackageSearch, Warehouse } from 'lucide-react'
-import { Alert, Desplegable, ListaDesplegable, ListPage, StatCard, Tabs } from '../../components/ui'
+import { Alert, Desplegable, ListaDesplegable, ListPage, StatCard, Tabs, PestanasVista } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn, TabItem } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { almacenApi, stockApi } from './inventarioApi'
@@ -406,11 +406,13 @@ export function StockPage() {
   ]
 
   return (
-    <>
-      {almacenes.length > 0 && (
-        <Tabs className="mb-5" active={String(almacenId)} onChange={(id) => setAlmacenId(Number(id))} items={tabs} />
-      )}
-
+    <PestanasVista
+      pestanas={
+        almacenes.length > 0 ? (
+          <Tabs active={String(almacenId)} onChange={(id) => setAlmacenId(Number(id))} items={tabs} />
+        ) : null
+      }
+    >
       <ListPage
         icon={<PackageSearch size={20} />}
         title="Stock por almacén"
@@ -469,6 +471,6 @@ export function StockPage() {
           </>
         }
       />
-    </>
+    </PestanasVista>
   )
 }

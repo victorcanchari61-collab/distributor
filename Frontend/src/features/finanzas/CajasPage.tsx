@@ -14,6 +14,7 @@ import {
   Tabs,
   useConfirmacion,
   useToast,
+  PestanasVista,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -158,7 +159,6 @@ export function CajasPage() {
 
   const cabecera = (
     <Tabs
-      className="mb-5"
       active={pestana}
       onChange={(id) => setPestana(id as 'cajas' | 'boveda')}
       items={[
@@ -170,16 +170,14 @@ export function CajasPage() {
 
   if (pestana === 'boveda') {
     return (
-      <>
-        {cabecera}
+      <PestanasVista pestanas={cabecera}>
         <BovedaTab boveda={boveda} cuentas={todas.filter((c) => c.activo)} onCambio={cargar} />
-      </>
+      </PestanasVista>
     )
   }
 
   return (
-    <>
-      {cabecera}
+    <PestanasVista pestanas={cabecera}>
       <ListPage
         icon={<Users size={20} />}
         title="Cajas"
@@ -263,7 +261,7 @@ export function CajasPage() {
 
         {dialogo}
       </ListPage>
-    </>
+    </PestanasVista>
   )
 }
 

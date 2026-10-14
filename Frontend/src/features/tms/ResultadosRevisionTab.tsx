@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ClipboardCheck, Pencil, Plus, ShieldCheck, ShieldOff } from 'lucide-react'
-import { Alert, Badge, Button, ListPage, RowAction, StatCard, useConfirmacion, useToast } from '../../components/ui'
+import { Alert, Badge, Button, ListPage, RowAction, StatCard, useConfirmacion, useToast, PestanasVista } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
@@ -108,8 +108,7 @@ export function ResultadosRevisionTab({ cabecera }: { cabecera: ReactNode }) {
   ]
 
   return (
-    <>
-      {cabecera}
+    <PestanasVista pestanas={cabecera}>
       <ListPage
         icon={<ClipboardCheck size={20} />}
         title="Resultados de revisión"
@@ -179,6 +178,6 @@ export function ResultadosRevisionTab({ cabecera }: { cabecera: ReactNode }) {
         />
         {dialogo}
       </ListPage>
-    </>
+    </PestanasVista>
   )
 }

@@ -13,6 +13,7 @@ import {
   Tabs,
   useConfirmacion,
   useToast,
+  PestanasVista,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -167,7 +168,6 @@ export function MotivosNovedadPage() {
 
   const cabecera = (
     <Tabs
-      className="mb-5"
       active={pestana}
       onChange={(id) => setPestana(id as 'motivos' | 'resultados')}
       items={[
@@ -180,8 +180,7 @@ export function MotivosNovedadPage() {
   if (pestana === 'resultados') return <ResultadosRevisionTab cabecera={cabecera} />
 
   return (
-    <>
-      {cabecera}
+    <PestanasVista pestanas={cabecera}>
       <ListPage
         icon={<Tags size={20} />}
         title="Motivos de novedad"
@@ -270,6 +269,6 @@ export function MotivosNovedadPage() {
 
         {dialogo}
       </ListPage>
-    </>
+    </PestanasVista>
   )
 }

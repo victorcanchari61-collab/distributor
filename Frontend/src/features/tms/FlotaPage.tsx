@@ -25,6 +25,7 @@ import {
   Tabs,
   useConfirmacion,
   useToast,
+  PestanasVista,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -378,7 +379,6 @@ export function FlotaPage() {
 
   const cabecera = (
     <Tabs
-      className="mb-5"
       active={pestana}
       onChange={(id) => setPestana(id as Pestana)}
       items={[
@@ -390,16 +390,14 @@ export function FlotaPage() {
 
   if (pestana === 'tipos') {
     return (
-      <>
-        {cabecera}
+      <PestanasVista pestanas={cabecera}>
         <TiposVehiculoTabla tipos={tipos} onRecargar={cargar} />
-      </>
+      </PestanasVista>
     )
   }
 
   return (
-    <>
-      {cabecera}
+    <PestanasVista pestanas={cabecera}>
       <ListPage
         icon={<Truck size={20} />}
         title="Flota"
@@ -756,7 +754,7 @@ export function FlotaPage() {
 
         {dialogo}
       </ListPage>
-    </>
+    </PestanasVista>
   )
 }
 

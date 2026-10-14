@@ -147,7 +147,11 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
   'financiamientos': [prestamosRecibidosProvider],
   'mercados': [tms.mercadosProvider, clientesProvider],
   'rutas': [tms.rutasProvider, rutasProvider, clientesProvider],
-  'flota': [tms.vehiculosProvider, tms.resumenFlotaProvider],
+  'flota': [
+    tms.vehiculosProvider,
+    tms.resumenFlotaProvider,
+    tms.tiposVehiculoProvider,
+  ],
   'conductores': [
     tms.conductoresProvider,
     tms.resumenConductoresProvider,

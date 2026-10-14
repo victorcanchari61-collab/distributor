@@ -31,6 +31,7 @@ import {
   Tabs,
   useConfirmacion,
   useToast,
+  PestanasVista,
 } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -694,7 +695,6 @@ export function ProductosPage() {
 
   const cabecera = (
     <Tabs
-      className="mb-5"
       active={pestana}
       onChange={(id) => setPestana(id as Pestana)}
       items={[
@@ -708,8 +708,7 @@ export function ProductosPage() {
 
   if (pestana !== 'productos') {
     return (
-      <>
-        {cabecera}
+      <PestanasVista pestanas={cabecera}>
         {pestana === 'categorias' && (
           <CatalogoSimple
             titulo="Categorías"
@@ -738,13 +737,12 @@ export function ProductosPage() {
           />
         )}
         {pestana === 'unidades' && <UnidadesTabla unidades={unidades} onRecargar={cargar} />}
-      </>
+      </PestanasVista>
     )
   }
 
   return (
-    <>
-      {cabecera}
+    <PestanasVista pestanas={cabecera}>
       <ListPage
         icon={<Package size={20} />}
         title="Productos"
@@ -1217,7 +1215,7 @@ export function ProductosPage() {
 
         {dialogo}
       </ListPage>
-    </>
+    </PestanasVista>
   )
 }
 

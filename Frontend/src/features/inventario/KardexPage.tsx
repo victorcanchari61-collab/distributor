@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaHora } from '../../lib/fechas'
 import { ArrowDownCircle, ArrowUpCircle, BookOpen, Boxes, Lock, Warehouse } from 'lucide-react'
-import { Alert, Badge, ListPage, Tabs } from '../../components/ui'
+import { Alert, Badge, ListPage, Tabs, PestanasVista } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn, TabItem } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { almacenApi, kardexApi, motivoApi } from './inventarioApi'
@@ -303,16 +303,17 @@ export function KardexPage() {
   ]
 
   return (
-    <>
-      {almacenes.length > 0 && (
-        <Tabs
-          className="mb-5"
-          active={String(almacenId)}
-          onChange={(id) => setAlmacenId(Number(id))}
-          items={tabs}
-        />
-      )}
-
+    <PestanasVista
+      pestanas={
+        almacenes.length > 0 ? (
+          <Tabs
+            active={String(almacenId)}
+            onChange={(id) => setAlmacenId(Number(id))}
+            items={tabs}
+          />
+        ) : null
+      }
+    >
       <ListPage
         icon={<BookOpen size={20} />}
         title="Kardex"
@@ -345,6 +346,6 @@ export function KardexPage() {
           </>
         }
       />
-    </>
+    </PestanasVista>
   )
 }

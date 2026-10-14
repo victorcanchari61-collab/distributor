@@ -672,7 +672,9 @@ class _EntregaPedidoHojaState extends ConsumerState<EntregaPedidoHoja>
                             producto: e.producto,
                             presentacionId: e.presentacionId,
                             cantidad: e.cantidad,
-                            importe: e.importe,
+                            importe: e.importe > 0
+                                ? e.importe
+                                : _valorSugerido(e.producto, e.presentacionId),
                           );
                           linea.importeControlador.addListener(
                             () => setState(() => _error = null),
@@ -742,6 +744,23 @@ class _FilaTotal extends StatelessWidget {
 }
 
 /// Nombre de la presentación de una línea de recojo: la base o una del producto.
+/// El valor de lo recogido que se propone, igual que en la web: el costo de
+/// referencia del producto por el factor de la presentación, al céntimo. Antes
+/// el campo salía vacío y había que teclearlo cada vez, aunque el dato
+/// existiera. Se puede corregir en la tarjeta.
+double _valorSugerido(Producto producto, int presentacionId) {
+  final costo = producto.costoReferencia;
+  if (costo == null) return 0;
+  final factor = presentacionId == 0
+      ? 1.0
+      : producto.presentaciones
+                .where((p) => p.id == presentacionId)
+                .firstOrNull
+                ?.factor ??
+            1.0;
+  return (costo * factor * 100).round() / 100;
+}
+
 String _nombrePresentacion(Producto producto, int presentacionId) {
   if (presentacionId == 0) return producto.unidadBase;
   return producto.presentaciones
@@ -852,8 +871,11 @@ class _TarjetaRecojo extends StatelessWidget {
                         color: Colores.tinta,
                       ),
                     ),
+                    // Como en la web: cuánto se le descuenta al cliente por esto.
                     Text(
-                      '${recojo.cantidad} $nombrePres',
+                      '${recojo.cantidad} $nombrePres × '
+                      '${formatoSoles(recojo.importe)} = '
+                      '${formatoSoles(recojo.subtotal)}',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colores.tintaSuave,
