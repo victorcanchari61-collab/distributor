@@ -21,7 +21,6 @@ import '../../features/facturacion/vistas/listas_precios_pagina.dart';
 import '../../features/finanzas/vistas/cuentas_por_cobrar_pagina.dart';
 import '../../features/finanzas/vistas/cuentas_por_pagar_pagina.dart';
 import '../../features/finanzas/vistas/mis_ganancias_pagina.dart';
-import '../../features/finanzas/vistas/metodos_pago_pagina.dart';
 import '../../features/finanzas/vistas/mi_caja_pagina.dart';
 import '../../features/finanzas/vistas/bancos_pagina.dart';
 import '../../features/finanzas/vistas/cajas_pagina.dart';
@@ -180,11 +179,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: EmpresasPagina.ruta,
         builder: (context, estado) =>
             const PuertaPermiso(child: EmpresasPagina()),
-      ),
-      GoRoute(
-        path: MetodosPagoPagina.ruta,
-        builder: (context, estado) =>
-            const PuertaPermiso(child: MetodosPagoPagina()),
       ),
       GoRoute(
         path: OrdenesCompraPagina.ruta,
@@ -387,7 +381,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != StockPagina.ruta &&
               item.ruta != KardexPagina.ruta &&
               item.ruta != LotesPagina.ruta &&
-              item.ruta != MetodosPagoPagina.ruta &&
               item.ruta != OrdenesCompraPagina.ruta &&
               item.ruta != MisComprasPagina.ruta &&
               item.ruta != RecepcionesPagina.ruta &&

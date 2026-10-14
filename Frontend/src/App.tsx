@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ShieldOff } from 'lucide-react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { DashboardLayout, navIdFromPath, navPath, resolveNav } from './components/layout'
+import { DashboardLayout, navIdFromPath, navPath, puedeAbrir, resolveNav } from './components/layout'
 import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
 import { AccesosPage, AuditoriaPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
@@ -25,7 +25,7 @@ import {
   CuentasPorCobrarPage,
   CuentasPorPagarPage,
   GastosOperativosPage,
-  MetodosPagoPage,
+  MetodosPagoEnBancos,
   MiCajaPage,
   MisGananciasPage,
   MovimientosDineroPage,
@@ -100,7 +100,8 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'finanzas.cajas': CajasPage,
   'finanzas.cierres': CierresCajaPage,
   'finanzas.bancos': CuentasFinancierasPage,
-  'finanzas.metodospago': MetodosPagoPage,
+  // Es una pestaña de Bancos: el enlace viejo lleva ahí, ya abierta.
+  'finanzas.metodospago': MetodosPagoEnBancos,
   'finanzas.cobrar': CuentasPorCobrarPage,
   'finanzas.pagar': CuentasPorPagarPage,
   'finanzas.ganancias': MisGananciasPage,
@@ -192,7 +193,8 @@ function Vista() {
   // El menu ya esconde lo que no se puede abrir, pero la URL se escribe a mano
   // y se comparte por chat: sin esto, pegar un enlace saltaria el filtro.
   if (cargando) return null
-  if (!puedeVer(id)) return <SinAcceso submodulo={id} />
+  // puedeAbrir y no puedeVer: Bancos se abre también con solo el permiso de Métodos de pago, que es su pestaña.
+  if (!puedeAbrir(id, puedeVer)) return <SinAcceso submodulo={id} />
 
   const View = VIEWS[id]
   if (View) return <View />

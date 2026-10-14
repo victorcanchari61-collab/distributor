@@ -20,6 +20,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/tesoreria.dart';
+import 'metodos_pago_pagina.dart';
 import '../estado/tesoreria_controlador.dart';
 import 'hoja_movimientos_cuenta.dart';
 import 'hojas_finanzas.dart';
@@ -27,6 +28,11 @@ import 'hojas_finanzas.dart';
 /// Las cuentas bancarias: cuanta plata hay en cada una y que se movio. Los
 /// metodos de pago (Yape, transferencia) apuntan a una de estas. La
 /// conciliacion contra el extracto se hace en el panel web.
+/// En Bancos: false son las cuentas bancarias, true los metodos de pago.
+final verMetodosEnBancosProvider = StateProvider.autoDispose<bool>(
+  (ref) => false,
+);
+
 class BancosPagina extends ConsumerWidget {
   const BancosPagina({super.key});
 
@@ -35,6 +41,38 @@ class BancosPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
+
+    // Las cuentas y los metodos de pago van juntos, igual que en el web: Yape o
+    // una transferencia apuntan a una de estas cuentas. Cada pestaña sigue con
+    // su permiso: quien solo tiene uno ve solo esa.
+    final verBancos = puedeVer(ref, 'finanzas.bancos');
+    final verMetodos = puedeVer(ref, 'finanzas.metodospago');
+    final enMetodos =
+        verMetodos && (!verBancos || ref.watch(verMetodosEnBancosProvider));
+    final pestanas = verBancos && verMetodos
+        ? Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+            child: SegmentedButton<bool>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(
+                  value: false,
+                  label: Text('Cuentas'),
+                  icon: Icon(Icons.account_balance_outlined, size: 18),
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text('Métodos de pago'),
+                  icon: Icon(Icons.payments_outlined, size: 18),
+                ),
+              ],
+              selected: {enMetodos},
+              onSelectionChanged: (s) =>
+                  ref.read(verMetodosEnBancosProvider.notifier).state = s.first,
+            ),
+          )
+        : null;
+    if (enMetodos) return MetodosPagoPagina(encabezado: pestanas);
     final todas =
         ref.watch(cuentasBancariasProvider).valueOrNull ??
         const <CuentaFinanciera>[];
@@ -51,6 +89,7 @@ class BancosPagina extends ConsumerWidget {
     return AppListaPagina<CuentaFinanciera>(
       titulo: 'Bancos',
       ruta: ruta,
+      encabezado: pestanas,
       estado: ref.watch(cuentasBancariasProvider),
       visibles: ref.watch(cuentasBancariasFiltradasProvider),
       busqueda: ref.watch(busquedaBancosProvider),

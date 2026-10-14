@@ -34,7 +34,13 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
 
     final grupos = <MenuGrupo>[];
     for (final g in menuGrupos) {
-      final items = g.items.where((i) => puedeVer(ref, i.id)).toList();
+      // Tambien si puede ver alguna de las pestañas que la pantalla lleva dentro.
+      final items = g.items
+          .where(
+            (i) =>
+                puedeVer(ref, i.id) || i.incluye.any((s) => puedeVer(ref, s)),
+          )
+          .toList();
       if (items.isEmpty) continue;
       grupos.add(
         MenuGrupo(id: g.id, titulo: g.titulo, icono: g.icono, items: items),

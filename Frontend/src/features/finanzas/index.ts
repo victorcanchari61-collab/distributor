@@ -6,7 +6,7 @@ export type { MetodoPagoOpcion, MetodoPagoResponse, MetodoPagoRequest, TipoMetod
 export { MisGananciasPage } from './MisGananciasPage'
 export { gananciaApi } from './gananciaApi'
 export type { GananciaPagina, GananciaProducto, GananciaResumen } from './gananciaApi'
-export { CuentasFinancierasPage } from './CuentasFinancierasPage'
+export { CuentasFinancierasPage, MetodosPagoEnBancos } from './CuentasFinancierasPage'
 export { CajasPage } from './CajasPage'
 export { CierresCajaPage } from './CierresCajaPage'
 export { cierreCajaApi } from './cierreCajaApi'

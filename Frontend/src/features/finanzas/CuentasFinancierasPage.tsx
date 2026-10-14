@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Building2, CheckCircle2, CreditCard, History, Landmark, Plus, Scale, ShieldCheck, ShieldOff, TrendingUp } from 'lucide-react'
+import { Navigate, useLocation } from 'react-router-dom'
+import { Building2, CheckCircle2, Coins, CreditCard, History, Landmark, Plus, Scale, ShieldCheck, ShieldOff, TrendingUp } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -23,6 +24,8 @@ import { useRealtime } from '../../lib/realtime'
 import { bancoApi } from './bancoApi'
 import type { BancoResponse } from './bancoApi'
 import { BancosPage } from './BancosPage'
+import { MetodosPagoPage } from './MetodosPagoPage'
+import { navPath } from '../../components/layout'
 import { cuentaFinancieraApi, conciliacionBancariaApi } from './cuentaFinancieraApi'
 import type {
   CuentaFinancieraResponse,
@@ -42,14 +45,27 @@ const VACIO = {
   montoInicial: '',
 }
 
-type Pestana = 'bancos' | 'cuentas'
+type Pestana = 'bancos' | 'cuentas' | 'metodos'
 
 /**
  * Bancos (catálogo) y Cuentas Bancarias (las que sí tienen saldo real) son
  * cosas separadas: un banco puede tener varias cuentas. Ver docs/finanzas-tesoreria.md.
+ *
+ * Los Métodos de pago van aquí también, como tercera pestaña: Yape o una transferencia apuntan a
+ * una de estas cuentas, y tenerlos en otra pantalla obligaba a ir y volver para enlazarlos. Siguen
+ * siendo un submódulo con su permiso: cada quien ve las pestañas que le tocan.
  */
 export function CuentasFinancierasPage() {
-  const [pestana, setPestana] = useState<Pestana>('bancos')
+  const { puedeVer } = usePermisos()
+  const location = useLocation()
+  const verBancos = puedeVer('finanzas.bancos')
+  const verMetodos = puedeVer('finanzas.metodospago')
+
+  // Se puede llegar pidiendo una pestaña (el enlace viejo de Métodos de pago).
+  const pedida = (location.state as { pestana?: Pestana } | null)?.pestana
+  const [pestana, setPestana] = useState<Pestana>(
+    pedida === 'metodos' && verMetodos ? 'metodos' : verBancos ? (pedida === 'cuentas' ? 'cuentas' : 'bancos') : 'metodos',
+  )
 
   const cabecera = (
     <Tabs
@@ -57,8 +73,13 @@ export function CuentasFinancierasPage() {
       active={pestana}
       onChange={(id) => setPestana(id as Pestana)}
       items={[
-        { id: 'bancos', label: 'Bancos', icon: <Landmark size={15} /> },
-        { id: 'cuentas', label: 'Cuentas Bancarias', icon: <CreditCard size={15} /> },
+        ...(verBancos
+          ? [
+              { id: 'bancos', label: 'Bancos', icon: <Landmark size={15} /> },
+              { id: 'cuentas', label: 'Cuentas Bancarias', icon: <CreditCard size={15} /> },
+            ]
+          : []),
+        ...(verMetodos ? [{ id: 'metodos', label: 'Métodos de pago', icon: <Coins size={15} /> }] : []),
       ]}
     />
   )
@@ -66,9 +87,14 @@ export function CuentasFinancierasPage() {
   return (
     <>
       {cabecera}
-      {pestana === 'bancos' ? <BancosPage /> : <CuentasBancariasTab />}
+      {pestana === 'bancos' ? <BancosPage /> : pestana === 'cuentas' ? <CuentasBancariasTab /> : <MetodosPagoPage />}
     </>
   )
+}
+
+/** El enlace viejo de Métodos de pago: lleva a Bancos con esa pestaña abierta. */
+export function MetodosPagoEnBancos() {
+  return <Navigate to={navPath('finanzas.bancos')} state={{ pestana: 'metodos' }} replace />
 }
 
 /**

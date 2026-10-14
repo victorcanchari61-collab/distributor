@@ -9,6 +9,7 @@ class MenuItem {
     required this.titulo,
     required this.icono,
     this.pendiente = true,
+    this.incluye = const [],
   });
 
   /// Mismo id que en el panel web: 'maestros.clientes'.
@@ -18,6 +19,11 @@ class MenuItem {
 
   /// Todavia no tiene pantalla en la app.
   final bool pendiente;
+
+  /// Otros submodulos que viven DENTRO de esta pantalla, como pestañas: Metodos
+  /// de pago dentro de Bancos. Cada uno conserva su permiso, asi que la entrada
+  /// se muestra y se abre si se puede ver este o cualquiera de esos.
+  final List<String> incluye;
 
   /// Ruta del navegador: 'maestros.clientes' -> '/maestros/clientes'.
   String get ruta => '/${id.split('.').join('/')}';
@@ -243,17 +249,14 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Cierres de caja',
         icono: Icons.lock_clock_outlined,
       ),
+      // Metodos de pago es una pestaña de Bancos, igual que en el web: no va
+      // en el menu, pero sigue siendo un submodulo con su permiso.
       MenuItem(
         id: 'finanzas.bancos',
         pendiente: false,
         titulo: 'Bancos',
         icono: Icons.account_balance_outlined,
-      ),
-      MenuItem(
-        id: 'finanzas.metodospago',
-        pendiente: false,
-        titulo: 'Métodos de pago',
-        icono: Icons.payments_outlined,
+        incluye: ['finanzas.metodospago'],
       ),
       MenuItem(
         id: 'finanzas.cobrar',

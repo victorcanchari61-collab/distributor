@@ -262,20 +262,35 @@ public class DespachoService : IDespachoService
         if (!CortesCarga.EsValido(corte))
             throw new BadRequestException("Elige un corte válido.");
 
-        if (!await _context.Despachos.AnyAsync(d => d.Id == id))
-            throw new NotFoundException($"No existe el despacho {id}");
+        var diaReparto = (await _context.Despachos.AsNoTracking()
+            .Where(d => d.Id == id)
+            .Select(d => (DateTime?)d.Fecha)
+            .FirstOrDefaultAsync()
+            ?? throw new NotFoundException($"No existe el despacho {id}")).Date;
 
         // Con las anuladas: una línea que hoy está quitada pudo estar pedida a
         // las 15:00, y la base tiene que contarla.
         var lineas = await LineasDelDespacho(id, conAnuladas: true).ToListAsync();
 
         /*
-         * El día de carga es el de los PEDIDOS: el más reciente del camión. El
-         * día en que se reparte no cuenta. Lo registrado en días anteriores
-         * queda dentro de la base, porque el primer corte llega hasta las 15:00
-         * de este día sin límite por atrás.
+         * El día de carga es el de los PEDIDOS: el más reciente ANTERIOR al día
+         * de reparto (los del lunes para el camión del martes). Lo registrado en
+         * días anteriores queda dentro de la base, porque el primer corte llega
+         * hasta las 15:00 de ese día sin límite por atrás.
+         *
+         * Un pedido tomado el mismo día de reparto NO mueve el día de carga: si
+         * lo moviera, un solo pedido nuevo de la mañana convertiría todo el
+         * camión en "base" y ya no se sabría qué se aumentó. Cae en el tercer
+         * corte, junto con los aumentos de esa mañana.
+         *
+         * Si no hay pedidos de días anteriores (se reparte el mismo día en que se
+         * tomaron), el día de carga es el de esos pedidos, como siempre.
          */
-        var diaCarga = lineas.Count == 0 ? Zona.Hoy : lineas.Max(l => Zona.DiaDe(l.PedidoFecha));
+        var diasDePedido = lineas.Select(l => Zona.DiaDe(l.PedidoFecha)).Distinct().ToList();
+        var anteriores = diasDePedido.Where(d => d < diaReparto).ToList();
+        var diaCarga = anteriores.Count > 0
+            ? anteriores.Max()
+            : diasDePedido.Count == 0 ? Zona.Hoy : diasDePedido.Max();
         var primerCorte = Zona.AUtc(diaCarga + CortesCarga.HoraPrimerCorte);
         var segundoCorte = Zona.AUtc(diaCarga + CortesCarga.HoraSegundoCorte);
 
@@ -526,7 +541,8 @@ public class DespachoService : IDespachoService
         var despacho = new Despacho
         {
             Numero = await SiguienteNumeroAsync(),
-            Fecha = (request.Fecha ?? DateTime.UtcNow).Date,
+            // Hoy es el de Perú: de noche, la fecha en UTC ya es la de mañana.
+            Fecha = (request.Fecha ?? Zona.Hoy).Date,
             PedidosDesde = request.PedidosDesde?.Date,
             PedidosHasta = request.PedidosHasta?.Date,
             DiaVisita = DiaSemana.Normalizar(request.DiaVisita),

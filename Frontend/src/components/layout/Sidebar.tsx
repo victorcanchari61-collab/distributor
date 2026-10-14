@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, Home, PanelLeftClose, PanelLeftOpen, EyeOff, X } from 'lucide-react'
 import { cn, Logo } from '../ui'
-import { NAV_GROUPS } from './navigation'
+import { NAV_GROUPS, puedeAbrir } from './navigation'
 import type { NavGroup } from './navigation'
 import { usePermisos } from '../../lib/permisos'
 
@@ -42,7 +42,7 @@ export function Sidebar({
    */
   const grupos = useMemo(() => {
     if (cargando) return []
-    return NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => puedeVer(i.id)) })).filter(
+    return NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => puedeAbrir(i.id, puedeVer)) })).filter(
       (g) => g.items.length > 0,
     )
   }, [cargando, puedeVer])

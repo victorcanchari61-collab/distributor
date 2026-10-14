@@ -44,7 +44,11 @@ class PuertaPermiso extends ConsumerWidget {
       );
     }
 
-    if (puedeVer(ref, item.id)) return child;
+    // Tambien con el permiso de alguna de sus pestañas: Bancos se abre con solo
+    // el de Metodos de pago, y adentro se ve nada mas que esa.
+    if (puedeVer(ref, item.id) || item.incluye.any((s) => puedeVer(ref, s))) {
+      return child;
+    }
 
     return _SinAcceso(titulo: item.titulo, submodulo: item.id);
   }

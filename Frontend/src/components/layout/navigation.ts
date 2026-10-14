@@ -69,8 +69,14 @@ export interface NavItem {
   badge?: string
   /** Marca las vistas que todavia no existen. */
   pending?: boolean
-  /** No se pinta en el sider (queda reservada para mas adelante). */
+  /** No se pinta en el sider (queda reservada para mas adelante, o vive como pestaña de otra). */
   hidden?: boolean
+  /**
+   * Otros submodulos que viven DENTRO de esta pantalla, como pestañas: Metodos de pago dentro de
+   * Bancos. Cada uno conserva su permiso, asi que la entrada se muestra y se abre si se puede ver
+   * este o cualquiera de esos; la pantalla enseña solo las pestañas que tocan.
+   */
+  incluye?: string[]
 }
 
 export interface NavGroup {
@@ -176,8 +182,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'finanzas.caja', label: 'Mi Caja', icon: HandCoins },
       { id: 'finanzas.cajas', label: 'Cajas', icon: Users },
       { id: 'finanzas.cierres', label: 'Cierres de caja', icon: ClipboardCheck },
-      { id: 'finanzas.bancos', label: 'Bancos', icon: Landmark },
-      { id: 'finanzas.metodospago', label: 'Métodos de pago', icon: Coins },
+      { id: 'finanzas.bancos', label: 'Bancos', icon: Landmark, incluye: ['finanzas.metodospago'] },
+      // Es una pestaña de Bancos: no va en el menu, pero sigue siendo un submodulo con su permiso.
+      { id: 'finanzas.metodospago', label: 'Métodos de pago', icon: Coins, hidden: true },
       { id: 'finanzas.cobrar', label: 'Cuentas por cobrar', icon: Wallet },
       { id: 'finanzas.pagar', label: 'Cuentas por pagar', icon: CreditCard },
       { id: 'finanzas.ganancias', label: 'Mis ganancias', icon: TrendingUp },
@@ -248,6 +255,15 @@ export function resolveNav(itemId: string): { sys: SysKey; group?: NavGroup; ite
   const group = NAV_GROUPS.find((g) => g.items.some((i) => i.id === itemId))
   if (!group) return { sys: 'brand' }
   return { sys: group.sys, group, item: group.items.find((i) => i.id === itemId) }
+}
+
+/**
+ * Si una entrada se puede abrir: porque se puede ver ella, o alguno de los submodulos que lleva
+ * dentro como pestañas.
+ */
+export function puedeAbrir(itemId: string, puedeVer: (submodulo: string) => boolean): boolean {
+  if (puedeVer(itemId)) return true
+  return (resolveNav(itemId).item?.incluye ?? []).some(puedeVer)
 }
 
 /** Primera vista del menu: la que se abre al entrar. */

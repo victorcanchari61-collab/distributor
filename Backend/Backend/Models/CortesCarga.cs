@@ -13,9 +13,15 @@ namespace Backend.Models;
 ///
 /// Los tres suman lo mismo que "todos".
 ///
-/// El día que cuenta es el de los PEDIDOS, no el del reparto: el día en que se
-/// reparte es solo informativo. Se toma el día del pedido más reciente del
-/// camión, y todo lo registrado antes (días anteriores incluidos) es base.
+/// El día que cuenta es el de los PEDIDOS, no el del reparto: se toma el día del
+/// pedido más reciente ANTERIOR al día de reparto (los del lunes para el camión
+/// del martes), y todo lo registrado antes (días anteriores incluidos) es base.
+///
+/// Lo del día de reparto —los aumentos de la mañana y los pedidos nuevos— cae en
+/// el tercer corte, que llega hasta que sale el camión. Un pedido nuevo de esa
+/// mañana no mueve el día: si lo moviera, todo el camión pasaría a ser "base" y
+/// ya no se sabría qué se aumentó. Si el camión sale el mismo día en que se
+/// tomaron todos sus pedidos, ese es el día.
 /// </summary>
 public static class CortesCarga
 {

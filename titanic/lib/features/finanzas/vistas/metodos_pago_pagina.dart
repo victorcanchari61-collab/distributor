@@ -24,9 +24,13 @@ import '../../../compartido/widgets/app_aviso.dart';
 /// el mismo catalogo lo usan Compras, Cuentas por cobrar y por pagar, Mis
 /// cobros y Mi Caja.
 class MetodosPagoPagina extends ConsumerWidget {
-  const MetodosPagoPagina({super.key});
+  const MetodosPagoPagina({super.key, this.encabezado});
 
-  static const ruta = '/finanzas/metodospago';
+  /// Vive dentro de Bancos, como pestaña: la ruta es la de Bancos.
+  static const ruta = '/finanzas/bancos';
+
+  /// El selector de pestañas de Bancos, para volver a las cuentas.
+  final Widget? encabezado;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,8 +48,9 @@ class MetodosPagoPagina extends ConsumerWidget {
         .length;
 
     return AppListaPagina<MetodoPago>(
-      titulo: 'Métodos de pago',
+      titulo: 'Bancos',
       ruta: ruta,
+      encabezado: encabezado,
       estado: ref.watch(metodosPagoProvider),
       visibles: ref.watch(metodosPagoFiltradosProvider),
       busqueda: ref.watch(busquedaMetodosPagoProvider),
