@@ -11,6 +11,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -34,6 +35,7 @@ String _origenEtiqueta(String o) =>
 /// Ingresos y egresos: los gastos que se repiten cada mes y el catalogo de
 /// categorias con que se clasifica todo lo que entra y sale. Tres pestañas,
 /// igual que el panel web: lo que toca pagar, las plantillas y las categorias.
+/// Los movimientos mismos estan en Movimientos, el kardex del dinero.
 class IngresosEgresosPagina extends ConsumerWidget {
   const IngresosEgresosPagina({super.key});
 
@@ -43,12 +45,34 @@ class IngresosEgresosPagina extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pestana = ref.watch(pestanaOperativosProvider);
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final pestanas = _Pestanas(
-      actual: pestana,
+    // Las tres se cargan juntas, como en la web: cada pestaña muestra cuantos
+    // tiene sin tener que abrirla.
+    final pestanas = AppPestanas<PestanaOperativos>(
+      activa: pestana,
       onCambio: (p) {
         ref.read(pestanaOperativosProvider.notifier).state = p;
         ref.read(busquedaOperativosProvider.notifier).state = '';
       },
+      pestanas: [
+        Pestana(
+          PestanaOperativos.pendientes,
+          'Pendientes',
+          icono: Icons.warning_amber_rounded,
+          contador: ref.watch(pendientesProvider).valueOrNull?.length,
+        ),
+        Pestana(
+          PestanaOperativos.recurrentes,
+          'Recurrentes',
+          icono: Icons.repeat,
+          contador: ref.watch(recurrentesProvider).valueOrNull?.length,
+        ),
+        Pestana(
+          PestanaOperativos.categorias,
+          'Categorías',
+          icono: Icons.sell_outlined,
+          contador: ref.watch(categoriasFinanzasProvider).valueOrNull?.length,
+        ),
+      ],
     );
 
     return switch (pestana) {
@@ -111,19 +135,19 @@ class IngresosEgresosPagina extends ConsumerWidget {
           etiqueta: 'Vencidos',
           valor: '${vencidos.length}',
           icono: Icons.warning_amber_rounded,
-          tono: vencidos.isEmpty ? DatoTono.neutral : DatoTono.peligro,
+          tono: vencidos.isEmpty ? DatoTono.exito : DatoTono.peligro,
           nota: formatoSoles(
             vencidos.fold<double>(0, (s, p) => s + p.montoEstimado),
           ),
         ),
         AppTarjetaDato(
-          etiqueta: 'Por vencer',
+          etiqueta: 'Por vencer este mes',
           valor: '${todos.length - vencidos.length}',
           icono: Icons.event_outlined,
           tono: DatoTono.aviso,
         ),
       ],
-      encabezado: pestanas,
+      pestanas: pestanas,
       fila: (context, p) => AppTarjetaRegistro(
         icono: Icons.event_repeat_outlined,
         color: color,
@@ -177,7 +201,7 @@ class IngresosEgresosPagina extends ConsumerWidget {
       singular: 'recurrente',
       plural: 'recurrentes',
       detalleVacio: 'Alquiler, luz, internet: lo que se paga todos los meses.',
-      encabezado: pestanas,
+      pestanas: pestanas,
       fila: (context, r) => AppTarjetaRegistro(
         icono: Icons.repeat,
         color: color,
@@ -213,7 +237,7 @@ class IngresosEgresosPagina extends ConsumerWidget {
               icon: Icon(
                 r.activo ? Icons.block : Icons.check_circle_outline,
                 size: 18,
-                color: r.activo ? Colores.advertencia : Colores.exito,
+                color: Colores.advertencia,
               ),
             ),
           ],
@@ -225,7 +249,7 @@ class IngresosEgresosPagina extends ConsumerWidget {
               icon: const Icon(
                 Icons.delete_outline,
                 size: 18,
-                color: Colores.peligro,
+                color: Colores.advertencia,
               ),
             ),
         ],
@@ -300,10 +324,10 @@ class IngresosEgresosPagina extends ConsumerWidget {
           ? () => abrirHojaFinanzas(context, (_) => const _HojaCategoria())
           : null,
       textoNuevo: 'Nueva categoría',
-      iconoVacio: Icons.category_outlined,
+      iconoVacio: Icons.sell_outlined,
       singular: 'categoría',
       plural: 'categorías',
-      encabezado: pestanas,
+      pestanas: pestanas,
       filtro: BotonFiltros(
         activos: ref.watch(filtrosCategoriasActivosProvider),
         color: color,
@@ -345,7 +369,7 @@ class IngresosEgresosPagina extends ConsumerWidget {
         ),
       ),
       fila: (context, c) => AppTarjetaRegistro(
-        icono: c.esSistema ? Icons.lock_outline : Icons.category_outlined,
+        icono: c.esSistema ? Icons.lock_outline : Icons.sell_outlined,
         color: color,
         titulo: c.nombre,
         insignia: AppEtiqueta(
@@ -383,7 +407,7 @@ class IngresosEgresosPagina extends ConsumerWidget {
               icon: const Icon(
                 Icons.delete_outline,
                 size: 18,
-                color: Colores.peligro,
+                color: Colores.advertencia,
               ),
             ),
         ],
@@ -413,40 +437,6 @@ class IngresosEgresosPagina extends ConsumerWidget {
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
-  }
-}
-
-/// Las tres pestañas, arriba de la lista.
-class _Pestanas extends StatelessWidget {
-  const _Pestanas({required this.actual, required this.onCambio});
-
-  final PestanaOperativos actual;
-  final ValueChanged<PestanaOperativos> onCambio;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-      child: SegmentedButton<PestanaOperativos>(
-        showSelectedIcon: false,
-        segments: const [
-          ButtonSegment(
-            value: PestanaOperativos.pendientes,
-            label: Text('Pendientes'),
-          ),
-          ButtonSegment(
-            value: PestanaOperativos.recurrentes,
-            label: Text('Recurrentes'),
-          ),
-          ButtonSegment(
-            value: PestanaOperativos.categorias,
-            label: Text('Categorías'),
-          ),
-        ],
-        selected: {actual},
-        onSelectionChanged: (s) => onCambio(s.first),
-      ),
-    );
   }
 }
 
@@ -858,6 +848,9 @@ class _HojaCategoriaState extends ConsumerState<_HojaCategoria> {
 
   @override
   Widget build(BuildContext context) {
+    // Ya usada no cambia de tipo, igual que en la web: el servidor lo rechaza.
+    final tipoFijo = (widget.categoria?.usos ?? 0) > 0;
+
     return Padding(
       padding: margenHoja(context),
       child: SingleChildScrollView(
@@ -890,7 +883,7 @@ class _HojaCategoriaState extends ConsumerState<_HojaCategoria> {
                   child: AppSelector<String>(
                     valor: _tipo,
                     etiqueta: 'Tipo',
-                    habilitado: !_guardando,
+                    habilitado: !_guardando && !tipoFijo,
                     opciones: const [
                       Opcion('INGRESO', 'Ingreso'),
                       Opcion('EGRESO', 'Egreso'),
@@ -913,6 +906,13 @@ class _HojaCategoriaState extends ConsumerState<_HojaCategoria> {
                 ),
               ],
             ),
+            if (tipoFijo) ...[
+              const SizedBox(height: Dimen.espacio1),
+              const Text(
+                'Ya se usó: no cambia de tipo.',
+                style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+              ),
+            ],
             const SizedBox(height: Dimen.espacio4),
             AppCampo(
               controlador: _descripcion,

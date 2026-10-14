@@ -320,6 +320,38 @@ final tiposVehiculoActivosProvider = Provider.autoDispose<List<TipoVehiculo>>(
           .toList(),
 );
 
+/// Las pestañas de Flota, las mismas del panel web: los vehículos y el
+/// catálogo de tipos del que salen.
+enum PestanaFlota { vehiculos, tipos }
+
+final pestanaFlotaProvider = StateProvider.autoDispose<PestanaFlota>(
+  (ref) => PestanaFlota.vehiculos,
+);
+
+final busquedaTiposVehiculoProvider = StateProvider.autoDispose((ref) => '');
+
+/// Estado de los tipos. Propio y no el `estadoFiltroProvider` de los
+/// vehículos, para que filtrar una pestaña no filtre la otra. Por defecto
+/// todos, como la web: son pocos y uno desactivado lo siguen llevando
+/// vehículos.
+final estadoTiposVehiculoFiltroProvider = StateProvider.autoDispose(
+  (ref) => FiltroEstado.todos,
+);
+
+final tiposVehiculoFiltradosProvider = Provider.autoDispose<List<TipoVehiculo>>(
+  (ref) {
+    final todos =
+        ref.watch(tiposVehiculoProvider).valueOrNull ?? const <TipoVehiculo>[];
+    final texto = ref.watch(busquedaTiposVehiculoProvider).trim().toLowerCase();
+    final estado = ref.watch(estadoTiposVehiculoFiltroProvider);
+
+    return todos
+        .where((t) => pasaEstado(t.activo, estado))
+        .where((t) => texto.isEmpty || t.buscable.contains(texto))
+        .toList();
+  },
+);
+
 /// Listado de conductores.
 class ConductoresControlador extends AsyncNotifier<List<Conductor>> {
   @override

@@ -222,6 +222,20 @@ class MaestrosApi {
         await _api.post('/categoria', cuerpo: cuerpo) as Map<String, dynamic>,
       );
 
+  /// PUT /api/categoria/{id}: nombre, descripcion y activo. Activar o
+  /// desactivar es esta misma llamada con `activo` cambiado.
+  Future<Categoria> actualizarCategoria(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => Categoria.desdeJson(
+    await _api.put('/categoria/$id', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
+
+  /// DELETE /api/categoria/{id}
+  ///
+  /// El backend lo rechaza si algun producto la usa: esa se desactiva.
+  Future<void> eliminarCategoria(int id) => _api.delete('/categoria/$id');
+
   /// GET /api/marca
   Future<List<Marca>> marcas() async {
     final datos = await _api.get('/marca') as List;
@@ -236,6 +250,17 @@ class MaestrosApi {
         await _api.post('/marca', cuerpo: cuerpo) as Map<String, dynamic>,
       );
 
+  /// PUT /api/marca/{id}: nombre y activo.
+  Future<Marca> actualizarMarca(int id, Map<String, dynamic> cuerpo) async =>
+      Marca.desdeJson(
+        await _api.put('/marca/$id', cuerpo: cuerpo) as Map<String, dynamic>,
+      );
+
+  /// DELETE /api/marca/{id}
+  ///
+  /// El backend lo rechaza si algun producto la usa: esa se desactiva.
+  Future<void> eliminarMarca(int id) => _api.delete('/marca/$id');
+
   /// GET /api/unidad
   Future<List<UnidadMedida>> unidades() async {
     final datos = await _api.get('/unidad') as List;
@@ -249,4 +274,17 @@ class MaestrosApi {
       UnidadMedida.desdeJson(
         await _api.post('/unidad', cuerpo: cuerpo) as Map<String, dynamic>,
       );
+
+  /// PUT /api/unidad/{id}: codigo, nombre, tipo, fraccionable y activo.
+  Future<UnidadMedida> actualizarUnidad(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => UnidadMedida.desdeJson(
+    await _api.put('/unidad/$id', cuerpo: cuerpo) as Map<String, dynamic>,
+  );
+
+  /// DELETE /api/unidad/{id}
+  ///
+  /// El backend rechaza las del sistema y las que ya se usan.
+  Future<void> eliminarUnidad(int id) => _api.delete('/unidad/$id');
 }

@@ -8,6 +8,7 @@ import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -15,7 +16,6 @@ import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
-import '../../../core/tema/dimensiones.dart';
 import '../datos/novedad.dart';
 import '../estado/novedades_controlador.dart';
 import 'motivo_novedad_formulario.dart';
@@ -35,30 +35,28 @@ class MotivosNovedadPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
+    final pestana = ref.watch(pestanaMotivosProvider);
     // Motivos: por qué no se entregó. Resultados: qué se encontró al contar
-    // lo que volvió en el camión.
-    final pestanas = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-      child: SegmentedButton<bool>(
-        showSelectedIcon: false,
-        segments: const [
-          ButtonSegment(
-            value: false,
-            label: Text('Motivos'),
-            icon: Icon(Icons.label_outline, size: 18),
-          ),
-          ButtonSegment(
-            value: true,
-            label: Text('Resultados'),
-            icon: Icon(Icons.fact_check_outlined, size: 18),
-          ),
-        ],
-        selected: {ref.watch(verResultadosProvider)},
-        onSelectionChanged: (s) =>
-            ref.read(verResultadosProvider.notifier).state = s.first,
-      ),
+    // lo que volvió en el camión. Sin contador, igual que la web: el número
+    // ya está en los indicadores de cada una.
+    final pestanas = AppPestanas<PestanaMotivos>(
+      activa: pestana,
+      onCambio: (p) {
+        // Las dos listas comparten el buscador: lo escrito para una no
+        // tiene por qué filtrar la otra.
+        ref.read(busquedaMotivosProvider.notifier).state = '';
+        ref.read(pestanaMotivosProvider.notifier).state = p;
+      },
+      pestanas: const [
+        Pestana(PestanaMotivos.motivos, 'Motivos', icono: Icons.label_outline),
+        Pestana(
+          PestanaMotivos.resultados,
+          'Resultados de revisión',
+          icono: Icons.fact_check_outlined,
+        ),
+      ],
     );
-    if (ref.watch(verResultadosProvider)) {
+    if (pestana == PestanaMotivos.resultados) {
       return _paginaResultados(context, ref, color, pestanas);
     }
 
@@ -95,7 +93,7 @@ class MotivosNovedadPagina extends ConsumerWidget {
           icono: Icons.check_circle_outline,
         ),
       ],
-      encabezado: pestanas,
+      pestanas: pestanas,
       filtro: BotonFiltros(
         activos: ref.watch(filtrosMotivosActivosProvider),
         color: color,
@@ -159,7 +157,7 @@ class MotivosNovedadPagina extends ConsumerWidget {
           icono: Icons.check_circle_outline,
         ),
       ],
-      encabezado: pestanas,
+      pestanas: pestanas,
       fila: (context, r) => AppTarjetaRegistro(
         icono: Icons.fact_check_outlined,
         color: color,

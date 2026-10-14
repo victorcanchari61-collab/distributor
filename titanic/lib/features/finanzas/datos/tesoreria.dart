@@ -645,8 +645,8 @@ class CuentaFinanciera {
   final double saldoActual;
   final bool activo;
 
-  /// La caja de la empresa, sin responsable: adonde va el efectivo de los
-  /// cierres. Solo efectivo.
+  /// La Boveda: el efectivo de la empresa, sin responsable, adonde va lo de
+  /// los cierres. No es una caja, aunque por dentro se guarde como CAJA.
   final bool esBoveda;
 
   /// Solo en una caja: de quien es.
@@ -696,16 +696,25 @@ class CuentaFinanciera {
 
 /// Un banco del catalogo (BCP, BBVA...): de el cuelgan las cuentas bancarias.
 class Banco {
-  const Banco({required this.id, required this.nombre, required this.activo});
+  const Banco({
+    required this.id,
+    required this.nombre,
+    required this.activo,
+    this.cantidadCuentas = 0,
+  });
 
   final int id;
   final String nombre;
   final bool activo;
 
+  /// Cuantas cuentas bancarias tiene.
+  final int cantidadCuentas;
+
   factory Banco.desdeJson(Map<String, dynamic> json) => Banco(
     id: json['id'] as int,
     nombre: json['nombre'] as String? ?? '',
     activo: json['activo'] as bool? ?? true,
+    cantidadCuentas: json['cantidadCuentas'] as int? ?? 0,
   );
 }
 

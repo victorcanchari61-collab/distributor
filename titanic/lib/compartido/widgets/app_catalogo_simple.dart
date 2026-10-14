@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/navegacion/menu.dart';
 import '../../core/red/excepciones.dart';
 import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
@@ -107,7 +108,9 @@ class _AppCatalogoSimpleState extends State<AppCatalogoSimple> {
   };
 
   Future<void> _abrirHoja([FilaCatalogo? editando]) {
-    final acento = Acento.de(context);
+    // El color del módulo sale de la ruta: este widget está por encima del
+    // AppShell que declara el acento, así que Acento.de daría el azul de marca.
+    final acento = resolverRuta(widget.ruta).grupo?.color ?? Colores.marca;
     return showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colores.superficie,
@@ -147,7 +150,8 @@ class _AppCatalogoSimpleState extends State<AppCatalogoSimple> {
       context,
       titulo: '${f.activo ? 'Desactivar' : 'Activar'} ${f.nombre}',
       mensaje: f.activo
-          ? 'Deja de ofrecerse al registrar. Lo que ya la usa la conserva.'
+          ? 'Deja de ofrecerse al registrar. '
+                '${widget.femenino ? 'Lo que ya la usa la conserva.' : 'Lo que ya lo usa lo conserva.'}'
           : 'Vuelve a estar disponible.',
       textoConfirmar: f.activo ? 'Desactivar' : 'Activar',
       tono: f.activo ? ConfirmTono.aviso : ConfirmTono.pregunta,
@@ -198,7 +202,9 @@ class _AppCatalogoSimpleState extends State<AppCatalogoSimple> {
               ),
         )
         .toList();
-    final acento = Acento.de(context);
+    // El color del módulo sale de la ruta: este widget está por encima del
+    // AppShell que declara el acento, así que Acento.de daría el azul de marca.
+    final acento = resolverRuta(widget.ruta).grupo?.color ?? Colores.marca;
 
     return AppListaPagina<FilaCatalogo>(
       titulo: widget.titulo,

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from './cn'
+import { useCabeceraGlobal } from './cabeceraGlobal'
 
 export interface PageHeaderProps {
   title: string
@@ -22,6 +23,9 @@ export function PageHeader({
   actions,
   className,
 }: PageHeaderProps) {
+  // La cuenta y la campana van en esta misma fila: ya no hay barra superior.
+  const { izquierda, derecha } = useCabeceraGlobal()
+
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {/*
@@ -33,7 +37,8 @@ export function PageHeader({
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         {/* flex-1 con un minimo: el titulo se lleva el ancho sobrante y nunca
             se recorta a dos letras para dejarle sitio a los botones. */}
-        <div className="flex min-w-[7rem] flex-1 items-center gap-3">
+        <div className="order-1 flex min-w-[7rem] flex-1 items-center gap-3">
+          {izquierda}
           {icon && (
             <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-field bg-[rgb(var(--sys-rgb)/0.1)] text-[rgb(var(--sys-ink-rgb))]">
               {icon}
@@ -53,15 +58,23 @@ export function PageHeader({
           Desde sm vuelven a compartir la fila del titulo, envolviendo si
           hace falta.
         */}
+        {/*
+          La cuenta, a la derecha de todo. En el celular sube a la fila del
+          título (order-2) y los botones de la vista bajan a la suya; desde sm
+          los botones van antes y la cuenta cierra la fila, como en el diseño.
+        */}
+        {derecha && <div className="order-2 flex shrink-0 items-center gap-2 sm:order-3">{derecha}</div>}
+
         {actions && (
           <div
             className={cn(
+              'order-3 sm:order-2',
               '-mx-4 flex w-full shrink-0 snap-x snap-mandatory items-center gap-2 overflow-x-auto px-4 pb-1',
               // Sin esto un boton de texto largo (Eliminar lista) se
               // encogia hasta partir el texto en vez de dejar que la fila
               // se deslice, que es justo lo que el scroll esta para evitar.
               '[&>*]:shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-              'sm:ml-auto sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0 sm:pb-0',
+              'sm:mr-0 sm:ml-auto sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0 sm:pb-0',
             )}
           >
             {actions}

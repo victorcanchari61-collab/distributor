@@ -54,9 +54,13 @@ final empleadosAsistenciaProvider =
       (ref) => ref.watch(rrhhApiProvider).empleadosAsistencia(),
     );
 
-/// Si se ve el calendario del mes arriba de la lista.
-final verCalendarioAsistenciaProvider = StateProvider.autoDispose<bool>(
-  (ref) => true,
+/// Las pestañas de Asistencia, las mismas del panel web: el mes en calendario
+/// y el registro de las marcas, tal cual.
+enum PestanaAsistencia { calendario, registro }
+
+/// La pestaña que se mira. Empieza en el calendario, igual que la web.
+final pestanaAsistenciaProvider = StateProvider.autoDispose<PestanaAsistencia>(
+  (ref) => PestanaAsistencia.calendario,
 );
 
 /// Los dias no laborables, para avisar en el pase de lista.

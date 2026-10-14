@@ -52,10 +52,10 @@ class StockPagina extends ConsumerWidget {
       plural: 'productos con stock',
       tituloVacio: 'Sin stock',
       detalleVacio: 'No hay productos que controlen stock aquí.',
-      encabezado: AlmacenTabs(
+      // Una pestaña por almacén, arriba de todo, como en el panel web.
+      pestanas: AlmacenTabs(
         almacenes: almacenes,
         valor: almacenId,
-        color: color,
         onCambio: (v) => ref.read(almacenStockProvider.notifier).state = v,
       ),
       indicadores: [

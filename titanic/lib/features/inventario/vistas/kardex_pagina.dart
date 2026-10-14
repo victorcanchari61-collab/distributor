@@ -49,10 +49,10 @@ class KardexPagina extends ConsumerWidget {
       singular: 'movimiento',
       plural: 'movimientos',
       detalleVacio: 'Se generan al registrar un ajuste.',
-      encabezado: AlmacenTabs(
+      // Una pestaña por almacén, arriba de todo, como en el panel web.
+      pestanas: AlmacenTabs(
         almacenes: almacenes,
         valor: almacenId,
-        color: color,
         onCambio: (v) => ref.read(almacenKardexProvider.notifier).state = v,
       ),
       indicadores: [

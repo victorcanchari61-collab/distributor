@@ -19,6 +19,9 @@ class EstadoPlanilla {
 
 double _monto(Object? v) => (v as num? ?? 0).toDouble();
 
+String _dmy(DateTime f) =>
+    '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';
+
 /// La planilla de una semana, de lunes a domingo, con una fila por empleado.
 class Planilla {
   const Planilla({
@@ -199,6 +202,12 @@ class PlanillaResumen {
   final int empleados;
   final double totalNeto;
   final DateTime? fechaPago;
+
+  /// Se busca por las fechas de la semana, como se leen (dd/mm/aaaa), y por
+  /// el estado.
+  String get buscable =>
+      '${_dmy(desde)} ${_dmy(hasta)} ${EstadoPlanilla.etiqueta(estado)}'
+          .toLowerCase();
 
   factory PlanillaResumen.desdeJson(Map<String, dynamic> json) =>
       PlanillaResumen(

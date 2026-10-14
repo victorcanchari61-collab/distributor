@@ -49,6 +49,40 @@ final historialPlanillasProvider =
       (ref) => ref.watch(rrhhApiProvider).historialPlanillas(),
     );
 
+/// Las pestañas de la planilla, las mismas del panel web: la semana que se
+/// arma y paga, y el historial de las ya armadas.
+enum PestanaPlanilla { semana, historial }
+
+final pestanaPlanillaProvider = StateProvider.autoDispose<PestanaPlanilla>(
+  (ref) => PestanaPlanilla.semana,
+);
+
+final busquedaHistorialPlanillaProvider = StateProvider.autoDispose(
+  (ref) => '',
+);
+
+/// BORRADOR, PAGADA, ANULADA. Null es "todos": el historial muestra tambien
+/// las anuladas, como la web.
+final estadoHistorialPlanillaProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+final historialPlanillasFiltradoProvider =
+    Provider.autoDispose<List<PlanillaResumen>>((ref) {
+      final todas =
+          ref.watch(historialPlanillasProvider).valueOrNull ??
+          const <PlanillaResumen>[];
+      final texto = ref
+          .watch(busquedaHistorialPlanillaProvider)
+          .trim()
+          .toLowerCase();
+      final estado = ref.watch(estadoHistorialPlanillaProvider);
+      return todas
+          .where((h) => estado == null || h.estado == estado)
+          .where((h) => texto.isEmpty || h.buscable.contains(texto))
+          .toList();
+    });
+
 /// De que cuentas puede salir el pago.
 final cuentasPlanillaProvider = FutureProvider.autoDispose<List<CuentaPago>>(
   (ref) => ref.watch(rrhhApiProvider).cuentasPlanilla(),

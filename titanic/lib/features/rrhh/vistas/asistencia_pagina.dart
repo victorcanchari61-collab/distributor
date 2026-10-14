@@ -10,7 +10,9 @@ import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../compartido/widgets/app_shell.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -41,9 +43,10 @@ EtiquetaTono tonoAsistencia(String estado) => switch (estado) {
 ///
 /// Se marca con el pase de lista de un dia —todos juntos— y aqui queda el
 /// registro del mes, donde se corrige o se anula una marca puesta por error.
-/// Es lo mismo que el panel web: el calendario del mes arriba (marcados de los
-/// que trabajaban cada dia; tocar uno abre su pase de lista), la lista debajo y
-/// los feriados en su hoja.
+/// Es lo mismo que el panel web, en dos pestañas: el calendario del mes
+/// (marcados de los que trabajaban cada dia; tocar uno abre su pase de lista,
+/// y ahi mismo los feriados) y el registro de las marcas. Pasar lista va en el
+/// boton flotante, a la vista en las dos pestañas.
 class AsistenciaPagina extends ConsumerWidget {
   const AsistenciaPagina({super.key});
 
@@ -54,71 +57,96 @@ class AsistenciaPagina extends ConsumerWidget {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final resumen = ref.watch(resumenAsistenciaProvider).valueOrNull;
     final mes = ref.watch(mesAsistenciaProvider);
+    final pestana = ref.watch(pestanaAsistenciaProvider);
+    final puedeCrear = puede(ref, 'rrhh.asistencia', Accion.crear);
+
+    final pestanas = AppPestanas<PestanaAsistencia>(
+      activa: pestana,
+      onCambio: (p) => ref.read(pestanaAsistenciaProvider.notifier).state = p,
+      pestanas: [
+        const Pestana(
+          PestanaAsistencia.calendario,
+          'Calendario',
+          icono: Icons.calendar_month_outlined,
+        ),
+        Pestana(
+          PestanaAsistencia.registro,
+          'Registro',
+          icono: Icons.table_rows_outlined,
+          // Todas las marcas del mes, como la web: tambien las anuladas.
+          contador: ref.watch(asistenciasProvider).valueOrNull?.length,
+        ),
+      ],
+    );
+
+    final indicadores = [
+      AppTarjetaDato(
+        etiqueta: 'Presentes',
+        valor: '${resumen?.presentes ?? 0}',
+        icono: Icons.how_to_reg_outlined,
+        color: color,
+      ),
+      AppTarjetaDato(
+        etiqueta: 'Tardanzas',
+        valor: '${resumen?.tardanzas ?? 0}',
+        icono: Icons.schedule,
+        tono: DatoTono.aviso,
+      ),
+      AppTarjetaDato(
+        etiqueta: 'Faltas',
+        valor: '${resumen?.faltas ?? 0}',
+        icono: Icons.person_off_outlined,
+        tono: DatoTono.peligro,
+      ),
+      AppTarjetaDato(
+        etiqueta: 'Permisos',
+        valor: '${resumen?.permisos ?? 0}',
+        icono: Icons.event_note_outlined,
+        tono: DatoTono.neutral,
+      ),
+    ];
+
+    void cambiarMes(DateTime m) =>
+        ref.read(mesAsistenciaProvider.notifier).state = m;
+    final onPaseLista = puedeCrear ? () => _abrirPaseLista(context, ref) : null;
+
+    if (pestana == PestanaAsistencia.calendario) {
+      return _PestanaCalendario(
+        color: color,
+        pestanas: pestanas,
+        indicadores: indicadores,
+        barraMes: _BarraMes(
+          mes: mes,
+          onMes: cambiarMes,
+          onFeriados: () => abrirFeriados(context),
+        ),
+        onPaseLista: onPaseLista,
+        // Tocar un dia del calendario abre su pase de lista.
+        onDia: puedeCrear ? (dia) => _pasarLista(context, ref, dia) : null,
+        onRecargar: () => _recargar(ref),
+      );
+    }
 
     return AppListaPagina<Asistencia>(
       titulo: 'Asistencia',
       ruta: ruta,
+      pestanas: pestanas,
       estado: ref.watch(asistenciasProvider),
       visibles: ref.watch(asistenciasFiltradasProvider),
       busqueda: ref.watch(busquedaAsistenciaProvider),
       onBuscar: (t) => ref.read(busquedaAsistenciaProvider.notifier).state = t,
       pistaBusqueda: 'Buscar empleado',
-      onRecargar: () async {
-        ref.invalidate(asistenciasProvider);
-        ref.invalidate(resumenAsistenciaProvider);
-        try {
-          await ref.read(asistenciasProvider.future);
-        } catch (_) {
-          // El fallo ya se ve en la pantalla, con su botón de reintentar.
-        }
-      },
+      onRecargar: () => _recargar(ref),
+      onNuevo: onPaseLista,
+      textoNuevo: 'Pasar lista',
       iconoVacio: Icons.event_available_outlined,
       singular: 'marca',
       plural: 'marcas',
       tituloVacio: 'Sin marcas',
       detalleVacio: 'No hay asistencia registrada en este mes.',
-      indicadores: [
-        AppTarjetaDato(
-          etiqueta: 'Presentes',
-          valor: '${resumen?.presentes ?? 0}',
-          icono: Icons.how_to_reg_outlined,
-          color: color,
-        ),
-        AppTarjetaDato(
-          etiqueta: 'Tardanzas',
-          valor: '${resumen?.tardanzas ?? 0}',
-          icono: Icons.schedule,
-          tono: DatoTono.aviso,
-        ),
-        AppTarjetaDato(
-          etiqueta: 'Faltas',
-          valor: '${resumen?.faltas ?? 0}',
-          icono: Icons.person_off_outlined,
-          tono: DatoTono.peligro,
-        ),
-        AppTarjetaDato(
-          etiqueta: 'Permisos',
-          valor: '${resumen?.permisos ?? 0}',
-          icono: Icons.event_note_outlined,
-          tono: DatoTono.neutral,
-        ),
-      ],
-      encabezado: _Encabezado(
-        mes: mes,
-        onMes: (m) => ref.read(mesAsistenciaProvider.notifier).state = m,
-        onPaseLista: puede(ref, 'rrhh.asistencia', Accion.crear)
-            ? () => _abrirPaseLista(context, ref)
-            : null,
-        verCalendario: ref.watch(verCalendarioAsistenciaProvider),
-        onCalendario: () =>
-            ref.read(verCalendarioAsistenciaProvider.notifier).state = !ref
-                .read(verCalendarioAsistenciaProvider),
-        onFeriados: () => abrirFeriados(context),
-        // Tocar un dia del calendario abre su pase de lista.
-        onDia: puede(ref, 'rrhh.asistencia', Accion.crear)
-            ? (dia) => _pasarLista(context, ref, dia)
-            : null,
-      ),
+      indicadores: indicadores,
+      // El registro es el del mes: sin las flechas no se sabria de cual.
+      encabezado: _BarraMes(mes: mes, onMes: cambiarMes),
       filtro: BotonFiltros(
         activos: ref.watch(filtrosAsistenciaActivosProvider),
         color: color,
@@ -135,6 +163,20 @@ class AsistenciaPagina extends ConsumerWidget {
             : null,
       ),
     );
+  }
+
+  /// Vuelve a pedir el mes, y con el lo que pinta el calendario: quienes
+  /// trabajaban cada dia y los feriados.
+  Future<void> _recargar(WidgetRef ref) async {
+    ref.invalidate(asistenciasProvider);
+    ref.invalidate(resumenAsistenciaProvider);
+    ref.invalidate(empleadosAsistenciaProvider);
+    ref.invalidate(feriadosProvider);
+    try {
+      await ref.read(asistenciasProvider.future);
+    } catch (_) {
+      // El fallo ya se ve en la pantalla, con su botón de reintentar.
+    }
   }
 
   Future<void> _abrirPaseLista(BuildContext context, WidgetRef ref) async {
@@ -271,25 +313,14 @@ class AsistenciaPagina extends ConsumerWidget {
 String _fecha(DateTime f) =>
     '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';
 
-/// El mes que se mira y el boton del pase de lista.
-class _Encabezado extends StatelessWidget {
-  const _Encabezado({
-    required this.mes,
-    required this.onMes,
-    required this.onPaseLista,
-    required this.verCalendario,
-    required this.onCalendario,
-    required this.onFeriados,
-    required this.onDia,
-  });
+/// El mes que se mira, con sus flechas. En el calendario lleva al lado los
+/// feriados, en el mismo lugar que la web.
+class _BarraMes extends StatelessWidget {
+  const _BarraMes({required this.mes, required this.onMes, this.onFeriados});
 
   final DateTime mes;
   final ValueChanged<DateTime> onMes;
-  final VoidCallback? onPaseLista;
-  final bool verCalendario;
-  final VoidCallback onCalendario;
-  final VoidCallback onFeriados;
-  final ValueChanged<DateTime>? onDia;
+  final VoidCallback? onFeriados;
 
   @override
   Widget build(BuildContext context) {
@@ -298,75 +329,131 @@ class _Encabezado extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
         children: [
-          Row(
-            children: [
-              IconButton(
-                tooltip: 'Mes anterior',
-                onPressed: () => onMes(DateTime(mes.year, mes.month - 1)),
-                icon: const Icon(Icons.chevron_left),
-              ),
-              Expanded(
-                child: Text(
-                  '${_meses[mes.month - 1][0].toUpperCase()}${_meses[mes.month - 1].substring(1)} ${mes.year}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Mes siguiente',
-                // No hay asistencia del futuro que mirar.
-                onPressed: esActual
-                    ? null
-                    : () => onMes(DateTime(mes.year, mes.month + 1)),
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
+          IconButton(
+            tooltip: 'Mes anterior',
+            onPressed: () => onMes(DateTime(mes.year, mes.month - 1)),
+            icon: const Icon(Icons.chevron_left),
           ),
-          if (verCalendario) ...[
-            CalendarioAsistencia(onDia: onDia),
-            const SizedBox(height: Dimen.espacio2),
+          Expanded(
+            child: Text(
+              '${_meses[mes.month - 1][0].toUpperCase()}${_meses[mes.month - 1].substring(1)} ${mes.year}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Mes siguiente',
+            // No hay asistencia del futuro que mirar.
+            onPressed: esActual
+                ? null
+                : () => onMes(DateTime(mes.year, mes.month + 1)),
+            icon: const Icon(Icons.chevron_right),
+          ),
+          if (onFeriados != null) ...[
+            const SizedBox(width: Dimen.espacio2),
+            AppBoton(
+              texto: 'Feriados',
+              icono: Icons.flag_outlined,
+              variante: BotonVariante.secundario,
+              tam: BotonTam.sm,
+              expandido: false,
+              onPressed: onFeriados,
+            ),
           ],
-          Row(
-            children: [
-              if (onPaseLista != null) ...[
-                Expanded(
-                  child: AppBoton(
-                    texto: 'Pasar lista',
-                    icono: Icons.fact_check_outlined,
-                    tam: BotonTam.md,
-                    onPressed: onPaseLista,
+        ],
+      ),
+    );
+  }
+}
+
+/// La pestaña del calendario: el mes en una grilla en lugar de la lista.
+///
+/// No es un listado, asi que no pasa por `AppListaPagina`; arma lo mismo que
+/// ella —pestañas, indicadores y boton flotante— para que cambiar de pestaña
+/// no mueva nada mas que el contenido.
+class _PestanaCalendario extends ConsumerWidget {
+  const _PestanaCalendario({
+    required this.color,
+    required this.pestanas,
+    required this.indicadores,
+    required this.barraMes,
+    required this.onPaseLista,
+    required this.onDia,
+    required this.onRecargar,
+  });
+
+  final Color color;
+  final Widget pestanas;
+  final List<Widget> indicadores;
+  final Widget barraMes;
+  final VoidCallback? onPaseLista;
+  final ValueChanged<DateTime>? onDia;
+  final Future<void> Function() onRecargar;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final estado = ref.watch(asistenciasProvider);
+    final error = estado.isLoading ? null : estado.error;
+
+    return AppShell(
+      titulo: 'Asistencia',
+      subtitulo: resolverRuta(AsistenciaPagina.ruta).grupo?.titulo,
+      acentado: color,
+      rutaActual: AsistenciaPagina.ruta,
+      accionFlotante: onPaseLista == null
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: onPaseLista,
+              backgroundColor: color,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add),
+              label: const Text('Pasar lista'),
+            ),
+      child: Column(
+        children: [
+          pestanas,
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: onRecargar,
+              child: ListView(
+                // Hueco al final para que el boton flotante no tape la
+                // ultima semana.
+                padding: const EdgeInsets.only(
+                  top: Dimen.espacio3,
+                  bottom: Dimen.espacio6 * 2,
+                ),
+                children: [
+                  AppFilaDatos(tarjetas: indicadores),
+                  const SizedBox(height: Dimen.espacio3),
+                  barraMes,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Dimen.espacio4,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (estado.isLoading && !estado.hasValue) ...[
+                          const LinearProgressIndicator(),
+                          const SizedBox(height: Dimen.espacio2),
+                        ],
+                        if (error != null) ...[
+                          AppAlerta(
+                            error is ApiExcepcion
+                                ? error.texto
+                                : 'No pudimos cargar la asistencia del mes.',
+                          ),
+                          const SizedBox(height: Dimen.espacio2),
+                        ],
+                        CalendarioAsistencia(onDia: onDia),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: Dimen.espacio2),
-              ],
-              Expanded(
-                child: AppBoton(
-                  texto: 'Feriados',
-                  icono: Icons.flag_outlined,
-                  variante: BotonVariante.secundario,
-                  tam: BotonTam.md,
-                  onPressed: onFeriados,
-                ),
+                ],
               ),
-              const SizedBox(width: Dimen.espacio1),
-              IconButton(
-                tooltip: verCalendario
-                    ? 'Ocultar calendario'
-                    : 'Ver calendario',
-                onPressed: onCalendario,
-                icon: Icon(
-                  verCalendario
-                      ? Icons.calendar_view_month
-                      : Icons.calendar_month_outlined,
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),

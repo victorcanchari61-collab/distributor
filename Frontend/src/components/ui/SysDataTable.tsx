@@ -684,8 +684,77 @@ export function SysDataTable<T>({
     <div className={className}>
       {toolbar && (
         <>
-          {/* barra de herramientas: suelta, sin tarjeta que la envuelva */}
-          <div className="mb-2 flex items-center justify-end gap-2">
+          {/*
+            Barra de herramientas, suelta, sin tarjeta que la envuelva. Los
+            filtros activos van a la izquierda en la MISMA fila del buscador:
+            en una fila propia gastaban una altura entera para dos chips. En el
+            celular no entran al lado del buscador y bajan a su propia línea.
+          */}
+          <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
+            {(filters.length > 0 || activeColumnSearches > 0) && (
+              <div className="order-last flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:order-none sm:w-auto sm:flex-1">
+                {filters.map((f) => (
+                  <span
+                    key={f.id}
+                    className="inline-flex animate-[fadeIn_150ms_ease-out] items-center gap-1.5 rounded-full border border-[rgb(var(--sys-rgb)/0.3)] bg-[rgb(var(--sys-rgb)/0.1)] py-1 pr-1.5 pl-2.5 text-[11px] text-[rgb(var(--sys-ink-rgb))]"
+                  >
+                    <span className="font-medium">{byKey[f.column]?.label}</span>
+                    <span>{describeFilter(f)}</span>
+                    {/* El de inicio no se quita: quitarlo volvería a él mismo. */}
+                    {!igual(f, inicialDe(f.column)) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const inicial = inicialDe(f.column)
+                          setFilters((prev) =>
+                            inicial ? prev.map((x) => (x.id === f.id ? inicial : x)) : prev.filter((x) => x.id !== f.id),
+                          )
+                        }}
+                        aria-label="Quitar filtro"
+                        className="rounded-full p-0.5 transition-colors hover:bg-[rgb(var(--sys-rgb)/0.2)]"
+                      >
+                        <X size={11} />
+                      </button>
+                    )}
+                  </span>
+                ))}
+
+                {Object.entries(columnSearch)
+                  .filter(([, v]) => v?.trim())
+                  .map(([key, value]) => (
+                    <span
+                      key={key}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white py-1 pr-1.5 pl-2.5 text-[11px] text-zinc-600"
+                    >
+                      <Search size={10} />
+                      <span className="font-medium">{byKey[key]?.label}</span>
+                      <span>{value}</span>
+                      <button
+                        type="button"
+                        onClick={() => setColumnSearch((prev) => ({ ...prev, [key]: '' }))}
+                        aria-label="Quitar busqueda de columna"
+                        className="rounded-full p-0.5 transition-colors hover:bg-zinc-100"
+                      >
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ))}
+
+                {(!enInicio || activeColumnSearches > 0) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilters(iniciales)
+                      setColumnSearch({})
+                    }}
+                    className="ml-1 text-[11px] font-medium text-zinc-500 transition-colors hover:text-zinc-800"
+                  >
+                    Limpiar todo
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="relative min-w-0 flex-1 sm:max-w-xs sm:flex-none sm:basis-80">
               <Search
                 size={15}
@@ -733,71 +802,6 @@ export function SysDataTable<T>({
               />
             </div>
           </div>
-
-          {/* chips de filtros activos */}
-          {(filters.length > 0 || activeColumnSearches > 0) && (
-            <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          {filters.map((f) => (
-            <span
-              key={f.id}
-              className="inline-flex animate-[fadeIn_150ms_ease-out] items-center gap-1.5 rounded-full border border-[rgb(var(--sys-rgb)/0.3)] bg-[rgb(var(--sys-rgb)/0.1)] py-1 pr-1.5 pl-2.5 text-[11px] text-[rgb(var(--sys-ink-rgb))]"
-            >
-              <span className="font-medium">{byKey[f.column]?.label}</span>
-              <span>{describeFilter(f)}</span>
-              {/* El de inicio no se quita: quitarlo volvería a él mismo. */}
-              {!igual(f, inicialDe(f.column)) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const inicial = inicialDe(f.column)
-                    setFilters((prev) =>
-                      inicial ? prev.map((x) => (x.id === f.id ? inicial : x)) : prev.filter((x) => x.id !== f.id),
-                    )
-                  }}
-                  aria-label="Quitar filtro"
-                  className="rounded-full p-0.5 transition-colors hover:bg-[rgb(var(--sys-rgb)/0.2)]"
-                >
-                  <X size={11} />
-                </button>
-              )}
-            </span>
-          ))}
-
-          {Object.entries(columnSearch)
-            .filter(([, v]) => v?.trim())
-            .map(([key, value]) => (
-              <span
-                key={key}
-                className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white py-1 pr-1.5 pl-2.5 text-[11px] text-zinc-600"
-              >
-                <Search size={10} />
-                <span className="font-medium">{byKey[key]?.label}</span>
-                <span>{value}</span>
-                <button
-                  type="button"
-                  onClick={() => setColumnSearch((prev) => ({ ...prev, [key]: '' }))}
-                  aria-label="Quitar busqueda de columna"
-                  className="rounded-full p-0.5 transition-colors hover:bg-zinc-100"
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            ))}
-
-          {(!enInicio || activeColumnSearches > 0) && (
-            <button
-              type="button"
-              onClick={() => {
-                setFilters(iniciales)
-                setColumnSearch({})
-              }}
-              className="ml-auto text-[11px] font-medium text-zinc-500 transition-colors hover:text-zinc-800"
-            >
-              Limpiar todo
-            </button>
-          )}
-        </div>
-          )}
         </>
       )}
 

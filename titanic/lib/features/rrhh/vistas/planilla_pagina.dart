@@ -9,8 +9,10 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -124,6 +126,30 @@ class _PlanillaPaginaState extends ConsumerState<PlanillaPagina> {
   Widget build(BuildContext context) {
     final color =
         resolverRuta(PlanillaPagina.ruta).grupo?.color ?? Colores.marca;
+    final pestana = ref.watch(pestanaPlanillaProvider);
+
+    final pestanas = AppPestanas<PestanaPlanilla>(
+      activa: pestana,
+      onCambio: (p) => ref.read(pestanaPlanillaProvider.notifier).state = p,
+      pestanas: [
+        const Pestana(
+          PestanaPlanilla.semana,
+          'Semana',
+          icono: Icons.calculate_outlined,
+        ),
+        Pestana(
+          PestanaPlanilla.historial,
+          'Historial',
+          icono: Icons.history,
+          contador: ref.watch(historialPlanillasProvider).valueOrNull?.length,
+        ),
+      ],
+    );
+
+    if (pestana == PestanaPlanilla.historial) {
+      return _historial(color, pestanas);
+    }
+
     final planilla = ref.watch(planillaSemanaProvider).valueOrNull;
     final borrador = planilla?.esBorrador ?? false;
     final puedeCrear = puede(ref, 'rrhh.planilla', Accion.crear);
@@ -131,6 +157,7 @@ class _PlanillaPaginaState extends ConsumerState<PlanillaPagina> {
     return AppListaPagina<PlanillaDetalle>(
       titulo: 'Planilla semanal',
       ruta: PlanillaPagina.ruta,
+      pestanas: pestanas,
       estado: ref.watch(detallePlanillaProvider),
       visibles: ref.watch(detallePlanillaFiltradoProvider),
       busqueda: ref.watch(busquedaPlanillaProvider),
@@ -191,7 +218,6 @@ class _PlanillaPaginaState extends ConsumerState<PlanillaPagina> {
         onAnular: planilla != null && puede(ref, 'rrhh.planilla', Accion.anular)
             ? () => _anular(planilla)
             : null,
-        onHistorial: () => _hoja((_) => const _HojaHistorial()),
         onBoletas:
             planilla != null &&
                 planilla.detalle.isNotEmpty &&
@@ -209,6 +235,84 @@ class _PlanillaPaginaState extends ConsumerState<PlanillaPagina> {
             planilla != null && puede(ref, 'rrhh.planilla', Accion.exportar)
             ? () => _boletas(planilla, empleado: d)
             : null,
+      ),
+    );
+  }
+
+  /// La pestaña del historial: las semanas ya armadas, pagadas o anuladas.
+  /// Tocar una la abre en la pestaña de la semana.
+  Widget _historial(Color color, Widget pestanas) {
+    final busqueda = ref.watch(busquedaHistorialPlanillaProvider);
+    final filtros = ref.watch(estadoHistorialPlanillaProvider) == null ? 0 : 1;
+
+    return AppListaPagina<PlanillaResumen>(
+      titulo: 'Planilla semanal',
+      ruta: PlanillaPagina.ruta,
+      pestanas: pestanas,
+      estado: ref.watch(historialPlanillasProvider),
+      visibles: ref.watch(historialPlanillasFiltradoProvider),
+      busqueda: busqueda,
+      onBuscar: (t) =>
+          ref.read(busquedaHistorialPlanillaProvider.notifier).state = t,
+      pistaBusqueda: 'Buscar semana',
+      onRecargar: () async {
+        ref.invalidate(historialPlanillasProvider);
+        try {
+          await ref.read(historialPlanillasProvider.future);
+        } catch (_) {
+          // El fallo ya se ve en la pantalla, con su botón de reintentar.
+        }
+      },
+      iconoVacio: Icons.history,
+      singular: 'planilla',
+      plural: 'planillas',
+      detalleVacio: busqueda.isEmpty && filtros == 0
+          ? 'Todavía no se armó ninguna planilla.'
+          : 'Ninguna coincide con lo que buscaste.',
+      filtro: BotonFiltros(
+        activos: filtros,
+        color: color,
+        onAbrir: () => mostrarFiltros(
+          context,
+          activos: filtros,
+          onLimpiar: () =>
+              ref.read(estadoHistorialPlanillaProvider.notifier).state = null,
+          grupos: [
+            Consumer(
+              builder: (context, ref, _) => GrupoFiltro<String?>(
+                titulo: 'Estado',
+                valor: ref.watch(estadoHistorialPlanillaProvider),
+                opciones: [
+                  const OpcionFiltro<String?>(null, 'Todos'),
+                  for (final e in const [
+                    EstadoPlanilla.borrador,
+                    EstadoPlanilla.pagada,
+                    EstadoPlanilla.anulada,
+                  ])
+                    OpcionFiltro<String?>(e, EstadoPlanilla.etiqueta(e)),
+                ],
+                onCambio: (v) =>
+                    ref.read(estadoHistorialPlanillaProvider.notifier).state =
+                        v,
+              ),
+            ),
+          ],
+        ),
+      ),
+      fila: (context, h) => _TarjetaHistorial(
+        resumen: h,
+        color: color,
+        // Una anulada no se abre: la semana muestra la vigente, no la
+        // descartada.
+        onAbrir: h.estado == EstadoPlanilla.anulada
+            ? null
+            : () {
+                ref.read(semanaPlanillaProvider.notifier).state = lunesDe(
+                  h.desde,
+                );
+                ref.read(pestanaPlanillaProvider.notifier).state =
+                    PestanaPlanilla.semana;
+              },
       ),
     );
   }
@@ -240,7 +344,6 @@ class _Encabezado extends StatelessWidget {
     required this.onGenerar,
     required this.onPagar,
     required this.onAnular,
-    required this.onHistorial,
     this.onBoletas,
   });
 
@@ -251,7 +354,6 @@ class _Encabezado extends StatelessWidget {
   final VoidCallback? onGenerar;
   final VoidCallback? onPagar;
   final VoidCallback? onAnular;
-  final VoidCallback onHistorial;
 
   /// Las boletas de pago de todos, en PDF.
   final VoidCallback? onBoletas;
@@ -261,6 +363,32 @@ class _Encabezado extends StatelessWidget {
     final domingo = semana.add(const Duration(days: 6));
     final esActual = !semana.isBefore(lunesDe(DateTime.now()));
     final p = planilla;
+    final botones = [
+      if (onGenerar != null)
+        AppBoton(
+          texto: p == null ? 'Armar' : 'Recalcular',
+          icono: Icons.refresh,
+          variante: BotonVariante.secundario,
+          tam: BotonTam.md,
+          cargando: trabajando,
+          onPressed: onGenerar,
+        ),
+      if (onPagar != null)
+        AppBoton(
+          texto: 'Pagar',
+          icono: Icons.payments_outlined,
+          tam: BotonTam.md,
+          onPressed: trabajando ? null : onPagar,
+        ),
+      if (onAnular != null)
+        AppBoton(
+          texto: 'Anular',
+          icono: Icons.block,
+          variante: BotonVariante.secundario,
+          tam: BotonTam.md,
+          onPressed: trabajando ? null : onAnular,
+        ),
+    ];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
@@ -329,56 +457,26 @@ class _Encabezado extends StatelessWidget {
             ),
             const SizedBox(height: Dimen.espacio2),
           ],
-          Row(
-            children: [
-              if (onGenerar != null)
-                Expanded(
-                  child: AppBoton(
-                    texto: p == null ? 'Armar' : 'Recalcular',
-                    icono: Icons.refresh,
-                    variante: BotonVariante.secundario,
-                    tam: BotonTam.md,
-                    cargando: trabajando,
-                    onPressed: onGenerar,
+          // El historial ya no va aqui: es la otra pestaña.
+          if (botones.isNotEmpty || onBoletas != null)
+            Row(
+              children: [
+                for (var i = 0; i < botones.length; i++) ...[
+                  if (i > 0) const SizedBox(width: Dimen.espacio2),
+                  Expanded(child: botones[i]),
+                ],
+                if (onBoletas != null) ...[
+                  if (botones.isNotEmpty) const SizedBox(width: Dimen.espacio1),
+                  // Sin botones al lado, el PDF se queda a la derecha.
+                  if (botones.isEmpty) const Spacer(),
+                  IconButton(
+                    tooltip: 'Boletas de pago',
+                    onPressed: onBoletas,
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
                   ),
-                ),
-              if (onPagar != null) ...[
-                const SizedBox(width: Dimen.espacio2),
-                Expanded(
-                  child: AppBoton(
-                    texto: 'Pagar',
-                    icono: Icons.payments_outlined,
-                    tam: BotonTam.md,
-                    onPressed: trabajando ? null : onPagar,
-                  ),
-                ),
+                ],
               ],
-              if (onAnular != null) ...[
-                const SizedBox(width: Dimen.espacio2),
-                Expanded(
-                  child: AppBoton(
-                    texto: 'Anular',
-                    icono: Icons.block,
-                    variante: BotonVariante.secundario,
-                    tam: BotonTam.md,
-                    onPressed: trabajando ? null : onAnular,
-                  ),
-                ),
-              ],
-              const SizedBox(width: Dimen.espacio1),
-              if (onBoletas != null)
-                IconButton(
-                  tooltip: 'Boletas de pago',
-                  onPressed: onBoletas,
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
-                ),
-              IconButton(
-                tooltip: 'Historial',
-                onPressed: onHistorial,
-                icon: const Icon(Icons.history),
-              ),
-            ],
-          ),
+            ),
         ],
       ),
     );
@@ -825,100 +923,53 @@ class _HojaPagarState extends ConsumerState<_HojaPagar> {
   }
 }
 
-/// Las semanas ya armadas. Tocar una la abre.
-class _HojaHistorial extends ConsumerWidget {
-  const _HojaHistorial();
+/// Una semana del historial. Tocarla la abre en la pestaña de la semana.
+class _TarjetaHistorial extends StatelessWidget {
+  const _TarjetaHistorial({
+    required this.resumen,
+    required this.color,
+    required this.onAbrir,
+  });
+
+  final PlanillaResumen resumen;
+  final Color color;
+
+  /// Null en una anulada, que no se abre.
+  final VoidCallback? onAbrir;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final historial = ref.watch(historialPlanillasProvider);
-
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.75,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          Dimen.espacio4,
-          0,
-          Dimen.espacio4,
-          Dimen.espacio4,
+  Widget build(BuildContext context) {
+    final h = resumen;
+    return AppTarjetaRegistro(
+      icono: Icons.date_range_outlined,
+      color: color,
+      titulo: '${_dia(h.desde)} al ${_dia(h.hasta)}',
+      campos: [
+        CampoDetalle('Empleados', '${h.empleados}'),
+        CampoDetalle('Neto', formatoSoles(h.totalNeto)),
+        CampoDetalle(
+          'Pagada el',
+          h.fechaPago == null ? null : _diaHora(h.fechaPago!),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Historial de planillas',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            Flexible(
-              child: historial.when(
-                loading: () => const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(Dimen.espacio5),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-                error: (e, _) => AppAlerta(
-                  e is ApiExcepcion
-                      ? e.texto
-                      : 'No pudimos cargar el historial.',
-                ),
-                data: (lista) => lista.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(Dimen.espacio5),
-                        child: Text(
-                          'Todavía no se armó ninguna planilla.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colores.tintaSuave),
-                        ),
-                      )
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: lista.length,
-                        separatorBuilder: (_, _) => const Divider(height: 1),
-                        itemBuilder: (context, i) {
-                          final h = lista[i];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              '${_dia(h.desde)} al ${_dia(h.hasta)}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            subtitle: Text(
-                              '${h.empleados} empleados · ${formatoSoles(h.totalNeto)}'
-                              '${h.fechaPago != null ? ' · pagada el ${_dia(h.fechaPago!)}' : ''}',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            trailing: AppEtiqueta(
-                              EstadoPlanilla.etiqueta(h.estado),
-                              tono: _tonoPlanilla(h.estado),
-                            ),
-                            // Una anulada no se abre: la semana muestra la
-                            // vigente, no la descartada.
-                            onTap: h.estado == EstadoPlanilla.anulada
-                                ? null
-                                : () {
-                                    ref
-                                        .read(semanaPlanillaProvider.notifier)
-                                        .state = lunesDe(
-                                      h.desde,
-                                    );
-                                    Navigator.of(context).pop();
-                                  },
-                          );
-                        },
-                      ),
-              ),
-            ),
-          ],
-        ),
+      ],
+      estado: AppEtiqueta(
+        EstadoPlanilla.etiqueta(h.estado),
+        tono: _tonoPlanilla(h.estado),
       ),
+      onTap: onAbrir,
+      acciones: [
+        if (onAbrir != null)
+          IconButton(
+            onPressed: onAbrir,
+            tooltip: 'Ver semana',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(
+              Icons.visibility_outlined,
+              size: 18,
+              color: Colores.tintaSuave,
+            ),
+          ),
+      ],
     );
   }
 }

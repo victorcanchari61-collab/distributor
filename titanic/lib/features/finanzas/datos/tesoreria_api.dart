@@ -161,7 +161,7 @@ class TesoreriaApi {
         .toList();
   }
 
-  /// POST /api/cuentafinanciera/boveda: la caja de la empresa, una sola.
+  /// POST /api/cuentafinanciera/boveda: el efectivo de la empresa, una sola.
   Future<void> crearBoveda(double montoInicial) => _api.post(
     '/cuentafinanciera/boveda',
     cuerpo: {'montoInicial': montoInicial},
@@ -201,6 +201,11 @@ class TesoreriaApi {
     await _api.post('/banco', cuerpo: {'nombre': nombre, 'activo': true})
         as Map<String, dynamic>,
   );
+
+  /// PUT /api/banco/{id}: nombre y estado. No hay DELETE: un banco que ya no
+  /// se usa se desactiva.
+  Future<void> actualizarBanco(int id, Map<String, dynamic> cuerpo) =>
+      _api.put('/banco/$id', cuerpo: cuerpo);
 
   // --- Ingresos y egresos ---
 

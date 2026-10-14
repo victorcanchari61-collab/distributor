@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/permisos.dart';
@@ -55,6 +56,38 @@ class ListasPreciosPagina extends ConsumerWidget {
     final productosConPrecio = precios.map((p) => p.productoId).toSet().length;
     final escalones = precios.where((p) => p.cantidadMinima > 1).length;
 
+    final puedeCrear = puede(ref, 'fact.precios', Accion.crear);
+    final puedeEditar = puede(ref, 'fact.precios', Accion.editar);
+    final puedeEliminar = puede(ref, 'fact.precios', Accion.eliminar);
+
+    // Las acciones de la LISTA, no de cada precio: actuan sobre la que esta
+    // abierta. "Nueva lista" va con ellas, como en la cabecera de la web.
+    final accionesLista = <Widget>[
+      if (activa != null && puedeEditar)
+        _AccionLista(
+          texto: 'Editar lista',
+          icono: Icons.edit_outlined,
+          onPressed: () => mostrarFormularioLista(context, ref, lista: activa),
+        ),
+      if (activa != null && puedeEliminar)
+        _AccionLista(
+          texto: 'Eliminar lista',
+          icono: Icons.delete_outline,
+          // La predeterminada no se borra: dejaria sin precio a todo cliente
+          // que no tenga lista propia.
+          onPressed: activa.esPredeterminada
+              ? null
+              : () => _eliminarLista(context, ref, activa!),
+        ),
+      if (puedeCrear)
+        _AccionLista(
+          texto: 'Nueva lista',
+          icono: Icons.add,
+          onPressed: () => _nuevaLista(context, ref),
+        ),
+    ];
+    final conBanner = activa != null && !activa.esPredeterminada && puedeEditar;
+
     return AppListaPagina<Precio>(
       titulo: 'Listas de precios',
       ruta: ruta,
@@ -67,7 +100,7 @@ class ListasPreciosPagina extends ConsumerWidget {
         await ref.read(listasPrecioProvider.notifier).recargar();
         ref.invalidate(preciosListaActivaProvider);
       },
-      onNuevo: activa == null || !puede(ref, 'fact.precios', Accion.crear)
+      onNuevo: activa == null || !puedeCrear
           ? null
           : () => _abrirPrecios(context, ref, activa!),
       textoNuevo: 'Agregar precio',
@@ -75,97 +108,88 @@ class ListasPreciosPagina extends ConsumerWidget {
       singular: 'precio',
       plural: 'precios',
       filtro: BotonFiltros(
-        activos: ref.read(filtrosPreciosActivosProvider),
+        activos: ref.watch(filtrosPreciosActivosProvider),
         color: color,
         onAbrir: () => _abrirFiltros(context, ref, color),
       ),
-      encabezado: Column(
-        children: [
-          _ListasTabs(
-            listas: listas,
-            valor: activaId,
-            color: color,
-            onCambio: (id) =>
-                ref.read(listaPrecioActivaProvider.notifier).state = id,
-            onNueva: () => _nuevaLista(context, ref),
-          ),
-          // Las acciones de la LISTA van aqui, junto a sus pestañas, y no en
-          // cada precio: actuan sobre la que esta abierta.
-          if (activa != null &&
-              (puede(ref, 'fact.precios', Accion.editar) ||
-                  puede(ref, 'fact.precios', Accion.eliminar))) ...[
-            const SizedBox(height: Dimen.espacio2),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-              child: Row(
-                children: [
-                  if (puede(ref, 'fact.precios', Accion.editar))
-                    Expanded(
-                      child: AppBoton(
-                        texto: 'Editar lista',
-                        icono: Icons.edit_outlined,
-                        variante: BotonVariante.secundario,
-                        onPressed: () =>
-                            mostrarFormularioLista(context, ref, lista: activa),
+      // Una pestaña por lista, como en el panel web: la estrella marca la
+      // predeterminada y el numero es cuantos precios tiene cargados.
+      pestanas: listas.isEmpty
+          ? null
+          : AppPestanas<int?>(
+              activa: activaId,
+              onCambio: (id) =>
+                  ref.read(listaPrecioActivaProvider.notifier).state = id,
+              pestanas: [
+                for (final l in listas)
+                  Pestana<int?>(
+                    l.id,
+                    l.nombre,
+                    icono: l.esPredeterminada
+                        ? Icons.star_rounded
+                        : Icons.sell_outlined,
+                    contador: l.precios,
+                  ),
+              ],
+            ),
+      encabezado: accionesLista.isEmpty && !conBanner
+          ? null
+          : Column(
+              children: [
+                if (accionesLista.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Dimen.espacio4,
+                    ),
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < accionesLista.length; i++) ...[
+                          if (i > 0) const SizedBox(width: Dimen.espacio2),
+                          Expanded(child: accionesLista[i]),
+                        ],
+                      ],
+                    ),
+                  ),
+                if (activa != null && conBanner) ...[
+                  if (accionesLista.isNotEmpty)
+                    const SizedBox(height: Dimen.espacio2),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Dimen.espacio4,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Dimen.espacio3,
+                        vertical: Dimen.espacio2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${activa.nombre} no es la lista predeterminada.',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: Colores.tinta,
+                              ),
+                            ),
+                          ),
+                          AppBoton(
+                            texto: 'Marcar predeterminada',
+                            variante: BotonVariante.texto,
+                            onPressed: () =>
+                                _marcarPredeterminada(context, ref, activa!),
+                          ),
+                        ],
                       ),
                     ),
-                  if (puede(ref, 'fact.precios', Accion.editar) &&
-                      puede(ref, 'fact.precios', Accion.eliminar))
-                    const SizedBox(width: Dimen.espacio2),
-                  if (puede(ref, 'fact.precios', Accion.eliminar))
-                    Expanded(
-                      child: AppBoton(
-                        texto: 'Eliminar lista',
-                        icono: Icons.delete_outline,
-                        variante: BotonVariante.secundario,
-                        // La predeterminada no se borra: dejaria sin precio a
-                        // todo cliente que no tenga lista propia.
-                        onPressed: activa.esPredeterminada
-                            ? null
-                            : () => _eliminarLista(context, ref, activa!),
-                      ),
-                    ),
+                  ),
                 ],
-              ),
+              ],
             ),
-          ],
-          if (activa != null && !activa.esPredeterminada) ...[
-            const SizedBox(height: Dimen.espacio2),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Dimen.espacio3,
-                  vertical: Dimen.espacio2,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${activa.nombre} no es la lista predeterminada.',
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: Colores.tinta,
-                        ),
-                      ),
-                    ),
-                    AppBoton(
-                      texto: 'Marcar predeterminada',
-                      variante: BotonVariante.texto,
-                      onPressed: () =>
-                          _marcarPredeterminada(context, ref, activa!),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
       indicadores: [
         AppTarjetaDato(
           etiqueta: 'Precios en la lista',
@@ -192,7 +216,7 @@ class ListasPreciosPagina extends ConsumerWidget {
       fila: (context, precio) => _TarjetaPrecio(
         precio: precio,
         color: color,
-        onEditar: puede(ref, 'fact.precios', Accion.editar)
+        onEditar: puedeEditar
             ? () => _abrirPrecios(
                 context,
                 ref,
@@ -200,7 +224,7 @@ class ListasPreciosPagina extends ConsumerWidget {
                 productoId: precio.productoId,
               )
             : null,
-        onEliminar: puede(ref, 'fact.precios', Accion.eliminar)
+        onEliminar: puedeEliminar
             ? () => _eliminarPrecio(context, ref, precio)
             : null,
       ),
@@ -362,70 +386,44 @@ class ListasPreciosPagina extends ConsumerWidget {
   }
 }
 
-class _ListasTabs extends StatelessWidget {
-  const _ListasTabs({
-    required this.listas,
-    required this.valor,
-    required this.color,
-    required this.onCambio,
-    required this.onNueva,
+/// Botón compacto para una acción de la lista abierta.
+///
+/// Son hasta tres en una fila del teléfono (editar, eliminar, nueva): con el
+/// relleno del AppBoton el texto no entraba y salía cortado.
+class _AccionLista extends StatelessWidget {
+  const _AccionLista({
+    required this.texto,
+    required this.icono,
+    this.onPressed,
   });
 
-  final List<ListaPrecio> listas;
-  final int? valor;
-  final Color color;
-  final ValueChanged<int> onCambio;
-  final VoidCallback onNueva;
+  final String texto;
+  final IconData icono;
+
+  /// Null la deja apagada (la predeterminada no se elimina).
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-        itemCount: listas.length + 1,
-        separatorBuilder: (context, i) => const SizedBox(width: Dimen.espacio2),
-        itemBuilder: (context, i) {
-          if (i == listas.length) {
-            return ActionChip(
-              avatar: const Icon(Icons.add, size: 16),
-              label: const Text('Nueva lista'),
-              onPressed: onNueva,
-              visualDensity: VisualDensity.compact,
-              labelStyle: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-              ),
-              backgroundColor: Colores.superficie,
-              side: const BorderSide(color: Colores.linea),
-            );
-          }
-
-          final lista = listas[i];
-          final activo = lista.id == valor;
-
-          return ChoiceChip(
-            avatar: Icon(
-              lista.esPredeterminada ? Icons.star : Icons.sell_outlined,
-              size: 15,
-              color: activo ? color : Colores.tintaSuave,
-            ),
-            label: Text('${lista.nombre} (${lista.precios})'),
-            selected: activo,
-            onSelected: (_) => onCambio(lista.id),
-            showCheckmark: false,
-            visualDensity: VisualDensity.compact,
-            labelStyle: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: activo ? color : Colores.tintaSuave,
-            ),
-            backgroundColor: Colores.superficie,
-            selectedColor: color.withValues(alpha: 0.12),
-            side: BorderSide(color: activo ? color : Colores.linea),
-          );
-        },
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(Dimen.campoSm),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Dimen.radioCampo),
+        ),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icono, size: 16),
+          const SizedBox(width: Dimen.espacio1),
+          Flexible(
+            child: Text(texto, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+        ],
       ),
     );
   }
@@ -494,7 +492,7 @@ class _TarjetaPrecio extends StatelessWidget {
             icon: const Icon(
               Icons.delete_outline,
               size: 18,
-              color: Colores.peligro,
+              color: Colores.advertencia,
             ),
           ),
       ],

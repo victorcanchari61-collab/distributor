@@ -8,6 +8,7 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/permisos.dart';
@@ -54,11 +55,40 @@ class FlotaPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
+    final pestana = ref.watch(pestanaFlotaProvider);
+
+    // Los tipos son el catálogo del que salen los vehículos: se tocan al
+    // empezar y casi nunca después, así que van en una pestaña en vez de
+    // ocupar una entrada propia del menú. Igual que en la web.
+    final pestanas = AppPestanas<PestanaFlota>(
+      activa: pestana,
+      onCambio: (p) => ref.read(pestanaFlotaProvider.notifier).state = p,
+      pestanas: [
+        Pestana(
+          PestanaFlota.vehiculos,
+          'Vehículos',
+          icono: Icons.local_shipping_outlined,
+          contador: ref.watch(vehiculosProvider).valueOrNull?.length,
+        ),
+        Pestana(
+          PestanaFlota.tipos,
+          'Tipos de vehículo',
+          icono: Icons.build_outlined,
+          contador: ref.watch(tiposVehiculoProvider).valueOrNull?.length,
+        ),
+      ],
+    );
+
+    if (pestana == PestanaFlota.tipos) {
+      return TiposVehiculoPestana(pestanas: pestanas);
+    }
+
     final resumen = ref.watch(resumenFlotaProvider).valueOrNull;
 
     return AppListaPagina<Vehiculo>(
       titulo: 'Flota',
       ruta: ruta,
+      pestanas: pestanas,
       estado: ref.watch(vehiculosProvider),
       visibles: ref.watch(vehiculosFiltradosProvider),
       busqueda: ref.watch(busquedaVehiculosProvider),
@@ -72,19 +102,6 @@ class FlotaPagina extends ConsumerWidget {
       iconoVacio: Icons.local_shipping_outlined,
       singular: 'vehículo',
       plural: 'vehículos',
-      // Los tipos son el catálogo del que salen los vehículos: se tocan al
-      // empezar y casi nunca después, así que van tras un enlace en vez de
-      // ocupar una entrada propia del menú.
-      encabezado: Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton.icon(
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const TiposVehiculoPagina()),
-          ),
-          icon: const Icon(Icons.category_outlined, size: 18),
-          label: const Text('Tipos de vehículo'),
-        ),
-      ),
       indicadores: [
         AppTarjetaDato(
           etiqueta: 'Vehículos',

@@ -184,7 +184,7 @@ export function BovedaTab({
         open={crearAbierto}
         size="sm"
         title="Crear la Bóveda"
-        description="La caja de la empresa: no es de nadie y solo guarda efectivo. Una sola."
+        description="El efectivo de la empresa: no es de nadie y aquí llega lo de los cierres de caja. Una sola."
         onClose={() => setCrearAbierto(false)}
         footer={
           <>

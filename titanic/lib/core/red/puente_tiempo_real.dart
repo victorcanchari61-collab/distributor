@@ -125,6 +125,8 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     movimientosDineroProvider,
     estadoResultadosProvider,
     cuentasFinancierasProvider,
+    // Cuántas cuentas tiene cada banco: cambia al crear o editar una cuenta.
+    bancosCatalogoProvider,
   ],
   'gastosoperativos': [
     miCajaProvider,

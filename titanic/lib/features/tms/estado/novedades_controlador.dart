@@ -100,8 +100,13 @@ final opcionesResultadoProvider =
       (ref) => ref.watch(novedadApiProvider).opcionesResultado(),
     );
 
-/// En Motivos de novedad: false son los motivos, true los resultados.
-final verResultadosProvider = StateProvider.autoDispose<bool>((ref) => false);
+/// Las pestañas de Motivos de novedad, las mismas del panel web: por qué no
+/// se entregó, y qué se encontró al contar lo que volvió en el camión.
+enum PestanaMotivos { motivos, resultados }
+
+final pestanaMotivosProvider = StateProvider.autoDispose<PestanaMotivos>(
+  (ref) => PestanaMotivos.motivos,
+);
 
 final motivosNovedadProvider =
     AsyncNotifierProvider<MotivosNovedadControlador, List<MotivoNovedad>>(

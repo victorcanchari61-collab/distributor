@@ -6,10 +6,12 @@ import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_catalogo_simple.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -20,19 +22,16 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/tesoreria.dart';
-import 'metodos_pago_pagina.dart';
+import '../estado/finanzas_controlador.dart';
 import '../estado/tesoreria_controlador.dart';
 import 'hoja_movimientos_cuenta.dart';
 import 'hojas_finanzas.dart';
+import 'metodos_pago_pagina.dart';
 
-/// Las cuentas bancarias: cuanta plata hay en cada una y que se movio. Los
-/// metodos de pago (Yape, transferencia) apuntan a una de estas. La
-/// conciliacion contra el extracto se hace en el panel web.
-/// En Bancos: false son las cuentas bancarias, true los metodos de pago.
-final verMetodosEnBancosProvider = StateProvider.autoDispose<bool>(
-  (ref) => false,
-);
-
+/// Bancos, con tres pestañas como en el panel web: el catalogo de bancos
+/// (BCP, BBVA...), las cuentas bancarias, que son las que tienen saldo, y los
+/// metodos de pago (Yape, transferencia), que apuntan a una de esas cuentas.
+/// La conciliacion contra el extracto se hace en el panel web.
 class BancosPagina extends ConsumerWidget {
   const BancosPagina({super.key});
 
@@ -40,39 +39,105 @@ class BancosPagina extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-
-    // Las cuentas y los metodos de pago van juntos, igual que en el web: Yape o
-    // una transferencia apuntan a una de estas cuentas. Cada pestaña sigue con
-    // su permiso: quien solo tiene uno ve solo esa.
+    // Cada pestaña sigue con su permiso: el catalogo y las cuentas con el de
+    // Bancos, los metodos con el suyo. Quien solo tiene uno ve solo lo suyo, y
+    // lo que no puede ver ni se pide.
     final verBancos = puedeVer(ref, 'finanzas.bancos');
     final verMetodos = puedeVer(ref, 'finanzas.metodospago');
-    final enMetodos =
-        verMetodos && (!verBancos || ref.watch(verMetodosEnBancosProvider));
-    final pestanas = verBancos && verMetodos
-        ? Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-            child: SegmentedButton<bool>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(
-                  value: false,
-                  label: Text('Cuentas'),
-                  icon: Icon(Icons.account_balance_outlined, size: 18),
+    final disponibles = [
+      if (verBancos) ...[PestanaBancos.bancos, PestanaBancos.cuentas],
+      if (verMetodos) PestanaBancos.metodos,
+    ];
+    final elegida = ref.watch(pestanaBancosProvider);
+    final activa = disponibles.contains(elegida)
+        ? elegida
+        : disponibles.firstOrNull ?? PestanaBancos.cuentas;
+
+    final pestanas = AppPestanas<PestanaBancos>(
+      activa: activa,
+      onCambio: (p) => ref.read(pestanaBancosProvider.notifier).state = p,
+      pestanas: [
+        if (verBancos) ...[
+          Pestana(
+            PestanaBancos.bancos,
+            'Bancos',
+            icono: Icons.account_balance_outlined,
+            contador: ref.watch(bancosCatalogoProvider).valueOrNull?.length,
+          ),
+          Pestana(
+            PestanaBancos.cuentas,
+            'Cuentas Bancarias',
+            icono: Icons.credit_card_outlined,
+            contador: ref.watch(cuentasBancariasProvider).valueOrNull?.length,
+          ),
+        ],
+        if (verMetodos)
+          Pestana(
+            PestanaBancos.metodos,
+            'Métodos de pago',
+            icono: Icons.payments_outlined,
+            contador: ref.watch(metodosPagoProvider).valueOrNull?.length,
+          ),
+      ],
+    );
+
+    return switch (activa) {
+      PestanaBancos.bancos => _catalogo(ref, pestanas),
+      PestanaBancos.cuentas => _cuentas(context, ref, pestanas),
+      PestanaBancos.metodos => MetodosPagoPagina(pestanas: pestanas),
+    };
+  }
+
+  /// El catalogo de bancos: de cada uno cuelgan sus cuentas. No se borran,
+  /// se desactivan; el backend no tiene DELETE.
+  Widget _catalogo(WidgetRef ref, Widget pestanas) {
+    final api = ref.read(tesoreriaApiProvider);
+
+    return AppCatalogoSimple(
+      titulo: 'Bancos',
+      ruta: ruta,
+      pestanas: pestanas,
+      estado: ref
+          .watch(bancosCatalogoProvider)
+          .whenData(
+            (lista) => [
+              for (final b in lista)
+                FilaCatalogo(
+                  id: b.id,
+                  nombre: b.nombre,
+                  activo: b.activo,
+                  usos: b.cantidadCuentas,
                 ),
-                ButtonSegment(
-                  value: true,
-                  label: Text('Métodos de pago'),
-                  icon: Icon(Icons.payments_outlined, size: 18),
-                ),
-              ],
-              selected: {enMetodos},
-              onSelectionChanged: (s) =>
-                  ref.read(verMetodosEnBancosProvider.notifier).state = s.first,
-            ),
-          )
-        : null;
-    if (enMetodos) return MetodosPagoPagina(encabezado: pestanas);
+            ],
+          ),
+      singular: 'banco',
+      plural: 'bancos',
+      icono: Icons.account_balance_outlined,
+      femenino: false,
+      usosEtiqueta: 'Cuentas',
+      onRecargar: () async {
+        ref.invalidate(bancosCatalogoProvider);
+        try {
+          await ref.read(bancosCatalogoProvider.future);
+        } catch (_) {
+          // El fallo ya se ve en la pantalla, con su botón de reintentar.
+        }
+      },
+      onCrear: (cuerpo) => api.crearBanco(cuerpo['nombre'] as String),
+      onActualizar: (id, cuerpo) async {
+        await api.actualizarBanco(id, cuerpo);
+        // Las cuentas muestran el nombre de su banco.
+        ref.invalidate(cuentasFinancierasProvider);
+      },
+      puedeCrear: puede(ref, 'finanzas.bancos', Accion.crear),
+      puedeEditar: puede(ref, 'finanzas.bancos', Accion.editar),
+      puedeEliminar: false,
+    );
+  }
+
+  /// Las cuentas bancarias: cuanta plata hay en cada una y que se movio.
+  Widget _cuentas(BuildContext context, WidgetRef ref, Widget pestanas) {
+    final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final todas =
         ref.watch(cuentasBancariasProvider).valueOrNull ??
         const <CuentaFinanciera>[];
@@ -89,7 +154,7 @@ class BancosPagina extends ConsumerWidget {
     return AppListaPagina<CuentaFinanciera>(
       titulo: 'Bancos',
       ruta: ruta,
-      encabezado: pestanas,
+      pestanas: pestanas,
       estado: ref.watch(cuentasBancariasProvider),
       visibles: ref.watch(cuentasBancariasFiltradasProvider),
       busqueda: ref.watch(busquedaBancosProvider),
@@ -280,7 +345,7 @@ class _TarjetaCuenta extends StatelessWidget {
             icon: Icon(
               c.activo ? Icons.block : Icons.check_circle_outline,
               size: 18,
-              color: c.activo ? Colores.advertencia : Colores.exito,
+              color: Colores.advertencia,
             ),
           ),
       ],
@@ -365,6 +430,8 @@ class _HojaCuentaState extends ConsumerState<_HojaCuenta> {
         await api.actualizarCuenta(widget.cuenta!.id, cuerpo);
       }
       ref.invalidate(cuentasFinancierasProvider);
+      // Cambia cuantas cuentas tiene cada banco, en su pestaña.
+      ref.invalidate(bancosCatalogoProvider);
       navegador.pop();
       mensajero.mostrar(_esNueva ? 'Cuenta creada' : 'Cuenta actualizada');
     } on ApiExcepcion catch (e) {

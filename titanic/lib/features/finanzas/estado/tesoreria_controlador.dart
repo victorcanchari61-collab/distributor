@@ -260,8 +260,13 @@ final cuentasBancariasProvider =
           .whenData((l) => l.where((c) => c.naturaleza == 'BANCO').toList()),
     );
 
-/// En Cajas: false es la pestaña de las cajas, true la de la Boveda.
-final verBovedaProvider = StateProvider.autoDispose<bool>((ref) => false);
+/// Las pestañas de Cajas, en el orden del panel web: las cajas de cada
+/// persona y la Boveda, que no es una caja sino el efectivo de la empresa.
+enum PestanaCajas { cajas, boveda }
+
+final pestanaCajasProvider = StateProvider.autoDispose<PestanaCajas>(
+  (ref) => PestanaCajas.cajas,
+);
 
 final busquedaBovedaProvider = StateProvider.autoDispose((ref) => '');
 
@@ -287,9 +292,20 @@ final cuentasBancariasFiltradasProvider =
           .toList();
     });
 
-/// El catalogo de bancos, para elegir el de una cuenta.
+/// El catalogo de bancos: su pestaña en Bancos y el selector de una cuenta.
 final bancosCatalogoProvider = FutureProvider.autoDispose<List<Banco>>(
   (ref) => ref.watch(tesoreriaApiProvider).bancos(),
+);
+
+/// Las pestañas de Bancos, en el orden del panel web: el catalogo de bancos,
+/// las cuentas bancarias y los metodos de pago. Cada una sigue con su
+/// permiso: quien no puede ver una no la tiene.
+enum PestanaBancos { bancos, cuentas, metodos }
+
+/// La que eligio el usuario. Si no puede verla, la pantalla abre la primera
+/// que si puede.
+final pestanaBancosProvider = StateProvider.autoDispose<PestanaBancos>(
+  (ref) => PestanaBancos.bancos,
 );
 
 /// Los movimientos de una cuenta en los ultimos 30 dias, del mas nuevo al

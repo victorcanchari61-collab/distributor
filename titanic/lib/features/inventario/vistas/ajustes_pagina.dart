@@ -4,28 +4,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/estado/filtro_documento.dart';
 import '../../../compartido/estado/filtro_estado.dart';
-import '../../../compartido/widgets/app_buscador.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
+import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
-import '../../../compartido/widgets/app_shell.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
-import '../../../compartido/widgets/app_vacio.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
-import '../../../core/tema/dimensiones.dart';
 import '../datos/documento_inventario.dart';
 import '../datos/motivo.dart';
 import '../estado/inventario_controlador.dart';
 import 'ajuste_formulario.dart';
 import 'motivo_formulario.dart';
 import '../../../compartido/widgets/app_aviso.dart';
+
+/// Las dos pestañas de la vista, como en el panel web.
+enum _Pestana { ajustes, motivos }
 
 /// Ajustes de inventario y sus motivos, en pestañas: no son dos modulos, son
 /// las dos caras del mismo concepto (el documento y las razones posibles).
@@ -38,68 +39,90 @@ class AjustesPagina extends ConsumerStatefulWidget {
   ConsumerState<AjustesPagina> createState() => _AjustesPaginaState();
 }
 
-class _AjustesPaginaState extends ConsumerState<AjustesPagina>
-    with SingleTickerProviderStateMixin {
-  late final _tabs = TabController(length: 2, vsync: this);
-
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
-  }
+class _AjustesPaginaState extends ConsumerState<AjustesPagina> {
+  var _pestana = _Pestana.ajustes;
 
   @override
   Widget build(BuildContext context) {
     final color =
         resolverRuta(AjustesPagina.ruta).grupo?.color ?? Colores.marca;
 
-    return AppShell(
-      titulo: 'Ajustes de inventario',
-      subtitulo: resolverRuta(AjustesPagina.ruta).grupo?.titulo,
-      acentado: color,
-      rutaActual: AjustesPagina.ruta,
-      accionFlotante: AnimatedBuilder(
-        animation: _tabs,
-        builder: (context, _) => FloatingActionButton.extended(
-          onPressed: () =>
-              _tabs.index == 0 ? _nuevoAjuste(context) : _nuevoMotivo(context),
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add),
-          label: Text(_tabs.index == 0 ? 'Nuevo ajuste' : 'Nuevo motivo'),
+    return switch (_pestana) {
+      _Pestana.ajustes => _vistaAjustes(color),
+      _Pestana.motivos => _vistaMotivos(color),
+    };
+  }
+
+  /// Ajustes | Motivos, cada una con cuántos registros tiene. En Motivos se
+  /// cuentan solo los manuales, igual que en la web: son los que se
+  /// administran aquí; los del sistema se listan pero no se tocan.
+  Widget _pestanas() {
+    final ajustes = ref.watch(ajustesProvider).valueOrNull;
+    final motivos = ref.watch(motivosProvider).valueOrNull;
+
+    return AppPestanas<_Pestana>(
+      activa: _pestana,
+      onCambio: (p) => setState(() => _pestana = p),
+      pestanas: [
+        Pestana(
+          _Pestana.ajustes,
+          'Ajustes',
+          icono: Icons.fact_check_outlined,
+          contador: ajustes?.length,
         ),
+        Pestana(
+          _Pestana.motivos,
+          'Motivos',
+          icono: Icons.checklist,
+          contador: motivos?.where((m) => !m.delSistema).length,
+        ),
+      ],
+    );
+  }
+
+  // --- Ajustes ---
+
+  Widget _vistaAjustes(Color color) {
+    final puedeAnular = puede(ref, 'inv.ajustes', Accion.anular);
+    final puedeExportar = puede(ref, 'inv.ajustes', Accion.exportar);
+    final puestos = ref.watch(filtrosAjustesActivosProvider);
+
+    return AppListaPagina<DocumentoInventario>(
+      titulo: 'Ajustes de inventario',
+      ruta: AjustesPagina.ruta,
+      pestanas: _pestanas(),
+      estado: ref.watch(ajustesProvider),
+      visibles: ref.watch(ajustesFiltradosProvider),
+      busqueda: ref.watch(busquedaAjustesProvider),
+      onBuscar: (t) => ref.read(busquedaAjustesProvider.notifier).state = t,
+      pistaBusqueda: 'Buscar por número, almacén o motivo',
+      onRecargar: () => ref.read(ajustesProvider.notifier).recargar(),
+      onNuevo: puede(ref, 'inv.ajustes', Accion.crear) ? _nuevoAjuste : null,
+      textoNuevo: 'Nuevo ajuste',
+      iconoVacio: Icons.fact_check_outlined,
+      singular: 'ajuste',
+      plural: 'ajustes',
+      detalleVacio: puestos > 0
+          ? 'Ninguno coincide con los filtros puestos.'
+          : null,
+      filtro: BotonFiltros(
+        activos: puestos,
+        color: color,
+        onAbrir: _filtrosAjustes,
       ),
-      child: Column(
-        children: [
-          TabBar(
-            controller: _tabs,
-            labelColor: color,
-            unselectedLabelColor: Colores.tintaSuave,
-            indicatorColor: color,
-            tabs: const [
-              Tab(text: 'Ajustes'),
-              Tab(text: 'Motivos'),
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabs,
-              children: [_tabAjustes(color), _tabMotivos(color)],
-            ),
-          ),
-        ],
+      fila: (context, doc) => _TarjetaAjuste(
+        doc: doc,
+        color: color,
+        conPdf: puedeExportar,
+        onAnular: doc.anulado || !puedeAnular ? null : () => _anularAjuste(doc),
       ),
     );
   }
 
-  void _nuevoAjuste(BuildContext context) {
+  void _nuevoAjuste() {
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const AjusteFormulario()));
-  }
-
-  void _nuevoMotivo(BuildContext context) {
-    mostrarFormularioMotivo(context, ref);
   }
 
   /// Lo que se pregunta de un listado de ajustes: en que quedo y por que fue.
@@ -138,7 +161,7 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
               for (final m in motivos)
                 OpcionFiltro<int?>(
                   m.id,
-                  '${m.nombre} (${m.esEntrada ? 'Entrada' : 'Salida'})',
+                  '${m.nombre} (${m.esEntrada ? 'Ingreso' : 'Salida'})',
                 ),
             ],
             onCambio: (v) =>
@@ -163,6 +186,92 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
           },
         ),
       ],
+    );
+  }
+
+  Future<void> _anularAjuste(DocumentoInventario doc) async {
+    final ok = await confirmarAccion(
+      context,
+      titulo: 'Anular ${doc.numero}',
+      mensaje:
+          'Se crea un documento que revierte el movimiento; el original queda '
+          'en el historial marcado como anulado. No se puede deshacer.',
+      textoConfirmar: 'Anular',
+      tono: ConfirmTono.peligro,
+    );
+    if (!ok || !mounted) return;
+
+    final mensajero = Aviso.de(context);
+    try {
+      await ref.read(ajustesProvider.notifier).anular(doc.id);
+      mensajero.mostrar('${doc.numero} anulado');
+    } on ApiExcepcion catch (e) {
+      mensajero.error(e.texto);
+    }
+  }
+
+  // --- Motivos ---
+
+  /*
+   * Los motivos, como `MotivosTabla` del panel web.
+   *
+   * Se listan todos: los manuales primero, que son los que se administran, y
+   * los del sistema detras, en solo lectura —aparecen en el kardex y en cada
+   * movimiento, y esconderlos hacia parecer que faltaban—. Solo los manuales
+   * se editan, se activan o desactivan y se eliminan.
+   */
+  Widget _vistaMotivos(Color color) {
+    final puedeEditar = puede(ref, 'inv.ajustes', Accion.editar);
+    final puestos = ref.watch(filtrosMotivosActivosProvider);
+    final busqueda = ref.watch(busquedaMotivosProvider);
+
+    return AppListaPagina<Motivo>(
+      titulo: 'Ajustes de inventario',
+      ruta: AjustesPagina.ruta,
+      pestanas: _pestanas(),
+      estado: ref.watch(motivosProvider),
+      visibles: ref.watch(motivosFiltradosProvider),
+      busqueda: busqueda,
+      onBuscar: (t) => ref.read(busquedaMotivosProvider.notifier).state = t,
+      pistaBusqueda: 'Buscar motivo',
+      onRecargar: () => ref.read(motivosProvider.notifier).recargar(),
+      onNuevo: puede(ref, 'inv.ajustes', Accion.crear)
+          ? () => mostrarFormularioMotivo(context, ref)
+          : null,
+      textoNuevo: 'Nuevo motivo',
+      iconoVacio: Icons.checklist,
+      singular: 'motivo',
+      plural: 'motivos',
+      detalleVacio: puestos > 0
+          ? 'Ninguno coincide con los filtros puestos.'
+          : busqueda.isEmpty
+          ? 'Crea los motivos con los que justificas un ajuste.'
+          : null,
+      filtro: BotonFiltros(
+        activos: puestos,
+        color: color,
+        onAbrir: _filtrosMotivos,
+      ),
+      fila: (context, motivo) {
+        // El del sistema no se edita, ni se desactiva, ni se borra: no hay
+        // accion que ofrecerle.
+        final editable = !motivo.delSistema && puedeEditar;
+
+        return _TarjetaMotivo(
+          motivo: motivo,
+          color: color,
+          onEditar: editable
+              ? () => mostrarFormularioMotivo(context, ref, motivo: motivo)
+              : null,
+          onEstado: editable ? () => _cambiarEstadoMotivo(motivo) : null,
+          // Va con "editar" y no con "eliminar", como en la web: inv.ajustes
+          // no declara esa accion porque un ajuste no se borra, se anula.
+          // Solo sin movimientos: lo que ya se usa se desactiva.
+          onEliminar: editable && motivo.movimientos == 0
+              ? () => _eliminarMotivo(motivo)
+              : null,
+        );
+      },
     );
   }
 
@@ -195,7 +304,7 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
             valor: ref.watch(tipoMotivoProvider),
             opciones: const [
               OpcionFiltro(FiltroMovimiento.todos, 'Todos'),
-              OpcionFiltro(FiltroMovimiento.entradas, 'Entradas'),
+              OpcionFiltro(FiltroMovimiento.entradas, 'Ingresos'),
               OpcionFiltro(FiltroMovimiento.salidas, 'Salidas'),
             ],
             onCambio: (v) => ref.read(tipoMotivoProvider.notifier).state = v,
@@ -217,191 +326,75 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina>
     );
   }
 
-  Widget _tabAjustes(Color color) {
-    final estado = ref.watch(ajustesProvider);
-    final visibles = ref.watch(ajustesFiltradosProvider);
-    final busqueda = ref.watch(busquedaAjustesProvider);
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(Dimen.espacio4),
-          child: Row(
-            children: [
-              Expanded(
-                child: AppBuscador(
-                  valor: busqueda,
-                  onCambio: (t) =>
-                      ref.read(busquedaAjustesProvider.notifier).state = t,
-                  pista: 'Buscar por número, almacén o motivo',
-                ),
-              ),
-              BotonFiltros(
-                activos: ref.watch(filtrosAjustesActivosProvider),
-                color: color,
-                onAbrir: _filtrosAjustes,
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: estado.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => AppVacio(
-              icono: Icons.wifi_off_outlined,
-              titulo: 'No se pudo cargar',
-              detalle: e is ApiExcepcion
-                  ? e.texto
-                  : 'No pudimos cargar los ajustes.',
-              accion: FilledButton.icon(
-                onPressed: () => ref.read(ajustesProvider.notifier).recargar(),
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Reintentar'),
-              ),
-            ),
-            data: (_) => visibles.isEmpty
-                ? const AppVacio(
-                    icono: Icons.fact_check_outlined,
-                    titulo: 'Sin ajustes',
-                    detalle: 'Registra el primero con el botón de abajo.',
-                  )
-                : RefreshIndicator(
-                    onRefresh: () =>
-                        ref.read(ajustesProvider.notifier).recargar(),
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(
-                        Dimen.espacio4,
-                        0,
-                        Dimen.espacio4,
-                        Dimen.espacio6 * 2,
-                      ),
-                      itemCount: visibles.length,
-                      separatorBuilder: (context, i) =>
-                          const SizedBox(height: Dimen.espacio2),
-                      itemBuilder: (context, i) => _TarjetaAjuste(
-                        doc: visibles[i],
-                        color: color,
-                        onAnular: visibles[i].anulado
-                            ? null
-                            : () => _anularAjuste(visibles[i]),
-                      ),
-                    ),
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _anularAjuste(DocumentoInventario doc) async {
+  /// El backend no tiene activar/desactivar propio: se manda el mismo PUT con
+  /// el estado invertido, igual que hace el panel web.
+  Future<void> _cambiarEstadoMotivo(Motivo m) async {
     final ok = await confirmarAccion(
       context,
-      titulo: 'Anular ${doc.numero}',
-      mensaje:
-          'Se revierte el movimiento con un documento espejo. No se puede deshacer.',
-      textoConfirmar: 'Anular',
+      titulo: '${m.activo ? 'Desactivar' : 'Activar'} ${m.nombre}',
+      mensaje: m.activo
+          ? 'Deja de ofrecerse al registrar un ajuste nuevo. Los documentos '
+                'que ya lo usan lo conservan.'
+          : 'Vuelve a estar disponible para ajustes nuevos.',
+      textoConfirmar: m.activo ? 'Desactivar' : 'Activar',
+      tono: m.activo ? ConfirmTono.aviso : ConfirmTono.pregunta,
+    );
+    if (!ok || !mounted) return;
+
+    final mensajero = Aviso.de(context);
+    try {
+      await ref
+          .read(motivosProvider.notifier)
+          .guardar(
+            id: m.id,
+            cuerpo: {
+              'codigo': m.codigo,
+              'nombre': m.nombre,
+              'tipo': m.tipo,
+              'activo': !m.activo,
+            },
+          );
+      mensajero.mostrar(
+        m.activo ? '${m.nombre} desactivado' : '${m.nombre} activado',
+      );
+    } on ApiExcepcion catch (e) {
+      mensajero.error(e.texto);
+    }
+  }
+
+  Future<void> _eliminarMotivo(Motivo m) async {
+    final ok = await confirmarAccion(
+      context,
+      titulo: 'Eliminar ${m.nombre}',
+      mensaje: 'Se borra definitivamente.',
+      textoConfirmar: 'Eliminar',
       tono: ConfirmTono.peligro,
     );
     if (!ok || !mounted) return;
 
     final mensajero = Aviso.de(context);
     try {
-      await ref.read(ajustesProvider.notifier).anular(doc.id);
-      mensajero.mostrar('${doc.numero} anulado');
+      await ref.read(motivosProvider.notifier).eliminar(m.id);
+      mensajero.mostrar('${m.nombre} eliminado');
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
   }
-
-  Widget _tabMotivos(Color color) {
-    final estado = ref.watch(motivosProvider);
-    final visibles = ref.watch(motivosFiltradosProvider);
-    final busqueda = ref.watch(busquedaMotivosProvider);
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(Dimen.espacio4),
-          child: Row(
-            children: [
-              Expanded(
-                child: AppBuscador(
-                  valor: busqueda,
-                  onCambio: (t) =>
-                      ref.read(busquedaMotivosProvider.notifier).state = t,
-                  pista: 'Buscar motivo',
-                ),
-              ),
-              BotonFiltros(
-                activos: ref.watch(filtrosMotivosActivosProvider),
-                color: color,
-                onAbrir: _filtrosMotivos,
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: estado.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => AppVacio(
-              icono: Icons.wifi_off_outlined,
-              titulo: 'No se pudo cargar',
-              detalle: e is ApiExcepcion
-                  ? e.texto
-                  : 'No pudimos cargar los motivos.',
-              accion: FilledButton.icon(
-                onPressed: () => ref.read(motivosProvider.notifier).recargar(),
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Reintentar'),
-              ),
-            ),
-            data: (_) => visibles.isEmpty
-                ? const AppVacio(
-                    icono: Icons.fact_check_outlined,
-                    titulo: 'Sin motivos',
-                    detalle:
-                        'Crea los motivos con los que justificas un ajuste.',
-                  )
-                : RefreshIndicator(
-                    onRefresh: () =>
-                        ref.read(motivosProvider.notifier).recargar(),
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(
-                        Dimen.espacio4,
-                        0,
-                        Dimen.espacio4,
-                        Dimen.espacio6 * 2,
-                      ),
-                      itemCount: visibles.length,
-                      separatorBuilder: (context, i) =>
-                          const SizedBox(height: Dimen.espacio2),
-                      itemBuilder: (context, i) => _TarjetaMotivo(
-                        motivo: visibles[i],
-                        color: color,
-                        onEditar:
-                            visibles[i].delSistema ||
-                                !puede(ref, 'inv.ajustes', Accion.editar)
-                            ? null
-                            : () => mostrarFormularioMotivo(
-                                context,
-                                ref,
-                                motivo: visibles[i],
-                              ),
-                      ),
-                    ),
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class _TarjetaAjuste extends StatelessWidget {
-  const _TarjetaAjuste({required this.doc, required this.color, this.onAnular});
+  const _TarjetaAjuste({
+    required this.doc,
+    required this.color,
+    required this.conPdf,
+    this.onAnular,
+  });
 
   final DocumentoInventario doc;
   final Color color;
+
+  /// Si se ofrece el PDF: pide el permiso de exportar.
+  final bool conPdf;
   final VoidCallback? onAnular;
 
   List<CampoDetalle> get _campos => [
@@ -421,7 +414,7 @@ class _TarjetaAjuste extends StatelessWidget {
             '${linea.codigo} · ${linea.presentacion ?? linea.unidadBase}',
         filas: [
           [
-            ('Tipo', linea.esEntrada ? 'Entrada' : 'Salida'),
+            ('Tipo', linea.esEntrada ? 'Ingreso' : 'Salida'),
             ('Cant.', formatoNumero(linea.cantidadPresentacion)),
             ('Subtotal', 'S/ ${linea.costoTotal.toStringAsFixed(2)}'),
           ],
@@ -450,23 +443,24 @@ class _TarjetaAjuste extends StatelessWidget {
         contenidoExtra: _lineas,
       ),
       acciones: [
-        IconButton(
-          onPressed: () => mostrarOpcionesPdf(
-            context,
-            documento: DocumentoPdf.ajuste,
-            id: doc.id,
-            numero: doc.numero,
+        if (conPdf)
+          IconButton(
+            onPressed: () => mostrarOpcionesPdf(
+              context,
+              documento: DocumentoPdf.ajuste,
+              id: doc.id,
+              numero: doc.numero,
+            ),
+            tooltip: 'PDF',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
           ),
-          tooltip: 'PDF',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-        ),
         if (onAnular != null)
           IconButton(
             onPressed: onAnular,
             tooltip: 'Anular',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.peligro),
+            icon: const Icon(Icons.block, size: 18, color: Colores.advertencia),
           ),
       ],
     );
@@ -478,21 +472,28 @@ class _TarjetaMotivo extends StatelessWidget {
     required this.motivo,
     required this.color,
     this.onEditar,
+    this.onEstado,
+    this.onEliminar,
   });
 
   final Motivo motivo;
   final Color color;
 
-  /// Null en los del sistema: no hay accion que ofrecerles.
+  /// Null en los del sistema o sin permiso: no hay accion que ofrecerles.
   final VoidCallback? onEditar;
+  final VoidCallback? onEstado;
+  final VoidCallback? onEliminar;
 
   @override
   Widget build(BuildContext context) {
     return AppTarjetaRegistro(
-      icono: Icons.fact_check_outlined,
+      icono: Icons.checklist,
       color: color,
       titulo: motivo.nombre,
-      insignia: AppEtiqueta(motivo.esEntrada ? 'Entrada' : 'Salida'),
+      insignia: AppEtiqueta(
+        motivo.esEntrada ? 'Ingreso' : 'Salida',
+        tono: motivo.esEntrada ? EtiquetaTono.exito : EtiquetaTono.aviso,
+      ),
       campos: [
         // Explica por que unas tarjetas no tienen acciones.
         CampoDetalle(
@@ -506,13 +507,14 @@ class _TarjetaMotivo extends StatelessWidget {
           ),
         ),
         CampoDetalle('Código', motivo.codigo),
-        CampoDetalle('Usos', '${motivo.movimientos}'),
+        CampoDetalle('Pide costo', motivo.pideCosto ? 'Sí' : 'No'),
+        CampoDetalle('Movimientos', '${motivo.movimientos}'),
         CampoDetalle(
           'Estado',
           motivo.activo ? 'Activo' : 'Inactivo',
           widget: AppEtiqueta(
             motivo.activo ? 'Activo' : 'Inactivo',
-            tono: motivo.activo ? EtiquetaTono.exito : EtiquetaTono.aviso,
+            tono: motivo.activo ? EtiquetaTono.exito : EtiquetaTono.neutral,
           ),
         ),
       ],
@@ -527,6 +529,28 @@ class _TarjetaMotivo extends StatelessWidget {
               Icons.edit_outlined,
               size: 18,
               color: Acento.de(context),
+            ),
+          ),
+        if (onEstado != null)
+          IconButton(
+            onPressed: onEstado,
+            tooltip: motivo.activo ? 'Desactivar' : 'Activar',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              motivo.activo ? Icons.block : Icons.check_circle_outline,
+              size: 18,
+              color: Colores.advertencia,
+            ),
+          ),
+        if (onEliminar != null)
+          IconButton(
+            onPressed: onEliminar,
+            tooltip: 'Eliminar',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(
+              Icons.delete_outline,
+              size: 18,
+              color: Colores.advertencia,
             ),
           ),
       ],

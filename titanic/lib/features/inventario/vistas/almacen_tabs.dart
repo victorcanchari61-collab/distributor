@@ -1,63 +1,38 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/tema/colores.dart';
-import '../../../core/tema/dimensiones.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../datos/almacen.dart';
 
-/// Selector de almacén, como una pestaña: cambiarlo cambia todo el conjunto
-/// de datos (otro stock, otros movimientos), no filtra una lista ya cargada.
-/// `valor` null es "Todos".
+/// Una pestaña por almacén, más "Todos", como en Stock y Kardex del panel web.
+///
+/// Es pestaña y no filtro: cambiarla cambia todo el conjunto de datos (otro
+/// stock, otros movimientos), no recorta una lista ya cargada. Se arma sobre
+/// `AppPestanas` para que se vea igual que el resto de pestañas de la app.
+/// Va en el hueco `pestanas` de `AppListaPagina`. `valor` null es "Todos".
 class AlmacenTabs extends StatelessWidget {
   const AlmacenTabs({
     super.key,
     required this.almacenes,
     required this.valor,
     required this.onCambio,
-    required this.color,
   });
 
   final List<Almacen> almacenes;
   final int? valor;
   final ValueChanged<int?> onCambio;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
     if (almacenes.isEmpty) return const SizedBox.shrink();
 
-    final opciones = <(int? id, String label)>[
-      (null, 'Todos'),
-      for (final a in almacenes) (a.id, a.nombre),
-    ];
-
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-        itemCount: opciones.length,
-        separatorBuilder: (context, i) => const SizedBox(width: Dimen.espacio2),
-        itemBuilder: (context, i) {
-          final (id, label) = opciones[i];
-          final activo = id == valor;
-
-          return ChoiceChip(
-            label: Text(label),
-            selected: activo,
-            onSelected: (_) => onCambio(id),
-            showCheckmark: false,
-            visualDensity: VisualDensity.compact,
-            labelStyle: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: activo ? color : Colores.tintaSuave,
-            ),
-            backgroundColor: Colores.superficie,
-            selectedColor: color.withValues(alpha: 0.12),
-            side: BorderSide(color: activo ? color : Colores.linea),
-          );
-        },
-      ),
+    return AppPestanas<int?>(
+      activa: valor,
+      onCambio: onCambio,
+      pestanas: [
+        const Pestana<int?>(null, 'Todos', icono: Icons.all_inbox_outlined),
+        for (final a in almacenes)
+          Pestana<int?>(a.id, a.nombre, icono: Icons.warehouse_outlined),
+      ],
     );
   }
 }

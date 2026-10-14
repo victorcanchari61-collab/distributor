@@ -10,6 +10,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector_rango.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -688,24 +689,29 @@ class _HojaDetalleCierreState extends ConsumerState<_HojaDetalleCierre> {
           ],
         ),
         const SizedBox(height: Dimen.espacio3),
-        SegmentedButton<_Parte>(
-          showSelectedIcon: false,
-          segments: [
-            ButtonSegment(
-              value: _Parte.efectivo,
-              label: Text('Efectivo (${d.efectivo.length})'),
+        // Las mismas pestañas que el detalle del cierre en la web.
+        AppPestanas<_Parte>(
+          activa: _parte,
+          onCambio: (p) => setState(() => _parte = p),
+          pestanas: [
+            Pestana(
+              _Parte.efectivo,
+              'Efectivo',
+              icono: Icons.account_balance_wallet_outlined,
+              contador: d.efectivo.length,
             ),
-            ButtonSegment(
-              value: _Parte.digital,
-              label: Text('Digital (${d.digitales.length})'),
+            Pestana(
+              _Parte.digital,
+              'Cobros digitales',
+              icono: Icons.smartphone_outlined,
+              contador: d.digitales.length,
             ),
-            const ButtonSegment(
-              value: _Parte.billetes,
-              label: Text('Billetes'),
+            const Pestana(
+              _Parte.billetes,
+              'Billetes y monedas',
+              icono: Icons.payments_outlined,
             ),
           ],
-          selected: {_parte},
-          onSelectionChanged: (s) => setState(() => _parte = s.first),
         ),
         const SizedBox(height: Dimen.espacio3),
         Flexible(

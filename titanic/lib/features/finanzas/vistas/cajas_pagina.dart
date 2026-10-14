@@ -10,6 +10,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -29,7 +30,9 @@ import 'hojas_finanzas.dart';
 
 /// La caja de cada persona que cobra en la calle: con cuanto anda y que se
 /// movio. Sin caja no se puede cobrar en efectivo; aqui se asigna una a quien
-/// no la tiene y se desactiva la de quien ya no cobra. Igual que el panel web.
+/// no la tiene y se desactiva la de quien ya no cobra. Igual que el panel web,
+/// con la Boveda en su propia pestaña: no es una caja, es el efectivo de la
+/// empresa.
 class CajasPagina extends ConsumerWidget {
   const CajasPagina({super.key});
 
@@ -38,11 +41,25 @@ class CajasPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final pestanas = _Pestanas(
-      boveda: ref.watch(verBovedaProvider),
-      onCambio: (v) => ref.read(verBovedaProvider.notifier).state = v,
+    final pestana = ref.watch(pestanaCajasProvider);
+    final pestanas = AppPestanas<PestanaCajas>(
+      activa: pestana,
+      onCambio: (p) => ref.read(pestanaCajasProvider.notifier).state = p,
+      pestanas: [
+        Pestana(
+          PestanaCajas.cajas,
+          'Cajas',
+          icono: Icons.groups_outlined,
+          contador: ref.watch(cajasProvider).valueOrNull?.length,
+        ),
+        const Pestana(
+          PestanaCajas.boveda,
+          'Bóveda',
+          icono: Icons.account_balance,
+        ),
+      ],
     );
-    if (ref.watch(verBovedaProvider)) {
+    if (pestana == PestanaCajas.boveda) {
       return _paginaBoveda(context, ref, color, pestanas);
     }
 
@@ -83,7 +100,7 @@ class CajasPagina extends ConsumerWidget {
           nota: '${activas.length} activas',
         ),
       ],
-      encabezado: pestanas,
+      pestanas: pestanas,
       filtro: BotonFiltros(
         activos: ref.watch(verInactivasCajasProvider) ? 1 : 0,
         color: color,
@@ -198,7 +215,7 @@ class CajasPagina extends ConsumerWidget {
                 nota: 'Últimos 30 días',
               ),
             ],
-      encabezado: pestanas,
+      pestanas: pestanas,
       fila: (context, m) => AppTarjetaRegistro(
         icono: m.esIngreso ? Icons.arrow_downward : Icons.arrow_upward,
         color: color,
@@ -284,38 +301,6 @@ class CajasPagina extends ConsumerWidget {
   }
 }
 
-/// Las dos pestañas de Cajas: las cajas de cada persona y la Boveda.
-class _Pestanas extends StatelessWidget {
-  const _Pestanas({required this.boveda, required this.onCambio});
-
-  final bool boveda;
-  final ValueChanged<bool> onCambio;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-      child: SegmentedButton<bool>(
-        showSelectedIcon: false,
-        segments: const [
-          ButtonSegment(
-            value: false,
-            label: Text('Cajas'),
-            icon: Icon(Icons.groups_outlined, size: 18),
-          ),
-          ButtonSegment(
-            value: true,
-            label: Text('Bóveda'),
-            icon: Icon(Icons.account_balance, size: 18),
-          ),
-        ],
-        selected: {boveda},
-        onSelectionChanged: (s) => onCambio(s.first),
-      ),
-    );
-  }
-}
-
 /// Crear la Boveda: con cuanto efectivo arranca.
 class _HojaBoveda extends ConsumerStatefulWidget {
   const _HojaBoveda();
@@ -370,7 +355,7 @@ class _HojaBovedaState extends ConsumerState<_HojaBoveda> {
           const TituloHoja(
             'Crear la Bóveda',
             apoyo:
-                'La caja de la empresa: no es de nadie y solo guarda efectivo. Una sola.',
+                'El efectivo de la empresa: no es de nadie y aquí llega lo de los cierres de caja. Una sola.',
           ),
           if (_error != null) ...[
             AppAlerta(_error!),
@@ -454,7 +439,7 @@ class _TarjetaCaja extends StatelessWidget {
             icon: Icon(
               c.activo ? Icons.block : Icons.check_circle_outline,
               size: 18,
-              color: c.activo ? Colores.advertencia : Colores.exito,
+              color: Colores.advertencia,
             ),
           ),
       ],

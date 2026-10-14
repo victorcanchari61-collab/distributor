@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
+import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
-import '../../../compartido/widgets/app_vacio.dart';
+import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -19,83 +22,88 @@ import '../estado/tms_controlador.dart';
 import 'flota_pagina.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
-/// Los tipos de vehículo: camión, furgoneta, moto.
+/// Los tipos de vehículo: camión, furgoneta, moto. Son la segunda pestaña de
+/// Flota, como en el panel web, y no una pantalla aparte.
 ///
 /// Es catálogo y no una lista fija en el código porque cada distribuidora
 /// reparte con lo que tiene; con una lista fija, añadir "moto de tres ruedas"
 /// obligaría a publicar una versión nueva de la app.
-class TiposVehiculoPagina extends ConsumerWidget {
-  const TiposVehiculoPagina({super.key});
+class TiposVehiculoPestana extends ConsumerWidget {
+  const TiposVehiculoPestana({super.key, required this.pestanas});
+
+  /// Las pestañas de Flota, que van arriba de todo.
+  final Widget pestanas;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final estado = ref.watch(tiposVehiculoProvider);
+    final color = resolverRuta(FlotaPagina.ruta).grupo?.color ?? Colores.marca;
+    final busqueda = ref.watch(busquedaTiposVehiculoProvider);
+    final filtros =
+        ref.watch(estadoTiposVehiculoFiltroProvider) == FiltroEstado.todos
+        ? 0
+        : 1;
+    final puedeEditar = puede(ref, 'tms.flota', Accion.editar);
 
-    return Acento.modulo(
-      'tms',
-      (context) => Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Tipos de vehículo',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-          ),
-          bottom: const PreferredSize(
-            preferredSize: Size.fromHeight(1),
-            child: Divider(height: 1),
-          ),
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _abrirHoja(context, ref, null),
-          icon: const Icon(Icons.add),
-          label: const Text('Nuevo tipo'),
-        ),
-        body: estado.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(Dimen.espacio4),
-              child: AppAlerta(
-                e is ApiExcepcion ? e.texto : 'No pudimos cargar los tipos.',
+    return AppListaPagina<TipoVehiculo>(
+      titulo: 'Flota',
+      ruta: FlotaPagina.ruta,
+      pestanas: pestanas,
+      estado: ref.watch(tiposVehiculoProvider),
+      visibles: ref.watch(tiposVehiculoFiltradosProvider),
+      busqueda: busqueda,
+      onBuscar: (t) =>
+          ref.read(busquedaTiposVehiculoProvider.notifier).state = t,
+      pistaBusqueda: 'Buscar tipo',
+      onRecargar: () => ref.read(tiposVehiculoProvider.notifier).recargar(),
+      onNuevo: puede(ref, 'tms.flota', Accion.crear)
+          ? () => _abrirHoja(context, null)
+          : null,
+      textoNuevo: 'Nuevo tipo',
+      iconoVacio: Icons.build_outlined,
+      singular: 'tipo',
+      plural: 'tipos',
+      tituloVacio: 'Sin tipos de vehículo',
+      detalleVacio: busqueda.isEmpty && filtros == 0
+          ? 'Crea al menos uno para poder dar de alta vehículos.'
+          : 'Ninguno coincide con lo que buscaste.',
+      filtro: BotonFiltros(
+        activos: filtros,
+        color: color,
+        onAbrir: () => mostrarFiltros(
+          context,
+          activos: filtros,
+          onLimpiar: () =>
+              ref.read(estadoTiposVehiculoFiltroProvider.notifier).state =
+                  FiltroEstado.todos,
+          grupos: [
+            Consumer(
+              builder: (context, ref, _) => GrupoFiltro<FiltroEstado>(
+                titulo: 'Estado',
+                valor: ref.watch(estadoTiposVehiculoFiltroProvider),
+                opciones: const [
+                  OpcionFiltro(FiltroEstado.todos, 'Todos'),
+                  OpcionFiltro(FiltroEstado.activos, 'Activos'),
+                  OpcionFiltro(FiltroEstado.inactivos, 'Desactivados'),
+                ],
+                onCambio: (v) =>
+                    ref.read(estadoTiposVehiculoFiltroProvider.notifier).state =
+                        v,
               ),
             ),
-          ),
-          data: (tipos) => tipos.isEmpty
-              ? const AppVacio(
-                  icono: Icons.category_outlined,
-                  titulo: 'Todavía no hay tipos',
-                  detalle:
-                      'Crea al menos uno para poder dar de alta vehículos.',
-                )
-              : RefreshIndicator(
-                  onRefresh: () =>
-                      ref.read(tiposVehiculoProvider.notifier).recargar(),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(Dimen.espacio4),
-                    itemCount: tipos.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: Dimen.espacio3),
-                    itemBuilder: (_, i) => _Tarjeta(
-                      tipo: tipos[i],
-                      onVer: () => _verDetalle(context, tipos[i]),
-                      onEditar: puede(ref, 'tms.flota', Accion.editar)
-                          ? () => _abrirHoja(context, ref, tipos[i])
-                          : null,
-                      onEstado: puede(ref, 'tms.flota', Accion.editar)
-                          ? () => _cambiarEstado(context, ref, tipos[i])
-                          : null,
-                    ),
-                  ),
-                ),
+          ],
         ),
+      ),
+      fila: (context, tipo) => _Tarjeta(
+        tipo: tipo,
+        color: color,
+        onVer: () => _verDetalle(context, tipo, color),
+        onEditar: puedeEditar ? () => _abrirHoja(context, tipo) : null,
+        onEstado: puedeEditar ? () => _cambiarEstado(context, ref, tipo) : null,
       ),
     );
   }
 
-  Future<void> _abrirHoja(
-    BuildContext context,
-    WidgetRef ref,
-    TipoVehiculo? tipo,
-  ) {
+  Future<void> _abrirHoja(BuildContext context, TipoVehiculo? tipo) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -106,7 +114,8 @@ class TiposVehiculoPagina extends ConsumerWidget {
           top: Radius.circular(Dimen.radioPanel),
         ),
       ),
-      builder: (_) => _HojaTipo(tipo: tipo),
+      // La hoja cuelga del Navigator y no hereda el acento del modulo.
+      builder: (_) => Acento.modulo('tms', (_) => _HojaTipo(tipo: tipo)),
     );
   }
 
@@ -154,11 +163,15 @@ class TiposVehiculoPagina extends ConsumerWidget {
   ///
   /// Existe para poder consultar el tipo sin abrir la hoja de edicion, donde
   /// un toque de mas guarda cambios que nadie queria hacer.
-  Future<void> _verDetalle(BuildContext context, TipoVehiculo tipo) {
+  Future<void> _verDetalle(
+    BuildContext context,
+    TipoVehiculo tipo,
+    Color color,
+  ) {
     return mostrarDetalle(
       context,
-      icono: Icons.category_outlined,
-      color: Acento.de(context),
+      icono: Icons.build_outlined,
+      color: color,
       titulo: tipo.nombre,
       subtitulo: tipo.descripcion,
       estado: insigniaActivo(tipo.activo),
@@ -185,12 +198,14 @@ class TiposVehiculoPagina extends ConsumerWidget {
 class _Tarjeta extends StatelessWidget {
   const _Tarjeta({
     required this.tipo,
+    required this.color,
     required this.onVer,
     this.onEditar,
     this.onEstado,
   });
 
   final TipoVehiculo tipo;
+  final Color color;
   final VoidCallback onVer;
   final VoidCallback? onEditar;
   final VoidCallback? onEstado;
@@ -198,8 +213,8 @@ class _Tarjeta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppTarjetaRegistro(
-      icono: Icons.category_outlined,
-      color: Acento.de(context),
+      icono: Icons.build_outlined,
+      color: color,
       titulo: tipo.nombre,
       campos: [
         CampoDetalle('Descripción', tipo.descripcion),

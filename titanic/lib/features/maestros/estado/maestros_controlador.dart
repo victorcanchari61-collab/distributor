@@ -345,6 +345,73 @@ final unidadesProvider = FutureProvider.autoDispose<List<UnidadMedida>>(
   (ref) => ref.watch(maestrosApiProvider).unidades(),
 );
 
+/// Las pestañas de la pantalla de Productos, las mismas del panel web: los
+/// catálogos de apoyo viven ahí y no tienen entrada propia en el menú.
+///
+/// Las pestañas de catálogo leen los mismos proveedores de arriba: traen todo
+/// (activos y desactivados, con cuántos productos los usan) y el puente de
+/// tiempo real ya los refresca cuando alguien los cambia desde otro equipo.
+enum PestanaProductos { productos, categorias, marcas, unidades }
+
+/// La pestaña abierta. `autoDispose`: al volver a entrar se abre en
+/// Productos, como en la web.
+final pestanaProductosProvider = StateProvider.autoDispose(
+  (ref) => PestanaProductos.productos,
+);
+
+// --- Unidades de medida (pestaña de Productos) ---
+
+final busquedaUnidadesProvider = StateProvider.autoDispose((ref) => '');
+
+/// Filtros de la pestaña de unidades, los mismos de las columnas de la tabla
+/// web. Null es "todas": la web las lista todas, activas o no.
+final tipoUnidadFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+/// null = todas, true = admiten decimales, false = no.
+final fraccionableFiltroProvider = StateProvider.autoDispose<bool?>(
+  (ref) => null,
+);
+
+/// null = todas, true = activas, false = desactivadas.
+final activoUnidadFiltroProvider = StateProvider.autoDispose<bool?>(
+  (ref) => null,
+);
+
+final filtrosUnidadesActivosProvider = Provider.autoDispose((ref) {
+  var n = 0;
+  if (ref.watch(tipoUnidadFiltroProvider) != null) n++;
+  if (ref.watch(fraccionableFiltroProvider) != null) n++;
+  if (ref.watch(activoUnidadFiltroProvider) != null) n++;
+  return n;
+});
+
+/// Unidades que quedan tras aplicar buscador y filtros.
+final unidadesFiltradasProvider = Provider.autoDispose<List<UnidadMedida>>((
+  ref,
+) {
+  final todas =
+      ref.watch(unidadesProvider).valueOrNull ?? const <UnidadMedida>[];
+  final texto = ref.watch(busquedaUnidadesProvider).trim().toLowerCase();
+  final tipo = ref.watch(tipoUnidadFiltroProvider);
+  final fraccionable = ref.watch(fraccionableFiltroProvider);
+  final activo = ref.watch(activoUnidadFiltroProvider);
+
+  return todas
+      .where((u) => tipo == null || u.tipo == tipo)
+      .where((u) => fraccionable == null || u.fraccionable == fraccionable)
+      .where((u) => activo == null || u.activo == activo)
+      .where(
+        (u) =>
+            texto.isEmpty ||
+            '${u.codigo} ${u.nombre} ${TipoUnidad.etiqueta(u.tipo)}'
+                .toLowerCase()
+                .contains(texto),
+      )
+      .toList();
+});
+
 // --- Productos ---
 
 final busquedaProductosProvider = StateProvider.autoDispose((ref) => '');

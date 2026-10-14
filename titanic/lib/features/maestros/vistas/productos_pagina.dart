@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_catalogo_simple.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/permisos.dart';
@@ -19,9 +21,25 @@ import '../datos/catalogo.dart';
 import '../datos/producto.dart';
 import '../estado/maestros_controlador.dart';
 import 'producto_formulario.dart';
+import 'unidades_pestana.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
-/// Listado de productos.
+/// Recarga un catálogo de apoyo y espera la lista nueva.
+Future<void> _recargarCatalogo(
+  WidgetRef ref,
+  AutoDisposeFutureProvider<Object?> provider,
+) async {
+  ref.invalidate(provider);
+  try {
+    await ref.read(provider.future);
+  } catch (_) {
+    // El fallo ya se ve en la pantalla, con su botón de reintentar.
+  }
+}
+
+/// Productos, con sus catálogos de apoyo en pestañas: Productos, Categorías,
+/// Marcas y Unidades, igual que el panel web. Cada pestaña muestra cuántos
+/// registros tiene.
 class ProductosPagina extends ConsumerWidget {
   const ProductosPagina({super.key});
 
@@ -30,6 +48,144 @@ class ProductosPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
+    final pestana = ref.watch(pestanaProductosProvider);
+
+    // Las mismas pestañas van arriba de cada vista, para que no se muevan al
+    // cambiar de una a otra.
+    final pestanas = AppPestanas<PestanaProductos>(
+      activa: pestana,
+      onCambio: (p) => ref.read(pestanaProductosProvider.notifier).state = p,
+      pestanas: [
+        Pestana(
+          PestanaProductos.productos,
+          'Productos',
+          icono: Icons.inventory_2_outlined,
+          contador: ref.watch(productosProvider).valueOrNull?.length,
+        ),
+        Pestana(
+          PestanaProductos.categorias,
+          'Categorías',
+          icono: Icons.category_outlined,
+          contador: ref.watch(categoriasProvider).valueOrNull?.length,
+        ),
+        Pestana(
+          PestanaProductos.marcas,
+          'Marcas',
+          icono: Icons.sell_outlined,
+          contador: ref.watch(marcasProvider).valueOrNull?.length,
+        ),
+        Pestana(
+          PestanaProductos.unidades,
+          'Unidades',
+          icono: Icons.straighten_outlined,
+          contador: ref.watch(unidadesProvider).valueOrNull?.length,
+        ),
+      ],
+    );
+
+    return switch (pestana) {
+      PestanaProductos.productos => _productos(context, ref, color, pestanas),
+      PestanaProductos.categorias => _categorias(ref, color, pestanas),
+      PestanaProductos.marcas => _marcas(ref, color, pestanas),
+      PestanaProductos.unidades => UnidadesPestana(
+        titulo: 'Productos',
+        ruta: ruta,
+        pestanas: pestanas,
+      ),
+    };
+  }
+
+  /// Categorías: nombre, descripción y cuántos productos la usan.
+  Widget _categorias(WidgetRef ref, Color color, Widget pestanas) {
+    final api = ref.read(maestrosApiProvider);
+    // El acento se declara aquí: el catálogo lo lee en su propio build, por
+    // encima del AppShell que lo pondría.
+    return Acento(
+      color: color,
+      child: AppCatalogoSimple(
+        // Con clave: sin ella Categorías y Marcas comparten el estado (y el
+        // texto del buscador) al pasar de una a otra.
+        key: const ValueKey(PestanaProductos.categorias),
+        titulo: 'Productos',
+        ruta: ruta,
+        pestanas: pestanas,
+        estado: ref
+            .watch(categoriasProvider)
+            .whenData(
+              (lista) => [
+                for (final c in lista)
+                  FilaCatalogo(
+                    id: c.id,
+                    nombre: c.nombre,
+                    descripcion: c.descripcion,
+                    activo: c.activo,
+                    usos: c.productos,
+                  ),
+              ],
+            ),
+        singular: 'categoría',
+        plural: 'categorías',
+        icono: Icons.category_outlined,
+        conDescripcion: true,
+        onRecargar: () => _recargarCatalogo(ref, categoriasProvider),
+        onCrear: (cuerpo) => api.crearCategoria(cuerpo),
+        onActualizar: (id, cuerpo) => api.actualizarCategoria(id, cuerpo),
+        onEliminar: (id) => api.eliminarCategoria(id),
+        puedeCrear: puede(ref, 'maestros.productos', Accion.crear),
+        puedeEditar: puede(ref, 'maestros.productos', Accion.editar),
+        puedeEliminar: puede(ref, 'maestros.productos', Accion.eliminar),
+      ),
+    );
+  }
+
+  /// Marcas: solo el nombre, sin descripción, como en la web.
+  Widget _marcas(WidgetRef ref, Color color, Widget pestanas) {
+    final api = ref.read(maestrosApiProvider);
+    return Acento(
+      color: color,
+      child: AppCatalogoSimple(
+        key: const ValueKey(PestanaProductos.marcas),
+        titulo: 'Productos',
+        ruta: ruta,
+        pestanas: pestanas,
+        estado: ref
+            .watch(marcasProvider)
+            .whenData(
+              (lista) => [
+                for (final m in lista)
+                  FilaCatalogo(
+                    id: m.id,
+                    nombre: m.nombre,
+                    activo: m.activo,
+                    usos: m.productos,
+                  ),
+              ],
+            ),
+        singular: 'marca',
+        plural: 'marcas',
+        icono: Icons.sell_outlined,
+        onRecargar: () => _recargarCatalogo(ref, marcasProvider),
+        // La marca solo lleva nombre (y activo al actualizar).
+        onCrear: (cuerpo) => api.crearMarca({'nombre': cuerpo['nombre']}),
+        onActualizar: (id, cuerpo) => api.actualizarMarca(id, {
+          'nombre': cuerpo['nombre'],
+          'activo': cuerpo['activo'],
+        }),
+        onEliminar: (id) => api.eliminarMarca(id),
+        puedeCrear: puede(ref, 'maestros.productos', Accion.crear),
+        puedeEditar: puede(ref, 'maestros.productos', Accion.editar),
+        puedeEliminar: puede(ref, 'maestros.productos', Accion.eliminar),
+      ),
+    );
+  }
+
+  /// El listado de productos de siempre, como primera pestaña.
+  Widget _productos(
+    BuildContext context,
+    WidgetRef ref,
+    Color color,
+    Widget pestanas,
+  ) {
     final todos =
         ref.watch(productosProvider).valueOrNull ?? const <Producto>[];
     final activos = todos.where((p) => p.activo).toList();
@@ -45,6 +201,7 @@ class ProductosPagina extends ConsumerWidget {
     return AppListaPagina<Producto>(
       titulo: 'Productos',
       ruta: ruta,
+      pestanas: pestanas,
       estado: ref.watch(productosProvider),
       visibles: ref.watch(productosFiltradosProvider),
       busqueda: ref.watch(busquedaProductosProvider),
@@ -330,7 +487,7 @@ class _TarjetaProducto extends StatelessWidget {
             icon: Icon(
               producto.activo ? Icons.block : Icons.check_circle_outline,
               size: 18,
-              color: producto.activo ? Colores.advertencia : Colores.exito,
+              color: Colores.advertencia,
             ),
           ),
       ],
