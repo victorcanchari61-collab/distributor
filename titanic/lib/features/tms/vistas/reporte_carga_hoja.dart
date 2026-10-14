@@ -193,12 +193,6 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
                           ],
                           onCambio: (v) => setState(() => _corte = v ?? 0),
                         ),
-                        if (_corte > 1)
-                          const _NotaCorte(
-                            'Aumentos: sale solo lo que se agregó en esa franja —lo que subió de '
-                            'cantidad, los productos y los pedidos nuevos—, para sumarlo a lo que '
-                            'ya se cargó. Lo que bajó sale en negativo.',
-                          ),
                         const SizedBox(height: Dimen.espacio4),
                       ],
                       if (opciones.mercados.isNotEmpty) ...[
@@ -314,25 +308,6 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Qué trae el corte elegido: el nombre solo no dice que los aumentos salen
-/// aparte de lo que ya subió al camión.
-class _NotaCorte extends StatelessWidget {
-  const _NotaCorte(this.texto);
-
-  final String texto;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: Dimen.espacio2),
-      child: Text(
-        texto,
-        style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
       ),
     );
   }

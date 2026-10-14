@@ -80,20 +80,12 @@ export function AccionCargaDespacho({ id, numero }: Props) {
           {!opciones && !error && <p className="py-6 text-center text-sm text-ink-soft">Cargando...</p>}
           {opciones && (
             <div className="flex flex-col gap-5">
-              <div className="flex flex-col gap-1.5">
-                <Desplegable
-                  label="Corte de horario"
-                  value={corte}
-                  onChange={(v) => setCorte(Number(v))}
-                  options={opciones.cortes.map((c) => ({ value: c.codigo, label: c.nombre }))}
-                />
-                {corte > 1 && (
-                  <p className="text-xs text-ink-soft">
-                    Aumentos: sale solo lo que se agregó en esa franja —lo que subió de cantidad, los productos y los
-                    pedidos nuevos—, para sumarlo a lo que ya se cargó. Lo que bajó sale en negativo.
-                  </p>
-                )}
-              </div>
+              <Desplegable
+                label="Corte de horario"
+                value={corte}
+                onChange={(v) => setCorte(Number(v))}
+                options={opciones.cortes.map((c) => ({ value: c.codigo, label: c.nombre }))}
+              />
 
               <Grupo
                 titulo="Mercados"
