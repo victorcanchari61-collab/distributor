@@ -195,7 +195,8 @@ public static class CatalogoPermisos
 
             // --- RR. HH. ---
             // La gente que trabaja en el negocio. No se importa: son pocos y se dan de alta a mano.
-            ["rrhh.empleados"] = Catalogo,
+            // Exportar: el padrón de empleados en PDF.
+            ["rrhh.empleados"] = [.. Catalogo, Accion.Exportar],
             /*
              * Un registro por empleado y día. Se corrige o se anula (marcado
              * por error), no se borra: es lo que sostiene el historial. Lleva
@@ -206,10 +207,11 @@ public static class CatalogoPermisos
             ["rrhh.asistencia"] = [.. Documento, Accion.Eliminar],
             // El pago semanal: armarla y pagarla (crear), ajustar bonos y
             // descuentos (editar), y anular una pagada por error.
-            // Exportar: las boletas de pago en PDF.
+            // Exportar: las boletas de pago y la planilla de la semana en PDF.
             ["rrhh.planilla"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Exportar],
             // Plata a cuenta del sueldo: se da (crear), se cambia cómo se descuenta (editar) o se anula.
-            ["rrhh.adelantos"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular],
+            // Exportar: el reporte de adelantos en PDF.
+            ["rrhh.adelantos"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Exportar],
 
             // --- Configuración ---
             ["config.usuarios"] = Catalogo,

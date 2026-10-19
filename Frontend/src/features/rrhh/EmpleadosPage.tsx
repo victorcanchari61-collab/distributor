@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
-import { BadgeCheck, IdCard, Pencil, Plus, ShieldCheck, ShieldOff, Trash2, UserRound, Users } from 'lucide-react'
+import { BadgeCheck, FileText, IdCard, Pencil, Plus, ShieldCheck, ShieldOff, Trash2, UserRound, Users } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -11,6 +11,7 @@ import {
   Modal,
   RowAction,
   StatCard,
+  VisorReportePdf,
   useConfirmacion,
   useToast,
 } from '../../components/ui'
@@ -62,6 +63,8 @@ export function EmpleadosPage() {
   const [guardando, setGuardando] = useState(false)
   const [consultando, setConsultando] = useState(false)
   const { confirmar, dialogo } = useConfirmacion()
+  // El reporte en PDF, en el visor antes de imprimir.
+  const [reporte, setReporte] = useState(false)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -284,11 +287,18 @@ export function EmpleadosPage() {
       title="Empleados"
       description="Quién trabaja en el negocio."
       actions={
-        puede('rrhh.empleados', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo empleado
-          </Button>
-        ) : undefined
+        <>
+          {puede('rrhh.empleados', 'exportar') && (
+            <Button size="sm" variant="secondary" onClick={() => setReporte(true)} iconRight={<FileText size={15} />}>
+              PDF
+            </Button>
+          )}
+          {puede('rrhh.empleados', 'crear') && (
+            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
+              Nuevo empleado
+            </Button>
+          )}
+        </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -478,6 +488,14 @@ export function EmpleadosPage() {
         </div>
       </Modal>
 
+      {reporte && (
+        <VisorReportePdf
+          ruta={empleadoApi.rutaPdf}
+          titulo="Padrón de empleados"
+          nombreArchivo="empleados.pdf"
+          onCerrar={() => setReporte(false)}
+        />
+      )}
       {dialogo}
     </ListPage>
   )

@@ -9,6 +9,7 @@ import {
   Clock,
   Flag,
   MessageSquare,
+  FileText,
   Pencil,
   Plus,
   Table2,
@@ -29,6 +30,7 @@ import {
   StatCard,
   SysDataTable,
   Tabs,
+  VisorReportePdf,
   cn,
   useConfirmacion,
   useToast,
@@ -266,6 +268,7 @@ export function AsistenciaPage() {
   const [guardando, setGuardando] = useState(false)
   const [feriadosAbierto, setFeriadosAbierto] = useState(false)
   const [paseFecha, setPaseFecha] = useState<string | null>(null)
+  const [reporte, setReporte] = useState(false)
 
   const desde = fechaLocal(new Date(cursor.getFullYear(), cursor.getMonth(), 1))
   const hasta = fechaLocal(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0))
@@ -473,11 +476,18 @@ export function AsistenciaPage() {
         title="Asistencia"
         description="Quién vino, quién faltó y quién llegó tarde."
         actions={
-          puede('rrhh.asistencia', 'crear') ? (
-            <Button size="sm" onClick={() => abrirNuevo()} iconRight={<Plus size={15} />}>
-              Nueva marca
-            </Button>
-          ) : undefined
+          <>
+            {puede('rrhh.asistencia', 'exportar') && (
+              <Button size="sm" variant="secondary" onClick={() => setReporte(true)} iconRight={<FileText size={15} />}>
+                PDF del mes
+              </Button>
+            )}
+            {puede('rrhh.asistencia', 'crear') && (
+              <Button size="sm" onClick={() => abrirNuevo()} iconRight={<Plus size={15} />}>
+                Nueva marca
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -815,6 +825,16 @@ export function AsistenciaPage() {
       </Modal>
 
       <FeriadosModal open={feriadosAbierto} onClose={() => setFeriadosAbierto(false)} />
+
+      {/* El mes que muestra el calendario y, si hay uno elegido, solo ese empleado. */}
+      {reporte && (
+        <VisorReportePdf
+          ruta={asistenciaApi.rutaPdf(desde, hasta, Number(empleadoFiltro) || undefined)}
+          titulo={`Asistencia de ${MESES[cursor.getMonth()].toLowerCase()} ${cursor.getFullYear()}`}
+          nombreArchivo={`asistencia-${desde.slice(0, 7)}.pdf`}
+          onCerrar={() => setReporte(false)}
+        />
+      )}
 
       {paseFecha && (
         <PaseListaModal

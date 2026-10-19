@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Ban, CalendarClock, Eye, HandCoins, Plus, Users, Wallet } from 'lucide-react'
+import { Ban, CalendarClock, Eye, FileText, HandCoins, Plus, Users, Wallet } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -11,6 +11,7 @@ import {
   Modal,
   RowAction,
   StatCard,
+  VisorReportePdf,
   useConfirmacion,
   useToast,
 } from '../../components/ui'
@@ -46,6 +47,8 @@ export function AdelantosPage() {
   const { puede } = usePermisos()
   const toast = useToast()
   const { confirmar, dialogo } = useConfirmacion()
+  // El reporte en PDF, en el visor antes de imprimir.
+  const [reporte, setReporte] = useState(false)
   const [adelantos, setAdelantos] = useState<AdelantoFila[]>([])
   const [resumen, setResumen] = useState<ResumenAdelantos | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -145,11 +148,18 @@ export function AdelantosPage() {
       title="Adelantos"
       description="Plata a cuenta del sueldo, que se descuenta en la planilla."
       actions={
-        puede('rrhh.adelantos', 'crear') ? (
-          <Button size="sm" onClick={() => setNuevoAbierto(true)} iconRight={<Plus size={15} />}>
-            Nuevo adelanto
-          </Button>
-        ) : undefined
+        <>
+          {puede('rrhh.adelantos', 'exportar') && (
+            <Button size="sm" variant="secondary" onClick={() => setReporte(true)} iconRight={<FileText size={15} />}>
+              PDF
+            </Button>
+          )}
+          {puede('rrhh.adelantos', 'crear') && (
+            <Button size="sm" onClick={() => setNuevoAbierto(true)} iconRight={<Plus size={15} />}>
+              Nuevo adelanto
+            </Button>
+          )}
+        </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -211,6 +221,14 @@ export function AdelantosPage() {
         />
       )}
       {viendoId !== null && <DetalleModal id={viendoId} onClose={() => setViendoId(null)} />}
+      {reporte && (
+        <VisorReportePdf
+          ruta={adelantoApi.rutaPdf}
+          titulo="Adelantos y préstamos"
+          nombreArchivo="adelantos.pdf"
+          onCerrar={() => setReporte(false)}
+        />
+      )}
       {dialogo}
     </ListPage>
   )

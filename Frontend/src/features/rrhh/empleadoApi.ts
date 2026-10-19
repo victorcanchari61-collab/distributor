@@ -87,6 +87,9 @@ export const empleadoApi = {
 
   /** Borrado definitivo. El backend lo rechaza si una cuenta usa la ficha. */
   remove: (id: number) => api.del<void>(`/empleado/${id}`),
+
+  /** El padrón de empleados en PDF: activos y, aparte, cesados. */
+  rutaPdf: '/empleado/pdf',
 }
 
 /**

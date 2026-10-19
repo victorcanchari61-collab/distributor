@@ -83,4 +83,8 @@ export const asistenciaApi = {
 
   /** Deja sin efecto una marca hecha por error. No se borra: queda el historial. */
   anular: (id: number) => api.patch<AsistenciaResponse>(`/asistencia/${id}/anular`),
+
+  /** La asistencia del mes en cuadro (empleados por días); con empleado, solo esa persona. */
+  rutaPdf: (desde: string, hasta: string, empleadoId?: number) =>
+    `/asistencia/pdf?desde=${desde}&hasta=${hasta}${empleadoId ? `&empleadoId=${empleadoId}` : ''}`,
 }

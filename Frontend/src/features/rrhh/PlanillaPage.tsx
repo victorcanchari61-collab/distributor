@@ -325,6 +325,22 @@ export function PlanillaPage() {
                 Boletas
               </Button>
             )}
+            {planilla && planilla.detalle.length > 0 && puede('rrhh.planilla', 'exportar') && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() =>
+                  setBoletas({
+                    ruta: planillaApi.rutaPlanilla(planilla.id),
+                    titulo: `Planilla del ${fechaCorta(planilla.desde)} al ${fechaCorta(planilla.hasta)}`,
+                    nombre: `planilla-${planilla.desde.slice(0, 10)}.pdf`,
+                  })
+                }
+                iconRight={<FileText size={15} />}
+              >
+                Planilla PDF
+              </Button>
+            )}
             {planilla && puede('rrhh.planilla', 'anular') && (
               <Button size="sm" variant="secondary" onClick={() => anular(planilla)} iconRight={<Ban size={15} />}>
                 Anular

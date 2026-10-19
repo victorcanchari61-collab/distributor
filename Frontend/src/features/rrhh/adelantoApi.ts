@@ -80,6 +80,9 @@ export const adelantoApi = {
   cambiarPlan: (id: number, body: PlanAdelantoRequest) => api.put<AdelantoResponse>(`/adelanto/${id}/plan`, body),
   /** Solo si todavía no se descontó nada: la plata vuelve a la cuenta de donde salió. */
   anular: (id: number) => api.patch<AdelantoResponse>(`/adelanto/${id}/anular`),
+
+  /** Los adelantos en PDF: lo que falta descontar y lo descontado en cada planilla. */
+  rutaPdf: '/adelanto/pdf',
 }
 
 /** El lunes de la semana de esa fecha (YYYY-MM-DD). */

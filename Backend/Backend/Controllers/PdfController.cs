@@ -83,6 +83,30 @@ public class PdfController(IPdfService pdf) : ControllerBase
     public async Task<IActionResult> Boletas(int id, [FromQuery] int? empleadoId) =>
         Archivo(await pdf.BoletasPlanillaAsync(id, empleadoId));
 
+    /// <summary>La planilla de la semana en una hoja, para firmar el pago.</summary>
+    [HttpGet("api/planilla/{id:int}/pdf/planilla")]
+    [Permiso("rrhh.planilla", Accion.Exportar)]
+    public async Task<IActionResult> Planilla(int id) =>
+        Archivo(await pdf.PlanillaAsync(id));
+
+    /// <summary>El padrón de empleados.</summary>
+    [HttpGet("api/empleado/pdf")]
+    [Permiso("rrhh.empleados", Accion.Exportar)]
+    public async Task<IActionResult> Empleados() =>
+        Archivo(await pdf.EmpleadosAsync());
+
+    /// <summary>La asistencia de un mes en cuadro; con <c>empleadoId</c>, solo esa persona.</summary>
+    [HttpGet("api/asistencia/pdf")]
+    [Permiso("rrhh.asistencia", Accion.Exportar)]
+    public async Task<IActionResult> Asistencia([FromQuery] DateTime desde, [FromQuery] DateTime hasta, [FromQuery] int? empleadoId) =>
+        Archivo(await pdf.AsistenciaMesAsync(desde, hasta, empleadoId));
+
+    /// <summary>Los adelantos y préstamos a los trabajadores, con lo que falta descontar.</summary>
+    [HttpGet("api/adelanto/pdf")]
+    [Permiso("rrhh.adelantos", Accion.Exportar)]
+    public async Task<IActionResult> Adelantos() =>
+        Archivo(await pdf.AdelantosAsync());
+
     /// <summary>
     /// Las novedades de entrega, con los mismos filtros de la pantalla.
     ///

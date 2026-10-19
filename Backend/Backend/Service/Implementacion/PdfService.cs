@@ -27,7 +27,11 @@ public class PdfService(
     IEmpresaService empresas,
     IClienteRepository clientes,
     IProveedorRepository proveedores,
-    IPlanillaService planillas) : IPdfService
+    IPlanillaService planillas,
+    IEmpleadoService empleados,
+    IAsistenciaService asistencia,
+    IFeriadoService feriados,
+    IAdelantoService adelantos) : IPdfService
 {
     public async Task<(byte[], string)> BoletasPlanillaAsync(int planillaId, int? empleadoId)
     {
@@ -46,6 +50,66 @@ public class PdfService(
         var contenido = new BoletasPlanillaA4(await empresas.GetActivaAsync(), planilla, detalles).GeneratePdf();
         var quien = detalles.Count == 1 ? $"-{Archivo(detalles[0].Empleado)}" : string.Empty;
         return (contenido, $"boleta{(detalles.Count == 1 ? "" : "s")}{quien}-{planilla.Desde:yyyy-MM-dd}.pdf");
+    }
+
+    /// <summary>El padrón de empleados: los activos y, aparte, los cesados.</summary>
+    public async Task<(byte[], string)> EmpleadosAsync()
+    {
+        var lista = (await empleados.GetAllAsync()).ToList();
+        var contenido = new EmpleadosA4(await empresas.GetActivaAsync(), lista, Zona.ALocal(DateTime.UtcNow)).GeneratePdf();
+        return (contenido, $"empleados-{Zona.Hoy:yyyy-MM-dd}.pdf");
+    }
+
+    /// <summary>
+    /// La asistencia de un mes en cuadro. Entra quien trabajaba algún día de esas fechas o tiene
+    /// una marca en ellas; con <paramref name="empleadoId"/>, solo esa persona.
+    /// </summary>
+    public async Task<(byte[], string)> AsistenciaMesAsync(DateTime desde, DateTime hasta, int? empleadoId)
+    {
+        desde = desde.Date;
+        hasta = hasta.Date;
+        if (hasta < desde) throw new BadRequestException("La fecha final es anterior a la inicial");
+        if ((hasta - desde).Days > 31) throw new BadRequestException("El reporte de asistencia es de un mes como máximo");
+
+        var marcas = (await asistencia.ListarAsync(desde, hasta, empleadoId)).Where(m => !m.Anulado).ToList();
+        var conMarca = marcas.Select(m => m.EmpleadoId).ToHashSet();
+
+        var gente = (await asistencia.EmpleadosAsync())
+            .Where(e => empleadoId is null || e.Id == empleadoId)
+            .Where(e => conMarca.Contains(e.Id)
+                        || ((e.Activo || e.FechaCese is not null)
+                            && (e.FechaIngreso is null || e.FechaIngreso.Value.Date <= hasta)
+                            && (e.FechaCese is null || e.FechaCese.Value.Date >= desde)))
+            .OrderBy(e => e.NombreCompleto, StringComparer.Create(System.Globalization.CultureInfo.GetCultureInfo("es-PE"), true))
+            .ToList();
+
+        var delMes = (await feriados.GetAllAsync()).Where(f => f.Fecha.Date >= desde && f.Fecha.Date <= hasta).ToList();
+        var solo = empleadoId is null ? null : gente.FirstOrDefault()?.NombreCompleto;
+
+        var contenido = new AsistenciaMesA4(
+            await empresas.GetActivaAsync(), desde, hasta, gente, marcas, delMes, solo, Zona.Hoy, Zona.ALocal(DateTime.UtcNow)).GeneratePdf();
+
+        var quien = solo is null ? string.Empty : $"-{Archivo(solo)}";
+        return (contenido, $"asistencia-{desde:yyyy-MM}{quien}.pdf");
+    }
+
+    /// <summary>La planilla de la semana en una hoja, con la casilla de firma de cada trabajador.</summary>
+    public async Task<(byte[], string)> PlanillaAsync(int planillaId)
+    {
+        var planilla = await planillas.GetAsync(planillaId);
+        var contenido = new PlanillaA4(await empresas.GetActivaAsync(), planilla, Zona.ALocal(DateTime.UtcNow)).GeneratePdf();
+        return (contenido, $"planilla-{planilla.Desde:yyyy-MM-dd}.pdf");
+    }
+
+    /// <summary>Los adelantos vigentes y descontados, con lo descontado en cada planilla.</summary>
+    public async Task<(byte[], string)> AdelantosAsync()
+    {
+        var detalle = new List<AdelantoResponse>();
+        foreach (var fila in (await adelantos.ListarAsync()).Where(a => a.Estado != EstadoAdelanto.Anulado))
+            detalle.Add(await adelantos.GetAsync(fila.Id));
+
+        var contenido = new AdelantosA4(await empresas.GetActivaAsync(), detalle, Zona.ALocal(DateTime.UtcNow)).GeneratePdf();
+        return (contenido, $"adelantos-{Zona.Hoy:yyyy-MM-dd}.pdf");
     }
 
     /// <summary>Un nombre que sirve en un archivo: sin tildes raras ni espacios.</summary>

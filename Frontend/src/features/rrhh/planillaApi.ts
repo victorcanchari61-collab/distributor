@@ -90,4 +90,6 @@ export const planillaApi = {
   /** La ruta de las boletas en PDF: de todos, o de un empleado. */
   rutaBoletas: (id: number, empleadoId?: number) =>
     `/planilla/${id}/pdf${empleadoId ? `?empleadoId=${empleadoId}` : ''}`,
+  /** La planilla de la semana en una hoja, con la casilla de firma de cada trabajador. */
+  rutaPlanilla: (id: number) => `/planilla/${id}/pdf/planilla`,
 }
