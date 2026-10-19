@@ -31,7 +31,8 @@ public class PdfService(
     IEmpleadoService empleados,
     IAsistenciaService asistencia,
     IFeriadoService feriados,
-    IAdelantoService adelantos) : IPdfService
+    IAdelantoService adelantos,
+    IReportesService reportes) : IPdfService
 {
     public async Task<(byte[], string)> BoletasPlanillaAsync(int planillaId, int? empleadoId)
     {
@@ -110,6 +111,15 @@ public class PdfService(
 
         var contenido = new AdelantosA4(await empresas.GetActivaAsync(), detalle, Zona.ALocal(DateTime.UtcNow)).GeneratePdf();
         return (contenido, $"adelantos-{Zona.Hoy:yyyy-MM-dd}.pdf");
+    }
+
+    /// <summary>El reporte de un dashboard, con los mismos filtros y vista de la pantalla.</summary>
+    public async Task<(byte[], string)> ReporteTableroAsync(string tablero, ReporteRequest request)
+    {
+        var reporte = await reportes.GenerarAsync(tablero, request);
+        var contenido = new ReporteTableroA4(await empresas.GetActivaAsync(), reporte, Zona.ALocal(DateTime.UtcNow)).GeneratePdf();
+        var cuando = reporte.ConFechas ? $"{reporte.Desde:yyyy-MM-dd}-al-{reporte.Hasta:yyyy-MM-dd}" : $"{Zona.Hoy:yyyy-MM-dd}";
+        return (contenido, $"{tablero}-{reporte.Vista}-{cuando}.pdf");
     }
 
     /// <summary>Un nombre que sirve en un archivo: sin tildes raras ni espacios.</summary>

@@ -23,6 +23,10 @@ class DashboardApi {
   Future<DashboardCobranza> cobranza(DateTime desde, DateTime hasta) async =>
       DashboardCobranza.desdeJson(await _pedir('cobranza', desde, hasta));
 
+  /// GET /api/dashboard/compras?desde=&hasta=
+  Future<DashboardCompras> compras(DateTime desde, DateTime hasta) async =>
+      DashboardCompras.desdeJson(await _pedir('compras', desde, hasta));
+
   /// GET /api/dashboard/inventario — la foto de hoy, sin rango.
   Future<DashboardInventario> inventario() async =>
       DashboardInventario.desdeJson(await _pedir('inventario'));

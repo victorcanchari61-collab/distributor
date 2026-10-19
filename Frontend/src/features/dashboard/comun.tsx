@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { RefreshCw } from 'lucide-react'
-import { Button, DateRangePicker, PageHeader, cn } from '../../components/ui'
+import { BarChart3, FileText, RefreshCw } from 'lucide-react'
+import { Button, DateRangePicker, PageHeader, PestanasVista, Tabs, cn } from '../../components/ui'
 import { SEMAFORO } from '../../components/charts'
 import { ApiError } from '../../lib/apiClient'
 import { desplazarDias, hoyLocal } from '../../lib/fechas'
@@ -168,6 +168,31 @@ export function Encabezado({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Las dos caras de un dashboard: los gráficos para ver de un vistazo y los reportes para ver el
+ * detalle filtrado e imprimirlo. Las pestañas van bajo el título, como en las demás vistas.
+ */
+export function ConReportes({ graficos, reportes }: { graficos: ReactNode; reportes: ReactNode }) {
+  const [vista, setVista] = useState<'graficos' | 'reportes'>('graficos')
+
+  return (
+    <PestanasVista
+      pestanas={
+        <Tabs
+          active={vista}
+          onChange={(id) => setVista(id as 'graficos' | 'reportes')}
+          items={[
+            { id: 'graficos', label: 'Gráficos', icon: <BarChart3 size={15} /> },
+            { id: 'reportes', label: 'Reportes', icon: <FileText size={15} /> },
+          ]}
+        />
+      }
+    >
+      {vista === 'graficos' ? graficos : reportes}
+    </PestanasVista>
   )
 }
 

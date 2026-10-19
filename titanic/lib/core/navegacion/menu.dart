@@ -83,6 +83,12 @@ const menuGrupos = <MenuGrupo>[
         icono: Icons.account_balance_wallet_outlined,
       ),
       MenuItem(
+        id: 'dashboard.compras',
+        pendiente: false,
+        titulo: 'Compras',
+        icono: Icons.shopping_bag_outlined,
+      ),
+      MenuItem(
         id: 'dashboard.inventario',
         pendiente: false,
         titulo: 'Inventario',

@@ -101,6 +101,35 @@ public class PdfController(IPdfService pdf) : ControllerBase
     public async Task<IActionResult> Asistencia([FromQuery] DateTime desde, [FromQuery] DateTime hasta, [FromQuery] int? empleadoId) =>
         Archivo(await pdf.AsistenciaMesAsync(desde, hasta, empleadoId));
 
+    // --- El reporte de cada dashboard, con los mismos filtros y vista de la pantalla ---
+
+    [HttpGet("api/dashboard/ventas/reporte/pdf")]
+    [Permiso("dashboard.ventas", Accion.Exportar)]
+    public Task<IActionResult> ReporteVentas() => ReporteTablero("ventas");
+
+    [HttpGet("api/dashboard/rentabilidad/reporte/pdf")]
+    [Permiso("dashboard.rentabilidad", Accion.Exportar)]
+    public Task<IActionResult> ReporteRentabilidad() => ReporteTablero("rentabilidad");
+
+    [HttpGet("api/dashboard/cobranza/reporte/pdf")]
+    [Permiso("dashboard.cobranza", Accion.Exportar)]
+    public Task<IActionResult> ReporteCobranza() => ReporteTablero("cobranza");
+
+    [HttpGet("api/dashboard/compras/reporte/pdf")]
+    [Permiso("dashboard.compras", Accion.Exportar)]
+    public Task<IActionResult> ReporteCompras() => ReporteTablero("compras");
+
+    [HttpGet("api/dashboard/inventario/reporte/pdf")]
+    [Permiso("dashboard.inventario", Accion.Exportar)]
+    public Task<IActionResult> ReporteInventario() => ReporteTablero("inventario");
+
+    [HttpGet("api/dashboard/reparto/reporte/pdf")]
+    [Permiso("dashboard.reparto", Accion.Exportar)]
+    public Task<IActionResult> ReporteReparto() => ReporteTablero("reparto");
+
+    private async Task<IActionResult> ReporteTablero(string tablero) =>
+        Archivo(await pdf.ReporteTableroAsync(tablero, ReporteRequest.DesdeQuery(Request.Query)));
+
     /// <summary>Los adelantos y préstamos a los trabajadores, con lo que falta descontar.</summary>
     [HttpGet("api/adelanto/pdf")]
     [Permiso("rrhh.adelantos", Accion.Exportar)]

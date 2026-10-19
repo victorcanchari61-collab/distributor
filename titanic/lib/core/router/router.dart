@@ -13,6 +13,7 @@ import '../../features/config/vistas/empresas_pagina.dart';
 import '../../features/config/vistas/roles_pagina.dart';
 import '../../features/config/vistas/usuarios_pagina.dart';
 import '../../features/dashboard/vistas/cobranza_dashboard_pagina.dart';
+import '../../features/dashboard/vistas/compras_dashboard_pagina.dart';
 import '../../features/dashboard/vistas/inventario_dashboard_pagina.dart';
 import '../../features/dashboard/vistas/rentabilidad_dashboard_pagina.dart';
 import '../../features/dashboard/vistas/reparto_dashboard_pagina.dart';
@@ -328,7 +329,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             const PuertaPermiso(child: MotivosNovedadPagina()),
       ),
 
-      // Los cinco dashboards: cada uno con su propio permiso (dashboard.*).
+      // Los seis dashboards: cada uno con su propio permiso (dashboard.*).
       GoRoute(
         path: VentasDashboardPagina.ruta,
         builder: (context, estado) =>
@@ -343,6 +344,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: CobranzaDashboardPagina.ruta,
         builder: (context, estado) =>
             const PuertaPermiso(child: CobranzaDashboardPagina()),
+      ),
+      GoRoute(
+        path: ComprasDashboardPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: ComprasDashboardPagina()),
       ),
       GoRoute(
         path: InventarioDashboardPagina.ruta,
@@ -368,6 +374,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           if (item.ruta != VentasDashboardPagina.ruta &&
               item.ruta != RentabilidadDashboardPagina.ruta &&
               item.ruta != CobranzaDashboardPagina.ruta &&
+              item.ruta != ComprasDashboardPagina.ruta &&
               item.ruta != InventarioDashboardPagina.ruta &&
               item.ruta != RepartoDashboardPagina.ruta &&
               item.ruta != ClientesPagina.ruta &&

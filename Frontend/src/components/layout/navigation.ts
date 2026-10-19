@@ -106,6 +106,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'dashboard.ventas', label: 'Ventas', icon: ShoppingCart },
       { id: 'dashboard.rentabilidad', label: 'Rentabilidad', icon: TrendingUp },
       { id: 'dashboard.cobranza', label: 'Cobranza', icon: Wallet },
+      { id: 'dashboard.compras', label: 'Compras', icon: ShoppingBag },
       { id: 'dashboard.inventario', label: 'Inventario', icon: Boxes },
       { id: 'dashboard.reparto', label: 'Pedidos y reparto', icon: PackageCheck },
     ],

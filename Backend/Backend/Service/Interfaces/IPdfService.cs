@@ -72,6 +72,9 @@ public interface IPdfService
     Task<(byte[] Contenido, string Nombre)> PlanillaAsync(int planillaId);
     Task<(byte[] Contenido, string Nombre)> AdelantosAsync();
 
+    // --- Reportes de los dashboards ---
+    Task<(byte[] Contenido, string Nombre)> ReporteTableroAsync(string tablero, ReporteRequest request);
+
     Task<(byte[] Contenido, string Nombre)> AjusteAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> TransferenciaAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> RecepcionAsync(int id, FormatoPdf formato);

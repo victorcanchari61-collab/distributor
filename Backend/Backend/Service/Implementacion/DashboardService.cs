@@ -21,6 +21,9 @@ public class DashboardService : IDashboardService
     private const string SinVendedor = "Sin asignar";
     private const string SinCategoria = "Sin categoría";
     private const string SinCliente = "Sin cliente";
+    private const string SinProveedor = "Sin proveedor";
+    private const string SinRuta = "Sin ruta";
+    private const string SinUsuario = "Sin usuario";
 
     private readonly AppDbContext _context;
     private readonly IPermisoService _permisos;
@@ -494,6 +497,7 @@ public class DashboardService : IDashboardService
                     n.Fecha,
                     n.ClienteId,
                     Cliente = n.Cliente != null ? n.Cliente.Nombre : null,
+                    Ruta = n.Cliente != null && n.Cliente.Ruta != null ? n.Cliente.Ruta.Nombre : null,
                     Total = n.Detalle.Where(d => !d.Anulado).Sum(d => (decimal?)(d.Cantidad * d.PrecioUnitario)) ?? 0m,
                     Pagado = n.Pagos.Where(p => !p.Anulado).Sum(p => (decimal?)p.Monto) ?? 0m,
                 })
@@ -506,6 +510,7 @@ public class DashboardService : IDashboardService
             {
                 n.ClienteId,
                 Cliente = n.Cliente ?? SinCliente,
+                Ruta = n.Ruta ?? SinRuta,
                 Saldo = n.Total - n.Pagado,
                 Dias = Math.Max(0, (int)(hoy - Zona.DiaDe(n.Fecha)).TotalDays),
             })
@@ -539,7 +544,14 @@ public class DashboardService : IDashboardService
                         && p.NotaVenta!.Estado == EstadoNotaVenta.Confirmada
                         && p.Fecha >= Zona.AUtc(primero)
                         && p.Fecha < Zona.AUtc(ultimo.AddDays(1)))
-            .Select(p => new { p.Fecha, p.Monto, Metodo = p.MetodoPago != null ? p.MetodoPago.Nombre : "Otro" })
+            .Select(p => new
+            {
+                p.Fecha,
+                p.Monto,
+                Metodo = p.MetodoPago != null ? p.MetodoPago.Nombre : "Otro",
+                Cobrador = p.Usuario != null ? p.Usuario.Nombre : null,
+                Credito = p.NotaVenta!.FormaPago == FormaPagoVenta.Credito,
+            })
             .AsNoTracking()
             .ToListAsync();
 
@@ -566,14 +578,60 @@ public class DashboardService : IDashboardService
             })
             .ToList();
 
-        var credito = await _context.NotasVenta
-            .Where(n => n.Estado == EstadoNotaVenta.Confirmada
-                        && n.FormaPago == FormaPagoVenta.Credito
-                        && n.Fecha >= Zona.AUtc(primero)
-                        && n.Fecha < Zona.AUtc(ultimo.AddDays(1)))
+        /*
+         * Cómo se movió la deuda: se parte de lo que se debía al empezar el período
+         * —todo lo fiado antes, menos lo cobrado de eso antes, sumado en MySQL— y
+         * cada día se le suma lo fiado y se le resta lo cobrado de lo fiado. Así
+         * no hace falta traer todo el historial para saber el saldo de cada día.
+         */
+        var inicio = Zona.AUtc(primero);
+        var fin = Zona.AUtc(ultimo.AddDays(1));
+
+        var fiadoAntes = await _context.NotasVenta
+            .Where(n => n.Estado == EstadoNotaVenta.Confirmada && n.FormaPago == FormaPagoVenta.Credito && n.Fecha < inicio)
             .SelectMany(n => n.Detalle)
             .Where(d => !d.Anulado)
             .SumAsync(d => (decimal?)(d.Cantidad * d.PrecioUnitario)) ?? 0m;
+
+        var cobradoAntes = await _context.PagosVenta
+            .Where(p => !p.Anulado
+                        && p.NotaVenta!.Estado == EstadoNotaVenta.Confirmada
+                        && p.NotaVenta.FormaPago == FormaPagoVenta.Credito
+                        && p.Fecha < inicio)
+            .SumAsync(p => (decimal?)p.Monto) ?? 0m;
+
+        var fiadoPorDia = (await _context.NotasVenta
+                .Where(n => n.Estado == EstadoNotaVenta.Confirmada
+                            && n.FormaPago == FormaPagoVenta.Credito
+                            && n.Fecha >= inicio
+                            && n.Fecha < fin)
+                .Select(n => new
+                {
+                    n.Fecha,
+                    Total = n.Detalle.Where(d => !d.Anulado).Sum(d => (decimal?)(d.Cantidad * d.PrecioUnitario)) ?? 0m,
+                })
+                .AsNoTracking()
+                .ToListAsync())
+            .GroupBy(n => Zona.DiaDe(n.Fecha))
+            .ToDictionary(g => g.Key, g => g.Sum(n => n.Total));
+
+        var cobradoFiadoPorDia = cobros
+            .Where(c => c.Credito)
+            .GroupBy(c => Zona.DiaDe(c.Fecha))
+            .ToDictionary(g => g.Key, g => g.Sum(c => c.Monto));
+
+        var saldo = fiadoAntes - cobradoAntes;
+        var evolucion = new List<DashDeudaDia>();
+        for (var i = 0; i < dias; i++)
+        {
+            var dia = primero.AddDays(i);
+            var fiado = fiadoPorDia.GetValueOrDefault(dia);
+            var cobrado = cobradoFiadoPorDia.GetValueOrDefault(dia);
+            saldo += fiado - cobrado;
+            evolucion.Add(new DashDeudaDia { Fecha = dia, Fiado = R2(fiado), Cobrado = R2(cobrado), Saldo = R2(saldo) });
+        }
+
+        var credito = fiadoPorDia.Values.Sum();
 
         return new DashboardCobranzaResponse
         {
@@ -588,7 +646,270 @@ public class DashboardService : IDashboardService
             Metodos = metodos,
             Cobros = serie,
             CreditoOtorgado = R2(credito),
+            Evolucion = evolucion,
+
+            PorRuta = abiertas
+                .GroupBy(a => a.Ruta)
+                .Select(g => new DashItem { Nombre = g.Key, Valor = R2(g.Sum(a => a.Saldo)), Cantidad = g.Select(a => a.ClienteId).Distinct().Count() })
+                .OrderByDescending(i => i.Valor)
+                .ToList(),
+
+            PorCobrador = cobros
+                .GroupBy(c => c.Cobrador ?? SinUsuario)
+                .Select(g => new DashItem { Nombre = g.Key, Valor = R2(g.Sum(c => c.Monto)), Cantidad = g.Count() })
+                .OrderByDescending(i => i.Valor)
+                .Take(8)
+                .ToList(),
+
+            PorMetodo = cobros
+                .GroupBy(c => c.Metodo)
+                .Select(g => new DashItem { Nombre = g.Key, Valor = R2(g.Sum(c => c.Monto)), Cantidad = g.Count() })
+                .OrderByDescending(i => i.Valor)
+                .ToList(),
         };
+    }
+
+    // ----------------------------------------------------------------- Compras
+
+    /// <summary>
+    /// El otro lado de Cobranza: lo que se le debe a los proveedores, lo que se compra y a quién,
+    /// y cómo cambia lo que cuesta cada producto.
+    /// </summary>
+    public async Task<DashboardComprasResponse> ComprasAsync(DateTime? desde, DateTime? hasta)
+    {
+        var (primero, ultimo) = Rango(desde, hasta);
+        var hoy = Zona.Hoy;
+        var dias = (int)(ultimo - primero).TotalDays + 1;
+        var inicio = Zona.AUtc(primero);
+        var fin = Zona.AUtc(ultimo.AddDays(1));
+        var inicioAnterior = Zona.AUtc(primero.AddDays(-dias));
+
+        /*
+         * Lo que se debe: la misma regla de Cuentas por pagar — compra a crédito
+         * no anulada cuyo total, redondeado a centavos, vale más que lo pagado.
+         * Se filtra en MySQL para que solo viajen las compras abiertas, no todo
+         * el historial (ver la nota de Cobranza).
+         */
+        var abiertas = (await _context.Compras
+                .Where(c => c.Estado != EstadoCompra.Anulada && c.FormaPago == FormaPagoCompra.Credito)
+                .Select(c => new
+                {
+                    c.Fecha,
+                    c.ProveedorId,
+                    Proveedor = c.Proveedor != null ? c.Proveedor.Nombre : null,
+                    Total = c.Detalle.Sum(d => (decimal?)(d.Cantidad * d.CostoUnitario)) ?? 0m,
+                    Pagado = c.Pagos.Where(p => !p.Anulado).Sum(p => (decimal?)p.Monto) ?? 0m,
+                })
+                .Where(c => Math.Round(c.Total, 2) > c.Pagado)
+                .AsNoTracking()
+                .ToListAsync())
+            .Select(c => new
+            {
+                c.ProveedorId,
+                Proveedor = c.Proveedor ?? SinProveedor,
+                Saldo = Math.Round(c.Total, 2) - c.Pagado,
+                Dias = Math.Max(0, (int)(hoy - Zona.DiaDe(c.Fecha)).TotalDays),
+            })
+            .ToList();
+
+        var antiguedad = TramosDeuda
+            .Select((t, i) =>
+            {
+                var desdeDias = i == 0 ? 0 : TramosDeuda[i - 1].Hasta + 1;
+                var deTramo = abiertas.Where(a => a.Dias >= desdeDias && a.Dias <= t.Hasta).ToList();
+                return new DashItem { Nombre = t.Nombre, Valor = R2(deTramo.Sum(a => a.Saldo)), Cantidad = deTramo.Count };
+            })
+            .ToList();
+
+        var acreedores = abiertas
+            .GroupBy(a => a.ProveedorId)
+            .Select(g => new DashAcreedor
+            {
+                Proveedor = g.First().Proveedor,
+                Saldo = R2(g.Sum(a => a.Saldo)),
+                Compras = g.Count(),
+                Dias = g.Max(a => a.Dias),
+            })
+            .OrderByDescending(a => a.Saldo)
+            .Take(8)
+            .ToList();
+
+        // Lo que se compró y todavía no llega, lo pida quien lo pida: es una foto de hoy.
+        var porRecibir = await _context.Compras
+            .Where(c => c.Estado == EstadoCompra.Pendiente || c.Estado == EstadoCompra.RecibidaParcial)
+            .SelectMany(c => c.Detalle)
+            .Where(d => d.Cantidad > d.CantidadRecibida)
+            .SumAsync(d => (decimal?)((d.Cantidad - d.CantidadRecibida) * d.CostoUnitario)) ?? 0m;
+
+        // Las compras del período y las del período anterior de igual largo, para comparar.
+        var compras = await _context.Compras
+            .Where(c => c.Estado != EstadoCompra.Anulada && c.Fecha >= inicioAnterior && c.Fecha < fin)
+            .Select(c => new
+            {
+                c.Fecha,
+                c.FormaPago,
+                c.ProveedorId,
+                Proveedor = c.Proveedor != null ? c.Proveedor.Nombre : null,
+                Total = c.Detalle.Sum(d => (decimal?)(d.Cantidad * d.CostoUnitario)) ?? 0m,
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        var delPeriodo = compras.Where(c => c.Fecha >= inicio).ToList();
+
+        var porDia = delPeriodo
+            .GroupBy(c => Zona.DiaDe(c.Fecha))
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var serie = Enumerable.Range(0, dias)
+            .Select(i =>
+            {
+                var dia = primero.AddDays(i);
+                var del = porDia.GetValueOrDefault(dia) ?? [];
+                return new DashCompraDia
+                {
+                    Fecha = dia,
+                    Contado = R2(del.Where(c => c.FormaPago != FormaPagoCompra.Credito).Sum(c => c.Total)),
+                    Credito = R2(del.Where(c => c.FormaPago == FormaPagoCompra.Credito).Sum(c => c.Total)),
+                };
+            })
+            .ToList();
+
+        var porProveedor = delPeriodo
+            .GroupBy(c => c.ProveedorId)
+            .Select(g => new DashItem { Nombre = g.First().Proveedor ?? SinProveedor, Valor = R2(g.Sum(c => c.Total)), Cantidad = g.Count() })
+            .OrderByDescending(i => i.Valor)
+            .Take(8)
+            .ToList();
+
+        var lineas = await _context.Compras
+            .Where(c => c.Estado != EstadoCompra.Anulada && c.Fecha >= inicio && c.Fecha < fin)
+            .SelectMany(c => c.Detalle)
+            .Select(d => new
+            {
+                Categoria = d.Producto!.Categoria != null ? d.Producto.Categoria.Nombre : null,
+                Importe = d.Cantidad * d.CostoUnitario,
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        var porCategoria = lineas
+            .GroupBy(l => l.Categoria ?? SinCategoria)
+            .Select(g => new DashItem { Nombre = g.Key, Valor = R2(g.Sum(l => l.Importe)), Cantidad = g.Count() })
+            .OrderByDescending(i => i.Valor)
+            .ToList();
+
+        // Lo pagado a proveedores en el período, por día y por método.
+        var pagos = await _context.CompraPagos
+            .Where(p => !p.Anulado
+                        && p.Compra!.Estado != EstadoCompra.Anulada
+                        && p.Fecha >= inicio
+                        && p.Fecha < fin)
+            .Select(p => new { p.Fecha, p.Monto, Metodo = p.MetodoPago != null ? p.MetodoPago.Nombre : "Otro" })
+            .AsNoTracking()
+            .ToListAsync();
+
+        var metodos = pagos
+            .GroupBy(p => p.Metodo)
+            .OrderByDescending(g => g.Sum(p => p.Monto))
+            .Select(g => g.Key)
+            .ToList();
+
+        var pagoPorDiaMetodo = pagos
+            .GroupBy(p => (Dia: Zona.DiaDe(p.Fecha), p.Metodo))
+            .ToDictionary(g => g.Key, g => g.Sum(p => p.Monto));
+
+        var seriePagos = Enumerable.Range(0, dias)
+            .Select(i =>
+            {
+                var dia = primero.AddDays(i);
+                return new DashCobroDia
+                {
+                    Fecha = dia,
+                    Valores = metodos.Select(m => R2(pagoPorDiaMetodo.TryGetValue((dia, m), out var v) ? v : 0m)).ToList(),
+                };
+            })
+            .ToList();
+
+        return new DashboardComprasResponse
+        {
+            Desde = primero,
+            Hasta = ultimo,
+            TotalPorPagar = R2(abiertas.Sum(a => a.Saldo)),
+            Cuentas = abiertas.Count,
+            Proveedores = abiertas.Select(a => a.ProveedorId).Distinct().Count(),
+            Antiguedad = antiguedad,
+            Acreedores = acreedores,
+            PorRecibir = R2(porRecibir),
+            Comprado = R2(delPeriodo.Sum(c => c.Total)),
+            CompradoAnterior = R2(compras.Where(c => c.Fecha < inicio).Sum(c => c.Total)),
+            Compras = delPeriodo.Count,
+            CompradoCredito = R2(delPeriodo.Where(c => c.FormaPago == FormaPagoCompra.Credito).Sum(c => c.Total)),
+            PagadoPeriodo = R2(pagos.Sum(p => p.Monto)),
+            Metodos = metodos,
+            Pagos = seriePagos,
+            Serie = serie,
+            PorProveedor = porProveedor,
+            PorCategoria = porCategoria,
+            Costos = await CostosAsync(inicio, fin),
+        };
+    }
+
+    /// <summary>
+    /// Los productos cuyo costo más cambió: lo que costó en su última compra del período contra lo
+    /// que costó en la última de antes. Por unidad base, que es como se guarda el costo: así una
+    /// compra por caja y otra por unidad se comparan con la misma vara.
+    /// </summary>
+    private async Task<List<DashCostoProducto>> CostosAsync(DateTime inicio, DateTime fin)
+    {
+        var comprados = await _context.Compras
+            .Where(c => c.Estado != EstadoCompra.Anulada && c.Fecha >= inicio && c.Fecha < fin)
+            .SelectMany(c => c.Detalle)
+            .Where(d => d.CostoUnitario > 0)
+            .Select(d => d.ProductoId)
+            .Distinct()
+            .ToListAsync();
+
+        if (comprados.Count == 0) return [];
+
+        var historial = await _context.Compras
+            .Where(c => c.Estado != EstadoCompra.Anulada && c.Fecha < fin)
+            .SelectMany(c => c.Detalle.Select(d => new
+            {
+                c.Fecha,
+                CompraId = c.Id,
+                d.ProductoId,
+                Producto = d.Producto!.Nombre,
+                Unidad = d.Producto.UnidadBase != null ? d.Producto.UnidadBase.Nombre : string.Empty,
+                d.CostoUnitario,
+            }))
+            .Where(x => x.CostoUnitario > 0 && comprados.Contains(x.ProductoId))
+            .AsNoTracking()
+            .ToListAsync();
+
+        return historial
+            .GroupBy(x => x.ProductoId)
+            .Select(g =>
+            {
+                var orden = g.OrderByDescending(x => x.Fecha).ThenByDescending(x => x.CompraId).ToList();
+                var actual = orden.First(x => x.Fecha >= inicio);
+                var anterior = orden.FirstOrDefault(x => x.Fecha < inicio);
+                if (anterior is null || anterior.CostoUnitario == actual.CostoUnitario) return null;
+
+                return new DashCostoProducto
+                {
+                    Producto = actual.Producto,
+                    Unidad = actual.Unidad,
+                    CostoAnterior = R2(anterior.CostoUnitario),
+                    CostoActual = R2(actual.CostoUnitario),
+                    Variacion = Math.Round((actual.CostoUnitario - anterior.CostoUnitario) / anterior.CostoUnitario * 100, 1),
+                };
+            })
+            .OfType<DashCostoProducto>()
+            .Where(c => c.Variacion != 0)
+            .OrderByDescending(c => Math.Abs(c.Variacion))
+            .Take(8)
+            .ToList();
     }
 
     // -------------------------------------------------------------- Inventario

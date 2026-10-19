@@ -19,6 +19,9 @@ public interface IDashboardService
     /// <summary>Lo que se debe, cuánto hace que se debe y lo que se cobró.</summary>
     Task<DashboardCobranzaResponse> CobranzaAsync(DateTime? desde, DateTime? hasta);
 
+    /// <summary>Lo que se le debe a los proveedores, lo comprado y cómo cambian los costos.</summary>
+    Task<DashboardComprasResponse> ComprasAsync(DateTime? desde, DateTime? hasta);
+
     /// <summary>Qué se acaba, qué está parado y qué vence.</summary>
     Task<DashboardInventarioResponse> InventarioAsync();
 

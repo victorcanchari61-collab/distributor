@@ -1,10 +1,16 @@
 import { ClipboardList, PackageCheck, PackageX, Send } from 'lucide-react'
 import { BarChart, DonutChart, FunnelChart, Gauge, Kpi, Marco, PALETA, SEMAFORO, compacto, diaCorto, diaLargo, moneda, pct } from '../../components/charts'
 import { dashboardApi } from './dashboardApi'
-import { Encabezado, FilaKpi, rejilla, useBloque, useTablero } from './comun'
+import { ConReportes, Encabezado, FilaKpi, rejilla, useBloque, useTablero } from './comun'
+import { ReporteTablero } from './ReporteTablero'
 
 /** Del pedido al cobro: cuántos se toman, cuántos se entregan completos y por qué se recorta lo demás. */
+/** Reparto: los gráficos y, en su otra pestaña, el reporte detallado. */
 export function RepartoDashboard() {
+  return <ConReportes graficos={<GraficosReparto />} reportes={<ReporteTablero tablero="reparto" />} />
+}
+
+function GraficosReparto() {
   const t = useTablero()
   const b = useBloque(() => dashboardApi.reparto(t.desde, t.hasta), [t.desde, t.hasta, t.version])
   const r = b.datos

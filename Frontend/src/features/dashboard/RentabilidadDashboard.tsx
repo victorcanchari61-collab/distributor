@@ -14,10 +14,16 @@ import {
   variacion,
 } from '../../components/charts'
 import { dashboardApi } from './dashboardApi'
-import { Encabezado, FilaKpi, frase, mediana, rejilla, useBloque, useTablero } from './comun'
+import { ConReportes, Encabezado, FilaKpi, frase, mediana, rejilla, useBloque, useTablero } from './comun'
+import { ReporteTablero } from './ReporteTablero'
 
 /** Cuánto se gana, con qué margen, y qué productos conviene empujar o revisar. */
+/** Rentabilidad: los gráficos y, en su otra pestaña, el reporte detallado. */
 export function RentabilidadDashboard() {
+  return <ConReportes graficos={<GraficosRentabilidad />} reportes={<ReporteTablero tablero="rentabilidad" />} />
+}
+
+function GraficosRentabilidad() {
   const t = useTablero()
   const b = useBloque(() => dashboardApi.ganancias(t.desde, t.hasta), [t.desde, t.hasta, t.version])
   const g = b.datos

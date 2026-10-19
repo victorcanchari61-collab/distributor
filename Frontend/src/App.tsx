@@ -10,6 +10,7 @@ import { solicitudApi } from './features/config/solicitudApi'
 import { InicioPage } from './features/inicio'
 import {
   CobranzaDashboard,
+  ComprasDashboard,
   InventarioDashboard,
   RentabilidadDashboard,
   RepartoDashboard,
@@ -64,6 +65,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'dashboard.ventas': VentasDashboard,
   'dashboard.rentabilidad': RentabilidadDashboard,
   'dashboard.cobranza': CobranzaDashboard,
+  'dashboard.compras': ComprasDashboard,
   'dashboard.inventario': InventarioDashboard,
   'dashboard.reparto': RepartoDashboard,
   'maestros.clientes': ClientesPage,

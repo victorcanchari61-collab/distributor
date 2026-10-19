@@ -19,7 +19,11 @@ public sealed record LineaGanancia(
     decimal Cantidad,
     decimal Importe,
     decimal Costo,
-    bool AfectoIgv)
+    bool AfectoIgv,
+    string Cliente = "",
+    string Ruta = "",
+    // CONTADO o CREDITO, el de la nota.
+    string FormaPago = "")
 {
     /// <summary>
     /// Lo vendido SIN el IGV: la ganancia real es esto menos el costo, no

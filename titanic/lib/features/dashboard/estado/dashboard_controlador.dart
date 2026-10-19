@@ -29,11 +29,14 @@ final periodoRentabilidadProvider = StateProvider.autoDispose<PeriodoTablero>(
 final periodoCobranzaProvider = StateProvider.autoDispose<PeriodoTablero>(
   (ref) => PeriodoTablero.predeterminado(),
 );
+final periodoComprasProvider = StateProvider.autoDispose<PeriodoTablero>(
+  (ref) => PeriodoTablero.predeterminado(),
+);
 final periodoRepartoProvider = StateProvider.autoDispose<PeriodoTablero>(
   (ref) => PeriodoTablero.predeterminado(),
 );
 
-/// Lo que comparten los cinco tableros: volver a pedir y esperar a que llegue,
+/// Lo que comparten los seis tableros: volver a pedir y esperar a que llegue,
 /// para que el gesto de tirar hacia abajo sepa cuándo dejar de girar.
 ///
 /// Se invalida el propio notifier en vez de reasignar el estado a mano: si
@@ -98,6 +101,21 @@ final cobranzaDashboardProvider =
       CobranzaDashboardControlador,
       DashboardCobranza
     >(CobranzaDashboardControlador.new);
+
+/// Compras: lo que se debe a proveedores, lo que se compra y sus costos.
+class ComprasDashboardControlador extends TableroControlador<DashboardCompras> {
+  @override
+  Future<DashboardCompras> build() {
+    final p = ref.watch(periodoComprasProvider);
+    return ref.watch(dashboardApiProvider).compras(p.desde, p.hasta);
+  }
+}
+
+final comprasDashboardProvider =
+    AsyncNotifierProvider.autoDispose<
+      ComprasDashboardControlador,
+      DashboardCompras
+    >(ComprasDashboardControlador.new);
 
 /// Inventario: la foto de hoy, sin rango de fechas.
 class InventarioDashboardControlador

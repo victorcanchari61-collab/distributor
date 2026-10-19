@@ -5,13 +5,42 @@ import '../datos/dashboard_modelos.dart';
 import '../estado/dashboard_controlador.dart';
 import '../widgets/grafico_barras.dart';
 import '../widgets/grafico_barras_h.dart';
+import '../widgets/grafico_dona.dart';
+import '../widgets/grafico_linea.dart';
 import '../widgets/grafico_util.dart';
 import '../widgets/marco_grafico.dart';
 import '../widgets/tablero_pagina.dart';
 import '../widgets/tarjeta_kpi.dart';
 
-/// Cuánto se debe, hace cuánto, quién y cuánto se cobró — para saber a quién
-/// llamar primero.
+/// La conclusión de "Cómo evoluciona la deuda": cuánto subió o bajó en el
+/// período y de dónde salió el cambio. Null si en el período no hubo deuda ni
+/// movimiento: el marco dice entonces que no hay nada que mostrar.
+///
+/// Con céntimos: el cambio es justo lo fiado menos lo cobrado de lo fiado, y
+/// redondeadas a soles las tres cifras podían no cuadrar, o decir "subió S/ 0"
+/// por unos céntimos.
+String? fraseDeuda(List<DashDeudaDia> dias) {
+  if (dias.every((d) => d.saldo == 0 && d.fiado == 0 && d.cobrado == 0)) {
+    return null;
+  }
+
+  // Lo que se debía al empezar: el saldo del primer día sin lo que ese mismo
+  // día se fió ni se cobró.
+  final primero = dias.first;
+  final inicial = primero.saldo - primero.fiado + primero.cobrado;
+  final cambio = dias.last.saldo - inicial;
+  final fiado = dias.fold<double>(0, (a, d) => a + d.fiado);
+  final cobrado = dias.fold<double>(0, (a, d) => a + d.cobrado);
+
+  // Al céntimo: sumar y restar los decimales del JSON deja restos como
+  // 0.0000001 que no son un cambio.
+  if ((cambio * 100).round() == 0) return 'La deuda no cambió';
+  return 'La deuda ${cambio > 0 ? 'subió' : 'bajó'} ${moneda(cambio.abs(), 2)}: '
+      'se fió ${moneda(fiado, 2)} y se cobró ${moneda(cobrado, 2)} de lo fiado';
+}
+
+/// Cuánto se debe, hace cuánto, quién, cómo se mueve la deuda y cuánto se
+/// cobró — para saber a quién llamar primero y a dónde mandar a cobrar.
 class CobranzaDashboardPagina extends ConsumerWidget {
   const CobranzaDashboardPagina({super.key});
 
@@ -36,6 +65,19 @@ class CobranzaDashboardPagina extends ConsumerWidget {
     final pasadoDeUnMes = c != null && c.totalPorCobrar > 0
         ? vieja / c.totalPorCobrar * 100
         : 0.0;
+
+    final evolucion = c?.evolucion ?? const <DashDeudaDia>[];
+    final tendencia = fraseDeuda(evolucion);
+
+    String cuantos(int n, String uno, String varios) =>
+        '$n ${n == 1 ? uno : varios}';
+
+    // El método de pago lleva el mismo color en la dona que en "Cobros por
+    // día": su puesto en `metodos`, que es el que usan las barras apiladas.
+    Color colorMetodo(String nombre, int i) {
+      final k = c?.metodos.indexOf(nombre) ?? -1;
+      return PaletaDash.deSerie(k >= 0 ? k : i);
+    }
 
     return TableroPagina(
       ruta: ruta,
@@ -183,6 +225,108 @@ class CobranzaDashboardPagina extends ConsumerWidget {
                 ),
             ],
             formato: (n) => moneda(n),
+          ),
+        ),
+
+        MarcoGrafico(
+          titulo: 'Cómo evoluciona la deuda',
+          subtitulo: tendencia,
+          cargando: b.cargando,
+          error: b.error,
+          vacio: tendencia == null,
+          mensajeVacio: 'Sin deuda en el período',
+          alto: 240,
+          contenido: () => GraficoLinea(
+            alto: 240,
+            etiquetas: evolucion.map((d) => diaCorto(d.fecha)).toList(),
+            // El globo dice además lo que se fió y se cobró ese día: es lo que
+            // explica por qué la línea subió o bajó.
+            etiquetasLargas: evolucion
+                .map(
+                  (d) =>
+                      '${diaLargo(d.fecha)} · se fió ${moneda(d.fiado, 2)}, '
+                      'se cobró ${moneda(d.cobrado, 2)}',
+                )
+                .toList(),
+            formato: (n) => moneda(n, 2),
+            series: [
+              SerieLinea(
+                id: 'saldo',
+                nombre: 'Se debía al cierre',
+                color: PaletaDash.serie[2],
+                valores: evolucion.map((d) => d.saldo).toList(),
+                area: true,
+              ),
+            ],
+          ),
+        ),
+
+        MarcoGrafico(
+          titulo: 'Deuda por ruta',
+          subtitulo: 'A dónde mandar a cobrar',
+          cargando: b.cargando,
+          error: b.error,
+          vacio: c == null || c.porRuta.isEmpty,
+          mensajeVacio: 'Nadie debe nada',
+          alto: 240,
+          contenido: () => GraficoBarrasH(
+            formato: (n) => moneda(n),
+            unColor: PaletaDash.serie[2],
+            items: [
+              for (final r in c!.porRuta)
+                ItemBarraH(
+                  nombre: r.nombre,
+                  valor: r.valor,
+                  detalle: cuantos(r.cantidad, 'cliente', 'clientes'),
+                  // "Sin ruta" en gris: no es un sitio al que mandar a nadie.
+                  color: r.nombre.startsWith('Sin ') ? PaletaDash.neutro : null,
+                ),
+            ],
+          ),
+        ),
+
+        MarcoGrafico(
+          titulo: 'Quién cobra',
+          subtitulo: 'Lo cobrado por cada usuario',
+          cargando: b.cargando,
+          error: b.error,
+          vacio: c == null || c.porCobrador.isEmpty,
+          mensajeVacio: 'Sin cobros en el período',
+          alto: 200,
+          contenido: () => GraficoBarrasH(
+            formato: (n) => moneda(n),
+            unColor: PaletaDash.serie[1],
+            items: [
+              for (final u in c!.porCobrador)
+                ItemBarraH(
+                  nombre: u.nombre,
+                  valor: u.valor,
+                  detalle: cuantos(u.cantidad, 'cobro', 'cobros'),
+                  color: u.nombre.startsWith('Sin ') ? PaletaDash.neutro : null,
+                ),
+            ],
+          ),
+        ),
+
+        MarcoGrafico(
+          titulo: 'Cómo pagan',
+          subtitulo: 'Lo cobrado por método de pago',
+          cargando: b.cargando,
+          error: b.error,
+          vacio: c == null || c.porMetodo.isEmpty,
+          mensajeVacio: 'Sin cobros en el período',
+          alto: 200,
+          contenido: () => GraficoDona(
+            formato: compacto,
+            centro: (titulo: 'Cobrado', valor: moneda(c!.cobradoPeriodo)),
+            porciones: [
+              for (var i = 0; i < c.porMetodo.length; i++)
+                PorcionDona(
+                  nombre: c.porMetodo[i].nombre,
+                  valor: c.porMetodo[i].valor,
+                  color: colorMetodo(c.porMetodo[i].nombre, i),
+                ),
+            ],
           ),
         ),
       ],

@@ -132,6 +132,7 @@ builder.Services.AddScoped<IConciliacionBancariaService, ConciliacionBancariaSer
 builder.Services.AddScoped<IGastoOperativoService, GastoOperativoService>();
 builder.Services.AddScoped<IGananciaService, GananciaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IReportesService, ReportesService>();
 
 // Consulta de RUC y DNI: se llama al proveedor desde el backend para no
 // exponer el token en el navegador.

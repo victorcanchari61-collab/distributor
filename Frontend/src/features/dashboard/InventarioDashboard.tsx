@@ -1,10 +1,16 @@
 import { Boxes, CalendarX, PackageOpen, Snowflake } from 'lucide-react'
 import { BarChart, DonutChart, HBarChart, Kpi, Marco, PALETA, SEMAFORO, compacto, moneda } from '../../components/charts'
 import { dashboardApi } from './dashboardApi'
-import { COLOR_SALUD, COLOR_VENCE, Encabezado, FilaKpi, rejilla, semaforoCobertura, useBloque, useTablero } from './comun'
+import { COLOR_SALUD, COLOR_VENCE, ConReportes, Encabezado, FilaKpi, rejilla, semaforoCobertura, useBloque, useTablero } from './comun'
+import { ReporteTablero } from './ReporteTablero'
 
 /** Qué se acaba, qué está parado y qué vence: una foto de hoy, sin rango de fechas. */
+/** Inventario: los gráficos y, en su otra pestaña, el reporte detallado. */
 export function InventarioDashboard() {
+  return <ConReportes graficos={<GraficosInventario />} reportes={<ReporteTablero tablero="inventario" conFechas={false} />} />
+}
+
+function GraficosInventario() {
   const t = useTablero()
   const b = useBloque(() => dashboardApi.inventario(), [t.version])
   const i = b.datos

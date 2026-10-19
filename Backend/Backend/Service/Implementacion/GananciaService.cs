@@ -38,6 +38,8 @@ public class GananciaService : IGananciaService
     private const string SinVendedor = "Sin asignar";
     private const string SinCategoria = "Sin categoría";
     private const string SinMarca = "Sin marca";
+    private const string SinCliente = "Sin cliente";
+    private const string SinRuta = "Sin ruta";
 
     private readonly AppDbContext _context;
     private readonly IPermisoService _permisos;
@@ -209,7 +211,8 @@ public class GananciaService : IGananciaService
             .Select(l => new LineaGanancia(
                 l.NotaVentaId, l.Venta, l.Fecha, l.Vendedor,
                 l.ProductoId, l.Codigo, l.Producto, l.Categoria, l.Marca,
-                l.UnidadBase, l.Cantidad, l.Importe, l.Costo, l.AfectoIgv))
+                l.UnidadBase, l.Cantidad, l.Importe, l.Costo, l.AfectoIgv,
+                l.Cliente, l.Ruta, l.FormaPago))
             .ToList();
 
         return (lineas, soloPropio);
@@ -259,6 +262,9 @@ public class GananciaService : IGananciaService
         public decimal Importe { get; set; }
         public bool AfectoIgv { get; set; }
         public decimal Costo { get; set; }
+        public string Cliente { get; set; } = string.Empty;
+        public string Ruta { get; set; } = string.Empty;
+        public string FormaPago { get; set; } = string.Empty;
     }
 
     public async Task<TotalesVenta> TotalesAsync(DateTime inicioUtc, DateTime finUtc)
@@ -307,6 +313,9 @@ public class GananciaService : IGananciaService
                 Costo = _context.Movimientos
                     .Where(m => m.NotaVentaDetalleId == d.Id)
                     .Sum(m => (decimal?)(m.Tipo == TipoMovimiento.Salida ? m.CostoTotal : -m.CostoTotal)) ?? 0m,
+                Cliente = d.NotaVenta.Cliente != null ? d.NotaVenta.Cliente.Nombre : SinCliente,
+                Ruta = d.NotaVenta.Cliente != null && d.NotaVenta.Cliente.Ruta != null ? d.NotaVenta.Cliente.Ruta.Nombre : SinRuta,
+                FormaPago = d.NotaVenta.FormaPago,
             });
 
     /*
@@ -340,6 +349,9 @@ public class GananciaService : IGananciaService
                 Costo = -(_context.Movimientos
                     .Where(m => m.RecojoVentaId == r.Id)
                     .Sum(m => (decimal?)(m.Tipo == TipoMovimiento.Entrada ? m.CostoTotal : -m.CostoTotal)) ?? 0m),
+                Cliente = r.NotaVenta.Cliente != null ? r.NotaVenta.Cliente.Nombre : SinCliente,
+                Ruta = r.NotaVenta.Cliente != null && r.NotaVenta.Cliente.Ruta != null ? r.NotaVenta.Cliente.Ruta.Nombre : SinRuta,
+                FormaPago = r.NotaVenta.FormaPago,
             });
 
     /// <summary>Los filtros del panel y el buscador, resueltos en la base.</summary>

@@ -1,4 +1,4 @@
-// Modelos de los cinco dashboards.
+// Modelos de los seis dashboards.
 //
 // Espejo de `Backend/Dtos/Responses/DashboardResponses.cs` (JSON en camelCase).
 // Todo se lee con tolerancia: un campo que no llega es un cero o una lista
@@ -407,12 +407,42 @@ class DashCobroDia {
 
   final DateTime fecha;
 
-  /// Uno por cada método de [DashboardCobranza.metodos], en ese orden.
+  /// Uno por cada método de [DashboardCobranza.metodos], en ese orden. Los
+  /// pagos a proveedores de Compras llegan igual y se leen con esta misma.
   final List<double> valores;
 
   factory DashCobroDia.desdeJson(Map<String, dynamic> j) => DashCobroDia(
     fecha: diaDeJson(j['fecha']),
     valores: _numeros(j['valores']),
+  );
+}
+
+/// Un día de la deuda de los clientes: lo que se fió, lo que se cobró de lo
+/// fiado y cuánto se debía al cerrar el día.
+class DashDeudaDia {
+  const DashDeudaDia({
+    required this.fecha,
+    this.fiado = 0,
+    this.cobrado = 0,
+    this.saldo = 0,
+  });
+
+  final DateTime fecha;
+
+  /// Lo vendido a crédito ese día.
+  final double fiado;
+
+  /// Lo cobrado ese día de ventas a crédito.
+  final double cobrado;
+
+  /// Lo que se debía al terminar el día.
+  final double saldo;
+
+  factory DashDeudaDia.desdeJson(Map<String, dynamic> j) => DashDeudaDia(
+    fecha: diaDeJson(j['fecha']),
+    fiado: _num(j['fiado']),
+    cobrado: _num(j['cobrado']),
+    saldo: _num(j['saldo']),
   );
 }
 
@@ -429,6 +459,10 @@ class DashboardCobranza {
     this.metodos = const [],
     this.cobros = const [],
     this.creditoOtorgado = 0,
+    this.evolucion = const [],
+    this.porRuta = const [],
+    this.porCobrador = const [],
+    this.porMetodo = const [],
   });
 
   final DateTime desde;
@@ -447,6 +481,20 @@ class DashboardCobranza {
   /// Lo vendido a crédito en el período, para compararlo con lo cobrado.
   final double creditoOtorgado;
 
+  /// Un registro por día del período: cómo se movió la deuda.
+  final List<DashDeudaDia> evolucion;
+
+  /// Lo que se debe hoy, por la ruta del cliente; `cantidad` es el número de
+  /// clientes.
+  final List<DashItem> porRuta;
+
+  /// Lo cobrado en el período por quien lo registró; `cantidad` es el número
+  /// de cobros.
+  final List<DashItem> porCobrador;
+
+  /// Lo cobrado en el período por método de pago.
+  final List<DashItem> porMetodo;
+
   factory DashboardCobranza.desdeJson(Map<String, dynamic> j) =>
       DashboardCobranza(
         desde: diaDeJson(j['desde']),
@@ -462,6 +510,173 @@ class DashboardCobranza {
             .toList(),
         cobros: _lista(j['cobros'], DashCobroDia.desdeJson),
         creditoOtorgado: _num(j['creditoOtorgado']),
+        evolucion: _lista(j['evolucion'], DashDeudaDia.desdeJson),
+        porRuta: _lista(j['porRuta'], DashItem.desdeJson),
+        porCobrador: _lista(j['porCobrador'], DashItem.desdeJson),
+        porMetodo: _lista(j['porMetodo'], DashItem.desdeJson),
+      );
+}
+
+// ----------------------------------------------------------------- Compras
+
+/// Un proveedor al que se le debe: el espejo de [DashDeudor] del otro lado.
+class DashAcreedor {
+  const DashAcreedor({
+    required this.proveedor,
+    this.saldo = 0,
+    this.compras = 0,
+    this.dias = 0,
+  });
+
+  final String proveedor;
+  final double saldo;
+
+  /// Cuántas compras le quedan sin pagar del todo.
+  final int compras;
+
+  /// Los días de la deuda más vieja: lo que decide el color.
+  final int dias;
+
+  factory DashAcreedor.desdeJson(Map<String, dynamic> j) => DashAcreedor(
+    proveedor: j['proveedor'] as String? ?? '',
+    saldo: _num(j['saldo']),
+    compras: _entero(j['compras']),
+    dias: _entero(j['dias']),
+  );
+}
+
+/// Lo comprado en un día, partido entre contado y crédito.
+class DashDiaCompra {
+  const DashDiaCompra({
+    required this.fecha,
+    this.contado = 0,
+    this.credito = 0,
+  });
+
+  final DateTime fecha;
+  final double contado;
+  final double credito;
+
+  factory DashDiaCompra.desdeJson(Map<String, dynamic> j) => DashDiaCompra(
+    fecha: diaDeJson(j['fecha']),
+    contado: _num(j['contado']),
+    credito: _num(j['credito']),
+  );
+}
+
+/// Un producto cuyo costo cambió entre su compra anterior y la última.
+class DashCostoProducto {
+  const DashCostoProducto({
+    required this.producto,
+    this.unidad = '',
+    this.costoAnterior = 0,
+    this.costoActual = 0,
+    this.variacion = 0,
+  });
+
+  final String producto;
+
+  /// La unidad base: los dos costos son por una de estas, no por caja.
+  final String unidad;
+  final double costoAnterior;
+  final double costoActual;
+
+  /// En %: positivo subió, negativo bajó.
+  final double variacion;
+
+  factory DashCostoProducto.desdeJson(Map<String, dynamic> j) =>
+      DashCostoProducto(
+        producto: j['producto'] as String? ?? '',
+        unidad: j['unidad'] as String? ?? '',
+        costoAnterior: _num(j['costoAnterior']),
+        costoActual: _num(j['costoActual']),
+        variacion: _num(j['variacion']),
+      );
+}
+
+class DashboardCompras {
+  const DashboardCompras({
+    required this.desde,
+    required this.hasta,
+    this.totalPorPagar = 0,
+    this.cuentas = 0,
+    this.proveedores = 0,
+    this.antiguedad = const [],
+    this.acreedores = const [],
+    this.porRecibir = 0,
+    this.comprado = 0,
+    this.compradoAnterior = 0,
+    this.compras = 0,
+    this.compradoCredito = 0,
+    this.pagadoPeriodo = 0,
+    this.metodos = const [],
+    this.pagos = const [],
+    this.serie = const [],
+    this.porProveedor = const [],
+    this.porCategoria = const [],
+    this.costos = const [],
+  });
+
+  final DateTime desde;
+  final DateTime hasta;
+  final double totalPorPagar;
+  final int cuentas;
+  final int proveedores;
+
+  /// La deuda repartida por antigüedad, de lo reciente a lo más viejo: los
+  /// mismos tramos que Cobranza.
+  final List<DashItem> antiguedad;
+
+  /// A quiénes más se les debe.
+  final List<DashAcreedor> acreedores;
+
+  /// Mercadería comprada que todavía no llega al almacén.
+  final double porRecibir;
+  final double comprado;
+
+  /// Lo comprado en el período anterior del mismo largo, para comparar.
+  final double compradoAnterior;
+
+  /// Cuántas compras se hicieron en el período.
+  final int compras;
+  final double compradoCredito;
+  final double pagadoPeriodo;
+
+  /// Los métodos con que se pagó, de más a menos usado.
+  final List<String> metodos;
+
+  /// Mismo formato que los cobros de Cobranza: un valor por método.
+  final List<DashCobroDia> pagos;
+  final List<DashDiaCompra> serie;
+
+  /// A quién se le compra; `cantidad` es el número de compras.
+  final List<DashItem> porProveedor;
+  final List<DashItem> porCategoria;
+  final List<DashCostoProducto> costos;
+
+  factory DashboardCompras.desdeJson(Map<String, dynamic> j) =>
+      DashboardCompras(
+        desde: diaDeJson(j['desde']),
+        hasta: diaDeJson(j['hasta']),
+        totalPorPagar: _num(j['totalPorPagar']),
+        cuentas: _entero(j['cuentas']),
+        proveedores: _entero(j['proveedores']),
+        antiguedad: _lista(j['antiguedad'], DashItem.desdeJson),
+        acreedores: _lista(j['acreedores'], DashAcreedor.desdeJson),
+        porRecibir: _num(j['porRecibir']),
+        comprado: _num(j['comprado']),
+        compradoAnterior: _num(j['compradoAnterior']),
+        compras: _entero(j['compras']),
+        compradoCredito: _num(j['compradoCredito']),
+        pagadoPeriodo: _num(j['pagadoPeriodo']),
+        metodos: ((j['metodos'] as List?) ?? const [])
+            .map((e) => e.toString())
+            .toList(),
+        pagos: _lista(j['pagos'], DashCobroDia.desdeJson),
+        serie: _lista(j['serie'], DashDiaCompra.desdeJson),
+        porProveedor: _lista(j['porProveedor'], DashItem.desdeJson),
+        porCategoria: _lista(j['porCategoria'], DashItem.desdeJson),
+        costos: _lista(j['costos'], DashCostoProducto.desdeJson),
       );
 }
 

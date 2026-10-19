@@ -16,10 +16,16 @@ import {
   variacion,
 } from '../../components/charts'
 import { dashboardApi } from './dashboardApi'
-import { Encabezado, FilaKpi, frase, rejilla, useBloque, useTablero } from './comun'
+import { ConReportes, Encabezado, FilaKpi, frase, rejilla, useBloque, useTablero } from './comun'
+import { ReporteTablero } from './ReporteTablero'
 
 /** Cuánto se vende, a quién, quién lo vende y en qué momento — con el mes proyectado a su cierre. */
+/** Ventas: los gráficos y, en su otra pestaña, el reporte detallado. */
 export function VentasDashboard() {
+  return <ConReportes graficos={<GraficosVentas />} reportes={<ReporteTablero tablero="ventas" />} />
+}
+
+function GraficosVentas() {
   const t = useTablero()
   const b = useBloque(() => dashboardApi.ventas(t.desde, t.hasta), [t.desde, t.hasta, t.version])
   const v = b.datos

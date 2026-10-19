@@ -90,11 +90,13 @@ public static class CatalogoPermisos
             // --- Dashboard ---
             // Un tablero por área, cada uno con su propio permiso: quien maneja el almacén ve
             // Inventario sin que eso le abra las ganancias. Son solo de lectura.
-            ["dashboard.ventas"] = [Accion.Ver],
-            ["dashboard.rentabilidad"] = [Accion.Ver],
-            ["dashboard.cobranza"] = [Accion.Ver],
-            ["dashboard.inventario"] = [Accion.Ver],
-            ["dashboard.reparto"] = [Accion.Ver],
+            // Exportar (todos los dashboards): el reporte de su pestaña Reportes en PDF.
+            ["dashboard.ventas"] = [Accion.Ver, Accion.Exportar],
+            ["dashboard.rentabilidad"] = [Accion.Ver, Accion.Exportar],
+            ["dashboard.cobranza"] = [Accion.Ver, Accion.Exportar],
+            ["dashboard.compras"] = [Accion.Ver, Accion.Exportar],
+            ["dashboard.inventario"] = [Accion.Ver, Accion.Exportar],
+            ["dashboard.reparto"] = [Accion.Ver, Accion.Exportar],
 
             // --- Maestros ---
             ["maestros.clientes"] = CatalogoImportable,

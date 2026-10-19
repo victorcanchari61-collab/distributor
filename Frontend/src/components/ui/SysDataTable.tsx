@@ -70,7 +70,9 @@ export interface DataTableColumn<T> {
   /**
    * No se pinta en la tabla, ni en las tarjetas, ni en el menú de columnas: solo existe en el
    * panel de Filtros. Es para el filtro que decide QUÉ se trae y no es un dato de cada fila —la
-   * semana de la planilla—, que antes quedaba como un campo suelto junto a los botones.
+   * semana de la planilla, el cliente de un reporte agrupado por producto—.
+   *
+   * La tabla no filtra sus filas con él: lo aplica la vista al pedir los datos (con `onConsulta`).
    */
   soloFiltro?: boolean
   /** Escape hatch: valor a usar para buscar, ordenar y filtrar. */
@@ -441,8 +443,9 @@ export function SysDataTable<T>({
       result = result.filter((row) => asText(cellValue(col, row)).includes(asText(term)))
     }
 
-    // filtros acumulados
+    // filtros acumulados (los de solo filtro los resuelve la vista al traer los datos)
     for (const filter of filters) {
+      if (byKey[filter.column]?.soloFiltro) continue
       result = result.filter((row) => matchesFilter(row, filter, byKey[filter.column]))
     }
 

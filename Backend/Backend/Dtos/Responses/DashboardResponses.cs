@@ -207,6 +207,126 @@ public class DashboardCobranzaResponse
 
     /// <summary>Lo vendido a crédito en el período, para compararlo con lo cobrado.</summary>
     public decimal CreditoOtorgado { get; set; }
+
+    /// <summary>Día por día: lo fiado, lo cobrado de lo fiado y cuánto se debía al cierre.</summary>
+    public List<DashDeudaDia> Evolucion { get; set; } = [];
+
+    /// <summary>Lo que se debe hoy, por la ruta del cliente: a dónde mandar a cobrar.</summary>
+    public List<DashItem> PorRuta { get; set; } = [];
+
+    /// <summary>Lo cobrado en el período por quien lo registró (Cantidad = cobros).</summary>
+    public List<DashItem> PorCobrador { get; set; } = [];
+
+    /// <summary>Lo cobrado en el período por método de pago.</summary>
+    public List<DashItem> PorMetodo { get; set; } = [];
+}
+
+/// <summary>Un día de la deuda de los clientes.</summary>
+public class DashDeudaDia
+{
+    public DateTime Fecha { get; set; }
+
+    /// <summary>Lo vendido a crédito ese día.</summary>
+    public decimal Fiado { get; set; }
+
+    /// <summary>Lo que se cobró ese día de ventas a crédito.</summary>
+    public decimal Cobrado { get; set; }
+
+    /// <summary>Lo que se debía al terminar el día.</summary>
+    public decimal Saldo { get; set; }
+}
+
+// ----------------------------------------------------------------- Compras
+
+/// <summary>Un proveedor al que se le debe.</summary>
+public class DashAcreedor
+{
+    public string Proveedor { get; set; } = string.Empty;
+    public decimal Saldo { get; set; }
+    public int Compras { get; set; }
+
+    /// <summary>Los días de la deuda más vieja: lo que decide el color.</summary>
+    public int Dias { get; set; }
+}
+
+/// <summary>Lo comprado un día, al contado y a crédito.</summary>
+public class DashCompraDia
+{
+    public DateTime Fecha { get; set; }
+    public decimal Contado { get; set; }
+    public decimal Credito { get; set; }
+}
+
+/// <summary>Cómo cambió el costo de un producto: su última compra del período contra la de antes.</summary>
+public class DashCostoProducto
+{
+    public string Producto { get; set; } = string.Empty;
+
+    /// <summary>La unidad base: el costo es por esa unidad.</summary>
+    public string Unidad { get; set; } = string.Empty;
+
+    public decimal CostoAnterior { get; set; }
+    public decimal CostoActual { get; set; }
+
+    /// <summary>En %: +8.5 es que subió, -3 que bajó.</summary>
+    public decimal Variacion { get; set; }
+}
+
+public class DashboardComprasResponse
+{
+    public DateTime Desde { get; set; }
+    public DateTime Hasta { get; set; }
+
+    // --- Lo que se debe hoy: no depende del período, como Cuentas por pagar ---
+
+    public decimal TotalPorPagar { get; set; }
+
+    /// <summary>Cuántas compras tienen saldo.</summary>
+    public int Cuentas { get; set; }
+
+    /// <summary>A cuántos proveedores se les debe.</summary>
+    public int Proveedores { get; set; }
+
+    /// <summary>La deuda repartida por antigüedad, en los mismos tramos de Cobranza.</summary>
+    public List<DashItem> Antiguedad { get; set; } = [];
+
+    /// <summary>Los proveedores a los que más se les debe.</summary>
+    public List<DashAcreedor> Acreedores { get; set; } = [];
+
+    /// <summary>Mercadería comprada que todavía no llega (compras pendientes o recibidas en parte).</summary>
+    public decimal PorRecibir { get; set; }
+
+    // --- Lo del período ---
+
+    public decimal Comprado { get; set; }
+
+    /// <summary>Lo comprado en los mismos días justo antes, para comparar.</summary>
+    public decimal CompradoAnterior { get; set; }
+
+    /// <summary>Cuántas compras se registraron.</summary>
+    public int Compras { get; set; }
+
+    public decimal CompradoCredito { get; set; }
+
+    public decimal PagadoPeriodo { get; set; }
+
+    /// <summary>Los métodos con que se pagó, de más a menos usado.</summary>
+    public List<string> Metodos { get; set; } = [];
+
+    /// <summary>Lo pagado a proveedores por día; cada valor, uno por método en el orden de <see cref="Metodos"/>.</summary>
+    public List<DashCobroDia> Pagos { get; set; } = [];
+
+    /// <summary>Lo comprado por día, al contado y a crédito.</summary>
+    public List<DashCompraDia> Serie { get; set; } = [];
+
+    /// <summary>A quién se le compra más.</summary>
+    public List<DashItem> PorProveedor { get; set; } = [];
+
+    /// <summary>Qué se compra, por categoría.</summary>
+    public List<DashItem> PorCategoria { get; set; } = [];
+
+    /// <summary>Los productos cuyo costo más cambió.</summary>
+    public List<DashCostoProducto> Costos { get; set; } = [];
 }
 
 // -------------------------------------------------------------- Inventario

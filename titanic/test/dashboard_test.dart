@@ -17,6 +17,7 @@ import 'package:titanic/features/dashboard/datos/dashboard_modelos.dart';
 import 'package:titanic/features/dashboard/estado/dashboard_controlador.dart';
 import 'package:titanic/features/dashboard/estado/periodo_tablero.dart';
 import 'package:titanic/features/dashboard/vistas/cobranza_dashboard_pagina.dart';
+import 'package:titanic/features/dashboard/vistas/compras_dashboard_pagina.dart';
 import 'package:titanic/features/dashboard/vistas/inventario_dashboard_pagina.dart';
 import 'package:titanic/features/dashboard/vistas/rentabilidad_dashboard_pagina.dart';
 import 'package:titanic/features/dashboard/vistas/reparto_dashboard_pagina.dart';
@@ -233,7 +234,47 @@ DashboardCobranza _cobranzaConDatos() => DashboardCobranza(
       ),
   ],
   creditoOtorgado: 12250,
+  evolucion: _evolucionDeuda(),
+  porRuta: const [
+    DashItem(nombre: 'Ruta Norte', valor: 6100, cantidad: 2),
+    DashItem(nombre: 'Ruta Centro', valor: 4200, cantidad: 1),
+    DashItem(nombre: 'Sin ruta', valor: 2100, cantidad: 2),
+  ],
+  porCobrador: const [
+    DashItem(nombre: 'Ana Ruiz', valor: 12000, cantidad: 14),
+    DashItem(nombre: 'Luis Campos', valor: 7500, cantidad: 9),
+    DashItem(nombre: 'Sin usuario', valor: 1500, cantidad: 1),
+  ],
+  // Por monto, que no es el orden de `metodos`: Yape tiene que seguir con su
+  // color de "Cobros por día".
+  porMetodo: const [
+    DashItem(nombre: 'Efectivo', valor: 14000, cantidad: 20),
+    DashItem(nombre: 'Transferencia', valor: 4000, cantidad: 6),
+    DashItem(nombre: 'Yape', valor: 3000, cantidad: 10),
+  ],
 );
+
+/// La deuda día a día: parte de S/ 10,650, se fían 7 veces S/ 1,750 (el
+/// crédito otorgado) y se cobran S/ 700 día de por medio, hasta cerrar en lo
+/// que se debe hoy (S/ 12,400).
+List<DashDeudaDia> _evolucionDeuda() {
+  final dias = <DashDeudaDia>[];
+  var saldo = 10650.0;
+  for (var i = 0; i < 30; i++) {
+    final fiado = i % 4 == 0 && i < 28 ? 1750.0 : 0.0;
+    final cobrado = i.isEven ? 700.0 : 0.0;
+    saldo += fiado - cobrado;
+    dias.add(
+      DashDeudaDia(
+        fecha: _dia(i),
+        fiado: fiado,
+        cobrado: cobrado,
+        saldo: saldo,
+      ),
+    );
+  }
+  return dias;
+}
 
 DashboardCobranza _cobranzaVacia() => DashboardCobranza(
   desde: _dia(0),
@@ -245,6 +286,111 @@ DashboardCobranza _cobranzaVacia() => DashboardCobranza(
     DashItem(nombre: '31–60 días', valor: 0),
     DashItem(nombre: 'Más de 60', valor: 0),
   ],
+  // El backend manda un día por cada día del período aunque todo esté en cero.
+  evolucion: [for (var i = 0; i < 30; i++) DashDeudaDia(fecha: _dia(i))],
+);
+
+DashboardCompras _comprasConDatos() => DashboardCompras(
+  desde: _dia(0),
+  hasta: _dia(29),
+  totalPorPagar: 9000,
+  cuentas: 6,
+  proveedores: 3,
+  antiguedad: const [
+    DashItem(nombre: '0–7 días', valor: 2000, cantidad: 2),
+    DashItem(nombre: '8–15 días', valor: 1500, cantidad: 1),
+    DashItem(nombre: '16–30 días', valor: 2700, cantidad: 1),
+    DashItem(nombre: '31–60 días', valor: 1800, cantidad: 1),
+    DashItem(nombre: 'Más de 60', valor: 1000, cantidad: 1),
+  ],
+  acreedores: const [
+    DashAcreedor(
+      proveedor: 'Distribuidora Mayorista del Norte S.A.C.',
+      saldo: 4800,
+      compras: 3,
+      dias: 70,
+    ),
+    DashAcreedor(
+      proveedor: 'Lácteos Andinos',
+      saldo: 3000,
+      compras: 2,
+      dias: 20,
+    ),
+    DashAcreedor(proveedor: 'Bebidas Lima', saldo: 1200, compras: 1, dias: 4),
+  ],
+  porRecibir: 1500,
+  comprado: 36000,
+  compradoAnterior: 30000,
+  compras: 14,
+  compradoCredito: 15000,
+  pagadoPeriodo: 18000,
+  metodos: const ['Transferencia', 'Efectivo'],
+  pagos: [
+    for (var i = 0; i < 30; i++)
+      DashCobroDia(
+        fecha: _dia(i),
+        valores: [i % 4 == 0 ? 2000 : 0, i % 3 == 0 ? 500 : 0],
+      ),
+  ],
+  serie: [
+    for (var i = 0; i < 30; i++)
+      DashDiaCompra(
+        fecha: _dia(i),
+        contado: i.isEven ? 700 : 0,
+        credito: i % 5 == 0 ? 1500 : 0,
+      ),
+  ],
+  porProveedor: const [
+    DashItem(nombre: 'Lácteos Andinos', valor: 18000, cantidad: 6),
+    DashItem(
+      nombre: 'Distribuidora Mayorista del Norte S.A.C.',
+      valor: 12000,
+      cantidad: 5,
+    ),
+    DashItem(nombre: 'Bebidas Lima', valor: 6000, cantidad: 1),
+  ],
+  porCategoria: const [
+    DashItem(nombre: 'Abarrotes', valor: 20000),
+    DashItem(nombre: 'Lácteos', valor: 12000),
+    DashItem(nombre: 'Sin categoría', valor: 4000),
+  ],
+  costos: const [
+    DashCostoProducto(
+      producto:
+          'Aceite vegetal botella 1 L con un nombre largo para el teléfono',
+      unidad: 'UND',
+      costoAnterior: 7.2,
+      costoActual: 8.1,
+      variacion: 12.5,
+    ),
+    DashCostoProducto(
+      producto: 'Azúcar rubia',
+      unidad: 'KG',
+      costoAnterior: 3.5,
+      costoActual: 3.2,
+      variacion: -8.571,
+    ),
+    // Sin unidad: se lee "por unidad".
+    DashCostoProducto(
+      producto: 'Leche evaporada',
+      costoAnterior: 3.4,
+      costoActual: 3.5,
+      variacion: 2.94,
+    ),
+  ],
+);
+
+DashboardCompras _comprasVacias() => DashboardCompras(
+  desde: _dia(0),
+  hasta: _dia(29),
+  antiguedad: const [
+    DashItem(nombre: '0–7 días', valor: 0),
+    DashItem(nombre: '8–15 días', valor: 0),
+    DashItem(nombre: '16–30 días', valor: 0),
+    DashItem(nombre: '31–60 días', valor: 0),
+    DashItem(nombre: 'Más de 60', valor: 0),
+  ],
+  serie: [for (var i = 0; i < 30; i++) DashDiaCompra(fecha: _dia(i))],
 );
 
 DashboardInventario _inventarioConDatos() => DashboardInventario(
@@ -397,6 +543,15 @@ class _ApiFalsa extends DashboardApi {
       );
 
   @override
+  Future<DashboardCompras> compras(DateTime desde, DateTime hasta) =>
+      _responder(
+        'compras',
+        desde,
+        hasta,
+        () => vacia ? _comprasVacias() : _comprasConDatos(),
+      );
+
+  @override
   Future<DashboardInventario> inventario() => _responder(
     'inventario',
     null,
@@ -445,7 +600,7 @@ Future<void> _montar(
   }
 }
 
-/// Las cinco pantallas con lo que las distingue.
+/// Las seis pantallas con lo que las distingue.
 final _tableros =
     <({String nombre, Widget pagina, String titulo, String ruta})>[
       (
@@ -465,6 +620,12 @@ final _tableros =
         pagina: const CobranzaDashboardPagina(),
         titulo: 'Cuánto hace que se debe',
         ruta: '/dashboard/cobranza',
+      ),
+      (
+        nombre: 'compras',
+        pagina: const ComprasDashboardPagina(),
+        titulo: 'Cuánto hace que se debe',
+        ruta: '/dashboard/compras',
       ),
       (
         nombre: 'inventario',
@@ -521,6 +682,37 @@ void main() {
       expect(fraseVariacion(-5, 'el mes pasado'), '−5% frente a el mes pasado');
       expect(fraseVariacion(0.2, 'x'), 'Igual que x');
       expect(fraseVariacion(null, 'x'), 'Sin x con qué comparar');
+    });
+
+    test('cómo se movió la deuda: subió, bajó o no cambió', () {
+      DashDeudaDia dia(double fiado, double cobrado, double saldo) =>
+          DashDeudaDia(
+            fecha: _dia(0),
+            fiado: fiado,
+            cobrado: cobrado,
+            saldo: saldo,
+          );
+
+      // Partió de 1,000 (1,500 del primer día sin los 500 fiados ese día).
+      expect(
+        fraseDeuda([dia(500, 0, 1500), dia(0, 800, 700)]),
+        'La deuda bajó S/ 300.00: se fió S/ 500.00 y se cobró S/ 800.00 '
+        'de lo fiado',
+      );
+      expect(
+        fraseDeuda([dia(0, 0, 1000), dia(250.5, 0, 1250.5)]),
+        'La deuda subió S/ 250.50: se fió S/ 250.50 y se cobró S/ 0.00 '
+        'de lo fiado',
+      );
+      // Lo fiado y lo cobrado se compensan; los decimales del JSON no cierran
+      // exacto, pero al céntimo no hay cambio.
+      expect(
+        fraseDeuda([dia(100.1, 0, 1100.1), dia(0, 100.1, 1000)]),
+        'La deuda no cambió',
+      );
+      // Sin deuda ni movimiento, o sin días: no hay frase y el marco va vacío.
+      expect(fraseDeuda([dia(0, 0, 0), dia(0, 0, 0)]), isNull);
+      expect(fraseDeuda(const []), isNull);
     });
 
     test('días de calle: sin zona horaria', () {
@@ -629,6 +821,91 @@ void main() {
       expect(v.calor, isEmpty);
     });
 
+    test('compras: pagos como los cobros, compras por día y costos', () {
+      final c = DashboardCompras.desdeJson({
+        'desde': '2026-10-19T00:00:00',
+        'totalPorPagar': 1200.5,
+        'acreedores': [
+          {
+            'proveedor': 'Lácteos Andinos',
+            'saldo': 800,
+            'compras': 2,
+            'dias': 41,
+          },
+        ],
+        'metodos': ['Transferencia', 'Efectivo'],
+        'pagos': [
+          {
+            'fecha': '2026-10-05T00:00:00',
+            'valores': [100, 0],
+          },
+        ],
+        'serie': [
+          {'fecha': '2026-10-05T00:00:00', 'contado': 50, 'credito': 250.5},
+        ],
+        'costos': [
+          {
+            'producto': 'Azúcar rubia',
+            'unidad': 'KG',
+            'costoAnterior': 3.5,
+            'costoActual': 3.2,
+            'variacion': -8.6,
+          },
+        ],
+      });
+
+      expect(c.desde, DateTime(2026, 10, 19));
+      expect(c.totalPorPagar, 1200.5);
+      expect(c.acreedores.single.dias, 41);
+      expect(c.pagos.single.valores, [100.0, 0.0]);
+      expect(c.serie.single.fecha, DateTime(2026, 10, 5));
+      expect(c.serie.single.credito, 250.5);
+      expect(c.costos.single.variacion, -8.6);
+      // Lo que no vino, en cero o vacío.
+      expect(c.compradoAnterior, 0);
+      expect(c.porProveedor, isEmpty);
+    });
+
+    test(
+      'cobranza: la deuda día a día, por ruta, por cobrador y por método',
+      () {
+        final c = DashboardCobranza.desdeJson({
+          'totalPorCobrar': 3379.5,
+          'evolucion': [
+            {
+              'fecha': '2026-10-05T00:00:00',
+              'fiado': 500,
+              'cobrado': 120.5,
+              'saldo': 3379.5,
+            },
+          ],
+          'porRuta': [
+            {'nombre': 'Sin ruta', 'valor': 800, 'cantidad': 2},
+          ],
+          'porCobrador': [
+            {'nombre': 'Ana Ruiz', 'valor': 120.5, 'cantidad': 1},
+          ],
+          'porMetodo': [
+            {'nombre': 'Yape', 'valor': 120.5, 'cantidad': 1},
+          ],
+        });
+
+        final dia = c.evolucion.single;
+        expect(dia.fecha, DateTime(2026, 10, 5));
+        expect((dia.fiado, dia.cobrado, dia.saldo), (500.0, 120.5, 3379.5));
+        expect(c.porRuta.single.cantidad, 2);
+        expect(c.porCobrador.single.valor, 120.5);
+        expect(c.porMetodo.single.nombre, 'Yape');
+
+        // Un backend que todavía no los manda: listas vacías, no una excepción.
+        final antes = DashboardCobranza.desdeJson(const {'totalPorCobrar': 10});
+        expect(antes.evolucion, isEmpty);
+        expect(antes.porRuta, isEmpty);
+        expect(antes.porCobrador, isEmpty);
+        expect(antes.porMetodo, isEmpty);
+      },
+    );
+
     test('las novedades nulas se distinguen de las vacías', () {
       final sinPermiso = DashboardReparto.desdeJson({
         'novedadesPorMotivo': null,
@@ -649,6 +926,7 @@ void main() {
       expect(DashboardVentas.desdeJson(const {}).serie, isEmpty);
       expect(DashboardGanancias.desdeJson(const {}).margen, isNull);
       expect(DashboardCobranza.desdeJson(const {}).metodos, isEmpty);
+      expect(DashboardCompras.desdeJson(const {}).costos, isEmpty);
       expect(DashboardInventario.desdeJson(const {}).cobertura, isEmpty);
       expect(DashboardReparto.desdeJson(const {}).embudo, isEmpty);
     });
@@ -656,7 +934,7 @@ void main() {
 
   // ----------------------------------------------------------------- Menú
 
-  test('el grupo Dashboard va primero, en índigo, con sus cinco vistas', () {
+  test('el grupo Dashboard va primero, en índigo, con sus seis vistas', () {
     final grupo = menuGrupos.first;
 
     expect(grupo.id, 'dashboard');
@@ -665,6 +943,7 @@ void main() {
       'dashboard.ventas',
       'dashboard.rentabilidad',
       'dashboard.cobranza',
+      'dashboard.compras',
       'dashboard.inventario',
       'dashboard.reparto',
     ]);
@@ -673,7 +952,7 @@ void main() {
     expect(Colores.modulos['dashboard'], grupo.color);
   });
 
-  // ------------------------------------------------------- Los 5 tableros
+  // ------------------------------------------------------- Los 6 tableros
 
   group('con datos', () {
     for (final t in _tableros) {
@@ -758,8 +1037,10 @@ void main() {
     ) async {
       await _montar(tester, const CobranzaDashboardPagina(), _ApiFalsa());
 
+      // Antigüedad y cobros por día.
       expect(find.byType(GraficoBarras), findsNWidgets(2));
-      expect(find.byType(GraficoBarrasH), findsOneWidget);
+      // Quién debe más, deuda por ruta y quién cobra.
+      expect(find.byType(GraficoBarrasH), findsNWidgets(3));
       // 4 mil de 12.4 mil pasan de 30 días: 32%.
       expect(find.text('32% de la deuda pasa de 30 días'), findsOneWidget);
       expect(
@@ -767,6 +1048,111 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('a crédito se dio S/ 12,250'), findsOneWidget);
+    });
+
+    testWidgets(
+      'cobranza: evolución de la deuda, rutas, cobradores y métodos',
+      (tester) async {
+        await _montar(tester, const CobranzaDashboardPagina(), _ApiFalsa());
+
+        for (final t in [
+          'Cómo evoluciona la deuda',
+          'Deuda por ruta',
+          'Quién cobra',
+          'Cómo pagan',
+        ]) {
+          expect(find.text(t), findsOneWidget, reason: t);
+        }
+        expect(find.byType(GraficoLinea), findsOneWidget);
+        expect(find.byType(GraficoDona), findsOneWidget);
+
+        // De S/ 10,650 a S/ 12,400, con céntimos para que las cifras cuadren.
+        expect(
+          find.text(
+            'La deuda subió S/ 1,750.00: se fió S/ 12,250.00 y se cobró '
+            'S/ 10,500.00 de lo fiado',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('A dónde mandar a cobrar'), findsOneWidget);
+        expect(find.text('Lo cobrado por cada usuario'), findsOneWidget);
+        expect(find.text('Lo cobrado por método de pago'), findsOneWidget);
+
+        // El detalle de cada barra, en singular cuando es uno.
+        expect(
+          find.text('S/ 6,100  2 clientes', findRichText: true),
+          findsOneWidget,
+        );
+        expect(
+          find.text('S/ 4,200  1 cliente', findRichText: true),
+          findsOneWidget,
+        );
+        expect(
+          find.text('S/ 12,000  14 cobros', findRichText: true),
+          findsOneWidget,
+        );
+        expect(
+          find.text('S/ 1,500  1 cobro', findRichText: true),
+          findsOneWidget,
+        );
+
+        // La dona lleva el total cobrado al centro.
+        expect(find.text('COBRADO'), findsOneWidget);
+        // Cada método con el color que tiene en "Cobros por día" aunque la dona
+        // los ordene por monto: Transferencia el tercero y Yape el segundo.
+        final secciones = tester
+            .widget<PieChart>(find.byType(PieChart))
+            .data
+            .sections;
+        expect(secciones.map((s) => s.color.toARGB32()), [
+          PaletaDash.serie[0].toARGB32(),
+          PaletaDash.serie[2].toARGB32(),
+          PaletaDash.serie[1].toARGB32(),
+        ]);
+      },
+    );
+
+    testWidgets('compras: deuda con proveedores, compras y costos', (
+      tester,
+    ) async {
+      await _montar(tester, const ComprasDashboardPagina(), _ApiFalsa());
+
+      // Antigüedad, compras por día y pagos por día.
+      expect(find.byType(GraficoBarras), findsNWidgets(3));
+      // A quién se le debe y a quién se le compra.
+      expect(find.byType(GraficoBarrasH), findsNWidgets(2));
+      expect(find.byType(GraficoDona), findsOneWidget);
+
+      // Indicadores.
+      expect(find.text('6 compras · 3 proveedores'), findsOneWidget);
+      expect(find.text('14 compras · S/ 1,500 por recibir'), findsOneWidget);
+      expect(find.text('A proveedores en el período'), findsOneWidget);
+
+      // 2.8 mil de 9 mil pasan de 30 días: 31%.
+      expect(find.text('31% de la deuda pasa de 30 días'), findsOneWidget);
+      expect(
+        find.text('La deuda más vieja tiene más de 60 días'),
+        findsOneWidget,
+      );
+      expect(find.text('+20% frente a los 30 días anteriores'), findsOneWidget);
+      expect(
+        find.textContaining('a crédito se compró S/ 15,000'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Lácteos Andinos es el 50% de lo comprado'),
+        findsOneWidget,
+      );
+
+      // Los costos: antes y ahora con céntimos, y el cambio con su signo.
+      expect(
+        find.text('2 subieron, 1 bajó frente a su compra anterior'),
+        findsOneWidget,
+      );
+      expect(find.text('S/ 7.20 → S/ 8.10 por und'), findsOneWidget);
+      expect(find.text('S/ 3.40 → S/ 3.50 por unidad'), findsOneWidget);
+      expect(find.text('+12.5%'), findsOneWidget);
+      expect(find.text('−8.6%'), findsOneWidget);
     });
 
     testWidgets('inventario: sin selector de período', (tester) async {
@@ -852,12 +1238,39 @@ void main() {
         _ApiFalsa(vacia: true),
       );
 
-      expect(find.text('Nadie debe nada'), findsOneWidget);
+      // La conclusión de la antigüedad y el vacío de la deuda por ruta.
+      expect(find.text('Nadie debe nada'), findsNWidgets(2));
       expect(find.text('Sin cuentas por cobrar'), findsOneWidget);
       expect(find.text('Sin deudores'), findsOneWidget);
-      expect(find.text('Sin cobros en el período'), findsOneWidget);
+      // Cobros por día, quién cobra y cómo pagan.
+      expect(find.text('Sin cobros en el período'), findsNWidgets(3));
+      // Los 30 días llegan, pero en cero: no hay línea que dibujar.
+      expect(find.text('Sin deuda en el período'), findsOneWidget);
       expect(find.text('Nada atrasado'), findsOneWidget);
       expect(find.text('0%'), findsOneWidget);
+    });
+
+    testWidgets('compras: no se le debe a nadie', (tester) async {
+      await _montar(
+        tester,
+        const ComprasDashboardPagina(),
+        _ApiFalsa(vacia: true),
+      );
+
+      expect(find.text('No se le debe a nadie'), findsOneWidget);
+      expect(find.text('Sin cuentas por pagar'), findsOneWidget);
+      expect(find.text('Sin deudas con proveedores'), findsOneWidget);
+      expect(find.text('Sin compras en el período'), findsOneWidget);
+      expect(find.text('Sin pagos en el período'), findsOneWidget);
+      expect(find.text('Sin cambios de costo en el período'), findsOneWidget);
+      expect(find.text('Nada atrasado'), findsOneWidget);
+      expect(find.text('0 compras en el período'), findsOneWidget);
+      expect(find.text('0%'), findsOneWidget);
+      // Sin período anterior con compras no hay con qué comparar.
+      expect(
+        find.text('Sin los 30 días anteriores con qué comparar'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('inventario: nada parado ni por vencer', (tester) async {
@@ -990,6 +1403,7 @@ void main() {
       expect(contenedor.read(periodoVentasProvider).id, '7');
       // Los demás siguen en 30 días: cambiar Ventas no mueve a Cobranza.
       expect(contenedor.read(periodoCobranzaProvider).id, '30');
+      expect(contenedor.read(periodoComprasProvider).id, '30');
       expect(contenedor.read(periodoRentabilidadProvider).id, '30');
       expect(contenedor.read(periodoRepartoProvider).id, '30');
       await tester.pumpAndSettle();
@@ -1573,6 +1987,10 @@ void main() {
     expect(
       CobranzaDashboardPagina.ruta,
       resolverRuta('/dashboard/cobranza').item?.ruta,
+    );
+    expect(
+      ComprasDashboardPagina.ruta,
+      resolverRuta('/dashboard/compras').item?.ruta,
     );
     expect(
       InventarioDashboardPagina.ruta,
