@@ -45,7 +45,11 @@ export interface DataTableFilter {
 }
 
 /** Texto legible de lo que compara un filtro, para el chip y la lista del panel. */
-export function describeFilter(f: DataTableFilter): ReactNode {
+/**
+ * El texto del chip. Con `opciones` (las de una columna de lista) se muestra el nombre de la
+ * opción y no su valor: "del 12/10 al 18/10", no "2026-10-12".
+ */
+export function describeFilter(f: DataTableFilter, opciones?: { value: string; label: string }[]): ReactNode {
   if (f.operator === 'between') {
     // yyyy-mm-dd del calendario, mostrado como se lee aquí: 27/09/2026.
     const dia = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-').reverse().join('/') : iso)
@@ -56,7 +60,7 @@ export function describeFilter(f: DataTableFilter): ReactNode {
   return (
     <>
       <span className="opacity-70">{OPERATORS.find((o) => o.id === f.operator)?.label}</span>{' '}
-      <b>{f.value}</b>
+      <b>{opciones?.find((o) => o.value === f.value)?.label ?? f.value}</b>
     </>
   )
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Ban, Calculator, Coins, Eye, FileText, HandCoins, History, Pencil, RefreshCw, Wallet } from 'lucide-react'
 import {
   Alert,
@@ -22,6 +22,7 @@ import { ApiError } from '../../lib/apiClient'
 import { fechaCorta, fechaHora, hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
+import { lunesDe, sumarDias } from './adelantoApi'
 import { planillaApi } from './planillaApi'
 import type {
   CuentaPagoOpcion,
@@ -43,6 +44,9 @@ const diaCorto = (fecha: string) => {
 const menos = (n: number) => (n > 0 ? `-${soles(n)}` : '—')
 const mas = (n: number) => (n > 0 ? `+${soles(n)}` : '—')
 
+/** "del 12/10 al 18/10/2026", desde el lunes. */
+const etiquetaSemana = (lunes: string) => `del ${fechaCorta(lunes).slice(0, 5)} al ${fechaCorta(sumarDias(lunes, 6))}`
+
 const ESTADOS: Record<EstadoPlanilla, { label: string; tono: BadgeTone }> = {
   BORRADOR: { label: 'Borrador', tono: 'warning' },
   PAGADA: { label: 'Pagada', tono: 'success' },
@@ -61,7 +65,8 @@ export function PlanillaPage() {
   const toast = useToast()
   const { confirmar, dialogo } = useConfirmacion()
   const [pestana, setPestana] = useState<Pestana>('semana')
-  const [fecha, setFecha] = useState(hoyLocal())
+  // Siempre el lunes de la semana: es el valor del filtro Semana.
+  const [fecha, setFecha] = useState(() => lunesDe(hoyLocal()))
   const [planilla, setPlanilla] = useState<PlanillaResponse | null>(null)
   const [historial, setHistorial] = useState<PlanillaResumenResponse[]>([])
   const [cargando, setCargando] = useState(true)
@@ -124,6 +129,23 @@ export function PlanillaPage() {
         }
       },
     })
+
+  /*
+   * Las semanas del filtro: de esta hacia atrás medio año, más las del historial que sean más
+   * viejas. Hasta esta semana: una que no empezó no tiene asistencia y se pagaría completa.
+   */
+  const estaSemana = lunesDe(hoyLocal())
+  const semanas = useMemo(() => {
+    const lunes = Array.from({ length: 26 }, (_, i) => sumarDias(estaSemana, -7 * i))
+    for (const h of historial) {
+      const l = h.desde.slice(0, 10)
+      if (!lunes.includes(l)) lunes.push(l)
+    }
+    return lunes
+      .sort()
+      .reverse()
+      .map((l) => ({ value: l, label: l === estaSemana ? `Esta semana (${etiquetaSemana(l)})` : etiquetaSemana(l) }))
+  }, [historial, estaSemana])
 
   const cabecera = (
     <Tabs
@@ -190,6 +212,15 @@ export function PlanillaPage() {
   const sinMarcar = borrador ? (planilla?.fechasSinMarcar ?? []) : []
 
   const columns: DataTableColumn<PlanillaDetalleResponse>[] = [
+    {
+      // Qué semana se ve: vive en el panel de Filtros, no es un dato de cada fila.
+      key: 'semana',
+      label: 'Semana',
+      soloFiltro: true,
+      filterType: 'select',
+      filterOptions: semanas,
+      value: () => planilla?.desde.slice(0, 10) ?? '',
+    },
     {
       key: 'empleado',
       label: 'Empleado',
@@ -267,17 +298,7 @@ export function PlanillaPage() {
         title="Planilla semanal"
         description="Pago semanal: sueldo, faltas, feriados, bonos y descuentos."
         actions={
-          <div className="flex flex-wrap items-end gap-2">
-            {/* Hasta hoy: una semana que no empezó no tiene asistencia y se pagaría completa. */}
-            <Input
-              size="sm"
-              type="date"
-              aria-label="Semana"
-              max={hoyLocal()}
-              value={fecha}
-              onChange={(e) => e.target.value && setFecha(e.target.value)}
-              className="w-40"
-            />
+          <>
             {(!planilla || borrador) && puede('rrhh.planilla', 'crear') && (
               <Button size="sm" variant="secondary" loading={trabajando} onClick={() => void generar()} iconRight={<RefreshCw size={15} />}>
                 {planilla ? 'Recalcular' : 'Armar planilla'}
@@ -309,7 +330,7 @@ export function PlanillaPage() {
                 Anular
               </Button>
             )}
-          </div>
+          </>
         }
         alert={
           error ? (
@@ -342,6 +363,8 @@ export function PlanillaPage() {
         }
         columns={columns}
         rows={planilla?.detalle ?? []}
+        onConsulta={(q) => setFecha(q.filtros.find((f) => f.columna === 'semana')?.valor || estaSemana)}
+        filtrosIniciales={[{ column: 'semana', operator: 'equals', value: fecha }]}
         cardIcon={Wallet}
         searchPlaceholder="Buscar empleado..."
         empty={

@@ -67,6 +67,12 @@ export interface DataTableColumn<T> {
   filterType?: FilterType
   /** Opciones del `<select>` cuando `filterType: 'select'`. */
   filterOptions?: { value: string; label: string }[]
+  /**
+   * No se pinta en la tabla, ni en las tarjetas, ni en el menú de columnas: solo existe en el
+   * panel de Filtros. Es para el filtro que decide QUÉ se trae y no es un dato de cada fila —la
+   * semana de la planilla—, que antes quedaba como un campo suelto junto a los botones.
+   */
+  soloFiltro?: boolean
   /** Escape hatch: valor a usar para buscar, ordenar y filtrar. */
   value?: (row: T) => string | number
   /**
@@ -297,7 +303,8 @@ export function SysDataTable<T>({
   toolbar = true,
   paginacion = true,
 }: SysDataTableProps<T>) {
-  const [order, setOrder] = useState<string[]>(() => columns.map((c) => c.key))
+  // Las de solo filtro no entran al orden: de él salen la tabla, la búsqueda, las tarjetas y el menú de columnas.
+  const [order, setOrder] = useState<string[]>(() => columns.filter((c) => !c.soloFiltro).map((c) => c.key))
   const [hidden, setHidden] = useState<string[]>([])
   const [sort, setSort] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({
     key: null,
@@ -338,8 +345,11 @@ export function SysDataTable<T>({
   // sin esto, una columna nueva nunca llegaria a pintarse.
   useEffect(() => {
     setOrder((prev) => {
-      const vigentes = prev.filter((k) => k in byKey)
-      const nuevas = columns.map((c) => c.key).filter((k) => !vigentes.includes(k))
+      const vigentes = prev.filter((k) => k in byKey && !byKey[k].soloFiltro)
+      const nuevas = columns
+        .filter((c) => !c.soloFiltro)
+        .map((c) => c.key)
+        .filter((k) => !vigentes.includes(k))
       if (nuevas.length === 0 && vigentes.length === prev.length) return prev
       return [...vigentes, ...nuevas]
     })
@@ -699,7 +709,7 @@ export function SysDataTable<T>({
                     className="inline-flex animate-[fadeIn_150ms_ease-out] items-center gap-1.5 rounded-full border border-[rgb(var(--sys-rgb)/0.3)] bg-[rgb(var(--sys-rgb)/0.1)] py-1 pr-1.5 pl-2.5 text-[11px] text-[rgb(var(--sys-ink-rgb))]"
                   >
                     <span className="font-medium">{byKey[f.column]?.label}</span>
-                    <span>{describeFilter(f)}</span>
+                    <span>{describeFilter(f, byKey[f.column]?.filterOptions)}</span>
                     {/* El de inicio no se quita: quitarlo volvería a él mismo. */}
                     {!igual(f, inicialDe(f.column)) && (
                       <button
