@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import {
   CalendarCheck,
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
   Clock,
   Flag,
+  MessageSquare,
   Pencil,
   Plus,
   Table2,
@@ -26,10 +29,11 @@ import {
   StatCard,
   SysDataTable,
   Tabs,
+  cn,
   useConfirmacion,
   useToast,
 } from '../../components/ui'
-import type { BadgeTone, DataTableColumn } from '../../components/ui'
+import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaCorta, fechaLocal, hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
@@ -63,14 +67,38 @@ const ESTADOS: { value: EstadoAsistencia; label: string }[] = [
   { value: 'PERMISO', label: 'Permiso' },
 ]
 
-// Apagados a propósito: PRESENTE (lo esperable, la mayoría de los días) va en
-// gris neutro y no compite por atención. El color se reserva para lo que de
-// verdad hay que mirar: una tardanza, una falta, un permiso.
-const TONO_ESTADO: Record<EstadoAsistencia, BadgeTone> = {
-  PRESENTE: 'neutral',
-  TARDANZA: 'warning',
-  FALTA: 'danger',
-  PERMISO: 'sys',
+/*
+ * Un color por significado. PRESENTE va en gris a propósito: es lo esperable, la mayoría de los
+ * días, y no compite por atención. El color se reserva para lo que hay que mirar.
+ *
+ * Permiso iba con el color del sistema, que en RR.HH. es ámbar: el mismo de la tardanza y del
+ * feriado, tres cosas distintas en un solo tono. Ahora es celeste, y el feriado, violeta.
+ */
+const COLOR_ESTADO: Record<EstadoAsistencia, { chip: string; punto: string }> = {
+  PRESENTE: { chip: 'bg-zinc-100 text-zinc-600 ring-zinc-200', punto: 'bg-zinc-400' },
+  TARDANZA: { chip: 'bg-amber-50 text-amber-800 ring-amber-200', punto: 'bg-amber-500' },
+  FALTA: { chip: 'bg-red-50 text-red-700 ring-red-200', punto: 'bg-red-500' },
+  PERMISO: { chip: 'bg-sky-50 text-sky-700 ring-sky-200', punto: 'bg-sky-500' },
+}
+
+/** Lo que no es "presente", en el orden en que se mira: lo más grave primero. */
+const INCIDENCIAS: EstadoAsistencia[] = ['FALTA', 'TARDANZA', 'PERMISO']
+
+const etiquetaEstado = (estado: EstadoAsistencia) => ESTADOS.find((e) => e.value === estado)?.label ?? estado
+
+/** El estado de una marca, con el mismo color en el calendario y en el registro. */
+function EstadoChip({ estado, className }: { estado: EstadoAsistencia; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1',
+        COLOR_ESTADO[estado].chip,
+        className,
+      )}
+    >
+      {etiquetaEstado(estado)}
+    </span>
+  )
 }
 
 const ABREVIA: Record<EstadoAsistencia, string> = {
@@ -81,6 +109,98 @@ const ABREVIA: Record<EstadoAsistencia, string> = {
 }
 
 type Pestana = 'calendario' | 'registro'
+
+/** El primer día del mes de una fecha YYYY-MM-DD. */
+const mesDe = (fecha: string) => new Date(Number(fecha.slice(0, 4)), Number(fecha.slice(5, 7)) - 1, 1)
+
+const DIAS_LARGOS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
+/**
+ * Un día del calendario: el número arriba (hoy, en un círculo con el color del sistema), lo que
+ * resume el día en la esquina y el detalle abajo. En el celular el detalle se vuelve puntos: siete
+ * columnas en 375px no dejan sitio para texto.
+ */
+function DiaCalendario({
+  fecha,
+  hoy,
+  apagado,
+  feriado,
+  sinMarcar = false,
+  clicable,
+  onClick,
+  detalle,
+  esquina,
+  punto,
+  children,
+}: {
+  fecha: string
+  hoy: boolean
+  /** Domingo, futuro o fuera de contrato: no se espera marca. */
+  apagado: boolean
+  feriado?: string
+  /** Se esperaba marca y no la hay: borde punteado para que salte a la vista. */
+  sinMarcar?: boolean
+  clicable: boolean
+  onClick: () => void
+  /** Para el lector de pantalla y el tooltip: qué pasó ese día, en palabras. */
+  detalle?: string
+  esquina?: ReactNode
+  /** En el celular, el estado del día como un punto junto al número. */
+  punto?: string
+  children?: ReactNode
+}) {
+  const [a, m, d] = fecha.split('-').map(Number)
+  const dia = DIAS_LARGOS[new Date(a, m - 1, d).getDay()]
+  const titulo = [`${dia} ${d}`, feriado && `Feriado: ${feriado}`, detalle].filter(Boolean).join(' · ')
+
+  return (
+    <button
+      type="button"
+      disabled={!clicable}
+      onClick={onClick}
+      title={titulo}
+      aria-label={titulo}
+      className={cn(
+        'flex h-16 min-w-0 flex-col justify-between rounded-field border p-1 text-left sm:h-24 sm:p-2',
+        'transition-[border-color,box-shadow] duration-150 ease-out',
+        'focus-visible:ring-2 focus-visible:ring-[rgb(var(--sys-rgb)/0.45)] focus-visible:outline-none',
+        feriado
+          ? 'border-violet-200 bg-violet-50'
+          : sinMarcar
+            ? 'border-dashed border-amber-300 bg-white'
+            : apagado
+              ? 'border-line/70 bg-surface-alt'
+              : 'border-line bg-white',
+        clicable
+          ? 'cursor-pointer hover:border-[rgb(var(--sys-rgb)/0.55)] hover:shadow-[0_3px_10px_-4px_rgb(15_23_42/0.18)]'
+          : 'cursor-default',
+      )}
+    >
+      <div className="flex items-start justify-between gap-1">
+        <span
+          className={cn(
+            'inline-flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums sm:size-7 sm:text-[13px]',
+            hoy ? 'bg-[rgb(var(--sys-rgb))] text-[var(--sys-on)]' : apagado && !feriado ? 'text-ink-soft' : 'text-ink',
+          )}
+        >
+          {d}
+        </span>
+        {esquina && <span className="hidden sm:inline-flex">{esquina}</span>}
+        {punto && <span className={cn('mt-1 size-1.5 shrink-0 rounded-full sm:hidden', punto)} />}
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-1">
+        {feriado && (
+          <span className="flex min-w-0 items-center gap-1 text-[10px] font-semibold text-violet-700 sm:text-[11px]">
+            <Flag size={11} className="shrink-0" aria-hidden="true" />
+            <span className="hidden truncate sm:inline">{feriado}</span>
+          </span>
+        )}
+        {children}
+      </div>
+    </button>
+  )
+}
 
 /** El mes de `cursor` en semanas de lunes a domingo, con huecos como `null`. */
 function semanasDe(cursor: Date): (string | null)[][] {
@@ -254,9 +374,10 @@ export function AsistenciaPage() {
       return
     }
     const marca = marcasPorDia.get(fecha)
+    const elegido = empleados.find((e) => e.id === empleadoFiltro)
     if (marca) {
       if (puede('rrhh.asistencia', 'editar')) abrirEdicion(marca)
-    } else if (fecha <= hoyLocal() && puede('rrhh.asistencia', 'crear')) {
+    } else if (fecha <= hoyLocal() && (!elegido || trabajaba(elegido, fecha)) && puede('rrhh.asistencia', 'crear')) {
       abrirNuevo({ empleadoId: Number(empleadoFiltro), fecha })
     }
   }
@@ -323,7 +444,7 @@ export function AsistenciaPage() {
       label: 'Estado',
       filterType: 'select',
       filterOptions: ESTADOS,
-      render: (row) => <Badge tone={TONO_ESTADO[row.estado]}>{ESTADOS.find((e) => e.value === row.estado)?.label}</Badge>,
+      render: (row) => <EstadoChip estado={row.estado} />,
     },
     { key: 'observacion', label: 'Observación', filterable: false, render: (row) => row.observacion ?? '—' },
     { key: 'usuario', label: 'Registrada por', filterable: false, render: (row) => row.usuario ?? '—' },
@@ -341,6 +462,9 @@ export function AsistenciaPage() {
   ]
 
   const semanas = semanasDe(cursor)
+  const hoy = hoyLocal()
+  const esMesActual = cursor.getFullYear() === Number(hoy.slice(0, 4)) && cursor.getMonth() === Number(hoy.slice(5, 7)) - 1
+  const empleadoElegido = empleadoFiltro ? empleados.find((e) => e.id === empleadoFiltro) : undefined
 
   return (
     <div className="space-y-5">
@@ -378,28 +502,35 @@ export function AsistenciaPage() {
       />
 
       {pestana === 'calendario' ? (
-        <div className="rounded-panel border border-line bg-white p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))}
-                className="rounded-field border border-line p-1.5 text-ink-soft hover:bg-surface-alt"
-                aria-label="Mes anterior"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="w-36 text-center text-sm font-bold text-ink">
-                {MESES[cursor.getMonth()]} {cursor.getFullYear()}
-              </span>
-              <button
-                type="button"
-                onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))}
-                className="rounded-field border border-line p-1.5 text-ink-soft hover:bg-surface-alt"
-                aria-label="Mes siguiente"
-              >
-                <ChevronRight size={16} />
-              </button>
+        <div className="rounded-panel border border-line bg-white p-3 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex shrink-0 overflow-hidden rounded-field border border-line">
+                <button
+                  type="button"
+                  onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))}
+                  className="cursor-pointer border-r border-line p-1.5 text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink"
+                  aria-label="Mes anterior"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))}
+                  className="cursor-pointer p-1.5 text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink"
+                  aria-label="Mes siguiente"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+              <h2 className="text-lg font-bold tracking-tight text-ink">
+                {MESES[cursor.getMonth()]} <span className="font-medium text-ink-muted">{cursor.getFullYear()}</span>
+              </h2>
+              {!esMesActual && (
+                <Button size="sm" variant="secondary" onClick={() => setCursor(mesDe(hoy))}>
+                  Hoy
+                </Button>
+              )}
             </div>
 
             <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
@@ -420,68 +551,176 @@ export function AsistenciaPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase text-ink-soft">
-            {DIAS.map((d) => (
-              <div key={d} className="py-1">
+          <div className="mb-1.5 grid grid-cols-7 gap-1.5 sm:gap-2">
+            {DIAS.map((d, i) => (
+              <div
+                key={d}
+                className={cn(
+                  'px-1 text-[11px] font-semibold tracking-wide uppercase sm:px-2',
+                  i === 6 ? 'text-ink-soft' : 'text-ink-muted',
+                )}
+              >
                 {d}
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1">
+          <div className={cn('grid grid-cols-7 gap-1.5 transition-opacity duration-200 sm:gap-2', cargando && 'opacity-60')}>
             {semanas.flatMap((semana, si) =>
               semana.map((fecha, di) => {
-                const marca = fecha && empleadoFiltro ? marcasPorDia.get(fecha) : undefined
-                const feriado = fecha ? feriadosPorDia.get(fecha) : undefined
-                const futuro = fecha ? fecha > hoyLocal() : false
-                const clicable = !!fecha && !futuro && (!!empleadoFiltro || puede('rrhh.asistencia', 'crear'))
-                const marcadosDia = fecha && !empleadoFiltro ? (marcasDelDia.get(fecha)?.length ?? 0) : 0
+                if (!fecha) return <div key={`${si}-${di}`} aria-hidden="true" />
+
+                const feriado = feriadosPorDia.get(fecha)
+                const futuro = fecha > hoy
                 // Los domingos y feriados no se esperan (no se pagan ni se descuentan): no son "incompletos".
-                const domingo = fecha ? new Date(`${fecha}T00:00:00`).getDay() === 0 : false
-                const seEspera = !domingo && !feriado
-                const esperadosDia =
-                  fecha && !empleadoFiltro && !futuro && seEspera ? empleados.filter((e) => trabajaba(e, fecha)).length : 0
+                const domingo = di === 6
+                const seEspera = !domingo && !feriado && !futuro
+
+                if (empleadoElegido) {
+                  const marca = marcasPorDia.get(fecha)
+                  const enContrato = trabajaba(empleadoElegido, fecha)
+                  return (
+                    <DiaCalendario
+                      key={fecha}
+                      fecha={fecha}
+                      hoy={fecha === hoy}
+                      apagado={futuro || domingo || !enContrato}
+                      feriado={feriado?.nombre}
+                      sinMarcar={seEspera && enContrato && !marca}
+                      clicable={
+                        marca ? puede('rrhh.asistencia', 'editar') : !futuro && enContrato && puede('rrhh.asistencia', 'crear')
+                      }
+                      onClick={() => alClickDia(fecha)}
+                      detalle={
+                        marca
+                          ? `${etiquetaEstado(marca.estado)}${marca.observacion ? `: ${marca.observacion}` : ''}`
+                          : !enContrato
+                            ? 'No trabajaba aquí'
+                            : seEspera
+                              ? 'Sin marcar'
+                              : undefined
+                      }
+                    >
+                      {marca ? (
+                        <div className="flex items-center gap-1">
+                          <EstadoChip estado={marca.estado} className="hidden sm:inline-flex" />
+                          <span
+                            className={cn('inline-flex rounded-full px-1.5 text-[10px] font-bold ring-1 sm:hidden', COLOR_ESTADO[marca.estado].chip)}
+                          >
+                            {ABREVIA[marca.estado]}
+                          </span>
+                          {marca.observacion && <MessageSquare size={12} className="shrink-0 text-ink-soft" aria-hidden="true" />}
+                        </div>
+                      ) : seEspera && enContrato ? (
+                        <span className="hidden text-[11px] font-medium text-amber-700 sm:inline">Sin marcar</span>
+                      ) : null}
+                    </DiaCalendario>
+                  )
+                }
+
+                const delDia = marcasDelDia.get(fecha) ?? []
+                const esperados = seEspera ? empleados.filter((e) => trabajaba(e, fecha)).length : 0
+                const completo = delDia.length >= esperados
+                const conteo = (estado: EstadoAsistencia) => delDia.filter((m) => m.estado === estado).length
+                const incidencias = INCIDENCIAS.map((estado) => ({ estado, n: conteo(estado) })).filter((x) => x.n > 0)
+
                 return (
-                  <button
-                    key={`${si}-${di}`}
-                    type="button"
-                    disabled={!clicable}
-                    title={feriado?.nombre}
+                  <DiaCalendario
+                    key={fecha}
+                    fecha={fecha}
+                    hoy={fecha === hoy}
+                    apagado={futuro || domingo}
+                    feriado={feriado?.nombre}
+                    clicable={!futuro && puede('rrhh.asistencia', 'crear')}
                     onClick={() => alClickDia(fecha)}
-                    className={`flex h-16 flex-col items-center justify-center gap-0.5 rounded-field border px-1 text-xs ${
-                      fecha ? (feriado ? 'border-amber-200 bg-amber-50' : 'border-line bg-white') : 'border-transparent'
-                    } ${clicable ? 'cursor-pointer hover:border-sys' : ''} ${futuro ? 'opacity-40' : ''}`}
+                    detalle={[
+                      esperados > 0 ? `${delDia.length} de ${esperados} con marca` : delDia.length > 0 ? `${delDia.length} con marca` : '',
+                      ...incidencias.map((x) => `${x.n} ${etiquetaEstado(x.estado).toLowerCase()}`),
+                    ]
+                      .filter(Boolean)
+                      .join(', ')}
+                    esquina={
+                      esperados > 0 ? (
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums',
+                            completo ? 'text-emerald-700' : 'text-amber-700',
+                          )}
+                        >
+                          {completo && <Check size={12} strokeWidth={3} aria-hidden="true" />}
+                          {delDia.length}/{esperados}
+                        </span>
+                      ) : delDia.length > 0 ? (
+                        <span className="text-[11px] font-semibold text-ink-muted tabular-nums">{delDia.length}</span>
+                      ) : undefined
+                    }
+                    punto={esperados > 0 ? (completo ? 'bg-emerald-500' : 'bg-amber-500') : undefined}
                   >
-                    {fecha && <span className="text-ink-soft">{Number(fecha.slice(8, 10))}</span>}
-                    {feriado && (
-                      <span className="w-full truncate text-center text-[10px] font-semibold text-amber-700">
-                        {feriado.nombre}
-                      </span>
+                    {incidencias.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1">
+                        {incidencias.map((x) => (
+                          <span key={x.estado} title={etiquetaEstado(x.estado)}>
+                            <span
+                              className={cn(
+                                'hidden items-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ring-1 sm:inline-flex',
+                                COLOR_ESTADO[x.estado].chip,
+                              )}
+                            >
+                              {x.n} {ABREVIA[x.estado]}
+                            </span>
+                            <span className={cn('inline-block size-1.5 rounded-full sm:hidden', COLOR_ESTADO[x.estado].punto)} />
+                          </span>
+                        ))}
+                      </div>
                     )}
-                    {marca && (
-                      <Badge tone={TONO_ESTADO[marca.estado]} className="px-1.5 py-0">
-                        {ABREVIA[marca.estado]}
-                      </Badge>
-                    )}
-                    {(marcadosDia > 0 || esperadosDia > 0) && (
-                      <Badge
-                        tone={!seEspera || marcadosDia >= esperadosDia ? 'neutral' : 'warning'}
-                        className="px-1.5 py-0"
-                      >
-                        {seEspera ? `${marcadosDia}/${esperadosDia}` : marcadosDia}
-                      </Badge>
-                    )}
-                  </button>
+                  </DiaCalendario>
                 )
               }),
             )}
           </div>
 
-          <p className="mt-2 text-xs text-ink-soft">
-            {empleadoFiltro
-              ? 'Toca un día para marcar o corregir a este empleado.'
-              : 'Toca un día para pasar lista a todos: marcados / los que trabajaban ese día. Elige un empleado para ver solo sus marcas.'}
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-line pt-3">
+            <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-ink-muted">
+              {empleadoElegido ? (
+                <>
+                  {ESTADOS.map((e) => (
+                    <li key={e.value} className="flex items-center gap-1.5">
+                      <span className={cn('size-2 rounded-full', COLOR_ESTADO[e.value].punto)} />
+                      {e.label}
+                    </li>
+                  ))}
+                  <li className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-sm border border-dashed border-amber-400" />
+                    Sin marcar
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li className="flex items-center gap-1.5">
+                    <Check size={12} strokeWidth={3} className="text-emerald-600" />
+                    Lista completa
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-amber-500" />
+                    Falta pasar lista
+                  </li>
+                  {INCIDENCIAS.map((estado) => (
+                    <li key={estado} className="flex items-center gap-1.5">
+                      <span className={cn('size-2 rounded-full', COLOR_ESTADO[estado].punto)} />
+                      {ABREVIA[estado]} {etiquetaEstado(estado).toLowerCase()}
+                    </li>
+                  ))}
+                </>
+              )}
+              <li className="flex items-center gap-1.5">
+                <Flag size={12} className="text-violet-600" />
+                Feriado
+              </li>
+            </ul>
+            <p className="text-xs text-ink-soft">
+              {empleadoElegido ? 'Toca un día para marcar o corregir.' : 'Toca un día para pasar lista.'}
+            </p>
+          </div>
         </div>
       ) : (
         <SysDataTable
