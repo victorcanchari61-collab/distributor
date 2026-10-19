@@ -368,11 +368,6 @@ const menuGrupos = <MenuGrupo>[
         icono: Icons.undo,
         pendiente: false,
       ),
-      MenuItem(
-        id: 'dms.evidencias',
-        titulo: 'Evidencias',
-        icono: Icons.fact_check_outlined,
-      ),
     ],
   ),
   MenuGrupo(

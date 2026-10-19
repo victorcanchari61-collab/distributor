@@ -47,7 +47,7 @@ function useCerrarAlTocarFuera(abierto: boolean, ref: RefObject<HTMLElement | nu
 
 /** El botón redondo blanco de la cabecera: la campana. */
 const BOTON_REDONDO =
-  'relative inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-line bg-white text-ink-muted shadow-sm transition-colors hover:text-ink'
+  'relative inline-flex size-[var(--height-field-sm)] shrink-0 cursor-pointer items-center justify-center rounded-full border border-line bg-white text-ink-muted shadow-sm transition-colors hover:text-ink'
 
 /**
  * La campana de alertas, en la cabecera de cada vista (ya no hay barra superior).
@@ -128,11 +128,11 @@ export function CampanaAlertas({ onNavigate }: { onNavigate: (id: string) => voi
   return (
     <div ref={contenedorRef} className="relative">
       <button type="button" aria-label="Notificaciones" onClick={() => setAbierto((a) => !a)} className={BOTON_REDONDO}>
-        <Bell size={19} />
+        <Bell size={17} />
         {sinLeer.length > 0 && (
           <span
             className={cn(
-              'absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full text-[10px] font-bold text-white ring-2 ring-white',
+              'absolute -top-1.5 -right-1.5 flex size-[1.125rem] items-center justify-center rounded-full text-[9px] font-bold text-white ring-2 ring-white',
               colorContador,
             )}
           >
@@ -283,9 +283,9 @@ export function MenuCuenta({ nombre, email, foto, onPerfil, onLogout }: MenuCuen
         type="button"
         onClick={() => setAbierto((a) => !a)}
         aria-label="Mi cuenta"
-        className="flex cursor-pointer items-center gap-3 rounded-full border border-line bg-white py-1.5 pr-3 pl-1.5 shadow-sm transition-shadow hover:shadow-md"
+        className="flex h-[var(--height-field-sm)] cursor-pointer items-center gap-2 rounded-full border border-line bg-white pr-2.5 pl-1 shadow-sm transition-shadow hover:shadow-md"
       >
-        <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[rgb(var(--sys-rgb))] text-sm font-bold text-[var(--sys-on)]">
+        <span className="inline-flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[rgb(var(--sys-rgb))] text-xs font-bold text-[var(--sys-on)]">
           {foto ? (
             <img src={urlImagen(foto)} alt={nombre} className="size-full object-cover" />
           ) : (
@@ -293,10 +293,10 @@ export function MenuCuenta({ nombre, email, foto, onPerfil, onLogout }: MenuCuen
           )}
         </span>
         <span className="hidden min-w-0 text-left sm:block">
-          <span className="block max-w-44 truncate text-sm leading-tight font-semibold text-ink">{nombre}</span>
-          <span className="block max-w-44 truncate text-[11px] text-ink-muted">{email}</span>
+          <span className="block max-w-44 truncate text-[13px] leading-tight font-semibold text-ink">{nombre}</span>
+          <span className="block max-w-44 truncate text-[11px] leading-tight text-ink-muted">{email}</span>
         </span>
-        <ChevronDown size={16} className={cn('shrink-0 text-ink-soft transition-transform', abierto && 'rotate-180')} />
+        <ChevronDown size={15} className={cn('shrink-0 text-ink-soft transition-transform', abierto && 'rotate-180')} />
       </button>
 
       {abierto && (
