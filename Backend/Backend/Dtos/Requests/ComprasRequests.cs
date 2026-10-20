@@ -30,6 +30,9 @@ public class PagoCompraRequest
 {
     public int MetodoPagoId { get; set; }
     public decimal Monto { get; set; }
+
+    /// <summary>Solo en efectivo: sale de la Bóveda en vez de la caja de quien paga.</summary>
+    public bool DesdeBoveda { get; set; }
 }
 
 /// <summary>Una compra registrada directa, sin orden previa (al contado, en el momento).</summary>

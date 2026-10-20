@@ -20,7 +20,7 @@ import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
-import { compraApi } from '../compras/comprasApi'
+import { OPCION_BOVEDA, aPagoCompra, compraApi, metodoDePago } from '../compras/comprasApi'
 import type { CompraFila, CompraResponse, PagoCompraResponse } from '../compras/comprasApi'
 import type { ResumenCuentas } from '../facturacion/ventasApi'
 import { proveedorApi } from '../maestros'
@@ -174,7 +174,7 @@ export function CuentasPorPagarPage() {
   const editarFila = (pago: FilaPago) => {
     setEditandoClave(pago.clave)
     setTipo(metodosPago.find((m) => m.id === pago.metodoPagoId)?.tipo ?? '')
-    setMetodoPagoId(pago.metodoPagoId)
+    setMetodoPagoId(metodoDePago(pago))
     setMonto(String(pago.monto))
   }
 
@@ -205,10 +205,12 @@ export function CuentasPorPagarPage() {
 
     setGuardando(true)
     try {
+      const efectivoId = metodosPago.find((m) => m.tipo === 'EFECTIVO')?.id
+      const pago = aPagoCompra(metodoPagoId, valor, efectivoId)
       if (editandoClave === NUEVA) {
-        await compraApi.registrarPago(gestionando.id, { metodoPagoId, monto: valor })
+        await compraApi.registrarPago(gestionando.id, pago)
       } else {
-        await compraApi.actualizarPago(gestionando.id, Number(editandoClave), { metodoPagoId, monto: valor })
+        await compraApi.actualizarPago(gestionando.id, Number(editandoClave), pago)
       }
       await refrescar(gestionando.id)
       await cargar()
@@ -278,7 +280,7 @@ export function CuentasPorPagarPage() {
     ? [
         ...gestionando.pagos.map((p) => ({ ...p, clave: String(p.id) })),
         ...(editandoClave === NUEVA
-          ? [{ id: 0, clave: NUEVA, fecha: '', metodoPagoId: 0, metodoPago: '', monto: 0, usuario: null, anulado: false }]
+          ? [{ id: 0, clave: NUEVA, fecha: '', metodoPagoId: 0, metodoPago: '', monto: 0, usuario: null, anulado: false, desdeBoveda: false }]
           : []),
       ]
     : []
@@ -324,10 +326,16 @@ export function CuentasPorPagarPage() {
             onChange={(v) => setMetodoPagoId(Number(v))}
             placeholder={tipo ? 'Elige el método' : 'Elige el tipo primero'}
             disabled={!tipo}
-            options={metodosPago.filter((m) => m.tipo === tipo).map((m) => ({ value: m.id, label: etiquetaMetodo(m) }))}
+            options={[
+              ...metodosPago.filter((m) => m.tipo === tipo).map((m) => ({ value: m.id, label: etiquetaMetodo(m) })),
+              // En efectivo, la plata puede salir de la Bóveda en vez de la caja de quien paga.
+              ...(tipo === 'EFECTIVO' ? [OPCION_BOVEDA] : []),
+            ]}
           />
         ) : fila.anulado ? (
-          <span className="text-ink-soft line-through">{fila.metodoPago}</span>
+          <span className="text-ink-soft line-through">{fila.desdeBoveda ? 'Bóveda' : fila.metodoPago}</span>
+        ) : fila.desdeBoveda ? (
+          'Bóveda'
         ) : (
           fila.metodoPago
         ),

@@ -294,7 +294,8 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
                     : () => setState(() {
                         _editando = pago;
                         _tipoEditar = null;
-                        _metodoEditarId = pago.metodoPagoId;
+                        // Uno que salio de la Boveda queda con esa opcion.
+                        _metodoEditarId = pago.metodoElegido;
                         _montoEditarCtrl.text = pago.monto.toStringAsFixed(2);
                         _error = null;
                       }),
@@ -365,6 +366,10 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
               opciones: [
                 for (final m in metodos.where((m) => m.tipo == _tipoNuevo))
                   Opcion(m.id, m.etiqueta),
+                // En efectivo, la plata puede salir de la Boveda en vez de la
+                // caja de quien paga.
+                if (_tipoNuevo == TipoMetodoPago.efectivo)
+                  const Opcion(PagoBoveda.id, PagoBoveda.opcion),
               ],
               onCambio: (v) => setState(() => _metodoNuevoId = v),
             ),
@@ -403,6 +408,14 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
     );
   }
 
+  /// El metodo Efectivo del catalogo: la opcion Boveda se manda como el, con
+  /// `desdeBoveda`.
+  int? get _efectivoId => ref
+      .read(metodosPagoActivosProvider)
+      .where((m) => m.tipo == TipoMetodoPago.efectivo)
+      .firstOrNull
+      ?.id;
+
   Future<void> _registrar(BuildContext context, Compra compra) async {
     final monto = double.tryParse(_montoCtrl.text.trim().replaceAll(',', '.'));
     if (_metodoNuevoId == null) {
@@ -415,10 +428,12 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
     }
 
     try {
-      await ref.read(cuentasPorPagarProvider.notifier).registrarPago(
-        compra.id,
-        {'metodoPagoId': _metodoNuevoId, 'monto': monto},
-      );
+      await ref
+          .read(cuentasPorPagarProvider.notifier)
+          .registrarPago(
+            compra.id,
+            cuerpoPagoCompra(_metodoNuevoId!, monto, _efectivoId),
+          );
       if (!mounted) return;
       setState(() {
         _error = null;
@@ -449,11 +464,13 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
     }
 
     try {
-      await ref.read(cuentasPorPagarProvider.notifier).actualizarPago(
-        compra.id,
-        pago.id,
-        {'metodoPagoId': _metodoEditarId, 'monto': monto},
-      );
+      await ref
+          .read(cuentasPorPagarProvider.notifier)
+          .actualizarPago(
+            compra.id,
+            pago.id,
+            cuerpoPagoCompra(_metodoEditarId!, monto, _efectivoId),
+          );
       if (!mounted) return;
       setState(() {
         _error = null;
@@ -517,7 +534,7 @@ class _FilaPago extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${_fecha(pago.fecha)} · ${pago.metodoPago}',
+                  '${_fecha(pago.fecha)} · ${pago.nombreMetodo}',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -628,6 +645,11 @@ class _FormularioEdicion extends StatelessWidget {
                 (m) => tipo == null || m.tipo == tipo,
               ))
                 Opcion(m.id, m.etiqueta),
+              // La Boveda va donde se ven los de efectivo: sin tipo elegido
+              // estan todos, y asi un pago que salio de ella abre con su
+              // opcion marcada.
+              if (tipo == null || tipo == TipoMetodoPago.efectivo)
+                const Opcion(PagoBoveda.id, PagoBoveda.opcion),
             ],
             onCambio: onMetodo,
           ),

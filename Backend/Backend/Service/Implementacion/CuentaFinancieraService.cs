@@ -417,6 +417,13 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         await _context.CuentasFinancieras.FirstOrDefaultAsync(c =>
             c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == usuarioId && c.Activo);
 
+    public async Task<CuentaFinanciera> ExigirBovedaAsync() =>
+        await _context.CuentasFinancieras
+            .Where(c => c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == null && c.Activo)
+            .OrderBy(c => c.Nombre == CuentaFinanciera.NombreBoveda ? 0 : 1).ThenBy(c => c.Id)
+            .FirstOrDefaultAsync()
+        ?? throw new BadRequestException("No hay Bóveda: créala en Finanzas → Cajas");
+
     public async Task ExigirSaldoAsync(int cuentaFinancieraId, decimal monto)
     {
         var cuenta = await _context.CuentasFinancieras.AsNoTracking()

@@ -113,12 +113,33 @@ export interface PagoCompraResponse {
   usuario: string | null
   /** Se registró por error: no cuenta para el total pagado, pero se conserva en el historial. */
   anulado: boolean
+  /** En efectivo, salió de la Bóveda y no de la caja de quien pagó. */
+  desdeBoveda: boolean
 }
 
 export interface PagoCompraRequest {
   metodoPagoId: number
   monto: number
+  /** Solo en efectivo: sale de la Bóveda en vez de la caja de quien paga. */
+  desdeBoveda?: boolean
 }
+
+/**
+ * La Bóveda como opción del método en efectivo. No es un método del catálogo: es de dónde sale
+ * la plata. En el selector vale este número, y al guardar se manda como Efectivo + desdeBoveda.
+ */
+export const PAGO_BOVEDA = -1
+
+/** El pago listo para el API: la opción Bóveda pasa a ser Efectivo desde la Bóveda. */
+export const aPagoCompra = (metodoPagoId: number, monto: number, efectivoId: number | undefined): PagoCompraRequest =>
+  metodoPagoId === PAGO_BOVEDA ? { metodoPagoId: efectivoId ?? 0, monto, desdeBoveda: true } : { metodoPagoId, monto }
+
+/** El valor del selector para un pago guardado: la Bóveda vuelve a ser su opción. */
+export const metodoDePago = (pago: { metodoPagoId: number; desdeBoveda?: boolean }) =>
+  pago.desdeBoveda ? PAGO_BOVEDA : pago.metodoPagoId
+
+/** La opción Bóveda, para sumarla a los métodos en efectivo. */
+export const OPCION_BOVEDA = { value: PAGO_BOVEDA, label: 'Bóveda', detalle: 'El efectivo de la empresa' }
 
 /**
  * Una compra como fila de un listado (Compras, Cuentas por pagar): solo lo que

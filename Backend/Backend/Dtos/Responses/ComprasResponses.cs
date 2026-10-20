@@ -75,6 +75,9 @@ public class PagoCompraResponse
     public DateTime Fecha { get; set; }
     public string? Usuario { get; set; }
     public bool Anulado { get; set; }
+
+    /// <summary>En efectivo, salió de la Bóveda y no de la caja de quien pagó.</summary>
+    public bool DesdeBoveda { get; set; }
 }
 
 public class CompraResponse

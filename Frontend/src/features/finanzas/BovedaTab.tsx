@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeftRight, Landmark, TrendingDown, TrendingUp } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpFromLine, Landmark, TrendingDown, TrendingUp } from 'lucide-react'
 import { Badge, Button, Input, ListPage, Modal, StatCard, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -48,7 +48,8 @@ export function BovedaTab({
   const [crearAbierto, setCrearAbierto] = useState(false)
   const [monto, setMonto] = useState('')
   const [guardando, setGuardando] = useState(false)
-  const [moverAbierto, setMoverAbierto] = useState(false)
+  // Sacar: sale de la Bóveda (fija). Traer: entra a la Bóveda (fija). Solo se elige la otra cuenta.
+  const [mover, setMover] = useState<'sacar' | 'traer' | null>(null)
 
   const bovedaId = boveda?.id
   const saldo = boveda?.saldoActual
@@ -131,9 +132,14 @@ export function BovedaTab({
       actions={
         boveda
           ? puedeMover && (
-              <Button size="sm" onClick={() => setMoverAbierto(true)} iconRight={<ArrowLeftRight size={15} />}>
-                Mover plata
-              </Button>
+              <>
+                <Button size="sm" variant="secondary" onClick={() => setMover('traer')} iconRight={<ArrowDownToLine size={15} />}>
+                  Traer a la Bóveda
+                </Button>
+                <Button size="sm" onClick={() => setMover('sacar')} iconRight={<ArrowUpFromLine size={15} />}>
+                  Sacar de la Bóveda
+                </Button>
+              </>
             )
           : puede('finanzas.cajas', 'crear') && (
               <Button
@@ -208,13 +214,25 @@ export function BovedaTab({
         />
       </Modal>
 
-      {moverAbierto && boveda && (
+      {mover && boveda && (
         <MoverPlataModal
-          cuentas={cuentas}
-          origenInicial={boveda.id}
-          onClose={() => setMoverAbierto(false)}
+          // Sacar: a un banco (depósito) o a la caja de un trabajador (fondo, sencillo, plata para pagar).
+          // Traer: solo desde un banco (retiro): las cajas de los trabajadores llegan con su cierre.
+          cuentas={cuentas.filter((c) =>
+            mover === 'sacar'
+              ? c.naturaleza === 'BANCO' || (c.naturaleza === 'CAJA' && !c.esBoveda)
+              : c.naturaleza === 'BANCO',
+          )}
+          fija={{ lado: mover === 'sacar' ? 'origen' : 'destino', cuenta: boveda }}
+          titulo={mover === 'sacar' ? 'Sacar de la Bóveda' : 'Traer a la Bóveda'}
+          descripcion={
+            mover === 'sacar'
+              ? 'A un banco (depósito) o a la caja de un trabajador. No es un gasto: la plata solo cambia de lugar.'
+              : 'Desde un banco: un retiro en efectivo. No es un ingreso: la plata solo cambia de lugar.'
+          }
+          onClose={() => setMover(null)}
           onHecho={async () => {
-            setMoverAbierto(false)
+            setMover(null)
             await onCambio()
             toast.exito('Plata movida')
           }}

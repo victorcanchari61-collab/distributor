@@ -31,6 +31,38 @@ class FormaPagoCompra {
   static const credito = 'CREDITO';
 }
 
+/// La Boveda como opcion del metodo en efectivo, igual que `PAGO_BOVEDA` en el
+/// panel web. No es un metodo del catalogo: es de donde sale la plata. En el
+/// selector vale [id], y al guardar se manda como el metodo Efectivo con
+/// `desdeBoveda`, para que el pago salga de la Boveda y no de la caja de quien
+/// paga.
+class PagoBoveda {
+  const PagoBoveda._();
+
+  /// El valor de la opcion en el selector: ningun id del catalogo es negativo.
+  static const id = -1;
+
+  static const nombre = 'Bóveda';
+
+  /// Con su detalle, como las demas opciones del selector ("BCP · ...").
+  static const opcion = '$nombre · El efectivo de la empresa';
+}
+
+/// El pago listo para el API: la opcion Boveda pasa a ser el metodo Efectivo
+/// del catalogo (`efectivoId`) con `desdeBoveda`; las demas van tal cual.
+Map<String, dynamic> cuerpoPagoCompra(
+  int metodoPagoId,
+  double monto,
+  int? efectivoId,
+) {
+  final boveda = metodoPagoId == PagoBoveda.id;
+  return {
+    'metodoPagoId': boveda ? efectivoId ?? 0 : metodoPagoId,
+    'monto': monto,
+    'desdeBoveda': boveda,
+  };
+}
+
 /// Una linea de una compra, con cuanto de ella ya llego al almacen.
 class CompraDetalle {
   const CompraDetalle({
@@ -96,6 +128,7 @@ class PagoCompra {
     required this.fecha,
     this.usuario,
     this.anulado = false,
+    this.desdeBoveda = false,
   });
 
   final int id;
@@ -106,6 +139,16 @@ class PagoCompra {
   final String? usuario;
   final bool anulado;
 
+  /// En efectivo, salio de la Boveda y no de la caja de quien pago. El metodo
+  /// que trae es el Efectivo del catalogo, asi que solo esto lo distingue.
+  final bool desdeBoveda;
+
+  /// El valor del selector de metodo: la Boveda vuelve a ser su opcion.
+  int get metodoElegido => desdeBoveda ? PagoBoveda.id : metodoPagoId;
+
+  /// Como se lee el metodo: "Bóveda" y no "Efectivo" si salio de ahi.
+  String get nombreMetodo => desdeBoveda ? PagoBoveda.nombre : metodoPago;
+
   factory PagoCompra.desdeJson(Map<String, dynamic> json) => PagoCompra(
     id: json['id'] as int,
     metodoPagoId: json['metodoPagoId'] as int,
@@ -114,6 +157,8 @@ class PagoCompra {
     fecha: fechaDeJson(json['fecha'] as String),
     usuario: json['usuario'] as String?,
     anulado: json['anulado'] as bool? ?? false,
+    // Un servidor anterior no lo manda: entonces nada salio de la Boveda.
+    desdeBoveda: json['desdeBoveda'] as bool? ?? false,
   );
 }
 

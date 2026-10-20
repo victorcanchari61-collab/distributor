@@ -82,6 +82,9 @@ public interface ICuentaFinancieraService
     /// </summary>
     Task ExigirSaldoAsync(int cuentaFinancieraId, decimal monto);
 
+    /// <summary>La Bóveda (la caja sin responsable), o un aviso de que hay que crearla.</summary>
+    Task<CuentaFinanciera> ExigirBovedaAsync();
+
     /// <summary>
     /// Mueve plata de una cuenta a otra: un Egreso en origen y un Ingreso en
     /// destino, mismo documento y mismo momento. Se usa para fondear una Caja

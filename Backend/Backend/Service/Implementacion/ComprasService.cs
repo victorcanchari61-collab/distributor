@@ -67,12 +67,16 @@ public class ComprasService : IComprasService
     /// sale de la caja de quien paga, y los demás métodos de la cuenta a la
     /// que apuntan. Un pago que no se puede postear ni siquiera se guarda.
     /// </summary>
-    private async Task ValidarPuedePagarAsync(IEnumerable<int> metodoPagoIds, int? pagadorId)
+    private async Task ValidarPuedePagarAsync(IEnumerable<PagoCompraRequest> pagos, int? pagadorId)
     {
-        foreach (var metodoId in metodoPagoIds.Distinct())
+        foreach (var (metodoId, desdeBoveda) in pagos.Select(p => (p.MetodoPagoId, p.DesdeBoveda)).Distinct())
         {
             var metodo = await _finanzas.GetMetodoPagoAsync(metodoId);
-            if (metodo.Tipo == TipoMetodoPago.Efectivo)
+            if (metodo.Tipo == TipoMetodoPago.Efectivo && desdeBoveda)
+            {
+                await _cuentas.ExigirBovedaAsync();
+            }
+            else if (metodo.Tipo == TipoMetodoPago.Efectivo)
             {
                 if (pagadorId is not int id || await _cuentas.ObtenerCajaUsuarioAsync(id) is null)
                 {
@@ -94,7 +98,12 @@ public class ComprasService : IComprasService
         var metodo = await _finanzas.GetMetodoPagoAsync(pago.MetodoPagoId);
 
         int cuentaId;
-        if (metodo.Tipo == TipoMetodoPago.Efectivo)
+        if (metodo.Tipo == TipoMetodoPago.Efectivo && pago.DesdeBoveda)
+        {
+            // La plata de la empresa paga directo, sin pasar por la caja de nadie.
+            cuentaId = (await _cuentas.ExigirBovedaAsync()).Id;
+        }
+        else if (metodo.Tipo == TipoMetodoPago.Efectivo)
         {
             if ((pago.UsuarioId ?? actorId) is not int pagadorId) return;
             cuentaId = (await _cuentas.ExigirCajaUsuarioAsync(pagadorId)).Id;
@@ -128,11 +137,11 @@ public class ComprasService : IComprasService
     }
 
     /// <summary>Los pagos como conjunto (método y monto), para saber si una edición los cambia.</summary>
-    private static string FirmaPagos(IEnumerable<(int MetodoPagoId, decimal Monto)> pagos) =>
+    private static string FirmaPagos(IEnumerable<(int MetodoPagoId, decimal Monto, bool DesdeBoveda)> pagos) =>
         // Con formato fijo: un decimal guarda su escala, y el 10.0000 de la
         // base se escribiría distinto que el 10 que llega en la edición.
         string.Join("|", pagos
-            .Select(p => $"{p.MetodoPagoId}:{Math.Round(p.Monto, 2).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}")
+            .Select(p => $"{p.MetodoPagoId}:{(p.DesdeBoveda ? "B" : "")}:{Math.Round(p.Monto, 2).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}")
             .OrderBy(x => x, StringComparer.Ordinal));
 
     // ------------------------------------------------------- Ordenes de compra
@@ -386,13 +395,14 @@ public class ComprasService : IComprasService
                 $"Los pagos suman S/ {totalPagado}, más que el total de la compra (S/ {total}).");
         }
 
-        await ValidarPuedePagarAsync(request.Pagos.Select(p => p.MetodoPagoId), usuarioId);
+        await ValidarPuedePagarAsync(request.Pagos, usuarioId);
 
         compra.Pagos = request.Pagos.Select(p => new CompraPago
         {
             MetodoPagoId = p.MetodoPagoId,
             Monto = p.Monto,
-            UsuarioId = usuarioId
+            UsuarioId = usuarioId,
+            DesdeBoveda = p.DesdeBoveda,
         }).ToList();
 
         await _repository.AddCompraAsync(compra);
@@ -435,11 +445,11 @@ public class ComprasService : IComprasService
         var actor = _usuarioActual.Id;
         var vigentes = compra.Pagos.Where(p => !p.Anulado).ToList();
         var cambianPagos =
-            FirmaPagos(vigentes.Select(p => (p.MetodoPagoId, p.Monto)))
-            != FirmaPagos(request.Pagos.Select(p => (p.MetodoPagoId, p.Monto)));
+            FirmaPagos(vigentes.Select(p => (p.MetodoPagoId, p.Monto, p.DesdeBoveda)))
+            != FirmaPagos(request.Pagos.Select(p => (p.MetodoPagoId, p.Monto, p.DesdeBoveda)));
         if (cambianPagos)
         {
-            await ValidarPuedePagarAsync(request.Pagos.Select(p => p.MetodoPagoId), actor);
+            await ValidarPuedePagarAsync(request.Pagos, actor);
         }
 
         compra.ProveedorId = request.ProveedorId;
@@ -479,7 +489,8 @@ public class ComprasService : IComprasService
                 CompraId = id,
                 MetodoPagoId = p.MetodoPagoId,
                 Monto = p.Monto,
-                UsuarioId = actor
+                UsuarioId = actor,
+                DesdeBoveda = p.DesdeBoveda,
             }).ToList();
             await _repository.ReemplazarPagosCompraAsync(id, nuevos);
 
@@ -553,13 +564,14 @@ public class ComprasService : IComprasService
                 $"El abono (S/ {request.Monto}) supera el saldo pendiente (S/ {saldo}).");
         }
 
-        await ValidarPuedePagarAsync([request.MetodoPagoId], usuarioId);
+        await ValidarPuedePagarAsync([request], usuarioId);
 
         var nuevo = new CompraPago
         {
             MetodoPagoId = request.MetodoPagoId,
             Monto = request.Monto,
-            UsuarioId = usuarioId
+            UsuarioId = usuarioId,
+            DesdeBoveda = request.DesdeBoveda,
         };
         compra.Pagos.Add(nuevo);
         await _repository.UpdateCompraAsync(compra);
@@ -604,15 +616,17 @@ public class ComprasService : IComprasService
         // Si cambia el método o el monto, lo que salió se devuelve y sale de
         // nuevo como corresponde; si no, el libro queda como estaba.
         var actor = _usuarioActual.Id;
-        var cambia = pago.MetodoPagoId != request.MetodoPagoId || pago.Monto != request.Monto;
+        var cambia = pago.MetodoPagoId != request.MetodoPagoId || pago.Monto != request.Monto
+                     || pago.DesdeBoveda != request.DesdeBoveda;
         if (cambia)
         {
-            await ValidarPuedePagarAsync([request.MetodoPagoId], pago.UsuarioId ?? actor);
+            await ValidarPuedePagarAsync([request], pago.UsuarioId ?? actor);
             await ReversarPagoAsync(pago, actor);
         }
 
         pago.MetodoPagoId = request.MetodoPagoId;
         pago.Monto = request.Monto;
+        pago.DesdeBoveda = request.DesdeBoveda;
         await _repository.GuardarAsync();
 
         if (cambia)
@@ -836,6 +850,7 @@ public class ComprasService : IComprasService
         Monto = p.Monto,
         Fecha = p.Fecha,
         Usuario = p.Usuario?.Nombre,
-        Anulado = p.Anulado
+        Anulado = p.Anulado,
+        DesdeBoveda = p.DesdeBoveda,
     };
 }

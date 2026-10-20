@@ -600,6 +600,9 @@ namespace Backend.Data.Migrations
                     b.Property<int>("CompraId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("DesdeBoveda")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime(6)");
 

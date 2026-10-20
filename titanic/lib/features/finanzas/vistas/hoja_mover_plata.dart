@@ -8,6 +8,7 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
+import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../estado/mi_caja_controlador.dart';
 import '../estado/tesoreria_controlador.dart';
@@ -25,19 +26,43 @@ class CuentaParaMover {
 /// Mover plata de una cuenta propia a otra: depositar lo de la Boveda en el
 /// banco, darle sencillo a un repartidor, retirar del banco. No es ingreso ni
 /// gasto: en el estado de resultados no suma nada.
+///
+/// Con [origenFijo] o [destinoFijo] ese lado no se elige, igual que la prop
+/// `fija` del panel web: desde la Boveda, "Sacar" sale siempre de ella y
+/// "Traer" entra siempre a ella; solo se elige la otra cuenta, entre
+/// [cuentas].
 class HojaMoverPlata extends ConsumerStatefulWidget {
-  const HojaMoverPlata({super.key, required this.cuentas, this.origenInicial});
+  const HojaMoverPlata({
+    super.key,
+    required this.cuentas,
+    this.origenInicial,
+    this.origenFijo,
+    this.destinoFijo,
+    this.titulo = 'Mover plata',
+    this.apoyo =
+        'De una cuenta propia a otra: un depósito, el sencillo de un '
+        'repartidor, un retiro. No es ingreso ni gasto.',
+  });
 
   final List<CuentaParaMover> cuentas;
   final int? origenInicial;
+
+  /// De donde sale la plata, si no se elige. Uno u otro, no los dos.
+  final CuentaParaMover? origenFijo;
+
+  /// A donde va la plata, si no se elige.
+  final CuentaParaMover? destinoFijo;
+
+  final String titulo;
+  final String apoyo;
 
   @override
   ConsumerState<HojaMoverPlata> createState() => _HojaMoverPlataState();
 }
 
 class _HojaMoverPlataState extends ConsumerState<HojaMoverPlata> {
-  late int? _origenId = widget.origenInicial;
-  int? _destinoId;
+  late int? _origenId = widget.origenFijo?.id ?? widget.origenInicial;
+  late int? _destinoId = widget.destinoFijo?.id;
   final _monto = TextEditingController();
   final _detalle = TextEditingController();
   bool _guardando = false;
@@ -104,7 +129,9 @@ class _HojaMoverPlataState extends ConsumerState<HojaMoverPlata> {
 
   @override
   Widget build(BuildContext context) {
-    final origen = widget.cuentas.where((c) => c.id == _origenId).firstOrNull;
+    final origen =
+        widget.origenFijo ??
+        widget.cuentas.where((c) => c.id == _origenId).firstOrNull;
 
     return Padding(
       padding: margenHoja(context),
@@ -113,39 +140,55 @@ class _HojaMoverPlataState extends ConsumerState<HojaMoverPlata> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const TituloHoja(
-              'Mover plata',
-              apoyo:
-                  'De una cuenta propia a otra: un depósito, el sencillo de un '
-                  'repartidor, un retiro. No es ingreso ni gasto.',
-            ),
+            TituloHoja(widget.titulo, apoyo: widget.apoyo),
             if (_error != null) ...[
               AppAlerta(_error!),
               const SizedBox(height: Dimen.espacio3),
             ],
-            AppSelector<int>(
-              valor: _origenId,
-              etiqueta: 'Sale de',
-              icono: Icons.north_east,
-              habilitado: !_guardando,
-              opciones: [for (final c in widget.cuentas) _opcion(c)],
-              onCambio: (v) => setState(() {
-                _origenId = v;
-                if (_destinoId == v) _destinoId = null;
-              }),
-            ),
+            if (widget.origenFijo != null)
+              _CuentaFija(
+                etiqueta: 'Sale de',
+                icono: Icons.north_east,
+                cuenta: widget.origenFijo!,
+              )
+            else
+              AppSelector<int>(
+                valor: _origenId,
+                etiqueta: 'Sale de',
+                icono: Icons.north_east,
+                habilitado: !_guardando,
+                opciones: [
+                  for (final c in widget.cuentas.where(
+                    (c) => c.id != widget.destinoFijo?.id,
+                  ))
+                    _opcion(c),
+                ],
+                onCambio: (v) => setState(() {
+                  _origenId = v;
+                  if (_destinoId == v) _destinoId = null;
+                }),
+              ),
             const SizedBox(height: Dimen.espacio4),
-            AppSelector<int>(
-              valor: _destinoId,
-              etiqueta: 'Va a',
-              icono: Icons.south_west,
-              habilitado: !_guardando,
-              opciones: [
-                for (final c in widget.cuentas.where((c) => c.id != _origenId))
-                  _opcion(c),
-              ],
-              onCambio: (v) => setState(() => _destinoId = v),
-            ),
+            if (widget.destinoFijo != null)
+              _CuentaFija(
+                etiqueta: 'Va a',
+                icono: Icons.south_west,
+                cuenta: widget.destinoFijo!,
+              )
+            else
+              AppSelector<int>(
+                valor: _destinoId,
+                etiqueta: 'Va a',
+                icono: Icons.south_west,
+                habilitado: !_guardando,
+                opciones: [
+                  for (final c in widget.cuentas.where(
+                    (c) => c.id != _origenId,
+                  ))
+                    _opcion(c),
+                ],
+                onCambio: (v) => setState(() => _destinoId = v),
+              ),
             const SizedBox(height: Dimen.espacio4),
             AppCampo(
               controlador: _monto,
@@ -171,6 +214,52 @@ class _HojaMoverPlataState extends ConsumerState<HojaMoverPlata> {
             AppBoton(texto: 'Mover', cargando: _guardando, onPressed: _mover),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// El lado que no se elige: se lee, con su saldo si se conoce. Con el mismo
+/// marco que los selectores, para que la hoja no cambie de forma.
+class _CuentaFija extends StatelessWidget {
+  const _CuentaFija({
+    required this.etiqueta,
+    required this.icono,
+    required this.cuenta,
+  });
+
+  final String etiqueta;
+  final IconData icono;
+  final CuentaParaMover cuenta;
+
+  @override
+  Widget build(BuildContext context) {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: etiqueta,
+        prefixIcon: Icon(icono, size: 19, color: Colores.tintaTenue),
+        constraints: const BoxConstraints(minHeight: Dimen.campoLg),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              cuenta.etiqueta,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colores.tinta,
+              ),
+            ),
+          ),
+          if (cuenta.saldo != null)
+            Text(
+              formatoSoles(cuenta.saldo!),
+              style: const TextStyle(fontSize: 13, color: Colores.tintaSuave),
+            ),
+        ],
       ),
     );
   }

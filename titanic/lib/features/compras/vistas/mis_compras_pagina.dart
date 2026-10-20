@@ -377,7 +377,10 @@ class _TarjetaCompra extends StatelessWidget {
       campos: [
         ..._campos,
         for (final pago in compra.pagos)
-          CampoDetalle(pago.metodoPago, 'S/ ${pago.monto.toStringAsFixed(2)}'),
+          CampoDetalle(
+            pago.nombreMetodo,
+            'S/ ${pago.monto.toStringAsFixed(2)}',
+          ),
       ],
       contenidoExtra: _lineas,
       acciones: [

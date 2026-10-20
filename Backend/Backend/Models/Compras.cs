@@ -186,6 +186,12 @@ public class CompraPago
     /// egreso ya se revirtió) o si es de antes de llevarse en el libro.
     /// </summary>
     public int? MovimientoCuentaId { get; set; }
+
+    /// <summary>
+    /// Un pago en efectivo que sale de la Bóveda y no de la caja de quien paga: la plata de la
+    /// empresa paga directo al proveedor, sin pasar antes por la caja de nadie.
+    /// </summary>
+    public bool DesdeBoveda { get; set; }
 }
 
 /// <summary>Un producto de la compra, con cuánto ya llegó.</summary>

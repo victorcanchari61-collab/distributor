@@ -43,7 +43,7 @@ import { almacenApi, stockApi } from '../inventario'
 import type { AlmacenOpcion } from '../inventario'
 import { etiquetaMetodo, metodoPagoApi } from '../finanzas'
 import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
-import { compraApi, ordenCompraApi } from './comprasApi'
+import { OPCION_BOVEDA, PAGO_BOVEDA, aPagoCompra, compraApi, metodoDePago, ordenCompraApi } from './comprasApi'
 import type {
   CompraDetalleResponse,
   CompraFila,
@@ -277,7 +277,7 @@ export function MisComprasPage() {
     setSerieComprobante(compra.serieComprobante ?? '')
     setNumeroComprobante(compra.numeroComprobante ?? '')
     setFormaPago(compra.formaPago)
-    setPagos(compra.pagos.map((p) => ({ metodoPagoId: p.metodoPagoId, monto: String(p.monto) })))
+    setPagos(compra.pagos.map((p) => ({ metodoPagoId: metodoDePago(p), monto: String(p.monto) })))
     setPagoTipo('')
     setPagoMetodoId(0)
     setPagoMonto('')
@@ -375,10 +375,14 @@ export function MisComprasPage() {
     setPagoMonto('')
   }
 
+  // La opción Bóveda es un pago en efectivo.
+  const tipoDePago = (metodoPagoId: number): TipoMetodoPago | '' =>
+    metodoPagoId === PAGO_BOVEDA ? 'EFECTIVO' : (metodosPago.find((m) => m.id === metodoPagoId)?.tipo ?? '')
+
   const editarFilaPago = (i: number) => {
     const pago = pagos[i]
     setFilaPago(i)
-    setPagoTipo(metodosPago.find((m) => m.id === pago.metodoPagoId)?.tipo ?? '')
+    setPagoTipo(tipoDePago(pago.metodoPagoId))
     setPagoMetodoId(pago.metodoPagoId)
     setPagoMonto(String(pago.monto))
   }
@@ -445,7 +449,7 @@ export function MisComprasPage() {
             />
           )
         }
-        const tipo = metodosPago.find((m) => m.id === fila.metodoPagoId)?.tipo
+        const tipo = tipoDePago(fila.metodoPagoId)
         return tipo ? <Badge tone="sys">{NOTA_TIPO[tipo]}</Badge> : <span className="text-ink-soft">—</span>
       },
     },
@@ -459,10 +463,14 @@ export function MisComprasPage() {
             onChange={(v) => setPagoMetodoId(Number(v))}
             placeholder={pagoTipo ? 'Elige el método' : 'Elige el tipo primero'}
             disabled={!pagoTipo}
-            options={metodosPago
-              .filter((m) => m.tipo === pagoTipo)
-              .map((m) => ({ value: m.id, label: etiquetaMetodo(m) }))}
+            options={[
+              ...metodosPago.filter((m) => m.tipo === pagoTipo).map((m) => ({ value: m.id, label: etiquetaMetodo(m) })),
+              // En efectivo, la plata puede salir de la Bóveda en vez de la caja de quien paga.
+              ...(pagoTipo === 'EFECTIVO' ? [OPCION_BOVEDA] : []),
+            ]}
           />
+        ) : fila.metodoPagoId === PAGO_BOVEDA ? (
+          'Bóveda'
         ) : (
           (metodosPago.find((m) => m.id === fila.metodoPagoId)?.nombre ?? '—')
         ),
@@ -505,7 +513,7 @@ export function MisComprasPage() {
       serieComprobante: serieComprobante.trim() || null,
       numeroComprobante: numeroComprobante.trim() || null,
       formaPago,
-      pagos: pagos.map((p) => ({ metodoPagoId: p.metodoPagoId, monto: Number(p.monto) })),
+      pagos: pagos.map((p) => aPagoCompra(p.metodoPagoId, Number(p.monto), metodosPago.find((m) => m.tipo === 'EFECTIVO')?.id)),
       observacion: observacion.trim() || null,
       detalle: validas.map((f) => ({
         productoId: f.productoId,

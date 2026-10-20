@@ -21,26 +21,36 @@ export interface CuentaParaMover {
  * Mover plata de una cuenta propia a otra: depositar lo de la Bóveda en el
  * banco, darle sencillo a un repartidor, retirar del banco. No es ingreso ni
  * gasto: en el estado de resultados no suma nada.
+ *
+ * Con `fija`, un lado no se elige: desde la Bóveda, "Sacar" sale siempre de
+ * ella y "Traer" entra siempre a ella; solo se elige la otra cuenta, entre
+ * las de `cuentas`.
  */
 export function MoverPlataModal({
   cuentas,
   origenInicial,
+  fija,
+  titulo = 'Mover plata',
+  descripcion = 'De una cuenta propia a otra: un depósito, el sencillo de un repartidor, un retiro del banco. No es ingreso ni gasto.',
   onClose,
   onHecho,
 }: {
   cuentas: CuentaParaMover[]
   origenInicial?: number
+  fija?: { lado: 'origen' | 'destino'; cuenta: CuentaParaMover }
+  titulo?: string
+  descripcion?: string
   onClose: () => void
   onHecho: () => void | Promise<void>
 }) {
-  const [origenId, setOrigenId] = useState(origenInicial ?? 0)
-  const [destinoId, setDestinoId] = useState(0)
+  const [origenId, setOrigenId] = useState(fija?.lado === 'origen' ? fija.cuenta.id : (origenInicial ?? 0))
+  const [destinoId, setDestinoId] = useState(fija?.lado === 'destino' ? fija.cuenta.id : 0)
   const [monto, setMonto] = useState('')
   const [observacion, setObservacion] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
-  const origen = cuentas.find((c) => c.id === origenId)
+  const origen = fija?.lado === 'origen' ? fija.cuenta : cuentas.find((c) => c.id === origenId)
   const opciones = (excluir: number) =>
     cuentas
       .filter((c) => c.id !== excluir)
@@ -79,8 +89,8 @@ export function MoverPlataModal({
     <Modal
       open
       size="sm"
-      title="Mover plata"
-      description="De una cuenta propia a otra: un depósito, el sencillo de un repartidor, un retiro del banco. No es ingreso ni gasto."
+      title={titulo}
+      description={descripcion}
       onClose={onClose}
       footer={
         <>
@@ -95,23 +105,31 @@ export function MoverPlataModal({
     >
       <div className="flex flex-col gap-4">
         {error && <Alert>{error}</Alert>}
-        <Desplegable
-          label="Sale de"
-          value={origenId}
-          onChange={(v) => {
-            setOrigenId(Number(v))
-            if (Number(v) === destinoId) setDestinoId(0)
-          }}
-          placeholder="Elige la cuenta"
-          options={opciones(0)}
-        />
-        <Desplegable
-          label="Va a"
-          value={destinoId}
-          onChange={(v) => setDestinoId(Number(v))}
-          placeholder="Elige la cuenta"
-          options={opciones(origenId)}
-        />
+        {fija?.lado === 'origen' ? (
+          <CuentaFija etiqueta="Sale de" cuenta={fija.cuenta} />
+        ) : (
+          <Desplegable
+            label="Sale de"
+            value={origenId}
+            onChange={(v) => {
+              setOrigenId(Number(v))
+              if (Number(v) === destinoId) setDestinoId(0)
+            }}
+            placeholder="Elige la cuenta"
+            options={opciones(fija?.lado === 'destino' ? fija.cuenta.id : 0)}
+          />
+        )}
+        {fija?.lado === 'destino' ? (
+          <CuentaFija etiqueta="Va a" cuenta={fija.cuenta} />
+        ) : (
+          <Desplegable
+            label="Va a"
+            value={destinoId}
+            onChange={(v) => setDestinoId(Number(v))}
+            placeholder="Elige la cuenta"
+            options={opciones(origenId)}
+          />
+        )}
         <Input
           label="Monto"
           type="number"
@@ -130,5 +148,18 @@ export function MoverPlataModal({
         />
       </div>
     </Modal>
+  )
+}
+
+/** El lado que no se elige: se lee, con su saldo si se conoce. */
+function CuentaFija({ etiqueta, cuenta }: { etiqueta: string; cuenta: CuentaParaMover }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-sm font-medium text-ink">{etiqueta}</span>
+      <div className="flex items-center justify-between rounded-field border border-line bg-surface-alt px-3 py-2 text-sm">
+        <span className="font-semibold text-ink">{cuenta.nombre}</span>
+        {cuenta.saldoActual !== undefined && <span className="text-ink-muted tabular-nums">{soles(cuenta.saldoActual)}</span>}
+      </div>
+    </div>
   )
 }

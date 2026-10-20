@@ -32,14 +32,13 @@ class _FilaPago {
     required this.monto,
   });
 
+  /// El valor del selector: un id del catalogo o [PagoBoveda.id].
   final int metodoPagoId;
   final String metodoPago;
   final double monto;
 
-  Map<String, dynamic> aCuerpo() => {
-    'metodoPagoId': metodoPagoId,
-    'monto': monto,
-  };
+  Map<String, dynamic> aCuerpo(int? efectivoId) =>
+      cuerpoPagoCompra(metodoPagoId, monto, efectivoId);
 }
 
 /// Alta y edicion de una compra directa, sin orden previa, y la conversion de
@@ -148,8 +147,9 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
   late final List<_FilaPago> _pagos = [
     for (final p in widget.compra?.pagos ?? const [])
       _FilaPago(
-        metodoPagoId: p.metodoPagoId,
-        metodoPago: p.metodoPago,
+        // Uno que salio de la Boveda vuelve a ser la opcion Boveda.
+        metodoPagoId: p.metodoElegido,
+        metodoPago: p.nombreMetodo,
         monto: p.monto,
       ),
   ];
@@ -201,6 +201,12 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
 
     final navegador = Navigator.of(context);
     final mensajero = Aviso.de(context);
+    // La opcion Boveda se manda como este metodo con `desdeBoveda`.
+    final efectivoId = ref
+        .read(metodosPagoActivosProvider)
+        .where((m) => m.tipo == TipoMetodoPago.efectivo)
+        .firstOrNull
+        ?.id;
 
     final cuerpo = <String, dynamic>{
       'proveedorId': _proveedorId,
@@ -213,7 +219,7 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
           : _numero.text.trim(),
       'formaPago': _formaPago,
       'pagos': _formaPago == FormaPagoCompra.contado
-          ? [for (final p in _pagos) p.aCuerpo()]
+          ? [for (final p in _pagos) p.aCuerpo(efectivoId)]
           : const [],
       'observacion': _observacion.text.trim().isEmpty
           ? null
@@ -362,7 +368,9 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                 return;
               }
 
-              String metodoNombre = '';
+              String metodoNombre = metodoId == PagoBoveda.id
+                  ? PagoBoveda.nombre
+                  : '';
               for (final m in metodos) {
                 if (m.id == metodoId) metodoNombre = m.nombre;
               }
@@ -472,6 +480,10 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
                     habilitado: tipo != null,
                     opciones: [
                       for (final m in metodosDelTipo) Opcion(m.id, m.etiqueta),
+                      // En efectivo, la plata puede salir de la Boveda en vez
+                      // de la caja de quien paga.
+                      if (tipo == TipoMetodoPago.efectivo)
+                        const Opcion(PagoBoveda.id, PagoBoveda.opcion),
                     ],
                     onCambio: (v) => setSheetState(() => metodoId = v),
                   ),

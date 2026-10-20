@@ -62,11 +62,7 @@ public class CierreCajaService : ICierreCajaService
          * elegía a quién entregarlo, y la plata terminaba repartida en cajas de otras personas o en
          * un banco sin pasar por ella. La cuenta que mande un APK viejo se ignora.
          */
-        var destino = await _context.CuentasFinancieras
-            .Where(c => c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == null && c.Activo)
-            .OrderBy(c => c.Nombre == CuentaFinanciera.NombreBoveda ? 0 : 1).ThenBy(c => c.Id)
-            .FirstOrDefaultAsync()
-            ?? throw new BadRequestException("No hay Bóveda: créala en Finanzas → Cajas antes de cerrar la caja");
+        var destino = await _cuentas.ExigirBovedaAsync();
 
         // Con el desglose, los totales salen de él: así no pueden contradecirse.
         var contadas = request.Denominaciones
