@@ -53,8 +53,12 @@ export const miCajaApi = {
       `/micaja/movimientos${desde ? `?desde=${desde}&hasta=${hasta ?? desde}` : ''}`,
     ),
 
+  /** Ingreso y egreso van por rutas distintas: cada uno pide su propio permiso. */
   registrarMovimiento: (body: MovimientoLibreRequest) =>
-    api.post<MovimientoOperativoResponse>('/micaja/movimiento', { ...body, cuentaFinancieraId: 0 }),
+    api.post<MovimientoOperativoResponse>(body.tipo === 'INGRESO' ? '/micaja/ingreso' : '/micaja/egreso', {
+      ...body,
+      cuentaFinancieraId: 0,
+    }),
 
   /** Lo que cobró o pagó por Yape, Plin o transferencia en esas fechas. */
   digitales: (desde: string, hasta: string) =>

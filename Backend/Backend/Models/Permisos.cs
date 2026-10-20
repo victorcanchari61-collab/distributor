@@ -30,9 +30,15 @@ public static class Accion
     /// <summary>Registrar o anular un pago o un cobro.</summary>
     public const string Cobrar = "cobrar";
 
+    /// <summary>Meter plata a la propia caja (Mi Caja), fuera de una venta.</summary>
+    public const string Ingreso = "ingreso";
+
+    /// <summary>Sacar plata de la propia caja (Mi Caja): un gasto, un pasaje, combustible.</summary>
+    public const string Egreso = "egreso";
+
     public static readonly string[] Todas =
     [
-        Ver, Crear, Editar, Anular, Eliminar, Exportar, Importar, Confirmar, Cobrar,
+        Ver, Crear, Editar, Anular, Eliminar, Exportar, Importar, Confirmar, Cobrar, Ingreso, Egreso,
     ];
 }
 
@@ -134,7 +140,9 @@ public static class CatalogoPermisos
             ["finanzas.ganancias"] = [Accion.Ver],
             // Ver el saldo y los movimientos de las cajas. "Mi Caja" (la
             // propia) es autoservicio y no pasa por este permiso.
-            ["finanzas.caja"] = [Accion.Ver],
+            // Ingreso y egreso: los botones de Mi Caja, por separado. Cerrar la caja no pide permiso:
+            // quien tiene caja siempre puede entregarla a la Bóveda.
+            ["finanzas.caja"] = [Accion.Ver, Accion.Ingreso, Accion.Egreso],
             // Alta de una Caja para un vendedor/repartidor y a quién se le
             // asigna: no se crea sola, solo quien tiene este permiso decide
             // quién puede cobrar en efectivo.

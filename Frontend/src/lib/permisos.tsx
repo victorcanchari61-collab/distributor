@@ -14,6 +14,9 @@ export const ACCION = {
   importar: 'importar',
   confirmar: 'confirmar',
   cobrar: 'cobrar',
+  /** Mi Caja: meter o sacar plata de la propia caja fuera de una venta. */
+  ingreso: 'ingreso',
+  egreso: 'egreso',
 } as const
 
 export type Accion = (typeof ACCION)[keyof typeof ACCION]

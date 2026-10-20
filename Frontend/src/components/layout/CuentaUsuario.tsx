@@ -31,6 +31,8 @@ const ACCION_PEDIDA: Record<string, string> = {
   importar: 'importar',
   confirmar: 'confirmar',
   cobrar: 'cobrar',
+  ingreso: 'registrar ingresos',
+  egreso: 'registrar egresos',
 }
 
 /** Cierra un panel al tocar fuera de él. */

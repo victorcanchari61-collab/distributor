@@ -51,8 +51,11 @@ class MiCajaApi {
   }
 
   /// POST /api/micaja/movimiento: un ingreso o egreso libre.
-  Future<void> registrarMovimiento(Map<String, dynamic> cuerpo) =>
-      _api.post('/micaja/movimiento', cuerpo: cuerpo);
+  /// Ingreso y egreso van por rutas distintas: cada uno pide su propio permiso.
+  Future<void> registrarMovimiento(Map<String, dynamic> cuerpo) => _api.post(
+    cuerpo['tipo'] == 'INGRESO' ? '/micaja/ingreso' : '/micaja/egreso',
+    cuerpo: cuerpo,
+  );
 
   /// POST /api/micaja/cerrar
   Future<CierreCaja> cerrar(Map<String, dynamic> cuerpo) async =>

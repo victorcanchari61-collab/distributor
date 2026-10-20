@@ -25,6 +25,8 @@ const ACCIONES: { id: Accion; label: string }[] = [
   { id: 'eliminar', label: 'Eliminar' },
   { id: 'exportar', label: 'Exportar' },
   { id: 'importar', label: 'Importar' },
+  { id: 'ingreso', label: 'Ingreso' },
+  { id: 'egreso', label: 'Egreso' },
 ]
 
 /** Lo concedido, como claves "submodulo:accion" — igual que lo guarda el backend. */

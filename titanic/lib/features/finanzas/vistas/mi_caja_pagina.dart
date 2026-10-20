@@ -14,6 +14,7 @@ import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -135,8 +136,13 @@ class MiCajaPagina extends ConsumerWidget {
                   'descuentan en tu planilla.',
         // Sin caja no hay nada que registrar ni cerrar.
         habilitado: caja != null,
-        onIngreso: () => _abrirMovimiento(context, 'INGRESO'),
-        onEgreso: () => _abrirMovimiento(context, 'EGRESO'),
+        // Ingreso y egreso piden su permiso; cerrar la caja no.
+        onIngreso: puede(ref, 'finanzas.caja', Accion.ingreso)
+            ? () => _abrirMovimiento(context, 'INGRESO')
+            : null,
+        onEgreso: puede(ref, 'finanzas.caja', Accion.egreso)
+            ? () => _abrirMovimiento(context, 'EGRESO')
+            : null,
         onCerrar: () => _abrirCierre(context),
       ),
       filtro: BotonFiltros(
@@ -241,16 +247,18 @@ class _Encabezado extends StatelessWidget {
   const _Encabezado({
     required this.aviso,
     required this.habilitado,
-    required this.onIngreso,
-    required this.onEgreso,
+    this.onIngreso,
+    this.onEgreso,
     required this.onCerrar,
   });
 
   /// Cobros que no aparecieron en el banco: se le descuentan.
   final String? aviso;
   final bool habilitado;
-  final VoidCallback onIngreso;
-  final VoidCallback onEgreso;
+
+  /// Null si no tiene el permiso: el botón no aparece.
+  final VoidCallback? onIngreso;
+  final VoidCallback? onEgreso;
   final VoidCallback onCerrar;
 
   @override
@@ -266,26 +274,30 @@ class _Encabezado extends StatelessWidget {
           ],
           Row(
             children: [
-              Expanded(
-                child: AppBoton(
-                  texto: 'Ingreso',
-                  icono: Icons.arrow_upward,
-                  variante: BotonVariante.secundario,
-                  tam: BotonTam.md,
-                  onPressed: habilitado ? onIngreso : null,
+              if (onIngreso != null) ...[
+                Expanded(
+                  child: AppBoton(
+                    texto: 'Ingreso',
+                    icono: Icons.arrow_upward,
+                    variante: BotonVariante.secundario,
+                    tam: BotonTam.md,
+                    onPressed: habilitado ? onIngreso : null,
+                  ),
                 ),
-              ),
-              const SizedBox(width: Dimen.espacio2),
-              Expanded(
-                child: AppBoton(
-                  texto: 'Egreso',
-                  icono: Icons.arrow_downward,
-                  variante: BotonVariante.secundario,
-                  tam: BotonTam.md,
-                  onPressed: habilitado ? onEgreso : null,
+                const SizedBox(width: Dimen.espacio2),
+              ],
+              if (onEgreso != null) ...[
+                Expanded(
+                  child: AppBoton(
+                    texto: 'Egreso',
+                    icono: Icons.arrow_downward,
+                    variante: BotonVariante.secundario,
+                    tam: BotonTam.md,
+                    onPressed: habilitado ? onEgreso : null,
+                  ),
                 ),
-              ),
-              const SizedBox(width: Dimen.espacio2),
+                const SizedBox(width: Dimen.espacio2),
+              ],
               Expanded(
                 child: AppBoton(
                   texto: 'Cerrar',
@@ -649,6 +661,12 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
   @override
   Widget build(BuildContext context) {
     final total = _suma(_billetes) + _suma(_monedas);
+    // Lo que debería haber según el sistema: contra eso se compara lo contado.
+    final esperado = ref.watch(miCajaProvider).valueOrNull?.saldoActual;
+    // En céntimos, para que 0.1 + 0.2 no deje una diferencia fantasma.
+    final diferencia = esperado == null
+        ? null
+        : ((total - esperado) * 100).round() / 100;
 
     return Padding(
       padding: _margenHoja(context),
@@ -681,23 +699,52 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
               onCambio: () => setState(() {}),
             ),
             const SizedBox(height: Dimen.espacio3),
-            Row(
-              children: [
-                const Text(
-                  'Total contado',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                ),
-                const Spacer(),
-                Text(
-                  formatoSoles(total),
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: Acento.de(context),
+            // Lo esperado al lado de lo contado: la diferencia se ve antes de cerrar.
+            Container(
+              padding: const EdgeInsets.all(Dimen.espacio3),
+              decoration: BoxDecoration(
+                color: Colores.fondo,
+                borderRadius: BorderRadius.circular(Dimen.radioCampo),
+              ),
+              child: Row(
+                children: [
+                  _DatoCierre(
+                    'Monto esperado',
+                    esperado == null ? '—' : formatoSoles(esperado),
+                    Colores.tinta,
                   ),
-                ),
-              ],
+                  _DatoCierre(
+                    'Total contado',
+                    formatoSoles(total),
+                    Acento.de(context),
+                  ),
+                  _DatoCierre(
+                    diferencia == null || diferencia == 0
+                        ? 'Diferencia'
+                        : diferencia < 0
+                        ? 'Faltante'
+                        : 'Sobrante',
+                    diferencia == null
+                        ? '—'
+                        : diferencia == 0
+                        ? 'Cuadra'
+                        : formatoSoles(diferencia.abs()),
+                    diferencia == null || diferencia == 0
+                        ? Colores.exito
+                        : diferencia < 0
+                        ? Colores.peligro
+                        : Colores.advertencia,
+                  ),
+                ],
+              ),
             ),
+            if (diferencia != null && diferencia < 0) ...[
+              const SizedBox(height: Dimen.espacio1),
+              const Text(
+                'Si cierras así, el faltante se descuenta en tu planilla.',
+                style: TextStyle(fontSize: 12, color: Colores.peligro),
+              ),
+            ],
             const SizedBox(height: Dimen.espacio4),
             AppCampo(
               controlador: _observacion,
@@ -892,4 +939,36 @@ String _textoFechas(DateTimeRange? rango) {
   return DateUtils.isSameDay(rango.start, rango.end)
       ? dm(rango.start)
       : '${dm(rango.start)} al ${dm(rango.end)}';
+}
+
+/// Un dato del resumen del cierre: esperado, contado o la diferencia.
+class _DatoCierre extends StatelessWidget {
+  const _DatoCierre(this.etiqueta, this.valor, this.color);
+
+  final String etiqueta;
+  final String valor;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            etiqueta,
+            style: const TextStyle(fontSize: 11, color: Colores.tintaSuave),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            valor,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

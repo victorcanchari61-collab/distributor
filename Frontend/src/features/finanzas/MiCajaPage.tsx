@@ -11,11 +11,13 @@ import {
   PageHeader,
   StatCard,
   SysDataTable,
+  cn,
   useToast,
 } from '../../components/ui'
 import type { BadgeTone, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaHora, hoyLocal } from '../../lib/fechas'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { miCajaApi } from './miCajaApi'
 import type { MovimientoDigital } from './miCajaApi'
@@ -142,6 +144,8 @@ const deDigital = (m: MovimientoDigital): FilaMiCaja => ({
  */
 export function MiCajaPage() {
   const toast = useToast()
+  // Ingreso y egreso piden su permiso; cerrar la caja no (quien tiene caja siempre puede entregarla).
+  const { puede } = usePermisos()
   const [caja, setCaja] = useState<CuentaFinancieraResponse | null>(null)
   const [filas, setFilas] = useState<FilaMiCaja[]>([])
   const [categorias, setCategorias] = useState<CategoriaOpcion[]>([])
@@ -273,12 +277,16 @@ export function MiCajaPage() {
         description="Tu efectivo del día: cobros, movimientos y cierre."
         actions={
           <>
-            <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('INGRESO')} iconRight={<ArrowUpCircle size={15} />}>
-              Ingreso
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('EGRESO')} iconRight={<ArrowDownCircle size={15} />}>
-              Egreso
-            </Button>
+            {puede('finanzas.caja', 'ingreso') && (
+              <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('INGRESO')} iconRight={<ArrowUpCircle size={15} />}>
+                Ingreso
+              </Button>
+            )}
+            {puede('finanzas.caja', 'egreso') && (
+              <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('EGRESO')} iconRight={<ArrowDownCircle size={15} />}>
+                Egreso
+              </Button>
+            )}
             <Button size="sm" onClick={() => setCerrarAbierto(true)} iconRight={<Landmark size={15} />}>
               Cerrar caja
             </Button>
@@ -355,6 +363,7 @@ export function MiCajaPage() {
 
       {cerrarAbierto && caja && (
         <CerrarCajaModal
+          esperado={caja.saldoActual}
           onClose={() => setCerrarAbierto(false)}
           onGuardado={async () => {
             setCerrarAbierto(false)
@@ -440,9 +449,12 @@ function MovimientoLibreModal({
 }
 
 function CerrarCajaModal({
+  esperado,
   onClose,
   onGuardado,
 }: {
+  /** Lo que debería haber en la caja según el sistema: contra eso se compara lo contado. */
+  esperado: number
   onClose: () => void
   onGuardado: () => void | Promise<void>
 }) {
@@ -462,6 +474,9 @@ function CerrarCajaModal({
 
   const totalBilletes = sumar(BILLETES, cantBilletes)
   const totalMonedas = sumar(MONEDAS, cantMonedas)
+  // En céntimos, para que 0.1 + 0.2 no deje una diferencia fantasma.
+  const contado = Math.round((totalBilletes + totalMonedas) * 100) / 100
+  const diferencia = Math.round((contado - esperado) * 100) / 100
 
   // Lo contado va siempre a la Bóveda: no se elige a quién entregarlo.
   const guardar = async () => {
@@ -573,10 +588,31 @@ function CerrarCajaModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-between rounded-field bg-surface-alt px-3 py-2">
-          <span className="text-sm font-semibold text-ink">Total contado</span>
-          <span className="text-lg font-bold text-[rgb(var(--sys-rgb))]">{soles(totalBilletes + totalMonedas)}</span>
+        {/* Lo esperado al lado de lo contado: la diferencia se ve antes de cerrar, no después. */}
+        <div className="grid grid-cols-3 gap-2 rounded-field bg-surface-alt p-3 text-center">
+          <div>
+            <p className="text-xs text-ink-muted">Monto esperado</p>
+            <p className="text-base font-bold text-ink tabular-nums">{soles(esperado)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-ink-muted">Total contado</p>
+            <p className="text-base font-bold text-[rgb(var(--sys-rgb))] tabular-nums">{soles(contado)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-ink-muted">{diferencia < 0 ? 'Faltante' : diferencia > 0 ? 'Sobrante' : 'Diferencia'}</p>
+            <p
+              className={cn(
+                'text-base font-bold tabular-nums',
+                diferencia < 0 ? 'text-red-600' : diferencia > 0 ? 'text-amber-600' : 'text-emerald-600',
+              )}
+            >
+              {diferencia === 0 ? 'Cuadra' : soles(Math.abs(diferencia))}
+            </p>
+          </div>
         </div>
+        {diferencia < 0 && (
+          <p className="-mt-2 text-xs text-red-600">Si cierras así, el faltante se descuenta en tu planilla.</p>
+        )}
 
         {/* Sin autocompletar: el navegador lo llenaba con el correo de la sesión. */}
         <Input

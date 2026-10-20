@@ -20,6 +20,10 @@ class Accion {
   static const importar = 'importar';
   static const confirmar = 'confirmar';
   static const cobrar = 'cobrar';
+
+  /// Mi Caja: meter o sacar plata de la propia caja fuera de una venta.
+  static const ingreso = 'ingreso';
+  static const egreso = 'egreso';
 }
 
 /// Un submódulo del catálogo y las acciones que admite.

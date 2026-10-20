@@ -176,13 +176,41 @@ class CajasPagina extends ConsumerWidget {
           ref.invalidate(movimientosCuentaProvider(boveda.id));
         }
       },
-      // El boton principal: crearla si falta, o mover plata si ya existe.
-      onNuevo: boveda == null
-          ? (puede(ref, 'finanzas.cajas', Accion.crear)
-                ? () => abrirHojaFinanzas(context, (_) => const _HojaBoveda())
-                : null)
-          : (puedeMover ? () => _mover(context, ref) : null),
-      textoNuevo: boveda == null ? 'Crear bóveda' : 'Mover plata',
+      // El boton flotante solo la crea si falta. Ya creada, la plata se mueve
+      // con Sacar y Traer, en el encabezado.
+      onNuevo: boveda == null && puede(ref, 'finanzas.cajas', Accion.crear)
+          ? () => abrirHojaFinanzas(context, (_) => const _HojaBoveda())
+          : null,
+      textoNuevo: 'Crear bóveda',
+      /*
+       * Sacar y Traer, como en el panel web, en vez de un "Mover plata" libre:
+       * la Bóveda va fija y solo se elige la otra cuenta. Uno debajo del otro:
+       * lado a lado, en un celular de 360 de ancho, los nombres se cortaban.
+       */
+      encabezado: boveda == null || !puedeMover
+          ? null
+          : Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppBoton(
+                    texto: 'Traer a la Bóveda',
+                    iconoDerecha: Icons.download_outlined,
+                    variante: BotonVariante.secundario,
+                    tam: BotonTam.sm,
+                    onPressed: () => _mover(context, ref, boveda, sacar: false),
+                  ),
+                  const SizedBox(height: Dimen.espacio2),
+                  AppBoton(
+                    texto: 'Sacar de la Bóveda',
+                    iconoDerecha: Icons.upload_outlined,
+                    tam: BotonTam.sm,
+                    onPressed: () => _mover(context, ref, boveda, sacar: true),
+                  ),
+                ],
+              ),
+            ),
       iconoVacio: Icons.account_balance,
       singular: 'movimiento',
       plural: 'movimientos',
@@ -245,29 +273,55 @@ class CajasPagina extends ConsumerWidget {
     );
   }
 
-  /// Mover plata desde la Boveda (u otra cuenta) a donde haga falta.
-  void _mover(BuildContext context, WidgetRef ref) {
+  /// Sacar de la Boveda o traer a ella. La Boveda va fija, con su saldo, y
+  /// solo se elige la otra cuenta.
+  void _mover(
+    BuildContext context,
+    WidgetRef ref,
+    CuentaFinanciera boveda, {
+    required bool sacar,
+  }) {
     final cuentas =
         (ref.read(cuentasFinancierasProvider).valueOrNull ??
                 const <CuentaFinanciera>[])
             .where((c) => c.activo)
+            /*
+             * Sacar: a un banco (deposito) o a la caja de un trabajador (fondo,
+             * sencillo, plata para pagar). Traer: solo desde un banco (retiro):
+             * las cajas de los trabajadores llegan con su cierre.
+             */
+            .where(
+              (c) =>
+                  c.naturaleza == 'BANCO' ||
+                  (sacar && c.naturaleza == 'CAJA' && !c.esBoveda),
+            )
             .map(
               (c) => CuentaParaMover(
                 id: c.id,
-                etiqueta: c.esBoveda
-                    ? c.nombre
-                    : c.naturaleza == 'CAJA'
+                etiqueta: c.naturaleza == 'CAJA'
                     ? '${c.nombre} · Caja'
                     : '${c.nombre} · Banco',
                 saldo: c.saldoActual,
               ),
             )
             .toList();
+    final fija = CuentaParaMover(
+      id: boveda.id,
+      etiqueta: boveda.nombre,
+      saldo: boveda.saldoActual,
+    );
     abrirHojaFinanzas(
       context,
       (_) => HojaMoverPlata(
         cuentas: cuentas,
-        origenInicial: ref.read(bovedaProvider)?.id,
+        origenFijo: sacar ? fija : null,
+        destinoFijo: sacar ? null : fija,
+        titulo: sacar ? 'Sacar de la Bóveda' : 'Traer a la Bóveda',
+        apoyo: sacar
+            ? 'A un banco (depósito) o a la caja de un trabajador. No es un '
+                  'gasto: la plata solo cambia de lugar.'
+            : 'Desde un banco: un retiro en efectivo. No es un ingreso: la '
+                  'plata solo cambia de lugar.',
       ),
     );
   }
