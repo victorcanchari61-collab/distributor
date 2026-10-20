@@ -1,5 +1,5 @@
 import { api } from '../../lib/apiClient'
-import type { CuentaFinancieraResponse, MovimientoCuentaResponse, NaturalezaCuenta } from './cuentaFinancieraApi'
+import type { CuentaFinancieraResponse, MovimientoCuentaResponse } from './cuentaFinancieraApi'
 import type { TipoMovimientoOperativo, MovimientoOperativoResponse } from './gastoOperativoApi'
 import type { CierreCajaResponse } from './cierreCajaApi'
 
@@ -11,24 +11,15 @@ export interface MovimientoLibreRequest {
   descripcion?: string | null
 }
 
-/** Cierra la caja propia: cuánto se contó y a qué cuenta se entrega. */
+/** Cierra la caja propia: cuánto se contó. Lo contado pasa siempre a la Bóveda. */
 export interface CerrarMiCajaRequest {
   billetes: number
   monedas: number
-  cuentaDestinoId: number
   observacion?: string | null
   /** Cuántos de cada billete y moneda: queda guardado para revisar el cierre. */
   denominaciones?: { valor: number; cantidad: number }[]
 }
 
-/** Una cuenta a la que se puede entregar lo contado, sin su saldo. */
-export interface CuentaDestino {
-  id: number
-  nombre: string
-  naturaleza: NaturalezaCuenta
-  /** La Bóveda: no es una caja. */
-  esBoveda?: boolean
-}
 
 /**
  * Un cobro o pago que hizo por Yape, Plin o transferencia: no pasa por su
@@ -64,8 +55,6 @@ export const miCajaApi = {
 
   registrarMovimiento: (body: MovimientoLibreRequest) =>
     api.post<MovimientoOperativoResponse>('/micaja/movimiento', { ...body, cuentaFinancieraId: 0 }),
-
-  destinos: () => api.get<CuentaDestino[]>('/micaja/destinos'),
 
   /** Lo que cobró o pagó por Yape, Plin o transferencia en esas fechas. */
   digitales: (desde: string, hasta: string) =>

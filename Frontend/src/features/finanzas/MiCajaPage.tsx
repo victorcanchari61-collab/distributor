@@ -18,8 +18,7 @@ import { ApiError } from '../../lib/apiClient'
 import { fechaHora, hoyLocal } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { miCajaApi } from './miCajaApi'
-import type { CuentaDestino, MovimientoDigital } from './miCajaApi'
-import { tipoDeCuenta } from './cuentaFinancieraApi'
+import type { MovimientoDigital } from './miCajaApi'
 import type { CuentaFinancieraResponse, MovimientoCuentaResponse } from './cuentaFinancieraApi'
 import { gastoOperativoApi, origenLabel } from './gastoOperativoApi'
 import type { CategoriaOpcion, TipoMovimientoOperativo } from './gastoOperativoApi'
@@ -449,8 +448,6 @@ function CerrarCajaModal({
 }) {
   const [cantBilletes, setCantBilletes] = useState<Record<number, string>>({})
   const [cantMonedas, setCantMonedas] = useState<Record<number, string>>({})
-  const [destinos, setDestinos] = useState<CuentaDestino[]>([])
-  const [cuentaDestinoId, setCuentaDestinoId] = useState(0)
   const [observacion, setObservacion] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
@@ -466,23 +463,14 @@ function CerrarCajaModal({
   const totalBilletes = sumar(BILLETES, cantBilletes)
   const totalMonedas = sumar(MONEDAS, cantMonedas)
 
-  useEffect(() => {
-    miCajaApi
-      .destinos()
-      .then(setDestinos)
-      .catch((e) => setError(e instanceof ApiError ? e.message : 'No pudimos cargar las cuentas.'))
-  }, [])
-
+  // Lo contado va siempre a la Bóveda: no se elige a quién entregarlo.
   const guardar = async () => {
-    if (!cuentaDestinoId) return setError('Elige a quién le entregas lo contado.')
-
     setGuardando(true)
     setError('')
     try {
       await miCajaApi.cerrar({
         billetes: Math.round(totalBilletes * 100) / 100,
         monedas: Math.round(totalMonedas * 100) / 100,
-        cuentaDestinoId,
         observacion: observacion.trim() || null,
         denominaciones: DENOMINACIONES.map((d) => ({
           valor: d.valor,
@@ -508,7 +496,7 @@ function CerrarCajaModal({
       open
       size="lg"
       title="Cerrar caja"
-      description="Cuenta billete por billete y moneda por moneda, y elige a quién se lo entregas."
+      description="Cuenta billete por billete y moneda por moneda. Lo contado pasa a la Bóveda."
       onClose={onClose}
       footer={
         <>
@@ -516,7 +504,7 @@ function CerrarCajaModal({
             Cancelar
           </Button>
           <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-            Cerrar y entregar
+            Cerrar y pasar a la Bóveda
           </Button>
         </>
       }
@@ -590,26 +578,16 @@ function CerrarCajaModal({
           <span className="text-lg font-bold text-[rgb(var(--sys-rgb))]">{soles(totalBilletes + totalMonedas)}</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Desplegable
-            label="Entregar a"
-            value={cuentaDestinoId}
-            onChange={(v) => setCuentaDestinoId(Number(v))}
-            placeholder="Elige la caja o el banco"
-            options={destinos.map((d) => ({ value: d.id, label: d.nombre, detalle: tipoDeCuenta(d) }))}
-          />
-
-          {/* Sin autocompletar: el navegador lo llenaba con el correo de la sesión. */}
-          <Input
-            label="Observación"
-            optional
-            autoComplete="off"
-            name="observacion-cierre"
-            placeholder="Alguna razón de la diferencia..."
-            value={observacion}
-            onChange={(e) => setObservacion(e.target.value)}
-          />
-        </div>
+        {/* Sin autocompletar: el navegador lo llenaba con el correo de la sesión. */}
+        <Input
+          label="Observación"
+          optional
+          autoComplete="off"
+          name="observacion-cierre"
+          placeholder="Alguna razón de la diferencia..."
+          value={observacion}
+          onChange={(e) => setObservacion(e.target.value)}
+        />
       </div>
     </Modal>
   )

@@ -54,14 +54,6 @@ class MiCajaApi {
   Future<void> registrarMovimiento(Map<String, dynamic> cuerpo) =>
       _api.post('/micaja/movimiento', cuerpo: cuerpo);
 
-  /// GET /api/micaja/destinos: a quien se puede entregar lo contado.
-  Future<List<CuentaDestino>> destinos() async {
-    final datos = await _api.get('/micaja/destinos') as List;
-    return datos
-        .map((e) => CuentaDestino.desdeJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
   /// POST /api/micaja/cerrar
   Future<CierreCaja> cerrar(Map<String, dynamic> cuerpo) async =>
       CierreCaja.desdeJson(

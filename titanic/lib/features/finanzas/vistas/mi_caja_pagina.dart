@@ -579,7 +579,6 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
     for (final v in [..._billetes, ..._monedas]) v: TextEditingController(),
   };
   final _observacion = TextEditingController();
-  int? _destinoId;
   bool _guardando = false;
   String? _error;
 
@@ -601,10 +600,6 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
 
   Future<void> _cerrar() async {
     FocusScope.of(context).unfocus();
-    if (_destinoId == null) {
-      setState(() => _error = 'Elige a quién le entregas lo contado.');
-      return;
-    }
 
     setState(() {
       _guardando = true;
@@ -623,7 +618,6 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
           for (final v in [..._billetes, ..._monedas])
             {'valor': v, 'cantidad': _cantidad(v)},
         ],
-        'cuentaDestinoId': _destinoId,
         'observacion': _observacion.text.trim().isEmpty
             ? null
             : _observacion.text.trim(),
@@ -654,7 +648,6 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
 
   @override
   Widget build(BuildContext context) {
-    final destinos = ref.watch(destinosMiCajaProvider);
     final total = _suma(_billetes) + _suma(_monedas);
 
     return Padding(
@@ -670,7 +663,7 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
             ),
             const SizedBox(height: Dimen.espacio1),
             const Text(
-              'Cuenta billete por billete y moneda por moneda, y elige a quién se lo entregas.',
+              'Cuenta billete por billete y moneda por moneda. Lo contado pasa a la Bóveda.',
               style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
             ),
             const SizedBox(height: Dimen.espacio4),
@@ -706,21 +699,6 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
               ],
             ),
             const SizedBox(height: Dimen.espacio4),
-            destinos.when(
-              loading: () => const LinearProgressIndicator(),
-              error: (e, _) => AppAlerta(
-                e is ApiExcepcion ? e.texto : 'No pudimos cargar las cuentas.',
-              ),
-              data: (lista) => AppSelector<int>(
-                valor: _destinoId,
-                etiqueta: 'Entregar a',
-                icono: Icons.account_balance_outlined,
-                habilitado: !_guardando,
-                opciones: [for (final d in lista) Opcion(d.id, d.etiqueta)],
-                onCambio: (v) => setState(() => _destinoId = v),
-              ),
-            ),
-            const SizedBox(height: Dimen.espacio4),
             AppCampo(
               controlador: _observacion,
               etiqueta: 'Observación',
@@ -731,7 +709,7 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
             ),
             const SizedBox(height: Dimen.espacio5),
             AppBoton(
-              texto: 'Cerrar y entregar',
+              texto: 'Cerrar y pasar a la Bóveda',
               cargando: _guardando,
               onPressed: _cerrar,
             ),

@@ -121,11 +121,6 @@ final categoriasMiCajaProvider = FutureProvider.autoDispose
       (ref, tipo) => ref.watch(miCajaApiProvider).categorias(tipo),
     );
 
-/// A quién se le puede entregar lo contado.
-final destinosMiCajaProvider = FutureProvider.autoDispose<List<CuentaDestino>>(
-  (ref) => ref.watch(miCajaApiProvider).destinos(),
-);
-
 /// Lo que cobro o pago por Yape, Plin o transferencia en las mismas fechas
 /// que se miran en el efectivo.
 final movimientosDigitalesProvider =

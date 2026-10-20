@@ -57,13 +57,16 @@ public class CierreCajaService : ICierreCajaService
 
         var caja = await _cuentas.ExigirCajaUsuarioAsync(usuarioId);
 
-        if (request.CuentaDestinoId == caja.Id)
-        {
-            throw new BadRequestException("Elige otra cuenta: no puedes entregarte a tu propia caja");
-        }
-
-        var destino = await _cuentas.GetOrThrowAsync(request.CuentaDestinoId);
-        if (!destino.Activo) throw new BadRequestException("Esa cuenta está desactivada");
+        /*
+         * Lo contado va siempre a la Bóveda: es donde se junta el efectivo de la empresa. Antes se
+         * elegía a quién entregarlo, y la plata terminaba repartida en cajas de otras personas o en
+         * un banco sin pasar por ella. La cuenta que mande un APK viejo se ignora.
+         */
+        var destino = await _context.CuentasFinancieras
+            .Where(c => c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == null && c.Activo)
+            .OrderBy(c => c.Nombre == CuentaFinanciera.NombreBoveda ? 0 : 1).ThenBy(c => c.Id)
+            .FirstOrDefaultAsync()
+            ?? throw new BadRequestException("No hay Bóveda: créala en Finanzas → Cajas antes de cerrar la caja");
 
         // Con el desglose, los totales salen de él: así no pueden contradecirse.
         var contadas = request.Denominaciones

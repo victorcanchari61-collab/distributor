@@ -9,6 +9,7 @@ public class CerrarCajaRequest
     /// <summary>Total en monedas. Si viene el desglose, se calcula de él.</summary>
     public decimal Monedas { get; set; }
 
+    /// <summary>Ya no se usa: lo contado va siempre a la Bóveda. Queda para no romper al APK viejo.</summary>
     public int CuentaDestinoId { get; set; }
     public string? Observacion { get; set; }
 
