@@ -114,7 +114,7 @@ class IngresosEgresosPagina extends ConsumerWidget {
     final vencidos = todos.where((p) => p.vencido);
     final puedePagar =
         puede(ref, _sub, Accion.crear) ||
-        puede(ref, 'finanzas.movimientos', Accion.crear);
+        puede(ref, 'finanzas.movimientos', Accion.egreso);
 
     return AppListaPagina<GastoPendiente>(
       titulo: 'Ingresos y egresos',

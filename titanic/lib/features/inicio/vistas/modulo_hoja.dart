@@ -24,6 +24,9 @@ const _etiquetaAccion = {
   Accion.importar: 'Importar',
   Accion.confirmar: 'Confirmar',
   Accion.cobrar: 'Cobrar',
+  Accion.ingreso: 'Ingreso',
+  Accion.egreso: 'Egreso',
+  Accion.transferir: 'Mover plata',
 };
 
 /// Las solicitudes que esta persona dejó pedidas y siguen sin respuesta.

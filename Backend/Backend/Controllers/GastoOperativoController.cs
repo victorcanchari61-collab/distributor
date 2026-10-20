@@ -14,10 +14,12 @@ namespace Backend.Controllers;
 public class GastoOperativoController : ControllerBase
 {
     private readonly IGastoOperativoService _gastos;
+    private readonly IPermisoService _permisos;
 
-    public GastoOperativoController(IGastoOperativoService gastos)
+    public GastoOperativoController(IGastoOperativoService gastos, IPermisoService permisos)
     {
         _gastos = gastos;
+        _permisos = permisos;
     }
 
     private int? UsuarioId =>
@@ -93,12 +95,37 @@ public class GastoOperativoController : ControllerBase
     public async Task<IActionResult> Listar([FromQuery] DateTime desde, [FromQuery] DateTime hasta) =>
         Ok(await _gastos.ListarAsync(desde, hasta));
 
-    // Se registra desde Movimientos, o desde Ingresos y egresos al pagar una
-    // plantilla pendiente: sirve cualquiera de los dos permisos.
+    // Se registra desde Movimientos, que pide Ingreso o Egreso según el tipo, o desde Ingresos y
+    // egresos al pagar una plantilla pendiente, que pide Crear de ese submódulo. Sin ninguno, el 403
+    // dice qué pedir: el de Movimientos para ese tipo.
     [HttpPost]
-    [PermisoAlguno("finanzas.movimientos:crear", "finanzas.operativos:crear")]
-    public async Task<IActionResult> Crear([FromBody] MovimientoOperativoRequest request) =>
-        Ok(await _gastos.CrearAsync(request, UsuarioId));
+    public async Task<IActionResult> Crear([FromBody] MovimientoOperativoRequest request)
+    {
+        if (UsuarioId is not int usuarioId) return Unauthorized();
+
+        int? permisoUnico = null;
+        if (!await _permisos.PuedeAsync(usuarioId, "finanzas.operativos", Accion.Crear))
+        {
+            var accion = request.Tipo == TipoMovimientoOperativo.Ingreso ? Accion.Ingreso : Accion.Egreso;
+            var veredicto = await _permisos.ResolverAsync(usuarioId, "finanzas.movimientos", accion);
+            if (!veredicto.Permitido)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    statusCode = StatusCodes.Status403Forbidden,
+                    message = "No tienes permiso para esta acción.",
+                    submodulo = "finanzas.movimientos",
+                    accion,
+                });
+            }
+            permisoUnico = veredicto.PermisoUnicoId;
+        }
+
+        var creado = await _gastos.CrearAsync(request, usuarioId);
+        // Un permiso de un solo uso se gasta recién cuando el movimiento quedó registrado.
+        if (permisoUnico is int id) await _permisos.ConsumirAsync(id);
+        return Ok(creado);
+    }
 
     [HttpPatch("{id:int}/anular")]
     [PermisoAlguno("finanzas.movimientos:anular", "finanzas.operativos:anular")]

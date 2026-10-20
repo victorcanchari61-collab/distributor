@@ -21,9 +21,12 @@ class Accion {
   static const confirmar = 'confirmar';
   static const cobrar = 'cobrar';
 
-  /// Mi Caja: meter o sacar plata de la propia caja fuera de una venta.
+  /// Mi Caja y Movimientos: un ingreso o un egreso registrado a mano.
   static const ingreso = 'ingreso';
   static const egreso = 'egreso';
+
+  /// Mover plata entre cuentas propias: la Boveda, las cajas y los bancos.
+  static const transferir = 'transferir';
 }
 
 /// Un submódulo del catálogo y las acciones que admite.

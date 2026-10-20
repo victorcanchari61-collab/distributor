@@ -30,15 +30,18 @@ public static class Accion
     /// <summary>Registrar o anular un pago o un cobro.</summary>
     public const string Cobrar = "cobrar";
 
-    /// <summary>Meter plata a la propia caja (Mi Caja), fuera de una venta.</summary>
+    /// <summary>Registrar un ingreso a mano (Mi Caja, Movimientos): plata que no viene de una venta.</summary>
     public const string Ingreso = "ingreso";
 
-    /// <summary>Sacar plata de la propia caja (Mi Caja): un gasto, un pasaje, combustible.</summary>
+    /// <summary>Registrar un egreso a mano (Mi Caja, Movimientos): un gasto, un pasaje, combustible.</summary>
     public const string Egreso = "egreso";
+
+    /// <summary>Mover plata entre cuentas propias: la Bóveda, las cajas y los bancos.</summary>
+    public const string Transferir = "transferir";
 
     public static readonly string[] Todas =
     [
-        Ver, Crear, Editar, Anular, Eliminar, Exportar, Importar, Confirmar, Cobrar, Ingreso, Egreso,
+        Ver, Crear, Editar, Anular, Eliminar, Exportar, Importar, Confirmar, Cobrar, Ingreso, Egreso, Transferir,
     ];
 }
 
@@ -160,8 +163,9 @@ public static class CatalogoPermisos
             // recurrentes (con el pago de las pendientes).
             ["finanzas.operativos"] = [Accion.Ver, Accion.Crear, Accion.Editar, Accion.Anular, Accion.Eliminar],
             // El kardex del dinero: todo lo que entra y sale de cajas y bancos.
-            // Crear y anular son los ingresos y egresos registrados a mano.
-            ["finanzas.movimientos"] = [Accion.Ver, Accion.Crear, Accion.Anular, Accion.Exportar],
+            // Ingreso y egreso son el "Nuevo movimiento" a mano, cada uno por su lado. Transferir es
+            // "Mover plata" entre cuentas propias, aquí y en la Bóveda. Anular, cualquiera de ellos.
+            ["finanzas.movimientos"] = [Accion.Ver, Accion.Ingreso, Accion.Egreso, Accion.Transferir, Accion.Anular, Accion.Exportar],
             // Préstamos recibidos: registrarlos, pagarlos (crear) y anular un
             // préstamo o un pago mal registrado.
             ["finanzas.financiamiento"] = [Accion.Ver, Accion.Crear, Accion.Anular],

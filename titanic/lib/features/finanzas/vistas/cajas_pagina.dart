@@ -156,9 +156,7 @@ class CajasPagina extends ConsumerWidget {
     final salio = movimientos
         .where((m) => !m.esIngreso)
         .fold<double>(0, (s, m) => s + m.monto);
-    final puedeMover =
-        puede(ref, 'finanzas.movimientos', Accion.crear) ||
-        puede(ref, 'finanzas.cajas', Accion.editar);
+    final puedeMover = puede(ref, 'finanzas.movimientos', Accion.transferir);
 
     return AppListaPagina<MovimientoCaja>(
       titulo: 'Cajas',

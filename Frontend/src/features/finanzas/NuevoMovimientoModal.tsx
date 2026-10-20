@@ -14,17 +14,20 @@ import { tipoDeCuenta } from './cuentaFinancieraApi'
  * esas se registran solas en su módulo.
  */
 export function NuevoMovimientoModal({
+  tipos,
   cuentas,
   categorias,
   onClose,
   onGuardado,
 }: {
+  /** Los tipos que su permiso le deja registrar: Ingreso, Egreso o los dos. */
+  tipos: readonly TipoMovimientoOperativo[]
   cuentas: CuentaMovimiento[]
   categorias: CategoriaOpcion[]
   onClose: () => void
   onGuardado: () => void | Promise<void>
 }) {
-  const [tipo, setTipo] = useState<TipoMovimientoOperativo>('EGRESO')
+  const [tipo, setTipo] = useState<TipoMovimientoOperativo>(tipos.includes('EGRESO') ? 'EGRESO' : 'INGRESO')
   const [cuentaFinancieraId, setCuentaFinancieraId] = useState(0)
   const [motivoGastoId, setMotivoGastoId] = useState(0)
   const [monto, setMonto] = useState('')
@@ -85,10 +88,7 @@ export function NuevoMovimientoModal({
             setTipo(v as TipoMovimientoOperativo)
             setMotivoGastoId(0)
           }}
-          options={[
-            { value: 'INGRESO', label: 'Ingreso' },
-            { value: 'EGRESO', label: 'Egreso' },
-          ]}
+          options={tipos.map((t) => ({ value: t, label: t === 'INGRESO' ? 'Ingreso' : 'Egreso' }))}
         />
         <Desplegable
           label="Cuenta"

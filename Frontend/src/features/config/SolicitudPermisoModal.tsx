@@ -17,6 +17,7 @@ const ACCION_LABEL: Record<string, string> = {
   confirmar: 'confirmar en',
   cobrar: 'registrar cobros en',
   ingreso: 'registrar ingresos en',
+  transferir: 'mover plata en',
   egreso: 'registrar egresos en',
 }
 

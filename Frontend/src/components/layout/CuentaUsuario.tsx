@@ -32,6 +32,7 @@ const ACCION_PEDIDA: Record<string, string> = {
   confirmar: 'confirmar',
   cobrar: 'cobrar',
   ingreso: 'registrar ingresos',
+  transferir: 'mover plata',
   egreso: 'registrar egresos',
 }
 

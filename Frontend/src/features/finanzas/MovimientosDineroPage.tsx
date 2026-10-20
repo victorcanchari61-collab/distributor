@@ -228,6 +228,11 @@ export function MovimientosDineroPage() {
     },
   ]
 
+  // Ingreso y egreso a mano se dan por separado: el modal ofrece solo los que tiene.
+  const tiposPermitidos = (['INGRESO', 'EGRESO'] as const).filter((t) =>
+    puede('finanzas.movimientos', t === 'INGRESO' ? 'ingreso' : 'egreso'),
+  )
+
   return (
     <ListPage
       icon={<ArrowLeftRight size={20} />}
@@ -240,12 +245,12 @@ export function MovimientosDineroPage() {
               Exportar
             </Button>
           )}
-          {puede('finanzas.movimientos', 'crear') && (
+          {puede('finanzas.movimientos', 'transferir') && (
             <Button size="sm" variant="secondary" onClick={() => void abrirMover()} iconRight={<ArrowLeftRight size={15} />}>
               Mover plata
             </Button>
           )}
-          {puede('finanzas.movimientos', 'crear') && (
+          {tiposPermitidos.length > 0 && (
             <Button size="sm" onClick={() => void abrirNuevo()} iconRight={<Plus size={15} />}>
               Nuevo movimiento
             </Button>
@@ -293,6 +298,7 @@ export function MovimientosDineroPage() {
     >
       {nuevoAbierto && (
         <NuevoMovimientoModal
+          tipos={tiposPermitidos}
           cuentas={cuentas}
           categorias={categorias}
           onClose={() => setNuevoAbierto(false)}

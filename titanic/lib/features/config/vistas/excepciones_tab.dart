@@ -25,6 +25,9 @@ const _acciones = {
   'importar': 'Importar',
   'confirmar': 'Confirmar',
   'cobrar': 'Cobrar',
+  'ingreso': 'Ingreso',
+  'egreso': 'Egreso',
+  'transferir': 'Mover plata',
 };
 
 /// Permisos que tiene una persona y su rol no le da.

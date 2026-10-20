@@ -41,6 +41,9 @@ const ACCION_LABEL: Record<string, string> = {
   importar: 'Importar',
   confirmar: 'Confirmar',
   cobrar: 'Cobrar',
+  ingreso: 'Ingreso',
+  egreso: 'Egreso',
+  transferir: 'Mover plata',
 }
 
 const nombrePantalla = (submodulo: string) => resolveNav(submodulo).item?.label ?? submodulo

@@ -89,7 +89,7 @@ export function BovedaTab({
 
   const ingresos = movimientos.filter((m) => m.tipo === 'INGRESO').reduce((s, m) => s + m.monto, 0)
   const egresos = movimientos.filter((m) => m.tipo === 'EGRESO').reduce((s, m) => s + m.monto, 0)
-  const puedeMover = puede('finanzas.movimientos', 'crear') || puede('finanzas.cajas', 'editar')
+  const puedeMover = puede('finanzas.movimientos', 'transferir')
 
   const columns: DataTableColumn<MovimientoCuentaResponse>[] = [
     { key: 'fecha', label: 'Fecha', filterType: 'date', render: (row) => fechaHora(row.fecha) },

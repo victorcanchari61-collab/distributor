@@ -21,6 +21,9 @@ const ACCION_LABEL: Record<string, string> = {
   importar: 'Importar',
   confirmar: 'Confirmar',
   cobrar: 'Cobrar',
+  ingreso: 'Ingreso',
+  egreso: 'Egreso',
+  transferir: 'Mover plata',
 }
 
 const ICONO_ALCANCE: Record<Alcance, React.ReactNode> = {

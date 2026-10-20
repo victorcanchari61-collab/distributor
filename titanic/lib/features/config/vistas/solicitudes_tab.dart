@@ -27,6 +27,9 @@ const _accionPedida = {
   'importar': 'importar',
   'confirmar': 'confirmar',
   'cobrar': 'cobrar',
+  'ingreso': 'registrar ingresos',
+  'egreso': 'registrar egresos',
+  'transferir': 'mover plata',
 };
 
 String _pantalla(String submodulo) =>

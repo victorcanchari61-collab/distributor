@@ -24,6 +24,7 @@ const _accionNegada = {
   'cobrar': 'registrar cobros en',
   'ingreso': 'registrar ingresos en',
   'egreso': 'registrar egresos en',
+  'transferir': 'mover plata en',
 };
 
 /// Lo que ve alguien cuando el servidor le niega una acción.

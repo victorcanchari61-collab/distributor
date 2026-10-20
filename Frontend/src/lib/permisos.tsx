@@ -14,9 +14,11 @@ export const ACCION = {
   importar: 'importar',
   confirmar: 'confirmar',
   cobrar: 'cobrar',
-  /** Mi Caja: meter o sacar plata de la propia caja fuera de una venta. */
+  /** Mi Caja y Movimientos: un ingreso o un egreso registrado a mano. */
   ingreso: 'ingreso',
   egreso: 'egreso',
+  /** Mover plata entre cuentas propias: la Bóveda, las cajas y los bancos. */
+  transferir: 'transferir',
 } as const
 
 export type Accion = (typeof ACCION)[keyof typeof ACCION]

@@ -19,6 +19,9 @@ const _accionPedida = {
   'importar': 'importar',
   'confirmar': 'confirmar',
   'cobrar': 'cobrar',
+  'ingreso': 'registrar ingresos',
+  'egreso': 'registrar egresos',
+  'transferir': 'mover plata',
 };
 
 /// Campana de alertas del AppBar: cuenta lo pendiente sin leer y abre una

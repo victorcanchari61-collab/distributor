@@ -46,6 +46,10 @@ class MovimientosDineroPagina extends ConsumerWidget {
     final egresos = vigentes
         .where((m) => !m.esIngreso)
         .fold<double>(0, (s, m) => s + m.monto);
+    final tipos = [
+      if (puede(ref, 'finanzas.movimientos', Accion.ingreso)) 'INGRESO',
+      if (puede(ref, 'finanzas.movimientos', Accion.egreso)) 'EGRESO',
+    ];
 
     return AppListaPagina<MovimientoDinero>(
       titulo: 'Movimientos',
@@ -63,8 +67,9 @@ class MovimientosDineroPagina extends ConsumerWidget {
           // El fallo ya se ve en la pantalla, con su botón de reintentar.
         }
       },
-      onNuevo: puede(ref, 'finanzas.movimientos', Accion.crear)
-          ? () => abrirHojaFinanzas(context, (_) => const _HojaNuevo())
+      // Ingreso y egreso a mano se dan por separado: la hoja ofrece solo los que tiene.
+      onNuevo: tipos.isNotEmpty
+          ? () => abrirHojaFinanzas(context, (_) => _HojaNuevo(tipos: tipos))
           : null,
       textoNuevo: 'Nuevo movimiento',
       iconoVacio: Icons.swap_horiz,
@@ -103,7 +108,7 @@ class MovimientosDineroPagina extends ConsumerWidget {
               onCambio: (r) =>
                   ref.read(rangoMovimientosProvider.notifier).state = r,
             ),
-            if (puede(ref, 'finanzas.movimientos', Accion.crear)) ...[
+            if (puede(ref, 'finanzas.movimientos', Accion.transferir)) ...[
               const SizedBox(height: Dimen.espacio2),
               AppBoton(
                 texto: 'Mover plata',
@@ -320,14 +325,17 @@ class _TarjetaMovimiento extends StatelessWidget {
 
 /// Un ingreso o egreso registrado a mano, en la cuenta que se elija.
 class _HojaNuevo extends ConsumerStatefulWidget {
-  const _HojaNuevo();
+  const _HojaNuevo({required this.tipos});
+
+  /// Los tipos que su permiso le deja registrar: INGRESO, EGRESO o los dos.
+  final List<String> tipos;
 
   @override
   ConsumerState<_HojaNuevo> createState() => _HojaNuevoState();
 }
 
 class _HojaNuevoState extends ConsumerState<_HojaNuevo> {
-  String _tipo = 'EGRESO';
+  late String _tipo = widget.tipos.contains('EGRESO') ? 'EGRESO' : 'INGRESO';
   int? _cuentaId;
   int? _categoriaId;
   final _monto = TextEditingController();
@@ -413,9 +421,9 @@ class _HojaNuevoState extends ConsumerState<_HojaNuevo> {
               etiqueta: 'Tipo',
               icono: Icons.swap_vert,
               habilitado: !_guardando,
-              opciones: const [
-                Opcion('INGRESO', 'Ingreso'),
-                Opcion('EGRESO', 'Egreso'),
+              opciones: [
+                for (final t in widget.tipos)
+                  Opcion(t, t == 'INGRESO' ? 'Ingreso' : 'Egreso'),
               ],
               // Las categorias son de un tipo: al cambiarlo se elige de nuevo.
               onCambio: (v) => setState(() {

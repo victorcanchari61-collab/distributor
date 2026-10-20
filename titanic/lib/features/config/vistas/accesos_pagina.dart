@@ -30,6 +30,9 @@ const _acciones = <String, String>{
   'eliminar': 'Eliminar',
   'exportar': 'Exportar',
   'importar': 'Importar',
+  'ingreso': 'Ingreso',
+  'egreso': 'Egreso',
+  'transferir': 'Mover plata',
 };
 
 String _clave(String submodulo, String accion) => '$submodulo:$accion';

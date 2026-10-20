@@ -65,7 +65,7 @@ public class CuentaFinancieraController : ControllerBase
 
     /// <summary>Mueve plata entre cuentas propias: depósito, sencillo, retiro.</summary>
     [HttpPost("transferir")]
-    [PermisoAlguno("finanzas.movimientos:crear", "finanzas.cajas:editar")]
+    [Permiso("finanzas.movimientos", Accion.Transferir)]
     public async Task<IActionResult> Transferir([FromBody] TransferenciaCuentasRequest request) =>
         Ok(new { salidaId = await _cuentas.TransferirEntreCuentasAsync(request, UsuarioId) });
 
