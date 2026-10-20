@@ -173,6 +173,7 @@ public class AdelantoService : IAdelantoService
                 Observacion = string.IsNullOrWhiteSpace(request.Observacion) ? null : request.Observacion.Trim(),
                 UsuarioId = usuarioId,
             };
+            await _cuentas.ExigirSaldoAsync(cuenta.Id, monto);
             _context.AdelantosEmpleado.Add(adelanto);
             await _context.SaveChangesAsync();
 

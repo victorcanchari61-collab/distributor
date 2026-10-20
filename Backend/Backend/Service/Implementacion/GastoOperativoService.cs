@@ -263,6 +263,11 @@ public class GastoOperativoService : IGastoOperativoService
         var cuenta = await _cuentas.GetOrThrowAsync(request.CuentaFinancieraId);
         if (!cuenta.Activo) throw new BadRequestException("Esa cuenta está desactivada");
 
+        // Un gasto que registra una persona sale de plata que hay. Los del sistema (la planilla,
+        // que ya revisó el saldo de su neto) no se frenan aquí.
+        if (request.Tipo == TipoMovimientoOperativo.Egreso && !delSistema)
+            await _cuentas.ExigirSaldoAsync(cuenta.Id, request.Monto);
+
         GastoRecurrente? plantilla = null;
         if (request.GastoRecurrenteId is int recurrenteId)
         {

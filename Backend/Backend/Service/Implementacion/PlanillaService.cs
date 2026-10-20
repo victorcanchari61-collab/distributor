@@ -210,6 +210,9 @@ public class PlanillaService : IPlanillaService
                 "Pasa lista primero, o confirma que quieres pagar igual.");
         }
 
+        // De la cuenta sale el neto (el costo completo sale y lo descontado vuelve): ese tiene que estar.
+        await _cuentas.ExigirSaldoAsync(cuenta.Id, planilla.Detalle.Sum(d => d.Neto));
+
         var ahora = DateTime.UtcNow;
         var semana = $"{planilla.Desde:dd/MM} al {planilla.Hasta:dd/MM}";
 

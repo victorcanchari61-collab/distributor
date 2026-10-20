@@ -417,6 +417,24 @@ public class CuentaFinancieraService : ICuentaFinancieraService
         await _context.CuentasFinancieras.FirstOrDefaultAsync(c =>
             c.Naturaleza == NaturalezaCuenta.Caja && c.UsuarioResponsableId == usuarioId && c.Activo);
 
+    public async Task ExigirSaldoAsync(int cuentaFinancieraId, decimal monto)
+    {
+        var cuenta = await _context.CuentasFinancieras.AsNoTracking()
+            .Where(c => c.Id == cuentaFinancieraId)
+            .Select(c => new { c.Nombre, c.SaldoActual })
+            .FirstOrDefaultAsync()
+            ?? throw new NotFoundException($"No existe la cuenta {cuentaFinancieraId}");
+
+        // La misma regla que al mover plata entre cuentas: una caja no tiene efectivo de más, y
+        // un banco no presta lo que no hay.
+        monto = Math.Round(monto, 2);
+        if (cuenta.SaldoActual < monto)
+        {
+            throw new BadRequestException(
+                $"{cuenta.Nombre} tiene S/ {Soles(cuenta.SaldoActual)}: no alcanza para pagar S/ {Soles(monto)}");
+        }
+    }
+
     public async Task<CuentaFinanciera> ExigirCajaUsuarioAsync(int usuarioId) =>
         await ObtenerCajaUsuarioAsync(usuarioId)
         ?? throw new BadRequestException(

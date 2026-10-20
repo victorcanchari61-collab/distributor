@@ -107,6 +107,9 @@ public class ComprasService : IComprasService
             cuentaId = cuenta;
         }
 
+        // Al proveedor se le paga con plata que hay: en la caja de quien paga o en la cuenta del método.
+        await _cuentas.ExigirSaldoAsync(cuentaId, pago.Monto);
+
         var movimiento = await _cuentas.PostearAsync(
             cuentaId, TipoMovimientoCuenta.Egreso, pago.Monto,
             DocumentoOrigenMovimiento.PagoCompra, pago.Id, actorId, pago.Fecha,

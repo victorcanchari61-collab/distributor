@@ -108,6 +108,8 @@ public class FinanciamientoService : IFinanciamientoService
             Observacion = string.IsNullOrWhiteSpace(request.Observacion) ? null : request.Observacion.Trim(),
         };
 
+        await _cuentas.ExigirSaldoAsync(cuenta.Id, monto);
+
         await using var transaccion = await _context.Database.BeginTransactionAsync();
 
         financiamiento.Pagos.Add(pago);

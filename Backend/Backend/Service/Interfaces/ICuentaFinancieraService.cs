@@ -76,6 +76,13 @@ public interface ICuentaFinancieraService
     Task<CuentaFinanciera> ExigirCajaUsuarioAsync(int usuarioId);
 
     /// <summary>
+    /// Que la cuenta tenga la plata para una salida que decide una persona —un gasto, un pago a un
+    /// proveedor o de un préstamo, un adelanto, la planilla—: no se gasta lo que no hay. Las salidas
+    /// del sistema (las reversas al anular) no pasan por aquí: devolver no puede quedar bloqueado.
+    /// </summary>
+    Task ExigirSaldoAsync(int cuentaFinancieraId, decimal monto);
+
+    /// <summary>
     /// Mueve plata de una cuenta a otra: un Egreso en origen y un Ingreso en
     /// destino, mismo documento y mismo momento. Se usa para fondear una Caja
     /// desde la Caja General, y para liquidar una Caja hacia la Caja General.
