@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Backend.Dtos.Requests;
 using Backend.Filters;
 using Backend.Models;
@@ -13,15 +14,32 @@ namespace Backend.Controllers;
 public class ProductoController : ControllerBase
 {
     private readonly IProductoService _productoService;
+    private readonly IPermisoService _permisos;
 
-    public ProductoController(IProductoService productoService)
+    public ProductoController(IProductoService productoService, IPermisoService permisos)
     {
         _productoService = productoService;
+        _permisos = permisos;
     }
 
+    /// <summary>
+    /// El catálogo entero. Lo necesita también quien toma un pedido o arma una venta, que no entra
+    /// a Maestros: sin esto no le sale ningún producto. A ese no le llega el costo — vende al
+    /// precio de la lista, lo que costó la mercadería es dato de quien administra el catálogo.
+    /// </summary>
     [HttpGet]
-    [Permiso("maestros.productos", Accion.Ver)]
-    public async Task<IActionResult> GetAll() => Ok(await _productoService.GetAllAsync());
+    [PermisoAlguno("maestros.productos:ver", "fact.pedidos:ver", "fact.notaventa:ver")]
+    public async Task<IActionResult> GetAll()
+    {
+        var productos = (await _productoService.GetAllAsync()).ToList();
+        var texto = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        if (!int.TryParse(texto, out var usuarioId)
+            || !await _permisos.PuedeAsync(usuarioId, "maestros.productos", Accion.Ver))
+        {
+            foreach (var p in productos) p.CostoReferencia = null;
+        }
+        return Ok(productos);
+    }
 
     /// <summary>Una página del catálogo, con búsqueda, filtros y orden en la base.</summary>
     [HttpPost("listar")]

@@ -19,8 +19,12 @@ public class ListaPrecioController : ControllerBase
         _listaService = listaService;
     }
 
+    /// <summary>
+    /// Las listas, sin sus precios: quien toma un pedido o arma una venta elige con cuál vende,
+    /// aunque no entre al catálogo de precios.
+    /// </summary>
     [HttpGet]
-    [Permiso("fact.precios", Accion.Ver)]
+    [PermisoAlguno("fact.precios:ver", "fact.pedidos:ver", "fact.notaventa:ver")]
     public async Task<IActionResult> GetAll() => Ok(await _listaService.GetAllAsync());
 
     [HttpGet("{id:int}")]
