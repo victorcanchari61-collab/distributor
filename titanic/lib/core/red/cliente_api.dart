@@ -23,6 +23,16 @@ class ClienteApi {
   static void Function(ApiExcepcion)? alNegarPermiso;
 
   /*
+   * Solo se avisa lo que la persona intento hacer: crear, anular, cobrar.
+   *
+   * Un "ver" negado llega de lo que una pantalla carga sola al abrirse (un
+   * catalogo, una lista): abrir la hoja por eso salta encima de la pantalla
+   * sin que nadie haya tocado nada. Esa pantalla ya muestra su error. Es la
+   * misma regla que la web.
+   */
+  static bool _avisable(ApiExcepcion e) => e.permisoNegado && e.accion != 'ver';
+
+  /*
    * A quien avisar cuando el servidor dice que la sesion ya no vale (401).
    *
    * El token guardado en el telefono vence: al abrir la app al dia siguiente
@@ -103,7 +113,7 @@ class ClienteApi {
         submodulo: mapa['submodulo'] as String?,
         accion: mapa['accion'] as String?,
       );
-      if (fallo.permisoNegado) alNegarPermiso?.call(fallo);
+      if (_avisable(fallo)) alNegarPermiso?.call(fallo);
       if (respuesta.statusCode == 401 &&
           conAuth &&
           cabeceras.containsKey('Authorization')) {
@@ -146,7 +156,7 @@ class ClienteApi {
         submodulo: mapa['submodulo'] as String?,
         accion: mapa['accion'] as String?,
       );
-      if (fallo.permisoNegado) alNegarPermiso?.call(fallo);
+      if (_avisable(fallo)) alNegarPermiso?.call(fallo);
       if (respuesta.statusCode == 401 && token != null) alSesionVencida?.call();
       throw fallo;
     }

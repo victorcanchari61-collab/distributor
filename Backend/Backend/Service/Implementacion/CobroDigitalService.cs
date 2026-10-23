@@ -36,24 +36,25 @@ public class CobroDigitalService : ICobroDigitalService
         _notificador = notificador;
     }
 
-    public async Task<IEnumerable<CobroDigitalResponse>> ListarAsync(DateTime desde, DateTime hasta)
+    public async Task<IEnumerable<CobroDigitalResponse>> ListarAsync(DateTime desde, DateTime hasta, int? soloDe = null)
     {
         var inicio = Zona.AUtc(desde.Date);
         var fin = Zona.AUtc(hasta.Date.AddDays(1));
 
         // Los pendientes salen siempre: uno viejo sin verificar no puede
         // perderse de vista solo porque cayó fuera de las fechas.
-        return await FilasAsync(Vigentes().Where(p =>
-            (p.Fecha >= inicio && p.Fecha < fin) || p.EstadoVerificacion == EstadoVerificacionCobro.Pendiente));
+        return await FilasAsync(Vigentes()
+            .Where(p => soloDe == null || p.UsuarioId == soloDe)
+            .Where(p => (p.Fecha >= inicio && p.Fecha < fin) || p.EstadoVerificacion == EstadoVerificacionCobro.Pendiente));
     }
 
     public Task<List<CobroDigitalResponse>> DelPeriodoAsync(int usuarioId, DateTime? desdeExclusivo, DateTime hasta) =>
         FilasAsync(Vigentes().Where(p =>
             p.UsuarioId == usuarioId && p.Fecha <= hasta && (desdeExclusivo == null || p.Fecha > desdeExclusivo)));
 
-    public async Task<CobroDigitalResponse> VerificarAsync(int pagoId, int? usuarioId)
+    public async Task<CobroDigitalResponse> VerificarAsync(int pagoId, int? usuarioId, int? soloDe = null)
     {
-        var pago = await ExigirVigenteAsync(pagoId);
+        var pago = await ExigirVigenteAsync(pagoId, soloDe);
 
         if (pago.EstadoVerificacion != EstadoVerificacionCobro.Pendiente)
         {
@@ -72,9 +73,9 @@ public class CobroDigitalService : ICobroDigitalService
         return await FilaAsync(pagoId);
     }
 
-    public async Task<CobroDigitalResponse> QuitarVerificacionAsync(int pagoId)
+    public async Task<CobroDigitalResponse> QuitarVerificacionAsync(int pagoId, int? soloDe = null)
     {
-        var pago = await ExigirVigenteAsync(pagoId);
+        var pago = await ExigirVigenteAsync(pagoId, soloDe);
 
         if (pago.EstadoVerificacion != EstadoVerificacionCobro.Verificado)
         {
@@ -90,11 +91,11 @@ public class CobroDigitalService : ICobroDigitalService
         return await FilaAsync(pagoId);
     }
 
-    public async Task<CobroDigitalResponse> RechazarAsync(int pagoId, RechazarCobroRequest request, int? usuarioId)
+    public async Task<CobroDigitalResponse> RechazarAsync(int pagoId, RechazarCobroRequest request, int? usuarioId, int? soloDe = null)
     {
         await _rechazoValidator.ValidateAndThrowAsync(request);
 
-        var pago = await ExigirVigenteAsync(pagoId);
+        var pago = await ExigirVigenteAsync(pagoId, soloDe);
 
         if (pago.EstadoVerificacion != EstadoVerificacionCobro.Pendiente)
         {
@@ -186,11 +187,12 @@ public class CobroDigitalService : ICobroDigitalService
                     && !p.Anulado
                     && p.NotaVenta!.Estado != EstadoNotaVenta.Anulada);
 
-    private async Task<PagoVenta> ExigirVigenteAsync(int pagoId)
+    /// <param name="soloDe">Si solo ve lo suyo: uno que cobró otro responde "no existe".</param>
+    private async Task<PagoVenta> ExigirVigenteAsync(int pagoId, int? soloDe = null)
     {
         var pago = await _context.PagosVenta
             .Include(p => p.NotaVenta)
-            .FirstOrDefaultAsync(p => p.Id == pagoId)
+            .FirstOrDefaultAsync(p => p.Id == pagoId && (soloDe == null || p.UsuarioId == soloDe))
             ?? throw new NotFoundException($"No existe el cobro {pagoId}");
 
         if (pago.EstadoVerificacion is null)

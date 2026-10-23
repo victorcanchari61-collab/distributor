@@ -42,7 +42,7 @@ import type { ClienteOpcion, ProductoResponse } from '../maestros'
 import { almacenApi, stockApi } from '../inventario'
 import type { AlmacenOpcion } from '../inventario'
 import { etiquetaMetodo, metodoPagoApi } from '../finanzas'
-import type { MetodoPagoResponse, TipoMetodoPago } from '../finanzas'
+import type { MetodoPagoOpcion, TipoMetodoPago } from '../finanzas'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { devolucionVentaApi, notaVentaApi } from './ventasApi'
@@ -113,7 +113,7 @@ export function NotasVentaPage() {
   const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
   const [listas, setListas] = useState<ListaPrecioResponse[]>([])
-  const [metodosPago, setMetodosPago] = useState<MetodoPagoResponse[]>([])
+  const [metodosPago, setMetodosPago] = useState<MetodoPagoOpcion[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -182,7 +182,7 @@ export function NotasVentaPage() {
         productoApi.getAll(),
         almacenApi.opciones(),
         listaPrecioApi.getAll(),
-        metodoPagoApi.getAll(),
+        metodoPagoApi.opciones(),
         motivoNovedadApi.opciones(),
       ])
       setResumen(res)
@@ -190,7 +190,7 @@ export function NotasVentaPage() {
       setProductos(prods.filter((p) => p.activo && p.controlaStock))
       setAlmacenes(alms.filter((a) => a.activo))
       setListas(lis.filter((l) => l.activo))
-      setMetodosPago(metodos.filter((m) => m.activo))
+      setMetodosPago(metodos)
       setMotivos(motivosNovedad)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los datos de apoyo.')

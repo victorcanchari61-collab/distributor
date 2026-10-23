@@ -16,11 +16,13 @@ public class CierreCajaController : ControllerBase
 {
     private readonly ICierreCajaService _cierres;
     private readonly ICobroDigitalService _cobros;
+    private readonly IPermisoService _permisos;
 
-    public CierreCajaController(ICierreCajaService cierres, ICobroDigitalService cobros)
+    public CierreCajaController(ICierreCajaService cierres, ICobroDigitalService cobros, IPermisoService permisos)
     {
         _cierres = cierres;
         _cobros = cobros;
+        _permisos = permisos;
     }
 
     private int? UsuarioId =>
@@ -28,19 +30,29 @@ public class CierreCajaController : ControllerBase
             ? id
             : null;
 
+    /// <summary>
+    /// De quién son los cierres y cobros que puede ver y tocar: null si los de todos; su propio id
+    /// si su alcance (Accesos → Alcance) lo limita a lo suyo.
+    /// </summary>
+    private async Task<int?> SoloDeAsync() =>
+        UsuarioId is int uid && await _permisos.AlcanceAsync(uid, "finanzas.cierres") != AlcanceDatos.Todos
+            ? uid
+            : null;
+
     [HttpGet]
     [Permiso("finanzas.cierres", Accion.Ver)]
     public async Task<IActionResult> Listar([FromQuery] DateTime desde, [FromQuery] DateTime hasta) =>
-        Ok(await _cierres.ListarAsync(desde, hasta));
+        Ok(await _cierres.ListarAsync(desde, hasta, await SoloDeAsync()));
 
     /// <summary>Todo lo del cierre para revisar si cuadra: efectivo, digital y billetes.</summary>
     [HttpGet("{id:int}/detalle")]
     [Permiso("finanzas.cierres", Accion.Ver)]
-    public async Task<IActionResult> Detalle(int id) => Ok(await _cierres.DetalleAsync(id));
+    public async Task<IActionResult> Detalle(int id) => Ok(await _cierres.DetalleAsync(id, await SoloDeAsync()));
 
     [HttpPatch("{id:int}/anular")]
     [Permiso("finanzas.cierres", Accion.Anular)]
-    public async Task<IActionResult> Anular(int id) => Ok(await _cierres.AnularAsync(id, UsuarioId));
+    public async Task<IActionResult> Anular(int id) =>
+        Ok(await _cierres.AnularAsync(id, UsuarioId, await SoloDeAsync()));
 
     /*
      * Los cobros por Yape, Plin o transferencia no se cuentan en el cierre —esa
@@ -51,19 +63,20 @@ public class CierreCajaController : ControllerBase
     [HttpGet("cobrosdigitales")]
     [Permiso("finanzas.cierres", Accion.Ver)]
     public async Task<IActionResult> CobrosDigitales([FromQuery] DateTime desde, [FromQuery] DateTime hasta) =>
-        Ok(await _cobros.ListarAsync(desde, hasta));
+        Ok(await _cobros.ListarAsync(desde, hasta, await SoloDeAsync()));
 
     [HttpPatch("cobrosdigitales/{pagoId:int}/verificar")]
     [Permiso("finanzas.cierres", Accion.Confirmar)]
-    public async Task<IActionResult> Verificar(int pagoId) => Ok(await _cobros.VerificarAsync(pagoId, UsuarioId));
+    public async Task<IActionResult> Verificar(int pagoId) =>
+        Ok(await _cobros.VerificarAsync(pagoId, UsuarioId, await SoloDeAsync()));
 
     [HttpPatch("cobrosdigitales/{pagoId:int}/pendiente")]
     [Permiso("finanzas.cierres", Accion.Confirmar)]
     public async Task<IActionResult> QuitarVerificacion(int pagoId) =>
-        Ok(await _cobros.QuitarVerificacionAsync(pagoId));
+        Ok(await _cobros.QuitarVerificacionAsync(pagoId, await SoloDeAsync()));
 
     [HttpPatch("cobrosdigitales/{pagoId:int}/rechazar")]
     [Permiso("finanzas.cierres", Accion.Confirmar)]
     public async Task<IActionResult> Rechazar(int pagoId, [FromBody] RechazarCobroRequest request) =>
-        Ok(await _cobros.RechazarAsync(pagoId, request, UsuarioId));
+        Ok(await _cobros.RechazarAsync(pagoId, request, UsuarioId, await SoloDeAsync()));
 }

@@ -10,23 +10,26 @@ namespace Backend.Service.Interfaces;
 /// </summary>
 public interface ICobroDigitalService
 {
-    /// <summary>Los cobros digitales del rango, más los pendientes de cualquier fecha.</summary>
-    Task<IEnumerable<CobroDigitalResponse>> ListarAsync(DateTime desde, DateTime hasta);
+    /// <summary>
+    /// Los cobros digitales del rango, más los pendientes de cualquier fecha. Con
+    /// <paramref name="soloDe"/>, solo los que cobró esa persona.
+    /// </summary>
+    Task<IEnumerable<CobroDigitalResponse>> ListarAsync(DateTime desde, DateTime hasta, int? soloDe = null);
 
     /// <summary>Los que cobró una persona en un periodo: entre un cierre y el siguiente.</summary>
     Task<List<CobroDigitalResponse>> DelPeriodoAsync(int usuarioId, DateTime? desdeExclusivo, DateTime hasta);
 
     /// <summary>Apareció en el banco por ese monto.</summary>
-    Task<CobroDigitalResponse> VerificarAsync(int pagoId, int? usuarioId);
+    Task<CobroDigitalResponse> VerificarAsync(int pagoId, int? usuarioId, int? soloDe = null);
 
     /// <summary>Se verificó por error: vuelve a pendiente.</summary>
-    Task<CobroDigitalResponse> QuitarVerificacionAsync(int pagoId);
+    Task<CobroDigitalResponse> QuitarVerificacionAsync(int pagoId, int? soloDe = null);
 
     /// <summary>
     /// No apareció: se reversa su ingreso en el banco y el monto queda como
     /// faltante de quien lo cobró, para descontárselo en planilla.
     /// </summary>
-    Task<CobroDigitalResponse> RechazarAsync(int pagoId, RechazarCobroRequest request, int? usuarioId);
+    Task<CobroDigitalResponse> RechazarAsync(int pagoId, RechazarCobroRequest request, int? usuarioId, int? soloDe = null);
 
     /// <summary>
     /// Falla si esa operación ya se cobró en otra venta vigente que entra a la

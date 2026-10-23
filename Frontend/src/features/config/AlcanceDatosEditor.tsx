@@ -23,6 +23,15 @@ const QUE_VE: Record<string, string> = {
   'fact.pedidos': 'Pedidos que ve y clientes que puede vender',
   'fact.notaventa': 'Notas de venta que ve y clientes que puede vender',
   'finanzas.ganancias': 'Ganancias que ve',
+  'finanzas.cierres': 'Cierres de caja y cobros digitales que ve',
+}
+
+/**
+ * Las pantallas sin clientes de por medio: ahí no hay "mis rutas", solo todo o lo propio. Cada una
+ * dice cómo se lee "lo propio".
+ */
+const SOLO_PROPIOS: Record<string, { label: string; nota: string }> = {
+  'finanzas.cierres': { label: 'Solo los suyos', nota: 'Únicamente los cierres de su propia caja y los cobros que él hizo' },
 }
 
 export interface AlcanceDatosEditorProps {
@@ -54,8 +63,13 @@ export function AlcanceDatosEditor({
       {submodulos.map((sub) => {
         const nombre = resolveNav(sub).item?.label ?? sub
         const valor = valores[sub] ?? (heredable ? '' : 'todos')
-        const nota =
-          valor === '' ? 'Usa el alcance que le da su rol' : NIVELES_ALCANCE.find((n) => n.value === valor)?.nota
+        const propio = SOLO_PROPIOS[sub]
+        const niveles = propio
+          ? NIVELES_ALCANCE.filter((n) => n.value !== 'misclientes').map((n) =>
+              n.value === 'propios' ? { ...n, label: propio.label, nota: propio.nota } : n,
+            )
+          : NIVELES_ALCANCE
+        const nota = valor === '' ? 'Usa el alcance que le da su rol' : niveles.find((n) => n.value === valor)?.nota
 
         return (
           <div key={sub} className="grid gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,16rem)] sm:items-center">
@@ -70,7 +84,7 @@ export function AlcanceDatosEditor({
               disabled={disabled}
               options={[
                 ...(heredable ? [{ value: '', label: 'Igual que su rol' }] : []),
-                ...NIVELES_ALCANCE.map((n) => ({ value: n.value, label: n.label })),
+                ...niveles.map((n) => ({ value: n.value, label: n.label })),
               ]}
             />
           </div>

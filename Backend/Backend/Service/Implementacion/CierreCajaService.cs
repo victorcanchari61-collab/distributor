@@ -142,24 +142,26 @@ public class CierreCajaService : ICierreCajaService
         return await GetAsync(cierre.Id);
     }
 
-    public async Task<IEnumerable<CierreCajaResponse>> ListarAsync(DateTime desde, DateTime hasta)
+    public async Task<IEnumerable<CierreCajaResponse>> ListarAsync(DateTime desde, DateTime hasta, int? soloDe = null)
     {
         var inicio = Zona.AUtc(desde.Date);
         var fin = Zona.AUtc(hasta.Date.AddDays(1));
 
         var cierres = await Consulta()
             .Where(c => c.Fecha >= inicio && c.Fecha < fin)
+            .Where(c => soloDe == null || c.UsuarioId == soloDe)
             .OrderByDescending(c => c.Fecha).ThenByDescending(c => c.Id)
             .ToListAsync();
 
         return await MapearAsync(cierres);
     }
 
-    public async Task<CierreDetalleResponse> DetalleAsync(int id)
+    public async Task<CierreDetalleResponse> DetalleAsync(int id, int? soloDe = null)
     {
+        // Uno ajeno, para quien solo ve los suyos, responde "no existe": decir que existe ya es contar algo.
         var cierre = await Consulta()
             .Include(c => c.Denominaciones)
-            .FirstOrDefaultAsync(c => c.Id == id)
+            .FirstOrDefaultAsync(c => c.Id == id && (soloDe == null || c.UsuarioId == soloDe))
             ?? throw new NotFoundException($"No existe el cierre {id}");
 
         var desde = (await InicioDePeriodosAsync([cierre]))[cierre.Id];
@@ -347,11 +349,11 @@ public class CierreCajaService : ICierreCajaService
         }).ToList();
     }
 
-    public async Task<CierreCajaResponse> AnularAsync(int id, int? usuarioId)
+    public async Task<CierreCajaResponse> AnularAsync(int id, int? usuarioId, int? soloDe = null)
     {
         var cierre = await _context.CierresCaja
             .Include(c => c.Descuento)
-            .FirstOrDefaultAsync(c => c.Id == id)
+            .FirstOrDefaultAsync(c => c.Id == id && (soloDe == null || c.UsuarioId == soloDe))
             ?? throw new NotFoundException($"No existe el cierre {id}");
 
         if (cierre.Anulado) throw new BadRequestException("Ese cierre ya está anulado");

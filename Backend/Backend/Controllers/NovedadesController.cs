@@ -32,7 +32,8 @@ public class MotivoNovedadController : ControllerBase
     /// catálogo entero ni poder editarlo.
     /// </summary>
     [HttpGet("opciones")]
-    [PermisoAlguno("fact.pedidos:confirmar", "tms.motivos:ver", "tms.novedades:ver")]
+    // También quien ve Notas de venta: la pantalla los carga al abrirse, para los recojos.
+    [PermisoAlguno("fact.pedidos:confirmar", "fact.notaventa:ver", "tms.motivos:ver", "tms.novedades:ver")]
     public async Task<IActionResult> Opciones() => Ok(await _novedades.GetOpcionesAsync());
 
     [HttpPost]

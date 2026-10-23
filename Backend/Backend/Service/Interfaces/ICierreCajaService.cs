@@ -11,18 +11,21 @@ public interface ICierreCajaService
 
     Task<CierreCajaResponse> CerrarAsync(int usuarioId, CerrarCajaRequest request);
 
-    /// <summary>Todos los cierres del rango, de todas las cajas, con el estado de su descuento.</summary>
-    Task<IEnumerable<CierreCajaResponse>> ListarAsync(DateTime desde, DateTime hasta);
+    /// <summary>
+    /// Los cierres del rango con el estado de su descuento: de todas las cajas, o solo los de
+    /// <paramref name="soloDe"/> si su alcance lo limita a lo suyo.
+    /// </summary>
+    Task<IEnumerable<CierreCajaResponse>> ListarAsync(DateTime desde, DateTime hasta, int? soloDe = null);
 
     /// <summary>
     /// Deshace un cierre mal contado: reversa la entrega y el ajuste y anula su
     /// descuento. No se puede si ese descuento ya entró en una planilla pagada.
     /// </summary>
-    Task<CierreCajaResponse> AnularAsync(int id, int? usuarioId);
+    Task<CierreCajaResponse> AnularAsync(int id, int? usuarioId, int? soloDe = null);
 
     /// <summary>
     /// Todo lo del cierre para revisar si cuadra: el efectivo y lo digital
     /// cobrado desde el cierre anterior de esa caja, y los billetes y monedas.
     /// </summary>
-    Task<CierreDetalleResponse> DetalleAsync(int id);
+    Task<CierreDetalleResponse> DetalleAsync(int id, int? soloDe = null);
 }

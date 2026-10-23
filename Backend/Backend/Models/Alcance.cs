@@ -46,6 +46,9 @@ public static class AlcanceDatos
         "maestros.clientes",
         // Las ganancias salen de las ventas de alguien: quien solo vende ve las suyas.
         "finanzas.ganancias",
+        // Cada cierre es de la caja de alguien: o se ven los de todos, o solo los suyos. Aquí no hay
+        // clientes de por medio, así que cualquier alcance que no sea "todos" es "solo los suyos".
+        "finanzas.cierres",
     ];
 }
 
