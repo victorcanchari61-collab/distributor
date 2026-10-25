@@ -18,8 +18,8 @@ class Entorno {
   static String get apiUrl {
     if (_definida.isNotEmpty) return _definida;
 
-    if (!kIsWeb && Platform.isAndroid) return 'http://83.147.39.5:8080/api';
-    return 'http://83.147.39.5:8080/api';
+    if (!kIsWeb && Platform.isAndroid) return 'http://80.65.211.175/api';
+    return 'http://80.65.211.175/api';
   }
 
   static const nombreApp = 'Titanic D';

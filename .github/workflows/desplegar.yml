@@ -1,0 +1,42 @@
+# En cada push a main, entra al VPS por SSH y corre desplegar.sh: baja el código, migra, publica
+# el backend y compila la web, solo lo que cambió. También se puede lanzar a mano desde la pestaña
+# Actions de GitHub (botón "Run workflow").
+#
+# Necesita dos secretos del repositorio (Settings → Secrets and variables → Actions):
+#   VPS_HOST     la IP del VPS
+#   VPS_SSH_KEY  la llave privada cuya pública está en /root/.ssh/authorized_keys del VPS
+name: Desplegar en el VPS
+
+on:
+  push:
+    branches: [main]
+    # El APK no vive en el VPS: un push que solo toca la app no despliega nada.
+    paths-ignore:
+      - 'titanic/**'
+  workflow_dispatch:
+
+# Dos push seguidos no se pisan: el segundo espera a que termine el primero.
+concurrency:
+  group: desplegar-vps
+  cancel-in-progress: false
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Desplegar por SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/despliegue
+          chmod 600 ~/.ssh/despliegue
+          # Corre el desplegar.sh de origin/main, no el que hay en el VPS: así el primer despliegue
+          # funciona aunque el VPS todavía no lo tenga, y siempre se usa la versión más nueva.
+          ssh -i ~/.ssh/despliegue \
+              -o StrictHostKeyChecking=accept-new \
+              -o ServerAliveInterval=30 \
+              "root@$VPS_HOST" \
+              'cd /var/www/distributor && git fetch --quiet origin main && bash <(git show origin/main:desplegar.sh)'
