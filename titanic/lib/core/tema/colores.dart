@@ -46,6 +46,7 @@ class Colores {
     'finanzas': Color(0xFF0D9488),
     'tms': Color(0xFF0891B2),
     'dms': Color(0xFFDB2777),
+    'crm': Color(0xFFEA580C),
     'rrhh': Color(0xFFD97706),
     'config': Color(0xFF475569),
   };

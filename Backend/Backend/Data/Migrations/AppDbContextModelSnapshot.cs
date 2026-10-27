@@ -213,6 +213,52 @@ namespace Backend.Data.Migrations
                     b.ToTable("Bancos", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Models.CalculoCategorizacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Automatico")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("CalculadoEn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Ciclo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int>("Clientes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EvaluadoDesde")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("EvaluadoHasta")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("VigenteDesde")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("VigenteHasta")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.HasIndex("VigenteDesde", "CalculadoEn");
+
+                    b.ToTable("CalculosCategorizacion", (string)null);
+                });
+
             modelBuilder.Entity("Backend.Models.CapaCosto", b =>
                 {
                     b.Property<int>("Id")
@@ -299,6 +345,91 @@ namespace Backend.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Categorias", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Models.CategoriaCliente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)");
+
+                    b.Property<decimal>("Desde")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.ToTable("CategoriasCliente", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Codigo = "A",
+                            Color = "sky",
+                            Desde = 250000m,
+                            Nombre = "Socio"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Codigo = "B",
+                            Color = "emerald",
+                            Desde = 35000m,
+                            Nombre = "Distribuidor"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Codigo = "C",
+                            Color = "amber",
+                            Desde = 20000m,
+                            Nombre = "Mayorista"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Codigo = "D",
+                            Color = "orange",
+                            Desde = 5000m,
+                            Nombre = "Minorista"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Codigo = "E",
+                            Color = "violet",
+                            Desde = 1000m,
+                            Nombre = "Emprendedor"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Codigo = "F",
+                            Color = "slate",
+                            Desde = 0m,
+                            Nombre = "Inactivo"
+                        });
                 });
 
             modelBuilder.Entity("Backend.Models.CierreCaja", b =>
@@ -467,6 +598,39 @@ namespace Backend.Data.Migrations
                     b.HasIndex("VendedorId");
 
                     b.ToTable("Clientes", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Models.ClienteCategoria", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CalculoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)");
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId");
+
+                    b.HasIndex("CalculoId", "ClienteId")
+                        .IsUnique();
+
+                    b.ToTable("ClientesCategoria", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Models.Compra", b =>
@@ -738,6 +902,40 @@ namespace Backend.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Conductores", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Models.ConfiguracionCategorizacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ActualizadoEn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Ciclo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int?>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("ConfiguracionCategorizacion", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            ActualizadoEn = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Ciclo = "TRIMESTRAL"
+                        });
                 });
 
             modelBuilder.Entity("Backend.Models.ConsumoCapa", b =>
@@ -1520,6 +1718,65 @@ namespace Backend.Data.Migrations
                     b.HasIndex("MotivoGastoId");
 
                     b.ToTable("GastosRecurrentes", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Models.GestionCliente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Cumplida")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("CumplidaEn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Nota")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("ProximaAccion")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<DateTime?>("ProximaFecha")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Resultado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int?>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.HasIndex("ClienteId", "Fecha");
+
+                    b.HasIndex("Cumplida", "ProximaFecha");
+
+                    b.ToTable("GestionesCliente", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Models.ListaPrecio", b =>
@@ -4463,6 +4720,16 @@ namespace Backend.Data.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("Backend.Models.CalculoCategorizacion", b =>
+                {
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("Backend.Models.CapaCosto", b =>
                 {
                     b.HasOne("Backend.Models.Almacen", "Almacen")
@@ -4581,6 +4848,25 @@ namespace Backend.Data.Migrations
                     b.Navigation("Vendedor");
                 });
 
+            modelBuilder.Entity("Backend.Models.ClienteCategoria", b =>
+                {
+                    b.HasOne("Backend.Models.CalculoCategorizacion", "Calculo")
+                        .WithMany()
+                        .HasForeignKey("CalculoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Calculo");
+
+                    b.Navigation("Cliente");
+                });
+
             modelBuilder.Entity("Backend.Models.Compra", b =>
                 {
                     b.HasOne("Backend.Models.OrdenCompra", "OrdenCompra")
@@ -4679,6 +4965,14 @@ namespace Backend.Data.Migrations
                     b.Navigation("CuentaFinanciera");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.ConfiguracionCategorizacion", b =>
+                {
+                    b.HasOne("Backend.Models.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Backend.Models.ConsumoCapa", b =>
@@ -4984,6 +5278,24 @@ namespace Backend.Data.Migrations
                     b.Navigation("CuentaFinancieraSugerida");
 
                     b.Navigation("MotivoGasto");
+                });
+
+            modelBuilder.Entity("Backend.Models.GestionCliente", b =>
+                {
+                    b.HasOne("Backend.Models.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Cliente");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("Backend.Models.MetodoPago", b =>

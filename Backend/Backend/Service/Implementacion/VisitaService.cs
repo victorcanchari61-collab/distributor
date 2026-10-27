@@ -11,6 +11,7 @@ public class VisitaService : IVisitaService
     private readonly AppDbContext _context;
     private readonly IPermisoService _permisos;
     private readonly IUsuarioActual _usuarioActual;
+    private readonly ICrmService _crm;
 
     /// <summary>
     /// Tope de días que se pueden pedir de una vez.
@@ -21,11 +22,12 @@ public class VisitaService : IVisitaService
     /// </summary>
     private const int MaximoDias = 14;
 
-    public VisitaService(AppDbContext context, IPermisoService permisos, IUsuarioActual usuarioActual)
+    public VisitaService(AppDbContext context, IPermisoService permisos, IUsuarioActual usuarioActual, ICrmService crm)
     {
         _context = context;
         _permisos = permisos;
         _usuarioActual = usuarioActual;
+        _crm = crm;
     }
 
     public async Task<IEnumerable<VisitaResponse>> DelRangoAsync(
@@ -42,6 +44,8 @@ public class VisitaService : IVisitaService
                 .ToListAsync())
             .GroupBy(u => u.RutaId)
             .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(u => u.Nombre).OrderBy(n => n)));
+
+        var riesgos = await RiesgosAsync();
 
         var visitas = new List<VisitaResponse>();
 
@@ -73,6 +77,10 @@ public class VisitaService : IVisitaService
                     // Una linea quitada al editar el pedido queda anulada, no
                     // se borra: sumarla diria que el cliente pidio mas.
                     Total = pedido?.Total ?? 0m,
+                    Riesgo = riesgos.GetValueOrDefault(c.Id)?.Nivel,
+                    Variacion = riesgos.GetValueOrDefault(c.Id)?.Variacion,
+                    AccionPendiente = riesgos.GetValueOrDefault(c.Id)?.ProximaAccion,
+                    AccionVencida = riesgos.GetValueOrDefault(c.Id)?.AccionVencida ?? false,
                 });
             }
         }
@@ -99,6 +107,27 @@ public class VisitaService : IVisitaService
             Pendientes = visitas.Count(v => !v.Atendido),
             Total = visitas.Sum(v => v.Total),
         };
+    }
+
+    /// <summary>
+    /// Cómo viene comprando cada cliente (el mes contra el anterior), tal como lo calcula la cartera
+    /// del CRM. Solo para quien puede abrirla: la lista de visitas no debe ser la puerta de atrás
+    /// para ver lo que el CRM le reserva a otros. Si falla, las visitas se muestran igual, sin riesgo.
+    /// </summary>
+    private async Task<Dictionary<int, CrmClienteResponse>> RiesgosAsync()
+    {
+        if (_usuarioActual.Id is not int usuarioId) return [];
+        if (!await _permisos.PuedeAsync(usuarioId, "crm.cartera", Accion.Ver)) return [];
+
+        try
+        {
+            var cartera = await _crm.CarteraAsync("mes", null, null, null, null, null);
+            return cartera.Items.ToDictionary(i => i.ClienteId);
+        }
+        catch (Exception)
+        {
+            return [];
+        }
     }
 
     /// <summary>Los días del rango, acotados y en orden.</summary>

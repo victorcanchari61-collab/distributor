@@ -46,6 +46,8 @@ public static class AlcanceDatos
         "maestros.clientes",
         // Las ganancias salen de las ventas de alguien: quien solo vende ve las suyas.
         "finanzas.ganancias",
+        // La cartera en riesgo son los clientes de alguien: quien vende ve los suyos.
+        "crm.cartera",
         // Cada cierre es de la caja de alguien: o se ven los de todos, o solo los suyos. Aquí no hay
         // clientes de por medio, así que cualquier alcance que no sea "todos" es "solo los suyos".
         "finanzas.cierres",

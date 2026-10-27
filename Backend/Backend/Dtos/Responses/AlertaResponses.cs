@@ -34,6 +34,9 @@ public static class TipoAlerta
     /// está parado delante del cliente sin poder hacer su trabajo.
     /// </summary>
     public const string SolicitudAcceso = "SOLICITUD_ACCESO";
+
+    /// <summary>Acciones de seguimiento de clientes que ya debieron hacerse, o que tocan hoy.</summary>
+    public const string SeguimientoCliente = "SEGUIMIENTO_CLIENTE";
 }
 
 /// <summary>

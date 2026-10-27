@@ -56,6 +56,7 @@ import {
   RutasPage,
 } from './features/tms'
 import { DevolucionesPage, VisitasPage } from './features/dms'
+import { AgendaPage, CarteraPage, CategorizacionPage, ProductosSinVentasPage, ZonasPage } from './features/crm'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
 import { PermisosProvider, usePermisos } from './lib/permisos'
@@ -96,6 +97,11 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'tms.despachos': DespachosPage,
   'tms.novedades': NovedadesPage,
   'tms.motivos': MotivosNovedadPage,
+  'crm.cartera': CarteraPage,
+  'crm.productos': ProductosSinVentasPage,
+  'crm.zonas': ZonasPage,
+  'crm.categorizacion': CategorizacionPage,
+  'crm.seguimiento': AgendaPage,
   'dms.visitas': VisitasPage,
   'dms.devoluciones': DevolucionesPage,
   'finanzas.caja': MiCajaPage,

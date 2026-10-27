@@ -133,6 +133,12 @@ builder.Services.AddScoped<IGastoOperativoService, GastoOperativoService>();
 builder.Services.AddScoped<IGananciaService, GananciaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IReportesService, ReportesService>();
+builder.Services.AddScoped<ICrmService, CrmService>();
+builder.Services.AddScoped<ICrmProductosService, CrmProductosService>();
+builder.Services.AddScoped<ICrmAgendaService, CrmAgendaService>();
+builder.Services.AddScoped<ICategorizacionService, CategorizacionService>();
+// Recalcula la categoría de los clientes cuando empieza un ciclo nuevo.
+builder.Services.AddHostedService<CategorizacionHostedService>();
 
 // Consulta de RUC y DNI: se llama al proveedor desde el backend para no
 // exponer el token en el navegador.

@@ -27,6 +27,7 @@ public class AlertasService : IAlertasService
     private readonly IVentasRepository _ventas;
     private readonly IFlotaService _flota;
     private readonly IPermisoService _permisos;
+    private readonly ICrmAgendaService _agenda;
 
     public AlertasService(
         IInventarioService inventario,
@@ -34,8 +35,10 @@ public class AlertasService : IAlertasService
         IComprasRepository compras,
         IVentasRepository ventas,
         IFlotaService flota,
-        IPermisoService permisos)
+        IPermisoService permisos,
+        ICrmAgendaService agenda)
     {
+        _agenda = agenda;
         _inventario = inventario;
         _inventarioRepo = inventarioRepo;
         _compras = compras;
@@ -58,6 +61,7 @@ public class AlertasService : IAlertasService
         alertas.AddRange(await DocumentosVehiculoAsync());
         alertas.AddRange(await LicenciasConductorAsync());
         alertas.AddRange(await SolicitudesDeAccesoAsync(usuarioId));
+        alertas.AddRange(await SeguimientoClientesAsync(usuarioId));
 
         return alertas
             .OrderBy(a => Peso(a.Severidad))
@@ -109,6 +113,57 @@ public class AlertasService : IAlertasService
                 Fecha = s.FechaSolicitud,
             })
         ];
+    }
+
+    /// <summary>
+    /// El recordatorio del seguimiento de clientes: las acciones que la persona anotó (o de sus
+    /// clientes) y ya debieron hacerse, y las que tocan hoy.
+    ///
+    /// Es personal: cada quien ve las suyas, y solo si puede abrir el seguimiento. Es una advertencia
+    /// y no una crítica porque no se cae nada, pero un cliente que bajaba y no recibió la llamada
+    /// prometida es plata que se sigue yendo.
+    /// </summary>
+    private async Task<List<AlertaResponse>> SeguimientoClientesAsync(int? usuarioId)
+    {
+        if (usuarioId is not int id) return [];
+        if (!await _permisos.PuedeAsync(id, "crm.seguimiento", Accion.Ver)) return [];
+
+        var agenda = await _agenda.ResumenDeAsync(id);
+        var alertas = new List<AlertaResponse>();
+
+        if (agenda.Vencidas > 0)
+        {
+            alertas.Add(new AlertaResponse
+            {
+                Id = "seguimiento-vencidas",
+                Tipo = TipoAlerta.SeguimientoCliente,
+                Severidad = SeveridadAlerta.Advertencia,
+                Titulo = agenda.Vencidas == 1
+                    ? "1 acción de seguimiento vencida"
+                    : $"{agenda.Vencidas} acciones de seguimiento vencidas",
+                Detalle = "Clientes a los que se les prometió una llamada, visita o gestión y ya pasó el día.",
+                Ruta = "crm.seguimiento",
+                Fecha = agenda.VencidaDesde,
+            });
+        }
+
+        if (agenda.Hoy > 0)
+        {
+            alertas.Add(new AlertaResponse
+            {
+                Id = "seguimiento-hoy",
+                Tipo = TipoAlerta.SeguimientoCliente,
+                Severidad = SeveridadAlerta.Info,
+                Titulo = agenda.Hoy == 1
+                    ? "1 acción de seguimiento para hoy"
+                    : $"{agenda.Hoy} acciones de seguimiento para hoy",
+                Detalle = "Lo que quedó anotado para hacer hoy con tus clientes.",
+                Ruta = "crm.seguimiento",
+                Fecha = Zona.Hoy,
+            });
+        }
+
+        return alertas;
     }
 
     /// <summary>

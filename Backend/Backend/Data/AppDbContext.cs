@@ -79,6 +79,11 @@ public class AppDbContext : DbContext
     public DbSet<PlanillaSemanal> PlanillasSemanales => Set<PlanillaSemanal>();
     public DbSet<PlanillaDetalle> PlanillaDetalles => Set<PlanillaDetalle>();
     public DbSet<PlanillaDescuento> PlanillaDescuentos => Set<PlanillaDescuento>();
+    public DbSet<GestionCliente> GestionesCliente => Set<GestionCliente>();
+    public DbSet<CategoriaCliente> CategoriasCliente => Set<CategoriaCliente>();
+    public DbSet<ConfiguracionCategorizacion> ConfiguracionesCategorizacion => Set<ConfiguracionCategorizacion>();
+    public DbSet<CalculoCategorizacion> CalculosCategorizacion => Set<CalculoCategorizacion>();
+    public DbSet<ClienteCategoria> ClientesCategoria => Set<ClienteCategoria>();
     public DbSet<AdelantoEmpleado> AdelantosEmpleado => Set<AdelantoEmpleado>();
     public DbSet<PlanillaAdelanto> PlanillaAdelantos => Set<PlanillaAdelanto>();
     public DbSet<MotivoGasto> MotivosGasto => Set<MotivoGasto>();
@@ -107,6 +112,28 @@ public class AppDbContext : DbContext
         ConfigurarNovedades(modelBuilder);
         ConfigurarFinanzas(modelBuilder);
         ConfigurarAuditoria(modelBuilder);
+
+        ConfigurarCategorizacion(modelBuilder);
+
+        modelBuilder.Entity<GestionCliente>(entity =>
+        {
+            entity.ToTable("GestionesCliente");
+            entity.Property(g => g.Tipo).HasMaxLength(20).IsRequired();
+            entity.Property(g => g.Resultado).HasMaxLength(20).IsRequired();
+            entity.Property(g => g.Nota).HasMaxLength(500).IsRequired();
+            entity.Property(g => g.ProximaAccion).HasMaxLength(150);
+
+            // El historial de un cliente, lo más reciente primero.
+            entity.HasIndex(g => new { g.ClienteId, g.Fecha });
+            // Las acciones que siguen abiertas, por día: lo que mira la cartera para marcar las vencidas.
+            entity.HasIndex(g => new { g.Cumplida, g.ProximaFecha });
+
+            // Un cliente con historial de gestiones no se borra sin pensarlo.
+            entity.HasOne(g => g.Cliente).WithMany()
+                .HasForeignKey(g => g.ClienteId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(g => g.Usuario).WithMany()
+                .HasForeignKey(g => g.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
 
         modelBuilder.Entity<Rol>(entity =>
         {
@@ -1673,6 +1700,71 @@ public class AppDbContext : DbContext
         });
     }
 
+    /// <summary>
+    /// Categorías de cliente. Nacen con los seis tramos de siempre (Socio a Inactivo) y el ciclo
+    /// trimestral; desde la pantalla de Categorización se renombran, se les cambia el monto y se
+    /// elige el ciclo.
+    /// </summary>
+    private static void ConfigurarCategorizacion(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<CategoriaCliente>(entity =>
+        {
+            entity.ToTable("CategoriasCliente");
+            entity.Property(c => c.Codigo).HasMaxLength(1).IsRequired();
+            entity.Property(c => c.Nombre).HasMaxLength(30).IsRequired();
+            entity.Property(c => c.Color).HasMaxLength(12).IsRequired();
+            entity.Property(c => c.Desde).HasPrecision(18, 2);
+            entity.HasIndex(c => c.Codigo).IsUnique();
+
+            entity.HasData(
+                new CategoriaCliente { Id = 1, Codigo = "A", Nombre = "Socio", Color = "sky", Desde = 250000m },
+                new CategoriaCliente { Id = 2, Codigo = "B", Nombre = "Distribuidor", Color = "emerald", Desde = 35000m },
+                new CategoriaCliente { Id = 3, Codigo = "C", Nombre = "Mayorista", Color = "amber", Desde = 20000m },
+                new CategoriaCliente { Id = 4, Codigo = "D", Nombre = "Minorista", Color = "orange", Desde = 5000m },
+                new CategoriaCliente { Id = 5, Codigo = "E", Nombre = "Emprendedor", Color = "violet", Desde = 1000m },
+                new CategoriaCliente { Id = 6, Codigo = "F", Nombre = "Inactivo", Color = "slate", Desde = 0m });
+        });
+
+        modelBuilder.Entity<ConfiguracionCategorizacion>(entity =>
+        {
+            entity.ToTable("ConfiguracionCategorizacion");
+            entity.Property(c => c.Ciclo).HasMaxLength(20).IsRequired();
+            entity.HasOne<Usuario>().WithMany()
+                .HasForeignKey(c => c.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasData(new ConfiguracionCategorizacion
+            {
+                Id = 1,
+                Ciclo = CicloCategorizacion.Trimestral,
+                ActualizadoEn = Semilla,
+            });
+        });
+
+        modelBuilder.Entity<CalculoCategorizacion>(entity =>
+        {
+            entity.ToTable("CalculosCategorizacion");
+            entity.Property(c => c.Ciclo).HasMaxLength(20).IsRequired();
+            entity.HasIndex(c => new { c.VigenteDesde, c.CalculadoEn });
+            entity.HasOne(c => c.Usuario).WithMany()
+                .HasForeignKey(c => c.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ClienteCategoria>(entity =>
+        {
+            entity.ToTable("ClientesCategoria");
+            entity.Property(c => c.Codigo).HasMaxLength(1).IsRequired();
+            entity.Property(c => c.Monto).HasPrecision(18, 2);
+            // Una fila por cliente en cada cálculo; y buscar el de un cliente es lo más frecuente.
+            entity.HasIndex(c => new { c.CalculoId, c.ClienteId }).IsUnique();
+            entity.HasIndex(c => c.ClienteId);
+
+            entity.HasOne(c => c.Calculo).WithMany()
+                .HasForeignKey(c => c.CalculoId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(c => c.Cliente).WithMany()
+                .HasForeignKey(c => c.ClienteId).OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
     // ------------------------------------------------------------- Auditoría
 
     /// <summary>
@@ -1684,7 +1776,10 @@ public class AppDbContext : DbContext
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         var entradas = ChangeTracker.Entries()
+            // ClienteCategoria queda fuera: cada cálculo escribe una fila por cliente (miles), y es un dato
+            // derivado que se puede volver a calcular. Lo que sí queda auditado es el CalculoCategorizacion.
             .Where(e => e.Entity is not RegistroAuditoria
+                        && e.Entity is not ClienteCategoria
                         && e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
             .ToList();
 

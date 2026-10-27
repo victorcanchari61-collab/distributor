@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   ArrowLeftRight,
+  Award,
   FileBarChart,
   Banknote,
   Boxes,
@@ -15,6 +16,8 @@ import {
   FileMinus,
   FileText,
   HandCoins,
+  HeartHandshake,
+  TrendingDown,
   TrendingUp,
   LayoutDashboard,
   Hash,
@@ -58,6 +61,7 @@ export type SysKey =
   | 'fact'
   | 'tms'
   | 'dms'
+  | 'crm'
   | 'rrhh'
   | 'config'
   | 'dashboard'
@@ -219,6 +223,20 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'dms.visitas', label: 'Visitas', icon: Store },
       { id: 'dms.devoluciones', label: 'Devoluciones', icon: Undo2 },
       { id: 'dms.evidencias', label: 'Evidencias', icon: ClipboardCheck, pending: true, hidden: true },
+    ],
+  },
+  {
+    id: 'crm',
+    label: 'CRM',
+    sys: 'crm',
+    icon: HeartHandshake,
+    items: [
+      { id: 'crm.cartera', label: 'Cartera en riesgo', icon: TrendingDown },
+      { id: 'crm.productos', label: 'Productos sin ventas', icon: PackageX },
+      { id: 'crm.zonas', label: 'Mercados y rutas', icon: Store },
+      { id: 'crm.categorizacion', label: 'Categorización', icon: Award },
+      // La agenda de las acciones pendientes; las gestiones se anotan en la pestaña Seguimiento de la ficha.
+      { id: 'crm.seguimiento', label: 'Agenda de seguimiento', icon: ClipboardList },
     ],
   },
   {

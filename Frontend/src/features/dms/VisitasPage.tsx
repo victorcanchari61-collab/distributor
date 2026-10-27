@@ -9,6 +9,8 @@ import { rutaApi } from '../tms'
 import type { RutaResponse } from '../tms'
 import { usuarioApi } from '../config/usuarioApi'
 import type { UsuarioResponse } from '../config/usuarioApi'
+import { NIVELES, colorCambio, porcentaje } from '../crm/formato'
+import { NivelBadge } from '../crm/NivelBadge'
 import { visitaApi } from './visitaApi'
 import type { ConsultaVisitas, ResumenVisitas, VisitaResponse } from './visitaApi'
 
@@ -179,6 +181,33 @@ export function VisitasPage() {
         filterOptions: usuarios.map((u) => ({ value: String(u.id), label: u.nombre })),
         value: (row) => String(row.vendedorId ?? ''),
         render: (row) => row.vendedor ?? '—',
+      },
+      {
+        // Solo llega para quien puede abrir la cartera del CRM: sin ese permiso la columna sale vacía.
+        key: 'riesgo',
+        label: 'Compra',
+        filterType: 'select',
+        filterOptions: Object.entries(NIVELES).map(([value, { label }]) => ({ value, label })),
+        value: (row) => row.riesgo ?? '',
+        render: (row) =>
+          row.riesgo ? (
+            <span className="flex flex-col items-start gap-0.5">
+              <span className="flex items-center gap-1.5">
+                <NivelBadge nivel={row.riesgo} />
+                {row.variacion !== null && (
+                  <span className={`text-xs ${colorCambio(row.variacion)}`}>{porcentaje(row.variacion)}</span>
+                )}
+              </span>
+              {row.accionPendiente && (
+                <span className={`text-xs ${row.accionVencida ? 'text-red-600' : 'text-ink-soft'}`}>
+                  {row.accionVencida ? 'Vencida: ' : 'Pendiente: '}
+                  {row.accionPendiente}
+                </span>
+              )}
+            </span>
+          ) : (
+            <span className="text-ink-soft">—</span>
+          ),
       },
       {
         key: 'atendido',

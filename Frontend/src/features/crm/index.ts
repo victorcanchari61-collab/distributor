@@ -1,0 +1,8 @@
+export { AgendaPage } from './AgendaPage'
+export { CarteraPage } from './CarteraPage'
+export { ProductosSinVentasPage } from './ProductosSinVentasPage'
+export { ZonasPage } from './ZonasPage'
+export { CategorizacionPage } from './CategorizacionPage'
+export { CategoriaBadge } from './CategoriaBadge'
+export { crmReportesApi } from './crmReportesApi'
+export { crmApi } from './crmApi'

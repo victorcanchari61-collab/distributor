@@ -90,6 +90,14 @@
   --sys-on: #ffffff;
 }
 
+/* CRM — naranja */
+[data-sys='crm'] {
+  --sys-rgb: 234 88 12;
+  --sys-dark-rgb: 154 52 18;
+  --sys-ink-rgb: 194 65 12;
+  --sys-on: #ffffff;
+}
+
 /* RRHH — ambar */
 [data-sys='rrhh'] {
   --sys-rgb: 217 119 6;

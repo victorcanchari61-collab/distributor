@@ -377,6 +377,38 @@ const menuGrupos = <MenuGrupo>[
     ],
   ),
   MenuGrupo(
+    id: 'crm',
+    titulo: 'CRM',
+    icono: Icons.handshake_outlined,
+    items: [
+      MenuItem(
+        id: 'crm.cartera',
+        titulo: 'Cartera en riesgo',
+        icono: Icons.trending_down,
+      ),
+      MenuItem(
+        id: 'crm.productos',
+        titulo: 'Productos sin ventas',
+        icono: Icons.inventory_2_outlined,
+      ),
+      MenuItem(
+        id: 'crm.zonas',
+        titulo: 'Mercados y rutas',
+        icono: Icons.storefront_outlined,
+      ),
+      MenuItem(
+        id: 'crm.categorizacion',
+        titulo: 'Categorización',
+        icono: Icons.workspace_premium_outlined,
+      ),
+      MenuItem(
+        id: 'crm.seguimiento',
+        titulo: 'Agenda de seguimiento',
+        icono: Icons.checklist_outlined,
+      ),
+    ],
+  ),
+  MenuGrupo(
     id: 'rrhh',
     titulo: 'RR. HH.',
     icono: Icons.people_outline,

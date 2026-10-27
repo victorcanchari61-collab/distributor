@@ -107,6 +107,21 @@ public static class CatalogoPermisos
             ["dashboard.inventario"] = [Accion.Ver, Accion.Exportar],
             ["dashboard.reparto"] = [Accion.Ver, Accion.Exportar],
 
+            // --- CRM ---
+            // Qué clientes están dejando de comprar y la ficha de cada uno. Solo lectura: lo que se
+            // hace con ellos (visitar, cobrar, llamar) se hace en sus propias pantallas.
+            ["crm.cartera"] = [Accion.Ver],
+            // Qué productos no se mueven (y dónde sí se venden) y cómo le va a cada mercado o ruta.
+            // Solo lectura; zonas usa el alcance de clientes de la cartera.
+            ["crm.productos"] = [Accion.Ver],
+            ["crm.zonas"] = [Accion.Ver],
+            // Los tramos y el ciclo de la categoría de los clientes (Socio a Inactivo). Editar es guardarlos
+            // y también "Calcular ahora".
+            ["crm.categorizacion"] = [Accion.Ver, Accion.Editar],
+            // Las gestiones con el cliente: llamadas, visitas y acuerdos. Editar es dar por hecha la
+            // próxima acción; Eliminar, borrar una gestión anotada por error.
+            ["crm.seguimiento"] = Catalogo,
+
             // --- Maestros ---
             ["maestros.clientes"] = CatalogoImportable,
             ["maestros.proveedores"] = CatalogoImportable,

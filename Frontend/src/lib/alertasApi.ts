@@ -12,6 +12,7 @@ export type TipoAlerta =
   | 'DOCUMENTO_VEHICULO'
   | 'LICENCIA_CONDUCTOR'
   | 'SOLICITUD_ACCESO'
+  | 'SEGUIMIENTO_CLIENTE'
 
 export interface AlertaResponse {
   id: string

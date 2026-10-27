@@ -1,4 +1,5 @@
 import { api } from '../../lib/apiClient'
+import type { NivelCliente } from '../crm/crmApi'
 
 /** Un cliente al que toca visitar ese día. */
 export interface VisitaResponse {
@@ -21,6 +22,16 @@ export interface VisitaResponse {
   pedidoId: number | null
   pedidoNumero: string | null
   total: number
+  /**
+   * Cómo viene comprando el cliente este mes frente al anterior (CRITICO, ALTO, MEDIO, ESTABLE, NUEVO
+   * o INACTIVO). Null si no hay datos o quien mira no puede abrir la cartera del CRM.
+   */
+  riesgo: NivelCliente | null
+  /** Cambio en % de sus compras del mes contra el anterior. */
+  variacion: number | null
+  /** La próxima acción de seguimiento abierta de este cliente. */
+  accionPendiente: string | null
+  accionVencida: boolean
 }
 
 export interface ResumenVisitas {
