@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
@@ -174,41 +175,30 @@ class CajasPagina extends ConsumerWidget {
           ref.invalidate(movimientosCuentaProvider(boveda.id));
         }
       },
-      // El boton flotante solo la crea si falta. Ya creada, la plata se mueve
-      // con Sacar y Traer, en el encabezado.
+      // La Bóveda solo se crea si falta. Ya creada, la plata se mueve con
+      // Sacar y Traer, en el botón de acciones.
       onNuevo: boveda == null && puede(ref, 'finanzas.cajas', Accion.crear)
           ? () => abrirHojaFinanzas(context, (_) => const _HojaBoveda())
           : null,
       textoNuevo: 'Crear bóveda',
-      /*
-       * Sacar y Traer, como en el panel web, en vez de un "Mover plata" libre:
-       * la Bóveda va fija y solo se elige la otra cuenta. Uno debajo del otro:
-       * lado a lado, en un celular de 360 de ancho, los nombres se cortaban.
-       */
-      encabezado: boveda == null || !puedeMover
-          ? null
-          : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AppBoton(
-                    texto: 'Traer a la Bóveda',
-                    iconoDerecha: Icons.download_outlined,
-                    variante: BotonVariante.secundario,
-                    tam: BotonTam.sm,
-                    onPressed: () => _mover(context, ref, boveda, sacar: false),
-                  ),
-                  const SizedBox(height: Dimen.espacio2),
-                  AppBoton(
-                    texto: 'Sacar de la Bóveda',
-                    iconoDerecha: Icons.upload_outlined,
-                    tam: BotonTam.sm,
-                    onPressed: () => _mover(context, ref, boveda, sacar: true),
-                  ),
-                ],
-              ),
-            ),
+      // Sacar y Traer, como en el panel web, en vez de un "Mover plata" libre:
+      // la Bóveda va fija y solo se elige la otra cuenta.
+      acciones: [
+        if (boveda != null && puedeMover) ...[
+          AccionGlobal(
+            etiqueta: 'Traer a la Bóveda',
+            icono: Icons.download_outlined,
+            color: AccionGlobal.azul,
+            onTap: () => _mover(context, ref, boveda, sacar: false),
+          ),
+          AccionGlobal(
+            etiqueta: 'Sacar de la Bóveda',
+            icono: Icons.upload_outlined,
+            color: AccionGlobal.naranja,
+            onTap: () => _mover(context, ref, boveda, sacar: true),
+          ),
+        ],
+      ],
       iconoVacio: Icons.account_balance,
       singular: 'movimiento',
       plural: 'movimientos',

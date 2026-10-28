@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import 'app_boton.dart';
+import 'app_hoja.dart';
 import 'app_selector.dart';
 import 'app_selector_rango.dart';
 
@@ -162,98 +162,35 @@ Future<void> mostrarFiltros(
   required VoidCallback onLimpiar,
   int activos = 0,
 }) {
-  /*
-   * El acento se lee ANTES de abrir y se vuelve a declarar dentro.
-   *
-   * La hoja cuelga del Navigator, no de la pantalla que la abrio, asi que por
-   * herencia no ve el acento del modulo y el boton salia con el azul de marca
-   * en todos los listados. Es el mismo motivo por el que los formularios
-   * declaran el suyo.
-   */
-  final acento = Acento.de(context);
-
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (context) => Acento(
-      color: acento,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Dimen.espacio4,
-                0,
-                Dimen.espacio4,
-                Dimen.espacio3,
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.filter_list_rounded,
-                    size: 20,
-                    color: Colores.tintaSuave,
-                  ),
-                  const SizedBox(width: Dimen.espacio2),
-                  const Text(
-                    'Filtros',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colores.tinta,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (activos > 0)
-                    TextButton(
-                      onPressed: () {
-                        onLimpiar();
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('Limpiar'),
-                    ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                padding: const EdgeInsets.all(Dimen.espacio4),
-                itemCount: grupos.length,
-                separatorBuilder: (context, i) =>
-                    const SizedBox(height: Dimen.espacio4),
-                itemBuilder: (context, i) => grupos[i],
-              ),
-            ),
-            const Divider(height: 1),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                Dimen.espacio4,
-                Dimen.espacio3,
-                Dimen.espacio4,
-                Dimen.espacio4 + MediaQuery.of(context).padding.bottom,
-              ),
-              // La lista se filtra en vivo al elegir en cada select: este boton
-              // solo cierra, pero hace falta para saber que se termino.
-              child: AppBoton(
-                texto: 'Ver resultados',
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
+  return abrirHoja<void>(
+    context,
+    (context) => HojaBase(
+      titulo: 'Filtros',
+      accionesTitulo: [
+        if (activos > 0)
+          TextButton(
+            onPressed: () {
+              onLimpiar();
+              Navigator.of(context).pop();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            child: const Text('Limpiar'),
+          ),
+      ],
+      cuerpo: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < grupos.length; i++) ...[
+            if (i > 0) const SizedBox(height: Dimen.espacio4),
+            grupos[i],
           ],
-        ),
+        ],
+      ),
+      // La lista se filtra en vivo al elegir en cada select: este boton solo
+      // cierra, pero hace falta para saber que se termino.
+      pie: AppBoton(
+        texto: 'Ver resultados',
+        onPressed: () => Navigator.of(context).pop(),
       ),
     ),
   );

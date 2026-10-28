@@ -102,11 +102,13 @@ const menuGrupos = <MenuGrupo>[
       ),
       MenuItem(
         id: 'dashboard.sinventas',
+        pendiente: false,
         titulo: 'Productos sin ventas',
         icono: Icons.inventory_2_outlined,
       ),
       MenuItem(
         id: 'dashboard.zonas',
+        pendiente: false,
         titulo: 'Mercados y rutas',
         icono: Icons.storefront_outlined,
       ),
@@ -393,21 +395,25 @@ const menuGrupos = <MenuGrupo>[
     items: [
       MenuItem(
         id: 'crm.seguimiento',
+        pendiente: false,
         titulo: 'Gestión y seguimiento',
         icono: Icons.person_search_outlined,
       ),
       MenuItem(
         id: 'crm.caida',
+        pendiente: false,
         titulo: 'Clientes con caída',
         icono: Icons.trending_down,
       ),
       MenuItem(
         id: 'crm.inactivos',
+        pendiente: false,
         titulo: 'Clientes inactivos',
         icono: Icons.person_off_outlined,
       ),
       MenuItem(
         id: 'crm.vendedores',
+        pendiente: false,
         titulo: 'Vendedores con caída',
         icono: Icons.groups_outlined,
       ),

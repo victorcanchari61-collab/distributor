@@ -126,4 +126,84 @@ void main() {
       expect((puntos[i] - puntos[i + 1]).distance, greaterThan(52));
     }
   });
+
+  testWidgets('las etiquetas no se tapan entre si ni tapan otros iconos', (
+    t,
+  ) async {
+    t.view.physicalSize = const Size(360, 700);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+
+    final iconos = [Icons.add, Icons.upload, Icons.download, Icons.description];
+    await t.pumpWidget(
+      _pantalla([
+        for (final (i, icono) in iconos.indexed)
+          AccionGlobal(etiqueta: 'Accion $i', icono: icono, onTap: () {}),
+      ]),
+    );
+    await t.tap(find.text('Acciones'));
+    await t.pumpAndSettle();
+
+    final etiquetas = [
+      for (var i = 0; i < iconos.length; i++) t.getRect(find.text('Accion $i')),
+    ];
+    final circulos = [
+      for (final i in iconos) t.getRect(find.byIcon(i)).inflate(4),
+    ];
+
+    for (var a = 0; a < etiquetas.length; a++) {
+      for (var b = 0; b < etiquetas.length; b++) {
+        if (a == b) continue;
+        expect(
+          etiquetas[a].overlaps(etiquetas[b]),
+          isFalse,
+          reason: 'la etiqueta $a tapa a la $b',
+        );
+        expect(
+          etiquetas[a].overlaps(circulos[b]),
+          isFalse,
+          reason: 'la etiqueta $a tapa al icono $b',
+        );
+      }
+    }
+  });
+
+  testWidgets(
+    'una etiqueta larga queda en una sola fila aun en pantalla angosta',
+    (t) async {
+      t.view.physicalSize = const Size(320, 640);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+
+      await t.pumpWidget(
+        _pantalla([
+          AccionGlobal(etiqueta: 'Nuevo', icono: Icons.add, onTap: () {}),
+          AccionGlobal(
+            etiqueta: 'Categorización',
+            icono: Icons.workspace_premium,
+            onTap: () {},
+          ),
+          AccionGlobal(
+            etiqueta: 'Subir clientes',
+            icono: Icons.upload,
+            onTap: () {},
+          ),
+          AccionGlobal(
+            etiqueta: 'Descargar plantilla',
+            icono: Icons.download,
+            onTap: () {},
+          ),
+        ]),
+      );
+      await t.tap(find.text('Acciones'));
+      await t.pumpAndSettle();
+
+      // Una fila de letra de 13: bien por debajo de dos líneas.
+      expect(t.getSize(find.text('Descargar plantilla')).height, lessThan(20));
+      expect(
+        t.getRect(find.text('Descargar plantilla')).left,
+        greaterThanOrEqualTo(0),
+      );
+    },
+  );
 }

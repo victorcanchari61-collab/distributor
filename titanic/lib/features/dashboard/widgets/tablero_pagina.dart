@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
+import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_shell.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -13,7 +18,7 @@ import 'grafico_util.dart';
 /// gráficos en una sola columna.
 ///
 /// Tirar hacia abajo también actualiza. Es el `Encabezado` del panel web.
-class TableroPagina extends StatelessWidget {
+class TableroPagina extends ConsumerWidget {
   const TableroPagina({
     super.key,
     required this.ruta,
@@ -35,15 +40,32 @@ class TableroPagina extends StatelessWidget {
   final ValueChanged<PeriodoTablero>? onPeriodo;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final vista = resolverRuta(ruta);
     final color = vista.grupo?.color ?? Colores.marca;
+
+    // El reporte en PDF del dashboard, con el período que se está mirando. Pide
+    // el permiso de exportar de ese dashboard: 'dashboard.ventas', etc.
+    final id = vista.item?.id;
+    final p = periodo;
+    final reporte = id != null && puede(ref, id, Accion.exportar)
+        ? accionReportePdf(
+            context,
+            ruta:
+                '/${id.replaceFirst('.', '/')}/reporte/pdf'
+                '${p == null ? '' : '?desde=${diaIso(p.desde)}&hasta=${diaIso(p.hasta)}'}',
+            nombre: '${id.split('.').last}.pdf',
+          )
+        : null;
 
     return AppShell(
       titulo: vista.item?.titulo ?? 'Dashboard',
       subtitulo: vista.grupo?.titulo,
       acentado: color,
       rutaActual: ruta,
+      accionFlotante: reporte == null
+          ? null
+          : AppAccionesFlotantes(acciones: [reporte], colorUnica: color),
       acciones: [
         IconButton(
           tooltip: 'Actualizar',

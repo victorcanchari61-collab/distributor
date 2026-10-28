@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/exportar_csv.dart';
@@ -121,17 +122,38 @@ class AsistenciaPagina extends ConsumerWidget {
         ref.read(mesAsistenciaProvider.notifier).state = m;
     final onPaseLista = puedeCrear ? () => _abrirPaseLista(context, ref) : null;
 
+    // Los feriados y el reporte del mes valen en las dos pestañas.
+    final accionFeriados = AccionGlobal(
+      etiqueta: 'Feriados',
+      icono: Icons.flag_outlined,
+      color: AccionGlobal.violeta,
+      onTap: () => abrirFeriados(context),
+    );
+    final accionReporte = puede(ref, 'rrhh.asistencia', Accion.exportar)
+        ? accionReportePdf(
+            context,
+            ruta: _rutaReporte(ref),
+            nombre: 'asistencia.pdf',
+          )
+        : null;
+
     if (pestana == PestanaAsistencia.calendario) {
       return _PestanaCalendario(
         color: color,
         pestanas: pestanas,
         indicadores: indicadores,
-        barraMes: _BarraMes(
-          mes: mes,
-          onMes: cambiarMes,
-          onFeriados: () => abrirFeriados(context),
-        ),
-        onPaseLista: onPaseLista,
+        barraMes: _BarraMes(mes: mes, onMes: cambiarMes),
+        acciones: [
+          if (onPaseLista != null)
+            AccionGlobal(
+              etiqueta: 'Pasar lista',
+              icono: Icons.add,
+              color: AccionGlobal.verde,
+              onTap: onPaseLista,
+            ),
+          accionFeriados,
+          ?accionReporte,
+        ],
         // Tocar un dia del calendario abre su pase de lista.
         onDia: puedeCrear ? (dia) => _pasarLista(context, ref, dia) : null,
         onRecargar: () => _recargar(ref),
@@ -149,12 +171,8 @@ class AsistenciaPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar empleado',
       onRecargar: () => _recargar(ref),
       acciones: [
-        if (puede(ref, 'rrhh.asistencia', Accion.exportar))
-          accionReportePdf(
-            context,
-            ruta: _rutaReporte(ref),
-            nombre: 'asistencia.pdf',
-          ),
+        accionFeriados,
+        ?accionReporte,
         if (puede(ref, 'rrhh.asistencia', Accion.exportar))
           accionExportar<Asistencia>(
             context,
@@ -354,14 +372,12 @@ class AsistenciaPagina extends ConsumerWidget {
 String _fecha(DateTime f) =>
     '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';
 
-/// El mes que se mira, con sus flechas. En el calendario lleva al lado los
-/// feriados, en el mismo lugar que la web.
+/// El mes que se mira, con sus flechas.
 class _BarraMes extends StatelessWidget {
-  const _BarraMes({required this.mes, required this.onMes, this.onFeriados});
+  const _BarraMes({required this.mes, required this.onMes});
 
   final DateTime mes;
   final ValueChanged<DateTime> onMes;
-  final VoidCallback? onFeriados;
 
   @override
   Widget build(BuildContext context) {
@@ -392,17 +408,6 @@ class _BarraMes extends StatelessWidget {
                 : () => onMes(DateTime(mes.year, mes.month + 1)),
             icon: const Icon(Icons.chevron_right),
           ),
-          if (onFeriados != null) ...[
-            const SizedBox(width: Dimen.espacio2),
-            AppBoton(
-              texto: 'Feriados',
-              icono: Icons.flag_outlined,
-              variante: BotonVariante.secundario,
-              tam: BotonTam.sm,
-              expandido: false,
-              onPressed: onFeriados,
-            ),
-          ],
         ],
       ),
     );
@@ -420,7 +425,7 @@ class _PestanaCalendario extends ConsumerWidget {
     required this.pestanas,
     required this.indicadores,
     required this.barraMes,
-    required this.onPaseLista,
+    required this.acciones,
     required this.onDia,
     required this.onRecargar,
   });
@@ -429,7 +434,7 @@ class _PestanaCalendario extends ConsumerWidget {
   final Widget pestanas;
   final List<Widget> indicadores;
   final Widget barraMes;
-  final VoidCallback? onPaseLista;
+  final List<AccionGlobal> acciones;
   final ValueChanged<DateTime>? onDia;
   final Future<void> Function() onRecargar;
 
@@ -443,15 +448,10 @@ class _PestanaCalendario extends ConsumerWidget {
       subtitulo: resolverRuta(AsistenciaPagina.ruta).grupo?.titulo,
       acentado: color,
       rutaActual: AsistenciaPagina.ruta,
-      accionFlotante: onPaseLista == null
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: onPaseLista,
-              backgroundColor: color,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: const Text('Pasar lista'),
-            ),
+      accionFlotante: AppAccionesFlotantes(
+        acciones: acciones,
+        colorUnica: color,
+      ),
       child: Column(
         children: [
           pestanas,

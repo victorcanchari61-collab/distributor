@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
@@ -71,6 +72,13 @@ class MovimientosDineroPagina extends ConsumerWidget {
       },
       // Ingreso y egreso a mano se dan por separado: la hoja ofrece solo los que tiene.
       acciones: [
+        if (puede(ref, 'finanzas.movimientos', Accion.transferir))
+          AccionGlobal(
+            etiqueta: 'Mover plata',
+            icono: Icons.swap_horiz,
+            color: AccionGlobal.azul,
+            onTap: () => _mover(context, ref),
+          ),
         if (puede(ref, 'finanzas.movimientos', Accion.exportar))
           accionExportar<MovimientoDinero>(
             context,
@@ -142,16 +150,6 @@ class MovimientosDineroPagina extends ConsumerWidget {
               onCambio: (r) =>
                   ref.read(rangoMovimientosProvider.notifier).state = r,
             ),
-            if (puede(ref, 'finanzas.movimientos', Accion.transferir)) ...[
-              const SizedBox(height: Dimen.espacio2),
-              AppBoton(
-                texto: 'Mover plata',
-                icono: Icons.swap_horiz,
-                variante: BotonVariante.secundario,
-                tam: BotonTam.md,
-                onPressed: () => _mover(context, ref),
-              ),
-            ],
           ],
         ),
       ),

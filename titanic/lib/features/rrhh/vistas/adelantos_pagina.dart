@@ -23,7 +23,13 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../finanzas/vistas/hojas_finanzas.dart'
-    show TituloHoja, margenHoja, soloMonto, fechaCorta, fechaHora;
+    show
+        TituloHoja,
+        abrirHojaTitulada,
+        margenHoja,
+        soloMonto,
+        fechaCorta,
+        fechaHora;
 import '../datos/adelanto.dart';
 import '../estado/adelantos_controlador.dart';
 import '../estado/asistencia_controlador.dart';
@@ -42,22 +48,9 @@ String _dm(DateTime f) =>
 String _semana(DateTime lunes) =>
     'del ${_dm(lunes)} al ${_dm(lunes.add(const Duration(days: 6)))}';
 
-/// Abre una hoja con el acento de RR. HH.
-Future<void> _hoja(BuildContext context, WidgetBuilder contenido) {
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    // La hoja cuelga del Navigator y no hereda el acento del modulo.
-    builder: (context) => Acento.modulo('rrhh', contenido),
-  );
-}
+/// Abre una hoja con la franja y el acento de RR. HH.
+Future<void> _hoja(BuildContext context, WidgetBuilder contenido) =>
+    abrirHojaTitulada(context, contenido, modulo: 'rrhh');
 
 void _recargar(WidgetRef ref) {
   ref.invalidate(adelantosProvider);

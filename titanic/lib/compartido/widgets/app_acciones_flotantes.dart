@@ -187,6 +187,14 @@ class _Abanico extends StatelessWidget {
         ? math.max(_radioMinimo, _separacion / (2 * math.sin(paso / 2)))
         : _radioMinimo;
 
+    // Arriba, donde el arco es casi horizontal, dos acciones vecinas quedan a
+    // pocos píxeles de altura y la etiqueta de una taparía a la otra: esa
+    // etiqueta sube lo que falte para quedar libre.
+    const altoEtiqueta = 46.0;
+    double alto(int i) => radioArco * math.cos(paso * i);
+    double elevacion(int i) =>
+        i >= n - 1 ? 0 : math.max(0, altoEtiqueta - (alto(i) - alto(i + 1)));
+
     return Material(
       type: MaterialType.transparency,
       child: Stack(
@@ -233,6 +241,7 @@ class _Abanico extends StatelessWidget {
               },
               child: _Fila(
                 accion: acciones[i],
+                elevacionEtiqueta: elevacion(i),
                 alTocar: () {
                   Navigator.of(context).pop();
                   acciones[i].onTap();
@@ -256,9 +265,16 @@ class _Abanico extends StatelessWidget {
 }
 
 class _Fila extends StatelessWidget {
-  const _Fila({required this.accion, required this.alTocar});
+  const _Fila({
+    required this.accion,
+    required this.alTocar,
+    this.elevacionEtiqueta = 0,
+  });
 
   final AccionGlobal accion;
+
+  /// Cuánto sube la etiqueta respecto al icono, para no tapar a la vecina.
+  final double elevacionEtiqueta;
   final VoidCallback alTocar;
 
   @override
@@ -273,23 +289,31 @@ class _Fila extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Flexible(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Dimen.espacio4,
-                  vertical: Dimen.espacio2,
-                ),
-                decoration: BoxDecoration(
-                  color: Colores.tinta.withValues(alpha: 0.88),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  accion.etiqueta,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Color.lerp(accion.color, Colors.white, 0.65),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
+              child: Transform.translate(
+                offset: Offset(0, -elevacionEtiqueta),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Dimen.espacio3,
+                    vertical: Dimen.espacio2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colores.tinta.withValues(alpha: 0.88),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  // Siempre en una sola fila: la letra es chica y, si aun así
+                  // no cabe en un teléfono angosto, se encoge hasta entrar.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      accion.etiqueta,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: TextStyle(
+                        color: Color.lerp(accion.color, Colors.white, 0.65),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
                 ),
               ),

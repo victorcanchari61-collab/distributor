@@ -6,9 +6,9 @@ import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/categorizacion.dart';
@@ -55,28 +55,11 @@ class InsigniaCategoria extends StatelessWidget {
 /// vendedor, por ejemplo) ve lo mismo en modo lectura: sin eso, la categoría de
 /// sus clientes sería una letra sin significado.
 Future<void> mostrarCategorizacion(BuildContext context, WidgetRef ref) {
-  final acento = Acento.de(context);
   final puedeEditar = puede(ref, 'crm.categorizacion', Accion.editar);
 
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    backgroundColor: Colores.superficie,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (_) => Acento(
-      color: acento,
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: _HojaCategorizacion(puedeEditar: puedeEditar),
-      ),
-    ),
+  return abrirHoja<void>(
+    context,
+    (_) => _HojaCategorizacion(puedeEditar: puedeEditar),
   );
 }
 
@@ -258,82 +241,69 @@ class _HojaCategorizacionState extends ConsumerState<_HojaCategorizacion> {
   Widget build(BuildContext context) {
     final datos = _datos;
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.9,
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          Dimen.espacio4,
-          0,
-          Dimen.espacio4,
-          Dimen.espacio5,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              widget.puedeEditar
-                  ? 'Categorización de clientes'
-                  : 'Categorías de clientes',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: Dimen.espacio3),
-
-            if (_error != null) AppAlerta(_error!),
-            if (datos == null && _error == null)
-              const Padding(
-                padding: EdgeInsets.all(Dimen.espacio6),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-
-            if (datos != null) ...[
-              if (widget.puedeEditar)
-                ..._editor(datos)
-              else
-                Text(
-                  'Cada cliente recibe una categoría según el monto total de '
-                  'sus compras durante el ${_ciclo.evalua}. La categoría se '
-                  'actualiza automáticamente ${_ciclo.renueva}.',
-                  style: const TextStyle(color: Colores.tintaSuave),
+    return HojaBase(
+      titulo: widget.puedeEditar
+          ? 'Categorización de clientes'
+          : 'Categorías de clientes',
+      pie: widget.puedeEditar && datos != null
+          ? Row(
+              children: [
+                Expanded(
+                  child: AppBoton(
+                    texto: 'Calcular ahora',
+                    variante: BotonVariante.secundario,
+                    cargando: _calculando,
+                    onPressed: _guardando ? null : _calcular,
+                  ),
                 ),
-              const SizedBox(height: Dimen.espacio4),
-
-              for (var i = 0; i < _filas.length; i++) _tarjeta(i),
-
-              const SizedBox(height: Dimen.espacio2),
-              Text(
-                widget.puedeEditar
-                    ? 'El «hasta» es lo que falta para llegar a la categoría '
-                          'de arriba: así los tramos nunca dejan huecos ni se '
-                          'pisan. Cambiar el ciclo recalcula las categorías al '
-                          'guardar; cambiar los montos, solo al calcular.'
-                    : 'Los montos están en soles, con IGV y sin ventas '
-                          'anuladas.',
-                style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-              ),
-
-              if (widget.puedeEditar) ...[
-                const SizedBox(height: Dimen.espacio4),
-                AppBoton(
-                  texto: 'Calcular ahora',
-                  icono: Icons.calculate_outlined,
-                  variante: BotonVariante.secundario,
-                  cargando: _calculando,
-                  onPressed: _guardando ? null : _calcular,
-                ),
-                const SizedBox(height: Dimen.espacio2),
-                AppBoton(
-                  texto: 'Guardar configuración',
-                  icono: Icons.save_outlined,
-                  cargando: _guardando,
-                  onPressed: _calculando ? null : _guardar,
+                const SizedBox(width: Dimen.espacio2),
+                Expanded(
+                  child: AppBoton(
+                    texto: 'Guardar',
+                    cargando: _guardando,
+                    onPressed: _calculando ? null : _guardar,
+                  ),
                 ),
               ],
-            ],
+            )
+          : null,
+      cuerpo: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_error != null) AppAlerta(_error!),
+          if (datos == null && _error == null)
+            const Padding(
+              padding: EdgeInsets.all(Dimen.espacio6),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+
+          if (datos != null) ...[
+            if (widget.puedeEditar)
+              ..._editor(datos)
+            else
+              Text(
+                'Cada cliente recibe una categoría según el monto total de '
+                'sus compras durante el ${_ciclo.evalua}. La categoría se '
+                'actualiza automáticamente ${_ciclo.renueva}.',
+                style: const TextStyle(color: Colores.tintaSuave),
+              ),
+            const SizedBox(height: Dimen.espacio4),
+
+            for (var i = 0; i < _filas.length; i++) _tarjeta(i),
+
+            const SizedBox(height: Dimen.espacio2),
+            Text(
+              widget.puedeEditar
+                  ? 'El «hasta» es lo que falta para llegar a la categoría '
+                        'de arriba: así los tramos nunca dejan huecos ni se '
+                        'pisan. Cambiar el ciclo recalcula las categorías al '
+                        'guardar; cambiar los montos, solo al calcular.'
+                  : 'Los montos están en soles, con IGV y sin ventas '
+                        'anuladas.',
+              style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

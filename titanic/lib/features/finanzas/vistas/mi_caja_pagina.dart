@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
@@ -128,23 +129,43 @@ class MiCajaPagina extends ConsumerWidget {
               : 'Va directo al banco',
         ),
       ],
-      encabezado: _Encabezado(
-        aviso: rechazados.isEmpty
-            ? null
-            : '${rechazados.length == 1 ? 'Un cobro no apareció' : '${rechazados.length} cobros no aparecieron'} '
-                  'en el banco: ${formatoSoles(suma(rechazados))} se te '
-                  'descuentan en tu planilla.',
-        // Sin caja no hay nada que registrar ni cerrar.
-        habilitado: caja != null,
-        // Ingreso y egreso piden su permiso; cerrar la caja no.
-        onIngreso: puede(ref, 'finanzas.caja', Accion.ingreso)
-            ? () => _abrirMovimiento(context, 'INGRESO')
-            : null,
-        onEgreso: puede(ref, 'finanzas.caja', Accion.egreso)
-            ? () => _abrirMovimiento(context, 'EGRESO')
-            : null,
-        onCerrar: () => _abrirCierre(context),
-      ),
+      // Sin caja no hay nada que registrar ni cerrar. Ingreso y egreso piden
+      // su permiso; cerrar la caja no.
+      acciones: [
+        if (caja != null) ...[
+          if (puede(ref, 'finanzas.caja', Accion.ingreso))
+            AccionGlobal(
+              etiqueta: 'Ingreso',
+              icono: Icons.arrow_upward,
+              color: AccionGlobal.verde,
+              onTap: () => _abrirMovimiento(context, 'INGRESO'),
+            ),
+          if (puede(ref, 'finanzas.caja', Accion.egreso))
+            AccionGlobal(
+              etiqueta: 'Egreso',
+              icono: Icons.arrow_downward,
+              color: AccionGlobal.naranja,
+              onTap: () => _abrirMovimiento(context, 'EGRESO'),
+            ),
+          AccionGlobal(
+            etiqueta: 'Cerrar caja',
+            icono: Icons.lock_outline,
+            color: AccionGlobal.azul,
+            onTap: () => _abrirCierre(context),
+          ),
+        ],
+      ],
+      encabezado: rechazados.isEmpty
+          ? null
+          : Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+              child: AppAlerta(
+                '${rechazados.length == 1 ? 'Un cobro no apareció' : '${rechazados.length} cobros no aparecieron'} '
+                'en el banco: ${formatoSoles(suma(rechazados))} se te '
+                'descuentan en tu planilla.',
+                tono: AlertaTono.aviso,
+              ),
+            ),
       filtro: BotonFiltros(
         activos: ref.watch(filtrosMiCajaActivosProvider),
         color: color,
@@ -238,78 +259,6 @@ class MiCajaPagina extends ConsumerWidget {
       // La hoja cuelga del Navigator y no hereda el acento del modulo: se
       // vuelve a declarar, igual que en los formularios.
       builder: (context) => Acento.modulo('finanzas', hoja),
-    );
-  }
-}
-
-/// Las fechas que se miran y lo que se puede hacer con la caja.
-class _Encabezado extends StatelessWidget {
-  const _Encabezado({
-    required this.aviso,
-    required this.habilitado,
-    this.onIngreso,
-    this.onEgreso,
-    required this.onCerrar,
-  });
-
-  /// Cobros que no aparecieron en el banco: se le descuentan.
-  final String? aviso;
-  final bool habilitado;
-
-  /// Null si no tiene el permiso: el botón no aparece.
-  final VoidCallback? onIngreso;
-  final VoidCallback? onEgreso;
-  final VoidCallback onCerrar;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (aviso != null) ...[
-            AppAlerta(aviso!, tono: AlertaTono.aviso),
-            const SizedBox(height: Dimen.espacio2),
-          ],
-          Row(
-            children: [
-              if (onIngreso != null) ...[
-                Expanded(
-                  child: AppBoton(
-                    texto: 'Ingreso',
-                    icono: Icons.arrow_upward,
-                    variante: BotonVariante.secundario,
-                    tam: BotonTam.md,
-                    onPressed: habilitado ? onIngreso : null,
-                  ),
-                ),
-                const SizedBox(width: Dimen.espacio2),
-              ],
-              if (onEgreso != null) ...[
-                Expanded(
-                  child: AppBoton(
-                    texto: 'Egreso',
-                    icono: Icons.arrow_downward,
-                    variante: BotonVariante.secundario,
-                    tam: BotonTam.md,
-                    onPressed: habilitado ? onEgreso : null,
-                  ),
-                ),
-                const SizedBox(width: Dimen.espacio2),
-              ],
-              Expanded(
-                child: AppBoton(
-                  texto: 'Cerrar',
-                  icono: Icons.lock_outline,
-                  tam: BotonTam.md,
-                  onPressed: habilitado ? onCerrar : null,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

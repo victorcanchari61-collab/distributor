@@ -13,6 +13,8 @@ import 'app_acciones_flotantes.dart';
 import 'app_alerta.dart';
 import 'app_aviso.dart';
 import 'app_boton.dart';
+import 'app_botones_formulario.dart';
+import 'app_hoja.dart';
 
 /// Lo que el backend responde por cada importación.
 class ResultadoImportacion {
@@ -113,30 +115,8 @@ List<AccionGlobal> accionesImportar(
 
 /// La hoja de importar: se elige el archivo, se ve cuántas filas trae, se
 /// importa y se muestra lo que pasó con cada una.
-Future<void> mostrarImportar(BuildContext context, ImportacionConfig config) {
-  final acento = Acento.de(context);
-
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    backgroundColor: Colores.superficie,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (_) => Acento(
-      color: acento,
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: _HojaImportar(config: config),
-      ),
-    ),
-  );
-}
+Future<void> mostrarImportar(BuildContext context, ImportacionConfig config) =>
+    abrirHoja<void>(context, (_) => _HojaImportar(config: config));
 
 class _HojaImportar extends StatefulWidget {
   const _HojaImportar({required this.config});
@@ -228,130 +208,113 @@ class _HojaImportarState extends State<_HojaImportar> {
     final acento = Acento.de(context);
     final r = _resultado;
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.9,
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          Dimen.espacio4,
-          0,
-          Dimen.espacio4,
-          Dimen.espacio5,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Importar ${_c.titulo}',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+    return HojaBase(
+      titulo: 'Importar ${_c.titulo}',
+      pie: r != null
+          ? AppBoton(texto: 'Cerrar', onPressed: _cerrar)
+          : AppBotonesFormulario(
+              onCancelar: () => Navigator.of(context).pop(),
+              onGuardar: _filas.isEmpty ? null : _importar,
+              textoGuardar: _filas.isEmpty
+                  ? 'Importar'
+                  : 'Importar ${_filas.length} filas',
+              cargando: _enviando,
             ),
-            const SizedBox(height: Dimen.espacio1),
+      cuerpo: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Desde un archivo CSV. Cada fila se procesa por separado.',
+            style: TextStyle(color: Colores.tintaSuave),
+          ),
+          const SizedBox(height: Dimen.espacio4),
+
+          if (_error != null) ...[
+            AppAlerta(_error!),
+            const SizedBox(height: Dimen.espacio3),
+          ],
+
+          if (r != null) ...[
+            AppAlerta(
+              '${r.creados} creados'
+              '${r.actualizados > 0 ? ', ${r.actualizados} actualizados' : ''}'
+              '${r.omitidos > 0 ? ', ${r.omitidos} omitidos' : ''}.',
+              tono: AlertaTono.exito,
+            ),
+            if (r.errores.isNotEmpty) ...[
+              const SizedBox(height: Dimen.espacio3),
+              Text(
+                'No se guardaron ${r.errores.length}:',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: Dimen.espacio2),
+              for (final e in r.errores.take(30))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Dimen.espacio1),
+                  child: Text(
+                    'Fila ${e.fila}'
+                    '${e.documento.isEmpty ? '' : ' (${e.documento})'}: ${e.motivo}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colores.peligro,
+                    ),
+                  ),
+                ),
+              if (r.errores.length > 30)
+                Text(
+                  'y ${r.errores.length - 30} más.',
+                  style: const TextStyle(color: Colores.tintaSuave),
+                ),
+            ],
+          ] else ...[
             const Text(
-              'Desde un archivo CSV. Cada fila se procesa por separado.',
-              style: TextStyle(color: Colores.tintaSuave),
+              'Columnas esperadas',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: Dimen.espacio2),
+            Wrap(
+              spacing: Dimen.espacio2,
+              runSpacing: Dimen.espacio2,
+              children: [
+                for (final col in _c.columnas)
+                  Chip(
+                    label: Text(col, style: const TextStyle(fontSize: 12)),
+                    visualDensity: VisualDensity.compact,
+                    backgroundColor: acento.withValues(alpha: 0.08),
+                    side: BorderSide.none,
+                  ),
+              ],
             ),
             const SizedBox(height: Dimen.espacio4),
 
-            if (_error != null) ...[
-              AppAlerta(_error!),
+            OutlinedButton.icon(
+              onPressed: _leyendo || _enviando ? null : _elegir,
+              icon: _leyendo
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.attach_file),
+              label: Text(_archivo ?? 'Elegir archivo CSV'),
+            ),
+
+            if (_filas.isNotEmpty) ...[
               const SizedBox(height: Dimen.espacio3),
-            ],
-
-            if (r != null) ...[
-              AppAlerta(
-                '${r.creados} creados'
-                '${r.actualizados > 0 ? ', ${r.actualizados} actualizados' : ''}'
-                '${r.omitidos > 0 ? ', ${r.omitidos} omitidos' : ''}.',
-                tono: AlertaTono.exito,
-              ),
-              if (r.errores.isNotEmpty) ...[
-                const SizedBox(height: Dimen.espacio3),
-                Text(
-                  'No se guardaron ${r.errores.length}:',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _actualizar,
+                onChanged: _enviando
+                    ? null
+                    : (v) => setState(() => _actualizar = v),
+                title: const Text('Actualizar los que ya existen'),
+                subtitle: const Text(
+                  'Si el documento ya está, se actualiza en vez de omitirse.',
                 ),
-                const SizedBox(height: Dimen.espacio2),
-                for (final e in r.errores.take(30))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: Dimen.espacio1),
-                    child: Text(
-                      'Fila ${e.fila}'
-                      '${e.documento.isEmpty ? '' : ' (${e.documento})'}: ${e.motivo}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colores.peligro,
-                      ),
-                    ),
-                  ),
-                if (r.errores.length > 30)
-                  Text(
-                    'y ${r.errores.length - 30} más.',
-                    style: const TextStyle(color: Colores.tintaSuave),
-                  ),
-              ],
-              const SizedBox(height: Dimen.espacio4),
-              AppBoton(texto: 'Cerrar', onPressed: _cerrar),
-            ] else ...[
-              const Text(
-                'Columnas esperadas',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: Dimen.espacio2),
-              Wrap(
-                spacing: Dimen.espacio2,
-                runSpacing: Dimen.espacio2,
-                children: [
-                  for (final col in _c.columnas)
-                    Chip(
-                      label: Text(col, style: const TextStyle(fontSize: 12)),
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: acento.withValues(alpha: 0.08),
-                      side: BorderSide.none,
-                    ),
-                ],
-              ),
-              const SizedBox(height: Dimen.espacio4),
-
-              OutlinedButton.icon(
-                onPressed: _leyendo || _enviando ? null : _elegir,
-                icon: _leyendo
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.attach_file),
-                label: Text(_archivo ?? 'Elegir archivo CSV'),
-              ),
-
-              if (_filas.isNotEmpty) ...[
-                const SizedBox(height: Dimen.espacio3),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _actualizar,
-                  onChanged: _enviando
-                      ? null
-                      : (v) => setState(() => _actualizar = v),
-                  title: const Text('Actualizar los que ya existen'),
-                  subtitle: const Text(
-                    'Si el documento ya está, se actualiza en vez de omitirse.',
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: Dimen.espacio4),
-              AppBoton(
-                texto: _filas.isEmpty
-                    ? 'Importar'
-                    : 'Importar ${_filas.length} filas',
-                cargando: _enviando,
-                onPressed: _filas.isEmpty ? null : _importar,
               ),
             ],
           ],
-        ),
+        ],
       ),
     );
   }

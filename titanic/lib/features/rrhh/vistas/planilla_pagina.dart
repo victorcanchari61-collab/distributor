@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
@@ -204,26 +205,48 @@ class _PlanillaPaginaState extends ConsumerState<PlanillaPagina> {
           tono: DatoTono.exito,
         ),
       ],
+      // Lo que se hace con la semana va en el botón de acciones; el encabezado
+      // solo dice qué semana se mira y en qué estado está. Mientras se arma o
+      // se paga, no se ofrece nada: un segundo toque repetiría la operación.
+      acciones: _trabajando
+          ? const []
+          : [
+              if ((planilla == null || borrador) && puedeCrear)
+                AccionGlobal(
+                  etiqueta: planilla == null ? 'Armar planilla' : 'Recalcular',
+                  icono: Icons.refresh,
+                  color: AccionGlobal.azul,
+                  onTap: () => _generar(planilla),
+                ),
+              if (borrador && puedeCrear)
+                AccionGlobal(
+                  etiqueta: 'Pagar planilla',
+                  icono: Icons.payments_outlined,
+                  color: AccionGlobal.verde,
+                  onTap: () => _hoja((_) => _HojaPagar(planilla: planilla!)),
+                ),
+              if (planilla != null &&
+                  planilla.detalle.isNotEmpty &&
+                  puede(ref, 'rrhh.planilla', Accion.exportar))
+                AccionGlobal(
+                  etiqueta: 'Boletas de pago',
+                  icono: Icons.picture_as_pdf_outlined,
+                  color: AccionGlobal.rojo,
+                  onTap: () => _boletas(planilla),
+                ),
+              if (planilla != null &&
+                  puede(ref, 'rrhh.planilla', Accion.anular))
+                AccionGlobal(
+                  etiqueta: 'Anular planilla',
+                  icono: Icons.block,
+                  color: AccionGlobal.naranja,
+                  onTap: () => _anular(planilla),
+                ),
+            ],
       encabezado: _Encabezado(
         semana: ref.watch(semanaPlanillaProvider),
         planilla: planilla,
-        trabajando: _trabajando,
         onSemana: (s) => ref.read(semanaPlanillaProvider.notifier).state = s,
-        onGenerar: (planilla == null || borrador) && puedeCrear
-            ? () => _generar(planilla)
-            : null,
-        onPagar: borrador && puedeCrear
-            ? () => _hoja((_) => _HojaPagar(planilla: planilla!))
-            : null,
-        onAnular: planilla != null && puede(ref, 'rrhh.planilla', Accion.anular)
-            ? () => _anular(planilla)
-            : null,
-        onBoletas:
-            planilla != null &&
-                planilla.detalle.isNotEmpty &&
-                puede(ref, 'rrhh.planilla', Accion.exportar)
-            ? () => _boletas(planilla)
-            : null,
       ),
       fila: (context, d) => _TarjetaDetalle(
         detalle: d,
@@ -339,56 +362,18 @@ class _Encabezado extends StatelessWidget {
   const _Encabezado({
     required this.semana,
     required this.planilla,
-    required this.trabajando,
     required this.onSemana,
-    required this.onGenerar,
-    required this.onPagar,
-    required this.onAnular,
-    this.onBoletas,
   });
 
   final DateTime semana;
   final Planilla? planilla;
-  final bool trabajando;
   final ValueChanged<DateTime> onSemana;
-  final VoidCallback? onGenerar;
-  final VoidCallback? onPagar;
-  final VoidCallback? onAnular;
-
-  /// Las boletas de pago de todos, en PDF.
-  final VoidCallback? onBoletas;
 
   @override
   Widget build(BuildContext context) {
     final domingo = semana.add(const Duration(days: 6));
     final esActual = !semana.isBefore(lunesDe(DateTime.now()));
     final p = planilla;
-    final botones = [
-      if (onGenerar != null)
-        AppBoton(
-          texto: p == null ? 'Armar' : 'Recalcular',
-          icono: Icons.refresh,
-          variante: BotonVariante.secundario,
-          tam: BotonTam.md,
-          cargando: trabajando,
-          onPressed: onGenerar,
-        ),
-      if (onPagar != null)
-        AppBoton(
-          texto: 'Pagar',
-          icono: Icons.payments_outlined,
-          tam: BotonTam.md,
-          onPressed: trabajando ? null : onPagar,
-        ),
-      if (onAnular != null)
-        AppBoton(
-          texto: 'Anular',
-          icono: Icons.block,
-          variante: BotonVariante.secundario,
-          tam: BotonTam.md,
-          onPressed: trabajando ? null : onAnular,
-        ),
-    ];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
@@ -457,26 +442,6 @@ class _Encabezado extends StatelessWidget {
             ),
             const SizedBox(height: Dimen.espacio2),
           ],
-          // El historial ya no va aqui: es la otra pestaña.
-          if (botones.isNotEmpty || onBoletas != null)
-            Row(
-              children: [
-                for (var i = 0; i < botones.length; i++) ...[
-                  if (i > 0) const SizedBox(width: Dimen.espacio2),
-                  Expanded(child: botones[i]),
-                ],
-                if (onBoletas != null) ...[
-                  if (botones.isNotEmpty) const SizedBox(width: Dimen.espacio1),
-                  // Sin botones al lado, el PDF se queda a la derecha.
-                  if (botones.isEmpty) const Spacer(),
-                  IconButton(
-                    tooltip: 'Boletas de pago',
-                    onPressed: onBoletas,
-                    icon: const Icon(Icons.picture_as_pdf_outlined),
-                  ),
-                ],
-              ],
-            ),
         ],
       ),
     );

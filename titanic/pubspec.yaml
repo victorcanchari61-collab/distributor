@@ -57,6 +57,7 @@ dependencies:
   # y atienden el toque para mostrar el detalle sin que haya que pintarlos a mano.
   fl_chart: ^1.2.0
   file_picker: ^13.3.0
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:

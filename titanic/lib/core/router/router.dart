@@ -12,6 +12,12 @@ import '../../features/config/vistas/auditoria_pagina.dart';
 import '../../features/config/vistas/empresas_pagina.dart';
 import '../../features/config/vistas/roles_pagina.dart';
 import '../../features/config/vistas/usuarios_pagina.dart';
+import '../../features/crm/vistas/caida_pagina.dart';
+import '../../features/crm/vistas/inactivos_pagina.dart';
+import '../../features/crm/vistas/seguimiento_pagina.dart';
+import '../../features/crm/vistas/vendedores_caida_pagina.dart';
+import '../../features/dashboard/vistas/sin_ventas_pagina.dart';
+import '../../features/dashboard/vistas/zonas_pagina.dart';
 import '../../features/dashboard/vistas/cobranza_dashboard_pagina.dart';
 import '../../features/dashboard/vistas/compras_dashboard_pagina.dart';
 import '../../features/dashboard/vistas/inventario_dashboard_pagina.dart';
@@ -361,6 +367,44 @@ final routerProvider = Provider<GoRouter>((ref) {
             const PuertaPermiso(child: RepartoDashboardPagina()),
       ),
 
+      // Las dos vistas del Dashboard que salen del CRM, y el CRM.
+      GoRoute(
+        path: SinVentasPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: SinVentasPagina()),
+      ),
+      GoRoute(
+        path: ZonasPagina.ruta,
+        builder: (context, estado) => const PuertaPermiso(child: ZonasPagina()),
+      ),
+      GoRoute(
+        path: SeguimientoPagina.ruta,
+        // Los reportes la abren con el cliente ya elegido:
+        // /crm/seguimiento?cliente=17&pestana=seguimiento
+        builder: (context, estado) => PuertaPermiso(
+          child: SeguimientoPagina(
+            clienteId: int.tryParse(
+              estado.uri.queryParameters['cliente'] ?? '',
+            ),
+            pestana: estado.uri.queryParameters['pestana'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: CaidaPagina.ruta,
+        builder: (context, estado) => const PuertaPermiso(child: CaidaPagina()),
+      ),
+      GoRoute(
+        path: InactivosPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: InactivosPagina()),
+      ),
+      GoRoute(
+        path: VendedoresCaidaPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: VendedoresCaidaPagina()),
+      ),
+
       // Mi perfil no es una vista del menu: se llega desde el avatar de la
       // barra superior o desde el propio drawer.
       GoRoute(
@@ -371,7 +415,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       for (final grupo in menuGrupos)
         for (final item in grupo.items)
           // Las que ya tienen pantalla propia se declaran arriba.
-          if (item.ruta != VentasDashboardPagina.ruta &&
+          if (item.ruta != SinVentasPagina.ruta &&
+              item.ruta != ZonasPagina.ruta &&
+              item.ruta != SeguimientoPagina.ruta &&
+              item.ruta != CaidaPagina.ruta &&
+              item.ruta != InactivosPagina.ruta &&
+              item.ruta != VendedoresCaidaPagina.ruta &&
+              item.ruta != VentasDashboardPagina.ruta &&
               item.ruta != RentabilidadDashboardPagina.ruta &&
               item.ruta != CobranzaDashboardPagina.ruta &&
               item.ruta != ComprasDashboardPagina.ruta &&

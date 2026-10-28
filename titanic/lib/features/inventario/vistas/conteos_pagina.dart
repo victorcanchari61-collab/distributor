@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/formato.dart';
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
 import '../../../compartido/widgets/app_alerta.dart';
-import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_buscador.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
@@ -178,6 +178,24 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
       subtitulo: resolverRuta(ConteosPagina.ruta).grupo?.titulo,
       acentado: color,
       rutaActual: ConteosPagina.ruta,
+      // Contar lo puede hacer cualquiera que entre; registrarlo no: el conteo
+      // termina en un ajuste que mueve el stock de verdad.
+      accionFlotante:
+          almacenId != null &&
+              !_guardando &&
+              puede(ref, 'inv.conteos', Accion.crear)
+          ? AppAccionesFlotantes(
+              colorUnica: color,
+              acciones: [
+                AccionGlobal(
+                  etiqueta: 'Registrar conteo',
+                  icono: Icons.fact_check_outlined,
+                  color: AccionGlobal.verde,
+                  onTap: () => _registrar(stockAsync.valueOrNull ?? const []),
+                ),
+              ],
+            )
+          : null,
       child: Column(
         children: [
           Padding(
@@ -264,17 +282,6 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
                     },
                   ),
           ),
-          // Contar lo puede hacer cualquiera que entre; registrarlo no: el
-          // conteo termina en un ajuste que mueve el stock de verdad.
-          if (almacenId != null && puede(ref, 'inv.conteos', Accion.crear))
-            Padding(
-              padding: const EdgeInsets.all(Dimen.espacio4),
-              child: AppBoton(
-                texto: 'Registrar conteo',
-                cargando: _guardando,
-                onPressed: () => _registrar(stockAsync.valueOrNull ?? const []),
-              ),
-            ),
         ],
       ),
     );
