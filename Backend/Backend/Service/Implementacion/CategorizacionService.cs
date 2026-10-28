@@ -67,6 +67,7 @@ public class CategorizacionService : ICategorizacionService
         {
             Ciclo = config.Ciclo,
             Ventana = Ventana(CicloCategorizacion.Ventana(config.Ciclo, hoy)),
+            Periodos = CicloCategorizacion.Todos.ToDictionary(c => c, c => Ventana(CicloCategorizacion.Ventana(c, hoy))),
             // "Hasta" es el "desde" de la categoría de arriba, menos un sol.
             Categorias = categorias.Select((c, i) => new CategoriaClienteResponse
             {
@@ -140,13 +141,24 @@ public class CategorizacionService : ICategorizacionService
         }
 
         var config = await ConfiguracionAsync(rastrear: true);
+        var cambioCiclo = config.Ciclo != request.Ciclo;
         config.Ciclo = request.Ciclo;
         config.ActualizadoEn = DateTime.UtcNow;
         config.UsuarioId = _usuarioActual.Id;
 
         await _context.SaveChangesAsync();
+
+        // Cambiar el ciclo cambia qué compras se miran y cuándo cambia el resultado: dejar las categorías del
+        // ciclo anterior sería mostrar un "Trimestral" con lo calculado de otra manera. Se recalcula en el acto,
+        // con los tramos ya guardados. Cambiar solo los montos o los nombres no recalcula: eso lo decide quien
+        // pulsa "Calcular ahora".
+        if (cambioCiclo) await CalcularCicloAsync(automatico: false);
+
         await _notificador.AvisarAsync("categorizacion", "configurada");
-        return await ObtenerAsync();
+
+        var respuesta = await ObtenerAsync();
+        respuesta.Recalculado = cambioCiclo;
+        return respuesta;
     }
 
     // ------------------------------------------------------------- Cálculo
@@ -167,10 +179,71 @@ public class CategorizacionService : ICategorizacionService
 
         var yaCalculado = await _context.CalculosCategorizacion.AnyAsync(
             c => c.Ciclo == config.Ciclo && c.VigenteDesde == ventana.VigenteDesde);
-        if (yaCalculado) return false;
+        if (yaCalculado)
+        {
+            // El ciclo ya está calculado, pero los clientes que llegaron después no tienen categoría: se
+            // les da ahora y no recién en el ciclo siguiente.
+            await CompletarSinCategoriaAsync();
+            return false;
+        }
 
         await CalcularCicloAsync(automatico: true);
         return true;
+    }
+
+    public async Task<int> CompletarSinCategoriaAsync(IReadOnlyCollection<int>? clienteIds = null)
+    {
+        var vigente = await _context.CalculosCategorizacion
+            .Where(c => c.VigenteDesde <= Zona.Hoy)
+            .OrderByDescending(c => c.VigenteDesde).ThenByDescending(c => c.CalculadoEn)
+            .FirstOrDefaultAsync();
+        if (vigente is null) return 0;
+
+        var activos = _context.Clientes.AsNoTracking().Where(c => c.Activo);
+        if (clienteIds is not null) activos = activos.Where(c => clienteIds.Contains(c.Id));
+
+        var pendientes = await activos
+            .Where(c => !_context.ClientesCategoria.Any(x => x.CalculoId == vigente.Id && x.ClienteId == c.Id))
+            .Select(c => c.Id)
+            .ToListAsync();
+        if (pendientes.Count == 0) return 0;
+
+        var categorias = await _context.CategoriasCliente.AsNoTracking()
+            .OrderByDescending(c => c.Desde)
+            .ToListAsync();
+
+        // Con lo comprado en el mismo ciclo que se evaluó: así queda en la misma categoría que le habría
+        // tocado si hubiera estado en el cálculo.
+        var ventas = await CategorizacionConsultas.VentasNetasAsync(
+            _context,
+            Zona.AUtc(vigente.EvaluadoDesde),
+            Zona.AUtc(vigente.EvaluadoHasta.AddDays(1)),
+            pendientes);
+
+        _context.ClientesCategoria.AddRange(pendientes.Select(id =>
+        {
+            var monto = Math.Round(Math.Max(0m, ventas.GetValueOrDefault(id)), 2);
+            return new ClienteCategoria
+            {
+                CalculoId = vigente.Id,
+                ClienteId = id,
+                Monto = monto,
+                Codigo = categorias.First(c => c.Desde <= monto).Codigo,
+            };
+        }));
+        vigente.Clientes += pendientes.Count;
+        await _context.SaveChangesAsync();
+
+        await _notificador.AvisarAsync("categorizacion", "completada", new { clientes = pendientes.Count });
+        return pendientes.Count;
+    }
+
+    public async Task<Dictionary<int, CategoriaVigenteResponse>> CategoriasPorClienteAsync()
+    {
+        var porCliente = await CategorizacionConsultas.PorClienteAsync(_context);
+        return porCliente.ToDictionary(
+            p => p.Key,
+            p => new CategoriaVigenteResponse { Codigo = p.Value.Codigo, Nombre = p.Value.Nombre, Color = p.Value.Color });
     }
 
     private async Task CalcularCicloAsync(bool automatico)

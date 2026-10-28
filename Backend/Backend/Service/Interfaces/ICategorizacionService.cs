@@ -13,8 +13,9 @@ public interface ICategorizacionService
     Task<CategorizacionResponse> ObtenerAsync();
 
     /// <summary>
-    /// Cambia el ciclo y los tramos. No recalcula: las categorías de los clientes siguen siendo las
-    /// del último cálculo hasta que se calcule de nuevo.
+    /// Cambia el ciclo y los tramos. Si el ciclo cambió, recalcula en el acto con el ciclo nuevo; si solo
+    /// cambiaron los tramos o los nombres, las categorías de los clientes siguen siendo las del último
+    /// cálculo hasta que se calcule de nuevo ("Calcular ahora") o empiece el ciclo siguiente.
     /// </summary>
     Task<CategorizacionResponse> GuardarAsync(GuardarCategorizacionRequest request);
 
@@ -33,4 +34,17 @@ public interface ICategorizacionService
     /// </summary>
     /// <returns>Si calculó.</returns>
     Task<bool> CalcularSiCorrespondeAsync();
+
+    /// <summary>
+    /// Da categoría a los clientes activos que no entraron en el cálculo que rige (un cliente nuevo, o
+    /// uno que estaba inactivo y se activó), con lo que compraron en el mismo ciclo que se evaluó. Sin
+    /// esto esperaban al cálculo siguiente, que en un ciclo trimestral son meses. Los que ya tienen no se
+    /// tocan: eso es del recálculo del ciclo.
+    /// </summary>
+    /// <param name="clienteIds">Solo estos clientes; nulo es "todos los que falten".</param>
+    /// <returns>A cuántos se les dio categoría.</returns>
+    Task<int> CompletarSinCategoriaAsync(IReadOnlyCollection<int>? clienteIds = null);
+
+    /// <summary>La categoría que rige para cada cliente, para pintarla en el padrón de clientes.</summary>
+    Task<Dictionary<int, CategoriaVigenteResponse>> CategoriasPorClienteAsync();
 }

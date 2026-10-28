@@ -10,7 +10,10 @@ public static class CicloCategorizacion
 
     public static readonly string[] Todos = [Mensual, Trimestral, Cuatrimestral, Anual];
 
-    /// <summary>Meses que dura un ciclo. Los ciclos son de calendario: trimestre = ene-mar, abr-jun...</summary>
+    /// <summary>
+    /// Meses que dura un ciclo. Los ciclos son de calendario (trimestre = ene-mar, abr-jun...; cuatrimestre =
+    /// ene-abr, may-ago, sep-dic), salvo el anual, que es móvil: ver <see cref="Ventana"/>.
+    /// </summary>
     public static int Meses(string ciclo) => ciclo switch
     {
         Mensual => 1,
@@ -29,6 +32,15 @@ public static class CicloCategorizacion
     /// </summary>
     public static VentanaCiclo Ventana(string ciclo, DateTime dia)
     {
+        // El anual no es un año de calendario sino una ventana móvil: se evalúan los doce meses
+        // anteriores al mes en curso y el resultado se renueva cada 1.º de mes. Con un año de
+        // calendario, quien empieza a comprar en febrero esperaría hasta enero a que se note.
+        if (ciclo == Anual)
+        {
+            var desdeMes = new DateTime(dia.Year, dia.Month, 1);
+            return new VentanaCiclo(desdeMes.AddMonths(-12), desdeMes.AddDays(-1), desdeMes, desdeMes.AddMonths(1).AddDays(-1));
+        }
+
         var meses = Meses(ciclo);
         var primerMes = (dia.Month - 1) / meses * meses + 1;
 

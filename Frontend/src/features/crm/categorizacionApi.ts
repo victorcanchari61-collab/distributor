@@ -44,6 +44,10 @@ export interface Categorizacion {
   categorias: CategoriaCliente[]
   /** Lo que se evaluaría si se calculara hoy con el ciclo guardado. */
   ventana: VentanaCategorizacion
+  /** Lo mismo para cada ciclo: la pantalla muestra el del que se elige, sin repetir la cuenta de las fechas. */
+  periodos: Record<CicloCategorizacion, VentanaCategorizacion>
+  /** Esta respuesta viene de guardar un cambio de ciclo, que recalculó las categorías en el acto. */
+  recalculado: boolean
   /** Nulo mientras nadie haya calculado. */
   vigente: CalculoVigente | null
   /** El ciclo guardado no es el del cálculo vigente. */

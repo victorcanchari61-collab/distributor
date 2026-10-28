@@ -49,20 +49,31 @@ public static class CategorizacionConsultas
     /// Lo comprado por cada cliente en [ini, fin) (UTC): las líneas vigentes menos lo recogido, con
     /// IGV. Es la misma "venta" de la Cartera en riesgo.
     /// </summary>
-    public static async Task<Dictionary<int, decimal>> VentasNetasAsync(AppDbContext context, DateTime ini, DateTime fin)
+    public static async Task<Dictionary<int, decimal>> VentasNetasAsync(
+        AppDbContext context, DateTime ini, DateTime fin, IReadOnlyCollection<int>? clienteIds = null)
     {
-        var vendido = await context.NotaVentaDetalles
+        var lineas = context.NotaVentaDetalles
             .Where(d => !d.Anulado
                         && d.NotaVenta!.Estado != EstadoNotaVenta.Anulada
-                        && d.NotaVenta.Fecha >= ini && d.NotaVenta.Fecha < fin)
+                        && d.NotaVenta.Fecha >= ini && d.NotaVenta.Fecha < fin);
+        var recojos = context.RecojosVenta
+            .Where(r => r.Estado != EstadoRecojo.Anulado
+                        && r.NotaVenta!.Estado != EstadoNotaVenta.Anulada
+                        && r.NotaVenta.Fecha >= ini && r.NotaVenta.Fecha < fin);
+
+        // Solo de algunos clientes: lo que hace falta al darle categoría a uno recién llegado.
+        if (clienteIds is not null)
+        {
+            lineas = lineas.Where(d => clienteIds.Contains(d.NotaVenta!.ClienteId));
+            recojos = recojos.Where(r => clienteIds.Contains(r.NotaVenta!.ClienteId));
+        }
+
+        var vendido = await lineas
             .GroupBy(d => d.NotaVenta!.ClienteId)
             .Select(g => new { ClienteId = g.Key, Importe = g.Sum(d => d.CantidadPresentacion * d.PrecioPresentacion) })
             .ToDictionaryAsync(x => x.ClienteId, x => x.Importe);
 
-        var recogido = await context.RecojosVenta
-            .Where(r => r.Estado != EstadoRecojo.Anulado
-                        && r.NotaVenta!.Estado != EstadoNotaVenta.Anulada
-                        && r.NotaVenta.Fecha >= ini && r.NotaVenta.Fecha < fin)
+        var recogido = await recojos
             .GroupBy(r => r.NotaVenta!.ClienteId)
             .Select(g => new { ClienteId = g.Key, Importe = g.Sum(r => r.Importe) })
             .ToListAsync();

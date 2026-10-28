@@ -21,6 +21,7 @@ public class ClienteService : IClienteService
     private readonly IPermisoService _permisos;
     private readonly IUsuarioActual _usuarioActual;
     private readonly INotificador _notificador;
+    private readonly ICategorizacionService _categorizacion;
 
     public ClienteService(IClienteRepository repository,
         IMercadoRepository mercados,
@@ -32,8 +33,10 @@ public class ClienteService : IClienteService
         IValidator<UpdateClienteRequest> updateValidator,
         IPermisoService permisos,
         IUsuarioActual usuarioActual,
-        INotificador notificador)
+        INotificador notificador,
+        ICategorizacionService categorizacion)
     {
+        _categorizacion = categorizacion;
         _repository = repository;
         _mercados = mercados;
         _rutas = rutas;
@@ -94,9 +97,52 @@ public class ClienteService : IClienteService
 
         // Se devuelven tambien los inactivos: si no, un registro desactivado
         // desaparece de la pantalla y ya no hay forma de reactivarlo.
-        return clientes.OrderByDescending(c => c.Activo)
+        return await ConCategoriasAsync(clientes.OrderByDescending(c => c.Activo)
             .ThenBy(c => c.Nombre)
-            .Select(c => MapToResponse(c, vendedores));
+            .Select(c => MapToResponse(c, vendedores))
+            .ToList());
+    }
+
+    /// <summary>
+    /// Le pone a cada cliente la categoría que rige hoy (Socio, Mayorista...). La calcula Categorización; aquí
+    /// solo se muestra. Un cliente que no entró en ningún cálculo se queda sin categoría.
+    /// </summary>
+    private async Task<List<ClienteResponse>> ConCategoriasAsync(List<ClienteResponse> clientes)
+    {
+        if (clientes.Count == 0) return clientes;
+
+        var categorias = await _categorizacion.CategoriasPorClienteAsync();
+        foreach (var c in clientes)
+        {
+            if (!categorias.TryGetValue(c.Id, out var categoria)) continue;
+            c.CategoriaCodigo = categoria.Codigo;
+            c.CategoriaNombre = categoria.Nombre;
+            c.CategoriaColor = categoria.Color;
+        }
+
+        return clientes;
+    }
+
+    private async Task<ClienteResponse> ConCategoriaAsync(ClienteResponse cliente) =>
+        (await ConCategoriasAsync([cliente]))[0];
+
+    /// <summary>
+    /// Un cliente activo que no tenía categoría (recién creado, o que estaba inactivo y se activó) la recibe en
+    /// el acto, con lo que compró en el ciclo evaluado. Si falla no impide guardar el cliente: el proceso diario
+    /// lo completa.
+    /// </summary>
+    private async Task CompletarCategoriaAsync(Cliente cliente)
+    {
+        if (!cliente.Activo) return;
+
+        try
+        {
+            await _categorizacion.CompletarSinCategoriaAsync([cliente.Id]);
+        }
+        catch (Exception)
+        {
+            // Lo completa el proceso diario de Categorización.
+        }
     }
 
     public async Task<PaginaResponse<ClienteOpcionResponse>> BuscarAsync(ConsultaTablaRequest consulta, string? para)
@@ -150,7 +196,7 @@ public class ClienteService : IClienteService
 
         return new PaginaResponse<ClienteResponse>
         {
-            Items = items.Select(c => MapToResponse(c, vendedores)).ToList(),
+            Items = await ConCategoriasAsync(items.Select(c => MapToResponse(c, vendedores)).ToList()),
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura
@@ -161,7 +207,7 @@ public class ClienteService : IClienteService
 
     public async Task<ClienteResponse> GetByIdAsync(int id)
     {
-        return MapToResponse(await GetOrThrowAsync(id), await _usuarios.VendedoresPorRutaAsync());
+        return await ConCategoriaAsync(MapToResponse(await GetOrThrowAsync(id), await _usuarios.VendedoresPorRutaAsync()));
     }
 
     public async Task<ClienteResponse> CreateAsync(CreateClienteRequest request)
@@ -179,7 +225,8 @@ public class ClienteService : IClienteService
         await ExigirAlcanceAsync(cliente);
 
         await _repository.AddAsync(cliente);
-        var response = MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync());
+        await CompletarCategoriaAsync(cliente);
+        var response = await ConCategoriaAsync(MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync()));
         await _notificador.AvisarAsync("clientes", "creado", response);
         return response;
     }
@@ -202,7 +249,8 @@ public class ClienteService : IClienteService
         cliente.Activo = request.Activo;
 
         await _repository.UpdateAsync(cliente);
-        var response = MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync());
+        await CompletarCategoriaAsync(cliente);
+        var response = await ConCategoriaAsync(MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync()));
         await _notificador.AvisarAsync("clientes", "actualizado", response);
         return response;
     }
@@ -216,10 +264,11 @@ public class ClienteService : IClienteService
         {
             cliente.Activo = activo;
             await _repository.UpdateAsync(cliente);
-            await _notificador.AvisarAsync("clientes", "estado", MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync()));
+            await CompletarCategoriaAsync(cliente);
+            await _notificador.AvisarAsync("clientes", "estado", await ConCategoriaAsync(MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync())));
         }
 
-        return MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync());
+        return await ConCategoriaAsync(MapToResponse(cliente, await _usuarios.VendedoresPorRutaAsync()));
     }
 
     public async Task DeleteAsync(int id)

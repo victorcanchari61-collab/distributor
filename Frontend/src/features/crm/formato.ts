@@ -54,43 +54,16 @@ export const RESULTADOS_GESTION: Record<ResultadoGestion, { label: string; tone:
 
 // --- Categorización ---
 
-export const CICLOS: { id: CicloCategorizacion; label: string; meses: number }[] = [
-  { id: 'MENSUAL', label: 'Mensual', meses: 1 },
-  { id: 'TRIMESTRAL', label: 'Trimestral', meses: 3 },
-  { id: 'CUATRIMESTRAL', label: 'Cuatrimestral', meses: 4 },
-  { id: 'ANUAL', label: 'Anual', meses: 12 },
+export const CICLOS: { id: CicloCategorizacion; label: string }[] = [
+  { id: 'MENSUAL', label: 'Mensual' },
+  { id: 'TRIMESTRAL', label: 'Trimestral' },
+  { id: 'CUATRIMESTRAL', label: 'Cuatrimestral' },
+  { id: 'ANUAL', label: 'Anual' },
 ]
 
 /** Un día como YYYY-MM-DD sin pasar por UTC (que en Perú lo correría al día anterior). */
 const dia = (anio: number, mes: number, d: number) =>
   `${anio}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-
-/**
- * Qué se evaluaría y cuándo rige un ciclo, calculado en pantalla para mostrar el efecto de cambiar
- * el ciclo antes de guardarlo. Es la misma cuenta del backend (CicloCategorizacion.Ventana): los
- * ciclos son de calendario y se evalúa el ciclo ANTERIOR al que contiene a hoy.
- */
-export function ventanaDelCiclo(ciclo: CicloCategorizacion, hoy: Date) {
-  const meses = CICLOS.find((c) => c.id === ciclo)?.meses ?? 3
-  const indice = hoy.getFullYear() * 12 + Math.floor(hoy.getMonth() / meses) * meses
-  const aMes = (i: number) => ({ anio: Math.floor(i / 12), mes: (i % 12) + 1 })
-  const ultimoDia = (i: number) => {
-    const { anio, mes } = aMes(i)
-    return new Date(anio, mes, 0).getDate()
-  }
-
-  const evaluadoIni = aMes(indice - meses)
-  const evaluadoFin = aMes(indice - 1)
-  const vigenteIni = aMes(indice)
-  const vigenteFin = aMes(indice + meses - 1)
-
-  return {
-    evaluadoDesde: dia(evaluadoIni.anio, evaluadoIni.mes, 1),
-    evaluadoHasta: dia(evaluadoFin.anio, evaluadoFin.mes, ultimoDia(indice - 1)),
-    vigenteDesde: dia(vigenteIni.anio, vigenteIni.mes, 1),
-    vigenteHasta: dia(vigenteFin.anio, vigenteFin.mes, ultimoDia(indice + meses - 1)),
-  }
-}
 
 /** El día siguiente a uno YYYY-MM-DD: cuándo cambia el resultado. */
 export function diaSiguiente(texto: string) {

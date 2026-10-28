@@ -27,6 +27,16 @@ public class ClienteResponse
     public string? Vendedor { get; set; }
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
+
+    /// <summary>
+    /// La categoría que rige hoy por lo que compró en el ciclo evaluado (A a F). La calcula Categorización;
+    /// aquí solo se muestra. Nula si el cliente no entró en ningún cálculo.
+    /// </summary>
+    public string? CategoriaCodigo { get; set; }
+    public string? CategoriaNombre { get; set; }
+
+    /// <summary>Cómo se pinta (sky, emerald...).</summary>
+    public string? CategoriaColor { get; set; }
 }
 
 /// <summary>

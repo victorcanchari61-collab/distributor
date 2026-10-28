@@ -23,8 +23,13 @@ public class CategorizacionController : ControllerBase
         _categorizacion = categorizacion;
     }
 
+    /// <summary>
+    /// Las categorías y sus tramos. Las ve también quien ve los clientes (el vendedor, por ejemplo): la columna
+    /// "Categoría" del padrón no sirve si nadie puede saber qué significa cada letra. Ajustarlas o calcular es
+    /// solo de quien tiene Editar.
+    /// </summary>
     [HttpGet]
-    [Permiso("crm.categorizacion", Accion.Ver)]
+    [PermisoAlguno("crm.categorizacion:ver", "maestros.clientes:ver")]
     public async Task<IActionResult> Obtener() => Ok(await _categorizacion.ObtenerAsync());
 
     [HttpPut]

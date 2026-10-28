@@ -33,6 +33,11 @@ export interface ClienteResponse {
   listaPrecio: string | null
   activo: boolean
   fechaCreacion: string
+  /** La categoría que rige hoy (A a F), según lo que compró en el ciclo evaluado. Null si todavía no entró en un cálculo. */
+  categoriaCodigo: string | null
+  categoriaNombre: string | null
+  /** Cómo se pinta: sky, emerald... */
+  categoriaColor: string | null
 }
 
 /** Un cliente para elegirlo en un pedido o una nota: lo justo para reconocerlo. */

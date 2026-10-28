@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
 import {
+  Award,
   Contact,
   MapPin,
   Pencil,
@@ -39,6 +40,10 @@ import { mercadoApi, rutaApi } from '../tms'
 import type { MercadoResponse, RutaResponse } from '../tms'
 import { listaPrecioApi } from '../facturacion'
 import type { ListaPrecioResponse } from '../facturacion'
+import { CategoriaBadge } from '../crm/CategoriaBadge'
+import { categorizacionApi } from '../crm/categorizacionApi'
+import type { CategoriaCliente } from '../crm/categorizacionApi'
+import { ModalCategorizacion } from '../crm/ModalCategorizacion'
 import { clienteApi } from './clienteApi'
 import type { ClienteRequest, ClienteResponse, ResumenClientes } from './clienteApi'
 
@@ -94,6 +99,10 @@ export function ClientesPage() {
 
   const { confirmar, dialogo } = useConfirmacion()
 
+  // La ventana de Categorización: quien tiene Editar ajusta y calcula; el resto (el vendedor) solo la mira.
+  const [verCategorias, setVerCategorias] = useState(false)
+  const [categorias, setCategorias] = useState<CategoriaCliente[]>([])
+
   /*
    * El listado NO se trae entero: la tabla dice qué página necesita y solo esa
    * se pide. Con ~2000 clientes, traerlos todos en cada carga era el grueso
@@ -123,6 +132,13 @@ export function ClientesPage() {
 
   /** Todo lo que no cambia al paginar: catálogos del formulario y el resumen. */
   const cargarApoyo = useCallback(async () => {
+    // Las categorías para el filtro de la columna: aparte del resto, porque quien solo ve clientes (el vendedor)
+    // puede no tener permiso sobre los demás catálogos y aun así debe poder filtrar por categoría.
+    categorizacionApi
+      .obtener()
+      .then((c) => setCategorias(c.categorias))
+      .catch(() => setCategorias([]))
+
     try {
       const [res, merc, rts, listas, deps, provs, dists] = await Promise.all([
         clienteApi.resumen(),
@@ -373,6 +389,20 @@ export function ClientesPage() {
     },
     { key: 'nombre', label: 'Nombre', filterable: false },
     {
+      // La calcula Categorización según lo comprado en el último ciclo cerrado; aquí solo se muestra y se filtra.
+      key: 'categoria',
+      label: 'Categoría',
+      filterType: 'select',
+      filterOptions: [
+        ...categorias.map((c) => ({ value: c.codigo, label: `${c.codigo} · ${c.nombre}` })),
+        { value: 'SIN', label: 'Sin categoría' },
+      ],
+      value: (row) => row.categoriaCodigo ?? 'SIN',
+      render: (row) => (
+        <CategoriaBadge codigo={row.categoriaCodigo} nombre={row.categoriaNombre} color={row.categoriaColor} />
+      ),
+    },
+    {
       key: 'direccion',
       label: 'Dirección',
       filterType: 'select',
@@ -447,6 +477,10 @@ export function ClientesPage() {
         description="Bodegas y puestos a los que se vende."
         actions={
           <>
+            <Button variant="secondary" size="sm" onClick={() => setVerCategorias(true)}>
+              <Award size={15} />
+              {puede('crm.categorizacion', 'editar') ? 'Categorización' : 'Categorías'}
+            </Button>
             {puede('maestros.clientes', 'importar') && (
               <Button variant="secondary" size="sm" onClick={() => setImportando(true)}>
                 <Upload size={15} />
@@ -774,6 +808,12 @@ export function ClientesPage() {
           })}
           onImportar={clienteApi.importar}
           onListo={() => void cargar()}
+        />
+
+        <ModalCategorizacion
+          open={verCategorias}
+          onClose={() => setVerCategorias(false)}
+          onCambio={() => void cargar()}
         />
 
         {dialogo}

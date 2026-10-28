@@ -51,11 +51,28 @@ public class CategorizacionResponse
     /// <summary>Lo que se evaluaría si se calculara hoy con el ciclo configurado.</summary>
     public CategorizacionVentanaResponse Ventana { get; set; } = new();
 
+    /// <summary>
+    /// Lo mismo para cada uno de los cuatro ciclos (MENSUAL, TRIMESTRAL...), para que la pantalla muestre el
+    /// del que se elige sin repetir la cuenta de las fechas: la hace solo el servidor.
+    /// </summary>
+    public Dictionary<string, CategorizacionVentanaResponse> Periodos { get; set; } = [];
+
+    /// <summary>Esta respuesta viene de guardar un cambio de ciclo, que recalculó las categorías en el acto.</summary>
+    public bool Recalculado { get; set; }
+
     /// <summary>Nulo mientras nadie haya calculado.</summary>
     public CalculoVigenteResponse? Vigente { get; set; }
 
     /// <summary>El ciclo configurado no es el del cálculo vigente: hay que calcular de nuevo para que rija.</summary>
     public bool CicloDistinto { get; set; }
+}
+
+/// <summary>La categoría que tiene hoy un cliente, con cómo se pinta.</summary>
+public class CategoriaVigenteResponse
+{
+    public string Codigo { get; set; } = string.Empty;
+    public string Nombre { get; set; } = string.Empty;
+    public string Color { get; set; } = string.Empty;
 }
 
 /// <summary>Un cliente con su categoría y cómo se movió desde el cálculo anterior.</summary>

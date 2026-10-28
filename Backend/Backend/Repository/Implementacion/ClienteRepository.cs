@@ -132,16 +132,25 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
 
         query = AplicarBusqueda(query, consulta.Buscar);
 
+        // La categoría que rige hoy de cada cliente (la del cálculo vigente de Categorización), para filtrar y
+        // ordenar por ella. Sin ningún cálculo no hay filas: todos quedan "sin categoría".
+        var vigenteId = await Context.CalculosCategorizacion.AsNoTracking()
+            .Where(c => c.VigenteDesde <= Zona.Hoy)
+            .OrderByDescending(c => c.VigenteDesde).ThenByDescending(c => c.CalculadoEn)
+            .Select(c => (int?)c.Id)
+            .FirstOrDefaultAsync();
+        var categorias = Context.ClientesCategoria.AsNoTracking().Where(x => x.CalculoId == vigenteId);
+
         foreach (var filtro in consulta.Filtros)
         {
-            query = AplicarFiltro(query, filtro, Context.UsuarioRutas);
+            query = AplicarFiltro(query, filtro, Context.UsuarioRutas, categorias);
         }
 
         // El total se cuenta ANTES de paginar: es cuántas filas hay en todo el
         // listado filtrado, que es lo que dice cuántas páginas dibujar.
         var total = await query.CountAsync();
 
-        query = Ordenar(query, consulta.Orden, consulta.Sentido);
+        query = Ordenar(query, consulta.Orden, consulta.Sentido, categorias);
 
         var items = await query
             .Skip((consulta.PaginaSegura - 1) * consulta.PorPaginaSegura)
@@ -179,7 +188,8 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
     /// que un nombre de columna inventado no llegue nunca a la consulta.
     /// </summary>
     private static IQueryable<Cliente> AplicarFiltro(
-        IQueryable<Cliente> query, FiltroTablaRequest filtro, IQueryable<UsuarioRuta> aCargo)
+        IQueryable<Cliente> query, FiltroTablaRequest filtro, IQueryable<UsuarioRuta> aCargo,
+        IQueryable<ClienteCategoria> categorias)
     {
         var valor = filtro.Valor?.Trim();
 
@@ -229,6 +239,10 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
                 aCargo.Any(r => r.RutaId == c.RutaId && r.Usuario!.Activo && r.Usuario.Nombre == valor)),
             "mercado" => query.Where(c => c.Mercado != null &&
                 (exacto ? c.Mercado.Nombre == valor : EF.Functions.Like(c.Mercado.Nombre, $"%{valor}%"))),
+            // La letra de la categoría (A a F), o SIN para los que no entraron en ningún cálculo.
+            "categoria" => valor.Equals("SIN", StringComparison.OrdinalIgnoreCase)
+                ? query.Where(c => !categorias.Any(x => x.ClienteId == c.Id))
+                : query.Where(c => categorias.Any(x => x.ClienteId == c.Id && x.Codigo == valor)),
             // En pantalla el estado se lee "Activo" / "Inactivo", no true/false.
             "activo" => query.Where(c => c.Activo == valor.Equals("Activo", StringComparison.OrdinalIgnoreCase)),
             _ => query
@@ -240,7 +254,8 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
     /// siempre: primero los activos, después por nombre — si no, paginar sobre
     /// un orden indefinido repetiría o saltearía filas entre páginas.
     /// </summary>
-    private static IQueryable<Cliente> Ordenar(IQueryable<Cliente> query, string? orden, string? sentido)
+    private static IQueryable<Cliente> Ordenar(
+        IQueryable<Cliente> query, string? orden, string? sentido, IQueryable<ClienteCategoria> categorias)
     {
         var desc = string.Equals(sentido, "desc", StringComparison.OrdinalIgnoreCase);
 
@@ -263,6 +278,11 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
                 ? query.OrderByDescending(c => c.FechaCreacion)
                 : query.OrderBy(c => c.FechaCreacion),
             "activo" => desc ? query.OrderByDescending(c => c.Activo) : query.OrderBy(c => c.Activo),
+            // De la A (la más alta) a la F; los que no tienen categoría, al final.
+            "categoria" => desc
+                ? query.OrderByDescending(c => categorias.Where(x => x.ClienteId == c.Id).Select(x => x.Codigo).FirstOrDefault())
+                : query.OrderBy(c => categorias.Where(x => x.ClienteId == c.Id).Select(x => x.Codigo).FirstOrDefault() == null)
+                    .ThenBy(c => categorias.Where(x => x.ClienteId == c.Id).Select(x => x.Codigo).FirstOrDefault()),
             _ => query.OrderByDescending(c => c.Activo).ThenBy(c => c.Nombre)
         };
 
