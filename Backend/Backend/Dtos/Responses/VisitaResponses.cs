@@ -36,19 +36,19 @@ public class VisitaResponse
     public decimal Total { get; set; }
 
     /// <summary>
-    /// Cómo viene comprando el cliente este mes frente al anterior (CRITICO, ALTO, MEDIO, ESTABLE,
-    /// NUEVO o INACTIVO), para que quien lo visita sepa si es uno de los que se están yendo.
-    /// Nulo si no hay datos o quien pregunta no puede ver la cartera del CRM.
+    /// El estado del cliente por su caída de compras (CRITICO, RIESGO, SEGUIMIENTO, NORMAL o SIN_BASE), para que
+    /// quien lo visita sepa si es uno de los que se están yendo. Nulo si no hay datos o quien pregunta no puede
+    /// ver los reportes del CRM.
     /// </summary>
     public string? Riesgo { get; set; }
 
-    /// <summary>Cambio en % de sus compras del mes contra el mes anterior.</summary>
-    public decimal? Variacion { get; set; }
+    /// <summary>Cuánto cayeron sus compras en %, contra el mismo tramo del año anterior (positivo es que cayó).</summary>
+    public decimal? CaidaPct { get; set; }
 
-    /// <summary>La próxima acción de seguimiento abierta de este cliente, si la hay.</summary>
+    /// <summary>Lo que se hará en su próximo contacto programado, si lo hay.</summary>
     public string? AccionPendiente { get; set; }
 
-    /// <summary>Esa acción ya debió hacerse.</summary>
+    /// <summary>Ese contacto ya debió hacerse.</summary>
     public bool AccionVencida { get; set; }
 }
 

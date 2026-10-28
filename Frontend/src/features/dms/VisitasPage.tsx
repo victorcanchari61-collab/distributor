@@ -9,8 +9,8 @@ import { rutaApi } from '../tms'
 import type { RutaResponse } from '../tms'
 import { usuarioApi } from '../config/usuarioApi'
 import type { UsuarioResponse } from '../config/usuarioApi'
-import { NIVELES, colorCambio, porcentaje } from '../crm/formato'
-import { NivelBadge } from '../crm/NivelBadge'
+import { ESTADOS_UI, ORDEN_ESTADOS, colorCambio, porcentaje } from '../crm/formato'
+import { EtiquetaEstado } from '../crm/piezas'
 import { visitaApi } from './visitaApi'
 import type { ConsultaVisitas, ResumenVisitas, VisitaResponse } from './visitaApi'
 
@@ -183,19 +183,19 @@ export function VisitasPage() {
         render: (row) => row.vendedor ?? '—',
       },
       {
-        // Solo llega para quien puede abrir la cartera del CRM: sin ese permiso la columna sale vacía.
+        // Solo llega para quien puede abrir Clientes con caída del CRM: sin ese permiso la columna sale vacía.
         key: 'riesgo',
         label: 'Compra',
         filterType: 'select',
-        filterOptions: Object.entries(NIVELES).map(([value, { label }]) => ({ value, label })),
+        filterOptions: ORDEN_ESTADOS.map((value) => ({ value, label: ESTADOS_UI[value].etiqueta })),
         value: (row) => row.riesgo ?? '',
         render: (row) =>
           row.riesgo ? (
             <span className="flex flex-col items-start gap-0.5">
               <span className="flex items-center gap-1.5">
-                <NivelBadge nivel={row.riesgo} />
-                {row.variacion !== null && (
-                  <span className={`text-xs ${colorCambio(row.variacion)}`}>{porcentaje(row.variacion)}</span>
+                <EtiquetaEstado estado={row.riesgo} />
+                {row.caidaPct !== null && (
+                  <span className={`text-xs ${colorCambio(-row.caidaPct)}`}>{porcentaje(-row.caidaPct)}</span>
                 )}
               </span>
               {row.accionPendiente && (

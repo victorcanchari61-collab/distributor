@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MapPinned, TrendingDown, TriangleAlert, Users, Wallet } from 'lucide-react'
+import { BarChart, HBarChart, Marco, PALETA, moneda } from '../../components/charts'
 import { Alert, ListPage, StatCard, Tabs } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
-import type { PeriodoCrm } from './crmApi'
-import { crmReportesApi } from './crmReportesApi'
-import type { AgruparZonas, ZonaCrm, ZonasCrm } from './crmReportesApi'
-import { PERIODOS, colorCambio, porcentaje, rango, soles, solesConSigno } from './formato'
+import { hoyLocal } from '../../lib/fechas'
+import { FiltroFechas, inicioDeAnio } from '../crm/filtros'
+import { colorCambio, porcentaje, soles, solesConSigno } from '../crm/formato'
+import { sinVentasApi } from './sinVentasApi'
+import type { AgruparZonas, ZonaCrm, ZonasCrm } from './sinVentasApi'
 
 const AGRUPAR: { id: AgruparZonas; label: string; singular: string }[] = [
   { id: 'mercado', label: 'Por mercado', singular: 'Mercado' },
@@ -22,7 +24,8 @@ const AGRUPAR: { id: AgruparZonas; label: string; singular: string }[] = [
  */
 export function ZonasPage() {
   const [agrupar, setAgrupar] = useState<AgruparZonas>('mercado')
-  const [periodo, setPeriodo] = useState<PeriodoCrm>('mes')
+  const [desde, setDesde] = useState(inicioDeAnio())
+  const [hasta, setHasta] = useState(hoyLocal())
   const [datos, setDatos] = useState<ZonasCrm | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -30,14 +33,14 @@ export function ZonasPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      setDatos(await crmReportesApi.zonas(periodo, agrupar))
+      setDatos(await sinVentasApi.zonas(desde, hasta, agrupar))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las zonas.')
     } finally {
       setCargando(false)
     }
-  }, [periodo, agrupar])
+  }, [desde, hasta, agrupar])
 
   useEffect(() => {
     void cargar()
@@ -46,7 +49,6 @@ export function ZonasPage() {
   useRealtime(['notasventa', 'pedidos', 'clientes', 'devoluciones', 'mercados', 'rutas'], cargar)
 
   const singular = AGRUPAR.find((a) => a.id === agrupar)?.singular ?? 'Zona'
-  const contra = PERIODOS.find((p) => p.id === periodo)?.contra
 
   const columns: DataTableColumn<ZonaCrm>[] = useMemo(
     () => [
@@ -78,47 +80,47 @@ export function ZonasPage() {
         render: (row) => (row.criticos > 0 ? <span className="font-semibold text-red-600">{row.criticos}</span> : '—'),
       },
       {
-        key: 'altos',
-        label: 'Altos',
+        key: 'enRiesgo',
+        label: 'En riesgo',
         align: 'right',
         filterable: false,
-        value: (row) => row.altos,
-        render: (row) => (row.altos > 0 ? <span className="font-semibold text-amber-600">{row.altos}</span> : '—'),
+        value: (row) => row.enRiesgo,
+        render: (row) => (row.enRiesgo > 0 ? <span className="font-semibold text-orange-600">{row.enRiesgo}</span> : '—'),
       },
       {
-        key: 'inactivos',
-        label: 'Inactivos',
+        key: 'enSeguimiento',
+        label: 'En seguimiento',
         align: 'right',
         filterable: false,
-        value: (row) => row.inactivos,
-        render: (row) => (row.inactivos > 0 ? row.inactivos : '—'),
-      },
-      {
-        key: 'actual',
-        label: 'Ahora',
-        align: 'right',
-        filterable: false,
-        value: (row) => row.actual,
-        render: (row) => soles(row.actual),
+        value: (row) => row.enSeguimiento,
+        render: (row) => (row.enSeguimiento > 0 ? <span className="font-semibold text-blue-600">{row.enSeguimiento}</span> : '—'),
       },
       {
         key: 'anterior',
-        label: 'Antes',
+        label: 'Venta anterior',
         align: 'right',
         filterable: false,
-        value: (row) => row.anterior,
-        render: (row) => <span className="text-ink-soft">{soles(row.anterior)}</span>,
+        value: (row) => row.ventaAnterior,
+        render: (row) => <span className="text-ink-soft">{soles(row.ventaAnterior)}</span>,
       },
       {
-        key: 'diferencia',
-        label: 'Cambio',
+        key: 'actual',
+        label: 'Venta actual',
         align: 'right',
         filterable: false,
-        value: (row) => row.diferencia,
+        value: (row) => row.ventaActual,
+        render: (row) => soles(row.ventaActual),
+      },
+      {
+        key: 'variacion',
+        label: 'Variación',
+        align: 'right',
+        filterable: false,
+        value: (row) => row.variacion,
         render: (row) => (
-          <span className={`flex flex-col items-end ${colorCambio(row.diferencia)}`}>
-            <span className="font-semibold">{solesConSigno(row.diferencia)}</span>
-            <span className="text-xs">{porcentaje(row.variacion)}</span>
+          <span className={`flex flex-col items-end ${colorCambio(row.variacion)}`}>
+            <span className="font-semibold">{solesConSigno(row.variacion)}</span>
+            <span className="text-xs">{row.caidaPct === null ? '—' : porcentaje(-row.caidaPct)}</span>
           </span>
         ),
       },
@@ -144,12 +146,15 @@ export function ZonasPage() {
   )
 
   const items = datos?.items ?? []
+  // Para los gráficos: las zonas que más venden (hasta 8) y las que más pierden (hasta 6).
+  const masVendidas = [...items].sort((a, b) => b.ventaActual + b.ventaAnterior - (a.ventaActual + a.ventaAnterior)).slice(0, 8)
+  const conPerdida = items.filter((z) => z.ventaPerdida > 0).sort((a, b) => b.ventaPerdida - a.ventaPerdida).slice(0, 6)
   const peor = items.find((z) => z.ventaPerdida > 0)
   const totalPerdida = items.reduce((s, z) => s + z.ventaPerdida, 0)
-  const enRiesgo = items.reduce((s, z) => s + z.criticos + z.altos, 0)
+  const enRiesgo = items.reduce((s, z) => s + z.criticos + z.enRiesgo, 0)
   const clientes = items.reduce((s, z) => s + z.clientes, 0)
-  const actual = items.reduce((s, z) => s + z.actual, 0)
-  const anterior = items.reduce((s, z) => s + z.anterior, 0)
+  const actual = items.reduce((s, z) => s + z.ventaActual, 0)
+  const anterior = items.reduce((s, z) => s + z.ventaAnterior, 0)
 
   return (
     <ListPage
@@ -165,24 +170,71 @@ export function ZonasPage() {
       }
       banner={
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
             <Tabs
               items={AGRUPAR.map((a) => ({ id: a.id, label: a.label }))}
               active={agrupar}
               onChange={(id) => setAgrupar(id as AgruparZonas)}
             />
-            <Tabs
-              items={PERIODOS.map((p) => ({ id: p.id, label: p.label }))}
-              active={periodo}
-              onChange={(id) => setPeriodo(id as PeriodoCrm)}
-            />
+            <FiltroFechas desde={desde} hasta={hasta} onChange={(d, h) => { setDesde(d); setHasta(h) }} />
           </div>
           {datos && (
             <p className="text-xs text-ink-soft">
-              Del {rango(datos.ventanas.actual)} frente a {contra} ({rango(datos.ventanas.anterior)}). Ventas con
-              IGV, sin anuladas ni recojos.
+              Del {datos.periodo.etiqueta} frente al {datos.periodo.etiquetaAnterior}. Ventas con IGV, sin
+              anuladas ni recojos.
             </p>
           )}
+
+          {/* Cómo le va a cada zona, de un vistazo: lo vendido ahora contra antes, y dónde se pierde. */}
+          <div className="grid gap-4 pt-2 lg:grid-cols-2">
+            <Marco
+              titulo={`Ventas por ${singular.toLowerCase()}`}
+              subtitulo="Lo vendido ahora frente al periodo anterior, en las zonas que más venden"
+              cargando={cargando && !datos}
+              vacio={masVendidas.length === 0}
+              mensajeVacio="No hay ventas en estos periodos"
+              alto={220}
+              derecha={
+                <span className="flex items-center gap-3 text-[11px] text-ink-muted">
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-sm" style={{ backgroundColor: PALETA[0] }} /> Ahora
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-sm bg-slate-300" /> Antes
+                  </span>
+                </span>
+              }
+            >
+              <BarChart
+                etiquetas={masVendidas.map((z) => z.nombre)}
+                series={[
+                  { id: 'antes', nombre: 'Antes', color: '#cbd5e1', valores: masVendidas.map((z) => z.ventaAnterior) },
+                  { id: 'ahora', nombre: 'Ahora', color: PALETA[0], valores: masVendidas.map((z) => z.ventaActual) },
+                ]}
+                formato={(n) => moneda(n)}
+                alto={220}
+              />
+            </Marco>
+
+            <Marco
+              titulo={`Dónde se pierde más`}
+              subtitulo={`Venta perdida por ${singular.toLowerCase()}, de los clientes que bajaron`}
+              cargando={cargando && !datos}
+              vacio={conPerdida.length === 0}
+              mensajeVacio="Ninguna zona perdió ventas"
+              alto={220}
+            >
+              <HBarChart
+                items={conPerdida.map((z) => ({
+                  nombre: z.nombre,
+                  valor: z.ventaPerdida,
+                  detalle: `${z.criticos + z.enRiesgo} en riesgo`,
+                }))}
+                formato={(n) => moneda(n)}
+                unColor="#dc2626"
+              />
+            </Marco>
+          </div>
         </div>
       }
       stats={
@@ -197,7 +249,7 @@ export function ZonasPage() {
           <StatCard
             label="Clientes en riesgo"
             value={String(enRiesgo)}
-            hint="críticos y altos"
+            hint="críticos y en riesgo"
             icon={<TriangleAlert size={18} />}
             tono="danger"
           />

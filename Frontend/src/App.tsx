@@ -13,8 +13,10 @@ import {
   ComprasDashboard,
   InventarioDashboard,
   RentabilidadDashboard,
+  ProductosSinVentasPage,
   RepartoDashboard,
   VentasDashboard,
+  ZonasPage,
 } from './features/dashboard'
 import { MiPerfilPage } from './features/perfil'
 import { Button } from './components/ui'
@@ -56,7 +58,7 @@ import {
   RutasPage,
 } from './features/tms'
 import { DevolucionesPage, VisitasPage } from './features/dms'
-import { AgendaPage, CarteraPage, CategorizacionPage, ProductosSinVentasPage, ZonasPage } from './features/crm'
+import { CaidaPage, CategorizacionPage, InactivosPage, SeguimientoPage, VendedoresCaidaPage } from './features/crm'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
 import { PermisosProvider, usePermisos } from './lib/permisos'
@@ -69,6 +71,8 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'dashboard.compras': ComprasDashboard,
   'dashboard.inventario': InventarioDashboard,
   'dashboard.reparto': RepartoDashboard,
+  'dashboard.sinventas': ProductosSinVentasPage,
+  'dashboard.zonas': ZonasPage,
   'maestros.clientes': ClientesPage,
   'maestros.proveedores': ProveedoresPage,
   'maestros.productos': ProductosPage,
@@ -97,11 +101,11 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'tms.despachos': DespachosPage,
   'tms.novedades': NovedadesPage,
   'tms.motivos': MotivosNovedadPage,
-  'crm.cartera': CarteraPage,
-  'crm.productos': ProductosSinVentasPage,
-  'crm.zonas': ZonasPage,
+  'crm.seguimiento': SeguimientoPage,
+  'crm.caida': CaidaPage,
+  'crm.inactivos': InactivosPage,
+  'crm.vendedores': VendedoresCaidaPage,
   'crm.categorizacion': CategorizacionPage,
-  'crm.seguimiento': AgendaPage,
   'dms.visitas': VisitasPage,
   'dms.devoluciones': DevolucionesPage,
   'finanzas.caja': MiCajaPage,

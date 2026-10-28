@@ -8,88 +8,105 @@ using Microsoft.AspNetCore.Mvc;
 namespace Backend.Controllers;
 
 /// <summary>
-/// CRM: qué clientes están dejando de comprar. Solo lectura. El alcance de quien pregunta (solo sus
-/// clientes, por ejemplo) se aplica dentro del servicio.
+/// CRM: Gestión y seguimiento de clientes y los reportes de quién compra menos (clientes con caída, clientes
+/// inactivos, vendedores con caída). El alcance de quien pregunta (solo sus clientes, por ejemplo) se aplica dentro
+/// de los servicios.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
 public class CrmController : ControllerBase
 {
-    private readonly ICrmService _crm;
-    private readonly ICrmProductosService _productos;
-    private readonly ICrmAgendaService _agenda;
+    private readonly ISeguimientoClienteService _seguimiento;
+    private readonly ICaidaService _caida;
 
-    public CrmController(ICrmService crm, ICrmProductosService productos, ICrmAgendaService agenda)
+    public CrmController(ISeguimientoClienteService seguimiento, ICaidaService caida)
     {
-        _crm = crm;
-        _productos = productos;
-        _agenda = agenda;
+        _seguimiento = seguimiento;
+        _caida = caida;
     }
 
-    /// <summary>
-    /// La agenda: las próximas acciones de seguimiento que siguen abiertas, las vencidas primero.
-    /// Sin parámetros, las mías.
-    /// </summary>
-    [HttpGet("tareas")]
+    // ------------------------------------------------------------- Gestión y seguimiento
+
+    [HttpGet("seguimiento/catalogo")]
     [Permiso("crm.seguimiento", Accion.Ver)]
-    public async Task<IActionResult> Tareas([FromQuery] string? quien, [FromQuery] string? estado) =>
-        Ok(await _agenda.TareasAsync(quien, estado));
+    public IActionResult Catalogo() => Ok(_seguimiento.Catalogo());
 
-    /// <summary>Mercados o rutas (agrupar), con cómo les va a sus clientes frente al periodo anterior.</summary>
-    [HttpGet("zonas")]
-    [Permiso("crm.zonas", Accion.Ver)]
-    public async Task<IActionResult> Zonas([FromQuery] string? periodo, [FromQuery] string? agrupar) =>
-        Ok(await _crm.ZonasAsync(periodo, agrupar));
+    /// <summary>Clientes que coinciden con lo escrito (nombre, documento o código).</summary>
+    [HttpGet("seguimiento/clientes")]
+    [Permiso("crm.seguimiento", Accion.Ver)]
+    public async Task<IActionResult> Buscar([FromQuery] string? buscar) => Ok(await _seguimiento.BuscarAsync(buscar));
 
-    /// <summary>Productos activos sin ventas en los últimos días, con su stock.</summary>
-    [HttpGet("productos")]
-    [Permiso("crm.productos", Accion.Ver)]
-    public async Task<IActionResult> ProductosSinVentas(
-        [FromQuery] int dias = 30,
-        [FromQuery] int? mercadoId = null,
-        [FromQuery] int? rutaId = null,
-        [FromQuery] int? categoriaId = null,
-        [FromQuery] string? stock = null) =>
-        Ok(await _productos.SinVentasAsync(dias, mercadoId, rutaId, categoriaId, stock));
+    [HttpGet("seguimiento/{id:int}/ficha")]
+    [Permiso("crm.seguimiento", Accion.Ver)]
+    public async Task<IActionResult> Ficha(int id, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
+        Ok(await _seguimiento.FichaAsync(id, desde, hasta));
 
-    /// <summary>La cartera con su caída frente al periodo anterior (semana, mes o anio).</summary>
-    [HttpGet("cartera")]
-    [Permiso("crm.cartera", Accion.Ver)]
-    public async Task<IActionResult> Cartera(
-        [FromQuery] string? periodo,
+    [HttpGet("seguimiento/{id:int}/gestiones")]
+    [Permiso("crm.seguimiento", Accion.Ver)]
+    public async Task<IActionResult> Gestiones(int id) => Ok(await _seguimiento.GestionesAsync(id));
+
+    [HttpPost("seguimiento/{id:int}/gestiones")]
+    [Permiso("crm.seguimiento", Accion.Crear)]
+    public async Task<IActionResult> Registrar(int id, [FromBody] GuardarGestionRequest request) =>
+        Ok(await _seguimiento.RegistrarAsync(id, request));
+
+    [HttpPut("seguimiento/gestiones/{id:int}")]
+    [Permiso("crm.seguimiento", Accion.Editar)]
+    public async Task<IActionResult> Actualizar(int id, [FromBody] GuardarGestionRequest request) =>
+        Ok(await _seguimiento.ActualizarAsync(id, request));
+
+    /// <summary>Cambia el día y la hora de un contacto que sigue programado.</summary>
+    [HttpPut("seguimiento/gestiones/{id:int}/reprogramar")]
+    [Permiso("crm.seguimiento", Accion.Editar)]
+    public async Task<IActionResult> Reprogramar(int id, [FromBody] ReprogramarGestionRequest request) =>
+        Ok(await _seguimiento.ReprogramarAsync(id, request));
+
+    [HttpGet("seguimiento/{id:int}/compras")]
+    [Permiso("crm.seguimiento", Accion.Ver)]
+    public async Task<IActionResult> Compras(int id, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
+        Ok(await _seguimiento.ComprasAsync(id, desde, hasta));
+
+    [HttpGet("seguimiento/{id:int}/documentos")]
+    [Permiso("crm.seguimiento", Accion.Ver)]
+    public async Task<IActionResult> Documentos(int id) => Ok(await _seguimiento.DocumentosAsync(id));
+
+    // ------------------------------------------------------------- Reportes
+
+    /// <summary>
+    /// Clientes con caída: lo comprado del 1 de enero a hoy (o el rango que se pida) contra el mismo tramo del año
+    /// anterior, con una tarjeta por estado.
+    /// </summary>
+    [HttpGet("caida")]
+    [Permiso("crm.caida", Accion.Ver)]
+    public async Task<IActionResult> ClientesConCaida(
+        [FromQuery] DateTime? desde,
+        [FromQuery] DateTime? hasta,
         [FromQuery] int? mercadoId,
         [FromQuery] int? rutaId,
         [FromQuery] int? vendedorId,
-        [FromQuery] string? nivel,
+        [FromQuery] string? estado,
         [FromQuery] string? buscar) =>
-        Ok(await _crm.CarteraAsync(periodo, mercadoId, rutaId, vendedorId, nivel, buscar));
+        Ok(await _caida.ClientesAsync(new ConsultaCaida(desde, hasta, mercadoId, rutaId, vendedorId, estado, buscar)));
 
-    [HttpGet("clientes/{id:int}")]
-    [Permiso("crm.cartera", Accion.Ver)]
-    public async Task<IActionResult> Ficha(int id, [FromQuery] string? periodo) =>
-        Ok(await _crm.FichaAsync(id, periodo));
+    /// <summary>De un cliente, qué productos dejó de comprar frente al mismo tramo del año anterior.</summary>
+    [HttpGet("caida/{clienteId:int}/productos")]
+    [Permiso("crm.caida", Accion.Ver)]
+    public async Task<IActionResult> QueDejoDeComprar(int clienteId, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
+        Ok(await _caida.QueDejoDeComprarAsync(clienteId, desde, hasta));
 
-    [HttpGet("clientes/{id:int}/gestiones")]
-    [Permiso("crm.seguimiento", Accion.Ver)]
-    public async Task<IActionResult> Gestiones(int id) => Ok(await _crm.GestionesAsync(id));
+    [HttpGet("inactivos")]
+    [Permiso("crm.inactivos", Accion.Ver)]
+    public async Task<IActionResult> ClientesInactivos(
+        [FromQuery] int? mercadoId,
+        [FromQuery] int? rutaId,
+        [FromQuery] int? vendedorId,
+        [FromQuery] string? estado,
+        [FromQuery] string? buscar) =>
+        Ok(await _caida.InactivosAsync(mercadoId, rutaId, vendedorId, estado, buscar));
 
-    [HttpPost("clientes/{id:int}/gestiones")]
-    [Permiso("crm.seguimiento", Accion.Crear)]
-    public async Task<IActionResult> RegistrarGestion(int id, [FromBody] CrearGestionRequest request) =>
-        Ok(await _crm.RegistrarGestionAsync(id, request));
-
-    /// <summary>Dar por hecha la próxima acción de una gestión, o volver a abrirla.</summary>
-    [HttpPatch("gestiones/{id:int}/cumplida")]
-    [Permiso("crm.seguimiento", Accion.Editar)]
-    public async Task<IActionResult> Cumplir(int id, [FromBody] CumplirGestionRequest request) =>
-        Ok(await _crm.CumplirGestionAsync(id, request));
-
-    [HttpDelete("gestiones/{id:int}")]
-    [Permiso("crm.seguimiento", Accion.Eliminar)]
-    public async Task<IActionResult> EliminarGestion(int id)
-    {
-        await _crm.EliminarGestionAsync(id);
-        return NoContent();
-    }
+    [HttpGet("vendedores")]
+    [Permiso("crm.vendedores", Accion.Ver)]
+    public async Task<IActionResult> VendedoresConCaida([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
+        Ok(await _caida.VendedoresAsync(desde, hasta));
 }

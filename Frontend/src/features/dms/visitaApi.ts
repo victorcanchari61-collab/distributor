@@ -1,5 +1,5 @@
 import { api } from '../../lib/apiClient'
-import type { NivelCliente } from '../crm/crmApi'
+import type { EstadoClave } from '../crm/crmApi'
 
 /** Un cliente al que toca visitar ese día. */
 export interface VisitaResponse {
@@ -23,13 +23,13 @@ export interface VisitaResponse {
   pedidoNumero: string | null
   total: number
   /**
-   * Cómo viene comprando el cliente este mes frente al anterior (CRITICO, ALTO, MEDIO, ESTABLE, NUEVO
-   * o INACTIVO). Null si no hay datos o quien mira no puede abrir la cartera del CRM.
+   * Cómo viene comprando el cliente este año frente al mismo tramo del anterior (CRITICO, RIESGO, SEGUIMIENTO,
+   * NORMAL o SIN_BASE). Null si no hay datos o quien mira no puede abrir Clientes con caída del CRM.
    */
-  riesgo: NivelCliente | null
-  /** Cambio en % de sus compras del mes contra el anterior. */
-  variacion: number | null
-  /** La próxima acción de seguimiento abierta de este cliente. */
+  riesgo: EstadoClave | null
+  /** Positiva si el cliente cayó, en %. */
+  caidaPct: number | null
+  /** La próxima acción de su seguimiento programado. */
   accionPendiente: string | null
   accionVencida: boolean
 }

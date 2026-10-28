@@ -1,55 +1,78 @@
-import type { BadgeTone } from '../../components/ui'
-import { fechaCorta } from '../../lib/fechas'
 import type { CicloCategorizacion, ColorCategoria } from './categorizacionApi'
-import type { NivelCliente, PeriodoCrm, RangoCrm, ResultadoGestion, TipoGestion } from './crmApi'
+import type { EstadoClave } from './crmApi'
 
-/** Soles con separador de miles, siempre con céntimos. */
-export const soles = (n: number) =>
-  `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+/** Soles con separador de miles. Sin decimales por defecto: son cifras de gestión, no de caja. */
+export const soles = (n: number, decimales = 0) =>
+  `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: decimales, maximumFractionDigits: decimales })}`
 
-/** Soles con signo explícito: "−S/ 120.00" o "+S/ 80.00". Para diferencias. */
-export const solesConSigno = (n: number) =>
-  `${n < 0 ? '−' : n > 0 ? '+' : ''}${soles(Math.abs(n))}`
+/** Soles con signo explícito: "−S/ 120" o "+S/ 80". Para diferencias. */
+export const solesConSigno = (n: number, decimales = 0) =>
+  `${n < 0 ? '−' : n > 0 ? '+' : ''}${soles(Math.abs(n), decimales)}`
 
 /** "−83.3 %" o "+12.0 %". Sin base de comparación, un guion. */
 export const porcentaje = (n: number | null) =>
   n === null ? '—' : `${n < 0 ? '−' : n > 0 ? '+' : ''}${Math.abs(n).toFixed(1)} %`
 
-export const PERIODOS: { id: PeriodoCrm; label: string; contra: string }[] = [
-  { id: 'semana', label: 'Semana', contra: 'los 7 días anteriores' },
-  { id: 'mes', label: 'Mes', contra: 'el mes anterior' },
-  { id: 'anio', label: 'Año', contra: 'el mismo periodo del año pasado' },
-]
-
-export const rango = (r: RangoCrm) => `${fechaCorta(r.desde)} – ${fechaCorta(r.hasta)}`
-
-export const NIVELES: Record<NivelCliente, { label: string; tone: BadgeTone }> = {
-  CRITICO: { label: 'Crítico', tone: 'danger' },
-  ALTO: { label: 'Alto', tone: 'warning' },
-  MEDIO: { label: 'Medio', tone: 'sys' },
-  ESTABLE: { label: 'Estable', tone: 'success' },
-  NUEVO: { label: 'Nuevo', tone: 'neutral' },
-  INACTIVO: { label: 'Inactivo', tone: 'neutral' },
-}
-
 /** Rojo si bajó, verde si subió: el color que cualquiera espera de una variación. */
-export const colorCambio = (n: number) =>
-  n < 0 ? 'text-red-600' : n > 0 ? 'text-emerald-600' : 'text-ink-soft'
+export const colorCambio = (n: number) => (n < 0 ? 'text-red-600' : n > 0 ? 'text-emerald-600' : 'text-ink-soft')
 
-export const TIPOS_GESTION: Record<TipoGestion, string> = {
-  LLAMADA: 'Llamada',
-  VISITA: 'Visita',
-  WHATSAPP: 'WhatsApp',
-  OTRO: 'Otro',
+// --- Estados (la escala de caída de 7power) ---
+
+export interface EstadoUi {
+  etiqueta: string
+  /** Qué rango de caída cubre. */
+  rango: string
+  color: string
+  fondo: string
 }
 
-export const RESULTADOS_GESTION: Record<ResultadoGestion, { label: string; tone: BadgeTone }> = {
-  CONTACTADO: { label: 'Contactado', tone: 'neutral' },
-  SIN_RESPUESTA: { label: 'Sin respuesta', tone: 'warning' },
-  PROMESA_COMPRA: { label: 'Promete comprar', tone: 'success' },
-  PROMESA_PAGO: { label: 'Promete pagar', tone: 'success' },
-  RECLAMO: { label: 'Reclamo', tone: 'danger' },
-  PERDIDO: { label: 'Cliente perdido', tone: 'danger' },
+/** De mayor a menor gravedad, que es el orden de las tarjetas. */
+export const ORDEN_ESTADOS: EstadoClave[] = ['CRITICO', 'RIESGO', 'SEGUIMIENTO', 'NORMAL', 'SIN_BASE']
+
+export const ESTADOS_UI: Record<EstadoClave, EstadoUi> = {
+  CRITICO: { etiqueta: 'Crítico', rango: '71 % o más', color: '#dc2626', fondo: '#fef2f2' },
+  RIESGO: { etiqueta: 'En riesgo', rango: '26 - 70 %', color: '#ea580c', fondo: '#fff7ed' },
+  SEGUIMIENTO: { etiqueta: 'En seguimiento', rango: '11 - 25 %', color: '#2563eb', fondo: '#eff6ff' },
+  NORMAL: { etiqueta: 'Normal', rango: '0 - 10 %', color: '#16a34a', fondo: '#f0fdf4' },
+  SIN_BASE: { etiqueta: 'Sin comparación', rango: 'Sin ventas el año anterior', color: '#64748b', fondo: '#f1f5f9' },
+}
+
+/** El rango de días sin comprar de cada estado en Clientes inactivos. */
+export const RANGO_DIAS: Partial<Record<EstadoClave, string>> = {
+  CRITICO: '61 días o más',
+  RIESGO: '31 - 60 días',
+  SEGUIMIENTO: '16 - 30 días',
+}
+
+export const ESCALA_DIAS = '0-15 normal · 16-30 seguimiento · 31-60 en riesgo · 61 o más crítico'
+
+/** El color de los días sin comprar, con la misma escala. */
+export const colorDeDias = (dias: number | null) => {
+  if (dias === null) return ESTADOS_UI.SIN_BASE.color
+  if (dias >= 61) return ESTADOS_UI.CRITICO.color
+  if (dias >= 31) return ESTADOS_UI.RIESGO.color
+  if (dias >= 16) return ESTADOS_UI.SEGUIMIENTO.color
+  return ESTADOS_UI.NORMAL.color
+}
+
+/** "20/10/2026" para un día del servidor, sin pasar por una zona horaria. */
+export const fechaDia = (iso: string | null) => {
+  if (!iso) return '—'
+  const [anio, mes, dia] = iso.slice(0, 10).split('-')
+  return `${dia}/${mes}/${anio}`
+}
+
+/** Los meses abreviados, para los ejes de los gráficos. */
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic']
+
+/** El mes de un YYYY-MM-DD, abreviado ("oct"), sin pasar por una zona horaria. */
+export const mesCorto = (iso: string) => MESES[Number(iso.slice(5, 7)) - 1] ?? ''
+
+/** El nombre y la inicial del apellido: "GUSTAVO MIRANDA MARTINEZ" → "GUSTAVO M.". */
+export const nombreCorto = (nombre: string | null) => {
+  const partes = (nombre ?? '').trim().split(/\s+/).filter(Boolean)
+  if (partes.length < 2) return partes[0] ?? ''
+  return `${partes[0]} ${partes[1].charAt(0)}.`
 }
 
 // --- Categorización ---

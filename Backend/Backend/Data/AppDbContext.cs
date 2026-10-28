@@ -118,15 +118,17 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<GestionCliente>(entity =>
         {
             entity.ToTable("GestionesCliente");
-            entity.Property(g => g.Tipo).HasMaxLength(20).IsRequired();
+            entity.Property(g => g.TipoContacto).HasMaxLength(20).IsRequired();
             entity.Property(g => g.Resultado).HasMaxLength(20).IsRequired();
-            entity.Property(g => g.Nota).HasMaxLength(500).IsRequired();
+            entity.Property(g => g.Comentario).HasMaxLength(500);
+            entity.Property(g => g.ProximoTipoContacto).HasMaxLength(20);
             entity.Property(g => g.ProximaAccion).HasMaxLength(150);
+            entity.Property(g => g.SeguimientoEstado).HasMaxLength(20);
 
             // El historial de un cliente, lo más reciente primero.
             entity.HasIndex(g => new { g.ClienteId, g.Fecha });
-            // Las acciones que siguen abiertas, por día: lo que mira la cartera para marcar las vencidas.
-            entity.HasIndex(g => new { g.Cumplida, g.ProximaFecha });
+            // Los contactos que siguen programados, por día: lo que mira el aviso de vencidos y de hoy.
+            entity.HasIndex(g => new { g.SeguimientoEstado, g.ProximoSeguimiento });
 
             // Un cliente con historial de gestiones no se borra sin pensarlo.
             entity.HasOne(g => g.Cliente).WithMany()

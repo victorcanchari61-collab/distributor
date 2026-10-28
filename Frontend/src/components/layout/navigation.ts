@@ -46,6 +46,9 @@ import {
   Undo2,
   Truck,
   UserCog,
+  UserSearch,
+  UserX,
+  UsersRound,
   Users,
   Warehouse,
   Wallet,
@@ -113,6 +116,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'dashboard.compras', label: 'Compras', icon: ShoppingBag },
       { id: 'dashboard.inventario', label: 'Inventario', icon: Boxes },
       { id: 'dashboard.reparto', label: 'Pedidos y reparto', icon: PackageCheck },
+      { id: 'dashboard.sinventas', label: 'Productos sin ventas', icon: PackageX },
+      { id: 'dashboard.zonas', label: 'Mercados y rutas', icon: Store },
     ],
   },
   {
@@ -231,12 +236,11 @@ export const NAV_GROUPS: NavGroup[] = [
     sys: 'crm',
     icon: HeartHandshake,
     items: [
-      { id: 'crm.cartera', label: 'Cartera en riesgo', icon: TrendingDown },
-      { id: 'crm.productos', label: 'Productos sin ventas', icon: PackageX },
-      { id: 'crm.zonas', label: 'Mercados y rutas', icon: Store },
+      { id: 'crm.seguimiento', label: 'Gestión y seguimiento', icon: UserSearch },
+      { id: 'crm.caida', label: 'Clientes con caída', icon: TrendingDown },
+      { id: 'crm.inactivos', label: 'Clientes inactivos', icon: UserX },
+      { id: 'crm.vendedores', label: 'Vendedores con caída', icon: UsersRound },
       { id: 'crm.categorizacion', label: 'Categorización', icon: Award },
-      // La agenda de las acciones pendientes; las gestiones se anotan en la pestaña Seguimiento de la ficha.
-      { id: 'crm.seguimiento', label: 'Agenda de seguimiento', icon: ClipboardList },
     ],
   },
   {

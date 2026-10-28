@@ -133,9 +133,9 @@ builder.Services.AddScoped<IGastoOperativoService, GastoOperativoService>();
 builder.Services.AddScoped<IGananciaService, GananciaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IReportesService, ReportesService>();
-builder.Services.AddScoped<ICrmService, CrmService>();
 builder.Services.AddScoped<ICrmProductosService, CrmProductosService>();
-builder.Services.AddScoped<ICrmAgendaService, CrmAgendaService>();
+builder.Services.AddScoped<ICaidaService, CaidaService>();
+builder.Services.AddScoped<ISeguimientoClienteService, SeguimientoClienteService>();
 builder.Services.AddScoped<ICategorizacionService, CategorizacionService>();
 // Recalcula la categoría de los clientes cuando empieza un ciclo nuevo.
 builder.Services.AddHostedService<CategorizacionHostedService>();

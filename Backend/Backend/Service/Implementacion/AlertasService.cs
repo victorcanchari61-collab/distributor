@@ -27,7 +27,7 @@ public class AlertasService : IAlertasService
     private readonly IVentasRepository _ventas;
     private readonly IFlotaService _flota;
     private readonly IPermisoService _permisos;
-    private readonly ICrmAgendaService _agenda;
+    private readonly ISeguimientoClienteService _seguimiento;
 
     public AlertasService(
         IInventarioService inventario,
@@ -36,9 +36,9 @@ public class AlertasService : IAlertasService
         IVentasRepository ventas,
         IFlotaService flota,
         IPermisoService permisos,
-        ICrmAgendaService agenda)
+        ISeguimientoClienteService seguimiento)
     {
-        _agenda = agenda;
+        _seguimiento = seguimiento;
         _inventario = inventario;
         _inventarioRepo = inventarioRepo;
         _compras = compras;
@@ -128,22 +128,22 @@ public class AlertasService : IAlertasService
         if (usuarioId is not int id) return [];
         if (!await _permisos.PuedeAsync(id, "crm.seguimiento", Accion.Ver)) return [];
 
-        var agenda = await _agenda.ResumenDeAsync(id);
+        var agenda = await _seguimiento.ResumenDeAsync(id);
         var alertas = new List<AlertaResponse>();
 
-        if (agenda.Vencidas > 0)
+        if (agenda.Vencidos > 0)
         {
             alertas.Add(new AlertaResponse
             {
                 Id = "seguimiento-vencidas",
                 Tipo = TipoAlerta.SeguimientoCliente,
                 Severidad = SeveridadAlerta.Advertencia,
-                Titulo = agenda.Vencidas == 1
-                    ? "1 acción de seguimiento vencida"
-                    : $"{agenda.Vencidas} acciones de seguimiento vencidas",
-                Detalle = "Clientes a los que se les prometió una llamada, visita o gestión y ya pasó el día.",
+                Titulo = agenda.Vencidos == 1
+                    ? "1 contacto de seguimiento vencido"
+                    : $"{agenda.Vencidos} contactos de seguimiento vencidos",
+                Detalle = "Contactos programados con clientes (llamada, visita, WhatsApp o correo) cuya hora ya pasó.",
                 Ruta = "crm.seguimiento",
-                Fecha = agenda.VencidaDesde,
+                Fecha = agenda.VencidoDesde,
             });
         }
 
@@ -155,9 +155,9 @@ public class AlertasService : IAlertasService
                 Tipo = TipoAlerta.SeguimientoCliente,
                 Severidad = SeveridadAlerta.Info,
                 Titulo = agenda.Hoy == 1
-                    ? "1 acción de seguimiento para hoy"
-                    : $"{agenda.Hoy} acciones de seguimiento para hoy",
-                Detalle = "Lo que quedó anotado para hacer hoy con tus clientes.",
+                    ? "1 contacto de seguimiento para hoy"
+                    : $"{agenda.Hoy} contactos de seguimiento para hoy",
+                Detalle = "Los contactos que dejaste programados para hoy con tus clientes.",
                 Ruta = "crm.seguimiento",
                 Fecha = Zona.Hoy,
             });

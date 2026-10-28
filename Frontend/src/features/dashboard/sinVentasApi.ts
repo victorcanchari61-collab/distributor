@@ -1,5 +1,5 @@
 import { api } from '../../lib/apiClient'
-import type { PeriodoCrm, RangoCrm, VentanasCrm } from './crmApi'
+import type { PeriodoCaida, Rango } from '../crm/crmApi'
 
 // --- Productos sin ventas ---
 
@@ -33,7 +33,7 @@ export interface ResumenProductosCrm {
 
 export interface ProductosSinVentasCrm {
   dias: number
-  rango: RangoCrm
+  rango: Rango
   mercado: string | null
   ruta: string | null
   resumen: ResumenProductosCrm
@@ -59,20 +59,21 @@ export interface ZonaCrm {
   clientes: number
   conVentas: number
   criticos: number
-  altos: number
-  inactivos: number
-  nuevos: number
-  actual: number
-  anterior: number
-  diferencia: number
-  variacion: number | null
+  enRiesgo: number
+  enSeguimiento: number
+  sinComparacion: number
+  ventaAnterior: number
+  ventaActual: number
+  variacion: number
+  /** Positiva si la zona cayó. Nula si el año anterior no vendió. */
+  caidaPct: number | null
   /** Lo que dejaron de comprar los clientes que bajaron. */
   ventaPerdida: number
   saldoPorCobrar: number
 }
 
 export interface ZonasCrm {
-  ventanas: VentanasCrm
+  periodo: PeriodoCaida
   agrupar: AgruparZonas
   soloPropios: boolean
   items: ZonaCrm[]
@@ -87,9 +88,8 @@ const queryProductos = (c: ConsultaProductosCrm) => {
   return `?${partes.toString()}`
 }
 
-export const crmReportesApi = {
-  productosSinVentas: (c: ConsultaProductosCrm) =>
-    api.get<ProductosSinVentasCrm>(`/crm/productos${queryProductos(c)}`),
-  zonas: (periodo: PeriodoCrm, agrupar: AgruparZonas) =>
-    api.get<ZonasCrm>(`/crm/zonas?periodo=${periodo}&agrupar=${agrupar}`),
+export const sinVentasApi = {
+  productosSinVentas: (c: ConsultaProductosCrm) => api.get<ProductosSinVentasCrm>(`/dashboard/sin-ventas${queryProductos(c)}`),
+  zonas: (desde: string, hasta: string, agrupar: AgruparZonas) =>
+    api.get<ZonasCrm>(`/dashboard/zonas?desde=${desde}&hasta=${hasta}&agrupar=${agrupar}`),
 }

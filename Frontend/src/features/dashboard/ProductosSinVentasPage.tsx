@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Boxes, PackageX, PiggyBank, SearchX } from 'lucide-react'
+import { HBarChart, Marco, moneda } from '../../components/charts'
 import { Alert, ListPage, StatCard, Tabs } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -9,11 +10,14 @@ import { categoriaApi } from '../maestros'
 import type { CategoriaResponse } from '../maestros/productoApi'
 import { mercadoApi, rutaApi } from '../tms'
 import type { MercadoResponse, RutaResponse } from '../tms'
-import { crmReportesApi } from './crmReportesApi'
-import type { ConsultaProductosCrm, ProductoSinVentaCrm, ProductosSinVentasCrm } from './crmReportesApi'
-import { rango, soles } from './formato'
+import type { Rango } from '../crm/crmApi'
+import { fechaDia, soles } from '../crm/formato'
+import { sinVentasApi } from './sinVentasApi'
+import type { ConsultaProductosCrm, ProductoSinVentaCrm, ProductosSinVentasCrm } from './sinVentasApi'
 
 const DIAS = [7, 15, 30, 60, 90]
+
+const rango = (r: Rango) => `${fechaDia(r.desde)} al ${fechaDia(r.hasta)}`
 
 type Filtros = Omit<ConsultaProductosCrm, 'dias'>
 
@@ -40,7 +44,7 @@ export function ProductosSinVentasPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      setDatos(await crmReportesApi.productosSinVentas({ dias, ...filtros }))
+      setDatos(await sinVentasApi.productosSinVentas({ dias, ...filtros }))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los productos.')
@@ -188,6 +192,35 @@ export function ProductosSinVentasPage() {
   const resumen = datos?.resumen
   const zona = datos?.mercado ?? datos?.ruta
 
+  // Para los gráficos: la plata parada sumada por categoría y los 8 productos que más inmovilizan.
+  const porCategoria = useMemo(() => {
+    const suma = new Map<string, { valor: number; productos: number }>()
+    for (const p of datos?.items ?? []) {
+      if (p.valorStock <= 0) continue
+      const nombre = p.categoria ?? 'Sin categoría'
+      const previo = suma.get(nombre) ?? { valor: 0, productos: 0 }
+      suma.set(nombre, { valor: previo.valor + p.valorStock, productos: previo.productos + 1 })
+    }
+    return [...suma.entries()]
+      .sort((a, b) => b[1].valor - a[1].valor)
+      .slice(0, 8)
+      .map(([nombre, v]) => ({ nombre, valor: v.valor, detalle: `${v.productos} ${v.productos === 1 ? 'producto' : 'productos'}` }))
+  }, [datos])
+
+  const masParados = useMemo(
+    () =>
+      (datos?.items ?? [])
+        .filter((p) => p.valorStock > 0)
+        .sort((a, b) => b.valorStock - a.valorStock)
+        .slice(0, 8)
+        .map((p) => ({
+          nombre: p.producto,
+          valor: p.valorStock,
+          detalle: p.diasSinVender === null ? 'nunca vendido' : `hace ${p.diasSinVender} días`,
+        })),
+    [datos],
+  )
+
   return (
     <ListPage
       icon={<PackageX size={20} />}
@@ -207,6 +240,31 @@ export function ProductosSinVentasPage() {
               recojos; el stock suma todos los almacenes y se valoriza a su costo.
             </p>
           )}
+
+          {/* Dónde está la plata parada: por categoría y en los productos que más inmovilizan. */}
+          <div className="grid gap-4 pt-2 lg:grid-cols-2">
+            <Marco
+              titulo="Plata parada por categoría"
+              subtitulo="Costo del stock de los productos que no se vendieron"
+              cargando={cargando && !datos}
+              vacio={porCategoria.length === 0}
+              mensajeVacio="Ningún producto con stock sin vender"
+              alto={200}
+            >
+              <HBarChart items={porCategoria} formato={(n) => moneda(n)} unColor="#dc2626" />
+            </Marco>
+
+            <Marco
+              titulo="Los que más dinero inmovilizan"
+              subtitulo="Productos sin ventas con más valor en stock"
+              cargando={cargando && !datos}
+              vacio={masParados.length === 0}
+              mensajeVacio="Ningún producto con stock sin vender"
+              alto={200}
+            >
+              <HBarChart items={masParados} formato={(n) => moneda(n)} unColor="#f59e0b" />
+            </Marco>
+          </div>
         </div>
       }
       stats={

@@ -54,7 +54,7 @@ public class CrmProductosResponse
     public int Dias { get; set; }
 
     /// <summary>El rango de días revisado, ambos incluidos.</summary>
-    public CrmRango Rango { get; set; } = new();
+    public RangoResponse Rango { get; set; } = new();
 
     public string? Mercado { get; set; }
     public string? Ruta { get; set; }
@@ -62,11 +62,10 @@ public class CrmProductosResponse
     public CrmProductosResumenResponse Resumen { get; set; } = new();
     public List<CrmProductoSinVentaResponse> Items { get; set; } = [];
 }
-
 // ------------------------------------------------------------------ Mercados y rutas
 
-/// <summary>Un mercado o una ruta, con cómo le va a sus clientes.</summary>
-public class CrmZonaResponse
+/// <summary>Un mercado o una ruta, con cómo les va a sus clientes frente al mismo tramo del año anterior.</summary>
+public class ZonaCaidaResponse
 {
     /// <summary>Nulo: los clientes que no tienen mercado (o ruta) asignado.</summary>
     public int? ZonaId { get; set; }
@@ -76,18 +75,20 @@ public class CrmZonaResponse
     /// <summary>Clientes activos de la zona.</summary>
     public int Clientes { get; set; }
 
-    /// <summary>Los que compraron en alguno de los dos periodos.</summary>
+    /// <summary>Los que compraron en alguno de los dos tramos.</summary>
     public int ConVentas { get; set; }
 
     public int Criticos { get; set; }
-    public int Altos { get; set; }
-    public int Inactivos { get; set; }
-    public int Nuevos { get; set; }
+    public int EnRiesgo { get; set; }
+    public int EnSeguimiento { get; set; }
+    public int SinComparacion { get; set; }
 
-    public decimal Actual { get; set; }
-    public decimal Anterior { get; set; }
-    public decimal Diferencia { get; set; }
-    public decimal? Variacion { get; set; }
+    public decimal VentaAnterior { get; set; }
+    public decimal VentaActual { get; set; }
+    public decimal Variacion { get; set; }
+
+    /// <summary>Positiva si la zona cayó. Nula si el año anterior no vendió.</summary>
+    public decimal? CaidaPct { get; set; }
 
     /// <summary>Lo que dejaron de comprar los clientes que bajaron, sin que las subidas la tapen.</summary>
     public decimal VentaPerdida { get; set; }
@@ -95,9 +96,9 @@ public class CrmZonaResponse
     public decimal SaldoPorCobrar { get; set; }
 }
 
-public class CrmZonasResponse
+public class ZonasCaidaResponse
 {
-    public CrmVentanas Ventanas { get; set; } = new();
+    public PeriodoCaidaResponse Periodo { get; set; } = new();
 
     /// <summary>mercado o ruta.</summary>
     public string Agrupar { get; set; } = string.Empty;
@@ -105,5 +106,5 @@ public class CrmZonasResponse
     public bool SoloPropios { get; set; }
 
     /// <summary>La que más plata perdió, primero.</summary>
-    public List<CrmZonaResponse> Items { get; set; } = [];
+    public List<ZonaCaidaResponse> Items { get; set; } = [];
 }

@@ -11,7 +11,7 @@ public class VisitaService : IVisitaService
     private readonly AppDbContext _context;
     private readonly IPermisoService _permisos;
     private readonly IUsuarioActual _usuarioActual;
-    private readonly ICrmService _crm;
+    private readonly ICaidaService _caida;
 
     /// <summary>
     /// Tope de días que se pueden pedir de una vez.
@@ -22,12 +22,12 @@ public class VisitaService : IVisitaService
     /// </summary>
     private const int MaximoDias = 14;
 
-    public VisitaService(AppDbContext context, IPermisoService permisos, IUsuarioActual usuarioActual, ICrmService crm)
+    public VisitaService(AppDbContext context, IPermisoService permisos, IUsuarioActual usuarioActual, ICaidaService caida)
     {
         _context = context;
         _permisos = permisos;
         _usuarioActual = usuarioActual;
-        _crm = crm;
+        _caida = caida;
     }
 
     public async Task<IEnumerable<VisitaResponse>> DelRangoAsync(
@@ -77,10 +77,10 @@ public class VisitaService : IVisitaService
                     // Una linea quitada al editar el pedido queda anulada, no
                     // se borra: sumarla diria que el cliente pidio mas.
                     Total = pedido?.Total ?? 0m,
-                    Riesgo = riesgos.GetValueOrDefault(c.Id)?.Nivel,
-                    Variacion = riesgos.GetValueOrDefault(c.Id)?.Variacion,
+                    Riesgo = riesgos.GetValueOrDefault(c.Id)?.Estado,
+                    CaidaPct = riesgos.GetValueOrDefault(c.Id)?.CaidaPct,
                     AccionPendiente = riesgos.GetValueOrDefault(c.Id)?.ProximaAccion,
-                    AccionVencida = riesgos.GetValueOrDefault(c.Id)?.AccionVencida ?? false,
+                    AccionVencida = riesgos.GetValueOrDefault(c.Id)?.SeguimientoVencido ?? false,
                 });
             }
         }
@@ -110,19 +110,20 @@ public class VisitaService : IVisitaService
     }
 
     /// <summary>
-    /// Cómo viene comprando cada cliente (el mes contra el anterior), tal como lo calcula la cartera
-    /// del CRM. Solo para quien puede abrirla: la lista de visitas no debe ser la puerta de atrás
-    /// para ver lo que el CRM le reserva a otros. Si falla, las visitas se muestran igual, sin riesgo.
+    /// El estado de cada cliente por su caída de compras (del 1 de enero a hoy contra el mismo tramo del año anterior)
+    /// y su próximo contacto programado: lo mismo que ven Clientes con caída y la ficha. Solo para quien puede abrir el
+    /// CRM: la lista de visitas no debe ser la puerta de atrás para ver lo que el CRM le reserva a otros. Si falla,
+    /// las visitas se muestran igual, sin estado.
     /// </summary>
-    private async Task<Dictionary<int, CrmClienteResponse>> RiesgosAsync()
+    private async Task<Dictionary<int, CaidaFilaResponse>> RiesgosAsync()
     {
         if (_usuarioActual.Id is not int usuarioId) return [];
-        if (!await _permisos.PuedeAsync(usuarioId, "crm.cartera", Accion.Ver)) return [];
+        if (!await _permisos.PuedeAsync(usuarioId, "crm.caida", Accion.Ver)) return [];
 
         try
         {
-            var cartera = await _crm.CarteraAsync("mes", null, null, null, null, null);
-            return cartera.Items.ToDictionary(i => i.ClienteId);
+            var caida = await _caida.ClientesAsync(new ConsultaCaida());
+            return caida.Items.ToDictionary(i => i.Id);
         }
         catch (Exception)
         {

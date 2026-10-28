@@ -106,21 +106,23 @@ public static class CatalogoPermisos
             ["dashboard.compras"] = [Accion.Ver, Accion.Exportar],
             ["dashboard.inventario"] = [Accion.Ver, Accion.Exportar],
             ["dashboard.reparto"] = [Accion.Ver, Accion.Exportar],
+            // Qué productos no se mueven (y dónde sí se venden) y cómo le va a cada mercado o ruta frente al año
+            // anterior. Solo lectura; zonas respeta el alcance de clientes del CRM.
+            ["dashboard.sinventas"] = [Accion.Ver],
+            ["dashboard.zonas"] = [Accion.Ver],
 
             // --- CRM ---
-            // Qué clientes están dejando de comprar y la ficha de cada uno. Solo lectura: lo que se
-            // hace con ellos (visitar, cobrar, llamar) se hace en sus propias pantallas.
-            ["crm.cartera"] = [Accion.Ver],
-            // Qué productos no se mueven (y dónde sí se venden) y cómo le va a cada mercado o ruta.
-            // Solo lectura; zonas usa el alcance de clientes de la cartera.
-            ["crm.productos"] = [Accion.Ver],
-            ["crm.zonas"] = [Accion.Ver],
+            // Gestión y seguimiento: la ficha de un cliente y los contactos que se le hacen (llamadas, visitas,
+            // WhatsApp, correos). Ver entra a la ficha; Crear registra una gestión; Editar corrige o reprograma una.
+            // Es también el submódulo con el que se configura el alcance de TODO el CRM ("solo mis clientes").
+            ["crm.seguimiento"] = [Accion.Ver, Accion.Crear, Accion.Editar],
+            // Reportes de quién compra menos, del 1 de enero a hoy contra el mismo tramo del año anterior. Solo lectura.
+            ["crm.caida"] = [Accion.Ver],
+            ["crm.inactivos"] = [Accion.Ver],
+            ["crm.vendedores"] = [Accion.Ver],
             // Los tramos y el ciclo de la categoría de los clientes (Socio a Inactivo). Editar es guardarlos
             // y también "Calcular ahora".
             ["crm.categorizacion"] = [Accion.Ver, Accion.Editar],
-            // Las gestiones con el cliente: llamadas, visitas y acuerdos. Editar es dar por hecha la
-            // próxima acción; Eliminar, borrar una gestión anotada por error.
-            ["crm.seguimiento"] = Catalogo,
 
             // --- Maestros ---
             ["maestros.clientes"] = CatalogoImportable,

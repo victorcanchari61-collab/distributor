@@ -100,6 +100,16 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Pedidos y reparto',
         icono: Icons.assignment_turned_in_outlined,
       ),
+      MenuItem(
+        id: 'dashboard.sinventas',
+        titulo: 'Productos sin ventas',
+        icono: Icons.inventory_2_outlined,
+      ),
+      MenuItem(
+        id: 'dashboard.zonas',
+        titulo: 'Mercados y rutas',
+        icono: Icons.storefront_outlined,
+      ),
     ],
   ),
   MenuGrupo(
@@ -382,29 +392,29 @@ const menuGrupos = <MenuGrupo>[
     icono: Icons.handshake_outlined,
     items: [
       MenuItem(
-        id: 'crm.cartera',
-        titulo: 'Cartera en riesgo',
+        id: 'crm.seguimiento',
+        titulo: 'Gestión y seguimiento',
+        icono: Icons.person_search_outlined,
+      ),
+      MenuItem(
+        id: 'crm.caida',
+        titulo: 'Clientes con caída',
         icono: Icons.trending_down,
       ),
       MenuItem(
-        id: 'crm.productos',
-        titulo: 'Productos sin ventas',
-        icono: Icons.inventory_2_outlined,
+        id: 'crm.inactivos',
+        titulo: 'Clientes inactivos',
+        icono: Icons.person_off_outlined,
       ),
       MenuItem(
-        id: 'crm.zonas',
-        titulo: 'Mercados y rutas',
-        icono: Icons.storefront_outlined,
+        id: 'crm.vendedores',
+        titulo: 'Vendedores con caída',
+        icono: Icons.groups_outlined,
       ),
       MenuItem(
         id: 'crm.categorizacion',
         titulo: 'Categorización',
         icono: Icons.workspace_premium_outlined,
-      ),
-      MenuItem(
-        id: 'crm.seguimiento',
-        titulo: 'Agenda de seguimiento',
-        icono: Icons.checklist_outlined,
       ),
     ],
   ),

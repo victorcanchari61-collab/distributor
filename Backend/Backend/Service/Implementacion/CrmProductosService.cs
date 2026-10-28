@@ -117,7 +117,7 @@ public class CrmProductosService : ICrmProductosService
         return new CrmProductosResponse
         {
             Dias = dias,
-            Rango = new CrmRango { Desde = desde, Hasta = hoy },
+            Rango = new RangoResponse { Desde = desde, Hasta = hoy },
             Mercado = mercadoId is int m
                 ? await _context.Mercados.Where(x => x.Id == m).Select(x => x.Nombre).FirstOrDefaultAsync()
                 : null,

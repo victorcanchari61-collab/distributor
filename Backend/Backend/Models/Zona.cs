@@ -21,7 +21,7 @@ public static class Zona
     public static DateTime AUtc(DateTime local) => local - Peru;
 
     /// <summary>El día al que pertenece ese instante, en hora local.</summary>
-    public static DateTime DiaDe(DateTime utc) => ALocal(utc).Date;
+    public static DateTime DiaDe(DateTime utc) => DateTime.SpecifyKind(ALocal(utc).Date, DateTimeKind.Unspecified);
 
     /// <summary>Hoy, como lo cuenta quien está en la calle.</summary>
     public static DateTime Hoy => DiaDe(DateTime.UtcNow);

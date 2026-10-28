@@ -1731,11 +1731,9 @@ namespace Backend.Data.Migrations
                     b.Property<int>("ClienteId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("Cumplida")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<DateTime?>("CumplidaEn")
-                        .HasColumnType("datetime(6)");
+                    b.Property<string>("Comentario")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
 
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime(6)");
@@ -1743,24 +1741,27 @@ namespace Backend.Data.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("Nota")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
                     b.Property<string>("ProximaAccion")
                         .HasMaxLength(150)
                         .HasColumnType("varchar(150)");
 
-                    b.Property<DateTime?>("ProximaFecha")
+                    b.Property<DateTime?>("ProximoSeguimiento")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ProximoTipoContacto")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
 
                     b.Property<string>("Resultado")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
 
-                    b.Property<string>("Tipo")
+                    b.Property<string>("SeguimientoEstado")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("TipoContacto")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
@@ -1774,7 +1775,7 @@ namespace Backend.Data.Migrations
 
                     b.HasIndex("ClienteId", "Fecha");
 
-                    b.HasIndex("Cumplida", "ProximaFecha");
+                    b.HasIndex("SeguimientoEstado", "ProximoSeguimiento");
 
                     b.ToTable("GestionesCliente", (string)null);
                 });
