@@ -1,7 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   ArrowLeftRight,
-  Award,
   FileBarChart,
   Banknote,
   Boxes,
@@ -240,7 +239,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'crm.caida', label: 'Clientes con caída', icon: TrendingDown },
       { id: 'crm.inactivos', label: 'Clientes inactivos', icon: UserX },
       { id: 'crm.vendedores', label: 'Vendedores con caída', icon: UsersRound },
-      { id: 'crm.categorizacion', label: 'Categorización', icon: Award },
     ],
   },
   {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
@@ -96,6 +97,34 @@ class AdelantosPagina extends ConsumerWidget {
           // El fallo ya se ve en la pantalla, con su botón de reintentar.
         }
       },
+      acciones: [
+        if (puede(ref, 'rrhh.adelantos', Accion.exportar))
+          accionExportar<Adelanto>(
+            context,
+            nombre: 'adelantos',
+            filas: () => ref.read(adelantosFiltradosProvider),
+            encabezados: const [
+              'Empleado',
+              'Cargo',
+              'Fecha',
+              'Monto',
+              'Descontado',
+              'Saldo',
+              'Cuota semanal',
+              'Estado',
+            ],
+            fila: (a) => [
+              a.empleado,
+              a.cargo,
+              diaIso(a.fecha),
+              a.monto,
+              a.descontado,
+              a.saldo,
+              a.cuotaSemanal,
+              a.estado,
+            ],
+          ),
+      ],
       onNuevo: puede(ref, 'rrhh.adelantos', Accion.crear)
           ? () => _hoja(context, (_) => const _HojaNuevo())
           : null,

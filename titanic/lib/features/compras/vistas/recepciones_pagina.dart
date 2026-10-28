@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
@@ -46,6 +48,34 @@ class RecepcionesPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaRecepcionesProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número, almacén o compra',
       onRecargar: () => ref.read(recepcionesProvider.notifier).recargar(),
+      acciones: [
+        if (puede(ref, 'compras.recepciones', Accion.exportar))
+          accionExportar<DocumentoInventario>(
+            context,
+            nombre: 'recepciones',
+            filas: () => ref.read(recepcionesFiltradasProvider),
+            encabezados: const [
+              'Número',
+              'Fecha',
+              'Almacén',
+              'Compra',
+              'Estado',
+              'Líneas',
+              'Total',
+              'Usuario',
+            ],
+            fila: (d) => [
+              d.numero,
+              diaIso(d.fecha),
+              d.almacen,
+              d.compra,
+              d.estado,
+              d.lineas,
+              d.total,
+              d.usuario,
+            ],
+          ),
+      ],
       onNuevo: puede(ref, 'compras.recepciones', Accion.crear)
           ? hayPendientes
                 ? () => _abrirFormulario(context)

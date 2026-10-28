@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/estado/filtro_documento.dart';
 import '../../../compartido/estado/filtro_estado.dart';
@@ -97,6 +99,36 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina> {
       onBuscar: (t) => ref.read(busquedaAjustesProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número, almacén o motivo',
       onRecargar: () => ref.read(ajustesProvider.notifier).recargar(),
+      acciones: [
+        if (puede(ref, 'inv.ajustes', Accion.exportar))
+          accionExportar<DocumentoInventario>(
+            context,
+            nombre: 'ajustes',
+            filas: () => ref.read(ajustesFiltradosProvider),
+            encabezados: const [
+              'Número',
+              'Fecha',
+              'Almacén',
+              'Motivo',
+              'Tipo',
+              'Estado',
+              'Líneas',
+              'Total',
+              'Usuario',
+            ],
+            fila: (d) => [
+              d.numero,
+              diaIso(d.fecha),
+              d.almacen,
+              d.motivo,
+              d.motivoTipo,
+              d.estado,
+              d.lineas,
+              d.total,
+              d.usuario,
+            ],
+          ),
+      ],
       onNuevo: puede(ref, 'inv.ajustes', Accion.crear) ? _nuevoAjuste : null,
       textoNuevo: 'Nuevo ajuste',
       iconoVacio: Icons.fact_check_outlined,

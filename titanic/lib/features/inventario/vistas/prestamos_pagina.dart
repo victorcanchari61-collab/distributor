@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
@@ -44,6 +46,34 @@ class PrestamosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaPrestamosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número, contraparte o almacén',
       onRecargar: () => ref.read(prestamosProvider.notifier).recargar(),
+      acciones: [
+        if (puede(ref, 'inv.prestamos', Accion.exportar))
+          accionExportar<Prestamo>(
+            context,
+            nombre: 'prestamos',
+            filas: () => ref.read(prestamosFiltradosProvider),
+            encabezados: const [
+              'Número',
+              'Fecha',
+              'Tipo',
+              'Contraparte',
+              'Almacén',
+              'Estado',
+              'Total',
+              'Usuario',
+            ],
+            fila: (p) => [
+              p.numero,
+              diaIso(p.fecha),
+              p.tipo,
+              p.contraparte,
+              p.almacen,
+              p.estado,
+              p.total,
+              p.usuario,
+            ],
+          ),
+      ],
       onNuevo: puede(ref, 'inv.prestamos', Accion.crear)
           ? () => _abrirFormulario(context)
           : null,

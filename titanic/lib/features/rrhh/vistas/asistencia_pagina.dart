@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
@@ -137,6 +139,30 @@ class AsistenciaPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaAsistenciaProvider.notifier).state = t,
       pistaBusqueda: 'Buscar empleado',
       onRecargar: () => _recargar(ref),
+      acciones: [
+        if (puede(ref, 'rrhh.asistencia', Accion.exportar))
+          accionExportar<Asistencia>(
+            context,
+            nombre: 'asistencia',
+            filas: () => ref.read(asistenciasFiltradasProvider),
+            encabezados: const [
+              'Fecha',
+              'Empleado',
+              'Cargo',
+              'Estado',
+              'Observación',
+              'Usuario',
+            ],
+            fila: (a) => [
+              diaIso(a.fecha),
+              a.empleado,
+              a.cargo,
+              a.anulado ? 'Anulada' : a.estado,
+              a.observacion,
+              a.usuario,
+            ],
+          ),
+      ],
       onNuevo: onPaseLista,
       textoNuevo: 'Pasar lista',
       iconoVacio: Icons.event_available_outlined,

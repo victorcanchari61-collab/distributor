@@ -411,11 +411,6 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Vendedores con caída',
         icono: Icons.groups_outlined,
       ),
-      MenuItem(
-        id: 'crm.categorizacion',
-        titulo: 'Categorización',
-        icono: Icons.workspace_premium_outlined,
-      ),
     ],
   ),
   MenuGrupo(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
@@ -54,6 +56,40 @@ class MisComprasPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaComprasProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número, proveedor o comprobante',
       onRecargar: () => ref.read(comprasProvider.notifier).recargar(),
+      acciones: [
+        if (puede(ref, 'compras.compras', Accion.exportar))
+          accionExportar<Compra>(
+            context,
+            nombre: 'compras',
+            filas: () => ref.read(comprasFiltradasProvider),
+            encabezados: const [
+              'Número',
+              'Fecha',
+              'Proveedor',
+              'Estado',
+              'Comprobante',
+              'Forma de pago',
+              'Total',
+              'Pagado',
+              'Usuario',
+            ],
+            fila: (c) => [
+              c.numero,
+              diaIso(c.fecha),
+              c.proveedor,
+              c.estado,
+              [
+                c.tipoComprobante,
+                c.serieComprobante,
+                c.numeroComprobante,
+              ].whereType<String>().join(' '),
+              c.formaPago,
+              c.total,
+              c.totalPagado,
+              c.usuario,
+            ],
+          ),
+      ],
       onNuevo: puede(ref, 'compras.compras', Accion.crear)
           ? () => _abrirFormulario(context)
           : null,

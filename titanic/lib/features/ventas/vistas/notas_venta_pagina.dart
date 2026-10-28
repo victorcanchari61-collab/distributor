@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -48,6 +50,38 @@ class NotasVentaPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaNotasVentaProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o cliente',
       onRecargar: () => ref.read(notasVentaProvider.notifier).recargar(),
+      acciones: [
+        if (puede(ref, 'fact.notaventa', Accion.exportar))
+          accionExportar<NotaVenta>(
+            context,
+            nombre: 'notas-de-venta',
+            filas: () => ref.read(notasVentaFiltradasProvider),
+            encabezados: const [
+              'Número',
+              'Fecha',
+              'Cliente',
+              'Pedido',
+              'Almacén',
+              'Estado',
+              'Forma de pago',
+              'Total',
+              'Pagado',
+              'Usuario',
+            ],
+            fila: (n) => [
+              n.numero,
+              diaIso(n.fecha),
+              n.cliente,
+              n.pedidoNumero,
+              n.almacen,
+              n.estado,
+              n.formaPago,
+              n.total,
+              n.totalPagado,
+              n.usuario,
+            ],
+          ),
+      ],
       onNuevo: puede(ref, 'fact.notaventa', Accion.crear)
           ? () => _abrirFormulario(context)
           : null,

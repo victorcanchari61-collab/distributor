@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
@@ -50,6 +52,34 @@ class PedidosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaPedidosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o cliente',
       onRecargar: () => ref.read(pedidosProvider.notifier).recargar(),
+      acciones: [
+        if (puede(ref, 'fact.pedidos', Accion.exportar))
+          accionExportar<Pedido>(
+            context,
+            nombre: 'pedidos',
+            filas: () => ref.read(pedidosFiltradosProvider),
+            encabezados: const [
+              'Número',
+              'Fecha',
+              'Cliente',
+              'Ruta',
+              'Condición de pago',
+              'Estado',
+              'Total',
+              'Usuario',
+            ],
+            fila: (p) => [
+              p.numero,
+              diaIso(p.fecha),
+              p.cliente,
+              p.ruta,
+              p.condicionPago,
+              p.estado,
+              p.total,
+              p.usuario,
+            ],
+          ),
+      ],
       onNuevo: puede(ref, 'fact.pedidos', Accion.crear)
           ? () => _abrirFormulario(context, null)
           : null,

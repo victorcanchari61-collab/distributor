@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
@@ -53,6 +55,38 @@ class EmpleadosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaEmpleadosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre, documento o cargo',
       onRecargar: () => ref.read(empleadosProvider.notifier).recargar(),
+      acciones: [
+        if (puede(ref, 'rrhh.empleados', Accion.exportar))
+          accionExportar<Empleado>(
+            context,
+            nombre: 'empleados',
+            filas: () => ref.read(empleadosFiltradosProvider),
+            encabezados: const [
+              'Documento',
+              'Nombres',
+              'Apellidos',
+              'Cargo',
+              'Área',
+              'Teléfono',
+              'Correo',
+              'Ingreso',
+              'Sueldo semanal',
+              'Estado',
+            ],
+            fila: (e) => [
+              e.documento,
+              e.nombres,
+              e.apellidos,
+              e.cargo,
+              e.area,
+              e.telefono,
+              e.email,
+              e.fechaIngreso == null ? null : diaIso(e.fechaIngreso!),
+              e.sueldoSemanal,
+              e.activo ? 'Activo' : 'Inactivo',
+            ],
+          ),
+      ],
       onNuevo: puede(ref, 'rrhh.empleados', Accion.crear)
           ? () => _abrirFormulario(context, null)
           : null,

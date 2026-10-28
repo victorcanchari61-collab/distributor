@@ -5,6 +5,7 @@ import '../../core/navegacion/menu.dart';
 import '../../core/red/excepciones.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
+import 'app_acciones_flotantes.dart';
 import 'app_buscador.dart';
 import 'app_shell.dart';
 import 'app_tarjeta_dato.dart';
@@ -33,6 +34,7 @@ class AppListaPagina<T> extends StatelessWidget {
     this.pistaBusqueda,
     this.onNuevo,
     this.textoNuevo = 'Nuevo',
+    this.acciones = const [],
     this.filtro,
     this.indicadores,
     this.encabezado,
@@ -62,6 +64,11 @@ class AppListaPagina<T> extends StatelessWidget {
   final VoidCallback? onNuevo;
   final String textoNuevo;
 
+  /// Las demás acciones de la PANTALLA (importar, descargar la plantilla,
+  /// exportar). Con ellas, el botón de crear y estas se juntan en un solo
+  /// botón flotante "Acciones". Las de cada fila no van aquí: van en la tarjeta.
+  final List<AccionGlobal> acciones;
+
   /// Controles propios de la pantalla junto al contador, normalmente el icono
   /// de filtros.
   final Widget? filtro;
@@ -89,20 +96,26 @@ class AppListaPagina<T> extends StatelessWidget {
     final grupo = resolverRuta(ruta).grupo;
     final color = grupo?.color ?? Colores.marca;
 
+    // Crear va primero: es la principal.
+    final todas = [
+      if (onNuevo != null)
+        AccionGlobal(
+          etiqueta: textoNuevo,
+          icono: Icons.add,
+          onTap: onNuevo!,
+          color: AccionGlobal.verde,
+        ),
+      ...acciones,
+    ];
+
     return AppShell(
       titulo: titulo,
       subtitulo: grupo?.titulo,
       acentado: color,
       rutaActual: ruta,
-      accionFlotante: onNuevo == null
+      accionFlotante: todas.isEmpty
           ? null
-          : FloatingActionButton.extended(
-              onPressed: onNuevo,
-              backgroundColor: color,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: Text(textoNuevo),
-            ),
+          : AppAccionesFlotantes(acciones: todas, colorUnica: color),
       child: Column(
         children: [
           ?pestanas,

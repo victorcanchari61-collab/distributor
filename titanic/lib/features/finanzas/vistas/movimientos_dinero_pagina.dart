@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
@@ -68,6 +70,38 @@ class MovimientosDineroPagina extends ConsumerWidget {
         }
       },
       // Ingreso y egreso a mano se dan por separado: la hoja ofrece solo los que tiene.
+      acciones: [
+        if (puede(ref, 'finanzas.movimientos', Accion.exportar))
+          accionExportar<MovimientoDinero>(
+            context,
+            nombre: 'movimientos',
+            filas: () => ref.read(movimientosDineroFiltradosProvider),
+            encabezados: const [
+              'Fecha',
+              'Cuenta',
+              'Tipo',
+              'Concepto',
+              'Categoría',
+              'Monto',
+              'Saldo',
+              'Documento',
+              'Estado',
+              'Usuario',
+            ],
+            fila: (m) => [
+              diaIso(m.fecha),
+              m.cuenta,
+              m.tipo,
+              m.concepto,
+              m.categoria,
+              m.monto,
+              m.saldoResultante,
+              m.documentoOrigen,
+              m.anulado ? 'Anulado' : 'Vigente',
+              m.usuario,
+            ],
+          ),
+      ],
       onNuevo: tipos.isNotEmpty
           ? () => abrirHojaFinanzas(context, (_) => _HojaNuevo(tipos: tipos))
           : null,

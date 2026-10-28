@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
@@ -53,6 +55,32 @@ class OrdenesCompraPagina extends ConsumerWidget {
           ref.read(busquedaOrdenesCompraProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o proveedor',
       onRecargar: () => ref.read(ordenesCompraProvider.notifier).recargar(),
+      acciones: [
+        if (puede(ref, 'compras.ordenes', Accion.exportar))
+          accionExportar<OrdenCompra>(
+            context,
+            nombre: 'ordenes-de-compra',
+            filas: () => ref.read(ordenesCompraFiltradasProvider),
+            encabezados: const [
+              'Número',
+              'Fecha',
+              'Proveedor',
+              'Fecha esperada',
+              'Estado',
+              'Total',
+              'Usuario',
+            ],
+            fila: (o) => [
+              o.numero,
+              diaIso(o.fecha),
+              o.proveedor,
+              o.fechaEsperada == null ? null : diaIso(o.fechaEsperada!),
+              o.estado,
+              o.total,
+              o.usuario,
+            ],
+          ),
+      ],
       onNuevo: puede(ref, 'compras.ordenes', Accion.crear)
           ? () => _abrirFormulario(context, null)
           : null,

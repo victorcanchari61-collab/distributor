@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../compartido/fechas.dart';
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
@@ -74,6 +76,38 @@ class DespachosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaDespachosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número, ruta o placa',
       onRecargar: () => ref.read(despachosProvider.notifier).recargar(),
+      acciones: [
+        if (puede(ref, 'tms.despachos', Accion.exportar))
+          accionExportar<Despacho>(
+            context,
+            nombre: 'despachos',
+            filas: () => ref.read(despachosFiltradosProvider),
+            encabezados: const [
+              'Número',
+              'Fecha',
+              'Ruta',
+              'Vehículo',
+              'Conductor',
+              'Estado',
+              'Pedidos',
+              'Entregados',
+              'No entregados',
+              'Total',
+            ],
+            fila: (d) => [
+              d.numero,
+              diaIso(d.fecha),
+              d.ruta,
+              d.vehiculo,
+              d.conductor,
+              d.estado,
+              d.pedidos,
+              d.entregados,
+              d.noEntregados,
+              d.total,
+            ],
+          ),
+      ],
       onNuevo: puede(ref, 'tms.despachos', Accion.crear)
           ? () => _abrirFormulario(context, null)
           : null,

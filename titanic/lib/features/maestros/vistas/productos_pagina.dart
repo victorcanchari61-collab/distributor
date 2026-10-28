@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_catalogo_simple.dart';
@@ -211,6 +212,38 @@ class ProductosPagina extends ConsumerWidget {
       onNuevo: puede(ref, 'maestros.productos', Accion.crear)
           ? () => _abrirFormulario(context, null)
           : null,
+      acciones: [
+        if (puede(ref, 'maestros.productos', Accion.exportar))
+          accionExportar<Producto>(
+            context,
+            nombre: 'productos',
+            filas: () => ref.read(productosFiltradosProvider),
+            encabezados: const [
+              'Código',
+              'Producto',
+              'Categoría',
+              'Marca',
+              'Unidad base',
+              'Costo de referencia',
+              'Precio de referencia',
+              'Afecto a IGV',
+              'Stock mínimo',
+              'Estado',
+            ],
+            fila: (p) => [
+              p.codigo,
+              p.nombre,
+              p.categoria,
+              p.marca,
+              p.unidadBase,
+              p.costoReferencia,
+              p.precioReferencia,
+              p.afectoIgv ? 'Sí' : 'No',
+              p.stockMinimo,
+              p.activo ? 'Activo' : 'Desactivado',
+            ],
+          ),
+      ],
       iconoVacio: Icons.inventory_2_outlined,
       singular: 'producto',
       plural: 'productos',
