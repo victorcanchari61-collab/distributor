@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_importar_hoja.dart';
+import '../../../compartido/csv.dart';
 import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_boton.dart';
@@ -24,6 +26,88 @@ import '../estado/maestros_controlador.dart';
 import 'producto_formulario.dart';
 import 'unidades_pestana.dart';
 import '../../../compartido/widgets/app_aviso.dart';
+
+/// La importación de productos: el catálogo del sistema anterior, con sus
+/// columnas (Codigo, Descripcion, Medida, Presentacion, Costo, Precio...).
+ImportacionConfig _importacionProductos(WidgetRef ref) {
+  // Mismo código con nombre distinto = producto distinto en el archivo viejo:
+  // se le agrega un sufijo para no perderlo. Mismo código con el mismo nombre es
+  // una fila repetida de verdad, y esa la detecta sola el backend (queda como
+  // omitida, con su motivo).
+  String unidadDesdeMedida(String medida) =>
+      switch (medida.trim().toLowerCase()) {
+        'kilos' || 'kilo' || 'kg' => 'KG',
+        'sacos' || 'saco' => 'SAC',
+        'caja' || 'cajas' => 'CJA',
+        'litros' || 'litro' => 'LT',
+        _ => 'UND',
+      };
+
+  return ImportacionConfig(
+    titulo: 'productos',
+    columnas: const [
+      'Codigo',
+      'Descripcion',
+      'Medida',
+      'Presentacion',
+      'Costo',
+      'Precio',
+      'P. Saco',
+      'P. Mayor',
+    ],
+    ejemplo: const [
+      'AC001',
+      'ACEITE VEGETAL 1L',
+      'UND',
+      '12',
+      '6.50',
+      '8.00',
+      '',
+      '7.50',
+    ],
+    // El mapa se arma una vez por importación: lleva la cuenta de los códigos
+    // que ya vio.
+    mapear: (() {
+      final vistos = <String, String>{};
+      final sufijos = <String, int>{};
+
+      return (FilaCsv fila) {
+        final codigoOriginal = valorDe(fila, ['codigo']).toUpperCase();
+        final nombre = valorDe(fila, ['descripcion']);
+
+        var codigo = codigoOriginal;
+        final previo = vistos[codigoOriginal];
+        if (codigoOriginal.isNotEmpty && previo != null && previo != nombre) {
+          final n = (sufijos[codigoOriginal] ?? 0) + 1;
+          sufijos[codigoOriginal] = n;
+          codigo = '$codigoOriginal-${String.fromCharCode(65 + n)}';
+        } else if (codigoOriginal.isNotEmpty && previo == null) {
+          vistos[codigoOriginal] = nombre;
+        }
+
+        final presentaciones = [
+          for (final n in valorDe(fila, ['presentacion']).split(','))
+            if (numeroPositivo(n) case final v? when v != 1) v,
+        ];
+        final mayor = numeroPositivo(valorDe(fila, ['p. mayor', 'p mayor']));
+
+        return {
+          'codigo': codigo,
+          'nombre': nombre,
+          'unidadBaseCodigo': unidadDesdeMedida(valorDe(fila, ['medida'])),
+          'costoReferencia': numeroPositivo(valorDe(fila, ['costo'])),
+          'presentaciones': presentaciones,
+          'precioContado': numeroPositivo(valorDe(fila, ['precio'])),
+          'precioPorSaco': numeroPositivo(valorDe(fila, ['p. saco', 'p saco'])),
+          // "1" es el relleno del sistema viejo para "no aplica".
+          'precioMayorista': mayor != null && mayor > 1 ? mayor : null,
+        };
+      };
+    })(),
+    enviar: ref.read(maestrosApiProvider).importarProductos,
+    onListo: () => ref.read(productosProvider.notifier).recargar(),
+  );
+}
 
 /// Recarga un catálogo de apoyo y espera la lista nueva.
 Future<void> _recargarCatalogo(
@@ -213,6 +297,8 @@ class ProductosPagina extends ConsumerWidget {
           ? () => _abrirFormulario(context, null)
           : null,
       acciones: [
+        if (puede(ref, 'maestros.productos', Accion.importar))
+          ...accionesImportar(context, _importacionProductos(ref)),
         if (puede(ref, 'maestros.productos', Accion.exportar))
           accionExportar<Producto>(
             context,

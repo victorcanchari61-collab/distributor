@@ -1,5 +1,7 @@
+import '../../../compartido/widgets/app_importar_hoja.dart';
 import '../../../core/red/cliente_api.dart';
 import 'catalogo.dart';
+import 'categorizacion.dart';
 import 'cliente.dart';
 import 'empleado.dart';
 import 'producto.dart';
@@ -46,6 +48,70 @@ class MaestrosApi {
         .map((e) => Cliente.desdeJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// GET /api/crm/categorizacion — los tramos y el ciclo de las categorías.
+  Future<Categorizacion> categorizacion() async => Categorizacion.desdeJson(
+    await _api.get('/crm/categorizacion') as Map<String, dynamic>,
+  );
+
+  /// PUT /api/crm/categorizacion
+  Future<Categorizacion> guardarCategorizacion(
+    Map<String, dynamic> cuerpo,
+  ) async => Categorizacion.desdeJson(
+    await _api.put('/crm/categorizacion', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
+
+  /// POST /api/crm/categorizacion/calcular — asigna a cada cliente su categoría.
+  Future<Categorizacion> calcularCategorizacion() async =>
+      Categorizacion.desdeJson(
+        await _api.post('/crm/categorizacion/calcular') as Map<String, dynamic>,
+      );
+
+  /// POST /api/cliente/importar — alta masiva desde un archivo.
+  Future<ResultadoImportacion> importarClientes(
+    List<Map<String, dynamic>> filas,
+    bool actualizarExistentes,
+  ) async => ResultadoImportacion.desdeJson(
+    await _api.post(
+          '/cliente/importar',
+          cuerpo: {
+            'filas': filas,
+            'actualizarExistentes': actualizarExistentes,
+          },
+        )
+        as Map<String, dynamic>,
+  );
+
+  /// POST /api/proveedor/importar
+  Future<ResultadoImportacion> importarProveedores(
+    List<Map<String, dynamic>> filas,
+    bool actualizarExistentes,
+  ) async => ResultadoImportacion.desdeJson(
+    await _api.post(
+          '/proveedor/importar',
+          cuerpo: {
+            'filas': filas,
+            'actualizarExistentes': actualizarExistentes,
+          },
+        )
+        as Map<String, dynamic>,
+  );
+
+  /// POST /api/producto/importar — alta masiva desde un catálogo externo.
+  Future<ResultadoImportacion> importarProductos(
+    List<Map<String, dynamic>> filas,
+    bool actualizarExistentes,
+  ) async => ResultadoImportacion.desdeJson(
+    await _api.post(
+          '/producto/importar',
+          cuerpo: {
+            'filas': filas,
+            'actualizarExistentes': actualizarExistentes,
+          },
+        )
+        as Map<String, dynamic>,
+  );
 
   /// POST /api/cliente
   Future<Cliente> crearCliente(Map<String, dynamic> cuerpo) async =>

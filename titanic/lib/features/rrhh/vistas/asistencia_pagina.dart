@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/widgets/app_alerta.dart';
@@ -53,6 +54,14 @@ class AsistenciaPagina extends ConsumerWidget {
   const AsistenciaPagina({super.key});
 
   static const ruta = '/rrhh/asistencia';
+
+  /// El reporte del mes que se mira, con un solo empleado si hay uno filtrado.
+  static String _rutaReporte(WidgetRef ref) {
+    final r = rangoDelMes(ref.watch(mesAsistenciaProvider));
+    final empleado = ref.watch(empleadoAsistenciaFiltroProvider);
+    return '/asistencia/pdf?desde=${diaIso(r.desde)}&hasta=${diaIso(r.hasta)}'
+        '${empleado == null ? '' : '&empleadoId=$empleado'}';
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -140,6 +149,12 @@ class AsistenciaPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar empleado',
       onRecargar: () => _recargar(ref),
       acciones: [
+        if (puede(ref, 'rrhh.asistencia', Accion.exportar))
+          accionReportePdf(
+            context,
+            ruta: _rutaReporte(ref),
+            nombre: 'asistencia.pdf',
+          ),
         if (puede(ref, 'rrhh.asistencia', Accion.exportar))
           accionExportar<Asistencia>(
             context,

@@ -22,6 +22,9 @@ class Cliente {
     this.mercado,
     this.vendedorId,
     this.vendedor,
+    this.categoriaCodigo,
+    this.categoriaNombre,
+    this.categoriaColor,
   });
 
   final int id;
@@ -67,6 +70,11 @@ class Cliente {
   /// Nombre del vendedor, solo para mostrar: no se envia al guardar.
   final String? vendedor;
 
+  /// La categoría que le dio el último cálculo (A a F). Nula si aún no tiene.
+  final String? categoriaCodigo;
+  final String? categoriaNombre;
+  final String? categoriaColor;
+
   final bool activo;
 
   /// Texto contra el que se busca en la lista.
@@ -95,6 +103,9 @@ class Cliente {
     mercado: json['mercado'] as String?,
     vendedorId: json['vendedorId'] as int?,
     vendedor: json['vendedor'] as String?,
+    categoriaCodigo: json['categoriaCodigo'] as String?,
+    categoriaNombre: json['categoriaNombre'] as String?,
+    categoriaColor: json['categoriaColor'] as String?,
     activo: json['activo'] as bool? ?? true,
   );
 

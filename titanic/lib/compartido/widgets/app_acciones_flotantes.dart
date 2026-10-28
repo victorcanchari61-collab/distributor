@@ -37,6 +37,8 @@ class AccionGlobal {
   static const azul = Color(0xFF0284C7);
   static const naranja = Color(0xFFEA580C);
   static const turquesa = Color(0xFF0D9488);
+  static const violeta = Color(0xFF7C3AED);
+  static const rojo = Color(0xFFDC2626);
 }
 
 /// El botón flotante de la pantalla.

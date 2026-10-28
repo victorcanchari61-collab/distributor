@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_importar_hoja.dart';
+import '../../../compartido/csv.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_boton.dart';
@@ -43,6 +45,59 @@ class ProveedoresPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaProveedoresProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por razon social, documento o rubro',
       onRecargar: () => ref.read(proveedoresProvider.notifier).recargar(),
+      acciones: [
+        if (puede(ref, 'maestros.proveedores', Accion.importar))
+          ...accionesImportar(
+            context,
+            ImportacionConfig(
+              titulo: 'proveedores',
+              columnas: const [
+                'RUC',
+                'Razón social',
+                'Nombre comercial',
+                'Dirección',
+                'Teléfono',
+                'Teléfono 2',
+                'Email',
+                'Departamento',
+                'Provincia',
+                'Distrito',
+              ],
+              ejemplo: const [
+                '20123456789',
+                'DISTRIBUIDORA SUR SAC',
+                'DISUR',
+                'AV. GRAU 456',
+                '987654321',
+                '',
+                'ventas@disur.pe',
+                'PIURA',
+                'PIURA',
+                'PIURA',
+              ],
+              mapear: (fila) => {
+                'documento': valorDe(fila, ['ruc', 'documento', 'dni']),
+                'nombre': valorDe(fila, [
+                  'razon social',
+                  'nombre',
+                  'proveedor',
+                ]),
+                'nombreComercial': valorDe(fila, ['nombre comercial']),
+                'direccion': valorDe(fila, ['direccion']),
+                'telefono': valorDe(fila, ['telefono']),
+                'telefono2': valorDe(fila, ['telefono 2', 'telefono2']),
+                // La hoja del negocio trae el rubro en la columna EMAIL: el
+                // backend separa lo que es correo de lo que no.
+                'email': valorDe(fila, ['email', 'correo']),
+                'departamento': valorDe(fila, ['departamento']),
+                'provincia': valorDe(fila, ['provincia']),
+                'distrito': valorDe(fila, ['distrito']),
+              },
+              enviar: ref.read(maestrosApiProvider).importarProveedores,
+              onListo: () => ref.read(proveedoresProvider.notifier).recargar(),
+            ),
+          ),
+      ],
       onNuevo: puede(ref, 'maestros.proveedores', Accion.crear)
           ? () => _abrirFormulario(context, null)
           : null,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
@@ -56,6 +57,12 @@ class EmpleadosPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por nombre, documento o cargo',
       onRecargar: () => ref.read(empleadosProvider.notifier).recargar(),
       acciones: [
+        if (puede(ref, 'rrhh.empleados', Accion.exportar))
+          accionReportePdf(
+            context,
+            ruta: '/empleado/pdf',
+            nombre: 'empleados.pdf',
+          ),
         if (puede(ref, 'rrhh.empleados', Accion.exportar))
           accionExportar<Empleado>(
             context,

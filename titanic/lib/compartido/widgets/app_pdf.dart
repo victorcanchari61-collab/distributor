@@ -8,6 +8,8 @@ import '../../core/red/cliente_api.dart';
 import '../../core/red/excepciones.dart';
 import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
+import 'app_acciones_flotantes.dart';
+import 'app_aviso.dart';
 import '../../core/tema/dimensiones.dart';
 
 /// Los documentos que se pueden imprimir, con la ruta que los sirve.
@@ -284,4 +286,25 @@ class _Opcion extends StatelessWidget {
       ),
     );
   }
+}
+
+/// La acción "Reporte PDF" de un listado: baja el reporte de esa ruta del API y
+/// lo abre en el visor del teléfono, desde donde se imprime o se manda por
+/// WhatsApp. Es el botón de reporte que la web tiene junto a Exportar.
+AccionGlobal accionReportePdf(
+  BuildContext context, {
+  required String ruta,
+  required String nombre,
+}) {
+  return AccionGlobal(
+    etiqueta: 'Reporte PDF',
+    icono: Icons.picture_as_pdf_outlined,
+    color: AccionGlobal.rojo,
+    onTap: () async {
+      final aviso = Aviso.de(context);
+      aviso.mostrar('Armando el reporte...');
+      final error = await abrirPdfDeRuta(ruta: ruta, nombre: nombre);
+      if (error != null) aviso.error(error);
+    },
+  );
 }

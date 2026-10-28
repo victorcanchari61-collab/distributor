@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
+import '../../../compartido/widgets/app_importar_hoja.dart';
+import 'categorizacion_hoja.dart';
+import '../../../compartido/csv.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_boton.dart';
@@ -42,6 +46,68 @@ class ClientesPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaClientesProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre, documento o punto de reparto',
       onRecargar: () => ref.read(clientesProvider.notifier).recargar(),
+      acciones: [
+        // Todos ven las categorías; quien puede editar, además las configura.
+        AccionGlobal(
+          etiqueta: puede(ref, 'crm.categorizacion', Accion.editar)
+              ? 'Categorización'
+              : 'Categorías',
+          icono: Icons.workspace_premium_outlined,
+          color: AccionGlobal.violeta,
+          onTap: () => mostrarCategorizacion(context, ref),
+        ),
+        if (puede(ref, 'maestros.clientes', Accion.importar))
+          ...accionesImportar(
+            context,
+            ImportacionConfig(
+              titulo: 'clientes',
+              columnas: const [
+                'Documento',
+                'Nombre',
+                'Direccion',
+                'Distrito',
+                'Telefono',
+                'Dias Visita',
+                'Rutas',
+                'Mercado',
+              ],
+              ejemplo: const [
+                '20123456789',
+                'BODEGA EL PROGRESO',
+                'JR. LIMA 123',
+                'PIURA',
+                '987654321',
+                'LUNES',
+                'RUTA NORTE',
+                'MERCADO CENTRAL',
+              ],
+              mapear: (fila) => {
+                'documento': valorDe(fila, [
+                  'documento',
+                  'dni',
+                  'ruc',
+                  'nro documento',
+                ]),
+                'nombre': valorDe(fila, ['nombre', 'razon social', 'cliente']),
+                'direccion': valorDe(fila, ['direccion']),
+                // Se busca por nombre en el ubigeo oficial: el archivo no
+                // trae el id.
+                'distritoNombre': valorDe(fila, ['distrito']),
+                'telefono': valorDe(fila, ['telefono', 'celular']),
+                'diaVisita': valorDe(fila, [
+                  'dias visita',
+                  'dia visita',
+                  'dia de visita',
+                ]),
+                // Se resuelven o crean por nombre: el archivo no trae el id.
+                'rutaNombre': valorDe(fila, ['rutas', 'ruta']),
+                'mercadoNombre': valorDe(fila, ['mercado', 'punto de reparto']),
+              },
+              enviar: ref.read(maestrosApiProvider).importarClientes,
+              onListo: () => ref.read(clientesProvider.notifier).recargar(),
+            ),
+          ),
+      ],
       onNuevo: puede(ref, 'maestros.clientes', Accion.crear)
           ? () => _abrirFormulario(context, null)
           : null,
@@ -306,6 +372,17 @@ class _TarjetaCliente extends StatelessWidget {
   /// listado estorban y hacen que entren menos registros en pantalla.
   List<CampoDetalle> get _campos => [
     CampoDetalle('Nombre', cliente.nombre),
+    CampoDetalle(
+      'Categoría',
+      cliente.categoriaCodigo,
+      widget: cliente.categoriaCodigo == null
+          ? null
+          : InsigniaCategoria(
+              codigo: cliente.categoriaCodigo!,
+              nombre: cliente.categoriaNombre,
+              color: cliente.categoriaColor,
+            ),
+    ),
     CampoDetalle('Dirección', cliente.direccion),
     CampoDetalle('Distrito', cliente.distrito, enTarjeta: false),
     CampoDetalle('Teléfono', cliente.telefono, enTarjeta: false),

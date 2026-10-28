@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/formato.dart';
@@ -98,6 +99,12 @@ class AdelantosPagina extends ConsumerWidget {
         }
       },
       acciones: [
+        if (puede(ref, 'rrhh.adelantos', Accion.exportar))
+          accionReportePdf(
+            context,
+            ruta: '/adelanto/pdf',
+            nombre: 'adelantos.pdf',
+          ),
         if (puede(ref, 'rrhh.adelantos', Accion.exportar))
           accionExportar<Adelanto>(
             context,
