@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
@@ -88,16 +89,21 @@ class NovedadesPagina extends ConsumerWidget {
         ),
       ],
       // El reporte va pegado al embudo porque respeta lo que ese embudo puso.
-      filtro: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          BotonFiltros(
-            activos: ref.watch(filtrosNovedadesActivosProvider),
-            color: color,
-            onAbrir: () => _abrirFiltros(context, ref),
+      acciones: [
+        // El reporte respeta lo que el embudo puso, así que sale con el filtro
+        // actual al tocarlo.
+        if (puedeExportar)
+          AccionGlobal(
+            etiqueta: 'Reporte PDF',
+            icono: Icons.picture_as_pdf_outlined,
+            color: AccionGlobal.rojo,
+            onTap: () => _abrirReporte(context, ref),
           ),
-          if (puedeExportar) const _BotonReporte(),
-        ],
+      ],
+      filtro: BotonFiltros(
+        activos: ref.watch(filtrosNovedadesActivosProvider),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
       ),
       fila: (context, novedad) => _TarjetaNovedad(
         novedad: novedad,
@@ -475,61 +481,27 @@ class NovedadesPagina extends ConsumerWidget {
 /// Se baja del servidor y no se arma con las filas del teléfono: la lista solo
 /// trae las últimas 200 y el papel lleva todo lo que pasa el filtro. Se abre con
 /// el visor del sistema, igual que el resto de PDF de la app.
-class _BotonReporte extends ConsumerStatefulWidget {
-  const _BotonReporte();
+Future<void> _abrirReporte(BuildContext context, WidgetRef ref) async {
+  // El aviso se toma antes del await: al volver, el context puede haberse ido.
+  final mensajero = Aviso.de(context);
+  mensajero.mostrar('Armando el reporte...');
 
-  @override
-  ConsumerState<_BotonReporte> createState() => _BotonReporteState();
-}
+  try {
+    final bytes = await ref
+        .read(novedadApiProvider)
+        .pdf(ref.read(consultaNovedadesProvider));
 
-class _BotonReporteState extends ConsumerState<_BotonReporte> {
-  bool _generando = false;
-
-  Future<void> _abrir() async {
-    // El aviso se toma antes del await: al volver, el context puede haberse ido.
-    final mensajero = Aviso.de(context);
-    setState(() => _generando = true);
-
-    try {
-      final bytes = await ref
-          .read(novedadApiProvider)
-          .pdf(ref.read(consultaNovedadesProvider));
-
-      // Con la fecha en el nombre, como lo nombra el servidor: son papeles que
-      // se sacan a diario y en la carpeta del teléfono conviene distinguirlos.
-      final hoy = DateTime.now().toIso8601String().substring(0, 10);
-      final carpeta = await getTemporaryDirectory();
-      final archivo = File('${carpeta.path}/novedades-$hoy.pdf');
-      await archivo.writeAsBytes(bytes);
-      await OpenFilex.open(archivo.path);
-    } on ApiExcepcion catch (e) {
-      mensajero.error(e.texto);
-    } catch (_) {
-      mensajero.error('No pudimos generar el reporte.');
-    } finally {
-      if (mounted) setState(() => _generando = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      // Mientras baja, apagado: con 2000 filas tarda y un segundo toque
-      // pediría el mismo papel dos veces.
-      onPressed: _generando ? null : _abrir,
-      tooltip: 'Reporte PDF',
-      icon: _generando
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(
-              Icons.picture_as_pdf_outlined,
-              size: 22,
-              color: Colores.tintaSuave,
-            ),
-    );
+    // Con la fecha en el nombre, como lo nombra el servidor: son papeles que
+    // se sacan a diario y en la carpeta del teléfono conviene distinguirlos.
+    final hoy = DateTime.now().toIso8601String().substring(0, 10);
+    final carpeta = await getTemporaryDirectory();
+    final archivo = File('${carpeta.path}/novedades-$hoy.pdf');
+    await archivo.writeAsBytes(bytes);
+    await OpenFilex.open(archivo.path);
+  } on ApiExcepcion catch (e) {
+    mensajero.error(e.texto);
+  } catch (_) {
+    mensajero.error('No pudimos generar el reporte.');
   }
 }
 

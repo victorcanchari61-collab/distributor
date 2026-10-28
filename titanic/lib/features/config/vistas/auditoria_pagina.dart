@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
@@ -73,35 +74,29 @@ class AuditoriaPagina extends ConsumerWidget {
           tono: DatoTono.neutral,
         ),
       ],
-      filtro: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          BotonFiltros(
-            activos:
-                (accionFiltro == null ? 0 : 1) +
-                (usuarioFiltro == null ? 0 : 1) +
-                (entidadFiltro == null ? 0 : 1),
-            color: color,
-            onAbrir: () => _abrirFiltros(context, ref),
-          ),
-          // Borrar de la bitácora es una acción con permiso propio: sin él ni
-          // se ofrece.
-          if (puede(ref, 'config.auditoria', Accion.eliminar))
-            IconButton(
-              onPressed: () => mostrarDepuracion(
-                context,
-                accion: accionFiltro,
-                usuario: usuarioFiltro,
-                entidad: entidadFiltro,
-              ),
-              tooltip: 'Depurar',
-              icon: const Icon(
-                Icons.delete_sweep_outlined,
-                size: 22,
-                color: Colores.tintaSuave,
-              ),
+      // Borrar de la bitácora es una acción con permiso propio: sin él ni se
+      // ofrece. Depura lo que los filtros dejan a la vista.
+      acciones: [
+        if (puede(ref, 'config.auditoria', Accion.eliminar))
+          AccionGlobal(
+            etiqueta: 'Depurar',
+            icono: Icons.delete_sweep_outlined,
+            color: AccionGlobal.rojo,
+            onTap: () => mostrarDepuracion(
+              context,
+              accion: accionFiltro,
+              usuario: usuarioFiltro,
+              entidad: entidadFiltro,
             ),
-        ],
+          ),
+      ],
+      filtro: BotonFiltros(
+        activos:
+            (accionFiltro == null ? 0 : 1) +
+            (usuarioFiltro == null ? 0 : 1) +
+            (entidadFiltro == null ? 0 : 1),
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref),
       ),
       fila: (context, registro) =>
           _TarjetaAuditoria(registro: registro, color: color),

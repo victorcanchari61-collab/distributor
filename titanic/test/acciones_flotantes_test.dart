@@ -87,4 +87,43 @@ void main() {
     await t.pumpWidget(_pantalla(const []));
     expect(find.byType(FloatingActionButton), findsNothing);
   });
+
+  testWidgets('las acciones van en un cuarto de circulo alrededor del boton', (
+    t,
+  ) async {
+    t.view.physicalSize = const Size(360, 700);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+
+    final iconos = [Icons.add, Icons.upload, Icons.download, Icons.description];
+    await t.pumpWidget(
+      _pantalla([
+        for (final (i, icono) in iconos.indexed)
+          AccionGlobal(etiqueta: 'A$i', icono: icono, onTap: () {}),
+      ]),
+    );
+    await t.tap(find.text('Acciones'));
+    await t.pumpAndSettle();
+
+    // El centro del boton: 16 de cada borde mas su radio de 36.
+    const centro = Offset(360 - 16 - 36, 700 - 16 - 36);
+    final puntos = [for (final i in iconos) t.getCenter(find.byIcon(i))];
+
+    // Todas a la misma distancia del boton: sobre el mismo arco.
+    final radios = [for (final p in puntos) (centro - p).distance];
+    for (final r in radios) {
+      expect(r, closeTo(radios.first, 0.5));
+    }
+
+    // La primera justo encima y la última justo a la izquierda, a su altura.
+    expect(puntos.first.dx, closeTo(centro.dx, 0.5));
+    expect(puntos.first.dy, lessThan(centro.dy));
+    expect(puntos.last.dy, closeTo(centro.dy, 0.5));
+    expect(puntos.last.dx, lessThan(centro.dx));
+
+    // Ninguna se encima con la vecina.
+    for (var i = 0; i < puntos.length - 1; i++) {
+      expect((puntos[i] - puntos[i + 1]).distance, greaterThan(52));
+    }
+  });
 }

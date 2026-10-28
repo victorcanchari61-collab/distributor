@@ -161,11 +161,11 @@ class _Abanico extends StatelessWidget {
   final Color color;
   final Animation<double> animacion;
 
-  /// Lo que separa una acción de la siguiente, en vertical.
-  static const double _paso = 62;
+  /// El radio del arco más chico: con pocas acciones no hace falta más.
+  static const double _radioMinimo = 110;
 
-  /// Cuánto se curva el arco hacia la izquierda en su punto medio.
-  static const double _curva = 44;
+  /// Lo que separa los centros de dos acciones vecinas, para que no se pisen.
+  static const double _separacion = 64;
 
   @override
   Widget build(BuildContext context) {
@@ -178,6 +178,15 @@ class _Abanico extends StatelessWidget {
     const radio = _lado / 2;
     const icono = 48.0;
 
+    // Las acciones van sobre un cuarto de círculo con centro en el botón: la
+    // primera justo encima y la última justo a su izquierda, a su misma altura.
+    // El radio crece lo justo para que, repartidas en ese cuarto, queden a
+    // `_separacion` unas de otras.
+    final paso = n > 1 ? (math.pi / 2) / (n - 1) : 0.0;
+    final radioArco = n > 1
+        ? math.max(_radioMinimo, _separacion / (2 * math.sin(paso / 2)))
+        : _radioMinimo;
+
     return Material(
       type: MaterialType.transparency,
       child: Stack(
@@ -189,24 +198,36 @@ class _Abanico extends StatelessWidget {
             ),
           ),
 
-          // La primera de la lista es la más alta: es la principal. Cada una
-          // sube un paso y se desplaza a un lado siguiendo un arco, que es lo
-          // que hace que se vea circular y no una columna recta.
+          // La primera de la lista es la principal: va arriba del botón.
           for (var i = 0; i < n; i++)
             AnimatedBuilder(
               animation: t,
               builder: (context, hijo) {
-                final k = n - i; // 1 la más cercana al botón, n la más alta
-                final y = _paso * k + 8;
-                final desvio = _curva * math.sin(math.pi * (k - 0.5) / n);
+                // 0 = justo arriba, 90 grados = justo a la izquierda.
+                final angulo = paso * i;
                 final avance = t.value.clamp(0.0, 1.2);
+                final r = radioArco * avance;
+
+                final derecha =
+                    borde + radio - icono / 2 + r * math.sin(angulo);
 
                 return Positioned(
-                  right: borde + radio - icono / 2 + desvio * avance,
-                  bottom: bajo + borde + radio - icono / 2 + y * avance,
-                  child: Opacity(
-                    opacity: animacion.value.clamp(0.0, 1.0),
-                    child: hijo,
+                  right: derecha,
+                  bottom:
+                      bajo + borde + radio - icono / 2 + r * math.cos(angulo),
+                  // En un teléfono angosto la etiqueta no puede pasar del borde
+                  // izquierdo: se acorta con puntos suspensivos.
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: math.max(
+                        icono,
+                        MediaQuery.sizeOf(context).width - derecha - 8,
+                      ),
+                    ),
+                    child: Opacity(
+                      opacity: animacion.value.clamp(0.0, 1.0),
+                      child: hijo,
+                    ),
                   ),
                 );
               },
@@ -251,21 +272,25 @@ class _Fila extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: Dimen.espacio4,
-                vertical: Dimen.espacio2,
-              ),
-              decoration: BoxDecoration(
-                color: Colores.tinta.withValues(alpha: 0.88),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                accion.etiqueta,
-                style: TextStyle(
-                  color: Color.lerp(accion.color, Colors.white, 0.65),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Dimen.espacio4,
+                  vertical: Dimen.espacio2,
+                ),
+                decoration: BoxDecoration(
+                  color: Colores.tinta.withValues(alpha: 0.88),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  accion.etiqueta,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Color.lerp(accion.color, Colors.white, 0.65),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ),

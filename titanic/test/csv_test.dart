@@ -24,14 +24,17 @@ void main() {
     expect(numeroPositivo(t.filas.single['costo']!), 6.5);
   });
 
-  test('valorDe prueba los nombres en orden y numeroPositivo descarta ceros', () {
-    final fila = {'ruc': ' 20123 ', 'dni': ''};
+  test(
+    'valorDe prueba los nombres en orden y numeroPositivo descarta ceros',
+    () {
+      final fila = {'ruc': ' 20123 ', 'dni': ''};
 
-    expect(valorDe(fila, ['dni', 'ruc']), '20123');
-    expect(valorDe(fila, ['otro']), '');
-    expect(numeroPositivo('0'), isNull);
-    expect(numeroPositivo('abc'), isNull);
-  });
+      expect(valorDe(fila, ['dni', 'ruc']), '20123');
+      expect(valorDe(fila, ['otro']), '');
+      expect(numeroPositivo('0'), isNull);
+      expect(numeroPositivo('abc'), isNull);
+    },
+  );
 
   test('un archivo vacío no trae filas', () {
     expect(leerCsv('').filas, isEmpty);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/widgets/app_boton.dart';
@@ -61,29 +62,31 @@ class ListasPreciosPagina extends ConsumerWidget {
     final puedeEliminar = puede(ref, 'fact.precios', Accion.eliminar);
 
     // Las acciones de la LISTA, no de cada precio: actuan sobre la que esta
-    // abierta. "Nueva lista" va con ellas, como en la cabecera de la web.
-    final accionesLista = <Widget>[
-      if (activa != null && puedeEditar)
-        _AccionLista(
-          texto: 'Editar lista',
-          icono: Icons.edit_outlined,
-          onPressed: () => mostrarFormularioLista(context, ref, lista: activa),
-        ),
-      if (activa != null && puedeEliminar)
-        _AccionLista(
-          texto: 'Eliminar lista',
-          icono: Icons.delete_outline,
-          // La predeterminada no se borra: dejaria sin precio a todo cliente
-          // que no tenga lista propia.
-          onPressed: activa.esPredeterminada
-              ? null
-              : () => _eliminarLista(context, ref, activa!),
-        ),
+    // abierta. Van en el boton flotante, junto a "Agregar precio", como las
+    // demas acciones de pantalla.
+    final accionesLista = <AccionGlobal>[
       if (puedeCrear)
-        _AccionLista(
-          texto: 'Nueva lista',
-          icono: Icons.add,
-          onPressed: () => _nuevaLista(context, ref),
+        AccionGlobal(
+          etiqueta: 'Nueva lista',
+          icono: Icons.playlist_add,
+          color: AccionGlobal.azul,
+          onTap: () => _nuevaLista(context, ref),
+        ),
+      if (activa != null && puedeEditar)
+        AccionGlobal(
+          etiqueta: 'Editar lista',
+          icono: Icons.edit_outlined,
+          color: AccionGlobal.naranja,
+          onTap: () => mostrarFormularioLista(context, ref, lista: activa),
+        ),
+      // La predeterminada no se borra: dejaria sin precio a todo cliente que no
+      // tenga lista propia. Con ella abierta la accion no se ofrece.
+      if (activa != null && puedeEliminar && !activa.esPredeterminada)
+        AccionGlobal(
+          etiqueta: 'Eliminar lista',
+          icono: Icons.delete_outline,
+          color: AccionGlobal.rojo,
+          onTap: () => _eliminarLista(context, ref, activa!),
         ),
     ];
     final conBanner = activa != null && !activa.esPredeterminada && puedeEditar;
@@ -104,6 +107,7 @@ class ListasPreciosPagina extends ConsumerWidget {
           ? null
           : () => _abrirPrecios(context, ref, activa!),
       textoNuevo: 'Agregar precio',
+      acciones: accionesLista,
       iconoVacio: Icons.payments_outlined,
       singular: 'precio',
       plural: 'precios',
@@ -132,64 +136,40 @@ class ListasPreciosPagina extends ConsumerWidget {
                   ),
               ],
             ),
-      encabezado: accionesLista.isEmpty && !conBanner
-          ? null
-          : Column(
-              children: [
-                if (accionesLista.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: Dimen.espacio4,
-                    ),
-                    child: Row(
-                      children: [
-                        for (var i = 0; i < accionesLista.length; i++) ...[
-                          if (i > 0) const SizedBox(width: Dimen.espacio2),
-                          Expanded(child: accionesLista[i]),
-                        ],
-                      ],
-                    ),
-                  ),
-                if (activa != null && conBanner) ...[
-                  if (accionesLista.isNotEmpty)
-                    const SizedBox(height: Dimen.espacio2),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: Dimen.espacio4,
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: Dimen.espacio3,
-                        vertical: Dimen.espacio2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${activa.nombre} no es la lista predeterminada.',
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: Colores.tinta,
-                              ),
-                            ),
-                          ),
-                          AppBoton(
-                            texto: 'Marcar predeterminada',
-                            variante: BotonVariante.texto,
-                            onPressed: () =>
-                                _marcarPredeterminada(context, ref, activa!),
-                          ),
-                        ],
+      encabezado: activa != null && conBanner
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Dimen.espacio3,
+                  vertical: Dimen.espacio2,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${activa.nombre} no es la lista predeterminada.',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: Colores.tinta,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    AppBoton(
+                      texto: 'Marcar predeterminada',
+                      variante: BotonVariante.texto,
+                      onPressed: () =>
+                          _marcarPredeterminada(context, ref, activa!),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
       indicadores: [
         AppTarjetaDato(
           etiqueta: 'Precios en la lista',
@@ -383,49 +363,6 @@ class ListasPreciosPagina extends ConsumerWidget {
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
     }
-  }
-}
-
-/// Botón compacto para una acción de la lista abierta.
-///
-/// Son hasta tres en una fila del teléfono (editar, eliminar, nueva): con el
-/// relleno del AppBoton el texto no entraba y salía cortado.
-class _AccionLista extends StatelessWidget {
-  const _AccionLista({
-    required this.texto,
-    required this.icono,
-    this.onPressed,
-  });
-
-  final String texto;
-  final IconData icono;
-
-  /// Null la deja apagada (la predeterminada no se elimina).
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(Dimen.campoSm),
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Dimen.radioCampo),
-        ),
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icono, size: 16),
-          const SizedBox(width: Dimen.espacio1),
-          Flexible(
-            child: Text(texto, maxLines: 1, overflow: TextOverflow.ellipsis),
-          ),
-        ],
-      ),
-    );
   }
 }
 
