@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { UsersRound } from 'lucide-react'
 import { BarChart, DonutChart, HBarChart, Marco, moneda } from '../../components/charts'
-import { Alert, PageHeader, SysDataTable } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import { Alert, ListPage } from '../../components/ui'
+import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { hoyLocal } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 import { crmApi } from './crmApi'
 import type { EstadoClave, FilaVendedor, VendedoresCaida } from './crmApi'
-import { FiltroFechas, inicioDeAnio } from './filtros'
+import { inicioDeAnio } from './filtros'
 import { ESTADOS_UI, ORDEN_ESTADOS, colorCambio, nombreCorto, porcentaje, soles, solesConSigno } from './formato'
 import { ICONO_ESTADO } from './iconosEstado'
 import { EtiquetaEstado, TarjetaReporte } from './piezas'
@@ -18,8 +18,11 @@ import { EtiquetaEstado, TarjetaReporte } from './piezas'
  * estados que los clientes. Además dice cuántos de sus clientes están bajando, que es de donde sale la caída.
  */
 export function VendedoresCaidaPage() {
-  const [desde, setDesde] = useState(inicioDeAnio())
-  const [hasta, setHasta] = useState(hoyLocal())
+  // El tramo lo elige el panel de filtros de la tabla, con los demás.
+  const [desdeInicial] = useState(inicioDeAnio())
+  const [hastaInicial] = useState(hoyLocal())
+  const [desde, setDesde] = useState(desdeInicial)
+  const [hasta, setHasta] = useState(hastaInicial)
   const [estado, setEstado] = useState<EstadoClave>()
 
   const [datos, setDatos] = useState<VendedoresCaida | null>(null)
@@ -46,6 +49,8 @@ export function VendedoresCaidaPage() {
 
   const columnas: DataTableColumn<FilaVendedor>[] = useMemo(
     () => [
+      // Solo existe en el panel de Filtros: decide qué se pide (ver SysDataTable).
+      { key: 'fecha', label: 'Fechas', soloFiltro: true, filterType: 'date' },
       {
         key: 'estado', width: 120,
         label: 'Estado',
@@ -99,6 +104,19 @@ export function VendedoresCaidaPage() {
     [],
   )
 
+  /** Traduce el panel de filtros al tramo que se pide. */
+  const aplicar = useCallback(
+    (q: ConsultaTabla) => {
+      const fecha = q.filtros.find((f) => f.columna === 'fecha')
+      const d = fecha?.valor || desdeInicial
+      const h = fecha?.valorHasta || fecha?.valor || hastaInicial
+      // Cada tecla del buscador también llega aquí: sin esta comparación se volvería a pedir todo.
+      setDesde((previo) => (previo === d ? previo : d))
+      setHasta((previo) => (previo === h ? previo : h))
+    },
+    [desdeInicial, hastaInicial],
+  )
+
   const resumen = datos?.estados ?? []
   const items = useMemo(() => (datos?.items ?? []).filter((f) => !estado || f.estado === estado), [datos, estado])
   const mayoresRiesgo = useMemo(
@@ -107,123 +125,120 @@ export function VendedoresCaidaPage() {
   )
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        icon={<UsersRound size={20} />}
-        title="Vendedores con caída"
-        description="Cuánto vendió cada vendedor frente al mismo tramo del año anterior, y cuántos de sus clientes están bajando."
-      />
+    <ListPage
+      icon={<UsersRound size={20} />}
+      title="Vendedores con caída"
+      description="Cuánto vendió cada vendedor frente al mismo tramo del año anterior, y cuántos de sus clientes están bajando."
+      alert={error ? <Alert>{error}</Alert> : undefined}
+      banner={
+        <div className="space-y-4">
+          {datos && (
+            <p className="text-xs text-ink-soft">
+              Del {datos.periodo.etiqueta} frente al {datos.periodo.etiquetaAnterior}. Ventas con IGV, sin anuladas ni recojos. Las fechas se
+              eligen en el ícono de filtros de la tabla.
+            </p>
+          )}
 
-      {error && <Alert>{error}</Alert>}
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {ORDEN_ESTADOS.map((e) => {
+              const ui = ESTADOS_UI[e]
+              const fila = resumen.find((r) => r.estado === e)
+              return (
+                <TarjetaReporte
+                  key={e}
+                  titulo={ui.etiqueta}
+                  nota={ui.rango}
+                  valor={fila?.clientes ?? 0}
+                  detalle={e === 'SIN_BASE' ? 'sin ventas el año anterior' : e === 'NORMAL' ? 'venden igual o casi' : `${soles(fila?.monto ?? 0)} en riesgo`}
+                  icono={ICONO_ESTADO[e]}
+                  color={ui.color}
+                  activa={estado === e}
+                  onClick={() => setEstado(estado === e ? undefined : e)}
+                />
+              )
+            })}
+          </section>
 
-      <section className="rounded-panel border border-line bg-white p-4">
-        <FiltroFechas desde={desde} hasta={hasta} onChange={(d, h) => { setDesde(d); setHasta(h) }} />
-        {datos && (
-          <p className="mt-3 text-xs text-ink-soft">
-            Del {datos.periodo.etiqueta} frente al {datos.periodo.etiquetaAnterior}. Ventas con IGV, sin anuladas ni recojos.
-          </p>
-        )}
-      </section>
+          <section className="grid gap-4 lg:grid-cols-3">
+            <Marco
+              titulo="Vendedores por estado"
+              subtitulo={datos ? `${soles(items.reduce((s, f) => s + f.ventaActual, 0))} vendidos en el tramo` : undefined}
+              cargando={cargando && !datos}
+              vacio={resumen.every((r) => r.clientes === 0)}
+              mensajeVacio="Ningún vendedor vendió en este tramo"
+              alto={168}
+            >
+              <DonutChart
+                porciones={ORDEN_ESTADOS.filter((e) => (resumen.find((r) => r.estado === e)?.clientes ?? 0) > 0).map((e) => ({
+                  nombre: ESTADOS_UI[e].etiqueta,
+                  valor: resumen.find((r) => r.estado === e)?.clientes ?? 0,
+                  color: ESTADOS_UI[e].color,
+                }))}
+                formato={(n) => `${n} ${n === 1 ? 'vendedor' : 'vendedores'}`}
+                centro={{ titulo: 'Vendedores', valor: String(resumen.reduce((s, r) => s + r.clientes, 0)) }}
+              />
+            </Marco>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {ORDEN_ESTADOS.map((e) => {
-          const ui = ESTADOS_UI[e]
-          const fila = resumen.find((r) => r.estado === e)
-          return (
-            <TarjetaReporte
-              key={e}
-              titulo={ui.etiqueta}
-              nota={ui.rango}
-              valor={fila?.clientes ?? 0}
-              detalle={e === 'SIN_BASE' ? 'sin ventas el año anterior' : e === 'NORMAL' ? 'venden igual o casi' : `${soles(fila?.monto ?? 0)} en riesgo`}
-              icono={ICONO_ESTADO[e]}
-              color={ui.color}
-              activa={estado === e}
-              onClick={() => setEstado(estado === e ? undefined : e)}
-            />
-          )
-        })}
-      </section>
+            <Marco
+              titulo="Dónde está el mayor monto en riesgo"
+              subtitulo="Lo que dejaron de comprar los clientes de cada vendedor"
+              cargando={cargando && !datos}
+              vacio={mayoresRiesgo.length === 0}
+              mensajeVacio="Ningún vendedor tiene clientes que hayan bajado"
+              alto={168}
+            >
+              <HBarChart
+                items={mayoresRiesgo.map((f) => ({
+                  nombre: nombreCorto(f.vendedor),
+                  valor: f.montoRiesgo,
+                  color: ESTADOS_UI[f.estado].color,
+                  detalle: `${f.clientesEnCaida} ${f.clientesEnCaida === 1 ? 'cliente' : 'clientes'}`,
+                }))}
+                formato={(n) => moneda(n)}
+              />
+            </Marco>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <Marco
-          titulo="Vendedores por estado"
-          subtitulo={datos ? `${soles(items.reduce((s, f) => s + f.ventaActual, 0))} vendidos en el tramo` : undefined}
-          cargando={cargando && !datos}
-          vacio={resumen.every((r) => r.clientes === 0)}
-          mensajeVacio="Ningún vendedor vendió en este tramo"
-          alto={168}
-        >
-          <DonutChart
-            porciones={ORDEN_ESTADOS.filter((e) => (resumen.find((r) => r.estado === e)?.clientes ?? 0) > 0).map((e) => ({
-              nombre: ESTADOS_UI[e].etiqueta,
-              valor: resumen.find((r) => r.estado === e)?.clientes ?? 0,
-              color: ESTADOS_UI[e].color,
-            }))}
-            formato={(n) => `${n} ${n === 1 ? 'vendedor' : 'vendedores'}`}
-            centro={{ titulo: 'Vendedores', valor: String(resumen.reduce((s, r) => s + r.clientes, 0)) }}
-          />
-        </Marco>
-
-        <Marco
-          titulo="Dónde está el mayor monto en riesgo"
-          subtitulo="Lo que dejaron de comprar los clientes de cada vendedor"
-          cargando={cargando && !datos}
-          vacio={mayoresRiesgo.length === 0}
-          mensajeVacio="Ningún vendedor tiene clientes que hayan bajado"
-          alto={168}
-        >
-          <HBarChart
-            items={mayoresRiesgo.map((f) => ({
-              nombre: nombreCorto(f.vendedor),
-              valor: f.montoRiesgo,
-              color: ESTADOS_UI[f.estado].color,
-              detalle: `${f.clientesEnCaida} ${f.clientesEnCaida === 1 ? 'cliente' : 'clientes'}`,
-            }))}
-            formato={(n) => moneda(n)}
-          />
-        </Marco>
-
-        <Marco
-          titulo="Ventas por vendedor"
-          subtitulo="El tramo actual frente al mismo tramo del año anterior"
-          cargando={cargando && !datos}
-          vacio={items.length === 0}
-          mensajeVacio="Ningún vendedor vendió en este tramo"
-          alto={200}
-          derecha={
-            <span className="flex items-center gap-3 text-[11px] text-ink-muted">
-              <span className="flex items-center gap-1.5">
-                <span className="size-2 rounded-sm bg-violet-600" /> Actual
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="size-2 rounded-sm bg-slate-300" /> Anterior
-              </span>
-            </span>
-          }
-        >
-          <BarChart
-            etiquetas={items.map((f) => nombreCorto(f.vendedor))}
-            etiquetasLargas={items.map((f) => f.vendedor)}
-            series={[
-              { id: 'anterior', nombre: datos?.periodo.etiquetaAnterior ?? 'Año anterior', color: '#cbd5e1', valores: items.map((f) => f.ventaAnterior) },
-              { id: 'actual', nombre: datos?.periodo.etiqueta ?? 'Actual', color: '#7c3aed', valores: items.map((f) => f.ventaActual) },
-            ]}
-            formato={(n) => moneda(n)}
-            alto={200}
-          />
-        </Marco>
-      </section>
-
-      <SysDataTable
-        columns={columnas}
-        rows={items}
-        rowKey="usuarioId"
-        toolbar={false}
-        pageSize={15}
-        cardIcon={UsersRound}
-        empty={cargando ? 'Cargando vendedores...' : 'Ningún vendedor vendió en este tramo.'}
-      />
-    </div>
+            <Marco
+              titulo="Ventas por vendedor"
+              subtitulo="El tramo actual frente al mismo tramo del año anterior"
+              cargando={cargando && !datos}
+              vacio={items.length === 0}
+              mensajeVacio="Ningún vendedor vendió en este tramo"
+              alto={200}
+              derecha={
+                <span className="flex items-center gap-3 text-[11px] text-ink-muted">
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-sm bg-violet-600" /> Actual
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-sm bg-slate-300" /> Anterior
+                  </span>
+                </span>
+              }
+            >
+              <BarChart
+                etiquetas={items.map((f) => nombreCorto(f.vendedor))}
+                etiquetasLargas={items.map((f) => f.vendedor)}
+                series={[
+                  { id: 'anterior', nombre: datos?.periodo.etiquetaAnterior ?? 'Año anterior', color: '#cbd5e1', valores: items.map((f) => f.ventaAnterior) },
+                  { id: 'actual', nombre: datos?.periodo.etiqueta ?? 'Actual', color: '#7c3aed', valores: items.map((f) => f.ventaActual) },
+                ]}
+                formato={(n) => moneda(n)}
+                alto={200}
+              />
+            </Marco>
+          </section>
+        </div>
+      }
+      columns={columnas}
+      rows={items}
+      rowKey="usuarioId"
+      onConsulta={aplicar}
+      filtrosIniciales={[{ column: 'fecha', operator: 'between', value: desdeInicial, valueTo: hastaInicial }]}
+      pageSize={15}
+      cardIcon={UsersRound}
+      searchPlaceholder="Buscar vendedor..."
+      empty={cargando ? 'Cargando vendedores...' : 'Ningún vendedor vendió en este tramo.'}
+    />
   )
 }
