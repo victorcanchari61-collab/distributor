@@ -21,7 +21,7 @@ const SUBMODULO = 'crm.seguimiento'
 
 /**
  * Gestión y seguimiento de clientes: se busca un cliente y aparece su ficha (resumen, seguimiento, compras y documentos).
- * Los reportes de Clientes con caída e inactivos la abren ya con el cliente elegido: `?cliente=17&pestana=seguimiento`.
+ * Clientes con caída la abre ya con el cliente elegido: `?cliente=17&pestana=seguimiento`.
  */
 export function SeguimientoPage() {
   const { puede } = usePermisos()

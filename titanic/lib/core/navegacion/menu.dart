@@ -406,12 +406,6 @@ const menuGrupos = <MenuGrupo>[
         icono: Icons.trending_down,
       ),
       MenuItem(
-        id: 'crm.inactivos',
-        pendiente: false,
-        titulo: 'Clientes inactivos',
-        icono: Icons.person_off_outlined,
-      ),
-      MenuItem(
         id: 'crm.vendedores',
         pendiente: false,
         titulo: 'Vendedores con caída',

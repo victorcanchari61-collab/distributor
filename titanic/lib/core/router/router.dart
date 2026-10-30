@@ -13,7 +13,6 @@ import '../../features/config/vistas/empresas_pagina.dart';
 import '../../features/config/vistas/roles_pagina.dart';
 import '../../features/config/vistas/usuarios_pagina.dart';
 import '../../features/crm/vistas/caida_pagina.dart';
-import '../../features/crm/vistas/inactivos_pagina.dart';
 import '../../features/crm/vistas/seguimiento_pagina.dart';
 import '../../features/crm/vistas/vendedores_caida_pagina.dart';
 import '../../features/dashboard/vistas/sin_ventas_pagina.dart';
@@ -395,11 +394,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, estado) => const PuertaPermiso(child: CaidaPagina()),
       ),
       GoRoute(
-        path: InactivosPagina.ruta,
-        builder: (context, estado) =>
-            const PuertaPermiso(child: InactivosPagina()),
-      ),
-      GoRoute(
         path: VendedoresCaidaPagina.ruta,
         builder: (context, estado) =>
             const PuertaPermiso(child: VendedoresCaidaPagina()),
@@ -419,7 +413,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != ZonasPagina.ruta &&
               item.ruta != SeguimientoPagina.ruta &&
               item.ruta != CaidaPagina.ruta &&
-              item.ruta != InactivosPagina.ruta &&
               item.ruta != VendedoresCaidaPagina.ruta &&
               item.ruta != VentasDashboardPagina.ruta &&
               item.ruta != RentabilidadDashboardPagina.ruta &&

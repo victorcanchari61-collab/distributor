@@ -231,6 +231,15 @@ void main() {
     },
   );
 
+  test('los tramos de inactividad cortan por días sin comprar', () {
+    expect(TramoInactividad.de16a30.incluye(15), isFalse);
+    expect(TramoInactividad.de16a30.incluye(16), isTrue);
+    expect(TramoInactividad.de31a60.incluye(32), isTrue);
+    expect(TramoInactividad.desde61.incluye(400), isTrue);
+    // Quien nunca compró no tiene días: no cae en ningún tramo.
+    expect(TramoInactividad.desde61.incluye(null), isFalse);
+  });
+
   test('los soles llevan miles, y las variaciones su signo', () {
     expect(soles(1234567), 'S/ 1,234,567');
     expect(soles(-11120), '−S/ 11,120');

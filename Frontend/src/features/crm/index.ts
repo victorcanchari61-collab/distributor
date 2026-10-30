@@ -1,6 +1,5 @@
 export { SeguimientoPage } from './SeguimientoPage'
 export { CaidaPage } from './CaidaPage'
-export { InactivosPage } from './InactivosPage'
 export { VendedoresCaidaPage } from './VendedoresCaidaPage'
 export { CategoriaBadge } from './CategoriaBadge'
 export { crmApi } from './crmApi'

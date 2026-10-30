@@ -58,7 +58,7 @@ import {
   RutasPage,
 } from './features/tms'
 import { DevolucionesPage, VisitasPage } from './features/dms'
-import { CaidaPage, InactivosPage, SeguimientoPage, VendedoresCaidaPage } from './features/crm'
+import { CaidaPage, SeguimientoPage, VendedoresCaidaPage } from './features/crm'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
 import { PermisosProvider, usePermisos } from './lib/permisos'
@@ -103,7 +103,6 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'tms.motivos': MotivosNovedadPage,
   'crm.seguimiento': SeguimientoPage,
   'crm.caida': CaidaPage,
-  'crm.inactivos': InactivosPage,
   'crm.vendedores': VendedoresCaidaPage,
   'dms.visitas': VisitasPage,
   'dms.devoluciones': DevolucionesPage,

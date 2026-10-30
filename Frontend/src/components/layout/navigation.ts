@@ -46,7 +46,6 @@ import {
   Truck,
   UserCog,
   UserSearch,
-  UserX,
   UsersRound,
   Users,
   Warehouse,
@@ -237,7 +236,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'crm.seguimiento', label: 'Gestión y seguimiento', icon: UserSearch },
       { id: 'crm.caida', label: 'Clientes con caída', icon: TrendingDown },
-      { id: 'crm.inactivos', label: 'Clientes inactivos', icon: UserX },
       { id: 'crm.vendedores', label: 'Vendedores con caída', icon: UsersRound },
     ],
   },

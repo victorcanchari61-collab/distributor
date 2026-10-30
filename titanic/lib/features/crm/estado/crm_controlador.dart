@@ -32,6 +32,26 @@ final mercadoCaidaFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
 
+/// Los que dejaron de comprar: por cuántos días llevan sin hacerlo. Cada fila ya
+/// trae sus días, así que se acota aquí y no en el servidor.
+enum TramoInactividad {
+  de16a30('16 a 30 días', 16, 30),
+  de31a60('31 a 60 días', 31, 60),
+  desde61('61 días o más', 61, null);
+
+  const TramoInactividad(this.etiqueta, this.desde, this.hasta);
+
+  final String etiqueta;
+  final int desde;
+  final int? hasta;
+
+  bool incluye(int? dias) =>
+      dias != null && dias >= desde && (hasta == null || dias <= hasta!);
+}
+
+final inactividadCaidaFiltroProvider =
+    StateProvider.autoDispose<TramoInactividad?>((ref) => null);
+
 final caidaProvider = FutureProvider.autoDispose<CaidaClientes>((ref) {
   final rango = ref.watch(rangoCaidaProvider);
   return ref
@@ -51,12 +71,14 @@ final caidaFiltradaProvider = Provider.autoDispose<List<FilaCaida>>((ref) {
   final texto = ref.watch(busquedaCaidaProvider).trim().toLowerCase();
   final vendedor = ref.watch(vendedorCaidaFiltroProvider);
   final mercado = ref.watch(mercadoCaidaFiltroProvider);
+  final inactividad = ref.watch(inactividadCaidaFiltroProvider);
 
   return [
     for (final f in todos)
       if ((texto.isEmpty || f.buscable.contains(texto)) &&
           (vendedor == null || f.vendedor == vendedor) &&
-          (mercado == null || f.mercado == mercado))
+          (mercado == null || f.mercado == mercado) &&
+          (inactividad == null || inactividad.incluye(f.diasSinCompra)))
         f,
   ];
 });
@@ -73,43 +95,6 @@ final queDejoDeComprarProvider = FutureProvider.autoDispose
             hasta: _hasta(rango),
           );
     });
-
-// -------------------------------------------------------- Clientes inactivos
-
-final estadoInactivosFiltroProvider = StateProvider.autoDispose<EstadoCaida?>(
-  (ref) => null,
-);
-final busquedaInactivosProvider = StateProvider.autoDispose((ref) => '');
-final vendedorInactivosFiltroProvider = StateProvider.autoDispose<String?>(
-  (ref) => null,
-);
-final mercadoInactivosFiltroProvider = StateProvider.autoDispose<String?>(
-  (ref) => null,
-);
-
-final inactivosProvider = FutureProvider.autoDispose<Inactivos>(
-  (ref) => ref
-      .watch(crmApiProvider)
-      .inactivos(estado: ref.watch(estadoInactivosFiltroProvider)),
-);
-
-final inactivosFiltradosProvider = Provider.autoDispose<List<FilaInactivo>>((
-  ref,
-) {
-  final todos =
-      ref.watch(inactivosProvider).valueOrNull?.items ?? const <FilaInactivo>[];
-  final texto = ref.watch(busquedaInactivosProvider).trim().toLowerCase();
-  final vendedor = ref.watch(vendedorInactivosFiltroProvider);
-  final mercado = ref.watch(mercadoInactivosFiltroProvider);
-
-  return [
-    for (final f in todos)
-      if ((texto.isEmpty || f.buscable.contains(texto)) &&
-          (vendedor == null || f.vendedor == vendedor) &&
-          (mercado == null || f.mercado == mercado))
-        f,
-  ];
-});
 
 // ------------------------------------------------------ Vendedores con caída
 

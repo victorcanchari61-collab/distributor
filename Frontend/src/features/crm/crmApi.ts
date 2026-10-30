@@ -105,46 +105,6 @@ export interface QueDejoDeComprar {
   productos: SituacionProductoFila[]
 }
 
-// --- Clientes inactivos ---
-
-export interface FilaInactivo {
-  id: number
-  codigo: string
-  cliente: string
-  documento: string
-  telefono: string | null
-  vendedor: string | null
-  mercado: string | null
-  ruta: string | null
-  categoriaCodigo: string | null
-  categoria: string | null
-  categoriaColor: string | null
-  ultimaCompra: string
-  diasSinCompra: number
-  /** Lo comprado en los últimos 12 meses: lo que se pierde si no vuelve. */
-  ventas12m: number
-  compras12m: number
-  ticketPromedio: number
-  estado: EstadoClave
-}
-
-export interface Inactivos {
-  corte: string
-  estados: EstadoResumen[]
-  soloPropios: boolean
-  items: FilaInactivo[]
-  /** Clientes activos que nunca compraron: aparte de la lista. */
-  nuncaCompraron: number
-}
-
-export interface ConsultaInactivos {
-  mercadoId?: number
-  rutaId?: number
-  vendedorId?: number
-  estado?: EstadoClave
-  buscar?: string
-}
-
 // --- Vendedores con caída ---
 
 export interface FilaVendedor {
@@ -330,6 +290,5 @@ export const crmApi = {
   caida: (c: ConsultaCaida) => api.get<CaidaClientes>(`/crm/caida${query({ ...c })}`),
   queDejoDeComprar: (clienteId: number, c: { desde?: string; hasta?: string }) =>
     api.get<QueDejoDeComprar>(`/crm/caida/${clienteId}/productos${query({ ...c })}`),
-  inactivos: (c: ConsultaInactivos) => api.get<Inactivos>(`/crm/inactivos${query({ ...c })}`),
   vendedores: (c: { desde?: string; hasta?: string }) => api.get<VendedoresCaida>(`/crm/vendedores${query({ ...c })}`),
 }

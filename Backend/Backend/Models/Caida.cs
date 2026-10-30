@@ -39,19 +39,6 @@ public static class EstadoCaida
         return Normal;
     }
 
-    /// <summary>
-    /// El estado por días sin comprar (Clientes inactivos): 0 a 15 normal, 16 a 30 en seguimiento, 31 a 60 en riesgo,
-    /// 61 o más crítico. Un cliente que nunca compró no tiene días: queda "Sin comparación".
-    /// </summary>
-    public static string ClasificarDias(int? dias) => dias switch
-    {
-        null => SinBase,
-        >= 61 => Critico,
-        >= 31 => Riesgo,
-        >= 16 => Seguimiento,
-        _ => Normal,
-    };
-
     /// <summary>La caída en %: positiva si compra menos que antes. Nula si el año anterior no compró.</summary>
     public static decimal? CaidaPct(decimal actual, decimal anterior) =>
         anterior > 0 ? Math.Round((anterior - actual) / anterior * 100m, 1) : null;

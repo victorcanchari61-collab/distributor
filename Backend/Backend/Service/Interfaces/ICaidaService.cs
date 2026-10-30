@@ -26,11 +26,6 @@ public interface ICaidaService
     /// <summary>De un cliente, qué productos dejó de comprar, cuáles compra menos o más, y cuáles son nuevos.</summary>
     Task<QueDejoDeComprarResponse> QueDejoDeComprarAsync(int clienteId, DateTime? desde, DateTime? hasta);
 
-    /// <summary>
-    /// Los clientes que llevan 16 días o más sin comprar, con su estado por días (61 o más es crítico).
-    /// </summary>
-    Task<InactivosResponse> InactivosAsync(int? mercadoId, int? rutaId, int? vendedorId, string? estado, string? buscar);
-
     /// <summary>Los vendedores cuyas ventas cayeron frente al mismo tramo del año anterior.</summary>
     Task<VendedoresCaidaResponse> VendedoresAsync(DateTime? desde, DateTime? hasta);
 

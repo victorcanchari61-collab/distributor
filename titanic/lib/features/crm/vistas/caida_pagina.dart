@@ -37,6 +37,7 @@ class CaidaPagina extends ConsumerWidget {
     final datos = estado.valueOrNull;
     final vendedor = ref.watch(vendedorCaidaFiltroProvider);
     final mercado = ref.watch(mercadoCaidaFiltroProvider);
+    final inactividad = ref.watch(inactividadCaidaFiltroProvider);
 
     return AppListaPagina<FilaCaida>(
       titulo: 'Clientes con caída',
@@ -99,7 +100,10 @@ class CaidaPagina extends ConsumerWidget {
         ],
       ),
       filtro: BotonFiltros(
-        activos: (vendedor == null ? 0 : 1) + (mercado == null ? 0 : 1),
+        activos:
+            (vendedor == null ? 0 : 1) +
+            (mercado == null ? 0 : 1) +
+            (inactividad == null ? 0 : 1),
         color: color,
         onAbrir: () => _abrirFiltros(context, ref, datos?.items ?? const []),
       ),
@@ -119,12 +123,28 @@ class CaidaPagina extends ConsumerWidget {
       context,
       activos:
           (ref.read(vendedorCaidaFiltroProvider) == null ? 0 : 1) +
-          (ref.read(mercadoCaidaFiltroProvider) == null ? 0 : 1),
+          (ref.read(mercadoCaidaFiltroProvider) == null ? 0 : 1) +
+          (ref.read(inactividadCaidaFiltroProvider) == null ? 0 : 1),
       onLimpiar: () {
         ref.read(vendedorCaidaFiltroProvider.notifier).state = null;
         ref.read(mercadoCaidaFiltroProvider.notifier).state = null;
+        ref.read(inactividadCaidaFiltroProvider.notifier).state = null;
       },
       grupos: [
+        // Los que dejaron de comprar: por cuántos días llevan sin hacerlo.
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<TramoInactividad?>(
+            titulo: 'Sin comprar hace',
+            valor: ref.watch(inactividadCaidaFiltroProvider),
+            opciones: [
+              const OpcionFiltro(null, 'Cualquiera'),
+              for (final t in TramoInactividad.values)
+                OpcionFiltro(t, t.etiqueta),
+            ],
+            onCambio: (v) =>
+                ref.read(inactividadCaidaFiltroProvider.notifier).state = v,
+          ),
+        ),
         if (vendedores.isNotEmpty)
           Consumer(
             builder: (context, ref, _) => GrupoFiltro<String?>(

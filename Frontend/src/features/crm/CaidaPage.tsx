@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MessageCircle, PackageSearch, TrendingDown, UserSearch } from 'lucide-react'
 import { DonutChart, HBarChart, Marco, moneda } from '../../components/charts'
-import { Alert, Input, Modal, PageHeader, RowAction, SysDataTable } from '../../components/ui'
+import { Alert, Input, Modal, PageHeader, RowAction, Select, SysDataTable } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { hoyLocal } from '../../lib/fechas'
@@ -12,7 +12,7 @@ import { crmApi } from './crmApi'
 import type { CaidaClientes, EstadoClave, FilaCaida, QueDejoDeComprar } from './crmApi'
 import { whatsapp } from './contacto'
 import { FiltroFechas, SelectorCatalogo, inicioDeAnio, useCatalogosCrm } from './filtros'
-import { ESTADOS_UI, ORDEN_ESTADOS, colorCambio, colorDeDias, fechaDia, nombreCorto, porcentaje, soles, solesConSigno } from './formato'
+import { ESTADOS_UI, ORDEN_ESTADOS, TRAMOS_INACTIVIDAD, colorCambio, colorDeDias, fechaDia, nombreCorto, porcentaje, soles, solesConSigno } from './formato'
 import { ICONO_ESTADO } from './iconosEstado'
 import { EtiquetaEstado, EtiquetaResultado, TarjetaReporte } from './piezas'
 import { TablaProductos } from './seguimiento/TabCompras'
@@ -34,6 +34,8 @@ export function CaidaPage() {
   const [estado, setEstado] = useState<EstadoClave>()
   const [texto, setTexto] = useState('')
   const [buscar, setBuscar] = useState('')
+  // Los que dejaron de comprar: por cuántos días llevan sin hacerlo. Se acota aquí porque cada fila ya trae sus días.
+  const [inactividad, setInactividad] = useState('')
 
   const [datos, setDatos] = useState<CaidaClientes | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -194,7 +196,16 @@ export function CaidaPage() {
   )
 
   const resumen = datos?.estados ?? []
-  const items = datos?.items ?? []
+  const tramo = TRAMOS_INACTIVIDAD.find((x) => x.id === inactividad)
+  const items = useMemo(
+    () =>
+      (datos?.items ?? []).filter(
+        (f) =>
+          !tramo ||
+          (f.diasSinCompra !== null && f.diasSinCompra >= tramo.desde && (tramo.hasta === null || f.diasSinCompra <= tramo.hasta)),
+      ),
+    [datos, tramo],
+  )
   const mayores = useMemo(
     () => [...items].filter((f) => f.montoRiesgo > 0).sort((a, b) => b.montoRiesgo - a.montoRiesgo).slice(0, 8),
     [items],
@@ -205,7 +216,7 @@ export function CaidaPage() {
       <PageHeader
         icon={<TrendingDown size={20} />}
         title="Clientes con caída"
-        description="Cuánto compra cada cliente frente al mismo tramo del año anterior, y en qué estado está."
+        description="Cuánto compra cada cliente frente al mismo tramo del año anterior, y en qué estado está. También sirve para encontrar a los que dejaron de comprar."
       />
 
       {error && <Alert>{error}</Alert>}
@@ -218,6 +229,16 @@ export function CaidaPage() {
           <SelectorCatalogo etiqueta="Mercado" todos="Todos" valor={mercadoId} opciones={mercados} onChange={setMercadoId} />
           <SelectorCatalogo etiqueta="Ruta" todos="Todas" valor={rutaId} opciones={rutas} onChange={setRutaId} />
           <SelectorCatalogo etiqueta="Vendedor" todos="Todos" valor={vendedorId} opciones={usuarios} onChange={setVendedorId} />
+          <div className="w-44">
+            <Select label="Sin comprar hace" size="sm" value={inactividad} onChange={(e) => setInactividad(e.target.value)}>
+              <option value="">Cualquiera</option>
+              {TRAMOS_INACTIVIDAD.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.label}
+                </option>
+              ))}
+            </Select>
+          </div>
           <div className="min-w-56 flex-1">
             <Input label="Buscar" size="sm" placeholder="Cliente o documento..." value={texto} onChange={(e) => setTexto(e.target.value)} />
           </div>

@@ -27,7 +27,7 @@ public class EstadoResumenResponse
     public string Etiqueta { get; set; } = string.Empty;
     public int Clientes { get; set; }
 
-    /// <summary>Lo que se dejó de vender (caída) o lo que compraban en el último año (inactivos).</summary>
+    /// <summary>Lo que se dejó de vender: la plata en riesgo.</summary>
     public decimal Monto { get; set; }
 }
 
@@ -106,48 +106,6 @@ public class QueDejoDeComprarResponse
     public string Cliente { get; set; } = string.Empty;
     public PeriodoCaidaResponse Periodo { get; set; } = new();
     public List<SituacionProductoResponse> Productos { get; set; } = [];
-}
-
-// ------------------------------------------------------------------ Clientes inactivos
-
-public class InactivoFilaResponse
-{
-    public int Id { get; set; }
-    public string Codigo { get; set; } = string.Empty;
-    public string Cliente { get; set; } = string.Empty;
-    public string Documento { get; set; } = string.Empty;
-    public string? Telefono { get; set; }
-    public string? Vendedor { get; set; }
-    public string? Mercado { get; set; }
-    public string? Ruta { get; set; }
-    public string? CategoriaCodigo { get; set; }
-    public string? Categoria { get; set; }
-    public string? CategoriaColor { get; set; }
-
-    public DateTime UltimaCompra { get; set; }
-    public int DiasSinCompra { get; set; }
-
-    /// <summary>Lo comprado en los últimos 12 meses antes de la última compra: lo que se pierde si no vuelve.</summary>
-    public decimal Ventas12m { get; set; }
-
-    public int Compras12m { get; set; }
-    public decimal TicketPromedio { get; set; }
-
-    /// <summary>CRITICO (61 días o más), RIESGO (31 a 60) o SEGUIMIENTO (16 a 30).</summary>
-    public string Estado { get; set; } = string.Empty;
-}
-
-public class InactivosResponse
-{
-    /// <summary>El día desde el que se cuentan los días sin comprar.</summary>
-    public DateTime Corte { get; set; }
-
-    public List<EstadoResumenResponse> Estados { get; set; } = [];
-    public bool SoloPropios { get; set; }
-    public List<InactivoFilaResponse> Items { get; set; } = [];
-
-    /// <summary>Clientes activos que nunca compraron, aparte de la lista.</summary>
-    public int NuncaCompraron { get; set; }
 }
 
 // ------------------------------------------------------------------ Vendedores con caída

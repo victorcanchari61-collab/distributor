@@ -113,14 +113,6 @@ class CrmApi {
     ),
   );
 
-  /// GET /api/crm/inactivos
-  Future<Inactivos> inactivos({EstadoCaida? estado}) async =>
-      Inactivos.desdeJson(
-        _mapa(
-          await _api.get('/crm/inactivos${_query({'estado': estado?.clave})}'),
-        ),
-      );
-
   /// GET /api/crm/vendedores
   Future<VendedoresCaida> vendedores({String? desde, String? hasta}) async =>
       VendedoresCaida.desdeJson(

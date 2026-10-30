@@ -37,14 +37,15 @@ export const ESTADOS_UI: Record<EstadoClave, EstadoUi> = {
   SIN_BASE: { etiqueta: 'Sin comparación', rango: 'Sin ventas el año anterior', color: '#64748b', fondo: '#f1f5f9' },
 }
 
-/** El rango de días sin comprar de cada estado en Clientes inactivos. */
-export const RANGO_DIAS: Partial<Record<EstadoClave, string>> = {
-  CRITICO: '61 días o más',
-  RIESGO: '31 - 60 días',
-  SEGUIMIENTO: '16 - 30 días',
-}
-
-export const ESCALA_DIAS = '0-15 normal · 16-30 seguimiento · 31-60 en riesgo · 61 o más crítico'
+/**
+ * Los tramos de días sin comprar con los que se filtra Clientes con caída: la misma escala de siempre (0-15 normal,
+ * 16-30 seguimiento, 31-60 en riesgo, 61 o más crítico). Un cliente que dejó de comprar se encuentra por aquí.
+ */
+export const TRAMOS_INACTIVIDAD: { id: string; label: string; desde: number; hasta: number | null }[] = [
+  { id: '16', label: '16 a 30 días', desde: 16, hasta: 30 },
+  { id: '31', label: '31 a 60 días', desde: 31, hasta: 60 },
+  { id: '61', label: '61 días o más', desde: 61, hasta: null },
+]
 
 /** El color de los días sin comprar, con la misma escala. */
 export const colorDeDias = (dias: number | null) => {

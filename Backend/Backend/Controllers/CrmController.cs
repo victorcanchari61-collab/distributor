@@ -8,8 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Backend.Controllers;
 
 /// <summary>
-/// CRM: Gestión y seguimiento de clientes y los reportes de quién compra menos (clientes con caída, clientes
-/// inactivos, vendedores con caída). El alcance de quien pregunta (solo sus clientes, por ejemplo) se aplica dentro
+/// CRM: Gestión y seguimiento de clientes y los reportes de quién compra menos (clientes con caída y vendedores con
+/// caída). El alcance de quien pregunta (solo sus clientes, por ejemplo) se aplica dentro
 /// de los servicios.
 /// </summary>
 [ApiController]
@@ -94,16 +94,6 @@ public class CrmController : ControllerBase
     [Permiso("crm.caida", Accion.Ver)]
     public async Task<IActionResult> QueDejoDeComprar(int clienteId, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
         Ok(await _caida.QueDejoDeComprarAsync(clienteId, desde, hasta));
-
-    [HttpGet("inactivos")]
-    [Permiso("crm.inactivos", Accion.Ver)]
-    public async Task<IActionResult> ClientesInactivos(
-        [FromQuery] int? mercadoId,
-        [FromQuery] int? rutaId,
-        [FromQuery] int? vendedorId,
-        [FromQuery] string? estado,
-        [FromQuery] string? buscar) =>
-        Ok(await _caida.InactivosAsync(mercadoId, rutaId, vendedorId, estado, buscar));
 
     [HttpGet("vendedores")]
     [Permiso("crm.vendedores", Accion.Ver)]

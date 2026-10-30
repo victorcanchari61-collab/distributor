@@ -19,7 +19,6 @@ namespace Backend.Service.Implementacion;
 public class CaidaService : ICaidaService
 {
     /// <summary>Sin comprar menos días que estos, el cliente está activo y no es "inactivo".</summary>
-    private const int DiasMinimosInactivo = 16;
 
     private readonly AppDbContext _context;
     private readonly IPermisoService _permisos;
@@ -230,127 +229,6 @@ public class CaidaService : ICaidaService
             .ThenBy(f => f.Variacion)
             .ThenBy(f => f.Producto)
             .ToList();
-    }
-
-    // ------------------------------------------------------------- Clientes inactivos
-
-    public async Task<InactivosResponse> InactivosAsync(
-        int? mercadoId, int? rutaId, int? vendedorId, string? estado, string? buscar)
-    {
-        ValidarEstado(estado, [EstadoCaida.Critico, EstadoCaida.Riesgo, EstadoCaida.Seguimiento]);
-
-        var (visibles, soloPropios) = await CrmConsultas.VisiblesAsync(_context, _permisos, _usuarioActual.Id);
-
-        var clientes = visibles.Where(c => c.Activo);
-        if (mercadoId is int m) clientes = clientes.Where(c => c.MercadoId == m);
-        if (rutaId is int r) clientes = clientes.Where(c => c.RutaId == r);
-        if (vendedorId is int v) clientes = clientes.Where(c => c.VendedorId == v);
-        if (!string.IsNullOrWhiteSpace(buscar))
-        {
-            var texto = buscar.Trim();
-            clientes = clientes.Where(c => c.Nombre.Contains(texto) || c.Documento.Contains(texto));
-        }
-
-        var datos = await clientes.Select(CrmConsultas.Fila).ToListAsync();
-        var ultimas = await CrmConsultas.UltimasComprasAsync(_context);
-        var categorias = await CategorizacionConsultas.PorClienteAsync(_context);
-
-        // Lo comprado en los últimos 12 meses: lo que se pierde si el cliente no vuelve.
-        var hoy = Zona.Hoy;
-        var (ventas12m, compras12m) = await Ventas12mAsync(Zona.AUtc(hoy.AddYears(-1).AddDays(1)), Zona.AUtc(hoy.AddDays(1)));
-
-        var filas = new List<InactivoFilaResponse>();
-        var nunca = 0;
-
-        foreach (var c in datos)
-        {
-            if (!ultimas.TryGetValue(c.Id, out var ultima))
-            {
-                nunca++;
-                continue;
-            }
-
-            var dias = Math.Max(0, (int)(hoy - Zona.DiaDe(ultima)).TotalDays);
-            if (dias < DiasMinimosInactivo) continue;
-
-            categorias.TryGetValue(c.Id, out var categoria);
-            var ventas = Math.Round(ventas12m.GetValueOrDefault(c.Id), 2);
-            var compras = compras12m.GetValueOrDefault(c.Id);
-
-            filas.Add(new InactivoFilaResponse
-            {
-                Id = c.Id,
-                Codigo = $"CLI{c.Id:D5}",
-                Cliente = c.Nombre,
-                Documento = c.Documento,
-                Telefono = c.Telefono,
-                Vendedor = c.Vendedor,
-                Mercado = c.Mercado,
-                Ruta = c.Ruta,
-                CategoriaCodigo = categoria?.Codigo,
-                Categoria = categoria?.Nombre,
-                CategoriaColor = categoria?.Color,
-                UltimaCompra = Zona.DiaDe(ultima),
-                DiasSinCompra = dias,
-                Ventas12m = ventas,
-                Compras12m = compras,
-                TicketPromedio = compras > 0 ? Math.Round(ventas / compras, 2) : 0m,
-                Estado = EstadoCaida.ClasificarDias(dias),
-            });
-        }
-
-        string[] estados = [EstadoCaida.Critico, EstadoCaida.Riesgo, EstadoCaida.Seguimiento];
-
-        return new InactivosResponse
-        {
-            Corte = hoy,
-            SoloPropios = soloPropios,
-            NuncaCompraron = nunca,
-            Estados = estados.Select(e => new EstadoResumenResponse
-            {
-                Estado = e,
-                Etiqueta = EstadoCaida.Etiqueta(e),
-                Clientes = filas.Count(f => f.Estado == e),
-                Monto = filas.Where(f => f.Estado == e).Sum(f => f.Ventas12m),
-            }).ToList(),
-            // Los que más tiempo llevan sin comprar, primero.
-            Items = filas
-                .Where(f => string.IsNullOrWhiteSpace(estado) || f.Estado == estado.Trim().ToUpperInvariant())
-                .OrderByDescending(f => f.DiasSinCompra)
-                .ThenByDescending(f => f.Ventas12m)
-                .ToList(),
-        };
-    }
-
-    /// <summary>Lo comprado por cada cliente en [ini, fin) y en cuántas compras (notas) lo hizo.</summary>
-    private async Task<(Dictionary<int, decimal> Ventas, Dictionary<int, int> Compras)> Ventas12mAsync(DateTime ini, DateTime fin)
-    {
-        var lineas = await _context.NotaVentaDetalles.AsNoTracking()
-            .Where(d => !d.Anulado
-                        && d.NotaVenta!.Estado != EstadoNotaVenta.Anulada
-                        && d.NotaVenta.Fecha >= ini && d.NotaVenta.Fecha < fin)
-            .GroupBy(d => d.NotaVenta!.ClienteId)
-            .Select(g => new
-            {
-                ClienteId = g.Key,
-                Importe = g.Sum(d => d.CantidadPresentacion * d.PrecioPresentacion),
-                Compras = g.Select(d => d.NotaVentaId).Distinct().Count(),
-            })
-            .ToListAsync();
-
-        var recojos = await _context.RecojosVenta.AsNoTracking()
-            .Where(r => r.Estado != EstadoRecojo.Anulado
-                        && r.NotaVenta!.Estado != EstadoNotaVenta.Anulada
-                        && r.NotaVenta.Fecha >= ini && r.NotaVenta.Fecha < fin)
-            .GroupBy(r => r.NotaVenta!.ClienteId)
-            .Select(g => new { ClienteId = g.Key, Importe = g.Sum(r => r.Importe) })
-            .ToListAsync();
-
-        var ventas = lineas.ToDictionary(l => l.ClienteId, l => l.Importe);
-        foreach (var r in recojos)
-            ventas[r.ClienteId] = Math.Max(0m, ventas.GetValueOrDefault(r.ClienteId) - r.Importe);
-
-        return (ventas, lineas.ToDictionary(l => l.ClienteId, l => l.Compras));
     }
 
     // ------------------------------------------------------------- Vendedores con caída

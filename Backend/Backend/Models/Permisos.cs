@@ -118,7 +118,6 @@ public static class CatalogoPermisos
             ["crm.seguimiento"] = [Accion.Ver, Accion.Crear, Accion.Editar],
             // Reportes de quién compra menos, del 1 de enero a hoy contra el mismo tramo del año anterior. Solo lectura.
             ["crm.caida"] = [Accion.Ver],
-            ["crm.inactivos"] = [Accion.Ver],
             ["crm.vendedores"] = [Accion.Ver],
             // Los tramos y el ciclo de la categoría de los clientes (Socio a Inactivo). Editar es guardarlos
             // y también "Calcular ahora".
