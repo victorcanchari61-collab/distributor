@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarClock, ClipboardList, Eye, Handshake, Pencil, Phone, Repeat } from 'lucide-react'
-import { Badge, Button, Input, Modal, RowAction, Select, SysDataTable, useToast } from '../../../components/ui'
+import { Badge, Button, Input, Modal, RowAction, SysDataTable, useToast } from '../../../components/ui'
 import type { DataTableColumn } from '../../../components/ui'
 import { ApiError } from '../../../lib/apiClient'
 import { fechaCorta, fechaHora, fechaLocal, hoyLocal, instanteMs } from '../../../lib/fechas'
@@ -69,10 +69,6 @@ export function TabSeguimiento({
   const [datos, setDatos] = useState<GestionesCliente | null>(null)
   const [cargando, setCargando] = useState(true)
 
-  // Filtros del historial.
-  const [tipoFiltro, setTipoFiltro] = useState<TipoContacto | ''>('')
-  const [resultadoFiltro, setResultadoFiltro] = useState('')
-
   // Registrar una nueva.
   const [nueva, setNueva] = useState<ValoresGestion>(VALORES_NUEVA_GESTION)
   const [guardando, setGuardando] = useState(false)
@@ -104,11 +100,6 @@ export function TabSeguimiento({
   const items = datos?.items ?? []
   const proxima = datos?.proximaGestion ?? null
   const ultima = items[0] ?? null
-
-  const visibles = useMemo(
-    () => items.filter((g) => (!tipoFiltro || g.tipoContacto === tipoFiltro) && (!resultadoFiltro || g.resultado === resultadoFiltro)),
-    [items, tipoFiltro, resultadoFiltro],
-  )
 
   /** Lo que se manda a la API a partir de lo escrito; el mensaje de lo que falta si no se puede. */
   const comoCuerpo = (v: ValoresGestion) => {
@@ -195,14 +186,16 @@ export function TabSeguimiento({
       {
         key: 'fecha',
         label: 'Fecha y hora',
-        filterable: false,
+        filterType: 'date',
         value: (g) => instanteMs(g.fecha),
         render: (g) => <span className="whitespace-nowrap">{fechaHora(g.fecha)}</span>,
       },
       {
         key: 'tipo',
         label: 'Tipo',
-        filterable: false,
+        filterType: 'select',
+        filterOptions: (Object.keys(CONTACTO_UI) as TipoContacto[]).map((c) => ({ value: c, label: CONTACTO_UI[c].etiqueta })),
+        value: (g) => g.tipoContacto,
         render: (g) => (
           <span className="flex items-center gap-2">
             <IconoContacto tipo={g.tipoContacto} tamano={26} />
@@ -213,7 +206,9 @@ export function TabSeguimiento({
       {
         key: 'resultado',
         label: 'Resultado',
-        filterable: false,
+        filterType: 'select',
+        filterOptions: (catalogo?.resultados ?? []).map((r) => ({ value: r.clave, label: r.etiqueta })),
+        value: (g) => g.resultado,
         render: (g) => <EtiquetaResultado tono={g.tono} texto={g.resultadoEtiqueta} />,
       },
       {
@@ -257,7 +252,7 @@ export function TabSeguimiento({
         render: (g) => (g.registradoPor ? <span title={g.registradoPor}>{nombreCorto(g.registradoPor)}</span> : <span className="text-ink-soft">—</span>),
       },
     ],
-    [],
+    [catalogo],
   )
 
   const aviso =
@@ -307,38 +302,13 @@ export function TabSeguimiento({
 
       {/* Historial de gestiones. */}
       <section className="min-w-0 rounded-panel border border-line bg-white p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-base font-semibold text-ink">Historial de gestiones</h3>
-          <div className="flex flex-wrap gap-2">
-            <Select
-              size="sm"
-              aria-label="Tipo de contacto"
-              value={tipoFiltro}
-              onChange={(e) => setTipoFiltro(e.target.value as TipoContacto | '')}
-            >
-              <option value="">Todos los tipos</option>
-              {(Object.keys(CONTACTO_UI) as TipoContacto[]).map((t) => (
-                <option key={t} value={t}>
-                  {CONTACTO_UI[t].etiqueta}
-                </option>
-              ))}
-            </Select>
-            <Select size="sm" aria-label="Resultado" value={resultadoFiltro} onChange={(e) => setResultadoFiltro(e.target.value)}>
-              <option value="">Todos los resultados</option>
-              {(catalogo?.resultados ?? []).map((r) => (
-                <option key={r.clave} value={r.clave}>
-                  {r.etiqueta}
-                </option>
-              ))}
-            </Select>
-          </div>
-        </div>
+        <h3 className="mb-3 text-base font-semibold text-ink">Historial de gestiones</h3>
 
         <SysDataTable
           columns={columnas}
-          rows={visibles}
+          rows={items}
           rowKey="id"
-          toolbar={false}
+          searchPlaceholder="Buscar en el historial..."
           pageSize={8}
           empty={cargando ? 'Cargando gestiones...' : items.length ? 'No hay gestiones con esos filtros' : 'Todavía no hay gestiones con este cliente'}
           actionsWidth={110}
