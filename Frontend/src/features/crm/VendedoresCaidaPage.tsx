@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { UsersRound } from 'lucide-react'
-import { BarChart, Marco, moneda } from '../../components/charts'
+import { BarChart, DonutChart, HBarChart, Marco, moneda } from '../../components/charts'
 import { Alert, PageHeader, SysDataTable } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -101,6 +101,10 @@ export function VendedoresCaidaPage() {
 
   const resumen = datos?.estados ?? []
   const items = useMemo(() => (datos?.items ?? []).filter((f) => !estado || f.estado === estado), [datos, estado])
+  const mayoresRiesgo = useMemo(
+    () => [...items].filter((f) => f.montoRiesgo > 0).sort((a, b) => b.montoRiesgo - a.montoRiesgo).slice(0, 8),
+    [items],
+  )
 
   return (
     <div className="space-y-5">
@@ -141,24 +145,75 @@ export function VendedoresCaidaPage() {
         })}
       </section>
 
-      <Marco
-        titulo="Ventas por vendedor"
-        subtitulo="El tramo actual frente al mismo tramo del año anterior"
-        cargando={cargando && !datos}
-        vacio={items.length === 0}
-        mensajeVacio="Ningún vendedor vendió en este tramo"
-        alto={240}
-      >
-        <BarChart
-          etiquetas={items.map((f) => nombreCorto(f.vendedor))}
-          etiquetasLargas={items.map((f) => f.vendedor)}
-          series={[
-            { id: 'anterior', nombre: datos?.periodo.etiquetaAnterior ?? 'Año anterior', color: '#cbd5e1', valores: items.map((f) => f.ventaAnterior) },
-            { id: 'actual', nombre: datos?.periodo.etiqueta ?? 'Actual', color: '#7c3aed', valores: items.map((f) => f.ventaActual) },
-          ]}
-          formato={(n) => moneda(n)}
-        />
-      </Marco>
+      <section className="grid gap-4 lg:grid-cols-3">
+        <Marco
+          titulo="Vendedores por estado"
+          subtitulo={datos ? `${soles(items.reduce((s, f) => s + f.ventaActual, 0))} vendidos en el tramo` : undefined}
+          cargando={cargando && !datos}
+          vacio={resumen.every((r) => r.clientes === 0)}
+          mensajeVacio="Ningún vendedor vendió en este tramo"
+          alto={168}
+        >
+          <DonutChart
+            porciones={ORDEN_ESTADOS.filter((e) => (resumen.find((r) => r.estado === e)?.clientes ?? 0) > 0).map((e) => ({
+              nombre: ESTADOS_UI[e].etiqueta,
+              valor: resumen.find((r) => r.estado === e)?.clientes ?? 0,
+              color: ESTADOS_UI[e].color,
+            }))}
+            formato={(n) => `${n} ${n === 1 ? 'vendedor' : 'vendedores'}`}
+            centro={{ titulo: 'Vendedores', valor: String(resumen.reduce((s, r) => s + r.clientes, 0)) }}
+          />
+        </Marco>
+
+        <Marco
+          titulo="Dónde está el mayor monto en riesgo"
+          subtitulo="Lo que dejaron de comprar los clientes de cada vendedor"
+          cargando={cargando && !datos}
+          vacio={mayoresRiesgo.length === 0}
+          mensajeVacio="Ningún vendedor tiene clientes que hayan bajado"
+          alto={168}
+        >
+          <HBarChart
+            items={mayoresRiesgo.map((f) => ({
+              nombre: nombreCorto(f.vendedor),
+              valor: f.montoRiesgo,
+              color: ESTADOS_UI[f.estado].color,
+              detalle: `${f.clientesEnCaida} ${f.clientesEnCaida === 1 ? 'cliente' : 'clientes'}`,
+            }))}
+            formato={(n) => moneda(n)}
+          />
+        </Marco>
+
+        <Marco
+          titulo="Ventas por vendedor"
+          subtitulo="El tramo actual frente al mismo tramo del año anterior"
+          cargando={cargando && !datos}
+          vacio={items.length === 0}
+          mensajeVacio="Ningún vendedor vendió en este tramo"
+          alto={200}
+          derecha={
+            <span className="flex items-center gap-3 text-[11px] text-ink-muted">
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 rounded-sm bg-violet-600" /> Actual
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 rounded-sm bg-slate-300" /> Anterior
+              </span>
+            </span>
+          }
+        >
+          <BarChart
+            etiquetas={items.map((f) => nombreCorto(f.vendedor))}
+            etiquetasLargas={items.map((f) => f.vendedor)}
+            series={[
+              { id: 'anterior', nombre: datos?.periodo.etiquetaAnterior ?? 'Año anterior', color: '#cbd5e1', valores: items.map((f) => f.ventaAnterior) },
+              { id: 'actual', nombre: datos?.periodo.etiqueta ?? 'Actual', color: '#7c3aed', valores: items.map((f) => f.ventaActual) },
+            ]}
+            formato={(n) => moneda(n)}
+            alto={200}
+          />
+        </Marco>
+      </section>
 
       <SysDataTable
         columns={columnas}
