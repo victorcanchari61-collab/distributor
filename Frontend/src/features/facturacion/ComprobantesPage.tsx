@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CircleCheck, CircleX, Clock, FileArchive, FileCode2, FileMinus, FilePen, FilePlus, Eye, Receipt, RefreshCw, Ticket } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { Alert, ListPage, Modal, RowAction, StatCard, useToast } from '../../components/ui'
+import { AccionPdf, Alert, Badge, ListPage, Modal, RowAction, StatCard, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaCorta } from '../../lib/fechas'
@@ -136,6 +136,37 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
           </span>
         ),
       },
+      // Solo facturas y boletas: qué notas de crédito o débito las corrigen.
+      ...(esNota
+        ? []
+        : [
+            {
+              key: 'notas',
+              label: 'Notas',
+              filterType: 'select' as const,
+              filterOptions: ['Sin notas', 'Solo crédito', 'Solo débito', 'Crédito y débito'].map((v) => ({ value: v, label: v })),
+              value: (c: ComprobanteResponse) => {
+                const vivas = c.notas.filter((n) => n.estado !== 'RECHAZADO')
+                const cre = vivas.some((n) => n.tipo === '07')
+                const deb = vivas.some((n) => n.tipo === '08')
+                return cre && deb ? 'Crédito y débito' : cre ? 'Solo crédito' : deb ? 'Solo débito' : 'Sin notas'
+              },
+              render: (c: ComprobanteResponse) =>
+                c.notas.length === 0 ? (
+                  <span className="text-ink-soft">—</span>
+                ) : (
+                  <span className="flex flex-col items-start gap-0.5">
+                    {c.notas.map((n) => (
+                      <span key={n.id} className="flex items-center gap-1.5 text-xs">
+                        <Badge tone={n.tipo === '07' ? 'warning' : 'sys'}>{n.tipo === '07' ? 'NC' : 'ND'}</Badge>
+                        {n.numeroCompleto}
+                        {n.estado === 'RECHAZADO' && <span className="text-red-600">rechazada</span>}
+                      </span>
+                    ))}
+                  </span>
+                ),
+            },
+          ]),
       {
         key: 'total',
         label: 'Total',
@@ -153,7 +184,7 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
         render: (c) => <EstadoCpeBadge estado={c.estado} />,
       },
     ],
-    [],
+    [esNota],
   )
 
   const aceptados = filas.filter((f) => f.estado === 'ACEPTADO').length
@@ -198,12 +229,13 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
       cardIcon={Icono}
       searchPlaceholder="Buscar por número, cliente..."
       empty={cargando ? 'Cargando...' : vista.vacio}
-      actionsWidth={190}
+      actionsWidth={220}
       rowActions={(c) => (
         <>
           <RowAction label={`Ver ${c.numeroCompleto}`} tone="view" onClick={() => setDetalle(c)}>
             <Eye size={15} />
           </RowAction>
+          {puede(submodulo, 'exportar') && <AccionPdf documento="comprobante" id={c.id} numero={c.numeroCompleto} />}
           {puede(submodulo, 'exportar') && (
             <RowAction label="Descargar XML" onClick={() => void descargar('xml', c)}>
               <FileCode2 size={15} />

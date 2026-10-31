@@ -20,6 +20,7 @@ export type DocumentoPdf =
   | 'prestamos'
   | 'devolucionesprestamo'
   | 'despacho'
+  | 'comprobante'
 
 type Formato = 'a4' | 'ticket' | 'copias'
 
@@ -34,6 +35,7 @@ const TITULOS: Record<DocumentoPdf, string> = {
   prestamos: 'Préstamo',
   devolucionesprestamo: 'Devolución de préstamo',
   despacho: 'Despacho',
+  comprobante: 'Comprobante',
 }
 
 /*

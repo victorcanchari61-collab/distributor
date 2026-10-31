@@ -57,10 +57,38 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         if (afectadoId is int a) consulta = consulta.Where(c => c.AfectadoId == a);
 
         var filas = await consulta.OrderByDescending(c => c.Id).Take(500).ToListAsync();
-        return filas.Select(Mapear).ToList();
+        var respuestas = filas.Select(Mapear).ToList();
+        await AgregarNotasAsync(respuestas);
+        return respuestas;
     }
 
-    public async Task<ComprobanteResponse> GetAsync(int id) => Mapear(await ObtenerAsync(id));
+    public async Task<ComprobanteResponse> GetAsync(int id)
+    {
+        var respuesta = Mapear(await ObtenerAsync(id));
+        await AgregarNotasAsync([respuesta]);
+        return respuesta;
+    }
+
+    /// <summary>Cuelga de cada factura o boleta las notas de crédito y débito que la corrigen, en una sola consulta.</summary>
+    private async Task AgregarNotasAsync(List<ComprobanteResponse> comprobantes)
+    {
+        var ids = comprobantes.Where(c => !TipoCpe.EsNota(c.Tipo)).Select(c => c.Id).ToList();
+        if (ids.Count == 0) return;
+
+        // Solo las columnas que se muestran: el XML y el CDR de cada nota no hacen falta aquí.
+        var notas = (await _context.ComprobantesElectronicos.AsNoTracking()
+            .Where(c => c.AfectadoId != null && ids.Contains(c.AfectadoId.Value))
+            .OrderBy(c => c.Id)
+            .Select(c => new { c.Id, c.Tipo, c.Serie, c.Numero, c.Estado, c.Total, AfectadoId = c.AfectadoId!.Value })
+            .ToListAsync())
+            .ToLookup(c => c.AfectadoId);
+
+        foreach (var c in comprobantes)
+            c.Notas = notas[c.Id].Select(n => new NotaDeComprobanteResponse
+            {
+                Id = n.Id, Tipo = n.Tipo, NumeroCompleto = $"{n.Serie}-{n.Numero}", Estado = n.Estado, Total = n.Total,
+            }).ToList();
+    }
 
     public async Task<string> TipoAsync(int id) =>
         await _context.ComprobantesElectronicos.AsNoTracking().Where(c => c.Id == id).Select(c => c.Tipo).FirstOrDefaultAsync()
@@ -549,6 +577,7 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         ClienteTipoDoc = c.ClienteTipoDoc,
         ClienteDocumento = c.ClienteDocumento,
         ClienteNombre = c.ClienteNombre,
+        ClienteDireccion = c.ClienteDireccion,
         Moneda = c.Moneda,
         OpGravada = c.OpGravada,
         OpExonerada = c.OpExonerada,

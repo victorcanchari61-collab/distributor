@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Download, FileArchive, FileCode2, RefreshCw } from 'lucide-react'
-import { Alert, Badge, Button, useToast } from '../../components/ui'
+import { Download, FileArchive, FileCode2, FileText, RefreshCw } from 'lucide-react'
+import { Alert, Badge, Button, VisorPdf, useToast } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaCorta, fechaHora } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
@@ -30,6 +30,7 @@ export function PanelComprobante({
   const toast = useToast()
   const { puede } = usePermisos()
   const [trabajando, setTrabajando] = useState<'xml' | 'cdr' | 'reenviar' | null>(null)
+  const [verPdf, setVerPdf] = useState(false)
   const c = comprobante
   const estado = ESTADOS_CPE[c.estado]
 
@@ -96,6 +97,20 @@ export function PanelComprobante({
               <dd>{fechaHora(c.enviadoEn)}</dd>
             </>
           )}
+          {c.notas?.length > 0 && (
+            <>
+              <dt className="text-ink-soft">Notas</dt>
+              <dd className="flex flex-col gap-0.5">
+                {c.notas.map((n) => (
+                  <span key={n.id} className="flex flex-wrap items-center gap-1.5">
+                    <Badge tone={n.tipo === '07' ? 'warning' : 'sys'}>{n.tipo === '07' ? 'Crédito' : 'Débito'}</Badge>
+                    {n.numeroCompleto} · {monto(n.total)}
+                    <EstadoCpeBadge estado={n.estado} />
+                  </span>
+                ))}
+              </dd>
+            </>
+          )}
         </dl>
       </div>
 
@@ -109,6 +124,11 @@ export function PanelComprobante({
       {c.notasSunat && <p className="text-xs whitespace-pre-line text-ink-soft">{c.notasSunat}</p>}
 
       <div className="flex flex-wrap gap-2">
+        {puedeDescargar && (
+          <Button variant="secondary" size="sm" onClick={() => setVerPdf(true)}>
+            <FileText size={15} /> Ver PDF
+          </Button>
+        )}
         {puedeDescargar && (
           <Button variant="secondary" size="sm" loading={trabajando === 'xml'} onClick={() => void ejecutar('xml')}>
             <FileCode2 size={15} /> Descargar XML
@@ -130,6 +150,8 @@ export function PanelComprobante({
           </span>
         )}
       </div>
+
+      {verPdf && <VisorPdf documento="comprobante" id={c.id} numero={c.numeroCompleto} onCerrar={() => setVerPdf(false)} />}
     </div>
   )
 }

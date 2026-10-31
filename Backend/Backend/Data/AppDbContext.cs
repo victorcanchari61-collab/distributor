@@ -1771,7 +1771,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(c => c.NotaVentaId);
             entity.HasIndex(c => new { c.Estado, c.FechaEmision });
 
-            entity.HasOne(c => c.NotaVenta).WithMany()
+            entity.HasOne(c => c.NotaVenta).WithMany(n => n.Comprobantes)
                 .HasForeignKey(c => c.NotaVentaId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(c => c.Afectado).WithMany()
                 .HasForeignKey(c => c.AfectadoId).OnDelete(DeleteBehavior.Restrict);

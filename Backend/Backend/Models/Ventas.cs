@@ -193,6 +193,9 @@ public class NotaVenta
     /// <summary>Con qué se pagó. Puede ser más de uno — un pago mixto.</summary>
     public List<PagoVenta> Pagos { get; set; } = [];
 
+    /// <summary>Los comprobantes electrónicos de esta venta: su factura o boleta y las notas que las corrigen.</summary>
+    public List<ComprobanteElectronico> Comprobantes { get; set; } = [];
+
     /// <summary>
     /// Lo que el cliente devolvió de esta venta.
     ///

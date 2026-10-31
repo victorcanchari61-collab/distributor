@@ -126,6 +126,9 @@ public static class Comprobante
             if (doc.Anulado)
                 col.Item().PaddingTop(6 * e).Element(c => Anulado(c, "DOCUMENTO ANULADO — SIN VALIDEZ"));
 
+            foreach (var aviso in doc.Avisos)
+                col.Item().PaddingTop(6 * e).Element(c => Anulado(c, aviso));
+
             // Tres columnas en la hoja entera; en la media hoja no caben.
             col.Item().PaddingTop(8 * e).Element(c => Datos(c, DatosDe(doc), e >= 1f ? 3 : 2, e));
         });
@@ -145,7 +148,7 @@ public static class Comprobante
         // Aparte del nombre: pegado a él, un nombre largo partía la línea en dos.
         if (doc.Usuario is { Length: > 0 } && doc.UsuarioTelefono is { Length: > 0 } telefono)
             datos.Add(new DatoImprimible($"CEL. {doc.EtiquetaUsuario}", telefono));
-        datos.Add(new DatoImprimible("FECHA", doc.Fecha.ToString("dd/MM/yyyy HH:mm")));
+        datos.Add(new DatoImprimible("FECHA", doc.FechaTexto));
         // La moneda solo cuando hay importes: en una transferencia sin
         // precios no dice nada.
         if (doc.Total > 0)
@@ -261,6 +264,20 @@ public static class Comprobante
                     obs.Item().Text("Observaciones:").FontSize(7.5f * e);
                     if (!string.IsNullOrWhiteSpace(doc.Observacion))
                         obs.Item().PaddingTop(2 * e).Text(doc.Observacion).FontSize(7.5f * e);
+
+                    // Un comprobante electrónico lleva su QR y la leyenda de que es una representación impresa.
+                    if (doc.QrTexto is { Length: > 0 } qr)
+                        obs.Item().PaddingTop(8 * e).Row(fila =>
+                        {
+                            fila.ConstantItem(72 * e).Image(CodigoQr.Png(qr)).FitArea();
+                            fila.RelativeItem().PaddingLeft(8 * e).Column(texto =>
+                            {
+                                if (!string.IsNullOrWhiteSpace(doc.Hash))
+                                    texto.Item().Text($"Hash: {doc.Hash}").FontSize(6.5f * e);
+                                if (!string.IsNullOrWhiteSpace(doc.PieLegal))
+                                    texto.Item().PaddingTop(3 * e).Text(doc.PieLegal).FontSize(6.5f * e);
+                            });
+                        });
                 });
 
                 row.ConstantItem(185 * e).Border(Linea).BorderColor(Colores.BordeTabla).Column(totales =>

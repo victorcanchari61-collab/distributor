@@ -423,6 +423,36 @@ public class VentasRepository : IVentasRepository
                 : query.Where(n => n.PedidoId != null);
         }
 
+        // Facturación: la rechazada no cuenta como facturada, porque la venta se puede volver a emitir.
+        if (consulta.ValorDe("comprobante") is string comprobante)
+        {
+            query = comprobante switch
+            {
+                "Sin comprobante" => query.Where(n => !n.Comprobantes.Any(c =>
+                    (c.Tipo == TipoCpe.Factura || c.Tipo == TipoCpe.Boleta) && c.Estado != EstadoCpe.Rechazado)),
+                "Factura" => query.Where(n => n.Comprobantes.Any(c => c.Tipo == TipoCpe.Factura && c.Estado != EstadoCpe.Rechazado)),
+                "Boleta" => query.Where(n => n.Comprobantes.Any(c => c.Tipo == TipoCpe.Boleta && c.Estado != EstadoCpe.Rechazado)),
+                // Facturada, pero SUNAT no la aceptó (rechazada, sin enviar o sin respuesta): hay que atenderla.
+                "Con problema en SUNAT" => query.Where(n => n.Comprobantes.Any(c =>
+                    (c.Tipo == TipoCpe.Factura || c.Tipo == TipoCpe.Boleta) && c.Estado != EstadoCpe.Aceptado)
+                    && !n.Comprobantes.Any(c =>
+                        (c.Tipo == TipoCpe.Factura || c.Tipo == TipoCpe.Boleta) && c.Estado == EstadoCpe.Aceptado)),
+                _ => query,
+            };
+        }
+
+        if (consulta.ValorDe("notas") is string notas)
+        {
+            query = notas switch
+            {
+                "Con nota de crédito" => query.Where(n => n.Comprobantes.Any(c => c.Tipo == TipoCpe.NotaCredito && c.Estado != EstadoCpe.Rechazado)),
+                "Con nota de débito" => query.Where(n => n.Comprobantes.Any(c => c.Tipo == TipoCpe.NotaDebito && c.Estado != EstadoCpe.Rechazado)),
+                "Sin notas" => query.Where(n => !n.Comprobantes.Any(c =>
+                    (c.Tipo == TipoCpe.NotaCredito || c.Tipo == TipoCpe.NotaDebito) && c.Estado != EstadoCpe.Rechazado)),
+                _ => query,
+            };
+        }
+
         var (desde, hasta) = consulta.RangoFechas("fecha");
         if (desde is not null) query = query.Where(n => n.Fecha >= desde);
         if (hasta is not null) query = query.Where(n => n.Fecha <= hasta);
@@ -474,6 +504,24 @@ public class VentasRepository : IVentasRepository
         Total = n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion)
                 - n.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado).Sum(r => r.Importe),
         TotalPagado = n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto),
+        ComprobanteId = n.Comprobantes
+            .Where(c => c.Tipo == TipoCpe.Factura || c.Tipo == TipoCpe.Boleta)
+            .OrderBy(c => c.Estado == EstadoCpe.Rechazado ? 1 : 0).ThenByDescending(c => c.Id)
+            .Select(c => (int?)c.Id).FirstOrDefault(),
+        ComprobanteTipo = n.Comprobantes
+            .Where(c => c.Tipo == TipoCpe.Factura || c.Tipo == TipoCpe.Boleta)
+            .OrderBy(c => c.Estado == EstadoCpe.Rechazado ? 1 : 0).ThenByDescending(c => c.Id)
+            .Select(c => c.Tipo).FirstOrDefault(),
+        ComprobanteNumero = n.Comprobantes
+            .Where(c => c.Tipo == TipoCpe.Factura || c.Tipo == TipoCpe.Boleta)
+            .OrderBy(c => c.Estado == EstadoCpe.Rechazado ? 1 : 0).ThenByDescending(c => c.Id)
+            .Select(c => c.Serie + "-" + c.Numero).FirstOrDefault(),
+        ComprobanteEstado = n.Comprobantes
+            .Where(c => c.Tipo == TipoCpe.Factura || c.Tipo == TipoCpe.Boleta)
+            .OrderBy(c => c.Estado == EstadoCpe.Rechazado ? 1 : 0).ThenByDescending(c => c.Id)
+            .Select(c => c.Estado).FirstOrDefault(),
+        NotasCredito = n.Comprobantes.Count(c => c.Tipo == TipoCpe.NotaCredito && c.Estado != EstadoCpe.Rechazado),
+        NotasDebito = n.Comprobantes.Count(c => c.Tipo == TipoCpe.NotaDebito && c.Estado != EstadoCpe.Rechazado),
     };
 
     private static (List<NotaVentaFilaResponse> Items, int Total) Redondear(

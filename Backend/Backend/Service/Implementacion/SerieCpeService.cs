@@ -58,7 +58,7 @@ public class SerieCpeService : ISerieCpeService
         };
         _context.SeriesCpe.Add(nueva);
         await _context.SaveChangesAsync();
-        await _notificador.AvisarAsync("empresas", "series", new { empresaId });
+        await _notificador.AvisarAsync("comprobantes", "series", new { empresaId });
 
         return Mapear(nueva, 0);
     }
@@ -86,7 +86,7 @@ public class SerieCpeService : ISerieCpeService
         existente.UltimoNumero = request.UltimoNumero;
         existente.Activa = request.Activa;
         await _context.SaveChangesAsync();
-        await _notificador.AvisarAsync("empresas", "series", new { empresaId });
+        await _notificador.AvisarAsync("comprobantes", "series", new { empresaId });
 
         return Mapear(existente, emitidos);
     }
@@ -99,7 +99,7 @@ public class SerieCpeService : ISerieCpeService
 
         _context.SeriesCpe.Remove(existente);
         await _context.SaveChangesAsync();
-        await _notificador.AvisarAsync("empresas", "series", new { empresaId });
+        await _notificador.AvisarAsync("comprobantes", "series", new { empresaId });
     }
 
     public async Task<List<SerieCpeResponse>> CrearEstandarAsync(int empresaId)
@@ -122,7 +122,7 @@ public class SerieCpeService : ISerieCpeService
             _context.SeriesCpe.Add(new SerieCpe { EmpresaId = empresaId, Tipo = tipo, Serie = serie, AplicaA = aplicaA });
 
         await _context.SaveChangesAsync();
-        await _notificador.AvisarAsync("empresas", "series", new { empresaId });
+        await _notificador.AvisarAsync("comprobantes", "series", new { empresaId });
         return await ListarAsync(empresaId);
     }
 

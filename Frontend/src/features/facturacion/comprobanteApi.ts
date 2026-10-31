@@ -95,6 +95,17 @@ export interface ComprobanteResponse {
   fechaCreacion: string
   enviadoEn: string | null
   lineas: LineaComprobante[]
+  /** Solo en facturas y boletas: las notas de crédito y débito que las corrigen (también las rechazadas, con su estado). */
+  notas: NotaDeComprobante[]
+}
+
+/** Una nota de crédito o débito, resumida, dentro de la factura o boleta que corrige. */
+export interface NotaDeComprobante {
+  id: number
+  tipo: TipoCpe
+  numeroCompleto: string
+  estado: EstadoCpe
+  total: number
 }
 
 export interface FiltrosComprobantes {

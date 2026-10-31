@@ -319,6 +319,14 @@ export interface NotaVentaFila {
   usuario: string | null
   total: number
   totalPagado: number
+  /** Su factura o boleta vigente; nulos si todavía no se facturó. */
+  comprobanteId: number | null
+  comprobanteTipo: '01' | '03' | null
+  comprobanteNumero: string | null
+  comprobanteEstado: 'GENERADO' | 'ACEPTADO' | 'RECHAZADO' | 'ERROR' | null
+  /** Notas de crédito y de débito emitidas sobre su comprobante (sin las rechazadas). */
+  notasCredito: number
+  notasDebito: number
 }
 
 export interface NotaVentaResponse {

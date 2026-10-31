@@ -303,6 +303,24 @@ public class NotaVentaFilaResponse
     /// <summary>Líneas vigentes menos recojos vigentes: la misma cuenta que la nota completa.</summary>
     public decimal Total { get; set; }
     public decimal TotalPagado { get; set; }
+
+    // --- Facturación electrónica: nulos si todavía no se facturó ---
+
+    /// <summary>La factura o boleta vigente de la venta (la rechazada solo si no hay otra).</summary>
+    public int? ComprobanteId { get; set; }
+
+    /// <summary>01 factura o 03 boleta.</summary>
+    public string? ComprobanteTipo { get; set; }
+
+    /// <summary>F001-10.</summary>
+    public string? ComprobanteNumero { get; set; }
+
+    /// <summary>ACEPTADO, RECHAZADO, GENERADO o ERROR.</summary>
+    public string? ComprobanteEstado { get; set; }
+
+    /// <summary>Notas de crédito y de débito emitidas sobre su comprobante (sin contar las rechazadas).</summary>
+    public int NotasCredito { get; set; }
+    public int NotasDebito { get; set; }
 }
 
 /// <summary>

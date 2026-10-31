@@ -69,11 +69,15 @@ public sealed class DocumentoTicket(DocumentoImprimible doc) : IDocument
 
             col.Item().PaddingTop(5).AlignCenter().Text(doc.Titulo).FontSize(9).Bold();
             col.Item().AlignCenter().Text(doc.Numero).FontSize(11).Bold();
-            col.Item().AlignCenter().Text(doc.Fecha.ToString("dd/MM/yyyy HH:mm")).FontSize(7.5f);
+            col.Item().AlignCenter().Text(doc.FechaTexto).FontSize(7.5f);
 
             if (doc.Anulado)
                 col.Item().PaddingTop(4).Border(1).BorderColor(Colores.Fuerte).Padding(3)
                     .AlignCenter().Text("ANULADO — SIN VALIDEZ").FontSize(9).Bold();
+
+            foreach (var aviso in doc.Avisos)
+                col.Item().PaddingTop(4).Border(1).BorderColor(Colores.Fuerte).Padding(3)
+                    .AlignCenter().Text(aviso).FontSize(7.5f).Bold();
         });
 
     private void Destinatario(IContainer container) =>
@@ -109,7 +113,7 @@ public sealed class DocumentoTicket(DocumentoImprimible doc) : IDocument
                     item.Item().PaddingLeft(6).Row(row =>
                     {
                         row.RelativeItem().Text(
-                                $"{Textos.Cantidad(linea.Cantidad)} {linea.Unidad} x {Textos.Monto(linea.PrecioUnitario)}")
+                                $"{Textos.Juntar(" ", Textos.Cantidad(linea.Cantidad), linea.Unidad)} x {Textos.Monto(linea.PrecioUnitario)}")
                             .FontSize(7.5f);
 
                         row.ConstantItem(62).AlignRight()
@@ -161,6 +165,15 @@ public sealed class DocumentoTicket(DocumentoImprimible doc) : IDocument
             // retoca con un trazo, la letra no.
             col.Item().PaddingTop(4).AlignCenter()
                 .Text($"SON: {MontoEnLetras.Soles(doc.Total)}").FontSize(6.5f);
+
+            if (doc.QrTexto is { Length: > 0 } qr)
+            {
+                col.Item().PaddingTop(6).AlignCenter().Width(34, Unit.Millimetre).Image(CodigoQr.Png(qr)).FitArea();
+                if (!string.IsNullOrWhiteSpace(doc.Hash))
+                    col.Item().PaddingTop(3).AlignCenter().Text($"Hash: {doc.Hash}").FontSize(6);
+                if (!string.IsNullOrWhiteSpace(doc.PieLegal))
+                    col.Item().PaddingTop(2).AlignCenter().Text(doc.PieLegal).FontSize(6);
+            }
 
             if (doc.Usuario is { Length: > 0 } usuario)
                 col.Item().PaddingTop(3).AlignCenter().Text($"Atendido por {usuario}").FontSize(6.5f);

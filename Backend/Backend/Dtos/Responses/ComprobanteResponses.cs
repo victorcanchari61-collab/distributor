@@ -22,6 +22,7 @@ public class ComprobanteResponse
     public string ClienteTipoDoc { get; set; } = string.Empty;
     public string ClienteDocumento { get; set; } = string.Empty;
     public string ClienteNombre { get; set; } = string.Empty;
+    public string? ClienteDireccion { get; set; }
     public string Moneda { get; set; } = string.Empty;
     public decimal OpGravada { get; set; }
     public decimal OpExonerada { get; set; }
@@ -49,6 +50,19 @@ public class ComprobanteResponse
 
     /// <summary>Las líneas con las que salió: de ahí se arma una nota de crédito.</summary>
     public List<LineaComprobanteResponse> Lineas { get; set; } = [];
+
+    /// <summary>Solo en facturas y boletas: las notas de crédito y débito emitidas sobre ellas (también las rechazadas, con su estado).</summary>
+    public List<NotaDeComprobanteResponse> Notas { get; set; } = [];
+}
+
+/// <summary>Una nota de crédito o débito, resumida, dentro del comprobante que corrige.</summary>
+public class NotaDeComprobanteResponse
+{
+    public int Id { get; set; }
+    public string Tipo { get; set; } = string.Empty;
+    public string NumeroCompleto { get; set; } = string.Empty;
+    public string Estado { get; set; } = string.Empty;
+    public decimal Total { get; set; }
 }
 
 public class LineaComprobanteResponse

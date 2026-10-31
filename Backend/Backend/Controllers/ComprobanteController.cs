@@ -22,10 +22,12 @@ public class ComprobanteController : ControllerBase
     private readonly IComprobanteElectronicoService _comprobantes;
     private readonly IPermisoService _permisos;
     private readonly IUsuarioActual _usuarioActual;
+    private readonly IPdfService _pdf;
 
     public ComprobanteController(
-        IComprobanteElectronicoService comprobantes, IPermisoService permisos, IUsuarioActual usuarioActual)
+        IComprobanteElectronicoService comprobantes, IPermisoService permisos, IUsuarioActual usuarioActual, IPdfService pdf)
     {
+        _pdf = pdf;
         _comprobantes = comprobantes;
         _permisos = permisos;
         _usuarioActual = usuarioActual;
@@ -93,6 +95,16 @@ public class ComprobanteController : ControllerBase
     {
         if (await Denegado(await _comprobantes.TipoAsync(id), Accion.Crear) is { } denegado) return denegado;
         return Ok(await _comprobantes.ReenviarAsync(id));
+    }
+
+    /// <summary>La representación impresa (PDF): A4 por defecto, o <c>?formato=ticket</c> para el rollo de 80 mm.</summary>
+    [HttpGet("{id:int}/pdf")]
+    public async Task<IActionResult> Pdf(int id, [FromQuery] string? formato)
+    {
+        if (await Denegado(await _comprobantes.TipoAsync(id), Accion.Exportar) is { } denegado) return denegado;
+        var (contenido, nombre) = await _pdf.ComprobanteAsync(
+            id, string.Equals(formato, "ticket", StringComparison.OrdinalIgnoreCase) ? FormatoPdf.Ticket : FormatoPdf.A4);
+        return File(contenido, "application/pdf", nombre);
     }
 
     /// <summary>El XML firmado.</summary>

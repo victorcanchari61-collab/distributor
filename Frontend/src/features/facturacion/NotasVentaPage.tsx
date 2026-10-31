@@ -44,6 +44,8 @@ import type { AlmacenOpcion } from '../inventario'
 import { etiquetaMetodo, metodoPagoApi } from '../finanzas'
 import type { MetodoPagoOpcion, TipoMetodoPago } from '../finanzas'
 import { EmitirComprobanteModal } from './EmitirComprobanteModal'
+import { TIPOS_CPE } from './comprobanteApi'
+import { EstadoCpeBadge } from './PanelComprobante'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { devolucionVentaApi, notaVentaApi } from './ventasApi'
@@ -207,7 +209,7 @@ export function NotasVentaPage() {
     void cargarApoyo()
   }, [cargarApoyo])
 
-  useRealtime(['notasventa', 'pedidos', 'stock'], cargar)
+  useRealtime(['notasventa', 'pedidos', 'stock', 'comprobantes'], cargar)
 
   // Stock disponible del almacén elegido: es lo que se puede vender desde ahí.
   useEffect(() => {
@@ -845,6 +847,51 @@ export function NotasVentaPage() {
         { value: 'ANULADA', label: 'Anulada' },
       ],
       render: (row) => estadoNotaVentaBadge(row.estado),
+    },
+    {
+      // En qué quedó la venta frente a SUNAT: su factura o boleta y cómo la recibió.
+      key: 'comprobante',
+      label: 'Comprobante',
+      sortable: false,
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Sin comprobante', label: 'Sin comprobante' },
+        { value: 'Factura', label: 'Con factura' },
+        { value: 'Boleta', label: 'Con boleta' },
+        { value: 'Con problema en SUNAT', label: 'Con problema en SUNAT' },
+      ],
+      render: (row) =>
+        row.comprobanteTipo && row.comprobanteNumero ? (
+          <span className="flex flex-col items-start gap-0.5">
+            <span className="text-sm font-medium text-ink">
+              {TIPOS_CPE[row.comprobanteTipo].corto} {row.comprobanteNumero}
+            </span>
+            {row.comprobanteEstado && <EstadoCpeBadge estado={row.comprobanteEstado} />}
+          </span>
+        ) : (
+          <span className="text-ink-soft">Sin comprobante</span>
+        ),
+    },
+    {
+      // Las notas de crédito y débito que corrigen su factura o boleta.
+      key: 'notas',
+      label: 'Notas',
+      sortable: false,
+      filterType: 'select',
+      filterOptions: [
+        { value: 'Con nota de crédito', label: 'Con nota de crédito' },
+        { value: 'Con nota de débito', label: 'Con nota de débito' },
+        { value: 'Sin notas', label: 'Sin notas' },
+      ],
+      render: (row) =>
+        row.notasCredito + row.notasDebito === 0 ? (
+          <span className="text-ink-soft">—</span>
+        ) : (
+          <span className="flex flex-wrap gap-1">
+            {row.notasCredito > 0 && <Badge tone="warning">{row.notasCredito} crédito</Badge>}
+            {row.notasDebito > 0 && <Badge tone="sys">{row.notasDebito} débito</Badge>}
+          </span>
+        ),
     },
     {
       key: 'formaPago',

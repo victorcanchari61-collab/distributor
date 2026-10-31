@@ -25,6 +25,7 @@ public class PdfService(
     IDespachoService despachos,
     INovedadService novedades,
     IEmpresaService empresas,
+    IComprobanteElectronicoService comprobantes,
     IClienteRepository clientes,
     IProveedorRepository proveedores,
     IPlanillaService planillas,
@@ -256,6 +257,71 @@ public class PdfService(
         };
 
         return (Generar(doc, formato), Nombre("nota-venta", venta.Numero, formato));
+    }
+
+    public async Task<(byte[], string)> ComprobanteAsync(int id, FormatoPdf formato)
+    {
+        var c = await comprobantes.GetAsync(id);
+        var empresa = await empresas.GetActivaAsync();
+        var nombre = TipoCpe.Nombre(c.Tipo);
+        var esNota = TipoCpe.EsNota(c.Tipo);
+
+        // SUNAT imprime el correlativo a 8 dígitos: F001-00000010.
+        var numero = $"{c.Serie}-{c.Numero:D8}";
+
+        var datos = new List<DatoImprimible>();
+        if (esNota)
+        {
+            if (c.AfectadoNumero is { Length: > 0 } afectado)
+                datos.Add(new DatoImprimible("Documento que modifica", afectado));
+            datos.Add(new DatoImprimible("Motivo", $"{c.CodMotivo} · {c.DesMotivo}"));
+        }
+        else if (c.NotaVentaNumero is { Length: > 0 } venta)
+        {
+            datos.Add(new DatoImprimible("Nota de venta", venta));
+        }
+
+        var avisos = new List<string>();
+        if (c.Entorno != "produccion") avisos.Add("COMPROBANTE DE PRUEBA — SIN VALIDEZ TRIBUTARIA");
+        if (c.Estado == EstadoCpe.Rechazado) avisos.Add("RECHAZADO POR SUNAT — SIN VALIDEZ");
+        else if (c.Estado is EstadoCpe.Generado or EstadoCpe.Error) avisos.Add("SUNAT TODAVÍA NO LO CONFIRMA");
+
+        // Lo que lee el QR, en el orden que fija SUNAT: RUC | tipo | serie | número | IGV | total | fecha | tipo y número de documento del cliente.
+        var qr = string.Join('|', empresa.Ruc, c.Tipo, c.Serie, c.Numero, c.Igv.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+            c.Total.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), c.FechaEmision.ToString("yyyy-MM-dd"),
+            c.ClienteTipoDoc, c.ClienteDocumento) + "|";
+
+        var doc = new DocumentoImprimible
+        {
+            // Dos renglones: el recuadro del membrete es angosto para "BOLETA DE VENTA ELECTRÓNICA".
+            Titulo = nombre.ToUpperInvariant().Replace(" ELECTRÓNICA", "\nELECTRÓNICA"),
+            Numero = numero,
+            Fecha = c.FechaEmision,
+            FechaConHora = false,
+            Anulado = false,
+            EtiquetaParte = "Cliente",
+            ParteNombre = c.ClienteNombre,
+            ParteDocumento = c.ClienteDocumento is { Length: > 0 } d && d != "-" ? d : null,
+            ParteDireccion = c.ClienteDireccion,
+            Datos = datos,
+            EtiquetaImporte = "Precio",
+            MostrarCodigo = false,
+            Lineas = [.. c.Lineas.Select(l => new LineaImprimible(
+                string.Empty, l.Descripcion, null, l.Cantidad, string.Empty, l.Precio, Math.Round(l.Cantidad * l.Precio, 2)))],
+            Total = c.Total,
+            OpGravada = c.OpGravada,
+            Igv = c.Igv,
+            OpExonerada = c.OpExonerada,
+            Usuario = c.Usuario,
+            EtiquetaUsuario = "EMITIÓ",
+            Avisos = avisos,
+            QrTexto = qr,
+            Hash = c.Hash,
+            PieLegal = $"Representación impresa de la {nombre.ToLowerInvariant()}. Consulte su validez en sunat.gob.pe",
+            Empresa = empresa,
+        };
+
+        return (Generar(doc, formato), Nombre(c.Tipo switch { TipoCpe.Factura => "factura", TipoCpe.Boleta => "boleta", TipoCpe.NotaCredito => "nota-credito", _ => "nota-debito" }, numero, formato));
     }
 
     public async Task<(byte[], string)> OrdenCompraAsync(int id, FormatoPdf formato)

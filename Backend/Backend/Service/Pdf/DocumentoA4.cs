@@ -21,6 +21,9 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
     /// </summary>
     private const float TablaMm = 170;
 
+    /// <summary>Lo que ocupa cada franja de aviso bajo el membrete, para que el pie siga cabiendo en la misma hoja.</summary>
+    private const float AvisoMm = 10;
+
     public void Compose(IDocumentContainer container) =>
         container.Page(page =>
         {
@@ -38,7 +41,7 @@ public sealed class DocumentoA4(DocumentoImprimible doc) : IDocument
                  * Minimo y no fijo para que un documento largo pueda seguir en
                  * la hoja siguiente en lugar de quedarse sin sitio.
                  */
-                col.Item().MinHeight(TablaMm, Unit.Millimetre).Element(c => Comprobante.Tabla(c, doc));
+                col.Item().MinHeight(TablaMm - AvisoMm * doc.Avisos.Count, Unit.Millimetre).Element(c => Comprobante.Tabla(c, doc));
 
                 // El importe en letras y el total van juntos: si no caben al
                 // final de la hoja, pasan enteros a la siguiente.

@@ -102,4 +102,29 @@ public sealed record DocumentoImprimible
     public string EtiquetaUsuario { get; init; } = "REGISTRÓ";
 
     public required EmpresaResponse Empresa { get; init; }
+
+    /// <summary>
+    /// false cuando la fecha no trae hora real (un comprobante electrónico se emite en un día, no a una hora): el
+    /// papel muestra solo el día en vez de un "00:00" que no significa nada.
+    /// </summary>
+    public bool FechaConHora { get; init; } = true;
+
+    /// <summary>
+    /// Franjas rojas bajo el membrete: lo que le quita validez al papel (documento de prueba, rechazado por SUNAT,
+    /// sin respuesta todavía).
+    /// </summary>
+    public IReadOnlyList<string> Avisos { get; init; } = [];
+
+    // --- Solo en un comprobante electrónico ---
+
+    /// <summary>Lo que lleva el código QR (formato de SUNAT). Nulo en los demás documentos: no se dibuja nada.</summary>
+    public string? QrTexto { get; init; }
+
+    /// <summary>El resumen (hash) de la firma del XML.</summary>
+    public string? Hash { get; init; }
+
+    /// <summary>La leyenda de "representación impresa" y dónde consultar su validez.</summary>
+    public string? PieLegal { get; init; }
+
+    public string FechaTexto => Fecha.ToString(FechaConHora ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy");
 }

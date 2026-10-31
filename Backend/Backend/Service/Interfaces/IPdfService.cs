@@ -35,6 +35,12 @@ public interface IPdfService
     Task<(byte[] Contenido, string Nombre)> OrdenCompraAsync(int id, FormatoPdf formato);
     Task<(byte[] Contenido, string Nombre)> CompraAsync(int id, FormatoPdf formato);
 
+    /// <summary>
+    /// La representación impresa de un comprobante electrónico (factura, boleta, nota de crédito o débito), con su
+    /// código QR y el hash de su firma.
+    /// </summary>
+    Task<(byte[] Contenido, string Nombre)> ComprobanteAsync(int id, FormatoPdf formato);
+
     /// <summary>Los pedidos de un despacho, listos para dárselos al repartidor.</summary>
     Task<(byte[] Contenido, string Nombre)> DespachoAsync(int id);
 
