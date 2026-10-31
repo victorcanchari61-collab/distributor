@@ -17,6 +17,7 @@ import { consultaApi } from '../../lib/consultaApi'
 import { empresaApi } from './empresaApi'
 import type { EmpresaRequest, EmpresaResponse } from './empresaApi'
 import { SeriesEmpresa } from './SeriesEmpresa'
+import { WhatsAppEmpresa } from './WhatsAppEmpresa'
 import { usePermisos } from '../../lib/permisos'
 import { fechaCorta } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
@@ -38,6 +39,8 @@ const VACIA: EmpresaRequest = {
   claveSol: '',
   // Arranca en pruebas: nadie emite de verdad a SUNAT sin haberlo decidido.
   modoPrueba: true,
+  whatsAppAutomatico: false,
+  whatsAppPlantilla: '',
   activa: true,
 }
 
@@ -58,10 +61,12 @@ const aFormulario = (e: EmpresaResponse): EmpresaRequest => ({
   // La clave no vuelve del servidor: vacía deja la que está.
   claveSol: '',
   modoPrueba: e.modoPrueba,
+  whatsAppAutomatico: e.whatsAppAutomatico,
+  whatsAppPlantilla: e.whatsAppPlantilla ?? '',
   activa: true,
 })
 
-type Pestana = 'datos' | 'facturacion' | 'series'
+type Pestana = 'datos' | 'facturacion' | 'series' | 'whatsapp'
 
 /**
  * La empresa del sistema: una sola, así que no hay lista. Es un formulario con tres pestañas: sus datos (los que
@@ -205,6 +210,7 @@ export function EmpresaPage() {
           { id: 'datos', label: 'Datos' },
           { id: 'facturacion', label: 'Facturación electrónica' },
           { id: 'series', label: 'Series' },
+          { id: 'whatsapp', label: 'WhatsApp' },
         ]}
       />
 
@@ -331,6 +337,21 @@ export function EmpresaPage() {
               </p>
             )}
           </div>
+        </PageSection>
+      )}
+
+      {pestana === 'whatsapp' && (
+        <PageSection
+          title="Envío por WhatsApp"
+          description="Manda el enlace de descarga de cada comprobante al celular del cliente."
+        >
+          <WhatsAppEmpresa
+            puedeEditar={puedeEditar}
+            automatico={form.whatsAppAutomatico}
+            plantilla={form.whatsAppPlantilla ?? ''}
+            onAutomatico={(v) => setForm({ ...form, whatsAppAutomatico: v })}
+            onPlantilla={(v) => setForm({ ...form, whatsAppPlantilla: v })}
+          />
         </PageSection>
       )}
 

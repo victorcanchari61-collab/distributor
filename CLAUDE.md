@@ -11,6 +11,7 @@ Monorepo con tres proyectos que consumen el mismo API:
 - `Backend/` — API ASP.NET Core (net10.0) + EF Core + MySQL.
 - `Frontend/` — panel web React 19 + TypeScript + Vite + Tailwind 4 (pnpm).
 - `titanic/` — app móvil Flutter (Riverpod), para el repartidor/vendedor en ruta. Ver `titanic/README.md`.
+- `whatsapp-service/` — microservicio Node (Baileys) que manda por WhatsApp el enlace de descarga de cada comprobante. El backend le habla por `127.0.0.1` (sección `WhatsApp` de appsettings); `desplegar.sh` **no** lo despliega ni lo reinicia. Ver `whatsapp-service/README.md`.
 
 No hay carpeta de tests en Backend ni Frontend; solo la app Flutter tiene tests.
 

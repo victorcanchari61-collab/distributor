@@ -6,6 +6,7 @@ import { fechaCorta, fechaHora } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { ESTADOS_CPE, SUBMODULO_CPE, TIPOS_CPE, comprobanteApi } from './comprobanteApi'
 import type { ComprobanteResponse } from './comprobanteApi'
+import { WhatsAppComprobante } from './WhatsAppComprobante'
 
 /** Soles con dos decimales: un comprobante se lee al centavo. */
 export const monto = (n: number) => `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -150,6 +151,8 @@ export function PanelComprobante({
           </span>
         )}
       </div>
+
+      {puedeDescargar && c.estado === 'ACEPTADO' && <WhatsAppComprobante comprobante={c} onCambio={onCambio} />}
 
       {verPdf && <VisorPdf documento="comprobante" id={c.id} numero={c.numeroCompleto} onCerrar={() => setVerPdf(false)} />}
     </div>

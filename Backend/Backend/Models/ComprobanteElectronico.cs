@@ -61,6 +61,19 @@ public static class EstadoCpe
     public const string Error = "ERROR";
 }
 
+/// <summary>En qué quedó el envío por WhatsApp de un comprobante.</summary>
+public static class EstadoWhatsApp
+{
+    /// <summary>El servicio de WhatsApp lo aceptó y lo manda en su turno (entre mensajes hay una pausa de unos segundos).</summary>
+    public const string Encolado = "ENCOLADO";
+
+    /// <summary>No se pudo entregar al servicio (caído, sin vincular, teléfono inválido): se puede reintentar.</summary>
+    public const string Error = "ERROR";
+
+    /// <summary>El cliente no tiene teléfono: se puede mandar escribiendo uno.</summary>
+    public const string SinTelefono = "SIN_TELEFONO";
+}
+
 /// <summary>
 /// Una serie de comprobantes y su correlativo. Las series de las notas dependen de lo que corrigen: SUNAT exige
 /// que empiecen con F si corrigen una factura y con B si corrigen una boleta (FF01, BB01).
@@ -175,6 +188,23 @@ public class ComprobanteElectronico
 
     public int? UsuarioId { get; set; }
     public Usuario? Usuario { get; set; }
+
+    /// <summary>
+    /// Lo que va en el enlace público del comprobante: 32 caracteres aleatorios, no el número (que es de dominio
+    /// público y se adivina). Quien tiene el enlace baja el PDF; nada más.
+    /// </summary>
+    public string TokenPublico { get; set; } = Guid.NewGuid().ToString("N");
+
+    // --- Envío por WhatsApp ---
+
+    /// <summary>Nulo: nunca se mandó. Ver <see cref="EstadoWhatsApp"/>.</summary>
+    public string? WhatsAppEstado { get; set; }
+
+    /// <summary>A qué número se mandó la última vez.</summary>
+    public string? WhatsAppTelefono { get; set; }
+
+    public DateTime? WhatsAppEnviadoEn { get; set; }
+    public string? WhatsAppError { get; set; }
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 

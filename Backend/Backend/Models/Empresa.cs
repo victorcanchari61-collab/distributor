@@ -58,5 +58,14 @@ public class Empresa
 
     /// <summary>Hasta cuándo vale ese certificado. Nulo: no se ha subido ninguno desde aquí.</summary>
     public DateTime? CertificadoVenceEl { get; set; }
+
+    // --- Envío de comprobantes por WhatsApp ---
+
+    /// <summary>Si cada comprobante que SUNAT acepta se manda solo por WhatsApp al teléfono del cliente.</summary>
+    public bool WhatsAppAutomatico { get; set; }
+
+    /// <summary>El mensaje, con {cliente}, {tipo}, {numero}, {total}, {empresa} y {url}. Nulo: el mensaje de siempre.</summary>
+    public string? WhatsAppPlantilla { get; set; }
+
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }

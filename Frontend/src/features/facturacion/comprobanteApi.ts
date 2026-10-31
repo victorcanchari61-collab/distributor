@@ -97,6 +97,20 @@ export interface ComprobanteResponse {
   lineas: LineaComprobante[]
   /** Solo en facturas y boletas: las notas de crédito y débito que las corrigen (también las rechazadas, con su estado). */
   notas: NotaDeComprobante[]
+  /** Nulo: nunca se mandó por WhatsApp. */
+  whatsAppEstado: EstadoWhatsAppCpe | null
+  whatsAppTelefono: string | null
+  whatsAppEnviadoEn: string | null
+  whatsAppError: string | null
+}
+
+/** En qué quedó el envío por WhatsApp: en cola del servicio, con error, o sin teléfono del cliente. */
+export type EstadoWhatsAppCpe = 'ENCOLADO' | 'ERROR' | 'SIN_TELEFONO'
+
+export const ESTADOS_WHATSAPP: Record<EstadoWhatsAppCpe, { label: string; tone: 'success' | 'danger' | 'warning' }> = {
+  ENCOLADO: { label: 'Enviado', tone: 'success' },
+  ERROR: { label: 'Falló', tone: 'danger' },
+  SIN_TELEFONO: { label: 'Sin teléfono', tone: 'warning' },
 }
 
 /** Una nota de crédito o débito, resumida, dentro de la factura o boleta que corrige. */
@@ -143,6 +157,10 @@ export const comprobanteApi = {
 
   /** Nota de crédito o débito sobre un comprobante aceptado. */
   emitirNota: (id: number, body: EmitirNota) => api.post<ComprobanteResponse>(`/comprobante/${id}/nota`, body),
+
+  /** Manda el enlace de descarga por WhatsApp: al teléfono del cliente, o al que se indique. */
+  enviarWhatsApp: (id: number, telefono?: string) =>
+    api.post<ComprobanteResponse>(`/comprobante/${id}/whatsapp`, { telefono: telefono?.trim() || null }),
 
   /** Reenvía a SUNAT un comprobante que quedó sin respuesta. */
   reenviar: (id: number) => api.post<ComprobanteResponse>(`/comprobante/${id}/reenviar`),

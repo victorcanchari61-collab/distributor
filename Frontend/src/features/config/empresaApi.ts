@@ -33,7 +33,23 @@ export interface EmpresaResponse {
   tieneCertificado: boolean
   certificadoVenceEl: string | null
   certificadoVencido: boolean
+  /** Si cada comprobante aceptado por SUNAT se manda solo por WhatsApp al cliente. */
+  whatsAppAutomatico: boolean
+  /** El mensaje con sus {variables}; nulo: el mensaje de siempre. */
+  whatsAppPlantilla: string | null
   fechaCreacion: string
+}
+
+/** Cómo está el servicio de WhatsApp de la empresa. */
+export interface EstadoWhatsApp {
+  /** conectado, esperando-qr, desconectado o sin-servicio. */
+  estado: string
+  enCola: number
+  /** El QR a escanear, como imagen (data URL). Nulo si no hace falta. */
+  qrImagen: string | null
+  error: string | null
+  /** Falta el token en la configuración del servidor. */
+  faltaToken: boolean
 }
 
 export interface SubirCertificadoResponse {
@@ -82,6 +98,9 @@ export interface EmpresaRequest {
   /** Vacía al editar = dejar la que está. */
   claveSol?: string | null
   modoPrueba: boolean
+  whatsAppAutomatico: boolean
+  /** Vacío: el mensaje de siempre. */
+  whatsAppPlantilla?: string | null
   activa: boolean
 }
 
@@ -117,6 +136,12 @@ export const empresaApi = {
 
   /** POST /api/empresa/{id}/series/estandar — F001, B001 y las de notas que falten. */
   crearSeriesEstandar: (id: number) => api.post<SerieCpe[]>(`/empresa/${id}/series/estandar`),
+
+  /** GET /api/whatsapp/estado */
+  estadoWhatsApp: () => api.get<EstadoWhatsApp>('/whatsapp/estado'),
+
+  /** POST /api/whatsapp/desvincular — cierra la sesión y pide un QR nuevo. */
+  desvincularWhatsApp: () => api.post<{ mensaje: string }>('/whatsapp/desvincular'),
 
   /** PATCH /api/empresa/{id}/activar — activa una y desactiva la anterior. */
   activar: (id: number) => api.patch<EmpresaResponse>(`/empresa/${id}/activar`),

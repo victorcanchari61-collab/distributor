@@ -94,6 +94,8 @@ public class EmpresaService : IEmpresaService
             UsuarioSol = Limpiar(request.UsuarioSol),
             ClaveSol = Limpiar(request.ClaveSol),
             ModoPrueba = request.ModoPrueba,
+            WhatsAppAutomatico = request.WhatsAppAutomatico,
+            WhatsAppPlantilla = Limpiar(request.WhatsAppPlantilla),
             Activa = false,
             Habilitada = true
         };
@@ -143,6 +145,8 @@ public class EmpresaService : IEmpresaService
         empresa.Ubigeo = Limpiar(request.Ubigeo);
         empresa.UsuarioSol = Limpiar(request.UsuarioSol);
         empresa.ModoPrueba = request.ModoPrueba;
+        empresa.WhatsAppAutomatico = request.WhatsAppAutomatico;
+        empresa.WhatsAppPlantilla = Limpiar(request.WhatsAppPlantilla);
         // La clave no vuelve al formulario: vacía significa "dejar la que está".
         if (!string.IsNullOrWhiteSpace(request.ClaveSol)) empresa.ClaveSol = request.ClaveSol.Trim();
 
@@ -294,6 +298,8 @@ public class EmpresaService : IEmpresaService
             TieneCertificado = !string.IsNullOrEmpty(empresa.CertificadoPem),
             CertificadoVenceEl = empresa.CertificadoVenceEl,
             CertificadoVencido = empresa.CertificadoVenceEl is DateTime v && v.Date < DateTime.UtcNow.Date,
+            WhatsAppAutomatico = empresa.WhatsAppAutomatico,
+            WhatsAppPlantilla = empresa.WhatsAppPlantilla,
             FechaCreacion = empresa.FechaCreacion
         };
     }

@@ -16,6 +16,9 @@ public interface IComprobanteElectronicoService
     /// <summary>El tipo (01, 03, 07, 08) de un comprobante: de ahí sale el permiso que se le pide a quien lo toca.</summary>
     Task<string> TipoAsync(int id);
 
+    /// <summary>El id del comprobante aceptado que tiene ese token público, o nulo si no hay.</summary>
+    Task<int?> IdPorTokenAsync(string token);
+
     Task<ComprobanteResponse> GetAsync(int id);
 
     /// <summary>Factura o boleta de una nota de venta. La firma, la envía a SUNAT y guarda lo que respondió.</summary>

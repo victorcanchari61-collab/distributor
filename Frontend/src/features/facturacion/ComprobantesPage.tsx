@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CircleCheck, CircleX, Clock, FileArchive, FileCode2, FileMinus, FilePen, FilePlus, Eye, Receipt, RefreshCw, Ticket } from 'lucide-react'
+import { MessageCircle, CircleCheck, CircleX, Clock, FileArchive, FileCode2, FileMinus, FilePen, FilePlus, Eye, Receipt, RefreshCw, Ticket } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { AccionPdf, Alert, Badge, ListPage, Modal, RowAction, StatCard, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
@@ -7,7 +7,7 @@ import { ApiError } from '../../lib/apiClient'
 import { fechaCorta } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
-import { ESTADOS_CPE, SUBMODULO_CPE, comprobanteApi } from './comprobanteApi'
+import { ESTADOS_CPE, ESTADOS_WHATSAPP, SUBMODULO_CPE, comprobanteApi } from './comprobanteApi'
 import type { ComprobanteResponse, EstadoCpe, TipoCpe } from './comprobanteApi'
 import { EmitirNotaModal } from './EmitirNotaModal'
 import { EstadoCpeBadge, PanelComprobante, monto } from './PanelComprobante'
@@ -86,6 +86,17 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
       else await comprobanteApi.descargarCdr(c)
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'No pudimos descargar el archivo')
+    }
+  }
+
+  /** Manda el enlace por WhatsApp al teléfono del cliente. Si no tiene, el mensaje del error manda a escribirlo en el detalle. */
+  const whatsapp = async (c: ComprobanteResponse) => {
+    try {
+      reemplazar(await comprobanteApi.enviarWhatsApp(c.id))
+      toast.exito(`${c.numeroCompleto} enviado a la cola de WhatsApp`)
+    } catch (e) {
+      toast.error(e instanceof ApiError ? `${e.message}. Ábrelo con el ojo para escribir el teléfono.` : 'No pudimos enviarlo por WhatsApp')
+      void cargar()
     }
   }
 
@@ -176,6 +187,18 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
         render: (c) => <span className="font-semibold">{monto(c.total)}</span>,
       },
       {
+        key: 'whatsapp',
+        label: 'WhatsApp',
+        filterType: 'select',
+        filterOptions: [
+          { value: 'Sin enviar', label: 'Sin enviar' },
+          ...(Object.keys(ESTADOS_WHATSAPP) as (keyof typeof ESTADOS_WHATSAPP)[]).map((k) => ({ value: ESTADOS_WHATSAPP[k].label, label: ESTADOS_WHATSAPP[k].label })),
+        ],
+        value: (c) => (c.whatsAppEstado ? ESTADOS_WHATSAPP[c.whatsAppEstado].label : 'Sin enviar'),
+        render: (c) =>
+          c.whatsAppEstado ? <Badge tone={ESTADOS_WHATSAPP[c.whatsAppEstado].tone}>{ESTADOS_WHATSAPP[c.whatsAppEstado].label}</Badge> : <span className="text-ink-soft">—</span>,
+      },
+      {
         key: 'estado',
         label: 'SUNAT',
         filterType: 'select',
@@ -229,7 +252,7 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
       cardIcon={Icono}
       searchPlaceholder="Buscar por número, cliente..."
       empty={cargando ? 'Cargando...' : vista.vacio}
-      actionsWidth={220}
+      actionsWidth={250}
       rowActions={(c) => (
         <>
           <RowAction label={`Ver ${c.numeroCompleto}`} tone="view" onClick={() => setDetalle(c)}>
@@ -244,6 +267,11 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
           {puede(submodulo, 'exportar') && c.tieneCdr && (
             <RowAction label="Descargar CDR" onClick={() => void descargar('cdr', c)}>
               <FileArchive size={15} />
+            </RowAction>
+          )}
+          {puede(submodulo, 'exportar') && c.estado === 'ACEPTADO' && (
+            <RowAction label={c.whatsAppEstado === 'ENCOLADO' ? 'Reenviar por WhatsApp' : 'Enviar por WhatsApp'} tone="success" onClick={() => void whatsapp(c)}>
+              <MessageCircle size={15} />
             </RowAction>
           )}
           {puede(submodulo, 'crear') && (c.estado === 'GENERADO' || c.estado === 'ERROR') && (

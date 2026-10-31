@@ -9,6 +9,12 @@ public class EmitirComprobanteRequest
     public string Tipo { get; set; } = string.Empty;
 }
 
+/// <summary>Mandar el comprobante por WhatsApp. Sin teléfono se usa el del cliente.</summary>
+public class EnviarWhatsAppRequest
+{
+    public string? Telefono { get; set; }
+}
+
 /// <summary>Crear o corregir una serie de comprobantes de una empresa.</summary>
 public class GuardarSerieRequest
 {

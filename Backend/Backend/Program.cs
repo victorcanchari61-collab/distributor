@@ -150,6 +150,9 @@ builder.Services.AddHttpClient<IFactuClient, FactuClient>();
 builder.Services.AddSingleton<IProtectorSecretos, ProtectorSecretos>();
 builder.Services.AddScoped<IComprobanteElectronicoService, ComprobanteElectronicoService>();
 builder.Services.AddScoped<ISerieCpeService, SerieCpeService>();
+builder.Services.Configure<WhatsAppOpciones>(builder.Configuration.GetSection("WhatsApp"));
+builder.Services.AddHttpClient<IWhatsAppClient, WhatsAppClient>();
+builder.Services.AddScoped<IWhatsAppComprobanteService, WhatsAppComprobanteService>();
 
 builder.Services.AddScoped<IPasswordHasher<Backend.Models.Usuario>, PasswordHasher<Backend.Models.Usuario>>();
 

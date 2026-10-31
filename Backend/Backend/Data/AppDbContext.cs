@@ -460,6 +460,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.ModoPrueba).HasDefaultValue(true);
             entity.Property(e => e.CertificadoTitular).HasMaxLength(250);
             entity.Property(e => e.CertificadoPem).HasColumnType("longtext");
+            entity.Property(e => e.WhatsAppPlantilla).HasMaxLength(1000);
 
             // Solo una empresa puede estar activa, garantizado en base de datos.
             // MySQL no tiene indices parciales, asi que se usa una columna
@@ -1760,6 +1761,11 @@ public class AppDbContext : DbContext
             entity.Property(c => c.Hash).HasMaxLength(100);
             entity.Property(c => c.QrInfo).HasMaxLength(250);
             entity.Property(c => c.Entorno).HasMaxLength(12).IsRequired();
+            entity.Property(c => c.TokenPublico).HasMaxLength(32).IsRequired();
+            entity.HasIndex(c => c.TokenPublico).IsUnique();
+            entity.Property(c => c.WhatsAppEstado).HasMaxLength(12);
+            entity.Property(c => c.WhatsAppTelefono).HasMaxLength(20);
+            entity.Property(c => c.WhatsAppError).HasMaxLength(300);
 
             // El XML y el CDR son archivos de unos pocos KB: se guardan en la fila y se bajan de ahí.
             entity.Property(c => c.XmlFirmado).HasColumnType("longtext");
@@ -1924,7 +1930,7 @@ public class AppDbContext : DbContext
         nombre.Contains("Password", StringComparison.OrdinalIgnoreCase)
         || nombre.Contains("Hash", StringComparison.OrdinalIgnoreCase)
         || nombre.Contains("ClaveSol", StringComparison.OrdinalIgnoreCase)
-        || nombre == "CertificadoPem"
+        || nombre is "CertificadoPem" or "TokenPublico"
         || nombre is "XmlFirmado" or "CdrZip" or "DetalleJson";
 
     private static (string? anteriores, string? nuevos) CapturarValores(EntityEntry entrada)

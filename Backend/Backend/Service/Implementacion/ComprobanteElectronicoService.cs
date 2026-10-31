@@ -90,6 +90,12 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
             }).ToList();
     }
 
+    public async Task<int?> IdPorTokenAsync(string token) =>
+        await _context.ComprobantesElectronicos.AsNoTracking()
+            .Where(c => c.TokenPublico == token && c.Estado == EstadoCpe.Aceptado)
+            .Select(c => (int?)c.Id)
+            .FirstOrDefaultAsync();
+
     public async Task<string> TipoAsync(int id) =>
         await _context.ComprobantesElectronicos.AsNoTracking().Where(c => c.Id == id).Select(c => c.Tipo).FirstOrDefaultAsync()
         ?? throw new NotFoundException($"No existe el comprobante {id}");
@@ -597,6 +603,10 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         Usuario = c.Usuario?.Nombre,
         FechaCreacion = c.FechaCreacion,
         EnviadoEn = c.EnviadoEn,
+        WhatsAppEstado = c.WhatsAppEstado,
+        WhatsAppTelefono = c.WhatsAppTelefono,
+        WhatsAppEnviadoEn = c.WhatsAppEnviadoEn,
+        WhatsAppError = c.WhatsAppError,
         Lineas = JsonSerializer.Deserialize<List<LineaComprobanteResponse>>(c.DetalleJson, Json) ?? [],
     };
 }

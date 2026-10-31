@@ -48,6 +48,12 @@ public class ComprobanteResponse
     public DateTime FechaCreacion { get; set; }
     public DateTime? EnviadoEn { get; set; }
 
+    // --- WhatsApp: nulo si nunca se mandó ---
+    public string? WhatsAppEstado { get; set; }
+    public string? WhatsAppTelefono { get; set; }
+    public DateTime? WhatsAppEnviadoEn { get; set; }
+    public string? WhatsAppError { get; set; }
+
     /// <summary>Las líneas con las que salió: de ahí se arma una nota de crédito.</summary>
     public List<LineaComprobanteResponse> Lineas { get; set; } = [];
 

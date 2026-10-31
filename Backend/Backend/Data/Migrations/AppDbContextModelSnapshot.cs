@@ -923,12 +923,32 @@ namespace Backend.Data.Migrations
                         .HasMaxLength(2)
                         .HasColumnType("varchar(2)");
 
+                    b.Property<string>("TokenPublico")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
                     b.Property<decimal>("Total")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("UsuarioId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("WhatsAppEnviadoEn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("WhatsAppError")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<string>("WhatsAppEstado")
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)");
+
+                    b.Property<string>("WhatsAppTelefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
 
                     b.Property<string>("XmlFirmado")
                         .IsRequired()
@@ -939,6 +959,9 @@ namespace Backend.Data.Migrations
                     b.HasIndex("AfectadoId");
 
                     b.HasIndex("NotaVentaId");
+
+                    b.HasIndex("TokenPublico")
+                        .IsUnique();
 
                     b.HasIndex("UsuarioId");
 
@@ -1765,6 +1788,13 @@ namespace Backend.Data.Migrations
                     b.Property<string>("UsuarioSol")
                         .HasMaxLength(30)
                         .HasColumnType("varchar(30)");
+
+                    b.Property<bool>("WhatsAppAutomatico")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("WhatsAppPlantilla")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
 
                     b.HasKey("Id");
 
@@ -5180,7 +5210,7 @@ namespace Backend.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Backend.Models.NotaVenta", "NotaVenta")
-                        .WithMany()
+                        .WithMany("Comprobantes")
                         .HasForeignKey("NotaVentaId")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -6491,6 +6521,8 @@ namespace Backend.Data.Migrations
 
             modelBuilder.Entity("Backend.Models.NotaVenta", b =>
                 {
+                    b.Navigation("Comprobantes");
+
                     b.Navigation("Detalle");
 
                     b.Navigation("Devoluciones");

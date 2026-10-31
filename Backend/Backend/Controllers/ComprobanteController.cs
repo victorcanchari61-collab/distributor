@@ -23,10 +23,13 @@ public class ComprobanteController : ControllerBase
     private readonly IPermisoService _permisos;
     private readonly IUsuarioActual _usuarioActual;
     private readonly IPdfService _pdf;
+    private readonly IWhatsAppComprobanteService _whatsapp;
 
     public ComprobanteController(
-        IComprobanteElectronicoService comprobantes, IPermisoService permisos, IUsuarioActual usuarioActual, IPdfService pdf)
+        IComprobanteElectronicoService comprobantes, IPermisoService permisos, IUsuarioActual usuarioActual, IPdfService pdf,
+        IWhatsAppComprobanteService whatsapp)
     {
+        _whatsapp = whatsapp;
         _pdf = pdf;
         _comprobantes = comprobantes;
         _permisos = permisos;
@@ -77,7 +80,7 @@ public class ComprobanteController : ControllerBase
     {
         if (!TipoCpe.Todos.Contains(request.Tipo)) return TipoInvalido();
         if (await Denegado(request.Tipo, Accion.Crear) is { } denegado) return denegado;
-        return Ok(await _comprobantes.EmitirAsync(request));
+        return Ok(await ConWhatsAppAsync(await _comprobantes.EmitirAsync(request)));
     }
 
     /// <summary>Nota de crédito o débito sobre un comprobante aceptado.</summary>
@@ -86,7 +89,7 @@ public class ComprobanteController : ControllerBase
     {
         if (!TipoCpe.Todos.Contains(request.Tipo)) return TipoInvalido();
         if (await Denegado(request.Tipo, Accion.Crear) is { } denegado) return denegado;
-        return Ok(await _comprobantes.EmitirNotaAsync(id, request));
+        return Ok(await ConWhatsAppAsync(await _comprobantes.EmitirNotaAsync(id, request)));
     }
 
     /// <summary>Reenvía a SUNAT un comprobante que quedó sin respuesta.</summary>
@@ -94,7 +97,15 @@ public class ComprobanteController : ControllerBase
     public async Task<IActionResult> Reenviar(int id)
     {
         if (await Denegado(await _comprobantes.TipoAsync(id), Accion.Crear) is { } denegado) return denegado;
-        return Ok(await _comprobantes.ReenviarAsync(id));
+        return Ok(await ConWhatsAppAsync(await _comprobantes.ReenviarAsync(id)));
+    }
+
+    /// <summary>Manda por WhatsApp el enlace de descarga: al teléfono del cliente, o al que se indique.</summary>
+    [HttpPost("{id:int}/whatsapp")]
+    public async Task<IActionResult> EnviarWhatsApp(int id, [FromBody] EnviarWhatsAppRequest? request)
+    {
+        if (await Denegado(await _comprobantes.TipoAsync(id), Accion.Exportar) is { } denegado) return denegado;
+        return Ok(await _whatsapp.EnviarAsync(id, request?.Telefono));
     }
 
     /// <summary>La representación impresa (PDF): A4 por defecto, o <c>?formato=ticket</c> para el rollo de 80 mm.</summary>
@@ -123,6 +134,18 @@ public class ComprobanteController : ControllerBase
         if (await Denegado(await _comprobantes.TipoAsync(id), Accion.Exportar) is { } denegado) return denegado;
         var (contenido, nombre) = await _comprobantes.DescargarCdrAsync(id);
         return File(contenido, "application/zip", nombre);
+    }
+
+    /// <summary>
+    /// Si SUNAT aceptó el comprobante y la empresa tiene activado el envío automático, lo manda por WhatsApp. Se hace
+    /// aquí y no dentro del servicio de comprobantes para no cruzar las dependencias entre los dos servicios.
+    /// </summary>
+    private async Task<Backend.Dtos.Responses.ComprobanteResponse> ConWhatsAppAsync(Backend.Dtos.Responses.ComprobanteResponse c)
+    {
+        if (c.Estado != EstadoCpe.Aceptado) return c;
+
+        await _whatsapp.EnviarAutomaticoAsync(c.Id);
+        return await _comprobantes.GetAsync(c.Id);
     }
 
     // ------------------------------------------------------------------ Permisos

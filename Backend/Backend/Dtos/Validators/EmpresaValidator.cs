@@ -23,6 +23,7 @@ public class EmpresaValidator : AbstractValidator<EmpresaRequestBase>
             .WithMessage("El ubigeo tiene 6 dígitos");
         RuleFor(x => x.UsuarioSol).MaximumLength(30);
         RuleFor(x => x.ClaveSol).MaximumLength(80);
+        RuleFor(x => x.WhatsAppPlantilla).MaximumLength(1000);
 
         // Se acepta con o sin http: al guardar se normaliza en el servicio.
         RuleFor(x => x.SitioWeb)

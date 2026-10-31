@@ -35,5 +35,9 @@ public class EmpresaResponse
 
     public DateTime? CertificadoVenceEl { get; set; }
     public bool CertificadoVencido { get; set; }
+
+    // --- WhatsApp ---
+    public bool WhatsAppAutomatico { get; set; }
+    public string? WhatsAppPlantilla { get; set; }
     public DateTime FechaCreacion { get; set; }
 }

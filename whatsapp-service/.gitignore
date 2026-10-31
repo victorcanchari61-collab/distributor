@@ -1,0 +1,4 @@
+node_modules/
+.env
+# La sesión vinculada de WhatsApp: son credenciales.
+auth_info/

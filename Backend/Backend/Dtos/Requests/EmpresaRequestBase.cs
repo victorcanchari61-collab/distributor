@@ -26,6 +26,14 @@ public abstract class EmpresaRequestBase
 
     /// <summary>true: envía al entorno de pruebas de SUNAT. false: producción.</summary>
     public bool ModoPrueba { get; set; } = true;
+
+    // --- WhatsApp ---
+
+    /// <summary>true: cada comprobante aceptado por SUNAT se manda solo al teléfono del cliente.</summary>
+    public bool WhatsAppAutomatico { get; set; }
+
+    /// <summary>El mensaje con sus {variables}. Vacío: el mensaje de siempre.</summary>
+    public string? WhatsAppPlantilla { get; set; }
 }
 
 /// <summary>El certificado digital (.pem) de la empresa, en texto: clave privada y certificado, sin contraseña.</summary>

@@ -1,0 +1,28 @@
+; Daemon del servicio de WhatsApp de Titanic D.
+;
+; Instalación en el servidor (como root):
+;   cp /var/www/distributor/whatsapp-service/distributor-whatsapp.service /etc/systemd/system/
+;   systemctl daemon-reload
+;   systemctl enable --now distributor-whatsapp
+;
+; Ajusta User/Group si el usuario del backend es otro (mira con cuál corre distributor-backend).
+
+[Unit]
+Description=Servicio WhatsApp (Baileys) - Titanic D
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/distributor/whatsapp-service
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+
+StandardOutput=append:/var/log/distributor-whatsapp.log
+StandardError=append:/var/log/distributor-whatsapp.log
+
+[Install]
+WantedBy=multi-user.target
