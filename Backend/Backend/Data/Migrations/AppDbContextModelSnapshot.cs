@@ -1684,6 +1684,9 @@ namespace Backend.Data.Migrations
                         .HasColumnType("tinyint(1)")
                         .HasComputedColumnSql("CASE WHEN `Activa` = 1 THEN 1 END", true);
 
+                    b.Property<string>("CertificadoPem")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("CertificadoTitular")
                         .HasMaxLength(250)
                         .HasColumnType("varchar(250)");

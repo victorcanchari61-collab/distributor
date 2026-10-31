@@ -26,6 +26,8 @@ export interface EmpresaResponse {
   modoPrueba: boolean
   /** Del certificado digital subido: a nombre de quién y hasta cuándo vale. Nulos si no hay. */
   certificadoTitular: string | null
+  /** Hay un certificado guardado. El certificado en sí nunca llega al navegador. */
+  tieneCertificado: boolean
   certificadoVenceEl: string | null
   certificadoVencido: boolean
   fechaCreacion: string

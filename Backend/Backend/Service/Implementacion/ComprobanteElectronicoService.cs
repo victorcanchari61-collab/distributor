@@ -26,14 +26,17 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
     private readonly FacturacionOpciones _opciones;
     private readonly IUsuarioActual _usuarioActual;
     private readonly INotificador _notificador;
+    private readonly IProtectorSecretos _protector;
 
     public ComprobanteElectronicoService(
         AppDbContext context,
         IFactuClient factu,
         IOptions<FacturacionOpciones> opciones,
         IUsuarioActual usuarioActual,
-        INotificador notificador)
+        INotificador notificador,
+        IProtectorSecretos protector)
     {
+        _protector = protector;
         _context = context;
         _factu = factu;
         _opciones = opciones.Value;
@@ -144,6 +147,7 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
             {
                 ["endpoint"] = emisora.Entorno,
                 ["documento"] = TipoCpe.ParaApi(request.Tipo),
+                ["certificado"] = emisora.Certificado,
                 ["empresa"] = empresa,
                 ["serie"] = comprobante.Serie,
                 ["numero"] = numero.ToString(),
@@ -255,6 +259,7 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
             {
                 ["endpoint"] = emisora.Entorno,
                 ["documento"] = TipoCpe.ParaApi(request.Tipo),
+                ["certificado"] = emisora.Certificado,
                 ["empresa"] = empresa,
                 ["serie"] = nota.Serie,
                 ["numero"] = numero.ToString(),
@@ -406,7 +411,7 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         string direccion, string ubigeo, string distrito, string provincia, string departamento);
 
     /// <summary>La empresa activa, lista para emitir: con sus datos de SUNAT y el entorno que eligió.</summary>
-    private record EmpresaEmisora(EmpresaApi Api, string Entorno);
+    private record EmpresaEmisora(EmpresaApi Api, string Entorno, string Certificado);
 
     private async Task<EmpresaEmisora> EmpresaAsync()
     {
@@ -424,9 +429,15 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
             throw new BadRequestException(
                 $"Falta {string.Join(", ", faltan)} de la empresa para facturar. Complétalo en Configuración > Empresas");
 
+        // El certificado se guarda cifrado en la empresa y va a la API en cada emisión: ella no guarda ninguno.
+        if (string.IsNullOrEmpty(e.CertificadoPem))
+            throw new BadRequestException("La empresa no tiene certificado digital. Súbelo en Configuración > Empresas");
+        var certificado = _protector.Desproteger(e.CertificadoPem)
+            ?? throw new BadRequestException("No se pudo leer el certificado de la empresa. Vuelve a subirlo en Configuración > Empresas");
+
         var api = new EmpresaApi(e.Ruc, e.UsuarioSol!, e.ClaveSol!, e.RazonSocial, e.NombreComercial,
             e.Direccion ?? "-", e.Ubigeo!, e.Distrito ?? "-", e.Provincia ?? "-", e.Departamento ?? "-");
-        return new EmpresaEmisora(api, e.ModoPrueba ? "beta" : "produccion");
+        return new EmpresaEmisora(api, e.ModoPrueba ? "beta" : "produccion", certificado);
     }
 
     // ------------------------------------------------------------------- Cálculo

@@ -47,7 +47,13 @@ public class Empresa
     /// </summary>
     public bool ModoPrueba { get; set; } = true;
 
-    /// <summary>A nombre de quién está el certificado digital que se subió a la API de facturación.</summary>
+    /// <summary>
+    /// El certificado digital (.pem) con clave privada, CIFRADO. Con él se firman los comprobantes: viaja a la API de
+    /// facturación en cada emisión, que no guarda nada. Nunca sale en las respuestas ni en la bitácora.
+    /// </summary>
+    public string? CertificadoPem { get; set; }
+
+    /// <summary>A nombre de quién está el certificado digital que se subió.</summary>
     public string? CertificadoTitular { get; set; }
 
     /// <summary>Hasta cuándo vale ese certificado. Nulo: no se ha subido ninguno desde aquí.</summary>

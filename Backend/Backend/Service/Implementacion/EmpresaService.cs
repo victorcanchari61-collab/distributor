@@ -27,14 +27,17 @@ public class EmpresaService : IEmpresaService
     private readonly IValidator<UpdateEmpresaRequest> _updateValidator;
     private readonly INotificador _notificador;
     private readonly IFactuClient _factu;
+    private readonly IProtectorSecretos _protector;
 
     public EmpresaService(IEmpresaRepository repository,
         IValidator<CreateEmpresaRequest> createValidator,
         IValidator<UpdateEmpresaRequest> updateValidator,
         INotificador notificador,
-        IFactuClient factu)
+        IFactuClient factu,
+        IProtectorSecretos protector)
     {
         _factu = factu;
+        _protector = protector;
         _repository = repository;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
@@ -163,9 +166,11 @@ public class EmpresaService : IEmpresaService
         if (string.IsNullOrWhiteSpace(pem) || !pem.Contains("-----BEGIN"))
             throw new BadRequestException("El archivo no parece un certificado .pem: debe traer la clave privada y el certificado");
 
-        var guardado = await _factu.GuardarCertificadoAsync(empresa.Ruc, pem);
+        // La API solo lo revisa (clave legible, vigencia, de quién es): no lo guarda. Quien lo guarda es esta empresa,
+        // cifrado, y viaja a la API en cada emisión para firmar.
+        var guardado = await _factu.ValidarCertificadoAsync(empresa.Ruc, pem);
 
-        // Se guarda solo lo que sirve para avisar: de quién es y hasta cuándo vale. El certificado vive en la API.
+        empresa.CertificadoPem = _protector.Proteger(pem.Trim());
         empresa.CertificadoTitular = guardado.Titular;
         empresa.CertificadoVenceEl = guardado.VigenteHasta;
         await _repository.UpdateAsync(empresa);
@@ -286,6 +291,7 @@ public class EmpresaService : IEmpresaService
             TieneClaveSol = !string.IsNullOrEmpty(empresa.ClaveSol),
             ModoPrueba = empresa.ModoPrueba,
             CertificadoTitular = empresa.CertificadoTitular,
+            TieneCertificado = !string.IsNullOrEmpty(empresa.CertificadoPem),
             CertificadoVenceEl = empresa.CertificadoVenceEl,
             CertificadoVencido = empresa.CertificadoVenceEl is DateTime v && v.Date < DateTime.UtcNow.Date,
             FechaCreacion = empresa.FechaCreacion

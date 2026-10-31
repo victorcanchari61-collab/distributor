@@ -22,7 +22,7 @@ public class FacturacionOpciones
 /// <summary>Un XML firmado, listo para guardar y enviar.</summary>
 public record XmlGenerado(string NombreArchivo, string Hash, string QrInfo, string Xml);
 
-/// <summary>Lo que dice la API del certificado que acaba de guardar.</summary>
+/// <summary>Lo que dice la API del certificado que se le mandó a revisar.</summary>
 public record CertificadoGuardado(string Mensaje, string? Titular, DateTime? VigenteHasta, bool Vencido, List<string> Advertencias);
 
 /// <summary>Lo que SUNAT respondió a un envío.</summary>
@@ -43,8 +43,8 @@ public interface IFactuClient
 {
     Task<XmlGenerado> GenerarComprobanteAsync(object cuerpo);
     Task<XmlGenerado> GenerarNotaAsync(object cuerpo);
-    /// <summary>Guarda el certificado .pem del RUC en la API (reemplaza el anterior si ya había uno).</summary>
-    Task<CertificadoGuardado> GuardarCertificadoAsync(string ruc, string pem);
+    /// <summary>Le pide a la API que revise el certificado .pem (clave, vigencia, de quién es). La API no lo guarda.</summary>
+    Task<CertificadoGuardado> ValidarCertificadoAsync(string ruc, string pem);
 
     Task<RespuestaSunat> EnviarAsync(string entorno, string ruc, string usuarioSol, string claveSol, string nombreArchivo, string xml);
 }
@@ -89,9 +89,9 @@ public class FactuClient : IFactuClient
             Texto(data, "contenido_xml") ?? string.Empty);
     }
 
-    public async Task<CertificadoGuardado> GuardarCertificadoAsync(string ruc, string pem)
+    public async Task<CertificadoGuardado> ValidarCertificadoAsync(string ruc, string pem)
     {
-        using var raiz = await PostAsync($"guardar/certificado/{ruc}", new { certificado = pem });
+        using var raiz = await PostAsync("validar/certificado", new { certificado = pem, ruc });
         var r = raiz.RootElement;
 
         if (!Verdadero(r, "estado"))
@@ -115,7 +115,7 @@ public class FactuClient : IFactuClient
                 advertencias = adv.EnumerateArray().Select(a => a.ToString()).Where(a => a.Length > 0).ToList();
         }
 
-        return new CertificadoGuardado(Texto(r, "mensaje") ?? "Certificado guardado.", titular, hasta, vencido, advertencias);
+        return new CertificadoGuardado(Texto(r, "mensaje") ?? "Certificado válido.", titular, hasta, vencido, advertencias);
     }
 
     public async Task<RespuestaSunat> EnviarAsync(

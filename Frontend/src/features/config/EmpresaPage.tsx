@@ -499,7 +499,11 @@ export function EmpresaPage() {
                     {fechaCorta(editando.certificadoVenceEl)}
                   </p>
                 ) : (
-                  <p className="text-xs text-ink-soft">Todavía no se subió ninguno desde aquí. Sin certificado no se pueden firmar comprobantes.</p>
+                  <p className="text-xs text-ink-soft">
+                    {editando.tieneCertificado
+                      ? 'Certificado guardado.'
+                      : 'Todavía no se subió ninguno. Sin certificado no se pueden firmar comprobantes.'}
+                  </p>
                 )
               ) : (
                 <p className="text-xs text-ink-soft">Guarda la empresa primero: el certificado se sube a su RUC.</p>
@@ -521,7 +525,7 @@ export function EmpresaPage() {
                 onClick={() => inputCert.current?.click()}
               >
                 <Upload size={15} />
-                {editando?.certificadoVenceEl ? 'Reemplazar' : 'Subir certificado'}
+                {editando?.tieneCertificado ? 'Reemplazar' : 'Subir certificado'}
               </Button>
             )}
           </div>

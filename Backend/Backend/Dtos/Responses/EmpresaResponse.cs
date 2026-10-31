@@ -30,6 +30,9 @@ public class EmpresaResponse
     /// <summary>Del certificado digital subido: a nombre de quién y hasta cuándo vale. Nulos si no hay.</summary>
     public string? CertificadoTitular { get; set; }
 
+    /// <summary>Hay un certificado guardado (el certificado en sí nunca se devuelve).</summary>
+    public bool TieneCertificado { get; set; }
+
     public DateTime? CertificadoVenceEl { get; set; }
     public bool CertificadoVencido { get; set; }
     public DateTime FechaCreacion { get; set; }

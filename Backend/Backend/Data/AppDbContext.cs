@@ -459,6 +459,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.ClaveSol).HasMaxLength(80);
             entity.Property(e => e.ModoPrueba).HasDefaultValue(true);
             entity.Property(e => e.CertificadoTitular).HasMaxLength(250);
+            entity.Property(e => e.CertificadoPem).HasColumnType("longtext");
 
             // Solo una empresa puede estar activa, garantizado en base de datos.
             // MySQL no tiene indices parciales, asi que se usa una columna
@@ -1928,6 +1929,7 @@ public class AppDbContext : DbContext
         nombre.Contains("Password", StringComparison.OrdinalIgnoreCase)
         || nombre.Contains("Hash", StringComparison.OrdinalIgnoreCase)
         || nombre.Contains("ClaveSol", StringComparison.OrdinalIgnoreCase)
+        || nombre == "CertificadoPem"
         || nombre is "XmlFirmado" or "CdrZip" or "DetalleJson";
 
     private static (string? anteriores, string? nuevos) CapturarValores(EntityEntry entrada)
