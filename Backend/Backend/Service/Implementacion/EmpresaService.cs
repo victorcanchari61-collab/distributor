@@ -84,6 +84,10 @@ public class EmpresaService : IEmpresaService
             Email = request.Email,
             SitioWeb = NormalizarWeb(request.SitioWeb),
             RepresentanteLegal = request.RepresentanteLegal,
+            Ubigeo = Limpiar(request.Ubigeo),
+            UsuarioSol = Limpiar(request.UsuarioSol),
+            ClaveSol = Limpiar(request.ClaveSol),
+            ModoPrueba = request.ModoPrueba,
             Activa = false,
             Habilitada = true
         };
@@ -130,6 +134,11 @@ public class EmpresaService : IEmpresaService
         empresa.Email = request.Email;
         empresa.SitioWeb = NormalizarWeb(request.SitioWeb);
         empresa.RepresentanteLegal = request.RepresentanteLegal;
+        empresa.Ubigeo = Limpiar(request.Ubigeo);
+        empresa.UsuarioSol = Limpiar(request.UsuarioSol);
+        empresa.ModoPrueba = request.ModoPrueba;
+        // La clave no vuelve al formulario: vacía significa "dejar la que está".
+        if (!string.IsNullOrWhiteSpace(request.ClaveSol)) empresa.ClaveSol = request.ClaveSol.Trim();
 
         await _repository.UpdateAsync(empresa);
 
@@ -224,6 +233,8 @@ public class EmpresaService : IEmpresaService
             ?? throw new NotFoundException("Empresa no encontrada");
     }
 
+    private static string? Limpiar(string? texto) => string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
+
     private static EmpresaResponse MapToResponse(Empresa empresa)
     {
         return new EmpresaResponse
@@ -242,6 +253,10 @@ public class EmpresaService : IEmpresaService
             RepresentanteLegal = empresa.RepresentanteLegal,
             Activa = empresa.Activa,
             Habilitada = empresa.Habilitada,
+            Ubigeo = empresa.Ubigeo,
+            UsuarioSol = empresa.UsuarioSol,
+            TieneClaveSol = !string.IsNullOrEmpty(empresa.ClaveSol),
+            ModoPrueba = empresa.ModoPrueba,
             FechaCreacion = empresa.FechaCreacion
         };
     }

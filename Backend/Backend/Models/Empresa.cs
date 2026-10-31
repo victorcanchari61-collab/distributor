@@ -29,5 +29,22 @@ public class Empresa
     /// historial pero no se puede activar; asi se retira sin eliminarla.
     /// </summary>
     public bool Habilitada { get; set; } = true;
+
+    // --- Facturación electrónica ---
+
+    /// <summary>Ubigeo (6 dígitos, INEI) del domicilio fiscal: el XML de SUNAT lo exige.</summary>
+    public string? Ubigeo { get; set; }
+
+    /// <summary>Usuario SOL con el que se envía a SUNAT. En el entorno de pruebas: MODDATOS.</summary>
+    public string? UsuarioSol { get; set; }
+
+    /// <summary>Clave SOL. Nunca sale en las respuestas ni en la bitácora: solo se guarda y se usa para enviar.</summary>
+    public string? ClaveSol { get; set; }
+
+    /// <summary>
+    /// true: los comprobantes van al entorno de pruebas (beta) de SUNAT y no tienen validez tributaria. false: van a
+    /// producción. Arranca en pruebas para que nadie emita de verdad sin haberlo decidido.
+    /// </summary>
+    public bool ModoPrueba { get; set; } = true;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }

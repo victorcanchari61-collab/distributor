@@ -18,6 +18,7 @@ import {
   VentasDashboard,
   ZonasPage,
 } from './features/dashboard'
+import { ComprobantesPage } from './features/facturacion'
 import { MiPerfilPage } from './features/perfil'
 import { Button } from './components/ui'
 import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
@@ -71,6 +72,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'dashboard.compras': ComprasDashboard,
   'dashboard.inventario': InventarioDashboard,
   'dashboard.reparto': RepartoDashboard,
+  'fact.comprobantes': ComprobantesPage,
   'dashboard.sinventas': ProductosSinVentasPage,
   'dashboard.zonas': ZonasPage,
   'maestros.clientes': ClientesPage,

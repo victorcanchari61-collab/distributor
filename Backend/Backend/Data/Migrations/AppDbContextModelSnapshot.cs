@@ -796,6 +796,160 @@ namespace Backend.Data.Migrations
                     b.ToTable("CompraPago", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Models.ComprobanteElectronico", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AfectadoId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("CdrZip")
+                        .HasColumnType("longblob");
+
+                    b.Property<string>("ClienteDireccion")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
+                    b.Property<string>("ClienteDocumento")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int?>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClienteNombre")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
+                    b.Property<string>("ClienteTipoDoc")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)");
+
+                    b.Property<string>("CodMotivo")
+                        .HasMaxLength(2)
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<string>("CodigoSunat")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<string>("DesMotivo")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
+                    b.Property<string>("DetalleJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Entorno")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)");
+
+                    b.Property<DateTime?>("EnviadoEn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaEmision")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<decimal>("Igv")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("MensajeSunat")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Moneda")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("varchar(3)");
+
+                    b.Property<string>("NombreArchivo")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("varchar(60)");
+
+                    b.Property<int?>("NotaVentaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NotasSunat")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<int>("Numero")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("OpExonerada")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OpGravada")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("QrInfo")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
+                    b.Property<string>("Serie")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("varchar(4)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("XmlFirmado")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AfectadoId");
+
+                    b.HasIndex("NotaVentaId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.HasIndex("Estado", "FechaEmision");
+
+                    b.HasIndex("Serie", "Numero")
+                        .IsUnique();
+
+                    b.ToTable("ComprobantesElectronicos", (string)null);
+                });
+
             modelBuilder.Entity("Backend.Models.ConciliacionBancaria", b =>
                 {
                     b.Property<int>("Id")
@@ -4161,6 +4315,96 @@ namespace Backend.Data.Migrations
                     b.ToTable("Rutas", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Models.SerieCpe", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("AplicaA")
+                        .HasMaxLength(2)
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<string>("Serie")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("varchar(4)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<int>("UltimoNumero")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Serie")
+                        .IsUnique();
+
+                    b.ToTable("SeriesCpe", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Activa = true,
+                            Serie = "F001",
+                            Tipo = "01",
+                            UltimoNumero = 0
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Activa = true,
+                            Serie = "B001",
+                            Tipo = "03",
+                            UltimoNumero = 0
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Activa = true,
+                            AplicaA = "01",
+                            Serie = "FC01",
+                            Tipo = "07",
+                            UltimoNumero = 0
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Activa = true,
+                            AplicaA = "03",
+                            Serie = "BC01",
+                            Tipo = "07",
+                            UltimoNumero = 0
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Activa = true,
+                            AplicaA = "01",
+                            Serie = "FD01",
+                            Tipo = "08",
+                            UltimoNumero = 0
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Activa = true,
+                            AplicaA = "03",
+                            Serie = "BD01",
+                            Tipo = "08",
+                            UltimoNumero = 0
+                        });
+                });
+
             modelBuilder.Entity("Backend.Models.SolicitudPermiso", b =>
                 {
                     b.Property<int>("Id")
@@ -4946,6 +5190,30 @@ namespace Backend.Data.Migrations
                     b.Navigation("Compra");
 
                     b.Navigation("MetodoPago");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.ComprobanteElectronico", b =>
+                {
+                    b.HasOne("Backend.Models.ComprobanteElectronico", "Afectado")
+                        .WithMany()
+                        .HasForeignKey("AfectadoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Backend.Models.NotaVenta", "NotaVenta")
+                        .WithMany()
+                        .HasForeignKey("NotaVentaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Afectado");
+
+                    b.Navigation("NotaVenta");
 
                     b.Navigation("Usuario");
                 });

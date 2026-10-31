@@ -17,6 +17,13 @@ export interface EmpresaResponse {
   activa: boolean
   /** Disponible para usarse. Una deshabilitada no se puede activar. */
   habilitada: boolean
+  /** Ubigeo de 6 dígitos del domicilio fiscal: el comprobante electrónico lo exige. */
+  ubigeo: string | null
+  usuarioSol: string | null
+  /** Hay una clave SOL guardada. La clave en sí nunca llega al navegador. */
+  tieneClaveSol: boolean
+  /** true: emite al entorno de pruebas de SUNAT (sin validez tributaria). false: producción. */
+  modoPrueba: boolean
   fechaCreacion: string
 }
 
@@ -33,6 +40,11 @@ export interface EmpresaRequest {
   /** Se puede escribir sin http: el backend le pone https al guardar. */
   sitioWeb?: string | null
   representanteLegal?: string | null
+  ubigeo?: string | null
+  usuarioSol?: string | null
+  /** Vacía al editar = dejar la que está. */
+  claveSol?: string | null
+  modoPrueba: boolean
   activa: boolean
 }
 

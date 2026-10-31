@@ -242,6 +242,11 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Listas de precios',
         icono: Icons.payments_outlined,
       ),
+      MenuItem(
+        id: 'fact.comprobantes',
+        titulo: 'Comprobantes',
+        icono: Icons.receipt_outlined,
+      ),
     ],
   ),
   MenuGrupo(

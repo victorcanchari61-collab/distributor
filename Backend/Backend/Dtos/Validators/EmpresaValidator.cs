@@ -18,6 +18,12 @@ public class EmpresaValidator : AbstractValidator<EmpresaRequestBase>
         RuleFor(x => x.Distrito).MaximumLength(60);
         RuleFor(x => x.RepresentanteLegal).MaximumLength(150);
 
+        RuleFor(x => x.Ubigeo)
+            .Matches("^[0-9]{6}$").When(x => !string.IsNullOrWhiteSpace(x.Ubigeo))
+            .WithMessage("El ubigeo tiene 6 dígitos");
+        RuleFor(x => x.UsuarioSol).MaximumLength(30);
+        RuleFor(x => x.ClaveSol).MaximumLength(80);
+
         // Se acepta con o sin http: al guardar se normaliza en el servicio.
         RuleFor(x => x.SitioWeb)
             .MaximumLength(150)

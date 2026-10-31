@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, Check, Eye, History, Pencil, Plus, ShoppingBag, Trash2, Undo2, X } from 'lucide-react'
+import { ArrowLeft, Check, Eye, History, Pencil, Plus, Receipt, ShoppingBag, Trash2, Undo2, X } from 'lucide-react'
 import { motivoNovedadApi } from '../tms/motivoNovedadApi'
 import type { MotivoNovedadOpcion } from '../tms/motivoNovedadApi'
 import {
@@ -43,6 +43,7 @@ import { almacenApi, stockApi } from '../inventario'
 import type { AlmacenOpcion } from '../inventario'
 import { etiquetaMetodo, metodoPagoApi } from '../finanzas'
 import type { MetodoPagoOpcion, TipoMetodoPago } from '../finanzas'
+import { EmitirComprobanteModal } from './EmitirComprobanteModal'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { devolucionVentaApi, notaVentaApi } from './ventasApi'
@@ -118,6 +119,7 @@ export function NotasVentaPage() {
   const [error, setError] = useState('')
 
   const [editando, setEditando] = useState<NotaVentaResponse | null>(null)
+  const [facturando, setFacturando] = useState<NotaVentaFila | null>(null)
   const [detalleAbierto, setDetalleAbierto] = useState<NotaVentaResponse | null>(null)
   const [rechazando, setRechazando] = useState<DevolucionDeVenta | null>(null)
   const [motivoRechazo, setMotivoRechazo] = useState('')
@@ -1251,6 +1253,17 @@ export function NotasVentaPage() {
           {puede('fact.notaventa', 'exportar') && (
             <AccionPdf documento="notaventa" id={row.id} numero={row.numero} />
           )}
+          {puede('fact.comprobantes', 'crear') && (
+            <RowAction
+              label={`Facturar ${row.numero}`}
+              tone="edit"
+              disabled={row.estado !== 'CONFIRMADA'}
+              disabledReason="Está anulada"
+              onClick={() => setFacturando(row)}
+            >
+              <Receipt size={15} />
+            </RowAction>
+          )}
           {puede('fact.notaventa', 'editar') && (
             <RowAction
               label={`Editar ${row.numero}`}
@@ -1275,6 +1288,11 @@ export function NotasVentaPage() {
         </>
       )}
     >
+      <EmitirComprobanteModal
+        nota={facturando ? { id: facturando.id, numero: facturando.numero, cliente: facturando.cliente, total: facturando.total } : null}
+        onClose={() => setFacturando(null)}
+      />
+
       <Modal
         open={detalleAbierto !== null}
         title={detalleAbierto ? `${detalleAbierto.numero} · ${detalleAbierto.cliente}` : ''}

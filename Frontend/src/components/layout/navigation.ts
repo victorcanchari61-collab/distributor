@@ -164,14 +164,13 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Facturación',
     sys: 'fact',
     icon: ReceiptText,
-    // Por ahora no se factura: se trabaja con pedido y nota de venta. Los
-    // comprobantes electronicos quedan reservados, junto a Series y Parametros
-    // en Configuracion, para cuando el cliente decida facturar.
+    // Los comprobantes electronicos (factura, boleta, notas de credito y debito) se emiten desde la nota de venta
+    // y se consultan en Comprobantes. Series y Parametros siguen reservados en Configuracion.
     items: [
       { id: 'fact.pedidos', label: 'Pedidos', icon: ClipboardList },
       { id: 'fact.notaventa', label: 'Notas de venta', icon: FileText },
       { id: 'fact.precios', label: 'Listas de precios', icon: Banknote },
-      { id: 'fact.comprobantes', label: 'Comprobantes', icon: Receipt, pending: true, hidden: true },
+      { id: 'fact.comprobantes', label: 'Comprobantes', icon: Receipt },
       {
         id: 'fact.notas',
         label: 'Notas de crédito y débito',

@@ -18,6 +18,7 @@ import {
   ListPage,
   Modal,
   RowAction,
+  Select,
   useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
@@ -40,6 +41,11 @@ const VACIA: EmpresaRequest = {
   email: '',
   sitioWeb: '',
   representanteLegal: '',
+  ubigeo: '',
+  usuarioSol: '',
+  claveSol: '',
+  // Arranca en pruebas: nadie emite de verdad a SUNAT sin haberlo decidido.
+  modoPrueba: true,
   activa: false,
 }
 
@@ -124,6 +130,11 @@ export function EmpresaPage() {
       email: empresa.email ?? '',
       sitioWeb: empresa.sitioWeb ?? '',
       representanteLegal: empresa.representanteLegal ?? '',
+      ubigeo: empresa.ubigeo ?? '',
+      usuarioSol: empresa.usuarioSol ?? '',
+      // La clave no vuelve del servidor: vacía deja la que está.
+      claveSol: '',
+      modoPrueba: empresa.modoPrueba,
       activa: empresa.activa,
     })
     setAvisoSunat('')
@@ -213,6 +224,14 @@ export function EmpresaPage() {
         ) : (
           <span className="text-ink-soft">—</span>
         ),
+    },
+    {
+      // Con qué entorno de SUNAT emite: en pruebas los comprobantes no valen.
+      key: 'modoPrueba',
+      label: 'Facturación',
+      filterable: false,
+      value: (row) => (row.modoPrueba ? 'Pruebas' : 'Producción'),
+      render: (row) => <Badge tone={row.modoPrueba ? 'warning' : 'success'}>{row.modoPrueba ? 'Pruebas' : 'Producción'}</Badge>,
     },
     {
       key: 'activa',
@@ -404,6 +423,49 @@ export function EmpresaPage() {
             value={form.sitioWeb ?? ''}
             onChange={(e) => setForm({ ...form, sitioWeb: e.target.value })}
           />
+
+          {/* Lo que SUNAT pide para recibir facturas, boletas y notas. */}
+          <div className="sm:col-span-2">
+            <p className="text-sm font-semibold text-ink">Facturación electrónica</p>
+            <p className="text-xs text-ink-soft">Con estos datos se firman y se envían a SUNAT los comprobantes de esta empresa.</p>
+          </div>
+          <Select
+            label="Modo"
+            value={form.modoPrueba ? 'prueba' : 'produccion'}
+            onChange={(e) => setForm({ ...form, modoPrueba: e.target.value === 'prueba' })}
+          >
+            <option value="prueba">Pruebas (beta de SUNAT, sin validez tributaria)</option>
+            <option value="produccion">Producción (comprobantes reales)</option>
+          </Select>
+          <Input
+            label="Ubigeo del domicilio fiscal"
+            placeholder="150101"
+            inputMode="numeric"
+            maxLength={6}
+            value={form.ubigeo ?? ''}
+            onChange={(e) => setForm({ ...form, ubigeo: e.target.value.replace(/\D/g, '') })}
+          />
+          <Input
+            label="Usuario SOL"
+            placeholder={form.modoPrueba ? 'MODDATOS' : ''}
+            autoComplete="off"
+            value={form.usuarioSol ?? ''}
+            onChange={(e) => setForm({ ...form, usuarioSol: e.target.value })}
+          />
+          <Input
+            label="Clave SOL"
+            type="password"
+            autoComplete="new-password"
+            placeholder={editando?.tieneClaveSol ? 'Guardada · escribe otra para cambiarla' : form.modoPrueba ? 'moddatos' : ''}
+            value={form.claveSol ?? ''}
+            onChange={(e) => setForm({ ...form, claveSol: e.target.value })}
+          />
+          {!form.modoPrueba && (
+            <p className="rounded-field border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 sm:col-span-2">
+              En producción cada comprobante que se emita es real y llega a SUNAT. Antes hay que subir el certificado digital de esta
+              empresa a la API de facturación.
+            </p>
+          )}
 
           {/* Desactivar desde aqui no se permite: el backend obliga a activar otra. */}
           {!form.activa && (

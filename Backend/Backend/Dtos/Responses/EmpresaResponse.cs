@@ -16,5 +16,15 @@ public class EmpresaResponse
     public string? RepresentanteLegal { get; set; }
     public bool Activa { get; set; }
     public bool Habilitada { get; set; }
+
+    // --- Facturación electrónica ---
+    public string? Ubigeo { get; set; }
+    public string? UsuarioSol { get; set; }
+
+    /// <summary>Hay una clave SOL guardada. La clave en sí nunca se devuelve.</summary>
+    public bool TieneClaveSol { get; set; }
+
+    /// <summary>true: emite al entorno de pruebas de SUNAT (sin validez tributaria).</summary>
+    public bool ModoPrueba { get; set; }
     public DateTime FechaCreacion { get; set; }
 }

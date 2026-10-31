@@ -144,6 +144,11 @@ builder.Services.AddHostedService<CategorizacionHostedService>();
 // exponer el token en el navegador.
 builder.Services.AddHttpClient<IConsultaService, ConsultaService>();
 
+// Facturación electrónica: la API que firma los XML y los manda a SUNAT (sección "Facturacion" de appsettings).
+builder.Services.Configure<FacturacionOpciones>(builder.Configuration.GetSection("Facturacion"));
+builder.Services.AddHttpClient<IFactuClient, FactuClient>();
+builder.Services.AddScoped<IComprobanteElectronicoService, ComprobanteElectronicoService>();
+
 builder.Services.AddScoped<IPasswordHasher<Backend.Models.Usuario>, PasswordHasher<Backend.Models.Usuario>>();
 
 // Tiempo real: un cambio en una PC se ve solo en las demas, sin recargar.

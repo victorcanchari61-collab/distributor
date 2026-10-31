@@ -80,6 +80,8 @@ public class AppDbContext : DbContext
     public DbSet<PlanillaDetalle> PlanillaDetalles => Set<PlanillaDetalle>();
     public DbSet<PlanillaDescuento> PlanillaDescuentos => Set<PlanillaDescuento>();
     public DbSet<GestionCliente> GestionesCliente => Set<GestionCliente>();
+    public DbSet<SerieCpe> SeriesCpe => Set<SerieCpe>();
+    public DbSet<ComprobanteElectronico> ComprobantesElectronicos => Set<ComprobanteElectronico>();
     public DbSet<CategoriaCliente> CategoriasCliente => Set<CategoriaCliente>();
     public DbSet<ConfiguracionCategorizacion> ConfiguracionesCategorizacion => Set<ConfiguracionCategorizacion>();
     public DbSet<CalculoCategorizacion> CalculosCategorizacion => Set<CalculoCategorizacion>();
@@ -114,6 +116,8 @@ public class AppDbContext : DbContext
         ConfigurarAuditoria(modelBuilder);
 
         ConfigurarCategorizacion(modelBuilder);
+
+        ConfigurarComprobantes(modelBuilder);
 
         modelBuilder.Entity<GestionCliente>(entity =>
         {
@@ -450,6 +454,10 @@ public class AppDbContext : DbContext
             entity.Property(e => e.SitioWeb).HasMaxLength(150);
             entity.Property(e => e.RepresentanteLegal).HasMaxLength(150);
             entity.Property(e => e.Habilitada).HasDefaultValue(true);
+            entity.Property(e => e.Ubigeo).HasMaxLength(6);
+            entity.Property(e => e.UsuarioSol).HasMaxLength(30);
+            entity.Property(e => e.ClaveSol).HasMaxLength(80);
+            entity.Property(e => e.ModoPrueba).HasDefaultValue(true);
 
             // Solo una empresa puede estar activa, garantizado en base de datos.
             // MySQL no tiene indices parciales, asi que se usa una columna
@@ -1707,6 +1715,74 @@ public class AppDbContext : DbContext
     /// trimestral; desde la pantalla de Categorización se renombran, se les cambia el monto y se
     /// elige el ciclo.
     /// </summary>
+    /// <summary>Series y comprobantes electrónicos: lo que se emite a SUNAT y lo que respondió.</summary>
+    private static void ConfigurarComprobantes(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SerieCpe>(entity =>
+        {
+            entity.ToTable("SeriesCpe");
+            entity.Property(s => s.Tipo).HasMaxLength(2).IsRequired();
+            entity.Property(s => s.Serie).HasMaxLength(4).IsRequired();
+            entity.Property(s => s.AplicaA).HasMaxLength(2);
+            entity.HasIndex(s => s.Serie).IsUnique();
+
+            // Las series con las que arranca el sistema: la primera de cada tipo. Las notas llevan la letra del
+            // comprobante que corrigen, como exige SUNAT.
+            entity.HasData(
+                new SerieCpe { Id = 1, Tipo = TipoCpe.Factura, Serie = "F001" },
+                new SerieCpe { Id = 2, Tipo = TipoCpe.Boleta, Serie = "B001" },
+                new SerieCpe { Id = 3, Tipo = TipoCpe.NotaCredito, Serie = "FC01", AplicaA = TipoCpe.Factura },
+                new SerieCpe { Id = 4, Tipo = TipoCpe.NotaCredito, Serie = "BC01", AplicaA = TipoCpe.Boleta },
+                new SerieCpe { Id = 5, Tipo = TipoCpe.NotaDebito, Serie = "FD01", AplicaA = TipoCpe.Factura },
+                new SerieCpe { Id = 6, Tipo = TipoCpe.NotaDebito, Serie = "BD01", AplicaA = TipoCpe.Boleta });
+        });
+
+        modelBuilder.Entity<ComprobanteElectronico>(entity =>
+        {
+            entity.ToTable("ComprobantesElectronicos");
+            entity.Ignore(c => c.NumeroCompleto);
+
+            entity.Property(c => c.Tipo).HasMaxLength(2).IsRequired();
+            entity.Property(c => c.Serie).HasMaxLength(4).IsRequired();
+            entity.Property(c => c.ClienteTipoDoc).HasMaxLength(1).IsRequired();
+            entity.Property(c => c.ClienteDocumento).HasMaxLength(20).IsRequired();
+            entity.Property(c => c.ClienteNombre).HasMaxLength(250).IsRequired();
+            entity.Property(c => c.ClienteDireccion).HasMaxLength(250);
+            entity.Property(c => c.Moneda).HasMaxLength(3).IsRequired();
+            entity.Property(c => c.OpGravada).HasPrecision(18, 2);
+            entity.Property(c => c.OpExonerada).HasPrecision(18, 2);
+            entity.Property(c => c.Igv).HasPrecision(18, 2);
+            entity.Property(c => c.Total).HasPrecision(18, 2);
+            entity.Property(c => c.CodMotivo).HasMaxLength(2);
+            entity.Property(c => c.DesMotivo).HasMaxLength(250);
+            entity.Property(c => c.Estado).HasMaxLength(12).IsRequired();
+            entity.Property(c => c.CodigoSunat).HasMaxLength(10);
+            entity.Property(c => c.MensajeSunat).HasMaxLength(500);
+            entity.Property(c => c.NotasSunat).HasMaxLength(1000);
+            entity.Property(c => c.NombreArchivo).HasMaxLength(60).IsRequired();
+            entity.Property(c => c.Hash).HasMaxLength(100);
+            entity.Property(c => c.QrInfo).HasMaxLength(250);
+            entity.Property(c => c.Entorno).HasMaxLength(12).IsRequired();
+
+            // El XML y el CDR son archivos de unos pocos KB: se guardan en la fila y se bajan de ahí.
+            entity.Property(c => c.XmlFirmado).HasColumnType("longtext");
+            entity.Property(c => c.DetalleJson).HasColumnType("longtext");
+            entity.Property(c => c.CdrZip).HasColumnType("longblob");
+
+            // Un número no se repite dentro de su serie.
+            entity.HasIndex(c => new { c.Serie, c.Numero }).IsUnique();
+            entity.HasIndex(c => c.NotaVentaId);
+            entity.HasIndex(c => new { c.Estado, c.FechaEmision });
+
+            entity.HasOne(c => c.NotaVenta).WithMany()
+                .HasForeignKey(c => c.NotaVentaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.Afectado).WithMany()
+                .HasForeignKey(c => c.AfectadoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.Usuario).WithMany()
+                .HasForeignKey(c => c.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+    }
+
     private static void ConfigurarCategorizacion(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CategoriaCliente>(entity =>
@@ -1843,10 +1919,15 @@ public class AppDbContext : DbContext
         return string.Join("/", partes);
     }
 
-    /// <summary>Nunca deja un hash de contraseña en la bitácora.</summary>
+    /// <summary>
+    /// Lo que nunca va a la bitácora: contraseñas y claves (hash de usuario, clave SOL) y los archivos pesados de un
+    /// comprobante (XML y CDR), que ya viven en su propia tabla y harían crecer la bitácora sin aportar nada.
+    /// </summary>
     private static bool EsSensible(string nombre) =>
         nombre.Contains("Password", StringComparison.OrdinalIgnoreCase)
-        || nombre.Contains("Hash", StringComparison.OrdinalIgnoreCase);
+        || nombre.Contains("Hash", StringComparison.OrdinalIgnoreCase)
+        || nombre.Contains("ClaveSol", StringComparison.OrdinalIgnoreCase)
+        || nombre is "XmlFirmado" or "CdrZip" or "DetalleJson";
 
     private static (string? anteriores, string? nuevos) CapturarValores(EntityEntry entrada)
     {
