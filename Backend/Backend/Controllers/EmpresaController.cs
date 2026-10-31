@@ -13,10 +13,12 @@ namespace Backend.Controllers;
 public class EmpresaController : ControllerBase
 {
     private readonly IEmpresaService _empresaService;
+    private readonly ISerieCpeService _series;
 
-    public EmpresaController(IEmpresaService empresaService)
+    public EmpresaController(IEmpresaService empresaService, ISerieCpeService series)
     {
         _empresaService = empresaService;
+        _series = series;
     }
 
     [HttpGet]
@@ -71,6 +73,36 @@ public class EmpresaController : ControllerBase
     {
         return Ok(await _empresaService.SubirCertificadoAsync(id, request.Certificado));
     }
+
+    // ---------------------------------------------------------- Series de comprobantes
+
+    /// <summary>Las series de factura, boleta y notas de la empresa, con su último número.</summary>
+    [HttpGet("{id:int}/series")]
+    [Permiso("config.empresa", Accion.Ver)]
+    public async Task<IActionResult> Series(int id) => Ok(await _series.ListarAsync(id));
+
+    [HttpPost("{id:int}/series")]
+    [Permiso("config.empresa", Accion.Editar)]
+    public async Task<IActionResult> CrearSerie(int id, [FromBody] GuardarSerieRequest request) =>
+        Ok(await _series.CrearAsync(id, request));
+
+    [HttpPut("{id:int}/series/{serieId:int}")]
+    [Permiso("config.empresa", Accion.Editar)]
+    public async Task<IActionResult> ActualizarSerie(int id, int serieId, [FromBody] GuardarSerieRequest request) =>
+        Ok(await _series.ActualizarAsync(id, serieId, request));
+
+    [HttpDelete("{id:int}/series/{serieId:int}")]
+    [Permiso("config.empresa", Accion.Editar)]
+    public async Task<IActionResult> EliminarSerie(int id, int serieId)
+    {
+        await _series.EliminarAsync(id, serieId);
+        return NoContent();
+    }
+
+    /// <summary>Crea F001, B001 y las series de notas que le falten a la empresa.</summary>
+    [HttpPost("{id:int}/series/estandar")]
+    [Permiso("config.empresa", Accion.Editar)]
+    public async Task<IActionResult> CrearSeriesEstandar(int id) => Ok(await _series.CrearEstandarAsync(id));
 
     /// <summary>Retira una empresa sin eliminarla.</summary>
     [HttpPatch("{id:int}/deshabilitar")]

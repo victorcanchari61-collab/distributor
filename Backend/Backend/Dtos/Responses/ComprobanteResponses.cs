@@ -67,4 +67,7 @@ public class SerieCpeResponse
     public string? AplicaA { get; set; }
     public int UltimoNumero { get; set; }
     public bool Activa { get; set; }
+
+    /// <summary>Cuántos comprobantes lleva emitidos con esta serie desde el sistema. Con alguno, ya no se cambia su nombre.</summary>
+    public int Emitidos { get; set; }
 }

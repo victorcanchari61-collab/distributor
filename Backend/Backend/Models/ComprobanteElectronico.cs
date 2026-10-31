@@ -24,6 +24,16 @@ public static class TipoCpe
         _ => tipo,
     };
 
+    /// <summary>El submódulo de permisos de cada tipo (los mismos ids del menú).</summary>
+    public static string Submodulo(string tipo) => tipo switch
+    {
+        Factura => "fact.facturas",
+        Boleta => "fact.boletas",
+        NotaCredito => "fact.notascredito",
+        NotaDebito => "fact.notasdebito",
+        _ => throw new ArgumentOutOfRangeException(nameof(tipo), tipo, "Tipo de comprobante desconocido"),
+    };
+
     /// <summary>La palabra con la que la API de facturación llama a cada tipo.</summary>
     public static string ParaApi(string tipo) => tipo switch
     {
@@ -59,6 +69,10 @@ public class SerieCpe
 {
     public int Id { get; set; }
 
+    /// <summary>La empresa dueña de la serie: cada RUC lleva sus propias series y su numeración.</summary>
+    public int EmpresaId { get; set; }
+    public Empresa? Empresa { get; set; }
+
     /// <summary>01, 03, 07 u 08.</summary>
     public string Tipo { get; set; } = TipoCpe.Factura;
 
@@ -68,7 +82,10 @@ public class SerieCpe
     /// <summary>Solo para notas: el tipo del comprobante que corrigen (01 o 03). Nulo en factura y boleta.</summary>
     public string? AplicaA { get; set; }
 
-    /// <summary>El último número usado. El siguiente es este más uno.</summary>
+    /// <summary>
+    /// El último número usado. El siguiente es este más uno. Se puede fijar a mano: quien ya venía facturando con
+    /// otro sistema continúa desde donde iba.
+    /// </summary>
     public int UltimoNumero { get; set; }
 
     public bool Activa { get; set; } = true;

@@ -149,6 +149,7 @@ builder.Services.Configure<FacturacionOpciones>(builder.Configuration.GetSection
 builder.Services.AddHttpClient<IFactuClient, FactuClient>();
 builder.Services.AddSingleton<IProtectorSecretos, ProtectorSecretos>();
 builder.Services.AddScoped<IComprobanteElectronicoService, ComprobanteElectronicoService>();
+builder.Services.AddScoped<ISerieCpeService, SerieCpeService>();
 
 builder.Services.AddScoped<IPasswordHasher<Backend.Models.Usuario>, PasswordHasher<Backend.Models.Usuario>>();
 

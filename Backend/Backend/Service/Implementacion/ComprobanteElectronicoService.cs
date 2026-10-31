@@ -47,10 +47,9 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
     // ------------------------------------------------------------------ Consultas
 
     public async Task<List<ComprobanteResponse>> ListarAsync(
-        string? tipo, string? estado, DateTime? desde, DateTime? hasta, int? notaVentaId, int? afectadoId)
+        IReadOnlyCollection<string> tipos, string? estado, DateTime? desde, DateTime? hasta, int? notaVentaId, int? afectadoId)
     {
-        var consulta = Consulta();
-        if (!string.IsNullOrWhiteSpace(tipo)) consulta = consulta.Where(c => c.Tipo == tipo);
+        var consulta = Consulta().Where(c => tipos.Contains(c.Tipo));
         if (!string.IsNullOrWhiteSpace(estado)) consulta = consulta.Where(c => c.Estado == estado.Trim().ToUpperInvariant());
         if (desde is DateTime d) consulta = consulta.Where(c => c.FechaEmision >= d.Date);
         if (hasta is DateTime h) consulta = consulta.Where(c => c.FechaEmision <= h.Date);
@@ -63,13 +62,9 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
 
     public async Task<ComprobanteResponse> GetAsync(int id) => Mapear(await ObtenerAsync(id));
 
-    public async Task<List<SerieCpeResponse>> SeriesAsync() =>
-        await _context.SeriesCpe.AsNoTracking().OrderBy(s => s.Tipo).ThenBy(s => s.Serie)
-            .Select(s => new SerieCpeResponse
-            {
-                Id = s.Id, Tipo = s.Tipo, Serie = s.Serie, AplicaA = s.AplicaA, UltimoNumero = s.UltimoNumero, Activa = s.Activa,
-            })
-            .ToListAsync();
+    public async Task<string> TipoAsync(int id) =>
+        await _context.ComprobantesElectronicos.AsNoTracking().Where(c => c.Id == id).Select(c => c.Tipo).FirstOrDefaultAsync()
+        ?? throw new NotFoundException($"No existe el comprobante {id}");
 
     // ------------------------------------------------------------ Factura y boleta
 
@@ -141,7 +136,7 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
             UsuarioId = _usuarioActual.Id,
         };
 
-        await GenerarYGuardarAsync(comprobante, null, async numero =>
+        await GenerarYGuardarAsync(comprobante, emisora.EmpresaId, null, async numero =>
         {
             var cuerpo = new Dictionary<string, object?>
             {
@@ -253,7 +248,7 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
             UsuarioId = _usuarioActual.Id,
         };
 
-        await GenerarYGuardarAsync(nota, afectado.Tipo, async numero =>
+        await GenerarYGuardarAsync(nota, emisora.EmpresaId, afectado.Tipo, async numero =>
         {
             var cuerpo = new Dictionary<string, object?>
             {
@@ -332,15 +327,15 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
     /// si la firma falla el número no se gasta, y no quedan huecos en la numeración.
     /// </summary>
     private async Task GenerarYGuardarAsync(
-        ComprobanteElectronico c, string? aplicaA, Func<int, Task<XmlGenerado>> generar)
+        ComprobanteElectronico c, int empresaId, string? aplicaA, Func<int, Task<XmlGenerado>> generar)
     {
         await using var tx = await _context.Database.BeginTransactionAsync();
 
         var serie = await _context.SeriesCpe.AsNoTracking()
-            .Where(s => s.Activa && s.Tipo == c.Tipo && s.AplicaA == aplicaA)
+            .Where(s => s.EmpresaId == empresaId && s.Activa && s.Tipo == c.Tipo && s.AplicaA == aplicaA)
             .OrderBy(s => s.Id)
             .FirstOrDefaultAsync()
-            ?? throw new BadRequestException($"No hay una serie activa para {TipoCpe.Nombre(c.Tipo).ToLowerInvariant()}");
+            ?? throw new BadRequestException(SinSerie(c.Tipo, aplicaA));
 
         // El número se toma con un UPDATE de la base: dos emisiones al mismo tiempo no pueden recibir el mismo.
         await _context.Database.ExecuteSqlInterpolatedAsync(
@@ -411,7 +406,14 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         string direccion, string ubigeo, string distrito, string provincia, string departamento);
 
     /// <summary>La empresa activa, lista para emitir: con sus datos de SUNAT y el entorno que eligió.</summary>
-    private record EmpresaEmisora(EmpresaApi Api, string Entorno, string Certificado);
+    private record EmpresaEmisora(int EmpresaId, EmpresaApi Api, string Entorno, string Certificado);
+
+    private static string SinSerie(string tipo, string? aplicaA)
+    {
+        var que = TipoCpe.Nombre(tipo).ToLowerInvariant();
+        if (aplicaA is not null) que += aplicaA == TipoCpe.Factura ? " de facturas" : " de boletas";
+        return $"La empresa no tiene una serie activa para {que}. Créala en Configuración > Empresas > Series";
+    }
 
     private async Task<EmpresaEmisora> EmpresaAsync()
     {
@@ -437,7 +439,7 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
 
         var api = new EmpresaApi(e.Ruc, e.UsuarioSol!, e.ClaveSol!, e.RazonSocial, e.NombreComercial,
             e.Direccion ?? "-", e.Ubigeo!, e.Distrito ?? "-", e.Provincia ?? "-", e.Departamento ?? "-");
-        return new EmpresaEmisora(api, e.ModoPrueba ? "beta" : "produccion", certificado);
+        return new EmpresaEmisora(e.Id, api, e.ModoPrueba ? "beta" : "produccion", certificado);
     }
 
     // ------------------------------------------------------------------- Cálculo

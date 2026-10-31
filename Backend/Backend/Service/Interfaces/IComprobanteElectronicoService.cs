@@ -11,11 +11,12 @@ public interface IComprobanteElectronicoService
 {
     /// <summary>Los comprobantes, el más nuevo primero. Todos los filtros son opcionales.</summary>
     Task<List<ComprobanteResponse>> ListarAsync(
-        string? tipo, string? estado, DateTime? desde, DateTime? hasta, int? notaVentaId, int? afectadoId);
+        IReadOnlyCollection<string> tipos, string? estado, DateTime? desde, DateTime? hasta, int? notaVentaId, int? afectadoId);
+
+    /// <summary>El tipo (01, 03, 07, 08) de un comprobante: de ahí sale el permiso que se le pide a quien lo toca.</summary>
+    Task<string> TipoAsync(int id);
 
     Task<ComprobanteResponse> GetAsync(int id);
-
-    Task<List<SerieCpeResponse>> SeriesAsync();
 
     /// <summary>Factura o boleta de una nota de venta. La firma, la envía a SUNAT y guarda lo que respondió.</summary>
     Task<ComprobanteResponse> EmitirAsync(EmitirComprobanteRequest request);

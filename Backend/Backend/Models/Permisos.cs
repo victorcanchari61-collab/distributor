@@ -147,7 +147,11 @@ public static class CatalogoPermisos
             ["fact.pedidos"] = DocumentoConfirmable,
             ["fact.notaventa"] = [.. Documento, Accion.Cobrar],
             ["fact.precios"] = Catalogo,
-            ["fact.comprobantes"] = Documento,
+            // Un submódulo por tipo de comprobante: quien factura no tiene por qué emitir notas de crédito.
+            ["fact.facturas"] = Documento,
+            ["fact.boletas"] = Documento,
+            ["fact.notascredito"] = Documento,
+            ["fact.notasdebito"] = Documento,
 
             // --- Finanzas ---
             ["finanzas.metodospago"] = Catalogo,

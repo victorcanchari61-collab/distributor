@@ -1726,17 +1726,12 @@ public class AppDbContext : DbContext
             entity.Property(s => s.Tipo).HasMaxLength(2).IsRequired();
             entity.Property(s => s.Serie).HasMaxLength(4).IsRequired();
             entity.Property(s => s.AplicaA).HasMaxLength(2);
+            // El comprobante guarda serie y número sin la empresa, así que una serie no se repite en todo el sistema.
             entity.HasIndex(s => s.Serie).IsUnique();
 
-            // Las series con las que arranca el sistema: la primera de cada tipo. Las notas llevan la letra del
-            // comprobante que corrigen, como exige SUNAT.
-            entity.HasData(
-                new SerieCpe { Id = 1, Tipo = TipoCpe.Factura, Serie = "F001" },
-                new SerieCpe { Id = 2, Tipo = TipoCpe.Boleta, Serie = "B001" },
-                new SerieCpe { Id = 3, Tipo = TipoCpe.NotaCredito, Serie = "FC01", AplicaA = TipoCpe.Factura },
-                new SerieCpe { Id = 4, Tipo = TipoCpe.NotaCredito, Serie = "BC01", AplicaA = TipoCpe.Boleta },
-                new SerieCpe { Id = 5, Tipo = TipoCpe.NotaDebito, Serie = "FD01", AplicaA = TipoCpe.Factura },
-                new SerieCpe { Id = 6, Tipo = TipoCpe.NotaDebito, Serie = "BD01", AplicaA = TipoCpe.Boleta });
+            // Las series se crean desde la empresa (o con "series estándar"); ya no nacen sembradas.
+            entity.HasOne(s => s.Empresa).WithMany()
+                .HasForeignKey(s => s.EmpresaId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ComprobanteElectronico>(entity =>
