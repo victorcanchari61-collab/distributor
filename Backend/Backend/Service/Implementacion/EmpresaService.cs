@@ -26,12 +26,15 @@ public class EmpresaService : IEmpresaService
     private readonly IValidator<CreateEmpresaRequest> _createValidator;
     private readonly IValidator<UpdateEmpresaRequest> _updateValidator;
     private readonly INotificador _notificador;
+    private readonly IFactuClient _factu;
 
     public EmpresaService(IEmpresaRepository repository,
         IValidator<CreateEmpresaRequest> createValidator,
         IValidator<UpdateEmpresaRequest> updateValidator,
-        INotificador notificador)
+        INotificador notificador,
+        IFactuClient factu)
     {
+        _factu = factu;
         _repository = repository;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
@@ -153,6 +156,31 @@ public class EmpresaService : IEmpresaService
         return actualizada;
     }
 
+    public async Task<SubirCertificadoResponse> SubirCertificadoAsync(int id, string pem)
+    {
+        var empresa = await GetOrThrowAsync(id);
+
+        if (string.IsNullOrWhiteSpace(pem) || !pem.Contains("-----BEGIN"))
+            throw new BadRequestException("El archivo no parece un certificado .pem: debe traer la clave privada y el certificado");
+
+        var guardado = await _factu.GuardarCertificadoAsync(empresa.Ruc, pem);
+
+        // Se guarda solo lo que sirve para avisar: de quién es y hasta cuándo vale. El certificado vive en la API.
+        empresa.CertificadoTitular = guardado.Titular;
+        empresa.CertificadoVenceEl = guardado.VigenteHasta;
+        await _repository.UpdateAsync(empresa);
+
+        var actualizada = MapToResponse(empresa);
+        await _notificador.AvisarAsync("empresas", "actualizado", actualizada);
+
+        return new SubirCertificadoResponse
+        {
+            Mensaje = guardado.Mensaje,
+            Advertencias = guardado.Advertencias,
+            Empresa = actualizada,
+        };
+    }
+
     public async Task<EmpresaResponse> ActivarAsync(int id)
     {
         var empresa = await GetOrThrowAsync(id);
@@ -257,6 +285,9 @@ public class EmpresaService : IEmpresaService
             UsuarioSol = empresa.UsuarioSol,
             TieneClaveSol = !string.IsNullOrEmpty(empresa.ClaveSol),
             ModoPrueba = empresa.ModoPrueba,
+            CertificadoTitular = empresa.CertificadoTitular,
+            CertificadoVenceEl = empresa.CertificadoVenceEl,
+            CertificadoVencido = empresa.CertificadoVenceEl is DateTime v && v.Date < DateTime.UtcNow.Date,
             FechaCreacion = empresa.FechaCreacion
         };
     }

@@ -24,7 +24,17 @@ export interface EmpresaResponse {
   tieneClaveSol: boolean
   /** true: emite al entorno de pruebas de SUNAT (sin validez tributaria). false: producción. */
   modoPrueba: boolean
+  /** Del certificado digital subido: a nombre de quién y hasta cuándo vale. Nulos si no hay. */
+  certificadoTitular: string | null
+  certificadoVenceEl: string | null
+  certificadoVencido: boolean
   fechaCreacion: string
+}
+
+export interface SubirCertificadoResponse {
+  mensaje: string
+  advertencias: string[]
+  empresa: EmpresaResponse
 }
 
 export interface EmpresaRequest {
@@ -60,6 +70,10 @@ export const empresaApi = {
 
   /** PUT /api/empresa/{id} */
   update: (id: number, body: EmpresaRequest) => api.put<EmpresaResponse>(`/empresa/${id}`, body),
+
+  /** POST /api/empresa/{id}/certificado — sube el .pem (en texto) a la API de facturación. */
+  subirCertificado: (id: number, certificado: string) =>
+    api.post<SubirCertificadoResponse>(`/empresa/${id}/certificado`, { certificado }),
 
   /** PATCH /api/empresa/{id}/activar — activa una y desactiva la anterior. */
   activar: (id: number) => api.patch<EmpresaResponse>(`/empresa/${id}/activar`),

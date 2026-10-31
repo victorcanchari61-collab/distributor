@@ -20,5 +20,19 @@ public interface IEmpresaService
     /// <summary>Habilita o retira una empresa sin eliminarla.</summary>
     Task<EmpresaResponse> CambiarHabilitacionAsync(int id, bool habilitada);
 
+    /// <summary>
+    /// Sube el certificado digital (.pem) de la empresa a la API de facturación, que lo guarda por RUC. Sin él no se
+    /// pueden firmar comprobantes.
+    /// </summary>
+    Task<SubirCertificadoResponse> SubirCertificadoAsync(int id, string pem);
+
     Task DeleteAsync(int id);
+}
+
+/// <summary>Lo que pasó al subir el certificado: el mensaje de la API, sus advertencias y la empresa ya actualizada.</summary>
+public class SubirCertificadoResponse
+{
+    public string Mensaje { get; set; } = string.Empty;
+    public List<string> Advertencias { get; set; } = [];
+    public EmpresaResponse Empresa { get; set; } = new();
 }

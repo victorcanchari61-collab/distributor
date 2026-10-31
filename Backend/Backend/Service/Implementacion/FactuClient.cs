@@ -22,6 +22,9 @@ public class FacturacionOpciones
 /// <summary>Un XML firmado, listo para guardar y enviar.</summary>
 public record XmlGenerado(string NombreArchivo, string Hash, string QrInfo, string Xml);
 
+/// <summary>Lo que dice la API del certificado que acaba de guardar.</summary>
+public record CertificadoGuardado(string Mensaje, string? Titular, DateTime? VigenteHasta, bool Vencido, List<string> Advertencias);
+
 /// <summary>Lo que SUNAT respondió a un envío.</summary>
 public class RespuestaSunat
 {
@@ -40,6 +43,9 @@ public interface IFactuClient
 {
     Task<XmlGenerado> GenerarComprobanteAsync(object cuerpo);
     Task<XmlGenerado> GenerarNotaAsync(object cuerpo);
+    /// <summary>Guarda el certificado .pem del RUC en la API (reemplaza el anterior si ya había uno).</summary>
+    Task<CertificadoGuardado> GuardarCertificadoAsync(string ruc, string pem);
+
     Task<RespuestaSunat> EnviarAsync(string entorno, string ruc, string usuarioSol, string claveSol, string nombreArchivo, string xml);
 }
 
@@ -81,6 +87,35 @@ public class FactuClient : IFactuClient
             Texto(data, "hash") ?? string.Empty,
             Texto(data, "qr_info") ?? string.Empty,
             Texto(data, "contenido_xml") ?? string.Empty);
+    }
+
+    public async Task<CertificadoGuardado> GuardarCertificadoAsync(string ruc, string pem)
+    {
+        using var raiz = await PostAsync($"guardar/certificado/{ruc}", new { certificado = pem });
+        var r = raiz.RootElement;
+
+        if (!Verdadero(r, "estado"))
+            throw new BadRequestException(Texto(r, "mensaje") ?? "La API de facturación no aceptó el certificado");
+
+        string? titular = null;
+        DateTime? hasta = null;
+        var vencido = false;
+        var advertencias = new List<string>();
+
+        if (r.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object)
+        {
+            if (data.TryGetProperty("certificado", out var cert) && cert.ValueKind == JsonValueKind.Object)
+            {
+                titular = Texto(cert, "titular");
+                if (DateTime.TryParse(Texto(cert, "vigente_hasta"), out var v)) hasta = v.Date;
+                vencido = Verdadero(cert, "vencido");
+            }
+
+            if (data.TryGetProperty("advertencias", out var adv) && adv.ValueKind == JsonValueKind.Array)
+                advertencias = adv.EnumerateArray().Select(a => a.ToString()).Where(a => a.Length > 0).ToList();
+        }
+
+        return new CertificadoGuardado(Texto(r, "mensaje") ?? "Certificado guardado.", titular, hasta, vencido, advertencias);
     }
 
     public async Task<RespuestaSunat> EnviarAsync(

@@ -458,6 +458,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.UsuarioSol).HasMaxLength(30);
             entity.Property(e => e.ClaveSol).HasMaxLength(80);
             entity.Property(e => e.ModoPrueba).HasDefaultValue(true);
+            entity.Property(e => e.CertificadoTitular).HasMaxLength(250);
 
             // Solo una empresa puede estar activa, garantizado en base de datos.
             // MySQL no tiene indices parciales, asi que se usa una columna

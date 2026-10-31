@@ -46,5 +46,11 @@ public class Empresa
     /// producción. Arranca en pruebas para que nadie emita de verdad sin haberlo decidido.
     /// </summary>
     public bool ModoPrueba { get; set; } = true;
+
+    /// <summary>A nombre de quién está el certificado digital que se subió a la API de facturación.</summary>
+    public string? CertificadoTitular { get; set; }
+
+    /// <summary>Hasta cuándo vale ese certificado. Nulo: no se ha subido ninguno desde aquí.</summary>
+    public DateTime? CertificadoVenceEl { get; set; }
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }

@@ -64,6 +64,14 @@ public class EmpresaController : ControllerBase
         return Ok(await _empresaService.ActivarAsync(id));
     }
 
+    /// <summary>Sube el certificado digital (.pem) de la empresa a la API de facturación.</summary>
+    [HttpPost("{id:int}/certificado")]
+    [Permiso("config.empresa", Accion.Editar)]
+    public async Task<IActionResult> SubirCertificado(int id, [FromBody] SubirCertificadoRequest request)
+    {
+        return Ok(await _empresaService.SubirCertificadoAsync(id, request.Certificado));
+    }
+
     /// <summary>Retira una empresa sin eliminarla.</summary>
     [HttpPatch("{id:int}/deshabilitar")]
     [Permiso("config.empresa", Accion.Editar)]

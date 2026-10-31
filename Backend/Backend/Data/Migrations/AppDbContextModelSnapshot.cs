@@ -1684,6 +1684,17 @@ namespace Backend.Data.Migrations
                         .HasColumnType("tinyint(1)")
                         .HasComputedColumnSql("CASE WHEN `Activa` = 1 THEN 1 END", true);
 
+                    b.Property<string>("CertificadoTitular")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
+                    b.Property<DateTime?>("CertificadoVenceEl")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ClaveSol")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
                     b.Property<string>("Departamento")
                         .HasMaxLength(60)
                         .HasColumnType("varchar(60)");
@@ -1704,6 +1715,11 @@ namespace Backend.Data.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<bool>("Habilitada")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("ModoPrueba")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("tinyint(1)")
                         .HasDefaultValue(true);
@@ -1738,6 +1754,14 @@ namespace Backend.Data.Migrations
                     b.Property<string>("Telefono")
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Ubigeo")
+                        .HasMaxLength(6)
+                        .HasColumnType("varchar(6)");
+
+                    b.Property<string>("UsuarioSol")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
 
                     b.HasKey("Id");
 

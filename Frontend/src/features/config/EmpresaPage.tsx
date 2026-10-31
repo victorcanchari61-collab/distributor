@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Building2,
   CheckCircle2,
@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   ShieldOff,
   Trash2,
+  Upload,
 } from 'lucide-react'
 import {
   Alert,
@@ -27,6 +28,7 @@ import { consultaApi } from '../../lib/consultaApi'
 import { empresaApi } from './empresaApi'
 import type { EmpresaRequest, EmpresaResponse } from './empresaApi'
 import { usePermisos } from '../../lib/permisos'
+import { fechaCorta } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
 
 const VACIA: EmpresaRequest = {
@@ -62,6 +64,8 @@ export function EmpresaPage() {
   const [guardando, setGuardando] = useState(false)
   const [consultando, setConsultando] = useState(false)
   const [avisoSunat, setAvisoSunat] = useState('')
+  const [subiendoCert, setSubiendoCert] = useState(false)
+  const inputCert = useRef<HTMLInputElement>(null)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -139,6 +143,30 @@ export function EmpresaPage() {
     })
     setAvisoSunat('')
     setAbierto(true)
+  }
+
+  /** Lee el .pem en el navegador y lo manda a la API de facturación, que lo guarda por RUC. */
+  const subirCertificado = async (archivo: File | undefined) => {
+    if (!archivo || !editando) return
+    if (archivo.size > 512 * 1024) {
+      toast.error('El certificado no debe pasar de 512 KB.')
+      return
+    }
+
+    setSubiendoCert(true)
+    try {
+      const resultado = await empresaApi.subirCertificado(editando.id, await archivo.text())
+      setEditando(resultado.empresa)
+      setEmpresas((lista) => lista.map((e) => (e.id === resultado.empresa.id ? resultado.empresa : e)))
+      if (resultado.advertencias.length > 0) toast.error(resultado.mensaje)
+      else toast.exito(resultado.mensaje)
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos subir el certificado.')
+    } finally {
+      setSubiendoCert(false)
+      // Sin esto elegir el mismo archivo otra vez no dispara el cambio.
+      if (inputCert.current) inputCert.current.value = ''
+    }
   }
 
   const guardar = async () => {
@@ -460,10 +488,47 @@ export function EmpresaPage() {
             value={form.claveSol ?? ''}
             onChange={(e) => setForm({ ...form, claveSol: e.target.value })}
           />
+          {/* El certificado se sube a una empresa ya guardada: va por RUC en la API de facturación. */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-field border border-line px-3 py-2.5 sm:col-span-2">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-ink">Certificado digital (.pem)</p>
+              {editando ? (
+                editando.certificadoVenceEl ? (
+                  <p className={`text-xs ${editando.certificadoVencido ? 'text-red-600' : 'text-ink-soft'}`}>
+                    {editando.certificadoTitular ?? 'Certificado cargado'} · {editando.certificadoVencido ? 'venció' : 'vence'} el{' '}
+                    {fechaCorta(editando.certificadoVenceEl)}
+                  </p>
+                ) : (
+                  <p className="text-xs text-ink-soft">Todavía no se subió ninguno desde aquí. Sin certificado no se pueden firmar comprobantes.</p>
+                )
+              ) : (
+                <p className="text-xs text-ink-soft">Guarda la empresa primero: el certificado se sube a su RUC.</p>
+              )}
+            </div>
+            <input
+              ref={inputCert}
+              type="file"
+              accept=".pem,.txt"
+              className="hidden"
+              onChange={(e) => void subirCertificado(e.target.files?.[0])}
+            />
+            {puede('config.empresa', 'editar') && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!editando}
+                loading={subiendoCert}
+                onClick={() => inputCert.current?.click()}
+              >
+                <Upload size={15} />
+                {editando?.certificadoVenceEl ? 'Reemplazar' : 'Subir certificado'}
+              </Button>
+            )}
+          </div>
+
           {!form.modoPrueba && (
             <p className="rounded-field border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 sm:col-span-2">
-              En producción cada comprobante que se emita es real y llega a SUNAT. Antes hay que subir el certificado digital de esta
-              empresa a la API de facturación.
+              En producción cada comprobante que se emita es real y llega a SUNAT. Sube antes el certificado digital de esta empresa.
             </p>
           )}
 

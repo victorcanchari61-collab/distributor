@@ -27,3 +27,9 @@ public abstract class EmpresaRequestBase
     /// <summary>true: envía al entorno de pruebas de SUNAT. false: producción.</summary>
     public bool ModoPrueba { get; set; } = true;
 }
+
+/// <summary>El certificado digital (.pem) de la empresa, en texto: clave privada y certificado, sin contraseña.</summary>
+public class SubirCertificadoRequest
+{
+    public string Certificado { get; set; } = string.Empty;
+}
