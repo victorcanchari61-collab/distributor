@@ -1253,7 +1253,7 @@ export function NotasVentaPage() {
           {puede('fact.notaventa', 'exportar') && (
             <AccionPdf documento="notaventa" id={row.id} numero={row.numero} />
           )}
-          {puede('fact.comprobantes', 'crear') && (
+          {(puede('fact.facturas', 'crear') || puede('fact.boletas', 'crear')) && (
             <RowAction
               label={`Facturar ${row.numero}`}
               tone="edit"

@@ -4,7 +4,7 @@ import { Alert, Badge, Button, useToast } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaCorta, fechaHora } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
-import { ESTADOS_CPE, TIPOS_CPE, comprobanteApi } from './comprobanteApi'
+import { ESTADOS_CPE, SUBMODULO_CPE, TIPOS_CPE, comprobanteApi } from './comprobanteApi'
 import type { ComprobanteResponse } from './comprobanteApi'
 
 /** Soles con dos decimales: un comprobante se lee al centavo. */
@@ -51,8 +51,8 @@ export function PanelComprobante({
     }
   }
 
-  const puedeDescargar = puede('fact.comprobantes', 'exportar')
-  const puedeReenviar = puede('fact.comprobantes', 'crear') && (c.estado === 'GENERADO' || c.estado === 'ERROR')
+  const puedeDescargar = puede(SUBMODULO_CPE[c.tipo], 'exportar')
+  const puedeReenviar = puede(SUBMODULO_CPE[c.tipo], 'crear') && (c.estado === 'GENERADO' || c.estado === 'ERROR')
 
   return (
     <div className="flex flex-col gap-3">

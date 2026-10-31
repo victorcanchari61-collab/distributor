@@ -1,24 +1,59 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CircleCheck, CircleX, Clock, FileArchive, FileCode2, Eye, FilePen, Receipt, RefreshCw } from 'lucide-react'
+import { CircleCheck, CircleX, Clock, FileArchive, FileCode2, FileMinus, FilePen, FilePlus, Eye, Receipt, RefreshCw, Ticket } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Alert, ListPage, Modal, RowAction, StatCard, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaCorta } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
-import { ESTADOS_CPE, TIPOS_CPE, comprobanteApi } from './comprobanteApi'
+import { ESTADOS_CPE, SUBMODULO_CPE, comprobanteApi } from './comprobanteApi'
 import type { ComprobanteResponse, EstadoCpe, TipoCpe } from './comprobanteApi'
 import { EmitirNotaModal } from './EmitirNotaModal'
 import { EstadoCpeBadge, PanelComprobante, monto } from './PanelComprobante'
 
+const VISTAS: Record<TipoCpe, { titulo: string; descripcion: string; icono: LucideIcon; vacio: string }> = {
+  '01': {
+    titulo: 'Facturas',
+    descripcion: 'Facturas electrónicas emitidas a SUNAT, con su XML y su CDR para descargar.',
+    icono: Receipt,
+    vacio: 'Todavía no se emitió ninguna factura. Se emiten desde Notas de venta.',
+  },
+  '03': {
+    titulo: 'Boletas',
+    descripcion: 'Boletas de venta electrónicas emitidas a SUNAT, con su XML y su CDR para descargar.',
+    icono: Ticket,
+    vacio: 'Todavía no se emitió ninguna boleta. Se emiten desde Notas de venta.',
+  },
+  '07': {
+    titulo: 'Notas de crédito',
+    descripcion: 'Notas de crédito electrónicas: devuelven o descuentan lo facturado.',
+    icono: FileMinus,
+    vacio: 'Todavía no se emitió ninguna nota de crédito. Se emiten desde Facturas o Boletas, sobre un comprobante aceptado.',
+  },
+  '08': {
+    titulo: 'Notas de débito',
+    descripcion: 'Notas de débito electrónicas: cobran de más sobre lo facturado.',
+    icono: FilePlus,
+    vacio: 'Todavía no se emitió ninguna nota de débito. Se emiten desde Facturas o Boletas, sobre un comprobante aceptado.',
+  },
+}
+
 /**
- * Comprobantes electrónicos emitidos: factura, boleta, y notas de crédito y débito. Cada uno muestra en qué quedó
- * frente a SUNAT y deja bajar su XML firmado y su CDR. Las facturas y boletas se emiten desde Notas de venta; las
- * notas, desde aquí, sobre un comprobante aceptado.
+ * Los comprobantes electrónicos de UN tipo (factura, boleta, nota de crédito o nota de débito), cada uno con su
+ * entrada en el menú y su permiso. Muestra en qué quedó cada comprobante frente a SUNAT y deja bajar su XML firmado y
+ * su CDR. Las facturas y boletas se emiten desde Notas de venta; las notas, desde Facturas y Boletas, sobre un
+ * comprobante aceptado.
  */
-export function ComprobantesPage() {
+function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
   const { puede } = usePermisos()
   const toast = useToast()
+  const vista = VISTAS[tipo]
+  const Icono = vista.icono
+  const submodulo = SUBMODULO_CPE[tipo]
+  const esNota = tipo === '07' || tipo === '08'
+  // Una factura o boleta se corrige con la nota que el usuario tenga permiso de emitir.
+  const notasPermitidas = (['07', '08'] as const).filter((t) => puede(SUBMODULO_CPE[t], 'crear'))
 
   const [filas, setFilas] = useState<ComprobanteResponse[]>([])
   const [cargando, setCargando] = useState(true)
@@ -28,14 +63,14 @@ export function ComprobantesPage() {
 
   const cargar = useCallback(async () => {
     try {
-      setFilas(await comprobanteApi.listar())
+      setFilas(await comprobanteApi.listar({ tipo }))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar los comprobantes')
     } finally {
       setCargando(false)
     }
-  }, [])
+  }, [tipo])
 
   useEffect(() => {
     void cargar()
@@ -73,14 +108,6 @@ export function ComprobantesPage() {
         filterType: 'date',
         value: (c) => new Date(c.fechaEmision).getTime(),
         render: (c) => fechaCorta(c.fechaEmision),
-      },
-      {
-        key: 'tipo',
-        label: 'Tipo',
-        filterType: 'select',
-        filterOptions: (Object.keys(TIPOS_CPE) as TipoCpe[]).map((t) => ({ value: t, label: TIPOS_CPE[t].corto })),
-        value: (c) => c.tipo,
-        render: (c) => TIPOS_CPE[c.tipo].corto,
       },
       {
         key: 'numeroCompleto',
@@ -136,9 +163,9 @@ export function ComprobantesPage() {
 
   return (
     <ListPage
-      icon={<Receipt size={20} />}
-      title="Comprobantes"
-      description="Facturas, boletas y notas de crédito y débito emitidas a SUNAT, con su XML y su CDR para descargar."
+      icon={<Icono size={20} />}
+      title={vista.titulo}
+      description={vista.descripcion}
       alert={
         error ? (
           <Alert>{error}</Alert>
@@ -162,37 +189,37 @@ export function ComprobantesPage() {
             icon={<CircleX size={18} />}
             tono={rechazados > 0 ? 'danger' : 'neutral'}
           />
-          <StatCard label="Emitidos" value={String(filas.length)} icon={<Receipt size={18} />} />
+          <StatCard label="Emitidos" value={String(filas.length)} icon={<Icono size={18} />} />
         </>
       }
       columns={columnas}
       rows={filas}
       rowKey="id"
-      cardIcon={Receipt}
+      cardIcon={Icono}
       searchPlaceholder="Buscar por número, cliente..."
-      empty={cargando ? 'Cargando comprobantes...' : 'Todavía no se emitió ningún comprobante. Se emiten desde Notas de venta.'}
+      empty={cargando ? 'Cargando...' : vista.vacio}
       actionsWidth={190}
       rowActions={(c) => (
         <>
           <RowAction label={`Ver ${c.numeroCompleto}`} tone="view" onClick={() => setDetalle(c)}>
             <Eye size={15} />
           </RowAction>
-          {puede('fact.comprobantes', 'exportar') && (
+          {puede(submodulo, 'exportar') && (
             <RowAction label="Descargar XML" onClick={() => void descargar('xml', c)}>
               <FileCode2 size={15} />
             </RowAction>
           )}
-          {puede('fact.comprobantes', 'exportar') && c.tieneCdr && (
+          {puede(submodulo, 'exportar') && c.tieneCdr && (
             <RowAction label="Descargar CDR" onClick={() => void descargar('cdr', c)}>
               <FileArchive size={15} />
             </RowAction>
           )}
-          {puede('fact.comprobantes', 'crear') && (c.estado === 'GENERADO' || c.estado === 'ERROR') && (
+          {puede(submodulo, 'crear') && (c.estado === 'GENERADO' || c.estado === 'ERROR') && (
             <RowAction label="Reenviar a SUNAT" tone="warning" onClick={() => void reenviar(c)}>
               <RefreshCw size={15} />
             </RowAction>
           )}
-          {puede('fact.comprobantes', 'crear') && c.estado === 'ACEPTADO' && (c.tipo === '01' || c.tipo === '03') && (
+          {!esNota && notasPermitidas.length > 0 && c.estado === 'ACEPTADO' && (
             <RowAction label="Emitir nota de crédito o débito" tone="edit" onClick={() => setCorrigiendo(c)}>
               <FilePen size={15} />
             </RowAction>
@@ -219,6 +246,7 @@ export function ComprobantesPage() {
 
       <EmitirNotaModal
         comprobante={corrigiendo}
+        tiposPermitidos={notasPermitidas}
         onClose={() => setCorrigiendo(null)}
         onEmitida={(nota) => {
           setCorrigiendo(null)
@@ -229,3 +257,8 @@ export function ComprobantesPage() {
     </ListPage>
   )
 }
+
+export const FacturasPage = () => <ComprobantesPage tipo="01" />
+export const BoletasPage = () => <ComprobantesPage tipo="03" />
+export const NotasCreditoPage = () => <ComprobantesPage tipo="07" />
+export const NotasDebitoPage = () => <ComprobantesPage tipo="08" />

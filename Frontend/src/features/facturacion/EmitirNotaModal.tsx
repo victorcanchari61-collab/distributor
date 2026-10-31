@@ -30,11 +30,14 @@ const desdeComprobante = (l: LineaComprobante): LineaEditable => ({
  */
 export function EmitirNotaModal({
   comprobante,
+  tiposPermitidos,
   onClose,
   onEmitida,
 }: {
   /** El comprobante a corregir; nulo con el modal cerrado. */
   comprobante: ComprobanteResponse | null
+  /** Las notas que el usuario puede emitir (tiene permiso de crear en su submódulo). */
+  tiposPermitidos: readonly ('07' | '08')[]
   onClose: () => void
   onEmitida: (nota: ComprobanteResponse) => void
 }) {
@@ -49,11 +52,13 @@ export function EmitirNotaModal({
   // Al abrir, vuelve a empezar: crédito, anulación y las líneas del comprobante.
   useEffect(() => {
     if (!comprobante) return
-    setTipo('07')
-    setCodMotivo('01')
+    const inicial = tiposPermitidos[0] ?? '07'
+    setTipo(inicial)
+    setCodMotivo(MOTIVOS_NOTA[inicial][0].codigo)
     setDesMotivo('')
-    setLineas(comprobante.lineas.map(desdeComprobante))
+    setLineas(inicial === '07' ? comprobante.lineas.map(desdeComprobante) : [lineaVacia()])
     setError('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al abrir con otro comprobante
   }, [comprobante])
 
   const cambiarTipo = (nuevo: '07' | '08') => {
@@ -130,8 +135,8 @@ export function EmitirNotaModal({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <Select label="Tipo de nota" value={tipo} onChange={(e) => cambiarTipo(e.target.value as '07' | '08')}>
-            <option value="07">Nota de crédito (devuelve o descuenta)</option>
-            <option value="08">Nota de débito (cobra de más)</option>
+            {tiposPermitidos.includes('07') && <option value="07">Nota de crédito (devuelve o descuenta)</option>}
+            {tiposPermitidos.includes('08') && <option value="08">Nota de débito (cobra de más)</option>}
           </Select>
           <Select label="Motivo (SUNAT)" value={codMotivo} onChange={(e) => setCodMotivo(e.target.value)}>
             {MOTIVOS_NOTA[tipo].map((m) => (

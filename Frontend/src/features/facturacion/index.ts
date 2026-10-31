@@ -18,5 +18,5 @@ export type {
   EstadoPedido,
   EstadoNotaVenta,
 } from './ventasApi'
-export { ComprobantesPage } from './ComprobantesPage'
+export { BoletasPage, FacturasPage, NotasCreditoPage, NotasDebitoPage } from './ComprobantesPage'
 export { comprobanteApi } from './comprobanteApi'

@@ -13,6 +13,7 @@ import {
   Contact,
   CreditCard,
   FileMinus,
+  FilePlus,
   FileText,
   HandCoins,
   HeartHandshake,
@@ -32,6 +33,7 @@ import {
   PackageSearch,
   PiggyBank,
   Receipt,
+  Ticket,
   ReceiptText,
   Repeat,
   Route,
@@ -165,19 +167,15 @@ export const NAV_GROUPS: NavGroup[] = [
     sys: 'fact',
     icon: ReceiptText,
     // Los comprobantes electronicos (factura, boleta, notas de credito y debito) se emiten desde la nota de venta
-    // y se consultan en Comprobantes. Series y Parametros siguen reservados en Configuracion.
+    // y cada tipo se consulta en su propia vista. Las series se configuran en Configuracion > Empresas.
     items: [
       { id: 'fact.pedidos', label: 'Pedidos', icon: ClipboardList },
       { id: 'fact.notaventa', label: 'Notas de venta', icon: FileText },
       { id: 'fact.precios', label: 'Listas de precios', icon: Banknote },
-      { id: 'fact.comprobantes', label: 'Comprobantes', icon: Receipt },
-      {
-        id: 'fact.notas',
-        label: 'Notas de crédito y débito',
-        icon: FileMinus,
-        pending: true,
-        hidden: true,
-      },
+      { id: 'fact.facturas', label: 'Facturas', icon: Receipt },
+      { id: 'fact.boletas', label: 'Boletas', icon: Ticket },
+      { id: 'fact.notascredito', label: 'Notas de crédito', icon: FileMinus },
+      { id: 'fact.notasdebito', label: 'Notas de débito', icon: FilePlus },
     ],
   },
   {

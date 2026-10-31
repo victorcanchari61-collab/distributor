@@ -13,6 +13,14 @@ export const TIPOS_CPE: Record<TipoCpe, { nombre: string; corto: string }> = {
   '08': { nombre: 'Nota de débito electrónica', corto: 'Nota de débito' },
 }
 
+/** El submódulo de permisos de cada tipo: los mismos ids que el menú y que Models/Permisos.cs. */
+export const SUBMODULO_CPE: Record<TipoCpe, string> = {
+  '01': 'fact.facturas',
+  '03': 'fact.boletas',
+  '07': 'fact.notascredito',
+  '08': 'fact.notasdebito',
+}
+
 export const ESTADOS_CPE: Record<EstadoCpe, { label: string; tone: 'success' | 'danger' | 'warning' | 'neutral'; ayuda: string }> = {
   ACEPTADO: { label: 'Aceptado', tone: 'success', ayuda: 'SUNAT lo aceptó.' },
   RECHAZADO: { label: 'Rechazado', tone: 'danger', ayuda: 'SUNAT lo rechazó: el motivo está en el CDR.' },
@@ -89,15 +97,6 @@ export interface ComprobanteResponse {
   lineas: LineaComprobante[]
 }
 
-export interface SerieCpe {
-  id: number
-  tipo: TipoCpe
-  serie: string
-  aplicaA: TipoCpe | null
-  ultimoNumero: number
-  activa: boolean
-}
-
 export interface FiltrosComprobantes {
   tipo?: TipoCpe
   estado?: EstadoCpe
@@ -127,7 +126,6 @@ const query = (f: FiltrosComprobantes) => {
 export const comprobanteApi = {
   listar: (filtros: FiltrosComprobantes = {}) => api.get<ComprobanteResponse[]>(`/comprobante${query(filtros)}`),
   obtener: (id: number) => api.get<ComprobanteResponse>(`/comprobante/${id}`),
-  series: () => api.get<SerieCpe[]>('/comprobante/series'),
 
   /** Factura o boleta de una nota de venta: la firma, la envía a SUNAT y devuelve lo que respondió. */
   emitir: (notaVentaId: number, tipo: '01' | '03') => api.post<ComprobanteResponse>('/comprobante/emitir', { notaVentaId, tipo }),

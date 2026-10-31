@@ -1,4 +1,7 @@
 import { api } from '../../lib/apiClient'
+import type { TipoCpe } from '../facturacion/comprobanteApi'
+
+export type { TipoCpe }
 
 export interface EmpresaResponse {
   id: number
@@ -39,6 +42,28 @@ export interface SubirCertificadoResponse {
   empresa: EmpresaResponse
 }
 
+/** Una serie de comprobantes de la empresa y hasta qué número llegó. */
+export interface SerieCpe {
+  id: number
+  tipo: TipoCpe
+  serie: string
+  /** Solo en notas: 01 si corrigen facturas, 03 si corrigen boletas. */
+  aplicaA: TipoCpe | null
+  /** El último número usado; el siguiente comprobante sale con este más uno. */
+  ultimoNumero: number
+  activa: boolean
+  /** Comprobantes emitidos con esta serie desde el sistema. */
+  emitidos: number
+}
+
+export interface SerieCpeRequest {
+  tipo: TipoCpe
+  serie: string
+  aplicaA?: TipoCpe | null
+  ultimoNumero: number
+  activa: boolean
+}
+
 export interface EmpresaRequest {
   razonSocial: string
   nombreComercial: string
@@ -76,6 +101,22 @@ export const empresaApi = {
   /** POST /api/empresa/{id}/certificado — sube el .pem (en texto) a la API de facturación. */
   subirCertificado: (id: number, certificado: string) =>
     api.post<SubirCertificadoResponse>(`/empresa/${id}/certificado`, { certificado }),
+
+  /** GET /api/empresa/{id}/series */
+  series: (id: number) => api.get<SerieCpe[]>(`/empresa/${id}/series`),
+
+  /** POST /api/empresa/{id}/series */
+  crearSerie: (id: number, body: SerieCpeRequest) => api.post<SerieCpe>(`/empresa/${id}/series`, body),
+
+  /** PUT /api/empresa/{id}/series/{serieId} */
+  actualizarSerie: (id: number, serieId: number, body: SerieCpeRequest) =>
+    api.put<SerieCpe>(`/empresa/${id}/series/${serieId}`, body),
+
+  /** DELETE /api/empresa/{id}/series/{serieId} — solo si nunca emitió. */
+  eliminarSerie: (id: number, serieId: number) => api.del<void>(`/empresa/${id}/series/${serieId}`),
+
+  /** POST /api/empresa/{id}/series/estandar — F001, B001 y las de notas que falten. */
+  crearSeriesEstandar: (id: number) => api.post<SerieCpe[]>(`/empresa/${id}/series/estandar`),
 
   /** PATCH /api/empresa/{id}/activar — activa una y desactiva la anterior. */
   activar: (id: number) => api.patch<EmpresaResponse>(`/empresa/${id}/activar`),

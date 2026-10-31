@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Receipt } from 'lucide-react'
 import { Alert, Button, Modal, Select, useToast } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { comprobanteApi, TIPOS_CPE } from './comprobanteApi'
+import { usePermisos } from '../../lib/permisos'
+import { comprobanteApi, SUBMODULO_CPE, TIPOS_CPE } from './comprobanteApi'
 import type { ComprobanteResponse } from './comprobanteApi'
 import { PanelComprobante, monto } from './PanelComprobante'
 
@@ -19,6 +20,9 @@ export function EmitirComprobanteModal({
   onClose: () => void
 }) {
   const toast = useToast()
+  const { puede } = usePermisos()
+  const puedeBoleta = puede(SUBMODULO_CPE['03'], 'crear')
+  const puedeFactura = puede(SUBMODULO_CPE['01'], 'crear')
   const [cargando, setCargando] = useState(false)
   const [emitiendo, setEmitiendo] = useState(false)
   const [error, setError] = useState('')
@@ -31,6 +35,7 @@ export function EmitirComprobanteModal({
     setCargando(true)
     setError('')
     setEmitido(null)
+    setTipo(puedeBoleta ? '03' : '01')
     comprobanteApi
       .listar({ notaVentaId: nota.id })
       .then((lista) => {
@@ -43,6 +48,7 @@ export function EmitirComprobanteModal({
     return () => {
       vigente = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al abrir con otra venta
   }, [nota])
 
   const emitir = async () => {
@@ -91,8 +97,8 @@ export function EmitirComprobanteModal({
         {!cargando && !emitido && (
           <>
             <Select label="Tipo de comprobante" value={tipo} onChange={(e) => setTipo(e.target.value as '01' | '03')}>
-              <option value="03">Boleta de venta electrónica</option>
-              <option value="01">Factura electrónica</option>
+              {puedeBoleta && <option value="03">Boleta de venta electrónica</option>}
+              {puedeFactura && <option value="01">Factura electrónica</option>}
             </Select>
             <p className="text-xs text-ink-soft">
               La factura pide que el cliente tenga RUC. La boleta acepta DNI o RUC; desde S/ 700 exige el documento del cliente. Se firma

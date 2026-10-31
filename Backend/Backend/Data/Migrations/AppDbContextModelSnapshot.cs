@@ -4357,6 +4357,9 @@ namespace Backend.Data.Migrations
                         .HasMaxLength(2)
                         .HasColumnType("varchar(2)");
 
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Serie")
                         .IsRequired()
                         .HasMaxLength(4)
@@ -4372,64 +4375,12 @@ namespace Backend.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EmpresaId");
+
                     b.HasIndex("Serie")
                         .IsUnique();
 
                     b.ToTable("SeriesCpe", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Activa = true,
-                            Serie = "F001",
-                            Tipo = "01",
-                            UltimoNumero = 0
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Activa = true,
-                            Serie = "B001",
-                            Tipo = "03",
-                            UltimoNumero = 0
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Activa = true,
-                            AplicaA = "01",
-                            Serie = "FC01",
-                            Tipo = "07",
-                            UltimoNumero = 0
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Activa = true,
-                            AplicaA = "03",
-                            Serie = "BC01",
-                            Tipo = "07",
-                            UltimoNumero = 0
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Activa = true,
-                            AplicaA = "01",
-                            Serie = "FD01",
-                            Tipo = "08",
-                            UltimoNumero = 0
-                        },
-                        new
-                        {
-                            Id = 6,
-                            Activa = true,
-                            AplicaA = "03",
-                            Serie = "BD01",
-                            Tipo = "08",
-                            UltimoNumero = 0
-                        });
                 });
 
             modelBuilder.Entity("Backend.Models.SolicitudPermiso", b =>
@@ -6350,6 +6301,17 @@ namespace Backend.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Rol");
+                });
+
+            modelBuilder.Entity("Backend.Models.SerieCpe", b =>
+                {
+                    b.HasOne("Backend.Models.Empresa", "Empresa")
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Empresa");
                 });
 
             modelBuilder.Entity("Backend.Models.SolicitudPermiso", b =>

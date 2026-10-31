@@ -20,12 +20,14 @@ import {
   Modal,
   RowAction,
   Select,
+  Tabs,
   useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { consultaApi } from '../../lib/consultaApi'
 import { empresaApi } from './empresaApi'
+import { SeriesEmpresa } from './SeriesEmpresa'
 import type { EmpresaRequest, EmpresaResponse } from './empresaApi'
 import { usePermisos } from '../../lib/permisos'
 import { fechaCorta } from '../../lib/fechas'
@@ -65,6 +67,7 @@ export function EmpresaPage() {
   const [consultando, setConsultando] = useState(false)
   const [avisoSunat, setAvisoSunat] = useState('')
   const [subiendoCert, setSubiendoCert] = useState(false)
+  const [pestana, setPestana] = useState<'datos' | 'facturacion' | 'series'>('datos')
   const inputCert = useRef<HTMLInputElement>(null)
 
   const cargar = useCallback(async () => {
@@ -89,6 +92,7 @@ export function EmpresaPage() {
     setEditando(null)
     setForm({ ...VACIA, activa: empresas.length === 0 })
     setAvisoSunat('')
+    setPestana('datos')
     setAbierto(true)
   }
 
@@ -142,6 +146,7 @@ export function EmpresaPage() {
       activa: empresa.activa,
     })
     setAvisoSunat('')
+    setPestana('datos')
     setAbierto(true)
   }
 
@@ -367,18 +372,38 @@ export function EmpresaPage() {
         open={abierto}
         title={editando ? 'Editar empresa' : 'Nueva empresa'}
         description="Estos datos aparecen en documentos y reportes."
+        size="lg"
         onClose={() => setAbierto(false)}
         footer={
-          <>
+          pestana === 'series' ? (
+            // Las series se guardan fila por fila: aquí solo se cierra.
             <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
-              Cancelar
+              Cerrar
             </Button>
-            <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-              {editando ? 'Guardar cambios' : 'Crear empresa'}
-            </Button>
-          </>
+          ) : (
+            <>
+              <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
+                Cancelar
+              </Button>
+              <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+                {editando ? 'Guardar cambios' : 'Crear empresa'}
+              </Button>
+            </>
+          )
         }
       >
+        <Tabs
+          className="mb-4"
+          active={pestana}
+          onChange={(id) => setPestana(id as typeof pestana)}
+          items={[
+            { id: 'datos', label: 'Datos' },
+            { id: 'facturacion', label: 'Facturación electrónica' },
+            { id: 'series', label: 'Series' },
+          ]}
+        />
+
+        {pestana === 'datos' && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {avisoSunat && (
             <p className="rounded-field border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 sm:col-span-2">
@@ -452,11 +477,27 @@ export function EmpresaPage() {
             onChange={(e) => setForm({ ...form, sitioWeb: e.target.value })}
           />
 
+          {/* Desactivar desde aqui no se permite: el backend obliga a activar otra. */}
+          {!form.activa && (
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-muted sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={form.activa}
+                onChange={(e) => setForm({ ...form, activa: e.target.checked })}
+                className="size-4 cursor-pointer rounded border-line-strong accent-[rgb(var(--sys-rgb))]"
+              />
+              Dejar esta empresa como la activa del sistema
+            </label>
+          )}
+        </div>
+        )}
+
+        {pestana === 'facturacion' && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Lo que SUNAT pide para recibir facturas, boletas y notas. */}
-          <div className="sm:col-span-2">
-            <p className="text-sm font-semibold text-ink">Facturación electrónica</p>
-            <p className="text-xs text-ink-soft">Con estos datos se firman y se envían a SUNAT los comprobantes de esta empresa.</p>
-          </div>
+          <p className="text-xs text-ink-soft sm:col-span-2">
+            Con estos datos se firman y se envían a SUNAT los comprobantes de esta empresa.
+          </p>
           <Select
             label="Modo"
             value={form.modoPrueba ? 'prueba' : 'produccion'}
@@ -536,19 +577,17 @@ export function EmpresaPage() {
             </p>
           )}
 
-          {/* Desactivar desde aqui no se permite: el backend obliga a activar otra. */}
-          {!form.activa && (
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-muted sm:col-span-2">
-              <input
-                type="checkbox"
-                checked={form.activa}
-                onChange={(e) => setForm({ ...form, activa: e.target.checked })}
-                className="size-4 cursor-pointer rounded border-line-strong accent-[rgb(var(--sys-rgb))]"
-              />
-              Dejar esta empresa como la activa del sistema
-            </label>
-          )}
         </div>
+        )}
+
+        {pestana === 'series' &&
+          (editando ? (
+            <SeriesEmpresa empresaId={editando.id} puedeEditar={puede('config.empresa', 'editar')} />
+          ) : (
+            <p className="rounded-field border border-line px-3 py-6 text-center text-sm text-ink-soft">
+              Guarda la empresa primero: las series y su numeración se registran sobre una empresa creada.
+            </p>
+          ))}
       </Modal>
     </ListPage>
   )
