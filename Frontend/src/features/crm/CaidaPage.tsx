@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MessageCircle, PackageSearch, TrendingDown, UserSearch } from 'lucide-react'
+import { FileSpreadsheet, MessageCircle, PackageSearch, TrendingDown, UserSearch } from 'lucide-react'
 import { DonutChart, HBarChart, Marco, moneda } from '../../components/charts'
-import { Alert, ListPage, Modal, RowAction } from '../../components/ui'
+import { Alert, Button, ListPage, Modal, RowAction } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { exportarExcel } from '../../lib/excel'
 import { hoyLocal } from '../../lib/fechas'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { CategoriaBadge } from './CategoriaBadge'
 import { crmApi } from './crmApi'
@@ -43,6 +45,7 @@ const mismos = (a: FiltrosCaida, b: FiltrosCaida) =>
  */
 export function CaidaPage() {
   const navegar = useNavigate()
+  const { puede } = usePermisos()
   const { mercados, rutas, usuarios } = useCatalogosCrm()
 
   // Lo que decide qué se trae: lo dice el panel de filtros de la tabla, con los demás.
@@ -271,11 +274,45 @@ export function CaidaPage() {
     [items],
   )
 
+  /** Lo que se ve en la tabla (con sus filtros y la tarjeta elegida), en un Excel. */
+  const exportar = () =>
+    exportarExcel(
+      `clientes-con-caida-${filtros.desde}_${filtros.hasta}`,
+      items.map((f) => ({
+        Estado: ESTADOS_UI[f.estado].etiqueta,
+        Código: f.codigo,
+        Cliente: f.cliente,
+        Documento: f.documento,
+        Teléfono: f.telefono,
+        Vendedor: f.vendedor,
+        Mercado: f.mercado,
+        Ruta: f.ruta,
+        Categoría: f.categoria,
+        'Última compra': f.ultimaCompra ? f.ultimaCompra.slice(0, 10) : null,
+        'Días sin comprar': f.diasSinCompra,
+        'Venta anterior': f.ventaAnterior,
+        'Venta actual': f.ventaActual,
+        Variación: f.variacion,
+        '% Caída': f.caidaPct === null ? null : Math.round(f.caidaPct * 10) / 10,
+        'Monto en riesgo': f.montoRiesgo,
+        'Saldo por cobrar': f.saldoPorCobrar,
+        'Última gestión': f.gestionEtiqueta,
+        'Próximo seguimiento': f.proximoSeguimiento ? f.proximoSeguimiento.slice(0, 10) : null,
+      })),
+    )
+
   return (
     <ListPage
       icon={<TrendingDown size={20} />}
       title="Clientes con caída"
       description="Cuánto compra cada cliente frente al mismo tramo del año anterior, y en qué estado está. También sirve para encontrar a los que dejaron de comprar."
+      actions={
+        puede('crm.caida', 'exportar') ? (
+          <Button variant="secondary" size="sm" disabled={items.length === 0} onClick={exportar} iconRight={<FileSpreadsheet size={15} />}>
+            Exportar Excel
+          </Button>
+        ) : undefined
+      }
       alert={
         error ? (
           <Alert>{error}</Alert>

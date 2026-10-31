@@ -116,9 +116,10 @@ public static class CatalogoPermisos
             // WhatsApp, correos). Ver entra a la ficha; Crear registra una gestión; Editar corrige o reprograma una.
             // Es también el submódulo con el que se configura el alcance de TODO el CRM ("solo mis clientes").
             ["crm.seguimiento"] = [Accion.Ver, Accion.Crear, Accion.Editar],
-            // Reportes de quién compra menos, del 1 de enero a hoy contra el mismo tramo del año anterior. Solo lectura.
-            ["crm.caida"] = [Accion.Ver],
-            ["crm.vendedores"] = [Accion.Ver],
+            // Reportes de quién compra menos, del 1 de enero a hoy contra el mismo tramo del año anterior. De lectura;
+            // Exportar es bajar la lista a Excel (saca los datos de los clientes fuera del sistema).
+            ["crm.caida"] = [Accion.Ver, Accion.Exportar],
+            ["crm.vendedores"] = [Accion.Ver, Accion.Exportar],
             // Los tramos y el ciclo de la categoría de los clientes (Socio a Inactivo). Editar es guardarlos
             // y también "Calcular ahora".
             ["crm.categorizacion"] = [Accion.Ver, Accion.Editar],

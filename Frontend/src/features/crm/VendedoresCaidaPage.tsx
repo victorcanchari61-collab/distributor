@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { UsersRound } from 'lucide-react'
+import { FileSpreadsheet, UsersRound } from 'lucide-react'
 import { BarChart, DonutChart, HBarChart, Marco, moneda } from '../../components/charts'
-import { Alert, ListPage } from '../../components/ui'
+import { Alert, Button, ListPage } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
+import { exportarExcel } from '../../lib/excel'
 import { hoyLocal } from '../../lib/fechas'
+import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { crmApi } from './crmApi'
 import type { EstadoClave, FilaVendedor, VendedoresCaida } from './crmApi'
@@ -18,6 +20,7 @@ import { EtiquetaEstado, TarjetaReporte } from './piezas'
  * estados que los clientes. Además dice cuántos de sus clientes están bajando, que es de donde sale la caída.
  */
 export function VendedoresCaidaPage() {
+  const { puede } = usePermisos()
   // El tramo lo elige el panel de filtros de la tabla, con los demás.
   const [desdeInicial] = useState(inicioDeAnio())
   const [hastaInicial] = useState(hoyLocal())
@@ -124,11 +127,36 @@ export function VendedoresCaidaPage() {
     [items],
   )
 
+  /** Lo que se ve en la tabla (con la tarjeta elegida), en un Excel. */
+  const exportar = () =>
+    exportarExcel(
+      `vendedores-con-caida-${desde}_${hasta}`,
+      items.map((f) => ({
+        Estado: ESTADOS_UI[f.estado].etiqueta,
+        Vendedor: f.vendedor,
+        'Venta anterior': f.ventaAnterior,
+        'Venta actual': f.ventaActual,
+        Variación: f.variacion,
+        '% Caída': f.caidaPct === null ? null : Math.round(f.caidaPct * 10) / 10,
+        Clientes: f.clientes,
+        'Clientes con caída': f.clientesEnCaida,
+        'Clientes críticos': f.clientesCriticos,
+        'Monto en riesgo': f.montoRiesgo,
+      })),
+    )
+
   return (
     <ListPage
       icon={<UsersRound size={20} />}
       title="Vendedores con caída"
       description="Cuánto vendió cada vendedor frente al mismo tramo del año anterior, y cuántos de sus clientes están bajando."
+      actions={
+        puede('crm.vendedores', 'exportar') ? (
+          <Button variant="secondary" size="sm" disabled={items.length === 0} onClick={exportar} iconRight={<FileSpreadsheet size={15} />}>
+            Exportar Excel
+          </Button>
+        ) : undefined
+      }
       alert={error ? <Alert>{error}</Alert> : undefined}
       banner={
         <div className="space-y-4">
