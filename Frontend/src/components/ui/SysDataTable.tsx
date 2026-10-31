@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ComponentType, ReactNode } from 'react'
 import {
@@ -565,17 +565,33 @@ export function SysDataTable<T>({
    */
   const [scrollbar, setScrollbar] = useState(0)
 
+  /*
+   * La columna de Acciones se queda fija a la derecha (sticky): con muchas columnas la tabla se desplaza de
+   * lado, y los botones no deben irse con ella. La sombra que la separa solo se pinta cuando hay filas
+   * tapadas por debajo, y entra y sale con una transicion para que no parpadee al desplazar.
+   */
+  const [sombra, setSombra] = useState(false)
+
+  const medirSombra = useCallback((el: HTMLDivElement) => {
+    setSombra(el.scrollWidth - el.clientWidth - el.scrollLeft > 1)
+  }, [])
+
   useEffect(() => {
     const el = bodyRef.current
     if (!el) return
 
-    const medir = () => setScrollbar(el.offsetWidth - el.clientWidth)
+    const medir = () => {
+      setScrollbar(el.offsetWidth - el.clientWidth)
+      medirSombra(el)
+    }
     medir()
 
+    // El contenedor cambia con la ventana; la tabla, cuando cambian los anchos de las columnas.
     const ro = new ResizeObserver(medir)
     ro.observe(el)
+    if (el.firstElementChild) ro.observe(el.firstElementChild)
     return () => ro.disconnect()
-  }, [])
+  }, [medirSombra])
 
   // Anchos de columna: los arrastrados mandan; el resto se reparte por igual.
   /*
@@ -647,6 +663,7 @@ export function SysDataTable<T>({
   /** La cabecera sigue el desplazamiento horizontal de las filas. */
   const onBodyScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (headRef.current) headRef.current.scrollLeft = e.currentTarget.scrollLeft
+    medirSombra(e.currentTarget)
   }
 
   const onBodyWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -960,7 +977,14 @@ export function SysDataTable<T>({
                 {actions && (
                   <th
                     scope="col"
-                    className="px-3 py-1.5 text-center text-[11px] font-semibold tracking-wider whitespace-nowrap uppercase"
+                    // Fija a la derecha, a la altura de las filas: la cabecera ocupa todo el ancho y el
+                    // cuerpo pierde el de su barra vertical, de ahi el desplazamiento.
+                    style={{ right: scrollbar }}
+                    className={cn(
+                      'sticky z-20 bg-[rgb(var(--sys-dark-rgb))] px-3 py-1.5 text-center text-[11px] font-semibold tracking-wider whitespace-nowrap uppercase',
+                      'transition-shadow duration-300',
+                      sombra && 'shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.35)]',
+                    )}
                   >
                     Acciones
                   </th>
@@ -1003,7 +1027,7 @@ export function SysDataTable<T>({
                     key={String((row as Row)[rowKey])}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
                     className={cn(
-                      'border-b border-zinc-100 transition-colors last:border-b-0 hover:bg-[rgb(var(--sys-rgb)/0.05)]',
+                      'group/fila border-b border-zinc-100 transition-colors last:border-b-0 hover:bg-[rgb(var(--sys-rgb)/0.05)]',
                       onRowClick && 'cursor-pointer',
                     )}
                   >
@@ -1022,7 +1046,16 @@ export function SysDataTable<T>({
                     ))}
 
                     {actions && (
-                      <td className="px-3 py-1.5 whitespace-nowrap">
+                      <td
+                        className={cn(
+                          // Opaca para tapar lo que pasa por debajo; el tinte del hover se superpone con un degradado
+                          // de un solo color, porque un fondo translucido dejaria ver las celdas.
+                          'sticky right-0 z-10 bg-white px-3 py-1.5 whitespace-nowrap',
+                          'transition-[box-shadow,background-image] duration-300',
+                          'group-hover/fila:bg-[linear-gradient(rgb(var(--sys-rgb)/0.05),rgb(var(--sys-rgb)/0.05))]',
+                          sombra && 'shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.12)]',
+                        )}
+                      >
                         <div className="flex items-center justify-center gap-1">{actions(row)}</div>
                       </td>
                     )}
