@@ -341,18 +341,14 @@ export function EmpresaPage() {
       )}
 
       {pestana === 'whatsapp' && (
-        <PageSection
-          title="Envío por WhatsApp"
-          description="Manda el enlace de descarga de cada comprobante al celular del cliente."
-        >
-          <WhatsAppEmpresa
-            puedeEditar={puedeEditar}
-            automatico={form.whatsAppAutomatico}
-            plantilla={form.whatsAppPlantilla ?? ''}
-            onAutomatico={(v) => setForm({ ...form, whatsAppAutomatico: v })}
-            onPlantilla={(v) => setForm({ ...form, whatsAppPlantilla: v })}
-          />
-        </PageSection>
+        // Sin tarjeta alrededor: la pestaña ya se compone de tarjetas propias.
+        <WhatsAppEmpresa
+          puedeEditar={puedeEditar}
+          automatico={form.whatsAppAutomatico}
+          plantilla={form.whatsAppPlantilla ?? ''}
+          onAutomatico={(v) => setForm({ ...form, whatsAppAutomatico: v })}
+          onPlantilla={(v) => setForm({ ...form, whatsAppPlantilla: v })}
+        />
       )}
 
       {pestana === 'series' && (
