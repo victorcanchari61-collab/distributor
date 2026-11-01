@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MessageCircle } from 'lucide-react'
+import { Loader2, MessageCircle } from 'lucide-react'
 import { Alert, Button, Input, Modal, useToast } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaHora } from '../../lib/fechas'
@@ -69,7 +69,7 @@ export function EnviarWhatsAppModal({
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" size="sm" onClick={onClose}>
+          <Button variant="secondary" size="sm" disabled={enviando} onClick={onClose}>
             Cancelar
           </Button>
           <Button size="sm" loading={enviando} disabled={!valido} onClick={() => void enviar()}>
@@ -78,8 +78,19 @@ export function EnviarWhatsAppModal({
         </>
       }
     >
-      <div className="flex flex-col gap-4">
+      <div className="relative flex flex-col gap-4">
         {error && <Alert>{error}</Alert>}
+
+        {/* Mientras sale: se tapa el formulario y se ve que está trabajando, para no tocar Enviar dos veces. */}
+        {enviando && (
+          <div
+            role="status"
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-field bg-white/85 backdrop-blur-[1px]"
+          >
+            <Loader2 size={30} className="animate-spin text-emerald-600" />
+            <p className="text-sm font-medium text-ink">Enviando por WhatsApp…</p>
+          </div>
+        )}
 
         <div className="rounded-field bg-surface-muted px-3 py-2.5 text-sm">
           <p className="font-medium text-ink">{c.clienteNombre}</p>

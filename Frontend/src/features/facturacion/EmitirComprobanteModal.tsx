@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Receipt } from 'lucide-react'
 import { Alert, Button, Modal, Select, useToast } from '../../components/ui'
+import { Loader2 } from 'lucide-react'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { comprobanteApi, SUBMODULO_CPE, TIPOS_CPE } from './comprobanteApi'
@@ -48,8 +49,10 @@ export function EmitirComprobanteModal({
     return () => {
       vigente = false
     }
+    // La venta llega como un objeto nuevo en cada render de la pantalla: solo importa CUÁL es. Con el objeto como
+    // dependencia, cada recarga de la lista volvía a pedir el comprobante y mostraba otra vez "Revisando...".
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al abrir con otra venta
-  }, [nota])
+  }, [nota?.id])
 
   const emitir = async () => {
     if (!nota) return
@@ -92,9 +95,18 @@ export function EmitirComprobanteModal({
 
         {cargando && <p className="py-6 text-center text-sm text-ink-soft">Revisando si ya tiene comprobante...</p>}
 
+        {/* Firmar, mandar a SUNAT y, si está activado, a WhatsApp tarda unos segundos: se ve que está trabajando. */}
+        {emitiendo && (
+          <div role="status" className="flex flex-col items-center gap-2 py-6 text-center">
+            <Loader2 size={28} className="animate-spin text-[rgb(var(--sys-rgb))]" />
+            <p className="text-sm font-medium text-ink">Emitiendo el comprobante…</p>
+            <p className="text-xs text-ink-soft">Se firma y se envía a SUNAT. Si está activado, también se manda por WhatsApp.</p>
+          </div>
+        )}
+
         {!cargando && emitido && <PanelComprobante comprobante={emitido} onCambio={setEmitido} />}
 
-        {!cargando && !emitido && (
+        {!cargando && !emitido && !emitiendo && (
           <>
             <Select label="Tipo de comprobante" value={tipo} onChange={(e) => setTipo(e.target.value as '01' | '03')}>
               {puedeBoleta && <option value="03">Boleta de venta electrónica</option>}

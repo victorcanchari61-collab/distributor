@@ -168,8 +168,8 @@ export function NotasVentaPage() {
   const [totalRegistros, setTotalRegistros] = useState(0)
   const [resumen, setResumen] = useState<ResumenNotasVenta | null>(null)
 
-  const cargarPagina = useCallback(async (q: ConsultaTabla) => {
-    setCargando(true)
+  const cargarPagina = useCallback(async (q: ConsultaTabla, silencioso = false) => {
+    if (!silencioso) setCargando(true)
     try {
       const pagina = await notaVentaApi.listar(q)
       setNotas(pagina.items)
@@ -214,7 +214,14 @@ export function NotasVentaPage() {
     void cargarApoyo()
   }, [cargarApoyo])
 
-  useRealtime(['notasventa', 'pedidos', 'stock', 'comprobantes'], cargar)
+  useRealtime(['notasventa', 'pedidos', 'stock'], cargar)
+
+  // Emitir un comprobante o mandarlo por WhatsApp solo cambia las columnas Comprobante y Notas de la tabla: se vuelve a
+  // pedir la página, sin tocar el catálogo de productos, las listas de precios ni los contadores, y sin parpadeo.
+  const refrescarPagina = useCallback(async () => {
+    if (consulta) await cargarPagina(consulta, true)
+  }, [consulta, cargarPagina])
+  useRealtime(['comprobantes'], refrescarPagina)
 
   // Stock disponible del almacén elegido: es lo que se puede vender desde ahí.
   useEffect(() => {
