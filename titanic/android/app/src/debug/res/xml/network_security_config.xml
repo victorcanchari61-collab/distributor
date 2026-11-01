@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Solo para desarrollo: permite hablar con el API por HTTP sin certificado.
+  Permite hablar con el API por HTTP sin certificado: el de desarrollo y, mientras el VPS no tenga HTTPS, el del VPS.
   10.0.2.2 es la maquina anfitriona vista desde el emulador de Android.
   En produccion el API debe ir por HTTPS y este archivo no aplica, porque vive
   en el manifiesto de debug.
@@ -10,5 +10,7 @@
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>
+        <!-- El VPS de produccion, que hoy se abre por IP y HTTP (sin dominio ni certificado). -->
+        <domain includeSubdomains="true">80.65.211.175</domain>
     </domain-config>
 </network-security-config>

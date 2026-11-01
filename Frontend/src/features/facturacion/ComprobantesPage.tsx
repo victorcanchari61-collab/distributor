@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { MessageCircle, CircleCheck, CircleX, Clock, FileArchive, FileCode2, FileMinus, FilePen, FilePlus, Eye, Receipt, RefreshCw, Ticket } from 'lucide-react'
+import { MessageCircle, Plus, CircleCheck, CircleX, Clock, FileArchive, FileCode2, FileMinus, FilePen, FilePlus, Eye, Receipt, RefreshCw, Ticket } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { AccionPdf, Alert, Badge, ListPage, Modal, RowAction, StatCard, useToast } from '../../components/ui'
+import { useNavigate } from 'react-router-dom'
+import { AccionPdf, Alert, Badge, Button, ListPage, Modal, RowAction, StatCard, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { fechaCorta } from '../../lib/fechas'
@@ -10,6 +11,7 @@ import { useRealtime } from '../../lib/realtime'
 import { ESTADOS_CPE, ESTADOS_WHATSAPP, SUBMODULO_CPE, comprobanteApi } from './comprobanteApi'
 import type { ComprobanteResponse, EstadoCpe, TipoCpe } from './comprobanteApi'
 import { EmitirNotaModal } from './EmitirNotaModal'
+import { EnviarWhatsAppModal } from './EnviarWhatsAppModal'
 import { EstadoCpeBadge, PanelComprobante, monto } from './PanelComprobante'
 
 const VISTAS: Record<TipoCpe, { titulo: string; descripcion: string; icono: LucideIcon; vacio: string }> = {
@@ -48,6 +50,7 @@ const VISTAS: Record<TipoCpe, { titulo: string; descripcion: string; icono: Luci
 function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
   const { puede } = usePermisos()
   const toast = useToast()
+  const navegar = useNavigate()
   const vista = VISTAS[tipo]
   const Icono = vista.icono
   const submodulo = SUBMODULO_CPE[tipo]
@@ -60,6 +63,7 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
   const [error, setError] = useState('')
   const [detalle, setDetalle] = useState<ComprobanteResponse | null>(null)
   const [corrigiendo, setCorrigiendo] = useState<ComprobanteResponse | null>(null)
+  const [enviando, setEnviando] = useState<ComprobanteResponse | null>(null)
 
   const cargar = useCallback(async () => {
     try {
@@ -86,17 +90,6 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
       else await comprobanteApi.descargarCdr(c)
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'No pudimos descargar el archivo')
-    }
-  }
-
-  /** Manda el enlace por WhatsApp al teléfono del cliente. Si no tiene, el mensaje del error manda a escribirlo en el detalle. */
-  const whatsapp = async (c: ComprobanteResponse) => {
-    try {
-      reemplazar(await comprobanteApi.enviarWhatsApp(c.id))
-      toast.exito(`${c.numeroCompleto} enviado a la cola de WhatsApp`)
-    } catch (e) {
-      toast.error(e instanceof ApiError ? `${e.message}. Ábrelo con el ojo para escribir el teléfono.` : 'No pudimos enviarlo por WhatsApp')
-      void cargar()
     }
   }
 
@@ -220,6 +213,14 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
       icon={<Icono size={20} />}
       title={vista.titulo}
       description={vista.descripcion}
+      // Crear directo: abre la venta directa con este comprobante ya elegido (registra la venta y lo emite a SUNAT).
+      actions={
+        !esNota && puede(submodulo, 'crear') && puede('fact.notaventa', 'crear') ? (
+          <Button size="sm" onClick={() => navegar(`/fact/notaventa?nueva=${tipo}`)} iconRight={<Plus size={15} />}>
+            {tipo === '01' ? 'Nueva factura' : 'Nueva boleta'}
+          </Button>
+        ) : undefined
+      }
       alert={
         error ? (
           <Alert>{error}</Alert>
@@ -270,7 +271,7 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
             </RowAction>
           )}
           {puede(submodulo, 'exportar') && c.estado === 'ACEPTADO' && (
-            <RowAction label={c.whatsAppEstado === 'ENCOLADO' ? 'Reenviar por WhatsApp' : 'Enviar por WhatsApp'} tone="success" onClick={() => void whatsapp(c)}>
+            <RowAction label="Enviar documento por WhatsApp" tone="success" onClick={() => setEnviando(c)}>
               <MessageCircle size={15} />
             </RowAction>
           )}
@@ -303,6 +304,15 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
           />
         )}
       </Modal>
+
+      <EnviarWhatsAppModal
+        comprobante={enviando}
+        onClose={() => setEnviando(null)}
+        onEnviado={(nuevo) => {
+          reemplazar(nuevo)
+          setDetalle((d) => (d?.id === nuevo.id ? nuevo : d))
+        }}
+      />
 
       <EmitirNotaModal
         comprobante={corrigiendo}

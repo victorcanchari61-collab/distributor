@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
 import { ArrowLeft, Check, Eye, History, Pencil, Plus, Receipt, ShoppingBag, Trash2, Undo2, X } from 'lucide-react'
@@ -20,6 +21,7 @@ import {
   PageSection,
   ResumenDocumento,
   RowAction,
+  Select,
   StatCard,
   SysDataTable,
   TablaProductosDetalle,
@@ -44,7 +46,7 @@ import type { AlmacenOpcion } from '../inventario'
 import { etiquetaMetodo, metodoPagoApi } from '../finanzas'
 import type { MetodoPagoOpcion, TipoMetodoPago } from '../finanzas'
 import { EmitirComprobanteModal } from './EmitirComprobanteModal'
-import { TIPOS_CPE } from './comprobanteApi'
+import { ESTADOS_CPE, TIPOS_CPE, comprobanteApi } from './comprobanteApi'
 import { EstadoCpeBadge } from './PanelComprobante'
 import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
@@ -108,6 +110,9 @@ interface RecojoLinea extends LineaProductoNueva {
 export function NotasVentaPage() {
   const { puede } = usePermisos()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
+  // Si la venta nueva también emite su comprobante: '01' factura, '03' boleta, '' solo la nota de venta.
+  const [emitir, setEmitir] = useState<'' | '01' | '03'>('')
+  const [params, setParams] = useSearchParams()
   const [notas, setNotas] = useState<NotaVentaFila[]>([])
   // El padrón no se descarga: el selector busca en el servidor, y los filtros
   // ofrecen solo los clientes que aparecen en esta tabla.
@@ -226,8 +231,9 @@ export function NotasVentaPage() {
     }
   }, [almacenId, notas])
 
-  const abrirNueva = () => {
+  const abrirNueva = (tipo: '' | '01' | '03' = '') => {
     setEditando(null)
+    setEmitir(tipo)
     setClienteId(0)
     setClienteNombre('')
     // El principal por defecto: quien tiene un solo depósito nunca lo elige.
@@ -243,6 +249,16 @@ export function NotasVentaPage() {
     setRecojos([])
     setVista('form')
   }
+
+  // "Nueva factura" y "Nueva boleta" (en Facturas y Boletas) llegan aquí con ?nueva=01|03: abre la venta directa
+  // con ese comprobante ya elegido.
+  useEffect(() => {
+    const tipo = params.get('nueva')
+    if (!tipo || almacenes.length === 0) return
+    if (tipo === '01' || tipo === '03') abrirNueva(tipo)
+    setParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo cuando llega el parámetro y ya hay almacenes
+  }, [params, almacenes])
 
   const abrirEdicion = (nota: NotaVentaResponse) => {
     setEditando(nota)
@@ -543,6 +559,24 @@ export function NotasVentaPage() {
     setListaPrecioId(cliente?.listaPrecioId ?? 0)
   }
 
+  /**
+   * Emite el comprobante de la venta recién creada. Si SUNAT o la configuración lo impiden, la venta ya quedó
+   * registrada: se avisa y se puede emitir después desde la lista con "Facturar".
+   */
+  const emitirComprobante = async (nota: NotaVentaResponse) => {
+    try {
+      const c = await comprobanteApi.emitir(nota.id, emitir as '01' | '03')
+      if (c.estado === 'ACEPTADO') toast.exito(`${c.numeroCompleto} aceptado por SUNAT`)
+      else toast.error(c.mensajeSunat ?? `${c.numeroCompleto}: ${ESTADOS_CPE[c.estado].ayuda}`)
+    } catch (e) {
+      toast.error(
+        `La venta ${nota.numero} se registró, pero no se pudo emitir el comprobante: ${
+          e instanceof ApiError ? e.message : 'error desconocido'
+        }. Puedes emitirlo desde la lista con el botón Facturar.`,
+      )
+    }
+  }
+
   const guardar = async () => {
     setErrorPagos('')
     if (!clienteId) return fallar('Elige el cliente.')
@@ -627,7 +661,8 @@ export function NotasVentaPage() {
       if (editando) {
         await notaVentaApi.update(editando.id, body)
       } else {
-        await notaVentaApi.create(body)
+        const creada = await notaVentaApi.create(body)
+        if (emitir) await emitirComprobante(creada)
       }
       setVista('lista')
       await cargar()
@@ -915,11 +950,13 @@ export function NotasVentaPage() {
       <div className="space-y-5">
         <PageHeader
           icon={<ShoppingBag size={20} />}
-          title={editando ? `Editar ${editando.numero}` : 'Nueva venta directa'}
+          title={editando ? `Editar ${editando.numero}` : emitir ? `Nueva ${TIPOS_CPE[emitir].corto.toLowerCase()}` : 'Nueva venta directa'}
           description={
             editando
               ? 'Lo que quites queda como devolución por aprobar.'
-              : 'Venta sin pedido previo; descuenta stock al registrarla.'
+              : emitir
+                ? 'Registra la venta, descuenta el stock y emite el comprobante a SUNAT en un solo paso.'
+                : 'Venta sin pedido previo; descuenta stock al registrarla.'
           }
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
@@ -1137,6 +1174,22 @@ export function NotasVentaPage() {
               </PageSection>
             )}
 
+            {!editando && (puede('fact.boletas', 'crear') || puede('fact.facturas', 'crear')) && (
+              <PageSection title="Comprobante" description="Emítelo a SUNAT al registrar la venta.">
+                <Select label="Emitir" value={emitir} onChange={(e) => setEmitir(e.target.value as '' | '01' | '03')}>
+                  <option value="">Solo la nota de venta</option>
+                  {puede('fact.boletas', 'crear') && <option value="03">Boleta de venta electrónica</option>}
+                  {puede('fact.facturas', 'crear') && <option value="01">Factura electrónica</option>}
+                </Select>
+                {emitir === '01' && <p className="mt-2 text-xs text-ink-soft">La factura pide que el cliente tenga RUC.</p>}
+                {emitir === '03' && (
+                  <p className="mt-2 text-xs text-ink-soft">
+                    La boleta acepta DNI o RUC; desde S/ 700 exige el documento del cliente.
+                  </p>
+                )}
+              </PageSection>
+            )}
+
             <PageSection title="Resumen">
               {totalRecojo > 0 && (
                 <div className="mb-2 flex items-center justify-between text-sm text-ink-soft">
@@ -1159,7 +1212,7 @@ export function NotasVentaPage() {
             Cancelar
           </Button>
           <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-            {editando ? 'Guardar cambios' : 'Registrar venta'}
+            {editando ? 'Guardar cambios' : emitir ? `Registrar y emitir ${TIPOS_CPE[emitir].corto.toLowerCase()}` : 'Registrar venta'}
           </Button>
         </div>
 
@@ -1251,7 +1304,7 @@ export function NotasVentaPage() {
       description="Las ventas, de un pedido o directas."
       actions={
         puede('fact.notaventa', 'crear') ? (
-          <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
+          <Button size="sm" onClick={() => abrirNueva()} iconRight={<Plus size={15} />}>
             Nueva venta
           </Button>
         ) : undefined

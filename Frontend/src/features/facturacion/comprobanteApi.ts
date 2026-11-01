@@ -97,6 +97,9 @@ export interface ComprobanteResponse {
   lineas: LineaComprobante[]
   /** Solo en facturas y boletas: las notas de crédito y débito que las corrigen (también las rechazadas, con su estado). */
   notas: NotaDeComprobante[]
+  clienteId: number | null
+  /** El teléfono que hoy tiene el cliente: el que se propone al enviar por WhatsApp. */
+  clienteTelefono: string | null
   /** Nulo: nunca se mandó por WhatsApp. */
   whatsAppEstado: EstadoWhatsAppCpe | null
   whatsAppTelefono: string | null

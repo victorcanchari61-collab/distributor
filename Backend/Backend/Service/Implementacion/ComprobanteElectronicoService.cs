@@ -59,6 +59,7 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         var filas = await consulta.OrderByDescending(c => c.Id).Take(500).ToListAsync();
         var respuestas = filas.Select(Mapear).ToList();
         await AgregarNotasAsync(respuestas);
+        await AgregarTelefonosAsync(respuestas);
         return respuestas;
     }
 
@@ -66,7 +67,22 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
     {
         var respuesta = Mapear(await ObtenerAsync(id));
         await AgregarNotasAsync([respuesta]);
+        await AgregarTelefonosAsync([respuesta]);
         return respuesta;
+    }
+
+    /// <summary>El teléfono actual de cada cliente, en una sola consulta: lo que se propone al enviar el comprobante por WhatsApp.</summary>
+    private async Task AgregarTelefonosAsync(List<ComprobanteResponse> comprobantes)
+    {
+        var ids = comprobantes.Where(c => c.ClienteId != null).Select(c => c.ClienteId!.Value).Distinct().ToList();
+        if (ids.Count == 0) return;
+
+        var telefonos = await _context.Clientes.AsNoTracking()
+            .Where(x => ids.Contains(x.Id) && x.Telefono != null && x.Telefono != "")
+            .ToDictionaryAsync(x => x.Id, x => x.Telefono);
+
+        foreach (var c in comprobantes)
+            if (c.ClienteId is int id && telefonos.TryGetValue(id, out var tel)) c.ClienteTelefono = tel;
     }
 
     /// <summary>Cuelga de cada factura o boleta las notas de crédito y débito que la corrigen, en una sola consulta.</summary>
@@ -584,6 +600,7 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         ClienteDocumento = c.ClienteDocumento,
         ClienteNombre = c.ClienteNombre,
         ClienteDireccion = c.ClienteDireccion,
+        ClienteId = c.ClienteId,
         Moneda = c.Moneda,
         OpGravada = c.OpGravada,
         OpExonerada = c.OpExonerada,

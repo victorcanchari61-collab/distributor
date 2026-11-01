@@ -63,6 +63,7 @@ import '../../features/tms/vistas/motivos_novedad_pagina.dart';
 import '../../features/tms/vistas/novedades_pagina.dart';
 import '../../features/tms/vistas/rutas_pagina.dart';
 import '../../features/ventas/vistas/notas_venta_pagina.dart';
+import '../../features/facturacion/vistas/comprobantes_pagina.dart';
 import '../../features/ventas/vistas/pedidos_pagina.dart';
 import '../navegacion/menu.dart';
 import '../permisos/puerta_permiso.dart';
@@ -245,6 +246,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: NotasVentaPagina.ruta,
         builder: (context, estado) =>
             const PuertaPermiso(child: NotasVentaPagina()),
+      ),
+      GoRoute(
+        path: FacturasPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: FacturasPagina()),
+      ),
+      GoRoute(
+        path: BoletasPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: BoletasPagina()),
+      ),
+      GoRoute(
+        path: NotasCreditoPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: NotasCreditoPagina()),
+      ),
+      GoRoute(
+        path: NotasDebitoPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: NotasDebitoPagina()),
       ),
       GoRoute(
         path: CuentasPorCobrarPagina.ruta,
@@ -443,6 +464,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != AuditoriaPagina.ruta &&
               item.ruta != PedidosPagina.ruta &&
               item.ruta != NotasVentaPagina.ruta &&
+              item.ruta != FacturasPagina.ruta &&
+              item.ruta != BoletasPagina.ruta &&
+              item.ruta != NotasCreditoPagina.ruta &&
+              item.ruta != NotasDebitoPagina.ruta &&
               item.ruta != CuentasPorCobrarPagina.ruta &&
               item.ruta != CuentasPorPagarPagina.ruta &&
               item.ruta != MiCajaPagina.ruta &&

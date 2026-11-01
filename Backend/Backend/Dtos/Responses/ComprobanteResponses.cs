@@ -23,6 +23,10 @@ public class ComprobanteResponse
     public string ClienteDocumento { get; set; } = string.Empty;
     public string ClienteNombre { get; set; } = string.Empty;
     public string? ClienteDireccion { get; set; }
+    public int? ClienteId { get; set; }
+
+    /// <summary>El teléfono que hoy tiene el cliente en el sistema: el que se propone al enviar por WhatsApp.</summary>
+    public string? ClienteTelefono { get; set; }
     public string Moneda { get; set; } = string.Empty;
     public decimal OpGravada { get; set; }
     public decimal OpExonerada { get; set; }

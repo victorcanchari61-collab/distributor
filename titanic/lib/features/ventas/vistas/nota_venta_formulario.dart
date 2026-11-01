@@ -10,10 +10,13 @@ import '../../../compartido/widgets/app_lineas_producto.dart';
 import '../../../compartido/widgets/app_panel_producto.dart';
 import '../../../compartido/widgets/app_campo_cliente.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
+import '../../facturacion/datos/comprobante.dart';
+import '../../facturacion/estado/comprobantes_controlador.dart';
 import '../../facturacion/datos/facturacion_api.dart';
 import '../../facturacion/datos/lista_precio.dart';
 import '../../facturacion/estado/facturacion_controlador.dart';
@@ -52,7 +55,11 @@ class _FilaPago {
 
 /// Alta de una venta directa, sin pedido previo: el stock sale al momento.
 class NotaVentaFormulario extends ConsumerStatefulWidget {
-  const NotaVentaFormulario({super.key});
+  const NotaVentaFormulario({super.key, this.comprobanteInicial = ''});
+
+  /// El comprobante que la venta emite al guardarse: [TipoCpe.factura], [TipoCpe.boleta] o vacío (solo la nota de
+  /// venta). Lo fijan "Nueva factura" y "Nueva boleta".
+  final String comprobanteInicial;
 
   @override
   ConsumerState<NotaVentaFormulario> createState() =>
@@ -67,6 +74,9 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
   int? _almacenId;
   int? _listaPrecioId;
   String _formaPago = FormaPagoVenta.contado;
+
+  /// Si la venta también emite su comprobante a SUNAT: '01' factura, '03' boleta, '' solo la nota de venta.
+  late String _emitir = widget.comprobanteInicial;
 
   final List<LineaDocumento> _lineas = [];
   final List<_FilaPago> _pagos = [];
@@ -176,10 +186,34 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
     };
 
     try {
-      await ref.read(notasVentaProvider.notifier).crear(cuerpo);
+      final nota = await ref.read(notasVentaProvider.notifier).crear(cuerpo);
+
+      // La venta ya quedó registrada: si el comprobante falla, se avisa y se puede emitir después desde Facturar.
+      String? aviso;
+      var fallo = false;
+      if (_emitir.isNotEmpty) {
+        try {
+          final c = await ref
+              .read(comprobantesApiProvider)
+              .emitir(nota.id, _emitir);
+          ref.invalidate(comprobantesProvider(_emitir));
+          aviso = c.aceptado
+              ? '${c.numeroCompleto} aceptado por SUNAT'
+              : '${c.numeroCompleto}: ${c.mensajeSunat ?? EstadoCpe.etiqueta(c.estado)}';
+          fallo = !c.aceptado;
+        } on ApiExcepcion catch (e) {
+          fallo = true;
+          aviso =
+              'La venta ${nota.numero} se registró, pero no se pudo emitir el comprobante: ${e.texto}';
+        }
+      }
 
       navegador.pop();
-      mensajero.mostrar('Venta registrada');
+      if (fallo) {
+        mensajero.error(aviso!);
+      } else {
+        mensajero.mostrar(aviso ?? 'Venta registrada');
+      }
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;
@@ -526,9 +560,11 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
       'fact',
       (context) => Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'Nueva venta',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          title: Text(
+            _emitir.isEmpty
+                ? 'Nueva venta'
+                : 'Nueva ${TipoCpe.corto(_emitir).toLowerCase()}',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
           bottom: const PreferredSize(
             preferredSize: Size.fromHeight(1),
@@ -659,6 +695,37 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
            * lineas no se sabe cuanto se debe cobrar, y pedirlo antes obligaba a
            * volver a subir para corregir el monto cada vez que se agregaba algo.
            */
+            // Emitir el comprobante en el mismo paso: solo se ofrecen los tipos que el usuario puede crear.
+            if (puede(ref, 'fact.boletas', Accion.crear) ||
+                puede(ref, 'fact.facturas', Accion.crear)) ...[
+              AppSelector<String>(
+                valor: _emitir,
+                etiqueta: 'Comprobante',
+                icono: Icons.receipt_long_outlined,
+                opciones: [
+                  const Opcion<String>('', 'Solo la nota de venta'),
+                  if (puede(ref, 'fact.boletas', Accion.crear))
+                    const Opcion<String>(TipoCpe.boleta, 'Boleta electrónica'),
+                  if (puede(ref, 'fact.facturas', Accion.crear))
+                    const Opcion<String>(TipoCpe.factura, 'Factura electrónica'),
+                ],
+                onCambio: (v) => setState(() => _emitir = v ?? ''),
+              ),
+              if (_emitir.isNotEmpty) ...[
+                const SizedBox(height: Dimen.espacio1),
+                Text(
+                  _emitir == TipoCpe.factura
+                      ? 'Se emite a SUNAT al registrar. La factura pide que el cliente tenga RUC.'
+                      : 'Se emite a SUNAT al registrar. Desde S/ 700 la boleta exige el documento del cliente.',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colores.tintaSuave,
+                  ),
+                ),
+              ],
+              const SizedBox(height: Dimen.espacio4),
+            ],
+
             const Text(
               'Pago',
               style: TextStyle(
@@ -737,6 +804,7 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
             const SizedBox(height: Dimen.espacio6),
 
             AppBotonesFormulario(
+              textoGuardar: _emitir.isEmpty ? 'Registrar' : 'Registrar y emitir',
               onCancelar: () => Navigator.of(context).pop(),
               onGuardar: _guardar,
               cargando: _guardando,

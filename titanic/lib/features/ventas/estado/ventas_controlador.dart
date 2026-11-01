@@ -153,9 +153,11 @@ class NotasVentaControlador extends AsyncNotifier<List<NotaVenta>> {
     );
   }
 
-  Future<void> crear(Map<String, dynamic> cuerpo) async {
-    await ref.read(ventasApiProvider).crearNotaVenta(cuerpo);
+  /// Crea la venta directa y devuelve la nota registrada (su id sirve para emitirle el comprobante).
+  Future<NotaVenta> crear(Map<String, dynamic> cuerpo) async {
+    final nota = await ref.read(ventasApiProvider).crearNotaVenta(cuerpo);
     await recargar();
+    return nota;
   }
 
   Future<void> anular(int id) async {

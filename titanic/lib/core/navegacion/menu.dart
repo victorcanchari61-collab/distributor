@@ -244,21 +244,25 @@ const menuGrupos = <MenuGrupo>[
       ),
       MenuItem(
         id: 'fact.facturas',
+        pendiente: false,
         titulo: 'Facturas',
         icono: Icons.receipt_outlined,
       ),
       MenuItem(
         id: 'fact.boletas',
+        pendiente: false,
         titulo: 'Boletas',
         icono: Icons.confirmation_number_outlined,
       ),
       MenuItem(
         id: 'fact.notascredito',
+        pendiente: false,
         titulo: 'Notas de crédito',
         icono: Icons.remove_circle_outline,
       ),
       MenuItem(
         id: 'fact.notasdebito',
+        pendiente: false,
         titulo: 'Notas de débito',
         icono: Icons.add_circle_outline,
       ),

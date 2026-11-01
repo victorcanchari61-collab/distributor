@@ -19,6 +19,10 @@ enum DocumentoPdf {
   ordenCompra('ordencompra', 'Orden de compra'),
   compra('compra', 'Compra'),
 
+  // Facturas, boletas y notas electronicas: un solo documento con su ruta, que
+  // el backend resuelve por el tipo para pedir el permiso de ese tipo.
+  comprobante('comprobante', 'Comprobante'),
+
   // Los de inventario cuelgan de /inventario: comparten tabla y numeracion de
   // id, asi que cada tipo necesita su ruta para que el backend sepa que
   // permiso exigir antes de leer el documento.
