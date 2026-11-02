@@ -271,3 +271,54 @@ public class ResumenSeguimientoResponse
     /// <summary>La hora más antigua entre los vencidos, si hay alguno.</summary>
     public DateTime? VencidoDesde { get; set; }
 }
+
+/// <summary>Un contacto programado con un cliente, para la lista de lo que hay que hacer.</summary>
+public class AgendaItemResponse
+{
+    public int GestionId { get; set; }
+    public int ClienteId { get; set; }
+    public string Codigo { get; set; } = string.Empty;
+    public string Cliente { get; set; } = string.Empty;
+    public string? Telefono { get; set; }
+    public string? Mercado { get; set; }
+    public string? Ruta { get; set; }
+
+    /// <summary>Cuándo toca (instante, UTC).</summary>
+    public DateTime Proximo { get; set; }
+
+    public string TipoContacto { get; set; } = string.Empty;
+    public string TipoEtiqueta { get; set; } = string.Empty;
+    public string? ProximaAccion { get; set; }
+
+    /// <summary>Su hora ya pasó.</summary>
+    public bool Vencida { get; set; }
+
+    /// <summary>Toca hoy (y todavía no pasó su hora).</summary>
+    public bool EsHoy { get; set; }
+
+    /// <summary>En qué quedó el contacto anterior, el que dejó esto programado.</summary>
+    public string ResultadoEtiqueta { get; set; } = string.Empty;
+    public string Tono { get; set; } = string.Empty;
+
+    /// <summary>Quien lo programó.</summary>
+    public string? ProgramadoPor { get; set; }
+}
+
+/// <summary>Los contactos que hay que hacer: los vencidos, los de hoy y los que vienen.</summary>
+public class AgendaSeguimientoResponse
+{
+    public int Vencidos { get; set; }
+    public int Hoy { get; set; }
+    public int Proximos { get; set; }
+
+    /// <summary>Hasta cuántos días adelante se mira.</summary>
+    public int Dias { get; set; }
+
+    /// <summary>
+    /// Se ven solo los míos (los que programé yo o son de un cliente mío). Falso: todos los que el alcance deja ver.
+    /// </summary>
+    public bool SoloMios { get; set; }
+
+    /// <summary>Los vencidos primero (el más atrasado arriba) y después los que vienen por orden de hora.</summary>
+    public List<AgendaItemResponse> Items { get; set; } = [];
+}

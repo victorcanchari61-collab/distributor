@@ -526,7 +526,12 @@ public class SeguimientoClienteService : ISeguimientoClienteService
 
     // ------------------------------------------------------------- Recordatorios
 
-    public async Task<ResumenSeguimientoResponse> ResumenDeAsync(int usuarioId)
+    /// <summary>
+    /// Los contactos programados que quien pregunta puede ver, y los "míos" entre ellos: los que registré yo o son de
+    /// un cliente mío (asignado o de mis rutas). Es la misma regla para la campanita y para la agenda, para que el
+    /// número del aviso y la lista que se abre digan lo mismo.
+    /// </summary>
+    private async Task<(IQueryable<GestionCliente> Visibles, IQueryable<GestionCliente> Mios)> ProgramadosAsync(int usuarioId)
     {
         var alcance = await _permisos.AlcanceFiltroAsync(usuarioId, CrmConsultas.Submodulo);
         var misRutas = alcance.RutaIds;
@@ -541,11 +546,89 @@ public class SeguimientoClienteService : ISeguimientoClienteService
                                                  || (g.Cliente.RutaId != null && misRutas.Contains(g.Cliente.RutaId.Value)));
         }
 
-        // Los "míos": los que registré yo o son de un cliente mío (asignado o de mis rutas).
-        var mios = await programados
+        var mios = programados
             .Where(g => g.UsuarioId == usuarioId
                         || g.Cliente!.VendedorId == usuarioId
-                        || (g.Cliente.RutaId != null && misRutas.Contains(g.Cliente.RutaId.Value)))
+                        || (g.Cliente.RutaId != null && misRutas.Contains(g.Cliente.RutaId.Value)));
+
+        return (programados, mios);
+    }
+
+    public async Task<AgendaSeguimientoResponse> AgendaAsync(bool soloMios, int dias)
+    {
+        if (_usuarioActual.Id is not int usuarioId)
+            throw new UnauthorizedException("Inicia sesión para ver tu agenda");
+        if (dias < 0 || dias > 60)
+            throw new BadRequestException("Elige entre 0 y 60 días.");
+
+        var (visibles, mios) = await ProgramadosAsync(usuarioId);
+        var ahora = DateTime.UtcNow;
+        var hoy = Zona.Hoy;
+        // Hasta el final del último día pedido (en hora de Perú), no hasta "dentro de N × 24 horas".
+        var limite = Zona.AUtc(hoy.AddDays(dias + 1));
+
+        var filas = await (soloMios ? mios : visibles)
+            .Where(g => g.ProximoSeguimiento < limite)
+            .OrderBy(g => g.ProximoSeguimiento)
+            .Select(g => new
+            {
+                g.Id,
+                g.ClienteId,
+                Cliente = g.Cliente!.Nombre,
+                g.Cliente.Telefono,
+                Mercado = g.Cliente.Mercado != null ? g.Cliente.Mercado.Nombre : null,
+                Ruta = g.Cliente.Ruta != null ? g.Cliente.Ruta.Nombre : null,
+                Proximo = g.ProximoSeguimiento!.Value,
+                g.TipoContacto,
+                g.ProximoTipoContacto,
+                g.ProximaAccion,
+                g.Resultado,
+                Usuario = g.Usuario != null ? g.Usuario.Nombre : null,
+            })
+            .ToListAsync();
+
+        var items = filas.Select(f =>
+        {
+            var tipo = f.ProximoTipoContacto ?? f.TipoContacto;
+            var (resultado, tono) = ResultadoGestion.De(f.Resultado);
+            return new AgendaItemResponse
+            {
+                GestionId = f.Id,
+                ClienteId = f.ClienteId,
+                Codigo = $"CLI{f.ClienteId:D5}",
+                Cliente = f.Cliente,
+                Telefono = f.Telefono,
+                Mercado = f.Mercado,
+                Ruta = f.Ruta,
+                Proximo = f.Proximo,
+                TipoContacto = tipo,
+                TipoEtiqueta = TipoContacto.Etiqueta(tipo),
+                ProximaAccion = f.ProximaAccion,
+                Vencida = f.Proximo < ahora,
+                EsHoy = f.Proximo >= ahora && Zona.DiaDe(f.Proximo) == hoy,
+                ResultadoEtiqueta = resultado,
+                Tono = tono,
+                ProgramadoPor = f.Usuario,
+            };
+        }).ToList();
+
+        return new AgendaSeguimientoResponse
+        {
+            Vencidos = items.Count(i => i.Vencida),
+            Hoy = items.Count(i => i.EsHoy),
+            Proximos = items.Count(i => !i.Vencida && !i.EsHoy),
+            Dias = dias,
+            SoloMios = soloMios,
+            // Ya vienen por hora: los vencidos quedan arriba con el más atrasado primero.
+            Items = items,
+        };
+    }
+
+    public async Task<ResumenSeguimientoResponse> ResumenDeAsync(int usuarioId)
+    {
+        var (_, programadosMios) = await ProgramadosAsync(usuarioId);
+
+        var mios = await programadosMios
             .Select(g => g.ProximoSeguimiento!.Value)
             .ToListAsync();
 

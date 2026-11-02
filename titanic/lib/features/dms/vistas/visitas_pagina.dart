@@ -14,6 +14,7 @@ import '../../../core/permisos/permisos.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
+import '../../crm/datos/crm.dart' show EstadoCaida;
 import '../../tms/estado/tms_controlador.dart' as tms;
 import '../datos/dms_modelos.dart';
 import '../estado/dms_controlador.dart';
@@ -299,8 +300,35 @@ class _TarjetaVisita extends StatelessWidget {
   /// Null si ya tiene pedido o si quien mira no puede crear pedidos.
   final VoidCallback? onTomarPedido;
 
+  /// Si el cliente se está yendo: lo que quien lo visita tiene que saber antes
+  /// de llegar. Los normales y los que no tienen comparación no se marcan.
+  EstadoCaida? get _riesgo {
+    final estado = EstadoCaida.desdeClave(visita.riesgo);
+    return switch (estado) {
+      EstadoCaida.critico || EstadoCaida.riesgo || EstadoCaida.seguimiento =>
+        estado,
+      _ => null,
+    };
+  }
+
+  String? get _textoRiesgo {
+    final estado = _riesgo;
+    if (estado == null) return null;
+    final caida = visita.caidaPct;
+    return caida == null
+        ? estado.etiqueta
+        : '${estado.etiqueta} · cayó ${caida.round()} %';
+  }
+
   List<CampoDetalle> get _campos => [
     CampoDetalle('Documento', visita.documento, enTarjeta: false),
+    CampoDetalle('Compras', _textoRiesgo),
+    CampoDetalle(
+      'Contacto pendiente',
+      visita.accionPendiente == null
+          ? null
+          : '${visita.accionVencida ? 'Vencido: ' : ''}${visita.accionPendiente}',
+    ),
     CampoDetalle('Mercado', visita.mercado),
     CampoDetalle('Dirección', visita.direccion),
     CampoDetalle('Teléfono', visita.telefono),

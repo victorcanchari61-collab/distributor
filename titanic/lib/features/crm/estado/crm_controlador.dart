@@ -244,3 +244,15 @@ final documentosClienteProvider = FutureProvider.autoDispose
     .family<DocumentosCliente, int>(
       (ref, id) => ref.watch(crmApiProvider).documentos(id),
     );
+
+// ------------------------------------------------------------------ Agenda
+
+/// Falso: solo los contactos míos. Verdadero: todos los que el alcance deja ver.
+final agendaTodosProvider = StateProvider.autoDispose<bool>((ref) => false);
+
+/// Los contactos programados: lo que se mira al abrir Gestión y seguimiento.
+final agendaProvider = FutureProvider.autoDispose<AgendaSeguimiento>(
+  (ref) => ref
+      .watch(crmApiProvider)
+      .agenda(todos: ref.watch(agendaTodosProvider)),
+);

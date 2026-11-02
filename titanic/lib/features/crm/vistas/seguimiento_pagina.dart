@@ -19,6 +19,7 @@ import '../../maestros/vistas/categorizacion_hoja.dart';
 import '../datos/crm.dart';
 import '../estado/crm_controlador.dart';
 import 'crm_comun.dart';
+import 'seguimiento_agenda.dart';
 import 'seguimiento_compras.dart';
 import 'seguimiento_gestiones.dart';
 import 'seguimiento_resumen.dart';
@@ -121,15 +122,9 @@ class _Buscador extends ConsumerWidget {
           ),
         ),
         Expanded(
+          // Sin buscar a nadie, lo que sirve es la agenda: a quién hay que contactar hoy.
           child: texto.trim().length < 2
-              ? const AppVacio(
-                  icono: Icons.person_search_outlined,
-                  titulo: 'Elige un cliente para empezar',
-                  detalle:
-                      'Búscalo por nombre, documento o código para ver su '
-                      'ficha, registrar una gestión y dejar programado el '
-                      'siguiente contacto.',
-                )
+              ? const SeguimientoAgenda()
               : resultados.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),

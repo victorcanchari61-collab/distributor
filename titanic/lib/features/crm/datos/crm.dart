@@ -950,3 +950,101 @@ class ZonasCaida {
     ],
   );
 }
+
+// ----------------------------------------------------------------- Agenda
+
+/// Un contacto programado con un cliente: a quién hay que llamar, escribir o visitar.
+class AgendaItem {
+  const AgendaItem({
+    required this.gestionId,
+    required this.clienteId,
+    required this.codigo,
+    required this.cliente,
+    required this.telefono,
+    required this.mercado,
+    required this.ruta,
+    required this.proximo,
+    required this.tipoContacto,
+    required this.tipoEtiqueta,
+    required this.proximaAccion,
+    required this.vencida,
+    required this.esHoy,
+    required this.resultadoEtiqueta,
+    required this.tono,
+  });
+
+  final int gestionId;
+  final int clienteId;
+  final String codigo;
+  final String cliente;
+  final String? telefono;
+  final String? mercado;
+  final String? ruta;
+
+  /// Cuándo toca.
+  final DateTime proximo;
+  final TipoContacto? tipoContacto;
+  final String tipoEtiqueta;
+  final String? proximaAccion;
+
+  /// Su hora ya pasó.
+  final bool vencida;
+
+  /// Toca hoy y todavía no pasó su hora.
+  final bool esHoy;
+
+  /// En qué quedó el contacto anterior, el que dejó esto programado.
+  final String resultadoEtiqueta;
+  final String tono;
+
+  factory AgendaItem.desdeJson(Map<String, dynamic> j) => AgendaItem(
+    gestionId: _i(j['gestionId']),
+    clienteId: _i(j['clienteId']),
+    codigo: j['codigo'] as String? ?? '',
+    cliente: j['cliente'] as String? ?? '',
+    telefono: j['telefono'] as String?,
+    mercado: j['mercado'] as String?,
+    ruta: j['ruta'] as String?,
+    proximo: fechaDeJson(j['proximo'] as String),
+    tipoContacto: TipoContacto.desdeClave(j['tipoContacto'] as String?),
+    tipoEtiqueta: j['tipoEtiqueta'] as String? ?? '',
+    proximaAccion: j['proximaAccion'] as String?,
+    vencida: j['vencida'] as bool? ?? false,
+    esHoy: j['esHoy'] as bool? ?? false,
+    resultadoEtiqueta: j['resultadoEtiqueta'] as String? ?? '',
+    tono: j['tono'] as String? ?? 'neutro',
+  );
+}
+
+/// Los contactos por hacer: los vencidos, los de hoy y los de los próximos días.
+class AgendaSeguimiento {
+  const AgendaSeguimiento({
+    required this.vencidos,
+    required this.hoy,
+    required this.proximos,
+    required this.dias,
+    required this.items,
+  });
+
+  final int vencidos;
+  final int hoy;
+  final int proximos;
+
+  /// Hasta cuántos días adelante se mira.
+  final int dias;
+
+  /// Los vencidos primero (el más atrasado arriba) y después los que vienen por hora.
+  final List<AgendaItem> items;
+
+  factory AgendaSeguimiento.desdeJson(Map<String, dynamic> j) =>
+      AgendaSeguimiento(
+        vencidos: _i(j['vencidos']),
+        hoy: _i(j['hoy']),
+        proximos: _i(j['proximos']),
+        dias: _i(j['dias']),
+        items: [
+          for (final e in (j['items'] as List?) ?? const [])
+            AgendaItem.desdeJson(e as Map<String, dynamic>),
+        ],
+      );
+}

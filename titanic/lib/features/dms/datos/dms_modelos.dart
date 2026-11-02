@@ -23,6 +23,10 @@ class Visita {
     this.pedidoId,
     this.pedidoNumero,
     required this.total,
+    this.riesgo,
+    this.caidaPct,
+    this.accionPendiente,
+    this.accionVencida = false,
   });
 
   final DateTime fecha;
@@ -48,6 +52,20 @@ class Visita {
   final String? pedidoNumero;
   final double total;
 
+  /// CRITICO, RIESGO, SEGUIMIENTO, NORMAL o SIN_BASE: cuánto cayeron sus compras
+  /// frente al mismo tramo del año anterior. Nulo si quien mira no puede ver el
+  /// CRM: es para que quien visita sepa si el cliente se está yendo.
+  final String? riesgo;
+
+  /// Cuánto cayeron sus compras, en %. Positivo es que cayó.
+  final double? caidaPct;
+
+  /// Lo que quedó pendiente en su próximo contacto programado.
+  final String? accionPendiente;
+
+  /// Ese contacto ya debió hacerse.
+  final bool accionVencida;
+
   String get buscable =>
       '$cliente $documento ${mercado ?? ''} ${direccion ?? ''} ${ruta ?? ''}'
           .toLowerCase();
@@ -69,6 +87,10 @@ class Visita {
     pedidoId: json['pedidoId'] as int?,
     pedidoNumero: json['pedidoNumero'] as String?,
     total: (json['total'] as num?)?.toDouble() ?? 0,
+    riesgo: json['riesgo'] as String?,
+    caidaPct: (json['caidaPct'] as num?)?.toDouble(),
+    accionPendiente: json['accionPendiente'] as String?,
+    accionVencida: json['accionVencida'] as bool? ?? false,
   );
 }
 

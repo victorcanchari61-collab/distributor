@@ -285,10 +285,51 @@ export const crmApi = {
     api.put<Gestion>(`/crm/seguimiento/gestiones/${gestionId}/reprogramar`, { proximoSeguimiento }),
   compras: (id: number) => api.get<ComprasCliente>(`/crm/seguimiento/${id}/compras`),
   documentos: (id: number) => api.get<DocumentosCliente>(`/crm/seguimiento/${id}/documentos`),
+  /** Los contactos programados: por defecto los míos; con `todos`, los de todos los clientes que se pueden ver. */
+  agenda: (todos: boolean, dias = 14) =>
+    api.get<AgendaSeguimiento>(`/crm/seguimiento/agenda${query({ todos: todos ? 'true' : undefined, dias })}`),
 
   // Reportes
   caida: (c: ConsultaCaida) => api.get<CaidaClientes>(`/crm/caida${query({ ...c })}`),
   queDejoDeComprar: (clienteId: number, c: { desde?: string; hasta?: string }) =>
     api.get<QueDejoDeComprar>(`/crm/caida/${clienteId}/productos${query({ ...c })}`),
   vendedores: (c: { desde?: string; hasta?: string }) => api.get<VendedoresCaida>(`/crm/vendedores${query({ ...c })}`),
+}
+
+// --- Agenda de seguimiento ---
+
+/** Un contacto programado con un cliente. */
+export interface AgendaItem {
+  gestionId: number
+  clienteId: number
+  codigo: string
+  cliente: string
+  telefono: string | null
+  mercado: string | null
+  ruta: string | null
+  /** Cuándo toca (instante, UTC). */
+  proximo: string
+  tipoContacto: TipoContacto
+  tipoEtiqueta: string
+  proximaAccion: string | null
+  /** Su hora ya pasó. */
+  vencida: boolean
+  /** Toca hoy y todavía no pasó su hora. */
+  esHoy: boolean
+  /** En qué quedó el contacto anterior, el que dejó esto programado. */
+  resultadoEtiqueta: string
+  tono: TonoGestion
+  programadoPor: string | null
+}
+
+export interface AgendaSeguimiento {
+  vencidos: number
+  hoy: number
+  proximos: number
+  /** Hasta cuántos días adelante se mira. */
+  dias: number
+  /** Solo los míos; falso son todos los que el alcance deja ver. */
+  soloMios: boolean
+  /** Los vencidos primero (el más atrasado arriba) y después los que vienen por hora. */
+  items: AgendaItem[]
 }

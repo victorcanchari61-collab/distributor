@@ -85,6 +85,16 @@ class CrmApi {
         _mapa(await _api.get('/crm/seguimiento/$id/documentos')),
       );
 
+  /// GET /api/crm/seguimiento/agenda — los contactos programados (los míos, o todos).
+  Future<AgendaSeguimiento> agenda({bool todos = false, int dias = 14}) async =>
+      AgendaSeguimiento.desdeJson(
+        _mapa(
+          await _api.get(
+            '/crm/seguimiento/agenda${_query({if (todos) 'todos': 'true', 'dias': dias})}',
+          ),
+        ),
+      );
+
   // --- Reportes ---
 
   /// GET /api/crm/caida — clientes frente al mismo tramo del año anterior.

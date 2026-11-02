@@ -7,6 +7,7 @@ import { ACCION, usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { crmApi } from './crmApi'
 import type { CatalogoSeguimiento, FichaCliente } from './crmApi'
+import { AgendaSeguimiento } from './seguimiento/AgendaSeguimiento'
 import { BuscadorCliente } from './seguimiento/BuscadorCliente'
 import { FichaCabecera } from './seguimiento/FichaCabecera'
 import { TabCompras } from './seguimiento/TabCompras'
@@ -76,6 +77,12 @@ export function SeguimientoPage() {
     setParametros(c ? { cliente: String(c.id), pestana } : {}, { replace: false })
   }
 
+  /** Desde la agenda se entra directo a la pestaña de seguimiento: es lo que se viene a hacer. */
+  const abrirDesdeAgenda = (item: { clienteId: number; cliente: string }) => {
+    setElegido({ id: item.clienteId, nombre: item.cliente })
+    setParametros({ cliente: String(item.clienteId), pestana: 'seguimiento' })
+  }
+
   const fichaVigente = ficha && ficha.cliente.id === id ? ficha : null
   const actual = fichaVigente
     ? { id: fichaVigente.cliente.id, nombre: fichaVigente.cliente.nombre }
@@ -93,15 +100,8 @@ export function SeguimientoPage() {
       />
 
       {id === null ? (
-        <div className="flex flex-col items-center justify-center rounded-panel border border-line bg-white py-20 text-center">
-          <span className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-violet-100 text-violet-500">
-            <UserSearch size={30} />
-          </span>
-          <h2 className="text-lg font-semibold text-ink">Elige un cliente para empezar</h2>
-          <p className="mt-1 max-w-md text-sm text-ink-soft">
-            Búscalo por nombre, documento o código para ver su ficha, registrar una gestión y dejar programado el siguiente contacto.
-          </p>
-        </div>
+        // Sin cliente elegido, lo que sirve es la agenda: a quién hay que contactar hoy.
+        <AgendaSeguimiento puedeVerTodos alElegir={abrirDesdeAgenda} />
       ) : error && !fichaVigente ? (
         <Alert tone="warning">{error}</Alert>
       ) : !fichaVigente ? (

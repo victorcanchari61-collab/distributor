@@ -47,4 +47,12 @@ public interface ISeguimientoClienteService
 
     /// <summary>Cuántos contactos programados tiene una persona vencidos y para hoy. Alimenta la campanita.</summary>
     Task<ResumenSeguimientoResponse> ResumenDeAsync(int usuarioId);
+
+    /// <summary>
+    /// La lista de contactos programados: los vencidos, los de hoy y los de los próximos días. Es lo que la campanita
+    /// cuenta, pero con nombre y apellido: a quién hay que llamar o visitar.
+    /// </summary>
+    /// <param name="soloMios">Solo los que programé yo o son de un cliente mío. Falso: todos los que el alcance deja ver.</param>
+    /// <param name="dias">Cuántos días adelante se mira, además de lo vencido.</param>
+    Task<AgendaSeguimientoResponse> AgendaAsync(bool soloMios, int dias);
 }

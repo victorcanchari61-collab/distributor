@@ -37,6 +37,12 @@ public class CrmController : ControllerBase
     [Permiso("crm.seguimiento", Accion.Ver)]
     public async Task<IActionResult> Buscar([FromQuery] string? buscar) => Ok(await _seguimiento.BuscarAsync(buscar));
 
+    /// <summary>Los contactos programados (vencidos, de hoy y de los próximos días): la agenda de seguimiento.</summary>
+    [HttpGet("seguimiento/agenda")]
+    [Permiso("crm.seguimiento", Accion.Ver)]
+    public async Task<IActionResult> Agenda([FromQuery] bool todos = false, [FromQuery] int dias = 14) =>
+        Ok(await _seguimiento.AgendaAsync(soloMios: !todos, dias));
+
     [HttpGet("seguimiento/{id:int}/ficha")]
     [Permiso("crm.seguimiento", Accion.Ver)]
     public async Task<IActionResult> Ficha(int id, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
