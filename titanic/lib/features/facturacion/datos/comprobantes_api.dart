@@ -26,6 +26,31 @@ class ComprobantesApi {
             as Map<String, dynamic>,
       );
 
+  /// POST /api/comprobante/{id}/reenviar. Vuelve a mandar a SUNAT un comprobante que quedo sin respuesta.
+  Future<Comprobante> reenviar(int id) async => Comprobante.desdeJson(
+    await _api.post('/comprobante/$id/reenviar') as Map<String, dynamic>,
+  );
+
+  /// POST /api/comprobante/{id}/nota. Nota de credito (07) o debito (08) sobre un comprobante aceptado.
+  Future<Comprobante> emitirNota(
+    int id, {
+    required String tipo,
+    required String codMotivo,
+    required String desMotivo,
+    required List<Map<String, dynamic>> lineas,
+  }) async => Comprobante.desdeJson(
+    await _api.post(
+          '/comprobante/$id/nota',
+          cuerpo: {
+            'tipo': tipo,
+            'codMotivo': codMotivo,
+            'desMotivo': desMotivo,
+            'lineas': lineas,
+          },
+        )
+        as Map<String, dynamic>,
+  );
+
   /// POST /api/comprobante/{id}/whatsapp. Sin teléfono usa el del cliente.
   Future<Comprobante> enviarWhatsApp(int id, {String? telefono}) async =>
       Comprobante.desdeJson(

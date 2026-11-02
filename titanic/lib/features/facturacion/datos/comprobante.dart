@@ -55,6 +55,65 @@ class EstadoWhatsAppCpe {
   };
 }
 
+/// Una línea de un comprobante, tal como salió.
+class LineaComprobante {
+  const LineaComprobante({
+    required this.descripcion,
+    required this.cantidad,
+    required this.precio,
+    required this.afectoIgv,
+  });
+
+  factory LineaComprobante.desdeJson(Map<String, dynamic> j) =>
+      LineaComprobante(
+        descripcion: j['descripcion'] as String? ?? '',
+        cantidad: (j['cantidad'] as num).toDouble(),
+        precio: (j['precio'] as num).toDouble(),
+        afectoIgv: j['afectoIgv'] as bool? ?? true,
+      );
+
+  final String descripcion;
+  final double cantidad;
+
+  /// Por unidad, con IGV si la línea es gravada.
+  final double precio;
+  final bool afectoIgv;
+}
+
+/// Los motivos de SUNAT (Catálogos 09 y 10): lo que se elige al corregir un comprobante.
+class MotivoNota {
+  const MotivoNota(this.codigo, this.etiqueta);
+  final String codigo;
+  final String etiqueta;
+}
+
+class MotivosNota {
+  const MotivosNota._();
+
+  static List<MotivoNota> de(String tipo) => tipo == TipoCpe.notaCredito
+      ? _credito
+      : _debito;
+
+  static const _credito = [
+    MotivoNota('01', 'Anulación de la operación'),
+    MotivoNota('02', 'Anulación por error en el RUC'),
+    MotivoNota('03', 'Corrección por error en la descripción'),
+    MotivoNota('04', 'Descuento global'),
+    MotivoNota('05', 'Descuento por ítem'),
+    MotivoNota('06', 'Devolución total'),
+    MotivoNota('07', 'Devolución por ítem'),
+    MotivoNota('08', 'Bonificación'),
+    MotivoNota('09', 'Disminución en el valor'),
+    MotivoNota('13', 'Ajustes de montos y/o fechas de pago'),
+  ];
+
+  static const _debito = [
+    MotivoNota('01', 'Intereses por mora'),
+    MotivoNota('02', 'Aumento en el valor'),
+    MotivoNota('03', 'Penalidades u otros conceptos'),
+  ];
+}
+
 /// Una nota de crédito o débito dentro de la factura o boleta que corrige.
 class NotaDeComprobante {
   const NotaDeComprobante({
@@ -101,6 +160,8 @@ class Comprobante {
     this.desMotivo,
     this.mensajeSunat,
     this.tieneCdr = false,
+    this.nombreArchivo = '',
+    this.lineas = const [],
     this.whatsAppEstado,
     this.whatsAppTelefono,
     this.whatsAppEnviadoEn,
@@ -126,6 +187,11 @@ class Comprobante {
     desMotivo: j['desMotivo'] as String?,
     mensajeSunat: j['mensajeSunat'] as String?,
     tieneCdr: j['tieneCdr'] as bool? ?? false,
+    nombreArchivo: j['nombreArchivo'] as String? ?? '',
+    lineas: [
+      for (final l in (j['lineas'] as List? ?? const []))
+        LineaComprobante.desdeJson(l as Map<String, dynamic>),
+    ],
     whatsAppEstado: j['whatsAppEstado'] as String?,
     whatsAppTelefono: j['whatsAppTelefono'] as String?,
     whatsAppEnviadoEn: fechaDeJsonOpcional(j['whatsAppEnviadoEn']),
@@ -161,6 +227,12 @@ class Comprobante {
   final String? desMotivo;
   final String? mensajeSunat;
   final bool tieneCdr;
+
+  /// 10761659621-03-B001-3: el nombre de sus archivos (XML y CDR), sin extension.
+  final String nombreArchivo;
+
+  /// Las lineas que salieron: de ahi arranca una nota de credito.
+  final List<LineaComprobante> lineas;
 
   final String? whatsAppEstado;
   final String? whatsAppTelefono;

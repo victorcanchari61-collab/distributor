@@ -14,6 +14,8 @@ import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../facturacion/datos/comprobante.dart';
+import '../../facturacion/vistas/facturar_hoja.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
@@ -122,6 +124,14 @@ class NotasVentaPagina extends ConsumerWidget {
                 nota.estado == EstadoNotaVenta.confirmada
             ? () => _anular(context, ref, nota)
             : null,
+        // Facturar: solo una venta vigente que todavia no tiene factura ni boleta, y a quien puede emitir alguna.
+        onFacturar:
+            nota.estado == EstadoNotaVenta.confirmada &&
+                !nota.facturada &&
+                (puede(ref, 'fact.facturas', Accion.crear) ||
+                    puede(ref, 'fact.boletas', Accion.crear))
+            ? () => abrirFacturar(context, nota)
+            : null,
       ),
     );
   }
@@ -136,6 +146,7 @@ class NotasVentaPagina extends ConsumerWidget {
         ref.read(formaPagoFiltroProvider.notifier).state = null;
         ref.read(clienteNotaVentaFiltroProvider.notifier).state = null;
         ref.read(deUnPedidoFiltroProvider.notifier).state = null;
+        ref.read(comprobanteVentaFiltroProvider.notifier).state = null;
       },
       grupos: [
         Consumer(
@@ -180,6 +191,21 @@ class NotasVentaPagina extends ConsumerWidget {
                   ref.read(clienteNotaVentaFiltroProvider.notifier).state = v,
             );
           },
+        ),
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Comprobante',
+            valor: ref.watch(comprobanteVentaFiltroProvider),
+            opciones: const [
+              OpcionFiltro<String?>(null, 'Todos'),
+              OpcionFiltro<String?>('sin', 'Sin comprobante'),
+              OpcionFiltro<String?>('factura', 'Con factura'),
+              OpcionFiltro<String?>('boleta', 'Con boleta'),
+              OpcionFiltro<String?>('problema', 'Con problema en SUNAT'),
+            ],
+            onCambio: (v) =>
+                ref.read(comprobanteVentaFiltroProvider.notifier).state = v,
+          ),
         ),
         Consumer(
           builder: (context, ref, _) => GrupoFiltro<bool?>(
@@ -234,11 +260,13 @@ class _TarjetaNotaVenta extends StatelessWidget {
     required this.nota,
     required this.color,
     this.onAnular,
+    this.onFacturar,
   });
 
   final NotaVenta nota;
   final Color color;
   final VoidCallback? onAnular;
+  final VoidCallback? onFacturar;
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Cliente', nota.cliente),
@@ -267,6 +295,41 @@ class _TarjetaNotaVenta extends StatelessWidget {
         ),
     ],
     CampoDetalle('Total', 'S/ ${nota.total.toStringAsFixed(2)}'),
+    // En que quedo frente a SUNAT: su factura o boleta, y las notas que la corrigen.
+    if (nota.comprobanteNumero != null)
+      CampoDetalle(
+        'Comprobante',
+        null,
+        widget: Wrap(
+          spacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.end,
+          children: [
+            Text(
+              '${TipoCpe.corto(nota.comprobanteTipo ?? '')} ${nota.comprobanteNumero}',
+              style: const TextStyle(fontSize: 12, color: Colores.tinta),
+            ),
+            AppEtiqueta(
+              EstadoCpe.etiqueta(nota.comprobanteEstado ?? ''),
+              tono: nota.comprobanteEstado == EstadoCpe.aceptado
+                  ? EtiquetaTono.exito
+                  : nota.comprobanteEstado == EstadoCpe.rechazado
+                  ? EtiquetaTono.peligro
+                  : EtiquetaTono.aviso,
+            ),
+          ],
+        ),
+      )
+    else if (nota.estado == EstadoNotaVenta.confirmada)
+      CampoDetalle('Comprobante', 'Sin comprobante'),
+    if (nota.notasCredito + nota.notasDebito > 0)
+      CampoDetalle(
+        'Notas',
+        [
+          if (nota.notasCredito > 0) '${nota.notasCredito} crédito',
+          if (nota.notasDebito > 0) '${nota.notasDebito} débito',
+        ].join(', '),
+      ),
     if (nota.pedidoNumero != null) CampoDetalle('Pedido', nota.pedidoNumero),
     if (nota.usuario != null) CampoDetalle('Registrada por', nota.usuario),
     if (nota.observacion != null) CampoDetalle('Observación', nota.observacion),
@@ -320,6 +383,13 @@ class _TarjetaNotaVenta extends StatelessWidget {
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
+        if (onFacturar != null)
+          IconButton(
+            onPressed: onFacturar,
+            tooltip: 'Facturar',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.receipt_long_outlined, size: 18),
+          ),
         if (onAnular != null)
           IconButton(
             onPressed: onAnular,

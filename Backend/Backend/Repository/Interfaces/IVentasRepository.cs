@@ -55,6 +55,12 @@ public interface IVentasRepository
     Task<NotaVenta> AddNotaVentaAsync(NotaVenta notaVenta);
     Task<NotaVenta?> GetNotaVentaAsync(int id, AlcanceFiltro? alcance = null);
     Task<IEnumerable<NotaVenta>> GetNotasVentaAsync(string? estado = null, AlcanceFiltro? alcance = null);
+
+    /// <summary>
+    /// La factura o boleta vigente de cada venta y cuántas notas de crédito y débito tiene, por id de venta. Solo trae
+    /// las columnas que se muestran: el XML y el CDR de cada comprobante no hacen falta.
+    /// </summary>
+    Task<Dictionary<int, ComprobanteVentaResumen>> ResumenComprobantesAsync(IReadOnlyCollection<int> ventaIds);
     Task UpdateNotaVentaAsync(NotaVenta notaVenta);
 
     /// <summary>Una página del listado de notas de venta.</summary>

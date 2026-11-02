@@ -736,11 +736,33 @@ public class VentasService : IVentasService
     public async Task<IEnumerable<NotaVentaResponse>> GetNotasVentaAsync(string? estado = null)
     {
         var notas = await _repository.GetNotasVentaAsync(estado, await AlcanceVentasAsync());
-        return notas.Select(MapNotaVenta);
+        var respuestas = notas.Select(MapNotaVenta).ToList();
+        await AgregarComprobantesAsync(respuestas);
+        return respuestas;
     }
 
-    public async Task<NotaVentaResponse> GetNotaVentaAsync(int id) =>
-        MapNotaVenta(await GetNotaVentaOrThrowAsync(id));
+    public async Task<NotaVentaResponse> GetNotaVentaAsync(int id)
+    {
+        var respuesta = MapNotaVenta(await GetNotaVentaOrThrowAsync(id));
+        await AgregarComprobantesAsync([respuesta]);
+        return respuesta;
+    }
+
+    /// <summary>Le pone a cada venta su factura o boleta y el conteo de notas, en una sola consulta.</summary>
+    private async Task AgregarComprobantesAsync(IReadOnlyCollection<NotaVentaResponse> ventas)
+    {
+        var resumen = await _repository.ResumenComprobantesAsync(ventas.Select(v => v.Id).ToList());
+        foreach (var v in ventas)
+        {
+            if (!resumen.TryGetValue(v.Id, out var r)) continue;
+            v.ComprobanteId = r.ComprobanteId;
+            v.ComprobanteTipo = r.Tipo;
+            v.ComprobanteNumero = r.Numero;
+            v.ComprobanteEstado = r.Estado;
+            v.NotasCredito = r.NotasCredito;
+            v.NotasDebito = r.NotasDebito;
+        }
+    }
 
     public async Task<NotaVentaResponse> CrearNotaVentaAsync(CrearNotaVentaRequest request, int? usuarioId)
     {

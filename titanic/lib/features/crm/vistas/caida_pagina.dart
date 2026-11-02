@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../compartido/exportar_excel.dart';
+import '../../../compartido/fechas.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector_rango.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
@@ -55,6 +58,58 @@ class CaidaPagina extends ConsumerWidget {
           // El fallo ya se ve en la pantalla, con su botón de reintentar.
         }
       },
+      // Exportar a Excel lo que se ve (con las fechas, filtros y la tarjeta elegidos): pide el permiso `exportar`.
+      acciones: [
+        if (puede(ref, 'crm.caida', Accion.exportar))
+          accionExportarExcel<FilaCaida>(
+            context,
+            nombre: 'clientes-con-caida',
+            hoja: 'Clientes con caída',
+            filas: () => ref.read(caidaFiltradaProvider),
+            encabezados: const [
+              'Estado',
+              'Código',
+              'Cliente',
+              'Documento',
+              'Teléfono',
+              'Vendedor',
+              'Mercado',
+              'Ruta',
+              'Categoría',
+              'Última compra',
+              'Días sin comprar',
+              'Venta anterior',
+              'Venta actual',
+              'Variación',
+              '% Caída',
+              'Monto en riesgo',
+              'Última gestión',
+              'Próximo seguimiento',
+            ],
+            fila: (f) => [
+              f.estado.etiqueta,
+              f.codigo,
+              f.cliente,
+              f.documento,
+              f.telefono,
+              f.vendedor,
+              f.mercado,
+              f.ruta,
+              f.categoriaCodigo,
+              f.ultimaCompra == null ? null : diaIso(f.ultimaCompra!),
+              f.diasSinCompra,
+              f.ventaAnterior,
+              f.ventaActual,
+              f.variacion,
+              f.caidaPct == null ? null : (f.caidaPct! * 10).round() / 10,
+              f.montoRiesgo,
+              f.gestionEtiqueta,
+              f.proximoSeguimiento == null
+                  ? null
+                  : diaIso(f.proximoSeguimiento!),
+            ],
+          ),
+      ],
       iconoVacio: Icons.trending_down,
       singular: 'cliente',
       plural: 'clientes',

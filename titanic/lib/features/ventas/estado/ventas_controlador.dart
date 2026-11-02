@@ -186,8 +186,14 @@ final deUnPedidoFiltroProvider = StateProvider.autoDispose<bool?>(
   (ref) => null,
 );
 
+/// Facturacion de la venta: 'sin' (sin comprobante), 'factura', 'boleta' o 'problema' (SUNAT no la acepto). Null es todas.
+final comprobanteVentaFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
 final filtrosNotasVentaActivosProvider = Provider.autoDispose((ref) {
   var n = 0;
+  if (ref.watch(comprobanteVentaFiltroProvider) != null) n++;
   if (ref.watch(filtroDocumentoProvider) != FiltroDocumento.todos) n++;
   if (ref.watch(formaPagoFiltroProvider) != null) n++;
   if (ref.watch(clienteNotaVentaFiltroProvider) != null) n++;
@@ -205,8 +211,19 @@ final notasVentaFiltradasProvider = Provider.autoDispose<List<NotaVenta>>((
   final forma = ref.watch(formaPagoFiltroProvider);
   final cliente = ref.watch(clienteNotaVentaFiltroProvider);
   final deUnPedido = ref.watch(deUnPedidoFiltroProvider);
+  final comprobante = ref.watch(comprobanteVentaFiltroProvider);
 
   return todas
+      .where(
+        (n) => switch (comprobante) {
+          'sin' => !n.facturada,
+          'factura' => n.facturada && n.comprobanteTipo == '01',
+          'boleta' => n.facturada && n.comprobanteTipo == '03',
+          'problema' =>
+            n.comprobanteNumero != null && n.comprobanteEstado != 'ACEPTADO',
+          _ => true,
+        },
+      )
       .where((n) => pasaDocumento(n.estado == EstadoNotaVenta.anulada, filtro))
       .where((n) => forma == null || n.formaPago == forma)
       .where((n) => cliente == null || n.cliente == cliente)

@@ -366,6 +366,39 @@ public class VentasRepository : IVentasRepository
             .Take(300)
             .ToListAsync();
 
+    public async Task<Dictionary<int, ComprobanteVentaResumen>> ResumenComprobantesAsync(IReadOnlyCollection<int> ventaIds)
+    {
+        if (ventaIds.Count == 0) return [];
+
+        var filas = await _context.ComprobantesElectronicos.AsNoTracking()
+            .Where(c => c.NotaVentaId != null && ventaIds.Contains(c.NotaVentaId.Value))
+            .Select(c => new { VentaId = c.NotaVentaId!.Value, c.Id, c.Tipo, c.Serie, c.Numero, c.Estado })
+            .ToListAsync();
+
+        var resumen = new Dictionary<int, ComprobanteVentaResumen>();
+        foreach (var grupo in filas.GroupBy(f => f.VentaId))
+        {
+            // La vigente: la que no fue rechazada y, entre ellas, la más nueva.
+            var principal = grupo
+                .Where(f => f.Tipo is TipoCpe.Factura or TipoCpe.Boleta)
+                .OrderBy(f => f.Estado == EstadoCpe.Rechazado ? 1 : 0)
+                .ThenByDescending(f => f.Id)
+                .FirstOrDefault();
+            if (principal is null) continue;
+
+            resumen[grupo.Key] = new ComprobanteVentaResumen
+            {
+                ComprobanteId = principal.Id,
+                Tipo = principal.Tipo,
+                Numero = $"{principal.Serie}-{principal.Numero}",
+                Estado = principal.Estado,
+                NotasCredito = grupo.Count(f => f.Tipo == TipoCpe.NotaCredito && f.Estado != EstadoCpe.Rechazado),
+                NotasDebito = grupo.Count(f => f.Tipo == TipoCpe.NotaDebito && f.Estado != EstadoCpe.Rechazado),
+            };
+        }
+        return resumen;
+    }
+
     public async Task UpdateNotaVentaAsync(NotaVenta notaVenta)
     {
         _context.NotasVenta.Update(notaVenta);

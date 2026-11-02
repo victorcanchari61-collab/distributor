@@ -101,6 +101,17 @@ public class PagoVentaResponse
     public string? EstadoVerificacion { get; set; }
 }
 
+/// <summary>En qué quedó la facturación electrónica de una venta: su comprobante y las notas que lo corrigen.</summary>
+public class ComprobanteVentaResumen
+{
+    public int ComprobanteId { get; set; }
+    public string Tipo { get; set; } = string.Empty;
+    public string Numero { get; set; } = string.Empty;
+    public string Estado { get; set; } = string.Empty;
+    public int NotasCredito { get; set; }
+    public int NotasDebito { get; set; }
+}
+
 public class NotaVentaResponse
 {
     public int Id { get; set; }
@@ -167,6 +178,24 @@ public class NotaVentaResponse
 
     /// <summary>Suma de Pagos. Si es menor que Total, falta esa diferencia por cobrar.</summary>
     public decimal TotalPagado { get; set; }
+
+    // --- Facturación electrónica: nulos si todavía no se facturó ---
+
+    /// <summary>La factura o boleta vigente de la venta (la rechazada solo si no hay otra).</summary>
+    public int? ComprobanteId { get; set; }
+
+    /// <summary>01 factura o 03 boleta.</summary>
+    public string? ComprobanteTipo { get; set; }
+
+    /// <summary>F001-10.</summary>
+    public string? ComprobanteNumero { get; set; }
+
+    /// <summary>ACEPTADO, RECHAZADO, GENERADO o ERROR.</summary>
+    public string? ComprobanteEstado { get; set; }
+
+    /// <summary>Notas de crédito y de débito emitidas sobre su comprobante (sin contar las rechazadas).</summary>
+    public int NotasCredito { get; set; }
+    public int NotasDebito { get; set; }
 
     /// <summary>
     /// Lo que el cliente trajo de vuelta de esta venta, ya aprobado.

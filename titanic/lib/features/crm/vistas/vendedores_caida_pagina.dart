@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/exportar_excel.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector_rango.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/permisos.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/crm.dart';
@@ -41,6 +43,40 @@ class VendedoresCaidaPagina extends ConsumerWidget {
           // El fallo ya se ve en la pantalla, con su botón de reintentar.
         }
       },
+      // Exportar a Excel lo que se ve (con las fechas y la tarjeta elegidas): pide el permiso `exportar`.
+      acciones: [
+        if (puede(ref, 'crm.vendedores', Accion.exportar))
+          accionExportarExcel<FilaVendedor>(
+            context,
+            nombre: 'vendedores-con-caida',
+            hoja: 'Vendedores con caída',
+            filas: () => ref.read(vendedoresFiltradosProvider),
+            encabezados: const [
+              'Estado',
+              'Vendedor',
+              'Venta anterior',
+              'Venta actual',
+              'Variación',
+              '% Caída',
+              'Clientes',
+              'Clientes con caída',
+              'Clientes críticos',
+              'Monto en riesgo',
+            ],
+            fila: (f) => [
+              f.estado.etiqueta,
+              f.vendedor,
+              f.ventaAnterior,
+              f.ventaActual,
+              f.variacion,
+              f.caidaPct == null ? null : (f.caidaPct! * 10).round() / 10,
+              f.clientes,
+              f.clientesEnCaida,
+              f.clientesCriticos,
+              f.montoRiesgo,
+            ],
+          ),
+      ],
       iconoVacio: Icons.groups_outlined,
       singular: 'vendedor',
       plural: 'vendedores',

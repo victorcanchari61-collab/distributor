@@ -233,6 +233,12 @@ class NotaVenta {
     required this.totalPagado,
     this.totalRecogido = 0,
     this.recojos = const [],
+    this.comprobanteId,
+    this.comprobanteTipo,
+    this.comprobanteNumero,
+    this.comprobanteEstado,
+    this.notasCredito = 0,
+    this.notasDebito = 0,
   });
 
   final int id;
@@ -282,6 +288,28 @@ class NotaVenta {
   /// Mercaderia de otra venta que se recogio al entregar esta.
   final List<RecojoVenta> recojos;
 
+  // --- Facturacion electronica: nulos si todavia no se facturo ---
+
+  /// Su factura o boleta vigente (la rechazada solo si no hay otra).
+  final int? comprobanteId;
+
+  /// 01 factura, 03 boleta.
+  final String? comprobanteTipo;
+
+  /// F001-10.
+  final String? comprobanteNumero;
+
+  /// ACEPTADO, RECHAZADO, GENERADO o ERROR.
+  final String? comprobanteEstado;
+
+  /// Notas de credito y debito emitidas sobre su comprobante (sin las rechazadas).
+  final int notasCredito;
+  final int notasDebito;
+
+  /// Tiene un comprobante que cuenta: uno rechazado por SUNAT no, porque la venta se puede volver a facturar.
+  bool get facturada =>
+      comprobanteNumero != null && comprobanteEstado != 'RECHAZADO';
+
   String get buscable => '$numero $cliente'.toLowerCase();
 
   factory NotaVenta.desdeJson(Map<String, dynamic> json) => NotaVenta(
@@ -313,5 +341,11 @@ class NotaVenta {
     recojos: (json['recojos'] as List? ?? const [])
         .map((e) => RecojoVenta.desdeJson(e as Map<String, dynamic>))
         .toList(),
+    comprobanteId: json['comprobanteId'] as int?,
+    comprobanteTipo: json['comprobanteTipo'] as String?,
+    comprobanteNumero: json['comprobanteNumero'] as String?,
+    comprobanteEstado: json['comprobanteEstado'] as String?,
+    notasCredito: json['notasCredito'] as int? ?? 0,
+    notasDebito: json['notasDebito'] as int? ?? 0,
   );
 }

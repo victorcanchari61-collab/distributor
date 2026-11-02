@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  El VPS de produccion se abre por IP y HTTP (todavia no tiene dominio ni certificado), y Android bloquea el HTTP
+  sin permiso explicito. Solo se permite ESE servidor: el resto del trafico sigue exigiendo HTTPS.
+
+  Cuando el VPS tenga HTTPS con dominio, este archivo se puede borrar junto con su referencia en el manifiesto.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">80.65.211.175</domain>
+    </domain-config>
+</network-security-config>

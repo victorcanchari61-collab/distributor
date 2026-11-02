@@ -14,6 +14,9 @@ import '../../../core/tema/colores.dart';
 import '../datos/comprobante.dart';
 import '../estado/comprobantes_controlador.dart';
 import '../../ventas/vistas/nota_venta_formulario.dart';
+import '../../../core/red/excepciones.dart';
+import '../../../compartido/widgets/app_aviso.dart';
+import 'emitir_nota_hoja.dart';
 import 'enviar_whatsapp_hoja.dart';
 
 /// Facturas, boletas y notas de crédito y débito: la misma pantalla con otro tipo, cada una con su entrada en el menú
@@ -175,8 +178,38 @@ class ComprobantesLista extends ConsumerWidget {
         comprobante: c,
         color: color,
         puedeExportar: puede(ref, submodulo, Accion.exportar),
+        puedeReenviar: puede(ref, submodulo, Accion.crear),
+        // Las notas que el usuario puede emitir sobre una factura o boleta aceptada.
+        tiposNota: [
+          if (c.aceptado &&
+              (c.tipo == TipoCpe.factura || c.tipo == TipoCpe.boleta)) ...[
+            if (puede(ref, TipoCpe.submodulo(TipoCpe.notaCredito), Accion.crear))
+              TipoCpe.notaCredito,
+            if (puede(ref, TipoCpe.submodulo(TipoCpe.notaDebito), Accion.crear))
+              TipoCpe.notaDebito,
+          ],
+        ],
+        onReenviar: () => _reenviar(context, ref, c),
       ),
     );
+  }
+}
+
+/// Vuelve a mandar a SUNAT un comprobante que quedo sin respuesta, y pone en la lista lo que respondio.
+Future<void> _reenviar(BuildContext context, WidgetRef ref, Comprobante c) async {
+  final mensajero = Aviso.de(context);
+  try {
+    final nuevo = await ref.read(comprobantesApiProvider).reenviar(c.id);
+    ref.read(comprobantesProvider(c.tipo).notifier).reemplazar(nuevo);
+    if (nuevo.aceptado) {
+      mensajero.mostrar('${nuevo.numeroCompleto} aceptado por SUNAT');
+    } else {
+      mensajero.error(
+        '${nuevo.numeroCompleto}: ${nuevo.mensajeSunat ?? EstadoCpe.etiqueta(nuevo.estado)}',
+      );
+    }
+  } on ApiExcepcion catch (e) {
+    mensajero.error(e.texto);
   }
 }
 
@@ -185,11 +218,19 @@ class _TarjetaComprobante extends StatelessWidget {
     required this.comprobante,
     required this.color,
     required this.puedeExportar,
+    required this.puedeReenviar,
+    required this.tiposNota,
+    required this.onReenviar,
   });
 
   final Comprobante comprobante;
   final Color color;
   final bool puedeExportar;
+  final bool puedeReenviar;
+
+  /// Notas (07, 08) que se pueden emitir sobre este comprobante. Vacio: ninguna.
+  final List<String> tiposNota;
+  final VoidCallback onReenviar;
 
   Comprobante get _c => comprobante;
 
@@ -235,6 +276,29 @@ class _TarjetaComprobante extends StatelessWidget {
       ),
   ];
 
+  bool get _hayMenu =>
+      puedeExportar ||
+      tiposNota.isNotEmpty ||
+      (puedeReenviar &&
+          (_c.estado == EstadoCpe.generado || _c.estado == EstadoCpe.error));
+
+  Future<void> _elegir(BuildContext context, String accion) async {
+    switch (accion) {
+      case 'xml':
+      case 'cdr':
+        final xml = accion == 'xml';
+        final error = await abrirPdfDeRuta(
+          ruta: '/comprobante/${_c.id}/$accion',
+          nombre: xml ? '${_c.nombreArchivo}.xml' : 'R-${_c.nombreArchivo}.zip',
+        );
+        if (error != null && context.mounted) Aviso.de(context).error(error);
+      case 'reenviar':
+        onReenviar();
+      case 'nota':
+        await abrirEmitirNota(context, _c, tiposNota);
+    }
+  }
+
   Widget get _estado =>
       AppEtiqueta(EstadoCpe.etiqueta(_c.estado), tono: _tonoEstado(_c.estado));
 
@@ -278,6 +342,32 @@ class _TarjetaComprobante extends StatelessWidget {
               size: 18,
               color: Colores.exito,
             ),
+          ),
+        // XML, CDR, reenvio a SUNAT y notas: en un menu, porque en la esquina de la tarjeta no caben tantos iconos.
+        if (_hayMenu)
+          PopupMenuButton<String>(
+            tooltip: 'Más',
+            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.more_vert, size: 18),
+            onSelected: (v) => _elegir(context, v),
+            itemBuilder: (_) => [
+              if (puedeExportar)
+                const PopupMenuItem(value: 'xml', child: Text('Descargar XML')),
+              if (puedeExportar && _c.tieneCdr)
+                const PopupMenuItem(value: 'cdr', child: Text('Descargar CDR')),
+              if (puedeReenviar &&
+                  (_c.estado == EstadoCpe.generado ||
+                      _c.estado == EstadoCpe.error))
+                const PopupMenuItem(
+                  value: 'reenviar',
+                  child: Text('Reenviar a SUNAT'),
+                ),
+              if (tiposNota.isNotEmpty)
+                const PopupMenuItem(
+                  value: 'nota',
+                  child: Text('Emitir nota de crédito o débito'),
+                ),
+            ],
           ),
       ],
     );

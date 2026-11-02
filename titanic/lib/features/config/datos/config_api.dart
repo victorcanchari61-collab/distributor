@@ -196,6 +196,60 @@ class ConfigApi {
     await _api.put('/empresa/$id', cuerpo: cuerpo) as Map<String, dynamic>,
   );
 
+  /// POST /api/empresa/{id}/certificado. Sube el .pem (en texto): el backend lo revisa y lo guarda cifrado.
+  Future<Map<String, dynamic>> subirCertificado(int id, String pem) async =>
+      await _api.post('/empresa/$id/certificado', cuerpo: {'certificado': pem})
+          as Map<String, dynamic>;
+
+  // --- Series de comprobantes ---
+
+  /// GET /api/empresa/{id}/series
+  Future<List<SerieCpe>> series(int empresaId) async {
+    final datos = await _api.get('/empresa/$empresaId/series') as List;
+    return datos
+        .map((e) => SerieCpe.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// POST /api/empresa/{id}/series
+  Future<SerieCpe> crearSerie(int empresaId, Map<String, dynamic> cuerpo) async =>
+      SerieCpe.desdeJson(
+        await _api.post('/empresa/$empresaId/series', cuerpo: cuerpo)
+            as Map<String, dynamic>,
+      );
+
+  /// PUT /api/empresa/{id}/series/{serieId}
+  Future<SerieCpe> actualizarSerie(
+    int empresaId,
+    int serieId,
+    Map<String, dynamic> cuerpo,
+  ) async => SerieCpe.desdeJson(
+    await _api.put('/empresa/$empresaId/series/$serieId', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
+
+  /// DELETE /api/empresa/{id}/series/{serieId}. Solo si nunca emitio.
+  Future<void> eliminarSerie(int empresaId, int serieId) =>
+      _api.delete('/empresa/$empresaId/series/$serieId');
+
+  /// POST /api/empresa/{id}/series/estandar. F001, B001 y las de notas que falten.
+  Future<List<SerieCpe>> crearSeriesEstandar(int empresaId) async {
+    final datos = await _api.post('/empresa/$empresaId/series/estandar') as List;
+    return datos
+        .map((e) => SerieCpe.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  // --- WhatsApp ---
+
+  /// GET /api/whatsapp/estado
+  Future<EstadoWhatsApp> estadoWhatsApp() async => EstadoWhatsApp.desdeJson(
+    await _api.get('/whatsapp/estado') as Map<String, dynamic>,
+  );
+
+  /// POST /api/whatsapp/desvincular. Cierra la sesion y pide un QR nuevo.
+  Future<void> desvincularWhatsApp() => _api.post('/whatsapp/desvincular');
+
   /// PATCH /api/empresa/{id}/activar
   ///
   /// El backend desactiva sola la que estuviera activa: nunca hay dos.

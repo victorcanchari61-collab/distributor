@@ -193,6 +193,16 @@ class Empresa {
     this.email,
     this.sitioWeb,
     this.representanteLegal,
+    this.ubigeo,
+    this.usuarioSol,
+    this.tieneClaveSol = false,
+    this.modoPrueba = true,
+    this.certificadoTitular,
+    this.tieneCertificado = false,
+    this.certificadoVenceEl,
+    this.certificadoVencido = false,
+    this.whatsAppAutomatico = false,
+    this.whatsAppPlantilla,
   });
 
   final int id;
@@ -214,6 +224,33 @@ class Empresa {
   /// Una empresa retirada sigue guardada pero no se puede activar.
   final bool habilitada;
 
+  // --- Facturacion electronica ---
+
+  /// Ubigeo de 6 digitos del domicilio fiscal: el comprobante electronico lo exige.
+  final String? ubigeo;
+  final String? usuarioSol;
+
+  /// Hay una clave SOL guardada. La clave en si nunca llega al telefono.
+  final bool tieneClaveSol;
+
+  /// true: emite al entorno de pruebas de SUNAT (sin validez tributaria). false: produccion.
+  final bool modoPrueba;
+
+  final String? certificadoTitular;
+
+  /// Hay un certificado guardado. El certificado en si nunca llega al telefono.
+  final bool tieneCertificado;
+  final DateTime? certificadoVenceEl;
+  final bool certificadoVencido;
+
+  // --- WhatsApp ---
+
+  /// Cada comprobante aceptado por SUNAT se manda solo al telefono del cliente.
+  final bool whatsAppAutomatico;
+
+  /// El mensaje con sus {variables}; nulo: el mensaje de siempre.
+  final String? whatsAppPlantilla;
+
   String get buscable => '$razonSocial $nombreComercial $ruc'.toLowerCase();
 
   factory Empresa.desdeJson(Map<String, dynamic> json) => Empresa(
@@ -231,7 +268,93 @@ class Empresa {
     representanteLegal: json['representanteLegal'] as String?,
     activa: json['activa'] as bool? ?? false,
     habilitada: json['habilitada'] as bool? ?? true,
+    ubigeo: json['ubigeo'] as String?,
+    usuarioSol: json['usuarioSol'] as String?,
+    tieneClaveSol: json['tieneClaveSol'] as bool? ?? false,
+    modoPrueba: json['modoPrueba'] as bool? ?? true,
+    certificadoTitular: json['certificadoTitular'] as String?,
+    tieneCertificado: json['tieneCertificado'] as bool? ?? false,
+    certificadoVenceEl: json['certificadoVenceEl'] is String
+        ? DateTime.tryParse(json['certificadoVenceEl'] as String)
+        : null,
+    certificadoVencido: json['certificadoVencido'] as bool? ?? false,
+    whatsAppAutomatico: json['whatsAppAutomatico'] as bool? ?? false,
+    whatsAppPlantilla: json['whatsAppPlantilla'] as String?,
   );
+}
+
+/// Una serie de comprobantes de la empresa y hasta que numero llego.
+class SerieCpe {
+  const SerieCpe({
+    required this.id,
+    required this.tipo,
+    required this.serie,
+    required this.ultimoNumero,
+    required this.activa,
+    this.aplicaA,
+    this.emitidos = 0,
+  });
+
+  factory SerieCpe.desdeJson(Map<String, dynamic> j) => SerieCpe(
+    id: j['id'] as int,
+    tipo: j['tipo'] as String,
+    serie: j['serie'] as String,
+    aplicaA: j['aplicaA'] as String?,
+    ultimoNumero: j['ultimoNumero'] as int? ?? 0,
+    activa: j['activa'] as bool? ?? true,
+    emitidos: j['emitidos'] as int? ?? 0,
+  );
+
+  final int id;
+
+  /// 01 factura, 03 boleta, 07 nota de credito, 08 nota de debito.
+  final String tipo;
+  final String serie;
+
+  /// Solo en notas: 01 si corrigen facturas, 03 si corrigen boletas.
+  final String? aplicaA;
+
+  /// El ultimo numero usado; el siguiente comprobante sale con este mas uno.
+  final int ultimoNumero;
+  final bool activa;
+
+  /// Comprobantes emitidos con esta serie desde el sistema.
+  final int emitidos;
+
+  static String nombreTipo(String tipo) => switch (tipo) {
+    '01' => 'Factura',
+    '03' => 'Boleta',
+    '07' => 'Nota de crédito',
+    _ => 'Nota de débito',
+  };
+}
+
+/// Como esta el servicio de WhatsApp de la empresa.
+class EstadoWhatsApp {
+  const EstadoWhatsApp({
+    required this.estado,
+    this.enCola = 0,
+    this.qrImagen,
+    this.error,
+    this.faltaToken = false,
+  });
+
+  factory EstadoWhatsApp.desdeJson(Map<String, dynamic> j) => EstadoWhatsApp(
+    estado: j['estado'] as String? ?? 'sin-servicio',
+    enCola: j['enCola'] as int? ?? 0,
+    qrImagen: j['qrImagen'] as String?,
+    error: j['error'] as String?,
+    faltaToken: j['faltaToken'] as bool? ?? false,
+  );
+
+  /// conectado, esperando-qr, desconectado o sin-servicio.
+  final String estado;
+  final int enCola;
+
+  /// El QR a escanear, como imagen (data URL). Nulo si no hace falta.
+  final String? qrImagen;
+  final String? error;
+  final bool faltaToken;
 }
 
 /// Datos de SUNAT para llenar el formulario de empresa.
