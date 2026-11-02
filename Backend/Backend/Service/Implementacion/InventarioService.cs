@@ -224,6 +224,14 @@ public class InventarioService : IInventarioService
                 $"El almacén tiene {movimientos} movimiento(s). Desactívalo en vez de eliminarlo.");
         }
 
+        // Los lugares (pisos, pasillos...) cuelgan del almacén: sin esto borrarlo reventaba con la llave foránea.
+        var lugares = (await _repository.GetUbicacionesPorAlmacenAsync()).GetValueOrDefault(id);
+        if (lugares > 0)
+        {
+            throw new BadRequestException(
+                $"El almacén tiene {lugares} lugar(es) definidos (pisos, pasillos...). Bórralos primero, o desactívalo.");
+        }
+
         await _repository.DeleteAlmacenAsync(almacen);
         await _notificador.AvisarAsync("almacenes", "eliminado", new { id });
     }

@@ -4,13 +4,14 @@ import type { PaginaResponse } from '../../lib/paginacion'
 
 // --- Almacenes ---
 
-export type TipoAlmacen = 'ALMACEN' | 'DEPOSITO' | 'TIENDA' | 'VEHICULO'
+export type TipoAlmacen = 'ALMACEN' | 'DEPOSITO' | 'TIENDA' | 'CASA' | 'EDIFICIO'
 
 export const TIPOS_ALMACEN: { value: TipoAlmacen; label: string }[] = [
   { value: 'ALMACEN', label: 'Almacén' },
   { value: 'DEPOSITO', label: 'Depósito' },
   { value: 'TIENDA', label: 'Tienda' },
-  { value: 'VEHICULO', label: 'Vehículo' },
+  { value: 'CASA', label: 'Casa' },
+  { value: 'EDIFICIO', label: 'Edificio' },
 ]
 
 export interface AlmacenResponse {

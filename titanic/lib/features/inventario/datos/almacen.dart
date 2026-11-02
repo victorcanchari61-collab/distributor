@@ -3,7 +3,8 @@ enum TipoAlmacen {
   almacen('ALMACEN', 'Almacén'),
   deposito('DEPOSITO', 'Depósito'),
   tienda('TIENDA', 'Tienda'),
-  vehiculo('VEHICULO', 'Vehículo');
+  casa('CASA', 'Casa'),
+  edificio('EDIFICIO', 'Edificio');
 
   const TipoAlmacen(this.clave, this.etiqueta);
 

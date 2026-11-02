@@ -12,7 +12,7 @@ public class AlmacenValidator<T> : AbstractValidator<T> where T : AlmacenRequest
         RuleFor(x => x.Nombre).NotEmpty().MaximumLength(80);
         RuleFor(x => x.Direccion).MaximumLength(250);
         RuleFor(x => x.Tipo).Must(t => string.IsNullOrWhiteSpace(t) || TipoAlmacen.Todos.Contains(t.Trim().ToUpperInvariant()))
-            .WithMessage("Elige un tipo: almacén, depósito, tienda o vehículo");
+            .WithMessage("Elige un tipo: almacén, depósito, tienda, casa o edificio");
         RuleFor(x => x.Referencia).MaximumLength(250);
         RuleFor(x => x.Responsable).MaximumLength(80);
         RuleFor(x => x.Telefono).MaximumLength(20);

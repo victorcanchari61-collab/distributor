@@ -4,7 +4,7 @@ public abstract class AlmacenRequestBase
 {
     public string Codigo { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;
-    /// <summary>ALMACEN, DEPOSITO, TIENDA o VEHICULO. Sin valor, ALMACEN.</summary>
+    /// <summary>ALMACEN, DEPOSITO, TIENDA, CASA o EDIFICIO. Sin valor, ALMACEN.</summary>
     public string? Tipo { get; set; }
 
     public string? Direccion { get; set; }

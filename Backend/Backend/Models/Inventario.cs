@@ -7,17 +7,21 @@ public static class TipoAlmacen
     public const string Deposito = "DEPOSITO";
     public const string Tienda = "TIENDA";
 
-    /// <summary>Un camión o una moto que lleva mercadería: stock que viaja.</summary>
-    public const string Vehiculo = "VEHICULO";
+    /// <summary>Una casa que se usa para guardar mercadería: uno o varios pisos, cuartos.</summary>
+    public const string Casa = "CASA";
 
-    public static readonly string[] Todos = [Almacen, Deposito, Tienda, Vehiculo];
+    /// <summary>Un edificio con varios pisos.</summary>
+    public const string Edificio = "EDIFICIO";
+
+    public static readonly string[] Todos = [Almacen, Deposito, Tienda, Casa, Edificio];
 
     public static string Etiqueta(string tipo) => tipo switch
     {
         Almacen => "Almacén",
         Deposito => "Depósito",
         Tienda => "Tienda",
-        Vehiculo => "Vehículo",
+        Casa => "Casa",
+        Edificio => "Edificio",
         _ => tipo,
     };
 }
