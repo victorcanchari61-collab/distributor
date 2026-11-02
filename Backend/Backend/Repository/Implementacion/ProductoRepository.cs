@@ -163,7 +163,13 @@ public class ProductoRepository : IProductoRepository
                 EF.Functions.Like(p.Codigo, $"%{texto}%")
                 || EF.Functions.Like(p.Nombre, $"%{texto}%")
                 || (p.Categoria != null && EF.Functions.Like(p.Categoria.Nombre, $"%{texto}%"))
-                || (p.Marca != null && EF.Functions.Like(p.Marca.Nombre, $"%{texto}%")));
+                || (p.Marca != null && EF.Functions.Like(p.Marca.Nombre, $"%{texto}%"))
+                // Buscar "A-03" o "P1" encuentra lo que está puesto en ese lugar del almacén.
+                || _context.ProductosUbicacion.Any(u => u.ProductoId == p.Id
+                                                        && (almacenId == null || u.Ubicacion!.AlmacenId == almacenId)
+                                                        && (EF.Functions.Like(u.Ubicacion!.Codigo, $"%{texto}%")
+                                                            || (u.Ubicacion.Nombre != null
+                                                                && EF.Functions.Like(u.Ubicacion.Nombre, $"%{texto}%")))));
         }
 
         if (consulta.ValorDe("codigo") is string codigo)

@@ -83,14 +83,23 @@ public class InventarioService : IInventarioService
         // Productos y valorizado de todos en una consulta. Antes era una por
         // almacén, y encima filtrando "producto 0": siempre daban cero.
         var totales = await _repository.GetTotalesPorAlmacenAsync();
-        return almacenes.Select(a => MapAlmacen(a, totales.GetValueOrDefault(a.Id))).ToList();
+        var ubicaciones = await _repository.GetUbicacionesPorAlmacenAsync();
+        return almacenes
+            .Select(a => MapAlmacen(a, totales.GetValueOrDefault(a.Id), ubicaciones.GetValueOrDefault(a.Id)))
+            .ToList();
     }
 
     public async Task<AlmacenResponse> GetAlmacenAsync(int id)
     {
         var almacen = await GetAlmacenOrThrowAsync(id);
-        return MapAlmacen(almacen, (await _repository.GetTotalesPorAlmacenAsync(id)).GetValueOrDefault(id));
+        return await MapAlmacenCompletoAsync(almacen);
     }
+
+    /// <summary>La respuesta de un almacén con sus totales y cuántos lugares tiene definidos.</summary>
+    private async Task<AlmacenResponse> MapAlmacenCompletoAsync(Almacen almacen) => MapAlmacen(
+        almacen,
+        (await _repository.GetTotalesPorAlmacenAsync(almacen.Id)).GetValueOrDefault(almacen.Id),
+        (await _repository.GetUbicacionesPorAlmacenAsync()).GetValueOrDefault(almacen.Id));
 
     public async Task<AlmacenResponse> CreateAlmacenAsync(CreateAlmacenRequest request)
     {
@@ -110,7 +119,12 @@ public class InventarioService : IInventarioService
         {
             Codigo = codigo,
             Nombre = request.Nombre.Trim(),
+            Tipo = TipoDe(request.Tipo),
             Direccion = Limpiar(request.Direccion),
+            DistritoId = await DistritoValidoAsync(request.DistritoId),
+            Referencia = Limpiar(request.Referencia),
+            Responsable = Limpiar(request.Responsable),
+            Telefono = Limpiar(request.Telefono),
             EsPrincipal = esPrimero || request.EsPrincipal,
             Activo = true
         };
@@ -121,7 +135,8 @@ public class InventarioService : IInventarioService
         }
 
         await _repository.AddAlmacenAsync(almacen);
-        var response = MapAlmacen(almacen, (0, 0m));
+        // Se vuelve a leer para traer el distrito, la provincia y el departamento por su nombre.
+        var response = await MapAlmacenCompletoAsync(await GetAlmacenOrThrowAsync(almacen.Id));
         await _notificador.AvisarAsync("almacenes", "creado", response);
         return response;
     }
@@ -158,11 +173,27 @@ public class InventarioService : IInventarioService
         almacen.Codigo = codigo;
         almacen.Nombre = request.Nombre.Trim();
         almacen.Direccion = Limpiar(request.Direccion);
+
+        /*
+         * Los datos nuevos (tipo, distrito, referencia, responsable, teléfono) solo se tocan si el cliente los
+         * manda. Los formularios actuales siempre mandan el tipo; una versión vieja de la app no sabe que
+         * existen y, si se tomara su silencio como "borrar", cada vez que editara un almacén le quitaría el
+         * distrito y el responsable que se pusieron desde la web.
+         */
+        if (request.Tipo is not null)
+        {
+            almacen.Tipo = TipoDe(request.Tipo);
+            almacen.DistritoId = await DistritoValidoAsync(request.DistritoId);
+            almacen.Referencia = Limpiar(request.Referencia);
+            almacen.Responsable = Limpiar(request.Responsable);
+            almacen.Telefono = Limpiar(request.Telefono);
+        }
+
         almacen.EsPrincipal = request.EsPrincipal;
         almacen.Activo = request.Activo;
 
         await _repository.UpdateAlmacenAsync(almacen);
-        var response = MapAlmacen(almacen, (await _repository.GetTotalesPorAlmacenAsync(id)).GetValueOrDefault(id));
+        var response = await MapAlmacenCompletoAsync(await GetAlmacenOrThrowAsync(id));
         await _notificador.AvisarAsync("almacenes", "actualizado", response);
         return response;
     }
@@ -313,11 +344,17 @@ public class InventarioService : IInventarioService
         // Son todos los que tienen capas: se agrupa sin mandar la lista de ids.
         var actividad = await _repository.GetActividadAsync(null, almacenId, DiasDeRitmo);
         var transito = await _compras.GetEnTransitoPorProductoAsync();
+        var ubicaciones = await _repository.GetUbicacionesDeProductosAsync(ids, almacenId);
 
-        return productos.Select(p => MapStock(
-            p, resumen.GetValueOrDefault(p.Id), reservado.GetValueOrDefault(p.Id),
-            almacenId, almacen?.Nombre,
-            actividad.GetValueOrDefault(p.Id), transito.GetValueOrDefault(p.Id)));
+        return productos.Select(p =>
+        {
+            var fila = MapStock(
+                p, resumen.GetValueOrDefault(p.Id), reservado.GetValueOrDefault(p.Id),
+                almacenId, almacen?.Nombre,
+                actividad.GetValueOrDefault(p.Id), transito.GetValueOrDefault(p.Id));
+            fila.Ubicaciones = ubicaciones.GetValueOrDefault(p.Id) ?? [];
+            return fila;
+        });
     }
 
     /// <summary>
@@ -344,6 +381,7 @@ public class InventarioService : IInventarioService
         var actividad = await _repository.GetActividadAsync(ids, almacenId, DiasDeRitmo);
         var transito = await _compras.GetEnTransitoPorProductoAsync(ids);
         var capas = (await _repository.GetCapasDisponiblesAsync(ids, almacenId)).ToLookup(c => c.ProductoId);
+        var ubicaciones = await _repository.GetUbicacionesDeProductosAsync(ids, almacenId);
 
         return new PaginaResponse<StockResponse>
         {
@@ -355,6 +393,7 @@ public class InventarioService : IInventarioService
                                     actividad.GetValueOrDefault(p.Id),
                                     transito.GetValueOrDefault(p.Id));
                 fila.Capas = capas[p.Id].Select(MapCapa).ToList();
+                fila.Ubicaciones = ubicaciones.GetValueOrDefault(p.Id) ?? [];
                 return fila;
             }).ToList(),
             Total = total,
@@ -1631,12 +1670,37 @@ public class InventarioService : IInventarioService
     private static string? Limpiar(string? texto) =>
         string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
 
-    private static AlmacenResponse MapAlmacen(Almacen a, (int Productos, decimal Valorizado) totales) => new()
+    private static string TipoDe(string? tipo) =>
+        string.IsNullOrWhiteSpace(tipo) ? TipoAlmacen.Almacen : tipo.Trim().ToUpperInvariant();
+
+    /// <summary>El distrito tiene que existir en el ubigeo oficial: un id suelto rompería la llave foránea.</summary>
+    private async Task<int?> DistritoValidoAsync(int? distritoId)
+    {
+        if (distritoId is not int id) return null;
+        if (!await _repository.ExisteDistritoAsync(id))
+            throw new BadRequestException("Ese distrito no existe");
+        return id;
+    }
+
+    private static AlmacenResponse MapAlmacen(
+        Almacen a, (int Productos, decimal Valorizado) totales, int ubicaciones) => new()
     {
         Id = a.Id,
         Codigo = a.Codigo,
         Nombre = a.Nombre,
+        Tipo = a.Tipo,
+        TipoEtiqueta = TipoAlmacen.Etiqueta(a.Tipo),
         Direccion = a.Direccion,
+        DistritoId = a.DistritoId,
+        Distrito = a.Distrito?.Nombre,
+        ProvinciaId = a.Distrito?.ProvinciaId,
+        Provincia = a.Distrito?.Provincia?.Nombre,
+        DepartamentoId = a.Distrito?.Provincia?.DepartamentoId,
+        Departamento = a.Distrito?.Provincia?.Departamento?.Nombre,
+        Referencia = a.Referencia,
+        Responsable = a.Responsable,
+        Telefono = a.Telefono,
+        Ubicaciones = ubicaciones,
         EsPrincipal = a.EsPrincipal,
         Activo = a.Activo,
         Productos = totales.Productos,

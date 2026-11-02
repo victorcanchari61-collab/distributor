@@ -27,6 +27,7 @@ public class InventarioRepository : IInventarioRepository
 
     public async Task<IEnumerable<Almacen>> GetAlmacenesAsync() =>
         await _context.Almacenes
+            .Include(a => a.Distrito).ThenInclude(d => d!.Provincia).ThenInclude(p => p!.Departamento)
             .OrderByDescending(a => a.Activo)
             .ThenByDescending(a => a.EsPrincipal)
             .ThenBy(a => a.Nombre)
@@ -46,7 +47,9 @@ public class InventarioRepository : IInventarioRepository
             .ToListAsync();
 
     public async Task<Almacen?> GetAlmacenAsync(int id) =>
-        await _context.Almacenes.FirstOrDefaultAsync(a => a.Id == id);
+        await _context.Almacenes
+            .Include(a => a.Distrito).ThenInclude(d => d!.Provincia).ThenInclude(p => p!.Departamento)
+            .FirstOrDefaultAsync(a => a.Id == id);
 
     public async Task<Almacen?> GetAlmacenPrincipalAsync() =>
         await _context.Almacenes
@@ -272,6 +275,60 @@ public class InventarioRepository : IInventarioRepository
             .ThenBy(c => c.Id)
             .ToListAsync();
     }
+
+    public async Task<Dictionary<int, List<string>>> GetUbicacionesDeProductosAsync(List<int> productoIds, int? almacenId)
+    {
+        if (productoIds.Count == 0) return [];
+
+        var puestos = await _context.ProductosUbicacion.AsNoTracking()
+            .Where(p => productoIds.Contains(p.ProductoId)
+                        && (almacenId == null || p.Ubicacion!.AlmacenId == almacenId))
+            .Select(p => new
+            {
+                p.ProductoId,
+                p.UbicacionId,
+                p.Ubicacion!.AlmacenId,
+                Almacen = p.Ubicacion.Almacen!.Codigo,
+            })
+            .ToListAsync();
+        if (puestos.Count == 0) return [];
+
+        // La ruta de cada lugar sale de subir por sus padres: se traen los lugares de esos almacenes (pocos).
+        var almacenes = puestos.Select(p => p.AlmacenId).Distinct().ToList();
+        var lugares = await _context.UbicacionesAlmacen.AsNoTracking()
+            .Where(u => almacenes.Contains(u.AlmacenId))
+            .Select(u => new { u.Id, u.PadreId, u.Codigo })
+            .ToDictionaryAsync(u => u.Id);
+
+        string Ruta(int id)
+        {
+            var partes = new List<string>();
+            int? actual = id;
+            while (actual is int a && lugares.TryGetValue(a, out var lugar))
+            {
+                partes.Insert(0, lugar.Codigo);
+                actual = lugar.PadreId;
+            }
+            return string.Join("-", partes);
+        }
+
+        return puestos
+            .GroupBy(p => p.ProductoId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(p => (almacenId == null ? $"{p.Almacen} · " : string.Empty) + Ruta(p.UbicacionId))
+                    .OrderBy(r => r, StringComparer.OrdinalIgnoreCase)
+                    .ToList());
+    }
+
+    public async Task<bool> ExisteDistritoAsync(int distritoId) =>
+        await _context.Distritos.AnyAsync(d => d.Id == distritoId);
+
+    public async Task<Dictionary<int, int>> GetUbicacionesPorAlmacenAsync() =>
+        await _context.UbicacionesAlmacen
+            .GroupBy(u => u.AlmacenId)
+            .Select(g => new { AlmacenId = g.Key, Total = g.Count() })
+            .ToDictionaryAsync(x => x.AlmacenId, x => x.Total);
 
     public async Task<Dictionary<int, (int Productos, decimal Valorizado)>> GetTotalesPorAlmacenAsync(int? almacenId = null)
     {

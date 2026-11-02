@@ -50,6 +50,7 @@ class Stock {
     this.ultimaSalida,
     this.diasStock,
     required this.capas,
+    this.ubicaciones = const [],
   });
 
   final int productoId;
@@ -97,9 +98,14 @@ class Stock {
 
   final List<CapaStock> capas;
 
+  /// Donde esta puesto en el almacen: las rutas de sus lugares ("P1-A-03"). Con
+  /// todos los almacenes a la vista, cada una lleva delante el codigo del almacen.
+  final List<String> ubicaciones;
+
   /// Texto contra el que se busca en la lista.
   String get buscable =>
-      '$codigo $producto ${categoria ?? ''} ${marca ?? ''}'.toLowerCase();
+      '$codigo $producto ${categoria ?? ''} ${marca ?? ''} ${ubicaciones.join(' ')}'
+          .toLowerCase();
 
   factory Stock.desdeJson(Map<String, dynamic> json) => Stock(
     productoId: json['productoId'] as int,
@@ -125,5 +131,8 @@ class Stock {
     capas: (json['capas'] as List? ?? const [])
         .map((e) => CapaStock.desdeJson(e as Map<String, dynamic>))
         .toList(),
+    ubicaciones: [
+      for (final u in (json['ubicaciones'] as List? ?? const [])) u as String,
+    ],
   );
 }

@@ -18,6 +18,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/almacen.dart';
 import '../estado/inventario_controlador.dart';
 import 'almacen_formulario.dart';
+import 'almacen_ubicaciones_pagina.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
 /// Listado de almacenes.
@@ -187,7 +188,16 @@ class _TarjetaAlmacen extends StatelessWidget {
   final VoidCallback? onEstado;
 
   List<CampoDetalle> get _campos => [
-    CampoDetalle('Dirección', almacen.direccion),
+    CampoDetalle('Tipo', almacen.tipo.etiqueta, enTarjeta: false),
+    CampoDetalle('Dirección', almacen.direccionCompleta),
+    CampoDetalle('Referencia', almacen.referencia, enTarjeta: false),
+    CampoDetalle('Responsable', almacen.responsable, enTarjeta: false),
+    CampoDetalle('Teléfono', almacen.telefono, enTarjeta: false),
+    CampoDetalle(
+      'Lugares',
+      almacen.ubicaciones == 0 ? null : '${almacen.ubicaciones}',
+      enTarjeta: false,
+    ),
     CampoDetalle('Productos', '${almacen.productos}'),
     CampoDetalle('Valorizado', 'S/ ${almacen.valorizado.toStringAsFixed(2)}'),
     CampoDetalle(
@@ -255,6 +265,20 @@ class _TarjetaAlmacen extends StatelessWidget {
           : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
       campos: _campos,
       acciones: [
+        // Los pisos, pasillos y estantes: dónde está cada cosa dentro del almacén.
+        AppBoton(
+          texto: 'Ver ubicaciones',
+          variante: BotonVariante.secundario,
+          expandido: true,
+          onPressed: () {
+            Navigator.of(context).pop();
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => AlmacenUbicacionesPagina(almacen: almacen),
+              ),
+            );
+          },
+        ),
         if (!almacen.esPrincipal)
           if (onEstado != null)
             AppBoton(

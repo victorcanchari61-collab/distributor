@@ -5,9 +5,27 @@ public class AlmacenResponse
     public int Id { get; set; }
     public string Codigo { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;
+    public string Tipo { get; set; } = "ALMACEN";
+    public string TipoEtiqueta { get; set; } = string.Empty;
     public string? Direccion { get; set; }
+
+    /// <summary>El ubigeo del almacén: distrito, provincia y departamento, con sus ids para el formulario.</summary>
+    public int? DistritoId { get; set; }
+    public string? Distrito { get; set; }
+    public int? ProvinciaId { get; set; }
+    public string? Provincia { get; set; }
+    public int? DepartamentoId { get; set; }
+    public string? Departamento { get; set; }
+
+    public string? Referencia { get; set; }
+    public string? Responsable { get; set; }
+    public string? Telefono { get; set; }
+
     public bool EsPrincipal { get; set; }
     public bool Activo { get; set; }
+
+    /// <summary>Cuántos lugares (pisos, pasillos, estantes...) tiene definidos dentro.</summary>
+    public int Ubicaciones { get; set; }
 
     /// <summary>Cuántos productos tienen stock ahí.</summary>
     public int Productos { get; set; }
@@ -81,6 +99,12 @@ public class StockResponse
     public int? DiasStock { get; set; }
 
     public List<CapaResponse> Capas { get; set; } = [];
+
+    /// <summary>
+    /// Dónde está puesto en el almacén: las rutas de sus lugares ("P1-A-03"). Con todos los almacenes a la vista,
+    /// cada una lleva delante el código del almacén ("PRIN · P1-A-03").
+    /// </summary>
+    public List<string> Ubicaciones { get; set; } = [];
 }
 
 public class CapaResponse

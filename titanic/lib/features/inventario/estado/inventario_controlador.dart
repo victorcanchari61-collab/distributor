@@ -66,6 +66,20 @@ class AlmacenesControlador extends AsyncNotifier<List<Almacen>> {
   }
 }
 
+/// Los lugares de un almacen (pisos, pasillos, estantes), ya en orden de arbol.
+final ubicacionesProvider = FutureProvider.autoDispose
+    .family<List<Ubicacion>, int>(
+      (ref, almacenId) =>
+          ref.watch(inventarioApiProvider).ubicaciones(almacenId),
+    );
+
+/// Los productos puestos en un lugar.
+final productosUbicacionProvider = FutureProvider.autoDispose
+    .family<List<UbicacionProducto>, int>(
+      (ref, ubicacionId) =>
+          ref.watch(inventarioApiProvider).productosDeUbicacion(ubicacionId),
+    );
+
 final almacenesProvider =
     AsyncNotifierProvider<AlmacenesControlador, List<Almacen>>(
       AlmacenesControlador.new,

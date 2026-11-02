@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/estado/ubigeo_controlador.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -33,6 +35,24 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
   late final _direccion = TextEditingController(
     text: widget.almacen?.direccion ?? '',
   );
+  late final _referencia = TextEditingController(
+    text: widget.almacen?.referencia ?? '',
+  );
+  late final _responsable = TextEditingController(
+    text: widget.almacen?.responsable ?? '',
+  );
+  late final _telefono = TextEditingController(
+    text: widget.almacen?.telefono ?? '',
+  );
+
+  late TipoAlmacen _tipo = widget.almacen?.tipo ?? TipoAlmacen.almacen;
+
+  // Solo para encadenar los selects: lo unico que se manda es _distritoId,
+  // pero para mostrar provincias y distritos hay que saber que departamento y
+  // provincia se eligieron primero.
+  late int? _departamentoId = widget.almacen?.departamentoId;
+  late int? _provinciaId = widget.almacen?.provinciaId;
+  late int? _distritoId = widget.almacen?.distritoId;
 
   late bool _esPrincipal = widget.almacen?.esPrincipal ?? false;
 
@@ -45,7 +65,14 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
 
   @override
   void dispose() {
-    for (final c in [_codigo, _nombre, _direccion]) {
+    for (final c in [
+      _codigo,
+      _nombre,
+      _direccion,
+      _referencia,
+      _responsable,
+      _telefono,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -74,7 +101,12 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
     final cuerpo = <String, dynamic>{
       'codigo': _codigo.text.trim(),
       'nombre': _nombre.text.trim(),
+      'tipo': _tipo.clave,
       'direccion': _direccion.text.trim(),
+      'distritoId': _distritoId,
+      'referencia': _referencia.text.trim(),
+      'responsable': _responsable.text.trim(),
+      'telefono': _telefono.text.trim(),
       'esPrincipal': _esPrincipal,
       if (!_esNuevo) 'activo': widget.almacen!.activo,
     };
@@ -141,11 +173,106 @@ class _AlmacenFormularioState extends ConsumerState<AlmacenFormulario> {
             ),
             const SizedBox(height: Dimen.espacio4),
 
+            AppSelector<TipoAlmacen>(
+              valor: _tipo,
+              etiqueta: 'Tipo',
+              icono: Icons.category_outlined,
+              habilitado: !_guardando,
+              opciones: [
+                for (final t in TipoAlmacen.values) Opcion<TipoAlmacen>(t, t.etiqueta),
+              ],
+              onCambio: (v) => setState(() => _tipo = v ?? TipoAlmacen.almacen),
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
             AppCampo(
               controlador: _direccion,
               etiqueta: 'Dirección',
               icono: Icons.place_outlined,
               opcional: true,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppSelector<int?>(
+              valor: _departamentoId,
+              etiqueta: 'Departamento',
+              icono: Icons.public_outlined,
+              habilitado: !_guardando,
+              opciones: [
+                const Opcion<int?>(null, 'Elegir'),
+                for (final d
+                    in ref.watch(departamentosProvider).valueOrNull ?? const [])
+                  Opcion<int?>(d.id, d.nombre),
+              ],
+              onCambio: (v) => setState(() {
+                _departamentoId = v;
+                _provinciaId = null;
+                _distritoId = null;
+              }),
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppSelector<int?>(
+              valor: _provinciaId,
+              etiqueta: 'Provincia',
+              icono: Icons.map_outlined,
+              habilitado: !_guardando && _departamentoId != null,
+              opciones: [
+                const Opcion<int?>(null, 'Elegir'),
+                for (final p
+                    in ref.watch(provinciasProvider).valueOrNull ?? const [])
+                  if (p.departamentoId == _departamentoId)
+                    Opcion<int?>(p.id, p.nombre),
+              ],
+              onCambio: (v) => setState(() {
+                _provinciaId = v;
+                _distritoId = null;
+              }),
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppSelector<int?>(
+              valor: _distritoId,
+              etiqueta: 'Distrito',
+              icono: Icons.location_city_outlined,
+              habilitado: !_guardando && _provinciaId != null,
+              opciones: [
+                const Opcion<int?>(null, 'Elegir'),
+                for (final d
+                    in ref.watch(distritosProvider).valueOrNull ?? const [])
+                  if (d.provinciaId == _provinciaId)
+                    Opcion<int?>(d.id, d.nombre),
+              ],
+              onCambio: (v) => setState(() => _distritoId = v),
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppCampo(
+              controlador: _referencia,
+              etiqueta: 'Referencia',
+              icono: Icons.signpost_outlined,
+              pista: 'Frente al mercado, portón verde',
+              opcional: true,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppCampo(
+              controlador: _responsable,
+              etiqueta: 'Responsable',
+              icono: Icons.person_outline,
+              opcional: true,
+              habilitado: !_guardando,
+            ),
+            const SizedBox(height: Dimen.espacio4),
+
+            AppCampo(
+              controlador: _telefono,
+              etiqueta: 'Teléfono',
+              icono: Icons.phone_outlined,
+              opcional: true,
+              tipoTeclado: TextInputType.phone,
               habilitado: !_guardando,
             ),
             const SizedBox(height: Dimen.espacio3),

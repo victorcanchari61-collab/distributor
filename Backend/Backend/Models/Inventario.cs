@@ -1,5 +1,27 @@
 namespace Backend.Models;
 
+/// <summary>Qué clase de lugar es un almacén.</summary>
+public static class TipoAlmacen
+{
+    public const string Almacen = "ALMACEN";
+    public const string Deposito = "DEPOSITO";
+    public const string Tienda = "TIENDA";
+
+    /// <summary>Un camión o una moto que lleva mercadería: stock que viaja.</summary>
+    public const string Vehiculo = "VEHICULO";
+
+    public static readonly string[] Todos = [Almacen, Deposito, Tienda, Vehiculo];
+
+    public static string Etiqueta(string tipo) => tipo switch
+    {
+        Almacen => "Almacén",
+        Deposito => "Depósito",
+        Tienda => "Tienda",
+        Vehiculo => "Vehículo",
+        _ => tipo,
+    };
+}
+
 /// <summary>
 /// Donde se guarda la mercaderia. El sistema arranca con uno principal: quien
 /// tenga un solo deposito nunca lo elige, y quien abra otro no tiene que
@@ -10,7 +32,22 @@ public class Almacen
     public int Id { get; set; }
     public string Codigo { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;
+
+    /// <summary>Qué clase de lugar es. Ver <see cref="TipoAlmacen"/>.</summary>
+    public string Tipo { get; set; } = TipoAlmacen.Almacen;
+
+    /// <summary>Calle, número, manzana y lote. El distrito va aparte, del ubigeo oficial.</summary>
     public string? Direccion { get; set; }
+
+    public int? DistritoId { get; set; }
+    public Distrito? Distrito { get; set; }
+
+    /// <summary>Cómo llegar: "frente al mercado, portón verde".</summary>
+    public string? Referencia { get; set; }
+
+    /// <summary>Quién lo tiene a cargo.</summary>
+    public string? Responsable { get; set; }
+    public string? Telefono { get; set; }
 
     /// <summary>El que se usa cuando no se indica otro.</summary>
     public bool EsPrincipal { get; set; }

@@ -48,6 +48,25 @@ class InventarioApi {
     await _api.put('/almacen/$id', cuerpo: cuerpo) as Map<String, dynamic>,
   );
 
+  // --- Ubicaciones (pisos, pasillos y estantes dentro de un almacen) ---
+
+  /// GET /api/almacen/{id}/ubicaciones - los lugares del almacen, ya en orden de arbol.
+  Future<List<Ubicacion>> ubicaciones(int almacenId) async {
+    final datos = await _api.get('/almacen/$almacenId/ubicaciones') as List;
+    return [
+      for (final e in datos) Ubicacion.desdeJson(e as Map<String, dynamic>),
+    ];
+  }
+
+  /// GET /api/ubicacion/{id}/productos - lo que esta puesto en ese lugar.
+  Future<List<UbicacionProducto>> productosDeUbicacion(int id) async {
+    final datos = await _api.get('/ubicacion/$id/productos') as List;
+    return [
+      for (final e in datos)
+        UbicacionProducto.desdeJson(e as Map<String, dynamic>),
+    ];
+  }
+
   // --- Stock ---
 
   /// GET /api/inventario/stock. Sin almacenId, suma todos.

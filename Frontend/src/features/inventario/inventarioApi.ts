@@ -4,13 +4,37 @@ import type { PaginaResponse } from '../../lib/paginacion'
 
 // --- Almacenes ---
 
+export type TipoAlmacen = 'ALMACEN' | 'DEPOSITO' | 'TIENDA' | 'VEHICULO'
+
+export const TIPOS_ALMACEN: { value: TipoAlmacen; label: string }[] = [
+  { value: 'ALMACEN', label: 'Almacén' },
+  { value: 'DEPOSITO', label: 'Depósito' },
+  { value: 'TIENDA', label: 'Tienda' },
+  { value: 'VEHICULO', label: 'Vehículo' },
+]
+
 export interface AlmacenResponse {
   id: number
   codigo: string
   nombre: string
+  tipo: TipoAlmacen
+  tipoEtiqueta: string
+  /** Calle, número, manzana y lote. El distrito va aparte. */
   direccion: string | null
+  distritoId: number | null
+  distrito: string | null
+  provinciaId: number | null
+  provincia: string | null
+  departamentoId: number | null
+  departamento: string | null
+  /** Cómo llegar: "frente al mercado, portón verde". */
+  referencia: string | null
+  responsable: string | null
+  telefono: string | null
   esPrincipal: boolean
   activo: boolean
+  /** Cuántos lugares (pisos, pasillos, estantes...) tiene definidos. */
+  ubicaciones: number
   productos: number
   valorizado: number
 }
@@ -35,7 +59,13 @@ export interface DisponibleResponse {
 export interface AlmacenRequest {
   codigo: string
   nombre: string
+  tipo?: TipoAlmacen
   direccion?: string | null
+  /** El distrito del ubigeo oficial. */
+  distritoId?: number | null
+  referencia?: string | null
+  responsable?: string | null
+  telefono?: string | null
   /** Solo uno puede serlo: marcarlo aquí desmarca al anterior. */
   esPrincipal?: boolean
 }
@@ -51,6 +81,79 @@ export const almacenApi = {
   update: (id: number, body: AlmacenRequest & { activo: boolean }) =>
     api.put<AlmacenResponse>(`/almacen/${id}`, body),
   remove: (id: number) => api.del<void>(`/almacen/${id}`),
+}
+
+// --- Ubicaciones (pisos, pasillos, estantes dentro de un almacén) ---
+
+export type TipoUbicacion = 'PISO' | 'ZONA' | 'PASILLO' | 'ESTANTE' | 'NIVEL' | 'POSICION' | 'OTRO'
+
+export const TIPOS_UBICACION: { value: TipoUbicacion; label: string }[] = [
+  { value: 'PISO', label: 'Piso' },
+  { value: 'ZONA', label: 'Zona' },
+  { value: 'PASILLO', label: 'Pasillo' },
+  { value: 'ESTANTE', label: 'Estante' },
+  { value: 'NIVEL', label: 'Nivel' },
+  { value: 'POSICION', label: 'Posición' },
+  { value: 'OTRO', label: 'Otro' },
+]
+
+export interface UbicacionResponse {
+  id: number
+  almacenId: number
+  padreId: number | null
+  tipo: TipoUbicacion
+  tipoEtiqueta: string
+  /** El código corto de este punto: "P1", "A", "03". */
+  codigo: string
+  nombre: string | null
+  /** Los códigos desde la raíz, unidos con guion: "P1-A-03". Es como se nombra el lugar. */
+  ruta: string
+  /** Cuántos escalones tiene arriba: 0 en la raíz del almacén. */
+  nivel: number
+  activo: boolean
+  /** Cuántos lugares tiene directamente adentro. */
+  hijos: number
+  /** Cuántos productos están puestos aquí. */
+  productos: number
+}
+
+export interface UbicacionProductoResponse {
+  productoId: number
+  codigo: string
+  producto: string
+  categoria: string | null
+  unidadBase: string
+}
+
+export interface UbicacionRequest {
+  tipo: TipoUbicacion
+  codigo: string
+  nombre?: string | null
+}
+
+export interface GenerarUbicacionesRequest {
+  padreId?: number | null
+  tipo: TipoUbicacion
+  prefijo?: string
+  desde: number
+  hasta: number
+  digitos: number
+}
+
+export const ubicacionApi = {
+  listar: (almacenId: number) => api.get<UbicacionResponse[]>(`/almacen/${almacenId}/ubicaciones`),
+  crear: (almacenId: number, body: UbicacionRequest & { padreId?: number | null }) =>
+    api.post<UbicacionResponse>(`/almacen/${almacenId}/ubicaciones`, body),
+  generar: (almacenId: number, body: GenerarUbicacionesRequest) =>
+    api.post<UbicacionResponse[]>(`/almacen/${almacenId}/ubicaciones/lote`, body),
+  actualizar: (id: number, body: UbicacionRequest & { activo: boolean }) =>
+    api.put<UbicacionResponse>(`/ubicacion/${id}`, body),
+  eliminar: (id: number) => api.del<void>(`/ubicacion/${id}`),
+  productos: (id: number) => api.get<UbicacionProductoResponse[]>(`/ubicacion/${id}/productos`),
+  asignar: (id: number, productoId: number) =>
+    api.post<UbicacionProductoResponse[]>(`/ubicacion/${id}/productos`, { productoId }),
+  quitar: (id: number, productoId: number) =>
+    api.del<UbicacionProductoResponse[]>(`/ubicacion/${id}/productos/${productoId}`),
 }
 
 // --- Motivos ---
@@ -112,6 +215,11 @@ export interface StockResponse {
   /** Para cuántos días alcanza al ritmo del último mes. Null si no se vendió. */
   diasStock: number | null
   capas: CapaResponse[]
+  /**
+   * Dónde está puesto: las rutas de sus lugares ("P1-A-03"). Con todos los almacenes a la vista, cada
+   * una lleva delante el código del almacén ("PRIN · P1-A-03").
+   */
+  ubicaciones: string[]
 }
 
 export interface CapaResponse {

@@ -105,6 +105,9 @@ namespace Backend.Data.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("varchar(250)");
 
+                    b.Property<int?>("DistritoId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("EsPrincipal")
                         .HasColumnType("tinyint(1)");
 
@@ -116,10 +119,31 @@ namespace Backend.Data.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("varchar(80)");
 
+                    b.Property<string>("Referencia")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
+                    b.Property<string>("Responsable")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("ALMACEN");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Codigo")
                         .IsUnique();
+
+                    b.HasIndex("DistritoId");
 
                     b.ToTable("Almacenes", (string)null);
 
@@ -131,7 +155,8 @@ namespace Backend.Data.Migrations
                             Codigo = "PRIN",
                             EsPrincipal = true,
                             FechaCreacion = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Nombre = "Almacén principal"
+                            Nombre = "Almacén principal",
+                            Tipo = "ALMACEN"
                         });
                 });
 
@@ -3908,6 +3933,33 @@ namespace Backend.Data.Migrations
                     b.ToTable("ProductoPresentaciones", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Models.ProductoUbicacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("ProductoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UbicacionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductoId");
+
+                    b.HasIndex("UbicacionId", "ProductoId")
+                        .IsUnique();
+
+                    b.ToTable("ProductosUbicacion", (string)null);
+                });
+
             modelBuilder.Entity("Backend.Models.Proveedor", b =>
                 {
                     b.Property<int>("Id")
@@ -4507,6 +4559,50 @@ namespace Backend.Data.Migrations
                     b.ToTable("TiposVehiculo", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Models.UbicacionAlmacen", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("AlmacenId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Nombre")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<int?>("PadreId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PadreId");
+
+                    b.HasIndex("AlmacenId", "PadreId", "Codigo")
+                        .IsUnique();
+
+                    b.ToTable("UbicacionesAlmacen", (string)null);
+                });
+
             modelBuilder.Entity("Backend.Models.UnidadMedida", b =>
                 {
                     b.Property<int>("Id")
@@ -4953,6 +5049,16 @@ namespace Backend.Data.Migrations
                     b.Navigation("Empleado");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.Almacen", b =>
+                {
+                    b.HasOne("Backend.Models.Distrito", "Distrito")
+                        .WithMany()
+                        .HasForeignKey("DistritoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Distrito");
                 });
 
             modelBuilder.Entity("Backend.Models.Asistencia", b =>
@@ -6216,6 +6322,25 @@ namespace Backend.Data.Migrations
                     b.Navigation("Unidad");
                 });
 
+            modelBuilder.Entity("Backend.Models.ProductoUbicacion", b =>
+                {
+                    b.HasOne("Backend.Models.Producto", "Producto")
+                        .WithMany()
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.UbicacionAlmacen", "Ubicacion")
+                        .WithMany()
+                        .HasForeignKey("UbicacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Producto");
+
+                    b.Navigation("Ubicacion");
+                });
+
             modelBuilder.Entity("Backend.Models.Provincia", b =>
                 {
                     b.HasOne("Backend.Models.Departamento", "Departamento")
@@ -6358,6 +6483,24 @@ namespace Backend.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.UbicacionAlmacen", b =>
+                {
+                    b.HasOne("Backend.Models.Almacen", "Almacen")
+                        .WithMany()
+                        .HasForeignKey("AlmacenId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.UbicacionAlmacen", "Padre")
+                        .WithMany()
+                        .HasForeignKey("PadreId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Almacen");
+
+                    b.Navigation("Padre");
                 });
 
             modelBuilder.Entity("Backend.Models.Usuario", b =>

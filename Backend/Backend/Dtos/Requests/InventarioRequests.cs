@@ -4,7 +4,17 @@ public abstract class AlmacenRequestBase
 {
     public string Codigo { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;
+    /// <summary>ALMACEN, DEPOSITO, TIENDA o VEHICULO. Sin valor, ALMACEN.</summary>
+    public string? Tipo { get; set; }
+
     public string? Direccion { get; set; }
+
+    /// <summary>El distrito del ubigeo oficial.</summary>
+    public int? DistritoId { get; set; }
+
+    public string? Referencia { get; set; }
+    public string? Responsable { get; set; }
+    public string? Telefono { get; set; }
 
     /// <summary>Solo uno puede serlo: marcarlo aquí desmarca al anterior.</summary>
     public bool EsPrincipal { get; set; }

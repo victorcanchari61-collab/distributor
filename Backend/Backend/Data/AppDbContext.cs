@@ -79,6 +79,8 @@ public class AppDbContext : DbContext
     public DbSet<PlanillaSemanal> PlanillasSemanales => Set<PlanillaSemanal>();
     public DbSet<PlanillaDetalle> PlanillaDetalles => Set<PlanillaDetalle>();
     public DbSet<PlanillaDescuento> PlanillaDescuentos => Set<PlanillaDescuento>();
+    public DbSet<UbicacionAlmacen> UbicacionesAlmacen => Set<UbicacionAlmacen>();
+    public DbSet<ProductoUbicacion> ProductosUbicacion => Set<ProductoUbicacion>();
     public DbSet<GestionCliente> GestionesCliente => Set<GestionCliente>();
     public DbSet<SerieCpe> SeriesCpe => Set<SerieCpe>();
     public DbSet<ComprobanteElectronico> ComprobantesElectronicos => Set<ComprobanteElectronico>();
@@ -944,6 +946,13 @@ public class AppDbContext : DbContext
             entity.Property(a => a.Codigo).HasMaxLength(15).IsRequired();
             entity.Property(a => a.Nombre).HasMaxLength(80).IsRequired();
             entity.Property(a => a.Direccion).HasMaxLength(250);
+            // Los almacenes que ya existían quedan como "Almacén" al agregar la columna.
+            entity.Property(a => a.Tipo).HasMaxLength(20).IsRequired().HasDefaultValue(TipoAlmacen.Almacen);
+            entity.Property(a => a.Referencia).HasMaxLength(250);
+            entity.Property(a => a.Responsable).HasMaxLength(80);
+            entity.Property(a => a.Telefono).HasMaxLength(20);
+            entity.HasOne(a => a.Distrito).WithMany()
+                .HasForeignKey(a => a.DistritoId).OnDelete(DeleteBehavior.SetNull);
 
             entity.HasData(new Almacen
             {
@@ -954,6 +963,33 @@ public class AppDbContext : DbContext
                 Activo = true,
                 FechaCreacion = Semilla
             });
+        });
+
+        modelBuilder.Entity<UbicacionAlmacen>(entity =>
+        {
+            entity.ToTable("UbicacionesAlmacen");
+            entity.Property(u => u.Tipo).HasMaxLength(20).IsRequired();
+            entity.Property(u => u.Codigo).HasMaxLength(20).IsRequired();
+            entity.Property(u => u.Nombre).HasMaxLength(80);
+            // Un código no se repite entre hermanos (dentro del mismo almacén y del mismo padre).
+            entity.HasIndex(u => new { u.AlmacenId, u.PadreId, u.Codigo }).IsUnique();
+
+            entity.HasOne(u => u.Almacen).WithMany()
+                .HasForeignKey(u => u.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(u => u.Padre).WithMany()
+                .HasForeignKey(u => u.PadreId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ProductoUbicacion>(entity =>
+        {
+            entity.ToTable("ProductosUbicacion");
+            entity.HasIndex(p => new { p.UbicacionId, p.ProductoId }).IsUnique();
+            entity.HasIndex(p => p.ProductoId);
+
+            entity.HasOne(p => p.Producto).WithMany()
+                .HasForeignKey(p => p.ProductoId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(p => p.Ubicacion).WithMany()
+                .HasForeignKey(p => p.UbicacionId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<MotivoMovimiento>(entity =>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
-import { AlertTriangle, Boxes, Layers, PackageSearch, Warehouse } from 'lucide-react'
+import { AlertTriangle, Boxes, Layers, MapPin, PackageSearch, Warehouse } from 'lucide-react'
 import { Alert, Desplegable, ListaDesplegable, ListPage, StatCard, Tabs, PestanasVista } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn, TabItem } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -380,6 +380,26 @@ export function StockPage() {
         .sort((a, b) => a.localeCompare(b, 'es'))
         .map((v) => ({ value: v, label: v })),
       render: (row) => row.marca ?? <span className="text-ink-soft">—</span>,
+    },
+    {
+      // Dónde está puesto en el almacén. Se encuentra también con el buscador de arriba (por código de lugar).
+      key: 'ubicaciones',
+      label: 'Ubicación',
+      filterable: false,
+      value: (row) => row.ubicaciones.join(' '),
+      render: (row) =>
+        row.ubicaciones.length === 0 ? (
+          <span className="text-ink-soft">—</span>
+        ) : (
+          <span className="flex flex-col gap-0.5">
+            {row.ubicaciones.map((u) => (
+              <span key={u} className="inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap">
+                <MapPin size={12} className="text-ink-soft" />
+                {u}
+              </span>
+            ))}
+          </span>
+        ),
     },
     {
       key: 'capas',

@@ -156,6 +156,9 @@ class _TarjetaStock extends StatelessWidget {
     CampoDetalle('Categoría', stock.categoria, enTarjeta: false),
     CampoDetalle('Marca', stock.marca, enTarjeta: false),
     CampoDetalle('Almacén', stock.almacen),
+    // Donde esta puesto: lo que ahorra caminar buscando.
+    if (stock.ubicaciones.isNotEmpty)
+      CampoDetalle('Ubicación', stock.ubicaciones.join(' · ')),
     CampoDetalle(
       'Stock',
       '${formatoNumero(stock.stock)} ${stock.unidadBase}',

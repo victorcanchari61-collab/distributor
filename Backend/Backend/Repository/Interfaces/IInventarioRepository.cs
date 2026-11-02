@@ -135,6 +135,18 @@ public interface IInventarioRepository
     /// <summary>Cuántos productos con saldo y cuánto vale lo que hay, por almacén: una sola consulta.</summary>
     Task<Dictionary<int, (int Productos, decimal Valorizado)>> GetTotalesPorAlmacenAsync(int? almacenId = null);
 
+    /// <summary>
+    /// Dónde está puesto cada producto: las rutas de sus lugares ("P1-A-03"). Con todos los almacenes
+    /// (<paramref name="almacenId"/> nulo) cada ruta lleva delante el código del almacén.
+    /// </summary>
+    Task<Dictionary<int, List<string>>> GetUbicacionesDeProductosAsync(List<int> productoIds, int? almacenId);
+
+    /// <summary>Si el distrito existe en el ubigeo oficial.</summary>
+    Task<bool> ExisteDistritoAsync(int distritoId);
+
+    /// <summary>Cuántos lugares (pisos, pasillos...) tiene definidos cada almacén.</summary>
+    Task<Dictionary<int, int>> GetUbicacionesPorAlmacenAsync();
+
     /// <summary>Las capas con saldo de varios productos, la que sale primero adelante.</summary>
     Task<List<CapaCosto>> GetCapasDisponiblesAsync(IEnumerable<int> productoIds, int? almacenId);
 
