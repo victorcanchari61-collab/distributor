@@ -23,4 +23,10 @@ public interface IVisitaService
 
     Task<ResumenVisitasResponse> ResumenAsync(
         DateTime desde, DateTime hasta, int? rutaId, int? vendedorId);
+
+    /// <summary>
+    /// Las rutas que quien pide puede mirar: todas para el administrador, y para el resto solo las que tiene a
+    /// cargo. Es la misma regla que acota la lista, para que el filtro de la pantalla no ofrezca rutas vacías.
+    /// </summary>
+    Task<IEnumerable<RutaVisitaResponse>> RutasAsync();
 }

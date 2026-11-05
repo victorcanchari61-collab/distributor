@@ -1,29 +1,29 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, MapPin, Phone, Plus, Store } from 'lucide-react'
-import { Alert, Badge, ListPage, StatCard } from '../../components/ui'
-import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
+import { Alert, Badge, Desplegable, ListPage, StatCard } from '../../components/ui'
+import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { hoyLocal, fechaCorta } from '../../lib/fechas'
+import { fechaCorta } from '../../lib/fechas'
 import { useRealtime } from '../../lib/realtime'
-import { rutaApi } from '../tms'
-import type { RutaResponse } from '../tms'
-import { usuarioApi } from '../config/usuarioApi'
-import type { UsuarioResponse } from '../config/usuarioApi'
 import { ESTADOS_UI, ORDEN_ESTADOS, colorCambio, porcentaje } from '../crm/formato'
 import { EtiquetaEstado } from '../crm/piezas'
 import { visitaApi } from './visitaApi'
-import type { ConsultaVisitas, ResumenVisitas, VisitaResponse } from './visitaApi'
+import type { ResumenVisitas, RutaVisita, VisitaResponse } from './visitaApi'
 
-const hoy = () => hoyLocal()
+/** Los días de visita, en orden de semana, tal como los entiende el backend. */
+const DIAS = [
+  { valor: 'LUNES', etiqueta: 'Lunes' },
+  { valor: 'MARTES', etiqueta: 'Martes' },
+  { valor: 'MIERCOLES', etiqueta: 'Miércoles' },
+  { valor: 'JUEVES', etiqueta: 'Jueves' },
+  { valor: 'VIERNES', etiqueta: 'Viernes' },
+  { valor: 'SABADO', etiqueta: 'Sábado' },
+  { valor: 'DOMINGO', etiqueta: 'Domingo' },
+  { valor: 'SEMANA', etiqueta: 'Toda la semana' },
+] as const
 
-/**
- * La fecha que guardó el filtro, como YYYY-MM-DD.
- *
- * El panel guarda lo que escribe un <input type="date">, es decir ya el texto
- * en ese formato; la fila en cambio expone epoch para poder comparar. Aquí
- * interesa el texto, que es lo que entiende el backend.
- */
-const fechaDe = (valor?: string) => (valor && valor.length >= 10 ? valor.slice(0, 10) : undefined)
+/** El día de hoy como lo guarda el sistema: es el que se abre por defecto. */
+const diaDeHoy = (): string => DIAS[(new Date().getDay() + 6) % 7].valor
 
 /**
  * Visitas: a qué clientes toca ir y a cuáles ya se les tomó pedido.
@@ -36,20 +36,21 @@ const fechaDe = (valor?: string) => (valor && valor.length >= 10 ? valor.slice(0
 export function VisitasPage() {
   const [visitas, setVisitas] = useState<VisitaResponse[]>([])
   const [resumen, setResumen] = useState<ResumenVisitas | null>(null)
-  const [rutas, setRutas] = useState<RutaResponse[]>([])
-  const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
+  const [rutas, setRutas] = useState<RutaVisita[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
   /*
-   * Los filtros viven en el modal de la tabla, no en una barra propia.
+   * Se mira por DÍA DE VISITA y por RUTA, no por rango de fechas.
    *
-   * La tabla los expone como columnas — Día, Ruta, Vendedor, Estado — y esta
-   * pantalla solo traduce a la consulta del servidor los que el backend
-   * necesita: el rango de fechas acota cuántas filas se piden, y ruta y
-   * vendedor evitan traerse la lista entera para descartarla en el navegador.
+   * El día de visita es una propiedad del cliente (los del lunes), así que se elige el día de la semana y la
+   * ruta; las fechas salen solas — la del día elegido en la semana de hoy — y sirven para saber a cuáles ya se
+   * les tomó pedido. Las rutas que se ofrecen son las del usuario: el administrador ve todas.
    */
-  const [consulta, setConsulta] = useState<ConsultaVisitas>({ desde: hoy(), hasta: hoy() })
+  const [dia, setDia] = useState<string>(diaDeHoy)
+  const [rutaId, setRutaId] = useState(0)
+
+  const consulta = useMemo(() => ({ dia, rutaId: rutaId || undefined }), [dia, rutaId])
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -77,45 +78,30 @@ export function VisitasPage() {
     void cargar()
   }, [cargar])
 
-  // Los catálogos de los filtros no dependen del rango elegido.
+  // Las rutas que puede mirar quien entra: todas si es administrador, las suyas si no.
   useEffect(() => {
-    void Promise.all([rutaApi.getAll(), usuarioApi.getAll()])
-      .then(([rts, usrs]) => {
-        setRutas(rts.filter((r) => r.activo))
-        setUsuarios(usrs.filter((u) => u.activo))
+    void visitaApi
+      .rutas()
+      .then((rts) => {
+        setRutas(rts)
+        // Con una sola ruta no hay nada que elegir: queda fija.
+        if (rts.length === 1) setRutaId(rts[0].id)
       })
       .catch(() => {
-        /* Sin catálogos la lista sigue sirviendo: solo se pierde filtrar. */
+        /* Sin rutas la lista sigue sirviendo: solo se pierde filtrar. */
       })
   }, [])
 
   // Al tomar un pedido, la lista tiene que reflejarlo sin recargar a mano.
   useRealtime(['pedidos', 'clientes'], cargar)
 
-  /** Traduce lo que eligió el usuario en el modal a la consulta del servidor. */
-  const aplicar = useCallback((q: ConsultaTabla) => {
-    const filtro = (columna: string) => q.filtros?.find((f) => f.columna === columna)
-
-    const fecha = filtro('fecha')
-    const desde = fechaDe(fecha?.valor) ?? hoy()
-
-    setConsulta({
-      desde,
-      // Sin extremo superior es un día suelto, que es el uso normal.
-      hasta: fechaDe(fecha?.valorHasta) ?? desde,
-      rutaId: Number(filtro('ruta')?.valor) || undefined,
-      vendedorId: Number(filtro('vendedor')?.valor) || undefined,
-    })
-  }, [])
-
   const columns: DataTableColumn<VisitaResponse>[] = useMemo(
     () => [
       {
         key: 'fecha',
         label: 'Día',
-        filterType: 'date',
-        // El filtro local compara epochs; el de servidor sale de aquí también.
-        value: (row) => new Date(row.fecha).getTime(),
+        // Se elige arriba, con los días de visita.
+        filterable: false,
         render: (row) => (
           <span className="flex flex-col">
             <span>{fechaCorta(row.fecha)}</span>
@@ -168,18 +154,14 @@ export function VisitasPage() {
       {
         key: 'ruta',
         label: 'Ruta',
-        filterType: 'select',
-        // El id como valor: es lo que el servidor necesita para acotar.
-        filterOptions: rutas.map((r) => ({ value: String(r.id), label: r.nombre })),
-        value: (row) => String(row.rutaId ?? ''),
+        // Se elige arriba, junto al día.
+        filterable: false,
         render: (row) => row.ruta ?? '—',
       },
       {
         key: 'vendedor',
         label: 'Vendedor',
-        filterType: 'select',
-        filterOptions: usuarios.map((u) => ({ value: String(u.id), label: u.nombre })),
-        value: (row) => String(row.vendedorId ?? ''),
+        filterable: false,
         render: (row) => row.vendedor ?? '—',
       },
       {
@@ -234,7 +216,7 @@ export function VisitasPage() {
           row.atendido ? `S/ ${row.total.toFixed(2)}` : <span className="text-ink-soft">—</span>,
       },
     ],
-    [rutas, usuarios],
+    [visitas],
   )
 
   const cobertura =
@@ -246,7 +228,7 @@ export function VisitasPage() {
     <ListPage
       icon={<Store size={20} />}
       title="Visitas"
-      description="Clientes por visitar y a cuáles ya se les tomó pedido."
+      description="Clientes que toca visitar según su día de visita y su ruta, y a cuáles ya se les tomó pedido."
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
@@ -270,16 +252,50 @@ export function VisitasPage() {
             tono="warning"
           />
           <StatCard
-            label="Pedido del período"
+            label="Pedido de la selección"
             value={`S/ ${(resumen?.total ?? 0).toFixed(2)}`}
             icon={<Plus size={18} />}
             tono="neutral"
           />
         </>
       }
+      banner={
+        <div className="flex flex-col gap-3 rounded-panel border border-line bg-white p-3 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1">
+            <span className="ui-label">Día de visita</span>
+            <div className="mt-1.5 flex flex-wrap gap-1.5" role="group" aria-label="Día de visita">
+              {DIAS.map((d) => (
+                <button
+                  key={d.valor}
+                  type="button"
+                  onClick={() => setDia(d.valor)}
+                  aria-pressed={dia === d.valor}
+                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    dia === d.valor
+                      ? 'border-blue-500 bg-blue-50 font-semibold text-blue-700'
+                      : 'border-line bg-white text-ink-muted hover:bg-surface-alt'
+                  }`}
+                >
+                  {d.etiqueta}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="sm:w-60">
+            <Desplegable
+              label="Ruta"
+              value={rutaId}
+              onChange={(v) => setRutaId(Number(v))}
+              options={[
+                { value: 0, label: rutas.length > 1 ? 'Todas mis rutas' : 'Sin rutas' },
+                ...rutas.map((r) => ({ value: r.id, label: r.nombre })),
+              ]}
+            />
+          </div>
+        </div>
+      }
       columns={columns}
       rows={visitas}
-      onConsulta={aplicar}
       cardIcon={Store}
       searchPlaceholder="Buscar cliente, mercado..."
       empty={cargando ? 'Cargando visitas...' : 'No hay clientes con visita en esos días.'}

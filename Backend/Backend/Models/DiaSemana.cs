@@ -30,6 +30,23 @@ public static class DiaSemana
 
     public static bool EsValido(string dia) => Todos.Contains(dia);
 
+    /// <summary>Pide toda la semana en vez de un día.</summary>
+    public const string Semana = "SEMANA";
+
+    /// <summary>
+    /// La fecha que le toca a un día de visita en la semana (lunes a domingo) de una fecha de referencia, o la
+    /// semana entera con <see cref="Semana"/>. Es lo que permite pedir "los del lunes" y seguir sabiendo a qué
+    /// fecha mirar los pedidos para decir cuáles ya se atendieron.
+    /// </summary>
+    public static (DateTime Desde, DateTime Hasta) DeLaSemana(DateTime referencia, string dia)
+    {
+        var lunes = referencia.Date.AddDays(-(((int)referencia.DayOfWeek + 6) % 7));
+        if (dia == Semana) return (lunes, lunes.AddDays(6));
+
+        var fecha = lunes.AddDays(Array.IndexOf(Todos, dia));
+        return (fecha, fecha);
+    }
+
     /// <summary>El día que le toca a una fecha.</summary>
     public static string De(DateTime fecha) => fecha.DayOfWeek switch
     {

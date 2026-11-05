@@ -53,6 +53,9 @@ public interface IPermisoService
     /// </summary>
     Task<string> AlcanceAsync(int usuarioId, string submodulo);
 
+    /// <summary>Si es administrador: el único que ve todo por defecto, sin depender de la ruta que tenga asignada.</summary>
+    Task<bool> EsAdministradorAsync(int usuarioId);
+
     /// <summary>El alcance junto con la ruta de la persona: lo que hace falta para filtrar "mis clientes".</summary>
     Task<AlcanceFiltro> AlcanceFiltroAsync(int usuarioId, string submodulo);
 

@@ -160,23 +160,45 @@ public class VisitaService : IVisitaService
         }
 
         /*
-         * El alcance de datos manda igual que en Pedidos.
+         * Cada quien ve las rutas que tiene a cargo; el administrador, todas.
          *
-         * Un vendedor acotado a "sus clientes" ve aqui su lista del dia, no la
-         * de toda la empresa: si no, esta pantalla seria la puerta de atras
-         * para ver el padron entero de otro.
+         * No depende del alcance configurado en Pedidos: esta lista es "a quién me toca visitar", y eso es por
+         * ruta. Quien no tiene ninguna ruta asignada no ve visitas — no hay a quién le toque —, y así esta
+         * pantalla tampoco es la puerta de atrás para ver el padrón de otro.
          */
-        if (_usuarioActual.Id is int usuarioId)
+        if (await RutasVisiblesAsync() is List<int> misRutas)
         {
-            var alcance = await _permisos.AlcanceFiltroAsync(usuarioId, "fact.pedidos");
-            if (!alcance.SinRestriccion)
-            {
-                var misRutas = alcance.RutaIds;
-                clientes = clientes.Where(c => c.RutaId != null && misRutas.Contains(c.RutaId.Value));
-            }
+            clientes = clientes.Where(c => c.RutaId != null && misRutas.Contains(c.RutaId.Value));
         }
 
         return await clientes.ToListAsync();
+    }
+
+    /// <summary>Las rutas que puede mirar quien pide, o null si puede mirarlas todas (administrador).</summary>
+    private async Task<List<int>?> RutasVisiblesAsync()
+    {
+        if (_usuarioActual.Id is not int usuarioId) return [];
+        if (await _permisos.EsAdministradorAsync(usuarioId)) return null;
+
+        return await _context.UsuarioRutas.AsNoTracking()
+            .Where(r => r.UsuarioId == usuarioId)
+            .Select(r => r.RutaId)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<RutaVisitaResponse>> RutasAsync()
+    {
+        var rutas = _context.Rutas.AsNoTracking().Where(r => r.Activo);
+
+        if (await RutasVisiblesAsync() is List<int> misRutas)
+        {
+            rutas = rutas.Where(r => misRutas.Contains(r.Id));
+        }
+
+        return await rutas
+            .OrderBy(r => r.Nombre)
+            .Select(r => new RutaVisitaResponse { Id = r.Id, Nombre = r.Nombre })
+            .ToListAsync();
     }
 
     /// <summary>El pedido de cada cliente en cada día del rango.</summary>

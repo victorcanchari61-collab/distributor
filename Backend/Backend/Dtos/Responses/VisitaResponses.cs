@@ -52,6 +52,13 @@ public class VisitaResponse
     public bool AccionVencida { get; set; }
 }
 
+/// <summary>Una ruta que se puede elegir para filtrar las visitas.</summary>
+public class RutaVisitaResponse
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+}
+
 public class ResumenVisitasResponse
 {
     /// <summary>Cuántos clientes tocan ese día.</summary>

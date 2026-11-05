@@ -41,8 +41,18 @@ export interface ResumenVisitas {
   total: number
 }
 
+export interface RutaVisita {
+  id: number
+  nombre: string
+}
+
 /** Los filtros de la lista. */
 export interface ConsultaVisitas {
+  /**
+   * El día de visita (LUNES... DOMINGO) o SEMANA: trae los clientes de ese día en la semana de hoy. Es lo normal;
+   * `desde` y `hasta` quedan para pedir un rango de fechas concreto.
+   */
+  dia?: string
   desde?: string
   hasta?: string
   rutaId?: number
@@ -51,6 +61,7 @@ export interface ConsultaVisitas {
 
 const query = (c: ConsultaVisitas) => {
   const partes = new URLSearchParams()
+  if (c.dia) partes.set('dia', c.dia)
   if (c.desde) partes.set('desde', c.desde)
   if (c.hasta) partes.set('hasta', c.hasta)
   if (c.rutaId) partes.set('rutaId', String(c.rutaId))
@@ -63,6 +74,9 @@ export const visitaApi = {
   /** Sin rango, hoy. */
   listar: (c: ConsultaVisitas = {}) => api.get<VisitaResponse[]>(`/visita${query(c)}`),
   resumen: (c: ConsultaVisitas = {}) => api.get<ResumenVisitas>(`/visita/resumen${query(c)}`),
+
+  /** Las rutas que se pueden elegir: todas para el administrador, las propias para el resto. */
+  rutas: () => api.get<RutaVisita[]>('/visita/rutas'),
 
   /**
    * Los días válidos, servidos por el backend.

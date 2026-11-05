@@ -256,6 +256,9 @@ public class PermisoService : IPermisoService
 
     private record UsuarioMinimo(IReadOnlyList<int> RolIds, bool EsAdministrador);
 
+    public async Task<bool> EsAdministradorAsync(int usuarioId) =>
+        (await UsuarioAsync(usuarioId))?.EsAdministrador ?? false;
+
     public async Task<AlcanceFiltro> AlcanceFiltroAsync(int usuarioId, string submodulo)
     {
         var alcance = await AlcanceAsync(usuarioId, submodulo);
