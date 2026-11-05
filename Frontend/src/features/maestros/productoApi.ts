@@ -70,6 +70,8 @@ export interface ProductoFila {
   marca: string | null
   unidadBase: string
   costoReferencia: number | null
+  /** Ruta de la foto, para la miniatura de la lista. */
+  foto: string | null
   activo: boolean
   /** Lo que lista el desplegable de la columna. */
   presentaciones: { id: number; nombre: string; factor: number; esBase: boolean }[]
@@ -100,6 +102,8 @@ export interface ProductoResponse {
   afectoIgv: boolean
   /** Cuánto pesa una unidad base, en kilos. */
   pesoUnidadBase: number | null
+  /** Ruta de la foto ("/uploads/productos/..."), o null si no tiene. */
+  foto: string | null
   controlaStock: boolean
   stockMinimo: number
   activo: boolean
@@ -133,6 +137,8 @@ export interface ProductoRequest {
   precioReferencia?: number | null
   afectoIgv: boolean
   pesoUnidadBase?: number | null
+  /** Ruta de la foto ya subida, o null para quitarla. */
+  foto?: string | null
   controlaStock: boolean
   stockMinimo: number
 }

@@ -3,6 +3,7 @@ import { idUnico } from '../../lib/ids'
 import {
   Boxes,
   Download,
+  ImageOff,
   Package,
   PackageCheck,
   Pencil,
@@ -37,6 +38,8 @@ import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { exportarExcel, valorDe } from '../../lib/excel'
 import { usePermisos } from '../../lib/permisos'
+import { CampoFoto } from '../tms/CampoFoto'
+import { urlImagen } from '../tms/flotaApi'
 import { CatalogoSimple } from './CatalogoSimple'
 import { ValorPorPresentacionInput } from './ValorPorPresentacionInput'
 import { PresentacionesEditor } from './PresentacionesEditor'
@@ -84,6 +87,8 @@ const VACIO = {
   afectoIgv: false,
   pesoUnidadBase: '',
   stockMinimo: '',
+  /** Ruta de la foto ya subida; vacío si no tiene. */
+  foto: '',
 }
 
 type Pestana = 'productos' | 'categorias' | 'marcas' | 'unidades'
@@ -112,6 +117,8 @@ export function ProductosPage() {
   const [importando, setImportando] = useState(false)
   const [editando, setEditando] = useState<ProductoResponse | null>(null)
   const [form, setForm] = useState(VACIO)
+  // Mientras sube la foto no se puede guardar: se guardaría sin ella.
+  const [subiendoFoto, setSubiendoFoto] = useState(false)
   const [presentaciones, setPresentaciones] = useState<FilaPresentacion[]>([])
   const [guardando, setGuardando] = useState(false)
   const [pestanaForm, setPestanaForm] = useState<PestanaForm>('datos')
@@ -226,6 +233,7 @@ export function ProductosPage() {
       afectoIgv: producto.afectoIgv,
       pesoUnidadBase: producto.pesoUnidadBase ? String(producto.pesoUnidadBase) : '',
       stockMinimo: producto.stockMinimo ? String(producto.stockMinimo) : '',
+      foto: producto.foto ?? '',
     })
 
     // Se escribe en la presentación con la que se compra habitualmente.
@@ -407,6 +415,7 @@ export function ProductosPage() {
       precioReferencia: form.precioReferencia ? Number(form.precioReferencia) : null,
       afectoIgv: form.afectoIgv,
       pesoUnidadBase: form.pesoUnidadBase ? Number(form.pesoUnidadBase) : null,
+      foto: form.foto || null,
       controlaStock: true,
       stockMinimo: Number(form.stockMinimo || 0),
     }
@@ -604,6 +613,25 @@ export function ProductosPage() {
     })
 
   const columns: DataTableColumn<ProductoFila>[] = [
+    {
+      key: 'foto',
+      label: 'Foto',
+      filterable: false,
+      width: 64,
+      render: (row) =>
+        row.foto ? (
+          <img
+            src={urlImagen(row.foto)}
+            alt={row.nombre}
+            loading="lazy"
+            className="size-10 rounded-field border border-line object-cover"
+          />
+        ) : (
+          <span className="grid size-10 place-items-center rounded-field border border-dashed border-line text-ink-soft">
+            <ImageOff size={16} />
+          </span>
+        ),
+    },
     { key: 'codigo', label: 'Código', filterable: false },
     { key: 'nombre', label: 'Nombre', filterable: false },
     {
@@ -843,7 +871,7 @@ export function ProductosPage() {
               <Button variant="secondary" size="sm" onClick={() => setAbierto(false)}>
                 Cancelar
               </Button>
-              <Button size="sm" loading={guardando} onClick={() => void guardar()}>
+              <Button size="sm" loading={guardando} disabled={subiendoFoto} onClick={() => void guardar()}>
                 {editando ? 'Guardar cambios' : 'Crear producto'}
               </Button>
             </>
@@ -1006,6 +1034,16 @@ export function ProductosPage() {
                     etiqueta="Peso"
                   />
                 </div>
+
+                {/* La foto se sube al elegirla; aquí queda solo su ruta. */}
+                <CampoFoto
+                  label="Foto del producto"
+                  carpeta="productos"
+                  valor={form.foto || null}
+                  onChange={(ruta) => setForm({ ...form, foto: ruta ?? '' })}
+                  onSubiendo={setSubiendoFoto}
+                  disabled={guardando}
+                />
 
                 {/* Ancho completo y al final: es texto libre, y lo de arriba
                     son los datos con los que se busca y se calcula. */}

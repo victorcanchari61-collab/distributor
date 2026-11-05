@@ -94,6 +94,7 @@ public class ArchivoController : ControllerBase
         "vehiculos" => "vehiculos",
         "conductores" => "conductores",
         "usuarios" => "usuarios",
+        "productos" => "productos",
         _ => "general",
     };
 }

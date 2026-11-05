@@ -26,6 +26,9 @@ public abstract class ProductoRequestBase
     /// <summary>Cuánto pesa una unidad base, en kilos.</summary>
     public decimal? PesoUnidadBase { get; set; }
 
+    /// <summary>Ruta de la foto ya subida ("/uploads/productos/..."), o vacío si no tiene.</summary>
+    public string? Foto { get; set; }
+
     public bool ControlaStock { get; set; } = true;
     public decimal StockMinimo { get; set; }
 }

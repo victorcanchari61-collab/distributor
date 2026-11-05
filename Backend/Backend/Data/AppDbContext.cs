@@ -821,6 +821,7 @@ public class AppDbContext : DbContext
             entity.Property(p => p.Contenido).HasPrecision(18, 4);
             entity.Property(p => p.StockMinimo).HasPrecision(18, 4);
             entity.Property(p => p.PesoUnidadBase).HasPrecision(18, 4);
+            entity.Property(p => p.Foto).HasMaxLength(250);
 
             // Ocho decimales por lo mismo que el costo: se teclea por presentación y se guarda por
             // unidad base, así que necesita los decimales para que la vuelta cierre.

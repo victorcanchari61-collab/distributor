@@ -116,6 +116,7 @@ public class ProductoRepository : IProductoRepository
                 Marca = p.Marca != null ? p.Marca.Nombre : null,
                 UnidadBase = p.UnidadBase != null ? p.UnidadBase.Codigo : string.Empty,
                 CostoReferencia = p.CostoReferencia,
+                Foto = p.Foto,
                 Activo = p.Activo,
                 Presentaciones = p.Presentaciones
                     .OrderBy(pr => pr.Factor)

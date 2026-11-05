@@ -3839,6 +3839,10 @@ namespace Backend.Data.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Foto")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
                     b.Property<int?>("MarcaId")
                         .HasColumnType("int");
 

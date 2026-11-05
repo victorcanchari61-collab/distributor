@@ -87,6 +87,12 @@ public class Producto
     /// </summary>
     public bool AfectoIgv { get; set; }
 
+    /// <summary>
+    /// Foto del producto. Se guarda la ruta relativa que sirve el backend ("/uploads/productos/..."), no la
+    /// imagen: así los listados no arrastran megabytes. Se sube aparte, por <c>api/archivo/imagen</c>.
+    /// </summary>
+    public string? Foto { get; set; }
+
     /// <summary>Servicios y similares no descuentan stock.</summary>
     public bool ControlaStock { get; set; } = true;
 

@@ -38,6 +38,9 @@ public class ProductoResponse
     /// <summary>Cuánto pesa una unidad base, en kilos.</summary>
     public decimal? PesoUnidadBase { get; set; }
 
+    /// <summary>Ruta de la foto ("/uploads/productos/..."), o null si no tiene.</summary>
+    public string? Foto { get; set; }
+
     public bool ControlaStock { get; set; }
     public decimal StockMinimo { get; set; }
     public bool Activo { get; set; }
@@ -85,6 +88,9 @@ public class ProductoFilaResponse
     public string? Marca { get; set; }
     public string UnidadBase { get; set; } = string.Empty;
     public decimal? CostoReferencia { get; set; }
+
+    /// <summary>Ruta de la foto, para la miniatura de la lista.</summary>
+    public string? Foto { get; set; }
     public bool Activo { get; set; }
 
     /// <summary>Lo que lista el desplegable de la columna: nombre y equivalencia.</summary>

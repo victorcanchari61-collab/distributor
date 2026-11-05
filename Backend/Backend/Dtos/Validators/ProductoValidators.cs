@@ -25,6 +25,10 @@ public class ProductoValidator<T> : AbstractValidator<T> where T : ProductoReque
         RuleFor(x => x.Codigo).NotEmpty().MaximumLength(30);
         RuleFor(x => x.Nombre).NotEmpty().MaximumLength(150);
         RuleFor(x => x.Descripcion).MaximumLength(500);
+        // La ruta que devolvió la subida: no se acepta cualquier dirección escrita a mano.
+        RuleFor(x => x.Foto).MaximumLength(250)
+            .Must(f => string.IsNullOrWhiteSpace(f) || f.StartsWith("/uploads/"))
+            .WithMessage("La foto no es una imagen subida al sistema");
         RuleFor(x => x.UnidadBaseId)
             .GreaterThan(0).WithMessage("Elige la unidad base del producto");
 

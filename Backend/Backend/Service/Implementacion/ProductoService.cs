@@ -111,6 +111,7 @@ public class ProductoService : IProductoService
             ContenidoUnidadId = request.ContenidoUnidadId,
             CostoReferencia = request.CostoReferencia,
             PesoUnidadBase = request.PesoUnidadBase,
+            Foto = string.IsNullOrWhiteSpace(request.Foto) ? null : request.Foto.Trim(),
             PrecioReferencia = request.PrecioReferencia,
             AfectoIgv = request.AfectoIgv,
             ControlaStock = request.ControlaStock,
@@ -217,6 +218,7 @@ public class ProductoService : IProductoService
         producto.ContenidoUnidadId = request.ContenidoUnidadId;
         producto.CostoReferencia = request.CostoReferencia;
         producto.PesoUnidadBase = request.PesoUnidadBase;
+        producto.Foto = string.IsNullOrWhiteSpace(request.Foto) ? null : request.Foto.Trim();
         producto.PrecioReferencia = request.PrecioReferencia;
         producto.AfectoIgv = request.AfectoIgv;
         producto.ControlaStock = request.ControlaStock;
@@ -748,6 +750,7 @@ public class ProductoService : IProductoService
         ContenidoUnidad = p.ContenidoUnidad?.Codigo,
         CostoReferencia = p.CostoReferencia,
         PesoUnidadBase = p.PesoUnidadBase,
+        Foto = p.Foto,
         PrecioReferencia = p.PrecioReferencia,
         AfectoIgv = p.AfectoIgv,
         ControlaStock = p.ControlaStock,
