@@ -189,6 +189,7 @@ public class ClienteService : IClienteService
         try
         {
             var deudas = await _ventas.GetDeudaPorClienteAsync(clientes.Select(c => c.Id));
+            File.AppendAllText(Path.Combine(Path.GetTempPath(), "deuda-selector.log"), $"{DateTime.Now:O} clientes={clientes.Count} deudas={deudas.Count}\n");
             foreach (var c in clientes)
             {
                 if (!deudas.TryGetValue(c.Id, out var d) || d.Saldo <= 0) continue;
@@ -196,9 +197,10 @@ public class ClienteService : IClienteService
                 c.DocumentosPendientes = d.Documentos;
             }
         }
-        catch (Exception)
+        catch (Exception e)
         {
             // Sin el aviso, pero con el selector.
+            File.AppendAllText(Path.Combine(Path.GetTempPath(), "deuda-selector.log"), $"{DateTime.Now:O} {e}\n");
         }
 
         return clientes;
