@@ -4,7 +4,7 @@ using Backend.Dtos.Responses;
 namespace Backend.Service.Interfaces;
 
 /// <summary>
-/// Los lugares dentro de un almacén (pisos, cuartos, estantes) y qué producto está en cada uno.
+/// Los lugares dentro de un almacén (pisos y cuartos) y qué producto está en cada uno.
 ///
 /// Sirve para decir DÓNDE está la mercadería. El stock no se cuenta por lugar: sigue siendo por almacén.
 /// </summary>

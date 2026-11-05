@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Backend.Controllers;
 
 /// <summary>
-/// Los lugares dentro de un almacén (pisos, cuartos, estantes) y qué producto está en cada uno.
+/// Los lugares dentro de un almacén (pisos y cuartos) y qué producto está en cada uno.
 /// Usa los permisos de Almacenes: quien puede crear almacenes arma su estructura.
 /// </summary>
 [ApiController]
@@ -38,7 +38,7 @@ public class UbicacionController : ControllerBase
     public async Task<IActionResult> Crear(int almacenId, [FromBody] CrearUbicacionRequest request) =>
         Ok(await _ubicaciones.CrearAsync(almacenId, request));
 
-    /// <summary>Crea varios lugares seguidos: los estantes E01 a E20 de un cuarto.</summary>
+    /// <summary>Crea varios lugares seguidos: los cuartos C1 a C8 de un piso.</summary>
     [HttpPost("almacen/{almacenId:int}/ubicaciones/lote")]
     [Permiso("inv.almacenes", Accion.Crear)]
     public async Task<IActionResult> Generar(int almacenId, [FromBody] GenerarUbicacionesRequest request) =>

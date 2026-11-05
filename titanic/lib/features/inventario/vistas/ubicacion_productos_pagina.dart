@@ -25,7 +25,7 @@ const _submodulo = 'inv.ubicaciones';
 ///
 /// Sirve para saber DONDE buscar la mercaderia y para ordenar: "Sin lugar" son
 /// los productos que tienen stock y nadie sabe donde estan. El stock sigue
-/// siendo por almacen, no por estante.
+/// siendo por almacen, no por cuarto.
 class UbicacionProductosPagina extends ConsumerWidget {
   const UbicacionProductosPagina({super.key});
 

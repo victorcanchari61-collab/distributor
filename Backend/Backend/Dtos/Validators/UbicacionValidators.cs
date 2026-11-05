@@ -19,7 +19,7 @@ public class CrearUbicacionRequestValidator : AbstractValidator<CrearUbicacionRe
     public CrearUbicacionRequestValidator()
     {
         RuleFor(x => x.Tipo).Must(t => TipoUbicacion.Todos.Contains(t))
-            .WithMessage("Elige qué es: piso, cuarto o estante");
+            .WithMessage("Elige qué es: piso o cuarto");
         RuleFor(x => x.Codigo).NotEmpty().WithMessage("Ponle un código")
             .MaximumLength(20)
             .Matches(ReglasUbicacion.PatronCodigo).WithMessage(ReglasUbicacion.MensajeCodigo);
@@ -32,7 +32,7 @@ public class ActualizarUbicacionRequestValidator : AbstractValidator<ActualizarU
     public ActualizarUbicacionRequestValidator()
     {
         RuleFor(x => x.Tipo).Must(t => TipoUbicacion.Todos.Contains(t))
-            .WithMessage("Elige qué es: piso, cuarto o estante");
+            .WithMessage("Elige qué es: piso o cuarto");
         RuleFor(x => x.Codigo).NotEmpty().WithMessage("Ponle un código")
             .MaximumLength(20)
             .Matches(ReglasUbicacion.PatronCodigo).WithMessage(ReglasUbicacion.MensajeCodigo);
@@ -48,7 +48,7 @@ public class GenerarUbicacionesRequestValidator : AbstractValidator<GenerarUbica
     public GenerarUbicacionesRequestValidator()
     {
         RuleFor(x => x.Tipo).Must(t => TipoUbicacion.Todos.Contains(t))
-            .WithMessage("Elige qué son: pisos, cuartos o estantes");
+            .WithMessage("Elige qué son: pisos o cuartos");
         RuleFor(x => x.Prefijo).MaximumLength(10)
             .Matches(ReglasUbicacion.PatronCodigo).When(x => !string.IsNullOrEmpty(x.Prefijo))
             .WithMessage(ReglasUbicacion.MensajeCodigo);

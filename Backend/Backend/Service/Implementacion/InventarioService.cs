@@ -1226,7 +1226,7 @@ public class InventarioService : IInventarioService
             throw new BadRequestException("Esta compra ya se recibió por completo.");
         }
 
-        // El lugar de cada línea tiene que ser de ESTE almacén y estar activo: guardar mercadería en un estante de
+        // El lugar de cada línea tiene que ser de ESTE almacén y estar activo: guardar mercadería en un cuarto de
         // otro almacén sería decir una cosa falsa. Se revisa antes de mover nada.
         var lugares = await _repository.GetUbicacionesValidasAsync(
             almacen.Id, request.Detalle.Where(l => l.UbicacionId is not null).Select(l => l.UbicacionId!.Value));

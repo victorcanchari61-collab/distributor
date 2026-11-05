@@ -28,7 +28,7 @@ type Mostrar = 'todos' | 'sin' | 'con'
  *
  * La lista de trabajo para ordenar el almacén: «Sin lugar» son los productos que tienen stock y nadie sabe dónde
  * están. Se eligen varios y se ponen o se mueven a un lugar de una vez. El stock sigue siendo por almacén: esto
- * dice dónde buscar, no cuánto hay en cada estante.
+ * dice dónde buscar, no cuánto hay en cada cuarto.
  */
 export function UbicacionProductosPage() {
   const toast = useToast()
@@ -242,14 +242,13 @@ export function UbicacionProductosPage() {
     <ListPage
       icon={<MapPin size={20} />}
       title="Ubicación de productos"
-      description="Dónde está puesto cada producto dentro del almacén: piso, cuarto y estante."
+      description="Dónde está puesto cada producto dentro del almacén: piso y cuarto."
       alert={
         error ? (
           <Alert>{error}</Alert>
         ) : ninguno ? (
           <Alert tone="info">
-            Este almacén todavía no tiene lugares definidos. Créalos en Almacenes → Ubicaciones (pisos, cuartos,
-            estantes) y vuelve aquí para poner los productos.
+            Este almacén todavía no tiene lugares definidos. Créalos en Almacenes → Ubicaciones (pisos y cuartos) y vuelve aquí para poner los productos.
           </Alert>
         ) : undefined
       }
@@ -274,7 +273,7 @@ export function UbicacionProductosPage() {
             icon={<MapPin size={18} />}
             tono="success"
           />
-          <StatCard label="Lugares definidos" value={String(datos?.lugares ?? 0)} hint="pisos, cuartos, estantes..." icon={<Warehouse size={18} />} tono="neutral" />
+          <StatCard label="Lugares definidos" value={String(datos?.lugares ?? 0)} hint="pisos y cuartos" icon={<Warehouse size={18} />} tono="neutral" />
         </>
       }
       actions={
@@ -312,7 +311,7 @@ export function UbicacionProductosPage() {
       cardIcon={MapPin}
       searchPlaceholder="Buscar producto, código o lugar..."
       empty={cargando ? 'Cargando productos...' : 'No hay productos para mostrar.'}
-      note="El stock se cuenta por almacén, no por estante: esto dice dónde buscar el producto."
+      note="El stock se cuenta por almacén, no por cuarto: esto dice dónde buscar el producto."
     >
       <Modal
         open={poniendo}

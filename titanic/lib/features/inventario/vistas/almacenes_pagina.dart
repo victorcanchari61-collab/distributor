@@ -265,7 +265,7 @@ class _TarjetaAlmacen extends StatelessWidget {
           : const AppEtiqueta('Inactivo', tono: EtiquetaTono.aviso),
       campos: _campos,
       acciones: [
-        // Los pisos, cuartos y estantes: dónde está cada cosa dentro del almacén.
+        // Los pisos y cuartos: dónde está cada cosa dentro del almacén.
         AppBoton(
           texto: 'Ver ubicaciones',
           variante: BotonVariante.secundario,

@@ -10,7 +10,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../datos/almacen.dart';
 import '../estado/inventario_controlador.dart';
 
-/// Los lugares de un almacen: pisos, cuartos y estantes, y que
+/// Los lugares de un almacen: pisos y cuartos, y que
 /// producto esta puesto en cada uno.
 ///
 /// Es de consulta: sirve para saber DONDE buscar la mercaderia. La estructura
@@ -64,8 +64,8 @@ class AlmacenUbicacionesPagina extends ConsumerWidget {
                     icono: Icons.layers_outlined,
                     titulo: 'Sin lugares definidos',
                     detalle:
-                        'Este almacén todavía no tiene pisos, cuartos ni '
-                        'estantes. Se arman desde el panel web.',
+                        'Este almacén todavía no tiene pisos ni cuartos. '
+                        'Se arman desde el panel web.',
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.all(Dimen.espacio4),

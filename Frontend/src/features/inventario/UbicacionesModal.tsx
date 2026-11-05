@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  Archive,
   Building2,
   DoorOpen,
   ListPlus,
@@ -23,14 +22,12 @@ import type { AlmacenResponse, TipoUbicacion, UbicacionProductoResponse, Ubicaci
 const ICONOS: Record<TipoUbicacion, LucideIcon> = {
   PISO: Building2,
   CUARTO: DoorOpen,
-  ESTANTE: Archive,
 }
 
-/** El tipo que se propone al crear algo adentro de otro: un piso lleva cuartos, un cuarto lleva estantes. */
+/** El tipo que se propone al crear algo adentro de otro: un piso lleva cuartos; un cuarto no lleva nada adentro. */
 const SIGUIENTE: Record<TipoUbicacion, TipoUbicacion> = {
   PISO: 'CUARTO',
-  CUARTO: 'ESTANTE',
-  ESTANTE: 'ESTANTE',
+  CUARTO: 'CUARTO',
 }
 
 interface FormLugar {
@@ -58,7 +55,7 @@ interface FormLote {
 const MAX_LOTE = 100
 
 /**
- * Los lugares de un almacén: pisos, cuartos y estantes.
+ * Los lugares de un almacén: pisos y cuartos.
  *
  * Es un árbol: cada lugar lleva su código y la ruta (P1-A-03) es como se nombra. Hoy sirve para decir DÓNDE
  * está cada producto; el stock se sigue contando por almacén.
@@ -295,7 +292,7 @@ export function UbicacionesModal({
       open
       size="2xl"
       title={`Ubicaciones de ${almacen.nombre}`}
-      description="Pisos, cuartos y estantes. Sirve para saber dónde está cada producto."
+      description="Pisos y cuartos. Sirve para saber dónde está cada producto."
       onClose={onClose}
       footer={
         <Button variant="secondary" size="sm" onClick={onClose}>
@@ -326,7 +323,7 @@ export function UbicacionesModal({
               <div className="p-8 text-center">
                 <p className="font-medium text-ink">Este almacén todavía no tiene lugares definidos</p>
                 <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
-                  Empieza por los pisos (P1, P2), y adentro de cada uno sus cuartos (y los estantes, si los hay).
+                  Empieza por los pisos (P1, P2), y adentro de cada uno sus cuartos (C1, C2...).
                 </p>
               </div>
             ) : (
@@ -354,12 +351,12 @@ export function UbicacionesModal({
                         </button>
 
                         <span className="flex shrink-0 items-center">
-                          {puedeCrear && l.activo && (
+                          {puedeCrear && l.activo && l.tipo === 'PISO' && (
                             <RowAction label={`Agregar adentro de ${l.ruta}`} tone="success" onClick={() => nuevo(l)}>
                               <Plus size={14} />
                             </RowAction>
                           )}
-                          {puedeCrear && l.activo && (
+                          {puedeCrear && l.activo && l.tipo === 'PISO' && (
                             <RowAction label={`Crear varios adentro de ${l.ruta}`} tone="view" onClick={() => abrirLote(l)}>
                               <ListPlus size={14} />
                             </RowAction>
@@ -460,11 +457,12 @@ export function UbicacionesModal({
               label="Qué es"
               value={form.tipo}
               onChange={(v) => setForm({ ...form, tipo: v as TipoUbicacion })}
-              options={TIPOS_UBICACION.map((t) => ({ value: t.value, label: t.label }))}
+              // Adentro de un piso solo van cuartos; un piso va directo en el almacén.
+              options={TIPOS_UBICACION.filter((t) => form.padreId === null || t.value === 'CUARTO').map((t) => ({ value: t.value, label: t.label }))}
             />
             <Input
               label="Código"
-              placeholder="P1, C1, E03"
+              placeholder="P1, C1"
               value={form.codigo}
               maxLength={20}
               onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase().replace(/[^A-Z0-9._]/g, '') })}
@@ -511,7 +509,7 @@ export function UbicacionesModal({
               label="Qué son"
               value={lote.tipo}
               onChange={(v) => setLote({ ...lote, tipo: v as TipoUbicacion })}
-              options={TIPOS_UBICACION.map((t) => ({ value: t.value, label: t.label }))}
+              options={TIPOS_UBICACION.filter((t) => lote.padreId === null || t.value === 'CUARTO').map((t) => ({ value: t.value, label: t.label }))}
             />
             <Input
               label="Prefijo del código"

@@ -73,7 +73,7 @@ public class LineaRecepcionRequest
     public DateTime? FechaVencimiento { get; set; }
 
     /// <summary>
-    /// Dónde se guardó dentro del almacén (un estante, una posición). Opcional: sin lugar, el producto entra al
+    /// Dónde se guardó dentro del almacén (un piso o un cuarto). Opcional: sin lugar, el producto entra al
     /// almacén igual. Con lugar, queda puesto ahí además de donde ya estuviera.
     /// </summary>
     public int? UbicacionId { get; set; }

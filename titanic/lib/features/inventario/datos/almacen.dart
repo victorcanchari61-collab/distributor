@@ -66,7 +66,7 @@ class Almacen {
 
   final bool activo;
 
-  /// Cuantos lugares (pisos, cuartos, estantes...) tiene definidos dentro.
+  /// Cuantos lugares (pisos y cuartos) tiene definidos dentro.
   final int ubicaciones;
 
   /// Cuantos productos tienen stock ahi.
@@ -112,7 +112,7 @@ class Almacen {
   );
 }
 
-/// Un lugar dentro de un almacen: un piso, un cuarto, un estante.
+/// Un lugar dentro de un almacen: un piso o un cuarto.
 class Ubicacion {
   const Ubicacion({
     required this.id,

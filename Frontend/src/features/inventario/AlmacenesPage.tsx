@@ -333,7 +333,7 @@ export function AlmacenesPage() {
           <StatCard
             label="Lugares definidos"
             value={String(almacenes.reduce((n, a) => n + a.ubicaciones, 0))}
-            hint="pisos, cuartos, estantes..."
+            hint="pisos y cuartos"
             icon={<MapPin size={18} />}
             tono="neutral"
           />
@@ -489,7 +489,7 @@ export function AlmacenesPage() {
 
           {!editando && (
             <p className="rounded-field bg-surface-alt px-3 py-2 text-sm text-ink-muted sm:col-span-2">
-              Los pisos, cuartos y estantes se arman después, con el botón «Ubicaciones» de la lista.
+              Los pisos y cuartos se arman después, con el botón «Ubicaciones» de la lista.
             </p>
           )}
         </div>

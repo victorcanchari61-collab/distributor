@@ -34,7 +34,7 @@ export interface AlmacenResponse {
   telefono: string | null
   esPrincipal: boolean
   activo: boolean
-  /** Cuántos lugares (pisos, cuartos, estantes...) tiene definidos. */
+  /** Cuántos lugares (pisos y cuartos) tiene definidos. */
   ubicaciones: number
   productos: number
   valorizado: number
@@ -84,14 +84,13 @@ export const almacenApi = {
   remove: (id: number) => api.del<void>(`/almacen/${id}`),
 }
 
-// --- Ubicaciones (pisos, cuartos y estantes dentro de un almacén) ---
+// --- Ubicaciones (pisos y cuartos dentro de un almacén) ---
 
-export type TipoUbicacion = 'PISO' | 'CUARTO' | 'ESTANTE'
+export type TipoUbicacion = 'PISO' | 'CUARTO'
 
 export const TIPOS_UBICACION: { value: TipoUbicacion; label: string }[] = [
   { value: 'PISO', label: 'Piso' },
   { value: 'CUARTO', label: 'Cuarto' },
-  { value: 'ESTANTE', label: 'Estante' },
 ]
 
 export interface UbicacionResponse {
@@ -157,7 +156,7 @@ export const ubicacionApi = {
 
 export interface LugarDeProducto {
   ubicacionId: number
-  /** "P1-A-E03". */
+  /** "P1-C2". */
   ruta: string
   nombre: string | null
 }

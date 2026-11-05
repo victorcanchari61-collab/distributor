@@ -90,7 +90,7 @@ public class LineaTransferenciaRequest
     public decimal Cantidad { get; set; }
 
     /// <summary>
-    /// Dónde se guarda en el almacén de destino (un estante, una posición). Opcional. Con lugar, el producto queda
+    /// Dónde se guarda en el almacén de destino (un piso o un cuarto). Opcional. Con lugar, el producto queda
     /// puesto ahí además de donde ya estuviera.
     /// </summary>
     public int? UbicacionDestinoId { get; set; }

@@ -24,7 +24,7 @@ public class AlmacenResponse
     public bool EsPrincipal { get; set; }
     public bool Activo { get; set; }
 
-    /// <summary>Cuántos lugares (pisos, cuartos, estantes...) tiene definidos dentro.</summary>
+    /// <summary>Cuántos lugares (pisos y cuartos) tiene definidos dentro.</summary>
     public int Ubicaciones { get; set; }
 
     /// <summary>Cuántos productos tienen stock ahí.</summary>

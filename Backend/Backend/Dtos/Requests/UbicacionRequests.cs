@@ -1,15 +1,15 @@
 namespace Backend.Dtos.Requests;
 
-/// <summary>Un lugar nuevo dentro de un almacén: un piso, un cuarto, un estante...</summary>
+/// <summary>Un lugar nuevo dentro de un almacén: un piso o un cuarto</summary>
 public class CrearUbicacionRequest
 {
-    /// <summary>El punto que lo va a contener. Sin valor, queda en la raíz del almacén (un piso, por ejemplo).</summary>
+    /// <summary>El piso que lo va a contener (solo para un cuarto). Sin valor, queda directo en el almacén.</summary>
     public int? PadreId { get; set; }
 
-    /// <summary>PISO, CUARTO o ESTANTE.</summary>
+    /// <summary>PISO o CUARTO.</summary>
     public string Tipo { get; set; } = string.Empty;
 
-    /// <summary>El código corto de este punto: "P1", "A", "03". No se repite entre hermanos.</summary>
+    /// <summary>El código corto de este punto: "P1", "C1". No se repite entre hermanos.</summary>
     public string Codigo { get; set; } = string.Empty;
 
     public string? Nombre { get; set; }
@@ -25,7 +25,7 @@ public class ActualizarUbicacionRequest
 }
 
 /// <summary>
-/// Crear varios lugares seguidos de una vez: los estantes E01 a E20 de un cuarto, los cuartos C1 a C8 de un piso.
+/// Crear varios lugares seguidos de una vez: los cuartos C1 a C8 de un piso, los pisos P1 a P3.
 /// El código de cada uno es el prefijo y el número con ceros a la izquierda.
 /// </summary>
 public class GenerarUbicacionesRequest

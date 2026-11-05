@@ -1,32 +1,29 @@
 namespace Backend.Models;
 
 /// <summary>
-/// Qué es un punto dentro del almacén. Son tres, de grande a chico: el PISO, el CUARTO que hay en cada piso y,
-/// si hace falta, el ESTANTE dentro del cuarto. Es una etiqueta: no obliga ningún orden entre ellos (una casa de
-/// un solo piso o un cuarto sin estantes también sirve).
+/// Qué es un punto dentro del almacén. Son dos, de grande a chico: el PISO y el CUARTO que hay en cada piso.
+/// Un piso va directo en el almacén; un cuarto va adentro de un piso (o directo en el almacén, si no hay pisos).
 /// </summary>
 public static class TipoUbicacion
 {
     public const string Piso = "PISO";
     public const string Cuarto = "CUARTO";
-    public const string Estante = "ESTANTE";
 
-    public static readonly string[] Todos = [Piso, Cuarto, Estante];
+    public static readonly string[] Todos = [Piso, Cuarto];
 
     public static string Etiqueta(string tipo) => tipo switch
     {
         Piso => "Piso",
         Cuarto => "Cuarto",
-        Estante => "Estante",
         _ => tipo,
     };
 }
 
 /// <summary>
-/// Un lugar dentro de un almacén: un piso, un cuarto, un estante.
+/// Un lugar dentro de un almacén: un piso o un cuarto.
 ///
-/// Forman un árbol: el piso 1 tiene el cuarto C1, que tiene el estante E03. Cada punto lleva su código
-/// y la "ruta" (los códigos de arriba hacia abajo, unidos con guion: P1-C1-E03) es como se nombra y se
+/// Forman un árbol: el piso 1 tiene los cuartos C1 y C2. Cada punto lleva su código
+/// y la "ruta" (los códigos de arriba hacia abajo, unidos con guion: P1-C1) es como se nombra y se
 /// busca el lugar. Hoy sirve para decir DÓNDE está un producto; el stock sigue contándose por almacén.
 /// </summary>
 public class UbicacionAlmacen
@@ -42,7 +39,7 @@ public class UbicacionAlmacen
 
     public string Tipo { get; set; } = TipoUbicacion.Cuarto;
 
-    /// <summary>El código corto de este punto ("P1", "C1", "E03"). No se repite entre hermanos.</summary>
+    /// <summary>El código corto de este punto ("P1", "C1"). No se repite entre hermanos.</summary>
     public string Codigo { get; set; } = string.Empty;
 
     /// <summary>Un nombre para leerlo ("Primer piso", "Cuarto de abarrotes").</summary>

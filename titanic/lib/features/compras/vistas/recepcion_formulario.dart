@@ -32,10 +32,6 @@ class _FilaRecepcion {
   final TextEditingController loteCtrl;
   DateTime? vencimiento;
 
-  /// Donde se guarda dentro del almacen. Solo vale si [tocada]: sin tocarlo, se
-  /// usa el lugar habitual del producto.
-  int? ubicacionId;
-  bool tocada = false;
 
   /*
    * Se compro por saco: se recibe por saco.
@@ -130,10 +126,19 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
     return lugares.any((l) => l.id == habitual) ? habitual : null;
   }
 
-  /// Lo que se manda: lo que eligio quien recibe, o el lugar habitual.
-  int? _lugarDe(_FilaRecepcion f, List<Ubicacion> lugares) => f.tocada
-      ? f.ubicacionId
-      : _lugarHabitual(f.detalle.productoId, lugares);
+  /// Un solo lugar para toda la recepcion: [_habitual] manda cada producto a su
+  /// lugar de siempre, 0 es sin lugar, y un id guarda todo ahi.
+  static const _habitual = -1;
+  int _lugarElegido = _habitual;
+
+  /// Donde se guarda esta linea segun el selector. Null: sin lugar.
+  int? _lugarDe(_FilaRecepcion f, List<Ubicacion> lugares) {
+    if (_lugarElegido == _habitual) {
+      return _lugarHabitual(f.detalle.productoId, lugares);
+    }
+    if (_lugarElegido == 0) return null;
+    return lugares.any((l) => l.id == _lugarElegido) ? _lugarElegido : null;
+  }
 
   List<_FilaRecepcion> _construirFilas(Compra? compra) {
     if (compra == null) return [];
@@ -349,13 +354,31 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
               onCambio: (v) => setState(() {
                 _almacenId = v;
                 // Los lugares son de cada almacen: lo elegido antes ya no sirve.
-                for (final f in _filas) {
-                  f.tocada = false;
-                  f.ubicacionId = null;
-                }
+                _lugarElegido = _habitual;
               }),
             ),
             const SizedBox(height: Dimen.espacio4),
+
+            // Donde se guarda lo que llega: un solo lugar para toda la
+            // recepcion. Solo aparece si el almacen tiene lugares definidos.
+            if (lugaresDelAlmacen.isNotEmpty) ...[
+              AppSelector<int>(
+                valor: _lugarElegido,
+                etiqueta: 'Guardar en',
+                icono: Icons.place_outlined,
+                opciones: [
+                  const Opcion<int>(_habitual, 'Su lugar habitual'),
+                  const Opcion<int>(0, 'Sin lugar'),
+                  for (final l in lugaresDelAlmacen)
+                    Opcion<int>(
+                      l.id,
+                      l.nombre == null ? l.ruta : '${l.ruta} · ${l.nombre}',
+                    ),
+                ],
+                onCambio: (v) => setState(() => _lugarElegido = v ?? _habitual),
+              ),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             AppCampo(
               controlador: _observacion,
@@ -391,12 +414,6 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
                 _TarjetaFilaRecepcion(
                   fila: fila,
                   onVencimiento: () => _elegirVencimiento(fila),
-                  lugares: lugaresDelAlmacen,
-                  lugar: _lugarDe(fila, lugaresDelAlmacen),
-                  onLugar: (v) => setState(() {
-                    fila.tocada = true;
-                    fila.ubicacionId = v;
-                  }),
                 ),
                 const SizedBox(height: Dimen.espacio3),
               ],
@@ -420,18 +437,10 @@ class _TarjetaFilaRecepcion extends StatelessWidget {
   const _TarjetaFilaRecepcion({
     required this.fila,
     required this.onVencimiento,
-    required this.lugares,
-    required this.lugar,
-    required this.onLugar,
   });
 
   final _FilaRecepcion fila;
   final VoidCallback onVencimiento;
-
-  /// Los lugares del almacen elegido. Vacio: el campo no se muestra.
-  final List<Ubicacion> lugares;
-  final int? lugar;
-  final ValueChanged<int?> onLugar;
 
   @override
   Widget build(BuildContext context) {
@@ -482,24 +491,6 @@ class _TarjetaFilaRecepcion extends StatelessWidget {
               ),
             ],
           ),
-          // Donde se guarda: el lugar habitual del producto viene puesto.
-          if (lugares.isNotEmpty) ...[
-            const SizedBox(height: Dimen.espacio3),
-            AppSelector<int?>(
-              valor: lugar,
-              etiqueta: 'Guardar en',
-              icono: Icons.place_outlined,
-              opciones: [
-                const Opcion<int?>(null, 'Sin lugar'),
-                for (final l in lugares)
-                  Opcion<int?>(
-                    l.id,
-                    l.nombre == null ? l.ruta : '${l.ruta} · ${l.nombre}',
-                  ),
-              ],
-              onCambio: onLugar,
-            ),
-          ],
           const SizedBox(height: Dimen.espacio2),
           InkWell(
             onTap: onVencimiento,

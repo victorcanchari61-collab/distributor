@@ -81,7 +81,7 @@ final productosUbicadosProvider =
           ref.watch(inventarioApiProvider).productosUbicados(almacenId),
     );
 
-/// Los lugares de un almacen (pisos, cuartos, estantes), ya en orden de arbol.
+/// Los lugares de un almacen (pisos y cuartos), ya en orden de arbol.
 final ubicacionesProvider = FutureProvider.autoDispose
     .family<List<Ubicacion>, int>(
       (ref, almacenId) =>

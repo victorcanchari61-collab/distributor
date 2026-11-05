@@ -48,7 +48,7 @@ class InventarioApi {
     await _api.put('/almacen/$id', cuerpo: cuerpo) as Map<String, dynamic>,
   );
 
-  // --- Ubicaciones (pisos, cuartos y estantes dentro de un almacen) ---
+  // --- Ubicaciones (pisos y cuartos dentro de un almacen) ---
 
   /// GET /api/almacen/{id}/ubicaciones - los lugares del almacen, ya en orden de arbol.
   Future<List<Ubicacion>> ubicaciones(int almacenId) async {

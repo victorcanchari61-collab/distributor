@@ -10,16 +10,13 @@ using Microsoft.EntityFrameworkCore;
 namespace Backend.Service.Implementacion;
 
 /// <summary>
-/// Pisos, cuartos y estantes de un almacén, y dónde está cada producto.
+/// Pisos y cuartos de un almacén, y dónde está cada producto.
 ///
-/// Es un árbol de profundidad libre (hasta <see cref="MaximoNivel"/> escalones) donde cada punto lleva su
-/// código; la "ruta" —los códigos de arriba hacia abajo unidos con guion— es como se nombra el lugar.
+/// Son dos niveles: el piso y, adentro, el cuarto. Cada punto lleva su código; la "ruta" —los códigos de arriba
+/// hacia abajo unidos con guion, por ejemplo P1-C2— es como se nombra el lugar.
 /// </summary>
 public class UbicacionService : IUbicacionService
 {
-    /// <summary>Piso, cuarto y estante, y margen de sobra: más profundo que esto ya no se encuentra.</summary>
-    private const int MaximoNivel = 6;
-
     private readonly AppDbContext _context;
     private readonly IValidator<CrearUbicacionRequest> _crear;
     private readonly IValidator<ActualizarUbicacionRequest> _actualizar;
@@ -112,7 +109,7 @@ public class UbicacionService : IUbicacionService
     {
         await _crear.ValidateAndThrowAsync(request);
         await ExigirAlmacenAsync(almacenId);
-        await ExigirPadreAsync(almacenId, request.PadreId);
+        await ExigirPadreAsync(almacenId, request.PadreId, request.Tipo);
 
         var codigo = Normalizar(request.Codigo);
         if (await _context.UbicacionesAlmacen.AnyAsync(
@@ -139,7 +136,7 @@ public class UbicacionService : IUbicacionService
     {
         await _generar.ValidateAndThrowAsync(request);
         await ExigirAlmacenAsync(almacenId);
-        await ExigirPadreAsync(almacenId, request.PadreId);
+        await ExigirPadreAsync(almacenId, request.PadreId, request.Tipo);
 
         var prefijo = Normalizar(request.Prefijo ?? string.Empty);
         var codigos = Enumerable.Range(request.Desde, request.Hasta - request.Desde + 1)
@@ -407,10 +404,20 @@ public class UbicacionService : IUbicacionService
             throw new NotFoundException("Almacén no encontrado");
     }
 
-    /// <summary>El padre existe, es de este almacén, está activo y todavía deja bajar un escalón más.</summary>
-    private async Task ExigirPadreAsync(int almacenId, int? padreId)
+    /// <summary>
+    /// Dónde puede ir cada tipo: un PISO va directo en el almacén; un CUARTO va adentro de un piso (o directo en el
+    /// almacén, si no se usan pisos). Nada va adentro de un cuarto. Así la estructura nunca pasa de dos niveles.
+    /// </summary>
+    private async Task ExigirPadreAsync(int almacenId, int? padreId, string tipo)
     {
-        if (padreId is not int id) return;
+        if (padreId is not int id)
+        {
+            // Sin lugar de arriba: queda directo en el almacén. Sirve a un piso y a un cuarto.
+            return;
+        }
+
+        if (tipo == TipoUbicacion.Piso)
+            throw new BadRequestException("Un piso va directo en el almacén, no adentro de otro lugar.");
 
         var padre = await _context.UbicacionesAlmacen.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id)
             ?? throw new BadRequestException("Ese lugar de arriba no existe");
@@ -418,20 +425,8 @@ public class UbicacionService : IUbicacionService
             throw new BadRequestException("Ese lugar es de otro almacén");
         if (!padre.Activo)
             throw new BadRequestException("Ese lugar de arriba está desactivado");
-
-        // Se cuenta cuántos escalones tiene el padre para no pasar del máximo.
-        var nivel = 1;
-        var actual = padre;
-        while (actual.PadreId is int arriba)
-        {
-            actual = await _context.UbicacionesAlmacen.AsNoTracking().FirstAsync(u => u.Id == arriba);
-            nivel++;
-            if (nivel >= MaximoNivel)
-                throw new BadRequestException($"Los lugares llegan hasta {MaximoNivel} niveles de profundidad");
-        }
-
-        if (nivel >= MaximoNivel)
-            throw new BadRequestException($"Los lugares llegan hasta {MaximoNivel} niveles de profundidad");
+        if (padre.Tipo != TipoUbicacion.Piso)
+            throw new BadRequestException("Un cuarto va adentro de un piso, no adentro de otro cuarto.");
     }
 
     private async Task<UbicacionResponse> UnaAsync(int almacenId, int id) =>
