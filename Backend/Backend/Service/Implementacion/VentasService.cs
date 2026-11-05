@@ -404,6 +404,7 @@ public class VentasService : IVentasService
               ?? throw new BadRequestException("Elige el almacén del que sale la mercadería.");
 
         var (lineasVenta, cambios) = await ResolverEntregaAsync(pedido, request);
+        await ExigirPreciosSobreCostoAsync(lineasVenta);
         var motivos = await _novedades.ExigirMotivosAsync(cambios.Select(c => c.MotivoId));
 
         /*
@@ -1451,6 +1452,7 @@ public class VentasService : IVentasService
         List<LineaVentaRequest> detalle, int pedidoId = 0)
     {
         var lineas = new List<PedidoDetalle>();
+        var bajoCosto = new List<string>();
 
         foreach (var linea in detalle)
         {
@@ -1490,6 +1492,12 @@ public class VentasService : IVentasService
 
             var cantidad = linea.Cantidad * factor;
 
+            // Una línea quitada del pedido no cuenta: lo que se vende es lo que queda.
+            if (!linea.Anulado && BajoCosto(producto, presentacion, linea.PrecioUnitario, factor) is string bajo)
+            {
+                bajoCosto.Add(bajo);
+            }
+
             lineas.Add(new PedidoDetalle
             {
                 Id = linea.Id ?? 0,
@@ -1513,7 +1521,63 @@ public class VentasService : IVentasService
             });
         }
 
+        ExigirSobreCosto(bajoCosto);
         return lineas;
+    }
+
+    /*
+     * No se vende por debajo del costo.
+     *
+     * Vale para todo lo que fija un precio al cliente: pedido, nota de venta —y de ella salen la boleta y la
+     * factura, que se emiten sobre una venta ya hecha— y la venta que nace al confirmar un pedido. El costo es el
+     * "costo de referencia" del producto (por unidad base, escalado a la presentación que se vende); un producto
+     * sin costo cargado no se valida, porque no hay contra qué comparar. Si el costo está mal, se corrige en
+     * Productos y no se fuerza el precio.
+     */
+
+    /// <summary>Describe la línea si su precio queda por debajo del costo; null si está bien o no hay costo.</summary>
+    private static string? BajoCosto(
+        Producto producto, ProductoPresentacion? presentacion, decimal precioPresentacion, decimal factor)
+    {
+        if (producto.CostoReferencia is not decimal costo || costo <= 0 || factor <= 0) return null;
+
+        // Tolerancia de un décimo de centavo por unidad base: el precio por unidad sale de dividir.
+        if (precioPresentacion / factor >= costo - 0.0001m) return null;
+
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var medida = presentacion?.Nombre ?? producto.UnidadBase?.Codigo ?? "unidad";
+        return $"{producto.Nombre} ({medida}): precio S/ {precioPresentacion.ToString("0.00", inv)}, "
+               + $"costo S/ {Math.Round(costo * factor, 2).ToString("0.00", inv)}";
+    }
+
+    private static void ExigirSobreCosto(List<string> bajoCosto)
+    {
+        if (bajoCosto.Count == 0) return;
+
+        throw new BadRequestException(
+            "No se puede vender por debajo del costo — " + string.Join("; ", bajoCosto)
+            + ". Sube el precio, o corrige el costo en Productos si está mal.");
+    }
+
+    /// <summary>La misma regla para líneas ya armadas (las de un pedido que se confirma como venta).</summary>
+    private async Task ExigirPreciosSobreCostoAsync(IEnumerable<PedidoDetalle> lineas)
+    {
+        var bajoCosto = new List<string>();
+
+        foreach (var l in lineas.Where(l => !l.Anulado))
+        {
+            var producto = await _productos.GetConDetalleAsync(l.ProductoId);
+            if (producto is null) continue;
+
+            var presentacion = l.PresentacionId is int pid
+                ? producto.Presentaciones.FirstOrDefault(p => p.Id == pid)
+                : null;
+            var factor = l.CantidadPresentacion > 0 ? l.Cantidad / l.CantidadPresentacion : 1m;
+
+            if (BajoCosto(producto, presentacion, l.PrecioPresentacion, factor) is string bajo) bajoCosto.Add(bajo);
+        }
+
+        ExigirSobreCosto(bajoCosto);
     }
 
     /// <summary>
