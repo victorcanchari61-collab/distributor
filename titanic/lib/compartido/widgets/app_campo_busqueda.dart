@@ -41,6 +41,7 @@ class AppCampoBusqueda<T> extends StatefulWidget {
     required this.buscable,
     required this.onElegir,
     this.subtitulo,
+    this.aviso,
     this.filtros = const [],
     this.textoElegido,
     this.error,
@@ -58,6 +59,9 @@ class AppCampoBusqueda<T> extends StatefulWidget {
   final List<T> items;
   final String Function(T) titulo;
   final String? Function(T)? subtitulo;
+
+  /// Una advertencia sobre el registro, en ámbar bajo el subtítulo: "Saldo pendiente: S/ 47.20 en 1 documento".
+  final String? Function(T)? aviso;
 
   /// Todo lo que hace encontrable a un registro, ya en minúsculas.
   final String Function(T) buscable;
@@ -263,6 +267,7 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
             restantes: coincidencias.length - widget.maximoSugerencias,
             titulo: widget.titulo,
             subtitulo: widget.subtitulo,
+            aviso: widget.aviso,
             onElegir: _elegir,
             onVerTodos: () => _abrirHoja(context),
           ),
@@ -298,6 +303,7 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
           fuente: _fuente,
           titulos: widget.titulo,
           subtitulos: widget.subtitulo,
+          avisos: widget.aviso,
           buscable: widget.buscable,
           filtros: widget.filtros,
           // Se abre con lo que ya se había escrito y filtrado: pasar a la lista
@@ -319,6 +325,7 @@ class _Sugerencias<T> extends StatelessWidget {
     required this.restantes,
     required this.titulo,
     required this.subtitulo,
+    required this.aviso,
     required this.onElegir,
     required this.onVerTodos,
   });
@@ -327,6 +334,7 @@ class _Sugerencias<T> extends StatelessWidget {
   final int restantes;
   final String Function(T) titulo;
   final String? Function(T)? subtitulo;
+  final String? Function(T)? aviso;
   final void Function(T) onElegir;
   final VoidCallback onVerTodos;
 
@@ -354,6 +362,7 @@ class _Sugerencias<T> extends StatelessWidget {
                     item: item,
                     titulo: titulo,
                     subtitulo: subtitulo,
+                    aviso: aviso,
                     onElegir: onElegir,
                   ),
                 if (restantes > 0)
@@ -382,17 +391,20 @@ class _Fila<T> extends StatelessWidget {
     required this.item,
     required this.titulo,
     required this.subtitulo,
+    required this.aviso,
     required this.onElegir,
   });
 
   final T item;
   final String Function(T) titulo;
   final String? Function(T)? subtitulo;
+  final String? Function(T)? aviso;
   final void Function(T) onElegir;
 
   @override
   Widget build(BuildContext context) {
     final sub = subtitulo?.call(item);
+    final alerta = aviso?.call(item);
 
     return InkWell(
       onTap: () => onElegir(item),
@@ -423,6 +435,18 @@ class _Fila<T> extends StatelessWidget {
                   ),
                 ),
               ),
+            if (alerta != null && alerta.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  alerta,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colores.advertencia,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -438,6 +462,7 @@ class _HojaBusqueda<T> extends StatefulWidget {
     required this.fuente,
     required this.titulos,
     required this.subtitulos,
+    required this.avisos,
     required this.buscable,
     required this.filtros,
     required this.textoInicial,
@@ -452,6 +477,7 @@ class _HojaBusqueda<T> extends StatefulWidget {
 
   final String Function(T) titulos;
   final String? Function(T)? subtitulos;
+  final String? Function(T)? avisos;
   final String Function(T) buscable;
   final List<FiltroBusqueda<T>> filtros;
   final String textoInicial;
@@ -673,6 +699,7 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
                         item: visibles[i],
                         titulo: widget.titulos,
                         subtitulo: widget.subtitulos,
+                        aviso: widget.avisos,
                         onElegir: (item) => Navigator.of(context).pop(item),
                       ),
                     ),

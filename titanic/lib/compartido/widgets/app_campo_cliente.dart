@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/maestros/datos/cliente.dart';
+import 'app_alerta.dart';
 import 'app_campo_busqueda.dart';
 
 /// El campo para elegir cliente en pedidos y notas de venta.
@@ -16,12 +17,13 @@ Widget campoCliente({
   String? error,
   bool habilitado = true,
   bool cargando = false,
+  String? deuda,
 }) {
   // Los desactivados no se ofrecen: no se le vende a un cliente dado de baja,
   // y verlo en la lista solo lleva a elegirlo y toparse con el error al grabar.
   final activos = clientes.where((c) => c.activo).toList();
 
-  return AppCampoBusqueda<Cliente>(
+  final campo = AppCampoBusqueda<Cliente>(
     etiqueta: 'Cliente',
     icono: Icons.contacts_outlined,
     pista: 'Escribe el nombre o el documento',
@@ -40,6 +42,8 @@ Widget campoCliente({
       if (c.ruta != null && c.ruta!.isNotEmpty) partes.add(c.ruta!);
       return partes.join(' · ');
     },
+    // Si debe, se ve ya en la lista: quien vende lo sabe antes de elegirlo.
+    aviso: (c) => c.textoDeuda,
     buscable: (c) => c.buscable,
     filtros: [
       FiltroBusqueda<Cliente>('Mercado', (c) => c.mercado),
@@ -47,5 +51,17 @@ Widget campoCliente({
       FiltroBusqueda<Cliente>('Día', (c) => c.diaVisita),
     ],
     onElegir: onElegir,
+  );
+
+  // Al elegir un cliente que debe, el aviso se queda bajo el campo mientras siga elegido.
+  if (deuda == null) return campo;
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      campo,
+      const SizedBox(height: 8),
+      AppAlerta('Este cliente tiene deuda. $deuda.', tono: AlertaTono.aviso),
+    ],
   );
 }

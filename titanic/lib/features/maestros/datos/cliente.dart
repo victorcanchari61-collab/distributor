@@ -25,6 +25,8 @@ class Cliente {
     this.categoriaCodigo,
     this.categoriaNombre,
     this.categoriaColor,
+    this.deudaPendiente = 0,
+    this.documentosPendientes = 0,
   });
 
   final int id;
@@ -75,6 +77,20 @@ class Cliente {
   final String? categoriaNombre;
   final String? categoriaColor;
 
+  /// Lo que debe hoy (ventas a crédito sin pagar del todo). Cero si no debe nada.
+  /// Solo lo trae el selector de pedidos y notas de venta.
+  final double deudaPendiente;
+
+  /// En cuántos documentos se reparte esa deuda.
+  final int documentosPendientes;
+
+  /// "Saldo pendiente: S/ 47.20 en 1 documento"; nulo si no debe nada.
+  String? get textoDeuda => deudaPendiente > 0
+      ? 'Saldo pendiente: S/ ${deudaPendiente.toStringAsFixed(2)} en '
+            '$documentosPendientes '
+            '${documentosPendientes == 1 ? 'documento' : 'documentos'}'
+      : null;
+
   final bool activo;
 
   /// Texto contra el que se busca en la lista.
@@ -106,6 +122,8 @@ class Cliente {
     categoriaCodigo: json['categoriaCodigo'] as String?,
     categoriaNombre: json['categoriaNombre'] as String?,
     categoriaColor: json['categoriaColor'] as String?,
+    deudaPendiente: (json['deudaPendiente'] as num?)?.toDouble() ?? 0,
+    documentosPendientes: json['documentosPendientes'] as int? ?? 0,
     activo: json['activo'] as bool? ?? true,
   );
 

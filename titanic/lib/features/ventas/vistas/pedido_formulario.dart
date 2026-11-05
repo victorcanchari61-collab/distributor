@@ -42,6 +42,9 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
 
   late int? _clienteId = widget.pedido?.clienteId;
   late String? _clienteNombre = widget.pedido?.cliente;
+
+  /// Lo que debe el cliente elegido, para avisarlo bajo el campo. Nulo si no debe o si no se eligió ahora.
+  String? _clienteDeuda;
   late final int? _listaPrecioId = widget.pedido?.listaPrecioId;
   late String _condicionPago =
       widget.pedido?.condicionPago ?? CondicionPago.contado;
@@ -306,11 +309,13 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
                   .watch(clientesParaVenderProvider('pedidos'))
                   .isLoading,
               elegido: _clienteNombre,
+              deuda: _clienteDeuda,
               error: _errorCliente,
               habilitado: !_guardando,
               onElegir: (c) => setState(() {
                 _clienteId = c.id;
                 _clienteNombre = c.nombre;
+                _clienteDeuda = c.textoDeuda;
                 _errorCliente = null;
               }),
             ),

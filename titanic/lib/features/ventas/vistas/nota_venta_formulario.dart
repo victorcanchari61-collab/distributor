@@ -71,6 +71,9 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
 
   int? _clienteId;
   String? _clienteNombre;
+
+  /// Lo que debe el cliente elegido, para avisarlo bajo el campo. Nulo si no debe.
+  String? _clienteDeuda;
   int? _almacenId;
   int? _listaPrecioId;
   String _formaPago = FormaPagoVenta.contado;
@@ -591,11 +594,13 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                   .watch(clientesParaVenderProvider('notaventa'))
                   .isLoading,
               elegido: _clienteNombre,
+              deuda: _clienteDeuda,
               error: _errorCliente,
               habilitado: !_guardando,
               onElegir: (c) => setState(() {
                 _clienteId = c.id;
                 _clienteNombre = c.nombre;
+                _clienteDeuda = c.textoDeuda;
                 _errorCliente = null;
               }),
             ),
