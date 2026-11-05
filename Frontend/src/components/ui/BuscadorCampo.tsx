@@ -10,6 +10,8 @@ export interface OpcionBuscador<T> {
   detalle?: string
   /** Tercer dato, a la derecha: rubro, distrito... */
   nota?: string
+  /** Una advertencia sobre la opción, en ámbar bajo el detalle: "Saldo pendiente: S/ 47.20 en 1 documento". */
+  aviso?: string
 }
 
 export interface BuscadorCampoProps<T> {
@@ -258,6 +260,9 @@ export function BuscadorCampo<T>({
                     <span className="block truncate text-[13px] text-ink">{o.label}</span>
                     {o.detalle && (
                       <span className="block truncate text-[11px] text-ink-soft">{o.detalle}</span>
+                    )}
+                    {o.aviso && (
+                      <span className="block truncate text-[11px] font-semibold text-amber-700">{o.aviso}</span>
                     )}
                   </span>
                   {o.nota && (

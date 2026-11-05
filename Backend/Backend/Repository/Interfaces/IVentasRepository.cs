@@ -79,6 +79,12 @@ public interface IVentasRepository
     /// <summary>Todas las notas que todavía deben algo, completas (con pagos): lo que usa el APK.</summary>
     Task<List<NotaVenta>> GetCuentasPorCobrarCompletasAsync();
 
+    /// <summary>
+    /// Lo que cada cliente debe hoy: el saldo y en cuántos documentos (ventas a crédito sin pagar del todo). Solo los
+    /// que deben algo; con la misma regla de Cuentas por cobrar.
+    /// </summary>
+    Task<Dictionary<int, (decimal Saldo, int Documentos)>> GetDeudaPorClienteAsync(IEnumerable<int> clienteIds);
+
     /// <summary>Totales de todas las cuentas por cobrar, no de una página.</summary>
     Task<ResumenCuentasResponse> ResumenCuentasPorCobrarAsync();
 

@@ -62,4 +62,10 @@ public class ClienteOpcionResponse
 
     /// <summary>Siempre true: el selector solo ofrece activos (el APK lo lee para filtrar).</summary>
     public bool Activo { get; set; } = true;
+
+    /// <summary>Lo que el cliente debe hoy (ventas a crédito sin pagar del todo). Cero si no debe nada.</summary>
+    public decimal DeudaPendiente { get; set; }
+
+    /// <summary>En cuántos documentos se reparte esa deuda.</summary>
+    public int DocumentosPendientes { get; set; }
 }

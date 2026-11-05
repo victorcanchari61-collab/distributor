@@ -51,6 +51,10 @@ export interface ClienteOpcion {
   mercado: string | null
   /** Con qué lista de precios se le vende; null usa la predeterminada. */
   listaPrecioId: number | null
+  /** Lo que debe hoy (ventas a crédito sin pagar del todo). Cero si no debe nada. */
+  deudaPendiente: number
+  /** En cuántos documentos se reparte esa deuda. */
+  documentosPendientes: number
 }
 
 export interface ClienteRequest {

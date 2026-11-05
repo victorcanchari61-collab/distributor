@@ -613,6 +613,31 @@ public class VentasRepository : IVentasRepository
                            > n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto))
             .AsNoTracking();
 
+    public async Task<Dictionary<int, (decimal Saldo, int Documentos)>> GetDeudaPorClienteAsync(
+        IEnumerable<int> clienteIds)
+    {
+        var ids = clienteIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        // El saldo de cada nota, con la misma cuenta que Cuentas por cobrar: líneas menos recojos, a centavos, menos lo pagado.
+        var notas = await CuentasPorCobrarBase()
+            .Where(n => ids.Contains(n.ClienteId))
+            .Select(n => new
+            {
+                n.ClienteId,
+                Total = n.Detalle.Where(d => !d.Anulado).Sum(d => d.CantidadPresentacion * d.PrecioPresentacion)
+                        - n.Recojos.Where(r => r.Estado != EstadoRecojo.Anulado).Sum(r => r.Importe),
+                Pagado = n.Pagos.Where(p => !p.Anulado).Sum(p => p.Monto),
+            })
+            .ToListAsync();
+
+        return notas
+            .GroupBy(n => n.ClienteId)
+            .ToDictionary(
+                g => g.Key,
+                g => (Math.Round(g.Sum(n => Math.Round(n.Total, 2) - n.Pagado), 2), g.Count()));
+    }
+
     public async Task<(List<NotaVentaFilaResponse> Items, int Total)> ListarCuentasPorCobrarAsync(
         ConsultaTablaRequest consulta)
     {

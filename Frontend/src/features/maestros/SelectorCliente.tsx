@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { Contact } from 'lucide-react'
-import { Badge, BuscadorCampo, BuscadorModal } from '../../components/ui'
+import { Alert, Badge, BuscadorCampo, BuscadorModal } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { clienteApi } from './clienteApi'
 import type { ClienteOpcion } from './clienteApi'
@@ -8,11 +8,20 @@ import type { ClienteOpcion } from './clienteApi'
 /** Lo que pide el campo mientras se escribe: las primeras coincidencias. */
 const COINCIDENCIAS = 20
 
+/** "Saldo pendiente: S/ 47.20 en 1 documento"; vacío si no debe nada. */
+const textoDeuda = (c: ClienteOpcion) =>
+  c.deudaPendiente > 0
+    ? `Saldo pendiente: S/ ${c.deudaPendiente.toFixed(2)} en ${c.documentosPendientes} ${
+        c.documentosPendientes === 1 ? 'documento' : 'documentos'
+      }`
+    : undefined
+
 const aOpcion = (c: ClienteOpcion): OpcionBuscador<number> => ({
   item: c.id,
   label: c.nombre,
   detalle: c.documento,
   nota: c.distrito ?? undefined,
+  aviso: textoDeuda(c),
 })
 
 const columnas: DataTableColumn<ClienteOpcion>[] = [
@@ -29,6 +38,16 @@ const columnas: DataTableColumn<ClienteOpcion>[] = [
   { key: 'nombre', label: 'Nombre' },
   { key: 'distrito', label: 'Distrito', render: (row) => row.distrito ?? '—' },
   { key: 'ruta', label: 'Ruta', render: (row) => row.ruta ?? '—' },
+  {
+    key: 'deuda',
+    label: 'Deuda',
+    render: (row) =>
+      row.deudaPendiente > 0 ? (
+        <Badge tone="warning">S/ {row.deudaPendiente.toFixed(2)} · {row.documentosPendientes} doc.</Badge>
+      ) : (
+        <span className="text-ink-soft">—</span>
+      ),
+  },
 ]
 
 /**
@@ -86,12 +105,24 @@ export function SelectorCliente({
   // salido en ninguna búsqueda (al editar un documento ya hecho).
   const seleccionado = value && nombre ? { item: value, label: nombre } : null
 
+  /*
+   * El cliente que se acaba de elegir, para avisar si debe. Se avisa al elegirlo —desde el campo o desde la
+   * búsqueda avanzada— y el aviso se queda debajo mientras siga elegido: quien vende tiene que saberlo antes de
+   * cargarle más.
+   */
+  const [elegido, setElegido] = useState<ClienteOpcion | null>(null)
+  const elegir = (c: ClienteOpcion | null) => {
+    setElegido(c)
+    onChange(c)
+  }
+  const deuda = elegido && elegido.id === value ? textoDeuda(elegido) : undefined
+
   return (
-    <>
+    <div className="flex flex-col gap-2">
       <BuscadorCampo
         label={label}
         value={value}
-        onChange={(id) => onChange(id ? (vistos.current.get(id) ?? null) : null)}
+        onChange={(id) => elegir(id ? (vistos.current.get(id) ?? null) : null)}
         buscar={buscar}
         seleccionado={seleccionado}
         placeholder="Buscar cliente..."
@@ -99,6 +130,7 @@ export function SelectorCliente({
         onAvanzado={() => setAvanzadoAbierto(true)}
         avanzadoLabel="Búsqueda avanzada de clientes"
       />
+      {deuda && <Alert tone="warning">Este cliente tiene deuda. {deuda}.</Alert>}
       {avanzadoAbierto && (
         <BuscadorModal
           open
@@ -112,10 +144,10 @@ export function SelectorCliente({
           searchPlaceholder="Buscar cliente..."
           onSeleccionar={(c) => {
             recordar([c])
-            onChange(c)
+            elegir(c)
           }}
         />
       )}
-    </>
+    </div>
   )
 }

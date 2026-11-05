@@ -22,6 +22,7 @@ public class ClienteService : IClienteService
     private readonly IUsuarioActual _usuarioActual;
     private readonly INotificador _notificador;
     private readonly ICategorizacionService _categorizacion;
+    private readonly IVentasRepository _ventas;
 
     public ClienteService(IClienteRepository repository,
         IMercadoRepository mercados,
@@ -34,9 +35,11 @@ public class ClienteService : IClienteService
         IPermisoService permisos,
         IUsuarioActual usuarioActual,
         INotificador notificador,
-        ICategorizacionService categorizacion)
+        ICategorizacionService categorizacion,
+        IVentasRepository ventas)
     {
         _categorizacion = categorizacion;
+        _ventas = ventas;
         _repository = repository;
         _mercados = mercados;
         _rutas = rutas;
@@ -158,7 +161,7 @@ public class ClienteService : IClienteService
 
         return new PaginaResponse<ClienteOpcionResponse>
         {
-            Items = items,
+            Items = await ConDeudaAsync(items),
             Total = total,
             Pagina = consulta.PaginaSegura,
             PorPagina = consulta.PorPaginaSegura,
@@ -174,7 +177,31 @@ public class ClienteService : IClienteService
             _ => null,
         };
         var (acotarARuta, ruta) = await AlcanceSelectorAsync(submodulo);
-        return await _repository.GetSelectorAsync(acotarARuta, ruta);
+        return await ConDeudaAsync((await _repository.GetSelectorAsync(acotarARuta, ruta)).ToList());
+    }
+
+    /// <summary>
+    /// Le pone a cada cliente lo que debe hoy, para avisarlo al elegirlo en un pedido o una venta: quien vende tiene
+    /// que saberlo ANTES de cargarle más. Si no se puede calcular, el selector sigue funcionando sin el aviso.
+    /// </summary>
+    private async Task<List<ClienteOpcionResponse>> ConDeudaAsync(List<ClienteOpcionResponse> clientes)
+    {
+        try
+        {
+            var deudas = await _ventas.GetDeudaPorClienteAsync(clientes.Select(c => c.Id));
+            foreach (var c in clientes)
+            {
+                if (!deudas.TryGetValue(c.Id, out var d) || d.Saldo <= 0) continue;
+                c.DeudaPendiente = d.Saldo;
+                c.DocumentosPendientes = d.Documentos;
+            }
+        }
+        catch (Exception)
+        {
+            // Sin el aviso, pero con el selector.
+        }
+
+        return clientes;
     }
 
     /// <summary>
