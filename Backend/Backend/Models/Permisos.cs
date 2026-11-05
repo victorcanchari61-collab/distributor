@@ -136,6 +136,8 @@ public static class CatalogoPermisos
 
             // --- Inventario ---
             ["inv.almacenes"] = Catalogo,
+            // Dónde está puesto cada producto dentro del almacén: verlo y ponerlo o moverlo (también en lote).
+            ["inv.ubicaciones"] = [Accion.Ver, Accion.Editar],
             ["inv.stock"] = Consulta,
             ["inv.kardex"] = Consulta,
             ["inv.ajustes"] = Documento,

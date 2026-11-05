@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Archive,
-  Box,
   Building2,
-  Layers,
-  LayoutGrid,
+  DoorOpen,
   ListPlus,
-  MapPin,
   Pencil,
   Plus,
-  Rows3,
   Trash2,
   X,
 } from 'lucide-react'
@@ -26,23 +22,15 @@ import type { AlmacenResponse, TipoUbicacion, UbicacionProductoResponse, Ubicaci
 
 const ICONOS: Record<TipoUbicacion, LucideIcon> = {
   PISO: Building2,
-  ZONA: LayoutGrid,
-  PASILLO: Rows3,
+  CUARTO: DoorOpen,
   ESTANTE: Archive,
-  NIVEL: Layers,
-  POSICION: Box,
-  OTRO: MapPin,
 }
 
-/** El tipo que se propone al crear algo adentro de otro: un piso lleva pasillos, un pasillo estantes... */
+/** El tipo que se propone al crear algo adentro de otro: un piso lleva cuartos, un cuarto lleva estantes. */
 const SIGUIENTE: Record<TipoUbicacion, TipoUbicacion> = {
-  PISO: 'PASILLO',
-  ZONA: 'PASILLO',
-  PASILLO: 'ESTANTE',
-  ESTANTE: 'NIVEL',
-  NIVEL: 'POSICION',
-  POSICION: 'OTRO',
-  OTRO: 'OTRO',
+  PISO: 'CUARTO',
+  CUARTO: 'ESTANTE',
+  ESTANTE: 'ESTANTE',
 }
 
 interface FormLugar {
@@ -70,7 +58,7 @@ interface FormLote {
 const MAX_LOTE = 100
 
 /**
- * Los lugares de un almacén: pisos, pasillos, estantes, posiciones.
+ * Los lugares de un almacén: pisos, cuartos y estantes.
  *
  * Es un árbol: cada lugar lleva su código y la ruta (P1-A-03) es como se nombra. Hoy sirve para decir DÓNDE
  * está cada producto; el stock se sigue contando por almacén.
@@ -307,7 +295,7 @@ export function UbicacionesModal({
       open
       size="2xl"
       title={`Ubicaciones de ${almacen.nombre}`}
-      description="Pisos, pasillos, estantes y posiciones. Sirve para saber dónde está cada producto."
+      description="Pisos, cuartos y estantes. Sirve para saber dónde está cada producto."
       onClose={onClose}
       footer={
         <Button variant="secondary" size="sm" onClick={onClose}>
@@ -338,7 +326,7 @@ export function UbicacionesModal({
               <div className="p-8 text-center">
                 <p className="font-medium text-ink">Este almacén todavía no tiene lugares definidos</p>
                 <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
-                  Empieza por los pisos (P1, P2), y adentro de cada uno los pasillos y los estantes.
+                  Empieza por los pisos (P1, P2), y adentro de cada uno sus cuartos (y los estantes, si los hay).
                 </p>
               </div>
             ) : (
@@ -476,7 +464,7 @@ export function UbicacionesModal({
             />
             <Input
               label="Código"
-              placeholder="P1, A, 03"
+              placeholder="P1, C1, E03"
               value={form.codigo}
               maxLength={20}
               onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase().replace(/[^A-Z0-9._]/g, '') })}

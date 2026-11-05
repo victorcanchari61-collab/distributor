@@ -38,6 +38,7 @@ import {
 } from './features/finanzas'
 import {
   AlmacenesPage,
+  UbicacionProductosPage,
   AjustesPage,
   KardexPage,
   StockPage,
@@ -89,6 +90,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'fact.notaventa': NotasVentaPage,
   'fact.precios': ListasPreciosPage,
   'inv.almacenes': AlmacenesPage,
+  'inv.ubicaciones': UbicacionProductosPage,
   'inv.stock': StockPage,
   'inv.kardex': KardexPage,
   'inv.ajustes': AjustesPage,

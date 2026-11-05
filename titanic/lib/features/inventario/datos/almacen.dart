@@ -66,7 +66,7 @@ class Almacen {
 
   final bool activo;
 
-  /// Cuantos lugares (pisos, pasillos, estantes...) tiene definidos dentro.
+  /// Cuantos lugares (pisos, cuartos, estantes...) tiene definidos dentro.
   final int ubicaciones;
 
   /// Cuantos productos tienen stock ahi.
@@ -112,7 +112,7 @@ class Almacen {
   );
 }
 
-/// Un lugar dentro de un almacen: un piso, un pasillo, un estante, una posicion.
+/// Un lugar dentro de un almacen: un piso, un cuarto, un estante.
 class Ubicacion {
   const Ubicacion({
     required this.id,
@@ -188,5 +188,101 @@ class UbicacionProducto {
         producto: json['producto'] as String? ?? '',
         categoria: json['categoria'] as String?,
         unidadBase: json['unidadBase'] as String? ?? '',
+      );
+}
+
+/// Un lugar donde esta puesto un producto.
+class LugarDeProducto {
+  const LugarDeProducto({
+    required this.ubicacionId,
+    required this.ruta,
+    this.nombre,
+  });
+
+  final int ubicacionId;
+
+  /// "P1-A-E03".
+  final String ruta;
+  final String? nombre;
+
+  factory LugarDeProducto.desdeJson(Map<String, dynamic> json) =>
+      LugarDeProducto(
+        ubicacionId: json['ubicacionId'] as int,
+        ruta: json['ruta'] as String? ?? '',
+        nombre: json['nombre'] as String?,
+      );
+}
+
+/// Un producto del almacen con el lugar o los lugares donde esta puesto.
+class ProductoUbicado {
+  const ProductoUbicado({
+    required this.productoId,
+    required this.codigo,
+    required this.producto,
+    this.categoria,
+    required this.unidadBase,
+    required this.stock,
+    required this.lugares,
+  });
+
+  final int productoId;
+  final String codigo;
+  final String producto;
+  final String? categoria;
+  final String unidadBase;
+
+  /// Lo que hay en el almacen, en unidad base.
+  final double stock;
+
+  /// Vacio: tiene stock pero nadie sabe donde esta.
+  final List<LugarDeProducto> lugares;
+
+  bool get sinLugar => lugares.isEmpty;
+
+  /// Texto contra el que se busca en la lista.
+  String get buscable =>
+      '$codigo $producto ${categoria ?? ''} ${lugares.map((l) => l.ruta).join(' ')}'
+          .toLowerCase();
+
+  factory ProductoUbicado.desdeJson(Map<String, dynamic> json) =>
+      ProductoUbicado(
+        productoId: json['productoId'] as int,
+        codigo: json['codigo'] as String? ?? '',
+        producto: json['producto'] as String? ?? '',
+        categoria: json['categoria'] as String?,
+        unidadBase: json['unidadBase'] as String? ?? '',
+        stock: (json['stock'] as num?)?.toDouble() ?? 0,
+        lugares: [
+          for (final l in (json['lugares'] as List? ?? const []))
+            LugarDeProducto.desdeJson(l as Map<String, dynamic>),
+        ],
+      );
+}
+
+/// La lista de trabajo de "Ubicacion de productos" de un almacen.
+class ProductosUbicados {
+  const ProductosUbicados({
+    required this.almacenId,
+    required this.lugares,
+    required this.sinLugar,
+    required this.items,
+  });
+
+  final int almacenId;
+
+  /// Cuantos lugares tiene definidos el almacen.
+  final int lugares;
+  final int sinLugar;
+  final List<ProductoUbicado> items;
+
+  factory ProductosUbicados.desdeJson(Map<String, dynamic> json) =>
+      ProductosUbicados(
+        almacenId: json['almacenId'] as int? ?? 0,
+        lugares: json['lugares'] as int? ?? 0,
+        sinLugar: json['sinLugar'] as int? ?? 0,
+        items: [
+          for (final i in (json['items'] as List? ?? const []))
+            ProductoUbicado.desdeJson(i as Map<String, dynamic>),
+        ],
       );
 }

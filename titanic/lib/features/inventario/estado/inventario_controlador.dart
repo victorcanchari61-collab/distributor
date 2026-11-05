@@ -66,7 +66,22 @@ class AlmacenesControlador extends AsyncNotifier<List<Almacen>> {
   }
 }
 
-/// Los lugares de un almacen (pisos, pasillos, estantes), ya en orden de arbol.
+/// El almacen que se esta mirando en "Ubicacion de productos". Null: el principal.
+final almacenUbicacionProvider = StateProvider.autoDispose<int?>((ref) => null);
+
+/// Mostrar solo los que no tienen lugar.
+final soloSinLugarProvider = StateProvider.autoDispose<bool>((ref) => false);
+
+final busquedaUbicacionProvider = StateProvider.autoDispose((ref) => '');
+
+/// Los productos del almacen elegido con el lugar donde esta cada uno.
+final productosUbicadosProvider =
+    FutureProvider.autoDispose.family<ProductosUbicados, int>(
+      (ref, almacenId) =>
+          ref.watch(inventarioApiProvider).productosUbicados(almacenId),
+    );
+
+/// Los lugares de un almacen (pisos, cuartos, estantes), ya en orden de arbol.
 final ubicacionesProvider = FutureProvider.autoDispose
     .family<List<Ubicacion>, int>(
       (ref, almacenId) =>

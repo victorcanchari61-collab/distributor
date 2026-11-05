@@ -16,8 +16,8 @@ import type { DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
-import type { AlmacenOpcion, CrearRecepcionRequest } from '../inventario'
-import { recepcionApi } from '../inventario'
+import type { AlmacenOpcion, CrearRecepcionRequest, ProductosUbicados, UbicacionResponse } from '../inventario'
+import { recepcionApi, ubicacionApi, ubicacionProductoApi } from '../inventario'
 import type { CompraDetalleResponse, CompraResponse } from './comprasApi'
 
 export interface NuevaRecepcionModalProps {
@@ -70,6 +70,49 @@ export function NuevaRecepcionModal({
   const [lotes, setLotes] = useState<Record<number, string>>({})
   const [vencimientos, setVencimientos] = useState<Record<number, string>>({})
   const [guardando, setGuardando] = useState(false)
+
+  /*
+   * Dónde se guarda lo que llega, dentro del almacén elegido. Un solo selector para toda la recepción:
+   *   HABITUAL (-1)  cada producto va a su lugar de siempre en ese almacén, si ya tiene uno;
+   *   0              sin lugar;
+   *   un id          todo lo que llega se guarda en ese lugar.
+   * Los lugares del almacén y dónde está hoy cada producto se piden al elegir el almacén. Es opcional: un almacén
+   * sin lugares recibe igual, y el selector ni aparece.
+   */
+  const HABITUAL = -1
+  const [lugares, setLugares] = useState<UbicacionResponse[]>([])
+  const [puestos, setPuestos] = useState<ProductosUbicados | null>(null)
+  const [lugarElegido, setLugarElegido] = useState(HABITUAL)
+
+  /** El lugar habitual del producto en este almacén, si ya tiene uno. */
+  const lugarHabitual = (d: CompraDetalleResponse) =>
+    puestos?.items.find((i) => i.productoId === d.productoId)?.lugares[0]?.ubicacionId ?? 0
+
+  /** Dónde se guarda esta línea según el selector. Solo cuenta si sigue siendo un lugar activo de este almacén. */
+  const lugarDe = (d: CompraDetalleResponse) => {
+    const id = lugarElegido === HABITUAL ? lugarHabitual(d) : lugarElegido
+    return lugares.some((l) => l.id === id && l.activo) ? id : 0
+  }
+
+  useEffect(() => {
+    if (!open || !almacenId) return
+    let vigente = true
+    setLugarElegido(HABITUAL)
+    setLugares([])
+    setPuestos(null)
+    // Sin permiso o sin lugares definidos, la recepción sigue igual: solo falta el campo.
+    void ubicacionApi
+      .listar(almacenId)
+      .then((l) => vigente && setLugares(l))
+      .catch(() => undefined)
+    void ubicacionProductoApi
+      .listar(almacenId)
+      .then((p) => vigente && setPuestos(p))
+      .catch(() => undefined)
+    return () => {
+      vigente = false
+    }
+  }, [open, almacenId])
 
   /** Lo que todavía no llega: es lo único que se puede recibir. */
   const pendientes: CompraDetalleResponse[] =
@@ -175,6 +218,7 @@ export function NuevaRecepcionModal({
         cantidad: Number(cantidades[d.id] || 0) * factorDe(d),
         lote: lotes[d.id]?.trim() || null,
         fechaVencimiento: vencimientos[d.id] || null,
+        ubicacionId: lugarDe(d) || null,
       }))
       .filter((l) => l.cantidad > 0)
 
@@ -421,6 +465,22 @@ export function NuevaRecepcionModal({
                     .filter((a) => a.activo)
                     .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
                 />
+
+                {lugares.some((l) => l.activo) && (
+                  <Desplegable
+                    label="Guardar en"
+                    optional
+                    value={lugarElegido}
+                    onChange={(v) => setLugarElegido(Number(v))}
+                    options={[
+                      { value: HABITUAL, label: 'Su lugar habitual', detalle: 'cada producto donde ya está' },
+                      { value: 0, label: 'Sin lugar' },
+                      ...lugares
+                        .filter((l) => l.activo)
+                        .map((l) => ({ value: l.id, label: l.ruta, detalle: l.nombre ?? l.tipoEtiqueta })),
+                    ]}
+                  />
+                )}
 
                 <Input
                   label="Observación"

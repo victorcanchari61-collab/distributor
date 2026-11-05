@@ -224,12 +224,12 @@ public class InventarioService : IInventarioService
                 $"El almacén tiene {movimientos} movimiento(s). Desactívalo en vez de eliminarlo.");
         }
 
-        // Los lugares (pisos, pasillos...) cuelgan del almacén: sin esto borrarlo reventaba con la llave foránea.
+        // Los lugares (pisos, cuartos...) cuelgan del almacén: sin esto borrarlo reventaba con la llave foránea.
         var lugares = (await _repository.GetUbicacionesPorAlmacenAsync()).GetValueOrDefault(id);
         if (lugares > 0)
         {
             throw new BadRequestException(
-                $"El almacén tiene {lugares} lugar(es) definidos (pisos, pasillos...). Bórralos primero, o desactívalo.");
+                $"El almacén tiene {lugares} lugar(es) definidos (pisos, cuartos...). Bórralos primero, o desactívalo.");
         }
 
         await _repository.DeleteAlmacenAsync(almacen);
@@ -909,6 +909,15 @@ public class InventarioService : IInventarioService
         if (!origen.Activo) throw new BadRequestException("El almacén de origen está desactivado");
         if (!destino.Activo) throw new BadRequestException("El almacén de destino está desactivado");
 
+        // El lugar de cada línea tiene que ser del almacén de DESTINO y estar activo.
+        var lugares = await _repository.GetUbicacionesValidasAsync(
+            destino.Id,
+            request.Detalle.Where(l => l.UbicacionDestinoId is not null).Select(l => l.UbicacionDestinoId!.Value));
+        if (request.Detalle.Any(l => l.UbicacionDestinoId is int u && !lugares.Contains(u)))
+        {
+            throw new BadRequestException("Uno de los lugares elegidos no es del almacén de destino o está desactivado.");
+        }
+
         var motivoSalida = await GetMotivoOrThrowAsync(Motivos.TransferenciaSalida);
         var motivoIngreso = await GetMotivoOrThrowAsync(Motivos.TransferenciaIngreso);
         var fecha = request.Fecha ?? DateTime.UtcNow;
@@ -1003,6 +1012,12 @@ public class InventarioService : IInventarioService
                     Origen = OrigenCapa.Transferencia,
                     Fecha = fecha
                 });
+            }
+
+            // Dónde queda en el destino (sin quitarlo de donde ya estuviera allá).
+            if (linea.UbicacionDestinoId is int lugar)
+            {
+                await _repository.PonerProductoEnUbicacionAsync(producto.Id, lugar);
             }
 
             await _repository.GuardarAsync();
@@ -1211,6 +1226,15 @@ public class InventarioService : IInventarioService
             throw new BadRequestException("Esta compra ya se recibió por completo.");
         }
 
+        // El lugar de cada línea tiene que ser de ESTE almacén y estar activo: guardar mercadería en un estante de
+        // otro almacén sería decir una cosa falsa. Se revisa antes de mover nada.
+        var lugares = await _repository.GetUbicacionesValidasAsync(
+            almacen.Id, request.Detalle.Where(l => l.UbicacionId is not null).Select(l => l.UbicacionId!.Value));
+        if (request.Detalle.Any(l => l.UbicacionId is int u && !lugares.Contains(u)))
+        {
+            throw new BadRequestException("Uno de los lugares elegidos no es de este almacén o está desactivado.");
+        }
+
         var motivo = await GetMotivoOrThrowAsync(Motivos.Compra);
         var fecha = request.Fecha ?? DateTime.UtcNow;
 
@@ -1282,6 +1306,13 @@ public class InventarioService : IInventarioService
                 Fecha = fecha
             });
             await _repository.GuardarAsync();
+
+            // Dónde se guardó: el producto queda puesto en ese lugar (sin quitarlo de donde ya estuviera).
+            if (linea.UbicacionId is int lugar)
+            {
+                await _repository.PonerProductoEnUbicacionAsync(detalle.ProductoId, lugar);
+                await _repository.GuardarAsync();
+            }
 
             detalle.CantidadRecibida += linea.Cantidad;
         }

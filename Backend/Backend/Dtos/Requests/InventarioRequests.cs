@@ -88,6 +88,12 @@ public class LineaTransferenciaRequest
     public int ProductoId { get; set; }
     public int? PresentacionId { get; set; }
     public decimal Cantidad { get; set; }
+
+    /// <summary>
+    /// Dónde se guarda en el almacén de destino (un estante, una posición). Opcional. Con lugar, el producto queda
+    /// puesto ahí además de donde ya estuviera.
+    /// </summary>
+    public int? UbicacionDestinoId { get; set; }
 }
 
 /// <summary>Transferencia entre dos almacenes propios. El costo viaja con la mercadería.</summary>

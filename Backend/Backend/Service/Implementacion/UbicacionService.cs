@@ -10,14 +10,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Backend.Service.Implementacion;
 
 /// <summary>
-/// Pisos, pasillos, estantes y posiciones de un almacén, y dónde está cada producto.
+/// Pisos, cuartos y estantes de un almacén, y dónde está cada producto.
 ///
 /// Es un árbol de profundidad libre (hasta <see cref="MaximoNivel"/> escalones) donde cada punto lleva su
 /// código; la "ruta" —los códigos de arriba hacia abajo unidos con guion— es como se nombra el lugar.
 /// </summary>
 public class UbicacionService : IUbicacionService
 {
-    /// <summary>Piso, pasillo, estante, nivel, posición y uno de sobra: más profundo que esto ya no se encuentra.</summary>
+    /// <summary>Piso, cuarto y estante, y margen de sobra: más profundo que esto ya no se encuentra.</summary>
     private const int MaximoNivel = 6;
 
     private readonly AppDbContext _context;
@@ -25,6 +25,8 @@ public class UbicacionService : IUbicacionService
     private readonly IValidator<ActualizarUbicacionRequest> _actualizar;
     private readonly IValidator<GenerarUbicacionesRequest> _generar;
     private readonly IValidator<AsignarProductoUbicacionRequest> _asignar;
+    private readonly IValidator<AsignarProductosUbicacionRequest> _asignarVarios;
+    private readonly IValidator<QuitarProductosUbicacionRequest> _quitarVarios;
     private readonly INotificador _notificador;
 
     public UbicacionService(
@@ -33,6 +35,8 @@ public class UbicacionService : IUbicacionService
         IValidator<ActualizarUbicacionRequest> actualizar,
         IValidator<GenerarUbicacionesRequest> generar,
         IValidator<AsignarProductoUbicacionRequest> asignar,
+        IValidator<AsignarProductosUbicacionRequest> asignarVarios,
+        IValidator<QuitarProductosUbicacionRequest> quitarVarios,
         INotificador notificador)
     {
         _context = context;
@@ -40,6 +44,8 @@ public class UbicacionService : IUbicacionService
         _actualizar = actualizar;
         _generar = generar;
         _asignar = asignar;
+        _asignarVarios = asignarVarios;
+        _quitarVarios = quitarVarios;
         _notificador = notificador;
     }
 
@@ -267,6 +273,130 @@ public class UbicacionService : IUbicacionService
 
         await _notificador.AvisarAsync("ubicaciones", "productos", new { almacenId });
         return await ProductosAsync(id);
+    }
+
+    // ------------------------------------------------------------- Ubicación de productos (trabajo en lote)
+
+    public async Task<ProductosUbicadosResponse> ProductosDelAlmacenAsync(int almacenId)
+    {
+        await ExigirAlmacenAsync(almacenId);
+
+        // Los lugares con su ruta, para decir "P1-A-E03" y no solo "E03".
+        var lugares = await ListarAsync(almacenId);
+        var rutas = lugares.ToDictionary(l => l.Id);
+
+        var stock = await _context.CapasCosto.AsNoTracking()
+            .Where(c => c.AlmacenId == almacenId && c.CantidadDisponible > 0)
+            .GroupBy(c => c.ProductoId)
+            .Select(g => new { ProductoId = g.Key, Stock = g.Sum(c => c.CantidadDisponible) })
+            .ToDictionaryAsync(x => x.ProductoId, x => x.Stock);
+
+        var puestos = (await _context.ProductosUbicacion.AsNoTracking()
+                .Where(p => p.Ubicacion!.AlmacenId == almacenId)
+                .Select(p => new { p.ProductoId, p.UbicacionId })
+                .ToListAsync())
+            .ToLookup(p => p.ProductoId, p => p.UbicacionId);
+
+        // Entran los que tienen stock ahí y los que ya se pusieron en un lugar (aunque hoy no tengan stock).
+        var ids = stock.Keys.Concat(puestos.Select(g => g.Key)).Distinct().ToList();
+
+        var productos = await _context.Productos.AsNoTracking()
+            .Where(p => p.Activo && ids.Contains(p.Id))
+            .OrderBy(p => p.Nombre)
+            .Select(p => new
+            {
+                p.Id,
+                p.Codigo,
+                p.Nombre,
+                Categoria = p.Categoria != null ? p.Categoria.Nombre : null,
+                Marca = p.Marca != null ? p.Marca.Nombre : null,
+                UnidadBase = p.UnidadBase != null ? p.UnidadBase.Codigo : string.Empty,
+            })
+            .ToListAsync();
+
+        var items = productos.Select(p => new ProductoUbicadoResponse
+        {
+            ProductoId = p.Id,
+            Codigo = p.Codigo,
+            Producto = p.Nombre,
+            Categoria = p.Categoria,
+            Marca = p.Marca,
+            UnidadBase = p.UnidadBase,
+            Stock = stock.GetValueOrDefault(p.Id),
+            Lugares = puestos[p.Id]
+                .Where(rutas.ContainsKey)
+                .Select(u => new LugarDeProductoResponse { UbicacionId = u, Ruta = rutas[u].Ruta, Nombre = rutas[u].Nombre })
+                .OrderBy(l => l.Ruta, StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+        }).ToList();
+
+        return new ProductosUbicadosResponse
+        {
+            AlmacenId = almacenId,
+            Lugares = lugares.Count,
+            SinLugar = items.Count(i => i.Lugares.Count == 0),
+            Items = items,
+        };
+    }
+
+    public async Task<ProductosUbicadosResponse> AsignarVariosAsync(AsignarProductosUbicacionRequest request)
+    {
+        await _asignarVarios.ValidateAndThrowAsync(request);
+
+        var lugar = await _context.UbicacionesAlmacen.AsNoTracking().FirstOrDefaultAsync(u => u.Id == request.UbicacionId)
+            ?? throw new NotFoundException("Lugar no encontrado");
+        if (!lugar.Activo)
+            throw new BadRequestException("Ese lugar está desactivado");
+
+        var ids = request.ProductoIds.Distinct().ToList();
+        var validos = await _context.Productos.Where(p => p.Activo && ids.Contains(p.Id)).Select(p => p.Id).ToListAsync();
+        if (validos.Count != ids.Count)
+            throw new BadRequestException("Alguno de los productos no existe o está inactivo");
+
+        await using var transaccion = await _context.Database.BeginTransactionAsync();
+
+        // Mover: se les quita el lugar que tuvieran en este almacén, menos el de destino.
+        if (request.Reemplazar)
+        {
+            var anteriores = await _context.ProductosUbicacion
+                .Where(p => ids.Contains(p.ProductoId)
+                            && p.Ubicacion!.AlmacenId == lugar.AlmacenId
+                            && p.UbicacionId != lugar.Id)
+                .ToListAsync();
+            _context.ProductosUbicacion.RemoveRange(anteriores);
+        }
+
+        var yaAhi = (await _context.ProductosUbicacion
+                .Where(p => p.UbicacionId == lugar.Id && ids.Contains(p.ProductoId))
+                .Select(p => p.ProductoId)
+                .ToListAsync())
+            .ToHashSet();
+        _context.ProductosUbicacion.AddRange(
+            ids.Where(id => !yaAhi.Contains(id)).Select(id => new ProductoUbicacion { ProductoId = id, UbicacionId = lugar.Id }));
+
+        await _context.SaveChangesAsync();
+        await transaccion.CommitAsync();
+
+        await _notificador.AvisarAsync("ubicaciones", "productos", new { almacenId = lugar.AlmacenId });
+        return await ProductosDelAlmacenAsync(lugar.AlmacenId);
+    }
+
+    public async Task<ProductosUbicadosResponse> QuitarVariosAsync(QuitarProductosUbicacionRequest request)
+    {
+        await _quitarVarios.ValidateAndThrowAsync(request);
+
+        var lugar = await _context.UbicacionesAlmacen.AsNoTracking().FirstOrDefaultAsync(u => u.Id == request.UbicacionId)
+            ?? throw new NotFoundException("Lugar no encontrado");
+
+        var ids = request.ProductoIds.Distinct().ToList();
+        var filas = await _context.ProductosUbicacion
+            .Where(p => p.UbicacionId == lugar.Id && ids.Contains(p.ProductoId))
+            .ToListAsync();
+        _context.ProductosUbicacion.RemoveRange(filas);
+        await _context.SaveChangesAsync();
+
+        await _notificador.AvisarAsync("ubicaciones", "productos", new { almacenId = lugar.AlmacenId });
+        return await ProductosDelAlmacenAsync(lugar.AlmacenId);
     }
 
     // ------------------------------------------------------------- Ayudas

@@ -141,6 +141,12 @@ public interface IInventarioRepository
     /// </summary>
     Task<Dictionary<int, List<string>>> GetUbicacionesDeProductosAsync(List<int> productoIds, int? almacenId);
 
+    /// <summary>De esos lugares, los que son de ese almacén y están activos. Lo que se recibe solo puede guardarse ahí.</summary>
+    Task<HashSet<int>> GetUbicacionesValidasAsync(int almacenId, IEnumerable<int> ubicacionIds);
+
+    /// <summary>Pone el producto en ese lugar (sin guardar). Si ya estaba ahí, no hace nada.</summary>
+    Task PonerProductoEnUbicacionAsync(int productoId, int ubicacionId);
+
     /// <summary>Si el distrito existe en el ubigeo oficial.</summary>
     Task<bool> ExisteDistritoAsync(int distritoId);
 

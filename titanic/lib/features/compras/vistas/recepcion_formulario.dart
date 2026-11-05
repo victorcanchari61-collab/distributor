@@ -12,6 +12,7 @@ import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
+import '../../inventario/datos/almacen.dart';
 import '../../inventario/estado/inventario_controlador.dart';
 import '../datos/compra.dart';
 import '../estado/compras_controlador.dart';
@@ -30,6 +31,11 @@ class _FilaRecepcion {
   final TextEditingController cantidadCtrl;
   final TextEditingController loteCtrl;
   DateTime? vencimiento;
+
+  /// Donde se guarda dentro del almacen. Solo vale si [tocada]: sin tocarlo, se
+  /// usa el lugar habitual del producto.
+  int? ubicacionId;
+  bool tocada = false;
 
   /*
    * Se compro por saco: se recibe por saco.
@@ -98,6 +104,37 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
     super.dispose();
   }
 
+  /// Los lugares activos del almacen elegido. Vacio si no tiene o no se pudieron
+  /// leer: la recepcion sigue igual, solo falta el campo.
+  List<Ubicacion> _lugares() {
+    final id = _almacenId;
+    if (id == null) return const [];
+    return (ref.watch(ubicacionesProvider(id)).valueOrNull ?? const <Ubicacion>[])
+        .where((l) => l.activo)
+        .toList();
+  }
+
+  /// Lo que la pantalla vio en el ultimo `build`: se guarda porque `ref.watch`
+  /// solo se puede usar al construir, y `_guardar` tambien necesita estos datos.
+  List<Ubicacion> _lugaresVistos = const [];
+  ProductosUbicados? _ubicadosVistos;
+
+  /// El lugar habitual del producto en este almacen, si ya tiene uno.
+  int? _lugarHabitual(int productoId, List<Ubicacion> lugares) {
+    final habitual = _ubicadosVistos?.items
+        .where((p) => p.productoId == productoId)
+        .firstOrNull
+        ?.lugares
+        .firstOrNull
+        ?.ubicacionId;
+    return lugares.any((l) => l.id == habitual) ? habitual : null;
+  }
+
+  /// Lo que se manda: lo que eligio quien recibe, o el lugar habitual.
+  int? _lugarDe(_FilaRecepcion f, List<Ubicacion> lugares) => f.tocada
+      ? f.ubicacionId
+      : _lugarHabitual(f.detalle.productoId, lugares);
+
   List<_FilaRecepcion> _construirFilas(Compra? compra) {
     if (compra == null) return [];
     return [
@@ -158,6 +195,7 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
     FocusScope.of(context).unfocus();
     if (!_validar()) return;
 
+    final lugares = _lugaresVistos;
     final lineas = _filas.where((f) => f.cantidad > 0).toList();
     if (lineas.isEmpty) {
       setState(() => _error = 'Ingresa cuánto llegó de al menos un producto.');
@@ -188,6 +226,7 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
                 ? null
                 : f.loteCtrl.text.trim(),
             'fechaVencimiento': f.vencimiento?.toIso8601String(),
+            'ubicacionId': _lugarDe(f, lugares),
           },
       ],
     };
@@ -208,6 +247,11 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
   @override
   Widget build(BuildContext context) {
     final almacenes = ref.watch(almacenesActivosProvider);
+    final lugaresDelAlmacen = _lugares();
+    _lugaresVistos = lugaresDelAlmacen;
+    _ubicadosVistos = _almacenId == null
+        ? null
+        : ref.watch(productosUbicadosProvider(_almacenId!)).valueOrNull;
 
     // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
     // acento del modulo. Sin esto los componentes compartidos y las hojas que
@@ -302,7 +346,14 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
               opciones: [
                 for (final a in almacenes) Opcion<int>(a.id, a.nombre),
               ],
-              onCambio: (v) => setState(() => _almacenId = v),
+              onCambio: (v) => setState(() {
+                _almacenId = v;
+                // Los lugares son de cada almacen: lo elegido antes ya no sirve.
+                for (final f in _filas) {
+                  f.tocada = false;
+                  f.ubicacionId = null;
+                }
+              }),
             ),
             const SizedBox(height: Dimen.espacio4),
 
@@ -340,6 +391,12 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
                 _TarjetaFilaRecepcion(
                   fila: fila,
                   onVencimiento: () => _elegirVencimiento(fila),
+                  lugares: lugaresDelAlmacen,
+                  lugar: _lugarDe(fila, lugaresDelAlmacen),
+                  onLugar: (v) => setState(() {
+                    fila.tocada = true;
+                    fila.ubicacionId = v;
+                  }),
                 ),
                 const SizedBox(height: Dimen.espacio3),
               ],
@@ -363,10 +420,18 @@ class _TarjetaFilaRecepcion extends StatelessWidget {
   const _TarjetaFilaRecepcion({
     required this.fila,
     required this.onVencimiento,
+    required this.lugares,
+    required this.lugar,
+    required this.onLugar,
   });
 
   final _FilaRecepcion fila;
   final VoidCallback onVencimiento;
+
+  /// Los lugares del almacen elegido. Vacio: el campo no se muestra.
+  final List<Ubicacion> lugares;
+  final int? lugar;
+  final ValueChanged<int?> onLugar;
 
   @override
   Widget build(BuildContext context) {
@@ -417,6 +482,24 @@ class _TarjetaFilaRecepcion extends StatelessWidget {
               ),
             ],
           ),
+          // Donde se guarda: el lugar habitual del producto viene puesto.
+          if (lugares.isNotEmpty) ...[
+            const SizedBox(height: Dimen.espacio3),
+            AppSelector<int?>(
+              valor: lugar,
+              etiqueta: 'Guardar en',
+              icono: Icons.place_outlined,
+              opciones: [
+                const Opcion<int?>(null, 'Sin lugar'),
+                for (final l in lugares)
+                  Opcion<int?>(
+                    l.id,
+                    l.nombre == null ? l.ruta : '${l.ruta} · ${l.nombre}',
+                  ),
+              ],
+              onCambio: onLugar,
+            ),
+          ],
           const SizedBox(height: Dimen.espacio2),
           InkWell(
             onTap: onVencimiento,

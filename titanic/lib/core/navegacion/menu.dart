@@ -176,6 +176,12 @@ const menuGrupos = <MenuGrupo>[
         icono: Icons.warehouse_outlined,
       ),
       MenuItem(
+        id: 'inv.ubicaciones',
+        pendiente: false,
+        titulo: 'Ubicación de productos',
+        icono: Icons.place_outlined,
+      ),
+      MenuItem(
         id: 'inv.stock',
         pendiente: false,
         titulo: 'Stock por almacén',

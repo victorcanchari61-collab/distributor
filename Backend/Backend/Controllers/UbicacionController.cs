@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Backend.Controllers;
 
 /// <summary>
-/// Los lugares dentro de un almacén (pisos, pasillos, estantes, posiciones) y qué producto está en cada uno.
+/// Los lugares dentro de un almacén (pisos, cuartos, estantes) y qué producto está en cada uno.
 /// Usa los permisos de Almacenes: quien puede crear almacenes arma su estructura.
 /// </summary>
 [ApiController]
@@ -23,8 +23,14 @@ public class UbicacionController : ControllerBase
         _ubicaciones = ubicaciones;
     }
 
+    /// <summary>
+    /// Los lugares del almacén. Los lee también quien recibe mercadería o transfiere y tiene que elegir dónde guardarla,
+    /// sin necesitar la pantalla de Almacenes.
+    /// </summary>
     [HttpGet("almacen/{almacenId:int}/ubicaciones")]
-    [Permiso("inv.almacenes", Accion.Ver)]
+    [PermisoAlguno(
+        "inv.almacenes:ver", "inv.ubicaciones:ver", "inv.stock:ver",
+        "compras.recepciones:crear", "inv.transferencias:crear")]
     public async Task<IActionResult> Listar(int almacenId) => Ok(await _ubicaciones.ListarAsync(almacenId));
 
     [HttpPost("almacen/{almacenId:int}/ubicaciones")]
@@ -32,7 +38,7 @@ public class UbicacionController : ControllerBase
     public async Task<IActionResult> Crear(int almacenId, [FromBody] CrearUbicacionRequest request) =>
         Ok(await _ubicaciones.CrearAsync(almacenId, request));
 
-    /// <summary>Crea varios lugares seguidos: los estantes E01 a E20 de un pasillo.</summary>
+    /// <summary>Crea varios lugares seguidos: los estantes E01 a E20 de un cuarto.</summary>
     [HttpPost("almacen/{almacenId:int}/ubicaciones/lote")]
     [Permiso("inv.almacenes", Accion.Crear)]
     public async Task<IActionResult> Generar(int almacenId, [FromBody] GenerarUbicacionesRequest request) =>
@@ -59,6 +65,27 @@ public class UbicacionController : ControllerBase
     [Permiso("inv.almacenes", Accion.Editar)]
     public async Task<IActionResult> Asignar(int id, [FromBody] AsignarProductoUbicacionRequest request) =>
         Ok(await _ubicaciones.AsignarProductoAsync(id, request));
+
+    // ------------------------------------------------------------- Ubicación de productos (pantalla propia)
+
+    /// <summary>Los productos del almacén con el lugar donde está cada uno. La lista de trabajo de "Ubicación de productos".
+    /// También la lee quien recibe o transfiere, para sugerir el lugar habitual de cada producto.
+    /// </summary>
+    [HttpGet("ubicacion-producto")]
+    [PermisoAlguno("inv.ubicaciones:ver", "compras.recepciones:crear", "inv.transferencias:crear")]
+    public async Task<IActionResult> ProductosDelAlmacen([FromQuery] int almacenId) =>
+        Ok(await _ubicaciones.ProductosDelAlmacenAsync(almacenId));
+
+    /// <summary>Pone varios productos en un lugar, o los mueve con <c>reemplazar</c>.</summary>
+    [HttpPost("ubicacion-producto/asignar")]
+    [Permiso("inv.ubicaciones", Accion.Editar)]
+    public async Task<IActionResult> AsignarVarios([FromBody] AsignarProductosUbicacionRequest request) =>
+        Ok(await _ubicaciones.AsignarVariosAsync(request));
+
+    [HttpPost("ubicacion-producto/quitar")]
+    [Permiso("inv.ubicaciones", Accion.Editar)]
+    public async Task<IActionResult> QuitarVarios([FromBody] QuitarProductosUbicacionRequest request) =>
+        Ok(await _ubicaciones.QuitarVariosAsync(request));
 
     [HttpDelete("ubicacion/{id:int}/productos/{productoId:int}")]
     [Permiso("inv.almacenes", Accion.Editar)]

@@ -1,12 +1,12 @@
 namespace Backend.Dtos.Requests;
 
-/// <summary>Un lugar nuevo dentro de un almacén: un piso, un pasillo, un estante...</summary>
+/// <summary>Un lugar nuevo dentro de un almacén: un piso, un cuarto, un estante...</summary>
 public class CrearUbicacionRequest
 {
     /// <summary>El punto que lo va a contener. Sin valor, queda en la raíz del almacén (un piso, por ejemplo).</summary>
     public int? PadreId { get; set; }
 
-    /// <summary>PISO, ZONA, PASILLO, ESTANTE, NIVEL, POSICION u OTRO.</summary>
+    /// <summary>PISO, CUARTO o ESTANTE.</summary>
     public string Tipo { get; set; } = string.Empty;
 
     /// <summary>El código corto de este punto: "P1", "A", "03". No se repite entre hermanos.</summary>
@@ -25,7 +25,7 @@ public class ActualizarUbicacionRequest
 }
 
 /// <summary>
-/// Crear varios lugares seguidos de una vez: los estantes E01 a E20 de un pasillo, las posiciones 01 a 12 de un estante.
+/// Crear varios lugares seguidos de una vez: los estantes E01 a E20 de un cuarto, los cuartos C1 a C8 de un piso.
 /// El código de cada uno es el prefijo y el número con ceros a la izquierda.
 /// </summary>
 public class GenerarUbicacionesRequest
@@ -47,4 +47,24 @@ public class GenerarUbicacionesRequest
 public class AsignarProductoUbicacionRequest
 {
     public int ProductoId { get; set; }
+}
+
+/// <summary>Poner varios productos en un lugar de una vez.</summary>
+public class AsignarProductosUbicacionRequest
+{
+    public int UbicacionId { get; set; }
+    public List<int> ProductoIds { get; set; } = [];
+
+    /// <summary>
+    /// Mover en vez de sumar: antes de ponerlos aquí, se les quita el lugar que tuvieran en ESTE almacén. Sin esto, el
+    /// producto queda puesto aquí además de donde ya estaba.
+    /// </summary>
+    public bool Reemplazar { get; set; }
+}
+
+/// <summary>Sacar varios productos de un lugar.</summary>
+public class QuitarProductosUbicacionRequest
+{
+    public int UbicacionId { get; set; }
+    public List<int> ProductoIds { get; set; } = [];
 }

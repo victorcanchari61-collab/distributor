@@ -30,12 +30,13 @@ import type {
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
-import { almacenApi, stockApi, transferenciaApi } from './inventarioApi'
+import { almacenApi, stockApi, transferenciaApi, ubicacionApi } from './inventarioApi'
 import type {
   AlmacenResponse,
   DocumentoInventarioResponse,
   LineaDocumentoResponse,
   ResumenDocumentos,
+  UbicacionResponse,
 } from './inventarioApi'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
@@ -80,6 +81,26 @@ export function TransferenciasPage() {
   })
   const [filas, setFilas] = useState<FilaTransferencia[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
+
+  // Dónde se guarda lo que se transfiere en el almacén de destino: 0 = sin lugar. Un solo lugar para toda la transferencia. Opcional.
+  const [lugaresDestino, setLugaresDestino] = useState<UbicacionResponse[]>([])
+  const [lugarDestinoId, setLugarDestinoId] = useState(0)
+
+  useEffect(() => {
+    setLugaresDestino([])
+    setLugarDestinoId(0)
+    if (vista !== 'form' || !cabecera.almacenDestinoId) return
+
+    let vigente = true
+    // Sin permiso o sin lugares definidos, la transferencia sigue igual: solo falta el campo.
+    void ubicacionApi
+      .listar(cabecera.almacenDestinoId)
+      .then((l) => vigente && setLugaresDestino(l.filter((x) => x.activo)))
+      .catch(() => undefined)
+    return () => {
+      vigente = false
+    }
+  }, [vista, cabecera.almacenDestinoId])
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -178,6 +199,7 @@ export function TransferenciasPage() {
           productoId: f.productoId,
           presentacionId: f.presentacionId || null,
           cantidad: Number(f.cantidad),
+          ubicacionDestinoId: lugarDestinoId || null,
         })),
       })
       setVista('lista')
@@ -396,6 +418,21 @@ export function TransferenciasPage() {
                 .filter((a) => a.id !== cabecera.almacenOrigenId)
                 .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
             />
+
+            {/* Dónde se guarda en el destino: un solo lugar para todo lo que se transfiere. Opcional. */}
+            {lugaresDestino.length > 0 && (
+              <Desplegable
+                className="mt-4"
+                label="Guardar en"
+                optional
+                value={lugarDestinoId}
+                onChange={(v) => setLugarDestinoId(Number(v))}
+                options={[
+                  { value: 0, label: 'Sin lugar' },
+                  ...lugaresDestino.map((l) => ({ value: l.id, label: l.ruta, detalle: l.nombre ?? l.tipoEtiqueta })),
+                ]}
+              />
+            )}
 
             <Input
               className="mt-4"

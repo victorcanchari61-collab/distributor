@@ -321,6 +321,29 @@ public class InventarioRepository : IInventarioRepository
                     .ToList());
     }
 
+    public async Task<HashSet<int>> GetUbicacionesValidasAsync(int almacenId, IEnumerable<int> ubicacionIds)
+    {
+        var ids = ubicacionIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        return (await _context.UbicacionesAlmacen.AsNoTracking()
+                .Where(u => u.AlmacenId == almacenId && u.Activo && ids.Contains(u.Id))
+                .Select(u => u.Id)
+                .ToListAsync())
+            .ToHashSet();
+    }
+
+    public async Task PonerProductoEnUbicacionAsync(int productoId, int ubicacionId)
+    {
+        // También lo pendiente de guardar: el mismo producto en dos líneas de un documento no debe chocar con el
+        // índice único.
+        if (_context.ProductosUbicacion.Local.Any(p => p.ProductoId == productoId && p.UbicacionId == ubicacionId)
+            || await _context.ProductosUbicacion.AnyAsync(p => p.ProductoId == productoId && p.UbicacionId == ubicacionId))
+            return;
+
+        _context.ProductosUbicacion.Add(new ProductoUbicacion { ProductoId = productoId, UbicacionId = ubicacionId });
+    }
+
     public async Task<bool> ExisteDistritoAsync(int distritoId) =>
         await _context.Distritos.AnyAsync(d => d.Id == distritoId);
 

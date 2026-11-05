@@ -36,3 +36,43 @@ public class UbicacionProductoResponse
     public string? Categoria { get; set; }
     public string UnidadBase { get; set; } = string.Empty;
 }
+
+/// <summary>Un lugar donde está puesto un producto.</summary>
+public class LugarDeProductoResponse
+{
+    public int UbicacionId { get; set; }
+
+    /// <summary>"P1-A-E03".</summary>
+    public string Ruta { get; set; } = string.Empty;
+
+    /// <summary>"Abarrotes", si el lugar tiene nombre.</summary>
+    public string? Nombre { get; set; }
+}
+
+/// <summary>Un producto del almacén con el lugar o los lugares donde está puesto.</summary>
+public class ProductoUbicadoResponse
+{
+    public int ProductoId { get; set; }
+    public string Codigo { get; set; } = string.Empty;
+    public string Producto { get; set; } = string.Empty;
+    public string? Categoria { get; set; }
+    public string? Marca { get; set; }
+    public string UnidadBase { get; set; } = string.Empty;
+
+    /// <summary>Lo que hay en el almacén, en unidad base.</summary>
+    public decimal Stock { get; set; }
+
+    /// <summary>Vacío: tiene stock (o ya se le puso un lugar) pero nadie sabe dónde está.</summary>
+    public List<LugarDeProductoResponse> Lugares { get; set; } = [];
+}
+
+public class ProductosUbicadosResponse
+{
+    public int AlmacenId { get; set; }
+
+    /// <summary>Cuántos lugares tiene definidos el almacén: sin ninguno no hay dónde poner nada.</summary>
+    public int Lugares { get; set; }
+
+    public int SinLugar { get; set; }
+    public List<ProductoUbicadoResponse> Items { get; set; } = [];
+}

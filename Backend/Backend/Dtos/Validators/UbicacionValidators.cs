@@ -19,7 +19,7 @@ public class CrearUbicacionRequestValidator : AbstractValidator<CrearUbicacionRe
     public CrearUbicacionRequestValidator()
     {
         RuleFor(x => x.Tipo).Must(t => TipoUbicacion.Todos.Contains(t))
-            .WithMessage("Elige qué es: piso, zona, pasillo, estante, nivel, posición u otro");
+            .WithMessage("Elige qué es: piso, cuarto o estante");
         RuleFor(x => x.Codigo).NotEmpty().WithMessage("Ponle un código")
             .MaximumLength(20)
             .Matches(ReglasUbicacion.PatronCodigo).WithMessage(ReglasUbicacion.MensajeCodigo);
@@ -32,7 +32,7 @@ public class ActualizarUbicacionRequestValidator : AbstractValidator<ActualizarU
     public ActualizarUbicacionRequestValidator()
     {
         RuleFor(x => x.Tipo).Must(t => TipoUbicacion.Todos.Contains(t))
-            .WithMessage("Elige qué es: piso, zona, pasillo, estante, nivel, posición u otro");
+            .WithMessage("Elige qué es: piso, cuarto o estante");
         RuleFor(x => x.Codigo).NotEmpty().WithMessage("Ponle un código")
             .MaximumLength(20)
             .Matches(ReglasUbicacion.PatronCodigo).WithMessage(ReglasUbicacion.MensajeCodigo);
@@ -48,7 +48,7 @@ public class GenerarUbicacionesRequestValidator : AbstractValidator<GenerarUbica
     public GenerarUbicacionesRequestValidator()
     {
         RuleFor(x => x.Tipo).Must(t => TipoUbicacion.Todos.Contains(t))
-            .WithMessage("Elige qué son: pisos, pasillos, estantes, posiciones...");
+            .WithMessage("Elige qué son: pisos, cuartos o estantes");
         RuleFor(x => x.Prefijo).MaximumLength(10)
             .Matches(ReglasUbicacion.PatronCodigo).When(x => !string.IsNullOrEmpty(x.Prefijo))
             .WithMessage(ReglasUbicacion.MensajeCodigo);
@@ -64,5 +64,27 @@ public class AsignarProductoUbicacionRequestValidator : AbstractValidator<Asigna
     public AsignarProductoUbicacionRequestValidator()
     {
         RuleFor(x => x.ProductoId).GreaterThan(0).WithMessage("Elige el producto");
+    }
+}
+
+public class AsignarProductosUbicacionRequestValidator : AbstractValidator<AsignarProductosUbicacionRequest>
+{
+    /// <summary>Tope de una tanda: más que esto es casi seguro seleccionar de más.</summary>
+    public const int Maximo = 500;
+
+    public AsignarProductosUbicacionRequestValidator()
+    {
+        RuleFor(x => x.UbicacionId).GreaterThan(0).WithMessage("Elige el lugar");
+        RuleFor(x => x.ProductoIds).NotEmpty().WithMessage("Elige al menos un producto")
+            .Must(p => p.Count <= Maximo).WithMessage($"Elige hasta {Maximo} productos por vez");
+    }
+}
+
+public class QuitarProductosUbicacionRequestValidator : AbstractValidator<QuitarProductosUbicacionRequest>
+{
+    public QuitarProductosUbicacionRequestValidator()
+    {
+        RuleFor(x => x.UbicacionId).GreaterThan(0).WithMessage("Elige el lugar");
+        RuleFor(x => x.ProductoIds).NotEmpty().WithMessage("Elige al menos un producto");
     }
 }

@@ -34,7 +34,7 @@ export interface AlmacenResponse {
   telefono: string | null
   esPrincipal: boolean
   activo: boolean
-  /** Cuántos lugares (pisos, pasillos, estantes...) tiene definidos. */
+  /** Cuántos lugares (pisos, cuartos, estantes...) tiene definidos. */
   ubicaciones: number
   productos: number
   valorizado: number
@@ -84,18 +84,14 @@ export const almacenApi = {
   remove: (id: number) => api.del<void>(`/almacen/${id}`),
 }
 
-// --- Ubicaciones (pisos, pasillos, estantes dentro de un almacén) ---
+// --- Ubicaciones (pisos, cuartos y estantes dentro de un almacén) ---
 
-export type TipoUbicacion = 'PISO' | 'ZONA' | 'PASILLO' | 'ESTANTE' | 'NIVEL' | 'POSICION' | 'OTRO'
+export type TipoUbicacion = 'PISO' | 'CUARTO' | 'ESTANTE'
 
 export const TIPOS_UBICACION: { value: TipoUbicacion; label: string }[] = [
   { value: 'PISO', label: 'Piso' },
-  { value: 'ZONA', label: 'Zona' },
-  { value: 'PASILLO', label: 'Pasillo' },
+  { value: 'CUARTO', label: 'Cuarto' },
   { value: 'ESTANTE', label: 'Estante' },
-  { value: 'NIVEL', label: 'Nivel' },
-  { value: 'POSICION', label: 'Posición' },
-  { value: 'OTRO', label: 'Otro' },
 ]
 
 export interface UbicacionResponse {
@@ -155,6 +151,46 @@ export const ubicacionApi = {
     api.post<UbicacionProductoResponse[]>(`/ubicacion/${id}/productos`, { productoId }),
   quitar: (id: number, productoId: number) =>
     api.del<UbicacionProductoResponse[]>(`/ubicacion/${id}/productos/${productoId}`),
+}
+
+// --- Ubicación de productos (pantalla propia) ---
+
+export interface LugarDeProducto {
+  ubicacionId: number
+  /** "P1-A-E03". */
+  ruta: string
+  nombre: string | null
+}
+
+export interface ProductoUbicado {
+  productoId: number
+  codigo: string
+  producto: string
+  categoria: string | null
+  marca: string | null
+  unidadBase: string
+  /** Lo que hay en el almacén, en unidad base. */
+  stock: number
+  /** Vacío: tiene stock pero nadie sabe dónde está. */
+  lugares: LugarDeProducto[]
+}
+
+export interface ProductosUbicados {
+  almacenId: number
+  /** Cuántos lugares tiene definidos el almacén. */
+  lugares: number
+  sinLugar: number
+  items: ProductoUbicado[]
+}
+
+export const ubicacionProductoApi = {
+  /** Los productos del almacén con el lugar donde está cada uno. */
+  listar: (almacenId: number) => api.get<ProductosUbicados>(`/ubicacion-producto?almacenId=${almacenId}`),
+  /** Pone varios productos en un lugar; con `reemplazar`, los mueve (les quita el lugar que tenían en ese almacén). */
+  asignar: (body: { ubicacionId: number; productoIds: number[]; reemplazar: boolean }) =>
+    api.post<ProductosUbicados>('/ubicacion-producto/asignar', body),
+  quitar: (body: { ubicacionId: number; productoIds: number[] }) =>
+    api.post<ProductosUbicados>('/ubicacion-producto/quitar', body),
 }
 
 // --- Motivos ---
@@ -457,6 +493,8 @@ export interface LineaTransferenciaRequest {
   productoId: number
   presentacionId?: number | null
   cantidad: number
+  /** Dónde se guarda en el almacén de destino. Opcional. */
+  ubicacionDestinoId?: number | null
 }
 
 export interface CrearTransferenciaRequest {
@@ -616,6 +654,8 @@ export interface LineaRecepcionRequest {
   lote?: string | null
   /** Cuándo vence, si aplica. */
   fechaVencimiento?: string | null
+  /** Dónde se guardó dentro del almacén. Opcional: sin lugar, entra al almacén igual. */
+  ubicacionId?: number | null
 }
 
 export interface CrearRecepcionRequest {

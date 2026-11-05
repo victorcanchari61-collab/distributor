@@ -48,7 +48,7 @@ class InventarioApi {
     await _api.put('/almacen/$id', cuerpo: cuerpo) as Map<String, dynamic>,
   );
 
-  // --- Ubicaciones (pisos, pasillos y estantes dentro de un almacen) ---
+  // --- Ubicaciones (pisos, cuartos y estantes dentro de un almacen) ---
 
   /// GET /api/almacen/{id}/ubicaciones - los lugares del almacen, ya en orden de arbol.
   Future<List<Ubicacion>> ubicaciones(int almacenId) async {
@@ -66,6 +66,42 @@ class InventarioApi {
         UbicacionProducto.desdeJson(e as Map<String, dynamic>),
     ];
   }
+
+  /// GET /api/ubicacion-producto?almacenId= - los productos del almacen con su lugar.
+  Future<ProductosUbicados> productosUbicados(int almacenId) async =>
+      ProductosUbicados.desdeJson(
+        await _api.get('/ubicacion-producto?almacenId=$almacenId')
+            as Map<String, dynamic>,
+      );
+
+  /// POST /api/ubicacion-producto/asignar - pone (o mueve) productos en un lugar.
+  Future<ProductosUbicados> asignarUbicacion({
+    required int ubicacionId,
+    required List<int> productoIds,
+    required bool reemplazar,
+  }) async => ProductosUbicados.desdeJson(
+    await _api.post(
+          '/ubicacion-producto/asignar',
+          cuerpo: {
+            'ubicacionId': ubicacionId,
+            'productoIds': productoIds,
+            'reemplazar': reemplazar,
+          },
+        )
+        as Map<String, dynamic>,
+  );
+
+  /// POST /api/ubicacion-producto/quitar - saca productos de un lugar.
+  Future<ProductosUbicados> quitarUbicacion({
+    required int ubicacionId,
+    required List<int> productoIds,
+  }) async => ProductosUbicados.desdeJson(
+    await _api.post(
+          '/ubicacion-producto/quitar',
+          cuerpo: {'ubicacionId': ubicacionId, 'productoIds': productoIds},
+        )
+        as Map<String, dynamic>,
+  );
 
   // --- Stock ---
 
