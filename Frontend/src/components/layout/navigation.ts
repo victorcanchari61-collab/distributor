@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   FileBarChart,
   Banknote,
+  BookOpen,
   Boxes,
   Building2,
   CalendarCheck,
@@ -130,6 +131,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'maestros.clientes', label: 'Clientes', icon: Contact },
       { id: 'maestros.proveedores', label: 'Proveedores', icon: Building2 },
       { id: 'maestros.productos', label: 'Productos', icon: Package },
+      { id: 'maestros.catalogo', label: 'Catálogo', icon: BookOpen },
     ],
   },
   {

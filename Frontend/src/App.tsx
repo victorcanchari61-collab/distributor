@@ -48,7 +48,7 @@ import {
   ConteosPage,
 } from './features/inventario'
 import { OrdenesCompraPage, MisComprasPage, RecepcionesPage } from './features/compras'
-import { ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
+import { CatalogoPage, CatalogoPublicoPage, ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
 import { AdelantosPage, AsistenciaPage, EmpleadosPage, PlanillaPage } from './features/rrhh'
 import {
   ConductoresPage,
@@ -82,6 +82,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'maestros.clientes': ClientesPage,
   'maestros.proveedores': ProveedoresPage,
   'maestros.productos': ProductosPage,
+  'maestros.catalogo': CatalogoPage,
   'rrhh.empleados': EmpleadosPage,
   'rrhh.asistencia': AsistenciaPage,
   'rrhh.planilla': PlanillaPage,
@@ -149,6 +150,12 @@ function App() {
     window.addEventListener('perfil:actualizado', alActualizar)
     return () => window.removeEventListener('perfil:actualizado', alActualizar)
   }, [])
+
+  // El catálogo público se abre con un enlace, sin sesión: va ANTES del login y fuera del panel (sin menú, sin
+  // permisos ni tiempo real). Es una sola palabra de ruta: el catálogo interno vive en /maestros/catalogo.
+  if (location.pathname === '/catalogo' || location.pathname === '/catalogo/') {
+    return <CatalogoPublicoPage />
+  }
 
   if (!usuario) {
     return (

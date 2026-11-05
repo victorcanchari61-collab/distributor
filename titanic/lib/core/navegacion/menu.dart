@@ -52,7 +52,9 @@ class MenuGrupo {
 /// Espejo de `Frontend/src/components/layout/navigation.ts`: mismos modulos, en
 /// el mismo orden y con los mismos nombres, para que quien usa el panel web
 /// encuentre lo mismo en el telefono. Las unicas ausentes son las vistas
-/// marcadas como ocultas alla (series de comprobantes y parametros).
+/// marcadas como ocultas alla (series de comprobantes y parametros) y las que
+/// son solo del panel web: el Catalogo (maestros.catalogo), porque los clientes
+/// tienen su propia aplicacion.
 ///
 /// Si el menu del web cambia, este archivo se actualiza detras.
 ///

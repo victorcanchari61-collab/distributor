@@ -128,6 +128,8 @@ public static class CatalogoPermisos
             ["maestros.clientes"] = CatalogoImportable,
             ["maestros.proveedores"] = CatalogoImportable,
             ["maestros.productos"] = CatalogoImportable,
+            // El catálogo de productos para enseñarle al cliente (fotos, presentaciones y precios). Solo se mira.
+            ["maestros.catalogo"] = [Accion.Ver],
 
             // --- Compras ---
             ["compras.ordenes"] = DocumentoConfirmable,

@@ -4,6 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:titanic/core/navegacion/menu.dart';
 
+/// Vistas que existen SOLO en el panel web y no van en la app: el Catalogo es
+/// para mostrarselo a los clientes, que tienen su propia aplicacion.
+const _soloWeb = {'maestros.catalogo'};
+
 /// Lee el menu del panel web para compararlo con el de la app.
 ///
 /// Los dos menus tienen que decir lo mismo: si alguien agrega un modulo en el
@@ -32,6 +36,7 @@ import 'package:titanic/core/navegacion/menu.dart';
 
   for (final coincidencia in objeto.allMatches(texto)) {
     if (coincidencia.group(0)!.contains('hidden: true')) continue;
+    if (_soloWeb.contains(coincidencia.group(1)!)) continue;
     vistas.add(coincidencia.group(1)!);
   }
 

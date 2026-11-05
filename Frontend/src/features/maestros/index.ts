@@ -6,6 +6,8 @@ export { SelectorCliente } from './SelectorCliente'
 export { proveedorApi } from './proveedorApi'
 export type { ProveedorRequest, ProveedorResponse } from './proveedorApi'
 export { ProductosPage } from './ProductosPage'
+export { CatalogoPage } from './CatalogoPage'
+export { CatalogoPublicoPage } from './CatalogoPublicoPage'
 export { productoApi, categoriaApi, marcaApi, unidadApi } from './productoApi'
 export type {
   ProductoResponse,
