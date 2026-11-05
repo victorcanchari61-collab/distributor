@@ -280,7 +280,7 @@ BEGIN
         UPDATE PedidoDetalle l
           JOIN tmp_plan t ON t.LineaId = l.Id
            SET l.CantidadPresentacion = l.CantidadPresentacion + t.Suma,
-               l.Cantidad             = (l.CantidadPresentacion + t.Suma) * t.Factor,
+               l.Cantidad             = (t.CantAntes + t.Suma) * t.Factor,
                l.PrecioPresentacion   = COALESCE(t.Precio, l.PrecioPresentacion),
                l.PrecioUnitario       = ROUND(COALESCE(t.Precio, l.PrecioPresentacion) / t.Factor, 4);
 
