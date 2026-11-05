@@ -791,7 +791,7 @@ public class DespachoService : IDespachoService
 
     private static DespachoResponse Map(Despacho d)
     {
-        var pedidos = d.Detalle.Select(x => MapPedido(x.Pedido!)).ToList();
+        var pedidos = PorRutaYMercado(d.Detalle.Select(x => MapPedido(x.Pedido!)));
 
         return new DespachoResponse
         {
@@ -819,6 +819,24 @@ public class DespachoService : IDespachoService
         };
     }
 
+    /// <summary>
+    /// Los pedidos en el orden en que se reparte: por ruta, luego por mercado y por último por cliente.
+    ///
+    /// Es el orden de la hoja de ruta, y con él salen los papeles que se lleva el repartidor: todos los pedidos de
+    /// un mercado juntos, para bajar del camión y entregar sin ir y venir. Ruta y mercado se ordenan como número
+    /// cuando lo son — los mercados se llaman 1, 7, 8, 11, y como texto el 11 saldría antes que el 7 —; los que
+    /// tienen nombre van después, y un pedido sin mercado, al final.
+    /// </summary>
+    private static List<DespachoPedidoResponse> PorRutaYMercado(IEnumerable<DespachoPedidoResponse> pedidos) =>
+        pedidos
+            .OrderBy(p => int.TryParse(p.RutaCliente, out var r) ? r : int.MaxValue)
+            .ThenBy(p => p.RutaCliente ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(p => p.Mercado is null ? 2 : int.TryParse(p.Mercado, out _) ? 0 : 1)
+            .ThenBy(p => int.TryParse(p.Mercado, out var m) ? m : int.MaxValue)
+            .ThenBy(p => p.Mercado ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(p => p.Cliente, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
     /// <summary>Los nombres de las rutas del despacho; si es de los de antes (sin lista), la ruta principal.</summary>
     private static List<string> NombresDeRutas(Despacho d)
     {
@@ -842,6 +860,7 @@ public class DespachoService : IDespachoService
             Fecha = p.Fecha,
             Direccion = p.Cliente?.Direccion,
             Mercado = p.Cliente?.Mercado?.Nombre,
+            MercadoId = p.Cliente?.MercadoId ?? 0,
             Telefono = p.Cliente?.Telefono,
             RutaCliente = p.Cliente?.Ruta?.Nombre,
             DiaVisita = p.Cliente?.DiaVisita,

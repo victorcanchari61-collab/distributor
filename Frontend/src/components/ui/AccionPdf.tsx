@@ -7,6 +7,7 @@ import { VisorPdfMovil } from './VisorPdfMovil'
 import { RowAction } from './RowAction'
 import { cn } from './cn'
 import { ApiError, guardarArchivo, obtenerArchivo } from '../../lib/apiClient'
+import { OrdenMercadosModal } from './OrdenMercadosModal'
 
 /** Los documentos que se pueden imprimir, con la ruta que los sirve. */
 export type DocumentoPdf =
@@ -110,16 +111,33 @@ export interface AccionPdfProps {
  */
 export function AccionPdf({ documento, id, numero, reporte }: AccionPdfProps) {
   const [abierto, setAbierto] = useState(false)
+  // Los pedidos del despacho piden primero el orden de los mercados, ANTES de generar el PDF.
+  const [ordenando, setOrdenando] = useState(false)
+  const [mercados, setMercados] = useState<number[]>([])
+  const conOrden = documento === 'despacho' && !reporte
 
   return (
     <>
       <RowAction
         label={reporte ? `${REPORTES[reporte].titulo} de ${numero}` : `PDF de ${numero}`}
         tone="neutral"
-        onClick={() => setAbierto(true)}
+        onClick={() => (conOrden ? setOrdenando(true) : setAbierto(true))}
       >
         {reporte ? REPORTES[reporte].icono : <FileText size={15} />}
       </RowAction>
+
+      {ordenando && (
+        <OrdenMercadosModal
+          id={id}
+          numero={numero}
+          onCancelar={() => setOrdenando(false)}
+          onContinuar={(orden) => {
+            setMercados(orden)
+            setOrdenando(false)
+            setAbierto(true)
+          }}
+        />
+      )}
 
       {/* Se monta solo al abrir: si no, cada fila de la tabla pediría su PDF. */}
       {abierto && (
@@ -128,6 +146,7 @@ export function AccionPdf({ documento, id, numero, reporte }: AccionPdfProps) {
           id={id}
           numero={numero}
           reporte={reporte}
+          mercados={mercados}
           onCerrar={() => setAbierto(false)}
         />
       )}
@@ -141,10 +160,13 @@ export function VisorPdf({
   numero,
   reporte,
   consulta,
+  mercados,
   onCerrar,
 }: AccionPdfProps & {
   /** Filtros del reporte, ya armados como query: `mercados=1,2&unidades=BOL`. */
   consulta?: string
+  /** Solo en los pedidos del despacho: los ids de mercado en el orden elegido para las hojas. */
+  mercados?: number[]
   onCerrar: () => void
 }) {
   const [formato, setFormato] = useState<Formato>('a4')
@@ -172,6 +194,8 @@ export function VisorPdf({
     return () => mq.removeEventListener('change', sincronizar)
   }, [])
 
+  const ordenKey = (mercados ?? []).join(',')
+
   // Al cambiar de documento o de formato se reintenta dibujar.
   useEffect(() => setVisorFallo(false), [documento, id, formato])
   const soloA4 = SOLO_A4.includes(documento)
@@ -188,7 +212,9 @@ export function VisorPdf({
         // Un reporte propio va en su ruta; un formato del mismo papel, en la query.
         const sufijo = reporte
           ? `/${reporte}${consulta ? `?${consulta}` : ''}`
-          : formato === 'a4' ? '' : `?formato=${formato}`
+          : documento === 'despacho'
+            ? ordenKey ? `?mercados=${ordenKey}` : ''
+            : formato === 'a4' ? '' : `?formato=${formato}`
         const archivo = await obtenerArchivo(
           `${rutaDe(documento)}/${id}/pdf${sufijo}`,
           `${documento}-${numero}.pdf`,
@@ -214,7 +240,7 @@ export function VisorPdf({
       // acumulan hasta recargar la página.
       if (creada) URL.revokeObjectURL(creada)
     }
-  }, [documento, id, numero, formato, reporte, consulta])
+  }, [documento, id, numero, formato, reporte, consulta, ordenKey])
 
   const imprimir = useCallback(() => {
     // Se imprime el propio visor incrustado. Algunos navegadores no dejan

@@ -18,6 +18,9 @@ public class DespachoPedidoResponse
     /// <summary>Dónde entregarlo: sin esto el papel del reparto no sirve.</summary>
     public string? Direccion { get; set; }
     public string? Mercado { get; set; }
+
+    /// <summary>El id del mercado, para ordenar los papeles por mercado a elección. Cero si el cliente no tiene.</summary>
+    public int MercadoId { get; set; }
     public string? Telefono { get; set; }
 
     /// <summary>La ruta del cliente y el día en que se lo visita: con varias rutas en el camión, dice de cuál es cada pedido.</summary>

@@ -408,12 +408,22 @@ public class PdfService(
         return (Generar(doc, formato), Nombre("compra", compra.Numero, formato));
     }
 
-    public async Task<(byte[], string)> DespachoAsync(int id)
+    public async Task<(byte[], string)> DespachoAsync(int id, IReadOnlyList<int>? mercados = null)
     {
         var despacho = await despachos.GetAsync(id);
 
+        /*
+         * El despacho ya viene por ruta y mercado. Si quien imprime eligió otro orden de mercados, las hojas
+         * siguen ese orden; dentro de cada mercado se mantiene el de siempre (OrderBy es estable) y un mercado
+         * que no venga en la lista va al final.
+         */
+        var posicion = (mercados ?? []).Select((m, i) => (m, i)).GroupBy(x => x.m).ToDictionary(g => g.Key, g => g.First().i);
+        var pedidos = despacho.Detalle
+            .OrderBy(p => posicion.GetValueOrDefault(p.MercadoId, int.MaxValue))
+            .ToList();
+
         var docs = new List<DocumentoImprimible>();
-        foreach (var pedido in despacho.Detalle)
+        foreach (var pedido in pedidos)
         {
             docs.Add(await ArmarPedidoAsync(pedido.PedidoId));
         }

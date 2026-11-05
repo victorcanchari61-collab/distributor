@@ -42,7 +42,7 @@ public interface IPdfService
     Task<(byte[] Contenido, string Nombre)> ComprobanteAsync(int id, FormatoPdf formato);
 
     /// <summary>Los pedidos de un despacho, listos para dárselos al repartidor.</summary>
-    Task<(byte[] Contenido, string Nombre)> DespachoAsync(int id);
+    Task<(byte[] Contenido, string Nombre)> DespachoAsync(int id, IReadOnlyList<int>? mercados = null);
 
     /// <summary>
     /// Detalle por cliente del camión: a quién se entrega y cuánto se cobra,

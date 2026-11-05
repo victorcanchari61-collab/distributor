@@ -45,10 +45,23 @@ public class PdfController(IPdfService pdf) : ControllerBase
     public async Task<IActionResult> Compra(int id, [FromQuery] string? formato) =>
         Archivo(await pdf.CompraAsync(id, Formato(formato)));
 
-    /// <summary>Los pedidos de un despacho: los papeles que se lleva el repartidor.</summary>
+    /// <summary>
+    /// Los pedidos de un despacho: los papeles que se lleva el repartidor.
+    /// <c>mercados</c>: los ids de los mercados en el orden en que se quieren las hojas (<c>5,2,0</c>). Sin él,
+    /// por ruta y mercado, como la hoja de ruta. Un mercado que no esté en la lista va al final.
+    /// </summary>
     [HttpGet("api/despacho/{id:int}/pdf")]
     [Permiso("tms.despachos", Accion.Exportar)]
-    public async Task<IActionResult> Despacho(int id) => Archivo(await pdf.DespachoAsync(id));
+    public async Task<IActionResult> Despacho(int id, [FromQuery] string? mercados)
+    {
+        var orden = (mercados ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(m => int.TryParse(m, out var n) ? n : (int?)null)
+            .OfType<int>()
+            .ToList();
+
+        return Archivo(await pdf.DespachoAsync(id, orden));
+    }
 
     /// <summary>Detalle por cliente del camión, en el orden de la ruta.</summary>
     [HttpGet("api/despacho/{id:int}/pdf/clientes")]
