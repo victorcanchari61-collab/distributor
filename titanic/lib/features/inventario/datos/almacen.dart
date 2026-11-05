@@ -118,6 +118,7 @@ class Ubicacion {
     required this.id,
     required this.almacenId,
     required this.padreId,
+    required this.tipo,
     required this.tipoEtiqueta,
     required this.codigo,
     required this.nombre,
@@ -131,6 +132,9 @@ class Ubicacion {
   final int id;
   final int almacenId;
   final int? padreId;
+
+  /// PISO o CUARTO.
+  final String tipo;
   final String tipoEtiqueta;
 
   /// El codigo corto de este punto: "P1", "A", "03".
@@ -154,6 +158,7 @@ class Ubicacion {
     id: json['id'] as int,
     almacenId: json['almacenId'] as int? ?? 0,
     padreId: json['padreId'] as int?,
+    tipo: json['tipo'] as String? ?? '',
     tipoEtiqueta: json['tipoEtiqueta'] as String? ?? '',
     codigo: json['codigo'] as String? ?? '',
     nombre: json['nombre'] as String?,

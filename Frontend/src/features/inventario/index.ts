@@ -1,5 +1,7 @@
 export { AlmacenesPage } from './AlmacenesPage'
 export { UbicacionProductosPage } from './UbicacionProductosPage'
+export { SelectorLugar, SIN_LUGAR, lugarFinal, useLugares } from './SelectorLugar'
+export type { LugarElegido } from './SelectorLugar'
 export { StockPage } from './StockPage'
 export { KardexPage } from './KardexPage'
 export { AjustesPage } from './AjustesPage'

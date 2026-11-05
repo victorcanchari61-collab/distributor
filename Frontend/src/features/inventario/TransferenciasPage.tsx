@@ -30,13 +30,14 @@ import type {
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
-import { almacenApi, stockApi, transferenciaApi, ubicacionApi } from './inventarioApi'
+import { almacenApi, stockApi, transferenciaApi } from './inventarioApi'
+import { SIN_LUGAR, SelectorLugar, lugarFinal, useLugares } from './SelectorLugar'
+import type { LugarElegido } from './SelectorLugar'
 import type {
   AlmacenResponse,
   DocumentoInventarioResponse,
   LineaDocumentoResponse,
   ResumenDocumentos,
-  UbicacionResponse,
 } from './inventarioApi'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
@@ -82,25 +83,20 @@ export function TransferenciasPage() {
   const [filas, setFilas] = useState<FilaTransferencia[]>([])
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
 
-  // Dónde se guarda lo que se transfiere en el almacén de destino: 0 = sin lugar. Un solo lugar para toda la transferencia. Opcional.
-  const [lugaresDestino, setLugaresDestino] = useState<UbicacionResponse[]>([])
-  const [lugarDestinoId, setLugarDestinoId] = useState(0)
+  // Dónde se guarda lo que se transfiere en el almacén de destino: un piso y, adentro, un cuarto. Opcional.
+  const [lugarDestino, setLugarDestino] = useState<LugarElegido>(SIN_LUGAR)
+  const { lugares: lugaresDestino, cargando: cargandoLugares } = useLugares(
+    cabecera.almacenDestinoId,
+    vista === 'form',
+  )
 
+  // Otro almacén tiene otros pisos y cuartos: lo elegido antes ya no sirve.
   useEffect(() => {
-    setLugaresDestino([])
-    setLugarDestinoId(0)
-    if (vista !== 'form' || !cabecera.almacenDestinoId) return
+    setLugarDestino(SIN_LUGAR)
+  }, [cabecera.almacenDestinoId, vista])
 
-    let vigente = true
-    // Sin permiso o sin lugares definidos, la transferencia sigue igual: solo falta el campo.
-    void ubicacionApi
-      .listar(cabecera.almacenDestinoId)
-      .then((l) => vigente && setLugaresDestino(l.filter((x) => x.activo)))
-      .catch(() => undefined)
-    return () => {
-      vigente = false
-    }
-  }, [vista, cabecera.almacenDestinoId])
+  /** El lugar donde queda todo. Solo cuenta si es un lugar del almacén de destino. */
+  const lugarDestinoId = lugaresDestino.some((l) => l.id === lugarFinal(lugarDestino)) ? lugarFinal(lugarDestino) : 0
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -419,20 +415,15 @@ export function TransferenciasPage() {
                 .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
             />
 
-            {/* Dónde se guarda en el destino: un solo lugar para todo lo que se transfiere. Opcional. */}
-            {lugaresDestino.length > 0 && (
-              <Desplegable
-                className="mt-4"
-                label="Guardar en"
-                optional
-                value={lugarDestinoId}
-                onChange={(v) => setLugarDestinoId(Number(v))}
-                options={[
-                  { value: 0, label: 'Sin lugar' },
-                  ...lugaresDestino.map((l) => ({ value: l.id, label: l.ruta, detalle: l.nombre ?? l.tipoEtiqueta })),
-                ]}
+            {/* Dónde se guarda en el destino: un piso y un cuarto para todo lo que se transfiere. Opcional. */}
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <SelectorLugar
+                lugares={lugaresDestino}
+                cargando={cargandoLugares}
+                valor={lugarDestino}
+                onChange={setLugarDestino}
               />
-            )}
+            </div>
 
             <Input
               className="mt-4"

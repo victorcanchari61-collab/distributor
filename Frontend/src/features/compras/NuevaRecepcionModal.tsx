@@ -16,8 +16,8 @@ import type { DataTableColumn, OpcionBuscador } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
-import type { AlmacenOpcion, CrearRecepcionRequest, ProductosUbicados, UbicacionResponse } from '../inventario'
-import { recepcionApi, ubicacionApi, ubicacionProductoApi } from '../inventario'
+import type { AlmacenOpcion, CrearRecepcionRequest, LugarElegido } from '../inventario'
+import { SIN_LUGAR, SelectorLugar, lugarFinal, recepcionApi, useLugares } from '../inventario'
 import type { CompraDetalleResponse, CompraResponse } from './comprasApi'
 
 export interface NuevaRecepcionModalProps {
@@ -72,47 +72,20 @@ export function NuevaRecepcionModal({
   const [guardando, setGuardando] = useState(false)
 
   /*
-   * Dónde se guarda lo que llega, dentro del almacén elegido. Un solo selector para toda la recepción:
-   *   HABITUAL (-1)  cada producto va a su lugar de siempre en ese almacén, si ya tiene uno;
-   *   0              sin lugar;
-   *   un id          todo lo que llega se guarda en ese lugar.
-   * Los lugares del almacén y dónde está hoy cada producto se piden al elegir el almacén. Es opcional: un almacén
-   * sin lugares recibe igual, y el selector ni aparece.
+   * Dónde se recibe, dentro del almacén elegido: un piso y, adentro, un cuarto. Se elige en los datos de la
+   * recepción, no línea por línea: todo lo que llega se guarda ahí. Es opcional; un almacén sin pisos ni cuartos
+   * recibe igual.
    */
-  const HABITUAL = -1
-  const [lugares, setLugares] = useState<UbicacionResponse[]>([])
-  const [puestos, setPuestos] = useState<ProductosUbicados | null>(null)
-  const [lugarElegido, setLugarElegido] = useState(HABITUAL)
+  const [lugar, setLugar] = useState<LugarElegido>(SIN_LUGAR)
+  const { lugares, cargando: cargandoLugares } = useLugares(almacenId, open)
 
-  /** El lugar habitual del producto en este almacén, si ya tiene uno. */
-  const lugarHabitual = (d: CompraDetalleResponse) =>
-    puestos?.items.find((i) => i.productoId === d.productoId)?.lugares[0]?.ubicacionId ?? 0
-
-  /** Dónde se guarda esta línea según el selector. Solo cuenta si sigue siendo un lugar activo de este almacén. */
-  const lugarDe = (d: CompraDetalleResponse) => {
-    const id = lugarElegido === HABITUAL ? lugarHabitual(d) : lugarElegido
-    return lugares.some((l) => l.id === id && l.activo) ? id : 0
-  }
-
+  // Otro almacén tiene otros pisos y cuartos: lo elegido antes ya no sirve.
   useEffect(() => {
-    if (!open || !almacenId) return
-    let vigente = true
-    setLugarElegido(HABITUAL)
-    setLugares([])
-    setPuestos(null)
-    // Sin permiso o sin lugares definidos, la recepción sigue igual: solo falta el campo.
-    void ubicacionApi
-      .listar(almacenId)
-      .then((l) => vigente && setLugares(l))
-      .catch(() => undefined)
-    void ubicacionProductoApi
-      .listar(almacenId)
-      .then((p) => vigente && setPuestos(p))
-      .catch(() => undefined)
-    return () => {
-      vigente = false
-    }
-  }, [open, almacenId])
+    setLugar(SIN_LUGAR)
+  }, [almacenId, open])
+
+  /** El lugar donde queda todo lo que llega. Solo cuenta si sigue siendo un lugar de este almacén. */
+  const lugarElegido = lugares.some((l) => l.id === lugarFinal(lugar)) ? lugarFinal(lugar) : 0
 
   /** Lo que todavía no llega: es lo único que se puede recibir. */
   const pendientes: CompraDetalleResponse[] =
@@ -218,7 +191,7 @@ export function NuevaRecepcionModal({
         cantidad: Number(cantidades[d.id] || 0) * factorDe(d),
         lote: lotes[d.id]?.trim() || null,
         fechaVencimiento: vencimientos[d.id] || null,
-        ubicacionId: lugarDe(d) || null,
+        ubicacionId: lugarElegido || null,
       }))
       .filter((l) => l.cantidad > 0)
 
@@ -466,22 +439,6 @@ export function NuevaRecepcionModal({
                     .map((a) => ({ value: a.id, label: a.nombre, detalle: a.codigo }))}
                 />
 
-                {lugares.some((l) => l.activo) && (
-                  <Desplegable
-                    label="Guardar en"
-                    optional
-                    value={lugarElegido}
-                    onChange={(v) => setLugarElegido(Number(v))}
-                    options={[
-                      { value: HABITUAL, label: 'Su lugar habitual', detalle: 'cada producto donde ya está' },
-                      { value: 0, label: 'Sin lugar' },
-                      ...lugares
-                        .filter((l) => l.activo)
-                        .map((l) => ({ value: l.id, label: l.ruta, detalle: l.nombre ?? l.tipoEtiqueta })),
-                    ]}
-                  />
-                )}
-
                 <Input
                   label="Observación"
                   optional
@@ -489,6 +446,9 @@ export function NuevaRecepcionModal({
                   value={observacion}
                   onChange={(e) => setObservacion(e.target.value)}
                 />
+
+                {/* Dónde se recibe: piso y cuarto del almacén elegido. */}
+                <SelectorLugar lugares={lugares} cargando={cargandoLugares} valor={lugar} onChange={setLugar} />
               </div>
             </div>
           ) : !compra ? (
@@ -496,19 +456,15 @@ export function NuevaRecepcionModal({
               Elige primero la compra en la pestaña Datos.
             </p>
           ) : (
-            <>
-              <SysDataTable<CompraDetalleResponse>
-                columns={columnasLineas}
-                rows={pendientes}
-                rowKey="id"
-                toolbar={false}
-                empty="Esta compra ya llegó completa: no queda nada por recibir."
-              />
-              <p className="text-xs text-ink-soft">
-                Viene lleno con lo que falta. Si llegó menos, corrige la cantidad y la compra
-                queda como recibida parcial. Lo que dejes en cero no se recibe.
-              </p>
-            </>
+            <SysDataTable<CompraDetalleResponse>
+              columns={columnasLineas}
+              rows={pendientes}
+              rowKey="id"
+              toolbar={false}
+              // Son pocas líneas, las de una compra: el pie de "1–1 de 1" no informa nada.
+              paginacion={false}
+              empty="Esta compra ya llegó completa: no queda nada por recibir."
+            />
           )}
         </div>
       </Modal>

@@ -113,31 +113,17 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
   /// Lo que la pantalla vio en el ultimo `build`: se guarda porque `ref.watch`
   /// solo se puede usar al construir, y `_guardar` tambien necesita estos datos.
   List<Ubicacion> _lugaresVistos = const [];
-  ProductosUbicados? _ubicadosVistos;
 
-  /// El lugar habitual del producto en este almacen, si ya tiene uno.
-  int? _lugarHabitual(int productoId, List<Ubicacion> lugares) {
-    final habitual = _ubicadosVistos?.items
-        .where((p) => p.productoId == productoId)
-        .firstOrNull
-        ?.lugares
-        .firstOrNull
-        ?.ubicacionId;
-    return lugares.any((l) => l.id == habitual) ? habitual : null;
-  }
+  /// Donde se recibe, dentro del almacen elegido: un piso y, adentro, un cuarto.
+  /// Es un solo lugar para toda la recepcion, no uno por linea.
+  int? _pisoId;
+  int? _cuartoId;
 
-  /// Un solo lugar para toda la recepcion: [_habitual] manda cada producto a su
-  /// lugar de siempre, 0 es sin lugar, y un id guarda todo ahi.
-  static const _habitual = -1;
-  int _lugarElegido = _habitual;
-
-  /// Donde se guarda esta linea segun el selector. Null: sin lugar.
-  int? _lugarDe(_FilaRecepcion f, List<Ubicacion> lugares) {
-    if (_lugarElegido == _habitual) {
-      return _lugarHabitual(f.detalle.productoId, lugares);
-    }
-    if (_lugarElegido == 0) return null;
-    return lugares.any((l) => l.id == _lugarElegido) ? _lugarElegido : null;
+  /// El lugar donde queda todo lo que llega: el cuarto si se eligio; si no, el
+  /// piso; si no, ninguno. Solo cuenta si sigue siendo un lugar de este almacen.
+  int? _lugarFinal(List<Ubicacion> lugares) {
+    final id = _cuartoId ?? _pisoId;
+    return lugares.any((l) => l.id == id) ? id : null;
   }
 
   List<_FilaRecepcion> _construirFilas(Compra? compra) {
@@ -231,7 +217,7 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
                 ? null
                 : f.loteCtrl.text.trim(),
             'fechaVencimiento': f.vencimiento?.toIso8601String(),
-            'ubicacionId': _lugarDe(f, lugares),
+            'ubicacionId': _lugarFinal(lugares),
           },
       ],
     };
@@ -254,9 +240,6 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
     final almacenes = ref.watch(almacenesActivosProvider);
     final lugaresDelAlmacen = _lugares();
     _lugaresVistos = lugaresDelAlmacen;
-    _ubicadosVistos = _almacenId == null
-        ? null
-        : ref.watch(productosUbicadosProvider(_almacenId!)).valueOrNull;
 
     // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
     // acento del modulo. Sin esto los componentes compartidos y las hojas que
@@ -354,31 +337,80 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
               onCambio: (v) => setState(() {
                 _almacenId = v;
                 // Los lugares son de cada almacen: lo elegido antes ya no sirve.
-                _lugarElegido = _habitual;
+                _pisoId = null;
+                _cuartoId = null;
               }),
             ),
             const SizedBox(height: Dimen.espacio4),
 
-            // Donde se guarda lo que llega: un solo lugar para toda la
-            // recepcion. Solo aparece si el almacen tiene lugares definidos.
-            if (lugaresDelAlmacen.isNotEmpty) ...[
-              AppSelector<int>(
-                valor: _lugarElegido,
-                etiqueta: 'Guardar en',
-                icono: Icons.place_outlined,
-                opciones: [
-                  const Opcion<int>(_habitual, 'Su lugar habitual'),
-                  const Opcion<int>(0, 'Sin lugar'),
-                  for (final l in lugaresDelAlmacen)
-                    Opcion<int>(
-                      l.id,
-                      l.nombre == null ? l.ruta : '${l.ruta} · ${l.nombre}',
+            // Donde se recibe: piso y, adentro, cuarto. Siempre se ven; si el
+            // almacen no tiene pisos ni cuartos quedan desactivados.
+            Builder(
+              builder: (context) {
+                final pisos = lugaresDelAlmacen
+                    .where((l) => l.tipo == 'PISO')
+                    .toList();
+                final cuartos = lugaresDelAlmacen
+                    .where(
+                      (l) =>
+                          l.tipo == 'CUARTO' &&
+                          (_pisoId == null
+                              ? l.padreId == null
+                              : l.padreId == _pisoId),
+                    )
+                    .toList();
+                String nombre(Ubicacion l) =>
+                    l.nombre == null ? l.codigo : '${l.codigo} · ${l.nombre}';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppSelector<int?>(
+                      valor: _pisoId,
+                      etiqueta: 'Piso',
+                      icono: Icons.layers_outlined,
+                      habilitado: !_guardando && pisos.isNotEmpty,
+                      opciones: [
+                        Opcion<int?>(null, pisos.isEmpty ? 'Sin pisos' : 'Sin piso'),
+                        for (final p in pisos) Opcion<int?>(p.id, nombre(p)),
+                      ],
+                      onCambio: (v) => setState(() {
+                        _pisoId = v;
+                        _cuartoId = null;
+                      }),
                     ),
-                ],
-                onCambio: (v) => setState(() => _lugarElegido = v ?? _habitual),
-              ),
-              const SizedBox(height: Dimen.espacio4),
-            ],
+                    const SizedBox(height: Dimen.espacio4),
+                    AppSelector<int?>(
+                      valor: _cuartoId,
+                      etiqueta: 'Cuarto',
+                      icono: Icons.meeting_room_outlined,
+                      habilitado: !_guardando && cuartos.isNotEmpty,
+                      opciones: [
+                        Opcion<int?>(
+                          null,
+                          cuartos.isEmpty ? 'Sin cuartos' : 'Sin cuarto',
+                        ),
+                        for (final c in cuartos) Opcion<int?>(c.id, nombre(c)),
+                      ],
+                      onCambio: (v) => setState(() => _cuartoId = v),
+                    ),
+                    if (lugaresDelAlmacen.isEmpty && _almacenId != null)
+                      const Padding(
+                        padding: EdgeInsets.only(top: Dimen.espacio2),
+                        child: Text(
+                          'Este almacén todavía no tiene pisos ni cuartos: se '
+                          'crean desde el panel web.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colores.tintaSuave,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: Dimen.espacio4),
 
             AppCampo(
               controlador: _observacion,
