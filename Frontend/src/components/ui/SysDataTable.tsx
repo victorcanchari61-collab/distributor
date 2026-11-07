@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ComponentType, ReactNode } from 'react'
 import {
@@ -178,10 +178,26 @@ export interface SysDataTableProps<T> {
    * conteo de filas que ya se ve a simple vista.
    */
   paginacion?: boolean
+  /**
+   * La tabla mide siempre lo mismo, haya una fila, veinte o ninguna: el cuerpo tiene alto fijo y, si hay más filas de
+   * las que caben, se desplaza por dentro. Así la pantalla no salta ni se encoge al filtrar o cuando todavía hay poco
+   * cargado. Por defecto aplica a los listados (con buscador y paginación); una tabla chica de un formulario, como las
+   * líneas de un documento, sigue creciendo con su contenido.
+   *
+   * El alto es lo que quede de la ventana: la tabla llega casi hasta el pie de la pantalla, en un monitor grande y en uno
+   * chico por igual. Dentro de una ventana emergente cae a un 55% de la altura.
+   */
+  alturaFija?: boolean
   className?: string
 }
 
 type Row = Record<string, unknown>
+
+/** Lo que se le deja a la pantalla debajo del cuerpo de la tabla: el pie de paginación, el margen de la página y un respiro. */
+const RESERVA_INFERIOR = 68
+
+/** Una tabla de alto fijo nunca baja de aquí, por chica que sea la ventana. */
+const ALTO_MINIMO_CUERPO = 288
 
 /**
  * Texto comparable de un valor: sin acentos y en minusculas, para que buscar
@@ -304,6 +320,7 @@ export function SysDataTable<T>({
   className,
   toolbar = true,
   paginacion = true,
+  alturaFija = toolbar && paginacion,
 }: SysDataTableProps<T>) {
   // Las de solo filtro no entran al orden: de él salen la tabla, la búsqueda, las tarjetas y el menú de columnas.
   const [order, setOrder] = useState<string[]>(() => columns.filter((c) => !c.soloFiltro).map((c) => c.key))
@@ -575,6 +592,44 @@ export function SysDataTable<T>({
   const medirSombra = useCallback((el: HTMLDivElement) => {
     setSombra(el.scrollWidth - el.clientWidth - el.scrollLeft > 1)
   }, [])
+
+  /*
+   * Alto fijo que llena la pantalla.
+   *
+   * El cuerpo ocupa todo lo que queda de la ventana desde donde empieza hasta el pie de paginación: en un monitor
+   * grande cubre casi toda la pantalla y en un portátil se ajusta a lo que hay, siempre con el mismo criterio. Se
+   * mide donde está de verdad (no se adivina un porcentaje) para que sirva igual con o sin tarjetas de resumen,
+   * avisos o notas arriba, y se vuelve a medir al cambiar el tamaño de la ventana o crecer la página.
+   *
+   * Dentro de una ventana emergente no se aplica: ahí manda el alto de la ventana y se cae al 55% de siempre.
+   */
+  const [altoCuerpo, setAltoCuerpo] = useState<number | null>(null)
+  useLayoutEffect(() => {
+    if (!alturaFija) return
+    const el = bodyRef.current
+    if (!el) return
+
+    const calcular = () => {
+      const caja = el.getBoundingClientRect()
+      // Oculta (vista móvil de tarjetas): no hay nada que medir.
+      if (caja.width === 0 || el.closest('[role="dialog"]')) {
+        setAltoCuerpo(null)
+        return
+      }
+      const alto = Math.max(ALTO_MINIMO_CUERPO, Math.floor(window.innerHeight - caja.top - RESERVA_INFERIOR))
+      setAltoCuerpo((actual) => (actual === alto ? actual : alto))
+    }
+
+    calcular()
+    window.addEventListener('resize', calcular)
+    // La página crece o se encoge cuando llegan las tarjetas de resumen o un aviso: ahí se vuelve a medir.
+    const observador = new ResizeObserver(calcular)
+    observador.observe(document.body)
+    return () => {
+      window.removeEventListener('resize', calcular)
+      observador.disconnect()
+    }
+  }, [alturaFija, pageRows.length])
 
   useEffect(() => {
     const el = bodyRef.current
@@ -999,10 +1054,15 @@ export function SysDataTable<T>({
           ref={bodyRef}
           onScroll={onBodyScroll}
           onWheel={onBodyWheel}
-          className="max-h-[55vh] overflow-auto"
+          className={cn('overflow-auto', alturaFija ? 'min-h-72 bg-white' : 'max-h-[55vh]', alturaFija && altoCuerpo === null && 'h-[55vh]')}
+          style={alturaFija && altoCuerpo !== null ? { height: altoCuerpo } : undefined}
         >
           <table
-            className="w-full border-collapse bg-white text-sm"
+            className={cn(
+              'w-full border-collapse bg-white text-sm',
+              // Sin filas, el aviso queda en el medio del espacio fijo y no pegado arriba.
+              alturaFija && pageRows.length === 0 && 'h-full',
+            )}
             style={{ tableLayout: 'fixed', minWidth: minTabla }}
           >
             <colgroup>
