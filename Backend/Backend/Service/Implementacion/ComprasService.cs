@@ -37,6 +37,7 @@ public class ComprasService : IComprasService
     private readonly IFinanzasService _finanzas;
     private readonly ICuentaFinancieraService _cuentas;
     private readonly IUsuarioActual _usuarioActual;
+    private readonly ISolicitudCompraService _solicitudes;
 
     public ComprasService(
         IComprasRepository repository,
@@ -47,8 +48,10 @@ public class ComprasService : IComprasService
         INotificador notificador,
         IFinanzasService finanzas,
         ICuentaFinancieraService cuentas,
-        IUsuarioActual usuarioActual)
+        IUsuarioActual usuarioActual,
+        ISolicitudCompraService solicitudes)
     {
+        _solicitudes = solicitudes;
         _repository = repository;
         _productos = productos;
         _ordenValidator = ordenValidator;
@@ -196,10 +199,14 @@ public class ComprasService : IComprasService
     {
         await _ordenValidator.ValidateAndThrowAsync(request);
 
+        // Si sale de una solicitud del almacén, tiene que poder atenderse (no rechazada ni anulada).
+        if (request.SolicitudCompraId is int solicitudId) await _solicitudes.ExigirAtendibleAsync(solicitudId);
+
         var orden = new OrdenCompra
         {
             Numero = await _repository.SiguienteNumeroOrdenAsync(),
             ProveedorId = request.ProveedorId,
+            SolicitudCompraId = request.SolicitudCompraId,
             Fecha = request.Fecha ?? DateTime.UtcNow,
             FechaEsperada = request.FechaEsperada,
             Estado = EstadoOrdenCompra.Pendiente,
@@ -210,6 +217,9 @@ public class ComprasService : IComprasService
         orden.Detalle = await ResolverLineasAsync(request.Detalle);
 
         await _repository.AddOrdenAsync(orden);
+
+        // La orden ya existe: la solicitud de la que salió pasa a Atendida.
+        if (request.SolicitudCompraId is int atendida) await _solicitudes.MarcarAtendidaAsync(atendida);
 
         var creada = await GetOrdenAsync(orden.Id);
         await _notificador.AvisarAsync("ordenescompra", "creado", creada);
@@ -798,6 +808,8 @@ public class ComprasService : IComprasService
         Estado = o.Estado,
         Observacion = o.Observacion,
         Usuario = o.Usuario?.Nombre,
+        SolicitudCompraId = o.SolicitudCompraId,
+        SolicitudNumero = o.SolicitudCompra?.Numero,
         Total = Math.Round(o.Detalle.Sum(d => d.Cantidad * d.CostoUnitario), 2),
         Detalle = o.Detalle.Select(MapLinea).ToList()
     };

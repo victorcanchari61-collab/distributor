@@ -52,6 +52,7 @@ public class ComprasRepository : IComprasRepository
         _context.OrdenesCompra
             .Include(o => o.Proveedor)
             .Include(o => o.Usuario)
+            .Include(o => o.SolicitudCompra)
             .Include(o => o.Detalle).ThenInclude(d => d.Producto).ThenInclude(p => p!.UnidadBase)
             .Include(o => o.Detalle).ThenInclude(d => d.Presentacion);
 

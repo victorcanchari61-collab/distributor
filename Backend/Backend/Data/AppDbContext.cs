@@ -60,6 +60,8 @@ public class AppDbContext : DbContext
     public DbSet<PrestamoDetalle> PrestamoDetalles => Set<PrestamoDetalle>();
     public DbSet<OrdenCompra> OrdenesCompra => Set<OrdenCompra>();
     public DbSet<OrdenCompraDetalle> OrdenCompraDetalles => Set<OrdenCompraDetalle>();
+    public DbSet<SolicitudCompra> SolicitudesCompra => Set<SolicitudCompra>();
+    public DbSet<SolicitudCompraDetalle> SolicitudCompraDetalles => Set<SolicitudCompraDetalle>();
     public DbSet<Compra> Compras => Set<Compra>();
     public DbSet<CompraDetalle> CompraDetalles => Set<CompraDetalle>();
     public DbSet<CompraPago> CompraPagos => Set<CompraPago>();
@@ -1185,6 +1187,42 @@ public class AppDbContext : DbContext
                 .HasForeignKey(o => o.ProveedorId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(o => o.Usuario).WithMany()
                 .HasForeignKey(o => o.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+            // Si algún día se borra la solicitud, la orden se queda: solo pierde el enlace.
+            entity.HasOne(o => o.SolicitudCompra).WithMany()
+                .HasForeignKey(o => o.SolicitudCompraId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SolicitudCompra>(entity =>
+        {
+            entity.ToTable("SolicitudesCompra");
+            entity.HasIndex(s => s.Numero).IsUnique();
+            entity.HasIndex(s => s.Fecha);
+            entity.HasIndex(s => s.Estado);
+            entity.Property(s => s.Numero).HasMaxLength(20).IsRequired();
+            entity.Property(s => s.Urgencia).HasMaxLength(10).IsRequired();
+            entity.Property(s => s.Estado).HasMaxLength(15).IsRequired();
+            entity.Property(s => s.Observacion).HasMaxLength(250);
+            entity.Property(s => s.MotivoRechazo).HasMaxLength(250);
+
+            entity.HasOne(s => s.Almacen).WithMany()
+                .HasForeignKey(s => s.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(s => s.Usuario).WithMany()
+                .HasForeignKey(s => s.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SolicitudCompraDetalle>(entity =>
+        {
+            entity.ToTable("SolicitudCompraDetalle");
+            entity.Property(d => d.CantidadPresentacion).HasPrecision(18, 4);
+            entity.Property(d => d.Cantidad).HasPrecision(18, 4);
+            entity.Property(d => d.Nota).HasMaxLength(150);
+
+            entity.HasOne(d => d.SolicitudCompra).WithMany(s => s.Detalle)
+                .HasForeignKey(d => d.SolicitudCompraId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(d => d.Producto).WithMany()
+                .HasForeignKey(d => d.ProductoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Presentacion).WithMany()
+                .HasForeignKey(d => d.PresentacionId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<OrdenCompraDetalle>(entity =>

@@ -51,6 +51,9 @@ public static class AlcanceDatos
         // Cada cierre es de la caja de alguien: o se ven los de todos, o solo los suyos. Aquí no hay
         // clientes de por medio, así que cualquier alcance que no sea "todos" es "solo los suyos".
         "finanzas.cierres",
+        // Cada solicitud de compra es de quien la pidió: el almacenero ve las suyas, Compras ve todas. Como en los
+        // cierres, cualquier alcance que no sea "todos" es "solo las mías".
+        "compras.solicitudes",
     ];
 }
 

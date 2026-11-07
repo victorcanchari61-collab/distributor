@@ -146,6 +146,13 @@ const menuGrupos = <MenuGrupo>[
     titulo: 'Compras',
     icono: Icons.shopping_cart_outlined,
     items: [
+      // El almacenero pide desde aquí lo que hace falta comprar; Compras arma con ella la orden de compra.
+      MenuItem(
+        id: 'compras.solicitudes',
+        pendiente: false,
+        titulo: 'Solicitudes de compra',
+        icono: Icons.edit_note_outlined,
+      ),
       MenuItem(
         id: 'compras.ordenes',
         pendiente: false,

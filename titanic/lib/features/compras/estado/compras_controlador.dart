@@ -5,10 +5,66 @@ import '../../auth/estado/auth_controlador.dart';
 import '../datos/compra.dart';
 import '../datos/compras_api.dart';
 import '../datos/orden_compra.dart';
+import '../datos/solicitud_compra.dart';
 
 final comprasApiProvider = Provider(
   (ref) => ComprasApi(ref.watch(clienteApiProvider)),
 );
+
+// --- Solicitudes de compra ---
+
+final busquedaSolicitudesProvider = StateProvider.autoDispose((ref) => '');
+
+/// Filtro por estado. Null es "todas".
+final estadoSolicitudFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
+class SolicitudesCompraControlador extends AsyncNotifier<List<SolicitudCompra>> {
+  @override
+  Future<List<SolicitudCompra>> build() =>
+      ref.watch(comprasApiProvider).solicitudesCompra();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(comprasApiProvider).solicitudesCompra(),
+    );
+  }
+
+  Future<void> crear(Map<String, dynamic> cuerpo) async {
+    await ref.read(comprasApiProvider).crearSolicitudCompra(cuerpo);
+    await recargar();
+  }
+
+  Future<void> actualizar(int id, Map<String, dynamic> cuerpo) async {
+    await ref.read(comprasApiProvider).actualizarSolicitudCompra(id, cuerpo);
+    await recargar();
+  }
+
+  Future<void> anular(int id) async {
+    await ref.read(comprasApiProvider).anularSolicitudCompra(id);
+    await recargar();
+  }
+}
+
+final solicitudesCompraProvider =
+    AsyncNotifierProvider<SolicitudesCompraControlador, List<SolicitudCompra>>(
+      SolicitudesCompraControlador.new,
+    );
+
+final solicitudesCompraFiltradasProvider =
+    Provider.autoDispose<List<SolicitudCompra>>((ref) {
+      final todas =
+          ref.watch(solicitudesCompraProvider).valueOrNull ??
+          const <SolicitudCompra>[];
+      final texto = ref.watch(busquedaSolicitudesProvider).trim().toLowerCase();
+      final estado = ref.watch(estadoSolicitudFiltroProvider);
+      return todas
+          .where((s) => estado == null || s.estado == estado)
+          .where((s) => texto.isEmpty || s.buscable.contains(texto))
+          .toList();
+    });
 
 // --- Ordenes de compra ---
 

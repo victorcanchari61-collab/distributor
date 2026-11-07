@@ -41,12 +41,17 @@ export interface OrdenCompraResponse {
   estado: EstadoOrdenCompra
   observacion: string | null
   usuario: string | null
+  /** La solicitud del almacén de la que nació, si nació de una. */
+  solicitudCompraId: number | null
+  solicitudNumero: string | null
   total: number
   detalle: LineaCompraResponse[]
 }
 
 export interface CrearOrdenCompraRequest {
   proveedorId: number
+  /** La solicitud del almacén de la que sale esta orden: la solicitud pasa a Atendida. */
+  solicitudCompraId?: number | null
   fecha?: string | null
   fechaEsperada?: string | null
   observacion?: string | null
@@ -86,6 +91,89 @@ export const ordenCompraApi = {
   convertir: (id: number, body: CrearCompraRequest) =>
     api.post<CompraResponse>(`/ordencompra/${id}/convertir`, body),
   anular: (id: number) => api.patch<void>(`/ordencompra/${id}/anular`),
+}
+
+// --- Solicitudes de compra ---
+
+export type EstadoSolicitudCompra = 'PENDIENTE' | 'ATENDIDA' | 'RECHAZADA' | 'ANULADA'
+export type UrgenciaSolicitud = 'NORMAL' | 'URGENTE'
+
+export interface OrdenDeSolicitud {
+  id: number
+  numero: string
+  estado: EstadoOrdenCompra
+}
+
+export interface SolicitudCompraFila {
+  id: number
+  numero: string
+  fecha: string
+  almacenId: number
+  almacen: string
+  urgencia: UrgenciaSolicitud
+  estado: EstadoSolicitudCompra
+  observacion: string | null
+  motivoRechazo: string | null
+  usuarioId: number | null
+  solicitante: string | null
+  lineas: number
+  /** Las órdenes de compra que se hicieron con ella. */
+  ordenes: OrdenDeSolicitud[]
+}
+
+export interface LineaSolicitudCompraResponse {
+  id: number
+  productoId: number
+  codigo: string
+  producto: string
+  unidadBase: string
+  presentacionId: number | null
+  presentacion: string | null
+  factor: number
+  cantidadPresentacion: number
+  cantidad: number
+  nota: string | null
+  /** Lo que suele costar una presentación, para sugerirlo al armar la orden. */
+  costoSugerido: number | null
+}
+
+export interface SolicitudCompraResponse extends SolicitudCompraFila {
+  detalle: LineaSolicitudCompraResponse[]
+}
+
+export interface CrearSolicitudCompraRequest {
+  almacenId: number
+  urgencia?: UrgenciaSolicitud | null
+  observacion?: string | null
+  detalle: { productoId: number; presentacionId?: number | null; cantidad: number; nota?: string | null }[]
+}
+
+/** Un producto bajo su mínimo en el almacén, con lo que se sugiere pedir (en unidad base). */
+export interface SugerenciaSolicitud {
+  productoId: number
+  codigo: string
+  producto: string
+  unidadBase: string
+  stock: number
+  stockMinimo: number
+  cantidadSugerida: number
+}
+
+export const solicitudCompraApi = {
+  getAll: (estado?: string) =>
+    api.get<SolicitudCompraFila[]>(`/solicitudcompra${estado ? `?estado=${estado}` : ''}`),
+  getById: (id: number) => api.get<SolicitudCompraResponse>(`/solicitudcompra/${id}`),
+  sugerencias: (almacenId: number) =>
+    api.get<SugerenciaSolicitud[]>(`/solicitudcompra/sugerencias?almacenId=${almacenId}`),
+  create: (body: CrearSolicitudCompraRequest) =>
+    api.post<SolicitudCompraResponse>('/solicitudcompra', body),
+  update: (id: number, body: CrearSolicitudCompraRequest) =>
+    api.put<SolicitudCompraResponse>(`/solicitudcompra/${id}`, body),
+  /** Quien la pidió la retira (solo Pendiente). */
+  anular: (id: number) => api.del<void>(`/solicitudcompra/${id}`),
+  /** Compras no la atiende y dice por qué. */
+  rechazar: (id: number, motivo: string) =>
+    api.post<SolicitudCompraResponse>(`/solicitudcompra/${id}/rechazar`, { motivo }),
 }
 
 // --- Compras ---

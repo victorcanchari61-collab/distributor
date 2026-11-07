@@ -106,6 +106,7 @@ builder.Services.AddScoped<IListaPrecioService, ListaPrecioService>();
 builder.Services.AddScoped<ICatalogoClienteService, CatalogoClienteService>();
 builder.Services.AddScoped<IInventarioService, InventarioService>();
 builder.Services.AddScoped<IUbicacionService, UbicacionService>();
+builder.Services.AddScoped<ISolicitudCompraService, SolicitudCompraService>();
 builder.Services.AddScoped<IComprasService, ComprasService>();
 builder.Services.AddScoped<IVentasService, VentasService>();
 builder.Services.AddScoped<IPdfService, PdfService>();

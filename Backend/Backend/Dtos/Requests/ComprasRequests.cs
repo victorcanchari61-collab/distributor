@@ -19,6 +19,9 @@ public class LineaCompraRequest
 public class CrearOrdenCompraRequest
 {
     public int ProveedorId { get; set; }
+
+    /// <summary>La solicitud del almacén de la que sale esta orden, si sale de una. La solicitud pasa a Atendida.</summary>
+    public int? SolicitudCompraId { get; set; }
     public DateTime? Fecha { get; set; }
     public DateTime? FechaEsperada { get; set; }
     public string? Observacion { get; set; }

@@ -54,7 +54,12 @@ class AppPanelProducto extends StatefulWidget {
     this.resolverPrecio,
     this.claveLista,
     this.reservado,
+    this.pideImporte = true,
   });
+
+  /// Si la línea lleva precio o costo. Sin él (una solicitud de compra, que no maneja plata) solo se pide la
+  /// cantidad, y las líneas elegidas salen con importe cero.
+  final bool pideImporte;
 
   final List<Producto> productos;
 
@@ -325,7 +330,10 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
   double get _importeNum =>
       double.tryParse(_importe.text.replaceAll(',', '.')) ?? 0;
 
-  bool get _listo => _producto != null && _cantidadNum > 0 && _importeNum > 0;
+  bool get _listo =>
+      _producto != null &&
+      _cantidadNum > 0 &&
+      (!widget.pideImporte || _importeNum > 0);
 
   void _agregar() {
     final p = _producto;
@@ -510,21 +518,23 @@ class _AppPanelProductoState extends State<AppPanelProducto> {
                   onCambio: () => setState(() {}),
                 ),
               ),
-              const SizedBox(width: Dimen.espacio3),
-              Expanded(
-                child: _CampoNumero(
-                  etiqueta: widget.paraVenta ? 'Precio S/' : 'Costo S/',
-                  controlador: _importe,
-                  habilitado: widget.habilitado && _producto != null,
-                  onCambio: () => setState(() {}),
+              if (widget.pideImporte) ...[
+                const SizedBox(width: Dimen.espacio3),
+                Expanded(
+                  child: _CampoNumero(
+                    etiqueta: widget.paraVenta ? 'Precio S/' : 'Costo S/',
+                    controlador: _importe,
+                    habilitado: widget.habilitado && _producto != null,
+                    onCambio: () => setState(() {}),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
 
           // Qué dijo la lista. Sin precio cargado la venta saldría en cero sin
           // que nadie chille: mejor decirlo aquí, antes de agregar la línea.
-          if (_avisoPrecio != null) ...[
+          if (widget.pideImporte && _avisoPrecio != null) ...[
             const SizedBox(height: Dimen.espacio2),
             Text(
               _avisoPrecio!,

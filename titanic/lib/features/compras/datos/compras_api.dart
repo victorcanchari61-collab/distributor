@@ -1,12 +1,61 @@
 import '../../../core/red/cliente_api.dart';
 import 'compra.dart';
 import 'orden_compra.dart';
+import 'solicitud_compra.dart';
 
 /// Llamadas del modulo de compras.
 class ComprasApi {
   const ComprasApi(this._api);
 
   final ClienteApi _api;
+
+  // --- Solicitudes de compra ---
+
+  /// GET /api/solicitudcompra. Sin las lineas: se piden al abrir una.
+  Future<List<SolicitudCompra>> solicitudesCompra() async {
+    final datos = await _api.get('/solicitudcompra') as List;
+    return datos
+        .map((e) => SolicitudCompra.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// GET /api/solicitudcompra/{id}. Con sus lineas.
+  Future<SolicitudCompra> solicitudCompra(int id) async =>
+      SolicitudCompra.desdeJson(
+        await _api.get('/solicitudcompra/$id') as Map<String, dynamic>,
+      );
+
+  /// GET /api/solicitudcompra/sugerencias. Lo que esta bajo el minimo en el almacen.
+  Future<List<SugerenciaSolicitud>> sugerenciasSolicitud(int almacenId) async {
+    final datos =
+        await _api.get('/solicitudcompra/sugerencias?almacenId=$almacenId')
+            as List;
+    return datos
+        .map((e) => SugerenciaSolicitud.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// POST /api/solicitudcompra
+  Future<SolicitudCompra> crearSolicitudCompra(
+    Map<String, dynamic> cuerpo,
+  ) async => SolicitudCompra.desdeJson(
+    await _api.post('/solicitudcompra', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
+
+  /// PUT /api/solicitudcompra/{id}. Solo mientras esta Pendiente.
+  Future<SolicitudCompra> actualizarSolicitudCompra(
+    int id,
+    Map<String, dynamic> cuerpo,
+  ) async => SolicitudCompra.desdeJson(
+    await _api.put('/solicitudcompra/$id', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
+
+  /// DELETE /api/solicitudcompra/{id}. Quien la pidio la retira: solo Pendiente.
+  Future<void> anularSolicitudCompra(int id) async {
+    await _api.delete('/solicitudcompra/$id');
+  }
 
   // --- Ordenes de compra ---
 

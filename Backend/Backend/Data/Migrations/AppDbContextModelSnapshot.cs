@@ -3167,6 +3167,9 @@ namespace Backend.Data.Migrations
                     b.Property<int>("ProveedorId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SolicitudCompraId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("UsuarioId")
                         .HasColumnType("int");
 
@@ -3180,6 +3183,8 @@ namespace Backend.Data.Migrations
                         .IsUnique();
 
                     b.HasIndex("ProveedorId");
+
+                    b.HasIndex("SolicitudCompraId");
 
                     b.HasIndex("UsuarioId");
 
@@ -4467,6 +4472,105 @@ namespace Backend.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("SeriesCpe", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Models.SolicitudCompra", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AlmacenId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("varchar(15)");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("MotivoRechazo")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Observacion")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
+                    b.Property<string>("Urgencia")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<int?>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlmacenId");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("Fecha");
+
+                    b.HasIndex("Numero")
+                        .IsUnique();
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("SolicitudesCompra", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Models.SolicitudCompraDetalle", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Cantidad")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("CantidadPresentacion")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Nota")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<int?>("PresentacionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SolicitudCompraId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PresentacionId");
+
+                    b.HasIndex("ProductoId");
+
+                    b.HasIndex("SolicitudCompraId");
+
+                    b.ToTable("SolicitudCompraDetalle", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Models.SolicitudPermiso", b =>
@@ -5952,12 +6056,19 @@ namespace Backend.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Backend.Models.SolicitudCompra", "SolicitudCompra")
+                        .WithMany()
+                        .HasForeignKey("SolicitudCompraId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Backend.Models.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Proveedor");
+
+                    b.Navigation("SolicitudCompra");
 
                     b.Navigation("Usuario");
                 });
@@ -6473,6 +6584,50 @@ namespace Backend.Data.Migrations
                     b.Navigation("Empresa");
                 });
 
+            modelBuilder.Entity("Backend.Models.SolicitudCompra", b =>
+                {
+                    b.HasOne("Backend.Models.Almacen", "Almacen")
+                        .WithMany()
+                        .HasForeignKey("AlmacenId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Almacen");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.SolicitudCompraDetalle", b =>
+                {
+                    b.HasOne("Backend.Models.ProductoPresentacion", "Presentacion")
+                        .WithMany()
+                        .HasForeignKey("PresentacionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Backend.Models.Producto", "Producto")
+                        .WithMany()
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.SolicitudCompra", "SolicitudCompra")
+                        .WithMany("Detalle")
+                        .HasForeignKey("SolicitudCompraId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Presentacion");
+
+                    b.Navigation("Producto");
+
+                    b.Navigation("SolicitudCompra");
+                });
+
             modelBuilder.Entity("Backend.Models.SolicitudPermiso", b =>
                 {
                     b.HasOne("Backend.Models.Usuario", null)
@@ -6723,6 +6878,11 @@ namespace Backend.Data.Migrations
                     b.Navigation("Permisos");
 
                     b.Navigation("Usuarios");
+                });
+
+            modelBuilder.Entity("Backend.Models.SolicitudCompra", b =>
+                {
+                    b.Navigation("Detalle");
                 });
 
             modelBuilder.Entity("Backend.Models.TipoVehiculo", b =>

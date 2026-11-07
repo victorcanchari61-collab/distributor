@@ -38,6 +38,10 @@ public class OrdenCompra
     public string Estado { get; set; } = EstadoOrdenCompra.Pendiente;
     public string? Observacion { get; set; }
 
+    /// <summary>La solicitud del almacén de la que nació esta orden, si nació de una.</summary>
+    public int? SolicitudCompraId { get; set; }
+    public SolicitudCompra? SolicitudCompra { get; set; }
+
     public int? UsuarioId { get; set; }
     public Usuario? Usuario { get; set; }
 

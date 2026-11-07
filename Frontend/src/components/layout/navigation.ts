@@ -10,6 +10,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   ClipboardList,
+  ClipboardPen,
   Coins,
   Contact,
   CreditCard,
@@ -143,6 +144,7 @@ export const NAV_GROUPS: NavGroup[] = [
     // la confirma se convierte en compra, y al llegar la mercaderia se
     // registra la recepcion.
     items: [
+      { id: 'compras.solicitudes', label: 'Solicitudes de compra', icon: ClipboardPen },
       { id: 'compras.ordenes', label: 'Órdenes de compra', icon: ClipboardList },
       { id: 'compras.compras', label: 'Mis compras', icon: ShoppingBag },
       { id: 'compras.recepciones', label: 'Recepciones', icon: PackageCheck },

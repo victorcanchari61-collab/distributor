@@ -6,6 +6,7 @@ import '../../compartido/widgets/app_shell.dart';
 import '../../features/auth/estado/auth_controlador.dart';
 import '../../features/compras/vistas/mis_compras_pagina.dart';
 import '../../features/compras/vistas/ordenes_compra_pagina.dart';
+import '../../features/compras/vistas/solicitudes_compra_pagina.dart';
 import '../../features/compras/vistas/recepciones_pagina.dart';
 import '../../features/config/vistas/accesos_pagina.dart';
 import '../../features/config/vistas/auditoria_pagina.dart';
@@ -192,6 +193,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: EmpresasPagina.ruta,
         builder: (context, estado) =>
             const PuertaPermiso(child: EmpresasPagina()),
+      ),
+      GoRoute(
+        path: SolicitudesCompraPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: SolicitudesCompraPagina()),
       ),
       GoRoute(
         path: OrdenesCompraPagina.ruta,
@@ -459,6 +465,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != StockPagina.ruta &&
               item.ruta != KardexPagina.ruta &&
               item.ruta != LotesPagina.ruta &&
+              item.ruta != SolicitudesCompraPagina.ruta &&
               item.ruta != OrdenesCompraPagina.ruta &&
               item.ruta != MisComprasPagina.ruta &&
               item.ruta != RecepcionesPagina.ruta &&

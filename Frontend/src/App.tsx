@@ -47,7 +47,7 @@ import {
   LotesVencimientosPage,
   ConteosPage,
 } from './features/inventario'
-import { OrdenesCompraPage, MisComprasPage, RecepcionesPage } from './features/compras'
+import { OrdenesCompraPage, MisComprasPage, RecepcionesPage, SolicitudesCompraPage } from './features/compras'
 import { CatalogoPage, CatalogoPublicoPage, ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
 import { AdelantosPage, AsistenciaPage, EmpleadosPage, PlanillaPage } from './features/rrhh'
 import {
@@ -99,6 +99,7 @@ const VIEWS: Record<string, () => React.ReactElement> = {
   'inv.prestamos': PrestamosPage,
   'inv.lotes': LotesVencimientosPage,
   'inv.conteos': ConteosPage,
+  'compras.solicitudes': SolicitudesCompraPage,
   'compras.ordenes': OrdenesCompraPage,
   'compras.compras': MisComprasPage,
   'compras.recepciones': RecepcionesPage,

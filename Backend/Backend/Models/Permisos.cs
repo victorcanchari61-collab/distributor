@@ -132,6 +132,8 @@ public static class CatalogoPermisos
             ["maestros.catalogo"] = [Accion.Ver],
 
             // --- Compras ---
+            // Lo que el almacén pide que se compre. Confirmar = atenderla: rechazarla o hacer con ella la orden de compra.
+            ["compras.solicitudes"] = DocumentoConfirmable,
             ["compras.ordenes"] = DocumentoConfirmable,
             ["compras.compras"] = [.. Documento, Accion.Cobrar],
             ["compras.recepciones"] = Documento,

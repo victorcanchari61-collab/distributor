@@ -37,6 +37,10 @@ public class OrdenCompraResponse
     public string? Observacion { get; set; }
     public string? Usuario { get; set; }
 
+    /// <summary>La solicitud del almacén de la que nació, si nació de una.</summary>
+    public int? SolicitudCompraId { get; set; }
+    public string? SolicitudNumero { get; set; }
+
     public decimal Total { get; set; }
     public List<LineaCompraResponse> Detalle { get; set; } = [];
 }

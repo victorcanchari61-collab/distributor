@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
 import {
@@ -51,7 +51,7 @@ import { useRealtime } from '../../lib/realtime'
 import { productoApi, proveedorApi } from '../maestros'
 import type { ProductoResponse, ProveedorResponse } from '../maestros'
 import { stockApi } from '../inventario'
-import { ordenCompraApi } from './comprasApi'
+import { ordenCompraApi, solicitudCompraApi } from './comprasApi'
 import type {
   CrearOrdenCompraRequest,
   LineaCompraResponse,
@@ -79,6 +79,7 @@ type FilaOrden = LineaProductoNueva
  */
 export function OrdenesCompraPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { puede } = usePermisos()
   const toast = useToast()
   const [vista, setVista] = useState<'lista' | 'form'>('lista')
@@ -93,6 +94,8 @@ export function OrdenesCompraPage() {
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
 
+  // La solicitud del almacén de la que sale esta orden, cuando se llega desde Solicitudes de compra.
+  const [solicitud, setSolicitud] = useState<{ id: number; numero: string } | null>(null)
   const [proveedorId, setProveedorId] = useState(0)
   const [fechaEsperada, setFechaEsperada] = useState('')
   const [observacion, setObservacion] = useState('')
@@ -153,8 +156,45 @@ export function OrdenesCompraPage() {
 
   useRealtime(['ordenescompra', 'stock'], cargar)
 
+  /*
+   * Desde Solicitudes de compra: la orden se abre ya con las líneas de la solicitud del almacén. Falta elegir el
+   * proveedor y poner los costos (el almacén no los maneja); lo que suele costar cada presentación viene sugerido.
+   * Espera a los productos porque las filas se dibujan contra ellos.
+   */
+  const desdeSolicitudId = (location.state as { desdeSolicitudId?: number } | null)?.desdeSolicitudId
+  useEffect(() => {
+    if (!desdeSolicitudId || productos.length === 0) return
+    navigate(location.pathname, { replace: true, state: null })
+
+    solicitudCompraApi
+      .getById(desdeSolicitudId)
+      .then((s) => {
+        setEditando(null)
+        setSolicitud({ id: s.id, numero: s.numero })
+        setProveedorId(0)
+        setFechaEsperada('')
+        setObservacion(`Solicitud ${s.numero}${s.observacion ? ` — ${s.observacion}` : ''}`.slice(0, 250))
+        setFilas(
+          s.detalle.map((l) => ({
+            id: idUnico(),
+            productoId: l.productoId,
+            presentacionId: l.presentacionId ?? 0,
+            cantidad: String(l.cantidadPresentacion),
+            costo: l.costoSugerido !== null ? String(l.costoSugerido) : '',
+            lote: '',
+            fechaVencimiento: '',
+          })),
+        )
+        setVista('form')
+      })
+      .catch((e) => toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir la solicitud.'))
+    // Solo cuando llega la solicitud y los productos: el resto de lo que usa no debe volver a dispararlo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desdeSolicitudId, productos.length])
+
   const abrirNueva = () => {
     setEditando(null)
+    setSolicitud(null)
     setProveedorId(0)
     setFechaEsperada('')
     setObservacion('')
@@ -173,6 +213,7 @@ export function OrdenesCompraPage() {
 
   const abrirEdicion = (orden: OrdenCompraResponse) => {
     setEditando(orden)
+    setSolicitud(null)
     setProveedorId(orden.proveedorId)
     setFechaEsperada(orden.fechaEsperada ? orden.fechaEsperada.slice(0, 10) : '')
     setObservacion(orden.observacion ?? '')
@@ -210,6 +251,7 @@ export function OrdenesCompraPage() {
 
     const body: CrearOrdenCompraRequest = {
       proveedorId,
+      solicitudCompraId: solicitud?.id ?? null,
       fechaEsperada: fechaEsperada || null,
       observacion: observacion.trim() || null,
       detalle: validas.map((f) => ({
@@ -405,7 +447,11 @@ export function OrdenesCompraPage() {
         <PageHeader
           icon={<ClipboardList size={20} />}
           title={editando ? `Editar ${editando.numero}` : 'Nueva orden de compra'}
-          description="Lo que se le pide al proveedor."
+          description={
+            solicitud
+              ? `Con lo que pidió el almacén en ${solicitud.numero}. Elige el proveedor y revisa los costos.`
+              : 'Lo que se le pide al proveedor.'
+          }
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
               <ArrowLeft size={15} />
@@ -629,6 +675,9 @@ export function OrdenesCompraPage() {
           <div className="flex flex-col gap-3">
             {detalleAbierto.estado === 'ANULADA' && (
               <div>{estadoOrdenBadge(detalleAbierto.estado)}</div>
+            )}
+            {detalleAbierto.solicitudNumero && (
+              <p className="text-xs text-ink-soft">Nació de la solicitud {detalleAbierto.solicitudNumero}.</p>
             )}
 
             <TablaProductosDetalle<LineaCompraResponse>
