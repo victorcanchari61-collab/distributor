@@ -63,6 +63,9 @@ if cambio "Frontend/"; then
   cd "$RAIZ/Frontend"
   pnpm install --frozen-lockfile --reporter=silent
   pnpm build
+  # Copias comprimidas (.gz) de lo que ya se compiló: con `gzip_static on` Nginx las entrega tal cual, sin gastar
+  # procesador comprimiendo el mismo JS en cada visita. Si Nginx no lo tiene activo, los .gz simplemente no se usan.
+  find dist -type f \( -name '*.js' -o -name '*.css' -o -name '*.svg' -o -name '*.json' -o -name '*.html' \) -exec gzip -kf -9 {} +
   echo "Web compilada."
 else
   echo "== Web sin cambios"
