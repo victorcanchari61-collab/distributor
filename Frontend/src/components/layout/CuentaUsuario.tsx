@@ -50,7 +50,7 @@ function useCerrarAlTocarFuera(abierto: boolean, ref: RefObject<HTMLElement | nu
 
 /** El botón redondo blanco de la cabecera: la campana. */
 const BOTON_REDONDO =
-  'relative inline-flex size-[var(--height-field-sm)] shrink-0 cursor-pointer items-center justify-center rounded-full border border-line bg-white text-ink-muted shadow-sm transition-colors hover:text-ink'
+  'relative inline-flex size-[var(--height-button-sm)] shrink-0 cursor-pointer items-center justify-center rounded-full border border-line bg-white text-ink-muted shadow-sm transition-colors hover:text-ink'
 
 /**
  * La campana de alertas, en la cabecera de cada vista (ya no hay barra superior).
@@ -286,7 +286,7 @@ export function MenuCuenta({ nombre, email, foto, onPerfil, onLogout }: MenuCuen
         type="button"
         onClick={() => setAbierto((a) => !a)}
         aria-label="Mi cuenta"
-        className="flex h-[var(--height-field-sm)] cursor-pointer items-center gap-2 rounded-full border border-line bg-white pr-2.5 pl-1 shadow-sm transition-shadow hover:shadow-md"
+        className="flex h-[var(--height-button-sm)] cursor-pointer items-center gap-2 rounded-full border border-line bg-white pr-2.5 pl-1 shadow-sm transition-shadow hover:shadow-md"
       >
         <span className="inline-flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[rgb(var(--sys-rgb))] text-xs font-bold text-[var(--sys-on)]">
           {foto ? (

@@ -557,21 +557,34 @@ export function SolicitudesCompraPage() {
           </PageSection>
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+        {/* En el teléfono los botones se apilan, el principal arriba: en una fila no caben sus textos. */}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="secondary" size="sm" className="w-full sm:w-auto" onClick={() => setVista('lista')}>
             Cancelar
           </Button>
           {/* Una ya enviada solo se corrige. Un borrador se guarda para seguir o se envía al administrador. */}
           {editando && editando.estado !== 'BORRADOR' ? (
-            <Button size="sm" loading={guardando} onClick={() => void guardar(false)}>
+            <Button size="sm" className="w-full sm:w-auto" loading={guardando} onClick={() => void guardar(false)}>
               Guardar cambios
             </Button>
           ) : (
             <>
-              <Button variant="secondary" size="sm" disabled={guardando} onClick={() => void guardar(false)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full sm:w-auto"
+                disabled={guardando}
+                onClick={() => void guardar(false)}
+              >
                 Guardar borrador
               </Button>
-              <Button size="sm" loading={guardando} onClick={() => void guardar(true)} iconRight={<Send size={15} />}>
+              <Button
+                size="sm"
+                className="w-full sm:w-auto"
+                loading={guardando}
+                onClick={() => void guardar(true)}
+                iconRight={<Send size={15} />}
+              >
                 Enviar al administrador
               </Button>
             </>

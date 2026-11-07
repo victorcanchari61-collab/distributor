@@ -48,13 +48,19 @@
 
   /* --- Alturas de los campos y botones ---
      Aqui se decide que tan altos son TODOS los controles del sistema.
-     sm  36px  tablas, barras de herramientas
-     md  40px  formularios (por defecto)
+     sm  28px  tablas, barras de herramientas
+     md  32px  formularios (por defecto)
      lg  48px  login y pantallas de una sola accion            */
-  --spacing-control: 2.5rem;
-  --height-field-sm: 2.25rem;
-  --height-field-md: 2.5rem;
+  --spacing-control: 2rem;
+  --height-field-sm: 1.75rem;
+  --height-field-md: 2rem;
   --height-field-lg: 3rem;
+
+  /* Los botones NO bajan con los campos: un campo se puede apretar, pero un boton necesita su alto para leerse y
+     para tocarse con el dedo. sm 36px · md 40px · lg 48px. */
+  --height-button-sm: 2.25rem;
+  --height-button-md: 2.5rem;
+  --height-button-lg: 3rem;
 }
 
 @layer base {

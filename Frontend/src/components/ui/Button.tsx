@@ -23,11 +23,11 @@ const VARIANTS: Record<Variant, string> = {
   ghost: 'bg-transparent text-[rgb(var(--sys-ink-rgb))] hover:not-disabled:bg-[rgb(var(--sys-rgb)/0.08)]',
 }
 
-// Mismas alturas que los campos, para que un boton junto a un input calce.
+// Alturas propias (--height-button-*): los campos son mas bajos que los botones a proposito.
 const SIZES: Record<Size, string> = {
-  sm: 'h-[var(--height-field-sm)] px-3 text-sm',
-  md: 'h-[var(--height-field-md)] px-5 text-sm',
-  lg: 'h-[var(--height-field-lg)] px-7 text-base',
+  sm: 'h-[var(--height-button-sm)] px-3 text-sm',
+  md: 'h-[var(--height-button-md)] px-5 text-sm',
+  lg: 'h-[var(--height-button-lg)] px-7 text-base',
 }
 
 export function Button({
@@ -47,7 +47,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex cursor-pointer items-center justify-center gap-2 rounded-field font-semibold',
+        'inline-flex cursor-pointer items-center justify-center gap-2 rounded-field font-semibold whitespace-nowrap',
         'transition-colors duration-150',
         'focus-visible:ring-4 focus-visible:ring-[rgb(var(--sys-rgb)/0.25)] focus-visible:outline-none',
         'disabled:cursor-not-allowed disabled:opacity-60',

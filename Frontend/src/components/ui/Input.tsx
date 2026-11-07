@@ -10,7 +10,7 @@ import { cn } from './cn'
  * pantallas, y las alturas salen de los tokens --height-field-* de theme.css.
  */
 
-/** sm 36px (tablas y barras) · md 40px (formularios) · lg 48px (login). */
+/** sm 28px (tablas y barras) · md 32px (formularios) · lg 48px (login). */
 export type FieldSize = 'sm' | 'md' | 'lg'
 
 export const FIELD_HEIGHT: Record<FieldSize, string> = {
