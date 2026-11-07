@@ -274,6 +274,8 @@ class _FilaAlerta extends ConsumerWidget {
     TipoAlerta.stockRepuesto => Icons.inventory_2_outlined,
     TipoAlerta.lotePorVencer => Icons.event_busy_outlined,
     TipoAlerta.solicitudAcceso => Icons.lock_person_outlined,
+    TipoAlerta.solicitudCompra => Icons.edit_note_outlined,
+    TipoAlerta.solicitudCompraRespuesta => Icons.mark_email_read_outlined,
     TipoAlerta.documentoVehiculo => Icons.description_outlined,
     TipoAlerta.licenciaConductor => Icons.badge_outlined,
     _ => Icons.warning_amber_outlined,

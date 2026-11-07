@@ -78,7 +78,7 @@ export function CampanaAlertas({ onNavigate }: { onNavigate: (id: string) => voi
 
   // Cualquiera de estos módulos puede crear, resolver o vencer una alerta.
   // 'permisos' está porque un acceso pedido desde el móvil es una alerta más.
-  useRealtime(['stock', 'compras', 'recepciones', 'notasventa', 'pedidos', 'permisos'], cargar)
+  useRealtime(['stock', 'compras', 'recepciones', 'notasventa', 'pedidos', 'permisos', 'solicitudescompra'], cargar)
 
   const cerrar = useCallback(() => setAbierto(false), [])
   useCerrarAlTocarFuera(abierto, contenedorRef, cerrar)

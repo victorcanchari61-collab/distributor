@@ -13,6 +13,10 @@ export type TipoAlerta =
   | 'LICENCIA_CONDUCTOR'
   | 'SOLICITUD_ACCESO'
   | 'SEGUIMIENTO_CLIENTE'
+  /** Una solicitud de compra enviada por el almacén y todavía sin atender (solo para quien la atiende). */
+  | 'SOLICITUD_COMPRA'
+  /** La respuesta a una solicitud propia: rechazada con su motivo, o ya con su orden de compra. */
+  | 'SOLICITUD_COMPRA_RESPUESTA'
 
 export interface AlertaResponse {
   id: string

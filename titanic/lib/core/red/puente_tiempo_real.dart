@@ -78,6 +78,8 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     movimientosDigitalesProvider,
   ],
   'ordenescompra': [ordenesCompraProvider, comprasProvider],
+  // Una solicitud enviada, rechazada o atendida es una alerta para quien la atiende y para quien la pidio.
+  'solicitudescompra': [solicitudesCompraProvider, alertasProvider],
   'recepciones': [
     recepcionesProvider,
     comprasProvider,

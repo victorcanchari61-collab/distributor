@@ -60,4 +60,10 @@ class TipoAlerta {
   /// Alguien pidio entrar a una pantalla que su rol no incluye. Solo llega a
   /// quien puede resolverla.
   static const solicitudAcceso = 'SOLICITUD_ACCESO';
+
+  /// Una solicitud de compra enviada por el almacen y todavia sin atender. Solo llega a quien la atiende.
+  static const solicitudCompra = 'SOLICITUD_COMPRA';
+
+  /// La respuesta a una solicitud propia: rechazada (con su motivo) o ya con su orden de compra.
+  static const solicitudCompraRespuesta = 'SOLICITUD_COMPRA_RESPUESTA';
 }
