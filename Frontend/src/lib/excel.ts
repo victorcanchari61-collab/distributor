@@ -1,4 +1,8 @@
-import * as XLSX from 'xlsx'
+/*
+ * La libreria de Excel (xlsx) pesa cerca de medio megabyte: se pide SOLO al leer o al exportar un archivo, no al
+ * abrir la aplicacion. Quien nunca exporta no la descarga.
+ */
+const cargarXlsx = () => import('xlsx')
 
 /**
  * Lectura de hojas de calculo para importar datos.
@@ -45,6 +49,7 @@ export interface LecturaExcel {
  * primera fila con al menos dos celdas con texto.
  */
 export async function leerExcel(archivo: File): Promise<LecturaExcel> {
+  const XLSX = await cargarXlsx()
   const buffer = await archivo.arrayBuffer()
   const libro = XLSX.read(buffer, { type: 'array' })
   const hoja = libro.Sheets[libro.SheetNames[0]]
@@ -95,7 +100,8 @@ export function valorDe(fila: FilaExcel, ...posiblesNombres: string[]): string {
 }
 
 /** Descarga una lista de filas como un .xlsx, una hoja, encabezados en la primera fila. */
-export function exportarExcel(nombreArchivo: string, filas: Record<string, unknown>[]) {
+export async function exportarExcel(nombreArchivo: string, filas: Record<string, unknown>[]) {
+  const XLSX = await cargarXlsx()
   const hoja = XLSX.utils.json_to_sheet(filas)
   const libro = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(libro, hoja, 'Datos')

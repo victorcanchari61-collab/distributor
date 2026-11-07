@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.ResponseCompression;
 using System.Text;
 using Backend.Data;
 using Backend.Hubs;
@@ -18,6 +19,25 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+/*
+ * Respuestas comprimidas.
+ *
+ * Los listados que bajan el padrón de clientes (1 MB), el catálogo de productos (300 KB) o el selector de la app
+ * (500 KB) viajaban en crudo: sobre una conexión con 170 ms de ida y vuelta, cada respuesta grande cuesta varios
+ * viajes extra mientras el protocolo "arranca". JSON comprime a una quinta parte. Brotli donde el cliente lo
+ * acepta y gzip donde no; nivel rápido para no gastar el procesador del servidor.
+ *
+ * Los archivos estáticos del panel (JS y CSS) los sirve Nginx: su compresión se configura allí, no aquí.
+ */
+builder.Services.AddResponseCompression(opciones =>
+{
+    opciones.EnableForHttps = true;
+    opciones.Providers.Add<BrotliCompressionProvider>();
+    opciones.Providers.Add<GzipCompressionProvider>();
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(o => o.Level = System.IO.Compression.CompressionLevel.Fastest);
+builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = System.IO.Compression.CompressionLevel.Fastest);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -200,6 +220,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 var app = builder.Build();
+
+// Lo primero de la tubería: comprime lo que salga después, incluidas las respuestas de error.
+app.UseResponseCompression();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

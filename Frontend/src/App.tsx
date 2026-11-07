@@ -1,138 +1,104 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import type { ComponentType } from 'react'
 import { ShieldOff } from 'lucide-react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { DashboardLayout, navIdFromPath, navPath, puedeAbrir, resolveNav } from './components/layout'
 import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
-import { AccesosPage, AuditoriaPage, EmpresaPage, RolesPage, UsuariosPage } from './features/config'
 import { SolicitudPermisoModal } from './features/config/SolicitudPermisoModal'
 import { solicitudApi } from './features/config/solicitudApi'
-import { InicioPage } from './features/inicio'
-import {
-  CobranzaDashboard,
-  ComprasDashboard,
-  InventarioDashboard,
-  RentabilidadDashboard,
-  ProductosSinVentasPage,
-  RepartoDashboard,
-  VentasDashboard,
-  ZonasPage,
-} from './features/dashboard'
-import { BoletasPage, FacturasPage, NotasCreditoPage, NotasDebitoPage } from './features/facturacion'
-import { MiPerfilPage } from './features/perfil'
 import { Button } from './components/ui'
-import { ListasPreciosPage, PedidosPage, NotasVentaPage } from './features/facturacion'
-import {
-  CajasPage,
-  CierresCajaPage,
-  CuentasFinancierasPage,
-  CuentasPorCobrarPage,
-  CuentasPorPagarPage,
-  GastosOperativosPage,
-  MetodosPagoEnBancos,
-  MiCajaPage,
-  MisGananciasPage,
-  MovimientosDineroPage,
-  PrestamosRecibidosPage,
-  EstadoResultadosPage,
-} from './features/finanzas'
-import {
-  AlmacenesPage,
-  UbicacionProductosPage,
-  AjustesPage,
-  KardexPage,
-  StockPage,
-  TransferenciasPage,
-  PrestamosPage,
-  LotesVencimientosPage,
-  ConteosPage,
-} from './features/inventario'
-import { OrdenesCompraPage, MisComprasPage, RecepcionesPage, SolicitudesCompraPage } from './features/compras'
-import { CatalogoPage, CatalogoPublicoPage, ClientesPage, ProductosPage, ProveedoresPage } from './features/maestros'
-import { AdelantosPage, AsistenciaPage, EmpleadosPage, PlanillaPage } from './features/rrhh'
-import {
-  ConductoresPage,
-  DespachosPage,
-  FlotaPage,
-  MercadosPage,
-  MotivosNovedadPage,
-  NovedadesPage,
-  RutasPage,
-} from './features/tms'
-import { DevolucionesPage, VisitasPage } from './features/dms'
-import { CaidaPage, SeguimientoPage, VendedoresCaidaPage } from './features/crm'
 import { PendingPage } from './features/PendingPage'
 import { clearSession, getUsuario } from './lib/authStorage'
 import { PermisosProvider, usePermisos } from './lib/permisos'
 
+/**
+ * Una pantalla que se descarga SOLO cuando se abre.
+ *
+ * Antes todas las pantallas viajaban juntas en un mismo archivo de 1.7 MB: quien solo entraba a Pedidos bajaba también
+ * la planilla, los dashboards y el CRM, y el login esperaba a que todo eso llegara. Ahora cada módulo es su propio
+ * archivo y se pide al abrir su primera pantalla; el navegador lo guarda para las siguientes.
+ */
+const pantalla = (cargar: () => Promise<Record<string, unknown>>, nombre: string) =>
+  lazy(() => cargar().then((modulo) => ({ default: modulo[nombre] as ComponentType })))
+
+const InicioPage = pantalla(() => import('./features/inicio'), 'InicioPage')
+const MiPerfilPage = pantalla(() => import('./features/perfil'), 'MiPerfilPage')
+const CatalogoPublicoPage = pantalla(() => import('./features/maestros'), 'CatalogoPublicoPage')
+
+/** Mientras llega el archivo de la pantalla: algo discreto, sin saltos. */
+function Cargando() {
+  return <p className="py-10 text-center text-sm text-ink-soft">Cargando...</p>
+}
+
 /** Vistas ya construidas, por id del menu. El resto cae en PendingPage. */
-const VIEWS: Record<string, () => React.ReactElement> = {
-  'dashboard.ventas': VentasDashboard,
-  'dashboard.rentabilidad': RentabilidadDashboard,
-  'dashboard.cobranza': CobranzaDashboard,
-  'dashboard.compras': ComprasDashboard,
-  'dashboard.inventario': InventarioDashboard,
-  'dashboard.reparto': RepartoDashboard,
-  'fact.facturas': FacturasPage,
-  'fact.boletas': BoletasPage,
-  'fact.notascredito': NotasCreditoPage,
-  'fact.notasdebito': NotasDebitoPage,
-  'dashboard.sinventas': ProductosSinVentasPage,
-  'dashboard.zonas': ZonasPage,
-  'maestros.clientes': ClientesPage,
-  'maestros.proveedores': ProveedoresPage,
-  'maestros.productos': ProductosPage,
-  'maestros.catalogo': CatalogoPage,
-  'rrhh.empleados': EmpleadosPage,
-  'rrhh.asistencia': AsistenciaPage,
-  'rrhh.planilla': PlanillaPage,
-  'rrhh.adelantos': AdelantosPage,
-  'fact.pedidos': PedidosPage,
-  'fact.notaventa': NotasVentaPage,
-  'fact.precios': ListasPreciosPage,
-  'inv.almacenes': AlmacenesPage,
-  'inv.ubicaciones': UbicacionProductosPage,
-  'inv.stock': StockPage,
-  'inv.kardex': KardexPage,
-  'inv.ajustes': AjustesPage,
-  'inv.transferencias': TransferenciasPage,
-  'inv.prestamos': PrestamosPage,
-  'inv.lotes': LotesVencimientosPage,
-  'inv.conteos': ConteosPage,
-  'compras.solicitudes': SolicitudesCompraPage,
-  'compras.ordenes': OrdenesCompraPage,
-  'compras.compras': MisComprasPage,
-  'compras.recepciones': RecepcionesPage,
-  'tms.mercados': MercadosPage,
-  'tms.rutas': RutasPage,
-  'tms.flota': FlotaPage,
-  'tms.conductores': ConductoresPage,
-  'tms.despachos': DespachosPage,
-  'tms.novedades': NovedadesPage,
-  'tms.motivos': MotivosNovedadPage,
-  'crm.seguimiento': SeguimientoPage,
-  'crm.caida': CaidaPage,
-  'crm.vendedores': VendedoresCaidaPage,
-  'dms.visitas': VisitasPage,
-  'dms.devoluciones': DevolucionesPage,
-  'finanzas.caja': MiCajaPage,
-  'finanzas.cajas': CajasPage,
-  'finanzas.cierres': CierresCajaPage,
-  'finanzas.bancos': CuentasFinancierasPage,
+const VIEWS: Record<string, ComponentType> = {
+  'dashboard.ventas': pantalla(() => import('./features/dashboard'), 'VentasDashboard'),
+  'dashboard.rentabilidad': pantalla(() => import('./features/dashboard'), 'RentabilidadDashboard'),
+  'dashboard.cobranza': pantalla(() => import('./features/dashboard'), 'CobranzaDashboard'),
+  'dashboard.compras': pantalla(() => import('./features/dashboard'), 'ComprasDashboard'),
+  'dashboard.inventario': pantalla(() => import('./features/dashboard'), 'InventarioDashboard'),
+  'dashboard.reparto': pantalla(() => import('./features/dashboard'), 'RepartoDashboard'),
+  'fact.facturas': pantalla(() => import('./features/facturacion'), 'FacturasPage'),
+  'fact.boletas': pantalla(() => import('./features/facturacion'), 'BoletasPage'),
+  'fact.notascredito': pantalla(() => import('./features/facturacion'), 'NotasCreditoPage'),
+  'fact.notasdebito': pantalla(() => import('./features/facturacion'), 'NotasDebitoPage'),
+  'dashboard.sinventas': pantalla(() => import('./features/dashboard'), 'ProductosSinVentasPage'),
+  'dashboard.zonas': pantalla(() => import('./features/dashboard'), 'ZonasPage'),
+  'maestros.clientes': pantalla(() => import('./features/maestros'), 'ClientesPage'),
+  'maestros.proveedores': pantalla(() => import('./features/maestros'), 'ProveedoresPage'),
+  'maestros.productos': pantalla(() => import('./features/maestros'), 'ProductosPage'),
+  'maestros.catalogo': pantalla(() => import('./features/maestros'), 'CatalogoPage'),
+  'rrhh.empleados': pantalla(() => import('./features/rrhh'), 'EmpleadosPage'),
+  'rrhh.asistencia': pantalla(() => import('./features/rrhh'), 'AsistenciaPage'),
+  'rrhh.planilla': pantalla(() => import('./features/rrhh'), 'PlanillaPage'),
+  'rrhh.adelantos': pantalla(() => import('./features/rrhh'), 'AdelantosPage'),
+  'fact.pedidos': pantalla(() => import('./features/facturacion'), 'PedidosPage'),
+  'fact.notaventa': pantalla(() => import('./features/facturacion'), 'NotasVentaPage'),
+  'fact.precios': pantalla(() => import('./features/facturacion'), 'ListasPreciosPage'),
+  'inv.almacenes': pantalla(() => import('./features/inventario'), 'AlmacenesPage'),
+  'inv.ubicaciones': pantalla(() => import('./features/inventario'), 'UbicacionProductosPage'),
+  'inv.stock': pantalla(() => import('./features/inventario'), 'StockPage'),
+  'inv.kardex': pantalla(() => import('./features/inventario'), 'KardexPage'),
+  'inv.ajustes': pantalla(() => import('./features/inventario'), 'AjustesPage'),
+  'inv.transferencias': pantalla(() => import('./features/inventario'), 'TransferenciasPage'),
+  'inv.prestamos': pantalla(() => import('./features/inventario'), 'PrestamosPage'),
+  'inv.lotes': pantalla(() => import('./features/inventario'), 'LotesVencimientosPage'),
+  'inv.conteos': pantalla(() => import('./features/inventario'), 'ConteosPage'),
+  'compras.solicitudes': pantalla(() => import('./features/compras'), 'SolicitudesCompraPage'),
+  'compras.ordenes': pantalla(() => import('./features/compras'), 'OrdenesCompraPage'),
+  'compras.compras': pantalla(() => import('./features/compras'), 'MisComprasPage'),
+  'compras.recepciones': pantalla(() => import('./features/compras'), 'RecepcionesPage'),
+  'tms.mercados': pantalla(() => import('./features/tms'), 'MercadosPage'),
+  'tms.rutas': pantalla(() => import('./features/tms'), 'RutasPage'),
+  'tms.flota': pantalla(() => import('./features/tms'), 'FlotaPage'),
+  'tms.conductores': pantalla(() => import('./features/tms'), 'ConductoresPage'),
+  'tms.despachos': pantalla(() => import('./features/tms'), 'DespachosPage'),
+  'tms.novedades': pantalla(() => import('./features/tms'), 'NovedadesPage'),
+  'tms.motivos': pantalla(() => import('./features/tms'), 'MotivosNovedadPage'),
+  'crm.seguimiento': pantalla(() => import('./features/crm'), 'SeguimientoPage'),
+  'crm.caida': pantalla(() => import('./features/crm'), 'CaidaPage'),
+  'crm.vendedores': pantalla(() => import('./features/crm'), 'VendedoresCaidaPage'),
+  'dms.visitas': pantalla(() => import('./features/dms'), 'VisitasPage'),
+  'dms.devoluciones': pantalla(() => import('./features/dms'), 'DevolucionesPage'),
+  'finanzas.caja': pantalla(() => import('./features/finanzas'), 'MiCajaPage'),
+  'finanzas.cajas': pantalla(() => import('./features/finanzas'), 'CajasPage'),
+  'finanzas.cierres': pantalla(() => import('./features/finanzas'), 'CierresCajaPage'),
+  'finanzas.bancos': pantalla(() => import('./features/finanzas'), 'CuentasFinancierasPage'),
   // Es una pestaña de Bancos: el enlace viejo lleva ahí, ya abierta.
-  'finanzas.metodospago': MetodosPagoEnBancos,
-  'finanzas.cobrar': CuentasPorCobrarPage,
-  'finanzas.pagar': CuentasPorPagarPage,
-  'finanzas.ganancias': MisGananciasPage,
-  'finanzas.movimientos': MovimientosDineroPage,
-  'finanzas.operativos': GastosOperativosPage,
-  'finanzas.financiamiento': PrestamosRecibidosPage,
-  'finanzas.resultados': EstadoResultadosPage,
-  'config.usuarios': UsuariosPage,
-  'config.accesos': AccesosPage,
-  'config.roles': RolesPage,
-  'config.empresa': EmpresaPage,
-  'config.auditoria': AuditoriaPage,
+  'finanzas.metodospago': pantalla(() => import('./features/finanzas'), 'MetodosPagoEnBancos'),
+  'finanzas.cobrar': pantalla(() => import('./features/finanzas'), 'CuentasPorCobrarPage'),
+  'finanzas.pagar': pantalla(() => import('./features/finanzas'), 'CuentasPorPagarPage'),
+  'finanzas.ganancias': pantalla(() => import('./features/finanzas'), 'MisGananciasPage'),
+  'finanzas.movimientos': pantalla(() => import('./features/finanzas'), 'MovimientosDineroPage'),
+  'finanzas.operativos': pantalla(() => import('./features/finanzas'), 'GastosOperativosPage'),
+  'finanzas.financiamiento': pantalla(() => import('./features/finanzas'), 'PrestamosRecibidosPage'),
+  'finanzas.resultados': pantalla(() => import('./features/finanzas'), 'EstadoResultadosPage'),
+  'config.usuarios': pantalla(() => import('./features/config'), 'UsuariosPage'),
+  'config.accesos': pantalla(() => import('./features/config'), 'AccesosPage'),
+  'config.roles': pantalla(() => import('./features/config'), 'RolesPage'),
+  'config.empresa': pantalla(() => import('./features/config'), 'EmpresaPage'),
+  'config.auditoria': pantalla(() => import('./features/config'), 'AuditoriaPage'),
 }
 
 function App() {
@@ -155,7 +121,11 @@ function App() {
   // El catálogo público se abre con un enlace, sin sesión: va ANTES del login y fuera del panel (sin menú, sin
   // permisos ni tiempo real). Es una sola palabra de ruta: el catálogo interno vive en /maestros/catalogo.
   if (location.pathname === '/catalogo' || location.pathname === '/catalogo/') {
-    return <CatalogoPublicoPage />
+    return (
+      <Suspense fallback={<Cargando />}>
+        <CatalogoPublicoPage />
+      </Suspense>
+    )
   }
 
   if (!usuario) {
@@ -190,6 +160,7 @@ function App() {
         navigate('/', { replace: true })
       }}
     >
+      <Suspense fallback={<Cargando />}>
       <Routes>
         <Route path="/" element={<Inicio />} />
         {/* Ruta propia y fuera del filtro de permisos: es de todos, no de un modulo. */}
@@ -197,6 +168,7 @@ function App() {
         <Route path="/:modulo/:vista" element={<Vista />} />
         <Route path="*" element={<Inicio />} />
       </Routes>
+      </Suspense>
 
       {/*
         Se monta una vez, fuera de las vistas: cualquier 403 del filtro de
