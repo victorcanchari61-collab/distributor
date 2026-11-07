@@ -52,7 +52,13 @@ class ComprasApi {
         as Map<String, dynamic>,
   );
 
-  /// DELETE /api/solicitudcompra/{id}. Quien la pidio la retira: solo Pendiente.
+  /// POST /api/solicitudcompra/{id}/enviar. Del borrador al administrador.
+  Future<SolicitudCompra> enviarSolicitudCompra(int id) async =>
+      SolicitudCompra.desdeJson(
+        await _api.post('/solicitudcompra/$id/enviar') as Map<String, dynamic>,
+      );
+
+  /// DELETE /api/solicitudcompra/{id}. Quien la pidio la retira: borrador o Pendiente.
   Future<void> anularSolicitudCompra(int id) async {
     await _api.delete('/solicitudcompra/$id');
   }

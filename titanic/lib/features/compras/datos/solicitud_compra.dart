@@ -2,6 +2,9 @@ import '../../../compartido/fechas.dart';
 
 class EstadoSolicitudCompra {
   const EstadoSolicitudCompra._();
+
+  /// Se esta armando: solo la ve quien la pidio. Se envia al administrador cuando esta lista.
+  static const borrador = 'BORRADOR';
   static const pendiente = 'PENDIENTE';
   static const atendida = 'ATENDIDA';
   static const rechazada = 'RECHAZADA';
@@ -124,6 +127,10 @@ class SolicitudCompra {
 
   bool get esUrgente => urgencia == UrgenciaSolicitud.urgente;
   bool get estaPendiente => estado == EstadoSolicitudCompra.pendiente;
+  bool get esBorrador => estado == EstadoSolicitudCompra.borrador;
+
+  /// Se corrige o se anula mientras es borrador o esta pendiente.
+  bool get seEdita => esBorrador || estaPendiente;
 
   String get buscable =>
       '$numero $almacen ${solicitante ?? ''} ${ordenes.map((o) => o.numero).join(' ')}'

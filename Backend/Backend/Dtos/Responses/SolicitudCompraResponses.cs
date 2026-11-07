@@ -23,6 +23,9 @@ public class SolicitudCompraFilaResponse
     public string? Observacion { get; set; }
     public string? MotivoRechazo { get; set; }
 
+    /// <summary>Cuándo se rechazó o se atendió. Null mientras espera.</summary>
+    public DateTime? FechaRespuesta { get; set; }
+
     /// <summary>Quién la pidió.</summary>
     public int? UsuarioId { get; set; }
     public string? Solicitante { get; set; }

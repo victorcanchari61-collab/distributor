@@ -19,8 +19,9 @@ public class RutaController : ControllerBase
         _rutas = rutas;
     }
 
+    /// <summary>También la lee quien ve Despachos: la pantalla pinta el nombre de la ruta de cada camión.</summary>
     [HttpGet]
-    [Permiso("tms.rutas", Accion.Ver)]
+    [PermisoAlguno("tms.rutas:ver", "tms.despachos:ver")]
     public async Task<IActionResult> GetAll() => Ok(await _rutas.GetAllAsync());
 
     [HttpGet("{id:int}")]

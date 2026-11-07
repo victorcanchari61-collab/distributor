@@ -58,7 +58,12 @@ public class SolicitudCompraController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] CrearSolicitudCompraRequest request) =>
         Ok(await _solicitudes.ActualizarAsync(id, request));
 
-    /// <summary>Quien la pidió la retira: solo mientras está Pendiente.</summary>
+    /// <summary>Del borrador al administrador: la solicitud pasa a Pendiente y Compras la ve.</summary>
+    [HttpPost("{id:int}/enviar")]
+    [Permiso("compras.solicitudes", Accion.Crear)]
+    public async Task<IActionResult> Enviar(int id) => Ok(await _solicitudes.EnviarAsync(id));
+
+    /// <summary>Quien la pidió la retira: solo mientras es borrador o está Pendiente.</summary>
     [HttpDelete("{id:int}")]
     [Permiso("compras.solicitudes", Accion.Anular)]
     public async Task<IActionResult> Anular(int id)

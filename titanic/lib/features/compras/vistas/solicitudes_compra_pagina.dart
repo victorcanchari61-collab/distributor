@@ -35,6 +35,7 @@ class SolicitudesCompraPagina extends ConsumerWidget {
     final todas =
         ref.watch(solicitudesCompraProvider).valueOrNull ??
         const <SolicitudCompra>[];
+    final borradores = todas.where((s) => s.esBorrador).length;
     final pendientes = todas.where((s) => s.estaPendiente).length;
     final urgentes = todas.where((s) => s.estaPendiente && s.esUrgente).length;
     final atendidas = todas
@@ -59,6 +60,11 @@ class SolicitudesCompraPagina extends ConsumerWidget {
       singular: 'solicitud de compra',
       plural: 'solicitudes de compra',
       indicadores: [
+        AppTarjetaDato(
+          etiqueta: 'Borradores',
+          valor: '$borradores',
+          icono: Icons.edit_outlined,
+        ),
         AppTarjetaDato(
           etiqueta: 'Pendientes',
           valor: '$pendientes',
@@ -88,13 +94,16 @@ class SolicitudesCompraPagina extends ConsumerWidget {
         color: color,
         onVer: () => _abrirDetalle(context, ref, solicitud, color),
         onEditar:
-            puede(ref, 'compras.solicitudes', Accion.editar) &&
-                solicitud.estaPendiente
+            puede(ref, 'compras.solicitudes', Accion.editar) && solicitud.seEdita
             ? () => _abrirFormulario(context, ref, solicitud)
             : null,
+        onEnviar:
+            puede(ref, 'compras.solicitudes', Accion.crear) &&
+                solicitud.esBorrador
+            ? () => _enviar(context, ref, solicitud)
+            : null,
         onAnular:
-            puede(ref, 'compras.solicitudes', Accion.anular) &&
-                solicitud.estaPendiente
+            puede(ref, 'compras.solicitudes', Accion.anular) && solicitud.seEdita
             ? () => _anular(context, ref, solicitud)
             : null,
       ),
@@ -114,6 +123,7 @@ class SolicitudesCompraPagina extends ConsumerWidget {
             valor: ref.watch(estadoSolicitudFiltroProvider),
             opciones: const [
               OpcionFiltro(null, 'Todas'),
+              OpcionFiltro(EstadoSolicitudCompra.borrador, 'Borradores'),
               OpcionFiltro(EstadoSolicitudCompra.pendiente, 'Pendientes'),
               OpcionFiltro(EstadoSolicitudCompra.atendida, 'Atendidas'),
               OpcionFiltro(EstadoSolicitudCompra.rechazada, 'Rechazadas'),
@@ -202,6 +212,29 @@ class SolicitudesCompraPagina extends ConsumerWidget {
     );
   }
 
+  Future<void> _enviar(
+    BuildContext context,
+    WidgetRef ref,
+    SolicitudCompra solicitud,
+  ) async {
+    final ok = await confirmarAccion(
+      context,
+      titulo: 'Enviar ${solicitud.numero}',
+      mensaje:
+          'Se envía al administrador para que la atienda. Después ya no es un borrador.',
+      textoConfirmar: 'Enviar',
+    );
+    if (!ok || !context.mounted) return;
+
+    final mensajero = Aviso.de(context);
+    try {
+      await ref.read(solicitudesCompraProvider.notifier).enviar(solicitud.id);
+      mensajero.mostrar('${solicitud.numero} enviada al administrador');
+    } on ApiExcepcion catch (e) {
+      mensajero.error(e.texto);
+    }
+  }
+
   Future<void> _anular(
     BuildContext context,
     WidgetRef ref,
@@ -230,6 +263,7 @@ EtiquetaTono _tonoEstado(String estado) => switch (estado) {
   EstadoSolicitudCompra.atendida => EtiquetaTono.exito,
   EstadoSolicitudCompra.rechazada => EtiquetaTono.peligro,
   EstadoSolicitudCompra.anulada => EtiquetaTono.neutral,
+  EstadoSolicitudCompra.borrador => EtiquetaTono.neutral,
   _ => EtiquetaTono.aviso,
 };
 
@@ -237,6 +271,7 @@ String _etiquetaEstado(String estado) => switch (estado) {
   EstadoSolicitudCompra.atendida => 'Atendida',
   EstadoSolicitudCompra.rechazada => 'Rechazada',
   EstadoSolicitudCompra.anulada => 'Anulada',
+  EstadoSolicitudCompra.borrador => 'Borrador',
   _ => 'Pendiente',
 };
 
@@ -259,6 +294,7 @@ class _TarjetaSolicitud extends StatelessWidget {
     required this.color,
     required this.onVer,
     this.onEditar,
+    this.onEnviar,
     this.onAnular,
   });
 
@@ -266,6 +302,7 @@ class _TarjetaSolicitud extends StatelessWidget {
   final Color color;
   final VoidCallback onVer;
   final VoidCallback? onEditar;
+  final VoidCallback? onEnviar;
   final VoidCallback? onAnular;
 
   @override
@@ -286,6 +323,13 @@ class _TarjetaSolicitud extends StatelessWidget {
       ],
       onTap: onVer,
       acciones: [
+        if (onEnviar != null)
+          IconButton(
+            onPressed: onEnviar,
+            tooltip: 'Enviar al administrador',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.send_outlined, size: 18, color: Colores.exito),
+          ),
         if (onEditar != null)
           IconButton(
             onPressed: onEditar,

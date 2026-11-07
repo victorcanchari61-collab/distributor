@@ -58,6 +58,10 @@ class _SolicitudCompraFormularioState
 
   bool get _esNueva => widget.solicitud == null;
 
+  /// Una ya enviada solo se corrige; un borrador se guarda para seguir o se envía.
+  bool get _soloCorregir =>
+      widget.solicitud != null && !widget.solicitud!.esBorrador;
+
   void _ponerLineasExistentes(List<Producto> catalogo) {
     final detalle = widget.solicitud?.detalle ?? const <LineaSolicitud>[];
     if (_lineasPuestas || detalle.isEmpty || catalogo.isEmpty) return;
@@ -101,7 +105,8 @@ class _SolicitudCompraFormularioState
     return _errorAlmacen == null && _errorLineas == null;
   }
 
-  Future<void> _guardar() async {
+  /// [enviar] false la deja en borrador (solo la ve quien la pide); true la manda al administrador.
+  Future<void> _guardar({required bool enviar}) async {
     FocusScope.of(context).unfocus();
     if (!_validar()) return;
 
@@ -116,6 +121,7 @@ class _SolicitudCompraFormularioState
     final cuerpo = <String, dynamic>{
       'almacenId': _almacenId,
       'urgencia': _urgencia,
+      'enviar': enviar,
       'observacion': _observacion.text.trim().isEmpty
           ? null
           : _observacion.text.trim(),
@@ -140,7 +146,11 @@ class _SolicitudCompraFormularioState
 
       navegador.pop();
       mensajero.mostrar(
-        _esNueva ? 'Solicitud enviada a Compras' : 'Solicitud actualizada',
+        enviar
+            ? 'Solicitud enviada al administrador'
+            : _esNueva
+            ? 'Borrador guardado: solo lo ves tú hasta que lo envíes'
+            : 'Solicitud actualizada',
       );
     } on ApiExcepcion catch (e) {
       setState(() {
@@ -356,12 +366,35 @@ class _SolicitudCompraFormularioState
             ),
             const SizedBox(height: Dimen.espacio6),
 
-            AppBotonesFormulario(
-              onCancelar: () => Navigator.of(context).pop(),
-              onGuardar: _guardar,
-              textoGuardar: _esNueva ? 'Enviar solicitud' : 'Guardar',
-              cargando: _guardando,
-            ),
+            if (_soloCorregir)
+              AppBotonesFormulario(
+                onCancelar: () => Navigator.of(context).pop(),
+                onGuardar: () => _guardar(enviar: false),
+                textoGuardar: 'Guardar',
+                cargando: _guardando,
+              )
+            else ...[
+              AppBoton(
+                texto: 'Enviar al administrador',
+                expandido: true,
+                cargando: _guardando,
+                onPressed: () => _guardar(enviar: true),
+              ),
+              const SizedBox(height: Dimen.espacio3),
+              AppBoton(
+                texto: 'Guardar borrador',
+                variante: BotonVariante.secundario,
+                expandido: true,
+                onPressed: _guardando ? null : () => _guardar(enviar: false),
+              ),
+              const SizedBox(height: Dimen.espacio3),
+              AppBoton(
+                texto: 'Cancelar',
+                variante: BotonVariante.texto,
+                expandido: true,
+                onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+              ),
+            ],
             const SizedBox(height: Dimen.espacio5),
           ],
         ),

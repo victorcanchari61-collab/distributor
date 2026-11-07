@@ -43,6 +43,16 @@ void main() {
       expect(s.detalle.single.cantidad, 10);
     });
 
+    test('un borrador se edita y se envía; una atendida ya no', () {
+      final borrador = SolicitudCompra.desdeJson({...json, 'estado': 'BORRADOR'});
+      final atendida = SolicitudCompra.desdeJson({...json, 'estado': 'ATENDIDA'});
+
+      expect(borrador.esBorrador, isTrue);
+      expect(borrador.estaPendiente, isFalse);
+      expect(borrador.seEdita, isTrue);
+      expect(atendida.seEdita, isFalse);
+    });
+
     test('el listado no trae líneas y no se rompe', () {
       final sinLineas = Map<String, dynamic>.of(json)..remove('detalle');
       final s = SolicitudCompra.desdeJson(sinLineas);

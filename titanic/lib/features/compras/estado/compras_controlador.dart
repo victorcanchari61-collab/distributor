@@ -42,6 +42,11 @@ class SolicitudesCompraControlador extends AsyncNotifier<List<SolicitudCompra>> 
     await recargar();
   }
 
+  Future<void> enviar(int id) async {
+    await ref.read(comprasApiProvider).enviarSolicitudCompra(id);
+    await recargar();
+  }
+
   Future<void> anular(int id) async {
     await ref.read(comprasApiProvider).anularSolicitudCompra(id);
     await recargar();

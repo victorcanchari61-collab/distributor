@@ -95,7 +95,7 @@ export const ordenCompraApi = {
 
 // --- Solicitudes de compra ---
 
-export type EstadoSolicitudCompra = 'PENDIENTE' | 'ATENDIDA' | 'RECHAZADA' | 'ANULADA'
+export type EstadoSolicitudCompra = 'BORRADOR' | 'PENDIENTE' | 'ATENDIDA' | 'RECHAZADA' | 'ANULADA'
 export type UrgenciaSolicitud = 'NORMAL' | 'URGENTE'
 
 export interface OrdenDeSolicitud {
@@ -145,6 +145,8 @@ export interface CrearSolicitudCompraRequest {
   almacenId: number
   urgencia?: UrgenciaSolicitud | null
   observacion?: string | null
+  /** true la envía al administrador; false la deja en borrador (solo la ve quien la pidió). */
+  enviar?: boolean
   detalle: { productoId: number; presentacionId?: number | null; cantidad: number; nota?: string | null }[]
 }
 
@@ -169,7 +171,9 @@ export const solicitudCompraApi = {
     api.post<SolicitudCompraResponse>('/solicitudcompra', body),
   update: (id: number, body: CrearSolicitudCompraRequest) =>
     api.put<SolicitudCompraResponse>(`/solicitudcompra/${id}`, body),
-  /** Quien la pidió la retira (solo Pendiente). */
+  /** Del borrador al administrador: pasa a Pendiente y Compras la ve. */
+  enviar: (id: number) => api.post<SolicitudCompraResponse>(`/solicitudcompra/${id}/enviar`),
+  /** Quien la pidió la retira (borrador o Pendiente). */
   anular: (id: number) => api.del<void>(`/solicitudcompra/${id}`),
   /** Compras no la atiende y dice por qué. */
   rechazar: (id: number, motivo: string) =>

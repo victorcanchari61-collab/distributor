@@ -7,6 +7,7 @@ import {
   ClipboardPen,
   Eye,
   Pencil,
+  Send,
   ShoppingCart,
   Trash2,
   TrendingDown,
@@ -54,6 +55,7 @@ import type {
 } from './comprasApi'
 
 const TONO_ESTADO = {
+  BORRADOR: 'neutral',
   PENDIENTE: 'warning',
   ATENDIDA: 'success',
   RECHAZADA: 'danger',
@@ -61,6 +63,7 @@ const TONO_ESTADO = {
 } as const
 
 const TEXTO_ESTADO: Record<EstadoSolicitudCompra, string> = {
+  BORRADOR: 'Borrador',
   PENDIENTE: 'Pendiente',
   ATENDIDA: 'Atendida',
   RECHAZADA: 'Rechazada',
@@ -226,7 +229,8 @@ export function SolicitudesCompraPage() {
     }
   }
 
-  const guardar = async () => {
+  /** `enviar` false la deja en borrador; true la manda al administrador. Una ya enviada solo se corrige. */
+  const guardar = async (enviar: boolean) => {
     if (!almacenId) return toast.error('Elige el almacén para el que se pide.')
 
     const validas = filas.filter((f) => f.productoId && Number(f.cantidad) > 0)
@@ -236,6 +240,7 @@ export function SolicitudesCompraPage() {
       almacenId,
       urgencia,
       observacion: observacion.trim() || null,
+      enviar,
       detalle: validas.map((f) => ({
         productoId: f.productoId,
         presentacionId: f.presentacionId || null,
@@ -250,7 +255,13 @@ export function SolicitudesCompraPage() {
 
       setVista('lista')
       await cargar()
-      toast.exito(editando ? 'Solicitud actualizada' : 'Solicitud enviada a Compras')
+      toast.exito(
+        enviar
+          ? 'Solicitud enviada al administrador'
+          : editando
+            ? 'Solicitud actualizada'
+            : 'Borrador guardado: la ves solo tú hasta que la envíes',
+      )
     } catch (e) {
       toast.error(
         e instanceof ApiError
@@ -263,6 +274,24 @@ export function SolicitudesCompraPage() {
       setGuardando(false)
     }
   }
+
+  const enviar = (s: SolicitudCompraFila) =>
+    confirmar({
+      titulo: `Enviar ${s.numero}`,
+      mensaje: 'Se envía al administrador para que la atienda. Después ya no es un borrador.',
+      confirmar: 'Enviar',
+      tono: 'pregunta',
+      accion: async () => {
+        setError('')
+        try {
+          await solicitudCompraApi.enviar(s.id)
+          await cargar()
+          toast.exito(`${s.numero} enviada al administrador`)
+        } catch (e) {
+          setError(e instanceof ApiError ? e.message : 'No pudimos enviar la solicitud.')
+        }
+      },
+    })
 
   const anular = (s: SolicitudCompraFila) =>
     confirmar({
@@ -306,6 +335,7 @@ export function SolicitudesCompraPage() {
 
   const stats = useMemo(
     () => ({
+      borradores: solicitudes.filter((s) => s.estado === 'BORRADOR').length,
       pendientes: solicitudes.filter((s) => s.estado === 'PENDIENTE').length,
       urgentes: solicitudes.filter((s) => s.estado === 'PENDIENTE' && s.urgencia === 'URGENTE').length,
       atendidas: solicitudes.filter((s) => s.estado === 'ATENDIDA').length,
@@ -432,7 +462,7 @@ export function SolicitudesCompraPage() {
         <PageHeader
           icon={<ClipboardPen size={20} />}
           title={editando ? `Editar ${editando.numero}` : 'Nueva solicitud de compra'}
-          description="Lo que hace falta comprar. Compras la revisa y arma la orden para el proveedor."
+          description="Lo que hace falta comprar. Se arma como borrador y, cuando está lista, se envía al administrador."
           actions={
             <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
               <ArrowLeft size={15} />
@@ -531,9 +561,21 @@ export function SolicitudesCompraPage() {
           <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
             Cancelar
           </Button>
-          <Button size="sm" loading={guardando} onClick={() => void guardar()}>
-            {editando ? 'Guardar cambios' : 'Enviar solicitud'}
-          </Button>
+          {/* Una ya enviada solo se corrige. Un borrador se guarda para seguir o se envía al administrador. */}
+          {editando && editando.estado !== 'BORRADOR' ? (
+            <Button size="sm" loading={guardando} onClick={() => void guardar(false)}>
+              Guardar cambios
+            </Button>
+          ) : (
+            <>
+              <Button variant="secondary" size="sm" disabled={guardando} onClick={() => void guardar(false)}>
+                Guardar borrador
+              </Button>
+              <Button size="sm" loading={guardando} onClick={() => void guardar(true)} iconRight={<Send size={15} />}>
+                Enviar al administrador
+              </Button>
+            </>
+          )}
         </div>
       </div>
     )
@@ -578,9 +620,10 @@ export function SolicitudesCompraPage() {
               tono="success"
             />
             <StatCard
-              label="Rechazadas"
-              value={String(stats.rechazadas)}
-              icon={<XCircle size={18} />}
+              label="Borradores"
+              value={String(stats.borradores)}
+              hint="sin enviar: solo los ves tú"
+              icon={<Pencil size={18} />}
               tono="neutral"
             />
           </>
@@ -600,12 +643,17 @@ export function SolicitudesCompraPage() {
             >
               <Eye size={15} />
             </RowAction>
-            {row.estado === 'PENDIENTE' && puede('compras.solicitudes', 'editar') && (
+            {(row.estado === 'BORRADOR' || row.estado === 'PENDIENTE') && puede('compras.solicitudes', 'editar') && (
               <RowAction
                 label={`Editar ${row.numero}`}
                 onClick={() => void conSolicitudCompleta(row.id, abrirEdicion)}
               >
                 <Pencil size={15} />
+              </RowAction>
+            )}
+            {row.estado === 'BORRADOR' && puede('compras.solicitudes', 'crear') && (
+              <RowAction label={`Enviar ${row.numero} al administrador`} tone="success" onClick={() => enviar(row)}>
+                <Send size={15} />
               </RowAction>
             )}
             {(row.estado === 'PENDIENTE' || row.estado === 'ATENDIDA') &&
@@ -627,7 +675,7 @@ export function SolicitudesCompraPage() {
                 <XCircle size={15} />
               </RowAction>
             )}
-            {row.estado === 'PENDIENTE' && puede('compras.solicitudes', 'anular') && (
+            {(row.estado === 'BORRADOR' || row.estado === 'PENDIENTE') && puede('compras.solicitudes', 'anular') && (
               <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anular(row)}>
                 <Undo2 size={15} />
               </RowAction>

@@ -102,8 +102,12 @@ public class CompraController : ControllerBase
             ? id
             : null;
 
+    /// <summary>
+    /// También la lee quien recibe mercadería: la app arma la recepción eligiendo una compra de esta lista, y quien
+    /// recibe no tiene por qué entrar a Mis compras.
+    /// </summary>
     [HttpGet]
-    [Permiso("compras.compras", Accion.Ver)]
+    [PermisoAlguno("compras.compras:ver", "compras.recepciones:crear")]
     public async Task<IActionResult> GetAll([FromQuery] string? estado) =>
         Ok(await _compras.GetComprasAsync(estado));
 
@@ -122,9 +126,12 @@ public class CompraController : ControllerBase
     [Permiso("compras.compras", Accion.Ver)]
     public async Task<IActionResult> Resumen() => Ok(await _compras.GetResumenComprasAsync());
 
-    /// <summary>Las compras que todavía esperan mercadería: alimenta el modal de recepción.</summary>
+    /// <summary>
+    /// Las compras que todavía esperan mercadería: alimenta el modal de recepción y la pantalla de Recepciones, así
+    /// que la lee quien recibe aunque no pueda ver Mis compras.
+    /// </summary>
     [HttpGet("abiertas")]
-    [Permiso("compras.compras", Accion.Ver)]
+    [PermisoAlguno("compras.compras:ver", "compras.recepciones:ver")]
     public async Task<IActionResult> Abiertas() => Ok(await _compras.GetComprasAbiertasAsync());
 
     /// <summary>Solo los números de las compras con recepción: las opciones del filtro de Recepciones.</summary>

@@ -37,6 +37,18 @@ public static class TipoAlerta
 
     /// <summary>Acciones de seguimiento de clientes que ya debieron hacerse, o que tocan hoy.</summary>
     public const string SeguimientoCliente = "SEGUIMIENTO_CLIENTE";
+
+    /// <summary>
+    /// Una solicitud de compra enviada por el almacén y todavía sin atender. Solo la ve quien puede atenderla
+    /// (el administrador): es lo que tiene que mirar para hacer la orden de compra.
+    /// </summary>
+    public const string SolicitudCompra = "SOLICITUD_COMPRA";
+
+    /// <summary>
+    /// La respuesta a una solicitud que uno mismo pidió: la rechazaron (con su motivo) o ya salió su orden de compra.
+    /// Se apaga sola a los pocos días.
+    /// </summary>
+    public const string SolicitudCompraRespuesta = "SOLICITUD_COMPRA_RESPUESTA";
 }
 
 /// <summary>

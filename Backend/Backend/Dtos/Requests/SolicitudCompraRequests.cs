@@ -24,6 +24,13 @@ public class CrearSolicitudCompraRequest
     public string? Urgencia { get; set; }
 
     public string? Observacion { get; set; }
+
+    /// <summary>
+    /// Si se envía al administrador ahora. Con false queda en Borrador: solo la ve quien la pidió, para seguir
+    /// completándola. Al corregir una ya enviada no cambia nada.
+    /// </summary>
+    public bool Enviar { get; set; }
+
     public List<LineaSolicitudCompraRequest> Detalle { get; set; } = [];
 }
 

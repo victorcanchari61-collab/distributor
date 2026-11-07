@@ -70,11 +70,12 @@ public class SolicitudCompraService : ISolicitudCompraService
             .AsQueryable();
 
         if (await SoloDeAsync() is int solo) consulta = consulta.Where(s => s.UsuarioId == solo);
+        consulta = consulta.Where(SoloBorradoresPropios());
         if (!string.IsNullOrWhiteSpace(estado)) consulta = consulta.Where(s => s.Estado == estado);
 
         var solicitudes = await consulta
-            // Lo pendiente y lo urgente primero: es lo que Compras tiene que mirar.
-            .OrderBy(s => s.Estado == EstadoSolicitudCompra.Pendiente ? 0 : 1)
+            // Lo pendiente y lo urgente primero: es lo que Compras tiene que mirar. Los borradores propios, a continuación.
+            .OrderBy(s => s.Estado == EstadoSolicitudCompra.Pendiente ? 0 : s.Estado == EstadoSolicitudCompra.Borrador ? 1 : 2)
             .ThenByDescending(s => s.Urgencia == UrgenciaSolicitudCompra.Urgente)
             .ThenByDescending(s => s.Fecha)
             .Take(500)
@@ -108,7 +109,8 @@ public class SolicitudCompraService : ISolicitudCompraService
             Numero = await SiguienteNumeroAsync(),
             AlmacenId = request.AlmacenId,
             Urgencia = UrgenciaDe(request.Urgencia),
-            Estado = EstadoSolicitudCompra.Pendiente,
+            // Sin "enviar" queda en borrador: solo la ve quien la pidió, para seguir completándola.
+            Estado = request.Enviar ? EstadoSolicitudCompra.Pendiente : EstadoSolicitudCompra.Borrador,
             Observacion = Limpiar(request.Observacion),
             UsuarioId = usuarioId,
             Detalle = await ResolverLineasAsync(request.Detalle),
@@ -118,7 +120,9 @@ public class SolicitudCompraService : ISolicitudCompraService
         await _context.SaveChangesAsync();
 
         var creada = await GetAsync(solicitud.Id);
-        await _notificador.AvisarAsync("solicitudescompra", "creado", creada);
+        // Un borrador no le importa a nadie más: solo se avisa cuando llega al administrador.
+        if (solicitud.Estado == EstadoSolicitudCompra.Pendiente)
+            await _notificador.AvisarAsync("solicitudescompra", "creado", creada);
         return creada;
     }
 
@@ -127,8 +131,12 @@ public class SolicitudCompraService : ISolicitudCompraService
         await _crearValidator.ValidateAndThrowAsync(request);
 
         var solicitud = await GetOrThrowAsync(id, rastrear: true);
-        ExigirPendiente(solicitud, "corregir");
+        ExigirEditable(solicitud, "corregir");
         await ExigirAlmacenAsync(request.AlmacenId);
+
+        // Un borrador se puede guardar y enviar en el mismo paso.
+        var seEnvia = solicitud.Estado == EstadoSolicitudCompra.Borrador && request.Enviar;
+        if (seEnvia) solicitud.Estado = EstadoSolicitudCompra.Pendiente;
 
         solicitud.AlmacenId = request.AlmacenId;
         solicitud.Urgencia = UrgenciaDe(request.Urgencia);
@@ -141,14 +149,32 @@ public class SolicitudCompraService : ISolicitudCompraService
         await _context.SaveChangesAsync();
 
         var actualizada = await GetAsync(id);
-        await _notificador.AvisarAsync("solicitudescompra", "actualizado", actualizada);
+        if (actualizada.Estado == EstadoSolicitudCompra.Pendiente)
+            await _notificador.AvisarAsync("solicitudescompra", seEnvia ? "creado" : "actualizado", actualizada);
         return actualizada;
+    }
+
+    public async Task<SolicitudCompraResponse> EnviarAsync(int id)
+    {
+        var solicitud = await GetOrThrowAsync(id, rastrear: true);
+
+        if (solicitud.Estado != EstadoSolicitudCompra.Borrador)
+            throw new BadRequestException($"La {solicitud.Numero} ya no es un borrador: está {solicitud.Estado.ToLowerInvariant()}.");
+        if (solicitud.Detalle.Count == 0)
+            throw new BadRequestException("Agrega al menos un producto antes de enviarla.");
+
+        solicitud.Estado = EstadoSolicitudCompra.Pendiente;
+        await _context.SaveChangesAsync();
+
+        var enviada = await GetAsync(id);
+        await _notificador.AvisarAsync("solicitudescompra", "creado", enviada);
+        return enviada;
     }
 
     public async Task AnularAsync(int id)
     {
         var solicitud = await GetOrThrowAsync(id, rastrear: true);
-        ExigirPendiente(solicitud, "anular");
+        ExigirEditable(solicitud, "anular");
 
         solicitud.Estado = EstadoSolicitudCompra.Anulada;
         await _context.SaveChangesAsync();
@@ -165,6 +191,7 @@ public class SolicitudCompraService : ISolicitudCompraService
 
         solicitud.Estado = EstadoSolicitudCompra.Rechazada;
         solicitud.MotivoRechazo = request.Motivo.Trim();
+        solicitud.FechaRespuesta = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
         var rechazada = await GetAsync(id);
@@ -214,6 +241,7 @@ public class SolicitudCompraService : ISolicitudCompraService
         if (solicitud is null || solicitud.Estado != EstadoSolicitudCompra.Pendiente) return;
 
         solicitud.Estado = EstadoSolicitudCompra.Atendida;
+        solicitud.FechaRespuesta = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
         await _notificador.AvisarAsync("solicitudescompra", "atendido", new { id });
@@ -227,11 +255,30 @@ public class SolicitudCompraService : ISolicitudCompraService
         var solicitud = await consulta.FirstOrDefaultAsync(s => s.Id == id)
             ?? throw new NotFoundException($"No existe la solicitud de compra {id}");
 
-        // Quien solo ve lo suyo no distingue una ajena de una que no existe.
+        // Quien solo ve lo suyo no distingue una ajena de una que no existe. Y el borrador de otro tampoco se ve.
         if (await SoloDeAsync() is int solo && solicitud.UsuarioId != solo)
+            throw new NotFoundException($"No existe la solicitud de compra {id}");
+        if (solicitud.Estado == EstadoSolicitudCompra.Borrador && solicitud.UsuarioId != _usuarioActual.Id)
             throw new NotFoundException($"No existe la solicitud de compra {id}");
 
         return solicitud;
+    }
+
+    /// <summary>Un borrador es de quien lo escribe: los demás —el administrador incluido— no lo ven hasta que se envía.</summary>
+    private System.Linq.Expressions.Expression<Func<SolicitudCompra, bool>> SoloBorradoresPropios()
+    {
+        var uid = _usuarioActual.Id;
+        return s => s.Estado != EstadoSolicitudCompra.Borrador || s.UsuarioId == uid;
+    }
+
+    /// <summary>Se corrige o se anula mientras es borrador o está pendiente.</summary>
+    private static void ExigirEditable(SolicitudCompra solicitud, string accion)
+    {
+        if (solicitud.Estado is not (EstadoSolicitudCompra.Borrador or EstadoSolicitudCompra.Pendiente))
+        {
+            throw new BadRequestException(
+                $"Solo se puede {accion} una solicitud en borrador o pendiente. La {solicitud.Numero} está {solicitud.Estado.ToLowerInvariant()}.");
+        }
     }
 
     private static void ExigirPendiente(SolicitudCompra solicitud, string accion)
@@ -337,6 +384,7 @@ public class SolicitudCompraService : ISolicitudCompraService
         fila.Estado = s.Estado;
         fila.Observacion = s.Observacion;
         fila.MotivoRechazo = s.MotivoRechazo;
+        fila.FechaRespuesta = s.FechaRespuesta;
         fila.UsuarioId = s.UsuarioId;
         fila.Solicitante = s.Usuario?.Nombre;
         fila.Lineas = lineas;

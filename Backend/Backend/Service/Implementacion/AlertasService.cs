@@ -20,6 +20,7 @@ public class AlertasService : IAlertasService
     private const int DiasReservaVencida = 3;
     private const int HorasStockRepuesto = 48;
     private const int DiasProductoNuevo = 7;
+    private const int DiasRespuestaSolicitud = 7;
 
     private readonly IInventarioService _inventario;
     private readonly IInventarioRepository _inventarioRepo;
@@ -28,6 +29,7 @@ public class AlertasService : IAlertasService
     private readonly IFlotaService _flota;
     private readonly IPermisoService _permisos;
     private readonly ISeguimientoClienteService _seguimiento;
+    private readonly ISolicitudCompraService _solicitudes;
 
     public AlertasService(
         IInventarioService inventario,
@@ -36,8 +38,10 @@ public class AlertasService : IAlertasService
         IVentasRepository ventas,
         IFlotaService flota,
         IPermisoService permisos,
-        ISeguimientoClienteService seguimiento)
+        ISeguimientoClienteService seguimiento,
+        ISolicitudCompraService solicitudes)
     {
+        _solicitudes = solicitudes;
         _seguimiento = seguimiento;
         _inventario = inventario;
         _inventarioRepo = inventarioRepo;
@@ -62,6 +66,7 @@ public class AlertasService : IAlertasService
         alertas.AddRange(await LicenciasConductorAsync());
         alertas.AddRange(await SolicitudesDeAccesoAsync(usuarioId));
         alertas.AddRange(await SeguimientoClientesAsync(usuarioId));
+        alertas.AddRange(await SolicitudesDeCompraAsync(usuarioId, ahora));
 
         return alertas
             .OrderBy(a => Peso(a.Severidad))
@@ -113,6 +118,86 @@ public class AlertasService : IAlertasService
                 Fecha = s.FechaSolicitud,
             })
         ];
+    }
+
+    /// <summary>
+    /// Lo que se movió con las solicitudes de compra, para cada quien lo suyo.
+    ///
+    /// A quien las atiende (administración) le llega cada solicitud ENVIADA que espera: es lo que tiene que mirar
+    /// para hacer la orden de compra, y la urgente va como crítica. A quien pidió una le llega la respuesta —que la
+    /// rechazaron, con su motivo, o que ya salió su orden— durante unos días. Los borradores no avisan a nadie: solo
+    /// los ve quien los escribe y todavía no los envió.
+    /// </summary>
+    private async Task<List<AlertaResponse>> SolicitudesDeCompraAsync(int? usuarioId, DateTime ahora)
+    {
+        if (usuarioId is not int id) return [];
+
+        var alertas = new List<AlertaResponse>();
+        var visibles = (await _solicitudes.GetAllAsync(null)).ToList();
+
+        // --- Para quien las atiende: lo que espera ---
+        if (await _permisos.PuedeAsync(id, "compras.solicitudes", Accion.Confirmar))
+        {
+            alertas.AddRange(visibles
+                .Where(s => s.Estado == EstadoSolicitudCompra.Pendiente)
+                .Take(20)
+                .Select(s =>
+                {
+                    var urgente = s.Urgencia == UrgenciaSolicitudCompra.Urgente;
+                    var partes = new List<string>
+                    {
+                        $"Pidió {s.Solicitante ?? "el almacén"}",
+                        s.Almacen,
+                        $"{s.Lineas} producto{(s.Lineas == 1 ? "" : "s")}",
+                    };
+                    if (!string.IsNullOrWhiteSpace(s.Observacion)) partes.Add(s.Observacion);
+
+                    return new AlertaResponse
+                    {
+                        Id = $"solicitud-compra-{s.Id}",
+                        Tipo = TipoAlerta.SolicitudCompra,
+                        Severidad = urgente ? SeveridadAlerta.Critica : SeveridadAlerta.Advertencia,
+                        Titulo = urgente
+                            ? $"Solicitud de compra URGENTE: {s.Numero}"
+                            : $"Solicitud de compra: {s.Numero}",
+                        Detalle = string.Join(" · ", partes),
+                        Ruta = "compras.solicitudes",
+                        Fecha = s.Fecha,
+                    };
+                }));
+        }
+
+        // --- Para quien pidió: la respuesta, durante unos días ---
+        var desde = ahora.AddDays(-DiasRespuestaSolicitud);
+        alertas.AddRange(visibles
+            .Where(s => s.UsuarioId == id
+                        && s.FechaRespuesta is DateTime respondida && respondida >= desde
+                        && s.Estado is EstadoSolicitudCompra.Rechazada or EstadoSolicitudCompra.Atendida)
+            .Select(s => s.Estado == EstadoSolicitudCompra.Rechazada
+                ? new AlertaResponse
+                {
+                    Id = $"solicitud-compra-resp-{s.Id}",
+                    Tipo = TipoAlerta.SolicitudCompraRespuesta,
+                    Severidad = SeveridadAlerta.Advertencia,
+                    Titulo = $"Rechazaron tu solicitud {s.Numero}",
+                    Detalle = string.IsNullOrWhiteSpace(s.MotivoRechazo) ? s.Almacen : $"{s.MotivoRechazo} · {s.Almacen}",
+                    Ruta = "compras.solicitudes",
+                    Fecha = s.FechaRespuesta,
+                }
+                : new AlertaResponse
+                {
+                    Id = $"solicitud-compra-resp-{s.Id}",
+                    Tipo = TipoAlerta.SolicitudCompraRespuesta,
+                    Severidad = SeveridadAlerta.Info,
+                    Titulo = $"Tu solicitud {s.Numero} ya tiene orden de compra",
+                    Detalle = s.Ordenes.Count > 0
+                        ? $"{string.Join(", ", s.Ordenes.Select(o => o.Numero))} · {s.Almacen}"
+                        : s.Almacen,
+                    Ruta = "compras.solicitudes",
+                    Fecha = s.FechaRespuesta,
+                }));
+
+        return alertas;
     }
 
     /// <summary>

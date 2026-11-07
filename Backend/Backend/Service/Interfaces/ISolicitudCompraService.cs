@@ -21,7 +21,10 @@ public interface ISolicitudCompraService
     /// <summary>Corrige una solicitud todavía Pendiente.</summary>
     Task<SolicitudCompraResponse> ActualizarAsync(int id, CrearSolicitudCompraRequest request);
 
-    /// <summary>Quien la pidió la retira. Solo mientras está Pendiente.</summary>
+    /// <summary>Del borrador al administrador: la solicitud pasa a Pendiente y Compras la ve.</summary>
+    Task<SolicitudCompraResponse> EnviarAsync(int id);
+
+    /// <summary>Quien la pidió la retira. Solo mientras es borrador o está Pendiente.</summary>
     Task AnularAsync(int id);
 
     /// <summary>Compras no la atiende, y dice por qué.</summary>

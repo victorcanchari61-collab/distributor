@@ -3,7 +3,13 @@ namespace Backend.Models;
 /// <summary>Estado de una solicitud de compra.</summary>
 public static class EstadoSolicitudCompra
 {
-    /// <summary>Recién enviada: Compras todavía no la atendió. Quien la pidió puede corregirla o anularla.</summary>
+    /// <summary>
+    /// Se está armando: solo la ve quien la pidió y nadie la atiende todavía. Se va completando (hoy un producto,
+    /// mañana otro) y recién cuando está lista se envía al administrador.
+    /// </summary>
+    public const string Borrador = "BORRADOR";
+
+    /// <summary>Ya se envió: espera que el administrador la atienda. Quien la pidió todavía puede corregirla o anularla.</summary>
     public const string Pendiente = "PENDIENTE";
 
     /// <summary>Compras ya hizo con ella una orden de compra (ver <see cref="OrdenCompra.SolicitudCompraId"/>).</summary>
@@ -60,6 +66,12 @@ public class SolicitudCompra
     public Usuario? Usuario { get; set; }
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Cuándo Compras la respondió: al rechazarla o al hacer con ella la orden de compra. Sirve para avisarle a quien
+    /// la pidió y para que ese aviso se apague solo con los días.
+    /// </summary>
+    public DateTime? FechaRespuesta { get; set; }
 
     public List<SolicitudCompraDetalle> Detalle { get; set; } = [];
 }

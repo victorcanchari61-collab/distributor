@@ -4496,6 +4496,9 @@ namespace Backend.Data.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<DateTime?>("FechaRespuesta")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("MotivoRechazo")
                         .HasMaxLength(250)
                         .HasColumnType("varchar(250)");

@@ -58,8 +58,9 @@ public class VehiculoController : ControllerBase
         _recorrido = recorrido;
     }
 
+    /// <summary>También la lee quien ve Despachos: la pantalla pinta la placa de cada camión.</summary>
     [HttpGet]
-    [Permiso("tms.flota", Accion.Ver)]
+    [PermisoAlguno("tms.flota:ver", "tms.despachos:ver")]
     public async Task<IActionResult> GetAll() => Ok(await _flota.GetVehiculosAsync());
 
     [HttpGet("resumen")]
@@ -112,8 +113,9 @@ public class ConductorController : ControllerBase
         _flota = flota;
     }
 
+    /// <summary>También la lee quien ve Despachos: la pantalla pinta el nombre del conductor de cada camión.</summary>
     [HttpGet]
-    [Permiso("tms.conductores", Accion.Ver)]
+    [PermisoAlguno("tms.conductores:ver", "tms.despachos:ver")]
     public async Task<IActionResult> GetAll() => Ok(await _flota.GetConductoresAsync());
 
     [HttpGet("resumen")]
