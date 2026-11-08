@@ -1127,7 +1127,8 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
               />
             </PageSection>
 
-            {!editando && (
+            {/* Una venta con recojos no se puede facturar: el comprobante no tendría de dónde restarlos. */}
+            {!editando && !emitir && (
               <PageSection
                 title="Recojo"
                 description="Lo que se recoge de otra venta; se descuenta del total."
@@ -1203,7 +1204,14 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
 
             {!editando && !directo && (puede('fact.boletas', 'crear') || puede('fact.facturas', 'crear')) && (
               <PageSection title="Comprobante" description="Emítelo a SUNAT al registrar la venta.">
-                <Select label="Emitir" value={emitir} onChange={(e) => setEmitir(e.target.value as '' | '01' | '03')}>
+                <Select
+                  label="Emitir"
+                  value={emitir}
+                  onChange={(e) => {
+                    setEmitir(e.target.value as '' | '01' | '03')
+                    if (e.target.value) setRecojos([])
+                  }}
+                >
                   <option value="">Solo la nota de venta</option>
                   {puede('fact.boletas', 'crear') && <option value="03">Boleta de venta electrónica</option>}
                   {puede('fact.facturas', 'crear') && <option value="01">Factura electrónica</option>}

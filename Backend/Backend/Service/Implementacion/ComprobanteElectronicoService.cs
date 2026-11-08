@@ -129,6 +129,9 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         if (request.Tipo is not (TipoCpe.Factura or TipoCpe.Boleta))
             throw new BadRequestException("El tipo debe ser 01 (factura) o 03 (boleta)");
 
+        if (request.Recojos.Count > 0)
+            throw new BadRequestException("Una factura o boleta no admite recojos: el comprobante no tendría de dónde restarlos");
+
         // La venta existe para descontar stock y contar en los reportes, pero el documento es el comprobante: no sale en
         // Notas de venta.
         var venta = await _ventas.CrearNotaVentaAsync(request, _usuarioActual.Id, soloComprobante: true);
