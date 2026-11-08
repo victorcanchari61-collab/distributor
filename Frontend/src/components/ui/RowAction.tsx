@@ -5,7 +5,7 @@ import { cn } from './cn'
  * Significado de la accion. Cada uno tiene SU color, igual en todos los
  * modulos: eliminar es rojo en Usuarios, en TMS y en Inventario.
  */
-export type RowActionTone = 'view' | 'edit' | 'danger' | 'success' | 'warning' | 'neutral'
+export type RowActionTone = 'view' | 'edit' | 'danger' | 'success' | 'warning' | 'neutral' | 'documento'
 
 const TONES: Record<RowActionTone, string> = {
   /** Ver detalle: azul. */
@@ -19,6 +19,8 @@ const TONES: Record<RowActionTone, string> = {
   /** Desactivar, devolver y otras acciones intermedias: naranja. */
   warning: 'bg-amber-600 [--d:#92400e]',
   neutral: 'bg-slate-500 [--d:#334155]',
+  /** PDF, impresión y otros documentos para descargar: rojo (el rojo clásico del PDF; eliminar usa un rosa más fuerte). */
+  documento: 'bg-red-600 [--d:#991b1b]',
 }
 
 export interface RowActionProps {

@@ -121,7 +121,7 @@ export function AccionPdf({ documento, id, numero, reporte }: AccionPdfProps) {
     <>
       <RowAction
         label={reporte ? `${REPORTES[reporte].titulo} de ${numero}` : `PDF de ${numero}`}
-        tone="neutral"
+        tone="documento"
         onClick={() => (conOrden ? setOrdenando(true) : setAbierto(true))}
       >
         {reporte ? REPORTES[reporte].icono : <FaFilePdf size={15} />}
