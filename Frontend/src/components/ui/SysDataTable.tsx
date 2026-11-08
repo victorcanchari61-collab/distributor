@@ -314,7 +314,7 @@ export function SysDataTable<T>({
   pageSize = PAGE_SIZE,
   cardIcon: CardIcon,
   actions,
-  actionsWidth = ACTIONS_WIDTH,
+  actionsWidth: actionsWidthBase = ACTIONS_WIDTH,
   servidor,
   onConsulta,
   filtrosIniciales,
@@ -324,6 +324,9 @@ export function SysDataTable<T>({
   paginacion = true,
   alturaFija = toolbar && paginacion,
 }: SysDataTableProps<T>) {
+  // Las acciones son píldoras de color, más anchas que los íconos sueltos de antes: el ancho que pide cada pantalla se ensancha.
+  const actionsWidth = Math.round(actionsWidthBase * 1.4)
+
   // Las de solo filtro no entran al orden: de él salen la tabla, la búsqueda, las tarjetas y el menú de columnas.
   const [order, setOrder] = useState<string[]>(() => columns.filter((c) => !c.soloFiltro).map((c) => c.key))
   const [hidden, setHidden] = useState<string[]>([])
@@ -1118,7 +1121,7 @@ export function SysDataTable<T>({
                           sombra && 'shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.12)]',
                         )}
                       >
-                        <div className="flex items-center justify-center gap-1">{actions(row)}</div>
+                        <div className="flex items-center justify-center gap-1.5">{actions(row)}</div>
                       </td>
                     )}
                   </tr>

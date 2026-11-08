@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Botones de acción</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap">
+<style>
+:root{--bg:#E9F0F6;--card:#fff;--ink:#14212D;--mute:#5B6B7A;--line:#DDE6EE;--row:#F5F9FC;--bar:#14212D}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0C151D;--card:#162330;--ink:#EAF2F8;--mute:#9DB0C0;--line:#26384A;--row:#1B2B3A;--bar:#0A1118}}
+:root[data-theme="dark"]{--bg:#0C151D;--card:#162330;--ink:#EAF2F8;--mute:#9DB0C0;--line:#26384A;--row:#1B2B3A;--bar:#0A1118}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-serif}
+.w{max-width:1040px;margin:0 auto;padding:40px 24px 56px;display:flex;flex-direction:column;gap:22px}
+h1{margin:0;font-size:40px;font-weight:800;letter-spacing:-1px}
+.sub{margin:4px 0 0;color:var(--mute);font-size:15px}
+.pn{background:var(--card);border:1.5px solid var(--line);border-radius:20px;padding:22px 24px 26px;box-shadow:0 18px 30px -24px rgba(10,40,70,.35)}
+.pn h2{margin:0 0 4px;font-size:18px;font-weight:800}
+.pn .d{margin:0 0 18px;color:var(--mute);font-size:14px}
+.i{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.pb{position:relative;width:60px;height:36px;border:0;border-radius:99px;color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;font-family:inherit;font-weight:700;font-size:13.5px;background:linear-gradient(180deg,rgba(255,255,255,.3) 0,rgba(255,255,255,0) 52%),linear-gradient(180deg,var(--l),var(--c));box-shadow:inset 0 2px 0 rgba(255,255,255,.6),inset 0 -4px 5px rgba(0,0,0,.2),0 6px 0 var(--d),0 14px 18px -6px var(--c);margin-bottom:6px;transition:transform .12s,box-shadow .12s,filter .12s}
+.pb:hover{filter:brightness(1.08);transform:translateY(-2px)}
+.pb:active{transform:translateY(5px);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),inset 0 -2px 3px rgba(0,0,0,.2),0 1px 0 var(--d)}
+.pb:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.pb:disabled{filter:grayscale(1) opacity(.45);cursor:not-allowed;transform:none}
+.pb[data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 10px);left:50%;transform:translate(-50%,4px);background:var(--ink);color:var(--card);font-size:12px;font-weight:700;padding:4px 9px;border-radius:7px;opacity:0;pointer-events:none;white-space:nowrap;transition:opacity .12s,transform .12s;z-index:5}
+.pb[data-tip]:hover::after,.pb[data-tip]:focus-visible::after{opacity:1;transform:translate(-50%,0)}
+.pb.tx{width:auto;padding:0 20px;height:42px;font-size:14px}
+.pb.ld{pointer-events:none}.pb.ld .i{display:none}
+.pb.ld::before{content:"";width:15px;height:15px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.pb.ld::before{animation-duration:2s}}
+.b{--l:#22A9D3;--c:#0A86AD;--d:#075F7D}.g{--l:#2DB872;--c:#18884E;--d:#0D6234}.o{--l:#F0922B;--c:#C96A00;--d:#8F4A00}.r{--l:#E85A52;--c:#CC2F27;--d:#96201A}.vi{--l:#7E63FF;--c:#5B3DF5;--d:#3F25B0}.t{--l:#26A3B3;--c:#0B7A8A;--d:#07565F}.n{--l:#7B8696;--c:#5B6475;--d:#3E4553}.k{--l:#4A586B;--c:#2F3B4A;--d:#1B2430}.v{--l:#6B93F0;--c:#3F6FD8;--d:#2A4C9C}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:22px 10px}
+.cell{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:13px;color:var(--mute);font-weight:500}
+.row{display:flex;flex-wrap:wrap;gap:14px}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px}
+th{background:linear-gradient(180deg,#14507A,#0F3B57);color:#fff;text-align:left;padding:13px 16px;font-size:12.5px;letter-spacing:.4px;font-weight:700}
+th:first-child{border-radius:12px 0 0 0}th:last-child{border-radius:0 12px 0 0;text-align:center}
+td{padding:13px 16px;border-bottom:1.5px solid var(--line);font-weight:500}
+tbody tr:hover td{background:var(--row)}
+td.num{font-weight:700;text-align:right;white-space:nowrap}th.num{text-align:right}
+td.ac{white-space:nowrap;text-align:center}td.ac .pb{margin:0 4px 6px}
+.dc{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.dci{width:32px;height:32px;border-radius:10px;background:#E8E3FF;color:#4527C9;display:flex;align-items:center;justify-content:center}
+.av{width:32px;height:32px;border-radius:99px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+.bd{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:5px 12px;border-radius:99px}
+.bd i{width:7px;height:7px;border-radius:99px;background:currentColor}
+.ok{background:#DDF6E8;color:#0A6B38}.wt{background:#FFEBC2;color:#7A4B00}.gr{background:#E6EAF0;color:#3E4553}
+@media (prefers-color-scheme:dark){.ok{background:#12392A;color:#7BE0A8}.wt{background:#42330F;color:#FFD071}.gr{background:#263340;color:#B9C6D3}.dci{background:#2A2450;color:#C9BEFF}}
+.tw{border-radius:14px;border:1.5px solid var(--line)}
+@media (max-width:760px){.tw{overflow-x:auto}}
+.bulk{display:flex;align-items:center;flex-wrap:wrap;gap:14px;background:var(--bar);color:#fff;border-radius:18px;padding:14px 18px;box-shadow:0 18px 28px -16px rgba(0,0,0,.55)}
+.bulk b{font-size:15px;margin-right:auto}
+.bulk .cnt{background:#fff;color:#14212D;border-radius:99px;padding:3px 11px;font-size:13px;margin-right:8px}
+.st{display:flex;flex-wrap:wrap;gap:22px 28px;align-items:flex-end}
+.st .cell{align-items:flex-start}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></symbol>
+<symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H5a1 1 0 01-1-1v-6a1 1 0 011-1h14a1 1 0 011 1v6a1 1 0 01-1 1h-2M7 14h10v7H7z"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM9 13h6M9 17h6"/></symbol>
+</defs></svg>
+<div class="w">
+<div><h1>Botones de acción</h1><p class="sub">Píldoras con ícono para tablas y formularios. Pasa el cursor para ver la etiqueta.</p></div>
+<div class="pn"><h2>En una tabla</h2><p class="d">Cada fila muestra solo las acciones que aplican a su estado.</p><div class="tw"><table><thead><tr><th>Documento</th><th>Cliente</th><th class="num">Total</th><th>Estado</th><th>ACCIONES</th></tr></thead><tbody><tr><td><div class="dc"><span class="dci"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-doc"/></svg></span>F001-00231</div></td><td><div class="dc"><span class="av" style="background:#5B3DF5">DA</span>Distribuidora Andina</div></td><td class="num">S/ 4,820.00</td><td><span class="bd ok"><i></i>Emitida</span></td><td class="ac"><button class="pb v" aria-label="Ver" data-tip="Ver"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-eye"/></svg></button><button class="pb b" aria-label="Editar" data-tip="Editar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-edit"/></svg></button><button class="pb o" aria-label="Anular" data-tip="Anular"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ban"/></svg></button></td></tr><tr><td><div class="dc"><span class="dci"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-doc"/></svg></span>F001-00232</div></td><td><div class="dc"><span class="av" style="background:#0A86AD">CN</span>Comercial Norte</div></td><td class="num">S/ 1,260.50</td><td><span class="bd wt"><i></i>Pendiente</span></td><td class="ac"><button class="pb v" aria-label="Ver" data-tip="Ver"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-eye"/></svg></button><button class="pb b" aria-label="Editar" data-tip="Editar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-edit"/></svg></button><button class="pb g" aria-label="Aprobar" data-tip="Aprobar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg></button><button class="pb r" aria-label="Eliminar" data-tip="Eliminar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"/></svg></button></td></tr><tr><td><div class="dc"><span class="dci"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-doc"/></svg></span>F001-00233</div></td><td><div class="dc"><span class="av" style="background:#C96A00">SL</span>Servicios Lima</div></td><td class="num">S/ 9,015.00</td><td><span class="bd ok"><i></i>Emitida</span></td><td class="ac"><button class="pb v" aria-label="Ver" data-tip="Ver"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-eye"/></svg></button><button class="pb b" aria-label="Editar" data-tip="Editar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-edit"/></svg></button><button class="pb o" aria-label="Anular" data-tip="Anular"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ban"/></svg></button></td></tr><tr><td><div class="dc"><span class="dci"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-doc"/></svg></span>F001-00234</div></td><td><div class="dc"><span class="av" style="background:#18884E">IS</span>Inversiones Sur</div></td><td class="num">S/ 730.00</td><td><span class="bd gr"><i></i>Anulada</span></td><td class="ac"><button class="pb v" aria-label="Ver" data-tip="Ver"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-eye"/></svg></button><button class="pb b" aria-label="Editar" data-tip="Editar" disabled><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-edit"/></svg></button><button class="pb o" aria-label="Anular" data-tip="Anular" disabled><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ban"/></svg></button></td></tr></tbody></table></div></div>
+<div class="bulk"><b><span class="cnt">3</span>documentos seleccionados</b><button class="pb tx g"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg>Aprobar</button><button class="pb tx vi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-send"/></svg>Enviar</button><button class="pb tx o"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ban"/></svg>Anular</button><button class="pb tx r"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"/></svg>Eliminar</button></div>
+<div class="pn"><h2>Todos los botones</h2><p class="d">Un color por acción, para que se reconozcan sin leer.</p><div class="grid"><div class="cell"><button class="pb v" aria-label="Ver" data-tip="Ver"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-eye"/></svg></button><span>Ver</span></div><div class="cell"><button class="pb b" aria-label="Editar" data-tip="Editar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-edit"/></svg></button><span>Editar</span></div><div class="cell"><button class="pb n" aria-label="Duplicar" data-tip="Duplicar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-copy"/></svg></button><span>Duplicar</span></div><div class="cell"><button class="pb vi" aria-label="Enviar" data-tip="Enviar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-send"/></svg></button><span>Enviar</span></div><div class="cell"><button class="pb g" aria-label="Aprobar" data-tip="Aprobar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg></button><span>Aprobar</span></div><div class="cell"><button class="pb o" aria-label="Anular" data-tip="Anular"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ban"/></svg></button><span>Anular</span></div><div class="cell"><button class="pb r" aria-label="Eliminar" data-tip="Eliminar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"/></svg></button><span>Eliminar</span></div><div class="cell"><button class="pb t" aria-label="Descargar" data-tip="Descargar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-download"/></svg></button><span>Descargar</span></div><div class="cell"><button class="pb k" aria-label="Imprimir" data-tip="Imprimir"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-print"/></svg></button><span>Imprimir</span></div></div></div>
+<div class="pn"><h2>Con texto</h2><p class="d">Para formularios y barras de herramientas.</p><div class="row"><button class="pb tx v"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-eye"/></svg>Ver</button><button class="pb tx b"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-edit"/></svg>Editar</button><button class="pb tx n"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-copy"/></svg>Duplicar</button><button class="pb tx vi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-send"/></svg>Enviar</button><button class="pb tx g"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg>Aprobar</button><button class="pb tx o"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ban"/></svg>Anular</button><button class="pb tx r"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"/></svg>Eliminar</button></div></div>
+<div class="pn"><h2>Estados</h2><p class="d">Haz clic en el botón de cargando para probarlo.</p><div class="st">
+<div class="cell"><button class="pb tx g"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg>Aprobar</button><span>Normal</span></div>
+<div class="cell"><button class="pb tx g" disabled><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg>Aprobar</button><span>Desactivado</span></div>
+<div class="cell"><button class="pb tx vi" data-demo="1"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-send"/></svg>Enviar</button><span>Cargando al hacer clic</span></div>
+</div></div>
+</div>
+<script>
+document.querySelectorAll('[data-demo]').forEach(function(b){b.addEventListener('click',function(){b.classList.add('ld');setTimeout(function(){b.classList.remove('ld')},1400)})});
+</script>
+</body></html>

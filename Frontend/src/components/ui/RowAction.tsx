@@ -9,16 +9,16 @@ export type RowActionTone = 'view' | 'edit' | 'danger' | 'success' | 'warning' |
 
 const TONES: Record<RowActionTone, string> = {
   /** Ver detalle: azul. */
-  view: 'text-sky-600 hover:bg-sky-50 hover:text-sky-700',
-  /** Editar: violeta. */
-  edit: 'text-violet-600 hover:bg-violet-50 hover:text-violet-700',
+  view: 'bg-sky-600',
+  /** Editar: cian. */
+  edit: 'bg-cyan-600',
   /** Anular / eliminar: rojo. */
-  danger: 'text-red-600 hover:bg-red-50 hover:text-red-700',
-  /** Confirmar / recibir: verde. */
-  success: 'text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700',
-  /** Devolver y otras acciones intermedias: ámbar. */
-  warning: 'text-amber-600 hover:bg-amber-50 hover:text-amber-700',
-  neutral: 'text-slate-500 hover:bg-slate-100 hover:text-slate-900',
+  danger: 'bg-rose-600',
+  /** Confirmar / recibir / activar: verde. */
+  success: 'bg-emerald-600',
+  /** Desactivar, devolver y otras acciones intermedias: naranja. */
+  warning: 'bg-amber-600',
+  neutral: 'bg-slate-500',
 }
 
 export interface RowActionProps {
@@ -40,10 +40,11 @@ export interface RowActionProps {
 }
 
 /**
- * Boton de icono de la columna Acciones.
+ * Boton de icono de la columna Acciones: una pildora de color con el icono en blanco, como en el Ecommerce.
  *
  * Los colores son FIJOS por significado y no siguen el acento del modulo: asi
- * el usuario reconoce "eliminar" por su rojo en cualquier pantalla del sistema.
+ * el usuario reconoce "eliminar" por su rojo y "editar" por su cian en cualquier pantalla del sistema. Sin permiso o
+ * deshabilitada, se apaga en gris.
  */
 export function RowAction({
   label,
@@ -67,8 +68,14 @@ export function RowAction({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'rounded-md p-1 transition-colors',
-        disabled ? 'cursor-not-allowed text-slate-300' : cn('cursor-pointer', TONES[tone]),
+        'inline-flex items-center justify-center rounded-xl px-2.5 py-1 transition-all',
+        disabled
+          ? 'cursor-not-allowed bg-slate-200 text-slate-400'
+          : cn(
+              'cursor-pointer text-white shadow-md hover:scale-105 hover:contrast-125 active:scale-95',
+              'focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1 focus-visible:outline-none',
+              TONES[tone],
+            ),
         className,
       )}
     >
