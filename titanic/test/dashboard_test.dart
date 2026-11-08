@@ -934,7 +934,7 @@ void main() {
 
   // ----------------------------------------------------------------- Menú
 
-  test('el grupo Dashboard va primero, en índigo, con sus seis vistas', () {
+  test('el grupo Dashboard va primero, en índigo, con sus ocho vistas', () {
     final grupo = menuGrupos.first;
 
     expect(grupo.id, 'dashboard');
@@ -946,6 +946,8 @@ void main() {
       'dashboard.compras',
       'dashboard.inventario',
       'dashboard.reparto',
+      'dashboard.sinventas',
+      'dashboard.zonas',
     ]);
     // Todas tienen pantalla: ninguna sale con el punto gris de "pendiente".
     expect(grupo.items.every((i) => !i.pendiente), isTrue);

@@ -5,17 +5,21 @@ import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/tiempo_real_provider.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/comprobante.dart';
 import '../estado/comprobantes_controlador.dart';
+import '../../ventas/estado/ventas_controlador.dart';
 import '../../ventas/vistas/nota_venta_formulario.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../compartido/widgets/app_aviso.dart';
+import 'dar_de_baja_hoja.dart';
 import 'emitir_nota_hoja.dart';
 import 'enviar_whatsapp_hoja.dart';
 
@@ -78,6 +82,14 @@ IconData _icono(String tipo) => switch (tipo) {
 EtiquetaTono _tonoEstado(String estado) => switch (estado) {
   EstadoCpe.aceptado => EtiquetaTono.exito,
   EstadoCpe.rechazado => EtiquetaTono.peligro,
+  // Dada de baja: la factura ya no vale, no hay nada pendiente ni que corregir.
+  EstadoCpe.baja => EtiquetaTono.neutral,
+  _ => EtiquetaTono.aviso,
+};
+
+EtiquetaTono _tonoBaja(String? estado) => switch (estado) {
+  EstadoBajaCpe.aceptada => EtiquetaTono.exito,
+  EstadoBajaCpe.rechazada => EtiquetaTono.peligro,
   _ => EtiquetaTono.aviso,
 };
 
@@ -127,14 +139,15 @@ class ComprobantesLista extends ConsumerWidget {
       pistaBusqueda: 'Buscar por número o cliente',
       onRecargar: () =>
           ref.read(comprobantesProvider(tipo).notifier).recargar(),
-      // Crear directo: abre la venta directa con este comprobante ya elegido (registra la venta y lo emite a SUNAT).
-      onNuevo:
-          (tipo == TipoCpe.factura || tipo == TipoCpe.boleta) &&
-              puede(ref, submodulo, Accion.crear) &&
-              puede(ref, 'fact.notaventa', Accion.crear)
-          ? () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => NotaVentaFormulario(comprobanteInicial: tipo),
+      // Crear directo: abre la venta directa en modo factura o boleta. El servidor registra la venta (que no sale en
+      // Notas de venta), descuenta el stock y emite el comprobante; solo pide el permiso de crear de este tipo.
+      onNuevo: (tipo == TipoCpe.factura || tipo == TipoCpe.boleta)
+          ? permitir(
+              puede(ref, submodulo, Accion.crear),
+              () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => NotaVentaFormulario(directo: tipo),
+                ),
               ),
             )
           : null,
@@ -142,7 +155,7 @@ class ComprobantesLista extends ConsumerWidget {
       iconoVacio: _icono(tipo),
       tituloVacio: 'Todavía no hay ${_titulo(tipo).toLowerCase()}',
       detalleVacio: tipo == TipoCpe.factura || tipo == TipoCpe.boleta
-          ? 'Se emiten desde Notas de venta en el panel web.'
+          ? 'Se emiten con "${tipo == TipoCpe.factura ? 'Nueva factura' : 'Nueva boleta'}" o desde Notas de venta.'
           : 'Se emiten desde Facturas o Boletas, sobre un comprobante aceptado.',
       singular: tipo == TipoCpe.notaCredito || tipo == TipoCpe.notaDebito
           ? 'nota'
@@ -179,24 +192,56 @@ class ComprobantesLista extends ConsumerWidget {
         color: color,
         puedeExportar: puede(ref, submodulo, Accion.exportar),
         puedeReenviar: puede(ref, submodulo, Accion.crear),
-        // Las notas que el usuario puede emitir sobre una factura o boleta aceptada.
+        puedeAnular: puede(ref, submodulo, Accion.anular),
+        // Una nota se ofrece sobre una factura o boleta aceptada; las que el
+        // usuario puede emitir salen en tiposNota (vacio: la opcion va en gris).
+        ofreceNota:
+            c.aceptado &&
+            (c.tipo == TipoCpe.factura || c.tipo == TipoCpe.boleta),
         tiposNota: [
-          if (c.aceptado &&
-              (c.tipo == TipoCpe.factura || c.tipo == TipoCpe.boleta)) ...[
-            if (puede(ref, TipoCpe.submodulo(TipoCpe.notaCredito), Accion.crear))
-              TipoCpe.notaCredito,
-            if (puede(ref, TipoCpe.submodulo(TipoCpe.notaDebito), Accion.crear))
-              TipoCpe.notaDebito,
-          ],
+          if (puede(ref, TipoCpe.submodulo(TipoCpe.notaCredito), Accion.crear))
+            TipoCpe.notaCredito,
+          if (puede(ref, TipoCpe.submodulo(TipoCpe.notaDebito), Accion.crear))
+            TipoCpe.notaDebito,
         ],
         onReenviar: () => _reenviar(context, ref, c),
+        onConsultarBaja: () => _consultarBaja(context, ref, c),
       ),
     );
   }
 }
 
+/// Pregunta a SUNAT por una baja que quedó pendiente y pone en la lista lo que respondió.
+Future<void> _consultarBaja(
+  BuildContext context,
+  WidgetRef ref,
+  Comprobante c,
+) async {
+  final mensajero = Aviso.de(context);
+  try {
+    final nuevo = await ref.read(comprobantesApiProvider).consultarBaja(c.id);
+    ref.read(comprobantesProvider(c.tipo).notifier).reemplazar(nuevo);
+    if (nuevo.bajaEstado == EstadoBajaCpe.aceptada) {
+      // La baja aceptada anula la venta de la factura.
+      ref.invalidate(notasVentaProvider);
+    }
+    final r = mensajeDeBaja(nuevo, consulta: true);
+    if (r.esError) {
+      mensajero.error(r.texto);
+    } else {
+      mensajero.mostrar(r.texto);
+    }
+  } on ApiExcepcion catch (e) {
+    mensajero.error(e.texto);
+  }
+}
+
 /// Vuelve a mandar a SUNAT un comprobante que quedo sin respuesta, y pone en la lista lo que respondio.
-Future<void> _reenviar(BuildContext context, WidgetRef ref, Comprobante c) async {
+Future<void> _reenviar(
+  BuildContext context,
+  WidgetRef ref,
+  Comprobante c,
+) async {
   final mensajero = Aviso.de(context);
   try {
     final nuevo = await ref.read(comprobantesApiProvider).reenviar(c.id);
@@ -219,8 +264,11 @@ class _TarjetaComprobante extends StatelessWidget {
     required this.color,
     required this.puedeExportar,
     required this.puedeReenviar,
+    required this.puedeAnular,
+    required this.ofreceNota,
     required this.tiposNota,
     required this.onReenviar,
+    required this.onConsultarBaja,
   });
 
   final Comprobante comprobante;
@@ -228,9 +276,16 @@ class _TarjetaComprobante extends StatelessWidget {
   final bool puedeExportar;
   final bool puedeReenviar;
 
-  /// Notas (07, 08) que se pueden emitir sobre este comprobante. Vacio: ninguna.
+  /// Puede pedir y consultar la baja de una factura (permiso `anular`).
+  final bool puedeAnular;
+
+  /// Si por su estado y tipo admite una nota de crédito o débito.
+  final bool ofreceNota;
+
+  /// Notas (07, 08) que este usuario puede emitir. Vacio: no tiene permiso.
   final List<String> tiposNota;
   final VoidCallback onReenviar;
+  final VoidCallback onConsultarBaja;
 
   Comprobante get _c => comprobante;
 
@@ -243,8 +298,24 @@ class _TarjetaComprobante extends StatelessWidget {
     CampoDetalle('Emisión', diaCorto(_c.fechaEmision)),
     CampoDetalle('Total', 'S/ ${_c.total.toStringAsFixed(2)}'),
     if (_c.afectadoNumero != null) CampoDetalle('Corrige a', _c.afectadoNumero),
-    if (_c.notaVentaNumero != null && _c.afectadoNumero == null)
+    // La factura o boleta directa no tiene nota de venta: no hay "de NV-…" que mostrar.
+    if (_c.notaVentaNumero != null &&
+        !_c.ventaDirecta &&
+        _c.afectadoNumero == null)
       CampoDetalle('Nota de venta', _c.notaVentaNumero),
+    if (_c.bajaEstado != null)
+      CampoDetalle(
+        'Baja',
+        null,
+        widget: AppEtiqueta(
+          EstadoBajaCpe.etiqueta(_c.bajaEstado!),
+          tono: _tonoBaja(_c.bajaEstado),
+        ),
+      ),
+    if (_c.bajaMotivo != null)
+      CampoDetalle('Motivo de baja', _c.bajaMotivo, enTarjeta: false),
+    if (_c.bajaMensaje != null && _c.bajaEstado == EstadoBajaCpe.rechazada)
+      CampoDetalle('Respuesta de baja', _c.bajaMensaje, enTarjeta: false),
     if (_c.desMotivo != null) CampoDetalle('Motivo', _c.desMotivo),
     if (_c.notas.isNotEmpty)
       CampoDetalle(
@@ -276,13 +347,16 @@ class _TarjetaComprobante extends StatelessWidget {
       ),
   ];
 
-  bool get _hayMenu =>
-      puedeExportar ||
-      tiposNota.isNotEmpty ||
-      (puedeReenviar &&
-          (_c.estado == EstadoCpe.generado || _c.estado == EstadoCpe.error));
+  // Lo que el estado del comprobante permite; el permiso se ve aparte, en gris.
+  bool get _puedeDarDeBaja => _c.puedeDarDeBaja(DateTime.now());
+
+  bool get _puedeConsultarBaja => _c.bajaEstado == EstadoBajaCpe.pendiente;
 
   Future<void> _elegir(BuildContext context, String accion) async {
+    if (esValorSinPermiso(accion)) {
+      avisarSinPermiso(context);
+      return;
+    }
     switch (accion) {
       case 'xml':
       case 'cdr':
@@ -296,6 +370,10 @@ class _TarjetaComprobante extends StatelessWidget {
         onReenviar();
       case 'nota':
         await abrirEmitirNota(context, _c, tiposNota);
+      case 'baja':
+        await abrirDarDeBaja(context, _c);
+      case 'consultar_baja':
+        onConsultarBaja();
     }
   }
 
@@ -320,55 +398,63 @@ class _TarjetaComprobante extends StatelessWidget {
         campos: _campos,
       ),
       acciones: [
-        if (puedeExportar)
-          IconButton(
-            onPressed: () => mostrarOpcionesPdf(
+        AppIconoAccion(
+          icono: Icons.picture_as_pdf_outlined,
+          tooltip: 'PDF',
+          onPressed: permitir(
+            puedeExportar,
+            () => mostrarOpcionesPdf(
               context,
               documento: DocumentoPdf.comprobante,
               id: _c.id,
               numero: _c.numeroCompleto,
             ),
-            tooltip: 'PDF',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
           ),
-        if (puedeExportar && _c.aceptado)
-          IconButton(
-            onPressed: () => abrirEnvioWhatsApp(context, _c),
+        ),
+        if (_c.aceptado)
+          AppIconoAccion(
+            icono: Icons.send_outlined,
             tooltip: 'Enviar documento por WhatsApp',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.send_outlined,
-              size: 18,
-              color: Colores.exito,
+            color: Colores.exito,
+            onPressed: permitir(
+              puedeExportar,
+              () => abrirEnvioWhatsApp(context, _c),
             ),
           ),
-        // XML, CDR, reenvio a SUNAT y notas: en un menu, porque en la esquina de la tarjeta no caben tantos iconos.
-        if (_hayMenu)
-          PopupMenuButton<String>(
-            tooltip: 'Más',
-            padding: EdgeInsets.zero,
-            icon: const Icon(Icons.more_vert, size: 18),
-            onSelected: (v) => _elegir(context, v),
-            itemBuilder: (_) => [
-              if (puedeExportar)
-                const PopupMenuItem(value: 'xml', child: Text('Descargar XML')),
-              if (puedeExportar && _c.tieneCdr)
-                const PopupMenuItem(value: 'cdr', child: Text('Descargar CDR')),
-              if (puedeReenviar &&
-                  (_c.estado == EstadoCpe.generado ||
-                      _c.estado == EstadoCpe.error))
-                const PopupMenuItem(
-                  value: 'reenviar',
-                  child: Text('Reenviar a SUNAT'),
-                ),
-              if (tiposNota.isNotEmpty)
-                const PopupMenuItem(
-                  value: 'nota',
-                  child: Text('Emitir nota de crédito o débito'),
-                ),
-            ],
-          ),
+        // XML, CDR, reenvio a SUNAT y notas: en un menu, porque en la esquina
+        // de la tarjeta no caben tantos iconos. Lo que falta por permiso sale
+        // en gris y avisa al tocarlo.
+        PopupMenuButton<String>(
+          tooltip: 'Más',
+          padding: EdgeInsets.zero,
+          icon: const Icon(Icons.more_vert, size: 18),
+          onSelected: (v) => _elegir(context, v),
+          itemBuilder: (_) => [
+            itemMenu('xml', 'Descargar XML', permitido: puedeExportar),
+            if (_c.tieneCdr)
+              itemMenu('cdr', 'Descargar CDR', permitido: puedeExportar),
+            if (_c.estado == EstadoCpe.generado || _c.estado == EstadoCpe.error)
+              itemMenu(
+                'reenviar',
+                'Reenviar a SUNAT',
+                permitido: puedeReenviar,
+              ),
+            if (ofreceNota)
+              itemMenu(
+                'nota',
+                'Emitir nota de crédito o débito',
+                permitido: tiposNota.isNotEmpty,
+              ),
+            if (_puedeDarDeBaja)
+              itemMenu('baja', 'Dar de baja', permitido: puedeAnular),
+            if (_puedeConsultarBaja)
+              itemMenu(
+                'consultar_baja',
+                'Consultar la baja en SUNAT',
+                permitido: puedeAnular,
+              ),
+          ],
+        ),
       ],
     );
   }

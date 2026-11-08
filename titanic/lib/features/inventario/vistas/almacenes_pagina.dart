@@ -8,8 +8,10 @@ import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -44,9 +46,10 @@ class AlmacenesPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaAlmacenesProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por código, nombre o dirección',
       onRecargar: () => ref.read(almacenesProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'inv.almacenes', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'inv.almacenes', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       iconoVacio: Icons.warehouse_outlined,
       singular: 'almacén',
       plural: 'almacenes',
@@ -85,12 +88,14 @@ class AlmacenesPagina extends ConsumerWidget {
       fila: (context, almacen) => _TarjetaAlmacen(
         almacen: almacen,
         color: color,
-        onEditar: puede(ref, 'inv.almacenes', Accion.editar)
-            ? () => _abrirFormulario(context, almacen)
-            : null,
-        onEstado: puede(ref, 'inv.almacenes', Accion.editar)
-            ? () => _cambiarEstado(context, ref, almacen)
-            : null,
+        onEditar: permitir(
+          puede(ref, 'inv.almacenes', Accion.editar),
+          () => _abrirFormulario(context, almacen),
+        ),
+        onEstado: permitir(
+          puede(ref, 'inv.almacenes', Accion.editar),
+          () => _cambiarEstado(context, ref, almacen),
+        ),
       ),
     );
   }
@@ -223,28 +228,20 @@ class _TarjetaAlmacen extends StatelessWidget {
       onTap: () => _abrirDetalle(context),
       acciones: [
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         // El principal siempre esta activo: no se ofrece apagarlo.
         if (!almacen.esPrincipal)
           if (onEstado != null)
-            IconButton(
-              onPressed: onEstado,
+            AppIconoAccion(
+              icono: almacen.activo ? Icons.block : Icons.check_circle_outline,
               tooltip: almacen.activo ? 'Desactivar' : 'Activar',
-              visualDensity: VisualDensity.compact,
-              icon: Icon(
-                almacen.activo ? Icons.block : Icons.check_circle_outline,
-                size: 18,
-                color: almacen.activo ? Colores.advertencia : Colores.exito,
-              ),
+              color: almacen.activo ? Colores.advertencia : Colores.exito,
+              onPressed: onEstado,
             ),
       ],
     );
@@ -285,19 +282,13 @@ class _TarjetaAlmacen extends StatelessWidget {
               texto: almacen.activo ? 'Desactivar' : 'Activar',
               variante: BotonVariante.secundario,
               expandido: true,
-              onPressed: () {
-                Navigator.of(context).pop();
-                onEstado!();
-              },
+              onPressed: cerrandoHoja(context, onEstado),
             ),
         if (onEditar != null)
           AppBoton(
             texto: 'Editar',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar!();
-            },
+            onPressed: cerrandoHoja(context, onEditar),
           ),
       ],
     );

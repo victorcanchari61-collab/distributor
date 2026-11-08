@@ -7,8 +7,10 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -44,9 +46,10 @@ class ConductoresPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaConductoresProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre, documento, licencia',
       onRecargar: () => ref.read(conductoresProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'tms.conductores', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'tms.conductores', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       textoNuevo: 'Nuevo conductor',
       iconoVacio: Icons.badge_outlined,
       singular: 'conductor',
@@ -89,12 +92,14 @@ class ConductoresPagina extends ConsumerWidget {
         conductor: conductor,
         color: color,
         onVer: () => _verDetalle(context, conductor, color),
-        onEditar: puede(ref, 'tms.conductores', Accion.editar)
-            ? () => _abrirFormulario(context, conductor)
-            : null,
-        onEstado: puede(ref, 'tms.conductores', Accion.editar)
-            ? () => _cambiarEstado(context, ref, conductor)
-            : null,
+        onEditar: permitir(
+          puede(ref, 'tms.conductores', Accion.editar),
+          () => _abrirFormulario(context, conductor),
+        ),
+        onEstado: permitir(
+          puede(ref, 'tms.conductores', Accion.editar),
+          () => _cambiarEstado(context, ref, conductor),
+        ),
       ),
     );
   }
@@ -327,26 +332,18 @@ class _TarjetaConductor extends StatelessWidget {
           ),
         ),
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: conductor.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: conductor.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              conductor.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: conductor.activo ? Colores.advertencia : Colores.exito,
-            ),
+            color: conductor.activo ? Colores.advertencia : Colores.exito,
+            onPressed: onEstado,
           ),
       ],
     );

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
 import '../../../compartido/widgets/app_importar_hoja.dart';
 import '../../../compartido/csv.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../compartido/widgets/app_filtros.dart';
@@ -46,61 +49,57 @@ class ProveedoresPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por razon social, documento o rubro',
       onRecargar: () => ref.read(proveedoresProvider.notifier).recargar(),
       acciones: [
-        if (puede(ref, 'maestros.proveedores', Accion.importar))
-          ...accionesImportar(
-            context,
-            ImportacionConfig(
-              titulo: 'proveedores',
-              columnas: const [
-                'RUC',
-                'Razón social',
-                'Nombre comercial',
-                'Dirección',
-                'Teléfono',
-                'Teléfono 2',
-                'Email',
-                'Departamento',
-                'Provincia',
-                'Distrito',
-              ],
-              ejemplo: const [
-                '20123456789',
-                'DISTRIBUIDORA SUR SAC',
-                'DISUR',
-                'AV. GRAU 456',
-                '987654321',
-                '',
-                'ventas@disur.pe',
-                'PIURA',
-                'PIURA',
-                'PIURA',
-              ],
-              mapear: (fila) => {
-                'documento': valorDe(fila, ['ruc', 'documento', 'dni']),
-                'nombre': valorDe(fila, [
-                  'razon social',
-                  'nombre',
-                  'proveedor',
-                ]),
-                'nombreComercial': valorDe(fila, ['nombre comercial']),
-                'direccion': valorDe(fila, ['direccion']),
-                'telefono': valorDe(fila, ['telefono']),
-                'telefono2': valorDe(fila, ['telefono 2', 'telefono2']),
-                // La hoja del negocio trae el rubro en la columna EMAIL: el
-                // backend separa lo que es correo de lo que no.
-                'email': valorDe(fila, ['email', 'correo']),
-                'departamento': valorDe(fila, ['departamento']),
-                'provincia': valorDe(fila, ['provincia']),
-                'distrito': valorDe(fila, ['distrito']),
-              },
-              enviar: ref.read(maestrosApiProvider).importarProveedores,
-              onListo: () => ref.read(proveedoresProvider.notifier).recargar(),
-            ),
+        ...accionesImportar(
+          context,
+          ImportacionConfig(
+            titulo: 'proveedores',
+            columnas: const [
+              'RUC',
+              'Razón social',
+              'Nombre comercial',
+              'Dirección',
+              'Teléfono',
+              'Teléfono 2',
+              'Email',
+              'Departamento',
+              'Provincia',
+              'Distrito',
+            ],
+            ejemplo: const [
+              '20123456789',
+              'DISTRIBUIDORA SUR SAC',
+              'DISUR',
+              'AV. GRAU 456',
+              '987654321',
+              '',
+              'ventas@disur.pe',
+              'PIURA',
+              'PIURA',
+              'PIURA',
+            ],
+            mapear: (fila) => {
+              'documento': valorDe(fila, ['ruc', 'documento', 'dni']),
+              'nombre': valorDe(fila, ['razon social', 'nombre', 'proveedor']),
+              'nombreComercial': valorDe(fila, ['nombre comercial']),
+              'direccion': valorDe(fila, ['direccion']),
+              'telefono': valorDe(fila, ['telefono']),
+              'telefono2': valorDe(fila, ['telefono 2', 'telefono2']),
+              // La hoja del negocio trae el rubro en la columna EMAIL: el
+              // backend separa lo que es correo de lo que no.
+              'email': valorDe(fila, ['email', 'correo']),
+              'departamento': valorDe(fila, ['departamento']),
+              'provincia': valorDe(fila, ['provincia']),
+              'distrito': valorDe(fila, ['distrito']),
+            },
+            enviar: ref.read(maestrosApiProvider).importarProveedores,
+            onListo: () => ref.read(proveedoresProvider.notifier).recargar(),
           ),
+        ).permitidas(puede(ref, 'maestros.proveedores', Accion.importar)),
       ],
-      onNuevo: puede(ref, 'maestros.proveedores', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'maestros.proveedores', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       iconoVacio: Icons.business_outlined,
       singular: 'proveedor',
       plural: 'proveedores',
@@ -145,12 +144,14 @@ class ProveedoresPagina extends ConsumerWidget {
       fila: (context, proveedor) => _TarjetaProveedor(
         proveedor: proveedor,
         color: color,
-        onEditar: puede(ref, 'maestros.proveedores', Accion.editar)
-            ? () => _abrirFormulario(context, proveedor)
-            : null,
-        onEstado: puede(ref, 'maestros.proveedores', Accion.editar)
-            ? () => _cambiarEstado(context, ref, proveedor)
-            : null,
+        onEditar: permitir(
+          puede(ref, 'maestros.proveedores', Accion.editar),
+          () => _abrirFormulario(context, proveedor),
+        ),
+        onEstado: permitir(
+          puede(ref, 'maestros.proveedores', Accion.editar),
+          () => _cambiarEstado(context, ref, proveedor),
+        ),
       ),
     );
   }
@@ -347,26 +348,18 @@ class _TarjetaProveedor extends StatelessWidget {
       onTap: () => _abrirDetalle(context),
       acciones: [
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: proveedor.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: proveedor.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              proveedor.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: proveedor.activo ? Colores.advertencia : Colores.exito,
-            ),
+            color: proveedor.activo ? Colores.advertencia : Colores.exito,
+            onPressed: onEstado,
           ),
       ],
     );
@@ -391,19 +384,13 @@ class _TarjetaProveedor extends StatelessWidget {
             texto: proveedor.activo ? 'Desactivar' : 'Activar',
             variante: BotonVariante.secundario,
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEstado!();
-            },
+            onPressed: cerrandoHoja(context, onEstado),
           ),
         if (onEditar != null)
           AppBoton(
             texto: 'Editar',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar!();
-            },
+            onPressed: cerrandoHoja(context, onEditar),
           ),
       ],
     );

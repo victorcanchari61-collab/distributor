@@ -9,8 +9,10 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -73,9 +75,10 @@ class CuentasPorCobrarPagina extends ConsumerWidget {
       fila: (context, nota) => _TarjetaCuentaCobrar(
         nota: nota,
         color: color,
-        onGestionarPagos: puede(ref, 'finanzas.cobrar', Accion.cobrar)
-            ? () => _gestionarPagos(context, ref, nota)
-            : null,
+        onGestionarPagos: permitir(
+          puede(ref, 'finanzas.cobrar', Accion.cobrar),
+          () => _gestionarPagos(context, ref, nota),
+        ),
       ),
     );
   }
@@ -187,15 +190,11 @@ class _TarjetaCuentaCobrar extends StatelessWidget {
       ],
       acciones: [
         if (onGestionarPagos != null)
-          IconButton(
-            onPressed: onGestionarPagos,
+          AppIconoAccion(
+            icono: Icons.request_quote_outlined,
             tooltip: 'Gestionar pagos',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.request_quote_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onGestionarPagos,
           ),
       ],
     );

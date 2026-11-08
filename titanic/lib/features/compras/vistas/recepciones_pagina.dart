@@ -12,8 +12,10 @@ import '../../../compartido/estado/filtro_documento.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -49,37 +51,37 @@ class RecepcionesPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por número, almacén o compra',
       onRecargar: () => ref.read(recepcionesProvider.notifier).recargar(),
       acciones: [
-        if (puede(ref, 'compras.recepciones', Accion.exportar))
-          accionExportar<DocumentoInventario>(
-            context,
-            nombre: 'recepciones',
-            filas: () => ref.read(recepcionesFiltradasProvider),
-            encabezados: const [
-              'Número',
-              'Fecha',
-              'Almacén',
-              'Compra',
-              'Estado',
-              'Líneas',
-              'Total',
-              'Usuario',
-            ],
-            fila: (d) => [
-              d.numero,
-              diaIso(d.fecha),
-              d.almacen,
-              d.compra,
-              d.estado,
-              d.lineas,
-              d.total,
-              d.usuario,
-            ],
-          ),
+        accionExportar<DocumentoInventario>(
+          context,
+          nombre: 'recepciones',
+          filas: () => ref.read(recepcionesFiltradasProvider),
+          encabezados: const [
+            'Número',
+            'Fecha',
+            'Almacén',
+            'Compra',
+            'Estado',
+            'Líneas',
+            'Total',
+            'Usuario',
+          ],
+          fila: (d) => [
+            d.numero,
+            diaIso(d.fecha),
+            d.almacen,
+            d.compra,
+            d.estado,
+            d.lineas,
+            d.total,
+            d.usuario,
+          ],
+        ).permitida(puede(ref, 'compras.recepciones', Accion.exportar)),
       ],
-      onNuevo: puede(ref, 'compras.recepciones', Accion.crear)
-          ? hayPendientes
-                ? () => _abrirFormulario(context)
-                : null
+      onNuevo: hayPendientes
+          ? permitir(
+              puede(ref, 'compras.recepciones', Accion.crear),
+              () => _abrirFormulario(context),
+            )
           : null,
       textoNuevo: 'Nueva recepción',
       iconoVacio: Icons.move_to_inbox_outlined,
@@ -110,10 +112,12 @@ class RecepcionesPagina extends ConsumerWidget {
       fila: (context, doc) => _TarjetaRecepcion(
         doc: doc,
         color: color,
-        onAnular:
-            doc.anulado || !puede(ref, 'compras.recepciones', Accion.anular)
+        onAnular: doc.anulado
             ? null
-            : () => _anular(context, ref, doc),
+            : permitir(
+                puede(ref, 'compras.recepciones', Accion.anular),
+                () => _anular(context, ref, doc),
+              ),
       ),
     );
   }
@@ -289,11 +293,11 @@ class _TarjetaRecepcion extends StatelessWidget {
           icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.peligro),
+            color: Colores.peligro,
+            onPressed: onAnular,
           ),
       ],
     );

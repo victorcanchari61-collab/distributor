@@ -15,10 +15,13 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_selector_rango.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
@@ -72,47 +75,46 @@ class MovimientosDineroPagina extends ConsumerWidget {
       },
       // Ingreso y egreso a mano se dan por separado: la hoja ofrece solo los que tiene.
       acciones: [
-        if (puede(ref, 'finanzas.movimientos', Accion.transferir))
-          AccionGlobal(
-            etiqueta: 'Mover plata',
-            icono: Icons.swap_horiz,
-            color: AccionGlobal.azul,
-            onTap: () => _mover(context, ref),
-          ),
-        if (puede(ref, 'finanzas.movimientos', Accion.exportar))
-          accionExportar<MovimientoDinero>(
-            context,
-            nombre: 'movimientos',
-            filas: () => ref.read(movimientosDineroFiltradosProvider),
-            encabezados: const [
-              'Fecha',
-              'Cuenta',
-              'Tipo',
-              'Concepto',
-              'Categoría',
-              'Monto',
-              'Saldo',
-              'Documento',
-              'Estado',
-              'Usuario',
-            ],
-            fila: (m) => [
-              diaIso(m.fecha),
-              m.cuenta,
-              m.tipo,
-              m.concepto,
-              m.categoria,
-              m.monto,
-              m.saldoResultante,
-              m.documentoOrigen,
-              m.anulado ? 'Anulado' : 'Vigente',
-              m.usuario,
-            ],
-          ),
+        AccionGlobal(
+          etiqueta: 'Mover plata',
+          icono: Icons.swap_horiz,
+          color: AccionGlobal.azul,
+          onTap: () => _mover(context, ref),
+        ).permitida(puede(ref, 'finanzas.movimientos', Accion.transferir)),
+        accionExportar<MovimientoDinero>(
+          context,
+          nombre: 'movimientos',
+          filas: () => ref.read(movimientosDineroFiltradosProvider),
+          encabezados: const [
+            'Fecha',
+            'Cuenta',
+            'Tipo',
+            'Concepto',
+            'Categoría',
+            'Monto',
+            'Saldo',
+            'Documento',
+            'Estado',
+            'Usuario',
+          ],
+          fila: (m) => [
+            diaIso(m.fecha),
+            m.cuenta,
+            m.tipo,
+            m.concepto,
+            m.categoria,
+            m.monto,
+            m.saldoResultante,
+            m.documentoOrigen,
+            m.anulado ? 'Anulado' : 'Vigente',
+            m.usuario,
+          ],
+        ).permitida(puede(ref, 'finanzas.movimientos', Accion.exportar)),
       ],
-      onNuevo: tipos.isNotEmpty
-          ? () => abrirHojaFinanzas(context, (_) => _HojaNuevo(tipos: tipos))
-          : null,
+      onNuevo: permitir(
+        tipos.isNotEmpty,
+        () => abrirHojaFinanzas(context, (_) => _HojaNuevo(tipos: tipos)),
+      ),
       textoNuevo: 'Nuevo movimiento',
       iconoVacio: Icons.swap_horiz,
       singular: 'movimiento',
@@ -162,10 +164,11 @@ class MovimientosDineroPagina extends ConsumerWidget {
         movimiento: m,
         color: color,
         onAnular:
-            m.anulable &&
-                (m.esTransferencia || m.movimientoOperativoId != null) &&
-                puede(ref, 'finanzas.movimientos', Accion.anular)
-            ? () => _anular(context, ref, m)
+            m.anulable && (m.esTransferencia || m.movimientoOperativoId != null)
+            ? permitir(
+                puede(ref, 'finanzas.movimientos', Accion.anular),
+                () => _anular(context, ref, m),
+              )
             : null,
       ),
     );
@@ -344,11 +347,11 @@ class _TarjetaMovimiento extends StatelessWidget {
       ],
       acciones: [
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.advertencia),
+            color: Colores.advertencia,
+            onPressed: onAnular,
           ),
       ],
     );
@@ -429,8 +432,10 @@ class _HojaNuevoState extends ConsumerState<_HojaNuevo> {
 
   @override
   Widget build(BuildContext context) {
-    final cuentas = ref.watch(cuentasMovimientoProvider);
-    final categorias = ref.watch(categoriasMiCajaProvider(_tipo));
+    final cuentas = ref.watch(cuentasMovimientoProvider).opcional(const []);
+    final categorias = ref
+        .watch(categoriasMiCajaProvider(_tipo))
+        .opcional(const []);
 
     return Padding(
       padding: margenHoja(context),

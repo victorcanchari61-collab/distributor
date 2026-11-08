@@ -9,8 +9,10 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../compartido/widgets/app_filtros.dart';
@@ -57,46 +59,45 @@ class EmpleadosPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por nombre, documento o cargo',
       onRecargar: () => ref.read(empleadosProvider.notifier).recargar(),
       acciones: [
-        if (puede(ref, 'rrhh.empleados', Accion.exportar))
-          accionReportePdf(
-            context,
-            ruta: '/empleado/pdf',
-            nombre: 'empleados.pdf',
-          ),
-        if (puede(ref, 'rrhh.empleados', Accion.exportar))
-          accionExportar<Empleado>(
-            context,
-            nombre: 'empleados',
-            filas: () => ref.read(empleadosFiltradosProvider),
-            encabezados: const [
-              'Documento',
-              'Nombres',
-              'Apellidos',
-              'Cargo',
-              'Área',
-              'Teléfono',
-              'Correo',
-              'Ingreso',
-              'Sueldo semanal',
-              'Estado',
-            ],
-            fila: (e) => [
-              e.documento,
-              e.nombres,
-              e.apellidos,
-              e.cargo,
-              e.area,
-              e.telefono,
-              e.email,
-              e.fechaIngreso == null ? null : diaIso(e.fechaIngreso!),
-              e.sueldoSemanal,
-              e.activo ? 'Activo' : 'Inactivo',
-            ],
-          ),
+        accionReportePdf(
+          context,
+          ruta: '/empleado/pdf',
+          nombre: 'empleados.pdf',
+        ).permitida(puede(ref, 'rrhh.empleados', Accion.exportar)),
+        accionExportar<Empleado>(
+          context,
+          nombre: 'empleados',
+          filas: () => ref.read(empleadosFiltradosProvider),
+          encabezados: const [
+            'Documento',
+            'Nombres',
+            'Apellidos',
+            'Cargo',
+            'Área',
+            'Teléfono',
+            'Correo',
+            'Ingreso',
+            'Sueldo semanal',
+            'Estado',
+          ],
+          fila: (e) => [
+            e.documento,
+            e.nombres,
+            e.apellidos,
+            e.cargo,
+            e.area,
+            e.telefono,
+            e.email,
+            e.fechaIngreso == null ? null : diaIso(e.fechaIngreso!),
+            e.sueldoSemanal,
+            e.activo ? 'Activo' : 'Inactivo',
+          ],
+        ).permitida(puede(ref, 'rrhh.empleados', Accion.exportar)),
       ],
-      onNuevo: puede(ref, 'rrhh.empleados', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'rrhh.empleados', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       iconoVacio: Icons.groups_outlined,
       singular: 'empleado',
       plural: 'empleados',
@@ -133,15 +134,18 @@ class EmpleadosPagina extends ConsumerWidget {
       fila: (context, empleado) => _TarjetaEmpleado(
         empleado: empleado,
         color: color,
-        onEditar: puede(ref, 'rrhh.empleados', Accion.editar)
-            ? () => _abrirFormulario(context, empleado)
-            : null,
-        onEstado: puede(ref, 'rrhh.empleados', Accion.editar)
-            ? () => _cambiarEstado(context, ref, empleado)
-            : null,
-        onEliminar: puede(ref, 'rrhh.empleados', Accion.eliminar)
-            ? () => _eliminar(context, ref, empleado)
-            : null,
+        onEditar: permitir(
+          puede(ref, 'rrhh.empleados', Accion.editar),
+          () => _abrirFormulario(context, empleado),
+        ),
+        onEstado: permitir(
+          puede(ref, 'rrhh.empleados', Accion.editar),
+          () => _cambiarEstado(context, ref, empleado),
+        ),
+        onEliminar: permitir(
+          puede(ref, 'rrhh.empleados', Accion.eliminar),
+          () => _eliminar(context, ref, empleado),
+        ),
       ),
     );
   }
@@ -379,37 +383,25 @@ class _TarjetaEmpleado extends StatelessWidget {
       onTap: () => _abrirDetalle(context),
       acciones: [
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: empleado.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: empleado.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              empleado.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: empleado.activo ? Colores.advertencia : Colores.exito,
-            ),
+            color: empleado.activo ? Colores.advertencia : Colores.exito,
+            onPressed: onEstado,
           ),
         if (onEliminar != null)
-          IconButton(
-            onPressed: onEliminar,
+          AppIconoAccion(
+            icono: Icons.delete_outline,
             tooltip: 'Eliminar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.delete_outline,
-              size: 18,
-              color: Colores.peligro,
-            ),
+            color: Colores.peligro,
+            onPressed: onEliminar,
           ),
       ],
     );
@@ -432,29 +424,20 @@ class _TarjetaEmpleado extends StatelessWidget {
             texto: 'Eliminar',
             variante: BotonVariante.secundario,
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEliminar!();
-            },
+            onPressed: cerrandoHoja(context, onEliminar),
           ),
         if (onEstado != null)
           AppBoton(
             texto: empleado.activo ? 'Desactivar' : 'Activar',
             variante: BotonVariante.secundario,
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEstado!();
-            },
+            onPressed: cerrandoHoja(context, onEstado),
           ),
         if (onEditar != null)
           AppBoton(
             texto: 'Editar',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar!();
-            },
+            onPressed: cerrandoHoja(context, onEditar),
           ),
       ],
     );

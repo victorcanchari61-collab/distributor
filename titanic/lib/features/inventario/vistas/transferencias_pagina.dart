@@ -12,8 +12,10 @@ import '../../../compartido/estado/filtro_documento.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -49,37 +51,37 @@ class TransferenciasPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por número o almacén',
       onRecargar: () => ref.read(transferenciasProvider.notifier).recargar(),
       acciones: [
-        if (puede(ref, 'inv.transferencias', Accion.exportar))
-          accionExportar<DocumentoInventario>(
-            context,
-            nombre: 'transferencias',
-            filas: () => ref.read(transferenciasFiltradasProvider),
-            encabezados: const [
-              'Número',
-              'Fecha',
-              'Origen',
-              'Destino',
-              'Estado',
-              'Líneas',
-              'Total',
-              'Usuario',
-            ],
-            fila: (d) => [
-              d.numero,
-              diaIso(d.fecha),
-              d.almacen,
-              d.almacenDestino,
-              d.estado,
-              d.lineas,
-              d.total,
-              d.usuario,
-            ],
-          ),
+        accionExportar<DocumentoInventario>(
+          context,
+          nombre: 'transferencias',
+          filas: () => ref.read(transferenciasFiltradasProvider),
+          encabezados: const [
+            'Número',
+            'Fecha',
+            'Origen',
+            'Destino',
+            'Estado',
+            'Líneas',
+            'Total',
+            'Usuario',
+          ],
+          fila: (d) => [
+            d.numero,
+            diaIso(d.fecha),
+            d.almacen,
+            d.almacenDestino,
+            d.estado,
+            d.lineas,
+            d.total,
+            d.usuario,
+          ],
+        ).permitida(puede(ref, 'inv.transferencias', Accion.exportar)),
       ],
-      onNuevo: puede(ref, 'inv.transferencias', Accion.crear)
-          ? almacenesActivos >= 2
-                ? () => _abrirFormulario(context)
-                : null
+      onNuevo: almacenesActivos >= 2
+          ? permitir(
+              puede(ref, 'inv.transferencias', Accion.crear),
+              () => _abrirFormulario(context),
+            )
           : null,
       textoNuevo: 'Nueva transferencia',
       iconoVacio: Icons.local_shipping_outlined,
@@ -110,10 +112,12 @@ class TransferenciasPagina extends ConsumerWidget {
       fila: (context, doc) => _TarjetaTransferencia(
         doc: doc,
         color: color,
-        onAnular:
-            doc.anulado || !puede(ref, 'inv.transferencias', Accion.anular)
+        onAnular: doc.anulado
             ? null
-            : () => _anular(context, ref, doc),
+            : permitir(
+                puede(ref, 'inv.transferencias', Accion.anular),
+                () => _anular(context, ref, doc),
+              ),
       ),
     );
   }
@@ -287,11 +291,11 @@ class _TarjetaTransferencia extends StatelessWidget {
           icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.peligro),
+            color: Colores.peligro,
+            onPressed: onAnular,
           ),
       ],
     );

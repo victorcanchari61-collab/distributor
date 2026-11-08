@@ -17,9 +17,11 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_shell.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -120,7 +122,10 @@ class AsistenciaPagina extends ConsumerWidget {
 
     void cambiarMes(DateTime m) =>
         ref.read(mesAsistenciaProvider.notifier).state = m;
-    final onPaseLista = puedeCrear ? () => _abrirPaseLista(context, ref) : null;
+    final onPaseLista = permitir(
+      puedeCrear,
+      () => _abrirPaseLista(context, ref),
+    );
 
     // Los feriados y el reporte del mes valen en las dos pestañas.
     final accionFeriados = AccionGlobal(
@@ -129,13 +134,11 @@ class AsistenciaPagina extends ConsumerWidget {
       color: AccionGlobal.violeta,
       onTap: () => abrirFeriados(context),
     );
-    final accionReporte = puede(ref, 'rrhh.asistencia', Accion.exportar)
-        ? accionReportePdf(
-            context,
-            ruta: _rutaReporte(ref),
-            nombre: 'asistencia.pdf',
-          )
-        : null;
+    final accionReporte = accionReportePdf(
+      context,
+      ruta: _rutaReporte(ref),
+      nombre: 'asistencia.pdf',
+    ).permitida(puede(ref, 'rrhh.asistencia', Accion.exportar));
 
     if (pestana == PestanaAsistencia.calendario) {
       return _PestanaCalendario(
@@ -144,15 +147,14 @@ class AsistenciaPagina extends ConsumerWidget {
         indicadores: indicadores,
         barraMes: _BarraMes(mes: mes, onMes: cambiarMes),
         acciones: [
-          if (onPaseLista != null)
-            AccionGlobal(
-              etiqueta: 'Pasar lista',
-              icono: Icons.add,
-              color: AccionGlobal.verde,
-              onTap: onPaseLista,
-            ),
+          AccionGlobal(
+            etiqueta: 'Pasar lista',
+            icono: Icons.add,
+            color: AccionGlobal.verde,
+            onTap: onPaseLista,
+          ),
           accionFeriados,
-          ?accionReporte,
+          accionReporte,
         ],
         // Tocar un dia del calendario abre su pase de lista.
         onDia: puedeCrear ? (dia) => _pasarLista(context, ref, dia) : null,
@@ -172,29 +174,28 @@ class AsistenciaPagina extends ConsumerWidget {
       onRecargar: () => _recargar(ref),
       acciones: [
         accionFeriados,
-        ?accionReporte,
-        if (puede(ref, 'rrhh.asistencia', Accion.exportar))
-          accionExportar<Asistencia>(
-            context,
-            nombre: 'asistencia',
-            filas: () => ref.read(asistenciasFiltradasProvider),
-            encabezados: const [
-              'Fecha',
-              'Empleado',
-              'Cargo',
-              'Estado',
-              'Observación',
-              'Usuario',
-            ],
-            fila: (a) => [
-              diaIso(a.fecha),
-              a.empleado,
-              a.cargo,
-              a.anulado ? 'Anulada' : a.estado,
-              a.observacion,
-              a.usuario,
-            ],
-          ),
+        accionReporte,
+        accionExportar<Asistencia>(
+          context,
+          nombre: 'asistencia',
+          filas: () => ref.read(asistenciasFiltradasProvider),
+          encabezados: const [
+            'Fecha',
+            'Empleado',
+            'Cargo',
+            'Estado',
+            'Observación',
+            'Usuario',
+          ],
+          fila: (a) => [
+            diaIso(a.fecha),
+            a.empleado,
+            a.cargo,
+            a.anulado ? 'Anulada' : a.estado,
+            a.observacion,
+            a.usuario,
+          ],
+        ).permitida(puede(ref, 'rrhh.asistencia', Accion.exportar)),
       ],
       onNuevo: onPaseLista,
       textoNuevo: 'Pasar lista',
@@ -214,11 +215,17 @@ class AsistenciaPagina extends ConsumerWidget {
       fila: (context, a) => _TarjetaAsistencia(
         asistencia: a,
         color: color,
-        onEditar: !a.anulado && puede(ref, 'rrhh.asistencia', Accion.editar)
-            ? () => _editar(context, ref, a)
+        onEditar: !a.anulado
+            ? permitir(
+                puede(ref, 'rrhh.asistencia', Accion.editar),
+                () => _editar(context, ref, a),
+              )
             : null,
-        onAnular: !a.anulado && puede(ref, 'rrhh.asistencia', Accion.anular)
-            ? () => _anular(context, ref, a)
+        onAnular: !a.anulado
+            ? permitir(
+                puede(ref, 'rrhh.asistencia', Accion.anular),
+                () => _anular(context, ref, a),
+              )
             : null,
       ),
     );
@@ -540,22 +547,18 @@ class _TarjetaAsistencia extends StatelessWidget {
       onTap: () => _abrirDetalle(context),
       acciones: [
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Corregir',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.advertencia),
+            color: Colores.advertencia,
+            onPressed: onAnular,
           ),
       ],
     );
@@ -576,19 +579,13 @@ class _TarjetaAsistencia extends StatelessWidget {
             texto: 'Anular',
             variante: BotonVariante.secundario,
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onAnular!();
-            },
+            onPressed: cerrandoHoja(context, onAnular),
           ),
         if (onEditar != null)
           AppBoton(
             texto: 'Corregir',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar!();
-            },
+            onPressed: cerrandoHoja(context, onEditar),
           ),
       ],
     );

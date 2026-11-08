@@ -13,10 +13,13 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -168,9 +171,10 @@ class BancosPagina extends ConsumerWidget {
           // El fallo ya se ve en la pantalla, con su botón de reintentar.
         }
       },
-      onNuevo: puede(ref, 'finanzas.bancos', Accion.crear)
-          ? () => abrirHojaFinanzas(context, (_) => const _HojaCuenta())
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'finanzas.bancos', Accion.crear),
+        () => abrirHojaFinanzas(context, (_) => const _HojaCuenta()),
+      ),
       textoNuevo: 'Nueva cuenta',
       iconoVacio: Icons.account_balance_outlined,
       singular: 'cuenta',
@@ -234,10 +238,11 @@ class BancosPagina extends ConsumerWidget {
       fila: (context, c) => _TarjetaCuenta(
         cuenta: c,
         color: color,
-        onEditar: puedeEditar
-            ? () => abrirHojaFinanzas(context, (_) => _HojaCuenta(cuenta: c))
-            : null,
-        onEstado: puedeEditar ? () => _cambiarEstado(context, ref, c) : null,
+        onEditar: permitir(
+          puedeEditar,
+          () => abrirHojaFinanzas(context, (_) => _HojaCuenta(cuenta: c)),
+        ),
+        onEstado: permitir(puedeEditar, () => _cambiarEstado(context, ref, c)),
       ),
     );
   }
@@ -327,26 +332,18 @@ class _TarjetaCuenta extends StatelessWidget {
           ),
         ),
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: c.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: c.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              c.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: Colores.advertencia,
-            ),
+            color: Colores.advertencia,
+            onPressed: onEstado,
           ),
       ],
     );
@@ -483,7 +480,7 @@ class _HojaCuentaState extends ConsumerState<_HojaCuenta> {
 
   @override
   Widget build(BuildContext context) {
-    final bancos = ref.watch(bancosCatalogoProvider);
+    final bancos = ref.watch(bancosCatalogoProvider).opcional(const []);
     final puedeCrearBanco = puede(ref, 'finanzas.bancos', Accion.crear);
 
     return Padding(

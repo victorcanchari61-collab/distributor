@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../core/red/apoyo.dart';
 import '../core/red/excepciones.dart';
 import 'widgets/app_aviso.dart';
 
@@ -13,13 +14,15 @@ import 'widgets/app_aviso.dart';
 ///
 /// Devuelve lista vacía si la carga falla, avisando del error: sin esto la
 /// excepción viaja sin dueño y la hoja se abre igual de vacía y sin explicar.
+/// Un 403 es la excepción: es un catálogo de apoyo que este rol no puede ver
+/// (ver `opcional`), así que el selector sale sin opciones y sin alarma.
 Future<List<T>> catalogoListo<T>(
   BuildContext context,
   Future<List<T>> carga, {
   required String queEs,
 }) async {
   try {
-    return await carga;
+    return await opcional(carga, <T>[]);
   } on ApiExcepcion catch (e) {
     if (context.mounted) {
       Aviso.de(context).error('No pudimos cargar $queEs. ${e.texto}');

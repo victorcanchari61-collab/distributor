@@ -40,6 +40,9 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
   late final _documento = TextEditingController(
     text: widget.cliente?.documento ?? '',
   );
+  late final _alterno = TextEditingController(
+    text: widget.cliente?.documentoAlterno ?? '',
+  );
   late final _nombre = TextEditingController(
     text: widget.cliente?.nombre ?? '',
   );
@@ -67,13 +70,14 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
   bool _guardando = false;
   String? _error;
   String? _errorDocumento;
+  String? _errorAlterno;
   String? _errorNombre;
 
   bool get _esNuevo => widget.cliente == null;
 
   @override
   void dispose() {
-    for (final c in [_documento, _nombre, _direccion, _telefono]) {
+    for (final c in [_documento, _alterno, _nombre, _direccion, _telefono]) {
       c.dispose();
     }
     super.dispose();
@@ -86,8 +90,18 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
     _ => (min: 3, max: 15),
   };
 
+  /// El segundo documento solo existe si el principal es DNI o RUC; un código
+  /// interno no tiene "otro" documento.
+  bool get _admiteAlterno => _tipoDoc == 'DNI' || _tipoDoc == 'RUC';
+
+  /// Siempre del tipo contrario al principal: DNI con su RUC, RUC con su DNI.
+  String get _tipoAlterno => _tipoDoc == 'DNI' ? 'RUC' : 'DNI';
+
+  int get _largoAlterno => _tipoAlterno == 'RUC' ? 11 : 8;
+
   bool _validar() {
     final doc = _documento.text.trim();
+    final alterno = _alterno.text.trim();
     final l = _largo;
 
     setState(() {
@@ -99,10 +113,20 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
                 : 'Entre ${l.min} y ${l.max} dígitos.'
           : null;
 
+      // Opcional: solo se valida si lo escribieron.
+      _errorAlterno =
+          _admiteAlterno &&
+              alterno.isNotEmpty &&
+              alterno.length != _largoAlterno
+          ? 'Un $_tipoAlterno tiene $_largoAlterno dígitos.'
+          : null;
+
       _errorNombre = _nombre.text.trim().isEmpty ? 'Ingresa el nombre.' : null;
     });
 
-    return _errorDocumento == null && _errorNombre == null;
+    return _errorDocumento == null &&
+        _errorAlterno == null &&
+        _errorNombre == null;
   }
 
   Future<void> _guardar() async {
@@ -121,6 +145,10 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
       'documento': _documento.text.trim(),
       'tipoDoc': _tipoDoc,
       'nombre': _nombre.text.trim(),
+      // Nulo al quitarlo: así el servidor borra el que tenía guardado.
+      'documentoAlterno': _admiteAlterno && _alterno.text.trim().isNotEmpty
+          ? _alterno.text.trim()
+          : null,
       'direccion': _direccion.text.trim(),
       'distritoId': _distritoId,
       'telefono': _telefono.text.trim(),
@@ -188,6 +216,11 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
                     ],
                     onCambio: (v) => setState(() {
                       _tipoDoc = v ?? 'DNI';
+                      // El segundo documento es del tipo contrario al principal:
+                      // al cambiar este, el que había ya no corresponde (igual
+                      // que en el panel web).
+                      _alterno.clear();
+                      _errorAlterno = null;
                       // Se recorta si el nuevo tipo admite menos digitos.
                       final max = _largo.max;
                       if (_documento.text.length > max) {
@@ -212,6 +245,25 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
               ],
             ),
             const SizedBox(height: Dimen.espacio4),
+
+            if (_admiteAlterno) ...[
+              AppCampo(
+                controlador: _alterno,
+                etiqueta: _tipoAlterno == 'RUC'
+                    ? 'RUC (segundo documento)'
+                    : 'DNI (segundo documento)',
+                icono: _tipoAlterno == 'RUC'
+                    ? Icons.apartment_outlined
+                    : Icons.badge_outlined,
+                opcional: true,
+                tipoTeclado: TextInputType.number,
+                formateadores: [FilteringTextInputFormatter.digitsOnly],
+                maxLargo: _largoAlterno,
+                error: _errorAlterno,
+                habilitado: !_guardando,
+              ),
+              const SizedBox(height: Dimen.espacio4),
+            ],
 
             AppCampo(
               controlador: _nombre,

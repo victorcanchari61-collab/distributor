@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector_rango.dart';
@@ -39,6 +40,7 @@ class ZonasPagina extends ConsumerWidget {
     final d = estado.valueOrNull;
     final agrupar = ref.watch(agruparZonasProvider);
     final singular = agrupar == 'mercado' ? 'mercado' : 'ruta';
+    final comparar = ref.watch(compararZonasProvider);
 
     final items = d?.items ?? const <ZonaCaida>[];
     final perdida = items.fold<double>(0, (s, z) => s + z.ventaPerdida);
@@ -80,6 +82,17 @@ class ZonasPagina extends ConsumerWidget {
           Pestana<String>('ruta', 'Por ruta', icono: Icons.route_outlined),
         ],
       ),
+      filtro: BotonFiltros(
+        activos: comparar == CompararCaida.mes ? 0 : 1,
+        color: color,
+        onAbrir: () => mostrarFiltros(
+          context,
+          activos: comparar == CompararCaida.mes ? 0 : 1,
+          onLimpiar: () => ref.read(compararZonasProvider.notifier).state =
+              CompararCaida.mes,
+          grupos: [grupoCompararCaida(compararZonasProvider)],
+        ),
+      ),
       indicadores: [
         AppTarjetaDato(
           etiqueta: 'Venta perdida',
@@ -100,7 +113,7 @@ class ZonasPagina extends ConsumerWidget {
           valor: soles(actual),
           icono: Icons.payments_outlined,
           color: color,
-          nota: 'antes ${soles(anterior)}',
+          nota: '${soles(anterior)} ${comparar.referencia}',
         ),
       ],
       encabezado: Column(
@@ -110,7 +123,7 @@ class ZonasPagina extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
             child: AppSelectorRango(
               rango: ref.watch(rangoZonasProvider),
-              textoVacio: 'Del 1 de enero a hoy',
+              textoVacio: 'Del 1 del mes a hoy',
               onCambio: (r) => ref.read(rangoZonasProvider.notifier).state = r,
             ),
           ),

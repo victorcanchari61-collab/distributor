@@ -9,9 +9,11 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -73,9 +75,10 @@ class MotivosNovedadPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaMotivosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar motivo',
       onRecargar: () => ref.read(motivosNovedadProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'tms.motivos', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'tms.motivos', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       textoNuevo: 'Nuevo motivo',
       iconoVacio: Icons.label_outline,
       singular: 'motivo',
@@ -103,12 +106,14 @@ class MotivosNovedadPagina extends ConsumerWidget {
         motivo: motivo,
         color: color,
         onVer: () => _verDetalle(context, motivo, color),
-        onEditar: puede(ref, 'tms.motivos', Accion.editar)
-            ? () => _abrirFormulario(context, motivo)
-            : null,
-        onEstado: puede(ref, 'tms.motivos', Accion.editar)
-            ? () => _cambiarEstado(context, ref, motivo)
-            : null,
+        onEditar: permitir(
+          puede(ref, 'tms.motivos', Accion.editar),
+          () => _abrirFormulario(context, motivo),
+        ),
+        onEstado: permitir(
+          puede(ref, 'tms.motivos', Accion.editar),
+          () => _cambiarEstado(context, ref, motivo),
+        ),
       ),
     );
   }
@@ -137,9 +142,10 @@ class MotivosNovedadPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar resultado',
       onRecargar: () =>
           ref.read(resultadosRevisionProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'tms.motivos', Accion.crear)
-          ? () => abrirHojaResultado(context)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'tms.motivos', Accion.crear),
+        () => abrirHojaResultado(context),
+      ),
       textoNuevo: 'Nuevo resultado',
       iconoVacio: Icons.fact_check_outlined,
       singular: 'resultado',
@@ -182,28 +188,24 @@ class MotivosNovedadPagina extends ConsumerWidget {
           ),
         ],
         acciones: [
-          if (puedeEditar)
-            IconButton(
-              onPressed: () => abrirHojaResultado(context, editando: r),
-              tooltip: 'Editar',
-              visualDensity: VisualDensity.compact,
-              icon: Icon(
-                Icons.edit_outlined,
-                size: 18,
-                color: Acento.de(context),
-              ),
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
+            tooltip: 'Editar',
+            color: Acento.de(context),
+            onPressed: permitir(
+              puedeEditar,
+              () => abrirHojaResultado(context, editando: r),
             ),
-          if (puedeEditar)
-            IconButton(
-              onPressed: () => _cambiarEstadoResultado(context, ref, r),
-              tooltip: r.activo ? 'Desactivar' : 'Activar',
-              visualDensity: VisualDensity.compact,
-              icon: Icon(
-                r.activo ? Icons.block : Icons.check_circle_outline,
-                size: 18,
-                color: r.activo ? Colores.advertencia : Colores.exito,
-              ),
+          ),
+          AppIconoAccion(
+            icono: r.activo ? Icons.block : Icons.check_circle_outline,
+            tooltip: r.activo ? 'Desactivar' : 'Activar',
+            color: r.activo ? Colores.advertencia : Colores.exito,
+            onPressed: permitir(
+              puedeEditar,
+              () => _cambiarEstadoResultado(context, ref, r),
             ),
+          ),
         ],
       ),
     );
@@ -376,26 +378,18 @@ class _TarjetaMotivo extends StatelessWidget {
           ),
         ),
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: motivo.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: motivo.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              motivo.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: motivo.activo ? Colores.advertencia : Colores.exito,
-            ),
+            color: motivo.activo ? Colores.advertencia : Colores.exito,
+            onPressed: onEstado,
           ),
       ],
     );

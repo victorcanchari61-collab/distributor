@@ -48,14 +48,14 @@ class TableroPagina extends ConsumerWidget {
     // el permiso de exportar de ese dashboard: 'dashboard.ventas', etc.
     final id = vista.item?.id;
     final p = periodo;
-    final reporte = id != null && puede(ref, id, Accion.exportar)
+    final reporte = id != null
         ? accionReportePdf(
             context,
             ruta:
                 '/${id.replaceFirst('.', '/')}/reporte/pdf'
                 '${p == null ? '' : '?desde=${diaIso(p.desde)}&hasta=${diaIso(p.hasta)}'}',
             nombre: '${id.split('.').last}.pdf',
-          )
+          ).permitida(puede(ref, id, Accion.exportar))
         : null;
 
     return AppShell(

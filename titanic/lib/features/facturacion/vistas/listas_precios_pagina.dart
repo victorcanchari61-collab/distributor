@@ -9,8 +9,10 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -65,29 +67,28 @@ class ListasPreciosPagina extends ConsumerWidget {
     // abierta. Van en el boton flotante, junto a "Agregar precio", como las
     // demas acciones de pantalla.
     final accionesLista = <AccionGlobal>[
-      if (puedeCrear)
-        AccionGlobal(
-          etiqueta: 'Nueva lista',
-          icono: Icons.playlist_add,
-          color: AccionGlobal.azul,
-          onTap: () => _nuevaLista(context, ref),
-        ),
-      if (activa != null && puedeEditar)
+      AccionGlobal(
+        etiqueta: 'Nueva lista',
+        icono: Icons.playlist_add,
+        color: AccionGlobal.azul,
+        onTap: () => _nuevaLista(context, ref),
+      ).permitida(puedeCrear),
+      if (activa != null)
         AccionGlobal(
           etiqueta: 'Editar lista',
           icono: Icons.edit_outlined,
           color: AccionGlobal.naranja,
           onTap: () => mostrarFormularioLista(context, ref, lista: activa),
-        ),
+        ).permitida(puedeEditar),
       // La predeterminada no se borra: dejaria sin precio a todo cliente que no
       // tenga lista propia. Con ella abierta la accion no se ofrece.
-      if (activa != null && puedeEliminar && !activa.esPredeterminada)
+      if (activa != null && !activa.esPredeterminada)
         AccionGlobal(
           etiqueta: 'Eliminar lista',
           icono: Icons.delete_outline,
           color: AccionGlobal.rojo,
           onTap: () => _eliminarLista(context, ref, activa!),
-        ),
+        ).permitida(puedeEliminar),
     ];
     final conBanner = activa != null && !activa.esPredeterminada && puedeEditar;
 
@@ -103,9 +104,9 @@ class ListasPreciosPagina extends ConsumerWidget {
         await ref.read(listasPrecioProvider.notifier).recargar();
         ref.invalidate(preciosListaActivaProvider);
       },
-      onNuevo: activa == null || !puedeCrear
+      onNuevo: activa == null
           ? null
-          : () => _abrirPrecios(context, ref, activa!),
+          : permitir(puedeCrear, () => _abrirPrecios(context, ref, activa!)),
       textoNuevo: 'Agregar precio',
       acciones: accionesLista,
       iconoVacio: Icons.payments_outlined,
@@ -196,17 +197,19 @@ class ListasPreciosPagina extends ConsumerWidget {
       fila: (context, precio) => _TarjetaPrecio(
         precio: precio,
         color: color,
-        onEditar: puedeEditar
-            ? () => _abrirPrecios(
-                context,
-                ref,
-                activa!,
-                productoId: precio.productoId,
-              )
-            : null,
-        onEliminar: puedeEliminar
-            ? () => _eliminarPrecio(context, ref, precio)
-            : null,
+        onEditar: permitir(
+          puedeEditar,
+          () => _abrirPrecios(
+            context,
+            ref,
+            activa!,
+            productoId: precio.productoId,
+          ),
+        ),
+        onEliminar: permitir(
+          puedeEliminar,
+          () => _eliminarPrecio(context, ref, precio),
+        ),
       ),
     );
   }
@@ -408,29 +411,21 @@ class _TarjetaPrecio extends StatelessWidget {
           'S/ ${precio.precioUnidadBase.toStringAsFixed(2)} × ${precio.unidadBase}',
         ),
       ],
-      onTap: onEditar,
+      onTap: esSinPermiso(onEditar) ? null : onEditar,
       acciones: [
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEliminar != null)
-          IconButton(
-            onPressed: onEliminar,
+          AppIconoAccion(
+            icono: Icons.delete_outline,
             tooltip: 'Eliminar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.delete_outline,
-              size: 18,
-              color: Colores.advertencia,
-            ),
+            color: Colores.advertencia,
+            onPressed: onEliminar,
           ),
       ],
     );

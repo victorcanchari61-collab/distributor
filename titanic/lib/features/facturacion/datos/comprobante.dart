@@ -32,11 +32,39 @@ class EstadoCpe {
   static const generado = 'GENERADO';
   static const error = 'ERROR';
 
+  /// SUNAT aceptó la comunicación de baja: la factura ya no vale.
+  static const baja = 'BAJA';
+
   static String etiqueta(String estado) => switch (estado) {
     aceptado => 'Aceptado',
     rechazado => 'Rechazado',
     generado => 'Sin enviar',
+    baja => 'Dado de baja',
     _ => 'Sin respuesta',
+  };
+
+  /// Qué significa cada estado, igual que la ayuda del panel web.
+  static String ayuda(String estado) => switch (estado) {
+    aceptado => 'SUNAT lo aceptó.',
+    rechazado => 'SUNAT lo rechazó: el motivo está en el CDR.',
+    generado => 'Está firmado pero todavía no llegó a SUNAT.',
+    baja => 'SUNAT aceptó la baja: la factura ya no vale.',
+    _ => 'El envío falló antes de tener respuesta: se puede reenviar.',
+  };
+}
+
+/// En qué quedó la comunicación de baja de una factura.
+class EstadoBajaCpe {
+  const EstadoBajaCpe._();
+  static const pendiente = 'PENDIENTE';
+  static const aceptada = 'ACEPTADA';
+  static const rechazada = 'RECHAZADA';
+
+  static String etiqueta(String estado) => switch (estado) {
+    pendiente => 'Baja pendiente',
+    aceptada => 'Baja aceptada',
+    rechazada => 'Baja rechazada',
+    _ => estado,
   };
 }
 
@@ -90,9 +118,8 @@ class MotivoNota {
 class MotivosNota {
   const MotivosNota._();
 
-  static List<MotivoNota> de(String tipo) => tipo == TipoCpe.notaCredito
-      ? _credito
-      : _debito;
+  static List<MotivoNota> de(String tipo) =>
+      tipo == TipoCpe.notaCredito ? _credito : _debito;
 
   static const _credito = [
     MotivoNota('01', 'Anulación de la operación'),
@@ -155,6 +182,7 @@ class Comprobante {
     this.clienteId,
     this.clienteTelefono,
     this.notaVentaNumero,
+    this.ventaDirecta = false,
     this.afectadoNumero,
     this.codMotivo,
     this.desMotivo,
@@ -167,6 +195,10 @@ class Comprobante {
     this.whatsAppEnviadoEn,
     this.whatsAppError,
     this.notas = const [],
+    this.bajaEstado,
+    this.bajaMotivo,
+    this.bajaFecha,
+    this.bajaMensaje,
   });
 
   factory Comprobante.desdeJson(Map<String, dynamic> j) => Comprobante(
@@ -182,6 +214,7 @@ class Comprobante {
     clienteId: j['clienteId'] as int?,
     clienteTelefono: j['clienteTelefono'] as String?,
     notaVentaNumero: j['notaVentaNumero'] as String?,
+    ventaDirecta: j['ventaDirecta'] as bool? ?? false,
     afectadoNumero: j['afectadoNumero'] as String?,
     codMotivo: j['codMotivo'] as String?,
     desMotivo: j['desMotivo'] as String?,
@@ -200,6 +233,10 @@ class Comprobante {
       for (final n in (j['notas'] as List? ?? const []))
         NotaDeComprobante.desdeJson(n as Map<String, dynamic>),
     ],
+    bajaEstado: j['bajaEstado'] as String?,
+    bajaMotivo: j['bajaMotivo'] as String?,
+    bajaFecha: fechaDeJsonOpcional(j['bajaFecha']),
+    bajaMensaje: j['bajaMensaje'] as String?,
   );
 
   final int id;
@@ -219,7 +256,11 @@ class Comprobante {
   /// El teléfono que hoy tiene el cliente: el que se propone al enviar.
   final String? clienteTelefono;
 
+  /// La nota de venta de la que salió; nulo si nació directa ([ventaDirecta]).
   final String? notaVentaNumero;
+
+  /// Nació como factura o boleta directa: no tiene nota de venta que mostrar.
+  final bool ventaDirecta;
 
   /// Solo en notas: el comprobante que corrigen.
   final String? afectadoNumero;
@@ -241,6 +282,54 @@ class Comprobante {
 
   /// Solo en facturas y boletas: las notas que las corrigen.
   final List<NotaDeComprobante> notas;
+
+  /// En qué quedó la baja (PENDIENTE, ACEPTADA, RECHAZADA); nulo si nunca se pidió.
+  final String? bajaEstado;
+  final String? bajaMotivo;
+  final DateTime? bajaFecha;
+  final String? bajaMensaje;
+
+  /// Cuántos días de emitida admite SUNAT la baja de una factura.
+  static const diasParaBaja = 7;
+
+  /// Se puede pedir la baja: solo una factura aceptada, sin baja en trámite, emitida hace [diasParaBaja] días o menos
+  /// y sin notas de crédito o débito aceptadas. Quien llama además comprueba el permiso `anular`.
+  bool puedeDarDeBaja(DateTime hoy) {
+    if (tipo != TipoCpe.factura || estado != EstadoCpe.aceptado) return false;
+    if (bajaEstado == EstadoBajaCpe.pendiente) return false;
+    if (notas.any((n) => n.estado == EstadoCpe.aceptado)) return false;
+
+    final emitida = DateTime.utc(
+      fechaEmision.year,
+      fechaEmision.month,
+      fechaEmision.day,
+    );
+    final hoyDia = DateTime.utc(hoy.year, hoy.month, hoy.day);
+    return hoyDia.difference(emitida).inDays <= diasParaBaja;
+  }
+
+  /// El aviso de la hoja de baja: qué pasa con la venta si SUNAT la acepta.
+  String get avisoBaja => ventaDirecta
+      ? 'Si SUNAT la acepta, la factura deja de valer: el stock vuelve al '
+            'almacén y deja de contar en los reportes.'
+      : notaVentaNumero != null
+      ? 'Si SUNAT la acepta, la venta $notaVentaNumero se anula: el stock '
+            'vuelve al almacén y deja de contar en los reportes.'
+      : 'Si SUNAT la acepta, la factura deja de valer.';
+
+  /// El aviso de una nota de crédito de anulación o devolución total; nulo si no hay venta que se anule.
+  String? get avisoNotaTotal {
+    if (ventaDirecta) {
+      return 'Si SUNAT la acepta y cubre todo lo facturado, el stock vuelve '
+          'al almacén y deja de contar en los reportes.';
+    }
+    if (notaVentaNumero != null) {
+      return 'Si SUNAT la acepta y cubre todo lo facturado, la venta '
+          '$notaVentaNumero se anula: el stock vuelve al almacén y deja de '
+          'contar en los reportes.';
+    }
+    return null;
+  }
 
   bool get aceptado => estado == EstadoCpe.aceptado;
   bool get esPrueba => entorno != 'produccion';

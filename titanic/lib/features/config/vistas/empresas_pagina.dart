@@ -220,7 +220,9 @@ class _EmpresasPaginaState extends ConsumerState<EmpresasPagina> {
           .guardar(id: existente?.id, cuerpo: cuerpo);
       // El formulario se vuelve a llenar con lo que quedo guardado.
       _llenado = false;
-      mensajero.mostrar(existente == null ? 'Empresa creada' : 'Empresa actualizada');
+      mensajero.mostrar(
+        existente == null ? 'Empresa creada' : 'Empresa actualizada',
+      );
     } on ApiExcepcion catch (e) {
       setState(() => _error = e.texto);
     } finally {
@@ -243,7 +245,10 @@ class _EmpresasPaginaState extends ConsumerState<EmpresasPagina> {
       setState(() => _subiendoCert = true);
       final r = await ref
           .read(configApiProvider)
-          .subirCertificado(empresa.id, utf8.decode(bytes, allowMalformed: true));
+          .subirCertificado(
+            empresa.id,
+            utf8.decode(bytes, allowMalformed: true),
+          );
       final advertencias = (r['advertencias'] as List? ?? const []);
       final mensaje = r['mensaje'] as String? ?? 'Certificado guardado';
       if (advertencias.isEmpty) {
@@ -278,12 +283,15 @@ class _EmpresasPaginaState extends ConsumerState<EmpresasPagina> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AppAlerta(e is ApiExcepcion ? e.texto : 'No pudimos cargar la empresa.'),
+                AppAlerta(
+                  e is ApiExcepcion ? e.texto : 'No pudimos cargar la empresa.',
+                ),
                 const SizedBox(height: Dimen.espacio3),
                 AppBoton(
                   texto: 'Reintentar',
                   expandido: false,
-                  onPressed: () => ref.read(empresasProvider.notifier).recargar(),
+                  onPressed: () =>
+                      ref.read(empresasProvider.notifier).recargar(),
                 ),
               ],
             ),
@@ -353,9 +361,10 @@ class _EmpresasPaginaState extends ConsumerState<EmpresasPagina> {
     ),
   );
 
-  Widget _boton(Empresa? empresa) => AppBoton(
+  Widget _boton(Empresa? empresa, bool puedeEditar) => AppBoton(
     texto: empresa == null ? 'Crear empresa' : 'Guardar cambios',
     cargando: _guardando,
+    sinPermiso: !puedeEditar,
     onPressed: () => _guardar(empresa),
   );
 
@@ -497,10 +506,8 @@ class _EmpresasPaginaState extends ConsumerState<EmpresasPagina> {
           tipoTeclado: TextInputType.url,
           habilitado: habilitado,
         ),
-        if (puedeEditar) ...[
-          const SizedBox(height: Dimen.espacio5),
-          _boton(empresa),
-        ],
+        const SizedBox(height: Dimen.espacio5),
+        _boton(empresa, puedeEditar),
       ],
     );
   }
@@ -595,8 +602,7 @@ class _EmpresasPaginaState extends ConsumerState<EmpresasPagina> {
                       : Colores.tintaSuave,
                 ),
               ),
-              if (empresa != null &&
-                  puede(ref, 'config.empresa', Accion.editar)) ...[
+              if (empresa != null) ...[
                 const SizedBox(height: Dimen.espacio3),
                 AppBoton(
                   texto: empresa.tieneCertificado
@@ -605,6 +611,7 @@ class _EmpresasPaginaState extends ConsumerState<EmpresasPagina> {
                   icono: Icons.upload_file,
                   variante: BotonVariante.secundario,
                   cargando: _subiendoCert,
+                  sinPermiso: !puede(ref, 'config.empresa', Accion.editar),
                   onPressed: () => _subirCertificado(empresa),
                 ),
               ],
@@ -618,10 +625,8 @@ class _EmpresasPaginaState extends ConsumerState<EmpresasPagina> {
             tono: AlertaTono.aviso,
           ),
         ],
-        if (puedeEditar) ...[
-          const SizedBox(height: Dimen.espacio5),
-          _boton(empresa),
-        ],
+        const SizedBox(height: Dimen.espacio5),
+        _boton(empresa, puedeEditar),
       ],
     );
   }

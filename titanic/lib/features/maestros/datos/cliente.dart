@@ -6,6 +6,8 @@ class Cliente {
     required this.tipoDoc,
     required this.nombre,
     required this.activo,
+    this.documentoAlterno,
+    this.tipoDocAlterno,
     this.direccion,
     this.distritoId,
     this.distrito,
@@ -36,6 +38,14 @@ class Cliente {
   final String tipoDoc;
 
   final String nombre;
+
+  /// Segundo documento, siempre del tipo contrario al principal (un DNI con su
+  /// RUC de persona natural, o un RUC con el DNI del dueño). Nulo si no tiene.
+  final String? documentoAlterno;
+
+  /// Tipo del segundo documento: DNI o RUC. Nulo si no hay segundo documento.
+  final String? tipoDocAlterno;
+
   final String? direccion;
 
   /// Distrito del ubigeo oficial (INEI/RENIEC), referencia al catalogo.
@@ -93,9 +103,17 @@ class Cliente {
 
   final bool activo;
 
+  /// "RUC 10458712039" o "DNI 45871203"; nulo si no tiene segundo documento.
+  String? get textoDocumentoAlterno {
+    final doc = documentoAlterno;
+    if (doc == null || doc.isEmpty) return null;
+    final tipo = tipoDocAlterno;
+    return tipo == null || tipo.isEmpty ? doc : '$tipo $doc';
+  }
+
   /// Texto contra el que se busca en la lista.
   String get buscable =>
-      '$documento $nombre ${direccion ?? ''} ${distrito ?? ''} ${mercado ?? ''} ${ruta ?? ''}'
+      '$documento ${documentoAlterno ?? ''} $nombre ${direccion ?? ''} ${distrito ?? ''} ${mercado ?? ''} ${ruta ?? ''}'
           .toLowerCase();
 
   factory Cliente.desdeJson(Map<String, dynamic> json) => Cliente(
@@ -103,6 +121,8 @@ class Cliente {
     documento: json['documento'] as String? ?? '',
     tipoDoc: json['tipoDoc'] as String? ?? '',
     nombre: json['nombre'] as String? ?? '',
+    documentoAlterno: json['documentoAlterno'] as String?,
+    tipoDocAlterno: json['tipoDocAlterno'] as String?,
     direccion: json['direccion'] as String?,
     distritoId: json['distritoId'] as int?,
     distrito: json['distrito'] as String?,
@@ -131,6 +151,7 @@ class Cliente {
     'documento': documento,
     'tipoDoc': tipoDoc,
     'nombre': nombre,
+    'documentoAlterno': documentoAlterno,
     'direccion': direccion,
     'distritoId': distritoId,
     'telefono': telefono,
@@ -144,6 +165,7 @@ class Cliente {
     String? documento,
     String? tipoDoc,
     String? nombre,
+    String? documentoAlterno,
     String? direccion,
     int? distritoId,
     String? telefono,
@@ -157,6 +179,8 @@ class Cliente {
     documento: documento ?? this.documento,
     tipoDoc: tipoDoc ?? this.tipoDoc,
     nombre: nombre ?? this.nombre,
+    documentoAlterno: documentoAlterno ?? this.documentoAlterno,
+    tipoDocAlterno: tipoDocAlterno,
     direccion: direccion ?? this.direccion,
     distritoId: distritoId ?? this.distritoId,
     distrito: distrito,

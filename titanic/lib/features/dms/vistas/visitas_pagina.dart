@@ -7,9 +7,11 @@ import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -99,9 +101,11 @@ class VisitasPagina extends ConsumerWidget {
         // Tomar el pedido lleva a Pedidos: la visita no crea nada por su
         // cuenta, y un segundo formulario de pedido aquí sería uno más que
         // mantener igual al de verdad.
-        onTomarPedido:
-            !visita.atendido && puede(ref, 'fact.pedidos', Accion.crear)
-            ? () => context.go('/fact/pedidos')
+        onTomarPedido: !visita.atendido
+            ? permitir(
+                puede(ref, 'fact.pedidos', Accion.crear),
+                () => context.go('/fact/pedidos'),
+              )
             : null,
       ),
     );
@@ -305,8 +309,9 @@ class _TarjetaVisita extends StatelessWidget {
   EstadoCaida? get _riesgo {
     final estado = EstadoCaida.desdeClave(visita.riesgo);
     return switch (estado) {
-      EstadoCaida.critico || EstadoCaida.riesgo || EstadoCaida.seguimiento =>
-        estado,
+      EstadoCaida.critico ||
+      EstadoCaida.riesgo ||
+      EstadoCaida.seguimiento => estado,
       _ => null,
     };
   }
@@ -379,15 +384,11 @@ class _TarjetaVisita extends StatelessWidget {
             ),
           ),
         if (onTomarPedido != null)
-          IconButton(
-            onPressed: onTomarPedido,
+          AppIconoAccion(
+            icono: Icons.add_shopping_cart_outlined,
             tooltip: 'Tomar pedido',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.add_shopping_cart_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onTomarPedido,
           ),
       ],
     );

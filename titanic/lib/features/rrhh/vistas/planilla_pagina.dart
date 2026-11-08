@@ -15,10 +15,13 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -211,37 +214,34 @@ class _PlanillaPaginaState extends ConsumerState<PlanillaPagina> {
       acciones: _trabajando
           ? const []
           : [
-              if ((planilla == null || borrador) && puedeCrear)
+              if (planilla == null || borrador)
                 AccionGlobal(
                   etiqueta: planilla == null ? 'Armar planilla' : 'Recalcular',
                   icono: Icons.refresh,
                   color: AccionGlobal.azul,
                   onTap: () => _generar(planilla),
-                ),
-              if (borrador && puedeCrear)
+                ).permitida(puedeCrear),
+              if (borrador)
                 AccionGlobal(
                   etiqueta: 'Pagar planilla',
                   icono: Icons.payments_outlined,
                   color: AccionGlobal.verde,
                   onTap: () => _hoja((_) => _HojaPagar(planilla: planilla!)),
-                ),
-              if (planilla != null &&
-                  planilla.detalle.isNotEmpty &&
-                  puede(ref, 'rrhh.planilla', Accion.exportar))
+                ).permitida(puedeCrear),
+              if (planilla != null && planilla.detalle.isNotEmpty)
                 AccionGlobal(
                   etiqueta: 'Boletas de pago',
                   icono: Icons.picture_as_pdf_outlined,
                   color: AccionGlobal.rojo,
                   onTap: () => _boletas(planilla),
-                ),
-              if (planilla != null &&
-                  puede(ref, 'rrhh.planilla', Accion.anular))
+                ).permitida(puede(ref, 'rrhh.planilla', Accion.exportar)),
+              if (planilla != null)
                 AccionGlobal(
                   etiqueta: 'Anular planilla',
                   icono: Icons.block,
                   color: AccionGlobal.naranja,
                   onTap: () => _anular(planilla),
-                ),
+                ).permitida(puede(ref, 'rrhh.planilla', Accion.anular)),
             ],
       encabezado: _Encabezado(
         semana: ref.watch(semanaPlanillaProvider),
@@ -251,12 +251,17 @@ class _PlanillaPaginaState extends ConsumerState<PlanillaPagina> {
       fila: (context, d) => _TarjetaDetalle(
         detalle: d,
         color: color,
-        onAjustar: borrador && puede(ref, 'rrhh.planilla', Accion.editar)
-            ? () => _hoja((_) => _HojaAjuste(detalle: d))
+        onAjustar: borrador
+            ? permitir(
+                puede(ref, 'rrhh.planilla', Accion.editar),
+                () => _hoja((_) => _HojaAjuste(detalle: d)),
+              )
             : null,
-        onBoleta:
-            planilla != null && puede(ref, 'rrhh.planilla', Accion.exportar)
-            ? () => _boletas(planilla, empleado: d)
+        onBoleta: planilla != null
+            ? permitir(
+                puede(ref, 'rrhh.planilla', Accion.exportar),
+                () => _boletas(planilla, empleado: d),
+              )
             : null,
       ),
     );
@@ -524,26 +529,18 @@ class _TarjetaDetalle extends StatelessWidget {
       ],
       acciones: [
         if (onBoleta != null)
-          IconButton(
-            onPressed: onBoleta,
+          AppIconoAccion(
+            icono: Icons.picture_as_pdf_outlined,
             tooltip: 'Boleta',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.picture_as_pdf_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onBoleta,
           ),
         if (onAjustar != null)
-          IconButton(
-            onPressed: onAjustar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Ajustar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onAjustar,
           ),
       ],
     );
@@ -794,7 +791,7 @@ class _HojaPagarState extends ConsumerState<_HojaPagar> {
 
   @override
   Widget build(BuildContext context) {
-    final cuentas = ref.watch(cuentasPlanillaProvider);
+    final cuentas = ref.watch(cuentasPlanillaProvider).opcional(const []);
     final p = _planilla;
     final sinMarcar = p.fechasSinMarcar;
 

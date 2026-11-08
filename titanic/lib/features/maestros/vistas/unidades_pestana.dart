@@ -11,9 +11,11 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -72,9 +74,10 @@ class UnidadesPestana extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaUnidadesProvider.notifier).state = t,
       pistaBusqueda: 'Buscar unidad',
       onRecargar: () => _recargar(ref),
-      onNuevo: puede(ref, 'maestros.productos', Accion.crear)
-          ? () => _abrirHoja(context, color)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'maestros.productos', Accion.crear),
+        () => _abrirHoja(context, color),
+      ),
       textoNuevo: 'Nueva unidad',
       iconoVacio: Icons.straighten_outlined,
       singular: 'unidad',
@@ -106,11 +109,11 @@ class UnidadesPestana extends ConsumerWidget {
       fila: (context, u) => _TarjetaUnidad(
         unidad: u,
         color: color,
-        onEditar: puedeEditar ? () => _abrirHoja(context, color, u) : null,
+        onEditar: permitir(puedeEditar, () => _abrirHoja(context, color, u)),
         // Solo las que se pueden borrar: las del sistema y las que ya se usan
         // el backend las rechaza.
-        onEliminar: puedeEliminar && u.usos == 0 && !u.delSistema
-            ? () => _eliminar(context, ref, u)
+        onEliminar: u.usos == 0 && !u.delSistema
+            ? permitir(puedeEliminar, () => _eliminar(context, ref, u))
             : null,
       ),
     );
@@ -258,26 +261,18 @@ class _TarjetaUnidad extends StatelessWidget {
       ),
       acciones: [
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEliminar != null)
-          IconButton(
-            onPressed: onEliminar,
+          AppIconoAccion(
+            icono: Icons.delete_outline,
             tooltip: 'Eliminar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.delete_outline,
-              size: 18,
-              color: Colores.advertencia,
-            ),
+            color: Colores.advertencia,
+            onPressed: onEliminar,
           ),
       ],
     );

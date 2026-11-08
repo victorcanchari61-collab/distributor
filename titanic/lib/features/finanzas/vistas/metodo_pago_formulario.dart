@@ -6,6 +6,7 @@ import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/dimensiones.dart';
@@ -215,7 +216,7 @@ class _SelectorCuenta extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cuentas = ref.watch(cuentasElegiblesProvider);
+    final cuentas = ref.watch(cuentasElegiblesProvider).opcional(const []);
 
     return cuentas.when(
       loading: () => const LinearProgressIndicator(),

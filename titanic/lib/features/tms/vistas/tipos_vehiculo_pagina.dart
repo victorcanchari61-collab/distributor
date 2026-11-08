@@ -10,8 +10,10 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -55,9 +57,10 @@ class TiposVehiculoPestana extends ConsumerWidget {
           ref.read(busquedaTiposVehiculoProvider.notifier).state = t,
       pistaBusqueda: 'Buscar tipo',
       onRecargar: () => ref.read(tiposVehiculoProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'tms.flota', Accion.crear)
-          ? () => _abrirHoja(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'tms.flota', Accion.crear),
+        () => _abrirHoja(context, null),
+      ),
       textoNuevo: 'Nuevo tipo',
       iconoVacio: Icons.build_outlined,
       singular: 'tipo',
@@ -97,8 +100,11 @@ class TiposVehiculoPestana extends ConsumerWidget {
         tipo: tipo,
         color: color,
         onVer: () => _verDetalle(context, tipo, color),
-        onEditar: puedeEditar ? () => _abrirHoja(context, tipo) : null,
-        onEstado: puedeEditar ? () => _cambiarEstado(context, ref, tipo) : null,
+        onEditar: permitir(puedeEditar, () => _abrirHoja(context, tipo)),
+        onEstado: permitir(
+          puedeEditar,
+          () => _cambiarEstado(context, ref, tipo),
+        ),
       ),
     );
   }
@@ -243,26 +249,18 @@ class _Tarjeta extends StatelessWidget {
           ),
         ),
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: tipo.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: tipo.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              tipo.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: tipo.activo ? Colores.advertencia : Colores.exito,
-            ),
+            color: tipo.activo ? Colores.advertencia : Colores.exito,
+            onPressed: onEstado,
           ),
       ],
     );

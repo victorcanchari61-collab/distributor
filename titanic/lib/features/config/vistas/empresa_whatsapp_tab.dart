@@ -85,10 +85,7 @@ class _EmpresaWhatsAppTabState extends ConsumerState<EmpresaWhatsAppTab> {
       });
       // Mientras espera el QR se vuelve a mirar cada pocos segundos: al escanearlo pasa solo a "conectado".
       if (estado.estado == 'esperando-qr') {
-        _vigia ??= Timer.periodic(
-          const Duration(seconds: 4),
-          (_) => _cargar(),
-        );
+        _vigia ??= Timer.periodic(const Duration(seconds: 4), (_) => _cargar());
       } else {
         _vigia?.cancel();
         _vigia = null;
@@ -147,7 +144,10 @@ class _EmpresaWhatsAppTabState extends ConsumerState<EmpresaWhatsAppTab> {
           .replaceAll('{numero}', 'B001-00000012')
           .replaceAll('{total}', 'S/ 157.00')
           .replaceAll('{empresa}', 'Titanic D')
-          .replaceAll('{url}', 'http://tu-servidor/api/publico/comprobante/3f9a…');
+          .replaceAll(
+            '{url}',
+            'http://tu-servidor/api/publico/comprobante/3f9a…',
+          );
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +157,11 @@ class _EmpresaWhatsAppTabState extends ConsumerState<EmpresaWhatsAppTab> {
     final apagado = estado?.estado == 'sin-servicio';
 
     final (colorEstado, textoEstado, detalle) = switch (estado?.estado) {
-      'conectado' => (Colores.exito, 'Conectado', 'Listo para enviar comprobantes'),
+      'conectado' => (
+        Colores.exito,
+        'Conectado',
+        'Listo para enviar comprobantes',
+      ),
       'esperando-qr' => (
         Colores.advertencia,
         'Esperando vinculación',
@@ -192,7 +196,10 @@ class _EmpresaWhatsAppTabState extends ConsumerState<EmpresaWhatsAppTab> {
                   const Expanded(
                     child: Text(
                       'Celular de la empresa',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -266,7 +273,9 @@ class _EmpresaWhatsAppTabState extends ConsumerState<EmpresaWhatsAppTab> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             border: Border.all(color: Colores.linea),
-                            borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                            borderRadius: BorderRadius.circular(
+                              Dimen.radioCampo,
+                            ),
                           ),
                           child: Image.memory(
                             base64Decode(estado!.qrImagen!.split(',').last),
@@ -298,14 +307,13 @@ class _EmpresaWhatsAppTabState extends ConsumerState<EmpresaWhatsAppTab> {
                     ),
                   ),
                 ],
-                if (widget.puedeEditar) ...[
-                  const SizedBox(height: Dimen.espacio3),
-                  AppBoton(
-                    texto: 'Cambiar celular',
-                    variante: BotonVariante.secundario,
-                    onPressed: _desvincular,
-                  ),
-                ],
+                const SizedBox(height: Dimen.espacio3),
+                AppBoton(
+                  texto: 'Cambiar celular',
+                  variante: BotonVariante.secundario,
+                  sinPermiso: !widget.puedeEditar,
+                  onPressed: _desvincular,
+                ),
               ],
             ],
           ),
@@ -415,14 +423,13 @@ class _EmpresaWhatsAppTabState extends ConsumerState<EmpresaWhatsAppTab> {
           style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
         ),
 
-        if (widget.puedeEditar) ...[
-          const SizedBox(height: Dimen.espacio4),
-          AppBoton(
-            texto: 'Guardar cambios',
-            cargando: widget.guardando,
-            onPressed: widget.onGuardar,
-          ),
-        ],
+        const SizedBox(height: Dimen.espacio4),
+        AppBoton(
+          texto: 'Guardar cambios',
+          cargando: widget.guardando,
+          sinPermiso: !widget.puedeEditar,
+          onPressed: widget.onGuardar,
+        ),
       ],
     );
   }

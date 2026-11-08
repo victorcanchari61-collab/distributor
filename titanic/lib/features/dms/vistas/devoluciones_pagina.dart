@@ -12,10 +12,12 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -95,11 +97,11 @@ class DevolucionesPagina extends ConsumerWidget {
       fila: (context, devolucion) => _TarjetaDevolucion(
         devolucion: devolucion,
         color: color,
-        onAprobar: resuelve && devolucion.pendiente
-            ? () => _aprobar(context, ref, devolucion)
+        onAprobar: devolucion.pendiente
+            ? permitir(resuelve, () => _aprobar(context, ref, devolucion))
             : null,
-        onRechazar: resuelve && devolucion.pendiente
-            ? () => _rechazar(context, ref, devolucion)
+        onRechazar: devolucion.pendiente
+            ? permitir(resuelve, () => _rechazar(context, ref, devolucion))
             : null,
       ),
     );
@@ -383,26 +385,18 @@ class _TarjetaDevolucion extends StatelessWidget {
       onTap: () => _detalle(context),
       acciones: [
         if (onRechazar != null)
-          IconButton(
-            onPressed: onRechazar,
+          AppIconoAccion(
+            icono: Icons.close_rounded,
             tooltip: 'Rechazar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.close_rounded,
-              size: 18,
-              color: Colores.peligro,
-            ),
+            color: Colores.peligro,
+            onPressed: onRechazar,
           ),
         if (onAprobar != null)
-          IconButton(
-            onPressed: onAprobar,
+          AppIconoAccion(
+            icono: Icons.check_rounded,
             tooltip: 'Aprobar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.check_rounded,
-              size: 18,
-              color: Colores.exito,
-            ),
+            color: Colores.exito,
+            onPressed: onAprobar,
           ),
       ],
     );
@@ -442,19 +436,13 @@ class _TarjetaDevolucion extends StatelessWidget {
             texto: 'Rechazar',
             variante: BotonVariante.secundario,
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onRechazar!();
-            },
+            onPressed: cerrandoHoja(context, onRechazar),
           ),
         if (onAprobar != null)
           AppBoton(
             texto: 'Aprobar',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onAprobar!();
-            },
+            onPressed: cerrandoHoja(context, onAprobar),
           ),
       ],
     );

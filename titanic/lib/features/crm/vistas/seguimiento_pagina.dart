@@ -11,6 +11,7 @@ import '../../../compartido/widgets/app_shell.dart';
 import '../../../compartido/widgets/app_vacio.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -75,7 +76,7 @@ class _SeguimientoPaginaState extends ConsumerState<SeguimientoPagina> {
       subtitulo: grupo?.titulo,
       acentado: color,
       rutaActual: SeguimientoPagina.ruta,
-      accionFlotante: id != null && puedeCrear
+      accionFlotante: id != null
           ? AppAccionesFlotantes(
               colorUnica: color,
               acciones: [
@@ -83,7 +84,10 @@ class _SeguimientoPaginaState extends ConsumerState<SeguimientoPagina> {
                   etiqueta: 'Registrar gestión',
                   icono: Icons.add_comment_outlined,
                   color: AccionGlobal.verde,
-                  onTap: () => mostrarFormularioGestion(context, clienteId: id),
+                  onTap: permitir(
+                    puedeCrear,
+                    () => mostrarFormularioGestion(context, clienteId: id),
+                  ),
                 ),
               ],
             )

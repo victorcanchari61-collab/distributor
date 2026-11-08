@@ -16,6 +16,7 @@ import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -133,20 +134,18 @@ class MiCajaPagina extends ConsumerWidget {
       // su permiso; cerrar la caja no.
       acciones: [
         if (caja != null) ...[
-          if (puede(ref, 'finanzas.caja', Accion.ingreso))
-            AccionGlobal(
-              etiqueta: 'Ingreso',
-              icono: Icons.arrow_upward,
-              color: AccionGlobal.verde,
-              onTap: () => _abrirMovimiento(context, 'INGRESO'),
-            ),
-          if (puede(ref, 'finanzas.caja', Accion.egreso))
-            AccionGlobal(
-              etiqueta: 'Egreso',
-              icono: Icons.arrow_downward,
-              color: AccionGlobal.naranja,
-              onTap: () => _abrirMovimiento(context, 'EGRESO'),
-            ),
+          AccionGlobal(
+            etiqueta: 'Ingreso',
+            icono: Icons.arrow_upward,
+            color: AccionGlobal.verde,
+            onTap: () => _abrirMovimiento(context, 'INGRESO'),
+          ).permitida(puede(ref, 'finanzas.caja', Accion.ingreso)),
+          AccionGlobal(
+            etiqueta: 'Egreso',
+            icono: Icons.arrow_downward,
+            color: AccionGlobal.naranja,
+            onTap: () => _abrirMovimiento(context, 'EGRESO'),
+          ).permitida(puede(ref, 'finanzas.caja', Accion.egreso)),
           AccionGlobal(
             etiqueta: 'Cerrar caja',
             icono: Icons.lock_outline,
@@ -455,7 +454,9 @@ class _HojaMovimientoState extends ConsumerState<_HojaMovimiento> {
 
   @override
   Widget build(BuildContext context) {
-    final categorias = ref.watch(categoriasMiCajaProvider(widget.tipo));
+    final categorias = ref
+        .watch(categoriasMiCajaProvider(widget.tipo))
+        .opcional(const []);
 
     return Padding(
       padding: _margenHoja(context),

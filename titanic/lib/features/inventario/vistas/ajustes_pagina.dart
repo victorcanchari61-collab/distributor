@@ -14,7 +14,9 @@ import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -100,36 +102,35 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina> {
       pistaBusqueda: 'Buscar por número, almacén o motivo',
       onRecargar: () => ref.read(ajustesProvider.notifier).recargar(),
       acciones: [
-        if (puede(ref, 'inv.ajustes', Accion.exportar))
-          accionExportar<DocumentoInventario>(
-            context,
-            nombre: 'ajustes',
-            filas: () => ref.read(ajustesFiltradosProvider),
-            encabezados: const [
-              'Número',
-              'Fecha',
-              'Almacén',
-              'Motivo',
-              'Tipo',
-              'Estado',
-              'Líneas',
-              'Total',
-              'Usuario',
-            ],
-            fila: (d) => [
-              d.numero,
-              diaIso(d.fecha),
-              d.almacen,
-              d.motivo,
-              d.motivoTipo,
-              d.estado,
-              d.lineas,
-              d.total,
-              d.usuario,
-            ],
-          ),
+        accionExportar<DocumentoInventario>(
+          context,
+          nombre: 'ajustes',
+          filas: () => ref.read(ajustesFiltradosProvider),
+          encabezados: const [
+            'Número',
+            'Fecha',
+            'Almacén',
+            'Motivo',
+            'Tipo',
+            'Estado',
+            'Líneas',
+            'Total',
+            'Usuario',
+          ],
+          fila: (d) => [
+            d.numero,
+            diaIso(d.fecha),
+            d.almacen,
+            d.motivo,
+            d.motivoTipo,
+            d.estado,
+            d.lineas,
+            d.total,
+            d.usuario,
+          ],
+        ).permitida(puede(ref, 'inv.ajustes', Accion.exportar)),
       ],
-      onNuevo: puede(ref, 'inv.ajustes', Accion.crear) ? _nuevoAjuste : null,
+      onNuevo: permitir(puede(ref, 'inv.ajustes', Accion.crear), _nuevoAjuste),
       textoNuevo: 'Nuevo ajuste',
       iconoVacio: Icons.fact_check_outlined,
       singular: 'ajuste',
@@ -146,7 +147,9 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina> {
         doc: doc,
         color: color,
         conPdf: puedeExportar,
-        onAnular: doc.anulado || !puedeAnular ? null : () => _anularAjuste(doc),
+        onAnular: doc.anulado
+            ? null
+            : permitir(puedeAnular, () => _anularAjuste(doc)),
       ),
     );
   }
@@ -267,9 +270,10 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina> {
       onBuscar: (t) => ref.read(busquedaMotivosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar motivo',
       onRecargar: () => ref.read(motivosProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'inv.ajustes', Accion.crear)
-          ? () => mostrarFormularioMotivo(context, ref)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'inv.ajustes', Accion.crear),
+        () => mostrarFormularioMotivo(context, ref),
+      ),
       textoNuevo: 'Nuevo motivo',
       iconoVacio: Icons.checklist,
       singular: 'motivo',
@@ -287,20 +291,24 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina> {
       fila: (context, motivo) {
         // El del sistema no se edita, ni se desactiva, ni se borra: no hay
         // accion que ofrecerle.
-        final editable = !motivo.delSistema && puedeEditar;
 
         return _TarjetaMotivo(
           motivo: motivo,
           color: color,
-          onEditar: editable
-              ? () => mostrarFormularioMotivo(context, ref, motivo: motivo)
-              : null,
-          onEstado: editable ? () => _cambiarEstadoMotivo(motivo) : null,
+          onEditar: motivo.delSistema
+              ? null
+              : permitir(
+                  puedeEditar,
+                  () => mostrarFormularioMotivo(context, ref, motivo: motivo),
+                ),
+          onEstado: motivo.delSistema
+              ? null
+              : permitir(puedeEditar, () => _cambiarEstadoMotivo(motivo)),
           // Va con "editar" y no con "eliminar", como en la web: inv.ajustes
           // no declara esa accion porque un ajuste no se borra, se anula.
           // Solo sin movimientos: lo que ya se usa se desactiva.
-          onEliminar: editable && motivo.movimientos == 0
-              ? () => _eliminarMotivo(motivo)
+          onEliminar: !motivo.delSistema && motivo.movimientos == 0
+              ? permitir(puedeEditar, () => _eliminarMotivo(motivo))
               : null,
         );
       },
@@ -475,24 +483,25 @@ class _TarjetaAjuste extends StatelessWidget {
         contenidoExtra: _lineas,
       ),
       acciones: [
-        if (conPdf)
-          IconButton(
-            onPressed: () => mostrarOpcionesPdf(
+        AppIconoAccion(
+          icono: Icons.picture_as_pdf_outlined,
+          tooltip: 'PDF',
+          onPressed: permitir(
+            conPdf,
+            () => mostrarOpcionesPdf(
               context,
               documento: DocumentoPdf.ajuste,
               id: doc.id,
               numero: doc.numero,
             ),
-            tooltip: 'PDF',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
           ),
+        ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.advertencia),
+            color: Colores.advertencia,
+            onPressed: onAnular,
           ),
       ],
     );
@@ -550,40 +559,28 @@ class _TarjetaMotivo extends StatelessWidget {
           ),
         ),
       ],
-      onTap: onEditar,
+      onTap: esSinPermiso(onEditar) ? null : onEditar,
       acciones: [
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: motivo.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: motivo.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              motivo.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: Colores.advertencia,
-            ),
+            color: Colores.advertencia,
+            onPressed: onEstado,
           ),
         if (onEliminar != null)
-          IconButton(
-            onPressed: onEliminar,
+          AppIconoAccion(
+            icono: Icons.delete_outline,
             tooltip: 'Eliminar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.delete_outline,
-              size: 18,
-              color: Colores.advertencia,
-            ),
+            color: Colores.advertencia,
+            onPressed: onEliminar,
           ),
       ],
     );

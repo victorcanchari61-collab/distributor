@@ -26,6 +26,33 @@ class ComprobantesApi {
             as Map<String, dynamic>,
       );
 
+  /// POST /api/comprobante/emitir-directo. Factura (01) o boleta (03) directa: registra la venta (que no sale en Notas de
+  /// venta), descuenta el stock y emite el comprobante en un solo paso. [venta] es el cuerpo de una venta directa y no
+  /// lleva recojos: el servidor los rechaza.
+  Future<Comprobante> emitirDirecto(
+    Map<String, dynamic> venta,
+    String tipo,
+  ) async => Comprobante.desdeJson(
+    await _api.post(
+          '/comprobante/emitir-directo',
+          cuerpo: {...venta, 'tipo': tipo},
+        )
+        as Map<String, dynamic>,
+  );
+
+  /// POST /api/comprobante/{id}/baja. Comunicación de baja de una factura (motivo de 3 a 100 caracteres). Si SUNAT la acepta,
+  /// la venta también se anula.
+  Future<Comprobante> darDeBaja(int id, String motivo) async =>
+      Comprobante.desdeJson(
+        await _api.post('/comprobante/$id/baja', cuerpo: {'motivo': motivo})
+            as Map<String, dynamic>,
+      );
+
+  /// POST /api/comprobante/{id}/baja/consultar. Pregunta a SUNAT por una baja que quedó pendiente.
+  Future<Comprobante> consultarBaja(int id) async => Comprobante.desdeJson(
+    await _api.post('/comprobante/$id/baja/consultar') as Map<String, dynamic>,
+  );
+
   /// POST /api/comprobante/{id}/reenviar. Vuelve a mandar a SUNAT un comprobante que quedo sin respuesta.
   Future<Comprobante> reenviar(int id) async => Comprobante.desdeJson(
     await _api.post('/comprobante/$id/reenviar') as Map<String, dynamic>,

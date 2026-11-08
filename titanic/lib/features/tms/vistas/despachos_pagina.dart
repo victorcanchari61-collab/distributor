@@ -14,8 +14,10 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/cliente_api.dart';
@@ -77,40 +79,40 @@ class DespachosPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por número, ruta o placa',
       onRecargar: () => ref.read(despachosProvider.notifier).recargar(),
       acciones: [
-        if (puede(ref, 'tms.despachos', Accion.exportar))
-          accionExportar<Despacho>(
-            context,
-            nombre: 'despachos',
-            filas: () => ref.read(despachosFiltradosProvider),
-            encabezados: const [
-              'Número',
-              'Fecha',
-              'Ruta',
-              'Vehículo',
-              'Conductor',
-              'Estado',
-              'Pedidos',
-              'Entregados',
-              'No entregados',
-              'Total',
-            ],
-            fila: (d) => [
-              d.numero,
-              diaIso(d.fecha),
-              d.ruta,
-              d.vehiculo,
-              d.conductor,
-              d.estado,
-              d.pedidos,
-              d.entregados,
-              d.noEntregados,
-              d.total,
-            ],
-          ),
+        accionExportar<Despacho>(
+          context,
+          nombre: 'despachos',
+          filas: () => ref.read(despachosFiltradosProvider),
+          encabezados: const [
+            'Número',
+            'Fecha',
+            'Ruta',
+            'Vehículo',
+            'Conductor',
+            'Estado',
+            'Pedidos',
+            'Entregados',
+            'No entregados',
+            'Total',
+          ],
+          fila: (d) => [
+            d.numero,
+            diaIso(d.fecha),
+            d.ruta,
+            d.vehiculo,
+            d.conductor,
+            d.estado,
+            d.pedidos,
+            d.entregados,
+            d.noEntregados,
+            d.total,
+          ],
+        ).permitida(puede(ref, 'tms.despachos', Accion.exportar)),
       ],
-      onNuevo: puede(ref, 'tms.despachos', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'tms.despachos', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       textoNuevo: 'Nuevo despacho',
       iconoVacio: Icons.local_shipping_outlined,
       singular: 'despacho',
@@ -147,15 +149,17 @@ class DespachosPagina extends ConsumerWidget {
       fila: (context, despacho) => _TarjetaDespacho(
         despacho: despacho,
         color: color,
-        onEditar:
-            puede(ref, 'tms.despachos', Accion.editar) && !despacho.anulado
-            ? () => _abrirFormulario(context, despacho)
+        onEditar: !despacho.anulado
+            ? permitir(
+                puede(ref, 'tms.despachos', Accion.editar),
+                () => _abrirFormulario(context, despacho),
+              )
             : null,
-        onAnular:
-            puede(ref, 'tms.despachos', Accion.anular) &&
-                !despacho.anulado &&
-                despacho.entregados == 0
-            ? () => _anular(context, ref, despacho)
+        onAnular: !despacho.anulado && despacho.entregados == 0
+            ? permitir(
+                puede(ref, 'tms.despachos', Accion.anular),
+                () => _anular(context, ref, despacho),
+              )
             : null,
         puedeExportar: puede(ref, 'tms.despachos', Accion.exportar),
       ),
@@ -337,55 +341,55 @@ class _TarjetaDespacho extends StatelessWidget {
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
-        if (puedeExportar) ...[
-          IconButton(
-            onPressed: () => _descargarYAbrir(
+        AppIconoAccion(
+          icono: Icons.picture_as_pdf_outlined,
+          tooltip: 'PDF de pedidos',
+          onPressed: permitir(
+            puedeExportar,
+            () => _descargarYAbrir(
               context,
               () => ClienteApi().archivo('/despacho/${despacho.id}/pdf'),
               'despacho-${despacho.numero}',
             ),
-            tooltip: 'PDF de pedidos',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
           ),
-          IconButton(
-            onPressed: () => mostrarReporteCarga(
+        ),
+        AppIconoAccion(
+          icono: Icons.inventory_2_outlined,
+          tooltip: 'Reporte de carga',
+          onPressed: permitir(
+            puedeExportar,
+            () => mostrarReporteCarga(
               context,
               despachoId: despacho.id,
               numero: despacho.numero,
             ),
-            tooltip: 'Reporte de carga',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.inventory_2_outlined, size: 18),
           ),
-          IconButton(
-            onPressed: () => _descargarYAbrir(
+        ),
+        AppIconoAccion(
+          icono: Icons.receipt_long_outlined,
+          tooltip: 'Detalle por cliente',
+          onPressed: permitir(
+            puedeExportar,
+            () => _descargarYAbrir(
               context,
               () => DespachoApi(ClienteApi()).pdfClientes(despacho.id),
               'clientes-${despacho.numero}',
             ),
-            tooltip: 'Detalle por cliente',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.receipt_long_outlined, size: 18),
           ),
-        ],
+        ),
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.peligro),
+            color: Colores.peligro,
+            onPressed: onAnular,
           ),
       ],
     );
@@ -410,10 +414,7 @@ class _TarjetaDespacho extends StatelessWidget {
           AppBoton(
             texto: 'Editar',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar!();
-            },
+            onPressed: cerrandoHoja(context, onEditar),
           ),
       ],
     );

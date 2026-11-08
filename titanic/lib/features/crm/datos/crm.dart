@@ -14,7 +14,7 @@ enum EstadoCaida {
   sinBase(
     'SIN_BASE',
     'Sin comparación',
-    'Sin ventas el año anterior',
+    'Sin ventas en el tramo anterior',
     Color(0xFF64748B),
   );
 
@@ -27,11 +27,53 @@ enum EstadoCaida {
   final String rango;
   final Color color;
 
+  /// Lo mismo que [rango], pero diciendo contra qué se compara (el mes o el año
+  /// anterior) cuando el estado es el de sin comparación.
+  String rangoPara(CompararCaida comparar) =>
+      this == sinBase ? comparar.sinVentas : rango;
+
   static EstadoCaida desdeClave(String? clave) => values.firstWhere(
     (e) => e.clave == clave,
     orElse: () => EstadoCaida.sinBase,
   );
 }
+
+/// Contra qué se compara el tramo que se mira: el mismo tramo del mes anterior
+/// (lo normal) o del año anterior. Es el parámetro `comparar` del API.
+enum CompararCaida {
+  mes('mes', 'Mes anterior', 'el mes anterior'),
+  anio('anio', 'Año anterior', 'el año anterior');
+
+  const CompararCaida(this.clave, this.etiqueta, this.referencia);
+
+  /// Lo que viaja en la query: `comparar=mes|anio`.
+  final String clave;
+
+  /// Lo que dice la opción del selector.
+  final String etiqueta;
+
+  /// Cómo se nombra el tramo anterior dentro de una frase.
+  final String referencia;
+
+  /// "Sin ventas el mes anterior": lo que dice la tarjeta de sin comparación.
+  String get sinVentas => 'Sin ventas $referencia';
+}
+
+/// Los meses abreviados, como los escribe el panel web ("set", no "sep").
+const _mesesCortos = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'set',
+  'oct',
+  'nov',
+  'dic',
+];
 
 double _d(Object? v) => (v as num?)?.toDouble() ?? 0;
 int _i(Object? v) => (v as num?)?.toInt() ?? 0;
@@ -50,7 +92,8 @@ class RangoDias {
       RangoDias(_dia(j['desde']), _dia(j['hasta']));
 }
 
-/// Qué se mide y contra qué: el tramo pedido y el mismo tramo del año anterior.
+/// Qué se mide y contra qué: el tramo pedido y el mismo tramo del mes anterior
+/// (o del año anterior, a elección).
 class PeriodoCaida {
   const PeriodoCaida({
     required this.actual,
@@ -65,6 +108,16 @@ class PeriodoCaida {
   /// "1 ene - 27 oct 2026"
   final String etiqueta;
   final String etiquetaAnterior;
+
+  /// Los rótulos de las dos columnas de ventas, (anterior, actual): los años
+  /// ("2025", "2026") si se compara por año, y el mes con su año ("oct 2026",
+  /// "nov 2026") si se compara por mes.
+  (String, String) rotulos(CompararCaida comparar) {
+    String mes(DateTime d) => '${_mesesCortos[d.month - 1]} ${d.year}';
+    return comparar == CompararCaida.anio
+        ? ('${anterior.hasta.year}', '${actual.hasta.year}')
+        : (mes(anterior.hasta), mes(actual.hasta));
+  }
 
   factory PeriodoCaida.desdeJson(Map<String, dynamic> j) => PeriodoCaida(
     actual: RangoDias.desdeJson(j['actual'] as Map<String, dynamic>),
@@ -140,7 +193,7 @@ class FilaCaida {
   /// Actual menos anterior: negativa es plata que se dejó de vender.
   final double variacion;
 
-  /// Positiva si cayó. Nula si el año anterior no compró.
+  /// Positiva si cayó. Nula si el tramo anterior no compró.
   final double? caidaPct;
 
   /// Lo que dejó de comprar (cero si compra igual o más).

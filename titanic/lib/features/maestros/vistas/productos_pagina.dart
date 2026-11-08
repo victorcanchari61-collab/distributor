@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_acciones_flotantes.dart';
 import '../../../compartido/widgets/app_importar_hoja.dart';
 import '../../../compartido/csv.dart';
 import '../../../compartido/exportar_csv.dart';
@@ -13,8 +14,10 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -293,42 +296,44 @@ class ProductosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaProductosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre, código o categoría',
       onRecargar: () => ref.read(productosProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'maestros.productos', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'maestros.productos', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       acciones: [
-        if (puede(ref, 'maestros.productos', Accion.importar))
-          ...accionesImportar(context, _importacionProductos(ref)),
-        if (puede(ref, 'maestros.productos', Accion.exportar))
-          accionExportar<Producto>(
-            context,
-            nombre: 'productos',
-            filas: () => ref.read(productosFiltradosProvider),
-            encabezados: const [
-              'Código',
-              'Producto',
-              'Categoría',
-              'Marca',
-              'Unidad base',
-              'Costo de referencia',
-              'Precio de referencia',
-              'Afecto a IGV',
-              'Stock mínimo',
-              'Estado',
-            ],
-            fila: (p) => [
-              p.codigo,
-              p.nombre,
-              p.categoria,
-              p.marca,
-              p.unidadBase,
-              p.costoReferencia,
-              p.precioReferencia,
-              p.afectoIgv ? 'Sí' : 'No',
-              p.stockMinimo,
-              p.activo ? 'Activo' : 'Desactivado',
-            ],
-          ),
+        ...accionesImportar(
+          context,
+          _importacionProductos(ref),
+        ).permitidas(puede(ref, 'maestros.productos', Accion.importar)),
+        accionExportar<Producto>(
+          context,
+          nombre: 'productos',
+          filas: () => ref.read(productosFiltradosProvider),
+          encabezados: const [
+            'Código',
+            'Producto',
+            'Categoría',
+            'Marca',
+            'Unidad base',
+            'Costo de referencia',
+            'Precio de referencia',
+            'Afecto a IGV',
+            'Stock mínimo',
+            'Estado',
+          ],
+          fila: (p) => [
+            p.codigo,
+            p.nombre,
+            p.categoria,
+            p.marca,
+            p.unidadBase,
+            p.costoReferencia,
+            p.precioReferencia,
+            p.afectoIgv ? 'Sí' : 'No',
+            p.stockMinimo,
+            p.activo ? 'Activo' : 'Desactivado',
+          ],
+        ).permitida(puede(ref, 'maestros.productos', Accion.exportar)),
       ],
       iconoVacio: Icons.inventory_2_outlined,
       singular: 'producto',
@@ -374,12 +379,14 @@ class ProductosPagina extends ConsumerWidget {
       fila: (context, producto) => _TarjetaProducto(
         producto: producto,
         color: color,
-        onEditar: puede(ref, 'maestros.productos', Accion.editar)
-            ? () => _abrirFormulario(context, producto)
-            : null,
-        onEstado: puede(ref, 'maestros.productos', Accion.editar)
-            ? () => _cambiarEstado(context, ref, producto)
-            : null,
+        onEditar: permitir(
+          puede(ref, 'maestros.productos', Accion.editar),
+          () => _abrirFormulario(context, producto),
+        ),
+        onEstado: permitir(
+          puede(ref, 'maestros.productos', Accion.editar),
+          () => _cambiarEstado(context, ref, producto),
+        ),
       ),
     );
   }
@@ -588,26 +595,18 @@ class _TarjetaProducto extends StatelessWidget {
       onTap: () => _abrirDetalle(context),
       acciones: [
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: producto.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: producto.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              producto.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: Colores.advertencia,
-            ),
+            color: Colores.advertencia,
+            onPressed: onEstado,
           ),
       ],
     );
@@ -630,19 +629,13 @@ class _TarjetaProducto extends StatelessWidget {
             texto: producto.activo ? 'Desactivar' : 'Activar',
             variante: BotonVariante.secundario,
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEstado!();
-            },
+            onPressed: cerrandoHoja(context, onEstado),
           ),
         if (onEditar != null)
           AppBoton(
             texto: 'Editar',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar!();
-            },
+            onPressed: cerrandoHoja(context, onEditar),
           ),
       ],
     );

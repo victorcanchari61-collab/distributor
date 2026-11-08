@@ -2,8 +2,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/permisos/sin_permiso.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
+import 'app_aviso.dart';
+import 'app_sin_permiso.dart';
 
 /// Una acción de la PANTALLA entera: crear, importar, descargar la plantilla,
 /// exportar.
@@ -13,8 +16,10 @@ import '../../core/tema/dimensiones.dart';
 /// pantalla están en la barra de arriba de la tabla; en el teléfono no caben ahí
 /// y van juntas en un solo botón flotante.
 ///
-/// Quien arma la lista decide qué acciones entran: la que el usuario no puede
-/// hacer por permiso simplemente no se agrega.
+/// Quien arma la lista decide qué acciones entran. La que el usuario no puede
+/// hacer por PERMISO sí entra, pero con `onTap: accionSinPermiso` (ver
+/// `permitir`): se ve en gris y al tocarla avisa que no tiene permiso, igual
+/// que en el panel web. La que no aplica por otra razón no se agrega.
 class AccionGlobal {
   const AccionGlobal({
     required this.etiqueta,
@@ -31,6 +36,25 @@ class AccionGlobal {
   /// exportar turquesa, subir naranja.
   final Color color;
 
+  /// Si la acción está a la vista pero la persona no tiene permiso para ella.
+  bool get sinPermiso => esSinPermiso(onTap);
+
+  /// El color con el que se pinta: gris cuando falta el permiso.
+  Color get colorVisible => sinPermiso ? Colores.tintaTenue : color;
+
+  /// Esta misma acción si hay permiso; si no, la versión en gris que solo avisa.
+  ///
+  /// Reemplaza al `if (puede(...))` que antes la escondía: así quien no tiene
+  /// permiso ve que existe, en vez de preguntarse dónde está.
+  AccionGlobal permitida(bool tiene) => tiene
+      ? this
+      : AccionGlobal(
+          etiqueta: etiqueta,
+          icono: icono,
+          onTap: accionSinPermiso,
+          color: color,
+        );
+
   /// Los colores de las acciones de siempre, para que en todas las pantallas
   /// crear sea verde y exportar turquesa.
   static const verde = Colores.exito;
@@ -39,6 +63,13 @@ class AccionGlobal {
   static const turquesa = Color(0xFF0D9488);
   static const violeta = Color(0xFF7C3AED);
   static const rojo = Color(0xFFDC2626);
+}
+
+/// Lo mismo para varias acciones juntas (importar trae dos o tres).
+extension AccionesPermitidas on List<AccionGlobal> {
+  List<AccionGlobal> permitidas(bool tiene) => [
+    for (final a in this) a.permitida(tiene),
+  ];
 }
 
 /// El botón flotante de la pantalla.
@@ -67,8 +98,12 @@ class AppAccionesFlotantes extends StatelessWidget {
     if (acciones.length == 1) {
       final unica = acciones.first;
       return FloatingActionButton.extended(
-        onPressed: unica.onTap,
-        backgroundColor: colorUnica ?? unica.color,
+        onPressed: unica.sinPermiso
+            ? () => avisarSinPermiso(context)
+            : unica.onTap,
+        backgroundColor: unica.sinPermiso
+            ? Colores.tintaTenue
+            : (colorUnica ?? unica.color),
         foregroundColor: Colors.white,
         icon: Icon(unica.icono),
         label: Text(unica.etiqueta),
@@ -243,8 +278,14 @@ class _Abanico extends StatelessWidget {
                 accion: acciones[i],
                 elevacionEtiqueta: elevacion(i),
                 alTocar: () {
+                  final sinPermiso = acciones[i].sinPermiso;
+                  final aviso = sinPermiso ? Aviso.de(context) : null;
                   Navigator.of(context).pop();
-                  acciones[i].onTap();
+                  if (sinPermiso) {
+                    aviso!.error(avisoSinPermiso);
+                  } else {
+                    acciones[i].onTap();
+                  }
                 },
               ),
             ),
@@ -309,7 +350,11 @@ class _Fila extends StatelessWidget {
                       maxLines: 1,
                       softWrap: false,
                       style: TextStyle(
-                        color: Color.lerp(accion.color, Colors.white, 0.65),
+                        color: Color.lerp(
+                          accion.colorVisible,
+                          Colors.white,
+                          0.65,
+                        ),
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
@@ -323,7 +368,7 @@ class _Fila extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: accion.color,
+                color: accion.colorVisible,
                 shape: BoxShape.circle,
                 boxShadow: const [
                   BoxShadow(

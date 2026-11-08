@@ -11,8 +11,10 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -53,36 +55,36 @@ class PedidosPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por número o cliente',
       onRecargar: () => ref.read(pedidosProvider.notifier).recargar(),
       acciones: [
-        if (puede(ref, 'fact.pedidos', Accion.exportar))
-          accionExportar<Pedido>(
-            context,
-            nombre: 'pedidos',
-            filas: () => ref.read(pedidosFiltradosProvider),
-            encabezados: const [
-              'Número',
-              'Fecha',
-              'Cliente',
-              'Ruta',
-              'Condición de pago',
-              'Estado',
-              'Total',
-              'Usuario',
-            ],
-            fila: (p) => [
-              p.numero,
-              diaIso(p.fecha),
-              p.cliente,
-              p.ruta,
-              p.condicionPago,
-              p.estado,
-              p.total,
-              p.usuario,
-            ],
-          ),
+        accionExportar<Pedido>(
+          context,
+          nombre: 'pedidos',
+          filas: () => ref.read(pedidosFiltradosProvider),
+          encabezados: const [
+            'Número',
+            'Fecha',
+            'Cliente',
+            'Ruta',
+            'Condición de pago',
+            'Estado',
+            'Total',
+            'Usuario',
+          ],
+          fila: (p) => [
+            p.numero,
+            diaIso(p.fecha),
+            p.cliente,
+            p.ruta,
+            p.condicionPago,
+            p.estado,
+            p.total,
+            p.usuario,
+          ],
+        ).permitida(puede(ref, 'fact.pedidos', Accion.exportar)),
       ],
-      onNuevo: puede(ref, 'fact.pedidos', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'fact.pedidos', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       textoNuevo: 'Nuevo pedido',
       iconoVacio: Icons.list_alt_outlined,
       singular: 'pedido',
@@ -115,27 +117,31 @@ class PedidosPagina extends ConsumerWidget {
       fila: (context, pedido) => _TarjetaPedido(
         pedido: pedido,
         color: color,
-        onEditar:
-            puede(ref, 'fact.pedidos', Accion.editar) &&
-                pedido.estado == EstadoPedido.pendiente
-            ? () => _abrirFormulario(context, pedido)
+        onEditar: pedido.estado == EstadoPedido.pendiente
+            ? permitir(
+                puede(ref, 'fact.pedidos', Accion.editar),
+                () => _abrirFormulario(context, pedido),
+              )
             : null,
-        onConfirmar:
-            puede(ref, 'fact.pedidos', Accion.confirmar) &&
-                pedido.estado == EstadoPedido.pendiente
-            ? () => _confirmar(context, ref, pedido)
+        onConfirmar: pedido.estado == EstadoPedido.pendiente
+            ? permitir(
+                puede(ref, 'fact.pedidos', Accion.confirmar),
+                () => _confirmar(context, ref, pedido),
+              )
             : null,
-        onNoEntregado:
-            puede(ref, 'fact.pedidos', Accion.confirmar) &&
-                pedido.estado == EstadoPedido.pendiente
-            ? () => pedido.noEntregadoMotivo != null
-                  ? _quitarNoEntregado(context, ref, pedido)
-                  : _noEntregado(context, ref, pedido)
+        onNoEntregado: pedido.estado == EstadoPedido.pendiente
+            ? permitir(
+                puede(ref, 'fact.pedidos', Accion.confirmar),
+                () => pedido.noEntregadoMotivo != null
+                    ? _quitarNoEntregado(context, ref, pedido)
+                    : _noEntregado(context, ref, pedido),
+              )
             : null,
-        onAnular:
-            puede(ref, 'fact.pedidos', Accion.anular) &&
-                pedido.estado == EstadoPedido.pendiente
-            ? () => _anular(context, ref, pedido)
+        onAnular: pedido.estado == EstadoPedido.pendiente
+            ? permitir(
+                puede(ref, 'fact.pedidos', Accion.anular),
+                () => _anular(context, ref, pedido),
+              )
             : null,
       ),
     );
@@ -438,15 +444,11 @@ class _TarjetaPedido extends StatelessWidget {
           icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
         if (onConfirmar != null)
-          IconButton(
-            onPressed: onConfirmar,
+          AppIconoAccion(
+            icono: Icons.check_circle_outline,
             tooltip: 'Confirmar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.check_circle_outline,
-              size: 18,
-              color: Colores.exito,
-            ),
+            color: Colores.exito,
+            onPressed: onConfirmar,
           ),
         if (onNoEntregado != null)
           IconButton(
@@ -464,22 +466,18 @@ class _TarjetaPedido extends StatelessWidget {
             ),
           ),
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.peligro),
+            color: Colores.peligro,
+            onPressed: onAnular,
           ),
       ],
     );
@@ -501,19 +499,13 @@ class _TarjetaPedido extends StatelessWidget {
             texto: 'Confirmar',
             variante: BotonVariante.secundario,
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onConfirmar!();
-            },
+            onPressed: cerrandoHoja(context, onConfirmar),
           ),
         if (onEditar != null)
           AppBoton(
             texto: 'Editar',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar!();
-            },
+            onPressed: cerrandoHoja(context, onEditar),
           ),
       ],
     );

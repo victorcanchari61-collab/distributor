@@ -14,10 +14,13 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -92,42 +95,41 @@ class AdelantosPagina extends ConsumerWidget {
         }
       },
       acciones: [
-        if (puede(ref, 'rrhh.adelantos', Accion.exportar))
-          accionReportePdf(
-            context,
-            ruta: '/adelanto/pdf',
-            nombre: 'adelantos.pdf',
-          ),
-        if (puede(ref, 'rrhh.adelantos', Accion.exportar))
-          accionExportar<Adelanto>(
-            context,
-            nombre: 'adelantos',
-            filas: () => ref.read(adelantosFiltradosProvider),
-            encabezados: const [
-              'Empleado',
-              'Cargo',
-              'Fecha',
-              'Monto',
-              'Descontado',
-              'Saldo',
-              'Cuota semanal',
-              'Estado',
-            ],
-            fila: (a) => [
-              a.empleado,
-              a.cargo,
-              diaIso(a.fecha),
-              a.monto,
-              a.descontado,
-              a.saldo,
-              a.cuotaSemanal,
-              a.estado,
-            ],
-          ),
+        accionReportePdf(
+          context,
+          ruta: '/adelanto/pdf',
+          nombre: 'adelantos.pdf',
+        ).permitida(puede(ref, 'rrhh.adelantos', Accion.exportar)),
+        accionExportar<Adelanto>(
+          context,
+          nombre: 'adelantos',
+          filas: () => ref.read(adelantosFiltradosProvider),
+          encabezados: const [
+            'Empleado',
+            'Cargo',
+            'Fecha',
+            'Monto',
+            'Descontado',
+            'Saldo',
+            'Cuota semanal',
+            'Estado',
+          ],
+          fila: (a) => [
+            a.empleado,
+            a.cargo,
+            diaIso(a.fecha),
+            a.monto,
+            a.descontado,
+            a.saldo,
+            a.cuotaSemanal,
+            a.estado,
+          ],
+        ).permitida(puede(ref, 'rrhh.adelantos', Accion.exportar)),
       ],
-      onNuevo: puede(ref, 'rrhh.adelantos', Accion.crear)
-          ? () => _hoja(context, (_) => const _HojaNuevo())
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'rrhh.adelantos', Accion.crear),
+        () => _hoja(context, (_) => const _HojaNuevo()),
+      ),
       textoNuevo: 'Nuevo adelanto',
       iconoVacio: Icons.payments_outlined,
       singular: 'adelanto',
@@ -203,15 +205,15 @@ class AdelantosPagina extends ConsumerWidget {
         adelanto: a,
         color: color,
         onVer: () => _hoja(context, (_) => _HojaDetalle(id: a.id)),
-        onPlan: a.pendiente && puedeEditar
-            ? () => _hoja(context, (_) => _HojaPlan(adelanto: a))
+        onPlan: a.pendiente
+            ? permitir(
+                puedeEditar,
+                () => _hoja(context, (_) => _HojaPlan(adelanto: a)),
+              )
             : null,
         // Solo sin descuentos: lo descontado ya se le pagó de menos.
-        onAnular:
-            puedeAnular &&
-                a.estado != EstadoAdelanto.anulado &&
-                a.descontado == 0
-            ? () => _anular(context, ref, a)
+        onAnular: a.estado != EstadoAdelanto.anulado && a.descontado == 0
+            ? permitir(puedeAnular, () => _anular(context, ref, a))
             : null,
       ),
     );
@@ -297,22 +299,18 @@ class _TarjetaAdelanto extends StatelessWidget {
           ),
         ),
         if (onPlan != null)
-          IconButton(
-            onPressed: onPlan,
+          AppIconoAccion(
+            icono: Icons.event_repeat_outlined,
             tooltip: 'Cómo se descuenta',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.event_repeat_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onPlan,
           ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.advertencia),
+            color: Colores.advertencia,
+            onPressed: onAnular,
           ),
       ],
     );
@@ -531,8 +529,8 @@ class _HojaNuevoState extends ConsumerState<_HojaNuevo> {
 
   @override
   Widget build(BuildContext context) {
-    final empleados = ref.watch(empleadosAdelantoProvider);
-    final cuentas = ref.watch(cuentasAdelantoProvider);
+    final empleados = ref.watch(empleadosAdelantoProvider).opcional(const []);
+    final cuentas = ref.watch(cuentasAdelantoProvider).opcional(const []);
     final elegido = empleados.valueOrNull
         ?.where((e) => e.id == _empleadoId)
         .firstOrNull;

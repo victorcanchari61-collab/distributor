@@ -6,6 +6,7 @@ import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -78,7 +79,8 @@ class _PaseListaPaginaState extends ConsumerState<PaseListaPagina> {
         // Los de Asistencia, con su propio permiso: no hace falta poder ver Empleados.
         api.empleadosAsistencia(),
         api.asistencias(widget.fecha, widget.fecha),
-        api.feriados(),
+        // Apoyo: sin permiso para ver los feriados, el pase de lista sigue.
+        opcional(api.feriados(), const <Feriado>[]),
       ]);
       final empleados = resultados[0] as List<EmpleadoAsistencia>;
       final marcas = (resultados[1] as List<Asistencia>).where(

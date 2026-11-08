@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_selector.dart';
@@ -46,9 +48,8 @@ class _EmpresaSeriesTabState extends ConsumerState<EmpresaSeriesTab> {
   bool get _esNota => _tipo == '07' || _tipo == '08';
 
   /// La letra con la que SUNAT exige que empiece la serie.
-  String get _letra => _esNota
-      ? (_aplicaA == '03' ? 'B' : 'F')
-      : (_tipo == '03' ? 'B' : 'F');
+  String get _letra =>
+      _esNota ? (_aplicaA == '03' ? 'B' : 'F') : (_tipo == '03' ? 'B' : 'F');
 
   @override
   void initState() {
@@ -65,9 +66,7 @@ class _EmpresaSeriesTabState extends ConsumerState<EmpresaSeriesTab> {
 
   Future<void> _cargar() async {
     try {
-      final lista = await ref
-          .read(configApiProvider)
-          .series(widget.empresaId);
+      final lista = await ref.read(configApiProvider).series(widget.empresaId);
       if (mounted) {
         setState(() {
           _series = lista;
@@ -83,16 +82,15 @@ class _EmpresaSeriesTabState extends ConsumerState<EmpresaSeriesTab> {
     final mensajero = Aviso.de(context);
     setState(() => _agregando = true);
     try {
-      final creada = await ref.read(configApiProvider).crearSerie(
-        widget.empresaId,
-        {
-          'tipo': _tipo,
-          'serie': _serie.text.trim().toUpperCase(),
-          'aplicaA': _esNota ? _aplicaA : null,
-          'ultimoNumero': int.tryParse(_ultimo.text.trim()) ?? 0,
-          'activa': true,
-        },
-      );
+      final creada = await ref
+          .read(configApiProvider)
+          .crearSerie(widget.empresaId, {
+            'tipo': _tipo,
+            'serie': _serie.text.trim().toUpperCase(),
+            'aplicaA': _esNota ? _aplicaA : null,
+            'ultimoNumero': int.tryParse(_ultimo.text.trim()) ?? 0,
+            'activa': true,
+          });
       _serie.clear();
       _ultimo.text = '0';
       mensajero.mostrar('Serie ${creada.serie} creada');
@@ -143,9 +141,7 @@ class _EmpresaSeriesTabState extends ConsumerState<EmpresaSeriesTab> {
 
     final mensajero = Aviso.de(context);
     try {
-      await ref
-          .read(configApiProvider)
-          .eliminarSerie(widget.empresaId, s.id);
+      await ref.read(configApiProvider).eliminarSerie(widget.empresaId, s.id);
       mensajero.mostrar('Serie ${s.serie} eliminada');
       await _cargar();
     } on ApiExcepcion catch (e) {
@@ -415,30 +411,37 @@ class _FilaSerieState extends State<_FilaSerie> {
                       : null,
                 ),
               ),
-              if (widget.puedeEditar) ...[
+              if (widget.puedeEditar)
                 IconButton(
                   tooltip: 'Eliminar',
                   onPressed: s.emitidos > 0 ? null : widget.onEliminar,
                   icon: const Icon(Icons.delete_outline, size: 20),
                   color: Colores.peligro,
+                )
+              else
+                AppIconoAccion(
+                  icono: Icons.delete_outline,
+                  tooltip: 'Eliminar',
+                  tam: 20,
+                  onPressed: accionSinPermiso,
                 ),
-                AppBoton(
-                  texto: 'Guardar',
-                  expandido: false,
-                  tam: BotonTam.md,
-                  onPressed: () {
-                    // Se revisa al tocar: el campo no avisa de cada tecla.
-                    if (!_sucia) return;
-                    widget.onGuardar({
-                      'tipo': s.tipo,
-                      'serie': _serie.text.trim().toUpperCase(),
-                      'aplicaA': s.aplicaA,
-                      'ultimoNumero': int.tryParse(_ultimo.text.trim()) ?? 0,
-                      'activa': _activa,
-                    });
-                  },
-                ),
-              ],
+              AppBoton(
+                texto: 'Guardar',
+                expandido: false,
+                tam: BotonTam.md,
+                sinPermiso: !widget.puedeEditar,
+                onPressed: () {
+                  // Se revisa al tocar: el campo no avisa de cada tecla.
+                  if (!_sucia) return;
+                  widget.onGuardar({
+                    'tipo': s.tipo,
+                    'serie': _serie.text.trim().toUpperCase(),
+                    'aplicaA': s.aplicaA,
+                    'ultimoNumero': int.tryParse(_ultimo.text.trim()) ?? 0,
+                    'activa': _activa,
+                  });
+                },
+              ),
             ],
           ),
         ],

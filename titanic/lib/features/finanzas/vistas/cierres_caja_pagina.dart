@@ -12,9 +12,11 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector_rango.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
@@ -125,8 +127,11 @@ class CierresCajaPagina extends ConsumerWidget {
           context,
           (_) => _HojaDetalleCierre(cierreId: c.id),
         ),
-        onAnular: !c.anulado && puede(ref, 'finanzas.cierres', Accion.anular)
-            ? () => _anular(context, ref, c)
+        onAnular: !c.anulado
+            ? permitir(
+                puede(ref, 'finanzas.cierres', Accion.anular),
+                () => _anular(context, ref, c),
+              )
             : null,
       ),
     );
@@ -296,33 +301,25 @@ class _TarjetaCobro extends StatelessWidget {
       ],
       acciones: [
         if (onVerificar != null)
-          IconButton(
-            onPressed: onVerificar,
+          AppIconoAccion(
+            icono: Icons.check_circle_outline,
             tooltip: 'Verificar: apareció en el banco',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.check_circle_outline,
-              size: 18,
-              color: Colores.exito,
-            ),
+            color: Colores.exito,
+            onPressed: onVerificar,
           ),
         if (onRechazar != null)
-          IconButton(
-            onPressed: onRechazar,
+          AppIconoAccion(
+            icono: Icons.cancel_outlined,
             tooltip: 'Rechazar: no apareció',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.cancel_outlined,
-              size: 18,
-              color: Colores.peligro,
-            ),
+            color: Colores.peligro,
+            onPressed: onRechazar,
           ),
         if (onQuitar != null)
-          IconButton(
-            onPressed: onQuitar,
+          AppIconoAccion(
+            icono: Icons.undo,
             tooltip: 'Quitar la verificación',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.undo, size: 18, color: Colores.tintaSuave),
+            color: Colores.tintaSuave,
+            onPressed: onQuitar,
           ),
       ],
     );
@@ -531,11 +528,11 @@ class _TarjetaCierre extends StatelessWidget {
           icon: Icon(Icons.visibility_outlined, size: 18, color: color),
         ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.advertencia),
+            color: Colores.advertencia,
+            onPressed: onAnular,
           ),
       ],
     );
@@ -730,22 +727,22 @@ class _HojaDetalleCierreState extends ConsumerState<_HojaDetalleCierre> {
                       cobro: cobro,
                       color: Colores.marca,
                       onVerificar:
-                          confirma &&
-                              cobro.estado == EstadoVerificacionPago.pendiente
-                          ? () => _verificar(cobro)
+                          cobro.estado == EstadoVerificacionPago.pendiente
+                          ? permitir(confirma, () => _verificar(cobro))
                           : null,
                       onRechazar:
-                          confirma &&
-                              cobro.estado == EstadoVerificacionPago.pendiente
-                          ? () => abrirHojaFinanzas(
-                              context,
-                              (_) => _HojaRechazo(cobro: cobro),
+                          cobro.estado == EstadoVerificacionPago.pendiente
+                          ? permitir(
+                              confirma,
+                              () => abrirHojaFinanzas(
+                                context,
+                                (_) => _HojaRechazo(cobro: cobro),
+                              ),
                             )
                           : null,
                       onQuitar:
-                          confirma &&
-                              cobro.estado == EstadoVerificacionPago.verificado
-                          ? () => _quitarVerificacion(cobro)
+                          cobro.estado == EstadoVerificacionPago.verificado
+                          ? permitir(confirma, () => _quitarVerificacion(cobro))
                           : null,
                     ),
                     const SizedBox(height: Dimen.espacio2),

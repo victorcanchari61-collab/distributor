@@ -38,6 +38,8 @@ Widget campoCliente({
       // dónde para. El mercado va primero porque es lo que el vendedor tiene
       // en la cabeza cuando está en la calle.
       final partes = <String>['${c.tipoDoc} ${c.documento}'];
+      // Su otro documento (el RUC de un DNI, o al revés), para ubicarlo por cualquiera de los dos.
+      if (c.textoDocumentoAlterno != null) partes.add(c.textoDocumentoAlterno!);
       if (c.mercado != null && c.mercado!.isNotEmpty) partes.add(c.mercado!);
       if (c.ruta != null && c.ruta!.isNotEmpty) partes.add(c.ruta!);
       return partes.join(' · ');

@@ -8,9 +8,11 @@ import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -42,7 +44,9 @@ class UbicacionProductosPagina extends ConsumerWidget {
         elegido ??
         (almacenes.isEmpty
             ? null
-            : (almacenes.where((a) => a.esPrincipal).firstOrNull ?? almacenes.first).id);
+            : (almacenes.where((a) => a.esPrincipal).firstOrNull ??
+                      almacenes.first)
+                  .id);
 
     if (almacenId == null) {
       return AppListaPagina<ProductoUbicado>(
@@ -68,7 +72,9 @@ class UbicacionProductosPagina extends ConsumerWidget {
     final items = datos.valueOrNull?.items ?? const <ProductoUbicado>[];
     final visibles = [
       for (final p in items)
-        if ((!soloSin || p.sinLugar) && (texto.isEmpty || p.buscable.contains(texto))) p,
+        if ((!soloSin || p.sinLugar) &&
+            (texto.isEmpty || p.buscable.contains(texto)))
+          p,
     ];
     final sinLugar = datos.valueOrNull?.sinLugar ?? 0;
 
@@ -130,9 +136,10 @@ class UbicacionProductosPagina extends ConsumerWidget {
       fila: (context, producto) => _TarjetaProducto(
         producto: producto,
         color: color,
-        onPoner: puede(ref, _submodulo, Accion.editar)
-            ? () => _poner(context, ref, almacenId, producto)
-            : null,
+        onPoner: permitir(
+          puede(ref, _submodulo, Accion.editar),
+          () => _poner(context, ref, almacenId, producto),
+        ),
       ),
     );
   }
@@ -157,7 +164,9 @@ class UbicacionProductosPagina extends ConsumerWidget {
     final activos = lugares.where((l) => l.activo).toList();
     if (!context.mounted) return;
     if (activos.isEmpty) {
-      mensajero.error('Este almacén no tiene lugares: créalos desde el panel web.');
+      mensajero.error(
+        'Este almacén no tiene lugares: créalos desde el panel web.',
+      );
       return;
     }
 
@@ -215,7 +224,9 @@ class _TarjetaProducto extends StatelessWidget {
     ),
     CampoDetalle(
       'Dónde está',
-      producto.sinLugar ? null : producto.lugares.map((l) => l.ruta).join(' · '),
+      producto.sinLugar
+          ? null
+          : producto.lugares.map((l) => l.ruta).join(' · '),
     ),
   ];
 
@@ -238,12 +249,11 @@ class _TarjetaProducto extends StatelessWidget {
         acciones: [
           if (onPoner != null)
             AppBoton(
-              texto: producto.sinLugar ? 'Poner en un lugar' : 'Mover a otro lugar',
+              texto: producto.sinLugar
+                  ? 'Poner en un lugar'
+                  : 'Mover a otro lugar',
               expandido: true,
-              onPressed: () {
-                Navigator.of(context).pop();
-                onPoner!();
-              },
+              onPressed: cerrandoHoja(context, onPoner),
             ),
         ],
       ),

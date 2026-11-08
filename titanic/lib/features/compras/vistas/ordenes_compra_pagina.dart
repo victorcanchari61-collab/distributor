@@ -12,8 +12,10 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -56,34 +58,34 @@ class OrdenesCompraPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por número o proveedor',
       onRecargar: () => ref.read(ordenesCompraProvider.notifier).recargar(),
       acciones: [
-        if (puede(ref, 'compras.ordenes', Accion.exportar))
-          accionExportar<OrdenCompra>(
-            context,
-            nombre: 'ordenes-de-compra',
-            filas: () => ref.read(ordenesCompraFiltradasProvider),
-            encabezados: const [
-              'Número',
-              'Fecha',
-              'Proveedor',
-              'Fecha esperada',
-              'Estado',
-              'Total',
-              'Usuario',
-            ],
-            fila: (o) => [
-              o.numero,
-              diaIso(o.fecha),
-              o.proveedor,
-              o.fechaEsperada == null ? null : diaIso(o.fechaEsperada!),
-              o.estado,
-              o.total,
-              o.usuario,
-            ],
-          ),
+        accionExportar<OrdenCompra>(
+          context,
+          nombre: 'ordenes-de-compra',
+          filas: () => ref.read(ordenesCompraFiltradasProvider),
+          encabezados: const [
+            'Número',
+            'Fecha',
+            'Proveedor',
+            'Fecha esperada',
+            'Estado',
+            'Total',
+            'Usuario',
+          ],
+          fila: (o) => [
+            o.numero,
+            diaIso(o.fecha),
+            o.proveedor,
+            o.fechaEsperada == null ? null : diaIso(o.fechaEsperada!),
+            o.estado,
+            o.total,
+            o.usuario,
+          ],
+        ).permitida(puede(ref, 'compras.ordenes', Accion.exportar)),
       ],
-      onNuevo: puede(ref, 'compras.ordenes', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'compras.ordenes', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       textoNuevo: 'Nueva orden',
       iconoVacio: Icons.list_alt_outlined,
       singular: 'orden de compra',
@@ -116,20 +118,23 @@ class OrdenesCompraPagina extends ConsumerWidget {
       fila: (context, orden) => _TarjetaOrden(
         orden: orden,
         color: color,
-        onEditar:
-            puede(ref, 'compras.ordenes', Accion.editar) &&
-                orden.estado == EstadoOrdenCompra.pendiente
-            ? () => _abrirFormulario(context, orden)
+        onEditar: orden.estado == EstadoOrdenCompra.pendiente
+            ? permitir(
+                puede(ref, 'compras.ordenes', Accion.editar),
+                () => _abrirFormulario(context, orden),
+              )
             : null,
-        onConfirmar:
-            puede(ref, 'compras.ordenes', Accion.confirmar) &&
-                orden.estado == EstadoOrdenCompra.pendiente
-            ? () => _confirmar(context, ref, orden)
+        onConfirmar: orden.estado == EstadoOrdenCompra.pendiente
+            ? permitir(
+                puede(ref, 'compras.ordenes', Accion.confirmar),
+                () => _confirmar(context, ref, orden),
+              )
             : null,
-        onAnular:
-            puede(ref, 'compras.ordenes', Accion.anular) &&
-                orden.estado != EstadoOrdenCompra.anulada
-            ? () => _anular(context, ref, orden)
+        onAnular: orden.estado != EstadoOrdenCompra.anulada
+            ? permitir(
+                puede(ref, 'compras.ordenes', Accion.anular),
+                () => _anular(context, ref, orden),
+              )
             : null,
       ),
     );
@@ -306,33 +311,25 @@ class _TarjetaOrden extends StatelessWidget {
           icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
         if (onConfirmar != null)
-          IconButton(
-            onPressed: onConfirmar,
+          AppIconoAccion(
+            icono: Icons.shopping_bag_outlined,
             tooltip: 'Convertir a compra',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.shopping_bag_outlined,
-              size: 18,
-              color: Colores.exito,
-            ),
+            color: Colores.exito,
+            onPressed: onConfirmar,
           ),
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.peligro),
+            color: Colores.peligro,
+            onPressed: onAnular,
           ),
       ],
     );
@@ -357,19 +354,13 @@ class _TarjetaOrden extends StatelessWidget {
             texto: 'Convertir a compra',
             variante: BotonVariante.secundario,
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onConfirmar!();
-            },
+            onPressed: cerrandoHoja(context, onConfirmar),
           ),
         if (onEditar != null)
           AppBoton(
             texto: 'Editar',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar!();
-            },
+            onPressed: cerrandoHoja(context, onEditar),
           ),
       ],
     );

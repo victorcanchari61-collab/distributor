@@ -11,8 +11,10 @@ import '../../../compartido/estado/filtro_documento.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../facturacion/datos/comprobante.dart';
 import '../../facturacion/vistas/facturar_hoja.dart';
@@ -53,40 +55,40 @@ class NotasVentaPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por número o cliente',
       onRecargar: () => ref.read(notasVentaProvider.notifier).recargar(),
       acciones: [
-        if (puede(ref, 'fact.notaventa', Accion.exportar))
-          accionExportar<NotaVenta>(
-            context,
-            nombre: 'notas-de-venta',
-            filas: () => ref.read(notasVentaFiltradasProvider),
-            encabezados: const [
-              'Número',
-              'Fecha',
-              'Cliente',
-              'Pedido',
-              'Almacén',
-              'Estado',
-              'Forma de pago',
-              'Total',
-              'Pagado',
-              'Usuario',
-            ],
-            fila: (n) => [
-              n.numero,
-              diaIso(n.fecha),
-              n.cliente,
-              n.pedidoNumero,
-              n.almacen,
-              n.estado,
-              n.formaPago,
-              n.total,
-              n.totalPagado,
-              n.usuario,
-            ],
-          ),
+        accionExportar<NotaVenta>(
+          context,
+          nombre: 'notas-de-venta',
+          filas: () => ref.read(notasVentaFiltradasProvider),
+          encabezados: const [
+            'Número',
+            'Fecha',
+            'Cliente',
+            'Pedido',
+            'Almacén',
+            'Estado',
+            'Forma de pago',
+            'Total',
+            'Pagado',
+            'Usuario',
+          ],
+          fila: (n) => [
+            n.numero,
+            diaIso(n.fecha),
+            n.cliente,
+            n.pedidoNumero,
+            n.almacen,
+            n.estado,
+            n.formaPago,
+            n.total,
+            n.totalPagado,
+            n.usuario,
+          ],
+        ).permitida(puede(ref, 'fact.notaventa', Accion.exportar)),
       ],
-      onNuevo: puede(ref, 'fact.notaventa', Accion.crear)
-          ? () => _abrirFormulario(context)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'fact.notaventa', Accion.crear),
+        () => _abrirFormulario(context),
+      ),
       textoNuevo: 'Nueva venta',
       iconoVacio: Icons.shopping_bag_outlined,
       singular: 'nota de venta',
@@ -119,18 +121,19 @@ class NotasVentaPagina extends ConsumerWidget {
       fila: (context, nota) => _TarjetaNotaVenta(
         nota: nota,
         color: color,
-        onAnular:
-            puede(ref, 'fact.notaventa', Accion.anular) &&
-                nota.estado == EstadoNotaVenta.confirmada
-            ? () => _anular(context, ref, nota)
+        onAnular: nota.estado == EstadoNotaVenta.confirmada
+            ? permitir(
+                puede(ref, 'fact.notaventa', Accion.anular),
+                () => _anular(context, ref, nota),
+              )
             : null,
         // Facturar: solo una venta vigente que todavia no tiene factura ni boleta, y a quien puede emitir alguna.
-        onFacturar:
-            nota.estado == EstadoNotaVenta.confirmada &&
-                !nota.facturada &&
-                (puede(ref, 'fact.facturas', Accion.crear) ||
-                    puede(ref, 'fact.boletas', Accion.crear))
-            ? () => abrirFacturar(context, nota)
+        onFacturar: nota.estado == EstadoNotaVenta.confirmada && !nota.facturada
+            ? permitir(
+                puede(ref, 'fact.facturas', Accion.crear) ||
+                    puede(ref, 'fact.boletas', Accion.crear),
+                () => abrirFacturar(context, nota),
+              )
             : null,
       ),
     );
@@ -384,18 +387,17 @@ class _TarjetaNotaVenta extends StatelessWidget {
           icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
         if (onFacturar != null)
-          IconButton(
-            onPressed: onFacturar,
+          AppIconoAccion(
+            icono: Icons.receipt_long_outlined,
             tooltip: 'Facturar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.receipt_long_outlined, size: 18),
+            onPressed: onFacturar,
           ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.peligro),
+            color: Colores.peligro,
+            onPressed: onAnular,
           ),
       ],
     );

@@ -8,7 +8,9 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -37,9 +39,10 @@ class RolesPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaRolesProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre o descripción',
       onRecargar: () => ref.read(rolesProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'config.roles', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'config.roles', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       iconoVacio: Icons.verified_user_outlined,
       singular: 'rol',
       plural: 'roles',
@@ -51,12 +54,14 @@ class RolesPagina extends ConsumerWidget {
       fila: (context, rol) => _TarjetaRol(
         rol: rol,
         color: color,
-        onEditar: puede(ref, 'config.roles', Accion.editar)
-            ? () => _abrirFormulario(context, rol)
-            : null,
-        onEstado: puede(ref, 'config.roles', Accion.editar)
-            ? () => _cambiarEstado(context, ref, rol)
-            : null,
+        onEditar: permitir(
+          puede(ref, 'config.roles', Accion.editar),
+          () => _abrirFormulario(context, rol),
+        ),
+        onEstado: permitir(
+          puede(ref, 'config.roles', Accion.editar),
+          () => _cambiarEstado(context, ref, rol),
+        ),
       ),
     );
   }
@@ -191,43 +196,29 @@ class _TarjetaRol extends StatelessWidget {
             AppBoton(
               texto: rol.activo ? 'Desactivar' : 'Activar',
               variante: BotonVariante.secundario,
-              onPressed: () {
-                Navigator.of(context).pop();
-                onEstado!();
-              },
+              onPressed: cerrandoHoja(context, onEstado),
             ),
           if (onEditar != null)
             AppBoton(
               texto: 'Editar',
-              onPressed: () {
-                Navigator.of(context).pop();
-                onEditar!();
-              },
+              onPressed: cerrandoHoja(context, onEditar),
             ),
         ],
       ),
       acciones: [
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: rol.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: rol.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              rol.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: rol.activo ? Colores.advertencia : Colores.exito,
-            ),
+            color: rol.activo ? Colores.advertencia : Colores.exito,
+            onPressed: onEstado,
           ),
       ],
     );

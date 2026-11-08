@@ -27,6 +27,7 @@ class GraficoDona extends StatefulWidget {
     this.formato = compacto,
     this.centro,
     this.tamano = 168,
+    this.decimalesPct = 0,
   });
 
   final List<PorcionDona> porciones;
@@ -38,6 +39,9 @@ class GraficoDona extends StatefulWidget {
   /// por ejemplo.
   final ({String titulo, String valor})? centro;
   final double tamano;
+
+  /// Decimales del porcentaje de la leyenda: 0 por defecto, 1 para "12.5%".
+  final int decimalesPct;
 
   @override
   State<GraficoDona> createState() => _GraficoDonaState();
@@ -95,7 +99,10 @@ class _GraficoDonaState extends State<GraficoDona> {
             color: _color(i),
             texto: widget.formato(porciones[i].valor),
             porcentaje: total > 0
-                ? porcentaje(math.max(0, porciones[i].valor) / total * 100, 0)
+                ? porcentaje(
+                    math.max(0, porciones[i].valor) / total * 100,
+                    widget.decimalesPct,
+                  )
                 : '—',
             activa: activa == i,
             alTocar: () => setState(() => _activa = activa == i ? null : i),

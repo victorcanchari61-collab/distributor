@@ -13,10 +13,13 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -162,12 +165,16 @@ class IngresosEgresosPagina extends ConsumerWidget {
           CampoDetalle('Vence', fechaCorta(p.proximoVencimiento)),
         ],
         acciones: [
-          if (puedePagar)
-            TextButton(
-              onPressed: () =>
-                  abrirHojaFinanzas(context, (_) => _HojaPagar(pendiente: p)),
-              child: const Text('Pagar'),
+          AppBoton(
+            texto: 'Pagar',
+            variante: BotonVariante.texto,
+            tam: BotonTam.sm,
+            expandido: false,
+            onPressed: permitir(
+              puedePagar,
+              () => abrirHojaFinanzas(context, (_) => _HojaPagar(pendiente: p)),
             ),
+          ),
         ],
       ),
     );
@@ -193,9 +200,10 @@ class IngresosEgresosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaOperativosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar gasto recurrente',
       onRecargar: () => _recargar(ref, recurrentesProvider),
-      onNuevo: puede(ref, _sub, Accion.crear)
-          ? () => abrirHojaFinanzas(context, (_) => const _HojaRecurrente())
-          : null,
+      onNuevo: permitir(
+        puede(ref, _sub, Accion.crear),
+        () => abrirHojaFinanzas(context, (_) => const _HojaRecurrente()),
+      ),
       textoNuevo: 'Nuevo recurrente',
       iconoVacio: Icons.repeat,
       singular: 'recurrente',
@@ -216,42 +224,36 @@ class IngresosEgresosPagina extends ConsumerWidget {
           CampoDetalle('Sale de', r.cuentaFinancieraSugerida),
         ],
         acciones: [
-          if (puedeEditar) ...[
-            IconButton(
-              onPressed: () => abrirHojaFinanzas(
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
+            tooltip: 'Editar',
+            color: Acento.de(context),
+            onPressed: permitir(
+              puedeEditar,
+              () => abrirHojaFinanzas(
                 context,
                 (_) => _HojaRecurrente(recurrente: r),
               ),
-              tooltip: 'Editar',
-              visualDensity: VisualDensity.compact,
-              icon: Icon(
-                Icons.edit_outlined,
-                size: 18,
-                color: Acento.de(context),
-              ),
             ),
-            IconButton(
-              onPressed: () => _estadoRecurrente(context, ref, r),
-              tooltip: r.activo ? 'Desactivar' : 'Activar',
-              visualDensity: VisualDensity.compact,
-              icon: Icon(
-                r.activo ? Icons.block : Icons.check_circle_outline,
-                size: 18,
-                color: Colores.advertencia,
-              ),
+          ),
+          AppIconoAccion(
+            icono: r.activo ? Icons.block : Icons.check_circle_outline,
+            tooltip: r.activo ? 'Desactivar' : 'Activar',
+            color: Colores.advertencia,
+            onPressed: permitir(
+              puedeEditar,
+              () => _estadoRecurrente(context, ref, r),
             ),
-          ],
-          if (puedeEliminar)
-            IconButton(
-              onPressed: () => _eliminarRecurrente(context, ref, r),
-              tooltip: 'Eliminar',
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(
-                Icons.delete_outline,
-                size: 18,
-                color: Colores.advertencia,
-              ),
+          ),
+          AppIconoAccion(
+            icono: Icons.delete_outline,
+            tooltip: 'Eliminar',
+            color: Colores.advertencia,
+            onPressed: permitir(
+              puedeEliminar,
+              () => _eliminarRecurrente(context, ref, r),
             ),
+          ),
         ],
       ),
     );
@@ -320,9 +322,10 @@ class IngresosEgresosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaOperativosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar categoría',
       onRecargar: () => _recargar(ref, categoriasFinanzasProvider),
-      onNuevo: puede(ref, _sub, Accion.crear)
-          ? () => abrirHojaFinanzas(context, (_) => const _HojaCategoria())
-          : null,
+      onNuevo: permitir(
+        puede(ref, _sub, Accion.crear),
+        () => abrirHojaFinanzas(context, (_) => const _HojaCategoria()),
+      ),
       textoNuevo: 'Nueva categoría',
       iconoVacio: Icons.sell_outlined,
       singular: 'categoría',
@@ -385,29 +388,27 @@ class IngresosEgresosPagina extends ConsumerWidget {
         ],
         acciones: [
           // Las del sistema las usa el propio sistema: no se tocan.
-          if (puedeEditar && !c.esSistema)
-            IconButton(
-              onPressed: () => abrirHojaFinanzas(
-                context,
-                (_) => _HojaCategoria(categoria: c),
-              ),
+          if (!c.esSistema)
+            AppIconoAccion(
+              icono: Icons.edit_outlined,
               tooltip: 'Editar',
-              visualDensity: VisualDensity.compact,
-              icon: Icon(
-                Icons.edit_outlined,
-                size: 18,
-                color: Acento.de(context),
+              color: Acento.de(context),
+              onPressed: permitir(
+                puedeEditar,
+                () => abrirHojaFinanzas(
+                  context,
+                  (_) => _HojaCategoria(categoria: c),
+                ),
               ),
             ),
-          if (puedeEliminar && !c.esSistema && c.usos == 0)
-            IconButton(
-              onPressed: () => _eliminarCategoria(context, ref, c),
+          if (!c.esSistema && c.usos == 0)
+            AppIconoAccion(
+              icono: Icons.delete_outline,
               tooltip: 'Eliminar',
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(
-                Icons.delete_outline,
-                size: 18,
-                color: Colores.advertencia,
+              color: Colores.advertencia,
+              onPressed: permitir(
+                puedeEliminar,
+                () => _eliminarCategoria(context, ref, c),
               ),
             ),
         ],
@@ -512,7 +513,7 @@ class _HojaPagarState extends ConsumerState<_HojaPagar> {
 
   @override
   Widget build(BuildContext context) {
-    final cuentas = ref.watch(cuentasMovimientoProvider);
+    final cuentas = ref.watch(cuentasMovimientoProvider).opcional(const []);
     final p = widget.pendiente;
 
     return Padding(
@@ -666,8 +667,10 @@ class _HojaRecurrenteState extends ConsumerState<_HojaRecurrente> {
   @override
   Widget build(BuildContext context) {
     // Una plantilla recurrente es siempre un gasto.
-    final categorias = ref.watch(categoriasMiCajaProvider('EGRESO'));
-    final cuentas = ref.watch(cuentasMovimientoProvider);
+    final categorias = ref
+        .watch(categoriasMiCajaProvider('EGRESO'))
+        .opcional(const []);
+    final cuentas = ref.watch(cuentasMovimientoProvider).opcional(const []);
 
     return Padding(
       padding: margenHoja(context),

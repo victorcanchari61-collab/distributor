@@ -9,8 +9,10 @@ import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -95,9 +97,10 @@ class FlotaPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaVehiculosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por placa, tipo, marca, conductor',
       onRecargar: () => ref.read(vehiculosProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'tms.flota', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'tms.flota', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       textoNuevo: 'Nuevo vehículo',
       iconoVacio: Icons.local_shipping_outlined,
       singular: 'vehículo',
@@ -140,12 +143,14 @@ class FlotaPagina extends ConsumerWidget {
         vehiculo: vehiculo,
         color: color,
         onVer: () => _verDetalle(context, vehiculo, color),
-        onEditar: puede(ref, 'tms.flota', Accion.editar)
-            ? () => _abrirFormulario(context, vehiculo)
-            : null,
-        onEstado: puede(ref, 'tms.flota', Accion.editar)
-            ? () => _cambiarEstado(context, ref, vehiculo)
-            : null,
+        onEditar: permitir(
+          puede(ref, 'tms.flota', Accion.editar),
+          () => _abrirFormulario(context, vehiculo),
+        ),
+        onEstado: permitir(
+          puede(ref, 'tms.flota', Accion.editar),
+          () => _cambiarEstado(context, ref, vehiculo),
+        ),
       ),
     );
   }
@@ -499,26 +504,18 @@ class _TarjetaVehiculo extends StatelessWidget {
           ),
         ),
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: vehiculo.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: vehiculo.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              vehiculo.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: vehiculo.activo ? Colores.advertencia : Colores.exito,
-            ),
+            color: vehiculo.activo ? Colores.advertencia : Colores.exito,
+            onPressed: onEstado,
           ),
       ],
     );

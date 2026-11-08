@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/exportar_excel.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector_rango.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -14,7 +15,7 @@ import '../estado/crm_controlador.dart';
 import 'crm_comun.dart';
 
 /// Vendedores con caída: lo que vendió cada vendedor frente al mismo tramo del
-/// año anterior, con la misma escala de estados que los clientes. Además dice
+/// mes anterior (o del año anterior, a elección), con la misma escala de estados que los clientes. Además dice
 /// cuántos de sus clientes están bajando, que es de donde sale la caída.
 class VendedoresCaidaPagina extends ConsumerWidget {
   const VendedoresCaidaPagina({super.key});
@@ -26,6 +27,7 @@ class VendedoresCaidaPagina extends ConsumerWidget {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final estado = ref.watch(vendedoresCaidaProvider);
     final datos = estado.valueOrNull;
+    final comparar = ref.watch(compararVendedoresProvider);
 
     return AppListaPagina<FilaVendedor>(
       titulo: 'Vendedores con caída',
@@ -45,37 +47,36 @@ class VendedoresCaidaPagina extends ConsumerWidget {
       },
       // Exportar a Excel lo que se ve (con las fechas y la tarjeta elegidas): pide el permiso `exportar`.
       acciones: [
-        if (puede(ref, 'crm.vendedores', Accion.exportar))
-          accionExportarExcel<FilaVendedor>(
-            context,
-            nombre: 'vendedores-con-caida',
-            hoja: 'Vendedores con caída',
-            filas: () => ref.read(vendedoresFiltradosProvider),
-            encabezados: const [
-              'Estado',
-              'Vendedor',
-              'Venta anterior',
-              'Venta actual',
-              'Variación',
-              '% Caída',
-              'Clientes',
-              'Clientes con caída',
-              'Clientes críticos',
-              'Monto en riesgo',
-            ],
-            fila: (f) => [
-              f.estado.etiqueta,
-              f.vendedor,
-              f.ventaAnterior,
-              f.ventaActual,
-              f.variacion,
-              f.caidaPct == null ? null : (f.caidaPct! * 10).round() / 10,
-              f.clientes,
-              f.clientesEnCaida,
-              f.clientesCriticos,
-              f.montoRiesgo,
-            ],
-          ),
+        accionExportarExcel<FilaVendedor>(
+          context,
+          nombre: 'vendedores-con-caida',
+          hoja: 'Vendedores con caída',
+          filas: () => ref.read(vendedoresFiltradosProvider),
+          encabezados: const [
+            'Estado',
+            'Vendedor',
+            'Venta anterior',
+            'Venta actual',
+            'Variación',
+            '% Caída',
+            'Clientes',
+            'Clientes con caída',
+            'Clientes críticos',
+            'Monto en riesgo',
+          ],
+          fila: (f) => [
+            f.estado.etiqueta,
+            f.vendedor,
+            f.ventaAnterior,
+            f.ventaActual,
+            f.variacion,
+            f.caidaPct == null ? null : (f.caidaPct! * 10).round() / 10,
+            f.clientes,
+            f.clientesEnCaida,
+            f.clientesCriticos,
+            f.montoRiesgo,
+          ],
+        ).permitida(puede(ref, 'crm.vendedores', Accion.exportar)),
       ],
       iconoVacio: Icons.groups_outlined,
       singular: 'vendedor',
@@ -89,7 +90,7 @@ class VendedoresCaidaPagina extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
             child: AppSelectorRango(
               rango: ref.watch(rangoVendedoresProvider),
-              textoVacio: 'Del 1 de enero a hoy',
+              textoVacio: 'Del 1 del mes a hoy',
               onCambio: (r) =>
                   ref.read(rangoVendedoresProvider.notifier).state = r,
             ),
@@ -114,12 +115,23 @@ class VendedoresCaidaPagina extends ConsumerWidget {
             onCambio: (e) =>
                 ref.read(estadoVendedoresFiltroProvider.notifier).state = e,
             nota: (r) => switch (r.estado) {
-              EstadoCaida.sinBase => 'sin ventas antes',
+              EstadoCaida.sinBase => 'sin ventas ${comparar.referencia}',
               EstadoCaida.normal => 'venden igual o casi',
               _ => '${soles(r.monto)} en riesgo',
             },
           ),
         ],
+      ),
+      filtro: BotonFiltros(
+        activos: comparar == CompararCaida.mes ? 0 : 1,
+        color: color,
+        onAbrir: () => mostrarFiltros(
+          context,
+          activos: comparar == CompararCaida.mes ? 0 : 1,
+          onLimpiar: () => ref.read(compararVendedoresProvider.notifier).state =
+              CompararCaida.mes,
+          grupos: [grupoCompararCaida(compararVendedoresProvider)],
+        ),
       ),
       fila: (context, f) => _TarjetaVendedor(fila: f, color: color),
     );

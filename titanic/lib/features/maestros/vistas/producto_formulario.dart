@@ -15,6 +15,7 @@ import '../datos/maestros_api.dart';
 import '../datos/producto.dart';
 import '../estado/maestros_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 
 /// Una presentacion en edicion dentro del formulario. `id` null cuando aun no
 /// se guarda: es lo que distingue "agregar" de "actualizar" al sincronizar.
@@ -945,25 +946,17 @@ class _TarjetaPresentacion extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
-          IconButton(
-            onPressed: onEliminar,
+          AppIconoAccion(
+            icono: Icons.delete_outline,
             tooltip: 'Quitar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.delete_outline,
-              size: 18,
-              color: Colores.peligro,
-            ),
+            color: Colores.peligro,
+            onPressed: onEliminar,
           ),
         ],
       ),

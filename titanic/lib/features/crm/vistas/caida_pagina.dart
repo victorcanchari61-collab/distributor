@@ -22,9 +22,9 @@ import 'crm_comun.dart';
 List<String> distintos(Iterable<String?> valores) =>
     ({...valores.whereType<String>()}.toList()..sort());
 
-/// Clientes con caída: lo que compró cada cliente del 1 de enero a hoy (o el
-/// tramo que se elija) contra el mismo tramo del año anterior, y en qué estado
-/// está por cuánto cayó.
+/// Clientes con caída: lo que compró cada cliente del 1 del mes a hoy (o el
+/// tramo que se elija) contra el mismo tramo del mes anterior (o del año
+/// anterior, a elección), y en qué estado está por cuánto cayó.
 ///
 /// Las tarjetas de estado son filtros: tocar una deja solo esos clientes. Desde
 /// cada cliente se abre Gestión y seguimiento ya con él elegido.
@@ -41,6 +41,7 @@ class CaidaPagina extends ConsumerWidget {
     final vendedor = ref.watch(vendedorCaidaFiltroProvider);
     final mercado = ref.watch(mercadoCaidaFiltroProvider);
     final inactividad = ref.watch(inactividadCaidaFiltroProvider);
+    final comparar = ref.watch(compararCaidaProvider);
 
     return AppListaPagina<FilaCaida>(
       titulo: 'Clientes con caída',
@@ -60,55 +61,52 @@ class CaidaPagina extends ConsumerWidget {
       },
       // Exportar a Excel lo que se ve (con las fechas, filtros y la tarjeta elegidos): pide el permiso `exportar`.
       acciones: [
-        if (puede(ref, 'crm.caida', Accion.exportar))
-          accionExportarExcel<FilaCaida>(
-            context,
-            nombre: 'clientes-con-caida',
-            hoja: 'Clientes con caída',
-            filas: () => ref.read(caidaFiltradaProvider),
-            encabezados: const [
-              'Estado',
-              'Código',
-              'Cliente',
-              'Documento',
-              'Teléfono',
-              'Vendedor',
-              'Mercado',
-              'Ruta',
-              'Categoría',
-              'Última compra',
-              'Días sin comprar',
-              'Venta anterior',
-              'Venta actual',
-              'Variación',
-              '% Caída',
-              'Monto en riesgo',
-              'Última gestión',
-              'Próximo seguimiento',
-            ],
-            fila: (f) => [
-              f.estado.etiqueta,
-              f.codigo,
-              f.cliente,
-              f.documento,
-              f.telefono,
-              f.vendedor,
-              f.mercado,
-              f.ruta,
-              f.categoriaCodigo,
-              f.ultimaCompra == null ? null : diaIso(f.ultimaCompra!),
-              f.diasSinCompra,
-              f.ventaAnterior,
-              f.ventaActual,
-              f.variacion,
-              f.caidaPct == null ? null : (f.caidaPct! * 10).round() / 10,
-              f.montoRiesgo,
-              f.gestionEtiqueta,
-              f.proximoSeguimiento == null
-                  ? null
-                  : diaIso(f.proximoSeguimiento!),
-            ],
-          ),
+        accionExportarExcel<FilaCaida>(
+          context,
+          nombre: 'clientes-con-caida',
+          hoja: 'Clientes con caída',
+          filas: () => ref.read(caidaFiltradaProvider),
+          encabezados: const [
+            'Estado',
+            'Código',
+            'Cliente',
+            'Documento',
+            'Teléfono',
+            'Vendedor',
+            'Mercado',
+            'Ruta',
+            'Categoría',
+            'Última compra',
+            'Días sin comprar',
+            'Venta anterior',
+            'Venta actual',
+            'Variación',
+            '% Caída',
+            'Monto en riesgo',
+            'Última gestión',
+            'Próximo seguimiento',
+          ],
+          fila: (f) => [
+            f.estado.etiqueta,
+            f.codigo,
+            f.cliente,
+            f.documento,
+            f.telefono,
+            f.vendedor,
+            f.mercado,
+            f.ruta,
+            f.categoriaCodigo,
+            f.ultimaCompra == null ? null : diaIso(f.ultimaCompra!),
+            f.diasSinCompra,
+            f.ventaAnterior,
+            f.ventaActual,
+            f.variacion,
+            f.caidaPct == null ? null : (f.caidaPct! * 10).round() / 10,
+            f.montoRiesgo,
+            f.gestionEtiqueta,
+            f.proximoSeguimiento == null ? null : diaIso(f.proximoSeguimiento!),
+          ],
+        ).permitida(puede(ref, 'crm.caida', Accion.exportar)),
       ],
       iconoVacio: Icons.trending_down,
       singular: 'cliente',
@@ -122,7 +120,7 @@ class CaidaPagina extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
             child: AppSelectorRango(
               rango: ref.watch(rangoCaidaProvider),
-              textoVacio: 'Del 1 de enero a hoy',
+              textoVacio: 'Del 1 del mes a hoy',
               onCambio: (r) => ref.read(rangoCaidaProvider.notifier).state = r,
             ),
           ),
@@ -137,7 +135,7 @@ class CaidaPagina extends ConsumerWidget {
               child: Text(
                 'Del ${datos.periodo.etiqueta} frente al '
                 '${datos.periodo.etiquetaAnterior}. '
-                '${soles(datos.ventaActual)} vendidos y ${soles(datos.ventaAnterior)} el año anterior.',
+                '${soles(datos.ventaActual)} vendidos y ${soles(datos.ventaAnterior)} ${comparar.referencia}.',
                 style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
               ),
             ),
@@ -147,7 +145,7 @@ class CaidaPagina extends ConsumerWidget {
             onCambio: (e) =>
                 ref.read(estadoCaidaFiltroProvider.notifier).state = e,
             nota: (r) => switch (r.estado) {
-              EstadoCaida.sinBase => 'no compraron antes',
+              EstadoCaida.sinBase => 'no compraron ${comparar.referencia}',
               EstadoCaida.normal => 'igual o casi',
               _ => '${soles(r.monto)} en riesgo',
             },
@@ -158,7 +156,8 @@ class CaidaPagina extends ConsumerWidget {
         activos:
             (vendedor == null ? 0 : 1) +
             (mercado == null ? 0 : 1) +
-            (inactividad == null ? 0 : 1),
+            (inactividad == null ? 0 : 1) +
+            (comparar == CompararCaida.mes ? 0 : 1),
         color: color,
         onAbrir: () => _abrirFiltros(context, ref, datos?.items ?? const []),
       ),
@@ -179,13 +178,16 @@ class CaidaPagina extends ConsumerWidget {
       activos:
           (ref.read(vendedorCaidaFiltroProvider) == null ? 0 : 1) +
           (ref.read(mercadoCaidaFiltroProvider) == null ? 0 : 1) +
-          (ref.read(inactividadCaidaFiltroProvider) == null ? 0 : 1),
+          (ref.read(inactividadCaidaFiltroProvider) == null ? 0 : 1) +
+          (ref.read(compararCaidaProvider) == CompararCaida.mes ? 0 : 1),
       onLimpiar: () {
         ref.read(vendedorCaidaFiltroProvider.notifier).state = null;
         ref.read(mercadoCaidaFiltroProvider.notifier).state = null;
         ref.read(inactividadCaidaFiltroProvider.notifier).state = null;
+        ref.read(compararCaidaProvider.notifier).state = CompararCaida.mes;
       },
       grupos: [
+        grupoCompararCaida(compararCaidaProvider),
         // Los que dejaron de comprar: por cuántos días llevan sin hacerlo.
         Consumer(
           builder: (context, ref, _) => GrupoFiltro<TramoInactividad?>(

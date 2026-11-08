@@ -77,18 +77,17 @@ class AuditoriaPagina extends ConsumerWidget {
       // Borrar de la bitácora es una acción con permiso propio: sin él ni se
       // ofrece. Depura lo que los filtros dejan a la vista.
       acciones: [
-        if (puede(ref, 'config.auditoria', Accion.eliminar))
-          AccionGlobal(
-            etiqueta: 'Depurar',
-            icono: Icons.delete_sweep_outlined,
-            color: AccionGlobal.rojo,
-            onTap: () => mostrarDepuracion(
-              context,
-              accion: accionFiltro,
-              usuario: usuarioFiltro,
-              entidad: entidadFiltro,
-            ),
+        AccionGlobal(
+          etiqueta: 'Depurar',
+          icono: Icons.delete_sweep_outlined,
+          color: AccionGlobal.rojo,
+          onTap: () => mostrarDepuracion(
+            context,
+            accion: accionFiltro,
+            usuario: usuarioFiltro,
+            entidad: entidadFiltro,
           ),
+        ).permitida(puede(ref, 'config.auditoria', Accion.eliminar)),
       ],
       filtro: BotonFiltros(
         activos:

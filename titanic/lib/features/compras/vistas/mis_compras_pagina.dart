@@ -12,8 +12,10 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -57,42 +59,42 @@ class MisComprasPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por número, proveedor o comprobante',
       onRecargar: () => ref.read(comprasProvider.notifier).recargar(),
       acciones: [
-        if (puede(ref, 'compras.compras', Accion.exportar))
-          accionExportar<Compra>(
-            context,
-            nombre: 'compras',
-            filas: () => ref.read(comprasFiltradasProvider),
-            encabezados: const [
-              'Número',
-              'Fecha',
-              'Proveedor',
-              'Estado',
-              'Comprobante',
-              'Forma de pago',
-              'Total',
-              'Pagado',
-              'Usuario',
-            ],
-            fila: (c) => [
-              c.numero,
-              diaIso(c.fecha),
-              c.proveedor,
-              c.estado,
-              [
-                c.tipoComprobante,
-                c.serieComprobante,
-                c.numeroComprobante,
-              ].whereType<String>().join(' '),
-              c.formaPago,
-              c.total,
-              c.totalPagado,
-              c.usuario,
-            ],
-          ),
+        accionExportar<Compra>(
+          context,
+          nombre: 'compras',
+          filas: () => ref.read(comprasFiltradasProvider),
+          encabezados: const [
+            'Número',
+            'Fecha',
+            'Proveedor',
+            'Estado',
+            'Comprobante',
+            'Forma de pago',
+            'Total',
+            'Pagado',
+            'Usuario',
+          ],
+          fila: (c) => [
+            c.numero,
+            diaIso(c.fecha),
+            c.proveedor,
+            c.estado,
+            [
+              c.tipoComprobante,
+              c.serieComprobante,
+              c.numeroComprobante,
+            ].whereType<String>().join(' '),
+            c.formaPago,
+            c.total,
+            c.totalPagado,
+            c.usuario,
+          ],
+        ).permitida(puede(ref, 'compras.compras', Accion.exportar)),
       ],
-      onNuevo: puede(ref, 'compras.compras', Accion.crear)
-          ? () => _abrirFormulario(context)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'compras.compras', Accion.crear),
+        () => _abrirFormulario(context),
+      ),
       textoNuevo: 'Nueva compra',
       iconoVacio: Icons.shopping_bag_outlined,
       singular: 'compra',
@@ -125,20 +127,23 @@ class MisComprasPagina extends ConsumerWidget {
       fila: (context, compra) => _TarjetaCompra(
         compra: compra,
         color: color,
-        onEditar:
-            puede(ref, 'compras.compras', Accion.editar) &&
-                compra.estado == EstadoCompra.pendiente
-            ? () => _abrirFormulario(context, compra)
+        onEditar: compra.estado == EstadoCompra.pendiente
+            ? permitir(
+                puede(ref, 'compras.compras', Accion.editar),
+                () => _abrirFormulario(context, compra),
+              )
             : null,
-        onRecibir:
-            puede(ref, 'compras.recepciones', Accion.crear) &&
-                compra.detalle.any((d) => d.cantidadPendiente > 0)
-            ? () => _recibir(context, compra)
+        onRecibir: compra.detalle.any((d) => d.cantidadPendiente > 0)
+            ? permitir(
+                puede(ref, 'compras.recepciones', Accion.crear),
+                () => _recibir(context, compra),
+              )
             : null,
-        onAnular:
-            puede(ref, 'compras.compras', Accion.anular) &&
-                compra.estado == EstadoCompra.pendiente
-            ? () => _anular(context, ref, compra)
+        onAnular: compra.estado == EstadoCompra.pendiente
+            ? permitir(
+                puede(ref, 'compras.compras', Accion.anular),
+                () => _anular(context, ref, compra),
+              )
             : null,
       ),
     );
@@ -367,33 +372,25 @@ class _TarjetaCompra extends StatelessWidget {
           icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onRecibir != null)
-          IconButton(
-            onPressed: onRecibir,
+          AppIconoAccion(
+            icono: Icons.move_to_inbox_outlined,
             tooltip: 'Recibir',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.move_to_inbox_outlined,
-              size: 18,
-              color: Colores.exito,
-            ),
+            color: Colores.exito,
+            onPressed: onRecibir,
           ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.peligro),
+            color: Colores.peligro,
+            onPressed: onAnular,
           ),
       ],
     );
@@ -425,19 +422,13 @@ class _TarjetaCompra extends StatelessWidget {
             texto: 'Editar',
             variante: BotonVariante.secundario,
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar!();
-            },
+            onPressed: cerrandoHoja(context, onEditar),
           ),
         if (onRecibir != null)
           AppBoton(
             texto: 'Recibir',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onRecibir!();
-            },
+            onPressed: cerrandoHoja(context, onRecibir),
           ),
       ],
     );

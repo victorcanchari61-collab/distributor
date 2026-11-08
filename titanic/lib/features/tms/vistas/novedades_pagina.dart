@@ -15,9 +15,11 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
@@ -92,13 +94,12 @@ class NovedadesPagina extends ConsumerWidget {
       acciones: [
         // El reporte respeta lo que el embudo puso, así que sale con el filtro
         // actual al tocarlo.
-        if (puedeExportar)
-          AccionGlobal(
-            etiqueta: 'Reporte PDF',
-            icono: Icons.picture_as_pdf_outlined,
-            color: AccionGlobal.rojo,
-            onTap: () => _abrirReporte(context, ref),
-          ),
+        AccionGlobal(
+          etiqueta: 'Reporte PDF',
+          icono: Icons.picture_as_pdf_outlined,
+          color: AccionGlobal.rojo,
+          onTap: () => _abrirReporte(context, ref),
+        ).permitida(puedeExportar),
       ],
       filtro: BotonFiltros(
         activos: ref.watch(filtrosNovedadesActivosProvider),
@@ -109,14 +110,17 @@ class NovedadesPagina extends ConsumerWidget {
         novedad: novedad,
         color: color,
         onVer: () => _verDetalle(context, ref, novedad, color, puedeRevisar),
-        onRevisar: puedeRevisar && novedad.porRevisar
-            ? () => novedad.esRecojo
-                  ? _verificarRecojo(context, ref, _comoRecojo(novedad))
-                  : _revisar(context, ref, novedad)
+        onRevisar: novedad.porRevisar
+            ? permitir(
+                puedeRevisar,
+                () => novedad.esRecojo
+                    ? _verificarRecojo(context, ref, _comoRecojo(novedad))
+                    : _revisar(context, ref, novedad),
+              )
             : null,
         // Un recojo verificado ya sumó stock: no se reabre.
-        onReabrir: puedeRevisar && novedad.revisada && !novedad.esRecojo
-            ? () => _reabrir(context, ref, novedad)
+        onReabrir: novedad.revisada && !novedad.esRecojo
+            ? permitir(puedeRevisar, () => _reabrir(context, ref, novedad))
             : null,
       ),
     );
@@ -457,10 +461,11 @@ class NovedadesPagina extends ConsumerWidget {
         ],
       ],
       acciones: [
-        if (puedeRevisar && n.porRevisar)
+        if (n.porRevisar)
           AppBoton(
             texto: n.esRecojo ? 'Verificar' : 'Revisar',
             expandido: true,
+            sinPermiso: !puedeRevisar,
             onPressed: () {
               Navigator.of(context).pop();
               if (n.esRecojo) {
@@ -699,26 +704,18 @@ class _TarjetaNovedad extends StatelessWidget {
           ),
         ),
         if (onRevisar != null)
-          IconButton(
-            onPressed: onRevisar,
+          AppIconoAccion(
+            icono: Icons.fact_check_outlined,
             tooltip: n.esRecojo ? 'Verificar' : 'Revisar',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.fact_check_outlined,
-              size: 18,
-              color: Colores.exito,
-            ),
+            color: Colores.exito,
+            onPressed: onRevisar,
           ),
         if (onReabrir != null)
-          IconButton(
-            onPressed: onReabrir,
+          AppIconoAccion(
+            icono: Icons.replay,
             tooltip: 'Reabrir la revisión',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.replay,
-              size: 18,
-              color: Colores.advertencia,
-            ),
+            color: Colores.advertencia,
+            onPressed: onReabrir,
           ),
       ],
     );

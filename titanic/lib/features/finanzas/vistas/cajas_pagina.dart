@@ -13,10 +13,13 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -85,9 +88,10 @@ class CajasPagina extends ConsumerWidget {
           // El fallo ya se ve en la pantalla, con su botón de reintentar.
         }
       },
-      onNuevo: puede(ref, 'finanzas.cajas', Accion.crear)
-          ? () => abrirHojaFinanzas(context, (_) => const _HojaNuevaCaja())
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'finanzas.cajas', Accion.crear),
+        () => abrirHojaFinanzas(context, (_) => const _HojaNuevaCaja()),
+      ),
       textoNuevo: 'Asignar caja',
       iconoVacio: Icons.point_of_sale_outlined,
       singular: 'caja',
@@ -129,9 +133,10 @@ class CajasPagina extends ConsumerWidget {
       fila: (context, c) => _TarjetaCaja(
         caja: c,
         color: color,
-        onEstado: puede(ref, 'finanzas.cajas', Accion.editar)
-            ? () => _cambiarEstado(context, ref, c)
-            : null,
+        onEstado: permitir(
+          puede(ref, 'finanzas.cajas', Accion.editar),
+          () => _cambiarEstado(context, ref, c),
+        ),
       ),
     );
   }
@@ -177,26 +182,29 @@ class CajasPagina extends ConsumerWidget {
       },
       // La Bóveda solo se crea si falta. Ya creada, la plata se mueve con
       // Sacar y Traer, en el botón de acciones.
-      onNuevo: boveda == null && puede(ref, 'finanzas.cajas', Accion.crear)
-          ? () => abrirHojaFinanzas(context, (_) => const _HojaBoveda())
+      onNuevo: boveda == null
+          ? permitir(
+              puede(ref, 'finanzas.cajas', Accion.crear),
+              () => abrirHojaFinanzas(context, (_) => const _HojaBoveda()),
+            )
           : null,
       textoNuevo: 'Crear bóveda',
       // Sacar y Traer, como en el panel web, en vez de un "Mover plata" libre:
       // la Bóveda va fija y solo se elige la otra cuenta.
       acciones: [
-        if (boveda != null && puedeMover) ...[
+        if (boveda != null) ...[
           AccionGlobal(
             etiqueta: 'Traer a la Bóveda',
             icono: Icons.download_outlined,
             color: AccionGlobal.azul,
             onTap: () => _mover(context, ref, boveda, sacar: false),
-          ),
+          ).permitida(puedeMover),
           AccionGlobal(
             etiqueta: 'Sacar de la Bóveda',
             icono: Icons.upload_outlined,
             color: AccionGlobal.naranja,
             onTap: () => _mover(context, ref, boveda, sacar: true),
-          ),
+          ).permitida(puedeMover),
         ],
       ],
       iconoVacio: Icons.account_balance,
@@ -474,15 +482,11 @@ class _TarjetaCaja extends StatelessWidget {
           ),
         ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: c.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: c.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              c.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: Colores.advertencia,
-            ),
+            color: Colores.advertencia,
+            onPressed: onEstado,
           ),
       ],
     );
@@ -549,7 +553,7 @@ class _HojaNuevaCajaState extends ConsumerState<_HojaNuevaCaja> {
 
   @override
   Widget build(BuildContext context) {
-    final usuarios = ref.watch(usuariosProvider);
+    final usuarios = ref.watch(usuariosProvider).opcional(const []);
     final cajas =
         ref.watch(cajasProvider).valueOrNull ?? const <CuentaFinanciera>[];
 

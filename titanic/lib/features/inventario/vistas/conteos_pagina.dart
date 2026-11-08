@@ -13,6 +13,7 @@ import '../../../compartido/widgets/app_shell.dart';
 import '../../../compartido/widgets/app_vacio.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
@@ -180,10 +181,7 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
       rutaActual: ConteosPagina.ruta,
       // Contar lo puede hacer cualquiera que entre; registrarlo no: el conteo
       // termina en un ajuste que mueve el stock de verdad.
-      accionFlotante:
-          almacenId != null &&
-              !_guardando &&
-              puede(ref, 'inv.conteos', Accion.crear)
+      accionFlotante: almacenId != null && !_guardando
           ? AppAccionesFlotantes(
               colorUnica: color,
               acciones: [
@@ -191,7 +189,10 @@ class _ConteosPaginaState extends ConsumerState<ConteosPagina> {
                   etiqueta: 'Registrar conteo',
                   icono: Icons.fact_check_outlined,
                   color: AccionGlobal.verde,
-                  onTap: () => _registrar(stockAsync.valueOrNull ?? const []),
+                  onTap: permitir(
+                    puede(ref, 'inv.conteos', Accion.crear),
+                    () => _registrar(stockAsync.valueOrNull ?? const []),
+                  ),
                 ),
               ],
             )

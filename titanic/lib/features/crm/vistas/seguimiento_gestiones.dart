@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
+import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -232,24 +234,36 @@ class _TarjetaGestion extends ConsumerWidget {
               ],
             ),
           ],
-          if (puedeEditar && g.programado) ...[
+          if (g.programado) ...[
             const SizedBox(height: Dimen.espacio1),
             Wrap(
               alignment: WrapAlignment.end,
               children: [
-                TextButton.icon(
-                  onPressed: () => _reprogramar(context, ref),
-                  icon: const Icon(Icons.update, size: 16),
-                  label: const Text('Reprogramar'),
-                ),
-                TextButton.icon(
-                  onPressed: () => mostrarFormularioGestion(
-                    context,
-                    clienteId: clienteId,
-                    editar: g,
+                AppBoton(
+                  texto: 'Reprogramar',
+                  icono: Icons.update,
+                  variante: BotonVariante.texto,
+                  tam: BotonTam.sm,
+                  expandido: false,
+                  onPressed: permitir(
+                    puedeEditar,
+                    () => _reprogramar(context, ref),
                   ),
-                  icon: const Icon(Icons.edit_outlined, size: 16),
-                  label: const Text('Editar'),
+                ),
+                AppBoton(
+                  texto: 'Editar',
+                  icono: Icons.edit_outlined,
+                  variante: BotonVariante.texto,
+                  tam: BotonTam.sm,
+                  expandido: false,
+                  onPressed: permitir(
+                    puedeEditar,
+                    () => mostrarFormularioGestion(
+                      context,
+                      clienteId: clienteId,
+                      editar: g,
+                    ),
+                  ),
                 ),
               ],
             ),

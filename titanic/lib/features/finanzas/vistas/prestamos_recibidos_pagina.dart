@@ -11,10 +11,13 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -65,9 +68,10 @@ class PrestamosRecibidosPagina extends ConsumerWidget {
           // El fallo ya se ve en la pantalla, con su botón de reintentar.
         }
       },
-      onNuevo: puedeCrear
-          ? () => abrirHojaFinanzas(context, (_) => const _HojaNuevo())
-          : null,
+      onNuevo: permitir(
+        puedeCrear,
+        () => abrirHojaFinanzas(context, (_) => const _HojaNuevo()),
+      ),
       textoNuevo: 'Nuevo préstamo',
       iconoVacio: Icons.savings_outlined,
       singular: 'préstamo',
@@ -110,8 +114,11 @@ class PrestamosRecibidosPagina extends ConsumerWidget {
       fila: (context, p) => _TarjetaPrestamo(
         prestamo: p,
         color: color,
-        onPagar: p.vigente && puedeCrear
-            ? () => abrirHojaFinanzas(context, (_) => _HojaPago(prestamo: p))
+        onPagar: p.vigente
+            ? permitir(
+                puedeCrear,
+                () => abrirHojaFinanzas(context, (_) => _HojaPago(prestamo: p)),
+              )
             : null,
         onPagos: p.pagos.isEmpty
             ? null
@@ -121,10 +128,9 @@ class PrestamosRecibidosPagina extends ConsumerWidget {
               ),
         // Solo sin pagos vigentes: primero se anulan los pagos.
         onAnular:
-            puedeAnular &&
-                p.estado != EstadoPrestamo.anulado &&
+            p.estado != EstadoPrestamo.anulado &&
                 !p.pagos.any((x) => !x.anulado)
-            ? () => _anular(context, ref, p)
+            ? permitir(puedeAnular, () => _anular(context, ref, p))
             : null,
       ),
     );
@@ -206,33 +212,25 @@ class _TarjetaPrestamo extends StatelessWidget {
       ],
       acciones: [
         if (onPagar != null)
-          IconButton(
-            onPressed: onPagar,
+          AppIconoAccion(
+            icono: Icons.payments_outlined,
             tooltip: 'Registrar pago',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.payments_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onPagar,
           ),
         if (onPagos != null)
-          IconButton(
-            onPressed: onPagos,
+          AppIconoAccion(
+            icono: Icons.receipt_long_outlined,
             tooltip: 'Ver pagos',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.receipt_long_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onPagos,
           ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.advertencia),
+            color: Colores.advertencia,
+            onPressed: onAnular,
           ),
       ],
     );
@@ -314,7 +312,7 @@ class _HojaNuevoState extends ConsumerState<_HojaNuevo> {
 
   @override
   Widget build(BuildContext context) {
-    final cuentas = ref.watch(cuentasPrestamoProvider);
+    final cuentas = ref.watch(cuentasPrestamoProvider).opcional(const []);
 
     return Padding(
       padding: margenHoja(context),
@@ -478,7 +476,7 @@ class _HojaPagoState extends ConsumerState<_HojaPago> {
 
   @override
   Widget build(BuildContext context) {
-    final cuentas = ref.watch(cuentasPrestamoProvider);
+    final cuentas = ref.watch(cuentasPrestamoProvider).opcional(const []);
     final p = widget.prestamo;
 
     return Padding(
@@ -604,13 +602,16 @@ class _HojaPagos extends ConsumerWidget {
                                   'Anulado',
                                   tono: EtiquetaTono.neutral,
                                 )
-                              : puedeAnular
-                              ? TextButton(
-                                  onPressed: () =>
-                                      _anularPago(context, ref, p, pago),
-                                  child: const Text('Anular'),
-                                )
-                              : null,
+                              : AppBoton(
+                                  texto: 'Anular',
+                                  variante: BotonVariante.texto,
+                                  tam: BotonTam.sm,
+                                  expandido: false,
+                                  onPressed: permitir(
+                                    puedeAnular,
+                                    () => _anularPago(context, ref, p, pago),
+                                  ),
+                                ),
                         );
                       },
                     ),

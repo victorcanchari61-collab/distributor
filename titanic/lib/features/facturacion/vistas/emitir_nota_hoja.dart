@@ -14,6 +14,7 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/comprobante.dart';
 import '../estado/comprobantes_controlador.dart';
+import '../../ventas/estado/ventas_controlador.dart';
 
 /// Nota de crédito o débito sobre un comprobante aceptado. La de crédito arranca con las líneas del comprobante
 /// (anulación o devolución total) y se puede editar para corregir solo una parte; la de débito pide el cargo.
@@ -161,6 +162,8 @@ class _EmitirNotaHojaState extends ConsumerState<EmitirNotaHoja> {
       // Cambian la lista de la nota nueva y la del comprobante corregido (sus notas).
       ref.invalidate(comprobantesProvider(nota.tipo));
       ref.invalidate(comprobantesProvider(afectado.tipo));
+      // Una nota que cubre todo lo facturado anula la venta: su lista se pone al día.
+      ref.invalidate(notasVentaProvider);
 
       navegador.pop();
       if (nota.aceptado) {
@@ -182,6 +185,11 @@ class _EmitirNotaHojaState extends ConsumerState<EmitirNotaHoja> {
   @override
   Widget build(BuildContext context) {
     final c = widget.comprobante;
+    // Anulación (01) o devolución total (06): si SUNAT la acepta y cubre todo, la venta se anula y el stock vuelve.
+    final aviso =
+        _tipo == TipoCpe.notaCredito && (_motivo == '01' || _motivo == '06')
+        ? c.avisoNotaTotal
+        : null;
 
     return HojaBase(
       titulo: 'Nota sobre ${c.numeroCompleto}',
@@ -222,6 +230,10 @@ class _EmitirNotaHojaState extends ConsumerState<EmitirNotaHoja> {
             ],
             onCambio: (v) => setState(() => _motivo = v ?? _motivo),
           ),
+          if (aviso != null) ...[
+            const SizedBox(height: Dimen.espacio3),
+            AppAlerta(aviso, tono: AlertaTono.aviso),
+          ],
           const SizedBox(height: Dimen.espacio4),
           AppCampo(
             controlador: _desMotivo,

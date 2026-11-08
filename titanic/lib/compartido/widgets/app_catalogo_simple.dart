@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/navegacion/menu.dart';
+import '../../core/permisos/sin_permiso.dart';
 import '../../core/red/excepciones.dart';
 import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
@@ -13,6 +14,7 @@ import 'app_campo.dart';
 import 'app_confirmacion.dart';
 import 'app_etiqueta.dart';
 import 'app_lista_pagina.dart';
+import 'app_sin_permiso.dart';
 import 'app_tarjeta_dato.dart';
 import 'app_tarjeta_registro.dart';
 
@@ -216,7 +218,7 @@ class _AppCatalogoSimpleState extends State<AppCatalogoSimple> {
       onBuscar: (t) => setState(() => _busqueda = t),
       pistaBusqueda: 'Buscar ${widget.singular}',
       onRecargar: widget.onRecargar,
-      onNuevo: widget.puedeCrear ? () => _abrirHoja() : null,
+      onNuevo: permitir(widget.puedeCrear, () => _abrirHoja()),
       textoNuevo: '${widget.femenino ? 'Nueva' : 'Nuevo'} ${widget.singular}',
       iconoVacio: widget.icono,
       singular: widget.singular,
@@ -248,35 +250,26 @@ class _AppCatalogoSimpleState extends State<AppCatalogoSimple> {
           CampoDetalle(widget.usosEtiqueta, '${f.usos}'),
         ],
         acciones: [
-          if (widget.puedeEditar)
-            IconButton(
-              onPressed: () => _abrirHoja(f),
-              tooltip: 'Editar',
-              visualDensity: VisualDensity.compact,
-              icon: Icon(Icons.edit_outlined, size: 18, color: acento),
-            ),
-          if (widget.puedeEditar)
-            IconButton(
-              onPressed: () => _cambiarEstado(f),
-              tooltip: f.activo ? 'Desactivar' : 'Activar',
-              visualDensity: VisualDensity.compact,
-              icon: Icon(
-                f.activo ? Icons.block : Icons.check_circle_outline,
-                size: 18,
-                color: Colores.advertencia,
-              ),
-            ),
-          // Solo sin usos: lo que ya se usa se desactiva, no se borra.
-          if (widget.onEliminar != null && widget.puedeEliminar && f.usos == 0)
-            IconButton(
-              onPressed: () => _eliminar(f),
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
+            tooltip: 'Editar',
+            color: acento,
+            onPressed: permitir(widget.puedeEditar, () => _abrirHoja(f)),
+          ),
+          AppIconoAccion(
+            icono: f.activo ? Icons.block : Icons.check_circle_outline,
+            tooltip: f.activo ? 'Desactivar' : 'Activar',
+            color: Colores.advertencia,
+            onPressed: permitir(widget.puedeEditar, () => _cambiarEstado(f)),
+          ),
+          // Solo sin usos: lo que ya se usa se desactiva, no se borra. Eso es
+          // del registro, no del permiso, así que ahí sigue oculto.
+          if (widget.onEliminar != null && f.usos == 0)
+            AppIconoAccion(
+              icono: Icons.delete_outline,
               tooltip: 'Eliminar',
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(
-                Icons.delete_outline,
-                size: 18,
-                color: Colores.advertencia,
-              ),
+              color: Colores.advertencia,
+              onPressed: permitir(widget.puedeEliminar, () => _eliminar(f)),
             ),
         ],
       ),

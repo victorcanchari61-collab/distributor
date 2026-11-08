@@ -7,8 +7,10 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -40,9 +42,10 @@ class RutasPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaRutasProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre',
       onRecargar: () => ref.read(rutasProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'tms.rutas', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'tms.rutas', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       textoNuevo: 'Nueva ruta',
       iconoVacio: Icons.route_outlined,
       singular: 'ruta',
@@ -69,12 +72,14 @@ class RutasPagina extends ConsumerWidget {
         ruta: ruta,
         color: color,
         onVer: () => _verDetalle(context, ruta, color),
-        onEditar: puede(ref, 'tms.rutas', Accion.editar)
-            ? () => _abrirFormulario(context, ruta)
-            : null,
-        onEstado: puede(ref, 'tms.rutas', Accion.editar)
-            ? () => _cambiarEstado(context, ref, ruta)
-            : null,
+        onEditar: permitir(
+          puede(ref, 'tms.rutas', Accion.editar),
+          () => _abrirFormulario(context, ruta),
+        ),
+        onEstado: permitir(
+          puede(ref, 'tms.rutas', Accion.editar),
+          () => _cambiarEstado(context, ref, ruta),
+        ),
       ),
     );
   }
@@ -209,26 +214,18 @@ class _TarjetaRuta extends StatelessWidget {
           ),
         ),
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: ruta.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: ruta.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              ruta.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: ruta.activo ? Colores.advertencia : Colores.exito,
-            ),
+            color: ruta.activo ? Colores.advertencia : Colores.exito,
+            onPressed: onEstado,
           ),
       ],
     );

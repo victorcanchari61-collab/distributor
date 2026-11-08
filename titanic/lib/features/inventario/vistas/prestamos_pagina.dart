@@ -11,8 +11,10 @@ import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/tema/colores.dart';
@@ -47,36 +49,36 @@ class PrestamosPagina extends ConsumerWidget {
       pistaBusqueda: 'Buscar por número, contraparte o almacén',
       onRecargar: () => ref.read(prestamosProvider.notifier).recargar(),
       acciones: [
-        if (puede(ref, 'inv.prestamos', Accion.exportar))
-          accionExportar<Prestamo>(
-            context,
-            nombre: 'prestamos',
-            filas: () => ref.read(prestamosFiltradosProvider),
-            encabezados: const [
-              'Número',
-              'Fecha',
-              'Tipo',
-              'Contraparte',
-              'Almacén',
-              'Estado',
-              'Total',
-              'Usuario',
-            ],
-            fila: (p) => [
-              p.numero,
-              diaIso(p.fecha),
-              p.tipo,
-              p.contraparte,
-              p.almacen,
-              p.estado,
-              p.total,
-              p.usuario,
-            ],
-          ),
+        accionExportar<Prestamo>(
+          context,
+          nombre: 'prestamos',
+          filas: () => ref.read(prestamosFiltradosProvider),
+          encabezados: const [
+            'Número',
+            'Fecha',
+            'Tipo',
+            'Contraparte',
+            'Almacén',
+            'Estado',
+            'Total',
+            'Usuario',
+          ],
+          fila: (p) => [
+            p.numero,
+            diaIso(p.fecha),
+            p.tipo,
+            p.contraparte,
+            p.almacen,
+            p.estado,
+            p.total,
+            p.usuario,
+          ],
+        ).permitida(puede(ref, 'inv.prestamos', Accion.exportar)),
       ],
-      onNuevo: puede(ref, 'inv.prestamos', Accion.crear)
-          ? () => _abrirFormulario(context)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'inv.prestamos', Accion.crear),
+        () => _abrirFormulario(context),
+      ),
       textoNuevo: 'Nuevo préstamo',
       iconoVacio: Icons.handshake_outlined,
       singular: 'préstamo',
@@ -103,10 +105,11 @@ class PrestamosPagina extends ConsumerWidget {
       fila: (context, prestamo) => _TarjetaPrestamo(
         prestamo: prestamo,
         color: color,
-        onDevolver:
-            puede(ref, 'inv.prestamos', Accion.confirmar) &&
-                prestamo.estado == EstadoPrestamo.pendiente
-            ? () => mostrarHojaDevolucion(context, ref, prestamo: prestamo)
+        onDevolver: prestamo.estado == EstadoPrestamo.pendiente
+            ? permitir(
+                puede(ref, 'inv.prestamos', Accion.confirmar),
+                () => mostrarHojaDevolucion(context, ref, prestamo: prestamo),
+              )
             : null,
       ),
     );
@@ -252,11 +255,11 @@ class _TarjetaPrestamo extends StatelessWidget {
           icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
         if (onDevolver != null)
-          IconButton(
-            onPressed: onDevolver,
+          AppIconoAccion(
+            icono: Icons.undo,
             tooltip: 'Registrar devolución',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.undo, size: 18, color: Colores.exito),
+            color: Colores.exito,
+            onPressed: onDevolver,
           ),
       ],
     );
@@ -282,10 +285,7 @@ class _TarjetaPrestamo extends StatelessWidget {
           AppBoton(
             texto: 'Registrar devolución',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onDevolver!();
-            },
+            onPressed: cerrandoHoja(context, onDevolver),
           ),
       ],
     );

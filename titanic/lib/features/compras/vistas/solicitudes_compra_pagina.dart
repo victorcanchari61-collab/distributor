@@ -9,9 +9,11 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -52,9 +54,10 @@ class SolicitudesCompraPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaSolicitudesProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por número o almacén',
       onRecargar: () => ref.read(solicitudesCompraProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'compras.solicitudes', Accion.crear)
-          ? () => _abrirFormulario(context, ref, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'compras.solicitudes', Accion.crear),
+        () => _abrirFormulario(context, ref, null),
+      ),
       textoNuevo: 'Nueva solicitud',
       iconoVacio: Icons.edit_note_outlined,
       singular: 'solicitud de compra',
@@ -93,18 +96,23 @@ class SolicitudesCompraPagina extends ConsumerWidget {
         solicitud: solicitud,
         color: color,
         onVer: () => _abrirDetalle(context, ref, solicitud, color),
-        onEditar:
-            puede(ref, 'compras.solicitudes', Accion.editar) && solicitud.seEdita
-            ? () => _abrirFormulario(context, ref, solicitud)
+        onEditar: solicitud.seEdita
+            ? permitir(
+                puede(ref, 'compras.solicitudes', Accion.editar),
+                () => _abrirFormulario(context, ref, solicitud),
+              )
             : null,
-        onEnviar:
-            puede(ref, 'compras.solicitudes', Accion.crear) &&
-                solicitud.esBorrador
-            ? () => _enviar(context, ref, solicitud)
+        onEnviar: solicitud.esBorrador
+            ? permitir(
+                puede(ref, 'compras.solicitudes', Accion.crear),
+                () => _enviar(context, ref, solicitud),
+              )
             : null,
-        onAnular:
-            puede(ref, 'compras.solicitudes', Accion.anular) && solicitud.seEdita
-            ? () => _anular(context, ref, solicitud)
+        onAnular: solicitud.seEdita
+            ? permitir(
+                puede(ref, 'compras.solicitudes', Accion.anular),
+                () => _anular(context, ref, solicitud),
+              )
             : null,
       ),
     );
@@ -145,9 +153,7 @@ class SolicitudesCompraPagina extends ConsumerWidget {
   ) async {
     final mensajero = Aviso.de(context);
     try {
-      return await ref
-          .read(comprasApiProvider)
-          .solicitudCompra(solicitud.id);
+      return await ref.read(comprasApiProvider).solicitudCompra(solicitud.id);
     } on ApiExcepcion catch (e) {
       mensajero.error(e.texto);
       return null;
@@ -201,10 +207,7 @@ class SolicitudesCompraPagina extends ConsumerWidget {
             filas: [
               [
                 ('Cantidad', formatoNumero(linea.cantidadPresentacion)),
-                (
-                  'En ${linea.unidadBase}',
-                  formatoNumero(linea.cantidad),
-                ),
+                ('En ${linea.unidadBase}', formatoNumero(linea.cantidad)),
               ],
             ],
           ),
@@ -324,29 +327,25 @@ class _TarjetaSolicitud extends StatelessWidget {
       onTap: onVer,
       acciones: [
         if (onEnviar != null)
-          IconButton(
-            onPressed: onEnviar,
+          AppIconoAccion(
+            icono: Icons.send_outlined,
             tooltip: 'Enviar al administrador',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.send_outlined, size: 18, color: Colores.exito),
+            color: Colores.exito,
+            onPressed: onEnviar,
           ),
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onAnular != null)
-          IconButton(
-            onPressed: onAnular,
+          AppIconoAccion(
+            icono: Icons.block,
             tooltip: 'Anular',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.block, size: 18, color: Colores.peligro),
+            color: Colores.peligro,
+            onPressed: onAnular,
           ),
       ],
     );

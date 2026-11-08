@@ -8,7 +8,9 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -37,9 +39,10 @@ class UsuariosPagina extends ConsumerWidget {
       onBuscar: (t) => ref.read(busquedaUsuariosProvider.notifier).state = t,
       pistaBusqueda: 'Buscar por nombre, correo o rol',
       onRecargar: () => ref.read(usuariosProvider.notifier).recargar(),
-      onNuevo: puede(ref, 'config.usuarios', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'config.usuarios', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       iconoVacio: Icons.person_outline,
       singular: 'usuario',
       plural: 'usuarios',
@@ -51,12 +54,14 @@ class UsuariosPagina extends ConsumerWidget {
       fila: (context, usuario) => _TarjetaUsuario(
         usuario: usuario,
         color: color,
-        onEditar: puede(ref, 'config.usuarios', Accion.editar)
-            ? () => _abrirFormulario(context, usuario)
-            : null,
-        onEstado: puede(ref, 'config.usuarios', Accion.editar)
-            ? () => _cambiarEstado(context, ref, usuario)
-            : null,
+        onEditar: permitir(
+          puede(ref, 'config.usuarios', Accion.editar),
+          () => _abrirFormulario(context, usuario),
+        ),
+        onEstado: permitir(
+          puede(ref, 'config.usuarios', Accion.editar),
+          () => _cambiarEstado(context, ref, usuario),
+        ),
       ),
     );
   }
@@ -195,43 +200,29 @@ class _TarjetaUsuario extends StatelessWidget {
             AppBoton(
               texto: usuario.activo ? 'Desactivar' : 'Activar',
               variante: BotonVariante.secundario,
-              onPressed: () {
-                Navigator.of(context).pop();
-                onEstado!();
-              },
+              onPressed: cerrandoHoja(context, onEstado),
             ),
           if (onEditar != null)
             AppBoton(
               texto: 'Editar',
-              onPressed: () {
-                Navigator.of(context).pop();
-                onEditar!();
-              },
+              onPressed: cerrandoHoja(context, onEditar),
             ),
         ],
       ),
       acciones: [
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: usuario.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: usuario.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              usuario.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: usuario.activo ? Colores.advertencia : Colores.exito,
-            ),
+            color: usuario.activo ? Colores.advertencia : Colores.exito,
+            onPressed: onEstado,
           ),
       ],
     );

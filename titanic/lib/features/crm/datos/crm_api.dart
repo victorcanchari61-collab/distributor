@@ -86,26 +86,30 @@ class CrmApi {
       );
 
   /// GET /api/crm/seguimiento/agenda — los contactos programados (los míos, o todos).
-  Future<AgendaSeguimiento> agenda({bool todos = false, int dias = 14}) async =>
-      AgendaSeguimiento.desdeJson(
-        _mapa(
-          await _api.get(
-            '/crm/seguimiento/agenda${_query({if (todos) 'todos': 'true', 'dias': dias})}',
-          ),
-        ),
-      );
+  Future<AgendaSeguimiento> agenda({
+    bool todos = false,
+    int dias = 14,
+  }) async => AgendaSeguimiento.desdeJson(
+    _mapa(
+      await _api.get(
+        '/crm/seguimiento/agenda${_query({if (todos) 'todos': 'true', 'dias': dias})}',
+      ),
+    ),
+  );
 
   // --- Reportes ---
 
-  /// GET /api/crm/caida — clientes frente al mismo tramo del año anterior.
+  /// GET /api/crm/caida — clientes frente al mismo tramo del mes anterior (o
+  /// del año anterior, según [comparar]).
   Future<CaidaClientes> caida({
     String? desde,
     String? hasta,
     EstadoCaida? estado,
+    CompararCaida comparar = CompararCaida.mes,
   }) async => CaidaClientes.desdeJson(
     _mapa(
       await _api.get(
-        '/crm/caida${_query({'desde': desde, 'hasta': hasta, 'estado': estado?.clave})}',
+        '/crm/caida${_query({'desde': desde, 'hasta': hasta, 'comparar': comparar.clave, 'estado': estado?.clave})}',
       ),
     ),
   );
@@ -115,23 +119,27 @@ class CrmApi {
     int clienteId, {
     String? desde,
     String? hasta,
+    CompararCaida comparar = CompararCaida.mes,
   }) async => QueDejoDeComprar.desdeJson(
     _mapa(
       await _api.get(
-        '/crm/caida/$clienteId/productos${_query({'desde': desde, 'hasta': hasta})}',
+        '/crm/caida/$clienteId/productos${_query({'desde': desde, 'hasta': hasta, 'comparar': comparar.clave})}',
       ),
     ),
   );
 
   /// GET /api/crm/vendedores
-  Future<VendedoresCaida> vendedores({String? desde, String? hasta}) async =>
-      VendedoresCaida.desdeJson(
-        _mapa(
-          await _api.get(
-            '/crm/vendedores${_query({'desde': desde, 'hasta': hasta})}',
-          ),
-        ),
-      );
+  Future<VendedoresCaida> vendedores({
+    String? desde,
+    String? hasta,
+    CompararCaida comparar = CompararCaida.mes,
+  }) async => VendedoresCaida.desdeJson(
+    _mapa(
+      await _api.get(
+        '/crm/vendedores${_query({'desde': desde, 'hasta': hasta, 'comparar': comparar.clave})}',
+      ),
+    ),
+  );
 
   // --- Dashboard ---
 
@@ -146,10 +154,11 @@ class CrmApi {
     String? desde,
     String? hasta,
     required String agrupar,
+    CompararCaida comparar = CompararCaida.mes,
   }) async => ZonasCaida.desdeJson(
     _mapa(
       await _api.get(
-        '/dashboard/zonas${_query({'desde': desde, 'hasta': hasta, 'agrupar': agrupar})}',
+        '/dashboard/zonas${_query({'desde': desde, 'hasta': hasta, 'agrupar': agrupar, 'comparar': comparar.clave})}',
       ),
     ),
   );

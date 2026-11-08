@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_hoja.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/colores.dart';
@@ -82,6 +83,22 @@ Future<void> abrirWhatsapp(BuildContext context, String telefono) async {
   );
   if (!ok) aviso.error('No pudimos abrir WhatsApp.');
 }
+
+/// "Comparar con: Mes anterior / Año anterior" dentro de la hoja de filtros de
+/// los reportes de caída. [proveedor] es el que guarda la elección de esa
+/// pantalla (el cambio vuelve a pedir los datos).
+Widget grupoCompararCaida(AutoDisposeStateProvider<CompararCaida> proveedor) =>
+    Consumer(
+      builder: (context, ref, _) => GrupoFiltro<CompararCaida>(
+        titulo: 'Comparar con',
+        valor: ref.watch(proveedor),
+        icono: Icons.compare_arrows_rounded,
+        opciones: [
+          for (final c in CompararCaida.values) OpcionFiltro(c, c.etiqueta),
+        ],
+        onCambio: (v) => ref.read(proveedor.notifier).state = v,
+      ),
+    );
 
 /// La etiqueta del estado de un cliente, con su color.
 class EtiquetaEstadoCaida extends StatelessWidget {
@@ -269,10 +286,21 @@ class DatoRecuadro extends StatelessWidget {
 
 /// La lista de productos de un cliente en los dos tramos: qué dejó de comprar,
 /// qué compra más y qué es nuevo.
+///
+/// [rotuloAnterior] y [rotuloActual] nombran las dos cifras de venta: los años
+/// (2025 / 2026) si se compara por año, el mes con su año (oct 2026 / nov 2026)
+/// si se compara por mes. Sin ellos dice "Antes" y "Ahora".
 class ListaProductosSituacion extends StatelessWidget {
-  const ListaProductosSituacion({super.key, required this.productos});
+  const ListaProductosSituacion({
+    super.key,
+    required this.productos,
+    this.rotuloAnterior = 'Antes',
+    this.rotuloActual = 'Ahora',
+  });
 
   final List<ProductoSituacion> productos;
+  final String rotuloAnterior;
+  final String rotuloActual;
 
   @override
   Widget build(BuildContext context) {
@@ -325,14 +353,18 @@ class ListaProductosSituacion extends StatelessWidget {
                 const SizedBox(height: Dimen.espacio1),
                 Row(
                   children: [
-                    Text(
-                      'Antes ${soles(p.ventaAnterior)}  ·  Ahora ${soles(p.ventaActual)}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colores.tintaSuave,
+                    // Expanded: los rótulos del mes ("oct 2026") alargan el texto.
+                    Expanded(
+                      child: Text(
+                        '$rotuloAnterior ${soles(p.ventaAnterior)}  ·  '
+                        '$rotuloActual ${soles(p.ventaActual)}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colores.tintaSuave,
+                        ),
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: Dimen.espacio2),
                     Text(
                       solesConSigno(p.variacion),
                       style: TextStyle(
@@ -391,20 +423,29 @@ class _HojaQueDejo extends ConsumerWidget {
                   ? e.mensaje
                   : 'No pudimos cargar los productos.',
             ),
-            data: (d) => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${d.periodo.etiqueta} frente a ${d.periodo.etiquetaAnterior}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colores.tintaSuave,
+            data: (d) {
+              final (anterior, actual) = d.periodo.rotulos(
+                ref.read(compararCaidaProvider),
+              );
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${d.periodo.etiqueta} frente a ${d.periodo.etiquetaAnterior}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colores.tintaSuave,
+                    ),
                   ),
-                ),
-                const SizedBox(height: Dimen.espacio3),
-                ListaProductosSituacion(productos: d.productos),
-              ],
-            ),
+                  const SizedBox(height: Dimen.espacio3),
+                  ListaProductosSituacion(
+                    productos: d.productos,
+                    rotuloAnterior: anterior,
+                    rotuloActual: actual,
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

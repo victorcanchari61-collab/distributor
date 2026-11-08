@@ -9,8 +9,10 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../compartido/widgets/app_filtros.dart';
@@ -56,61 +58,61 @@ class ClientesPagina extends ConsumerWidget {
           color: AccionGlobal.violeta,
           onTap: () => mostrarCategorizacion(context, ref),
         ),
-        if (puede(ref, 'maestros.clientes', Accion.importar))
-          ...accionesImportar(
-            context,
-            ImportacionConfig(
-              titulo: 'clientes',
-              columnas: const [
-                'Documento',
-                'Nombre',
-                'Direccion',
-                'Distrito',
-                'Telefono',
-                'Dias Visita',
-                'Rutas',
-                'Mercado',
-              ],
-              ejemplo: const [
-                '20123456789',
-                'BODEGA EL PROGRESO',
-                'JR. LIMA 123',
-                'PIURA',
-                '987654321',
-                'LUNES',
-                'RUTA NORTE',
-                'MERCADO CENTRAL',
-              ],
-              mapear: (fila) => {
-                'documento': valorDe(fila, [
-                  'documento',
-                  'dni',
-                  'ruc',
-                  'nro documento',
-                ]),
-                'nombre': valorDe(fila, ['nombre', 'razon social', 'cliente']),
-                'direccion': valorDe(fila, ['direccion']),
-                // Se busca por nombre en el ubigeo oficial: el archivo no
-                // trae el id.
-                'distritoNombre': valorDe(fila, ['distrito']),
-                'telefono': valorDe(fila, ['telefono', 'celular']),
-                'diaVisita': valorDe(fila, [
-                  'dias visita',
-                  'dia visita',
-                  'dia de visita',
-                ]),
-                // Se resuelven o crean por nombre: el archivo no trae el id.
-                'rutaNombre': valorDe(fila, ['rutas', 'ruta']),
-                'mercadoNombre': valorDe(fila, ['mercado', 'punto de reparto']),
-              },
-              enviar: ref.read(maestrosApiProvider).importarClientes,
-              onListo: () => ref.read(clientesProvider.notifier).recargar(),
-            ),
+        ...accionesImportar(
+          context,
+          ImportacionConfig(
+            titulo: 'clientes',
+            columnas: const [
+              'Documento',
+              'Nombre',
+              'Direccion',
+              'Distrito',
+              'Telefono',
+              'Dias Visita',
+              'Rutas',
+              'Mercado',
+            ],
+            ejemplo: const [
+              '20123456789',
+              'BODEGA EL PROGRESO',
+              'JR. LIMA 123',
+              'PIURA',
+              '987654321',
+              'LUNES',
+              'RUTA NORTE',
+              'MERCADO CENTRAL',
+            ],
+            mapear: (fila) => {
+              'documento': valorDe(fila, [
+                'documento',
+                'dni',
+                'ruc',
+                'nro documento',
+              ]),
+              'nombre': valorDe(fila, ['nombre', 'razon social', 'cliente']),
+              'direccion': valorDe(fila, ['direccion']),
+              // Se busca por nombre en el ubigeo oficial: el archivo no
+              // trae el id.
+              'distritoNombre': valorDe(fila, ['distrito']),
+              'telefono': valorDe(fila, ['telefono', 'celular']),
+              'diaVisita': valorDe(fila, [
+                'dias visita',
+                'dia visita',
+                'dia de visita',
+              ]),
+              // Se resuelven o crean por nombre: el archivo no trae el id.
+              'rutaNombre': valorDe(fila, ['rutas', 'ruta']),
+              'mercadoNombre': valorDe(fila, ['mercado', 'punto de reparto']),
+            },
+            enviar: ref.read(maestrosApiProvider).importarClientes,
+            onListo: () => ref.read(clientesProvider.notifier).recargar(),
           ),
+        ).permitidas(puede(ref, 'maestros.clientes', Accion.importar)),
       ],
-      onNuevo: puede(ref, 'maestros.clientes', Accion.crear)
-          ? () => _abrirFormulario(context, null)
-          : null,
+      onNuevo: permitir(
+        puede(ref, 'maestros.clientes', Accion.crear),
+        () => _abrirFormulario(context, null),
+      ),
       iconoVacio: Icons.contacts_outlined,
       singular: 'cliente',
       plural: 'clientes',
@@ -155,12 +157,14 @@ class ClientesPagina extends ConsumerWidget {
       fila: (context, cliente) => _TarjetaCliente(
         cliente: cliente,
         color: color,
-        onEditar: puede(ref, 'maestros.clientes', Accion.editar)
-            ? () => _abrirFormulario(context, cliente)
-            : null,
-        onEstado: puede(ref, 'maestros.clientes', Accion.editar)
-            ? () => _cambiarEstado(context, ref, cliente)
-            : null,
+        onEditar: permitir(
+          puede(ref, 'maestros.clientes', Accion.editar),
+          () => _abrirFormulario(context, cliente),
+        ),
+        onEstado: permitir(
+          puede(ref, 'maestros.clientes', Accion.editar),
+          () => _cambiarEstado(context, ref, cliente),
+        ),
       ),
     );
   }
@@ -372,6 +376,13 @@ class _TarjetaCliente extends StatelessWidget {
   /// listado estorban y hacen que entren menos registros en pantalla.
   List<CampoDetalle> get _campos => [
     CampoDetalle('Nombre', cliente.nombre),
+    // "RUC 10…" / "DNI …": en la tarjeta solo sale cuando lo tiene, para no
+    // gastar una línea en una raya; la ficha lo muestra siempre.
+    CampoDetalle(
+      'Segundo documento',
+      cliente.textoDocumentoAlterno,
+      enTarjeta: cliente.documentoAlterno != null,
+    ),
     CampoDetalle(
       'Categoría',
       cliente.categoriaCodigo,
@@ -420,26 +431,18 @@ class _TarjetaCliente extends StatelessWidget {
       onTap: () => _abrirDetalle(context),
       acciones: [
         if (onEditar != null)
-          IconButton(
-            onPressed: onEditar,
+          AppIconoAccion(
+            icono: Icons.edit_outlined,
             tooltip: 'Editar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
+            color: Acento.de(context),
+            onPressed: onEditar,
           ),
         if (onEstado != null)
-          IconButton(
-            onPressed: onEstado,
+          AppIconoAccion(
+            icono: cliente.activo ? Icons.block : Icons.check_circle_outline,
             tooltip: cliente.activo ? 'Desactivar' : 'Activar',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              cliente.activo ? Icons.block : Icons.check_circle_outline,
-              size: 18,
-              color: cliente.activo ? Colores.advertencia : Colores.exito,
-            ),
+            color: cliente.activo ? Colores.advertencia : Colores.exito,
+            onPressed: onEstado,
           ),
       ],
     );
@@ -462,19 +465,13 @@ class _TarjetaCliente extends StatelessWidget {
             texto: cliente.activo ? 'Desactivar' : 'Activar',
             variante: BotonVariante.secundario,
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEstado!();
-            },
+            onPressed: cerrandoHoja(context, onEstado),
           ),
         if (onEditar != null)
           AppBoton(
             texto: 'Editar',
             expandido: true,
-            onPressed: () {
-              Navigator.of(context).pop();
-              onEditar!();
-            },
+            onPressed: cerrandoHoja(context, onEditar),
           ),
       ],
     );

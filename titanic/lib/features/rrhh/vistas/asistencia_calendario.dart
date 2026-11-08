@@ -7,7 +7,10 @@ import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
+import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
+import '../../../core/permisos/sin_permiso.dart';
+import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -340,7 +343,7 @@ class _HojaFeriadosState extends ConsumerState<_HojaFeriados> {
 
   @override
   Widget build(BuildContext context) {
-    final feriados = ref.watch(feriadosProvider);
+    final feriados = ref.watch(feriadosProvider).opcional(const []);
     final puedeCrear = puede(ref, 'rrhh.asistencia', Accion.crear);
     final puedeEditar = puede(ref, 'rrhh.asistencia', Accion.editar);
     final puedeEliminar = puede(ref, 'rrhh.asistencia', Accion.eliminar);
@@ -420,12 +423,12 @@ class _HojaFeriadosState extends ConsumerState<_HojaFeriados> {
                 ],
               ),
               const SizedBox(height: Dimen.espacio4),
-            ] else if (puedeCrear) ...[
+            ] else ...[
               AppBoton(
                 texto: 'Agregar feriado',
                 icono: Icons.add,
                 variante: BotonVariante.secundario,
-                onPressed: () => _abrir(),
+                onPressed: permitir(puedeCrear, () => _abrir()),
               ),
               const SizedBox(height: Dimen.espacio3),
             ],
@@ -478,28 +481,21 @@ class _HojaFeriadosState extends ConsumerState<_HojaFeriados> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (puedeEditar)
-                              IconButton(
-                                tooltip: 'Editar',
-                                visualDensity: VisualDensity.compact,
-                                onPressed: () => _abrir(f),
-                                icon: Icon(
-                                  Icons.edit_outlined,
-                                  size: 18,
-                                  color: acento,
-                                ),
+                            AppIconoAccion(
+                              icono: Icons.edit_outlined,
+                              tooltip: 'Editar',
+                              color: acento,
+                              onPressed: permitir(puedeEditar, () => _abrir(f)),
+                            ),
+                            AppIconoAccion(
+                              icono: Icons.delete_outline,
+                              tooltip: 'Eliminar',
+                              color: Colores.advertencia,
+                              onPressed: permitir(
+                                puedeEliminar,
+                                () => _eliminar(f),
                               ),
-                            if (puedeEliminar)
-                              IconButton(
-                                tooltip: 'Eliminar',
-                                visualDensity: VisualDensity.compact,
-                                onPressed: () => _eliminar(f),
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  size: 18,
-                                  color: Colores.advertencia,
-                                ),
-                              ),
+                            ),
                           ],
                         ),
                       ),

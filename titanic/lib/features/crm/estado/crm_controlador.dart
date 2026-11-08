@@ -8,15 +8,20 @@ import '../datos/crm_api.dart';
 
 final crmApiProvider = Provider((ref) => CrmApi(ref.watch(clienteApiProvider)));
 
-/// El rango se manda como días; sin rango, el servidor mide del 1 de enero a hoy.
+/// El rango se manda como días; sin rango, el servidor mide del 1 del mes a hoy.
 String? _desde(DateTimeRange? r) => r == null ? null : diaIso(r.start);
 String? _hasta(DateTimeRange? r) => r == null ? null : diaIso(r.end);
 
 // ------------------------------------------------------- Clientes con caída
 
-/// El tramo que se mide: nulo es "del 1 de enero a hoy".
+/// El tramo que se mide: nulo es "del 1 del mes a hoy".
 final rangoCaidaProvider = StateProvider.autoDispose<DateTimeRange?>(
   (ref) => null,
+);
+
+/// Contra qué se compara: el mes anterior (lo normal) o el año anterior.
+final compararCaidaProvider = StateProvider.autoDispose<CompararCaida>(
+  (ref) => CompararCaida.mes,
 );
 
 /// Una tarjeta tocada: deja solo los clientes de ese estado.
@@ -59,6 +64,7 @@ final caidaProvider = FutureProvider.autoDispose<CaidaClientes>((ref) {
       .caida(
         desde: _desde(rango),
         hasta: _hasta(rango),
+        comparar: ref.watch(compararCaidaProvider),
         estado: ref.watch(estadoCaidaFiltroProvider),
       );
 });
@@ -93,6 +99,7 @@ final queDejoDeComprarProvider = FutureProvider.autoDispose
             clienteId,
             desde: _desde(rango),
             hasta: _hasta(rango),
+            comparar: ref.read(compararCaidaProvider),
           );
     });
 
@@ -100,6 +107,9 @@ final queDejoDeComprarProvider = FutureProvider.autoDispose
 
 final rangoVendedoresProvider = StateProvider.autoDispose<DateTimeRange?>(
   (ref) => null,
+);
+final compararVendedoresProvider = StateProvider.autoDispose<CompararCaida>(
+  (ref) => CompararCaida.mes,
 );
 final estadoVendedoresFiltroProvider = StateProvider.autoDispose<EstadoCaida?>(
   (ref) => null,
@@ -112,7 +122,11 @@ final vendedoresCaidaProvider = FutureProvider.autoDispose<VendedoresCaida>((
   final rango = ref.watch(rangoVendedoresProvider);
   return ref
       .watch(crmApiProvider)
-      .vendedores(desde: _desde(rango), hasta: _hasta(rango));
+      .vendedores(
+        desde: _desde(rango),
+        hasta: _hasta(rango),
+        comparar: ref.watch(compararVendedoresProvider),
+      );
 });
 
 final vendedoresFiltradosProvider = Provider.autoDispose<List<FilaVendedor>>((
@@ -172,6 +186,9 @@ final sinVentasFiltradasProvider = Provider.autoDispose<List<ProductoSinVenta>>(
 final rangoZonasProvider = StateProvider.autoDispose<DateTimeRange?>(
   (ref) => null,
 );
+final compararZonasProvider = StateProvider.autoDispose<CompararCaida>(
+  (ref) => CompararCaida.mes,
+);
 
 /// mercado o ruta.
 final agruparZonasProvider = StateProvider.autoDispose((ref) => 'mercado');
@@ -185,6 +202,7 @@ final zonasProvider = FutureProvider.autoDispose<ZonasCaida>((ref) {
         desde: _desde(rango),
         hasta: _hasta(rango),
         agrupar: ref.watch(agruparZonasProvider),
+        comparar: ref.watch(compararZonasProvider),
       );
 });
 
@@ -252,7 +270,6 @@ final agendaTodosProvider = StateProvider.autoDispose<bool>((ref) => false);
 
 /// Los contactos programados: lo que se mira al abrir Gestión y seguimiento.
 final agendaProvider = FutureProvider.autoDispose<AgendaSeguimiento>(
-  (ref) => ref
-      .watch(crmApiProvider)
-      .agenda(todos: ref.watch(agendaTodosProvider)),
+  (ref) =>
+      ref.watch(crmApiProvider).agenda(todos: ref.watch(agendaTodosProvider)),
 );
