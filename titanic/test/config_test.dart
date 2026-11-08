@@ -182,12 +182,7 @@ Future<_ApiFalso> _montar(WidgetTester tester, Widget pantalla) async {
               'config.accesos',
               'config.empresa',
             ])
-              for (final accion in const [
-                'ver',
-                'crear',
-                'editar',
-                'eliminar',
-              ])
+              for (final accion in const ['ver', 'crear', 'editar', 'eliminar'])
                 '$sub:$accion',
           },
         ),
@@ -228,13 +223,18 @@ void main() {
     await tester.tap(find.text('Nuevo'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Crear usuario'));
+    await tester.tap(find.text('Registrar'));
     await tester.pumpAndSettle();
 
     expect(find.text('Ingresa el nombre.'), findsOneWidget);
-    expect(find.text('Ingresa el correo.'), findsOneWidget);
+    expect(
+      find.text(
+        'Ingresa el usuario, el correo o el DNI: sin uno no podrá iniciar sesión.',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Ingresa una contraseña.'), findsOneWidget);
-    expect(find.text('Elige un rol.'), findsOneWidget);
+    expect(find.text('Elige al menos un rol.'), findsOneWidget);
 
     // No se llamo al API con datos incompletos.
     expect(api.ultimoUsuario, isNull);
@@ -257,6 +257,10 @@ void main() {
       find.text('El rol Administrador no se puede desactivar.'),
       findsOneWidget,
     );
+
+    // El aviso se cierra solo a los 3 segundos: se deja correr para no terminar con su temporizador pendiente.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('la empresa es un solo formulario con pestañas, sin lista', (
@@ -360,5 +364,9 @@ void main() {
 
     // Sin Ver, "crear" se fue con ella en vez de quedar concedido e inalcanzable.
     expect(api.ultimosPermisos, isEmpty);
+
+    // El aviso se cierra solo a los 3 segundos: se deja correr para no terminar con su temporizador pendiente.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
   });
 }

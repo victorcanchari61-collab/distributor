@@ -240,6 +240,9 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
         children: [
           TabBar(
             controller: _tabs,
+            // Se desliza de lado: en un teléfono angosto "Solicitudes" con su contador no cabía en un tercio del ancho.
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             labelColor: color,
             indicatorColor: color,
             unselectedLabelColor: Colores.tintaSuave,

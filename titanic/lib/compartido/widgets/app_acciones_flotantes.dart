@@ -326,61 +326,67 @@ class _Fila extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(32),
         onTap: alTocar,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Transform.translate(
-                offset: Offset(0, -elevacionEtiqueta),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Dimen.espacio3,
-                    vertical: Dimen.espacio2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colores.tinta.withValues(alpha: 0.88),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  // Siempre en una sola fila: la letra es chica y, si aun así
-                  // no cabe en un teléfono angosto, se encoge hasta entrar.
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      accion.etiqueta,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: TextStyle(
-                        color: Color.lerp(
-                          accion.colorVisible,
-                          Colors.white,
-                          0.65,
+        // La etiqueta sube (Transform) para no tapar a la vecina: sin este espacio arriba quedaba fuera del área
+        // tocable, y tocar la palabra le pegaba al fondo, que cerraba el abanico sin hacer nada. Como la fila se
+        // ancla por abajo, el icono no se mueve.
+        child: Padding(
+          padding: EdgeInsets.only(top: elevacionEtiqueta),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Transform.translate(
+                  offset: Offset(0, -elevacionEtiqueta),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Dimen.espacio3,
+                      vertical: Dimen.espacio2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colores.tinta.withValues(alpha: 0.88),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    // Siempre en una sola fila: la letra es chica y, si aun así
+                    // no cabe en un teléfono angosto, se encoge hasta entrar.
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        accion.etiqueta,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          color: Color.lerp(
+                            accion.colorVisible,
+                            Colors.white,
+                            0.65,
+                          ),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
                         ),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: Dimen.espacio3),
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: accion.colorVisible,
-                shape: BoxShape.circle,
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+              const SizedBox(width: Dimen.espacio3),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: accion.colorVisible,
+                  shape: BoxShape.circle,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(accion.icono, color: Colors.white),
               ),
-              child: Icon(accion.icono, color: Colors.white),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:titanic/compartido/widgets/app_filtros.dart';
 import 'package:titanic/compartido/widgets/app_selector.dart';
 import 'package:titanic/core/almacenamiento/sesion_almacen.dart';
+import 'package:titanic/core/permisos/permisos.dart' show misPermisosProvider;
 import 'package:titanic/core/red/cliente_api.dart';
 import 'package:titanic/core/red/excepciones.dart';
 import 'package:titanic/core/tema/tema.dart';
@@ -153,6 +154,20 @@ Future<_ApiFalso> _montarClientes(
       overrides: [
         sesionAlmacenProvider.overrideWithValue(const _AlmacenConSesion()),
         maestrosApiProvider.overrideWithValue(api),
+        // Los botones sin permiso salen en gris y no abren nada: aquí se tienen todos los de Clientes.
+        misPermisosProvider.overrideWith(
+          (ref) async => {
+            for (final accion in const [
+              'ver',
+              'crear',
+              'editar',
+              'eliminar',
+              'importar',
+              'exportar',
+            ])
+              'maestros.clientes:$accion',
+          },
+        ),
       ],
       child: MaterialApp(theme: Tema.claro(), home: const ClientesPagina()),
     ),
@@ -251,10 +266,12 @@ void main() {
   ) async {
     final api = await _montarClientes(tester);
 
+    await tester.tap(find.text('Acciones'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Nuevo'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Crear cliente'));
+    await tester.tap(find.text('Registrar'));
     await tester.pumpAndSettle();
 
     expect(find.text('Ingresa el documento.'), findsOneWidget);
@@ -267,11 +284,13 @@ void main() {
   testWidgets('un DNI incompleto no pasa la validacion', (tester) async {
     await _montarClientes(tester);
 
+    await tester.tap(find.text('Acciones'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Nuevo'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).first, '123');
-    await tester.tap(find.text('Crear cliente'));
+    await tester.tap(find.text('Registrar'));
     await tester.pumpAndSettle();
 
     expect(find.text('Un DNI tiene 8 dígitos.'), findsOneWidget);
@@ -300,6 +319,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.cambiados, [1]);
+
+    // El aviso se cierra solo a los 3 segundos: se deja correr para no terminar con su temporizador pendiente.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('la pantalla de proveedores se arma sin errores', (tester) async {

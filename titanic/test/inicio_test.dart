@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:titanic/core/almacenamiento/sesion_almacen.dart';
 import 'package:titanic/core/navegacion/menu.dart';
+import 'package:titanic/core/permisos/permisos.dart' show misPermisosProvider;
 import 'package:titanic/core/tema/tema.dart';
 import 'package:titanic/features/auth/estado/auth_controlador.dart';
 import 'package:titanic/features/inicio/vistas/inicio_pagina.dart';
@@ -43,6 +44,13 @@ Future<void> _montar(
     ProviderScope(
       overrides: [
         sesionAlmacenProvider.overrideWithValue(const _AlmacenConSesion()),
+        // El menú lateral esconde lo que el rol no puede ver: aquí se ven todas las vistas.
+        misPermisosProvider.overrideWith(
+          (ref) async => {
+            for (final grupo in menuGrupos)
+              for (final item in grupo.items) '${item.id}:ver',
+          },
+        ),
       ],
       child: MaterialApp(theme: Tema.claro(), home: const InicioPagina()),
     ),
@@ -73,21 +81,26 @@ void main() {
     expect(find.text('Módulos'), findsOneWidget);
   });
 
-  testWidgets(
-    'el menu lateral abre y lista los modulos, sin datos de usuario',
-    (tester) async {
-      await _montar(tester);
+  testWidgets('el menu lateral abre y lista los modulos, sin datos de usuario', (
+    tester,
+  ) async {
+    await _montar(tester);
 
-      await tester.tap(find.byTooltip('Open navigation menu'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Inicio'), findsWidgets);
-      expect(find.text('Cerrar sesión'), findsOneWidget);
+    expect(find.text('Inicio'), findsWidgets);
 
-      // El correo del usuario vive en la barra superior, no en el menu.
-      expect(find.text('admin@distributor.com'), findsNothing);
-    },
-  );
+    // Cerrar sesión y el correo del usuario viven en el menú del avatar de la barra superior, no en el menú lateral.
+    expect(
+      find.descendant(
+        of: find.byType(Drawer),
+        matching: find.text('Cerrar sesión'),
+      ),
+      findsNothing,
+    );
+    expect(find.text('admin@distributor.com'), findsNothing);
+  });
 
   testWidgets('al elegir un modulo se despliegan sus vistas', (tester) async {
     await _montar(tester);
@@ -96,7 +109,13 @@ void main() {
     await tester.pumpAndSettle();
 
     // El primer modulo viene desplegado.
-    expect(find.text('Clientes'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(Drawer),
+        matching: find.text(menuGrupos.first.items.first.titulo),
+      ),
+      findsOneWidget,
+    );
 
     // El titulo del modulo esta dos veces en pantalla (tarjeta del inicio y
     // menu), asi que se busca dentro del propio menu.
@@ -108,6 +127,10 @@ void main() {
     await tester.tap(enMenu);
     await tester.pumpAndSettle();
 
-    expect(find.text('Arqueo diario'), findsOneWidget);
+    // Se despliegan las vistas de Finanzas: su primera vista aparece en el menú.
+    expect(
+      find.descendant(of: find.byType(Drawer), matching: find.text('Mi Caja')),
+      findsOneWidget,
+    );
   });
 }
