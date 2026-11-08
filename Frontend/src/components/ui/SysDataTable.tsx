@@ -325,7 +325,7 @@ export function SysDataTable<T>({
   alturaFija = toolbar && paginacion,
 }: SysDataTableProps<T>) {
   // Las acciones son píldoras de color, más anchas que los íconos sueltos de antes: el ancho que pide cada pantalla se ensancha.
-  const actionsWidth = Math.round(actionsWidthBase * 1.4)
+  const actionsWidth = Math.round(actionsWidthBase * 1.2)
 
   // Las de solo filtro no entran al orden: de él salen la tabla, la búsqueda, las tarjetas y el menú de columnas.
   const [order, setOrder] = useState<string[]>(() => columns.filter((c) => !c.soloFiltro).map((c) => c.key))

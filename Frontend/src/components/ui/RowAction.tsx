@@ -70,14 +70,14 @@ export function RowAction({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'inline-flex items-center justify-center rounded-xl px-3 py-1 [&_svg]:size-4 [&_svg]:stroke-[2.5]',
+        'inline-flex items-center justify-center rounded-lg px-2.5 py-[3px] [&_svg]:size-3.5 [&_svg]:stroke-[2.5]',
         disabled
           ? 'cursor-not-allowed bg-slate-200 text-slate-400'
           : cn(
               // El efecto 3D: una base sólida más oscura bajo el botón; al pasar el mouse se levanta y al pulsar se hunde
               // hasta tocar la base.
-              'cursor-pointer text-white shadow-[0_4px_0_var(--d)] transition-[transform,translate,box-shadow,filter] duration-[120ms]',
-              'hover:-translate-y-0.5 hover:brightness-[1.08] active:translate-y-[3px] active:shadow-[0_1px_0_var(--d)]',
+              'cursor-pointer text-white shadow-[0_3px_0_var(--d)] transition-[transform,translate,box-shadow,filter] duration-[120ms]',
+              'hover:-translate-y-px hover:brightness-[1.08] active:translate-y-[2px] active:shadow-[0_1px_0_var(--d)]',
               'focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1 focus-visible:outline-none',
               TONES[tone],
             ),
