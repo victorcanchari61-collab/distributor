@@ -1,8 +1,18 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { Badge, cn } from '../../components/ui'
+import { Badge, Desplegable, cn } from '../../components/ui'
 import { NAV_GROUPS, resolveNav } from '../../components/layout'
 import type { Accion, SubmoduloCatalogo } from '../../lib/permisos'
+import { opcionesAlcance, queVe } from './AlcanceDatosEditor'
+
+/** Qué filas ve en cada pantalla que lo admite (todas, solo su ruta, solo lo suyo). */
+export interface AlcanceEnMatriz {
+  /** Las pantallas donde se puede limitar. */
+  pantallas: string[]
+  valores: Record<string, string>
+  onChange: (submodulo: string, nivel: string) => void
+  disabled?: boolean
+}
 
 /** Como se nombra cada accion en pantalla, y en que orden se leen. */
 export const ACCIONES: { id: Accion; label: string }[] = [
@@ -39,7 +49,13 @@ export function MatrizPermisos({
   onMarcarModulo,
   filtro = '',
   nuevas = false,
+  alcance,
 }: {
+  /**
+   * Con esto cada pantalla que lo admite lleva, en su misma fila, qué clientes y ventas ve: así se configura todo
+   * de una pantalla en un solo sitio.
+   */
+  alcance?: AlcanceEnMatriz
   catalogo: SubmoduloCatalogo[]
   /** Lo marcado y editable. */
   marcadas: Set<string>
@@ -96,6 +112,7 @@ export function MatrizPermisos({
         const completo = submodulos.every((s) => s.acciones.every((a) => marcadas.has(clave(s.submodulo, a))))
         // Solo las columnas que existen en este módulo: las demás serían una fila de puntos.
         const columnas = ACCIONES.filter((a) => submodulos.some((s) => s.acciones.includes(a.id)))
+        const conAlcance = alcance !== undefined && submodulos.some((s) => alcance.pantallas.includes(s.submodulo))
 
         return (
           <div key={grupo.id} data-sys={grupo.sys} className="overflow-hidden rounded-panel border border-line">
@@ -156,6 +173,11 @@ export function MatrizPermisos({
                           {a.label}
                         </th>
                       ))}
+                      {conAlcance && (
+                        <th className="w-48 px-2 py-2 text-left text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
+                          Qué ve
+                        </th>
+                      )}
                       {onMarcarSubmodulo && (
                         <th className="w-20 px-2 py-2 text-center text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
                           Todo
@@ -170,7 +192,7 @@ export function MatrizPermisos({
 
                       return (
                         <tr key={s.submodulo} className="border-b border-line last:border-b-0 hover:bg-surface-alt/60">
-                          <td className="py-2 pr-3 pl-3">
+                          <td className="py-2 pr-3 pl-3 whitespace-nowrap">
                             <span className="font-medium text-ink">{nombre}</span>
                           </td>
 
@@ -204,6 +226,29 @@ export function MatrizPermisos({
                               </td>
                             )
                           })}
+
+                          {conAlcance && (
+                            <td className="px-2 py-1.5">
+                              {alcance.pantallas.includes(s.submodulo) ? (
+                                <span title={queVe(s.submodulo)}>
+                                  <Desplegable
+                                    size="sm"
+                                    value={alcance.valores[s.submodulo] || 'todos'}
+                                    onChange={(v) => alcance.onChange(s.submodulo, String(v))}
+                                    // Sin Ver no entra a la pantalla: qué filas vería da igual.
+                                    disabled={alcance.disabled || !tiene(clave(s.submodulo, 'ver'))}
+                                    options={opcionesAlcance(s.submodulo).map((n) => ({
+                                      value: n.value,
+                                      label: n.label,
+                                      nota: n.nota,
+                                    }))}
+                                  />
+                                </span>
+                              ) : (
+                                <span className="text-ink-soft">—</span>
+                              )}
+                            </td>
+                          )}
 
                           {onMarcarSubmodulo && (
                             <td className="px-2 py-2 text-center">

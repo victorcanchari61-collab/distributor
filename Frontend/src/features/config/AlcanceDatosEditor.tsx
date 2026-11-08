@@ -34,6 +34,26 @@ const SOLO_PROPIOS: Record<string, { label: string; nota: string }> = {
   'finanzas.cierres': { label: 'Solo los suyos', nota: 'Únicamente los cierres de su propia caja y los cobros que él hizo' },
 }
 
+/**
+ * Los niveles que admite una pantalla, como opciones de un desplegable con su explicación debajo. Con `heredable`
+ * empieza por "Igual que su rol" (valor ''), que solo tiene sentido al configurar a una persona.
+ */
+export function opcionesAlcance(sub: string, heredable?: boolean) {
+  const propio = SOLO_PROPIOS[sub]
+  const niveles = propio
+    ? NIVELES_ALCANCE.filter((n) => n.value !== 'misclientes').map((n) =>
+        n.value === 'propios' ? { ...n, label: propio.label, nota: propio.nota } : n,
+      )
+    : NIVELES_ALCANCE
+  return [
+    ...(heredable ? [{ value: '', label: 'Igual que su rol', nota: 'Usa el alcance que le da su rol' }] : []),
+    ...niveles,
+  ]
+}
+
+/** Qué se restringe en esa pantalla, dicho para quien configura. */
+export const queVe = (sub: string) => QUE_VE[sub] ?? 'Qué filas ve'
+
 export interface AlcanceDatosEditorProps {
   submodulos: string[]
   /** Nivel de cada pantalla. En un usuario, '' significa "igual que su rol". */
@@ -63,29 +83,21 @@ export function AlcanceDatosEditor({
       {submodulos.map((sub) => {
         const nombre = resolveNav(sub).item?.label ?? sub
         const valor = valores[sub] ?? (heredable ? '' : 'todos')
-        const propio = SOLO_PROPIOS[sub]
-        const niveles = propio
-          ? NIVELES_ALCANCE.filter((n) => n.value !== 'misclientes').map((n) =>
-              n.value === 'propios' ? { ...n, label: propio.label, nota: propio.nota } : n,
-            )
-          : NIVELES_ALCANCE
-        const nota = valor === '' ? 'Usa el alcance que le da su rol' : niveles.find((n) => n.value === valor)?.nota
+        const opciones = opcionesAlcance(sub, heredable)
+        const nota = opciones.find((n) => n.value === valor)?.nota
 
         return (
           <div key={sub} className="grid gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,16rem)] sm:items-center">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-ink">{nombre}</p>
-              <p className="text-xs text-ink-soft">{QUE_VE[sub] ?? 'Qué filas ve'}</p>
+              <p className="text-xs text-ink-soft">{queVe(sub)}</p>
               {nota && <p className="mt-0.5 text-xs text-ink-muted">{nota}</p>}
             </div>
             <Desplegable
               value={valor}
               onChange={(v) => onChange(sub, String(v))}
               disabled={disabled}
-              options={[
-                ...(heredable ? [{ value: '', label: 'Igual que su rol' }] : []),
-                ...niveles.map((n) => ({ value: n.value, label: n.label })),
-              ]}
+              options={opciones.map((n) => ({ value: n.value, label: n.label }))}
             />
           </div>
         )

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Inbox, RotateCcw, Save, ShieldCheck, ShieldPlus, Users } from 'lucide-react'
 import { Alert, Button, cn, PageHeader, PageSection, Tabs, useToast } from '../../components/ui'
 import { ExcepcionesPermisos } from './ExcepcionesPermisos'
-import { AlcanceDatosEditor } from './AlcanceDatosEditor'
 import { permisoApi } from './permisoApi'
 import { BandejaSolicitudes } from './BandejaSolicitudes'
 import { ESTADO_SOLICITUD, solicitudApi } from './solicitudApi'
@@ -355,37 +354,27 @@ export function AccesosPage() {
           onToggle={toggle}
           onMarcarSubmodulo={marcarSubmodulo}
           onMarcarModulo={marcarModulo}
+          /*
+            Qué FILAS ve, no qué botones tiene: el permiso dice si entra a Pedidos; esto dice de qué clientes. Va en
+            la misma fila de la pantalla para configurarla entera en un solo sitio. "Solo mis rutas" limita a los
+            clientes de las rutas que la persona tiene a cargo (se asigna en Usuarios); sin ruta no ve ninguno.
+          */
+          alcance={{
+            pantallas: pantallasAlcance,
+            valores: alcances,
+            onChange: cambiarAlcance,
+            // El Administrador ve siempre todo.
+            disabled: rol?.protegido,
+          }}
         />
 
         <p className="mt-3 text-xs text-ink-soft">
           Quitar <b>Ver</b> retira la pantalla por completo. Conceder cualquier otra acción activa{' '}
           <b>Ver</b> automáticamente. Un <b>·</b> significa que esa acción no existe en esa
-          pantalla.
+          pantalla. <b>Qué ve</b> dice de qué clientes y ventas: todos, solo los de su ruta o solo
+          lo que registró.
         </p>
       </PageSection>
-
-      {/*
-        Qué FILAS ve, no qué botones tiene: el permiso de arriba dice si entra a Pedidos; esto dice de
-        qué clientes. "Solo mis rutas" limita a los clientes de las rutas que la persona tiene a cargo
-        (se asigna en Usuarios); sin ruta no ve ninguno.
-      */}
-      {pantallasAlcance.length > 0 && (
-        <PageSection
-          title="Qué clientes y ventas ve"
-          description={
-            rol?.protegido
-              ? 'El Administrador ve siempre todo.'
-              : 'Todo, solo su ruta o solo lo suyo. Se guarda con Guardar.'
-          }
-        >
-          <AlcanceDatosEditor
-            submodulos={pantallasAlcance}
-            valores={alcances}
-            onChange={cambiarAlcance}
-            disabled={rol?.protegido}
-          />
-        </PageSection>
-      )}
       </>
       )}
     </div>
