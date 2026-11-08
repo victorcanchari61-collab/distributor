@@ -59,6 +59,21 @@ public static class EstadoCpe
 
     /// <summary>El envío falló antes de tener respuesta (red, caída de SUNAT): se puede reintentar.</summary>
     public const string Error = "ERROR";
+
+    /// <summary>Se dio de baja: SUNAT aceptó la comunicación de baja y el comprobante ya no vale.</summary>
+    public const string Baja = "BAJA";
+}
+
+/// <summary>En qué quedó la comunicación de baja de un comprobante.</summary>
+public static class EstadoBaja
+{
+    /// <summary>SUNAT recibió la baja y todavía la procesa: se consulta después con su ticket.</summary>
+    public const string Pendiente = "PENDIENTE";
+
+    public const string Aceptada = "ACEPTADA";
+
+    /// <summary>SUNAT no la aceptó: el comprobante sigue vigente y se puede intentar de nuevo.</summary>
+    public const string Rechazada = "RECHAZADA";
 }
 
 /// <summary>En qué quedó el envío por WhatsApp de un comprobante.</summary>
@@ -194,6 +209,24 @@ public class ComprobanteElectronico
     /// público y se adivina). Quien tiene el enlace baja el PDF; nada más.
     /// </summary>
     public string TokenPublico { get; set; } = Guid.NewGuid().ToString("N");
+
+    // --- Comunicación de baja (solo facturas) ---
+
+    /// <summary>Nulo: nunca se pidió la baja. Ver <see cref="EstadoBaja"/>.</summary>
+    public string? BajaEstado { get; set; }
+
+    public string? BajaMotivo { get; set; }
+
+    /// <summary>El día en que se pidió la baja (hora de Perú).</summary>
+    public DateTime? BajaFecha { get; set; }
+
+    /// <summary>El correlativo de la comunicación dentro de ese día: RA-AAAAMMDD-n.</summary>
+    public int? BajaCorrelativo { get; set; }
+
+    /// <summary>El ticket con el que se consulta una baja que SUNAT todavía procesa.</summary>
+    public string? BajaTicket { get; set; }
+
+    public string? BajaMensaje { get; set; }
 
     // --- Envío por WhatsApp ---
 

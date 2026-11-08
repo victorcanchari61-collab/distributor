@@ -38,6 +38,20 @@ public class RespuestaSunat
     public byte[]? CdrZip { get; set; }
 }
 
+/// <summary>Lo que respondió SUNAT a una comunicación de baja (o a la consulta de su ticket).</summary>
+public class RespuestaBaja
+{
+    public bool Aceptada { get; set; }
+
+    /// <summary>SUNAT todavía la procesa: se consulta de nuevo con el ticket.</summary>
+    public bool Pendiente { get; set; }
+
+    public string? Ticket { get; set; }
+    public string? Codigo { get; set; }
+    public string? Mensaje { get; set; }
+    public byte[]? CdrZip { get; set; }
+}
+
 /// <summary>La API de facturación electrónica (api-factu): genera y firma el XML, y lo envía a SUNAT.</summary>
 public interface IFactuClient
 {
@@ -47,6 +61,12 @@ public interface IFactuClient
     Task<CertificadoGuardado> ValidarCertificadoAsync(string ruc, string pem);
 
     Task<RespuestaSunat> EnviarAsync(string entorno, string ruc, string usuarioSol, string claveSol, string nombreArchivo, string xml);
+
+    /// <summary>Firma y envía una comunicación de baja; la API espera a SUNAT unos segundos y, si no alcanza, devuelve el ticket.</summary>
+    Task<RespuestaBaja> EnviarBajaAsync(object cuerpo);
+
+    /// <summary>Consulta en SUNAT cómo va una baja con su ticket.</summary>
+    Task<RespuestaBaja> ConsultarTicketAsync(string entorno, string ruc, string usuarioSol, string claveSol, string ticket);
 }
 
 public class FactuClient : IFactuClient
@@ -67,7 +87,8 @@ public class FactuClient : IFactuClient
             _http.BaseAddress = new Uri(_opciones.ApiUrl.TrimEnd('/') + "/");
         // Firmar es rápido; enviar a SUNAT puede tardar. Un corte a los 60 s deja el comprobante en "Generado" y se
         // reintenta, que es mejor que dejar la petición colgada.
-        _http.Timeout = TimeSpan.FromSeconds(60);
+        // Una baja espera a SUNAT hasta unos 40 segundos más: por eso el margen.
+        _http.Timeout = TimeSpan.FromSeconds(100);
     }
 
     public Task<XmlGenerado> GenerarComprobanteAsync(object cuerpo) => GenerarAsync("generar/comprobante", cuerpo);
@@ -152,6 +173,54 @@ public class FactuClient : IFactuClient
             respuesta.CdrZip = Convert.FromBase64String(cdr);
         }
 
+        return respuesta;
+    }
+
+    public async Task<RespuestaBaja> EnviarBajaAsync(object cuerpo)
+    {
+        using var raiz = await PostAsync("enviar/comunicacion/baja", cuerpo);
+        return LeerBaja(raiz.RootElement);
+    }
+
+    public async Task<RespuestaBaja> ConsultarTicketAsync(string entorno, string ruc, string usuarioSol, string claveSol, string ticket)
+    {
+        using var raiz = await PostAsync(
+            $"consulta/documento/ticker-see/{Uri.EscapeDataString(ticket)}",
+            new { endpoint = entorno, ruc, usuario = usuarioSol, clave = claveSol });
+        var r = raiz.RootElement;
+        var baja = LeerBaja(r);
+        baja.Ticket ??= ticket;
+        return baja;
+    }
+
+    /// <summary>
+    /// Las dos respuestas (enviar y consultar) se parecen: aceptada, pendiente (SUNAT sigue procesando, código 0098) o
+    /// rechazada. Una baja que SUNAT no acepta no deja el comprobante dado de baja.
+    /// </summary>
+    private static RespuestaBaja LeerBaja(JsonElement r)
+    {
+        var mensaje = Texto(r, "mensaje");
+        var respuesta = new RespuestaBaja
+        {
+            Ticket = Texto(r, "ticket"),
+            Codigo = Texto(r, "codigo_cdr"),
+            Mensaje = mensaje,
+        };
+
+        var cdr = Texto(r, "cdr");
+        if (!string.IsNullOrEmpty(cdr)) respuesta.CdrZip = Convert.FromBase64String(cdr);
+
+        var aceptadoCampo = !r.TryGetProperty("aceptado", out var a) || a.ValueKind != JsonValueKind.False;
+        if (Verdadero(r, "estado") && aceptadoCampo && (respuesta.Codigo is null or "0"))
+        {
+            respuesta.Aceptada = true;
+            return respuesta;
+        }
+
+        // Sigue en proceso: lo dice el flag de la API o el código 0098 de SUNAT en el mensaje.
+        respuesta.Pendiente = Verdadero(r, "pendiente")
+            || (mensaje?.Contains("0098") ?? false)
+            || (mensaje?.Contains("todavía está procesando", StringComparison.OrdinalIgnoreCase) ?? false);
         return respuesta;
     }
 

@@ -19,6 +19,12 @@ public class EmitirDirectoRequest : CrearNotaVentaRequest
     public string Tipo { get; set; } = string.Empty;
 }
 
+/// <summary>Dar de baja una factura: SUNAT pide el motivo.</summary>
+public class DarDeBajaRequest
+{
+    public string Motivo { get; set; } = string.Empty;
+}
+
 /// <summary>Mandar el comprobante por WhatsApp. Sin teléfono se usa el del cliente.</summary>
 public class EnviarWhatsAppRequest
 {

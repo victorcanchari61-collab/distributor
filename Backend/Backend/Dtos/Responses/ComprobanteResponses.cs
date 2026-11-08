@@ -52,6 +52,12 @@ public class ComprobanteResponse
     public DateTime FechaCreacion { get; set; }
     public DateTime? EnviadoEn { get; set; }
 
+    // --- Baja: nulo si nunca se pidió ---
+    public string? BajaEstado { get; set; }
+    public string? BajaMotivo { get; set; }
+    public DateTime? BajaFecha { get; set; }
+    public string? BajaMensaje { get; set; }
+
     // --- WhatsApp: nulo si nunca se mandó ---
     public string? WhatsAppEstado { get; set; }
     public string? WhatsAppTelefono { get; set; }

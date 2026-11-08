@@ -832,6 +832,24 @@ namespace Backend.Data.Migrations
                     b.Property<int?>("AfectadoId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("BajaCorrelativo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BajaEstado")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("BajaFecha")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("BajaMensaje")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("BajaMotivo")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("BajaTicket")
+                        .HasColumnType("longtext");
+
                     b.Property<byte[]>("CdrZip")
                         .HasColumnType("longblob");
 

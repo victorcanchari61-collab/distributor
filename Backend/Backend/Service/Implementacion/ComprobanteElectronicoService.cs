@@ -504,16 +504,144 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
                 .SumAsync(x => (decimal?)x.Total) ?? 0m;
             if (corregido + 0.01m < facturado) return;
 
-            var anulada = await _context.NotasVenta.AsNoTracking()
-                .Where(n => n.Id == ventaId).Select(n => n.Estado == EstadoNotaVenta.Anulada).FirstOrDefaultAsync();
-            if (anulada) return;
-
-            await _ventas.AnularNotaVentaAsync(ventaId, nota.UsuarioId ?? _usuarioActual.Id);
+            await AnularVentaAsync(ventaId, nota.UsuarioId ?? _usuarioActual.Id);
         }
         catch (Exception e)
         {
             _logger.LogWarning(e, "No se pudo anular la venta {VentaId} tras aceptarse la nota de crédito {Nota}", ventaId, nota.NumeroCompleto);
         }
+    }
+
+    /// <summary>Anula la venta de un comprobante que SUNAT dio por deshecho, si no estaba anulada. Nunca tumba la respuesta.</summary>
+    private async Task AnularVentaAsync(int ventaId, int? usuarioId)
+    {
+        try
+        {
+            var anulada = await _context.NotasVenta.AsNoTracking()
+                .Where(n => n.Id == ventaId).Select(n => n.Estado == EstadoNotaVenta.Anulada).FirstOrDefaultAsync();
+            if (anulada) return;
+
+            await _ventas.AnularNotaVentaAsync(ventaId, usuarioId);
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "No se pudo anular la venta {VentaId} tras dar de baja su factura", ventaId);
+        }
+    }
+
+    // ------------------------------------------------------------------ Baja
+
+    /// <summary>SUNAT solo admite dar de baja una factura dentro de los 7 días de emitida.</summary>
+    private const int DiasParaBaja = 7;
+
+    public async Task<ComprobanteResponse> DarDeBajaAsync(int id, DarDeBajaRequest request)
+    {
+        var c = await ObtenerAsync(id);
+
+        if (c.Tipo != TipoCpe.Factura)
+            throw new BadRequestException("Solo las facturas se dan de baja; una boleta se corrige con una nota de crédito");
+        if (c.Estado != EstadoCpe.Aceptado)
+            throw new BadRequestException("Solo se puede dar de baja una factura que SUNAT ya aceptó");
+        if (c.BajaEstado is EstadoBaja.Pendiente or EstadoBaja.Aceptada)
+            throw new ConflictException(c.BajaEstado == EstadoBaja.Pendiente
+                ? "La baja ya se envió y SUNAT todavía la procesa: consúltala"
+                : "Esta factura ya se dio de baja");
+
+        var motivo = (request.Motivo ?? string.Empty).Trim();
+        if (motivo.Length < 3) throw new BadRequestException("Escribe el motivo de la baja");
+        if (motivo.Length > 100) throw new BadRequestException("El motivo de la baja admite hasta 100 caracteres");
+
+        var hoy = Zona.Hoy;
+        if ((hoy - c.FechaEmision.Date).TotalDays > DiasParaBaja)
+            throw new BadRequestException($"SUNAT solo admite la baja dentro de los {DiasParaBaja} días de emitida la factura: usa una nota de crédito");
+
+        if (await _context.ComprobantesElectronicos.AsNoTracking()
+                .AnyAsync(x => x.AfectadoId == c.Id && x.Tipo == TipoCpe.NotaCredito && x.Estado == EstadoCpe.Aceptado))
+            throw new BadRequestException("La factura ya tiene una nota de crédito: no se puede dar de baja");
+
+        var emisora = await EmpresaAsync();
+        var correlativo = (await _context.ComprobantesElectronicos.AsNoTracking()
+            .Where(x => x.BajaFecha == hoy).MaxAsync(x => (int?)x.BajaCorrelativo) ?? 0) + 1;
+
+        RespuestaBaja respuesta;
+        try
+        {
+            respuesta = await EnviarBajaAsync(emisora, c, correlativo, motivo, hoy);
+        }
+        catch (AppException e) when (e.StatusCode == StatusCodes.Status502BadGateway)
+        {
+            // Sin respuesta no se sabe si SUNAT la recibió: se anota el correlativo usado para que un nuevo intento no lo repita.
+            c.BajaMotivo = motivo;
+            c.BajaFecha = hoy;
+            c.BajaCorrelativo = correlativo;
+            c.BajaEstado = EstadoBaja.Rechazada;
+            c.BajaMensaje = "No hubo respuesta de la API: no se sabe si SUNAT recibió la baja. Revisa en SUNAT antes de reintentar.";
+            await _context.SaveChangesAsync();
+            throw;
+        }
+
+        c.BajaMotivo = motivo;
+        c.BajaFecha = hoy;
+        c.BajaCorrelativo = correlativo;
+        return await AplicarBajaAsync(c, respuesta);
+    }
+
+    private Task<RespuestaBaja> EnviarBajaAsync(EmpresaEmisora emisora, ComprobanteElectronico c, int correlativo, string motivo, DateTime hoy) =>
+        _factu.EnviarBajaAsync(new Dictionary<string, object?>
+        {
+            ["endpoint"] = c.Entorno,
+            ["certificado"] = emisora.Certificado,
+            ["empresa"] = emisora.Api,
+            ["correlativo"] = correlativo.ToString(),
+            ["fecha_generacion"] = hoy.ToString("yyyy-MM-dd"),
+            ["fecha_comunicacion"] = c.FechaEmision.ToString("yyyy-MM-dd"),
+            ["detalles"] = new[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["tipo_doc"] = c.Tipo, ["serie"] = c.Serie, ["correlativo"] = c.Numero.ToString(), ["motivo"] = motivo,
+                },
+            },
+        });
+
+    public async Task<ComprobanteResponse> ConsultarBajaAsync(int id)
+    {
+        var c = await ObtenerAsync(id);
+        if (c.BajaEstado != EstadoBaja.Pendiente || string.IsNullOrEmpty(c.BajaTicket))
+            throw new BadRequestException("Esta factura no tiene una baja pendiente de consultar");
+
+        var emisora = await EmpresaAsync();
+        var respuesta = await _factu.ConsultarTicketAsync(c.Entorno, emisora.Api.ruc, emisora.Api.usuario, emisora.Api.clave, c.BajaTicket);
+        return await AplicarBajaAsync(c, respuesta);
+    }
+
+    /// <summary>
+    /// Guarda lo que SUNAT respondió a la baja. Aceptada: el comprobante queda dado de baja y su venta se anula (stock de vuelta,
+    /// fuera de los reportes). Pendiente: queda el ticket para consultar. Rechazada: el comprobante sigue vigente.
+    /// </summary>
+    private async Task<ComprobanteResponse> AplicarBajaAsync(ComprobanteElectronico c, RespuestaBaja r)
+    {
+        c.BajaMensaje = Corto(r.Mensaje, 500);
+        if (!string.IsNullOrEmpty(r.Ticket)) c.BajaTicket = r.Ticket;
+
+        if (r.Aceptada)
+        {
+            c.BajaEstado = EstadoBaja.Aceptada;
+            c.Estado = EstadoCpe.Baja;
+            if (r.CdrZip is { Length: > 0 }) c.CdrZip = r.CdrZip;
+        }
+        else
+        {
+            c.BajaEstado = r.Pendiente ? EstadoBaja.Pendiente : EstadoBaja.Rechazada;
+        }
+
+        await _context.SaveChangesAsync();
+        await _notificador.AvisarAsync("comprobantes", "baja", new { c.Id, c.Estado, c.BajaEstado });
+
+        if (r.Aceptada && c.NotaVentaId is int ventaId)
+            await AnularVentaAsync(ventaId, c.UsuarioId ?? _usuarioActual.Id);
+
+        return Mapear(c);
     }
 
     /// <summary>La empresa como la pide la API: los nombres van tal cual porque son los de su JSON.</summary>
@@ -686,6 +814,10 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         Usuario = c.Usuario?.Nombre,
         FechaCreacion = c.FechaCreacion,
         EnviadoEn = c.EnviadoEn,
+        BajaEstado = c.BajaEstado,
+        BajaMotivo = c.BajaMotivo,
+        BajaFecha = c.BajaFecha,
+        BajaMensaje = c.BajaMensaje,
         WhatsAppEstado = c.WhatsAppEstado,
         WhatsAppTelefono = c.WhatsAppTelefono,
         WhatsAppEnviadoEn = c.WhatsAppEnviadoEn,

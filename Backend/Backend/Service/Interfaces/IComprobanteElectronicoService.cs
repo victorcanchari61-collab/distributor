@@ -21,6 +21,12 @@ public interface IComprobanteElectronicoService
 
     Task<ComprobanteResponse> GetAsync(int id);
 
+    /// <summary>Comunicación de baja de una factura (dentro de 7 días). Aceptada, anula también su venta.</summary>
+    Task<ComprobanteResponse> DarDeBajaAsync(int id, DarDeBajaRequest request);
+
+    /// <summary>Consulta en SUNAT una baja que quedó pendiente.</summary>
+    Task<ComprobanteResponse> ConsultarBajaAsync(int id);
+
     /// <summary>Factura o boleta directa: registra la venta (que no sale en Notas de venta), descuenta stock y emite el comprobante.</summary>
     Task<ComprobanteResponse> EmitirDirectoAsync(EmitirDirectoRequest request);
 

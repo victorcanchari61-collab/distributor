@@ -5,7 +5,10 @@ import type { CrearNotaVentaRequest } from './ventasApi'
 export type TipoCpe = '01' | '03' | '07' | '08'
 
 /** En qué quedó el comprobante frente a SUNAT. */
-export type EstadoCpe = 'GENERADO' | 'ACEPTADO' | 'RECHAZADO' | 'ERROR'
+export type EstadoCpe = 'GENERADO' | 'ACEPTADO' | 'RECHAZADO' | 'ERROR' | 'BAJA'
+
+/** En qué quedó la comunicación de baja de una factura. */
+export type EstadoBajaCpe = 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA'
 
 export const TIPOS_CPE: Record<TipoCpe, { nombre: string; corto: string }> = {
   '01': { nombre: 'Factura electrónica', corto: 'Factura' },
@@ -27,6 +30,7 @@ export const ESTADOS_CPE: Record<EstadoCpe, { label: string; tone: 'success' | '
   RECHAZADO: { label: 'Rechazado', tone: 'danger', ayuda: 'SUNAT lo rechazó: el motivo está en el CDR.' },
   GENERADO: { label: 'Sin enviar', tone: 'warning', ayuda: 'Está firmado pero todavía no llegó a SUNAT.' },
   ERROR: { label: 'Sin respuesta', tone: 'warning', ayuda: 'El envío falló antes de tener respuesta: se puede reenviar.' },
+  BAJA: { label: 'Dado de baja', tone: 'neutral', ayuda: 'SUNAT aceptó la baja: la factura ya no vale.' },
 }
 
 /** Los motivos de SUNAT (Catálogos 09 y 10): lo que se elige al corregir un comprobante. */
@@ -101,6 +105,11 @@ export interface ComprobanteResponse {
   clienteId: number | null
   /** El teléfono que hoy tiene el cliente: el que se propone al enviar por WhatsApp. */
   clienteTelefono: string | null
+  /** Nulo: nunca se pidió la baja. */
+  bajaEstado: EstadoBajaCpe | null
+  bajaMotivo: string | null
+  bajaFecha: string | null
+  bajaMensaje: string | null
   /** Nulo: nunca se mandó por WhatsApp. */
   whatsAppEstado: EstadoWhatsAppCpe | null
   whatsAppTelefono: string | null
@@ -165,6 +174,12 @@ export const comprobanteApi = {
    */
   emitirDirecto: (venta: CrearNotaVentaRequest, tipo: '01' | '03') =>
     api.post<ComprobanteResponse>('/comprobante/emitir-directo', { ...venta, tipo }),
+
+  /** Comunicación de baja de una factura (dentro de 7 días): si SUNAT la acepta, también anula su venta. */
+  darDeBaja: (id: number, motivo: string) => api.post<ComprobanteResponse>(`/comprobante/${id}/baja`, { motivo }),
+
+  /** Consulta en SUNAT una baja que quedó pendiente. */
+  consultarBaja: (id: number) => api.post<ComprobanteResponse>(`/comprobante/${id}/baja/consultar`, {}),
 
   /** Nota de crédito o débito sobre un comprobante aceptado. */
   emitirNota: (id: number, body: EmitirNota) => api.post<ComprobanteResponse>(`/comprobante/${id}/nota`, body),

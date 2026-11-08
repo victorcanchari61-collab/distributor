@@ -101,6 +101,22 @@ public class ComprobanteController : ControllerBase
         return Ok(await ConWhatsAppAsync(await _comprobantes.EmitirNotaAsync(id, request)));
     }
 
+    /// <summary>Comunicación de baja de una factura: la anula ante SUNAT y, si la acepta, anula también su venta.</summary>
+    [HttpPost("{id:int}/baja")]
+    public async Task<IActionResult> DarDeBaja(int id, [FromBody] DarDeBajaRequest request)
+    {
+        if (await Denegado(await _comprobantes.TipoAsync(id), Accion.Anular) is { } denegado) return denegado;
+        return Ok(await _comprobantes.DarDeBajaAsync(id, request));
+    }
+
+    /// <summary>Consulta en SUNAT cómo va una baja que quedó pendiente.</summary>
+    [HttpPost("{id:int}/baja/consultar")]
+    public async Task<IActionResult> ConsultarBaja(int id)
+    {
+        if (await Denegado(await _comprobantes.TipoAsync(id), Accion.Anular) is { } denegado) return denegado;
+        return Ok(await _comprobantes.ConsultarBajaAsync(id));
+    }
+
     /// <summary>Reenvía a SUNAT un comprobante que quedó sin respuesta.</summary>
     [HttpPost("{id:int}/reenviar")]
     public async Task<IActionResult> Reenviar(int id)

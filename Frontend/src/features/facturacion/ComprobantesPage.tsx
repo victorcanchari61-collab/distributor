@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { MessageCircle, Plus, CircleCheck, CircleX, Clock, FileArchive, FileCode2, FileMinus, FilePen, FilePlus, Eye, Receipt, RefreshCw, Ticket } from 'lucide-react'
+import { MessageCircle, Plus, CircleCheck, CircleX, Clock, FileArchive, FileCode2, FileMinus, FileX, FilePen, FilePlus, Eye, Receipt, RefreshCw, Ticket } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { AccionPdf, Alert, Badge, Button, ListPage, Modal, RowAction, StatCard, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
-import { fechaCorta } from '../../lib/fechas'
+import { fechaCorta, hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { ESTADOS_CPE, ESTADOS_WHATSAPP, SUBMODULO_CPE, comprobanteApi } from './comprobanteApi'
 import type { ComprobanteResponse, EstadoCpe, TipoCpe } from './comprobanteApi'
+import { DarDeBajaModal } from './DarDeBajaModal'
 import { NotasVentaPage } from './NotasVentaPage'
 import { EmitirNotaModal } from './EmitirNotaModal'
 import { EnviarWhatsAppModal } from './EnviarWhatsAppModal'
@@ -65,6 +66,7 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
   const [enviando, setEnviando] = useState<ComprobanteResponse | null>(null)
   // Emitiendo una factura o boleta directa: el formulario de venta ocupa la pantalla hasta terminar o cancelar.
   const [creando, setCreando] = useState(false)
+  const [dandoDeBaja, setDandoDeBaja] = useState<ComprobanteResponse | null>(null)
 
   const cargar = useCallback(async () => {
     try {
@@ -91,6 +93,26 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
       else await comprobanteApi.descargarCdr(c)
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'No pudimos descargar el archivo')
+    }
+  }
+
+  /** SUNAT solo admite la baja de una factura dentro de los 7 días de emitida. */
+  const puedeDarDeBaja = (c: ComprobanteResponse) =>
+    c.tipo === '01' &&
+    c.estado === 'ACEPTADO' &&
+    c.bajaEstado !== 'PENDIENTE' &&
+    (Date.parse(hoyLocal()) - Date.parse(c.fechaEmision.slice(0, 10))) / 86_400_000 <= 7 &&
+    c.notas.every((n) => n.estado !== 'ACEPTADO')
+
+  const consultarBaja = async (c: ComprobanteResponse) => {
+    try {
+      const nuevo = await comprobanteApi.consultarBaja(c.id)
+      reemplazar(nuevo)
+      if (nuevo.bajaEstado === 'ACEPTADA') toast.exito(`${nuevo.numeroCompleto} dada de baja`)
+      else if (nuevo.bajaEstado === 'PENDIENTE') toast.exito('SUNAT todavía procesa la baja')
+      else toast.error(nuevo.bajaMensaje ?? 'SUNAT no aceptó la baja')
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos consultar la baja')
     }
   }
 
@@ -293,6 +315,16 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
               <RefreshCw size={15} />
             </RowAction>
           )}
+          {puede(submodulo, 'anular') && puedeDarDeBaja(c) && (
+            <RowAction label="Dar de baja" tone="danger" onClick={() => setDandoDeBaja(c)}>
+              <FileX size={15} />
+            </RowAction>
+          )}
+          {puede(submodulo, 'anular') && c.bajaEstado === 'PENDIENTE' && (
+            <RowAction label="Consultar la baja en SUNAT" tone="warning" onClick={() => void consultarBaja(c)}>
+              <RefreshCw size={15} />
+            </RowAction>
+          )}
           {!esNota && notasPermitidas.length > 0 && c.estado === 'ACEPTADO' && (
             <RowAction label="Emitir nota de crédito o débito" tone="edit" onClick={() => setCorrigiendo(c)}>
               <FilePen size={15} />
@@ -324,6 +356,16 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
         onEnviado={(nuevo) => {
           reemplazar(nuevo)
           setDetalle((d) => (d?.id === nuevo.id ? nuevo : d))
+        }}
+      />
+
+      <DarDeBajaModal
+        comprobante={dandoDeBaja}
+        onClose={() => setDandoDeBaja(null)}
+        onResuelta={(c) => {
+          setDandoDeBaja(null)
+          reemplazar(c)
+          setDetalle((d) => (d?.id === c.id ? c : d))
         }}
       />
 
