@@ -22,15 +22,36 @@ public class DashboardController : ControllerBase
     private readonly IReportesService _reportes;
     private readonly ICrmProductosService _productos;
     private readonly ICaidaService _caida;
+    private readonly IProductosCaidaService _productosCaida;
 
     public DashboardController(
-        IDashboardService dashboard, IReportesService reportes, ICrmProductosService productos, ICaidaService caida)
+        IDashboardService dashboard, IReportesService reportes, ICrmProductosService productos, ICaidaService caida,
+        IProductosCaidaService productosCaida)
     {
         _dashboard = dashboard;
         _reportes = reportes;
         _productos = productos;
         _caida = caida;
+        _productosCaida = productosCaida;
     }
+
+    /// <summary>
+    /// Productos con caída: lo que vendió cada producto en el tramo frente al mes anterior (o al año anterior), su estado,
+    /// las categorías que más cayeron y la evolución de la venta.
+    /// </summary>
+    [HttpGet("sin-ventas/analisis")]
+    [Permiso("dashboard.sinventas", Accion.Ver)]
+    public async Task<IActionResult> AnalisisProductos(
+        [FromQuery] DateTime? desde,
+        [FromQuery] DateTime? hasta,
+        [FromQuery] string? comparar = null,
+        [FromQuery] string? medida = null,
+        [FromQuery] string? criterio = null,
+        [FromQuery] int? almacenId = null,
+        [FromQuery] int? categoriaId = null,
+        [FromQuery] int? marcaId = null,
+        [FromQuery] bool incluirSinStock = false) =>
+        Ok(await _productosCaida.AnalisisAsync(desde, hasta, comparar, medida, criterio, almacenId, categoriaId, marcaId, incluirSinStock));
 
     /// <summary>
     /// Productos activos sin ventas en los últimos días, con su stock y lo que inmovilizan. Con mercado o ruta, los

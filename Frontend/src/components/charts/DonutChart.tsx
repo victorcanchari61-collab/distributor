@@ -15,6 +15,8 @@ export interface DonutChartProps {
   /** Lo que va en el centro: el total, o el nombre de la porción sobre la que está el cursor. */
   centro?: { titulo: string; valor: string }
   tamano?: number
+  /** Decimales del % de cada porción en la leyenda. Por defecto, ninguno. */
+  decimalesPct?: number
   className?: string
 }
 
@@ -22,7 +24,7 @@ export interface DonutChartProps {
  * Dona con leyenda a un lado. Las porciones muy chicas (menos de 1.5 %) se dibujan igual pero sin
  * separación, para que sigan siendo visibles; la leyenda dice el valor exacto.
  */
-export function DonutChart({ porciones, formato = compacto, centro, tamano = 168, className }: DonutChartProps) {
+export function DonutChart({ porciones, formato = compacto, centro, tamano = 168, decimalesPct = 0, className }: DonutChartProps) {
   const [activa, setActiva] = useState<number | null>(null)
   const total = porciones.reduce((a, p) => a + p.valor, 0)
 
@@ -93,7 +95,7 @@ export function DonutChart({ porciones, formato = compacto, centro, tamano = 168
             </span>
             <span className="shrink-0 font-semibold text-ink tabular-nums">
               {formato(p.valor)}
-              <span className="ml-1.5 font-normal text-ink-soft">{total > 0 ? pct((p.valor / total) * 100, 0) : '—'}</span>
+              <span className="ml-1.5 font-normal text-ink-soft">{total > 0 ? pct((p.valor / total) * 100, decimalesPct) : '—'}</span>
             </span>
           </li>
         ))}

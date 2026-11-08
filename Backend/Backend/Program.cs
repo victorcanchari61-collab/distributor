@@ -158,6 +158,7 @@ builder.Services.AddScoped<IGananciaService, GananciaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IReportesService, ReportesService>();
 builder.Services.AddScoped<ICrmProductosService, CrmProductosService>();
+builder.Services.AddScoped<IProductosCaidaService, ProductosCaidaService>();
 builder.Services.AddScoped<ICaidaService, CaidaService>();
 builder.Services.AddScoped<ISeguimientoClienteService, SeguimientoClienteService>();
 builder.Services.AddScoped<ICategorizacionService, CategorizacionService>();

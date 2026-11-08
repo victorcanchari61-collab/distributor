@@ -160,13 +160,6 @@ export function VendedoresCaidaPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       banner={
         <div className="space-y-4">
-          {datos && (
-            <p className="text-xs text-ink-soft">
-              Del {datos.periodo.etiqueta} frente al {datos.periodo.etiquetaAnterior}. Ventas con IGV, sin anuladas ni recojos. Las fechas se
-              eligen en el ícono de filtros de la tabla.
-            </p>
-          )}
-
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             {ORDEN_ESTADOS.map((e) => {
               const ui = ESTADOS_UI[e]

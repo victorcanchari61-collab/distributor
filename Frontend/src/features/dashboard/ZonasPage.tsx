@@ -178,13 +178,6 @@ export function ZonasPage() {
             />
             <FiltroFechas desde={desde} hasta={hasta} onChange={(d, h) => { setDesde(d); setHasta(h) }} />
           </div>
-          {datos && (
-            <p className="text-xs text-ink-soft">
-              Del {datos.periodo.etiqueta} frente al {datos.periodo.etiquetaAnterior}. Ventas con IGV, sin
-              anuladas ni recojos.
-            </p>
-          )}
-
           {/* Cómo le va a cada zona, de un vistazo: lo vendido ahora contra antes, y dónde se pierde. */}
           <div className="grid gap-4 pt-2 lg:grid-cols-2">
             <Marco
