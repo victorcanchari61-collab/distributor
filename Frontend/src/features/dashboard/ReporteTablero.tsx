@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { AlertTriangle, BarChart3, Coins, FileBarChart, FileText, Hash, RefreshCw, TrendingUp } from 'lucide-react'
+import { FileBarChart, FileText, RefreshCw } from 'lucide-react'
 import { moneda } from '../../components/charts'
-import { Alert, Button, FilaStats, ListPage, StatCard, VisorReportePdf, cn } from '../../components/ui'
+import { Alert, Button, ListPage, VisorReportePdf, cn } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { usePermisos } from '../../lib/permisos'
 import { dashboardApi } from './dashboardApi'
@@ -34,14 +34,6 @@ function formatear(valor: unknown, tipo: TipoDato): string {
     default:
       return String(valor)
   }
-}
-
-const ICONO: Record<string, ReactNode> = {
-  sys: <BarChart3 size={18} />,
-  success: <TrendingUp size={18} />,
-  warning: <Coins size={18} />,
-  danger: <AlertTriangle size={18} />,
-  neutral: <Hash size={18} />,
 }
 
 /** Una columna del reporte como columna de la tabla: alineada y formateada según su tipo. */
@@ -150,11 +142,6 @@ export function ReporteTablero({
 
   const visibles = (r?.columnas ?? []).map(columnaDe)
 
-  // Los totales, en una línea bajo la tabla: la tabla no tiene fila de pie.
-  const totales = (r?.columnas ?? [])
-    .filter((c) => r?.totales[c.clave] !== undefined && r?.totales[c.clave] !== null)
-    .map((c) => `${c.titulo} ${formatear(r?.totales[c.clave], c.tipo)}`)
-
   const titulo = r?.titulo ?? 'Reporte'
   const vistaTexto = r?.vistas.find((v) => v.id === r.vista)?.texto ?? ''
 
@@ -177,25 +164,7 @@ export function ReporteTablero({
         </>
       }
       alert={b.error ? <Alert>{b.error}</Alert> : r?.aviso ? <Alert tone="info">{r.aviso}</Alert> : undefined}
-      banner={
-        <div className="space-y-5">
-          {graficos}
-          {r?.resumen.length ? (
-            <FilaStats>
-              {r.resumen.map((s) => (
-                <StatCard
-                  key={s.titulo}
-                  label={s.titulo}
-                  value={formatear(s.valor, s.tipo)}
-                  icon={ICONO[s.tono] ?? ICONO.neutral}
-                  tono={s.tono}
-                  hint={s.nota ?? undefined}
-                />
-              ))}
-            </FilaStats>
-          ) : null}
-        </div>
-      }
+      banner={graficos}
       columns={[...columnasFiltro, ...visibles]}
       rows={r?.filas ?? []}
       rowKey="clave"
@@ -216,18 +185,6 @@ export function ReporteTablero({
       cardIcon={FileBarChart}
       searchPlaceholder="Buscar en el reporte..."
       empty={b.cargando ? 'Cargando reporte...' : 'No hay datos con esos filtros.'}
-      note={
-        totales.length > 0 || r?.nota ? (
-          <div className="space-y-1">
-            {totales.length > 0 && (
-              <p className="font-semibold text-ink-muted">
-                Totales{buscar ? ' de lo buscado' : ''}: {totales.join(' · ')}
-              </p>
-            )}
-            {r?.nota && <p>{r.nota}</p>}
-          </div>
-        ) : undefined
-      }
     >
       {pdf && r && (
         <VisorReportePdf
