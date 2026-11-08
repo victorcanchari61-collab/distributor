@@ -140,28 +140,30 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
         key: 'numeroCompleto',
         label: 'Número',
         filterable: false,
-        render: (c) => (
-          <span className="flex flex-col">
-            <span className="font-medium text-ink">{c.numeroCompleto}</span>
-            {c.afectadoNumero ? (
-              <span className="text-xs text-ink-soft">corrige a {c.afectadoNumero}</span>
-            ) : c.notaVentaNumero ? (
-              <span className="text-xs text-ink-soft">de {c.notaVentaNumero}</span>
-            ) : null}
-          </span>
-        ),
+        render: (c) => <span className="font-medium text-ink">{c.numeroCompleto}</span>,
+      },
+      // La nota de venta de la que sale (o, en una nota, el comprobante que corrige): una columna propia. Las facturas y boletas
+      // directas no tienen nota de venta que mostrar.
+      {
+        key: 'origen',
+        label: esNota ? 'Corrige a' : 'Nota de venta',
+        filterable: false,
+        value: (c) => c.afectadoNumero ?? c.notaVentaNumero ?? '',
+        render: (c) => c.afectadoNumero ?? c.notaVentaNumero ?? <span className="text-ink-soft">—</span>,
       },
       {
         key: 'cliente',
         label: 'Cliente',
         filterable: false,
         value: (c) => `${c.clienteNombre} ${c.clienteDocumento}`,
-        render: (c) => (
-          <span className="flex flex-col">
-            <span>{c.clienteNombre}</span>
-            <span className="text-xs text-ink-soft">{c.clienteDocumento === '-' ? 'sin documento' : c.clienteDocumento}</span>
-          </span>
-        ),
+        render: (c) => c.clienteNombre,
+      },
+      {
+        key: 'documento',
+        label: 'Documento',
+        filterable: false,
+        value: (c) => c.clienteDocumento,
+        render: (c) => (c.clienteDocumento === '-' ? <span className="text-ink-soft">Sin documento</span> : c.clienteDocumento),
       },
       // Solo facturas y boletas: qué notas de crédito o débito las corrigen.
       ...(esNota

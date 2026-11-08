@@ -383,11 +383,15 @@ export function SolicitudesCompraPage() {
       label: 'Stock',
       align: 'right',
       filterable: false,
-      render: (fila) => {
-        const producto = productos.find((p) => p.id === fila.productoId)
-        const stock = stockMap[fila.productoId]
-        return stock === undefined ? '—' : `${stock} ${producto?.unidadBase ?? ''}`
-      },
+      value: (fila) => stockMap[fila.productoId] ?? 0,
+      render: (fila) => stockMap[fila.productoId] ?? '—',
+    },
+    {
+      key: 'unidadBase',
+      label: 'Unidad',
+      filterable: false,
+      value: (fila) => productos.find((p) => p.id === fila.productoId)?.unidadBase ?? '',
+      render: (fila) => productos.find((p) => p.id === fila.productoId)?.unidadBase ?? '—',
     },
     {
       key: 'cantidad',
@@ -445,14 +449,19 @@ export function SolicitudesCompraPage() {
         value: e,
         label: TEXTO_ESTADO[e],
       })),
-      render: (row) => (
-        <span className="flex flex-col items-start gap-0.5">
-          {estadoBadge(row.estado)}
-          {row.ordenes.length > 0 && (
-            <span className="text-xs text-ink-soft">{row.ordenes.map((o) => o.numero).join(', ')}</span>
-          )}
-        </span>
-      ),
+      render: (row) => estadoBadge(row.estado),
+    },
+    {
+      key: 'ordenes',
+      label: 'Órdenes de compra',
+      filterable: false,
+      value: (row) => row.ordenes.map((o) => o.numero).join(', '),
+      render: (row) =>
+        row.ordenes.length > 0 ? (
+          <span className="text-ink-muted">{row.ordenes.map((o) => o.numero).join(', ')}</span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
     },
   ]
 

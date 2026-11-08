@@ -67,12 +67,12 @@ public class DashboardController : ControllerBase
         [FromQuery] string? stock = null) =>
         Ok(await _productos.SinVentasAsync(dias, mercadoId, rutaId, categoriaId, stock));
 
-    /// <summary>Cómo le va a cada mercado o ruta (agrupar) frente al mismo tramo del año anterior.</summary>
+    /// <summary>Cómo le va a cada mercado o ruta (agrupar) frente al mismo tramo del mes (o año) anterior.</summary>
     [HttpGet("zonas")]
     [Permiso("dashboard.zonas", Accion.Ver)]
     public async Task<IActionResult> Zonas(
-        [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta, [FromQuery] string? agrupar) =>
-        Ok(await _caida.ZonasAsync(desde, hasta, agrupar));
+        [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta, [FromQuery] string? agrupar, [FromQuery] string? comparar) =>
+        Ok(await _caida.ZonasAsync(desde, hasta, agrupar, comparar));
 
     // --- La pestaña Reportes de cada dashboard, con el permiso de ver de ese dashboard ---
 

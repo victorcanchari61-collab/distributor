@@ -208,6 +208,6 @@ const queryProductos = (c: ConsultaProductosCrm) => {
 export const sinVentasApi = {
   productosSinVentas: (c: ConsultaProductosCrm) => api.get<ProductosSinVentasCrm>(`/dashboard/sin-ventas${queryProductos(c)}`),
   analisis: (c: ConsultaProductosCaida) => api.get<ProductosCaida>(`/dashboard/sin-ventas/analisis${queryAnalisis(c)}`),
-  zonas: (desde: string, hasta: string, agrupar: AgruparZonas) =>
-    api.get<ZonasCrm>(`/dashboard/zonas?desde=${desde}&hasta=${hasta}&agrupar=${agrupar}`),
+  zonas: (desde: string, hasta: string, agrupar: AgruparZonas, comparar: CompararProductos = 'mes') =>
+    api.get<ZonasCrm>(`/dashboard/zonas?desde=${desde}&hasta=${hasta}&agrupar=${agrupar}&comparar=${comparar}`),
 }

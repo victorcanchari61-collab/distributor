@@ -257,26 +257,26 @@ export function NuevaRecepcionModal({
    */
   const columnasLineas: DataTableColumn<CompraDetalleResponse>[] = [
     {
+      key: 'codigo',
+      label: 'Código',
+      width: 110,
+      render: (d) => <span className="text-sm text-ink-soft">{d.codigo}</span>,
+    },
+    {
       key: 'producto',
       label: 'Producto',
       width: 220,
-      render: (d) => (
-        <span className="flex flex-col">
-          <span className="text-sm font-medium text-ink">{d.producto}</span>
-          <span className="text-xs text-ink-soft">{d.codigo}</span>
-        </span>
-      ),
+      render: (d) => <span className="text-sm font-medium text-ink">{d.producto}</span>,
     },
     {
       key: 'cantidadRecibida',
       label: 'Ya recibido',
       align: 'right',
-      width: 120,
+      width: 110,
+      value: (d) => enPresentacionCompra(d, d.cantidadRecibida),
       render: (d) =>
         d.cantidadRecibida > 0 ? (
-          <span className="text-sm text-ink-soft">
-            {enPresentacionCompra(d, d.cantidadRecibida)} {d.presentacion ?? d.unidadBase}
-          </span>
+          <span className="text-sm text-ink-soft">{enPresentacionCompra(d, d.cantidadRecibida)}</span>
         ) : (
           <span className="text-ink-soft">—</span>
         ),
@@ -285,12 +285,19 @@ export function NuevaRecepcionModal({
       key: 'cantidadPendiente',
       label: 'Pendiente',
       align: 'right',
-      width: 120,
+      width: 110,
+      value: (d) => enPresentacionCompra(d, d.cantidadPendiente),
       render: (d) => (
-        <span className="text-sm font-medium text-ink">
-          {enPresentacionCompra(d, d.cantidadPendiente)} {d.presentacion ?? d.unidadBase}
-        </span>
+        <span className="text-sm font-medium text-ink">{enPresentacionCompra(d, d.cantidadPendiente)}</span>
       ),
+    },
+    {
+      // La unidad en que están expresados «Ya recibido» y «Pendiente».
+      key: 'unidadCompra',
+      label: 'Unidad',
+      width: 100,
+      value: (d) => d.presentacion ?? d.unidadBase,
+      render: (d) => <span className="text-sm text-ink-soft">{d.presentacion ?? d.unidadBase}</span>,
     },
     {
       /*

@@ -36,33 +36,60 @@ function formatear(valor: unknown, tipo: TipoDato): string {
   }
 }
 
-/** Una columna del reporte como columna de la tabla: alineada y formateada según su tipo. */
-function columnaDe(c: ColumnaReporte): DataTableColumn<Fila> {
+/** Cómo se llama la columna de cada dato de apoyo (el que antes iba en una segunda línea). */
+const TITULO_APOYO: Record<string, string> = {
+  ruta: 'Ruta',
+  detalle: 'Detalle',
+  unidad: 'Unidad',
+  semana: 'Semana',
+  comprobante: 'Comprobante',
+  lote: 'Lote',
+  venta: 'Nota de venta',
+}
+
+/**
+ * Una columna del reporte como columnas de la tabla: la principal, alineada y formateada según su tipo, y, si trae un dato de
+ * apoyo (la ruta del cliente, la unidad de la cantidad), ese dato en su propia columna a continuación.
+ */
+function columnasDe(c: ColumnaReporte): DataTableColumn<Fila>[] {
   const numerica = c.tipo !== 'texto' && c.tipo !== 'fecha'
-  return {
+  const principal: DataTableColumn<Fila> = {
     key: c.clave,
     label: c.titulo,
     align: numerica ? 'right' : 'left',
     filterable: false,
-    // Para ordenar y buscar: el número o la fecha tal cual, y el texto con su apoyo.
-    value: (f) =>
-      numerica ? numero(f[c.clave]) : `${f[c.clave] ?? ''}${c.apoyo && f[c.apoyo] ? ` ${f[c.apoyo]}` : ''}`,
+    // Para ordenar y buscar: el número o la fecha tal cual.
+    value: (f) => (numerica ? numero(f[c.clave]) : String(f[c.clave] ?? '')),
     render: (f) => {
       const valor = f[c.clave]
       const negativo = c.tipo === 'moneda' && numero(valor) < 0
-      const apoyo = c.apoyo ? f[c.apoyo] : null
       return (
-        <div className="min-w-0">
-          <p className={cn('truncate', c.destacada && 'font-semibold text-ink', negativo && 'text-red-600')}>
-            {formatear(valor, c.tipo)}
-          </p>
-          {apoyo !== null && apoyo !== undefined && apoyo !== '' && (
-            <p className="truncate text-xs text-ink-soft">{String(apoyo)}</p>
-          )}
-        </div>
+        <span className={cn('block truncate', c.destacada && 'font-semibold text-ink', negativo && 'text-red-600')}>
+          {formatear(valor, c.tipo)}
+        </span>
       )
     },
   }
+
+  if (!c.apoyo) return [principal]
+  const apoyo = c.apoyo
+  return [
+    principal,
+    {
+      key: `${c.clave}_${apoyo}`,
+      label: TITULO_APOYO[apoyo] ?? apoyo.charAt(0).toUpperCase() + apoyo.slice(1),
+      filterable: false,
+      value: (f) => String(f[apoyo] ?? ''),
+      render: (f) => {
+        const valor = f[apoyo]
+        return valor === null || valor === undefined || valor === '' ? (
+          <span className="text-ink-soft">—</span>
+        ) : (
+          <span className="block truncate">{String(valor)}</span>
+        )
+      },
+    },
+  ]
 }
 
 /**
@@ -140,7 +167,7 @@ export function ReporteTablero({
     })),
   ]
 
-  const visibles = (r?.columnas ?? []).map(columnaDe)
+  const visibles = (r?.columnas ?? []).flatMap(columnasDe)
 
   const titulo = r?.titulo ?? 'Reporte'
   const vistaTexto = r?.vistas.find((v) => v.id === r.vista)?.texto ?? ''

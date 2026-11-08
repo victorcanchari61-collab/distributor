@@ -156,16 +156,12 @@ export function ConteosPage() {
 
   const columns: DataTableColumn<StockResponse>[] = [
     // El producto se busca con el buscador de arriba, no en el panel.
+    { key: 'codigo', label: 'Código', filterable: false, render: (row) => <span className="text-ink-soft">{row.codigo}</span> },
     {
       key: 'producto',
       label: 'Producto',
       filterable: false,
-      render: (row) => (
-        <span>
-          <span className="font-medium text-ink">{row.producto}</span>
-          <span className="ml-2 text-xs text-ink-soft">{row.codigo}</span>
-        </span>
-      ),
+      render: (row) => <span className="font-medium text-ink">{row.producto}</span>,
     },
     {
       key: 'almacen',
@@ -196,12 +192,10 @@ export function ConteosPage() {
       label: 'Teórico',
       align: 'right',
       filterable: false,
-      render: (row) => (
-        <span className="text-ink-soft">
-          {row.stock} {row.unidadBase}
-        </span>
-      ),
+      value: (row) => row.stock,
+      render: (row) => <span className="text-ink-soft">{row.stock}</span>,
     },
+    { key: 'unidadBase', label: 'Unidad', filterable: false, render: (row) => <span className="text-ink-soft">{row.unidadBase}</span> },
     {
       // Lo tecleado no es un dato guardado: es transitorio, así que no
       // ordena ni filtra, solo se busca cuando se escribe (para eso entra

@@ -75,9 +75,13 @@ export interface CaidaClientes {
   items: FilaCaida[]
 }
 
+/** Contra qué se compara el tramo: el mes anterior (lo normal) o el año anterior. */
+export type CompararCaida = 'mes' | 'anio'
+
 export interface ConsultaCaida {
   desde?: string
   hasta?: string
+  comparar?: CompararCaida
   mercadoId?: number
   rutaId?: number
   vendedorId?: number
@@ -291,9 +295,9 @@ export const crmApi = {
 
   // Reportes
   caida: (c: ConsultaCaida) => api.get<CaidaClientes>(`/crm/caida${query({ ...c })}`),
-  queDejoDeComprar: (clienteId: number, c: { desde?: string; hasta?: string }) =>
+  queDejoDeComprar: (clienteId: number, c: { desde?: string; hasta?: string; comparar?: CompararCaida }) =>
     api.get<QueDejoDeComprar>(`/crm/caida/${clienteId}/productos${query({ ...c })}`),
-  vendedores: (c: { desde?: string; hasta?: string }) => api.get<VendedoresCaida>(`/crm/vendedores${query({ ...c })}`),
+  vendedores: (c: { desde?: string; hasta?: string; comparar?: CompararCaida }) => api.get<VendedoresCaida>(`/crm/vendedores${query({ ...c })}`),
 }
 
 // --- Agenda de seguimiento ---

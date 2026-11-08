@@ -202,13 +202,17 @@ export function ExcepcionesPermisos() {
         <span className="inline-flex items-center gap-1.5">
           {ICONO_ALCANCE[p.alcance]}
           {ALCANCE_LABEL[p.alcance]}
-          {p.alcance === ALCANCE.temporal && p.expiraEn && (
-            <span className="text-xs text-ink-soft">
-              hasta {fechaHora(p.expiraEn)}
-            </span>
-          )}
         </span>
       ),
+    },
+    {
+      key: 'expiraEn',
+      label: 'Vence',
+      filterable: false,
+      // Solo los permisos temporales vencen; sin fecha queda en 0 para ordenar.
+      value: (p) => (p.alcance === ALCANCE.temporal && p.expiraEn ? new Date(p.expiraEn).getTime() : 0),
+      render: (p) =>
+        p.alcance === ALCANCE.temporal && p.expiraEn ? fechaHora(p.expiraEn) : <span className="text-ink-soft">—</span>,
     },
     {
       key: 'estado',

@@ -176,17 +176,13 @@ export function NovedadesPage() {
       filterType: 'date',
       render: (row) => fechaCorta(row.fecha),
     },
+    { key: 'codigo', label: 'Código', filterable: false, render: (row) => <span className="text-ink-soft">{row.codigo}</span> },
     {
       key: 'producto',
       label: 'Producto',
       filterType: 'select',
       filterOptions: opcionesDe(opciones.productos),
-      render: (row) => (
-        <span className="flex flex-col">
-          <span className="font-semibold text-ink">{row.producto}</span>
-          <span className="text-xs text-ink-soft">{row.codigo}</span>
-        </span>
-      ),
+      render: (row) => <span className="font-semibold text-ink">{row.producto}</span>,
     },
     {
       // Lo que vuelve en el camión, dicho como se cuenta: "9 Caja + 5 UND".
@@ -208,12 +204,14 @@ export function NovedadesPage() {
       label: 'Motivo',
       filterType: 'select',
       filterOptions: opcionesDe(opciones.motivos),
-      render: (row) => (
-        <span className="flex flex-col">
-          <span className="text-ink">{row.motivo}</span>
-          {row.observacion && <span className="text-xs text-ink-soft">{row.observacion}</span>}
-        </span>
-      ),
+      render: (row) => <span className="text-ink">{row.motivo}</span>,
+    },
+    {
+      key: 'observacion',
+      label: 'Observación',
+      filterable: false,
+      value: (row) => row.observacion ?? '',
+      render: (row) => row.observacion || <span className="text-ink-soft">—</span>,
     },
     {
       key: 'tipo',
@@ -240,12 +238,14 @@ export function NovedadesPage() {
       label: 'Estado',
       filterType: 'select',
       filterOptions: (Object.keys(ESTADOS) as EstadoNovedad[]).map((e) => ({ value: e, label: ESTADOS[e].texto })),
-      render: (row) => (
-        <div>
-          <Badge tone={ESTADOS[row.estado].tono}>{ESTADOS[row.estado].texto}</Badge>
-          {row.resultado && <div className="mt-0.5 text-xs text-ink-soft">{row.resultado}</div>}
-        </div>
-      ),
+      render: (row) => <Badge tone={ESTADOS[row.estado].tono}>{ESTADOS[row.estado].texto}</Badge>,
+    },
+    {
+      key: 'resultado',
+      label: 'Resultado',
+      filterable: false,
+      value: (row) => row.resultado ?? '',
+      render: (row) => row.resultado || <span className="text-ink-soft">—</span>,
     },
   ]
 

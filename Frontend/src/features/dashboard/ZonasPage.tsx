@@ -6,8 +6,8 @@ import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
 import { hoyLocal } from '../../lib/fechas'
-import { inicioDeAnio } from '../crm/filtros'
-import { ESTADOS_UI, ORDEN_ESTADOS, colorCambio, porcentaje, soles, solesConSigno } from '../crm/formato'
+import { inicioDeMes } from '../crm/filtros'
+import { ESTADOS_UI, OPCIONES_COMPARAR, ORDEN_ESTADOS, colorCambio, porcentaje, soles, solesConSigno } from '../crm/formato'
 import { sinVentasApi } from './sinVentasApi'
 import type { EstadoClave } from '../crm/crmApi'
 import type { AgruparZonas, ZonaCrm, ZonasCrm } from './sinVentasApi'
@@ -25,10 +25,11 @@ const AGRUPAR: { id: AgruparZonas; label: string; singular: string }[] = [
  */
 export function ZonasPage() {
   const [agrupar, setAgrupar] = useState<AgruparZonas>('mercado')
-  const [desdeInicial] = useState(inicioDeAnio())
+  const [desdeInicial] = useState(inicioDeMes())
   const [hastaInicial] = useState(hoyLocal())
   const [desde, setDesde] = useState(desdeInicial)
   const [hasta, setHasta] = useState(hastaInicial)
+  const [comparar, setComparar] = useState<'mes' | 'anio'>('mes')
   const [datos, setDatos] = useState<ZonasCrm | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -36,14 +37,14 @@ export function ZonasPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      setDatos(await sinVentasApi.zonas(desde, hasta, agrupar))
+      setDatos(await sinVentasApi.zonas(desde, hasta, agrupar, comparar))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar las zonas.')
     } finally {
       setCargando(false)
     }
-  }, [desde, hasta, agrupar])
+  }, [desde, hasta, agrupar, comparar])
 
   useEffect(() => {
     void cargar()
@@ -61,6 +62,7 @@ export function ZonasPage() {
       setDesde(fecha?.valor || desdeInicial)
       setHasta(fecha?.valorHasta || fecha?.valor || hastaInicial)
       setAgrupar(por === 'ruta' ? 'ruta' : 'mercado')
+      setComparar(q.filtros.find((f) => f.columna === 'comparar')?.valor === 'anio' ? 'anio' : 'mes')
     },
     [desdeInicial, hastaInicial],
   )
@@ -69,6 +71,7 @@ export function ZonasPage() {
     () => [
       // Estas dos solo existen en el panel de Filtros: deciden qué se pide (ver SysDataTable).
       { key: 'fecha', label: 'Fechas', soloFiltro: true, filterType: 'date' },
+      { key: 'comparar', label: 'Comparar con', soloFiltro: true, filterType: 'select', filterOptions: OPCIONES_COMPARAR },
       {
         key: 'agrupar',
         label: 'Agrupar por',
@@ -88,12 +91,15 @@ export function ZonasPage() {
         align: 'right',
         filterable: false,
         value: (row) => row.clientes,
-        render: (row) => (
-          <span className="flex flex-col items-end">
-            <span>{row.clientes}</span>
-            <span className="text-xs text-ink-soft">{row.conVentas} compraron</span>
-          </span>
-        ),
+        render: (row) => row.clientes,
+      },
+      {
+        key: 'conVentas',
+        label: 'Compraron',
+        align: 'right',
+        filterable: false,
+        value: (row) => row.conVentas,
+        render: (row) => row.conVentas,
       },
       {
         key: 'criticos',
@@ -141,12 +147,20 @@ export function ZonasPage() {
         align: 'right',
         filterable: false,
         value: (row) => row.variacion,
-        render: (row) => (
-          <span className={`flex flex-col items-end ${colorCambio(row.variacion)}`}>
-            <span className="font-semibold">{solesConSigno(row.variacion)}</span>
-            <span className="text-xs">{row.caidaPct === null ? '—' : porcentaje(-row.caidaPct)}</span>
-          </span>
-        ),
+        render: (row) => <span className={`font-semibold ${colorCambio(row.variacion)}`}>{solesConSigno(row.variacion)}</span>,
+      },
+      {
+        key: 'caidaPct',
+        label: '% caída',
+        align: 'right',
+        filterable: false,
+        value: (row) => row.caidaPct ?? -999,
+        render: (row) =>
+          row.caidaPct === null ? (
+            <span className="text-ink-soft">—</span>
+          ) : (
+            <span className={colorCambio(row.variacion)}>{porcentaje(-row.caidaPct)}</span>
+          ),
       },
       {
         key: 'ventaPerdida',
@@ -314,6 +328,7 @@ export function ZonasPage() {
       filtrosIniciales={[
         { column: 'fecha', operator: 'between', value: desdeInicial, valueTo: hastaInicial },
         { column: 'agrupar', operator: 'equals', value: 'mercado' },
+        { column: 'comparar', operator: 'equals', value: 'mes' },
       ]}
       cardIcon={MapPinned}
       searchPlaceholder={`Buscar ${singular.toLowerCase()}...`}

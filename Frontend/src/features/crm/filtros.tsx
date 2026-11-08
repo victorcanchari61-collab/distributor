@@ -9,6 +9,9 @@ import type { MercadoResponse, RutaResponse } from '../tms'
 /** El 1 de enero de este año: desde donde miden los reportes si nadie elige fechas. */
 export const inicioDeAnio = () => `${hoyLocal().slice(0, 4)}-01-01`
 
+/** El 1 del mes en curso: desde donde miden los reportes de caída si nadie elige fechas (contra el mes anterior). */
+export const inicioDeMes = () => `${hoyLocal().slice(0, 7)}-01`
+
 /** Mercados, rutas y vendedores activos para los filtros de los reportes. */
 export function useCatalogosCrm() {
   const [mercados, setMercados] = useState<MercadoResponse[]>([])

@@ -222,28 +222,53 @@ export function TabSeguimiento({
         key: 'proxima',
         label: 'Próxima gestión',
         filterable: false,
-        render: (g) => {
-          if (!g.proximoSeguimiento) return <span className="text-ink-soft">—</span>
-          return (
-            <span className="flex flex-col">
-              <span className="flex items-center gap-1.5 whitespace-nowrap">
-                {fechaCorta(g.proximoSeguimiento)}
-                {g.seguimientoEstado === 'PROGRAMADO' && (
-                  <Badge tone={g.vencida ? 'danger' : 'sys'}>{g.vencida ? 'Vencido' : 'Programado'}</Badge>
-                )}
-              </span>
-              <span className="text-xs text-ink-soft">
-                {[
-                  horaCorta(g.proximoSeguimiento),
-                  g.proximoTipoContacto ? CONTACTO_UI[g.proximoTipoContacto].corto : null,
-                  g.proximaAccion,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </span>
-            </span>
-          )
-        },
+        value: (g) => (g.proximoSeguimiento ? instanteMs(g.proximoSeguimiento) : 0),
+        render: (g) =>
+          g.proximoSeguimiento ? (
+            <span className="whitespace-nowrap">{fechaCorta(g.proximoSeguimiento)}</span>
+          ) : (
+            <span className="text-ink-soft">—</span>
+          ),
+      },
+      {
+        key: 'proximaHora',
+        label: 'Hora',
+        filterable: false,
+        value: (g) => (g.proximoSeguimiento ? horaCorta(g.proximoSeguimiento) : ''),
+        render: (g) =>
+          g.proximoSeguimiento ? (
+            <span className="whitespace-nowrap">{horaCorta(g.proximoSeguimiento)}</span>
+          ) : (
+            <span className="text-ink-soft">—</span>
+          ),
+      },
+      {
+        key: 'proximoEstado',
+        label: 'Estado',
+        filterable: false,
+        value: (g) => (g.seguimientoEstado === 'PROGRAMADO' ? (g.vencida ? 'Vencido' : 'Programado') : ''),
+        render: (g) =>
+          g.proximoSeguimiento && g.seguimientoEstado === 'PROGRAMADO' ? (
+            <Badge tone={g.vencida ? 'danger' : 'sys'}>{g.vencida ? 'Vencido' : 'Programado'}</Badge>
+          ) : (
+            <span className="text-ink-soft">—</span>
+          ),
+      },
+      {
+        key: 'proximoTipo',
+        label: 'Tipo de contacto próximo',
+        filterable: false,
+        value: (g) => (g.proximoTipoContacto ? CONTACTO_UI[g.proximoTipoContacto].corto : ''),
+        render: (g) =>
+          g.proximoSeguimiento && g.proximoTipoContacto ? CONTACTO_UI[g.proximoTipoContacto].corto : <span className="text-ink-soft">—</span>,
+      },
+      {
+        key: 'proximaAccion',
+        label: 'Próxima acción',
+        filterable: false,
+        value: (g) => g.proximaAccion ?? '',
+        render: (g) =>
+          g.proximoSeguimiento && g.proximaAccion ? <span className="text-ink-muted">{g.proximaAccion}</span> : <span className="text-ink-soft">—</span>,
       },
       {
         key: 'usuario',

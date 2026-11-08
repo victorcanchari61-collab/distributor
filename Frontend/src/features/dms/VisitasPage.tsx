@@ -99,43 +99,48 @@ export function VisitasPage() {
     () => [
       {
         key: 'fecha',
-        label: 'Día',
+        label: 'Fecha',
         // Se elige arriba, con los días de visita.
         filterable: false,
-        render: (row) => (
-          <span className="flex flex-col">
-            <span>{fechaCorta(row.fecha)}</span>
-            <span className="text-xs text-ink-soft capitalize">{row.dia.toLowerCase()}</span>
-          </span>
-        ),
+        render: (row) => fechaCorta(row.fecha),
+      },
+      {
+        key: 'dia',
+        label: 'Día',
+        filterable: false,
+        value: (row) => row.dia,
+        render: (row) => <span className="capitalize">{row.dia.toLowerCase()}</span>,
       },
       {
         // Se busca con el buscador de arriba, no en el panel.
         key: 'cliente',
         label: 'Cliente',
         filterable: false,
-        render: (row) => (
-          <span className="flex flex-col">
-            <span className="font-medium text-ink">{row.cliente}</span>
-            <span className="text-xs text-ink-soft">{row.documento}</span>
-          </span>
-        ),
+        render: (row) => <span className="font-medium text-ink">{row.cliente}</span>,
+      },
+      {
+        key: 'documento',
+        label: 'Documento',
+        filterable: false,
+        value: (row) => row.documento,
+        render: (row) => row.documento,
       },
       {
         key: 'mercado',
-        label: 'Dónde',
-        // Mercado y dirección juntos: es lo que se lee para llegar al puesto.
-        // El filtro compara solo por mercado; la dirección varía por cliente.
+        label: 'Mercado',
+        // El filtro compara solo por mercado; la dirección va en su propia columna.
         filterType: 'select',
         filterOptions: [...new Set(visitas.map((v) => v.mercado).filter((v): v is string => !!v))]
           .sort((a, b) => a.localeCompare(b, 'es'))
           .map((v) => ({ value: v, label: v })),
-        render: (row) => (
-          <span className="flex flex-col">
-            <span>{row.mercado ?? '—'}</span>
-            {row.direccion && <span className="text-xs text-ink-soft">{row.direccion}</span>}
-          </span>
-        ),
+        render: (row) => row.mercado ?? <span className="text-ink-soft">—</span>,
+      },
+      {
+        key: 'direccion',
+        label: 'Dirección',
+        filterable: false,
+        value: (row) => row.direccion ?? '',
+        render: (row) => row.direccion ?? <span className="text-ink-soft">—</span>,
       },
       {
         key: 'telefono',
@@ -171,21 +176,31 @@ export function VisitasPage() {
         filterType: 'select',
         filterOptions: ORDEN_ESTADOS.map((value) => ({ value, label: ESTADOS_UI[value].etiqueta })),
         value: (row) => row.riesgo ?? '',
+        render: (row) => (row.riesgo ? <EtiquetaEstado estado={row.riesgo} /> : <span className="text-ink-soft">—</span>),
+      },
+      {
+        key: 'caidaPct',
+        label: '% caída',
+        align: 'right',
+        filterable: false,
+        value: (row) => row.caidaPct ?? -999,
         render: (row) =>
-          row.riesgo ? (
-            <span className="flex flex-col items-start gap-0.5">
-              <span className="flex items-center gap-1.5">
-                <EtiquetaEstado estado={row.riesgo} />
-                {row.caidaPct !== null && (
-                  <span className={`text-xs ${colorCambio(-row.caidaPct)}`}>{porcentaje(-row.caidaPct)}</span>
-                )}
-              </span>
-              {row.accionPendiente && (
-                <span className={`text-xs ${row.accionVencida ? 'text-red-600' : 'text-ink-soft'}`}>
-                  {row.accionVencida ? 'Vencida: ' : 'Pendiente: '}
-                  {row.accionPendiente}
-                </span>
-              )}
+          row.riesgo && row.caidaPct !== null ? (
+            <span className={colorCambio(-row.caidaPct)}>{porcentaje(-row.caidaPct)}</span>
+          ) : (
+            <span className="text-ink-soft">—</span>
+          ),
+      },
+      {
+        key: 'accionPendiente',
+        label: 'Acción pendiente',
+        filterable: false,
+        value: (row) => row.accionPendiente ?? '',
+        render: (row) =>
+          row.riesgo && row.accionPendiente ? (
+            <span className={row.accionVencida ? 'text-red-600' : undefined}>
+              {row.accionPendiente}
+              {row.accionVencida && ' (vencida)'}
             </span>
           ) : (
             <span className="text-ink-soft">—</span>

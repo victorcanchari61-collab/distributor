@@ -34,7 +34,7 @@ export const ESTADOS_UI: Record<EstadoClave, EstadoUi> = {
   RIESGO: { etiqueta: 'En riesgo', rango: '26 - 70 %', color: '#ea580c', fondo: '#fff7ed' },
   SEGUIMIENTO: { etiqueta: 'En seguimiento', rango: '11 - 25 %', color: '#2563eb', fondo: '#eff6ff' },
   NORMAL: { etiqueta: 'Normal', rango: '0 - 10 %', color: '#16a34a', fondo: '#f0fdf4' },
-  SIN_BASE: { etiqueta: 'Sin comparación', rango: 'Sin ventas el año anterior', color: '#64748b', fondo: '#f1f5f9' },
+  SIN_BASE: { etiqueta: 'Sin comparación', rango: 'Sin ventas en el tramo anterior', color: '#64748b', fondo: '#f1f5f9' },
 }
 
 /**
@@ -68,6 +68,21 @@ const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'o
 
 /** El mes de un YYYY-MM-DD, abreviado ("oct"), sin pasar por una zona horaria. */
 export const mesCorto = (iso: string) => MESES[Number(iso.slice(5, 7)) - 1] ?? ''
+
+/** Las dos opciones del filtro "Comparar con" de los reportes de caída. */
+export const OPCIONES_COMPARAR = [
+  { value: 'mes', label: 'Mes anterior' },
+  { value: 'anio', label: 'Año anterior' },
+]
+
+/** Cómo se llama el tramo anterior en un texto: "el mes anterior" o "el año anterior". */
+export const nombreAnterior = (comparar: 'mes' | 'anio') => (comparar === 'anio' ? 'el año anterior' : 'el mes anterior')
+
+/** Los rótulos de las dos columnas de ventas de una comparación: los años (2025, 2026) o los meses (oct 2026, nov 2026). */
+export const rotulosComparacion = (comparar: 'mes' | 'anio', anteriorHasta: string, actualHasta: string): [string, string] =>
+  comparar === 'anio'
+    ? [anteriorHasta.slice(0, 4), actualHasta.slice(0, 4)]
+    : [`${mesCorto(anteriorHasta)} ${anteriorHasta.slice(0, 4)}`, `${mesCorto(actualHasta)} ${actualHasta.slice(0, 4)}`]
 
 /** El nombre y la inicial del apellido: "GUSTAVO MIRANDA MARTINEZ" → "GUSTAVO M.". */
 export const nombreCorto = (nombre: string | null) => {

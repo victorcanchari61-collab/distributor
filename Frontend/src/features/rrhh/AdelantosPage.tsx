@@ -122,14 +122,16 @@ export function AdelantosPage() {
     },
     {
       key: 'cuotaSemanal',
-      label: 'Cómo se descuenta',
+      label: 'Cuota semanal',
       filterable: false,
-      render: (row) => (
-        <div>
-          <p>{comoSeDescuenta(row)}</p>
-          <p className="text-xs text-ink-soft">Desde la semana {semana(row.descontarDesde)}</p>
-        </div>
-      ),
+      render: (row) => comoSeDescuenta(row),
+    },
+    {
+      key: 'descontarDesde',
+      label: 'Descontar desde',
+      filterable: false,
+      value: (row) => row.descontarDesde,
+      render: (row) => `Semana ${semana(row.descontarDesde)}`,
     },
     { key: 'cuentaFinanciera', label: 'Salió de', filterable: false },
     {

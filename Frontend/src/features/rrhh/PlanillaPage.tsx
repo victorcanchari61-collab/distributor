@@ -225,12 +225,14 @@ export function PlanillaPage() {
       key: 'empleado',
       label: 'Empleado',
       filterable: false,
-      render: (row) => (
-        <div>
-          <p className="font-medium text-ink">{row.empleado}</p>
-          {row.cargo && <p className="text-xs text-ink-soft">{row.cargo}</p>}
-        </div>
-      ),
+      render: (row) => <span className="font-medium text-ink">{row.empleado}</span>,
+    },
+    {
+      key: 'cargo',
+      label: 'Cargo',
+      filterable: false,
+      value: (row) => row.cargo ?? '',
+      render: (row) => (row.cargo ? row.cargo : <span className="text-ink-soft">—</span>),
     },
     { key: 'sueldoSemanal', label: 'Sueldo', align: 'right', filterable: false, render: (row) => soles(row.sueldoSemanal) },
     {
@@ -238,16 +240,21 @@ export function PlanillaPage() {
       label: 'Faltas y permisos',
       align: 'right',
       filterable: false,
-      render: (row) => (
-        <div>
-          <p>{row.diasNoPagados > 0 ? `${menos(row.descuentoInasistencias)} (${row.diasNoPagados} d)` : '—'}</p>
-          {borrador && row.diasSinMarcar > 0 && (
-            <p className="text-xs text-amber-700">
-              {row.diasSinMarcar} {row.diasSinMarcar === 1 ? 'día' : 'días'} sin marcar
-            </p>
-          )}
-        </div>
-      ),
+      render: (row) => (row.diasNoPagados > 0 ? `${menos(row.descuentoInasistencias)} (${row.diasNoPagados} d)` : '—'),
+    },
+    {
+      key: 'diasSinMarcar',
+      label: 'Aviso de marcas',
+      filterable: false,
+      value: (row) => (borrador ? row.diasSinMarcar : 0),
+      render: (row) =>
+        borrador && row.diasSinMarcar > 0 ? (
+          <span className="text-amber-700">
+            {row.diasSinMarcar} {row.diasSinMarcar === 1 ? 'día' : 'días'} sin marcar
+          </span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
     },
     { key: 'extraFeriados', label: 'Feriados', align: 'right', filterable: false, render: (row) => mas(row.extraFeriados) },
     { key: 'bonos', label: 'Bonos', align: 'right', filterable: false, render: (row) => mas(row.bonos) },
@@ -272,15 +279,32 @@ export function PlanillaPage() {
       label: 'Adelantos',
       align: 'right',
       filterable: false,
-      render: (row) => (
-        <div>
-          <p>{menos(row.descuentoAdelantos)}</p>
-          {borrador && row.adelantosSaldo > row.descuentoAdelantos && (
-            <p className="text-xs text-ink-soft">Debe {soles(row.adelantosSaldo)}</p>
-          )}
-          {borrador && row.adelantosManual !== null && <p className="text-xs text-amber-700">Ajustado a mano</p>}
-        </div>
-      ),
+      render: (row) => menos(row.descuentoAdelantos),
+    },
+    {
+      key: 'adelantosSaldo',
+      label: 'Debe en adelantos',
+      align: 'right',
+      filterable: false,
+      value: (row) => (borrador && row.adelantosSaldo > row.descuentoAdelantos ? row.adelantosSaldo : 0),
+      render: (row) =>
+        borrador && row.adelantosSaldo > row.descuentoAdelantos ? (
+          soles(row.adelantosSaldo)
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
+      key: 'adelantosManual',
+      label: 'Aviso de adelantos',
+      filterable: false,
+      value: (row) => (borrador && row.adelantosManual !== null ? 'Ajustado a mano' : ''),
+      render: (row) =>
+        borrador && row.adelantosManual !== null ? (
+          <span className="text-amber-700">Ajustado a mano</span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
     },
     {
       key: 'neto',

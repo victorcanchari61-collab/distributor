@@ -73,17 +73,23 @@ export function MisGananciasPage() {
 
   const columns: DataTableColumn<GananciaProducto>[] = [
     {
+      key: 'codigo',
+      label: 'Código',
+      filterable: false,
+      // El servidor ordena por columnas conocidas; el código no es una.
+      sortable: false,
+      value: (row) => row.codigo,
+      render: (row) => <span className="text-ink-soft">{row.codigo}</span>,
+    },
+    {
       key: 'producto',
       label: 'Producto',
       filterType: 'select',
       filterOptions: opcionesDe(opciones.productos),
       render: (row) => (
-        <span className="flex flex-col">
-          <span className="flex items-center gap-2 font-semibold text-ink">
-            {row.producto}
-            {row.sinCosto && <Badge tone="warning">Sin costo</Badge>}
-          </span>
-          <span className="text-xs text-ink-soft">{row.codigo}</span>
+        <span className="flex items-center gap-2 font-semibold text-ink">
+          {row.producto}
+          {row.sinCosto && <Badge tone="warning">Sin costo</Badge>}
         </span>
       ),
     },
@@ -110,15 +116,18 @@ export function MisGananciasPage() {
     {
       // Los números de las ventas en que salió; el filtro elige una concreta.
       key: 'venta',
-      label: 'Ventas',
+      label: 'Venta',
       filterType: 'select',
       filterOptions: opcionesDe(opciones.ventas),
-      render: (row) => (
-        <span className="flex flex-col">
-          <span>{lista(row.notas)}</span>
-          {row.ventas > 1 && <span className="text-xs text-ink-soft">{row.ventas} ventas</span>}
-        </span>
-      ),
+      render: (row) => lista(row.notas),
+    },
+    {
+      key: 'ventas',
+      label: 'Ventas',
+      align: 'right',
+      filterable: false,
+      value: (row) => row.ventas,
+      render: (row) => row.ventas,
     },
     {
       key: 'fecha',

@@ -99,12 +99,14 @@ export function PrestamosRecibidosPage() {
       key: 'acreedor',
       label: 'Quién prestó',
       filterable: false,
-      render: (row) => (
-        <div>
-          <p className="font-medium text-ink">{row.acreedor}</p>
-          {row.descripcion && <p className="text-xs text-ink-soft">{row.descripcion}</p>}
-        </div>
-      ),
+      render: (row) => <span className="font-medium text-ink">{row.acreedor}</span>,
+    },
+    {
+      key: 'descripcion',
+      label: 'Descripción',
+      filterable: false,
+      value: (row) => row.descripcion ?? '',
+      render: (row) => (row.descripcion ? row.descripcion : <span className="text-ink-soft">—</span>),
     },
     { key: 'montoRecibido', label: 'Recibido', align: 'right', filterable: false, render: (row) => soles(row.montoRecibido) },
     { key: 'totalADevolver', label: 'A devolver', align: 'right', filterable: false, render: (row) => soles(row.totalADevolver) },

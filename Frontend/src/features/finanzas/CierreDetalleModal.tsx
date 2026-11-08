@@ -167,12 +167,13 @@ export function CierreDetalleModal({
     {
       key: 'documentoOrigen',
       label: 'Concepto',
-      render: (row) => (
-        <div>
-          <p>{DOCUMENTOS[row.documentoOrigen] ?? row.documentoOrigen}</p>
-          {row.detalle && <p className="text-xs text-ink-soft">{row.detalle}</p>}
-        </div>
-      ),
+      render: (row) => DOCUMENTOS[row.documentoOrigen] ?? row.documentoOrigen,
+    },
+    {
+      key: 'detalle',
+      label: 'Detalle',
+      value: (row) => row.detalle ?? '',
+      render: (row) => (row.detalle ? row.detalle : <span className="text-ink-soft">—</span>),
     },
     {
       key: 'monto',
@@ -208,22 +209,24 @@ export function CierreDetalleModal({
     {
       key: 'documento',
       label: 'Venta',
-      render: (row) => (
-        <div>
-          <Badge>{row.documento}</Badge>
-          {row.cliente && <div className="mt-0.5 text-xs text-ink-soft">{row.cliente}</div>}
-        </div>
-      ),
+      render: (row) => <Badge>{row.documento}</Badge>,
+    },
+    {
+      key: 'cliente',
+      label: 'Cliente',
+      value: (row) => row.cliente ?? '',
+      render: (row) => (row.cliente ? row.cliente : <span className="text-ink-soft">—</span>),
     },
     {
       key: 'metodoPago',
       label: 'Método',
-      render: (row) => (
-        <div>
-          <p>{row.metodoPago}</p>
-          {row.cuenta && <p className="text-xs text-ink-soft">a {row.cuenta}</p>}
-        </div>
-      ),
+      render: (row) => row.metodoPago,
+    },
+    {
+      key: 'cuenta',
+      label: 'Cuenta',
+      value: (row) => row.cuenta ?? '',
+      render: (row) => (row.cuenta ? row.cuenta : <span className="text-ink-soft">—</span>),
     },
     {
       key: 'numeroOperacion',
@@ -239,24 +242,41 @@ export function CierreDetalleModal({
     {
       key: 'estado',
       label: 'Estado',
-      render: (row) => (
-        <div>
-          <Badge tone={ESTADOS_DIGITAL[row.estado].tono}>{ESTADOS_DIGITAL[row.estado].label}</Badge>
-          {row.verificadoPor && (
-            <div className="mt-0.5 text-xs text-ink-soft">
-              {row.verificadoPor}
-              {row.verificadoEn && ` · ${fechaHora(row.verificadoEn)}`}
-            </div>
-          )}
-          {row.observacion && <div className="mt-0.5 text-xs text-ink-soft">{row.observacion}</div>}
-          {row.descuento && (
-            <div className="mt-0.5 text-xs font-medium text-red-600">
-              {DESCUENTO[row.descuento.estado]}
-              {row.descuento.estado === 'PENDIENTE' && ` · ${soles(row.descuento.saldo)}`}
-            </div>
-          )}
-        </div>
-      ),
+      render: (row) => <Badge tone={ESTADOS_DIGITAL[row.estado].tono}>{ESTADOS_DIGITAL[row.estado].label}</Badge>,
+    },
+    {
+      key: 'verificadoPor',
+      label: 'Verificado por',
+      value: (row) => (row.verificadoPor ? `${row.verificadoPor}${row.verificadoEn ? ` · ${fechaHora(row.verificadoEn)}` : ''}` : ''),
+      render: (row) =>
+        row.verificadoPor ? (
+          <span>
+            {row.verificadoPor}
+            {row.verificadoEn && ` · ${fechaHora(row.verificadoEn)}`}
+          </span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
+      key: 'observacion',
+      label: 'Observación',
+      value: (row) => row.observacion ?? '',
+      render: (row) => (row.observacion ? row.observacion : <span className="text-ink-soft">—</span>),
+    },
+    {
+      key: 'descuento',
+      label: 'Descuento',
+      value: (row) => (row.descuento ? DESCUENTO[row.descuento.estado] : ''),
+      render: (row) =>
+        row.descuento ? (
+          <span className="font-medium text-red-600">
+            {DESCUENTO[row.descuento.estado]}
+            {row.descuento.estado === 'PENDIENTE' && ` · ${soles(row.descuento.saldo)}`}
+          </span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
     },
   ]
 

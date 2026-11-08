@@ -227,12 +227,14 @@ export function MiCajaPage() {
       label: 'Concepto',
       filterType: 'select',
       filterOptions: Object.entries(DOCUMENTOS).map(([value, label]) => ({ value, label })),
-      render: (row) => (
-        <div>
-          <p>{DOCUMENTOS[row.concepto] ?? row.concepto}</p>
-          {row.detalle && <p className="text-xs text-ink-soft">{row.detalle}</p>}
-        </div>
-      ),
+      render: (row) => DOCUMENTOS[row.concepto] ?? row.concepto,
+    },
+    {
+      key: 'detalle',
+      label: 'Detalle',
+      filterable: false,
+      value: (row) => row.detalle ?? '',
+      render: (row) => (row.detalle ? row.detalle : <span className="text-ink-soft">—</span>),
     },
     {
       key: 'monto',

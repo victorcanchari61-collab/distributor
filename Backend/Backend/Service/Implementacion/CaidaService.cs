@@ -11,7 +11,7 @@ namespace Backend.Service.Implementacion;
 /// Los reportes de CRM sobre la caída de ventas.
 ///
 /// Todos miden lo mismo y con la misma regla: el estado de un cliente por cuánto cayó su compra frente al mismo tramo
-/// del año anterior (<see cref="EstadoCaida"/>). Por eso el estado que ve el vendedor en la ficha, el del reporte de
+/// del mes anterior, o del año anterior si se pide (<see cref="EstadoCaida"/>). Por eso el estado que ve el vendedor en la ficha, el del reporte de
 /// Clientes con caída y el de Vendedores con caída siempre coinciden.
 ///
 /// El alcance de quien pregunta manda: quien solo ve "sus clientes" no ve la cartera de otro.
@@ -36,7 +36,7 @@ public class CaidaService : ICaidaService
     public async Task<CaidaClientesResponse> ClientesAsync(ConsultaCaida consulta)
     {
         ValidarEstado(consulta.Estado, EstadoCaida.Todos);
-        var periodo = PeriodoComparado.Crear(consulta.Desde, consulta.Hasta, Zona.Hoy);
+        var periodo = PeriodoDe(consulta.Desde, consulta.Hasta, consulta.Comparar);
 
         var (filas, soloPropios) = await FilasAsync(periodo, consulta.MercadoId, consulta.RutaId, consulta.VendedorId, consulta.Buscar);
 
@@ -153,9 +153,9 @@ public class CaidaService : ICaidaService
 
     // ------------------------------------------------------------- Qué dejó de comprar
 
-    public async Task<QueDejoDeComprarResponse> QueDejoDeComprarAsync(int clienteId, DateTime? desde, DateTime? hasta)
+    public async Task<QueDejoDeComprarResponse> QueDejoDeComprarAsync(int clienteId, DateTime? desde, DateTime? hasta, string? comparar = null)
     {
-        var periodo = PeriodoComparado.Crear(desde, hasta, Zona.Hoy);
+        var periodo = PeriodoDe(desde, hasta, comparar);
 
         var (visibles, _) = await CrmConsultas.VisiblesAsync(_context, _permisos, _usuarioActual.Id);
         var cliente = await visibles.Where(c => c.Id == clienteId).Select(c => c.Nombre).FirstOrDefaultAsync();
@@ -233,9 +233,9 @@ public class CaidaService : ICaidaService
 
     // ------------------------------------------------------------- Vendedores con caída
 
-    public async Task<VendedoresCaidaResponse> VendedoresAsync(DateTime? desde, DateTime? hasta)
+    public async Task<VendedoresCaidaResponse> VendedoresAsync(DateTime? desde, DateTime? hasta, string? comparar = null)
     {
-        var periodo = PeriodoComparado.Crear(desde, hasta, Zona.Hoy);
+        var periodo = PeriodoDe(desde, hasta, comparar);
 
         var (visibles, _) = await CrmConsultas.VisiblesAsync(_context, _permisos, _usuarioActual.Id);
         var clienteIds = visibles.Select(c => c.Id);
@@ -313,14 +313,14 @@ public class CaidaService : ICaidaService
 
     // ------------------------------------------------------------- Zonas (dashboard)
 
-    public async Task<ZonasCaidaResponse> ZonasAsync(DateTime? desde, DateTime? hasta, string? agrupar)
+    public async Task<ZonasCaidaResponse> ZonasAsync(DateTime? desde, DateTime? hasta, string? agrupar, string? comparar = null)
     {
         var por = string.IsNullOrWhiteSpace(agrupar) ? "mercado" : agrupar.Trim().ToLowerInvariant();
         if (por is not ("mercado" or "ruta"))
             throw new BadRequestException("Agrupa por mercado o por ruta.");
         var porMercado = por == "mercado";
 
-        var periodo = PeriodoComparado.Crear(desde, hasta, Zona.Hoy);
+        var periodo = PeriodoDe(desde, hasta, comparar);
         var (filas, soloPropios) = await FilasAsync(periodo, null, null, null, null);
 
         var (visibles, _) = await CrmConsultas.VisiblesAsync(_context, _permisos, _usuarioActual.Id);
@@ -386,6 +386,17 @@ public class CaidaService : ICaidaService
         if (string.IsNullOrWhiteSpace(estado)) return;
         if (!validos.Contains(estado.Trim().ToUpperInvariant()))
             throw new BadRequestException("Ese estado no existe en este reporte.");
+    }
+
+    /// <summary>
+    /// El tramo a medir y contra qué se compara: el mes anterior (lo normal) o el año anterior (<c>comparar = "anio"</c>). Sin
+    /// fechas, del 1 del mes a hoy.
+    /// </summary>
+    public static PeriodoComparado PeriodoDe(DateTime? desde, DateTime? hasta, string? comparar)
+    {
+        if (comparar is not null && comparar is not ("mes" or "anio"))
+            throw new BadRequestException("Compara contra el mes anterior (mes) o el año anterior (anio).");
+        return PeriodoComparado.CrearContra(desde, hasta, Zona.Hoy, comparar == "anio");
     }
 
     public static PeriodoCaidaResponse Describir(PeriodoComparado p) => new()

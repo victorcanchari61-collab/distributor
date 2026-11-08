@@ -161,16 +161,12 @@ export function UbicacionProductosPage() {
           } satisfies DataTableColumn<ProductoUbicado>,
         ]
       : []),
+    { key: 'codigo', label: 'Código', filterable: false, render: (p) => <span className="text-ink-soft">{p.codigo}</span> },
     {
       key: 'producto',
       label: 'Producto',
       filterable: false,
-      render: (p) => (
-        <span className="flex flex-col">
-          <span className="font-medium text-ink">{p.producto}</span>
-          <span className="text-xs text-ink-soft">{p.codigo}</span>
-        </span>
-      ),
+      render: (p) => <span className="font-medium text-ink">{p.producto}</span>,
     },
     {
       key: 'categoria',
@@ -188,14 +184,14 @@ export function UbicacionProductosPage() {
       align: 'right',
       filterable: false,
       value: (p) => p.stock,
-      render: (p) =>
-        p.stock > 0 ? (
-          <span>
-            {Number(p.stock.toFixed(4))} <span className="text-xs text-ink-soft">{p.unidadBase}</span>
-          </span>
-        ) : (
-          <span className="text-ink-soft">—</span>
-        ),
+      render: (p) => (p.stock > 0 ? Number(p.stock.toFixed(4)) : <span className="text-ink-soft">—</span>),
+    },
+    {
+      key: 'unidadBase',
+      label: 'Unidad',
+      filterable: false,
+      value: (p) => (p.stock > 0 ? p.unidadBase : ''),
+      render: (p) => (p.stock > 0 ? p.unidadBase : <span className="text-ink-soft">—</span>),
     },
     {
       key: 'lugar',

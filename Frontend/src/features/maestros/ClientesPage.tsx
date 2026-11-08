@@ -395,16 +395,7 @@ export function ClientesPage() {
       label: 'Documento',
       filterable: false,
       // Solo el número: el tipo tiene su propia columna al lado.
-      render: (row) => (
-        <span className="flex flex-col">
-          <span className="font-medium text-ink">{row.documento}</span>
-          {row.documentoAlterno && (
-            <span className="text-xs text-ink-soft">
-              {row.tipoDocAlterno} {row.documentoAlterno}
-            </span>
-          )}
-        </span>
-      ),
+      render: (row) => <span className="font-medium text-ink">{row.documento}</span>,
     },
     {
       key: 'tipoDoc',
@@ -417,6 +408,20 @@ export function ClientesPage() {
       ],
       value: (row) => row.tipoDoc,
       render: (row) => <Badge>{row.tipoDoc}</Badge>,
+    },
+    {
+      key: 'documentoAlterno',
+      label: 'Segundo documento',
+      filterable: false,
+      value: (row) => (row.documentoAlterno ? `${row.tipoDocAlterno ?? ''} ${row.documentoAlterno}`.trim() : ''),
+      render: (row) =>
+        row.documentoAlterno ? (
+          <span className="text-ink-soft">
+            {row.tipoDocAlterno} {row.documentoAlterno}
+          </span>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
     },
     { key: 'nombre', label: 'Nombre', filterable: false },
     {

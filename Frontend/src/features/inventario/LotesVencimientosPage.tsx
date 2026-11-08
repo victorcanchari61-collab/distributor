@@ -52,17 +52,13 @@ export function LotesVencimientosPage() {
       .map((v) => ({ value: v, label: v }))
 
   const columns: DataTableColumn<LoteResponse>[] = [
+    { key: 'codigo', label: 'Código', filterable: false, render: (row) => <span className="text-ink-soft">{row.codigo}</span> },
     {
       key: 'producto',
       label: 'Producto',
       filterType: 'select',
       filterOptions: distintos('producto'),
-      render: (row) => (
-        <span>
-          <span className="font-medium text-ink">{row.producto}</span>
-          <span className="ml-2 text-xs text-ink-soft">{row.codigo}</span>
-        </span>
-      ),
+      render: (row) => <span className="font-medium text-ink">{row.producto}</span>,
     },
     {
       key: 'almacen',
@@ -107,8 +103,10 @@ export function LotesVencimientosPage() {
       label: 'Stock',
       align: 'right',
       filterable: false,
-      render: (row) => `${row.cantidadDisponible} ${row.unidadBase}`,
+      value: (row) => row.cantidadDisponible,
+      render: (row) => row.cantidadDisponible,
     },
+    { key: 'unidadBase', label: 'Unidad', filterable: false, render: (row) => row.unidadBase },
     {
       key: 'valor',
       label: 'Valorizado',

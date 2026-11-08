@@ -591,12 +591,14 @@ function CategoriasTabla({
       key: 'nombre',
       label: 'Nombre',
       filterable: false,
-      render: (row) => (
-        <div>
-          <p className="font-medium text-ink">{row.nombre}</p>
-          {row.descripcion && <p className="text-xs text-ink-soft">{row.descripcion}</p>}
-        </div>
-      ),
+      render: (row) => <span className="font-medium text-ink">{row.nombre}</span>,
+    },
+    {
+      key: 'descripcion',
+      label: 'Descripción',
+      filterable: false,
+      value: (row) => row.descripcion ?? '',
+      render: (row) => (row.descripcion ? row.descripcion : <span className="text-ink-soft">—</span>),
     },
     {
       key: 'tipo',

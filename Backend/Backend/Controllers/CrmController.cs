@@ -80,8 +80,8 @@ public class CrmController : ControllerBase
     // ------------------------------------------------------------- Reportes
 
     /// <summary>
-    /// Clientes con caída: lo comprado del 1 de enero a hoy (o el rango que se pida) contra el mismo tramo del año
-    /// anterior, con una tarjeta por estado.
+    /// Clientes con caída: lo comprado del 1 del mes a hoy (o el rango que se pida) contra el mismo tramo del mes
+    /// anterior (o del año anterior con <c>comparar=anio</c>), con una tarjeta por estado.
     /// </summary>
     [HttpGet("caida")]
     [Permiso("crm.caida", Accion.Ver)]
@@ -92,17 +92,20 @@ public class CrmController : ControllerBase
         [FromQuery] int? rutaId,
         [FromQuery] int? vendedorId,
         [FromQuery] string? estado,
-        [FromQuery] string? buscar) =>
-        Ok(await _caida.ClientesAsync(new ConsultaCaida(desde, hasta, mercadoId, rutaId, vendedorId, estado, buscar)));
+        [FromQuery] string? buscar,
+        [FromQuery] string? comparar) =>
+        Ok(await _caida.ClientesAsync(new ConsultaCaida(desde, hasta, mercadoId, rutaId, vendedorId, estado, buscar, comparar)));
 
-    /// <summary>De un cliente, qué productos dejó de comprar frente al mismo tramo del año anterior.</summary>
+    /// <summary>De un cliente, qué productos dejó de comprar frente al mismo tramo del mes (o año) anterior.</summary>
     [HttpGet("caida/{clienteId:int}/productos")]
     [Permiso("crm.caida", Accion.Ver)]
-    public async Task<IActionResult> QueDejoDeComprar(int clienteId, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
-        Ok(await _caida.QueDejoDeComprarAsync(clienteId, desde, hasta));
+    public async Task<IActionResult> QueDejoDeComprar(
+        int clienteId, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta, [FromQuery] string? comparar) =>
+        Ok(await _caida.QueDejoDeComprarAsync(clienteId, desde, hasta, comparar));
 
     [HttpGet("vendedores")]
     [Permiso("crm.vendedores", Accion.Ver)]
-    public async Task<IActionResult> VendedoresConCaida([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta) =>
-        Ok(await _caida.VendedoresAsync(desde, hasta));
+    public async Task<IActionResult> VendedoresConCaida(
+        [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta, [FromQuery] string? comparar) =>
+        Ok(await _caida.VendedoresAsync(desde, hasta, comparar));
 }

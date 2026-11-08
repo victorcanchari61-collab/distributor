@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { LayoutList, MapPin, Pencil, Phone, Plus, ShieldCheck, ShieldOff, Star, UserRound, Warehouse } from 'lucide-react'
+import { LayoutList, MapPin, Pencil, Plus, ShieldCheck, ShieldOff, Star, Warehouse } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -238,15 +238,14 @@ export function AlmacenesPage() {
       filterOptions: distintos(almacenes.map((a) => a.distrito)),
       // El filtro es por distrito: es lo que de verdad se repite entre almacenes.
       value: (row) => row.distrito ?? '',
-      render: (row) =>
-        direccionCompleta(row) ? (
-          <span className="flex flex-col">
-            <span>{direccionCompleta(row)}</span>
-            {row.referencia && <span className="text-xs text-ink-soft">{row.referencia}</span>}
-          </span>
-        ) : (
-          <span className="text-ink-soft">—</span>
-        ),
+      render: (row) => direccionCompleta(row) || <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'referencia',
+      label: 'Referencia',
+      filterable: false,
+      value: (row) => row.referencia ?? '',
+      render: (row) => row.referencia || <span className="text-ink-soft">—</span>,
     },
     {
       key: 'responsable',
@@ -254,23 +253,14 @@ export function AlmacenesPage() {
       filterType: 'select',
       filterOptions: distintos(almacenes.map((a) => a.responsable)),
       value: (row) => row.responsable ?? '',
-      render: (row) =>
-        row.responsable ? (
-          <span className="flex flex-col">
-            <span className="inline-flex items-center gap-1">
-              <UserRound size={13} className="text-ink-soft" />
-              {row.responsable}
-            </span>
-            {row.telefono && (
-              <span className="inline-flex items-center gap-1 text-xs text-ink-soft">
-                <Phone size={11} />
-                {row.telefono}
-              </span>
-            )}
-          </span>
-        ) : (
-          <span className="text-ink-soft">—</span>
-        ),
+      render: (row) => row.responsable || <span className="text-ink-soft">—</span>,
+    },
+    {
+      key: 'telefono',
+      label: 'Teléfono',
+      filterable: false,
+      value: (row) => row.telefono ?? '',
+      render: (row) => row.telefono || <span className="text-ink-soft">—</span>,
     },
     {
       key: 'ubicaciones',

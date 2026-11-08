@@ -178,12 +178,15 @@ export function MovimientosDineroPage() {
       key: 'concepto',
       label: 'Concepto',
       filterable: false,
-      render: (row) => (
-        <div className="min-w-0">
-          <p className={`text-ink ${row.anulado ? 'line-through opacity-60' : ''}`}>{row.concepto}</p>
-          {row.observacion && !row.esReversa && <p className="text-xs text-ink-soft">{row.observacion}</p>}
-        </div>
-      ),
+      render: (row) => <span className={`text-ink ${row.anulado ? 'line-through opacity-60' : ''}`}>{row.concepto}</span>,
+    },
+    {
+      key: 'observacion',
+      label: 'Observación',
+      filterable: false,
+      value: (row) => (row.esReversa ? '' : (row.observacion ?? '')),
+      render: (row) =>
+        row.observacion && !row.esReversa ? row.observacion : <span className="text-ink-soft">—</span>,
     },
     {
       key: 'categoria',

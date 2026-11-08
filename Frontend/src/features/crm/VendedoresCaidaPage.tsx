@@ -9,23 +9,25 @@ import { hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { crmApi } from './crmApi'
-import type { EstadoClave, FilaVendedor, VendedoresCaida } from './crmApi'
-import { inicioDeAnio } from './filtros'
-import { ESTADOS_UI, ORDEN_ESTADOS, colorCambio, nombreCorto, porcentaje, soles, solesConSigno } from './formato'
+import type { CompararCaida, EstadoClave, FilaVendedor, VendedoresCaida } from './crmApi'
+import { inicioDeMes } from './filtros'
+import { ESTADOS_UI, OPCIONES_COMPARAR, ORDEN_ESTADOS, colorCambio, nombreAnterior, nombreCorto, porcentaje, soles, solesConSigno } from './formato'
 import { ICONO_ESTADO } from './iconosEstado'
 import { EtiquetaEstado, TarjetaReporte } from './piezas'
 
 /**
- * Vendedores con caída: lo que vendió cada vendedor frente al mismo tramo del año anterior, con la misma escala de
+ * Vendedores con caída: lo que vendió cada vendedor frente al mismo tramo del mes anterior (o del año anterior, a elección), con la misma escala de
  * estados que los clientes. Además dice cuántos de sus clientes están bajando, que es de donde sale la caída.
  */
 export function VendedoresCaidaPage() {
   const { puede } = usePermisos()
   // El tramo lo elige el panel de filtros de la tabla, con los demás.
-  const [desdeInicial] = useState(inicioDeAnio())
+  const [desdeInicial] = useState(inicioDeMes())
   const [hastaInicial] = useState(hoyLocal())
   const [desde, setDesde] = useState(desdeInicial)
   const [hasta, setHasta] = useState(hastaInicial)
+  const [comparar, setComparar] = useState<CompararCaida>('mes')
+  const referencia = nombreAnterior(comparar)
   const [estado, setEstado] = useState<EstadoClave>()
 
   const [datos, setDatos] = useState<VendedoresCaida | null>(null)
@@ -35,14 +37,14 @@ export function VendedoresCaidaPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      setDatos(await crmApi.vendedores({ desde, hasta }))
+      setDatos(await crmApi.vendedores({ desde, hasta, comparar }))
       setError('')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No pudimos cargar el reporte.')
     } finally {
       setCargando(false)
     }
-  }, [desde, hasta])
+  }, [desde, hasta, comparar])
 
   useEffect(() => {
     void cargar()
@@ -54,6 +56,7 @@ export function VendedoresCaidaPage() {
     () => [
       // Solo existe en el panel de Filtros: decide qué se pide (ver SysDataTable).
       { key: 'fecha', label: 'Fechas', soloFiltro: true, filterType: 'date' },
+      { key: 'comparar', label: 'Comparar con', soloFiltro: true, filterType: 'select', filterOptions: OPCIONES_COMPARAR },
       {
         key: 'estado', width: 120,
         label: 'Estado',
@@ -88,12 +91,15 @@ export function VendedoresCaidaPage() {
         align: 'right',
         filterable: false,
         value: (r) => r.clientesEnCaida,
-        render: (r) => (
-          <span className="flex flex-col items-end">
-            <span className="font-medium">{r.clientesEnCaida}</span>
-            {r.clientesCriticos > 0 && <span className="text-[11px] font-semibold text-red-600">{r.clientesCriticos} críticos</span>}
-          </span>
-        ),
+        render: (r) => <span className="font-medium">{r.clientesEnCaida}</span>,
+      },
+      {
+        key: 'criticos', width: 100,
+        label: 'Críticos',
+        align: 'right',
+        filterable: false,
+        value: (r) => r.clientesCriticos,
+        render: (r) => (r.clientesCriticos > 0 ? <span className="font-semibold text-red-600">{r.clientesCriticos}</span> : <span className="text-ink-soft">—</span>),
       },
       {
         key: 'riesgo', width: 130,
@@ -116,6 +122,8 @@ export function VendedoresCaidaPage() {
       // Cada tecla del buscador también llega aquí: sin esta comparación se volvería a pedir todo.
       setDesde((previo) => (previo === d ? previo : d))
       setHasta((previo) => (previo === h ? previo : h))
+      const c: CompararCaida = q.filtros.find((f) => f.columna === 'comparar')?.valor === 'anio' ? 'anio' : 'mes'
+      setComparar((previo) => (previo === c ? previo : c))
     },
     [desdeInicial, hastaInicial],
   )
@@ -149,7 +157,7 @@ export function VendedoresCaidaPage() {
     <ListPage
       icon={<UsersRound size={20} />}
       title="Vendedores con caída"
-      description="Cuánto vendió cada vendedor frente al mismo tramo del año anterior, y cuántos de sus clientes están bajando."
+      description={`Cuánto vendió cada vendedor frente al mismo tramo d${comparar === 'anio' ? 'el año' : 'el mes'} anterior, y cuántos de sus clientes están bajando.`}
       actions={
         puede('crm.vendedores', 'exportar') ? (
           <Button variant="secondary" size="sm" disabled={items.length === 0} onClick={exportar} iconRight={<FileSpreadsheet size={15} />}>
@@ -170,7 +178,7 @@ export function VendedoresCaidaPage() {
                   titulo={ui.etiqueta}
                   nota={ui.rango}
                   valor={fila?.clientes ?? 0}
-                  detalle={e === 'SIN_BASE' ? 'sin ventas el año anterior' : e === 'NORMAL' ? 'venden igual o casi' : `${soles(fila?.monto ?? 0)} en riesgo`}
+                  detalle={e === 'SIN_BASE' ? `sin ventas ${referencia}` : e === 'NORMAL' ? 'venden igual o casi' : `${soles(fila?.monto ?? 0)} en riesgo`}
                   icono={ICONO_ESTADO[e]}
                   color={ui.color}
                   activa={estado === e}
@@ -221,7 +229,7 @@ export function VendedoresCaidaPage() {
 
             <Marco
               titulo="Ventas por vendedor"
-              subtitulo="El tramo actual frente al mismo tramo del año anterior"
+              subtitulo={`El tramo actual frente al mismo tramo d${comparar === 'anio' ? 'el año' : 'el mes'} anterior`}
               cargando={cargando && !datos}
               vacio={items.length === 0}
               mensajeVacio="Ningún vendedor vendió en este tramo"
@@ -241,7 +249,7 @@ export function VendedoresCaidaPage() {
                 etiquetas={items.map((f) => nombreCorto(f.vendedor))}
                 etiquetasLargas={items.map((f) => f.vendedor)}
                 series={[
-                  { id: 'anterior', nombre: datos?.periodo.etiquetaAnterior ?? 'Año anterior', color: '#cbd5e1', valores: items.map((f) => f.ventaAnterior) },
+                  { id: 'anterior', nombre: datos?.periodo.etiquetaAnterior ?? 'Anterior', color: '#cbd5e1', valores: items.map((f) => f.ventaAnterior) },
                   { id: 'actual', nombre: datos?.periodo.etiqueta ?? 'Actual', color: '#7c3aed', valores: items.map((f) => f.ventaActual) },
                 ]}
                 formato={(n) => moneda(n)}
@@ -255,7 +263,10 @@ export function VendedoresCaidaPage() {
       rows={items}
       rowKey="usuarioId"
       onConsulta={aplicar}
-      filtrosIniciales={[{ column: 'fecha', operator: 'between', value: desdeInicial, valueTo: hastaInicial }]}
+      filtrosIniciales={[
+        { column: 'fecha', operator: 'between', value: desdeInicial, valueTo: hastaInicial },
+        { column: 'comparar', operator: 'equals', value: 'mes' },
+      ]}
       pageSize={15}
       cardIcon={UsersRound}
       searchPlaceholder="Buscar vendedor..."

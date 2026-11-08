@@ -34,16 +34,13 @@ export function EtiquetaSituacion({ situacion }: { situacion: SituacionProducto 
 export function TablaProductos({ productos, anterior, actual }: { productos: SituacionProductoFila[]; anterior: string; actual: string }) {
   const columnas: DataTableColumn<SituacionProductoFila>[] = useMemo(
     () => [
+      { key: 'codigo', label: 'Código', filterable: false, value: (r) => r.codigo, render: (r) => r.codigo },
       {
         key: 'producto',
         label: 'Producto',
         filterable: false,
-        render: (r) => (
-          <span className="flex flex-col">
-            <span className="font-medium text-ink">{r.producto}</span>
-            <span className="text-xs text-ink-soft">{r.codigo}</span>
-          </span>
-        ),
+        value: (r) => r.producto,
+        render: (r) => <span className="font-medium text-ink">{r.producto}</span>,
       },
       { key: 'anterior', label: `Ventas ${anterior}`, align: 'right', filterable: false, value: (r) => r.ventaAnterior, render: (r) => soles(r.ventaAnterior) },
       { key: 'actual', label: `Ventas ${actual}`, align: 'right', filterable: false, value: (r) => r.ventaActual, render: (r) => soles(r.ventaActual) },
