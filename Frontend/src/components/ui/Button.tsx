@@ -10,7 +10,15 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   block?: boolean
   loading?: boolean
   iconRight?: ReactNode
+  /**
+   * La persona no tiene permiso para esta acción: el botón se ve, apagado en gris y con el aviso al pasar el mouse. Un botón
+   * que desaparece no explica nada; uno apagado con su razón, sí.
+   */
+  sinPermiso?: boolean
 }
+
+/** Lo que dice el aviso de un botón apagado por falta de permiso. */
+export const AVISO_SIN_PERMISO = 'No tienes permiso para esta acción'
 
 const VARIANTS: Record<Variant, string> = {
   // Color del modulo abierto (--sys-rgb, definido por DashboardLayout): el
@@ -36,6 +44,7 @@ export function Button({
   block = false,
   loading = false,
   iconRight,
+  sinPermiso = false,
   className,
   children,
   disabled,
@@ -45,7 +54,8 @@ export function Button({
   return (
     <button
       type={type}
-      disabled={disabled || loading}
+      disabled={disabled || loading || sinPermiso}
+      title={sinPermiso ? AVISO_SIN_PERMISO : undefined}
       className={cn(
         'inline-flex cursor-pointer items-center justify-center gap-2 rounded-field font-semibold whitespace-nowrap',
         'transition-colors duration-150',
@@ -54,6 +64,7 @@ export function Button({
         variant === 'ghost' ? 'px-2 py-1 text-sm' : SIZES[size],
         VARIANTS[variant],
         block && 'w-full',
+        sinPermiso && 'border border-slate-200 bg-slate-200! text-slate-400! opacity-100! shadow-none',
         className,
       )}
       {...rest}

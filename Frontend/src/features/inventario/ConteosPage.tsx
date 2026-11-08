@@ -9,6 +9,7 @@ import type { ProductoResponse } from '../maestros'
 import { almacenApi, ajusteApi, motivoApi, stockApi } from './inventarioApi'
 import type { AlmacenResponse, MotivoResponse, StockResponse } from './inventarioApi'
 
+import { opcional } from '../../lib/apoyo'
 /**
  * Conteo cíclico: cuánto hay en el sistema (teórico) contra cuánto hay en el
  * anaquel (contado). La diferencia se registra sola como un ajuste de
@@ -36,9 +37,9 @@ export function ConteosPage() {
       setCargando(true)
       try {
         const [alms, prods, mots] = await Promise.all([
-          almacenApi.getAll(),
-          productoApi.getAll(),
-          motivoApi.getAll(),
+          opcional(almacenApi.getAll(), []),
+          opcional(productoApi.getAll(), []),
+          opcional(motivoApi.getAll(), []),
         ])
         setAlmacenes(alms)
         setProductos(prods)
@@ -241,12 +242,10 @@ export function ConteosPage() {
       title="Conteos cíclicos"
       description="Lo del sistema contra lo del anaquel."
       actions={
-        puede('inv.conteos', 'crear') ? (
-          <Button size="sm" onClick={() => void registrarConteo()} loading={guardando}>
-            <Save size={15} />
-            Registrar conteo
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={() => void registrarConteo()} loading={guardando} sinPermiso={!puede('inv.conteos', 'crear')}>
+          <Save size={15} />
+          Registrar conteo
+        </Button>
       }
       alert={
         error ? (

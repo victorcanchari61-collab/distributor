@@ -46,6 +46,7 @@ import { EntregaPedidoModal, NoEntregadoModal } from './EntregaPedidoModal'
 import type { AuditoriaResponse } from '../config'
 import type { CrearPedidoRequest, FormaPagoVenta, LineaVentaResponse, OpcionesFiltroVentas, PedidoFila, PedidoResponse, ResumenPedidos } from './ventasApi'
 
+import { opcional } from '../../lib/apoyo'
 function estadoPedidoBadge(estado: PedidoResponse['estado']) {
   const tono = estado === 'CONFIRMADO' ? 'success' : estado === 'ANULADO' ? 'danger' : 'warning'
   const texto = estado === 'CONFIRMADO' ? 'Confirmado' : estado === 'ANULADO' ? 'Anulado' : 'Pendiente'
@@ -141,9 +142,9 @@ export function PedidosPage() {
       const [res, opciones, prods, alms, lis] = await Promise.all([
         pedidoApi.resumen(),
         pedidoApi.opciones(),
-        productoApi.getAll(),
-        almacenApi.opciones(),
-        listaPrecioApi.getAll(),
+        opcional(productoApi.getAll(), []),
+        opcional(almacenApi.opciones(), []),
+        opcional(listaPrecioApi.getAll(), []),
       ])
       setResumen(res)
       setOpcionesFiltro(opciones)
@@ -774,11 +775,9 @@ export function PedidosPage() {
       title="Pedidos"
       description="Lo que pide un cliente; al convertirlo nace su venta."
       actions={
-        puede('fact.pedidos', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo pedido
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('fact.pedidos', 'crear')}>
+          Nuevo pedido
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -825,58 +824,50 @@ export function PedidosPage() {
           {puede('fact.pedidos', 'exportar') && (
             <AccionPdf documento="pedido" id={row.id} numero={row.numero} />
           )}
-          {puede('fact.pedidos', 'editar') && (
-            <RowAction
-              label={`Editar ${row.numero}`}
-              disabled={row.estado !== 'PENDIENTE'}
-              disabledReason="Solo se edita un pedido pendiente"
-              onClick={() => void conPedidoCompleto(row.id, abrirEdicion)}
-            >
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('fact.pedidos', 'confirmar') && (
-            <RowAction
-              label={`Convertir ${row.numero} en venta`}
-              tone="success"
-              disabled={row.estado !== 'PENDIENTE'}
-              // El motivo nombra la venta: "ya fue convertido" deja buscandola.
-              disabledReason={
-                row.notaVentaNumero
-                  ? `Ya es la venta ${row.notaVentaNumero}. Anúlala para rehacerla.`
-                  : 'Está anulado'
-              }
-              onClick={() => void conPedidoCompleto(row.id, setConfirmando)}
-            >
-              <ShoppingBag size={15} />
-            </RowAction>
-          )}
-          {puede('fact.pedidos', 'confirmar') && (
-            <RowAction
-              label={
-                row.noEntregadoMotivo
-                  ? `Quitar la marca de no entregado de ${row.numero}`
-                  : `Marcar ${row.numero} como no entregado`
-              }
-              tone="warning"
-              disabled={row.estado !== 'PENDIENTE'}
-              disabledReason="Solo un pedido pendiente puede marcarse como no entregado"
-              onClick={() => (row.noEntregadoMotivo ? quitarNoEntregado(row) : void conPedidoCompleto(row.id, setNoEntregando))}
-            >
-              <PackageX size={15} />
-            </RowAction>
-          )}
-          {puede('fact.pedidos', 'anular') && (
-            <RowAction
-              label={`Anular ${row.numero}`}
-              tone="danger"
-              disabled={row.estado !== 'PENDIENTE'}
-              disabledReason={row.estado === 'CONFIRMADO' ? 'Ya generó su venta: anula esa' : 'Ya está anulado'}
-              onClick={() => anularPedido(row)}
-            >
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Editar ${row.numero}`}
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason="Solo se edita un pedido pendiente"
+            onClick={() => void conPedidoCompleto(row.id, abrirEdicion)}
+            sinPermiso={!puede('fact.pedidos', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`Convertir ${row.numero} en venta`}
+            tone="success"
+            disabled={row.estado !== 'PENDIENTE'}
+            // El motivo nombra la venta: "ya fue convertido" deja buscandola.
+            disabledReason={
+              row.notaVentaNumero
+                ? `Ya es la venta ${row.notaVentaNumero}. Anúlala para rehacerla.`
+                : 'Está anulado'
+            }
+            onClick={() => void conPedidoCompleto(row.id, setConfirmando)}
+            sinPermiso={!puede('fact.pedidos', 'confirmar')}>
+            <ShoppingBag size={15} />
+          </RowAction>
+          <RowAction
+            label={
+              row.noEntregadoMotivo
+                ? `Quitar la marca de no entregado de ${row.numero}`
+                : `Marcar ${row.numero} como no entregado`
+            }
+            tone="warning"
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason="Solo un pedido pendiente puede marcarse como no entregado"
+            onClick={() => (row.noEntregadoMotivo ? quitarNoEntregado(row) : void conPedidoCompleto(row.id, setNoEntregando))}
+            sinPermiso={!puede('fact.pedidos', 'confirmar')}>
+            <PackageX size={15} />
+          </RowAction>
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason={row.estado === 'CONFIRMADO' ? 'Ya generó su venta: anula esa' : 'Ya está anulado'}
+            onClick={() => anularPedido(row)}
+            sinPermiso={!puede('fact.pedidos', 'anular')}>
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

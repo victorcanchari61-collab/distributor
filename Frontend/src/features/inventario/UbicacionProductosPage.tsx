@@ -19,6 +19,7 @@ import { useRealtime } from '../../lib/realtime'
 import { almacenApi, ubicacionApi, ubicacionProductoApi } from './inventarioApi'
 import type { AlmacenResponse, ProductoUbicado, ProductosUbicados, UbicacionResponse } from './inventarioApi'
 
+import { opcional } from '../../lib/apoyo'
 const SUBMODULO = 'inv.ubicaciones'
 
 type Mostrar = 'todos' | 'sin' | 'con'
@@ -67,7 +68,7 @@ export function UbicacionProductosPage() {
     if (!almacenId) return
     setCargando(true)
     try {
-      const [lista, arbol] = await Promise.all([ubicacionProductoApi.listar(almacenId), ubicacionApi.listar(almacenId)])
+      const [lista, arbol] = await Promise.all([ubicacionProductoApi.listar(almacenId), opcional(ubicacionApi.listar(almacenId), [])])
       setDatos(lista)
       setLugares(arbol)
       setError('')

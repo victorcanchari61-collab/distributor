@@ -24,6 +24,7 @@ import { NuevoMovimientoModal } from './NuevoMovimientoModal'
 import { MoverPlataModal } from './MoverPlataModal'
 import { cuentaFinancieraApi } from './cuentaFinancieraApi'
 
+import { opcional } from '../../lib/apoyo'
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 const redondear = (n: number) => Math.round(n * 100) / 100
 
@@ -85,7 +86,7 @@ export function MovimientosDineroPage() {
 
   const abrirNuevo = async () => {
     try {
-      const [c, cat] = await Promise.all([movimientoDineroApi.cuentas(), gastoOperativoApi.categoriasOpciones()])
+      const [c, cat] = await Promise.all([opcional(movimientoDineroApi.cuentas(), []), opcional(gastoOperativoApi.categoriasOpciones(), [])])
       setCuentas(c)
       setCategorias(cat)
       setNuevoAbierto(true)
@@ -243,16 +244,12 @@ export function MovimientosDineroPage() {
       description="Todo lo que entra y sale de cajas y bancos, con su saldo."
       actions={
         <>
-          {puede('finanzas.movimientos', 'exportar') && (
-            <Button size="sm" variant="secondary" onClick={exportar} disabled={movimientos.length === 0} iconRight={<Download size={15} />}>
-              Exportar
-            </Button>
-          )}
-          {puede('finanzas.movimientos', 'transferir') && (
-            <Button size="sm" variant="secondary" onClick={() => void abrirMover()} iconRight={<ArrowLeftRight size={15} />}>
-              Mover plata
-            </Button>
-          )}
+          <Button size="sm" variant="secondary" onClick={exportar} disabled={movimientos.length === 0} iconRight={<Download size={15} />} sinPermiso={!puede('finanzas.movimientos', 'exportar')}>
+            Exportar
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => void abrirMover()} iconRight={<ArrowLeftRight size={15} />} sinPermiso={!puede('finanzas.movimientos', 'transferir')}>
+            Mover plata
+          </Button>
           {tiposPermitidos.length > 0 && (
             <Button size="sm" onClick={() => void abrirNuevo()} iconRight={<Plus size={15} />}>
               Nuevo movimiento
@@ -292,8 +289,8 @@ export function MovimientosDineroPage() {
       searchPlaceholder="Buscar por concepto..."
       empty={cargando ? 'Cargando movimientos...' : 'No hay movimientos en este período.'}
       rowActions={(row) =>
-        row.anulable && puede('finanzas.movimientos', 'anular') ? (
-          <RowAction label="Anular" tone="danger" onClick={() => anular(row)}>
+        row.anulable ? (
+          <RowAction label="Anular" tone="danger" onClick={() => anular(row)} sinPermiso={!puede('finanzas.movimientos', 'anular')}>
             <Ban size={15} />
           </RowAction>
         ) : null

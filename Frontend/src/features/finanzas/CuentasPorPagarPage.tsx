@@ -28,6 +28,7 @@ import type { ProveedorResponse } from '../maestros'
 import { etiquetaMetodo, metodoPagoApi } from './finanzasApi'
 import type { MetodoPagoResponse, TipoMetodoPago } from './finanzasApi'
 
+import { opcional } from '../../lib/apoyo'
 const NOTA_TIPO: Record<TipoMetodoPago, string> = {
   EFECTIVO: 'Efectivo',
   BILLETERA_DIGITAL: 'Billetera digital',
@@ -105,8 +106,8 @@ export function CuentasPorPagarPage() {
     try {
       const [res, metodos, provs] = await Promise.all([
         compraApi.resumenCuentasPorPagar(),
-        metodoPagoApi.getAll(),
-        proveedorApi.getAll(),
+        opcional(metodoPagoApi.getAll(), []),
+        opcional(proveedorApi.getAll(), []),
       ])
       setResumen(res)
       setMetodosPago(metodos.filter((m) => m.activo))
@@ -455,12 +456,10 @@ export function CuentasPorPagarPage() {
             <Button variant="secondary" size="sm" onClick={() => setGestionando(null)}>
               Cerrar
             </Button>
-            {puede('finanzas.pagar', 'cobrar') && (
-              <Button size="sm" disabled={editandoClave !== null} onClick={agregarFila}>
-                <Plus size={15} />
-                Agregar pago
-              </Button>
-            )}
+            <Button size="sm" disabled={editandoClave !== null} onClick={agregarFila} sinPermiso={!puede('finanzas.pagar', 'cobrar')}>
+              <Plus size={15} />
+              Agregar pago
+            </Button>
           </>
         }
       >
@@ -499,26 +498,22 @@ export function CuentasPorPagarPage() {
                   </>
                 ) : fila.anulado ? null : (
                   <>
-                    {puede('finanzas.pagar', 'cobrar') && (
-                      <RowAction
-                        label={`Editar pago de S/ ${fila.monto.toFixed(2)}`}
-                        tone="edit"
-                        disabled={editandoClave !== null}
-                        onClick={() => editarFila(fila)}
-                      >
-                        <Pencil size={15} />
-                      </RowAction>
-                    )}
-                    {puede('finanzas.pagar', 'cobrar') && (
-                      <RowAction
-                        label={`Anular pago de S/ ${fila.monto.toFixed(2)}`}
-                        tone="danger"
-                        disabled={editandoClave !== null}
-                        onClick={() => void anularFila(fila)}
-                      >
-                        <Undo2 size={15} />
-                      </RowAction>
-                    )}
+                    <RowAction
+                      label={`Editar pago de S/ ${fila.monto.toFixed(2)}`}
+                      tone="edit"
+                      disabled={editandoClave !== null}
+                      onClick={() => editarFila(fila)}
+                      sinPermiso={!puede('finanzas.pagar', 'cobrar')}>
+                      <Pencil size={15} />
+                    </RowAction>
+                    <RowAction
+                      label={`Anular pago de S/ ${fila.monto.toFixed(2)}`}
+                      tone="danger"
+                      disabled={editandoClave !== null}
+                      onClick={() => void anularFila(fila)}
+                      sinPermiso={!puede('finanzas.pagar', 'cobrar')}>
+                      <Undo2 size={15} />
+                    </RowAction>
                   </>
                 )
               }

@@ -148,11 +148,9 @@ export function RutasPage() {
       title="Rutas"
       description="Rutas de reparto a las que pertenece cada cliente."
       actions={
-        puede('tms.rutas', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nueva ruta
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('tms.rutas', 'crear')}>
+          Nueva ruta
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -177,20 +175,16 @@ export function RutasPage() {
           <RowAction tone="view" label={`Ver ${row.nombre}`} onClick={() => setDetalle(row)}>
             <Eye size={15} />
           </RowAction>
-          {puede('tms.rutas', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('tms.rutas', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-          )}
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('tms.rutas', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            onClick={() => cambiarEstado(row)}
+            sinPermiso={!puede('tms.rutas', 'editar')}>
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
         </>
       )}
     >

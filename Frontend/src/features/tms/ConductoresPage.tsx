@@ -30,6 +30,7 @@ import { BadgeEstadoDocumentos, CampoFoto } from './CampoFoto'
 import { conductorApi, urlImagen } from './flotaApi'
 import type { ConductorResponse, ResumenConductoresResponse } from './flotaApi'
 
+import { opcional } from '../../lib/apoyo'
 interface FormConductor {
   nombre: string
   documento: string
@@ -85,7 +86,7 @@ export function ConductoresPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [c, r] = await Promise.all([conductorApi.getAll(), conductorApi.resumen()])
+      const [c, r] = await Promise.all([opcional(conductorApi.getAll(), []), conductorApi.resumen()])
       setConductores(c)
       setResumen(r)
       setError('')
@@ -291,11 +292,9 @@ export function ConductoresPage() {
       title="Conductores"
       description="Quiénes conducen, su licencia y su vehículo."
       actions={
-        puede('tms.conductores', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo conductor
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('tms.conductores', 'crear')}>
+          Nuevo conductor
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -337,20 +336,16 @@ export function ConductoresPage() {
           <RowAction tone="view" label={`Ver ${row.nombre}`} onClick={() => setDetalle(row)}>
             <Eye size={15} />
           </RowAction>
-          {puede('tms.conductores', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('tms.conductores', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-          )}
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('tms.conductores', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            onClick={() => cambiarEstado(row)}
+            sinPermiso={!puede('tms.conductores', 'editar')}>
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
         </>
       )}
     >

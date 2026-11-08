@@ -54,6 +54,7 @@ import type {
   UrgenciaSolicitud,
 } from './comprasApi'
 
+import { opcional } from '../../lib/apoyo'
 const TONO_ESTADO = {
   BORRADOR: 'neutral',
   PENDIENTE: 'warning',
@@ -129,9 +130,9 @@ export function SolicitudesCompraPage() {
     if (!puede('compras.solicitudes', 'crear') && !puede('compras.solicitudes', 'editar')) return
     try {
       const [alms, prods, stock] = await Promise.all([
-        almacenApi.opciones(),
-        productoApi.getAll(),
-        stockApi.disponible(),
+        opcional(almacenApi.opciones(), []),
+        opcional(productoApi.getAll(), []),
+        opcional(stockApi.disponible(), []),
       ])
       const activos = alms.filter((a) => a.activo)
       setAlmacenes(activos)
@@ -665,27 +666,27 @@ export function SolicitudesCompraPage() {
             >
               <Eye size={15} />
             </RowAction>
-            {(row.estado === 'BORRADOR' || row.estado === 'PENDIENTE') && puede('compras.solicitudes', 'editar') && (
+            {(row.estado === 'BORRADOR' || row.estado === 'PENDIENTE') && (
               <RowAction
                 label={`Editar ${row.numero}`}
                 onClick={() => void conSolicitudCompleta(row.id, abrirEdicion)}
+                sinPermiso={!puede('compras.solicitudes', 'editar')}
               >
                 <Pencil size={15} />
               </RowAction>
             )}
-            {row.estado === 'BORRADOR' && puede('compras.solicitudes', 'crear') && (
-              <RowAction label={`Enviar ${row.numero} al administrador`} tone="success" onClick={() => enviar(row)}>
+            {row.estado === 'BORRADOR' && (
+              <RowAction label={`Enviar ${row.numero} al administrador`} tone="success" onClick={() => enviar(row)} sinPermiso={!puede('compras.solicitudes', 'crear')}>
                 <Send size={15} />
               </RowAction>
             )}
             {(row.estado === 'PENDIENTE' || row.estado === 'ATENDIDA') &&
-              puede('compras.solicitudes', 'confirmar') &&
-              puede('compras.ordenes', 'crear') && (
-                <RowAction label={`Hacer orden de compra con ${row.numero}`} tone="success" onClick={() => hacerOrden(row)}>
+              (
+                <RowAction label={`Hacer orden de compra con ${row.numero}`} tone="success" onClick={() => hacerOrden(row)} sinPermiso={!(puede('compras.solicitudes', 'confirmar') && puede('compras.ordenes', 'crear'))}>
                   <ShoppingCart size={15} />
                 </RowAction>
               )}
-            {row.estado === 'PENDIENTE' && puede('compras.solicitudes', 'confirmar') && (
+            {row.estado === 'PENDIENTE' && (
               <RowAction
                 label={`Rechazar ${row.numero}`}
                 tone="danger"
@@ -693,12 +694,13 @@ export function SolicitudesCompraPage() {
                   setMotivo('')
                   setRechazando(row)
                 }}
+                sinPermiso={!puede('compras.solicitudes', 'confirmar')}
               >
                 <XCircle size={15} />
               </RowAction>
             )}
-            {(row.estado === 'BORRADOR' || row.estado === 'PENDIENTE') && puede('compras.solicitudes', 'anular') && (
-              <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anular(row)}>
+            {(row.estado === 'BORRADOR' || row.estado === 'PENDIENTE') && (
+              <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anular(row)} sinPermiso={!puede('compras.solicitudes', 'anular')}>
                 <Undo2 size={15} />
               </RowAction>
             )}

@@ -159,11 +159,9 @@ export function VendedoresCaidaPage() {
       title="Vendedores con caída"
       description={`Cuánto vendió cada vendedor frente al mismo tramo d${comparar === 'anio' ? 'el año' : 'el mes'} anterior, y cuántos de sus clientes están bajando.`}
       actions={
-        puede('crm.vendedores', 'exportar') ? (
-          <Button variant="secondary" size="sm" disabled={items.length === 0} onClick={exportar} iconRight={<FileSpreadsheet size={15} />}>
-            Exportar Excel
-          </Button>
-        ) : undefined
+        <Button variant="secondary" size="sm" disabled={items.length === 0} onClick={exportar} iconRight={<FileSpreadsheet size={15} />} sinPermiso={!puede('crm.vendedores', 'exportar')}>
+          Exportar Excel
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       banner={

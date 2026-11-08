@@ -33,6 +33,7 @@ import type {
 } from './planillaApi'
 import { tipoDeCuenta } from '../finanzas/cuentaFinancieraApi'
 
+import { opcional } from '../../lib/apoyo'
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
 /** "mar 07/10": el día de la semana ayuda a ubicar cuál falta. */
@@ -80,7 +81,7 @@ export function PlanillaPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [p, h] = await Promise.all([planillaApi.semana(fecha), planillaApi.historial()])
+      const [p, h] = await Promise.all([planillaApi.semana(fecha), opcional(planillaApi.historial(), [])])
       setPlanilla(p)
       setHistorial(h)
       setError('')
@@ -323,17 +324,17 @@ export function PlanillaPage() {
         description="Pago semanal: sueldo, faltas, feriados, bonos y descuentos."
         actions={
           <>
-            {(!planilla || borrador) && puede('rrhh.planilla', 'crear') && (
-              <Button size="sm" variant="secondary" loading={trabajando} onClick={() => void generar()} iconRight={<RefreshCw size={15} />}>
+            {(!planilla || borrador) && (
+              <Button size="sm" variant="secondary" loading={trabajando} onClick={() => void generar()} iconRight={<RefreshCw size={15} />} sinPermiso={!puede('rrhh.planilla', 'crear')}>
                 {planilla ? 'Recalcular' : 'Armar planilla'}
               </Button>
             )}
-            {borrador && puede('rrhh.planilla', 'crear') && (
-              <Button size="sm" onClick={() => setPagarAbierto(true)} iconRight={<HandCoins size={15} />}>
+            {borrador && (
+              <Button size="sm" onClick={() => setPagarAbierto(true)} iconRight={<HandCoins size={15} />} sinPermiso={!puede('rrhh.planilla', 'crear')}>
                 Pagar
               </Button>
             )}
-            {planilla && planilla.detalle.length > 0 && puede('rrhh.planilla', 'exportar') && (
+            {planilla && planilla.detalle.length > 0 && (
               <Button
                 size="sm"
                 variant="secondary"
@@ -345,11 +346,12 @@ export function PlanillaPage() {
                   })
                 }
                 iconRight={<FileText size={15} />}
+                sinPermiso={!puede('rrhh.planilla', 'exportar')}
               >
                 Boletas
               </Button>
             )}
-            {planilla && planilla.detalle.length > 0 && puede('rrhh.planilla', 'exportar') && (
+            {planilla && planilla.detalle.length > 0 && (
               <Button
                 size="sm"
                 variant="secondary"
@@ -361,12 +363,13 @@ export function PlanillaPage() {
                   })
                 }
                 iconRight={<FileText size={15} />}
+                sinPermiso={!puede('rrhh.planilla', 'exportar')}
               >
                 Planilla PDF
               </Button>
             )}
-            {planilla && puede('rrhh.planilla', 'anular') && (
-              <Button size="sm" variant="secondary" onClick={() => anular(planilla)} iconRight={<Ban size={15} />}>
+            {planilla && (
+              <Button size="sm" variant="secondary" onClick={() => anular(planilla)} iconRight={<Ban size={15} />} sinPermiso={!puede('rrhh.planilla', 'anular')}>
                 Anular
               </Button>
             )}
@@ -416,7 +419,7 @@ export function PlanillaPage() {
         }
         rowActions={(row) => (
           <>
-            {planilla && puede('rrhh.planilla', 'exportar') && (
+            {planilla && (
               <RowAction
                 label={`Boleta de ${row.empleado}`}
                 tone="neutral"
@@ -427,12 +430,13 @@ export function PlanillaPage() {
                     nombre: `boleta-${planilla.desde.slice(0, 10)}.pdf`,
                   })
                 }
+                sinPermiso={!puede('rrhh.planilla', 'exportar')}
               >
                 <FileText size={15} />
               </RowAction>
             )}
-            {borrador && puede('rrhh.planilla', 'editar') && (
-              <RowAction label={`Ajustar ${row.empleado}`} onClick={() => setAjustando(row)}>
+            {borrador && (
+              <RowAction label={`Ajustar ${row.empleado}`} onClick={() => setAjustando(row)} sinPermiso={!puede('rrhh.planilla', 'editar')}>
                 <Pencil size={15} />
               </RowAction>
             )}

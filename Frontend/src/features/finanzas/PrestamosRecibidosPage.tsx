@@ -22,6 +22,7 @@ import { financiamientoApi } from './financiamientoApi'
 import type { CuentaOpcion, EstadoFinanciamiento, FinanciamientoResponse } from './financiamientoApi'
 import { tipoDeCuenta } from './cuentaFinancieraApi'
 
+import { opcional } from '../../lib/apoyo'
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
 const ESTADOS: Record<EstadoFinanciamiento, { label: string; tono: BadgeTone }> = {
@@ -56,7 +57,7 @@ export function PrestamosRecibidosPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [p, c] = await Promise.all([financiamientoApi.listar(), financiamientoApi.cuentas()])
+      const [p, c] = await Promise.all([opcional(financiamientoApi.listar(), []), opcional(financiamientoApi.cuentas(), [])])
       setPrestamos(p)
       setCuentas(c)
       setError('')
@@ -135,11 +136,9 @@ export function PrestamosRecibidosPage() {
       title="Préstamos recibidos"
       description="Plata prestada a la empresa y lo que falta pagar."
       actions={
-        puede('finanzas.financiamiento', 'crear') ? (
-          <Button size="sm" onClick={() => setNuevoAbierto(true)} iconRight={<Plus size={15} />}>
-            Nuevo préstamo
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={() => setNuevoAbierto(true)} iconRight={<Plus size={15} />} sinPermiso={!puede('finanzas.financiamiento', 'crear')}>
+          Nuevo préstamo
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -158,18 +157,19 @@ export function PrestamosRecibidosPage() {
           <RowAction label={`Pagos de ${row.acreedor}`} tone="view" onClick={() => setViendoPagosId(row.id)}>
             <List size={15} />
           </RowAction>
-          {row.estado === 'VIGENTE' && puede('finanzas.financiamiento', 'crear') && (
-            <RowAction label={`Registrar pago a ${row.acreedor}`} tone="success" onClick={() => setPagando(row)}>
+          {row.estado === 'VIGENTE' && (
+            <RowAction label={`Registrar pago a ${row.acreedor}`} tone="success" onClick={() => setPagando(row)} sinPermiso={!puede('finanzas.financiamiento', 'crear')}>
               <HandCoins size={15} />
             </RowAction>
           )}
-          {row.estado !== 'ANULADO' && puede('finanzas.financiamiento', 'anular') && (
+          {row.estado !== 'ANULADO' && (
             <RowAction
               label={`Anular préstamo de ${row.acreedor}`}
               tone="danger"
               disabled={row.pagos.some((p) => !p.anulado)}
               disabledReason="Tiene pagos: anúlalos primero"
               onClick={() => anular(row)}
+              sinPermiso={!puede('finanzas.financiamiento', 'anular')}
             >
               <Ban size={15} />
             </RowAction>

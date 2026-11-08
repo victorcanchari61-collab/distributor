@@ -19,6 +19,7 @@ import { urlImagen } from '../tms/flotaApi'
 import { sinVentasApi } from './sinVentasApi'
 import type { CompararProductos, CriterioProductos, FilaProductoCaida, MedidaProductos, ProductosCaida } from './sinVentasApi'
 
+import { opcional } from '../../lib/apoyo'
 /** Lo que el panel de filtros decide que se pida al servidor. */
 interface FiltrosServidor {
   desde: string
@@ -137,7 +138,7 @@ export function ProductosSinVentasPage() {
   }, [cargar])
 
   useEffect(() => {
-    void Promise.all([almacenApi.opciones(), categoriaApi.getAll(), marcaApi.getAll()])
+    void Promise.all([opcional(almacenApi.opciones(), []), opcional(categoriaApi.getAll(), []), opcional(marcaApi.getAll(), [])])
       .then(([alm, cat, mar]) => {
         setAlmacenes(alm.filter((a) => a.activo))
         setCategorias(cat.filter((c) => c.activo))

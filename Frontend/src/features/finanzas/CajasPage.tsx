@@ -27,6 +27,7 @@ import { cuentaFinancieraApi } from './cuentaFinancieraApi'
 import type { CuentaFinancieraResponse, MovimientoCuentaResponse } from './cuentaFinancieraApi'
 import { BovedaTab } from './BovedaTab'
 
+import { opcional } from '../../lib/apoyo'
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
 /**
@@ -56,7 +57,7 @@ export function CajasPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [cuentas, u] = await Promise.all([cuentaFinancieraApi.getAll(), usuarioApi.getAll()])
+      const [cuentas, u] = await Promise.all([opcional(cuentaFinancieraApi.getAll(), []), opcional(usuarioApi.getAll(), [])])
       setTodas(cuentas)
       setCajas(cuentas.filter((c) => c.naturaleza === 'CAJA' && c.usuarioResponsableId != null))
       setUsuarios(u)
@@ -183,11 +184,9 @@ export function CajasPage() {
         title="Cajas"
         description="Quién tiene caja para cobrar en efectivo."
         actions={
-          puede('finanzas.cajas', 'crear') ? (
-            <Button size="sm" onClick={abrirNuevo} iconRight={<UserPlus size={15} />}>
-              Asignar caja
-            </Button>
-          ) : undefined
+          <Button size="sm" onClick={abrirNuevo} iconRight={<UserPlus size={15} />} sinPermiso={!puede('finanzas.cajas', 'crear')}>
+            Asignar caja
+          </Button>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
         stats={
@@ -210,15 +209,13 @@ export function CajasPage() {
             <RowAction label={`Movimientos de ${row.nombre}`} tone="view" onClick={() => setMovimientosDe(row)}>
               <History size={15} />
             </RowAction>
-            {puede('finanzas.cajas', 'editar') && (
-              <RowAction
-                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-                tone={row.activo ? 'warning' : 'success'}
-                onClick={() => cambiarEstado(row)}
-              >
-                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-              </RowAction>
-            )}
+            <RowAction
+              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => cambiarEstado(row)}
+              sinPermiso={!puede('finanzas.cajas', 'editar')}>
+              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            </RowAction>
           </>
         )}
       >

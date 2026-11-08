@@ -22,6 +22,7 @@ import type { MetodoPagoResponse, TipoMetodoPago } from './finanzasApi'
 import { cuentaFinancieraApi } from './cuentaFinancieraApi'
 import type { CuentaFinancieraResponse } from './cuentaFinancieraApi'
 
+import { opcional } from '../../lib/apoyo'
 const TIPOS: { value: TipoMetodoPago; label: string }[] = [
   { value: 'EFECTIVO', label: 'Efectivo' },
   { value: 'BILLETERA_DIGITAL', label: 'Billetera digital' },
@@ -63,7 +64,7 @@ export function MetodosPagoPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [m, c] = await Promise.all([metodoPagoApi.getAll(), cuentaFinancieraApi.getAll()])
+      const [m, c] = await Promise.all([opcional(metodoPagoApi.getAll(), []), opcional(cuentaFinancieraApi.getAll(), [])])
       setMetodos(m)
       setCuentas(c)
       setError('')
@@ -213,11 +214,9 @@ export function MetodosPagoPage() {
       title="Métodos de pago"
       description="Cómo se cobra y se paga: efectivo, Yape, transferencia."
       actions={
-        puede('finanzas.metodospago', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo método
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('finanzas.metodospago', 'crear')}>
+          Nuevo método
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -260,27 +259,23 @@ export function MetodosPagoPage() {
       note="Efectivo es fijo: no se crea otro, no se edita ni se desactiva — se resuelve según quién cobra, no apunta a ninguna cuenta."
       rowActions={(row) => (
         <>
-          {puede('finanzas.metodospago', 'editar') && (
-            <RowAction
-              label={`Editar ${row.nombre}`}
-              disabled={row.tipo === 'EFECTIVO'}
-              disabledReason="Efectivo es fijo"
-              onClick={() => abrirEdicion(row)}
-            >
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('finanzas.metodospago', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              disabled={row.tipo === 'EFECTIVO'}
-              disabledReason="Efectivo es fijo"
-              onClick={() => cambiarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-          )}
+          <RowAction
+            label={`Editar ${row.nombre}`}
+            disabled={row.tipo === 'EFECTIVO'}
+            disabledReason="Efectivo es fijo"
+            onClick={() => abrirEdicion(row)}
+            sinPermiso={!puede('finanzas.metodospago', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            disabled={row.tipo === 'EFECTIVO'}
+            disabledReason="Efectivo es fijo"
+            onClick={() => cambiarEstado(row)}
+            sinPermiso={!puede('finanzas.metodospago', 'editar')}>
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
         </>
       )}
     >

@@ -288,16 +288,12 @@ export function EmpleadosPage() {
       description="Quién trabaja en el negocio."
       actions={
         <>
-          {puede('rrhh.empleados', 'exportar') && (
-            <Button size="sm" variant="secondary" onClick={() => setReporte(true)} iconRight={<FileText size={15} />}>
-              PDF
-            </Button>
-          )}
-          {puede('rrhh.empleados', 'crear') && (
-            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-              Nuevo empleado
-            </Button>
-          )}
+          <Button size="sm" variant="secondary" onClick={() => setReporte(true)} iconRight={<FileText size={15} />} sinPermiso={!puede('rrhh.empleados', 'exportar')}>
+            PDF
+          </Button>
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('rrhh.empleados', 'crear')}>
+            Nuevo empleado
+          </Button>
         </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
@@ -327,32 +323,26 @@ export function EmpleadosPage() {
       empty={cargando ? 'Cargando empleados...' : 'Todavía no hay empleados registrados.'}
       rowActions={(row) => (
         <>
-          {puede('rrhh.empleados', 'editar') && (
-            <RowAction label={`Editar a ${row.nombreCompleto}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('rrhh.empleados', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} a ${row.nombreCompleto}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-          )}
-          {puede('rrhh.empleados', 'eliminar') && (
-            <RowAction
-              label={`Eliminar a ${row.nombreCompleto}`}
-              tone="danger"
-              // Con cuenta enlazada el servidor lo rechaza: se dice aquí en vez de dejar intentarlo.
-              disabled={row.usuarioId != null}
-              disabledReason="Tiene un usuario enlazado"
-              onClick={() => eliminar(row)}
-            >
-              <Trash2 size={15} />
-            </RowAction>
-          )}
+          <RowAction label={`Editar a ${row.nombreCompleto}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('rrhh.empleados', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`${row.activo ? 'Desactivar' : 'Activar'} a ${row.nombreCompleto}`}
+            tone={row.activo ? 'warning' : 'success'}
+            onClick={() => cambiarEstado(row)}
+            sinPermiso={!puede('rrhh.empleados', 'editar')}>
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
+          <RowAction
+            label={`Eliminar a ${row.nombreCompleto}`}
+            tone="danger"
+            // Con cuenta enlazada el servidor lo rechaza: se dice aquí en vez de dejar intentarlo.
+            disabled={row.usuarioId != null}
+            disabledReason="Tiene un usuario enlazado"
+            onClick={() => eliminar(row)}
+            sinPermiso={!puede('rrhh.empleados', 'eliminar')}>
+            <Trash2 size={15} />
+          </RowAction>
         </>
       )}
     >

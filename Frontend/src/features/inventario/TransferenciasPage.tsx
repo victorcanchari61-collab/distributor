@@ -42,6 +42,7 @@ import type {
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
+import { opcional } from '../../lib/apoyo'
 type FilaTransferencia = LineaProductoNueva
 
 function estadoDocumentoBadge(row: DocumentoInventarioResponse) {
@@ -126,8 +127,8 @@ export function TransferenciasPage() {
     try {
       const [res, alms, prods] = await Promise.all([
         transferenciaApi.resumen(),
-        almacenApi.getAll(),
-        productoApi.getAll(),
+        opcional(almacenApi.getAll(), []),
+        opcional(productoApi.getAll(), []),
       ])
       setResumen(res)
       setAlmacenes(alms)
@@ -456,16 +457,14 @@ export function TransferenciasPage() {
       title="Transferencias"
       description="Mercadería que pasa de un almacén a otro."
       actions={
-        puede('inv.transferencias', 'crear') ? (
-          <Button
-            size="sm"
-            onClick={abrirNuevo}
-            disabled={!cargando && activos.length < 2}
-            iconRight={<Plus size={15} />}
-          >
-            Nueva transferencia
-          </Button>
-        ) : undefined
+        <Button
+          size="sm"
+          onClick={abrirNuevo}
+          disabled={!cargando && activos.length < 2}
+          iconRight={<Plus size={15} />}
+          sinPermiso={!puede('inv.transferencias', 'crear')}>
+          Nueva transferencia
+        </Button>
       }
       alert={
         error ? (
@@ -524,17 +523,15 @@ export function TransferenciasPage() {
           {puede('inv.transferencias', 'exportar') && (
             <AccionPdf documento="transferencias" id={row.id} numero={row.numero} />
           )}
-          {puede('inv.transferencias', 'anular') && (
-            <RowAction
-              label={`Anular ${row.numero}`}
-              tone="danger"
-              disabled={row.estado !== 'CONFIRMADO'}
-              disabledReason="Ya está anulada"
-              onClick={() => anular(row)}
-            >
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'CONFIRMADO'}
+            disabledReason="Ya está anulada"
+            onClick={() => anular(row)}
+            sinPermiso={!puede('inv.transferencias', 'anular')}>
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

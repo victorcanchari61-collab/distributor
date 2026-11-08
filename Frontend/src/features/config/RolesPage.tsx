@@ -170,11 +170,9 @@ export function RolesPage() {
       title="Roles"
       description="Los perfiles de trabajo; sus permisos van en Accesos."
       actions={
-        puede('config.roles', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo rol
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('config.roles', 'crear')}>
+          Nuevo rol
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -205,40 +203,34 @@ export function RolesPage() {
       empty={cargando ? 'Cargando roles...' : 'Todavía no hay roles definidos.'}
       rowActions={(row) => (
         <>
-          {puede('config.roles', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('config.roles', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
 
           {/* Administrador no se toca: sin el activo nadie configura el sistema. */}
-          {puede('config.roles', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              disabled={row.protegido}
-              disabledReason="Administrador no se puede desactivar"
-              onClick={() => void alternarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-          )}
+          <RowAction
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            disabled={row.protegido}
+            disabledReason="Administrador no se puede desactivar"
+            onClick={() => void alternarEstado(row)}
+            sinPermiso={!puede('config.roles', 'editar')}>
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
 
-          {puede('config.roles', 'eliminar') && (
-            <RowAction
-              label={`Eliminar ${row.nombre}`}
-              tone="danger"
-              disabled={row.delSistema || row.usuarios > 0}
-              disabledReason={
-                row.delSistema
-                  ? 'Es un rol del sistema: no se elimina'
-                  : `Tiene ${row.usuarios} usuario(s): cámbialos de rol primero`
-              }
-              onClick={() => void eliminar(row)}
-            >
-              <Trash2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Eliminar ${row.nombre}`}
+            tone="danger"
+            disabled={row.delSistema || row.usuarios > 0}
+            disabledReason={
+              row.delSistema
+                ? 'Es un rol del sistema: no se elimina'
+                : `Tiene ${row.usuarios} usuario(s): cámbialos de rol primero`
+            }
+            onClick={() => void eliminar(row)}
+            sinPermiso={!puede('config.roles', 'eliminar')}>
+            <Trash2 size={15} />
+          </RowAction>
         </>
       )}
       note="Un rol desactivado no deja entrar a sus usuarios. Administrador no se puede desactivar, los roles del sistema no se eliminan y un rol con usuarios asignados tampoco."

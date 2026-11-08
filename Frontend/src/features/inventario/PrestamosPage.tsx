@@ -43,6 +43,7 @@ import type {
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
+import { opcional } from '../../lib/apoyo'
 type FilaPrestamo = LineaProductoNueva
 
 /**
@@ -132,8 +133,8 @@ export function PrestamosPage() {
     try {
       const [res, alms, prods] = await Promise.all([
         prestamoApi.resumen(),
-        almacenApi.getAll(),
-        productoApi.getAll(),
+        opcional(almacenApi.getAll(), []),
+        opcional(productoApi.getAll(), []),
       ])
       setResumen(res)
       setAlmacenes(alms)
@@ -670,11 +671,9 @@ export function PrestamosPage() {
       title="Préstamos"
       description="Mercadería prestada a terceros o de terceros."
       actions={
-        puede('inv.prestamos', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo préstamo
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('inv.prestamos', 'crear')}>
+          Nuevo préstamo
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -719,34 +718,30 @@ export function PrestamosPage() {
           {puede('inv.prestamos', 'exportar') && (
             <AccionPdf documento="prestamos" id={row.id} numero={row.numero} />
           )}
-          {puede('inv.prestamos', 'confirmar') && (
-            <RowAction
-              label={`Registrar devolución de ${row.numero}`}
-              tone="warning"
-              disabled={row.estado !== 'PENDIENTE'}
-              disabledReason="Ya fue devuelto"
-              onClick={() => void conPrestamoCompleto(row.id, abrirDevolucion)}
-            >
-              <Undo2 size={15} />
-            </RowAction>
-          )}
-          {puede('inv.prestamos', 'anular') && (
-            <RowAction
-              label={`Anular ${row.numero}`}
-              tone="danger"
-              disabled={row.estado !== 'PENDIENTE' || row.tieneDevolucion}
-              disabledReason={
-                row.estado === 'ANULADO'
-                  ? 'Ya está anulado'
-                  : row.estado === 'DEVUELTO'
-                    ? 'Ya se devolvió'
-                    : 'Ya tiene una devolución registrada'
-              }
-              onClick={() => anularPrestamo(row)}
-            >
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Registrar devolución de ${row.numero}`}
+            tone="warning"
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason="Ya fue devuelto"
+            onClick={() => void conPrestamoCompleto(row.id, abrirDevolucion)}
+            sinPermiso={!puede('inv.prestamos', 'confirmar')}>
+            <Undo2 size={15} />
+          </RowAction>
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'PENDIENTE' || row.tieneDevolucion}
+            disabledReason={
+              row.estado === 'ANULADO'
+                ? 'Ya está anulado'
+                : row.estado === 'DEVUELTO'
+                  ? 'Ya se devolvió'
+                  : 'Ya tiene una devolución registrada'
+            }
+            onClick={() => anularPrestamo(row)}
+            sinPermiso={!puede('inv.prestamos', 'anular')}>
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >
@@ -828,16 +823,14 @@ export function PrestamosPage() {
               <Button variant="secondary" size="sm" onClick={() => setDevolucionAbierta(null)}>
                 Cerrar
               </Button>
-              {puede('inv.prestamos', 'confirmar') && (
-                <Button
-                  size="sm"
-                  disabled={!devolucionAbierta?.detalle.some((d) => d.cantidadPendiente > 0)}
-                  onClick={agregarDevolucion}
-                >
-                  <Plus size={15} />
-                  Agregar devolución
-                </Button>
-              )}
+              <Button
+                size="sm"
+                disabled={!devolucionAbierta?.detalle.some((d) => d.cantidadPendiente > 0)}
+                onClick={agregarDevolucion}
+                sinPermiso={!puede('inv.prestamos', 'confirmar')}>
+                <Plus size={15} />
+                Agregar devolución
+              </Button>
             </>
           )
         }
@@ -911,11 +904,12 @@ export function PrestamosPage() {
                 f.devolucion && (
                   <>
                     <AccionPdf documento="devolucionesprestamo" id={f.devolucion.id} numero={f.devolucion.numero} />
-                    {f.devolucion.estado === 'CONFIRMADO' && puede('inv.prestamos', 'anular') && (
+                    {f.devolucion.estado === 'CONFIRMADO' && (
                       <RowAction
                         label={`Anular devolución ${f.devolucion.numero}`}
                         tone="danger"
                         onClick={() => f.devolucion && anularDevolucion(f.devolucion)}
+                        sinPermiso={!puede('inv.prestamos', 'anular')}
                       >
                         <Undo2 size={15} />
                       </RowAction>

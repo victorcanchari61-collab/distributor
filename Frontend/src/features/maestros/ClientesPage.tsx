@@ -47,6 +47,7 @@ import { ModalCategorizacion } from '../crm/ModalCategorizacion'
 import { clienteApi } from './clienteApi'
 import type { ClienteRequest, ClienteResponse, ResumenClientes } from './clienteApi'
 
+import { opcional } from '../../lib/apoyo'
 const VACIO: ClienteRequest = {
   documento: '',
   tipoDoc: 'DNI',
@@ -143,12 +144,12 @@ export function ClientesPage() {
     try {
       const [res, merc, rts, listas, deps, provs, dists] = await Promise.all([
         clienteApi.resumen(),
-        mercadoApi.getAll(),
-        rutaApi.getAll(),
-        listaPrecioApi.getAll(),
-        ubigeoApi.departamentos(),
-        ubigeoApi.provincias(),
-        ubigeoApi.distritos(),
+        opcional(mercadoApi.getAll(), []),
+        opcional(rutaApi.getAll(), []),
+        opcional(listaPrecioApi.getAll(), []),
+        opcional(ubigeoApi.departamentos(), []),
+        opcional(ubigeoApi.provincias(), []),
+        opcional(ubigeoApi.distritos(), []),
       ])
       setResumen(res)
       setMercados(merc)
@@ -517,17 +518,13 @@ export function ClientesPage() {
               <Award size={15} />
               {puede('crm.categorizacion', 'editar') ? 'Categorización' : 'Categorías'}
             </Button>
-            {puede('maestros.clientes', 'importar') && (
-              <Button variant="secondary" size="sm" onClick={() => setImportando(true)}>
-                <Upload size={15} />
-                Importar
-              </Button>
-            )}
-            {puede('maestros.clientes', 'crear') && (
-              <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-                Nuevo cliente
-              </Button>
-            )}
+            <Button variant="secondary" size="sm" onClick={() => setImportando(true)} sinPermiso={!puede('maestros.clientes', 'importar')}>
+              <Upload size={15} />
+              Importar
+            </Button>
+            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('maestros.clientes', 'crear')}>
+              Nuevo cliente
+            </Button>
           </>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
@@ -578,25 +575,19 @@ export function ClientesPage() {
         empty={cargando ? 'Cargando clientes...' : 'Todavía no hay clientes registrados.'}
         rowActions={(row) => (
           <>
-            {puede('maestros.clientes', 'editar') && (
-              <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-                <Pencil size={15} />
-              </RowAction>
-            )}
-            {puede('maestros.clientes', 'editar') && (
-              <RowAction
-                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-                tone={row.activo ? 'warning' : 'success'}
-                onClick={() => cambiarEstado(row)}
-              >
-                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-              </RowAction>
-            )}
-            {puede('maestros.clientes', 'eliminar') && (
-              <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-                <Trash2 size={15} />
-              </RowAction>
-            )}
+            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('maestros.clientes', 'editar')}>
+              <Pencil size={15} />
+            </RowAction>
+            <RowAction
+              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => cambiarEstado(row)}
+              sinPermiso={!puede('maestros.clientes', 'editar')}>
+              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            </RowAction>
+            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)} sinPermiso={!puede('maestros.clientes', 'eliminar')}>
+              <Trash2 size={15} />
+            </RowAction>
           </>
         )}
       >

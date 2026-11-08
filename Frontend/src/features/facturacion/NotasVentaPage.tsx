@@ -54,6 +54,7 @@ import { devolucionVentaApi, notaVentaApi } from './ventasApi'
 import type { AuditoriaResponse } from '../config'
 import type { CrearNotaVentaRequest, DevolucionDeVenta, FormaPagoVenta, LineaDevuelta, LineaVentaResponse, NotaVentaFila, NotaVentaResponse, OpcionesFiltroVentas, RecojoRequest, ResumenNotasVenta } from './ventasApi'
 
+import { opcional } from '../../lib/apoyo'
 const FORMAS_PAGO: { value: FormaPagoVenta; label: string }[] = [
   { value: 'CONTADO', label: 'Contado' },
   { value: 'CREDITO', label: 'Crédito' },
@@ -191,11 +192,11 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
       const [res, opciones, prods, alms, lis, metodos, motivosNovedad] = await Promise.all([
         notaVentaApi.resumen(),
         notaVentaApi.opciones(),
-        productoApi.getAll(),
-        almacenApi.opciones(),
-        listaPrecioApi.getAll(),
-        metodoPagoApi.opciones(),
-        motivoNovedadApi.opciones(),
+        opcional(productoApi.getAll(), []),
+        opcional(almacenApi.opciones(), []),
+        opcional(listaPrecioApi.getAll(), []),
+        opcional(metodoPagoApi.opciones(), []),
+        opcional(motivoNovedadApi.opciones(), []),
       ])
       setResumen(res)
       setOpcionesFiltro(opciones)
@@ -1100,11 +1101,9 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
                               : `S/ ${totalPagado.toFixed(2)} de S/ ${totalNeto.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
                           </span>
                         </div>
-                        {puede('fact.notaventa', 'cobrar') && (
-                          <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
-                            {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
-                          </Button>
-                        )}
+                        <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)} sinPermiso={!puede('fact.notaventa', 'cobrar')}>
+                          {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
+                        </Button>
                       </div>
 
                       {errorPagos && <p className="mt-1.5 text-xs text-red-600">{errorPagos}</p>}
@@ -1338,11 +1337,9 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
       title="Notas de venta"
       description="Las ventas, de un pedido o directas."
       actions={
-        puede('fact.notaventa', 'crear') ? (
-          <Button size="sm" onClick={() => abrirNueva()} iconRight={<Plus size={15} />}>
-            Nueva venta
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={() => abrirNueva()} iconRight={<Plus size={15} />} sinPermiso={!puede('fact.notaventa', 'crear')}>
+          Nueva venta
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -1388,38 +1385,32 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
           {puede('fact.notaventa', 'exportar') && (
             <AccionPdf documento="notaventa" id={row.id} numero={row.numero} />
           )}
-          {(puede('fact.facturas', 'crear') || puede('fact.boletas', 'crear')) && (
-            <RowAction
-              label={`Facturar ${row.numero}`}
-              tone="edit"
-              disabled={row.estado !== 'CONFIRMADA'}
-              disabledReason="Está anulada"
-              onClick={() => setFacturando(row)}
-            >
-              <Receipt size={15} />
-            </RowAction>
-          )}
-          {puede('fact.notaventa', 'editar') && (
-            <RowAction
-              label={`Editar ${row.numero}`}
-              disabled={row.estado !== 'CONFIRMADA'}
-              disabledReason="Ya está anulada"
-              onClick={() => void conNotaCompleta(row.id, abrirEdicion)}
-            >
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('fact.notaventa', 'anular') && (
-            <RowAction
-              label={`Anular ${row.numero}`}
-              tone="danger"
-              disabled={row.estado !== 'CONFIRMADA'}
-              disabledReason="Ya está anulada"
-              onClick={() => anularNota(row)}
-            >
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Facturar ${row.numero}`}
+            tone="edit"
+            disabled={row.estado !== 'CONFIRMADA'}
+            disabledReason="Está anulada"
+            onClick={() => setFacturando(row)}
+            sinPermiso={!((puede('fact.facturas', 'crear') || puede('fact.boletas', 'crear')))}>
+            <Receipt size={15} />
+          </RowAction>
+          <RowAction
+            label={`Editar ${row.numero}`}
+            disabled={row.estado !== 'CONFIRMADA'}
+            disabledReason="Ya está anulada"
+            onClick={() => void conNotaCompleta(row.id, abrirEdicion)}
+            sinPermiso={!puede('fact.notaventa', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'CONFIRMADA'}
+            disabledReason="Ya está anulada"
+            onClick={() => anularNota(row)}
+            sinPermiso={!puede('fact.notaventa', 'anular')}>
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

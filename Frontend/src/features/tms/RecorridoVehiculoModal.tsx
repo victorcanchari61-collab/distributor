@@ -6,6 +6,7 @@ import type { VehiculoResponse } from './flotaApi'
 import { rutaApi } from './rutaApi'
 import type { RutaResponse } from './rutaApi'
 
+import { opcional } from '../../lib/apoyo'
 /** Los días como los guarda el backend, en orden de semana. */
 export const DIAS_SEMANA: { id: string; label: string }[] = [
   { id: 'LUNES', label: 'Lunes' },
@@ -102,7 +103,7 @@ export function RecorridoVehiculoModal({ vehiculo, onClose }: RecorridoVehiculoM
     let vivo = true
     setCargando(true)
     setError('')
-    void Promise.all([rutaApi.getAll(), vehiculoApi.recorrido(vehiculo.id)])
+    void Promise.all([opcional(rutaApi.getAll(), []), vehiculoApi.recorrido(vehiculo.id)])
       .then(([rts, rec]) => {
         if (!vivo) return
         setRutas(rts.filter((r) => r.activo))

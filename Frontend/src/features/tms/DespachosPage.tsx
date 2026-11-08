@@ -37,6 +37,7 @@ import type {
   ResumenDespachos,
 } from './despachoApi'
 
+import { opcional } from '../../lib/apoyo'
 const hoy = () => hoyLocal()
 
 function estadoBadge(estado: DespachoResponse['estado']) {
@@ -122,11 +123,11 @@ export function DespachosPage() {
     setCargando(true)
     try {
       const [lista, res, rts, vhs, cds] = await Promise.all([
-        despachoApi.lista(listaDesde, listaHasta),
+        opcional(despachoApi.lista(listaDesde, listaHasta), []),
         despachoApi.resumen(),
-        rutaApi.getAll(),
-        vehiculoApi.getAll(),
-        conductorApi.getAll(),
+        opcional(rutaApi.getAll(), []),
+        opcional(vehiculoApi.getAll(), []),
+        opcional(conductorApi.getAll(), []),
       ])
       setDespachos(lista)
       setResumen(res)
@@ -713,11 +714,9 @@ export function DespachosPage() {
       title="Despachos"
       description="La carga de cada camión y sus pedidos."
       actions={
-        puede('tms.despachos', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo despacho
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('tms.despachos', 'crear')}>
+          Nuevo despacho
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -766,29 +765,25 @@ export function DespachosPage() {
           {puede('tms.despachos', 'exportar') && (
             <AccionPdf documento="despacho" id={row.id} numero={row.numero} reporte="clientes" />
           )}
-          {puede('tms.despachos', 'editar') && (
-            <RowAction
-              label={`Editar ${row.numero}`}
-              disabled={row.estado === 'ANULADO'}
-              disabledReason="Está anulado"
-              onClick={() => void conDespachoCompleto(row.id, abrirEdicion)}
-            >
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('tms.despachos', 'anular') && (
-            <RowAction
-              label={`Anular ${row.numero}`}
-              tone="danger"
-              disabled={row.estado === 'ANULADO' || row.entregados > 0}
-              disabledReason={
-                row.estado === 'ANULADO' ? 'Ya está anulado' : 'Ya tiene entregas facturadas'
-              }
-              onClick={() => anular(row)}
-            >
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Editar ${row.numero}`}
+            disabled={row.estado === 'ANULADO'}
+            disabledReason="Está anulado"
+            onClick={() => void conDespachoCompleto(row.id, abrirEdicion)}
+            sinPermiso={!puede('tms.despachos', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado === 'ANULADO' || row.entregados > 0}
+            disabledReason={
+              row.estado === 'ANULADO' ? 'Ya está anulado' : 'Ya tiene entregas facturadas'
+            }
+            onClick={() => anular(row)}
+            sinPermiso={!puede('tms.despachos', 'anular')}>
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

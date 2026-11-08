@@ -114,18 +114,16 @@ export function ResultadosRevisionTab({ cabecera }: { cabecera: ReactNode }) {
         title="Resultados de revisión"
         description="Qué se encontró al contar lo que volvió en el camión."
         actions={
-          puede('tms.motivos', 'crear') ? (
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditando(null)
-                setAbierto(true)
-              }}
-              iconRight={<Plus size={15} />}
-            >
-              Nuevo resultado
-            </Button>
-          ) : undefined
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditando(null)
+              setAbierto(true)
+            }}
+            iconRight={<Plus size={15} />}
+            sinPermiso={!puede('tms.motivos', 'crear')}>
+            Nuevo resultado
+          </Button>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
         stats={

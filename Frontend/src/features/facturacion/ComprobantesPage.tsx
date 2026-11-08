@@ -252,8 +252,8 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
       description={vista.descripcion}
       // Crear directo: abre el formulario de venta con este comprobante ya elegido (registra la venta y lo emite a SUNAT).
       actions={
-        !esNota && puede(submodulo, 'crear') ? (
-          <Button size="sm" onClick={() => setCreando(true)} iconRight={<Plus size={15} />}>
+        !esNota ? (
+          <Button size="sm" onClick={() => setCreando(true)} iconRight={<Plus size={15} />} sinPermiso={!puede(submodulo, 'crear')}>
             {tipo === '01' ? 'Nueva factura' : 'Nueva boleta'}
           </Button>
         ) : undefined
@@ -297,33 +297,31 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
             <Eye size={15} />
           </RowAction>
           {puede(submodulo, 'exportar') && <AccionPdf documento="comprobante" id={c.id} numero={c.numeroCompleto} />}
-          {puede(submodulo, 'exportar') && (
-            <RowAction label="Descargar XML" onClick={() => void descargar('xml', c)}>
-              <FileCode2 size={15} />
-            </RowAction>
-          )}
-          {puede(submodulo, 'exportar') && c.tieneCdr && (
-            <RowAction label="Descargar CDR" onClick={() => void descargar('cdr', c)}>
+          <RowAction label="Descargar XML" onClick={() => void descargar('xml', c)} sinPermiso={!puede(submodulo, 'exportar')}>
+            <FileCode2 size={15} />
+          </RowAction>
+          {c.tieneCdr && (
+            <RowAction label="Descargar CDR" onClick={() => void descargar('cdr', c)} sinPermiso={!puede(submodulo, 'exportar')}>
               <FileArchive size={15} />
             </RowAction>
           )}
-          {puede(submodulo, 'exportar') && c.estado === 'ACEPTADO' && (
-            <RowAction label="Enviar documento por WhatsApp" tone="success" onClick={() => setEnviando(c)}>
+          {c.estado === 'ACEPTADO' && (
+            <RowAction label="Enviar documento por WhatsApp" tone="success" onClick={() => setEnviando(c)} sinPermiso={!puede(submodulo, 'exportar')}>
               <MessageCircle size={15} />
             </RowAction>
           )}
-          {puede(submodulo, 'crear') && (c.estado === 'GENERADO' || c.estado === 'ERROR') && (
-            <RowAction label="Reenviar a SUNAT" tone="warning" onClick={() => void reenviar(c)}>
+          {(c.estado === 'GENERADO' || c.estado === 'ERROR') && (
+            <RowAction label="Reenviar a SUNAT" tone="warning" onClick={() => void reenviar(c)} sinPermiso={!puede(submodulo, 'crear')}>
               <RefreshCw size={15} />
             </RowAction>
           )}
-          {puede(submodulo, 'anular') && puedeDarDeBaja(c) && (
-            <RowAction label="Dar de baja" tone="danger" onClick={() => setDandoDeBaja(c)}>
+          {puedeDarDeBaja(c) && (
+            <RowAction label="Dar de baja" tone="danger" onClick={() => setDandoDeBaja(c)} sinPermiso={!puede(submodulo, 'anular')}>
               <FileX size={15} />
             </RowAction>
           )}
-          {puede(submodulo, 'anular') && c.bajaEstado === 'PENDIENTE' && (
-            <RowAction label="Consultar la baja en SUNAT" tone="warning" onClick={() => void consultarBaja(c)}>
+          {c.bajaEstado === 'PENDIENTE' && (
+            <RowAction label="Consultar la baja en SUNAT" tone="warning" onClick={() => void consultarBaja(c)} sinPermiso={!puede(submodulo, 'anular')}>
               <RefreshCw size={15} />
             </RowAction>
           )}

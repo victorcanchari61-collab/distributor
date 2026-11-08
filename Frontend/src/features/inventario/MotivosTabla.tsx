@@ -208,11 +208,9 @@ export function MotivosTabla({
       title="Motivos"
       description="Por qué se ajusta el stock. Los del sistema no se editan."
       actions={
-        puede('inv.ajustes', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo motivo
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('inv.ajustes', 'crear')}>
+          Nuevo motivo
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       columns={columns}
@@ -224,31 +222,25 @@ export function MotivosTabla({
         // accion que ofrecerle.
         row.delSistema ? null : (
         <>
-          {puede('inv.ajustes', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('inv.ajustes', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              <Badge tone={row.activo ? 'warning' : 'success'}>{row.activo ? 'Off' : 'On'}</Badge>
-            </RowAction>
-          )}
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('inv.ajustes', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            onClick={() => cambiarEstado(row)}
+            sinPermiso={!puede('inv.ajustes', 'editar')}>
+            <Badge tone={row.activo ? 'warning' : 'success'}>{row.activo ? 'Off' : 'On'}</Badge>
+          </RowAction>
           {/*
             Va con "editar" y no con "eliminar" porque inv.ajustes no declara
             esa accion a proposito: un ajuste no se borra nunca, se anula.
             Borrar un motivo es mantener el catalogo, igual que renombrarlo, y
             asi coincide con lo que exige el endpoint.
           */}
-          {puede('inv.ajustes', 'editar') && (
-            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-              <Trash2 size={15} />
-            </RowAction>
-          )}
+          <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)} sinPermiso={!puede('inv.ajustes', 'editar')}>
+            <Trash2 size={15} />
+          </RowAction>
         </>
         )
       }

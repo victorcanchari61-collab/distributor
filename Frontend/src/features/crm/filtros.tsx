@@ -6,6 +6,7 @@ import type { UsuarioResponse } from '../config/usuarioApi'
 import { mercadoApi, rutaApi } from '../tms'
 import type { MercadoResponse, RutaResponse } from '../tms'
 
+import { opcional } from '../../lib/apoyo'
 /** El 1 de enero de este año: desde donde miden los reportes si nadie elige fechas. */
 export const inicioDeAnio = () => `${hoyLocal().slice(0, 4)}-01-01`
 
@@ -19,7 +20,7 @@ export function useCatalogosCrm() {
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
 
   useEffect(() => {
-    void Promise.all([mercadoApi.getAll(), rutaApi.getAll(), usuarioApi.getAll()])
+    void Promise.all([opcional(mercadoApi.getAll(), []), opcional(rutaApi.getAll(), []), opcional(usuarioApi.getAll(), [])])
       .then(([mer, rut, usr]) => {
         setMercados(mer.filter((m) => m.activo))
         setRutas(rut.filter((r) => r.activo))

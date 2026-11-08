@@ -43,6 +43,7 @@ import type {
   VehiculoResponse,
 } from './flotaApi'
 
+import { opcional } from '../../lib/apoyo'
 type Pestana = 'vehiculos' | 'tipos'
 type PestanaForm = 'datos' | 'recorrido'
 
@@ -125,9 +126,9 @@ export function FlotaPage() {
       // Los conductores hacen falta para el desplegable del formulario y para
       // decir de quién es cada vehículo.
       const [v, t, c, r] = await Promise.all([
-        vehiculoApi.getAll(),
-        tipoVehiculoApi.getAll(),
-        conductorApi.getAll(),
+        opcional(vehiculoApi.getAll(), []),
+        opcional(tipoVehiculoApi.getAll(), []),
+        opcional(conductorApi.getAll(), []),
         vehiculoApi.resumen(),
       ])
       setVehiculos(v)
@@ -403,11 +404,9 @@ export function FlotaPage() {
         title="Flota"
         description="Los vehículos de reparto y quién los conduce."
         actions={
-          puede('tms.flota', 'crear') ? (
-            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-              Nuevo vehículo
-            </Button>
-          ) : undefined
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('tms.flota', 'crear')}>
+            Nuevo vehículo
+          </Button>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
         stats={
@@ -448,25 +447,19 @@ export function FlotaPage() {
             <RowAction tone="view" label={`Ver ${row.placa}`} onClick={() => setDetalle(row)}>
               <Eye size={15} />
             </RowAction>
-            {puede('tms.flota', 'editar') && (
-              <RowAction label={`Editar ${row.placa}`} onClick={() => abrirEdicion(row)}>
-                <Pencil size={15} />
-              </RowAction>
-            )}
-            {puede('tms.flota', 'editar') && (
-              <RowAction label={`Recorrido de ${row.placa}`} onClick={() => setRecorrido(row)}>
-                <RutaIcono size={15} />
-              </RowAction>
-            )}
-            {puede('tms.flota', 'editar') && (
-              <RowAction
-                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.placa}`}
-                tone={row.activo ? 'warning' : 'success'}
-                onClick={() => cambiarEstado(row)}
-              >
-                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-              </RowAction>
-            )}
+            <RowAction label={`Editar ${row.placa}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('tms.flota', 'editar')}>
+              <Pencil size={15} />
+            </RowAction>
+            <RowAction label={`Recorrido de ${row.placa}`} onClick={() => setRecorrido(row)} sinPermiso={!puede('tms.flota', 'editar')}>
+              <RutaIcono size={15} />
+            </RowAction>
+            <RowAction
+              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.placa}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => cambiarEstado(row)}
+              sinPermiso={!puede('tms.flota', 'editar')}>
+              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            </RowAction>
           </>
         )}
       >
@@ -888,11 +881,9 @@ function TiposVehiculoTabla({
       title="Tipos de vehículo"
       description="Furgón, camioneta, moto."
       actions={
-        puede('tms.flota', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo tipo
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('tms.flota', 'crear')}>
+          Nuevo tipo
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       columns={columns}
@@ -902,20 +893,16 @@ function TiposVehiculoTabla({
       empty="Todavía no hay tipos de vehículo."
       rowActions={(row) => (
         <>
-          {puede('tms.flota', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('tms.flota', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-          )}
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('tms.flota', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            onClick={() => cambiarEstado(row)}
+            sinPermiso={!puede('tms.flota', 'editar')}>
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
         </>
       )}
     >

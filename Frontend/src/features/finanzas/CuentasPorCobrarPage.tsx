@@ -31,6 +31,7 @@ import type {
 import { etiquetaMetodo, metodoPagoApi } from './finanzasApi'
 import type { MetodoPagoOpcion, TipoMetodoPago } from './finanzasApi'
 
+import { opcional } from '../../lib/apoyo'
 const NOTA_TIPO: Record<TipoMetodoPago, string> = {
   EFECTIVO: 'Efectivo',
   BILLETERA_DIGITAL: 'Billetera digital',
@@ -116,7 +117,7 @@ export function CuentasPorCobrarPage() {
         notaVentaApi.resumenCuentasPorCobrar(),
         // Las opciones y no el catalogo: quien cobra no tiene por que poder ver el catalogo de Finanzas,
         // y con el catalogo un cajero se quedaba sin metodos para elegir.
-        metodoPagoApi.opciones(),
+        opcional(metodoPagoApi.opciones(), []),
         // Solo los clientes, rutas y mercados con deuda: no el padrón entero.
         notaVentaApi.opcionesCuentasPorCobrar(),
       ])
@@ -532,12 +533,10 @@ export function CuentasPorCobrarPage() {
             <Button variant="secondary" size="sm" onClick={() => setGestionando(null)}>
               Cerrar
             </Button>
-            {puede('finanzas.cobrar', 'cobrar') && (
-              <Button size="sm" disabled={editandoClave !== null} onClick={agregarFila}>
-                <Plus size={15} />
-                Agregar pago
-              </Button>
-            )}
+            <Button size="sm" disabled={editandoClave !== null} onClick={agregarFila} sinPermiso={!puede('finanzas.cobrar', 'cobrar')}>
+              <Plus size={15} />
+              Agregar pago
+            </Button>
           </>
         }
       >
@@ -576,29 +575,25 @@ export function CuentasPorCobrarPage() {
                   </>
                 ) : fila.anulado ? null : (
                   <>
-                    {puede('finanzas.cobrar', 'cobrar') && (
-                      <RowAction
-                        label={`Editar pago de S/ ${fila.monto.toFixed(2)}`}
-                        tone="edit"
-                        disabled={editandoClave !== null || fila.estadoVerificacion === 'RECHAZADO'}
-                        disabledReason={
-                          fila.estadoVerificacion === 'RECHAZADO' ? 'Se rechazó en el banco: no se edita' : undefined
-                        }
-                        onClick={() => editarFila(fila)}
-                      >
-                        <Pencil size={15} />
-                      </RowAction>
-                    )}
-                    {puede('finanzas.cobrar', 'cobrar') && (
-                      <RowAction
-                        label={`Anular pago de S/ ${fila.monto.toFixed(2)}`}
-                        tone="danger"
-                        disabled={editandoClave !== null}
-                        onClick={() => void anularFila(fila)}
-                      >
-                        <Undo2 size={15} />
-                      </RowAction>
-                    )}
+                    <RowAction
+                      label={`Editar pago de S/ ${fila.monto.toFixed(2)}`}
+                      tone="edit"
+                      disabled={editandoClave !== null || fila.estadoVerificacion === 'RECHAZADO'}
+                      disabledReason={
+                        fila.estadoVerificacion === 'RECHAZADO' ? 'Se rechazó en el banco: no se edita' : undefined
+                      }
+                      onClick={() => editarFila(fila)}
+                      sinPermiso={!puede('finanzas.cobrar', 'cobrar')}>
+                      <Pencil size={15} />
+                    </RowAction>
+                    <RowAction
+                      label={`Anular pago de S/ ${fila.monto.toFixed(2)}`}
+                      tone="danger"
+                      disabled={editandoClave !== null}
+                      onClick={() => void anularFila(fila)}
+                      sinPermiso={!puede('finanzas.cobrar', 'cobrar')}>
+                      <Undo2 size={15} />
+                    </RowAction>
                   </>
                 )
               }

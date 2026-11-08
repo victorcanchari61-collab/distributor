@@ -190,11 +190,9 @@ export function CatalogoSimple({
       title={titulo}
       description={descripcion}
       actions={
-        puede('maestros.productos', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('maestros.productos', 'crear')}>
+          Nuevo
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       columns={columns}
@@ -203,25 +201,19 @@ export function CatalogoSimple({
       empty="Todavía no hay registros."
       rowActions={(row) => (
         <>
-          {puede('maestros.productos', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('maestros.productos', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              <Badge tone={row.activo ? 'warning' : 'success'}>{row.activo ? 'Off' : 'On'}</Badge>
-            </RowAction>
-          )}
-          {puede('maestros.productos', 'eliminar') && (
-            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-              <Trash2 size={15} />
-            </RowAction>
-          )}
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('maestros.productos', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            onClick={() => cambiarEstado(row)}
+            sinPermiso={!puede('maestros.productos', 'editar')}>
+            <Badge tone={row.activo ? 'warning' : 'success'}>{row.activo ? 'Off' : 'On'}</Badge>
+          </RowAction>
+          <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)} sinPermiso={!puede('maestros.productos', 'eliminar')}>
+            <Trash2 size={15} />
+          </RowAction>
         </>
       )}
     >

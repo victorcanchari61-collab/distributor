@@ -358,11 +358,9 @@ export function CaidaPage() {
       title="Clientes con caída"
       description={`Cuánto compra cada cliente frente al mismo tramo d${comparar === 'anio' ? 'el año' : 'el mes'} anterior, y en qué estado está. También sirve para encontrar a los que dejaron de comprar.`}
       actions={
-        puede('crm.caida', 'exportar') ? (
-          <Button variant="secondary" size="sm" disabled={items.length === 0} onClick={exportar} iconRight={<FileSpreadsheet size={15} />}>
-            Exportar Excel
-          </Button>
-        ) : undefined
+        <Button variant="secondary" size="sm" disabled={items.length === 0} onClick={exportar} iconRight={<FileSpreadsheet size={15} />} sinPermiso={!puede('crm.caida', 'exportar')}>
+          Exportar Excel
+        </Button>
       }
       alert={
         error ? (

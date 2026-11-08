@@ -25,6 +25,7 @@ import type { CuentaFinancieraResponse, MovimientoCuentaResponse } from './cuent
 import { gastoOperativoApi, origenLabel } from './gastoOperativoApi'
 import type { CategoriaOpcion, TipoMovimientoOperativo } from './gastoOperativoApi'
 
+import { opcional } from '../../lib/apoyo'
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
 const BILLETES = [200, 100, 50, 20, 10]
@@ -164,9 +165,9 @@ export function MiCajaPage() {
     try {
       const [c, cat, efectivo, digitales] = await Promise.all([
         miCajaApi.mia(),
-        gastoOperativoApi.categoriasOpciones(),
-        miCajaApi.movimientos(desde, hasta),
-        miCajaApi.digitales(desde, hasta),
+        opcional(gastoOperativoApi.categoriasOpciones(), []),
+        opcional(miCajaApi.movimientos(desde, hasta), []),
+        opcional(miCajaApi.digitales(desde, hasta), []),
       ])
       setCaja(c)
       setCategorias(cat)
@@ -279,16 +280,12 @@ export function MiCajaPage() {
         description="Tu efectivo del día: cobros, movimientos y cierre."
         actions={
           <>
-            {puede('finanzas.caja', 'ingreso') && (
-              <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('INGRESO')} iconRight={<ArrowUpCircle size={15} />}>
-                Ingreso
-              </Button>
-            )}
-            {puede('finanzas.caja', 'egreso') && (
-              <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('EGRESO')} iconRight={<ArrowDownCircle size={15} />}>
-                Egreso
-              </Button>
-            )}
+            <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('INGRESO')} iconRight={<ArrowUpCircle size={15} />} sinPermiso={!puede('finanzas.caja', 'ingreso')}>
+              Ingreso
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setMovimientoAbierto('EGRESO')} iconRight={<ArrowDownCircle size={15} />} sinPermiso={!puede('finanzas.caja', 'egreso')}>
+              Egreso
+            </Button>
             <Button size="sm" onClick={() => setCerrarAbierto(true)} iconRight={<Landmark size={15} />}>
               Cerrar caja
             </Button>

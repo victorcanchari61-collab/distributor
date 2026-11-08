@@ -48,6 +48,7 @@ import type { FeriadoResponse } from './feriadoApi'
 import { FeriadosModal } from './FeriadosModal'
 import { PaseListaModal } from './PaseListaModal'
 
+import { opcional } from '../../lib/apoyo'
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 /** Su cargo, y si ya no está: cesado con su fecha, o desactivado. */
@@ -279,7 +280,7 @@ export function AsistenciaPage() {
     try {
       const id = empleadoFiltro || undefined
       const [m, r] = await Promise.all([
-        asistenciaApi.listar(desde, hasta, id),
+        opcional(asistenciaApi.listar(desde, hasta, id), []),
         asistenciaApi.resumen(desde, hasta, id),
       ])
       setMarcas(m)
@@ -477,16 +478,12 @@ export function AsistenciaPage() {
         description="Quién vino, quién faltó y quién llegó tarde."
         actions={
           <>
-            {puede('rrhh.asistencia', 'exportar') && (
-              <Button size="sm" variant="secondary" onClick={() => setReporte(true)} iconRight={<FileText size={15} />}>
-                PDF del mes
-              </Button>
-            )}
-            {puede('rrhh.asistencia', 'crear') && (
-              <Button size="sm" onClick={() => abrirNuevo()} iconRight={<Plus size={15} />}>
-                Nueva marca
-              </Button>
-            )}
+            <Button size="sm" variant="secondary" onClick={() => setReporte(true)} iconRight={<FileText size={15} />} sinPermiso={!puede('rrhh.asistencia', 'exportar')}>
+              PDF del mes
+            </Button>
+            <Button size="sm" onClick={() => abrirNuevo()} iconRight={<Plus size={15} />} sinPermiso={!puede('rrhh.asistencia', 'crear')}>
+              Nueva marca
+            </Button>
           </>
         }
       />
@@ -553,11 +550,9 @@ export function AsistenciaPage() {
                   options={empleados.map((e) => ({ value: e.id, label: e.nombreCompleto, detalle: detalleEmpleado(e) }))}
                 />
               </div>
-              {puede('rrhh.asistencia', 'ver') && (
-                <Button size="sm" variant="secondary" onClick={() => setFeriadosAbierto(true)} iconRight={<Flag size={15} />}>
-                  Feriados
-                </Button>
-              )}
+              <Button size="sm" variant="secondary" onClick={() => setFeriadosAbierto(true)} iconRight={<Flag size={15} />} sinPermiso={!puede('rrhh.asistencia', 'ver')}>
+                Feriados
+              </Button>
             </div>
           </div>
 
@@ -741,13 +736,13 @@ export function AsistenciaPage() {
           empty={cargando ? 'Cargando asistencia...' : 'No hay marcas registradas este mes.'}
           actions={(row) => (
             <>
-              {!row.anulado && puede('rrhh.asistencia', 'editar') && (
-                <RowAction label={`Editar la marca de ${row.empleado}`} onClick={() => abrirEdicion(row)}>
+              {!row.anulado && (
+                <RowAction label={`Editar la marca de ${row.empleado}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('rrhh.asistencia', 'editar')}>
                   <Pencil size={15} />
                 </RowAction>
               )}
-              {!row.anulado && puede('rrhh.asistencia', 'anular') && (
-                <RowAction label={`Anular la marca de ${row.empleado}`} tone="danger" onClick={() => anular(row)}>
+              {!row.anulado && (
+                <RowAction label={`Anular la marca de ${row.empleado}`} tone="danger" onClick={() => anular(row)} sinPermiso={!puede('rrhh.asistencia', 'anular')}>
                   <Undo2 size={15} />
                 </RowAction>
               )}

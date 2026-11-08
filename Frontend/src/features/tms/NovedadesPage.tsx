@@ -256,16 +256,14 @@ export function NovedadesPage() {
       title="Novedades de entrega"
       description="Lo que no se entregó o se recogió, para contarlo al volver."
       actions={
-        puede('tms.novedades', 'exportar') ? (
-          <Button
-            size="sm"
-            variant="secondary"
-            iconRight={<FileText size={15} />}
-            onClick={() => setReporteAbierto(true)}
-          >
-            Reporte PDF
-          </Button>
-        ) : undefined
+        <Button
+          size="sm"
+          variant="secondary"
+          iconRight={<FileText size={15} />}
+          onClick={() => setReporteAbierto(true)}
+          sinPermiso={!puede('tms.novedades', 'exportar')}>
+          Reporte PDF
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -325,13 +323,13 @@ export function NovedadesPage() {
             )
           ) : (
           <>
-          {puede('tms.novedades', 'confirmar') && row.estado === 'PENDIENTE' && (
-            <RowAction tone="success" label={`Revisar ${row.producto}`} onClick={() => setRevisando(row)}>
+          {row.estado === 'PENDIENTE' && (
+            <RowAction tone="success" label={`Revisar ${row.producto}`} onClick={() => setRevisando(row)} sinPermiso={!puede('tms.novedades', 'confirmar')}>
               <ClipboardCheck size={15} />
             </RowAction>
           )}
-          {puede('tms.novedades', 'confirmar') && (row.estado === 'RECIBIDA' || row.estado === 'FALTANTE') && (
-            <RowAction tone="warning" label={`Reabrir la revisión de ${row.producto}`} onClick={() => reabrir(row)}>
+          {(row.estado === 'RECIBIDA' || row.estado === 'FALTANTE') && (
+            <RowAction tone="warning" label={`Reabrir la revisión de ${row.producto}`} onClick={() => reabrir(row)} sinPermiso={!puede('tms.novedades', 'confirmar')}>
               <RotateCcw size={15} />
             </RowAction>
           )}

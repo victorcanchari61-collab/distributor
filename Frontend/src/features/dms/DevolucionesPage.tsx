@@ -26,6 +26,7 @@ import type {
   ResumenDevoluciones,
 } from './devolucionApi'
 
+import { opcional } from '../../lib/apoyo'
 function estadoBadge(estado: DevolucionResponse['estado']) {
   if (estado === 'APROBADA') return <Badge tone="success">Aprobada</Badge>
   if (estado === 'RECHAZADA') return <Badge tone="danger">Rechazada</Badge>
@@ -63,7 +64,7 @@ export function DevolucionesPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [lista, res] = await Promise.all([devolucionApi.delRango(desde, hasta), devolucionApi.resumen()])
+      const [lista, res] = await Promise.all([opcional(devolucionApi.delRango(desde, hasta), []), devolucionApi.resumen()])
       setDevoluciones(lista)
       setResumen(res)
       setError('')
@@ -220,32 +221,28 @@ export function DevolucionesPage() {
             <Eye size={15} />
           </RowAction>
 
-          {puede('dms.devoluciones', 'confirmar') && (
-            <RowAction
-              label={`Aprobar ${row.numero}`}
-              tone="success"
-              disabled={row.estado !== 'SOLICITADA'}
-              disabledReason={row.estado === 'APROBADA' ? 'Ya fue aprobada' : 'Ya fue rechazada'}
-              onClick={() => aprobar(row)}
-            >
-              <Check size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Aprobar ${row.numero}`}
+            tone="success"
+            disabled={row.estado !== 'SOLICITADA'}
+            disabledReason={row.estado === 'APROBADA' ? 'Ya fue aprobada' : 'Ya fue rechazada'}
+            onClick={() => aprobar(row)}
+            sinPermiso={!puede('dms.devoluciones', 'confirmar')}>
+            <Check size={15} />
+          </RowAction>
 
-          {puede('dms.devoluciones', 'confirmar') && (
-            <RowAction
-              label={`Rechazar ${row.numero}`}
-              tone="danger"
-              disabled={row.estado !== 'SOLICITADA'}
-              disabledReason={row.estado === 'APROBADA' ? 'Ya fue aprobada' : 'Ya fue rechazada'}
-              onClick={() => {
-                setRechazando(row)
-                setMotivoRechazo('')
-              }}
-            >
-              <X size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Rechazar ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'SOLICITADA'}
+            disabledReason={row.estado === 'APROBADA' ? 'Ya fue aprobada' : 'Ya fue rechazada'}
+            onClick={() => {
+              setRechazando(row)
+              setMotivoRechazo('')
+            }}
+            sinPermiso={!puede('dms.devoluciones', 'confirmar')}>
+            <X size={15} />
+          </RowAction>
         </>
       )}
     >

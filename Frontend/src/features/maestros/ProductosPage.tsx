@@ -57,6 +57,7 @@ import type {
 } from './productoApi'
 import { useRealtime } from '../../lib/realtime'
 
+import { opcional } from '../../lib/apoyo'
 /** "Kilos" -> KG, "Sacos" -> SAC... lo que ya trae el catálogo de unidades. */
 function unidadDesdeMedida(medida: string): string {
   const m = medida.trim().toLowerCase()
@@ -169,9 +170,9 @@ export function ProductosPage() {
     try {
       const [res, c, m, u] = await Promise.all([
         productoApi.resumen(),
-        categoriaApi.getAll(),
-        marcaApi.getAll(),
-        unidadApi.getAll(),
+        opcional(categoriaApi.getAll(), []),
+        opcional(marcaApi.getAll(), []),
+        opcional(unidadApi.getAll(), []),
       ])
       setResumen(res)
       setCategorias(c)
@@ -777,21 +778,15 @@ export function ProductosPage() {
         description="Qué se compra y se vende, y en qué presentaciones."
         actions={
           <>
-            {puede('maestros.productos', 'exportar') && (
-              <Button variant="secondary" size="sm" onClick={exportarProductos} iconRight={<Download size={15} />}>
-                Exportar
-              </Button>
-            )}
-            {puede('maestros.productos', 'importar') && (
-              <Button variant="secondary" size="sm" onClick={() => setImportando(true)} iconRight={<Upload size={15} />}>
-                Importar
-              </Button>
-            )}
-            {puede('maestros.productos', 'crear') && (
-              <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-                Nuevo producto
-              </Button>
-            )}
+            <Button variant="secondary" size="sm" onClick={exportarProductos} iconRight={<Download size={15} />} sinPermiso={!puede('maestros.productos', 'exportar')}>
+              Exportar
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setImportando(true)} iconRight={<Upload size={15} />} sinPermiso={!puede('maestros.productos', 'importar')}>
+              Importar
+            </Button>
+            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('maestros.productos', 'crear')}>
+              Nuevo producto
+            </Button>
           </>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
@@ -839,25 +834,19 @@ export function ProductosPage() {
         empty={cargando ? 'Cargando productos...' : 'Todavía no hay productos registrados.'}
         rowActions={(row) => (
           <>
-            {puede('maestros.productos', 'editar') && (
-              <RowAction label={`Editar ${row.nombre}`} onClick={() => void editarProducto(row.id)}>
-                <Pencil size={15} />
-              </RowAction>
-            )}
-            {puede('maestros.productos', 'editar') && (
-              <RowAction
-                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-                tone={row.activo ? 'warning' : 'success'}
-                onClick={() => cambiarEstado(row)}
-              >
-                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-              </RowAction>
-            )}
-            {puede('maestros.productos', 'eliminar') && (
-              <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-                <Trash2 size={15} />
-              </RowAction>
-            )}
+            <RowAction label={`Editar ${row.nombre}`} onClick={() => void editarProducto(row.id)} sinPermiso={!puede('maestros.productos', 'editar')}>
+              <Pencil size={15} />
+            </RowAction>
+            <RowAction
+              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => cambiarEstado(row)}
+              sinPermiso={!puede('maestros.productos', 'editar')}>
+              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            </RowAction>
+            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)} sinPermiso={!puede('maestros.productos', 'eliminar')}>
+              <Trash2 size={15} />
+            </RowAction>
           </>
         )}
       >
@@ -1366,11 +1355,9 @@ function UnidadesTabla({
       title="Unidades de medida"
       description="Kilo, unidad, saco, caja."
       actions={
-        puede('maestros.productos', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nueva unidad
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('maestros.productos', 'crear')}>
+          Nueva unidad
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       columns={columns}
@@ -1380,36 +1367,32 @@ function UnidadesTabla({
       empty="No hay unidades."
       rowActions={(row) => (
         <>
-          {puede('maestros.productos', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('maestros.productos', 'eliminar') && (
-            <RowAction
-              label={`Eliminar ${row.nombre}`}
-              tone="danger"
-              onClick={() =>
-              confirmar({
-                titulo: `Eliminar ${row.nombre}`,
-                mensaje: 'Solo se puede eliminar si ningún producto la usa.',
-                confirmar: 'Eliminar',
-                tono: 'danger',
-                accion: async () => {
-                  setError('')
-                  try {
-                    await unidadApi.remove(row.id)
-                    await onRecargar()
-                  } catch (e) {
-                    setError(e instanceof ApiError ? e.message : 'No pudimos eliminarla.')
-                  }
-                },
-              })
-            }
-            >
-              <Trash2 size={15} />
-            </RowAction>
-          )}
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('maestros.productos', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`Eliminar ${row.nombre}`}
+            tone="danger"
+            onClick={() =>
+            confirmar({
+              titulo: `Eliminar ${row.nombre}`,
+              mensaje: 'Solo se puede eliminar si ningún producto la usa.',
+              confirmar: 'Eliminar',
+              tono: 'danger',
+              accion: async () => {
+                setError('')
+                try {
+                  await unidadApi.remove(row.id)
+                  await onRecargar()
+                } catch (e) {
+                  setError(e instanceof ApiError ? e.message : 'No pudimos eliminarla.')
+                }
+              },
+            })
+          }
+            sinPermiso={!puede('maestros.productos', 'eliminar')}>
+            <Trash2 size={15} />
+          </RowAction>
         </>
       )}
     >

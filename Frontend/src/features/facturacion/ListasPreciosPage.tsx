@@ -26,6 +26,7 @@ import type { ListaPrecioResponse, PrecioResponse } from './listaPrecioApi'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
+import { opcional } from '../../lib/apoyo'
 /**
  * Una linea de la tabla de precios del modal.
  *
@@ -106,7 +107,7 @@ export function ListasPreciosPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [l, p] = await Promise.all([listaPrecioApi.getAll(), productoApi.getAll()])
+      const [l, p] = await Promise.all([opcional(listaPrecioApi.getAll(), []), opcional(productoApi.getAll(), [])])
       setListas(l)
       setProductos(p.filter((x) => x.activo))
       setListaActiva((actual) => actual ?? l.find((x) => x.esPredeterminada)?.id ?? l[0]?.id ?? null)
@@ -698,7 +699,7 @@ export function ListasPreciosPage() {
               los precios de dentro, y las listas son las pestañas de arriba.
               Actuan sobre la que este abierta, que es la que se esta viendo.
             */}
-            {lista && puede('fact.precios', 'editar') && (
+            {lista && (
               <Button
                 variant="secondary"
                 size="sm"
@@ -708,12 +709,13 @@ export function ListasPreciosPage() {
                   setAbierto(true)
                 }}
                 iconRight={<Pencil size={15} />}
+                sinPermiso={!puede('fact.precios', 'editar')}
               >
                 Editar lista
               </Button>
             )}
 
-            {lista && puede('fact.precios', 'eliminar') && (
+            {lista && (
               <Button
                 variant="secondary"
                 size="sm"
@@ -727,40 +729,37 @@ export function ListasPreciosPage() {
                 }
                 onClick={() => eliminarLista(lista)}
                 iconRight={<Trash2 size={15} />}
+                sinPermiso={!puede('fact.precios', 'eliminar')}
               >
                 Eliminar lista
               </Button>
             )}
 
-            {puede('fact.precios', 'crear') && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setEditando(null)
-                  setForm({ nombre: '', descripcion: '' })
-                  setAbierto(true)
-                }}
-              >
-                <Plus size={15} />
-                Nueva lista
-              </Button>
-            )}
-            {puede('fact.precios', 'crear') && (
-              <Button
-                size="sm"
-                disabled={!listaActiva}
-                onClick={() => {
-                  setPrecioForm({ productoId: 0 })
-                  setFilasPrecio([])
-                  setMargenObjetivo('')
-                  setPrecioAbierto(true)
-                }}
-                iconRight={<Plus size={15} />}
-              >
-                Agregar precio
-              </Button>
-            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setEditando(null)
+                setForm({ nombre: '', descripcion: '' })
+                setAbierto(true)
+              }}
+              sinPermiso={!puede('fact.precios', 'crear')}>
+              <Plus size={15} />
+              Nueva lista
+            </Button>
+            <Button
+              size="sm"
+              disabled={!listaActiva}
+              onClick={() => {
+                setPrecioForm({ productoId: 0 })
+                setFilasPrecio([])
+                setMargenObjetivo('')
+                setPrecioAbierto(true)
+              }}
+              iconRight={<Plus size={15} />}
+              sinPermiso={!puede('fact.precios', 'crear')}>
+              Agregar precio
+            </Button>
           </>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
@@ -844,43 +843,39 @@ export function ListasPreciosPage() {
         }
         rowActions={(row) => (
           <>
-            {puede('fact.precios', 'editar') && (
             <RowAction
-              label={`Editar precios de ${row.producto}`}
-              onClick={() => {
-                const p = productos.find((x) => x.id === row.productoId)
-                cambiarProductoMasivo(row.productoId)
-                // Solo se avisa si hay algo que avisar: el aviso salia igual
-                // con el producto activo, en rojo y sin texto.
-                if (!p) toast.error('El producto de este precio está desactivado.')
-                setPrecioAbierto(true)
-              }}
-            >
-              <Pencil size={15} />
-            </RowAction>
-            )}
-            {puede('fact.precios', 'eliminar') && (
+            label={`Editar precios de ${row.producto}`}
+            onClick={() => {
+              const p = productos.find((x) => x.id === row.productoId)
+              cambiarProductoMasivo(row.productoId)
+              // Solo se avisa si hay algo que avisar: el aviso salia igual
+              // con el producto activo, en rojo y sin texto.
+              if (!p) toast.error('El producto de este precio está desactivado.')
+              setPrecioAbierto(true)
+            }}
+            sinPermiso={!puede('fact.precios', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
             <RowAction
-              label={`Eliminar precio de ${row.producto}`}
-              tone="danger"
-              onClick={() =>
-                confirmar({
-                  titulo: `Quitar precio de ${row.presentacion}`,
-                  mensaje: 'Deja de tener precio en esta lista.',
-                  confirmar: 'Quitar',
-                  tono: 'danger',
-                  accion: async () => {
-                    await listaPrecioApi.eliminarPrecio(row.id)
-                    if (listaActiva) await cargarPrecios(listaActiva)
-                    await cargar()
-                    toast.exito('Precio quitado')
-                  },
-                })
-              }
-            >
-              <Trash2 size={15} />
-            </RowAction>
-            )}
+            label={`Eliminar precio de ${row.producto}`}
+            tone="danger"
+            onClick={() =>
+              confirmar({
+                titulo: `Quitar precio de ${row.presentacion}`,
+                mensaje: 'Deja de tener precio en esta lista.',
+                confirmar: 'Quitar',
+                tono: 'danger',
+                accion: async () => {
+                  await listaPrecioApi.eliminarPrecio(row.id)
+                  if (listaActiva) await cargarPrecios(listaActiva)
+                  await cargar()
+                  toast.exito('Precio quitado')
+                },
+              })
+            }
+            sinPermiso={!puede('fact.precios', 'eliminar')}>
+            <Trash2 size={15} />
+          </RowAction>
           </>
         )}
       >

@@ -186,11 +186,9 @@ export function MotivosNovedadPage() {
         title="Motivos de novedad"
         description="Por qué no se entregó algo al cliente."
         actions={
-          puede('tms.motivos', 'crear') ? (
-            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-              Nuevo motivo
-            </Button>
-          ) : undefined
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('tms.motivos', 'crear')}>
+            Nuevo motivo
+          </Button>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
         stats={
@@ -211,20 +209,16 @@ export function MotivosNovedadPage() {
         empty={cargando ? 'Cargando motivos...' : 'Todavía no hay motivos: crea el primero.'}
         rowActions={(row) => (
           <>
-            {puede('tms.motivos', 'editar') && (
-              <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-                <Pencil size={15} />
-              </RowAction>
-            )}
-            {puede('tms.motivos', 'editar') && (
-              <RowAction
-                label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-                tone={row.activo ? 'warning' : 'success'}
-                onClick={() => cambiarEstado(row)}
-              >
-                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-              </RowAction>
-            )}
+            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('tms.motivos', 'editar')}>
+              <Pencil size={15} />
+            </RowAction>
+            <RowAction
+              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+              tone={row.activo ? 'warning' : 'success'}
+              onClick={() => cambiarEstado(row)}
+              sinPermiso={!puede('tms.motivos', 'editar')}>
+              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            </RowAction>
           </>
         )}
       >

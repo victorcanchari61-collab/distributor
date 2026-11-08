@@ -43,6 +43,7 @@ import type {
   TipoMovimientoOperativo,
 } from './gastoOperativoApi'
 
+import { opcional } from '../../lib/apoyo'
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
 type Pestana = 'pendientes' | 'recurrentes' | 'categorias'
@@ -74,10 +75,10 @@ export function GastosOperativosPage() {
     setCargando(true)
     try {
       const [p, r, mot, cta] = await Promise.all([
-        gastoOperativoApi.getPendientes(),
-        gastoOperativoApi.getRecurrentes(),
-        gastoOperativoApi.getCategorias(),
-        cuentaFinancieraApi.getAll(),
+        opcional(gastoOperativoApi.getPendientes(), []),
+        opcional(gastoOperativoApi.getRecurrentes(), []),
+        opcional(gastoOperativoApi.getCategorias(), []),
+        opcional(cuentaFinancieraApi.getAll(), []),
       ])
       setPendientes(p)
       setRecurrentes(r)
@@ -183,11 +184,9 @@ export function GastosOperativosPage() {
                   </p>
                   <p className="text-xs text-ink-soft">{p.motivoGasto} · estimado {soles(p.montoEstimado)}</p>
                 </div>
-                {puede('finanzas.operativos', 'crear') && (
-                  <Button size="sm" onClick={() => setPagando(p)}>
-                    Pagar
-                  </Button>
-                )}
+                <Button size="sm" onClick={() => setPagando(p)} sinPermiso={!puede('finanzas.operativos', 'crear')}>
+                  Pagar
+                </Button>
               </div>
             ))}
           </div>
@@ -411,11 +410,9 @@ function RecurrentesTabla({
       title="Gastos recurrentes"
       description="Lo que se paga cada mes: alquiler, luz, agua, internet."
       actions={
-        puede('finanzas.operativos', 'crear') ? (
-          <Button size="sm" onClick={onAbrirNuevo} iconRight={<Plus size={15} />}>
-            Nueva plantilla
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={onAbrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('finanzas.operativos', 'crear')}>
+          Nueva plantilla
+        </Button>
       }
       columns={columns}
       rows={recurrentes}
@@ -424,16 +421,12 @@ function RecurrentesTabla({
       empty="Todavía no hay gastos recurrentes."
       rowActions={(row) => (
         <>
-          {puede('finanzas.operativos', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => onAbrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('finanzas.operativos', 'eliminar') && (
-            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-              <Trash2 size={15} />
-            </RowAction>
-          )}
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => onAbrirEdicion(row)} sinPermiso={!puede('finanzas.operativos', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)} sinPermiso={!puede('finanzas.operativos', 'eliminar')}>
+            <Trash2 size={15} />
+          </RowAction>
         </>
       )}
     >
@@ -655,11 +648,9 @@ function CategoriasTabla({
       title="Categorías"
       description="Cómo se clasifica cada ingreso o egreso."
       actions={
-        puede('finanzas.operativos', 'crear') ? (
-          <Button size="sm" onClick={() => abrir(null)} iconRight={<Plus size={15} />}>
-            Nueva categoría
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={() => abrir(null)} iconRight={<Plus size={15} />} sinPermiso={!puede('finanzas.operativos', 'crear')}>
+          Nueva categoría
+        </Button>
       }
       columns={columns}
       rows={categorias}
@@ -668,27 +659,23 @@ function CategoriasTabla({
       empty="Todavía no hay categorías."
       rowActions={(row) => (
         <>
-          {puede('finanzas.operativos', 'editar') && (
-            <RowAction
-              label={`Editar ${row.nombre}`}
-              disabled={row.esSistema}
-              disabledReason="Es del sistema: no se edita"
-              onClick={() => abrir(row)}
-            >
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('finanzas.operativos', 'eliminar') && (
-            <RowAction
-              label={`Eliminar ${row.nombre}`}
-              tone="danger"
-              disabled={row.esSistema || row.usos > 0}
-              disabledReason={row.esSistema ? 'Es del sistema: no se elimina' : 'Ya se usó: desactívala en vez de eliminarla'}
-              onClick={() => eliminar(row)}
-            >
-              <Trash2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Editar ${row.nombre}`}
+            disabled={row.esSistema}
+            disabledReason="Es del sistema: no se edita"
+            onClick={() => abrir(row)}
+            sinPermiso={!puede('finanzas.operativos', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`Eliminar ${row.nombre}`}
+            tone="danger"
+            disabled={row.esSistema || row.usos > 0}
+            disabledReason={row.esSistema ? 'Es del sistema: no se elimina' : 'Ya se usó: desactívala en vez de eliminarla'}
+            onClick={() => eliminar(row)}
+            sinPermiso={!puede('finanzas.operativos', 'eliminar')}>
+            <Trash2 size={15} />
+          </RowAction>
         </>
       )}
     >

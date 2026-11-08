@@ -25,6 +25,7 @@ import type { AdelantoFila, AdelantoResponse, EmpleadoAdelanto, EstadoAdelanto, 
 import type { CuentaPagoOpcion } from './planillaApi'
 import { tipoDeCuenta } from '../finanzas/cuentaFinancieraApi'
 
+import { opcional } from '../../lib/apoyo'
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 const numero = (texto: string) => (texto.trim() ? Number(texto.replace(',', '.')) : NaN)
 const redondear = (n: number) => Math.round(n * 100) / 100
@@ -60,7 +61,7 @@ export function AdelantosPage() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [lista, r] = await Promise.all([adelantoApi.listar(), adelantoApi.resumen()])
+      const [lista, r] = await Promise.all([opcional(adelantoApi.listar(), []), adelantoApi.resumen()])
       setAdelantos(lista)
       setResumen(r)
       setError('')
@@ -151,16 +152,12 @@ export function AdelantosPage() {
       description="Plata a cuenta del sueldo, que se descuenta en la planilla."
       actions={
         <>
-          {puede('rrhh.adelantos', 'exportar') && (
-            <Button size="sm" variant="secondary" onClick={() => setReporte(true)} iconRight={<FileText size={15} />}>
-              PDF
-            </Button>
-          )}
-          {puede('rrhh.adelantos', 'crear') && (
-            <Button size="sm" onClick={() => setNuevoAbierto(true)} iconRight={<Plus size={15} />}>
-              Nuevo adelanto
-            </Button>
-          )}
+          <Button size="sm" variant="secondary" onClick={() => setReporte(true)} iconRight={<FileText size={15} />} sinPermiso={!puede('rrhh.adelantos', 'exportar')}>
+            PDF
+          </Button>
+          <Button size="sm" onClick={() => setNuevoAbierto(true)} iconRight={<Plus size={15} />} sinPermiso={!puede('rrhh.adelantos', 'crear')}>
+            Nuevo adelanto
+          </Button>
         </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
@@ -182,18 +179,19 @@ export function AdelantosPage() {
           <RowAction label={`Ver el adelanto de ${row.empleado}`} tone="view" onClick={() => setViendoId(row.id)}>
             <Eye size={15} />
           </RowAction>
-          {row.estado === 'PENDIENTE' && puede('rrhh.adelantos', 'editar') && (
-            <RowAction label={`Cambiar cómo se le descuenta a ${row.empleado}`} onClick={() => setCambiandoPlan(row)}>
+          {row.estado === 'PENDIENTE' && (
+            <RowAction label={`Cambiar cómo se le descuenta a ${row.empleado}`} onClick={() => setCambiandoPlan(row)} sinPermiso={!puede('rrhh.adelantos', 'editar')}>
               <CalendarClock size={15} />
             </RowAction>
           )}
-          {row.estado !== 'ANULADO' && puede('rrhh.adelantos', 'anular') && (
+          {row.estado !== 'ANULADO' && (
             <RowAction
               label={`Anular el adelanto de ${row.empleado}`}
               tone="danger"
               disabled={row.descontado > 0}
               disabledReason="Ya se le descontó algo en planilla"
               onClick={() => anular(row)}
+              sinPermiso={!puede('rrhh.adelantos', 'anular')}
             >
               <Ban size={15} />
             </RowAction>
@@ -353,7 +351,7 @@ function NuevoAdelantoModal({ onClose, onGuardado }: { onClose: () => void; onGu
   const [error, setError] = useState('')
 
   useEffect(() => {
-    Promise.all([adelantoApi.empleados(), adelantoApi.cuentas()])
+    Promise.all([opcional(adelantoApi.empleados(), []), opcional(adelantoApi.cuentas(), [])])
       .then(([e, c]) => {
         setEmpleados(e)
         setCuentas(c)

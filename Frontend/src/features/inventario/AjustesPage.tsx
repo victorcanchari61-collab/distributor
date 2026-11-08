@@ -45,6 +45,7 @@ import { MotivosTabla } from './MotivosTabla'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
+import { opcional } from '../../lib/apoyo'
 type Pestana = 'ajustes' | 'motivos'
 
 type FilaAjuste = LineaProductoNueva
@@ -130,9 +131,9 @@ export function AjustesPage() {
     try {
       const [res, alms, mots, prods] = await Promise.all([
         ajusteApi.resumen(),
-        almacenApi.getAll(),
-        motivoApi.getAll(),
-        productoApi.getAll(),
+        opcional(almacenApi.getAll(), []),
+        opcional(motivoApi.getAll(), []),
+        opcional(productoApi.getAll(), []),
       ])
       setResumen(res)
       setAlmacenes(alms)
@@ -586,11 +587,9 @@ export function AjustesPage() {
       title="Ajustes de inventario"
       description="Carga inicial, mermas, sobrantes y faltantes."
       actions={
-        puede('inv.ajustes', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo ajuste
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('inv.ajustes', 'crear')}>
+          Nuevo ajuste
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -644,17 +643,15 @@ export function AjustesPage() {
           {puede('inv.ajustes', 'exportar') && (
             <AccionPdf documento="ajustes" id={row.id} numero={row.numero} />
           )}
-          {puede('inv.ajustes', 'anular') && (
-            <RowAction
-              label={`Anular ${row.numero}`}
-              tone="danger"
-              disabled={row.estado !== 'CONFIRMADO'}
-              disabledReason="Ya está anulado"
-              onClick={() => anular(row)}
-            >
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'CONFIRMADO'}
+            disabledReason="Ya está anulado"
+            onClick={() => anular(row)}
+            sinPermiso={!puede('inv.ajustes', 'anular')}>
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

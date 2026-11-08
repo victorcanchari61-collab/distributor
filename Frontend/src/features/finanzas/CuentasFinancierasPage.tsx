@@ -35,6 +35,7 @@ import type {
   ConciliacionBancariaResponse,
 } from './cuentaFinancieraApi'
 
+import { opcional } from '../../lib/apoyo'
 const soles = (n: number) => `S/ ${n.toFixed(2)}`
 
 const VACIO = {
@@ -125,7 +126,7 @@ function CuentasBancariasTab() {
     try {
       // Las cajas (Caja General y las de vendedores/repartidores) viven en
       // "Cajas": aquí solo las cuentas bancarias.
-      const [todas, bcos] = await Promise.all([cuentaFinancieraApi.getAll(), bancoApi.getAll()])
+      const [todas, bcos] = await Promise.all([opcional(cuentaFinancieraApi.getAll(), []), opcional(bancoApi.getAll(), [])])
       setCuentas(todas.filter((c) => c.naturaleza === 'BANCO'))
       setBancos(bcos)
       setError('')
@@ -274,11 +275,9 @@ function CuentasBancariasTab() {
       title="Cuentas Bancarias"
       description="Las cuentas de la empresa en cada banco."
       actions={
-        puede('finanzas.bancos', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nueva cuenta
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('finanzas.bancos', 'crear')}>
+          Nueva cuenta
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -323,25 +322,19 @@ function CuentasBancariasTab() {
           <RowAction label={`Movimientos de ${row.nombre}`} tone="view" onClick={() => setMovimientosDe(row)}>
             <History size={15} />
           </RowAction>
-          {puede('finanzas.bancos', 'crear') && (
-            <RowAction label={`Conciliar ${row.nombre}`} onClick={() => setConciliarDe(row)}>
-              <Scale size={15} />
-            </RowAction>
-          )}
-          {puede('finanzas.bancos', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Building2 size={15} />
-            </RowAction>
-          )}
-          {puede('finanzas.bancos', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-          )}
+          <RowAction label={`Conciliar ${row.nombre}`} onClick={() => setConciliarDe(row)} sinPermiso={!puede('finanzas.bancos', 'crear')}>
+            <Scale size={15} />
+          </RowAction>
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('finanzas.bancos', 'editar')}>
+            <Building2 size={15} />
+          </RowAction>
+          <RowAction
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            onClick={() => cambiarEstado(row)}
+            sinPermiso={!puede('finanzas.bancos', 'editar')}>
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
         </>
       )}
     >

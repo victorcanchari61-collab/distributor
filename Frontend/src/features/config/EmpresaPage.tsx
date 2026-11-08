@@ -317,18 +317,16 @@ export function EmpresaPage() {
                 className="hidden"
                 onChange={(e) => void subirCertificado(e.target.files?.[0])}
               />
-              {puede('config.empresa', 'editar') && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={!empresa}
-                  loading={subiendoCert}
-                  onClick={() => inputCert.current?.click()}
-                >
-                  <Upload size={15} />
-                  {empresa?.tieneCertificado ? 'Reemplazar' : 'Subir certificado'}
-                </Button>
-              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!empresa}
+                loading={subiendoCert}
+                onClick={() => inputCert.current?.click()}
+                sinPermiso={!puede('config.empresa', 'editar')}>
+                <Upload size={15} />
+                {empresa?.tieneCertificado ? 'Reemplazar' : 'Subir certificado'}
+              </Button>
             </div>
 
             {!form.modoPrueba && (

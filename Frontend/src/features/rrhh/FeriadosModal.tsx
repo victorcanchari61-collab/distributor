@@ -155,16 +155,12 @@ export function FeriadosModal({ open, onClose }: Props) {
           empty={cargando ? 'Cargando feriados...' : 'Todavía no hay feriados registrados.'}
           actions={(row) => (
             <>
-              {puede('rrhh.asistencia', 'editar') && (
-                <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-                  <Pencil size={15} />
-                </RowAction>
-              )}
-              {puede('rrhh.asistencia', 'eliminar') && (
-                <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-                  <Trash2 size={15} />
-                </RowAction>
-              )}
+              <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('rrhh.asistencia', 'editar')}>
+                <Pencil size={15} />
+              </RowAction>
+              <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)} sinPermiso={!puede('rrhh.asistencia', 'eliminar')}>
+                <Trash2 size={15} />
+              </RowAction>
             </>
           )}
         />

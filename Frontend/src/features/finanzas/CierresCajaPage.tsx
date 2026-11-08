@@ -249,13 +249,14 @@ export function CierresCajaPage() {
           <RowAction label="Ver el detalle del cierre" tone="view" onClick={() => setAbierto(row)}>
             <Eye size={15} />
           </RowAction>
-          {!row.anulado && puede('finanzas.cierres', 'anular') && (
+          {!row.anulado && (
             <RowAction
               label="Anular cierre"
               tone="danger"
               disabled={(row.descuento?.montoAplicado ?? 0) > 0}
               disabledReason="Su faltante ya se descontó en una planilla pagada"
               onClick={() => anular(row)}
+              sinPermiso={!puede('finanzas.cierres', 'anular')}
             >
               <Ban size={15} />
             </RowAction>

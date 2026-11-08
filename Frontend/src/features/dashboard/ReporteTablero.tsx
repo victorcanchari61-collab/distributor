@@ -179,11 +179,9 @@ export function ReporteTablero({
       description={descripcion}
       actions={
         <>
-          {puede(`dashboard.${tablero}`, 'exportar') && (
-            <Button size="sm" variant="secondary" onClick={() => setPdf(true)} disabled={!r} iconRight={<FileText size={15} />}>
-              PDF
-            </Button>
-          )}
+          <Button size="sm" variant="secondary" onClick={() => setPdf(true)} disabled={!r} iconRight={<FileText size={15} />} sinPermiso={!puede(`dashboard.${tablero}`, 'exportar')}>
+            PDF
+          </Button>
           <Button variant="secondary" size="sm" onClick={t.refrescar}>
             <RefreshCw size={14} />
             Actualizar

@@ -365,11 +365,9 @@ export function UsuariosPage() {
       title="Usuarios del sistema"
       description="Quién entra a la plataforma y con qué rol."
       actions={
-        puede('config.usuarios', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo usuario
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('config.usuarios', 'crear')}>
+          Nuevo usuario
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -402,20 +400,16 @@ export function UsuariosPage() {
       empty={cargando ? 'Cargando usuarios...' : 'Todavía no hay usuarios registrados.'}
       rowActions={(row) => (
         <>
-          {puede('config.usuarios', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('config.usuarios', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Deshabilitar' : 'Habilitar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => void alternarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-          )}
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('config.usuarios', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`${row.activo ? 'Deshabilitar' : 'Habilitar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            onClick={() => void alternarEstado(row)}
+            sinPermiso={!puede('config.usuarios', 'editar')}>
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
         </>
       )}
     >

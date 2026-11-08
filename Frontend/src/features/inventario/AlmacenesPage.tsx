@@ -24,6 +24,7 @@ import { UbicacionesModal } from './UbicacionesModal'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
+import { opcional } from '../../lib/apoyo'
 interface FormAlmacen {
   codigo: string
   nombre: string
@@ -102,9 +103,9 @@ export function AlmacenesPage() {
     if (departamentos.length > 0) return
     try {
       const [dep, prov, dist] = await Promise.all([
-        ubigeoApi.departamentos(),
-        ubigeoApi.provincias(),
-        ubigeoApi.distritos(),
+        opcional(ubigeoApi.departamentos(), []),
+        opcional(ubigeoApi.provincias(), []),
+        opcional(ubigeoApi.distritos(), []),
       ])
       setDepartamentos(dep)
       setProvincias(prov)
@@ -306,11 +307,9 @@ export function AlmacenesPage() {
       title="Almacenes"
       description="Dónde se guarda la mercadería: sus datos, su dirección y cómo está organizado por dentro."
       actions={
-        puede('inv.almacenes', 'crear') ? (
-          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-            Nuevo almacén
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('inv.almacenes', 'crear')}>
+          Nuevo almacén
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -346,16 +345,15 @@ export function AlmacenesPage() {
           <RowAction label={`Ubicaciones de ${row.nombre}`} tone="view" onClick={() => setConLugares(row.id)}>
             <LayoutList size={15} />
           </RowAction>
-          {puede('inv.almacenes', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {!row.esPrincipal && puede('inv.almacenes', 'editar') && (
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('inv.almacenes', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          {!row.esPrincipal && (
             <RowAction
               label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
               tone={row.activo ? 'warning' : 'success'}
               onClick={() => cambiarEstado(row)}
+              sinPermiso={!puede('inv.almacenes', 'editar')}
             >
               {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
             </RowAction>

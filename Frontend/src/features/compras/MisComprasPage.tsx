@@ -56,6 +56,7 @@ import type {
 } from './comprasApi'
 import { NuevaRecepcionModal } from './NuevaRecepcionModal'
 
+import { opcional } from '../../lib/apoyo'
 const TIPOS_COMPROBANTE: { value: TipoComprobanteCompra; label: string }[] = [
   { value: 'FACTURA', label: 'Factura' },
   { value: 'BOLETA', label: 'Boleta' },
@@ -210,14 +211,14 @@ export function MisComprasPage() {
     try {
       const [res, abiertas, provs, prods, alms, stock, metodos] = await Promise.all([
         compraApi.resumen(),
-        compraApi.abiertas(),
-        proveedorApi.getAll(),
-        productoApi.getAll(),
-        almacenApi.opciones(),
+        opcional(compraApi.abiertas(), []),
+        opcional(proveedorApi.getAll(), []),
+        opcional(productoApi.getAll(), []),
+        opcional(almacenApi.opciones(), []),
         // Sin almacenId: una compra directa tampoco elige almacén todavía
         // (eso se decide al recibir), así que se muestra el stock total.
-        stockApi.disponible(),
-        metodoPagoApi.getAll(),
+        opcional(stockApi.disponible(), []),
+        opcional(metodoPagoApi.getAll(), []),
       ])
       setResumen(res)
       setComprasParaRecibir(abiertas)
@@ -863,11 +864,9 @@ export function MisComprasPage() {
                         : `S/ ${totalPagado.toFixed(2)} de S/ ${total.toFixed(2)} · ${pagos.length} ${pagos.length === 1 ? 'línea' : 'líneas'}`}
                     </span>
                   </div>
-                  {puede('compras.compras', 'cobrar') && (
-                    <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)}>
-                      {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
-                    </Button>
-                  )}
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setPagosAbierto(true)} sinPermiso={!puede('compras.compras', 'cobrar')}>
+                    {pagos.length === 0 ? 'Agregar pago' : 'Gestionar pagos'}
+                  </Button>
                 </div>
               ) : (
                 <p className="mt-4 text-xs text-ink-soft">
@@ -1006,11 +1005,9 @@ export function MisComprasPage() {
       title="Mis compras"
       description="Compras registradas, de una orden o directas."
       actions={
-        puede('compras.compras', 'crear') ? (
-          <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />}>
-            Nueva compra
-          </Button>
-        ) : undefined
+        <Button size="sm" onClick={abrirNueva} iconRight={<Plus size={15} />} sinPermiso={!puede('compras.compras', 'crear')}>
+          Nueva compra
+        </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
@@ -1052,43 +1049,37 @@ export function MisComprasPage() {
           {puede('compras.compras', 'exportar') && (
             <AccionPdf documento="compra" id={row.id} numero={row.numero} />
           )}
-          {puede('compras.compras', 'editar') && (
-            <RowAction
-              label={`Editar ${row.numero}`}
-              disabled={row.estado !== 'PENDIENTE'}
-              disabledReason={row.estado === 'ANULADA' ? 'Está anulada' : 'Ya tiene mercadería recibida'}
-              onClick={() => void conCompraCompleta(row.id, abrirEdicion)}
-            >
-              <Pencil size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Editar ${row.numero}`}
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason={row.estado === 'ANULADA' ? 'Está anulada' : 'Ya tiene mercadería recibida'}
+            onClick={() => void conCompraCompleta(row.id, abrirEdicion)}
+            sinPermiso={!puede('compras.compras', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
           {/*
             Recibir crea una recepcion, asi que el permiso es el de esa pantalla
             y no el de compras: quien despacha el almacen no tiene por que poder
             tocar el documento comercial.
           */}
-          {puede('compras.recepciones', 'crear') && (
-            <RowAction
-              label={`Recibir ${row.numero}`}
-              tone="success"
-              disabled={row.estado !== 'PENDIENTE' && row.estado !== 'RECIBIDA_PARCIAL'}
-              disabledReason={row.estado === 'ANULADA' ? 'Está anulada' : 'Ya se recibió completa'}
-              onClick={() => void conCompraCompleta(row.id, setRecepcionAbierta)}
-            >
-              <PackageCheck size={15} />
-            </RowAction>
-          )}
-          {puede('compras.compras', 'anular') && (
-            <RowAction
-              label={`Anular ${row.numero}`}
-              tone="danger"
-              disabled={row.estado !== 'PENDIENTE'}
-              disabledReason={row.estado === 'ANULADA' ? 'Ya está anulada' : 'Tiene recepciones: anula esas'}
-              onClick={() => anularCompra(row)}
-            >
-              <Undo2 size={15} />
-            </RowAction>
-          )}
+          <RowAction
+            label={`Recibir ${row.numero}`}
+            tone="success"
+            disabled={row.estado !== 'PENDIENTE' && row.estado !== 'RECIBIDA_PARCIAL'}
+            disabledReason={row.estado === 'ANULADA' ? 'Está anulada' : 'Ya se recibió completa'}
+            onClick={() => void conCompraCompleta(row.id, setRecepcionAbierta)}
+            sinPermiso={!puede('compras.recepciones', 'crear')}>
+            <PackageCheck size={15} />
+          </RowAction>
+          <RowAction
+            label={`Anular ${row.numero}`}
+            tone="danger"
+            disabled={row.estado !== 'PENDIENTE'}
+            disabledReason={row.estado === 'ANULADA' ? 'Ya está anulada' : 'Tiene recepciones: anula esas'}
+            onClick={() => anularCompra(row)}
+            sinPermiso={!puede('compras.compras', 'anular')}>
+            <Undo2 size={15} />
+          </RowAction>
         </>
       )}
     >

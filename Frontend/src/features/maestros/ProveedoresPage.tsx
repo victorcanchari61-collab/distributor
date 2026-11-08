@@ -36,6 +36,7 @@ import type { ProveedorRequest, ProveedorResponse } from './proveedorApi'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 
+import { opcional } from '../../lib/apoyo'
 const VACIO: ProveedorRequest = {
   documento: '',
   tipoDoc: 'DNI',
@@ -91,7 +92,7 @@ export function ProveedoresPage() {
   }, [cargar])
 
   useEffect(() => {
-    void Promise.all([ubigeoApi.departamentos(), ubigeoApi.provincias(), ubigeoApi.distritos()]).then(
+    void Promise.all([opcional(ubigeoApi.departamentos(), []), opcional(ubigeoApi.provincias(), []), opcional(ubigeoApi.distritos(), [])]).then(
       ([deps, provs, dists]) => {
         setDepartamentos(deps)
         setProvincias(provs)
@@ -320,17 +321,13 @@ export function ProveedoresPage() {
       description="A quién se le compra."
       actions={
         <>
-          {puede('maestros.proveedores', 'importar') && (
-            <Button variant="secondary" size="sm" onClick={() => setImportando(true)}>
-              <Upload size={15} />
-              Importar
-            </Button>
-          )}
-          {puede('maestros.proveedores', 'crear') && (
-            <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />}>
-              Nuevo proveedor
-            </Button>
-          )}
+          <Button variant="secondary" size="sm" onClick={() => setImportando(true)} sinPermiso={!puede('maestros.proveedores', 'importar')}>
+            <Upload size={15} />
+            Importar
+          </Button>
+          <Button size="sm" onClick={abrirNuevo} iconRight={<Plus size={15} />} sinPermiso={!puede('maestros.proveedores', 'crear')}>
+            Nuevo proveedor
+          </Button>
         </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
@@ -370,25 +367,19 @@ export function ProveedoresPage() {
       empty={cargando ? 'Cargando proveedores...' : 'Todavía no hay proveedores registrados.'}
       rowActions={(row) => (
         <>
-          {puede('maestros.proveedores', 'editar') && (
-            <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)}>
-              <Pencil size={15} />
-            </RowAction>
-          )}
-          {puede('maestros.proveedores', 'editar') && (
-            <RowAction
-              label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
-              tone={row.activo ? 'warning' : 'success'}
-              onClick={() => cambiarEstado(row)}
-            >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
-            </RowAction>
-          )}
-          {puede('maestros.proveedores', 'eliminar') && (
-            <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)}>
-              <Trash2 size={15} />
-            </RowAction>
-          )}
+          <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('maestros.proveedores', 'editar')}>
+            <Pencil size={15} />
+          </RowAction>
+          <RowAction
+            label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
+            tone={row.activo ? 'warning' : 'success'}
+            onClick={() => cambiarEstado(row)}
+            sinPermiso={!puede('maestros.proveedores', 'editar')}>
+            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+          </RowAction>
+          <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)} sinPermiso={!puede('maestros.proveedores', 'eliminar')}>
+            <Trash2 size={15} />
+          </RowAction>
         </>
       )}
     >

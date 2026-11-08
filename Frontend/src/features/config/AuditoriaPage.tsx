@@ -225,17 +225,15 @@ export function AuditoriaPage() {
       description="Qué cambió en el sistema, quién lo hizo y cuándo."
       actions={
         <>
-          {puede('config.auditoria', 'eliminar') && (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={total === 0 || !consulta}
-              onClick={() => setDepurando(true)}
-            >
-              <Trash2 size={15} />
-              Depurar
-            </Button>
-          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={total === 0 || !consulta}
+            onClick={() => setDepurando(true)}
+            sinPermiso={!puede('config.auditoria', 'eliminar')}>
+            <Trash2 size={15} />
+            Depurar
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => void cargar()} loading={cargando}>
             <RefreshCw size={15} />
             Actualizar

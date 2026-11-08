@@ -33,6 +33,8 @@ export interface RowActionProps {
    * si.
    */
   disabledReason?: string
+  /** La persona no tiene permiso: la acción se ve apagada en gris, con el aviso al pasar el mouse. */
+  sinPermiso?: boolean
   children: ReactNode
   className?: string
 }
@@ -49,9 +51,14 @@ export function RowAction({
   tone = 'edit',
   disabled = false,
   disabledReason,
+  sinPermiso = false,
   children,
   className,
 }: RowActionProps) {
+  if (sinPermiso) {
+    disabled = true
+    disabledReason = 'No tienes permiso para esta acción'
+  }
   return (
     <button
       type="button"
