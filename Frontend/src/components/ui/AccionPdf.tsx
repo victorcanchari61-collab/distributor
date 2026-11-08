@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ClipboardList, Download, FileText, PackageCheck, Printer } from 'lucide-react'
+import { Download, Printer } from 'lucide-react'
+import { FaBoxOpen, FaClipboardList, FaFilePdf } from 'react-icons/fa6'
 import { Alert } from './Alert'
 import { Button } from './Button'
 import { Modal } from './Modal'
@@ -85,8 +86,8 @@ const rutaDe = (documento: DocumentoPdf) =>
 export type ReportePdf = 'clientes' | 'carga'
 
 const REPORTES: Record<ReportePdf, { titulo: string; icono: React.ReactNode }> = {
-  clientes: { titulo: 'Detalle por cliente', icono: <ClipboardList size={15} /> },
-  carga: { titulo: 'Reporte de carga', icono: <PackageCheck size={15} /> },
+  clientes: { titulo: 'Detalle por cliente', icono: <FaClipboardList size={15} /> },
+  carga: { titulo: 'Reporte de carga', icono: <FaBoxOpen size={15} /> },
 }
 
 export interface AccionPdfProps {
@@ -123,7 +124,7 @@ export function AccionPdf({ documento, id, numero, reporte }: AccionPdfProps) {
         tone="neutral"
         onClick={() => (conOrden ? setOrdenando(true) : setAbierto(true))}
       >
-        {reporte ? REPORTES[reporte].icono : <FileText size={15} />}
+        {reporte ? REPORTES[reporte].icono : <FaFilePdf size={15} />}
       </RowAction>
 
       {ordenando && (
