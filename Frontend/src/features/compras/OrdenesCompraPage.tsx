@@ -2,18 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
-import {
-  ArrowLeft,
-  Building2,
-  CheckCircle2,
-  ClipboardList,
-  Eye,
-  Pencil,
-  Plus,
-  ShoppingBag,
-  Trash2,
-  Undo2,
-} from 'lucide-react'
+import { ArrowLeft, Building2, CheckCircle2, ClipboardList, Plus } from 'lucide-react'
+import { FaBagShopping, FaEye, FaPencil, FaRotateLeft, FaTrash } from 'react-icons/fa6'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -492,7 +482,7 @@ export function OrdenesCompraPage() {
                     tone="danger"
                     onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
                   >
-                    <Trash2 size={15} />
+                    <FaTrash size={15} />
                   </RowAction>
                 )}
               />
@@ -615,7 +605,7 @@ export function OrdenesCompraPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conOrdenCompleta(row.id, setDetalleAbierto)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           {puede('compras.ordenes', 'exportar') && (
             <AccionPdf documento="ordencompra" id={row.id} numero={row.numero} />
@@ -626,7 +616,7 @@ export function OrdenesCompraPage() {
             disabledReason="Solo se edita una orden pendiente"
             onClick={() => void conOrdenCompleta(row.id, abrirEdicion)}
             sinPermiso={!puede('compras.ordenes', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction
             label={`Convertir ${row.numero} a compra`}
@@ -635,7 +625,7 @@ export function OrdenesCompraPage() {
             disabledReason={row.estado === 'CONFIRMADA' ? 'Ya se convirtió en compra' : 'Está anulada'}
             onClick={() => convertirOrden(row)}
             sinPermiso={!puede('compras.ordenes', 'confirmar')}>
-            <ShoppingBag size={15} />
+            <FaBagShopping size={15} />
           </RowAction>
           <RowAction
             label={`Anular ${row.numero}`}
@@ -644,7 +634,7 @@ export function OrdenesCompraPage() {
             disabledReason={row.estado === 'CONFIRMADA' ? 'Ya generó su compra: anula esa' : 'Ya está anulada'}
             onClick={() => anularOrden(row)}
             sinPermiso={!puede('compras.ordenes', 'anular')}>
-            <Undo2 size={15} />
+            <FaRotateLeft size={15} />
           </RowAction>
         </>
       )}

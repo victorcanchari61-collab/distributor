@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaHora, fechaCorta } from '../../lib/fechas'
-import { CalendarClock, Check, CircleCheck, CreditCard, HandCoins, Pencil, Plus, Receipt, Undo2, X } from 'lucide-react'
+import { CalendarClock, CircleCheck, CreditCard, HandCoins, Plus, Receipt } from 'lucide-react'
+import { FaCheck, FaHandHoldingDollar, FaPencil, FaRotateLeft, FaXmark } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -437,7 +438,7 @@ export function CuentasPorPagarPage() {
       empty={cargando ? 'Cargando cuentas por pagar...' : 'No hay cuentas pendientes de pago.'}
       rowActions={(row) => (
         <RowAction label={`Gestionar pagos de ${row.numero}`} tone="success" onClick={() => void abrirGestion(row)}>
-          <HandCoins size={15} />
+          <FaHandHoldingDollar size={15} />
         </RowAction>
       )}
     >
@@ -490,10 +491,10 @@ export function CuentasPorPagarPage() {
                       disabled={guardando}
                       onClick={() => void guardarFila()}
                     >
-                      <Check size={15} />
+                      <FaCheck size={15} />
                     </RowAction>
                     <RowAction label="Cancelar" tone="neutral" disabled={guardando} onClick={cancelarEdicion}>
-                      <X size={15} />
+                      <FaXmark size={15} />
                     </RowAction>
                   </>
                 ) : fila.anulado ? null : (
@@ -504,7 +505,7 @@ export function CuentasPorPagarPage() {
                       disabled={editandoClave !== null}
                       onClick={() => editarFila(fila)}
                       sinPermiso={!puede('finanzas.pagar', 'cobrar')}>
-                      <Pencil size={15} />
+                      <FaPencil size={15} />
                     </RowAction>
                     <RowAction
                       label={`Anular pago de S/ ${fila.monto.toFixed(2)}`}
@@ -512,7 +513,7 @@ export function CuentasPorPagarPage() {
                       disabled={editandoClave !== null}
                       onClick={() => void anularFila(fila)}
                       sinPermiso={!puede('finanzas.pagar', 'cobrar')}>
-                      <Undo2 size={15} />
+                      <FaRotateLeft size={15} />
                     </RowAction>
                   </>
                 )

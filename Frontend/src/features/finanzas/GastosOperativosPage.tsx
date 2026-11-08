@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import {
-  AlertTriangle,
-  CalendarClock,
-  Lock,
-  Pencil,
-  Plus,
-  Repeat,
-  Tags,
-  Trash2,
-} from 'lucide-react'
+import { AlertTriangle, CalendarClock, Lock, Plus, Repeat, Tags } from 'lucide-react'
+import { FaPencil, FaTrash } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -422,10 +414,10 @@ function RecurrentesTabla({
       rowActions={(row) => (
         <>
           <RowAction label={`Editar ${row.nombre}`} onClick={() => onAbrirEdicion(row)} sinPermiso={!puede('finanzas.operativos', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)} sinPermiso={!puede('finanzas.operativos', 'eliminar')}>
-            <Trash2 size={15} />
+            <FaTrash size={15} />
           </RowAction>
         </>
       )}
@@ -665,7 +657,7 @@ function CategoriasTabla({
             disabledReason="Es del sistema: no se edita"
             onClick={() => abrir(row)}
             sinPermiso={!puede('finanzas.operativos', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction
             label={`Eliminar ${row.nombre}`}
@@ -674,7 +666,7 @@ function CategoriasTabla({
             disabledReason={row.esSistema ? 'Es del sistema: no se elimina' : 'Ya se usó: desactívala en vez de eliminarla'}
             onClick={() => eliminar(row)}
             sinPermiso={!puede('finanzas.operativos', 'eliminar')}>
-            <Trash2 size={15} />
+            <FaTrash size={15} />
           </RowAction>
         </>
       )}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeftRight, Ban, Download, Landmark, Plus, Scale, TrendingDown, TrendingUp } from 'lucide-react'
+import { ArrowLeftRight, Download, Landmark, Plus, Scale, TrendingDown, TrendingUp } from 'lucide-react'
+import { FaBan } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -291,7 +292,7 @@ export function MovimientosDineroPage() {
       rowActions={(row) =>
         row.anulable ? (
           <RowAction label="Anular" tone="danger" onClick={() => anular(row)} sinPermiso={!puede('finanzas.movimientos', 'anular')}>
-            <Ban size={15} />
+            <FaBan size={15} />
           </RowAction>
         ) : null
       }

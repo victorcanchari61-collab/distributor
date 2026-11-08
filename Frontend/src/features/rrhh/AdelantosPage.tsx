@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Ban, CalendarClock, Eye, FileText, HandCoins, Plus, Users, Wallet } from 'lucide-react'
+import { CalendarClock, FileText, HandCoins, Plus, Users, Wallet } from 'lucide-react'
+import { FaBan, FaCalendarDays, FaEye } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -177,11 +178,11 @@ export function AdelantosPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Ver el adelanto de ${row.empleado}`} tone="view" onClick={() => setViendoId(row.id)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           {row.estado === 'PENDIENTE' && (
             <RowAction label={`Cambiar cómo se le descuenta a ${row.empleado}`} onClick={() => setCambiandoPlan(row)} sinPermiso={!puede('rrhh.adelantos', 'editar')}>
-              <CalendarClock size={15} />
+              <FaCalendarDays size={15} />
             </RowAction>
           )}
           {row.estado !== 'ANULADO' && (
@@ -193,7 +194,7 @@ export function AdelantosPage() {
               onClick={() => anular(row)}
               sinPermiso={!puede('rrhh.adelantos', 'anular')}
             >
-              <Ban size={15} />
+              <FaBan size={15} />
             </RowAction>
           )}
         </>

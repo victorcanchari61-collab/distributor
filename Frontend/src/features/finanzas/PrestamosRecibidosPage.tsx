@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Ban, HandCoins, List, PiggyBank, Plus } from 'lucide-react'
+import { HandCoins, PiggyBank, Plus } from 'lucide-react'
+import { FaBan, FaHandHoldingDollar, FaList } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -155,11 +156,11 @@ export function PrestamosRecibidosPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Pagos de ${row.acreedor}`} tone="view" onClick={() => setViendoPagosId(row.id)}>
-            <List size={15} />
+            <FaList size={15} />
           </RowAction>
           {row.estado === 'VIGENTE' && (
             <RowAction label={`Registrar pago a ${row.acreedor}`} tone="success" onClick={() => setPagando(row)} sinPermiso={!puede('finanzas.financiamiento', 'crear')}>
-              <HandCoins size={15} />
+              <FaHandHoldingDollar size={15} />
             </RowAction>
           )}
           {row.estado !== 'ANULADO' && (
@@ -171,7 +172,7 @@ export function PrestamosRecibidosPage() {
               onClick={() => anular(row)}
               sinPermiso={!puede('finanzas.financiamiento', 'anular')}
             >
-              <Ban size={15} />
+              <FaBan size={15} />
             </RowAction>
           )}
         </>
@@ -453,7 +454,7 @@ function PagosModal({
                 puedeAnular &&
                 prestamo.estado !== 'ANULADO' && (
                   <RowAction label="Anular pago" tone="danger" onClick={() => anularPago(p.id, p.monto)}>
-                    <Ban size={15} />
+                    <FaBan size={15} />
                   </RowAction>
                 )
               )}

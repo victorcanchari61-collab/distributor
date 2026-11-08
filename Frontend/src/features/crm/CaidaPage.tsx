@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileSpreadsheet, MessageCircle, PackageSearch, TrendingDown, UserSearch } from 'lucide-react'
+import { FileSpreadsheet, MessageCircle, TrendingDown } from 'lucide-react'
+import { FaMagnifyingGlass } from 'react-icons/fa6'
 import { DonutChart, HBarChart, Marco, moneda } from '../../components/charts'
 import { Alert, Button, ListPage, Modal, RowAction } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
@@ -446,10 +447,10 @@ export function CaidaPage() {
       rowActions={(r) => (
         <>
           <RowAction label="Gestionar" tone="view" onClick={() => gestionar(r.id)}>
-            <UserSearch size={16} />
+            <FaMagnifyingGlass size={16} />
           </RowAction>
           <RowAction label="Qué dejó de comprar" tone="warning" onClick={() => void verProductos(r)}>
-            <PackageSearch size={16} />
+            <FaMagnifyingGlass size={16} />
           </RowAction>
           {r.telefono && (
             <a

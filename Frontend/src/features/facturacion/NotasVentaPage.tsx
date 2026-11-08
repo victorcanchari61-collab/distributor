@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, Check, Eye, History, Pencil, Plus, Receipt, ShoppingBag, Trash2, Undo2, X } from 'lucide-react'
+import { ArrowLeft, Plus, ShoppingBag, Trash2 } from 'lucide-react'
+import { FaCheck, FaClockRotateLeft, FaEye, FaPencil, FaReceipt, FaRotateLeft, FaTrash, FaXmark } from 'react-icons/fa6'
 import { motivoNovedadApi } from '../tms/motivoNovedadApi'
 import type { MotivoNovedadOpcion } from '../tms/motivoNovedadApi'
 import {
@@ -1026,7 +1027,7 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
                     tone="danger"
                     onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
                   >
-                    <Trash2 size={15} />
+                    <FaTrash size={15} />
                   </RowAction>
                 )}
               />
@@ -1290,10 +1291,10 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
                 fila.clave === filaPago ? (
                   <>
                     <RowAction label="Guardar pago" tone="success" onClick={guardarFilaPago}>
-                      <Check size={15} />
+                      <FaCheck size={15} />
                     </RowAction>
                     <RowAction label="Cancelar" tone="danger" onClick={cerrarFilaPago}>
-                      <X size={15} />
+                      <FaXmark size={15} />
                     </RowAction>
                   </>
                 ) : (
@@ -1304,7 +1305,7 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
                       disabled={filaPago !== null}
                       onClick={() => editarFilaPago(fila.clave)}
                     >
-                      <Pencil size={15} />
+                      <FaPencil size={15} />
                     </RowAction>
                     <RowAction
                       label="Quitar pago"
@@ -1312,7 +1313,7 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
                       disabled={filaPago !== null}
                       onClick={() => quitarPago(fila.clave)}
                     >
-                      <Trash2 size={15} />
+                      <FaTrash size={15} />
                     </RowAction>
                   </>
                 )
@@ -1377,10 +1378,10 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
       rowActions={(row) => (
         <>
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conNotaCompleta(row.id, setDetalleAbierto)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           <RowAction tone="view" label={`Ver historial de ${row.numero}`} onClick={() => abrirHistorial(row)}>
-            <History size={15} />
+            <FaClockRotateLeft size={15} />
           </RowAction>
           {puede('fact.notaventa', 'exportar') && (
             <AccionPdf documento="notaventa" id={row.id} numero={row.numero} />
@@ -1392,7 +1393,7 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
             disabledReason="Está anulada"
             onClick={() => setFacturando(row)}
             sinPermiso={!((puede('fact.facturas', 'crear') || puede('fact.boletas', 'crear')))}>
-            <Receipt size={15} />
+            <FaReceipt size={15} />
           </RowAction>
           <RowAction
             label={`Editar ${row.numero}`}
@@ -1400,7 +1401,7 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
             disabledReason="Ya está anulada"
             onClick={() => void conNotaCompleta(row.id, abrirEdicion)}
             sinPermiso={!puede('fact.notaventa', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction
             label={`Anular ${row.numero}`}
@@ -1409,7 +1410,7 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
             disabledReason="Ya está anulada"
             onClick={() => anularNota(row)}
             sinPermiso={!puede('fact.notaventa', 'anular')}>
-            <Undo2 size={15} />
+            <FaRotateLeft size={15} />
           </RowAction>
         </>
       )}

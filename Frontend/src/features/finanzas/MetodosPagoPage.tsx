@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, ArrowLeftRight, Coins, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, Coins, Plus, Smartphone } from 'lucide-react'
+import { FaBan, FaCircleCheck, FaPencil } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -265,7 +266,7 @@ export function MetodosPagoPage() {
             disabledReason="Efectivo es fijo"
             onClick={() => abrirEdicion(row)}
             sinPermiso={!puede('finanzas.metodospago', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction
             label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
@@ -274,7 +275,7 @@ export function MetodosPagoPage() {
             disabledReason="Efectivo es fijo"
             onClick={() => cambiarEstado(row)}
             sinPermiso={!puede('finanzas.metodospago', 'editar')}>
-            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
           </RowAction>
         </>
       )}

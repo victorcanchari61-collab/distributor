@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, CreditCard, Landmark, Pencil, Plus, ShieldCheck, ShieldOff } from 'lucide-react'
+import { AlertTriangle, CreditCard, Landmark, Plus, ShieldOff } from 'lucide-react'
+import { FaBan, FaCircleCheck, FaPencil } from 'react-icons/fa6'
 import { Alert, Badge, Button, Input, ListPage, Modal, RowAction, StatCard, useConfirmacion, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -168,14 +169,14 @@ export function BancosPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('finanzas.bancos', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction
             label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
             tone={row.activo ? 'warning' : 'success'}
             onClick={() => cambiarEstado(row)}
             sinPermiso={!puede('finanzas.bancos', 'editar')}>
-            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
           </RowAction>
         </>
       )}

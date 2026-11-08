@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, ClipboardCheck, Eye, ListChecks, Plus, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, ClipboardCheck, ListChecks, Plus, Undo2 } from 'lucide-react'
+import { FaEye, FaRotateLeft, FaTrash } from 'react-icons/fa6'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -481,7 +482,7 @@ export function AjustesPage() {
                     tone="danger"
                     onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
                   >
-                    <Trash2 size={15} />
+                    <FaTrash size={15} />
                   </RowAction>
                 )}
               />
@@ -638,7 +639,7 @@ export function AjustesPage() {
               void ajusteApi.getById(row.id).then(setDetalleAbierto)
             }}
           >
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           {puede('inv.ajustes', 'exportar') && (
             <AccionPdf documento="ajustes" id={row.id} numero={row.numero} />
@@ -650,7 +651,7 @@ export function AjustesPage() {
             disabledReason="Ya está anulado"
             onClick={() => anular(row)}
             sinPermiso={!puede('inv.ajustes', 'anular')}>
-            <Undo2 size={15} />
+            <FaRotateLeft size={15} />
           </RowAction>
         </>
       )}

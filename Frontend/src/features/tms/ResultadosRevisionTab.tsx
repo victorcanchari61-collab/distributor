@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ClipboardCheck, Pencil, Plus, ShieldCheck, ShieldOff } from 'lucide-react'
+import { ClipboardCheck, Plus, ShieldCheck } from 'lucide-react'
+import { FaBan, FaCircleCheck, FaPencil } from 'react-icons/fa6'
 import { Alert, Badge, Button, ListPage, RowAction, StatCard, useConfirmacion, useToast, PestanasVista } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -152,14 +153,14 @@ export function ResultadosRevisionTab({ cabecera }: { cabecera: ReactNode }) {
                   setAbierto(true)
                 }}
               >
-                <Pencil size={15} />
+                <FaPencil size={15} />
               </RowAction>
               <RowAction
                 label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
                 tone={row.activo ? 'warning' : 'success'}
                 onClick={() => cambiarEstado(row)}
               >
-                {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+                {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
               </RowAction>
             </>
           ) : null

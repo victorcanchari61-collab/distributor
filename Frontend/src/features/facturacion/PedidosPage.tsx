@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, CheckCircle2, ClipboardList, Eye, History, PackageX, Pencil, Plus, ShoppingBag, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ClipboardList, PackageX, Plus } from 'lucide-react'
+import { FaBagShopping, FaClockRotateLeft, FaEye, FaPencil, FaRotateLeft, FaTrash } from 'react-icons/fa6'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -666,7 +667,7 @@ export function PedidosPage() {
                     tone="danger"
                     onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
                   >
-                    <Trash2 size={15} />
+                    <FaTrash size={15} />
                   </RowAction>
                 )}
               />
@@ -816,10 +817,10 @@ export function PedidosPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conPedidoCompleto(row.id, setDetalleAbierto)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           <RowAction tone="view" label={`Ver historial de ${row.numero}`} onClick={() => abrirHistorial(row)}>
-            <History size={15} />
+            <FaClockRotateLeft size={15} />
           </RowAction>
           {puede('fact.pedidos', 'exportar') && (
             <AccionPdf documento="pedido" id={row.id} numero={row.numero} />
@@ -830,7 +831,7 @@ export function PedidosPage() {
             disabledReason="Solo se edita un pedido pendiente"
             onClick={() => void conPedidoCompleto(row.id, abrirEdicion)}
             sinPermiso={!puede('fact.pedidos', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction
             label={`Convertir ${row.numero} en venta`}
@@ -844,7 +845,7 @@ export function PedidosPage() {
             }
             onClick={() => void conPedidoCompleto(row.id, setConfirmando)}
             sinPermiso={!puede('fact.pedidos', 'confirmar')}>
-            <ShoppingBag size={15} />
+            <FaBagShopping size={15} />
           </RowAction>
           <RowAction
             label={
@@ -866,7 +867,7 @@ export function PedidosPage() {
             disabledReason={row.estado === 'CONFIRMADO' ? 'Ya generó su venta: anula esa' : 'Ya está anulado'}
             onClick={() => anularPedido(row)}
             sinPermiso={!puede('fact.pedidos', 'anular')}>
-            <Undo2 size={15} />
+            <FaRotateLeft size={15} />
           </RowAction>
         </>
       )}

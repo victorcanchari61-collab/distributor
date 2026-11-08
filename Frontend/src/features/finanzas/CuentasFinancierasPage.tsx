@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { Building2, CheckCircle2, Coins, CreditCard, History, Landmark, Plus, Scale, ShieldCheck, ShieldOff, TrendingUp } from 'lucide-react'
+import { Building2, CheckCircle2, Coins, CreditCard, Landmark, Plus, ShieldOff, TrendingUp } from 'lucide-react'
+import { FaBan, FaBuilding, FaCircleCheck, FaClockRotateLeft, FaScaleBalanced } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -320,20 +321,20 @@ function CuentasBancariasTab() {
       rowActions={(row) => (
         <>
           <RowAction label={`Movimientos de ${row.nombre}`} tone="view" onClick={() => setMovimientosDe(row)}>
-            <History size={15} />
+            <FaClockRotateLeft size={15} />
           </RowAction>
           <RowAction label={`Conciliar ${row.nombre}`} onClick={() => setConciliarDe(row)} sinPermiso={!puede('finanzas.bancos', 'crear')}>
-            <Scale size={15} />
+            <FaScaleBalanced size={15} />
           </RowAction>
           <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('finanzas.bancos', 'editar')}>
-            <Building2 size={15} />
+            <FaBuilding size={15} />
           </RowAction>
           <RowAction
             label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
             tone={row.activo ? 'warning' : 'success'}
             onClick={() => cambiarEstado(row)}
             sinPermiso={!puede('finanzas.bancos', 'editar')}>
-            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
           </RowAction>
         </>
       )}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
-import { BadgeCheck, FileText, IdCard, Pencil, Plus, ShieldCheck, ShieldOff, Trash2, UserRound, Users } from 'lucide-react'
+import { BadgeCheck, FileText, IdCard, Plus, ShieldOff, UserRound, Users } from 'lucide-react'
+import { FaBan, FaCircleCheck, FaPencil, FaTrash } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -324,14 +325,14 @@ export function EmpleadosPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Editar a ${row.nombreCompleto}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('rrhh.empleados', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction
             label={`${row.activo ? 'Desactivar' : 'Activar'} a ${row.nombreCompleto}`}
             tone={row.activo ? 'warning' : 'success'}
             onClick={() => cambiarEstado(row)}
             sinPermiso={!puede('rrhh.empleados', 'editar')}>
-            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
           </RowAction>
           <RowAction
             label={`Eliminar a ${row.nombreCompleto}`}
@@ -341,7 +342,7 @@ export function EmpleadosPage() {
             disabledReason="Tiene un usuario enlazado"
             onClick={() => eliminar(row)}
             sinPermiso={!puede('rrhh.empleados', 'eliminar')}>
-            <Trash2 size={15} />
+            <FaTrash size={15} />
           </RowAction>
         </>
       )}

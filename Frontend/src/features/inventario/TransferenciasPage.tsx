@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, ArrowRight, Eye, Plus, Trash2, Truck, Undo2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Plus, Truck, Undo2 } from 'lucide-react'
+import { FaEye, FaRotateLeft, FaTrash } from 'react-icons/fa6'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -391,7 +392,7 @@ export function TransferenciasPage() {
                     tone="danger"
                     onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
                   >
-                    <Trash2 size={15} />
+                    <FaTrash size={15} />
                   </RowAction>
                 )}
               />
@@ -518,7 +519,7 @@ export function TransferenciasPage() {
               void transferenciaApi.getById(row.id).then(setDetalleAbierto)
             }}
           >
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           {puede('inv.transferencias', 'exportar') && (
             <AccionPdf documento="transferencias" id={row.id} numero={row.numero} />
@@ -530,7 +531,7 @@ export function TransferenciasPage() {
             disabledReason="Ya está anulada"
             onClick={() => anular(row)}
             sinPermiso={!puede('inv.transferencias', 'anular')}>
-            <Undo2 size={15} />
+            <FaRotateLeft size={15} />
           </RowAction>
         </>
       )}

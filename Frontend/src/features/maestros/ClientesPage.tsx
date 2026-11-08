@@ -1,17 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
-import {
-  Award,
-  Contact,
-  MapPin,
-  Pencil,
-  Plus,
-  Route,
-  ShieldCheck,
-  ShieldOff,
-  Trash2,
-  Upload,
-} from 'lucide-react'
+import { Award, Contact, MapPin, Plus, Route, ShieldOff, Upload } from 'lucide-react'
+import { FaBan, FaCircleCheck, FaPencil, FaTrash } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -576,17 +566,17 @@ export function ClientesPage() {
         rowActions={(row) => (
           <>
             <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('maestros.clientes', 'editar')}>
-              <Pencil size={15} />
+              <FaPencil size={15} />
             </RowAction>
             <RowAction
               label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
               tone={row.activo ? 'warning' : 'success'}
               onClick={() => cambiarEstado(row)}
               sinPermiso={!puede('maestros.clientes', 'editar')}>
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+              {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
             </RowAction>
             <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)} sinPermiso={!puede('maestros.clientes', 'eliminar')}>
-              <Trash2 size={15} />
+              <FaTrash size={15} />
             </RowAction>
           </>
         )}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Check, CheckCircle2, Pencil, Plus, Trash2, Wallet, X } from 'lucide-react'
+import { CheckCircle2, Plus, Wallet } from 'lucide-react'
+import { FaCheck, FaPencil, FaTrash, FaXmark } from 'react-icons/fa6'
 import { Alert, Badge, Button, CifrasPago, Desplegable, Input, RowAction, SysDataTable } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { etiquetaMetodo } from '../finanzas/finanzasApi'
@@ -314,10 +315,10 @@ export function PagoEntrega({ metodos, metodosListos, filas, total, onFilas }: P
             !fila.guardado ? (
               <>
                 <RowAction label="Guardar pago" tone="success" onClick={() => guardar(fila)}>
-                  <Check size={15} />
+                  <FaCheck size={15} />
                 </RowAction>
                 <RowAction label="Cancelar" tone="neutral" onClick={() => cancelar(fila)}>
-                  <X size={15} />
+                  <FaXmark size={15} />
                 </RowAction>
               </>
             ) : (
@@ -328,7 +329,7 @@ export function PagoEntrega({ metodos, metodosListos, filas, total, onFilas }: P
                   disabled={editando !== undefined}
                   onClick={() => editar(fila)}
                 >
-                  <Pencil size={15} />
+                  <FaPencil size={15} />
                 </RowAction>
                 <RowAction
                   label={`Quitar pago de ${soles(monto(fila))}`}
@@ -336,7 +337,7 @@ export function PagoEntrega({ metodos, metodosListos, filas, total, onFilas }: P
                   disabled={editando !== undefined}
                   onClick={() => quitar(fila)}
                 >
-                  <Trash2 size={15} />
+                  <FaTrash size={15} />
                 </RowAction>
               </>
             )

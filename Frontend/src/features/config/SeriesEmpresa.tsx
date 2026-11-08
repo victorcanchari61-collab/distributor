@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Plus, Save, Sparkles, Trash2 } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
+import { FaFloppyDisk, FaTrash } from 'react-icons/fa6'
 import { Alert, Badge, Button, Input, RowAction, Select, useConfirmacion, useToast } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { empresaApi } from './empresaApi'
@@ -229,7 +230,7 @@ export function SeriesEmpresa({ empresaId, puedeEditar }: Props) {
                           disabledReason="No hay cambios que guardar"
                           onClick={() => void guardarFila(s)}
                         >
-                          <Save size={15} />
+                          <FaFloppyDisk size={15} />
                         </RowAction>
                         <RowAction
                           label={`Eliminar ${s.serie}`}
@@ -238,7 +239,7 @@ export function SeriesEmpresa({ empresaId, puedeEditar }: Props) {
                           disabledReason="Ya emitió comprobantes: desactívala en vez de eliminarla"
                           onClick={() => eliminar(s)}
                         >
-                          <Trash2 size={15} />
+                          <FaTrash size={15} />
                         </RowAction>
                       </div>
                     </td>

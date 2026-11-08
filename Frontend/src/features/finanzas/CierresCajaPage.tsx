@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Ban, ClipboardCheck, Eye, Smartphone, UserX } from 'lucide-react'
+import { AlertTriangle, ClipboardCheck, Smartphone, UserX } from 'lucide-react'
+import { FaBan, FaEye } from 'react-icons/fa6'
 import { Alert, Badge, ListPage, RowAction, StatCard, useConfirmacion, useToast } from '../../components/ui'
 import type { BadgeTone, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -247,7 +248,7 @@ export function CierresCajaPage() {
       rowActions={(row) => (
         <>
           <RowAction label="Ver el detalle del cierre" tone="view" onClick={() => setAbierto(row)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           {!row.anulado && (
             <RowAction
@@ -258,7 +259,7 @@ export function CierresCajaPage() {
               onClick={() => anular(row)}
               sinPermiso={!puede('finanzas.cierres', 'anular')}
             >
-              <Ban size={15} />
+              <FaBan size={15} />
             </RowAction>
           )}
         </>

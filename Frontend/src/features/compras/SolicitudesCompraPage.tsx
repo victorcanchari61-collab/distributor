@@ -1,19 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  AlertTriangle,
-  ArrowLeft,
-  CheckCircle2,
-  ClipboardPen,
-  Eye,
-  Pencil,
-  Send,
-  ShoppingCart,
-  Trash2,
-  TrendingDown,
-  Undo2,
-  XCircle,
-} from 'lucide-react'
+import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardPen, Pencil, Send, TrendingDown } from 'lucide-react'
+import { FaCartShopping, FaCircleXmark, FaEye, FaPaperPlane, FaPencil, FaRotateLeft, FaTrash } from 'react-icons/fa6'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
 import {
@@ -517,7 +505,7 @@ export function SolicitudesCompraPage() {
                     tone="danger"
                     onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
                   >
-                    <Trash2 size={15} />
+                    <FaTrash size={15} />
                   </RowAction>
                 )}
               />
@@ -664,7 +652,7 @@ export function SolicitudesCompraPage() {
               tone="view"
               onClick={() => void conSolicitudCompleta(row.id, setDetalleAbierto)}
             >
-              <Eye size={15} />
+              <FaEye size={15} />
             </RowAction>
             {(row.estado === 'BORRADOR' || row.estado === 'PENDIENTE') && (
               <RowAction
@@ -672,18 +660,18 @@ export function SolicitudesCompraPage() {
                 onClick={() => void conSolicitudCompleta(row.id, abrirEdicion)}
                 sinPermiso={!puede('compras.solicitudes', 'editar')}
               >
-                <Pencil size={15} />
+                <FaPencil size={15} />
               </RowAction>
             )}
             {row.estado === 'BORRADOR' && (
               <RowAction label={`Enviar ${row.numero} al administrador`} tone="success" onClick={() => enviar(row)} sinPermiso={!puede('compras.solicitudes', 'crear')}>
-                <Send size={15} />
+                <FaPaperPlane size={15} />
               </RowAction>
             )}
             {(row.estado === 'PENDIENTE' || row.estado === 'ATENDIDA') &&
               (
                 <RowAction label={`Hacer orden de compra con ${row.numero}`} tone="success" onClick={() => hacerOrden(row)} sinPermiso={!(puede('compras.solicitudes', 'confirmar') && puede('compras.ordenes', 'crear'))}>
-                  <ShoppingCart size={15} />
+                  <FaCartShopping size={15} />
                 </RowAction>
               )}
             {row.estado === 'PENDIENTE' && (
@@ -696,12 +684,12 @@ export function SolicitudesCompraPage() {
                 }}
                 sinPermiso={!puede('compras.solicitudes', 'confirmar')}
               >
-                <XCircle size={15} />
+                <FaCircleXmark size={15} />
               </RowAction>
             )}
             {(row.estado === 'BORRADOR' || row.estado === 'PENDIENTE') && (
               <RowAction label={`Anular ${row.numero}`} tone="danger" onClick={() => anular(row)} sinPermiso={!puede('compras.solicitudes', 'anular')}>
-                <Undo2 size={15} />
+                <FaRotateLeft size={15} />
               </RowAction>
             )}
           </>

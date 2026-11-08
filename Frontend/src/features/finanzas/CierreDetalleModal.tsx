@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Banknote, CheckCircle2, Smartphone, Undo2, UserX, Wallet, XCircle } from 'lucide-react'
+import { Banknote, CheckCircle2, Smartphone, UserX, Wallet, XCircle } from 'lucide-react'
+import { FaCircleCheck, FaCircleXmark, FaRotateLeft } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -389,15 +390,15 @@ export function CierreDetalleModal({
                   !puedeConfirmar ? null : row.estado === 'PENDIENTE' ? (
                     <>
                       <RowAction label="Verificar: apareció en el banco" tone="success" onClick={() => void verificar(row)}>
-                        <CheckCircle2 size={15} />
+                        <FaCircleCheck size={15} />
                       </RowAction>
                       <RowAction label="Rechazar: no apareció" tone="danger" onClick={() => setRechazando(row)}>
-                        <XCircle size={15} />
+                        <FaCircleXmark size={15} />
                       </RowAction>
                     </>
                   ) : row.estado === 'VERIFICADO' ? (
                     <RowAction label="Quitar la verificación" tone="neutral" onClick={() => quitarVerificacion(row)}>
-                      <Undo2 size={15} />
+                      <FaRotateLeft size={15} />
                     </RowAction>
                   ) : null
                 }

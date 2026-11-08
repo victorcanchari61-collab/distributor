@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, Building2, Check, Eye, PackageCheck, Pencil, Plus, ShoppingBag, Trash2, Undo2, X } from 'lucide-react'
+import { ArrowLeft, Building2, PackageCheck, Plus, ShoppingBag } from 'lucide-react'
+import { FaBoxOpen, FaCheck, FaEye, FaPencil, FaRotateLeft, FaTrash, FaXmark } from 'react-icons/fa6'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -783,7 +784,7 @@ export function MisComprasPage() {
                     tone="danger"
                     onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
                   >
-                    <Trash2 size={15} />
+                    <FaTrash size={15} />
                   </RowAction>
                 )}
               />
@@ -958,10 +959,10 @@ export function MisComprasPage() {
                 fila.clave === filaPago ? (
                   <>
                     <RowAction label="Guardar pago" tone="success" onClick={guardarFilaPago}>
-                      <Check size={15} />
+                      <FaCheck size={15} />
                     </RowAction>
                     <RowAction label="Cancelar" tone="danger" onClick={cerrarFilaPago}>
-                      <X size={15} />
+                      <FaXmark size={15} />
                     </RowAction>
                   </>
                 ) : (
@@ -972,7 +973,7 @@ export function MisComprasPage() {
                       disabled={filaPago !== null}
                       onClick={() => editarFilaPago(fila.clave)}
                     >
-                      <Pencil size={15} />
+                      <FaPencil size={15} />
                     </RowAction>
                     <RowAction
                       label="Quitar pago"
@@ -980,7 +981,7 @@ export function MisComprasPage() {
                       disabled={filaPago !== null}
                       onClick={() => quitarPago(fila.clave)}
                     >
-                      <Trash2 size={15} />
+                      <FaTrash size={15} />
                     </RowAction>
                   </>
                 )
@@ -1044,7 +1045,7 @@ export function MisComprasPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conCompraCompleta(row.id, setDetalleAbierto)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           {puede('compras.compras', 'exportar') && (
             <AccionPdf documento="compra" id={row.id} numero={row.numero} />
@@ -1055,7 +1056,7 @@ export function MisComprasPage() {
             disabledReason={row.estado === 'ANULADA' ? 'Está anulada' : 'Ya tiene mercadería recibida'}
             onClick={() => void conCompraCompleta(row.id, abrirEdicion)}
             sinPermiso={!puede('compras.compras', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           {/*
             Recibir crea una recepcion, asi que el permiso es el de esa pantalla
@@ -1069,7 +1070,7 @@ export function MisComprasPage() {
             disabledReason={row.estado === 'ANULADA' ? 'Está anulada' : 'Ya se recibió completa'}
             onClick={() => void conCompraCompleta(row.id, setRecepcionAbierta)}
             sinPermiso={!puede('compras.recepciones', 'crear')}>
-            <PackageCheck size={15} />
+            <FaBoxOpen size={15} />
           </RowAction>
           <RowAction
             label={`Anular ${row.numero}`}
@@ -1078,7 +1079,7 @@ export function MisComprasPage() {
             disabledReason={row.estado === 'ANULADA' ? 'Ya está anulada' : 'Tiene recepciones: anula esas'}
             onClick={() => anularCompra(row)}
             sinPermiso={!puede('compras.compras', 'anular')}>
-            <Undo2 size={15} />
+            <FaRotateLeft size={15} />
           </RowAction>
         </>
       )}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Plus, ShieldCheck, ShieldOff, UserCheck, UserCog, UserPlus } from 'lucide-react'
+import { Plus, UserCheck, UserCog, UserPlus } from 'lucide-react'
+import { FaBan, FaCircleCheck, FaPencil } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -401,14 +402,14 @@ export function UsuariosPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('config.usuarios', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction
             label={`${row.activo ? 'Deshabilitar' : 'Habilitar'} ${row.nombre}`}
             tone={row.activo ? 'warning' : 'success'}
             onClick={() => void alternarEstado(row)}
             sinPermiso={!puede('config.usuarios', 'editar')}>
-            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
           </RowAction>
         </>
       )}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarClock, ClipboardList, Eye, Handshake, Pencil, Phone, Repeat } from 'lucide-react'
+import { CalendarClock, ClipboardList, Handshake, Phone } from 'lucide-react'
+import { FaEye, FaPencil, FaRepeat } from 'react-icons/fa6'
 import { Badge, Button, Input, Modal, RowAction, SysDataTable, useToast } from '../../../components/ui'
 import type { DataTableColumn } from '../../../components/ui'
 import { ApiError } from '../../../lib/apiClient'
@@ -340,16 +341,16 @@ export function TabSeguimiento({
           actions={(g) => (
             <>
               <RowAction label="Ver detalle" tone="view" onClick={() => setDetalle(g)}>
-                <Eye size={16} />
+                <FaEye size={16} />
               </RowAction>
               {puedeEditar && (
                 <RowAction label="Editar" tone="edit" onClick={() => abrirEditar(g)}>
-                  <Pencil size={16} />
+                  <FaPencil size={16} />
                 </RowAction>
               )}
               {puedeEditar && g.seguimientoEstado === 'PROGRAMADO' && (
                 <RowAction label="Reprogramar" tone="warning" onClick={() => abrirReprogramar(g)}>
-                  <Repeat size={16} />
+                  <FaRepeat size={16} />
                 </RowAction>
               )}
             </>

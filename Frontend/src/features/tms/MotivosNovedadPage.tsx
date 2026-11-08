@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ClipboardCheck, Pencil, Plus, ShieldCheck, ShieldOff, Tags } from 'lucide-react'
+import { ClipboardCheck, Plus, ShieldCheck, Tags } from 'lucide-react'
+import { FaBan, FaCircleCheck, FaPencil } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -210,14 +211,14 @@ export function MotivosNovedadPage() {
         rowActions={(row) => (
           <>
             <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('tms.motivos', 'editar')}>
-              <Pencil size={15} />
+              <FaPencil size={15} />
             </RowAction>
             <RowAction
               label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
               tone={row.activo ? 'warning' : 'success'}
               onClick={() => cambiarEstado(row)}
               sinPermiso={!puede('tms.motivos', 'editar')}>
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+              {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
             </RowAction>
           </>
         )}

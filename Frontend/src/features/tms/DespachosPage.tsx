@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Eye, Package, Pencil, Plus, Truck, Undo2 } from 'lucide-react'
+import { ArrowLeft, Package, Plus, Truck } from 'lucide-react'
+import { FaEye, FaPencil, FaRotateLeft } from 'react-icons/fa6'
 import {
   AccionPdf,
   Alert,
@@ -751,7 +752,7 @@ export function DespachosPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conDespachoCompleto(row.id, setDetalle)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           {/* Los papeles de la carga: dos copias por hoja, para el repartidor. */}
           {puede('tms.despachos', 'exportar') && (
@@ -771,7 +772,7 @@ export function DespachosPage() {
             disabledReason="Está anulado"
             onClick={() => void conDespachoCompleto(row.id, abrirEdicion)}
             sinPermiso={!puede('tms.despachos', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction
             label={`Anular ${row.numero}`}
@@ -782,7 +783,7 @@ export function DespachosPage() {
             }
             onClick={() => anular(row)}
             sinPermiso={!puede('tms.despachos', 'anular')}>
-            <Undo2 size={15} />
+            <FaRotateLeft size={15} />
           </RowAction>
         </>
       )}

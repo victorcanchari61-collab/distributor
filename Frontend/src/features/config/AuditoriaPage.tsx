@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta, fechaHora } from '../../lib/fechas'
-import { Eye, RefreshCw, ScrollText, Trash2 } from 'lucide-react'
+import { RefreshCw, ScrollText, Trash2 } from 'lucide-react'
+import { FaEye } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -279,7 +280,7 @@ export function AuditoriaPage() {
       empty={cargando ? 'Cargando auditoría...' : 'No hay cambios registrados con esos filtros.'}
       rowActions={(row) => (
         <RowAction label={`Ver cambios de ${row.entidad} #${row.entidadId}`} tone="view" onClick={() => void verCambios(row.id)}>
-          <Eye size={15} />
+          <FaEye size={15} />
         </RowAction>
       )}
     >

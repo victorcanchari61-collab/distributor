@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Ban, Calculator, Coins, Eye, FileText, HandCoins, History, Pencil, RefreshCw, Wallet } from 'lucide-react'
+import { Ban, Calculator, Coins, FileText, HandCoins, History, RefreshCw, Wallet } from 'lucide-react'
+import { FaEye, FaFileLines, FaPencil } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -200,7 +201,7 @@ export function PlanillaPage() {
                 setPestana('semana')
               }}
             >
-              <Eye size={15} />
+              <FaEye size={15} />
             </RowAction>
           )}
         />
@@ -432,12 +433,12 @@ export function PlanillaPage() {
                 }
                 sinPermiso={!puede('rrhh.planilla', 'exportar')}
               >
-                <FileText size={15} />
+                <FaFileLines size={15} />
               </RowAction>
             )}
             {borrador && (
               <RowAction label={`Ajustar ${row.empleado}`} onClick={() => setAjustando(row)} sinPermiso={!puede('rrhh.planilla', 'editar')}>
-                <Pencil size={15} />
+                <FaPencil size={15} />
               </RowAction>
             )}
           </>

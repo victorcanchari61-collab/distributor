@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Eye, Pencil, Plus, Route, ShieldCheck, ShieldOff } from 'lucide-react'
+import { Plus, Route, ShieldCheck } from 'lucide-react'
+import { FaBan, FaCircleCheck, FaEye, FaPencil } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -173,17 +174,17 @@ export function RutasPage() {
         <>
           {/* Sin permiso: quien llega a la pantalla ya puede leer la ficha. */}
           <RowAction tone="view" label={`Ver ${row.nombre}`} onClick={() => setDetalle(row)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('tms.rutas', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction
             label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
             tone={row.activo ? 'warning' : 'success'}
             onClick={() => cambiarEstado(row)}
             sinPermiso={!puede('tms.rutas', 'editar')}>
-            {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+            {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
           </RowAction>
         </>
       )}

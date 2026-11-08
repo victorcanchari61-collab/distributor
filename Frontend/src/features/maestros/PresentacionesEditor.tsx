@@ -1,4 +1,5 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus } from 'lucide-react'
+import { FaTrash } from 'react-icons/fa6'
 import { idUnico } from '../../lib/ids'
 import { Badge, Button, Checkbox, Desplegable, Input, RowAction, SysDataTable } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
@@ -237,7 +238,7 @@ export function PresentacionesEditor({
               disabled={disabled}
               onClick={() => quitar(fila.clave)}
             >
-              <Trash2 size={15} />
+              <FaTrash size={15} />
             </RowAction>
           )
         }

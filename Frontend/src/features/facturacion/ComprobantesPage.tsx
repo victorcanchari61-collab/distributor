@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { MessageCircle, Plus, CircleCheck, CircleX, Clock, FileArchive, FileCode2, FileMinus, FileX, FilePen, FilePlus, Eye, Receipt, RefreshCw, Ticket } from 'lucide-react'
+import { Plus, CircleCheck, CircleX, Clock, FileMinus, FilePlus, Receipt, Ticket } from 'lucide-react'
+import { FaEye, FaFileCircleXmark, FaFileCode, FaFilePen, FaFileZipper, FaRotate, FaWhatsapp } from 'react-icons/fa6'
 import type { LucideIcon } from 'lucide-react'
 import { AccionPdf, Alert, Badge, Button, ListPage, Modal, RowAction, StatCard, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
@@ -294,40 +295,40 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
       rowActions={(c) => (
         <>
           <RowAction label={`Ver ${c.numeroCompleto}`} tone="view" onClick={() => setDetalle(c)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           {puede(submodulo, 'exportar') && <AccionPdf documento="comprobante" id={c.id} numero={c.numeroCompleto} />}
           <RowAction label="Descargar XML" onClick={() => void descargar('xml', c)} sinPermiso={!puede(submodulo, 'exportar')}>
-            <FileCode2 size={15} />
+            <FaFileCode size={15} />
           </RowAction>
           {c.tieneCdr && (
             <RowAction label="Descargar CDR" onClick={() => void descargar('cdr', c)} sinPermiso={!puede(submodulo, 'exportar')}>
-              <FileArchive size={15} />
+              <FaFileZipper size={15} />
             </RowAction>
           )}
           {c.estado === 'ACEPTADO' && (
             <RowAction label="Enviar documento por WhatsApp" tone="success" onClick={() => setEnviando(c)} sinPermiso={!puede(submodulo, 'exportar')}>
-              <MessageCircle size={15} />
+              <FaWhatsapp size={15} />
             </RowAction>
           )}
           {(c.estado === 'GENERADO' || c.estado === 'ERROR') && (
             <RowAction label="Reenviar a SUNAT" tone="warning" onClick={() => void reenviar(c)} sinPermiso={!puede(submodulo, 'crear')}>
-              <RefreshCw size={15} />
+              <FaRotate size={15} />
             </RowAction>
           )}
           {puedeDarDeBaja(c) && (
             <RowAction label="Dar de baja" tone="danger" onClick={() => setDandoDeBaja(c)} sinPermiso={!puede(submodulo, 'anular')}>
-              <FileX size={15} />
+              <FaFileCircleXmark size={15} />
             </RowAction>
           )}
           {c.bajaEstado === 'PENDIENTE' && (
             <RowAction label="Consultar la baja en SUNAT" tone="warning" onClick={() => void consultarBaja(c)} sinPermiso={!puede(submodulo, 'anular')}>
-              <RefreshCw size={15} />
+              <FaRotate size={15} />
             </RowAction>
           )}
           {!esNota && notasPermitidas.length > 0 && c.estado === 'ACEPTADO' && (
             <RowAction label="Emitir nota de crédito o débito" tone="edit" onClick={() => setCorrigiendo(c)}>
-              <FilePen size={15} />
+              <FaFilePen size={15} />
             </RowAction>
           )}
         </>

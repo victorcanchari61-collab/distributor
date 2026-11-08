@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Plus } from 'lucide-react'
+import { FaPencil, FaTrash } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -223,7 +224,7 @@ export function MotivosTabla({
         row.delSistema ? null : (
         <>
           <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('inv.ajustes', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           <RowAction
             label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
@@ -239,7 +240,7 @@ export function MotivosTabla({
             asi coincide con lo que exige el endpoint.
           */}
           <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)} sinPermiso={!puede('inv.ajustes', 'editar')}>
-            <Trash2 size={15} />
+            <FaTrash size={15} />
           </RowAction>
         </>
         )

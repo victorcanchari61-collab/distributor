@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  Building2,
-  DoorOpen,
-  ListPlus,
-  Pencil,
-  Plus,
-  Trash2,
-  X,
-} from 'lucide-react'
+import { Building2, DoorOpen, ListPlus, Plus } from 'lucide-react'
+import { FaPencil, FaPlus, FaTrash, FaXmark } from 'react-icons/fa6'
 import type { LucideIcon } from 'lucide-react'
 import { Alert, Badge, BuscadorModal, Button, Checkbox, Desplegable, Input, Modal, RowAction, useConfirmacion, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
@@ -353,7 +346,7 @@ export function UbicacionesModal({
                         <span className="flex shrink-0 items-center">
                           {puedeCrear && l.activo && l.tipo === 'PISO' && (
                             <RowAction label={`Agregar adentro de ${l.ruta}`} tone="success" onClick={() => nuevo(l)}>
-                              <Plus size={14} />
+                              <FaPlus size={14} />
                             </RowAction>
                           )}
                           {puedeCrear && l.activo && l.tipo === 'PISO' && (
@@ -363,12 +356,12 @@ export function UbicacionesModal({
                           )}
                           {puedeEditar && (
                             <RowAction label={`Editar ${l.ruta}`} onClick={() => editar(l)}>
-                              <Pencil size={14} />
+                              <FaPencil size={14} />
                             </RowAction>
                           )}
                           {puedeEliminar && (
                             <RowAction label={`Eliminar ${l.ruta}`} tone="danger" onClick={() => eliminar(l)}>
-                              <Trash2 size={14} />
+                              <FaTrash size={14} />
                             </RowAction>
                           )}
                         </span>
@@ -421,7 +414,7 @@ export function UbicacionesModal({
                       </span>
                       {puedeEditar && (
                         <RowAction label={`Quitar ${p.producto}`} tone="danger" onClick={() => void quitar(p)}>
-                          <X size={14} />
+                          <FaXmark size={14} />
                         </RowAction>
                       )}
                     </li>

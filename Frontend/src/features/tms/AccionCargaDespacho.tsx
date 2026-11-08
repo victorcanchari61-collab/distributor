@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PackageCheck } from 'lucide-react'
+import { FaBoxOpen } from 'react-icons/fa6'
 import { Alert, Button, Checkbox, Desplegable, Modal, RowAction, VisorPdf } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { despachoApi } from './despachoApi'
@@ -56,7 +56,7 @@ export function AccionCargaDespacho({ id, numero }: Props) {
   return (
     <>
       <RowAction label={`Reporte de carga de ${numero}`} tone="neutral" onClick={() => setPaso('filtros')}>
-        <PackageCheck size={15} />
+        <FaBoxOpen size={15} />
       </RowAction>
 
       {paso === 'filtros' && (

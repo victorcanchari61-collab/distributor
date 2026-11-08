@@ -68,7 +68,7 @@ export function RowAction({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'inline-flex items-center justify-center rounded-xl px-2.5 py-1 transition-all',
+        'inline-flex items-center justify-center rounded-xl px-3 py-1 transition-all [&_svg]:size-4 [&_svg]:stroke-[2.5]',
         disabled
           ? 'cursor-not-allowed bg-slate-200 text-slate-400'
           : cn(

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta, fechaHora } from '../../lib/fechas'
-import { ArrowLeft, Eye, HandCoins, Plus, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, HandCoins, Plus, Undo2 } from 'lucide-react'
+import { FaEye, FaRotateLeft, FaTrash } from 'react-icons/fa6'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -608,7 +609,7 @@ export function PrestamosPage() {
                     tone="danger"
                     onClick={() => setFilas((f) => f.filter((x) => x.id !== fila.id))}
                   >
-                    <Trash2 size={15} />
+                    <FaTrash size={15} />
                   </RowAction>
                 )}
               />
@@ -713,7 +714,7 @@ export function PrestamosPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conPrestamoCompleto(row.id, setDetalleAbierto)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           {puede('inv.prestamos', 'exportar') && (
             <AccionPdf documento="prestamos" id={row.id} numero={row.numero} />
@@ -725,7 +726,7 @@ export function PrestamosPage() {
             disabledReason="Ya fue devuelto"
             onClick={() => void conPrestamoCompleto(row.id, abrirDevolucion)}
             sinPermiso={!puede('inv.prestamos', 'confirmar')}>
-            <Undo2 size={15} />
+            <FaRotateLeft size={15} />
           </RowAction>
           <RowAction
             label={`Anular ${row.numero}`}
@@ -740,7 +741,7 @@ export function PrestamosPage() {
             }
             onClick={() => anularPrestamo(row)}
             sinPermiso={!puede('inv.prestamos', 'anular')}>
-            <Undo2 size={15} />
+            <FaRotateLeft size={15} />
           </RowAction>
         </>
       )}
@@ -911,7 +912,7 @@ export function PrestamosPage() {
                         onClick={() => f.devolucion && anularDevolucion(f.devolucion)}
                         sinPermiso={!puede('inv.prestamos', 'anular')}
                       >
-                        <Undo2 size={15} />
+                        <FaRotateLeft size={15} />
                       </RowAction>
                     )}
                   </>

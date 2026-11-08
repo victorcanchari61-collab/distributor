@@ -1,22 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import {
-  CalendarCheck,
-  CalendarDays,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Flag,
-  MessageSquare,
-  FileText,
-  Pencil,
-  Plus,
-  Table2,
-  Undo2,
-  UserCheck,
-  UserX,
-} from 'lucide-react'
+import { CalendarCheck, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Flag, MessageSquare, FileText, Plus, Table2, UserCheck, UserX } from 'lucide-react'
+import { FaPencil, FaRotateLeft } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -738,12 +723,12 @@ export function AsistenciaPage() {
             <>
               {!row.anulado && (
                 <RowAction label={`Editar la marca de ${row.empleado}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('rrhh.asistencia', 'editar')}>
-                  <Pencil size={15} />
+                  <FaPencil size={15} />
                 </RowAction>
               )}
               {!row.anulado && (
                 <RowAction label={`Anular la marca de ${row.empleado}`} tone="danger" onClick={() => anular(row)} sinPermiso={!puede('rrhh.asistencia', 'anular')}>
-                  <Undo2 size={15} />
+                  <FaRotateLeft size={15} />
                 </RowAction>
               )}
             </>

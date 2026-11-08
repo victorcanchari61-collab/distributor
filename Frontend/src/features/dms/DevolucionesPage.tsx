@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { desplazarDias, fechaCorta, hoyLocal } from '../../lib/fechas'
-import { Check, Eye, Undo2, X } from 'lucide-react'
+import { Check, Undo2 } from 'lucide-react'
+import { FaCheck, FaEye, FaXmark } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -218,7 +219,7 @@ export function DevolucionesPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => setDetalle(row)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
 
           <RowAction
@@ -228,7 +229,7 @@ export function DevolucionesPage() {
             disabledReason={row.estado === 'APROBADA' ? 'Ya fue aprobada' : 'Ya fue rechazada'}
             onClick={() => aprobar(row)}
             sinPermiso={!puede('dms.devoluciones', 'confirmar')}>
-            <Check size={15} />
+            <FaCheck size={15} />
           </RowAction>
 
           <RowAction
@@ -241,7 +242,7 @@ export function DevolucionesPage() {
               setMotivoRechazo('')
             }}
             sinPermiso={!puede('dms.devoluciones', 'confirmar')}>
-            <X size={15} />
+            <FaXmark size={15} />
           </RowAction>
         </>
       )}

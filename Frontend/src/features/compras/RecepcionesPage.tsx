@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
-import { Eye, PackageCheck, Plus, Undo2 } from 'lucide-react'
+import { PackageCheck, Plus, Undo2 } from 'lucide-react'
+import { FaEye, FaRotateLeft } from 'react-icons/fa6'
 import {
   AccionPdf,
   Alert,
@@ -245,7 +246,7 @@ export function RecepcionesPage() {
               void recepcionApi.getById(row.id).then(setDetalleAbierto)
             }}
           >
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           {puede('compras.recepciones', 'exportar') && (
             <AccionPdf documento="recepciones" id={row.id} numero={row.numero} />
@@ -257,7 +258,7 @@ export function RecepcionesPage() {
             disabledReason="Ya está anulada"
             onClick={() => anular(row)}
             sinPermiso={!puede('compras.recepciones', 'anular')}>
-            <Undo2 size={15} />
+            <FaRotateLeft size={15} />
           </RowAction>
         </>
       )}

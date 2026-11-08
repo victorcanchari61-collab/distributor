@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { idUnico } from '../../lib/ids'
 import { Banknote, Check, Pencil, Plus, Star, Tag, Trash2 } from 'lucide-react'
+import { FaPencil, FaPlus, FaTrash } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -854,7 +855,7 @@ export function ListasPreciosPage() {
               setPrecioAbierto(true)
             }}
             sinPermiso={!puede('fact.precios', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
             <RowAction
             label={`Eliminar precio de ${row.producto}`}
@@ -874,7 +875,7 @@ export function ListasPreciosPage() {
               })
             }
             sinPermiso={!puede('fact.precios', 'eliminar')}>
-            <Trash2 size={15} />
+            <FaTrash size={15} />
           </RowAction>
           </>
         )}
@@ -985,7 +986,7 @@ export function ListasPreciosPage() {
                       label={`Agregar un tramo de ${presentacionDe(fila.presentacionId)?.nombre}`}
                       onClick={() => agregarTramo(fila)}
                     >
-                      <Plus size={15} />
+                      <FaPlus size={15} />
                     </RowAction>
                     {/* El renglon de "desde 1" es el precio normal: no se quita. */}
                     {filasPrecio.filter((f) => f.presentacionId === fila.presentacionId).length >
@@ -995,7 +996,7 @@ export function ListasPreciosPage() {
                         tone="danger"
                         onClick={() => quitarTramo(fila.clave)}
                       >
-                        <Trash2 size={15} />
+                        <FaTrash size={15} />
                       </RowAction>
                     )}
                   </>

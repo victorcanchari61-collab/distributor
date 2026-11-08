@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { LayoutList, MapPin, Pencil, Plus, ShieldCheck, ShieldOff, Star, Warehouse } from 'lucide-react'
+import { MapPin, Plus, Star, Warehouse } from 'lucide-react'
+import { FaBan, FaCircleCheck, FaList, FaPencil } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -343,10 +344,10 @@ export function AlmacenesPage() {
       rowActions={(row) => (
         <>
           <RowAction label={`Ubicaciones de ${row.nombre}`} tone="view" onClick={() => setConLugares(row.id)}>
-            <LayoutList size={15} />
+            <FaList size={15} />
           </RowAction>
           <RowAction label={`Editar ${row.nombre}`} onClick={() => abrirEdicion(row)} sinPermiso={!puede('inv.almacenes', 'editar')}>
-            <Pencil size={15} />
+            <FaPencil size={15} />
           </RowAction>
           {!row.esPrincipal && (
             <RowAction
@@ -355,7 +356,7 @@ export function AlmacenesPage() {
               onClick={() => cambiarEstado(row)}
               sinPermiso={!puede('inv.almacenes', 'editar')}
             >
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+              {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
             </RowAction>
           )}
         </>

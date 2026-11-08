@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { History, Landmark, ShieldCheck, ShieldOff, UserPlus, Users } from 'lucide-react'
+import { Landmark, UserPlus, Users } from 'lucide-react'
+import { FaBan, FaCircleCheck, FaClockRotateLeft } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -207,14 +208,14 @@ export function CajasPage() {
         rowActions={(row) => (
           <>
             <RowAction label={`Movimientos de ${row.nombre}`} tone="view" onClick={() => setMovimientosDe(row)}>
-              <History size={15} />
+              <FaClockRotateLeft size={15} />
             </RowAction>
             <RowAction
               label={`${row.activo ? 'Desactivar' : 'Activar'} ${row.nombre}`}
               tone={row.activo ? 'warning' : 'success'}
               onClick={() => cambiarEstado(row)}
               sinPermiso={!puede('finanzas.cajas', 'editar')}>
-              {row.activo ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+              {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
             </RowAction>
           </>
         )}

@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import {
-  AlertTriangle,
-  CheckCircle2,
-  ClipboardCheck,
-  Eye,
-  FileText,
-  PackageX,
-  RotateCcw,
-  Wallet,
-} from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ClipboardCheck, FileText, PackageX, Wallet } from 'lucide-react'
+import { FaClipboardCheck, FaEye, FaRotateLeft } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -307,7 +299,7 @@ export function NovedadesPage() {
       rowActions={(row) => (
         <>
           <RowAction tone="view" label={`Ver la novedad de ${row.producto}`} onClick={() => setDetalle(row)}>
-            <Eye size={15} />
+            <FaEye size={15} />
           </RowAction>
           {/* Un recojo se verifica eligiendo a qué almacén entra; no se reabre. */}
           {row.tipo === 'RECOJO' ? (
@@ -318,19 +310,19 @@ export function NovedadesPage() {
                 label={`Verificar el recojo de ${row.producto}`}
                 onClick={() => setVerificandoRecojo(comoRecojo(row))}
               >
-                <ClipboardCheck size={15} />
+                <FaClipboardCheck size={15} />
               </RowAction>
             )
           ) : (
           <>
           {row.estado === 'PENDIENTE' && (
             <RowAction tone="success" label={`Revisar ${row.producto}`} onClick={() => setRevisando(row)} sinPermiso={!puede('tms.novedades', 'confirmar')}>
-              <ClipboardCheck size={15} />
+              <FaClipboardCheck size={15} />
             </RowAction>
           )}
           {(row.estado === 'RECIBIDA' || row.estado === 'FALTANTE') && (
             <RowAction tone="warning" label={`Reabrir la revisión de ${row.producto}`} onClick={() => reabrir(row)} sinPermiso={!puede('tms.novedades', 'confirmar')}>
-              <RotateCcw size={15} />
+              <FaRotateLeft size={15} />
             </RowAction>
           )}
           </>
