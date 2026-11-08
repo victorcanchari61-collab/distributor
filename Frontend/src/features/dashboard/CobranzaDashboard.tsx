@@ -15,17 +15,26 @@ import {
   pct,
 } from '../../components/charts'
 import { dashboardApi } from './dashboardApi'
-import { COLOR_DEUDA, ConReportes, Encabezado, FilaKpi, rejilla, semaforoDias, useBloque, useTablero } from './comun'
+import { COLOR_DEUDA, FilaKpi, rejilla, semaforoDias, useBloque, useTablero } from './comun'
+import type { Tablero } from './comun'
 import { ReporteTablero } from './ReporteTablero'
 
 /** Cuánto se debe, hace cuánto, quién y cuánto se cobró — para saber a quién llamar primero. */
-/** Cobranza: los gráficos y, en su otra pestaña, el reporte detallado. */
 export function CobranzaDashboard() {
-  return <ConReportes graficos={<GraficosCobranza />} reportes={<ReporteTablero tablero="cobranza" />} />
+  const t = useTablero()
+  return (
+    <ReporteTablero
+      tablero="cobranza"
+      t={t}
+      icono={<Wallet size={20} />}
+      titulo="Dashboard de cobranza"
+      descripcion="Lo que se debe, hace cuánto y lo que se ha cobrado."
+      graficos={<GraficosCobranza t={t} />}
+    />
+  )
 }
 
-function GraficosCobranza() {
-  const t = useTablero()
+function GraficosCobranza({ t }: { t: Tablero }) {
   const b = useBloque(() => dashboardApi.cobranza(t.desde, t.hasta), [t.desde, t.hasta, t.version])
   const c = b.datos
 
@@ -48,13 +57,6 @@ function GraficosCobranza() {
 
   return (
     <div className="space-y-5">
-      <Encabezado
-        icono={<Wallet size={20} />}
-        titulo="Dashboard de cobranza"
-        descripcion="Lo que se debe, hace cuánto y lo que se ha cobrado."
-        tablero={t}
-      />
-
       <FilaKpi cargando={b.cargando}>
         {c && (
           <>

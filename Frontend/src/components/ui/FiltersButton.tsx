@@ -167,6 +167,7 @@ function PanelFiltros<T>({
               <FilterField
                 type={tipo}
                 options={col.filterOptions}
+                vacioTexto={col.filterVacio}
                 value={d.value}
                 valueTo={d.valueTo}
                 onChange={(v) => setValue(col.key, 'value', v)}

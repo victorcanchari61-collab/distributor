@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { BarChart3, FileText, RefreshCw } from 'lucide-react'
-import { Button, DateRangePicker, PageHeader, PestanasVista, Tabs, cn } from '../../components/ui'
+import { RefreshCw } from 'lucide-react'
+import { Button, DateRangePicker, PageHeader, cn } from '../../components/ui'
 import { SEMAFORO } from '../../components/charts'
 import { ApiError } from '../../lib/apiClient'
 import { desplazarDias, hoyLocal } from '../../lib/fechas'
@@ -44,7 +44,7 @@ export function useTablero(inicial: 'ultimos30' | 'mes' = 'ultimos30') {
   const [version, setVersion] = useState(0)
 
   const cambiarRango = useCallback((d: string, h: string) => {
-    if (d && h) setPeriodo({ id: 'custom', etiqueta: 'Personalizado', desde: d, hasta: h })
+    if (d && h) setPeriodo((p) => (p.desde === d && p.hasta === h ? p : { id: 'custom', etiqueta: 'Personalizado', desde: d, hasta: h }))
   }, [])
 
   return {
@@ -105,8 +105,8 @@ export function useBloque<T>(cargar: () => Promise<T>, dependencias: unknown[]):
 // ------------------------------------------------------------------ Estructura
 
 /**
- * Cabecera común: título, botón Actualizar y, si el dashboard depende de un rango, los atajos de
- * período (7 días, 30 días, este mes, 90 días) con el selector de fechas para uno propio.
+ * Cabecera de una pantalla sin tabla (Estado de resultados): título, botón Actualizar y los atajos de período con el
+ * selector de fechas. Los dashboards con tabla eligen sus fechas en el panel de filtros de la tabla.
  */
 export function Encabezado({
   icono,
@@ -168,31 +168,6 @@ export function Encabezado({
         </div>
       )}
     </div>
-  )
-}
-
-/**
- * Las dos caras de un dashboard: los gráficos para ver de un vistazo y los reportes para ver el
- * detalle filtrado e imprimirlo. Las pestañas van bajo el título, como en las demás vistas.
- */
-export function ConReportes({ graficos, reportes }: { graficos: ReactNode; reportes: ReactNode }) {
-  const [vista, setVista] = useState<'graficos' | 'reportes'>('graficos')
-
-  return (
-    <PestanasVista
-      pestanas={
-        <Tabs
-          active={vista}
-          onChange={(id) => setVista(id as 'graficos' | 'reportes')}
-          items={[
-            { id: 'graficos', label: 'Gráficos', icon: <BarChart3 size={15} /> },
-            { id: 'reportes', label: 'Reportes', icon: <FileText size={15} /> },
-          ]}
-        />
-      }
-    >
-      {vista === 'graficos' ? graficos : reportes}
-    </PestanasVista>
   )
 }
 

@@ -16,17 +16,26 @@ import {
   variacion,
 } from '../../components/charts'
 import { dashboardApi } from './dashboardApi'
-import { ConReportes, Encabezado, FilaKpi, frase, rejilla, useBloque, useTablero } from './comun'
+import { FilaKpi, frase, rejilla, useBloque, useTablero } from './comun'
+import type { Tablero } from './comun'
 import { ReporteTablero } from './ReporteTablero'
 
 /** Cuánto se vende, a quién, quién lo vende y en qué momento — con el mes proyectado a su cierre. */
-/** Ventas: los gráficos y, en su otra pestaña, el reporte detallado. */
 export function VentasDashboard() {
-  return <ConReportes graficos={<GraficosVentas />} reportes={<ReporteTablero tablero="ventas" />} />
+  const t = useTablero()
+  return (
+    <ReporteTablero
+      tablero="ventas"
+      t={t}
+      icono={<ShoppingCart size={20} />}
+      titulo="Dashboard de ventas"
+      descripcion="Cuánto se vende, a quién, quién lo vende y cuándo."
+      graficos={<GraficosVentas t={t} />}
+    />
+  )
 }
 
-function GraficosVentas() {
-  const t = useTablero()
+function GraficosVentas({ t }: { t: Tablero }) {
   const b = useBloque(() => dashboardApi.ventas(t.desde, t.hasta), [t.desde, t.hasta, t.version])
   const v = b.datos
 
@@ -51,13 +60,6 @@ function GraficosVentas() {
 
   return (
     <div className="space-y-5">
-      <Encabezado
-        icono={<ShoppingCart size={20} />}
-        titulo="Dashboard de ventas"
-        descripcion="Cuánto se vende, a quién, quién lo vende y cuándo."
-        tablero={t}
-      />
-
       <FilaKpi cargando={b.cargando}>
         {v && (
           <>

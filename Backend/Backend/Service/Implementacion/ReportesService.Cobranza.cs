@@ -169,7 +169,6 @@ public partial class ReportesService
                 Resumen("Cobrado", cobrado.Sum(c => c.Monto), tono: "success", nota: "En las fechas elegidas"),
                 Resumen("Cobros", cobrado.Count, TipoDato.Entero, "neutral"),
             ],
-            Aviso = "La deuda es la de hoy; las fechas solo filtran los cobros.",
         };
     }
 }

@@ -17,20 +17,29 @@ import {
 import { cn } from '../../components/ui'
 import { dashboardApi } from './dashboardApi'
 import type { DashCostoProducto } from './dashboardApi'
-import { COLOR_DEUDA, ConReportes, Encabezado, FilaKpi, frase, rejilla, semaforoDias, useBloque, useTablero } from './comun'
+import { COLOR_DEUDA, FilaKpi, frase, rejilla, semaforoDias, useBloque, useTablero } from './comun'
+import type { Tablero } from './comun'
 import { ReporteTablero } from './ReporteTablero'
 
 /**
  * El otro lado de Cobranza: lo que se le debe a los proveedores y hace cuánto, lo que se compra y
  * a quién, y qué productos están costando más — para saber a quién pagar primero y dónde negociar.
  */
-/** Compras: los gráficos y, en su otra pestaña, el reporte detallado. */
 export function ComprasDashboard() {
-  return <ConReportes graficos={<GraficosCompras />} reportes={<ReporteTablero tablero="compras" />} />
+  const t = useTablero()
+  return (
+    <ReporteTablero
+      tablero="compras"
+      t={t}
+      icono={<ShoppingBag size={20} />}
+      titulo="Dashboard de compras"
+      descripcion="Lo que se debe a proveedores, lo que se compra y cómo cambian los costos."
+      graficos={<GraficosCompras t={t} />}
+    />
+  )
 }
 
-function GraficosCompras() {
-  const t = useTablero()
+function GraficosCompras({ t }: { t: Tablero }) {
   const b = useBloque(() => dashboardApi.compras(t.desde, t.hasta), [t.desde, t.hasta, t.version])
   const c = b.datos
 
@@ -45,13 +54,6 @@ function GraficosCompras() {
 
   return (
     <div className="space-y-5">
-      <Encabezado
-        icono={<ShoppingBag size={20} />}
-        titulo="Dashboard de compras"
-        descripcion="Lo que se debe a proveedores, lo que se compra y cómo cambian los costos."
-        tablero={t}
-      />
-
       <FilaKpi cargando={b.cargando}>
         {c && (
           <>

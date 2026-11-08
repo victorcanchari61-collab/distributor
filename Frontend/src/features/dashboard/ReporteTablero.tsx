@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { AlertTriangle, BarChart3, Coins, FileBarChart, FileText, Hash, TrendingUp } from 'lucide-react'
+import { AlertTriangle, BarChart3, Coins, FileBarChart, FileText, Hash, RefreshCw, TrendingUp } from 'lucide-react'
 import { moneda } from '../../components/charts'
-import { Alert, Button, ListPage, StatCard, VisorReportePdf, cn } from '../../components/ui'
+import { Alert, Button, FilaStats, ListPage, StatCard, VisorReportePdf, cn } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
-import { desplazarDias, hoyLocal } from '../../lib/fechas'
 import { usePermisos } from '../../lib/permisos'
 import { dashboardApi } from './dashboardApi'
 import type { ColumnaReporte, ConsultaReporte, Reporte, Tablero, TipoDato } from './dashboardApi'
 import { useBloque } from './comun'
+import type { Tablero as EstadoTablero } from './comun'
 
 type Fila = Record<string, unknown>
 
@@ -74,39 +74,71 @@ function columnaDe(c: ColumnaReporte): DataTableColumn<Fila> {
 }
 
 /**
- * La pestaña Reportes de un dashboard. El backend arma el reporte —vistas, columnas, filas,
- * totales y filtros— y esta pestaña lo dibuja igual para todos: así cada dashboard tiene su
- * reporte sin una pantalla propia.
+ * Un dashboard completo en una sola pantalla: arriba sus gráficos y debajo el reporte detallado. El backend arma el
+ * reporte —vistas, columnas, filas, totales y filtros— y esta pantalla lo dibuja igual para todos: así cada dashboard
+ * tiene su reporte sin una pantalla propia.
  *
- * Las fechas y los filtros (cliente, ruta, proveedor, almacén...) van en el ícono de filtros como
- * listas, con solo lo que hay en esas fechas. El PDF pide la misma consulta, con la búsqueda
- * incluida: lo impreso es lo que se ve.
+ * Todo se elige en el ícono de filtros de la tabla: las fechas (que también mueven los gráficos), la vista del reporte
+ * y los filtros propios de cada uno (cliente, ruta, proveedor, almacén...), como listas con solo lo que hay en esas
+ * fechas. El PDF pide la misma consulta, con la búsqueda incluida: lo impreso es lo que se ve.
  */
-export function ReporteTablero({ tablero, conFechas = true }: { tablero: Tablero; conFechas?: boolean }) {
+export function ReporteTablero({
+  tablero,
+  t,
+  icono,
+  titulo: tituloPagina,
+  descripcion,
+  graficos,
+  conFechas = true,
+}: {
+  tablero: Tablero
+  /** El período y el contador de "Actualizar" que comparten los gráficos y el reporte. */
+  t: EstadoTablero
+  icono: ReactNode
+  titulo: string
+  descripcion: string
+  /** Los indicadores y gráficos que van sobre la tabla. */
+  graficos: ReactNode
+  conFechas?: boolean
+}) {
   const { puede } = usePermisos()
   const [vista, setVista] = useState<string | undefined>()
-  const [desdeInicial] = useState(() => desplazarDias(-29))
-  const [consultaBase, setConsultaBase] = useState<Omit<ConsultaReporte, 'vista' | 'buscar'>>(() => ({
-    desde: conFechas ? desdeInicial : undefined,
-    hasta: conFechas ? hoyLocal() : undefined,
-    filtros: {},
-  }))
+  const [filtrosPropios, setFiltrosPropios] = useState<Record<string, string>>({})
+  const [desdeInicial] = useState(t.desde)
+  const [hastaInicial] = useState(t.hasta)
   const [buscar, setBuscar] = useState('')
   const [pdf, setPdf] = useState(false)
 
+  const base = useMemo(
+    () => ({ desde: conFechas ? t.desde : undefined, hasta: conFechas ? t.hasta : undefined, filtros: filtrosPropios }),
+    [conFechas, t.desde, t.hasta, filtrosPropios],
+  )
+
   // Por contenido y no por objeto: la tabla avisa en cada tecla del buscador, y eso no recarga.
-  const clave = JSON.stringify(consultaBase)
-  const b = useBloque<Reporte>(() => dashboardApi.reporte(tablero, { ...consultaBase, vista }), [tablero, vista, clave])
+  const clave = JSON.stringify(base)
+  const b = useBloque<Reporte>(() => dashboardApi.reporte(tablero, { ...base, vista }), [tablero, vista, clave, t.version])
   const r = b.datos
 
   const consulta = useMemo<ConsultaReporte>(
-    () => ({ ...consultaBase, vista: r?.vista ?? vista, buscar }),
-    [consultaBase, r?.vista, vista, buscar],
+    () => ({ ...base, vista: r?.vista ?? vista, buscar }),
+    [base, r?.vista, vista, buscar],
   )
 
   // Las de solo filtro deciden qué se trae: no son datos de las filas (ver SysDataTable).
   const columnasFiltro: DataTableColumn<Fila>[] = [
     ...(conFechas ? [{ key: 'f_fecha', label: 'Fechas', soloFiltro: true, filterType: 'date' as const }] : []),
+    ...(r && r.vistas.length > 1
+      ? [
+          {
+            key: 'f_vista',
+            label: 'Ver',
+            soloFiltro: true,
+            filterType: 'select' as const,
+            filterVacio: 'Predeterminada',
+            filterOptions: r.vistas.map((v) => ({ value: v.id, label: v.texto })),
+          },
+        ]
+      : []),
     ...(r?.filtros ?? []).map((f) => ({
       key: `f_${f.clave}`,
       label: f.titulo,
@@ -128,73 +160,59 @@ export function ReporteTablero({ tablero, conFechas = true }: { tablero: Tablero
 
   return (
     <ListPage
-      icon={<FileBarChart size={20} />}
-      title={titulo}
-      description="El detalle, filtrado como lo necesites."
+      icon={icono}
+      title={tituloPagina}
+      description={descripcion}
       actions={
-        puede(`dashboard.${tablero}`, 'exportar') ? (
-          <Button size="sm" variant="secondary" onClick={() => setPdf(true)} disabled={!r} iconRight={<FileText size={15} />}>
-            PDF
+        <>
+          {puede(`dashboard.${tablero}`, 'exportar') && (
+            <Button size="sm" variant="secondary" onClick={() => setPdf(true)} disabled={!r} iconRight={<FileText size={15} />}>
+              PDF
+            </Button>
+          )}
+          <Button variant="secondary" size="sm" onClick={t.refrescar}>
+            <RefreshCw size={14} />
+            Actualizar
           </Button>
-        ) : undefined
+        </>
       }
       alert={b.error ? <Alert>{b.error}</Alert> : r?.aviso ? <Alert tone="info">{r.aviso}</Alert> : undefined}
-      stats={
-        r?.resumen.length ? (
-          <>
-            {r.resumen.map((s) => (
-              <StatCard
-                key={s.titulo}
-                label={s.titulo}
-                value={formatear(s.valor, s.tipo)}
-                icon={ICONO[s.tono] ?? ICONO.neutral}
-                tono={s.tono}
-                hint={s.nota ?? undefined}
-              />
-            ))}
-          </>
-        ) : undefined
-      }
       banner={
-        r && r.vistas.length > 1 ? (
-          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Ver">
-            <span className="mr-1 text-xs font-semibold text-ink-muted">Ver</span>
-            {r.vistas.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                aria-pressed={r.vista === v.id}
-                onClick={() => setVista(v.id)}
-                className={cn(
-                  'cursor-pointer rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
-                  r.vista === v.id
-                    ? 'border-transparent bg-[rgb(var(--sys-rgb))] text-[var(--sys-on)]'
-                    : 'border-line bg-white text-ink-muted hover:bg-surface-alt',
-                )}
-              >
-                {v.texto}
-              </button>
-            ))}
-          </div>
-        ) : undefined
+        <div className="space-y-5">
+          {graficos}
+          {r?.resumen.length ? (
+            <FilaStats>
+              {r.resumen.map((s) => (
+                <StatCard
+                  key={s.titulo}
+                  label={s.titulo}
+                  value={formatear(s.valor, s.tipo)}
+                  icon={ICONO[s.tono] ?? ICONO.neutral}
+                  tono={s.tono}
+                  hint={s.nota ?? undefined}
+                />
+              ))}
+            </FilaStats>
+          ) : null}
+        </div>
       }
       columns={[...columnasFiltro, ...visibles]}
       rows={r?.filas ?? []}
       rowKey="clave"
       onConsulta={(q) => {
         const fecha = q.filtros.find((f) => f.columna === 'f_fecha')
-        const filtros: Record<string, string> = {}
+        const propios: Record<string, string> = {}
         for (const f of q.filtros) {
-          if (f.columna.startsWith('f_') && f.columna !== 'f_fecha' && f.valor) filtros[f.columna.slice(2)] = f.valor
+          if (f.columna.startsWith('f_') && f.columna !== 'f_fecha' && f.columna !== 'f_vista' && f.valor) {
+            propios[f.columna.slice(2)] = f.valor
+          }
         }
-        setConsultaBase({
-          desde: conFechas ? fecha?.valor || desdeInicial : undefined,
-          hasta: conFechas ? fecha?.valorHasta || fecha?.valor || hoyLocal() : undefined,
-          filtros,
-        })
+        if (conFechas) t.cambiarRango(fecha?.valor || desdeInicial, fecha?.valorHasta || fecha?.valor || hastaInicial)
+        setVista(q.filtros.find((f) => f.columna === 'f_vista')?.valor || undefined)
+        setFiltrosPropios((previo) => (JSON.stringify(previo) === JSON.stringify(propios) ? previo : propios))
         setBuscar(q.buscar)
       }}
-      filtrosIniciales={conFechas ? [{ column: 'f_fecha', operator: 'between', value: desdeInicial, valueTo: hoyLocal() }] : undefined}
+      filtrosIniciales={conFechas ? [{ column: 'f_fecha', operator: 'between', value: desdeInicial, valueTo: hastaInicial }] : undefined}
       cardIcon={FileBarChart}
       searchPlaceholder="Buscar en el reporte..."
       empty={b.cargando ? 'Cargando reporte...' : 'No hay datos con esos filtros.'}

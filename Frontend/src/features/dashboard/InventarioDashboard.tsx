@@ -1,17 +1,27 @@
 import { Boxes, CalendarX, PackageOpen, Snowflake } from 'lucide-react'
 import { BarChart, DonutChart, HBarChart, Kpi, Marco, PALETA, SEMAFORO, compacto, moneda } from '../../components/charts'
 import { dashboardApi } from './dashboardApi'
-import { COLOR_SALUD, COLOR_VENCE, ConReportes, Encabezado, FilaKpi, rejilla, semaforoCobertura, useBloque, useTablero } from './comun'
+import { COLOR_SALUD, COLOR_VENCE, FilaKpi, rejilla, semaforoCobertura, useBloque, useTablero } from './comun'
+import type { Tablero } from './comun'
 import { ReporteTablero } from './ReporteTablero'
 
 /** Qué se acaba, qué está parado y qué vence: una foto de hoy, sin rango de fechas. */
-/** Inventario: los gráficos y, en su otra pestaña, el reporte detallado. */
 export function InventarioDashboard() {
-  return <ConReportes graficos={<GraficosInventario />} reportes={<ReporteTablero tablero="inventario" conFechas={false} />} />
+  const t = useTablero()
+  return (
+    <ReporteTablero
+      tablero="inventario"
+      t={t}
+      icono={<Boxes size={20} />}
+      titulo="Dashboard de inventario"
+      descripcion="Cuánto dura el stock, cuánto vale y qué vence."
+      conFechas={false}
+      graficos={<GraficosInventario t={t} />}
+    />
+  )
 }
 
-function GraficosInventario() {
-  const t = useTablero()
+function GraficosInventario({ t }: { t: Tablero }) {
   const b = useBloque(() => dashboardApi.inventario(), [t.version])
   const i = b.datos
 
@@ -20,14 +30,6 @@ function GraficosInventario() {
 
   return (
     <div className="space-y-5">
-      <Encabezado
-        icono={<Boxes size={20} />}
-        titulo="Dashboard de inventario"
-        descripcion="Cuánto dura el stock, cuánto vale y qué vence."
-        tablero={t}
-        sinPeriodo
-      />
-
       <FilaKpi cargando={b.cargando}>
         {i && (
           <>

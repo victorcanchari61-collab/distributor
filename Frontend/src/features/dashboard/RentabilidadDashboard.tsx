@@ -14,17 +14,26 @@ import {
   variacion,
 } from '../../components/charts'
 import { dashboardApi } from './dashboardApi'
-import { ConReportes, Encabezado, FilaKpi, frase, mediana, rejilla, useBloque, useTablero } from './comun'
+import { FilaKpi, frase, mediana, rejilla, useBloque, useTablero } from './comun'
+import type { Tablero } from './comun'
 import { ReporteTablero } from './ReporteTablero'
 
 /** Cuánto se gana, con qué margen, y qué productos conviene empujar o revisar. */
-/** Rentabilidad: los gráficos y, en su otra pestaña, el reporte detallado. */
 export function RentabilidadDashboard() {
-  return <ConReportes graficos={<GraficosRentabilidad />} reportes={<ReporteTablero tablero="rentabilidad" />} />
+  const t = useTablero()
+  return (
+    <ReporteTablero
+      tablero="rentabilidad"
+      t={t}
+      icono={<TrendingUp size={20} />}
+      titulo="Dashboard de rentabilidad"
+      descripcion="Cuánto deja lo que se vende, con su costo real."
+      graficos={<GraficosRentabilidad t={t} />}
+    />
+  )
 }
 
-function GraficosRentabilidad() {
-  const t = useTablero()
+function GraficosRentabilidad({ t }: { t: Tablero }) {
   const b = useBloque(() => dashboardApi.ganancias(t.desde, t.hasta), [t.desde, t.hasta, t.version])
   const g = b.datos
 
@@ -48,13 +57,6 @@ function GraficosRentabilidad() {
 
   return (
     <div className="space-y-5">
-      <Encabezado
-        icono={<TrendingUp size={20} />}
-        titulo="Dashboard de rentabilidad"
-        descripcion="Cuánto deja lo que se vende, con su costo real."
-        tablero={t}
-      />
-
       <FilaKpi cargando={b.cargando}>
         {g && (
           <>
@@ -82,7 +84,6 @@ function GraficosRentabilidad() {
 
       <div className={rejilla(3)}>
         <Marco
-          className="lg:col-span-2"
           titulo="Ganancia y margen por día"
           subtitulo={g && frase(variacion(g.ganancia, g.gananciaAnterior), `los ${t.dias} días anteriores`)}
           cargando={b.cargando}
@@ -104,29 +105,23 @@ function GraficosRentabilidad() {
         <Marco titulo="Ganancia por categoría" subtitulo="Cuánto deja cada rubro" cargando={b.cargando} error={b.error} vacio={!b.cargando && !b.error && !g?.porCategoria.length} alto={250}>
           <HBarChart items={(g?.porCategoria ?? []).map((i) => ({ nombre: i.nombre, valor: i.valor, color: i.valor < 0 ? SEMAFORO.mal : undefined }))} formato={(n) => moneda(n)} />
         </Marco>
-      </div>
 
-      <Marco
+        <Marco
         titulo="Qué productos conviene empujar"
         subtitulo={
           g &&
-          (aRevisar.length > 0 ? (
-            <>
-              {aRevisar.length} {aRevisar.length === 1 ? 'producto vende' : 'productos venden'} mucho y {aRevisar.length === 1 ? 'deja' : 'dejan'} menos que el margen de la casa ({pct(cortY)}):{' '}
-              <strong className="text-ink">{aRevisar.slice(0, 3).map((p) => p.nombre).join(', ')}</strong>
-            </>
-          ) : (
-            'Los productos que más venden dejan un margen sano'
-          ))
+          (aRevisar.length > 0
+            ? `${aRevisar.length} ${aRevisar.length === 1 ? 'vende mucho y deja' : 'venden mucho y dejan'} menos que el margen de la casa (${pct(cortY)})`
+            : 'Los que más venden dejan un margen sano')
         }
         cargando={b.cargando}
         error={b.error}
         vacio={!b.cargando && !b.error && conMargen.length < 2}
         mensajeVacio="Hacen falta al menos dos productos vendidos"
-        alto={340}
+        alto={250}
       >
         <ScatterChart
-          alto={340}
+          alto={250}
           etiquetaX="Importe vendido"
           etiquetaY="Margen %"
           formatoY={(n) => `${Math.round(n)}%`}
@@ -140,7 +135,8 @@ function GraficosRentabilidad() {
             detalle: `${moneda(p.importe)} vendidos · ${pct(p.margen ?? 0)} de margen · ${moneda(p.ganancia)} de ganancia`,
           }))}
         />
-      </Marco>
+        </Marco>
+      </div>
     </div>
   )
 }

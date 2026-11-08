@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MapPinned, TrendingDown, TriangleAlert, Users, Wallet } from 'lucide-react'
-import { BarChart, HBarChart, Marco, PALETA, moneda } from '../../components/charts'
-import { Alert, ListPage, StatCard, Tabs } from '../../components/ui'
-import type { DataTableColumn } from '../../components/ui'
+import { BarChart, DonutChart, HBarChart, Marco, PALETA, moneda } from '../../components/charts'
+import { Alert, ListPage, StatCard } from '../../components/ui'
+import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { useRealtime } from '../../lib/realtime'
 import { hoyLocal } from '../../lib/fechas'
-import { FiltroFechas, inicioDeAnio } from '../crm/filtros'
-import { colorCambio, porcentaje, soles, solesConSigno } from '../crm/formato'
+import { inicioDeAnio } from '../crm/filtros'
+import { ESTADOS_UI, ORDEN_ESTADOS, colorCambio, porcentaje, soles, solesConSigno } from '../crm/formato'
 import { sinVentasApi } from './sinVentasApi'
+import type { EstadoClave } from '../crm/crmApi'
 import type { AgruparZonas, ZonaCrm, ZonasCrm } from './sinVentasApi'
 
 const AGRUPAR: { id: AgruparZonas; label: string; singular: string }[] = [
-  { id: 'mercado', label: 'Por mercado', singular: 'Mercado' },
-  { id: 'ruta', label: 'Por ruta', singular: 'Ruta' },
+  { id: 'mercado', label: 'Mercados', singular: 'Mercado' },
+  { id: 'ruta', label: 'Rutas', singular: 'Ruta' },
 ]
 
 /**
@@ -24,8 +25,10 @@ const AGRUPAR: { id: AgruparZonas; label: string; singular: string }[] = [
  */
 export function ZonasPage() {
   const [agrupar, setAgrupar] = useState<AgruparZonas>('mercado')
-  const [desde, setDesde] = useState(inicioDeAnio())
-  const [hasta, setHasta] = useState(hoyLocal())
+  const [desdeInicial] = useState(inicioDeAnio())
+  const [hastaInicial] = useState(hoyLocal())
+  const [desde, setDesde] = useState(desdeInicial)
+  const [hasta, setHasta] = useState(hastaInicial)
   const [datos, setDatos] = useState<ZonasCrm | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -50,8 +53,29 @@ export function ZonasPage() {
 
   const singular = AGRUPAR.find((a) => a.id === agrupar)?.singular ?? 'Zona'
 
+  /** Traduce el panel de filtros a lo que se pide al servidor. */
+  const aplicar = useCallback(
+    (q: ConsultaTabla) => {
+      const fecha = q.filtros.find((f) => f.columna === 'fecha')
+      const por = q.filtros.find((f) => f.columna === 'agrupar')?.valor
+      setDesde(fecha?.valor || desdeInicial)
+      setHasta(fecha?.valorHasta || fecha?.valor || hastaInicial)
+      setAgrupar(por === 'ruta' ? 'ruta' : 'mercado')
+    },
+    [desdeInicial, hastaInicial],
+  )
+
   const columns: DataTableColumn<ZonaCrm>[] = useMemo(
     () => [
+      // Estas dos solo existen en el panel de Filtros: deciden qué se pide (ver SysDataTable).
+      { key: 'fecha', label: 'Fechas', soloFiltro: true, filterType: 'date' },
+      {
+        key: 'agrupar',
+        label: 'Agrupar por',
+        soloFiltro: true,
+        filterType: 'select',
+        filterOptions: AGRUPAR.map((a) => ({ value: a.id, label: a.label })),
+      },
       {
         key: 'nombre',
         label: singular,
@@ -155,6 +179,15 @@ export function ZonasPage() {
   const clientes = items.reduce((s, z) => s + z.clientes, 0)
   const actual = items.reduce((s, z) => s + z.ventaActual, 0)
   const anterior = items.reduce((s, z) => s + z.ventaAnterior, 0)
+  // Los clientes con ventas, por estado: los normales son los que quedan después de los que cayeron o no tienen base.
+  const porEstado: Record<EstadoClave, number> = {
+    CRITICO: items.reduce((s, z) => s + z.criticos, 0),
+    RIESGO: items.reduce((s, z) => s + z.enRiesgo, 0),
+    SEGUIMIENTO: items.reduce((s, z) => s + z.enSeguimiento, 0),
+    NORMAL: items.reduce((s, z) => s + Math.max(0, z.conVentas - z.criticos - z.enRiesgo - z.enSeguimiento - z.sinComparacion), 0),
+    SIN_BASE: items.reduce((s, z) => s + z.sinComparacion, 0),
+  }
+  const conVentas = Object.values(porEstado).reduce((s, n) => s + n, 0)
 
   return (
     <ListPage
@@ -170,16 +203,8 @@ export function ZonasPage() {
       }
       banner={
         <div className="space-y-2">
-          <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
-            <Tabs
-              items={AGRUPAR.map((a) => ({ id: a.id, label: a.label }))}
-              active={agrupar}
-              onChange={(id) => setAgrupar(id as AgruparZonas)}
-            />
-            <FiltroFechas desde={desde} hasta={hasta} onChange={(d, h) => { setDesde(d); setHasta(h) }} />
-          </div>
           {/* Cómo le va a cada zona, de un vistazo: lo vendido ahora contra antes, y dónde se pierde. */}
-          <div className="grid gap-4 pt-2 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-3">
             <Marco
               titulo={`Ventas por ${singular.toLowerCase()}`}
               subtitulo="Lo vendido ahora frente al periodo anterior, en las zonas que más venden"
@@ -227,6 +252,26 @@ export function ZonasPage() {
                 unColor="#dc2626"
               />
             </Marco>
+
+            <Marco
+              titulo="Clientes por estado"
+              subtitulo={`${conVentas} ${conVentas === 1 ? 'cliente compró' : 'clientes compraron'} en el periodo`}
+              cargando={cargando && !datos}
+              vacio={conVentas === 0}
+              mensajeVacio="No hay clientes con ventas"
+              alto={220}
+            >
+              <DonutChart
+                porciones={ORDEN_ESTADOS.filter((e) => porEstado[e] > 0).map((e) => ({
+                  nombre: ESTADOS_UI[e].etiqueta,
+                  valor: porEstado[e],
+                  color: ESTADOS_UI[e].color,
+                }))}
+                formato={(n) => String(n)}
+                decimalesPct={1}
+                centro={{ titulo: 'clientes', valor: String(conVentas) }}
+              />
+            </Marco>
           </div>
         </div>
       }
@@ -265,10 +310,14 @@ export function ZonasPage() {
       columns={columns}
       rows={items}
       rowKey="nombre"
+      onConsulta={aplicar}
+      filtrosIniciales={[
+        { column: 'fecha', operator: 'between', value: desdeInicial, valueTo: hastaInicial },
+        { column: 'agrupar', operator: 'equals', value: 'mercado' },
+      ]}
       cardIcon={MapPinned}
       searchPlaceholder={`Buscar ${singular.toLowerCase()}...`}
       empty={cargando ? 'Cargando zonas...' : 'No hay clientes con ventas en estos periodos.'}
-      note="Las zonas con más venta perdida salen primero. 'Sin mercado' o 'Sin ruta' junta a los clientes que no tienen una asignada."
     />
   )
 }

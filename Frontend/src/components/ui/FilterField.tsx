@@ -20,6 +20,8 @@ export interface FilterFieldProps {
   /** Solo para `type: 'text'` — Enter confirma, igual que un buscador. */
   onEnter?: () => void
   textPlaceholder?: string
+  /** Solo para `type: 'select'` — lo que dice la opción vacía ("Todos" por defecto). */
+  vacioTexto?: string
 }
 
 export function FilterField({
@@ -31,14 +33,15 @@ export function FilterField({
   onChangeTo,
   onEnter,
   textPlaceholder = 'Valor',
+  vacioTexto = 'Todos',
 }: FilterFieldProps) {
   if (type === 'select') {
     return (
       <Desplegable
         value={value}
         onChange={(v) => onChange(String(v))}
-        placeholder="Todos"
-        options={[{ value: '', label: 'Todos' }, ...options]}
+        placeholder={vacioTexto}
+        options={[{ value: '', label: vacioTexto }, ...options]}
       />
     )
   }

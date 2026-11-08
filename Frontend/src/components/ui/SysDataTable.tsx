@@ -67,6 +67,8 @@ export interface DataTableColumn<T> {
   filterType?: FilterType
   /** Opciones del `<select>` cuando `filterType: 'select'`. */
   filterOptions?: { value: string; label: string }[]
+  /** Lo que dice la opción vacía del `<select>` cuando no es "Todos" (por ejemplo, "Predeterminada"). */
+  filterVacio?: string
   /**
    * No se pinta en la tabla, ni en las tarjetas, ni en el menú de columnas: solo existe en el
    * panel de Filtros. Es para el filtro que decide QUÉ se trae y no es un dato de cada fila —la
