@@ -92,7 +92,9 @@ BEGIN
         ('Vendedor', 'fact.notaventa', 'ver'), ('Vendedor', 'fact.notaventa', 'crear'), ('Vendedor', 'fact.notaventa', 'editar'),
         ('Vendedor', 'fact.notaventa', 'exportar'),
         ('Vendedor', 'fact.precios', 'ver'),
-        ('Vendedor', 'fact.facturas', 'ver'), ('Vendedor', 'fact.boletas', 'ver'),
+        -- Emite la factura o boleta de lo que vende (desde su nota de venta o directa).
+        ('Vendedor', 'fact.facturas', 'ver'), ('Vendedor', 'fact.facturas', 'crear'),
+        ('Vendedor', 'fact.boletas', 'ver'), ('Vendedor', 'fact.boletas', 'crear'),
         ('Vendedor', 'fact.notascredito', 'ver'), ('Vendedor', 'fact.notasdebito', 'ver'),
         ('Vendedor', 'finanzas.caja', 'ver'), ('Vendedor', 'finanzas.caja', 'ingreso'), ('Vendedor', 'finanzas.caja', 'egreso'),
         ('Vendedor', 'finanzas.cierres', 'ver'),
