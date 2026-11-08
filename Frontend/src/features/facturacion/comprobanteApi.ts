@@ -71,6 +71,8 @@ export interface ComprobanteResponse {
   numeroCompleto: string
   notaVentaId: number | null
   notaVentaNumero: string | null
+  /** Nació como factura o boleta directa: no tiene nota de venta que mostrar. */
+  ventaDirecta: boolean
   /** En una nota: el comprobante que corrige. */
   afectadoId: number | null
   afectadoNumero: string | null

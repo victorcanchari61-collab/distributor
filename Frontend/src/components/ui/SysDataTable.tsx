@@ -1099,7 +1099,7 @@ export function SysDataTable<T>({
                         className={cn(
                           // con `table-fixed` el contenido no puede ensanchar la
                           // columna: lo que no cabe se recorta
-                          'truncate px-3 py-1.5 text-zinc-700',
+                          'truncate px-3 py-1 text-zinc-700',
                           col.align === 'right' && 'text-right tabular-nums',
                         )}
                       >
@@ -1112,7 +1112,7 @@ export function SysDataTable<T>({
                         className={cn(
                           // Opaca para tapar lo que pasa por debajo; el tinte del hover se superpone con un degradado
                           // de un solo color, porque un fondo translucido dejaria ver las celdas.
-                          'sticky right-0 z-10 bg-white px-3 py-1.5 whitespace-nowrap',
+                          'sticky right-0 z-10 bg-white px-3 py-1 whitespace-nowrap',
                           'transition-[box-shadow,background-image] duration-300',
                           'group-hover/fila:bg-[linear-gradient(rgb(var(--sys-rgb)/0.05),rgb(var(--sys-rgb)/0.05))]',
                           sombra && 'shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.12)]',

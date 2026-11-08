@@ -11,7 +11,11 @@ public class ComprobanteResponse
     public string NumeroCompleto { get; set; } = string.Empty;
 
     public int? NotaVentaId { get; set; }
+    /// <summary>El número de la nota de venta de la que sale. Nulo si la venta es interna (factura o boleta directa).</summary>
     public string? NotaVentaNumero { get; set; }
+
+    /// <summary>Nació como factura o boleta directa: no tiene nota de venta que el usuario vea.</summary>
+    public bool VentaDirecta { get; set; }
 
     /// <summary>En una nota: el comprobante que corrige.</summary>
     public int? AfectadoId { get; set; }

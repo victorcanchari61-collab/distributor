@@ -60,7 +60,7 @@ export function RowAction({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'rounded-md p-1.5 transition-colors',
+        'rounded-md p-1 transition-colors',
         disabled ? 'cursor-not-allowed text-slate-300' : cn('cursor-pointer', TONES[tone]),
         className,
       )}

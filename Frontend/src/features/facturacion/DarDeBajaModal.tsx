@@ -68,9 +68,11 @@ export function DarDeBajaModal({
       <div className="flex flex-col gap-4">
         {error && <Alert>{error}</Alert>}
         <Alert tone="info">
-          {comprobante?.notaVentaNumero
-            ? `Si SUNAT la acepta, la venta ${comprobante.notaVentaNumero} se anula: el stock vuelve al almacén y deja de contar en los reportes.`
-            : 'Si SUNAT la acepta, la factura deja de valer.'}
+          {comprobante?.ventaDirecta
+            ? 'Si SUNAT la acepta, la factura deja de valer: el stock vuelve al almacén y deja de contar en los reportes.'
+            : comprobante?.notaVentaNumero
+              ? `Si SUNAT la acepta, la venta ${comprobante.notaVentaNumero} se anula: el stock vuelve al almacén y deja de contar en los reportes.`
+              : 'Si SUNAT la acepta, la factura deja de valer.'}
         </Alert>
         <Input
           label="Motivo de la baja"
