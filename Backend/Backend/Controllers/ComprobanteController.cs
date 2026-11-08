@@ -83,6 +83,15 @@ public class ComprobanteController : ControllerBase
         return Ok(await ConWhatsAppAsync(await _comprobantes.EmitirAsync(request)));
     }
 
+    /// <summary>Factura o boleta directa: registra la venta, descuenta el stock y emite el comprobante en un paso.</summary>
+    [HttpPost("emitir-directo")]
+    public async Task<IActionResult> EmitirDirecto([FromBody] EmitirDirectoRequest request)
+    {
+        if (request.Tipo is not (TipoCpe.Factura or TipoCpe.Boleta)) return TipoInvalido();
+        if (await Denegado(request.Tipo, Accion.Crear) is { } denegado) return denegado;
+        return Ok(await ConWhatsAppAsync(await _comprobantes.EmitirDirectoAsync(request)));
+    }
+
     /// <summary>Nota de crédito o débito sobre un comprobante aceptado.</summary>
     [HttpPost("{id:int}/nota")]
     public async Task<IActionResult> EmitirNota(int id, [FromBody] EmitirNotaRequest request)

@@ -176,6 +176,12 @@ public class NotaVenta
 
     public string? Observacion { get; set; }
 
+    /// <summary>
+    /// Nació al emitir una factura o boleta directa: la venta existe para descontar stock y contar en los reportes, pero
+    /// el documento es el comprobante, así que no sale en la lista de Notas de venta.
+    /// </summary>
+    public bool SoloComprobante { get; set; }
+
     public int? UsuarioId { get; set; }
     public Usuario? Usuario { get; set; }
 

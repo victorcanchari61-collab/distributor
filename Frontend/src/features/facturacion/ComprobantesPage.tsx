@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MessageCircle, Plus, CircleCheck, CircleX, Clock, FileArchive, FileCode2, FileMinus, FilePen, FilePlus, Eye, Receipt, RefreshCw, Ticket } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 import { AccionPdf, Alert, Badge, Button, ListPage, Modal, RowAction, StatCard, useToast } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -10,6 +9,7 @@ import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { ESTADOS_CPE, ESTADOS_WHATSAPP, SUBMODULO_CPE, comprobanteApi } from './comprobanteApi'
 import type { ComprobanteResponse, EstadoCpe, TipoCpe } from './comprobanteApi'
+import { NotasVentaPage } from './NotasVentaPage'
 import { EmitirNotaModal } from './EmitirNotaModal'
 import { EnviarWhatsAppModal } from './EnviarWhatsAppModal'
 import { EstadoCpeBadge, PanelComprobante, monto } from './PanelComprobante'
@@ -50,7 +50,6 @@ const VISTAS: Record<TipoCpe, { titulo: string; descripcion: string; icono: Luci
 function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
   const { puede } = usePermisos()
   const toast = useToast()
-  const navegar = useNavigate()
   const vista = VISTAS[tipo]
   const Icono = vista.icono
   const submodulo = SUBMODULO_CPE[tipo]
@@ -64,6 +63,8 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
   const [detalle, setDetalle] = useState<ComprobanteResponse | null>(null)
   const [corrigiendo, setCorrigiendo] = useState<ComprobanteResponse | null>(null)
   const [enviando, setEnviando] = useState<ComprobanteResponse | null>(null)
+  // Emitiendo una factura o boleta directa: el formulario de venta ocupa la pantalla hasta terminar o cancelar.
+  const [creando, setCreando] = useState(false)
 
   const cargar = useCallback(async () => {
     try {
@@ -208,15 +209,27 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
   const pendientes = filas.filter((f) => f.estado === 'GENERADO' || f.estado === 'ERROR').length
   const enPruebas = filas.some((f) => f.entorno !== 'produccion')
 
+  if (creando && !esNota) {
+    return (
+      <NotasVentaPage
+        directo={tipo as '01' | '03'}
+        onCerrar={() => {
+          setCreando(false)
+          void cargar()
+        }}
+      />
+    )
+  }
+
   return (
     <ListPage
       icon={<Icono size={20} />}
       title={vista.titulo}
       description={vista.descripcion}
-      // Crear directo: abre la venta directa con este comprobante ya elegido (registra la venta y lo emite a SUNAT).
+      // Crear directo: abre el formulario de venta con este comprobante ya elegido (registra la venta y lo emite a SUNAT).
       actions={
-        !esNota && puede(submodulo, 'crear') && puede('fact.notaventa', 'crear') ? (
-          <Button size="sm" onClick={() => navegar(`/fact/notaventa?nueva=${tipo}`)} iconRight={<Plus size={15} />}>
+        !esNota && puede(submodulo, 'crear') ? (
+          <Button size="sm" onClick={() => setCreando(true)} iconRight={<Plus size={15} />}>
             {tipo === '01' ? 'Nueva factura' : 'Nueva boleta'}
           </Button>
         ) : undefined

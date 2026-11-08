@@ -765,7 +765,7 @@ public class VentasService : IVentasService
         }
     }
 
-    public async Task<NotaVentaResponse> CrearNotaVentaAsync(CrearNotaVentaRequest request, int? usuarioId)
+    public async Task<NotaVentaResponse> CrearNotaVentaAsync(CrearNotaVentaRequest request, int? usuarioId, bool soloComprobante = false)
     {
         await _notaVentaValidator.ValidateAndThrowAsync(request);
         await ExigirClienteDeMiRutaAsync(request.ClienteId, "fact.notaventa");
@@ -779,7 +779,8 @@ public class VentasService : IVentasService
             observacion: request.Observacion,
             lineas: await ResolverLineasAsync(request.Detalle),
             usuarioId: usuarioId,
-            recojos: request.Recojos);
+            recojos: request.Recojos,
+            soloComprobante: soloComprobante);
     }
 
     /// <summary>
@@ -1234,7 +1235,8 @@ public class VentasService : IVentasService
         string? observacion,
         List<PedidoDetalle> lineas,
         int? usuarioId,
-        List<RecojoRequest>? recojos = null)
+        List<RecojoRequest>? recojos = null,
+        bool soloComprobante = false)
     {
         // Antes de guardar nada: si el almacén no existe o está desactivado,
         // mejor que falle aquí que dejar una nota guardada sin poder despachar.
@@ -1301,6 +1303,7 @@ public class VentasService : IVentasService
             Estado = EstadoNotaVenta.Confirmada,
             FormaPago = forma,
             Observacion = Limpiar(observacion),
+            SoloComprobante = soloComprobante,
             UsuarioId = usuarioId,
             Detalle = lineas.Select(l => new NotaVentaDetalle
             {

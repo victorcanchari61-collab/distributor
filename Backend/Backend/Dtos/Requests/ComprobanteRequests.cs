@@ -9,6 +9,16 @@ public class EmitirComprobanteRequest
     public string Tipo { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Emitir una factura o boleta directa: la venta (cliente, almacén, productos y pago) y el comprobante en un solo paso, sin
+/// pasar por la lista de Notas de venta.
+/// </summary>
+public class EmitirDirectoRequest : CrearNotaVentaRequest
+{
+    /// <summary>01 factura o 03 boleta.</summary>
+    public string Tipo { get; set; } = string.Empty;
+}
+
 /// <summary>Mandar el comprobante por WhatsApp. Sin teléfono se usa el del cliente.</summary>
 public class EnviarWhatsAppRequest
 {

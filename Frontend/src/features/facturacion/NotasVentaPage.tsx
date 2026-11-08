@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
@@ -107,11 +107,14 @@ interface RecojoLinea extends LineaProductoNueva {
  * "nota de venta a medio despachar" como sí existe una compra a medio
  * recibir, así que no hay una pantalla de despachos aparte.
  */
-export function NotasVentaPage() {
+export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; onCerrar?: () => void } = {}) {
   const { puede } = usePermisos()
-  const [vista, setVista] = useState<'lista' | 'form'>('lista')
+  // Con `directo` (Facturas y Boletas) la pantalla es solo el formulario de una factura o boleta directa: la venta no
+  // sale en esta lista, y al terminar o cancelar se vuelve a quien la abrió (`onCerrar`).
+  const [vista, setVista] = useState<'lista' | 'form'>(directo ? 'form' : 'lista')
   // Si la venta nueva también emite su comprobante: '01' factura, '03' boleta, '' solo la nota de venta.
-  const [emitir, setEmitir] = useState<'' | '01' | '03'>('')
+  const [emitir, setEmitir] = useState<'' | '01' | '03'>(directo ?? '')
+  const volver = () => (directo ? onCerrar?.() : setVista('lista'))
   const [params, setParams] = useSearchParams()
   const [notas, setNotas] = useState<NotaVentaFila[]>([])
   // El padrón no se descarga: el selector busca en el servidor, y los filtros
@@ -256,6 +259,15 @@ export function NotasVentaPage() {
     setRecojos([])
     setVista('form')
   }
+
+  // En modo directo el formulario se arma apenas llegan los almacenes (el principal queda elegido).
+  const iniciado = useRef(false)
+  useEffect(() => {
+    if (!directo || iniciado.current || almacenes.length === 0) return
+    iniciado.current = true
+    abrirNueva(directo)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- una sola vez, cuando ya hay almacenes
+  }, [directo, almacenes])
 
   // "Nueva factura" y "Nueva boleta" (en Facturas y Boletas) llegan aquí con ?nueva=01|03: abre la venta directa
   // con ese comprobante ya elegido.
@@ -665,6 +677,14 @@ export function NotasVentaPage() {
 
     setGuardando(true)
     try {
+      if (directo) {
+        // Factura o boleta directa: la venta y el comprobante nacen juntos; si algo falla, no queda nada a medias.
+        const c = await comprobanteApi.emitirDirecto(body, directo)
+        if (c.estado === 'ACEPTADO') toast.exito(`${c.numeroCompleto} aceptado por SUNAT`)
+        else toast.error(c.mensajeSunat ?? `${c.numeroCompleto}: ${ESTADOS_CPE[c.estado].ayuda}`)
+        onCerrar?.()
+        return
+      }
       if (editando) {
         await notaVentaApi.update(editando.id, body)
       } else {
@@ -966,7 +986,7 @@ export function NotasVentaPage() {
                 : 'Venta sin pedido previo; descuenta stock al registrarla.'
           }
           actions={
-            <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+            <Button variant="secondary" size="sm" onClick={volver}>
               <ArrowLeft size={15} />
               Volver
             </Button>
@@ -1181,7 +1201,7 @@ export function NotasVentaPage() {
               </PageSection>
             )}
 
-            {!editando && (puede('fact.boletas', 'crear') || puede('fact.facturas', 'crear')) && (
+            {!editando && !directo && (puede('fact.boletas', 'crear') || puede('fact.facturas', 'crear')) && (
               <PageSection title="Comprobante" description="Emítelo a SUNAT al registrar la venta.">
                 <Select label="Emitir" value={emitir} onChange={(e) => setEmitir(e.target.value as '' | '01' | '03')}>
                   <option value="">Solo la nota de venta</option>
@@ -1215,7 +1235,7 @@ export function NotasVentaPage() {
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+          <Button variant="secondary" size="sm" onClick={volver}>
             Cancelar
           </Button>
           <Button size="sm" loading={guardando} onClick={() => void guardar()}>

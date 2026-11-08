@@ -27,6 +27,8 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
     private readonly IUsuarioActual _usuarioActual;
     private readonly INotificador _notificador;
     private readonly IProtectorSecretos _protector;
+    private readonly IVentasService _ventas;
+    private readonly ILogger<ComprobanteElectronicoService> _logger;
 
     public ComprobanteElectronicoService(
         AppDbContext context,
@@ -34,8 +36,12 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         IOptions<FacturacionOpciones> opciones,
         IUsuarioActual usuarioActual,
         INotificador notificador,
-        IProtectorSecretos protector)
+        IProtectorSecretos protector,
+        IVentasService ventas,
+        ILogger<ComprobanteElectronicoService> logger)
     {
+        _logger = logger;
+        _ventas = ventas;
         _protector = protector;
         _context = context;
         _factu = factu;
@@ -117,6 +123,29 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         ?? throw new NotFoundException($"No existe el comprobante {id}");
 
     // ------------------------------------------------------------ Factura y boleta
+
+    public async Task<ComprobanteResponse> EmitirDirectoAsync(EmitirDirectoRequest request)
+    {
+        if (request.Tipo is not (TipoCpe.Factura or TipoCpe.Boleta))
+            throw new BadRequestException("El tipo debe ser 01 (factura) o 03 (boleta)");
+
+        // La venta existe para descontar stock y contar en los reportes, pero el documento es el comprobante: no sale en
+        // Notas de venta.
+        var venta = await _ventas.CrearNotaVentaAsync(request, _usuarioActual.Id, soloComprobante: true);
+
+        try
+        {
+            return await EmitirAsync(new EmitirComprobanteRequest { NotaVentaId = venta.Id, Tipo = request.Tipo });
+        }
+        catch
+        {
+            // Sin comprobante la venta no tiene dónde verse: se anula y el stock vuelve, en vez de dejarla escondida.
+            var emitido = await _context.ComprobantesElectronicos.AsNoTracking()
+                .AnyAsync(c => c.NotaVentaId == venta.Id && (c.Tipo == TipoCpe.Factura || c.Tipo == TipoCpe.Boleta));
+            if (!emitido) await _ventas.AnularNotaVentaAsync(venta.Id, _usuarioActual.Id);
+            throw;
+        }
+    }
 
     public async Task<ComprobanteResponse> EmitirAsync(EmitirComprobanteRequest request)
     {
@@ -447,7 +476,44 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
         await _context.SaveChangesAsync();
         await _notificador.AvisarAsync("comprobantes", "emitido", new { c.Id, c.Estado });
 
+        if (c.Estado == EstadoCpe.Aceptado && c.Tipo == TipoCpe.NotaCredito)
+            await AnularVentaSiSeCorrigioTodoAsync(c);
+
         return Mapear(c);
+    }
+
+    /// <summary>
+    /// Una nota de crédito de anulación (01) o de devolución total (06) que SUNAT aceptó y que, junto con las demás, cubre todo
+    /// lo facturado, deshace la venta: se anula, el stock vuelve al almacén y deja de contar en los reportes. Sin esto la nota
+    /// existía solo para SUNAT y la venta seguía vendida en el sistema.
+    ///
+    /// Los motivos parciales (descuentos, devolución por ítem, correcciones) no se tocan: no dicen qué productos volvieron.
+    /// Si anular la venta falla, la nota ya fue aceptada y no se deshace: queda en el registro para anular la venta a mano.
+    /// </summary>
+    private async Task AnularVentaSiSeCorrigioTodoAsync(ComprobanteElectronico nota)
+    {
+        if (nota.CodMotivo is not ("01" or "06") || nota.AfectadoId is not int afectadoId || nota.NotaVentaId is not int ventaId)
+            return;
+
+        try
+        {
+            var facturado = await _context.ComprobantesElectronicos.AsNoTracking()
+                .Where(x => x.Id == afectadoId).Select(x => x.Total).FirstAsync();
+            var corregido = await _context.ComprobantesElectronicos.AsNoTracking()
+                .Where(x => x.AfectadoId == afectadoId && x.Tipo == TipoCpe.NotaCredito && x.Estado == EstadoCpe.Aceptado)
+                .SumAsync(x => (decimal?)x.Total) ?? 0m;
+            if (corregido + 0.01m < facturado) return;
+
+            var anulada = await _context.NotasVenta.AsNoTracking()
+                .Where(n => n.Id == ventaId).Select(n => n.Estado == EstadoNotaVenta.Anulada).FirstOrDefaultAsync();
+            if (anulada) return;
+
+            await _ventas.AnularNotaVentaAsync(ventaId, nota.UsuarioId ?? _usuarioActual.Id);
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "No se pudo anular la venta {VentaId} tras aceptarse la nota de crédito {Nota}", ventaId, nota.NumeroCompleto);
+        }
     }
 
     /// <summary>La empresa como la pide la API: los nombres van tal cual porque son los de su JSON.</summary>

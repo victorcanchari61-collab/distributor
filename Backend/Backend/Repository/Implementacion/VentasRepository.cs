@@ -410,7 +410,7 @@ public class VentasRepository : IVentasRepository
     {
         // Sin Include: la fila se proyecta al final, así la base lee solo las
         // columnas que muestra la tabla y no el detalle, pagos ni devoluciones.
-        var query = Acotar(_context.NotasVenta.AsNoTracking(), alcance);
+        var query = Acotar(_context.NotasVenta.AsNoTracking(), alcance).Where(n => !n.SoloComprobante);
 
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
@@ -570,7 +570,7 @@ public class VentasRepository : IVentasRepository
 
     public async Task<ResumenNotasVentaResponse> ResumenNotasVentaAsync(AlcanceFiltro? alcance = null)
     {
-        var notas = Acotar(_context.NotasVenta.AsNoTracking(), alcance);
+        var notas = Acotar(_context.NotasVenta.AsNoTracking(), alcance).Where(n => !n.SoloComprobante);
         var confirmadas = notas.Where(n => n.Estado == EstadoNotaVenta.Confirmada);
 
         return new ResumenNotasVentaResponse
@@ -720,7 +720,7 @@ public class VentasRepository : IVentasRepository
 
     public async Task<OpcionesFiltroVentasResponse> OpcionesNotasVentaAsync(AlcanceFiltro? alcance = null)
     {
-        var notas = Acotar(_context.NotasVenta.AsNoTracking(), alcance);
+        var notas = Acotar(_context.NotasVenta.AsNoTracking(), alcance).Where(n => !n.SoloComprobante);
         return new OpcionesFiltroVentasResponse
         {
             Clientes = await notas.Select(n => n.Cliente!.Nombre).Distinct().OrderBy(n => n).ToListAsync(),

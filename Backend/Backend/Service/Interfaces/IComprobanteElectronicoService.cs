@@ -21,6 +21,9 @@ public interface IComprobanteElectronicoService
 
     Task<ComprobanteResponse> GetAsync(int id);
 
+    /// <summary>Factura o boleta directa: registra la venta (que no sale en Notas de venta), descuenta stock y emite el comprobante.</summary>
+    Task<ComprobanteResponse> EmitirDirectoAsync(EmitirDirectoRequest request);
+
     /// <summary>Factura o boleta de una nota de venta. La firma, la envía a SUNAT y guarda lo que respondió.</summary>
     Task<ComprobanteResponse> EmitirAsync(EmitirComprobanteRequest request);
 

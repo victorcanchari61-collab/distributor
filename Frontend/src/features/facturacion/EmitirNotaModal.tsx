@@ -147,6 +147,13 @@ export function EmitirNotaModal({
           </Select>
         </div>
 
+        {tipo === '07' && (codMotivo === '01' || codMotivo === '06') && comprobante?.notaVentaNumero && (
+          <Alert tone="info">
+            Si SUNAT la acepta y cubre todo lo facturado, la venta {comprobante.notaVentaNumero} se anula: el stock vuelve al almacén
+            y deja de contar en los reportes.
+          </Alert>
+        )}
+
         <Input
           label="Descripción del motivo"
           placeholder="Ej.: El cliente devolvió la mercadería"

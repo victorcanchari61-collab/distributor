@@ -51,7 +51,8 @@ public interface IVentasService
     Task<OpcionesFiltroVentasResponse> GetOpcionesNotasVentaAsync();
 
     /// <summary>Venta directa, sin pedido previo: el stock sale al momento.</summary>
-    Task<NotaVentaResponse> CrearNotaVentaAsync(CrearNotaVentaRequest request, int? usuarioId);
+    /// <param name="soloComprobante">La venta nace de una factura o boleta directa: no sale en la lista de Notas de venta.</param>
+    Task<NotaVentaResponse> CrearNotaVentaAsync(CrearNotaVentaRequest request, int? usuarioId, bool soloComprobante = false);
 
     /// <summary>
     /// Corrige una venta ya confirmada: el stock que había salido con las

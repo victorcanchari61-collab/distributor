@@ -1,4 +1,5 @@
 import { api, guardarArchivo, obtenerArchivo } from '../../lib/apiClient'
+import type { CrearNotaVentaRequest } from './ventasApi'
 
 /** Los tipos de comprobante electrónico (Catálogo 01 de SUNAT). */
 export type TipoCpe = '01' | '03' | '07' | '08'
@@ -157,6 +158,13 @@ export const comprobanteApi = {
 
   /** Factura o boleta de una nota de venta: la firma, la envía a SUNAT y devuelve lo que respondió. */
   emitir: (notaVentaId: number, tipo: '01' | '03') => api.post<ComprobanteResponse>('/comprobante/emitir', { notaVentaId, tipo }),
+
+  /**
+   * Factura o boleta directa: registra la venta (que no sale en Notas de venta), descuenta el stock y emite el comprobante
+   * en un solo paso.
+   */
+  emitirDirecto: (venta: CrearNotaVentaRequest, tipo: '01' | '03') =>
+    api.post<ComprobanteResponse>('/comprobante/emitir-directo', { ...venta, tipo }),
 
   /** Nota de crédito o débito sobre un comprobante aceptado. */
   emitirNota: (id: number, body: EmitirNota) => api.post<ComprobanteResponse>(`/comprobante/${id}/nota`, body),

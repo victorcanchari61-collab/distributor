@@ -2959,6 +2959,9 @@ namespace Backend.Data.Migrations
                     b.Property<int?>("PedidoId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("SoloComprobante")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int?>("UsuarioId")
                         .HasColumnType("int");
 
