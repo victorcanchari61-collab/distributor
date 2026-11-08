@@ -24,7 +24,6 @@ import type { SubmoduloCatalogo } from '../../lib/permisos'
 import { usuarioApi } from './usuarioApi'
 import type { UsuarioResponse } from './usuarioApi'
 import { ALCANCE, ALCANCE_LABEL, permisoApi } from './permisoApi'
-import { AlcanceDatosEditor } from './AlcanceDatosEditor'
 import type { Alcance, UsuarioPermisoResponse } from './permisoApi'
 
 const ICONO_ALCANCE: Record<Alcance, React.ReactNode> = {
@@ -74,11 +73,10 @@ export function ExcepcionesPermisos() {
   const [abierto, setAbierto] = useState(false)
   const { confirmar, dialogo } = useConfirmacion()
 
-  // Qué filas ve ESTA persona. Vacío en una pantalla = igual que su rol.
+  // Qué filas ve ESTA persona. Sin fila en una pantalla = igual que su rol. Se cambia en el modal, en la columna
+  // "Qué ve" de la matriz.
   const [pantallasAlcance, setPantallasAlcance] = useState<string[]>([])
   const [alcances, setAlcances] = useState<Record<string, string>>({})
-  const [alcancesBase, setAlcancesBase] = useState<Record<string, string>>({})
-  const [guardandoAlcance, setGuardandoAlcance] = useState(false)
 
   useEffect(() => {
     void usuarioApi
@@ -112,39 +110,12 @@ export function ExcepcionesPermisos() {
     let vigente = true
     void permisoApi
       .alcancesDeUsuario(usuarioId)
-      .then((a) => {
-        if (!vigente) return
-        setAlcances(a)
-        setAlcancesBase(a)
-      })
-      .catch(() => {
-        if (!vigente) return
-        setAlcances({})
-        setAlcancesBase({})
-      })
+      .then((a) => vigente && setAlcances(a))
+      .catch(() => vigente && setAlcances({}))
     return () => {
       vigente = false
     }
   }, [usuarioId])
-
-  const alcancesSucios = JSON.stringify(alcances) !== JSON.stringify(alcancesBase)
-
-  const guardarAlcances = async () => {
-    if (usuarioId === null) return
-    setGuardandoAlcance(true)
-    try {
-      // Lo que se deja en "igual que su rol" no viaja: sin fila la persona sigue a su rol.
-      const propios = Object.fromEntries(Object.entries(alcances).filter(([, nivel]) => nivel !== ''))
-      await permisoApi.guardarAlcancesUsuario(usuarioId, propios)
-      setAlcancesBase(propios)
-      setAlcances(propios)
-      toast.exito('Alcance guardado')
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos guardar el alcance.')
-    } finally {
-      setGuardandoAlcance(false)
-    }
-  }
 
   const cargar = useCallback(async () => {
     if (usuarioId === null) return
@@ -277,7 +248,7 @@ export function ExcepcionesPermisos() {
 
         <Button size="sm" disabled={usuarioId === null} onClick={() => setAbierto(true)}>
           <Plus size={15} />
-          Conceder permiso
+          Dar permisos
         </Button>
       </div>
 
@@ -309,40 +280,9 @@ export function ExcepcionesPermisos() {
       />
 
       <p className="mt-3 text-xs text-ink-soft">
-        Lo que se concede aquí <b>se suma</b> a lo del rol, nunca lo quita.
+        Lo que se concede aquí <b>se suma</b> a lo del rol, nunca lo quita. Qué clientes y ventas ve se cambia en{' '}
+        <b>Dar permisos</b>, en la columna <b>Qué ve</b>.
       </p>
-
-      {/*
-        El alcance sí puede cambiar lo del rol en cualquier sentido: el supervisor del rol Vendedor que
-        debe verlo todo, o el dueño que solo atiende su ruta. Por eso aquí manda sobre el rol.
-      */}
-      {pantallasAlcance.length > 0 && usuarioId !== null && (
-        <div className="mt-6 border-t border-line pt-5">
-          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-base font-bold text-ink">Qué clientes y ventas ve</h3>
-              <p className="mt-0.5 text-sm text-ink-muted">
-                Manda sobre el alcance de su rol. Déjalo en <b>Igual que su rol</b> para no cambiar nada.
-                {usuario && !usuario.rutaIds?.length && ' Esta persona todavía no tiene ruta asignada (se asigna en Usuarios).'}
-              </p>
-            </div>
-            <Button
-              size="sm"
-              disabled={!alcancesSucios}
-              loading={guardandoAlcance}
-              onClick={() => void guardarAlcances()}
-            >
-              Guardar alcance
-            </Button>
-          </div>
-          <AlcanceDatosEditor
-            submodulos={pantallasAlcance}
-            valores={alcances}
-            onChange={(sub, nivel) => setAlcances((prev) => ({ ...prev, [sub]: nivel }))}
-            heredable
-          />
-        </div>
-      )}
 
       {abierto && usuarioId !== null && (
         <ModalConceder
@@ -350,11 +290,18 @@ export function ExcepcionesPermisos() {
           catalogo={catalogo}
           roles={roles}
           vigentes={permisos.filter((p) => p.vigente)}
+          pantallasAlcance={pantallasAlcance}
+          alcancesActuales={alcances}
           onCerrar={() => setAbierto(false)}
-          onConcedido={async (n) => {
+          onConcedido={async (n, nuevosAlcances) => {
             setAbierto(false)
             await cargar()
-            toast.exito(n === 1 ? 'Permiso concedido' : `${n} permisos concedidos`)
+            if (nuevosAlcances) setAlcances(nuevosAlcances)
+            const partes = [
+              n === 1 ? 'Permiso concedido' : n > 1 ? `${n} permisos concedidos` : '',
+              nuevosAlcances ? 'Qué ve guardado' : '',
+            ].filter(Boolean)
+            toast.exito(partes.join(' · '))
           }}
           usuarioId={usuarioId}
         />
@@ -378,6 +325,8 @@ function ModalConceder({
   catalogo,
   roles,
   vigentes,
+  pantallasAlcance,
+  alcancesActuales,
   onCerrar,
   onConcedido,
 }: {
@@ -386,8 +335,13 @@ function ModalConceder({
   catalogo: SubmoduloCatalogo[]
   roles: RolResponse[]
   vigentes: UsuarioPermisoResponse[]
+  /** Las pantallas donde se puede limitar qué clientes y ventas ve. */
+  pantallasAlcance: string[]
+  /** Lo que ve hoy esta persona, distinto de su rol. Sin fila = igual que su rol. */
+  alcancesActuales: Record<string, string>
   onCerrar: () => void
-  onConcedido: (cuantos: number) => Promise<void>
+  /** Con `nuevosAlcances` solo si se cambió qué ve. */
+  onConcedido: (cuantos: number, nuevosAlcances?: Record<string, string>) => Promise<void>
 }) {
   const [marcadas, setMarcadas] = useState<Set<string>>(() => new Set())
   const [buscar, setBuscar] = useState('')
@@ -396,6 +350,35 @@ function ModalConceder({
   const [motivo, setMotivo] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+
+  /*
+   * Qué clientes y ventas ve, en la columna "Qué ve" de la matriz. No es un permiso que se gaste ni venza: manda
+   * sobre lo de su rol hasta que se cambie (el supervisor del rol Vendedor que debe verlo todo, o el dueño que solo
+   * atiende su ruta).
+   */
+  const [queVe, setQueVe] = useState<Record<string, string>>(alcancesActuales)
+  const [delRol, setDelRol] = useState<Record<string, string>>({})
+  const rolPrincipal = usuario?.rolId
+
+  useEffect(() => {
+    if (rolPrincipal === undefined) return
+    let vigente = true
+    void permisoApi
+      .alcancesDeRol(rolPrincipal)
+      .then((a) => vigente && setDelRol(a))
+      .catch(() => vigente && setDelRol({}))
+    return () => {
+      vigente = false
+    }
+  }, [rolPrincipal])
+
+  // "Igual que su rol" no viaja: sin fila la persona sigue a su rol.
+  const queVePropio = useMemo(
+    () => Object.fromEntries(Object.entries(queVe).filter(([, nivel]) => nivel !== '')),
+    [queVe],
+  )
+  const ordenado = (o: Record<string, string>) => JSON.stringify(Object.entries(o).sort())
+  const cambioQueVe = ordenado(queVePropio) !== ordenado(alcancesActuales)
 
   /** Lo que ya tiene y no se vuelve a dar: lo de sus roles y lo concedido antes que sigue vigente. */
   const fijas = useMemo(() => {
@@ -468,7 +451,8 @@ function ModalConceder({
         })
         dados++
       }
-      await onConcedido(dados)
+      if (cambioQueVe) await permisoApi.guardarAlcancesUsuario(usuarioId, queVePropio)
+      await onConcedido(dados, cambioQueVe ? queVePropio : undefined)
     } catch (e) {
       const mensaje = e instanceof ApiError ? e.message : 'No pudimos conceder el permiso.'
       setError(dados > 0 ? `Se dieron ${dados} de ${marcadas.size}. ${mensaje}` : mensaje)
@@ -477,7 +461,9 @@ function ModalConceder({
     }
   }
 
-  const listo = marcadas.size > 0 && (alcance !== ALCANCE.temporal || expiraEn !== '')
+  const fechaLista = alcance !== ALCANCE.temporal || expiraEn !== ''
+  const listo = marcadas.size > 0 ? fechaLista : cambioQueVe
+  const esAdmin = roles.some((r) => r.protegido && usuario?.rolIds.includes(r.id))
 
   return (
     <Modal
@@ -488,15 +474,19 @@ function ModalConceder({
       footer={
         <>
           <span className="mr-auto text-sm text-ink-muted">
-            {marcadas.size === 0
-              ? 'Marca lo que necesita.'
-              : `${marcadas.size} ${marcadas.size === 1 ? 'permiso' : 'permisos'} · ${ALCANCE_LABEL[alcance].toLowerCase()}`}
+            {[
+              marcadas.size > 0 &&
+                `${marcadas.size} ${marcadas.size === 1 ? 'permiso' : 'permisos'} · ${ALCANCE_LABEL[alcance].toLowerCase()}`,
+              cambioQueVe && 'Qué ve cambiado',
+            ]
+              .filter(Boolean)
+              .join(' · ') || 'Marca lo que necesita.'}
           </span>
           <Button variant="secondary" onClick={onCerrar}>
             Cancelar
           </Button>
           <Button disabled={!listo} loading={guardando} onClick={() => void guardar()}>
-            Conceder
+            {marcadas.size > 0 ? 'Conceder' : 'Guardar'}
           </Button>
         </>
       }
@@ -531,7 +521,20 @@ function ModalConceder({
             fijas={fijas}
             filtro={buscar}
             nuevas
+            alcance={{
+              pantallas: pantallasAlcance,
+              valores: queVe,
+              onChange: (sub, nivel) => setQueVe((prev) => ({ ...prev, [sub]: nivel })),
+              heredado: delRol,
+              // El Administrador ve siempre todo.
+              disabled: esAdmin,
+            }}
           />
+          <p className="mt-2 text-xs text-ink-soft">
+            <b>Qué ve</b> dice de qué clientes y ventas: no se gasta ni vence, queda hasta que lo cambies.
+            {usuario && !usuario.rutaIds?.length &&
+              ' Esta persona no tiene ruta asignada (se asigna en Usuarios): con "Solo mis rutas" no verá ningún cliente.'}
+          </p>
           {resumen.length > 0 && (
             <ul className="mt-2 space-y-0.5 rounded-field bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
               {resumen.map((r) => (
@@ -543,6 +546,9 @@ function ModalConceder({
           )}
         </div>
 
+        {/* Hasta cuándo y por qué son de los permisos marcados: sin ninguno no hay nada que preguntar. */}
+        {marcadas.size > 0 && (
+        <>
         <div>
           <p className="mb-1.5 text-sm font-medium text-ink">¿Hasta cuándo?</p>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -596,6 +602,8 @@ function ModalConceder({
             className="w-full rounded-field border border-line px-3 py-2 text-sm"
           />
         </label>
+        </>
+        )}
       </div>
     </Modal>
   )

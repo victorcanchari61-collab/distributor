@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react'
 import { Badge, Desplegable, cn } from '../../components/ui'
 import { NAV_GROUPS, resolveNav } from '../../components/layout'
 import type { Accion, SubmoduloCatalogo } from '../../lib/permisos'
-import { opcionesAlcance, queVe } from './AlcanceDatosEditor'
+import { opcionesAlcance, queVe } from './alcanceDatos'
 
 /** Qué filas ve en cada pantalla que lo admite (todas, solo su ruta, solo lo suyo). */
 export interface AlcanceEnMatriz {
@@ -12,6 +12,11 @@ export interface AlcanceEnMatriz {
   valores: Record<string, string>
   onChange: (submodulo: string, nivel: string) => void
   disabled?: boolean
+  /**
+   * Para una persona: ofrece "Igual que su rol" (valor ''), que es lo que tiene mientras no se le cambie. Trae lo
+   * que su rol ve en cada pantalla, para decirlo en esa opción.
+   */
+  heredado?: Record<string, string>
 }
 
 /** Como se nombra cada accion en pantalla, y en que orden se leen. */
@@ -174,7 +179,7 @@ export function MatrizPermisos({
                         </th>
                       ))}
                       {conAlcance && (
-                        <th className="w-48 px-2 py-2 text-left text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
+                        <th className="w-56 px-2 py-2 text-left text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
                           Qué ve
                         </th>
                       )}
@@ -233,15 +238,17 @@ export function MatrizPermisos({
                                 <span title={queVe(s.submodulo)}>
                                   <Desplegable
                                     size="sm"
-                                    value={alcance.valores[s.submodulo] || 'todos'}
+                                    value={alcance.valores[s.submodulo] ?? (alcance.heredado ? '' : 'todos')}
                                     onChange={(v) => alcance.onChange(s.submodulo, String(v))}
                                     // Sin Ver no entra a la pantalla: qué filas vería da igual.
                                     disabled={alcance.disabled || !tiene(clave(s.submodulo, 'ver'))}
-                                    options={opcionesAlcance(s.submodulo).map((n) => ({
-                                      value: n.value,
-                                      label: n.label,
-                                      nota: n.nota,
-                                    }))}
+                                    options={opcionesAlcance(s.submodulo, alcance.heredado !== undefined).map((n) => {
+                                      if (n.value !== '' || !alcance.heredado) return n
+                                      // "Igual que su rol" dice cuál es, para no tener que ir a mirarlo al rol.
+                                      const delRol = alcance.heredado[s.submodulo] || 'todos'
+                                      const nombre = opcionesAlcance(s.submodulo).find((o) => o.value === delRol)?.label
+                                      return { ...n, label: `Igual que su rol${nombre ? ` (${nombre})` : ''}` }
+                                    })}
                                   />
                                 </span>
                               ) : (
