@@ -1,39 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, Inbox, RotateCcw, Save, ShieldCheck, ShieldPlus, Users } from 'lucide-react'
-import { Alert, Badge, Button, cn, PageHeader, PageSection, Tabs, useToast } from '../../components/ui'
+import { Inbox, RotateCcw, Save, ShieldCheck, ShieldPlus, Users } from 'lucide-react'
+import { Alert, Button, cn, PageHeader, PageSection, Tabs, useToast } from '../../components/ui'
 import { ExcepcionesPermisos } from './ExcepcionesPermisos'
 import { AlcanceDatosEditor } from './AlcanceDatosEditor'
 import { permisoApi } from './permisoApi'
 import { BandejaSolicitudes } from './BandejaSolicitudes'
 import { ESTADO_SOLICITUD, solicitudApi } from './solicitudApi'
-import { NAV_GROUPS, resolveNav } from '../../components/layout'
+import { MatrizPermisos, clave } from './MatrizPermisos'
 import { ApiError } from '../../lib/apiClient'
 import { catalogoPermisos } from '../../lib/permisos'
-import type { Accion, SubmoduloCatalogo } from '../../lib/permisos'
+import type { SubmoduloCatalogo } from '../../lib/permisos'
 import { rolApi } from './rolApi'
 import type { RolPermisoResponse, RolResponse } from './rolApi'
 import { useRealtime } from '../../lib/realtime'
 
-/** Como se nombra cada accion en pantalla, y en que orden se leen. */
-const ACCIONES: { id: Accion; label: string }[] = [
-  { id: 'ver', label: 'Ver' },
-  { id: 'crear', label: 'Crear' },
-  { id: 'editar', label: 'Editar' },
-  { id: 'confirmar', label: 'Confirmar' },
-  { id: 'cobrar', label: 'Cobrar' },
-  { id: 'anular', label: 'Anular' },
-  { id: 'eliminar', label: 'Eliminar' },
-  { id: 'exportar', label: 'Exportar' },
-  { id: 'importar', label: 'Importar' },
-  { id: 'ingreso', label: 'Ingreso' },
-  { id: 'egreso', label: 'Egreso' },
-  { id: 'transferir', label: 'Mover plata' },
-]
-
 /** Lo concedido, como claves "submodulo:accion" — igual que lo guarda el backend. */
 type Marcas = Set<string>
-
-const clave = (submodulo: string, accion: string) => `${submodulo}:${accion}`
 
 /**
  * Quién puede hacer qué, por submódulo y acción.
@@ -56,7 +38,6 @@ export function AccesosPage() {
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
-  const [abiertos, setAbiertos] = useState<string[]>([])
   // Qué filas ve el rol (todos / solo su ruta / solo lo que registró) y en qué pantallas aplica.
   const [pantallasAlcance, setPantallasAlcance] = useState<string[]>([])
   const [alcances, setAlcances] = useState<Record<string, string>>({})
@@ -137,20 +118,6 @@ export function AccesosPage() {
   }, [])
 
   const rol = useMemo(() => roles.find((r) => r.id === rolId) ?? null, [roles, rolId])
-
-  /** El catálogo agrupado por módulo, en el orden del menú. */
-  const modulos = useMemo(() => {
-    const porModulo = new Map<string, SubmoduloCatalogo[]>()
-    for (const s of catalogo) {
-      const lista = porModulo.get(s.modulo) ?? []
-      lista.push(s)
-      porModulo.set(s.modulo, lista)
-    }
-
-    return NAV_GROUPS.map((g) => ({ grupo: g, submodulos: porModulo.get(g.id) ?? [] })).filter(
-      (m) => m.submodulos.length > 0,
-    )
-  }, [catalogo])
 
   const deRol = (permisos: RolPermisoResponse[]) =>
     new Set(permisos.map((p) => clave(p.submodulo, p.accion)))
@@ -382,142 +349,13 @@ export function AccesosPage() {
           ))}
         </div>
 
-        {/*
-         * Un módulo por bloque plegable. Con 41 pantallas × 9 acciones, una sola
-         * tabla plana sería una pared de casillas que nadie configuraría bien;
-         * plegado se ve el resumen y se abre solo lo que se va a tocar.
-         */}
-        <div className="space-y-2">
-          {modulos.map(({ grupo, submodulos }) => {
-            const GroupIcon = grupo.icon
-            const abierto = abiertos.includes(grupo.id)
-            const visibles = submodulos.filter((s) => marcas.has(clave(s.submodulo, 'ver'))).length
-            const completo = submodulos.every((s) =>
-              s.acciones.every((a) => marcas.has(clave(s.submodulo, a))),
-            )
-
-            return (
-              <div
-                key={grupo.id}
-                data-sys={grupo.sys}
-                className="overflow-hidden rounded-panel border border-line"
-              >
-                <div className="flex items-center gap-2 bg-surface-alt/60 px-3 py-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAbiertos((prev) =>
-                        prev.includes(grupo.id)
-                          ? prev.filter((g) => g !== grupo.id)
-                          : [...prev, grupo.id],
-                      )
-                    }
-                    aria-expanded={abierto}
-                    className="flex flex-1 cursor-pointer items-center gap-2 text-left"
-                  >
-                    <ChevronDown
-                      size={15}
-                      className={cn('shrink-0 transition-transform', abierto && 'rotate-180')}
-                    />
-                    <GroupIcon size={16} className="text-[rgb(var(--sys-rgb))]" />
-                    <span className="font-semibold text-ink">{grupo.label}</span>
-                    <span className="text-xs text-ink-soft">
-                      {visibles} de {submodulos.length}
-                    </span>
-                    {visibles === 0 && <Badge>sin acceso</Badge>}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => marcarModulo(submodulos, !completo)}
-                    className="cursor-pointer text-xs font-semibold text-[rgb(var(--sys-ink-rgb))] hover:underline"
-                  >
-                    {completo ? 'Quitar todo' : 'Marcar todo'}
-                  </button>
-                </div>
-
-                {abierto && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[720px] border-collapse text-sm">
-                      <thead>
-                        <tr className="border-b border-line">
-                          <th className="py-2 pr-3 pl-3 text-left text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
-                            Pantalla
-                          </th>
-                          {ACCIONES.map((a) => (
-                            <th
-                              key={a.id}
-                              className="w-[74px] px-1 py-2 text-center text-[11px] font-semibold tracking-wider text-ink-muted uppercase"
-                            >
-                              {a.label}
-                            </th>
-                          ))}
-                          <th className="w-20 px-2 py-2 text-center text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
-                            Todo
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {submodulos.map((s) => {
-                          const { item } = resolveNav(s.submodulo)
-                          const lleno = s.acciones.every((a) => marcas.has(clave(s.submodulo, a)))
-
-                          return (
-                            <tr
-                              key={s.submodulo}
-                              className="border-b border-line last:border-b-0 hover:bg-surface-alt/60"
-                            >
-                              <td className="py-2 pr-3 pl-3">
-                                <span className="font-medium text-ink">
-                                  {item?.label ?? s.submodulo}
-                                </span>
-                              </td>
-
-                              {ACCIONES.map((a) => {
-                                // Una casilla vacia, no una desactivada: esa
-                                // accion no existe en esta pantalla, no es que
-                                // este prohibida.
-                                if (!s.acciones.includes(a.id)) {
-                                  return (
-                                    <td key={a.id} className="px-1 py-2 text-center text-ink-soft">
-                                      ·
-                                    </td>
-                                  )
-                                }
-
-                                return (
-                                  <td key={a.id} className="px-1 py-2 text-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={marcas.has(clave(s.submodulo, a.id))}
-                                      onChange={() => toggle(s.submodulo, a.id, s.acciones)}
-                                      aria-label={`${a.label} en ${item?.label ?? s.submodulo}`}
-                                      className="size-4 cursor-pointer rounded border-line-strong accent-[rgb(var(--sys-rgb))]"
-                                    />
-                                  </td>
-                                )
-                              })}
-
-                              <td className="px-2 py-2 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => marcarSubmodulo(s.submodulo, s.acciones, !lleno)}
-                                  className="cursor-pointer text-xs font-semibold text-[rgb(var(--sys-ink-rgb))] hover:underline"
-                                >
-                                  {lleno ? 'Quitar' : 'Marcar'}
-                                </button>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        <MatrizPermisos
+          catalogo={catalogo}
+          marcadas={marcas}
+          onToggle={toggle}
+          onMarcarSubmodulo={marcarSubmodulo}
+          onMarcarModulo={marcarModulo}
+        />
 
         <p className="mt-3 text-xs text-ink-soft">
           Quitar <b>Ver</b> retira la pantalla por completo. Conceder cualquier otra acción activa{' '}

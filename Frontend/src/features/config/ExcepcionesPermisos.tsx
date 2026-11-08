@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { MatrizPermisos, clave } from './MatrizPermisos'
+import { rolApi } from './rolApi'
+import type { RolResponse } from './rolApi'
 import { fechaHora, fechaCorta } from '../../lib/fechas'
-import { Ban, CalendarClock, Infinity as InfinityIcon, Plus, ShieldPlus, Zap } from 'lucide-react'
+import { Ban, CalendarClock, Infinity as InfinityIcon, Plus, Search, ShieldPlus, Zap } from 'lucide-react'
 import {
   Alert,
   Badge,
@@ -63,6 +66,7 @@ export function ExcepcionesPermisos() {
   const toast = useToast()
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
   const [catalogo, setCatalogo] = useState<SubmoduloCatalogo[]>([])
+  const [roles, setRoles] = useState<RolResponse[]>([])
   const [usuarioId, setUsuarioId] = useState<number | null>(null)
   const [permisos, setPermisos] = useState<UsuarioPermisoResponse[]>([])
   const [cargando, setCargando] = useState(false)
@@ -84,6 +88,12 @@ export function ExcepcionesPermisos() {
         setUsuarioId((actual) => actual ?? lista[0]?.id ?? null)
       })
       .catch(() => setError('No pudimos cargar los usuarios.'))
+
+    // Lo que ya le da su rol se muestra marcado en gris al conceder: no tiene sentido dárselo otra vez.
+    void rolApi
+      .getAll()
+      .then(setRoles)
+      .catch(() => setRoles([]))
 
     void catalogoPermisos()
       .then(setCatalogo)
@@ -338,11 +348,13 @@ export function ExcepcionesPermisos() {
         <ModalConceder
           usuario={usuario}
           catalogo={catalogo}
+          roles={roles}
+          vigentes={permisos.filter((p) => p.vigente)}
           onCerrar={() => setAbierto(false)}
-          onConcedido={async () => {
+          onConcedido={async (n) => {
             setAbierto(false)
             await cargar()
-            toast.exito('Permiso concedido')
+            toast.exito(n === 1 ? 'Permiso concedido' : `${n} permisos concedidos`)
           }}
           usuarioId={usuarioId}
         />
@@ -353,70 +365,133 @@ export function ExcepcionesPermisos() {
   )
 }
 
-/** Elegir pantalla, acción y hasta cuándo vale. */
+/**
+ * Elegir qué se le da, hasta cuándo y por qué.
+ *
+ * Lo que se le da se busca como en el menú — módulo, pantalla, acción — con la misma matriz de los roles, en vez de
+ * dos desplegables con el nombre interno de la pantalla. Lo que su rol ya le da sale marcado en gris, y se pueden
+ * dar varias cosas de una vez.
+ */
 function ModalConceder({
   usuario,
   usuarioId,
   catalogo,
+  roles,
+  vigentes,
   onCerrar,
   onConcedido,
 }: {
   usuario: UsuarioResponse | null
   usuarioId: number
   catalogo: SubmoduloCatalogo[]
+  roles: RolResponse[]
+  vigentes: UsuarioPermisoResponse[]
   onCerrar: () => void
-  onConcedido: () => Promise<void>
+  onConcedido: (cuantos: number) => Promise<void>
 }) {
-  const [submodulo, setSubmodulo] = useState('')
-  const [accion, setAccion] = useState('')
+  const [marcadas, setMarcadas] = useState<Set<string>>(() => new Set())
+  const [buscar, setBuscar] = useState('')
   const [alcance, setAlcance] = useState<Alcance>(ALCANCE.unaVez)
   const [expiraEn, setExpiraEn] = useState('')
   const [motivo, setMotivo] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
-  const acciones = useMemo(
-    () => catalogo.find((s) => s.submodulo === submodulo)?.acciones ?? [],
-    [catalogo, submodulo],
-  )
+  /** Lo que ya tiene y no se vuelve a dar: lo de sus roles y lo concedido antes que sigue vigente. */
+  const fijas = useMemo(() => {
+    const m = new Map<string, string>()
+    const suyos = roles.filter((r) => usuario?.rolIds.includes(r.id))
+    // El Administrador lo tiene todo aunque la matriz de su rol no lo diga.
+    if (suyos.some((r) => r.protegido)) {
+      for (const s of catalogo)
+        for (const a of s.acciones) m.set(clave(s.submodulo, a), 'Ya lo tiene: es Administrador')
+      return m
+    }
+    for (const r of suyos)
+      for (const p of r.permisos) m.set(clave(p.submodulo, p.accion), `Ya lo tiene por su rol (${r.nombre})`)
+    for (const p of vigentes) {
+      const k = clave(p.submodulo, p.accion)
+      if (!m.has(k)) m.set(k, 'Ya se le concedió y sigue vigente')
+    }
+    return m
+  }, [roles, usuario, vigentes, catalogo])
 
-  // Al cambiar de pantalla la accion elegida puede ya no existir en ella.
-  useEffect(() => {
-    if (accion && !acciones.includes(accion as never)) setAccion('')
-  }, [acciones, accion])
+  const toggle = (submodulo: string, accion: string, acciones: string[]) => {
+    setMarcadas((prev) => {
+      const siguiente = new Set(prev)
+      const k = clave(submodulo, accion)
+      const ver = clave(submodulo, 'ver')
+
+      if (siguiente.has(k)) {
+        siguiente.delete(k)
+        // Sin Ver lo demás de esa pantalla quedaría dado pero inalcanzable.
+        if (accion === 'ver') for (const a of acciones) siguiente.delete(clave(submodulo, a))
+      } else {
+        siguiente.add(k)
+        // Cualquier acción necesita poder entrar a la pantalla.
+        if (!fijas.has(ver)) siguiente.add(ver)
+      }
+      return siguiente
+    })
+  }
+
+  /** Lo elegido dicho en palabras, para leerlo antes de confirmar. */
+  const resumen = useMemo(() => {
+    const porPantalla = new Map<string, string[]>()
+    for (const k of marcadas) {
+      const corte = k.lastIndexOf(':')
+      const sub = k.slice(0, corte)
+      const accion = k.slice(corte + 1)
+      const lista = porPantalla.get(sub) ?? []
+      lista.push((ACCION_LABEL[accion] ?? accion).toLowerCase())
+      porPantalla.set(sub, lista)
+    }
+    return [...porPantalla].map(([sub, acciones]) => `${nombrePantalla(sub)}: ${acciones.join(', ')}`)
+  }, [marcadas])
 
   const guardar = async () => {
     setGuardando(true)
     setError('')
+    // Uno por uno: si alguno falla se para ahí y se dice cuántos se dieron.
+    let dados = 0
     try {
-      await permisoApi.conceder({
-        usuarioId,
-        submodulo,
-        accion,
-        alcance,
-        // El input da hora local; el backend guarda en UTC.
-        expiraEn: alcance === ALCANCE.temporal ? new Date(expiraEn).toISOString() : null,
-        motivo: motivo.trim() || null,
-      })
-      await onConcedido()
+      for (const k of marcadas) {
+        const corte = k.lastIndexOf(':')
+        await permisoApi.conceder({
+          usuarioId,
+          submodulo: k.slice(0, corte),
+          accion: k.slice(corte + 1),
+          alcance,
+          // El input da hora local; el backend guarda en UTC.
+          expiraEn: alcance === ALCANCE.temporal ? new Date(expiraEn).toISOString() : null,
+          motivo: motivo.trim() || null,
+        })
+        dados++
+      }
+      await onConcedido(dados)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos conceder el permiso.')
+      const mensaje = e instanceof ApiError ? e.message : 'No pudimos conceder el permiso.'
+      setError(dados > 0 ? `Se dieron ${dados} de ${marcadas.size}. ${mensaje}` : mensaje)
     } finally {
       setGuardando(false)
     }
   }
 
-  const listo =
-    submodulo !== '' && accion !== '' && (alcance !== ALCANCE.temporal || expiraEn !== '')
+  const listo = marcadas.size > 0 && (alcance !== ALCANCE.temporal || expiraEn !== '')
 
   return (
     <Modal
       open
       onClose={onCerrar}
-      title={`Conceder un permiso a ${usuario?.nombre ?? ''}`}
-      size="md"
+      title={`Dar permisos a ${usuario?.nombre ?? ''}`}
+      size="xl"
       footer={
         <>
+          <span className="mr-auto text-sm text-ink-muted">
+            {marcadas.size === 0
+              ? 'Marca lo que necesita.'
+              : `${marcadas.size} ${marcadas.size === 1 ? 'permiso' : 'permisos'} · ${ALCANCE_LABEL[alcance].toLowerCase()}`}
+          </span>
           <Button variant="secondary" onClick={onCerrar}>
             Cancelar
           </Button>
@@ -429,22 +504,44 @@ function ModalConceder({
       <div className="space-y-4">
         {error && <Alert>{error}</Alert>}
 
-        <Desplegable
-          label="Pantalla"
-          value={submodulo}
-          onChange={(v) => setSubmodulo(String(v))}
-          placeholder="Elige una pantalla"
-          options={catalogo.map((s) => ({ value: s.submodulo, label: nombrePantalla(s.submodulo) }))}
-        />
-
-        <Desplegable
-          label="Acción"
-          value={accion}
-          onChange={(v) => setAccion(String(v))}
-          disabled={submodulo === ''}
-          placeholder="Elige una acción"
-          options={acciones.map((a) => ({ value: a, label: ACCION_LABEL[a] ?? a }))}
-        />
+        <div>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-medium text-ink">
+              ¿Qué necesita hacer?{' '}
+              <span className="font-normal text-ink-soft">Lo que ya tiene sale marcado en gris.</span>
+            </p>
+            <label className="relative w-full sm:w-64">
+              <Search
+                size={15}
+                className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-ink-soft"
+              />
+              <input
+                type="search"
+                value={buscar}
+                onChange={(e) => setBuscar(e.target.value)}
+                placeholder="Buscar pantalla: boletas, caja…"
+                className="w-full rounded-field border border-line py-1.5 pr-3 pl-8 text-sm"
+              />
+            </label>
+          </div>
+          <MatrizPermisos
+            catalogo={catalogo}
+            marcadas={marcadas}
+            onToggle={toggle}
+            fijas={fijas}
+            filtro={buscar}
+            nuevas
+          />
+          {resumen.length > 0 && (
+            <ul className="mt-2 space-y-0.5 rounded-field bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+              {resumen.map((r) => (
+                <li key={r}>
+                  <b>Podrá</b> · {r}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         <div>
           <p className="mb-1.5 text-sm font-medium text-ink">¿Hasta cuándo?</p>
@@ -467,8 +564,7 @@ function ModalConceder({
             ))}
           </div>
           <p className="mt-1.5 text-xs text-ink-soft">
-            {alcance === ALCANCE.unaVez &&
-              'Se gasta al usarlo una vez. Si la operación falla, no se gasta.'}
+            {alcance === ALCANCE.unaVez && 'Se gasta al usarlo una vez. Si la operación falla, no se gasta.'}
             {alcance === ALCANCE.temporal && 'Deja de valer solo, sin que nadie tenga que retirarlo.'}
             {alcance === ALCANCE.permanente &&
               'No vence. Si varias personas lo necesitan, es mejor ponerlo en el rol.'}
@@ -496,7 +592,7 @@ function ModalConceder({
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
             maxLength={300}
-            placeholder="Anular la NV-0042 que emitió con el cliente equivocado"
+            placeholder="Boleta de la NV-0042 que pidió el cliente"
             className="w-full rounded-field border border-line px-3 py-2 text-sm"
           />
         </label>
