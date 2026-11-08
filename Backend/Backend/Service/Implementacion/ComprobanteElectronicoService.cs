@@ -758,18 +758,22 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
     /// </summary>
     private static ClienteCpe ClienteDe(Cliente c, string tipo, decimal total)
     {
-        var documento = c.Documento?.Trim() ?? string.Empty;
-        var esRuc = c.TipoDoc == TipoDocumento.Ruc && documento.Length == 11 && documento.All(char.IsDigit);
-        var esDni = c.TipoDoc == TipoDocumento.Dni && documento.Length == 8 && documento.All(char.IsDigit);
+        // Un cliente puede tener DNI y RUC a la vez: se busca cada uno entre el documento principal y el segundo.
+        static string? Valido(string? numero, string? tipo, string esperado, int largo) =>
+            tipo == esperado && numero is { } n && n.Trim().Length == largo && n.Trim().All(char.IsDigit) ? n.Trim() : null;
+        var ruc = Valido(c.Documento, c.TipoDoc, TipoDocumento.Ruc, 11) ?? Valido(c.DocumentoAlterno, c.TipoDocAlterno, TipoDocumento.Ruc, 11);
+        var dni = Valido(c.Documento, c.TipoDoc, TipoDocumento.Dni, 8) ?? Valido(c.DocumentoAlterno, c.TipoDocAlterno, TipoDocumento.Dni, 8);
 
+        // La factura exige RUC.
         if (tipo == TipoCpe.Factura)
         {
-            if (!esRuc) throw new BadRequestException("Para emitir una factura el cliente necesita un RUC de 11 dígitos");
-            return new ClienteCpe("6", documento, c.Nombre, c.Direccion);
+            if (ruc is null) throw new BadRequestException("Para emitir una factura el cliente necesita un RUC de 11 dígitos");
+            return new ClienteCpe("6", ruc, c.Nombre, c.Direccion);
         }
 
-        if (esDni) return new ClienteCpe("1", documento, c.Nombre, c.Direccion);
-        if (esRuc) return new ClienteCpe("6", documento, c.Nombre, c.Direccion);
+        // La boleta prefiere el DNI; sin DNI, el RUC.
+        if (dni is not null) return new ClienteCpe("1", dni, c.Nombre, c.Direccion);
+        if (ruc is not null) return new ClienteCpe("6", ruc, c.Nombre, c.Direccion);
 
         if (total >= MontoBoletaConDocumento)
             throw new BadRequestException($"Una boleta desde S/ {MontoBoletaConDocumento:0} necesita el DNI del cliente");

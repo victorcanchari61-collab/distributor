@@ -7,6 +7,9 @@ export interface ClienteResponse {
   documento: string
   /** DNI, RUC o CODIGO, deducido del largo del documento. */
   tipoDoc: string
+  /** El otro documento cuando tiene DNI y RUC a la vez (si el principal es DNI, este es el RUC, y al revés). */
+  documentoAlterno: string | null
+  tipoDocAlterno: string | null
   nombre: string
   direccion: string | null
   distritoId: number | null
@@ -61,6 +64,8 @@ export interface ClienteRequest {
   documento: string
   /** DNI, RUC o CODIGO. Si va vacío el backend lo deduce del largo. */
   tipoDoc?: string
+  /** Opcional: el otro documento (RUC si el principal es DNI, DNI si es RUC). */
+  documentoAlterno?: string | null
   nombre: string
   direccion?: string | null
   distritoId?: number | null

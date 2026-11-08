@@ -9,6 +9,11 @@ public abstract class ClienteRequestBase
     /// deduce del largo del numero.
     /// </summary>
     public string? TipoDoc { get; set; }
+    /// <summary>
+    /// Opcional: el otro documento si el cliente tiene DNI y RUC. Debe ser del tipo contrario al principal (8 o 11 dígitos).
+    /// </summary>
+    public string? DocumentoAlterno { get; set; }
+
     public string Nombre { get; set; } = string.Empty;
     public string? Direccion { get; set; }
 

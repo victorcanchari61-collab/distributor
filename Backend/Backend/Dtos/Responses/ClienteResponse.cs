@@ -5,6 +5,10 @@ public class ClienteResponse
     public int Id { get; set; }
     public string Documento { get; set; } = string.Empty;
     public string TipoDoc { get; set; } = string.Empty;
+
+    /// <summary>El otro documento (DNI y RUC a la vez); nulo si solo tiene uno.</summary>
+    public string? DocumentoAlterno { get; set; }
+    public string? TipoDocAlterno { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string? Direccion { get; set; }
     public int? DistritoId { get; set; }

@@ -10,6 +10,15 @@ public class Cliente
     /// <summary>DNI / RUC / CODIGO, deducido del largo del documento.</summary>
     public string TipoDoc { get; set; } = TipoDocumento.Codigo;
 
+    /// <summary>
+    /// El otro documento del cliente cuando tiene DNI y RUC a la vez (una persona con negocio): si el principal es DNI, este
+    /// es el RUC, y al revés. La factura usa el RUC y la boleta, el DNI.
+    /// </summary>
+    public string? DocumentoAlterno { get; set; }
+
+    /// <summary>DNI o RUC, deducido del largo de <see cref="DocumentoAlterno"/>.</summary>
+    public string? TipoDocAlterno { get; set; }
+
     public string Nombre { get; set; } = string.Empty;
     public string? Direccion { get; set; }
 

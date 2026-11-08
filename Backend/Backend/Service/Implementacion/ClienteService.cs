@@ -245,6 +245,7 @@ public class ClienteService : IClienteService
         {
             throw new ConflictException("Ya existe un cliente con ese documento");
         }
+        await ExigirAlternoLibreAsync(request, null);
 
         var cliente = new Cliente();
         Aplicar(cliente, request, await ResolverMercadoAsync(request), await ResolverRutaAsync(request),
@@ -269,6 +270,7 @@ public class ClienteService : IClienteService
         {
             throw new ConflictException("Ya existe un cliente con ese documento");
         }
+        await ExigirAlternoLibreAsync(request, id);
 
         Aplicar(cliente, request, await ResolverMercadoAsync(request), await ResolverRutaAsync(request),
             await ResolverDistritoAsync(request), await ResolverListaAsync(request));
@@ -415,6 +417,17 @@ public class ClienteService : IClienteService
         fila.MercadoNombre = Limpiar(fila.MercadoNombre);
     }
 
+    /// <summary>El segundo documento tampoco puede ser el de otro cliente (ni principal ni segundo).</summary>
+    private async Task ExigirAlternoLibreAsync(ClienteRequestBase request, int? excluirId)
+    {
+        var alterno = request.DocumentoAlterno?.Trim();
+        if (string.IsNullOrEmpty(alterno)) return;
+        if (alterno == request.Documento.Trim())
+            throw new BadRequestException("El segundo documento no puede ser igual al primero");
+        if (await _repository.ExistsByDocumentoAsync(alterno, excluirId))
+            throw new ConflictException("Ya existe un cliente con ese segundo documento");
+    }
+
     private static void Aplicar(Cliente cliente, ClienteRequestBase request, Mercado? mercado, Ruta? ruta,
         Distrito? distrito, ListaPrecio? lista)
     {
@@ -424,6 +437,9 @@ public class ClienteService : IClienteService
         cliente.TipoDoc = string.IsNullOrWhiteSpace(request.TipoDoc)
             ? TipoDocumento.Deducir(cliente.Documento)
             : request.TipoDoc.Trim().ToUpperInvariant();
+        var alterno = Limpiar(request.DocumentoAlterno);
+        cliente.DocumentoAlterno = alterno;
+        cliente.TipoDocAlterno = alterno is null ? null : TipoDocumento.Deducir(alterno);
         cliente.Nombre = request.Nombre.Trim();
         cliente.Direccion = Limpiar(request.Direccion);
         cliente.DistritoId = distrito?.Id;
@@ -572,6 +588,8 @@ public class ClienteService : IClienteService
             Id = cliente.Id,
             Documento = cliente.Documento,
             TipoDoc = cliente.TipoDoc,
+            DocumentoAlterno = cliente.DocumentoAlterno,
+            TipoDocAlterno = cliente.TipoDocAlterno,
             Nombre = cliente.Nombre,
             Direccion = cliente.Direccion,
             DistritoId = cliente.DistritoId,

@@ -34,12 +34,14 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
             var texto = $"%{consulta.Buscar.Trim()}%";
             query = query.Where(c =>
                 EF.Functions.Like(c.Nombre, texto) || EF.Functions.Like(c.Documento, texto)
+                || (c.DocumentoAlterno != null && EF.Functions.Like(c.DocumentoAlterno, texto))
                 || (c.Distrito != null && EF.Functions.Like(c.Distrito.Nombre, texto))
                 || (c.Ruta != null && EF.Functions.Like(c.Ruta.Nombre, texto)));
         }
 
         if (consulta.ValorDe("documento") is string documento)
-            query = query.Where(c => EF.Functions.Like(c.Documento, $"%{documento}%"));
+            query = query.Where(c => EF.Functions.Like(c.Documento, $"%{documento}%")
+                || (c.DocumentoAlterno != null && EF.Functions.Like(c.DocumentoAlterno, $"%{documento}%")));
         if (consulta.ValorDe("nombre") is string nombre)
             query = query.Where(c => EF.Functions.Like(c.Nombre, $"%{nombre}%"));
         if (consulta.ValorDe("distrito") is string distrito)
@@ -108,7 +110,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
 
     public async Task<bool> ExistsByDocumentoAsync(string documento, int? excludeId = null)
     {
-        return await DbSet.AnyAsync(c => c.Documento == documento && c.Id != excludeId);
+        return await DbSet.AnyAsync(c => (c.Documento == documento || c.DocumentoAlterno == documento) && c.Id != excludeId);
     }
 
     public async Task DeleteAsync(Cliente entidad)
@@ -173,6 +175,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
 
         return query.Where(c =>
             EF.Functions.Like(c.Documento, $"%{texto}%")
+            || (c.DocumentoAlterno != null && EF.Functions.Like(c.DocumentoAlterno, $"%{texto}%"))
             || EF.Functions.Like(c.Nombre, $"%{texto}%")
             || (c.Direccion != null && EF.Functions.Like(c.Direccion, $"%{texto}%"))
             || (c.Telefono != null && EF.Functions.Like(c.Telefono, $"%{texto}%"))
@@ -219,7 +222,9 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
         return filtro.Columna switch
         {
             "documento" => query.Where(c =>
-                exacto ? c.Documento == valor : EF.Functions.Like(c.Documento, $"%{valor}%")),
+                exacto
+                    ? c.Documento == valor || c.DocumentoAlterno == valor
+                    : EF.Functions.Like(c.Documento, $"%{valor}%") || (c.DocumentoAlterno != null && EF.Functions.Like(c.DocumentoAlterno, $"%{valor}%"))),
             "tipoDoc" => query.Where(c => c.TipoDoc == valor),
             "nombre" => query.Where(c =>
                 exacto ? c.Nombre == valor : EF.Functions.Like(c.Nombre, $"%{valor}%")),

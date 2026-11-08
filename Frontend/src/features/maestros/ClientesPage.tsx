@@ -50,6 +50,7 @@ import type { ClienteRequest, ClienteResponse, ResumenClientes } from './cliente
 const VACIO: ClienteRequest = {
   documento: '',
   tipoDoc: 'DNI',
+  documentoAlterno: '',
   nombre: '',
   direccion: '',
   distritoId: 0,
@@ -184,6 +185,7 @@ export function ClientesPage() {
     setForm({
       documento: cliente.documento,
       tipoDoc: cliente.tipoDoc,
+      documentoAlterno: cliente.documentoAlterno ?? '',
       nombre: cliente.nombre,
       direccion: cliente.direccion ?? '',
       distritoId: cliente.distritoId ?? 0,
@@ -237,9 +239,28 @@ export function ClientesPage() {
     }
   }
 
+  /** Del RUC del segundo documento solo se toma la dirección, y solo si no hay una: el nombre ya lo trae el primero. */
+  const consultarAlterno = async (documento: string, tipo: TipoDocumento) => {
+    if (tipo !== 'RUC') return
+    setConsultando(true)
+    try {
+      const datos = await consultaApi.ruc(documento)
+      setForm((prev) => ({ ...prev, direccion: prev.direccion || (datos.direccion ?? '') }))
+      toast.exito(`RUC de ${datos.razonSocial}`)
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos consultar el documento.')
+    } finally {
+      setConsultando(false)
+    }
+  }
+
   const guardar = async () => {
     if (!/^[0-9]{3,15}$/.test(form.documento)) {
       return toast.error('El documento debe tener entre 3 y 15 dígitos.')
+    }
+    const alterno = form.documentoAlterno ?? ''
+    if (alterno && alterno.length !== (form.tipoDoc === 'DNI' ? 11 : 8)) {
+      return toast.error(form.tipoDoc === 'DNI' ? 'El RUC debe tener 11 dígitos.' : 'El DNI debe tener 8 dígitos.')
     }
     if (!form.nombre.trim()) return toast.error('Ingresa el nombre del cliente.')
 
@@ -247,6 +268,7 @@ export function ClientesPage() {
     try {
       const cuerpo = {
         ...form,
+        documentoAlterno: form.tipoDoc === 'CODIGO' ? null : alterno || null,
         mercadoId: form.mercadoId || null,
         rutaId: form.rutaId || null,
         distritoId: form.distritoId || null,
@@ -373,7 +395,16 @@ export function ClientesPage() {
       label: 'Documento',
       filterable: false,
       // Solo el número: el tipo tiene su propia columna al lado.
-      render: (row) => <span className="font-medium text-ink">{row.documento}</span>,
+      render: (row) => (
+        <span className="flex flex-col">
+          <span className="font-medium text-ink">{row.documento}</span>
+          {row.documentoAlterno && (
+            <span className="text-xs text-ink-soft">
+              {row.tipoDocAlterno} {row.documentoAlterno}
+            </span>
+          )}
+        </span>
+      ),
     },
     {
       key: 'tipoDoc',
@@ -584,12 +615,26 @@ export function ClientesPage() {
             <DocumentoInput
               className="sm:col-span-2"
               tipo={(form.tipoDoc as TipoDocumento) ?? 'DNI'}
-              onTipoChange={(tipoDoc) => setForm((prev) => ({ ...prev, tipoDoc }))}
+              onTipoChange={(tipoDoc) => setForm((prev) => ({ ...prev, tipoDoc, documentoAlterno: '' }))}
               value={form.documento}
               onChange={(documento) => setForm((prev) => ({ ...prev, documento }))}
               onBuscar={consultarDocumento}
               buscando={consultando}
             />
+
+            {/* Una persona con negocio tiene DNI y RUC: el segundo es del tipo contrario. La factura usa el RUC y la boleta, el DNI. */}
+            {(form.tipoDoc === 'DNI' || form.tipoDoc === 'RUC') && (
+              <DocumentoInput
+                className="sm:col-span-2"
+                tipoFijo
+                tipo={form.tipoDoc === 'DNI' ? 'RUC' : 'DNI'}
+                label={form.tipoDoc === 'DNI' ? 'RUC (si también tiene)' : 'DNI (si también tiene)'}
+                value={form.documentoAlterno ?? ''}
+                onChange={(documentoAlterno) => setForm((prev) => ({ ...prev, documentoAlterno }))}
+                onBuscar={form.tipoDoc === 'DNI' ? consultarAlterno : undefined}
+                buscando={consultando}
+              />
+            )}
 
             <Input
               label="Nombre"

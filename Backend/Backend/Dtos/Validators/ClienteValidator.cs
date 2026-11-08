@@ -27,6 +27,19 @@ public class ClienteValidator : AbstractValidator<ClienteRequestBase>
             .Length(11).When(x => x.TipoDoc == "RUC")
             .WithMessage("El RUC debe tener 11 dígitos");
 
+        // El otro documento: solo cuando el principal es DNI o RUC, y del tipo contrario (DNI con RUC, RUC con DNI).
+        RuleFor(x => x.DocumentoAlterno)
+            .Matches("^([0-9]{8}|[0-9]{11})$").WithMessage("El segundo documento debe ser un DNI (8 dígitos) o un RUC (11 dígitos)")
+            .When(x => !string.IsNullOrWhiteSpace(x.DocumentoAlterno));
+        RuleFor(x => x.DocumentoAlterno)
+            .Must((x, alterno) =>
+            {
+                var principal = string.IsNullOrWhiteSpace(x.TipoDoc) ? TipoDocumento.Deducir(x.Documento) : x.TipoDoc!.Trim().ToUpperInvariant();
+                return principal != TipoDocumento.Codigo && TipoDocumento.Deducir(alterno) != principal;
+            })
+            .WithMessage("El segundo documento debe ser del otro tipo: un DNI con un RUC, o un RUC con un DNI")
+            .When(x => !string.IsNullOrWhiteSpace(x.DocumentoAlterno));
+
         RuleFor(x => x.Nombre).NotEmpty().WithMessage("Falta el nombre").MaximumLength(150);
         RuleFor(x => x.Direccion).MaximumLength(250);
         RuleFor(x => x.DistritoNombre).MaximumLength(80);

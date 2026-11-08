@@ -574,6 +574,9 @@ namespace Backend.Data.Migrations
                         .HasMaxLength(15)
                         .HasColumnType("varchar(15)");
 
+                    b.Property<string>("DocumentoAlterno")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Email")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
@@ -603,6 +606,9 @@ namespace Backend.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("varchar(10)");
+
+                    b.Property<string>("TipoDocAlterno")
+                        .HasColumnType("longtext");
 
                     b.Property<int?>("VendedorId")
                         .HasColumnType("int");
