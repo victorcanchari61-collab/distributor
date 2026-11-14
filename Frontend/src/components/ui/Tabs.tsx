@@ -17,61 +17,73 @@ export interface TabsProps {
 }
 
 /**
+ * Un nombre que llega TODO EN MAYÚSCULAS desde los datos ("TIENDA 1", "SEGUNDO PISO") se muestra como
+ * "Tienda 1": en mayúsculas una fila de pestañas se lee como un grito y cuesta distinguir una de otra. Solo se
+ * toca lo que viene entero en mayúsculas; un nombre escrito a mano ("Por rol") queda como está.
+ */
+function legible(texto: string) {
+  const letras = texto.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, '')
+  if (letras.length < 2 || letras !== letras.toUpperCase()) return texto
+  const bajo = texto.toLocaleLowerCase('es')
+  return bajo.charAt(0).toLocaleUpperCase('es') + bajo.slice(1)
+}
+
+/**
  * Pestañas de una vista.
  *
  * Se usan cuando varias tablas pequeñas pertenecen al mismo tema y no merecen
  * entrada propia en el menu: categorias, marcas y unidades viven dentro de
  * Productos porque solo se tocan al dar de alta uno.
+ *
+ * Cada pestaña es una tarjetita con borde; la activa se rellena con el color
+ * del módulo, y su contador (si lo tiene) también. Así se ve de un vistazo en
+ * cuál se está, cosa que una línea fina debajo del texto no lograba.
  */
 export function Tabs({ items, active, onChange, className }: TabsProps) {
   return (
     <div
       role="tablist"
       className={cn(
-        // Se desliza en movil: cuatro pestañas no entran en 390px.
-        '-mx-4 flex gap-1 overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0',
+        // Se desliza en movil: cuatro pestañas no entran en 390px. El py deja ver el borde de la activa.
+        '-mx-4 flex gap-2 overflow-x-auto px-4 py-0.5 sm:mx-0 sm:px-0',
         '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         className,
       )}
     >
       {items.map((item) => {
         const activa = item.id === active
+        const texto = legible(item.label)
         return (
           <button
             key={item.id}
             role="tab"
             type="button"
             aria-selected={activa}
+            title={texto !== item.label ? item.label : undefined}
             onClick={() => onChange(item.id)}
             className={cn(
-              'relative flex shrink-0 items-center gap-2 px-3 py-2.5 text-sm whitespace-nowrap',
+              'flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border px-3 py-1.5 text-sm whitespace-nowrap',
               'transition-colors duration-150',
               activa
-                ? 'font-semibold text-[rgb(var(--sys-ink-rgb))]'
-                : 'text-ink-soft hover:text-ink',
+                ? 'border-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.1)] font-semibold text-[rgb(var(--sys-ink-rgb))] ring-1 ring-[rgb(var(--sys-rgb))]'
+                : 'border-line bg-white text-ink-muted hover:border-line-strong hover:text-ink',
             )}
           >
-            {item.icon}
-            {item.label}
+            {item.icon && (
+              <span className={cn('flex shrink-0', activa ? 'text-[rgb(var(--sys-rgb))]' : 'text-ink-soft')}>
+                {item.icon}
+              </span>
+            )}
+            {texto}
             {item.badge !== undefined && (
               <span
                 className={cn(
-                  'rounded-full px-1.5 py-0.5 text-[11px] font-semibold',
-                  activa
-                    ? 'bg-[rgb(var(--sys-rgb)/0.12)] text-[rgb(var(--sys-ink-rgb))]'
-                    : 'bg-slate-100 text-slate-500',
+                  'rounded-full px-1.5 py-0.5 text-[11px] leading-none font-semibold',
+                  activa ? 'bg-[rgb(var(--sys-rgb))] text-white' : 'bg-slate-100 text-slate-500',
                 )}
               >
                 {item.badge}
               </span>
-            )}
-
-            {/* La linea inferior marca la activa sin mover el texto. */}
-            {activa && (
-              <span
-                aria-hidden="true"
-                className="absolute inset-x-0 -bottom-px h-0.5 bg-[rgb(var(--sys-rgb))]"
-              />
             )}
           </button>
         )

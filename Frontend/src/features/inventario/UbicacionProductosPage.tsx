@@ -22,7 +22,12 @@ import type { AlmacenResponse, ProductoUbicado, ProductosUbicados, UbicacionResp
 import { opcional } from '../../lib/apoyo'
 const SUBMODULO = 'inv.ubicaciones'
 
-type Mostrar = 'todos' | 'sin' | 'con'
+/*
+ * Valores especiales del filtro "Dónde está": además de cada lugar, se puede pedir los que no tienen ninguno o los
+ * que tienen alguno. Viven en el panel de filtros de la tabla con los demás, no en un desplegable aparte.
+ */
+const SIN_LUGAR = '__sin'
+const CON_LUGAR = '__con'
 
 /**
  * Ubicación de productos: dónde está puesto cada producto dentro de un almacén.
@@ -43,7 +48,6 @@ export function UbicacionProductosPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
-  const [mostrar, setMostrar] = useState<Mostrar>('todos')
   const [elegidos, setElegidos] = useState<Set<number>>(new Set())
 
   // El modal de poner o mover.
@@ -87,14 +91,7 @@ export function UbicacionProductosPage() {
   // Un lugar o un producto cambiaron en otra PC (o aquí mismo).
   useRealtime(['ubicaciones', 'stock'], cargar)
 
-  const filas = useMemo(() => {
-    const todos = datos?.items ?? []
-    return mostrar === 'sin'
-      ? todos.filter((p) => p.lugares.length === 0)
-      : mostrar === 'con'
-        ? todos.filter((p) => p.lugares.length > 0)
-        : todos
-  }, [datos, mostrar])
+  const filas = datos?.items ?? []
 
   const lugaresActivos = useMemo(() => lugares.filter((l) => l.activo), [lugares])
 
@@ -197,10 +194,15 @@ export function UbicacionProductosPage() {
     {
       key: 'lugar',
       label: 'Dónde está',
-      // El filtro acierta si CUALQUIERA de sus lugares coincide: un producto puede estar en varios.
+      // El filtro acierta si CUALQUIERA de sus lugares coincide: un producto puede estar en varios. Arriba van
+      // "Sin lugar" y "Con algún lugar", la lista de trabajo de ordenar el almacén.
       filterType: 'select',
-      filterOptions: lugaresActivos.map((l) => ({ value: l.ruta, label: l.nombre ? `${l.ruta} · ${l.nombre}` : l.ruta })),
-      valores: (p) => p.lugares.map((l) => l.ruta),
+      filterOptions: [
+        { value: SIN_LUGAR, label: 'Sin lugar' },
+        { value: CON_LUGAR, label: 'Con algún lugar' },
+        ...lugaresActivos.map((l) => ({ value: l.ruta, label: l.nombre ? `${l.ruta} · ${l.nombre}` : l.ruta })),
+      ],
+      valores: (p) => (p.lugares.length === 0 ? [SIN_LUGAR] : [CON_LUGAR, ...p.lugares.map((l) => l.ruta)]),
       value: (p) => p.lugares.map((l) => l.ruta).join(' '),
       render: (p) =>
         p.lugares.length === 0 ? (
@@ -275,16 +277,6 @@ export function UbicacionProductosPage() {
       }
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <Desplegable
-            size="sm"
-            value={mostrar}
-            onChange={(v) => setMostrar(v as Mostrar)}
-            options={[
-              { value: 'todos', label: 'Todos los productos' },
-              { value: 'sin', label: 'Solo sin lugar' },
-              { value: 'con', label: 'Solo con lugar' },
-            ]}
-          />
           {puedeEditar && (datos?.sinLugar ?? 0) > 0 && (
             <Button size="sm" variant="secondary" onClick={elegirSinLugar}>
               Elegir los sin lugar
