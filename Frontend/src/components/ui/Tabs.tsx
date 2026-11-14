@@ -35,59 +35,61 @@ function legible(texto: string) {
  * entrada propia en el menu: categorias, marcas y unidades viven dentro de
  * Productos porque solo se tocan al dar de alta uno.
  *
- * Cada pestaña es una tarjetita con borde; la activa se rellena con el color
- * del módulo, y su contador (si lo tiene) también. Así se ve de un vistazo en
- * cuál se está, cosa que una línea fina debajo del texto no lograba.
+ * Van juntas dentro de un rectángulo con fondo propio, que las separa de lo que
+ * hay arriba y abajo. Cada pestaña es una tarjetita blanca con borde; la activa
+ * se rellena con el color del módulo, igual que su contador.
  */
 export function Tabs({ items, active, onChange, className }: TabsProps) {
   return (
+    // El que se desliza en movil es el envoltorio, no el rectángulo: así la sombra de la activa y el borde redondo
+    // no se recortan, y en escritorio el rectángulo mide lo que sus pestañas.
     <div
-      role="tablist"
       className={cn(
-        // Se desliza en movil: cuatro pestañas no entran en 390px. El py deja ver el borde de la activa.
-        '-mx-4 flex gap-2 overflow-x-auto px-4 py-0.5 sm:mx-0 sm:px-0',
+        '-mx-4 overflow-x-auto px-4 py-1 sm:mx-0 sm:px-0',
         '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         className,
       )}
     >
-      {items.map((item) => {
-        const activa = item.id === active
-        const texto = legible(item.label)
-        return (
-          <button
-            key={item.id}
-            role="tab"
-            type="button"
-            aria-selected={activa}
-            title={texto !== item.label ? item.label : undefined}
-            onClick={() => onChange(item.id)}
-            className={cn(
-              'flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border px-3 py-1.5 text-sm whitespace-nowrap',
-              'transition-colors duration-150',
-              activa
-                ? 'border-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.1)] font-semibold text-[rgb(var(--sys-ink-rgb))] ring-1 ring-[rgb(var(--sys-rgb))]'
-                : 'border-line bg-white text-ink-muted hover:border-line-strong hover:text-ink',
-            )}
-          >
-            {item.icon && (
-              <span className={cn('flex shrink-0', activa ? 'text-[rgb(var(--sys-rgb))]' : 'text-ink-soft')}>
-                {item.icon}
-              </span>
-            )}
-            {texto}
-            {item.badge !== undefined && (
-              <span
-                className={cn(
-                  'rounded-full px-1.5 py-0.5 text-[11px] leading-none font-semibold',
-                  activa ? 'bg-[rgb(var(--sys-rgb))] text-white' : 'bg-slate-100 text-slate-500',
-                )}
-              >
-                {item.badge}
-              </span>
-            )}
-          </button>
-        )
-      })}
+      <div role="tablist" className="inline-flex min-w-max gap-1.5 rounded-xl border border-line bg-slate-200/70 p-1.5">
+        {items.map((item) => {
+          const activa = item.id === active
+          const texto = legible(item.label)
+          return (
+            <button
+              key={item.id}
+              role="tab"
+              type="button"
+              aria-selected={activa}
+              title={texto !== item.label ? item.label : undefined}
+              onClick={() => onChange(item.id)}
+              className={cn(
+                'flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm whitespace-nowrap',
+                'transition-colors duration-150',
+                activa
+                  ? 'border-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.12)] font-semibold text-[rgb(var(--sys-ink-rgb))] ring-1 ring-[rgb(var(--sys-rgb))]'
+                  : 'border-line bg-white font-medium text-ink-muted hover:border-line-strong hover:text-ink',
+              )}
+            >
+              {item.icon && (
+                <span className={cn('flex shrink-0', activa ? 'text-[rgb(var(--sys-rgb))]' : 'text-ink-soft')}>
+                  {item.icon}
+                </span>
+              )}
+              {texto}
+              {item.badge !== undefined && (
+                <span
+                  className={cn(
+                    'rounded-full px-1.5 py-0.5 text-[11px] leading-none font-semibold',
+                    activa ? 'bg-[rgb(var(--sys-rgb))] text-white' : 'bg-slate-100 text-slate-500',
+                  )}
+                >
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
