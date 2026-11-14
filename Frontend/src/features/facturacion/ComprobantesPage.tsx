@@ -69,6 +69,10 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
   const [creando, setCreando] = useState(false)
   const [dandoDeBaja, setDandoDeBaja] = useState<ComprobanteResponse | null>(null)
 
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver los 3" pone ese filtro en la columna SUNAT.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargar = useCallback(async () => {
     try {
       setFilas(await comprobanteApi.listar({ tipo }))
@@ -266,23 +270,40 @@ function ComprobantesPage({ tipo }: { tipo: TipoCpe }) {
           <Alert tone="info">Hay comprobantes emitidos en el entorno de pruebas de SUNAT: no tienen validez tributaria.</Alert>
         ) : undefined
       }
+      filtroPedido={filtroPedido}
       stats={
         <>
-          <StatCard label="Aceptados" value={String(aceptados)} icon={<CircleCheck size={18} />} tono="success" />
+          <StatCard
+            label="Aceptados"
+            value={String(aceptados)}
+            icon={<CircleCheck size={18} />}
+            tono="success"
+            progreso={filas.length > 0 ? aceptados / filas.length : 0}
+            accion={{ label: aceptados > 0 ? `Ver los ${aceptados}` : 'Ver', onClick: () => verEstado('ACEPTADO') }}
+          />
           <StatCard
             label="Sin respuesta"
             value={String(pendientes)}
             icon={<Clock size={18} />}
             tono={pendientes > 0 ? 'warning' : 'neutral'}
             hint={pendientes > 0 ? 'se pueden reenviar' : 'ninguno'}
+            progreso={filas.length > 0 ? pendientes / filas.length : 0}
           />
           <StatCard
             label="Rechazados"
             value={String(rechazados)}
             icon={<CircleX size={18} />}
             tono={rechazados > 0 ? 'danger' : 'neutral'}
+            progreso={filas.length > 0 ? rechazados / filas.length : 0}
+            accion={{ label: rechazados > 0 ? `Ver los ${rechazados}` : 'Ver', onClick: () => verEstado('RECHAZADO') }}
           />
-          <StatCard label="Emitidos" value={String(filas.length)} icon={<Icono size={18} />} />
+          <StatCard
+            label="Emitidos"
+            value={String(filas.length)}
+            icon={<Icono size={18} />}
+            progreso={filas.length > 0 ? 1 : 0}
+            accion={{ label: 'Ver todos', onClick: () => verEstado('') }}
+          />
         </>
       }
       columns={columnas}

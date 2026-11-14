@@ -153,8 +153,15 @@ export function GastosOperativosPage() {
             value={String(vencidos.length)}
             icon={<AlertTriangle size={18} />}
             tono={vencidos.length > 0 ? 'danger' : 'success'}
+            progreso={pendientes.length > 0 ? vencidos.length / pendientes.length : 0}
           />
-          <StatCard label="Por vencer este mes" value={String(pendientes.length - vencidos.length)} icon={<CalendarClock size={18} />} tono="warning" />
+          <StatCard
+            label="Por vencer este mes"
+            value={String(pendientes.length - vencidos.length)}
+            icon={<CalendarClock size={18} />}
+            tono="warning"
+            progreso={pendientes.length > 0 ? (pendientes.length - vencidos.length) / pendientes.length : 0}
+          />
         </FilaStats>
 
         {cargando ? (

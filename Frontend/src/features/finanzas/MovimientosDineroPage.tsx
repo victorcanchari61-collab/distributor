@@ -67,6 +67,10 @@ export function MovimientosDineroPage() {
   const [nuevoAbierto, setNuevoAbierto] = useState(false)
   const [moverAbierto, setMoverAbierto] = useState(false)
 
+  // Los dos resultados llevan a los movimientos que los forman: ponen ese filtro en "Origen".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verOrigen = (value: string) => setFiltroPedido((f) => ({ column: 'origen', value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
@@ -144,6 +148,8 @@ export function MovimientosDineroPage() {
   }
   const resultado = redondear(totales.ingresosOp - totales.egresosOp)
   const netoNoOperativo = redondear(totales.ingresosNo - totales.egresosNo)
+  const operativos = movimientos.filter((m) => m.origen === 'OPERATIVO').length
+  const noOperativos = movimientos.filter((m) => m.origen === 'NO_OPERATIVO').length
 
   const exportar = () =>
     exportarExcel(
@@ -259,6 +265,7 @@ export function MovimientosDineroPage() {
         </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard label="Ingresos operativos" value={soles(redondear(totales.ingresosOp))} icon={<TrendingUp size={18} />} tono="success" />
@@ -269,6 +276,7 @@ export function MovimientosDineroPage() {
             icon={<Scale size={18} />}
             tono={resultado < 0 ? 'danger' : 'sys'}
             hint="Ingresos menos egresos operativos"
+            accion={{ label: operativos > 0 ? `Ver los ${operativos}` : 'Ver', onClick: () => verOrigen('OPERATIVO') }}
           />
           <StatCard
             label="Neto no operativo"
@@ -276,6 +284,7 @@ export function MovimientosDineroPage() {
             icon={<Landmark size={18} />}
             tono="warning"
             hint="Préstamos, aportes, retiros, activos"
+            accion={{ label: noOperativos > 0 ? `Ver los ${noOperativos}` : 'Ver', onClick: () => verOrigen('NO_OPERATIVO') }}
           />
         </>
       }

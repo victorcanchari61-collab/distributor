@@ -120,6 +120,10 @@ function CuentasBancariasTab() {
   const [movimientosDe, setMovimientosDe] = useState<CuentaFinancieraResponse | null>(null)
   const [conciliarDe, setConciliarDe] = useState<CuentaFinancieraResponse | null>(null)
 
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver las 3" pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
+
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
@@ -228,6 +232,7 @@ function CuentasBancariasTab() {
     })
 
   const activas = cuentas.filter((c) => c.activo)
+  const inactivas = cuentas.length - activas.length
   const saldoTotal = activas.reduce((s, c) => s + c.saldoActual, 0)
   // La que más plata tiene: de ahí suele salir lo que se paga.
   const mayor = activas.reduce<CuentaFinancieraResponse | null>(
@@ -281,6 +286,7 @@ function CuentasBancariasTab() {
         </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard
@@ -296,6 +302,8 @@ function CuentasBancariasTab() {
             icon={<Building2 size={18} />}
             tono="success"
             hint={`En ${new Set(activas.map((c) => c.bancoId)).size} bancos`}
+            progreso={cuentas.length > 0 ? activas.length / cuentas.length : 0}
+            accion={{ label: activas.length > 0 ? `Ver las ${activas.length}` : 'Ver', onClick: () => verEstado('Activo') }}
           />
           <StatCard
             label="Mayor saldo"
@@ -306,10 +314,12 @@ function CuentasBancariasTab() {
           />
           <StatCard
             label="Inactivas"
-            value={String(cuentas.length - activas.length)}
+            value={String(inactivas)}
             icon={<ShieldOff size={18} />}
             tono="neutral"
             hint="No reciben cobros ni pagos"
+            progreso={cuentas.length > 0 ? inactivas / cuentas.length : 0}
+            accion={{ label: inactivas > 0 ? `Ver las ${inactivas}` : 'Ver', onClick: () => verEstado('Inactivo') }}
           />
         </>
       }

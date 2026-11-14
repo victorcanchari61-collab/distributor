@@ -83,6 +83,13 @@ export function AuditoriaPage() {
   const [total, setTotal] = useState(0)
   const [resumen, setResumen] = useState<ResumenAuditoria | null>(null)
 
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver los 40" pone ese filtro en Acción.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verAccion = (value: string) => setFiltroPedido((f) => ({ column: 'accion', value, vez: (f?.vez ?? 0) + 1 }))
+  const totalRegistros = resumen?.total ?? 0
+  const parte = (n: number | undefined) => (totalRegistros > 0 ? (n ?? 0) / totalRegistros : 0)
+  const verLos = (n: number | undefined) => ((n ?? 0) > 0 ? `Ver los ${n}` : 'Ver')
+
   const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
@@ -242,26 +249,39 @@ export function AuditoriaPage() {
         </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
-          <StatCard label="Registros" value={String(resumen?.total ?? 0)} icon={<ScrollText size={18} />} />
+          <StatCard
+            label="Registros"
+            value={String(resumen?.total ?? 0)}
+            icon={<ScrollText size={18} />}
+            progreso={totalRegistros > 0 ? 1 : 0}
+            accion={{ label: 'Ver todos', onClick: () => verAccion('') }}
+          />
           <StatCard
             label="Creados"
             value={String(resumen?.creados ?? 0)}
             icon={<ScrollText size={18} />}
             tono="success"
+            progreso={parte(resumen?.creados)}
+            accion={{ label: verLos(resumen?.creados), onClick: () => verAccion('CREADO') }}
           />
           <StatCard
             label="Actualizados"
             value={String(resumen?.actualizados ?? 0)}
             icon={<ScrollText size={18} />}
             tono="warning"
+            progreso={parte(resumen?.actualizados)}
+            accion={{ label: verLos(resumen?.actualizados), onClick: () => verAccion('ACTUALIZADO') }}
           />
           <StatCard
             label="Eliminados"
             value={String(resumen?.eliminados ?? 0)}
             icon={<ScrollText size={18} />}
             tono="neutral"
+            progreso={parte(resumen?.eliminados)}
+            accion={{ label: verLos(resumen?.eliminados), onClick: () => verAccion('ELIMINADO') }}
           />
         </>
       }

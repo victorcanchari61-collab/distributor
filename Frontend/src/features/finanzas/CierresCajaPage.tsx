@@ -61,6 +61,10 @@ export function CierresCajaPage() {
   const [error, setError] = useState('')
   const [abierto, setAbierto] = useState<CierreCajaResponse | null>(null)
 
+  // Las tarjetas de arriba llevan a lo que cuentan: ponen su filtro en la columna que toca.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verPor = (column: string, value: string) => setFiltroPedido((f) => ({ column, value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
@@ -101,6 +105,7 @@ export function CierresCajaPage() {
     (s, c) => s + (c.descuento?.estado === 'PENDIENTE' ? c.descuento.saldo : 0),
     0,
   )
+  const conFaltante = vigentes.filter((c) => c.descuento?.estado === 'PENDIENTE').length
   const sinEmpleado = vigentes.filter((c) => c.sinEmpleado && c.descuento?.estado === 'PENDIENTE').length
   const trabajadores = [...new Set(cierres.map((c) => c.usuario))].sort((a, b) => a.localeCompare(b, 'es'))
 
@@ -222,16 +227,30 @@ export function CierresCajaPage() {
           </Alert>
         ) : undefined
       }
+      filtroPedido={filtroPedido}
       stats={
         <>
-          <StatCard label="Faltantes por descontar" value={soles(faltantePendiente)} icon={<AlertTriangle size={18} />} tono="danger" />
-          <StatCard label="Cierres del periodo" value={String(vigentes.length)} icon={<ClipboardCheck size={18} />} tono="sys" />
+          <StatCard
+            label="Faltantes por descontar"
+            value={soles(faltantePendiente)}
+            icon={<AlertTriangle size={18} />}
+            tono="danger"
+            accion={{ label: conFaltante > 0 ? `Ver los ${conFaltante}` : 'Ver', onClick: () => verPor('descuento', 'PENDIENTE') }}
+          />
+          <StatCard
+            label="Cierres del periodo"
+            value={String(vigentes.length)}
+            icon={<ClipboardCheck size={18} />}
+            tono="sys"
+            accion={{ label: vigentes.length > 0 ? `Ver los ${vigentes.length}` : 'Ver', onClick: () => verPor('anulado', 'Vigente') }}
+          />
         <StatCard
           label="Digital por verificar"
           value={String(vigentes.reduce((n, c) => n + c.digitalPorVerificar, 0))}
           icon={<Smartphone size={18} />}
           tono="warning"
           hint="Cobros por Yape o transferencia a buscar en el banco"
+          accion={{ label: 'Ver cierres', onClick: () => verPor('verificacion', 'PENDIENTE') }}
         />
         </>
       }

@@ -103,6 +103,11 @@ export function OrdenesCompraPage() {
   const [totalRegistros, setTotalRegistros] = useState(0)
   const [resumen, setResumen] = useState<ResumenOrdenesCompra | null>(null)
 
+  // Las tarjetas llevan a lo que cuentan: "Ver las 4" pone ese filtro en la columna Estado.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) =>
+    setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
@@ -560,6 +565,10 @@ export function OrdenesCompraPage() {
     )
   }
 
+  const totalOrdenes = resumen?.total ?? 0
+  const pendientes = resumen?.pendientes ?? 0
+  const confirmadas = resumen?.confirmadas ?? 0
+
   return (
     <ListPage
       icon={<ClipboardList size={20} />}
@@ -573,21 +582,35 @@ export function OrdenesCompraPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Órdenes" value={String(resumen?.total ?? 0)} icon={<ClipboardList size={18} />} />
+          <StatCard
+            label="Órdenes"
+            value={String(totalOrdenes)}
+            icon={<ClipboardList size={18} />}
+            progreso={totalOrdenes > 0 ? 1 : 0}
+            accion={{ label: 'Ver todas', onClick: () => verEstado('') }}
+          />
           <StatCard
             label="Pendientes"
-            value={String(resumen?.pendientes ?? 0)}
+            value={String(pendientes)}
             icon={<ClipboardList size={18} />}
             tono="warning"
+            progreso={totalOrdenes > 0 ? pendientes / totalOrdenes : 0}
+            accion={{ label: pendientes > 0 ? `Ver las ${pendientes}` : 'Ver', onClick: () => verEstado('PENDIENTE') }}
           />
           <StatCard
             label="Confirmadas"
-            value={String(resumen?.confirmadas ?? 0)}
+            value={String(confirmadas)}
             icon={<CheckCircle2 size={18} />}
             tono="success"
+            progreso={totalOrdenes > 0 ? confirmadas / totalOrdenes : 0}
+            accion={{
+              label: confirmadas > 0 ? `Ver las ${confirmadas}` : 'Ver',
+              onClick: () => verEstado('CONFIRMADA'),
+            }}
           />
         </>
       }
+      filtroPedido={filtroPedido}
       columns={columns}
       rows={ordenes}
       servidor={{

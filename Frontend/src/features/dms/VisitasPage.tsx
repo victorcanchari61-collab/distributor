@@ -50,6 +50,10 @@ export function VisitasPage() {
   const [dia, setDia] = useState<string>(diaDeHoy)
   const [rutaId, setRutaId] = useState(0)
 
+  // Las tarjetas llevan a lo que cuentan: "Ver las 14" pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'atendido', value, vez: (f?.vez ?? 0) + 1 }))
+
   const consulta = useMemo(() => ({ dia, rutaId: rutaId || undefined }), [dia, rutaId])
 
   const cargar = useCallback(async () => {
@@ -234,30 +238,34 @@ export function VisitasPage() {
     [visitas],
   )
 
-  const cobertura =
-    resumen && resumen.programadas > 0
-      ? Math.round((resumen.atendidas / resumen.programadas) * 100)
-      : 0
-
   return (
     <ListPage
       icon={<Store size={20} />}
       title="Visitas"
       description="Clientes que toca visitar según su día de visita y su ruta, y a cuáles ya se les tomó pedido."
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard
             label="Programadas"
             value={String(resumen?.programadas ?? 0)}
             icon={<Store size={18} />}
+            progreso={(resumen?.programadas ?? 0) > 0 ? 1 : 0}
+            accion={{ label: 'Ver todas', onClick: () => verEstado('') }}
           />
           <StatCard
             label="Con pedido"
             value={String(resumen?.atendidas ?? 0)}
-            hint={`${cobertura}% de cobertura`}
+            // El % de cobertura ya lo dice la barra con su porcentaje.
+            hint="ya se les tomó pedido"
             icon={<CheckCircle2 size={18} />}
             tono="success"
+            progreso={resumen?.programadas ? resumen.atendidas / resumen.programadas : 0}
+            accion={{
+              label: resumen?.atendidas ? `Ver las ${resumen.atendidas}` : 'Ver',
+              onClick: () => verEstado('Con pedido'),
+            }}
           />
           <StatCard
             label="Pendientes"
@@ -265,6 +273,11 @@ export function VisitasPage() {
             hint="todavía sin pasar"
             icon={<MapPin size={18} />}
             tono="warning"
+            progreso={resumen?.programadas ? resumen.pendientes / resumen.programadas : 0}
+            accion={{
+              label: resumen?.pendientes ? `Ver las ${resumen.pendientes}` : 'Ver',
+              onClick: () => verEstado('Pendiente'),
+            }}
           />
           <StatCard
             label="Pedido de la selección"

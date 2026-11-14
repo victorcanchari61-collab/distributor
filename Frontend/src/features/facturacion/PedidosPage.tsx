@@ -123,6 +123,10 @@ export function PedidosPage() {
   const [totalRegistros, setTotalRegistros] = useState(0)
   const [resumen, setResumen] = useState<ResumenPedidos | null>(null)
 
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver los 7" pone ese filtro en Estado.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
@@ -781,20 +785,37 @@ export function PedidosPage() {
         </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
-          <StatCard label="Pedidos" value={String(resumen?.total ?? 0)} icon={<ClipboardList size={18} />} />
+          <StatCard
+            label="Pedidos"
+            value={String(resumen?.total ?? 0)}
+            icon={<ClipboardList size={18} />}
+            progreso={(resumen?.total ?? 0) > 0 ? 1 : 0}
+            accion={{ label: 'Ver todos', onClick: () => verEstado('') }}
+          />
           <StatCard
             label="Pendientes"
             value={String(resumen?.pendientes ?? 0)}
             icon={<ClipboardList size={18} />}
             tono="warning"
+            progreso={(resumen?.total ?? 0) > 0 ? (resumen?.pendientes ?? 0) / (resumen?.total ?? 0) : 0}
+            accion={{
+              label: (resumen?.pendientes ?? 0) > 0 ? `Ver los ${resumen?.pendientes}` : 'Ver',
+              onClick: () => verEstado('PENDIENTE'),
+            }}
           />
           <StatCard
             label="Confirmados"
             value={String(resumen?.confirmados ?? 0)}
             icon={<CheckCircle2 size={18} />}
             tono="success"
+            progreso={(resumen?.total ?? 0) > 0 ? (resumen?.confirmados ?? 0) / (resumen?.total ?? 0) : 0}
+            accion={{
+              label: (resumen?.confirmados ?? 0) > 0 ? `Ver los ${resumen?.confirmados}` : 'Ver',
+              onClick: () => verEstado('CONFIRMADO'),
+            }}
           />
         </>
       }

@@ -19,7 +19,7 @@ import { useDismiss } from './useDismiss'
 import { instanteMs } from '../../lib/fechas'
 import { FiltersButton } from './FiltersButton'
 import { describeFilter } from './dataTableFilters'
-import type { DataTableFilter, FilterType } from './dataTableFilters'
+import type { DataTableFilter, FilterType, OperatorId } from './dataTableFilters'
 
 /**
  * Tabla de listado con columnas movibles y ocultables, orden y busqueda por
@@ -152,6 +152,12 @@ export interface SysDataTableProps<T> {
    * estos, no a vacío.
    */
   filtrosIniciales?: Omit<DataTableFilter, 'id'>[]
+  /**
+   * Un filtro que se pide desde fuera de la tabla: una tarjeta de arriba con "Ver los 29". Cada vez que cambia
+   * `vez` se pone en su columna, reemplazando el que hubiera ahí, y queda a la vista en el panel y como chip igual
+   * que uno elegido a mano. Con `value` vacío la columna queda sin filtro.
+   */
+  filtroPedido?: { column: string; value: string; operator?: OperatorId; vez: number }
   /** Propiedad que identifica cada fila. */
   rowKey?: keyof T & string
   searchPlaceholder?: string
@@ -318,6 +324,7 @@ export function SysDataTable<T>({
   servidor,
   onConsulta,
   filtrosIniciales,
+  filtroPedido,
   onRowClick,
   className,
   toolbar = true,
@@ -350,6 +357,20 @@ export function SysDataTable<T>({
   const igual = (a: DataTableFilter, b?: DataTableFilter) =>
     !!b && a.operator === b.operator && a.value === b.value && (a.valueTo ?? '') === (b.valueTo ?? '')
   const enInicio = filters.length === iniciales.length && filters.every((f) => igual(f, inicialDe(f.column)))
+  const vezPedida = filtroPedido?.vez
+  // El pedido que ya estaba al montar no se repite: al volver a una pestaña la tabla se monta de nuevo, y volver a
+  // poner el último filtro pedido revivía un chip que la persona ya había quitado.
+  const vezAlMontar = useRef(vezPedida)
+  useEffect(() => {
+    if (!filtroPedido || vezPedida === vezAlMontar.current) return
+    const { column, value, operator = 'equals' } = filtroPedido
+    setFilters((prev) => [
+      ...prev.filter((f) => f.column !== column),
+      ...(value ? [{ id: column, column, operator, value }] : []),
+    ])
+    // Solo cuando se pide otra vez: el objeto llega nuevo en cada render de la vista.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vezPedida])
   const [panel, setPanel] = useState<'columns' | 'filters' | null>(null)
   const [dragging, setDragging] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)

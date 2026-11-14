@@ -180,6 +180,15 @@ export function RecepcionesPage() {
     },
   ]
 
+  const total = resumen?.total ?? 0
+  const confirmadas = resumen?.confirmados ?? 0
+  const anuladas = resumen?.anulados ?? 0
+
+  // Las tarjetas llevan a lo que cuentan: "Ver las 12" pone ese filtro en la columna Estado.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) =>
+    setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
   const comprasParaRecibir = compras.filter(
     (c) => c.estado === 'PENDIENTE' || c.estado === 'RECIBIDA_PARCIAL',
   )
@@ -208,21 +217,35 @@ export function RecepcionesPage() {
       }
       stats={
         <>
-          <StatCard label="Recepciones" value={String(resumen?.total ?? 0)} icon={<PackageCheck size={18} />} />
+          <StatCard
+            label="Recepciones"
+            value={String(total)}
+            icon={<PackageCheck size={18} />}
+            progreso={total > 0 ? 1 : 0}
+            accion={{ label: 'Ver todas', onClick: () => verEstado('') }}
+          />
           <StatCard
             label="Confirmadas"
-            value={String(resumen?.confirmados ?? 0)}
+            value={String(confirmadas)}
             icon={<PackageCheck size={18} />}
             tono="success"
+            progreso={total > 0 ? confirmadas / total : 0}
+            accion={{
+              label: confirmadas > 0 ? `Ver las ${confirmadas}` : 'Ver',
+              onClick: () => verEstado('CONFIRMADO'),
+            }}
           />
           <StatCard
             label="Anuladas"
-            value={String(resumen?.anulados ?? 0)}
+            value={String(anuladas)}
             icon={<Undo2 size={18} />}
             tono="neutral"
+            progreso={total > 0 ? anuladas / total : 0}
+            accion={{ label: anuladas > 0 ? `Ver las ${anuladas}` : 'Ver', onClick: () => verEstado('ANULADO') }}
           />
         </>
       }
+      filtroPedido={filtroPedido}
       columns={columns}
       rows={recepciones}
       servidor={{

@@ -332,6 +332,12 @@ export function SolicitudesCompraPage() {
     }),
     [solicitudes],
   )
+  const total = solicitudes.length
+
+  // Las tarjetas llevan a lo que cuentan: "Ver los 3" pone ese filtro en la columna Estado.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verPor = (column: string, value: string) =>
+    setFiltroPedido((f) => ({ column, value, vez: (f?.vez ?? 0) + 1 }))
 
   const columnasFilas: DataTableColumn<LineaProductoNueva>[] = [
     {
@@ -615,6 +621,11 @@ export function SolicitudesCompraPage() {
               hint="esperando a Compras"
               icon={<ClipboardPen size={18} />}
               tono="warning"
+              progreso={total > 0 ? stats.pendientes / total : 0}
+              accion={{
+                label: stats.pendientes > 0 ? `Ver las ${stats.pendientes}` : 'Ver',
+                onClick: () => verPor('estado', 'PENDIENTE'),
+              }}
             />
             <StatCard
               label="Urgentes"
@@ -622,6 +633,7 @@ export function SolicitudesCompraPage() {
               hint="pendientes y urgentes"
               icon={<AlertTriangle size={18} />}
               tono="danger"
+              progreso={total > 0 ? stats.urgentes / total : 0}
             />
             <StatCard
               label="Atendidas"
@@ -629,6 +641,11 @@ export function SolicitudesCompraPage() {
               hint="ya tienen orden de compra"
               icon={<CheckCircle2 size={18} />}
               tono="success"
+              progreso={total > 0 ? stats.atendidas / total : 0}
+              accion={{
+                label: stats.atendidas > 0 ? `Ver las ${stats.atendidas}` : 'Ver',
+                onClick: () => verPor('estado', 'ATENDIDA'),
+              }}
             />
             <StatCard
               label="Borradores"
@@ -636,9 +653,15 @@ export function SolicitudesCompraPage() {
               hint="sin enviar: solo los ves tú"
               icon={<Pencil size={18} />}
               tono="neutral"
+              progreso={total > 0 ? stats.borradores / total : 0}
+              accion={{
+                label: stats.borradores > 0 ? `Ver los ${stats.borradores}` : 'Ver',
+                onClick: () => verPor('estado', 'BORRADOR'),
+              }}
             />
           </>
         }
+        filtroPedido={filtroPedido}
         columns={columns}
         rows={solicitudes}
         cardIcon={ClipboardPen}

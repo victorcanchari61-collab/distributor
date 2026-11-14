@@ -116,6 +116,11 @@ export function PrestamosPage() {
   const [totalRegistros, setTotalRegistros] = useState(0)
   const [resumen, setResumen] = useState<ResumenPrestamos | null>(null)
 
+  // Las tarjetas llevan a lo que cuentan: "Ver los 3" pone ese filtro en la columna Estado.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) =>
+    setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
@@ -666,6 +671,10 @@ export function PrestamosPage() {
     )
   }
 
+  const total = resumen?.total ?? 0
+  const pendientes = resumen?.pendientes ?? 0
+  const devueltos = resumen?.devueltos ?? 0
+
   return (
     <ListPage
       icon={<HandCoins size={20} />}
@@ -681,23 +690,30 @@ export function PrestamosPage() {
         <>
           <StatCard
             label="Préstamos"
-            value={String(resumen?.total ?? 0)}
+            value={String(total)}
             icon={<HandCoins size={18} />}
+            progreso={total > 0 ? 1 : 0}
+            accion={{ label: 'Ver todos', onClick: () => verEstado('') }}
           />
           <StatCard
             label="Pendientes"
-            value={String(resumen?.pendientes ?? 0)}
+            value={String(pendientes)}
             icon={<HandCoins size={18} />}
             tono="warning"
+            progreso={total > 0 ? pendientes / total : 0}
+            accion={{ label: pendientes > 0 ? `Ver los ${pendientes}` : 'Ver', onClick: () => verEstado('PENDIENTE') }}
           />
           <StatCard
             label="Devueltos"
-            value={String(resumen?.devueltos ?? 0)}
+            value={String(devueltos)}
             icon={<Undo2 size={18} />}
             tono="neutral"
+            progreso={total > 0 ? devueltos / total : 0}
+            accion={{ label: devueltos > 0 ? `Ver los ${devueltos}` : 'Ver', onClick: () => verEstado('DEVUELTO') }}
           />
         </>
       }
+      filtroPedido={filtroPedido}
       columns={columns}
       rows={prestamos}
       servidor={{

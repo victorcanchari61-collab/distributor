@@ -80,6 +80,11 @@ export function StockPage() {
   const [totalRegistros, setTotalRegistros] = useState(0)
   const [resumen, setResumen] = useState<ResumenStock | null>(null)
 
+  // "Ver los 7" de la tarjeta Bajo el mínimo pone ese filtro en la columna ¿Bajo mínimo?.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verBajoMinimo = () =>
+    setFiltroPedido((f) => ({ column: 'bajoMinimo', value: 'Si', vez: (f?.vez ?? 0) + 1 }))
+
   const cargarPagina = useCallback(
     async (q: ConsultaTabla) => {
       setCargando(true)
@@ -455,6 +460,7 @@ export function StockPage() {
               icon={<AlertTriangle size={18} />}
               tono={bajoMinimo > 0 ? 'warning' : 'neutral'}
               hint={bajoMinimo > 0 ? 'reponer pronto' : 'todo en orden'}
+              accion={{ label: bajoMinimo > 0 ? `Ver los ${bajoMinimo}` : 'Ver', onClick: verBajoMinimo }}
             />
             <StatCard
               label="Valor del inventario"
@@ -465,6 +471,7 @@ export function StockPage() {
             />
           </>
         }
+        filtroPedido={filtroPedido}
         columns={columns}
         rows={stock}
         servidor={{

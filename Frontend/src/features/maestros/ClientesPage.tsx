@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { navPath } from '../../components/layout'
 import { fechaCorta } from '../../lib/fechas'
 import { Award, Contact, MapPin, Plus, Route, ShieldOff, Upload } from 'lucide-react'
 import { FaBan, FaCircleCheck, FaPencil, FaTrash } from 'react-icons/fa6'
@@ -107,6 +109,11 @@ export function ClientesPage() {
   const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
   const [total, setTotal] = useState(0)
   const [resumen, setResumen] = useState<ResumenClientes | null>(null)
+
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver los 12" pone ese filtro en Estado.
+  const navigate = useNavigate()
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
 
   const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
@@ -518,12 +525,15 @@ export function ClientesPage() {
           </>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
+        filtroPedido={filtroPedido}
         stats={
           <>
             <StatCard
               label="Clientes activos"
               value={String(activos)}
               icon={<Contact size={18} />}
+              progreso={activos + desactivados > 0 ? activos / (activos + desactivados) : 0}
+              accion={{ label: activos > 0 ? `Ver los ${activos}` : 'Ver', onClick: () => verEstado('Activo') }}
             />
             <StatCard
               label="Desactivados"
@@ -531,6 +541,8 @@ export function ClientesPage() {
               icon={<ShieldOff size={18} />}
               tono={desactivados > 0 ? 'warning' : 'neutral'}
               hint={desactivados > 0 ? 'no aparecen en nuevas operaciones' : 'ninguno'}
+              progreso={activos + desactivados > 0 ? desactivados / (activos + desactivados) : 0}
+              accion={{ label: desactivados > 0 ? `Ver los ${desactivados}` : 'Ver', onClick: () => verEstado('Inactivo') }}
             />
             <StatCard
               label="Con ruta asignada"
@@ -538,6 +550,7 @@ export function ClientesPage() {
               icon={<Route size={18} />}
               tono="success"
               hint={`${activos - conRuta} sin ruta`}
+              progreso={activos > 0 ? conRuta / activos : 0}
             />
             <StatCard
               label="Rutas"
@@ -545,6 +558,7 @@ export function ClientesPage() {
               icon={<MapPin size={18} />}
               tono="neutral"
               hint="rutas de reparto distintas"
+              accion={{ label: 'Ver rutas', onClick: () => navigate(navPath('tms.rutas')) }}
             />
           </>
         }

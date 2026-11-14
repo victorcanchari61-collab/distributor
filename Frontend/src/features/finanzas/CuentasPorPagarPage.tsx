@@ -403,17 +403,20 @@ export function CuentasPorPagarPage() {
             value={`S/ ${totalPendiente.toFixed(2)}`}
             icon={<HandCoins size={18} />}
             tono="warning"
+            progreso={totalFacturado > 0 ? totalPendiente / totalFacturado : 0}
           />
           <StatCard
             label="Facturado (de estas)"
             value={`S/ ${totalFacturado.toFixed(2)}`}
             icon={<Receipt size={18} />}
+            progreso={totalFacturado > 0 ? 1 : 0}
           />
           <StatCard
             label="Ya pagado (de estas)"
             value={`S/ ${totalPagadoDeEstas.toFixed(2)}`}
             icon={<CircleCheck size={18} />}
             tono="success"
+            progreso={totalFacturado > 0 ? totalPagadoDeEstas / totalFacturado : 0}
           />
           <StatCard
             label="Cuenta más antigua"

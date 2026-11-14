@@ -138,6 +138,10 @@ export function ProductosPage() {
   const [totalRegistros, setTotalRegistros] = useState(0)
   const [resumen, setResumen] = useState<ResumenProductos | null>(null)
 
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver los 12" pone ese filtro en Estado.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
@@ -182,6 +186,7 @@ export function ProductosPage() {
 
   const unidadesActivas = useMemo(() => unidades.filter((u) => u.activo), [unidades])
   const activos = productos.filter((p) => p.activo)
+  const totalProductos = (resumen?.activos ?? 0) + (resumen?.desactivados ?? 0)
 
   const unidadBase = unidades.find((u) => u.id === form.unidadBaseId)?.codigo ?? ''
 
@@ -777,18 +782,29 @@ export function ProductosPage() {
           </>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
+        filtroPedido={filtroPedido}
         stats={
           <>
             <StatCard
               label="Productos activos"
               value={String(resumen?.activos ?? 0)}
               icon={<Package size={18} />}
+              progreso={totalProductos > 0 ? (resumen?.activos ?? 0) / totalProductos : 0}
+              accion={{
+                label: (resumen?.activos ?? 0) > 0 ? `Ver los ${resumen?.activos}` : 'Ver',
+                onClick: () => verEstado('Activo'),
+              }}
             />
             <StatCard
               label="Desactivados"
               value={String(resumen?.desactivados ?? 0)}
               icon={<ShieldOff size={18} />}
               tono={productos.length > activos.length ? 'warning' : 'neutral'}
+              progreso={totalProductos > 0 ? (resumen?.desactivados ?? 0) / totalProductos : 0}
+              accion={{
+                label: (resumen?.desactivados ?? 0) > 0 ? `Ver los ${resumen?.desactivados}` : 'Ver',
+                onClick: () => verEstado('Inactivo'),
+              }}
             />
             <StatCard
               label="Presentaciones"
@@ -803,6 +819,7 @@ export function ProductosPage() {
               icon={<Boxes size={18} />}
               tono="neutral"
               hint={`${marcas.length} marcas`}
+              accion={{ label: 'Ver categorías', onClick: () => setPestana('categorias') }}
             />
           </>
         }

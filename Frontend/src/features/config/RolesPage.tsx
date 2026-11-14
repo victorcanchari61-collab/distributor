@@ -13,7 +13,8 @@ import {
   useToast,
 } from '../../components/ui'
 import type { DataTableColumn } from '../../components/ui'
-import { NAV_GROUPS } from '../../components/layout'
+import { useNavigate } from 'react-router-dom'
+import { NAV_GROUPS, navPath } from '../../components/layout'
 import { ApiError } from '../../lib/apiClient'
 import { rolApi } from './rolApi'
 import type { RolResponse } from './rolApi'
@@ -23,6 +24,7 @@ import { useRealtime } from '../../lib/realtime'
 export function RolesPage() {
   const { puede } = usePermisos()
   const toast = useToast()
+  const navigate = useNavigate()
   const [roles, setRoles] = useState<RolResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -188,6 +190,7 @@ export function RolesPage() {
             label="Usuarios asignados"
             value={String(roles.reduce((total, r) => total + r.usuarios, 0))}
             icon={<Users size={18} />}
+            accion={{ label: 'Ver usuarios', onClick: () => navigate(navPath('config.usuarios')) }}
           />
           <StatCard
             label="Módulos del sistema"

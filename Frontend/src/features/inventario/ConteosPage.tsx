@@ -258,12 +258,18 @@ export function ConteosPage() {
       }
       stats={
         <>
-          <StatCard label="Productos en el almacén" value={String(stock.length)} icon={<ClipboardCheck size={18} />} />
+          <StatCard
+            label="Productos en el almacén"
+            value={String(stock.length)}
+            icon={<ClipboardCheck size={18} />}
+            progreso={stock.length > 0 ? 1 : 0}
+          />
           <StatCard
             label="Con conteo escrito"
             value={String(contadosActivos.length)}
             icon={<Save size={18} />}
             tono="success"
+            progreso={stock.length > 0 ? contadosActivos.length / stock.length : 0}
           />
         </>
       }

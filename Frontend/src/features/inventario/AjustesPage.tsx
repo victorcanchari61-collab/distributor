@@ -114,6 +114,11 @@ export function AjustesPage() {
   const [totalRegistros, setTotalRegistros] = useState(0)
   const [resumen, setResumen] = useState<ResumenDocumentos | null>(null)
 
+  // Las tarjetas llevan a lo que cuentan: "Ver los 6" pone ese filtro en la columna Estado.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) =>
+    setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
@@ -581,6 +586,10 @@ export function AjustesPage() {
     )
   }
 
+  const totalDocs = resumen?.total ?? 0
+  const confirmados = resumen?.confirmados ?? 0
+  const anulados = resumen?.anulados ?? 0
+
   return (
     <PestanasVista pestanas={cabeceraPestanas}>
       <ListPage
@@ -597,23 +606,33 @@ export function AjustesPage() {
         <>
           <StatCard
             label="Documentos"
-            value={String(resumen?.total ?? 0)}
+            value={String(totalDocs)}
             icon={<ClipboardCheck size={18} />}
+            progreso={totalDocs > 0 ? 1 : 0}
+            accion={{ label: 'Ver todos', onClick: () => verEstado('') }}
           />
           <StatCard
             label="Confirmados"
-            value={String(resumen?.confirmados ?? 0)}
+            value={String(confirmados)}
             icon={<ClipboardCheck size={18} />}
             tono="success"
+            progreso={totalDocs > 0 ? confirmados / totalDocs : 0}
+            accion={{
+              label: confirmados > 0 ? `Ver los ${confirmados}` : 'Ver',
+              onClick: () => verEstado('CONFIRMADO'),
+            }}
           />
           <StatCard
             label="Anulados"
-            value={String(resumen?.anulados ?? 0)}
+            value={String(anulados)}
             icon={<Undo2 size={18} />}
             tono="neutral"
+            progreso={totalDocs > 0 ? anulados / totalDocs : 0}
+            accion={{ label: anulados > 0 ? `Ver los ${anulados}` : 'Ver', onClick: () => verEstado('ANULADO') }}
           />
         </>
       }
+      filtroPedido={filtroPedido}
       columns={columns}
       rows={documentos}
       servidor={{

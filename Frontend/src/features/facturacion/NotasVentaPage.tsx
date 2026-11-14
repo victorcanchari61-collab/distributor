@@ -173,6 +173,10 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
   const [totalRegistros, setTotalRegistros] = useState(0)
   const [resumen, setResumen] = useState<ResumenNotasVenta | null>(null)
 
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver las 12" pone ese filtro en Estado.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargarPagina = useCallback(async (q: ConsultaTabla, silencioso = false) => {
     if (!silencioso) setCargando(true)
     try {
@@ -1343,14 +1347,26 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
         </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
-          <StatCard label="Notas de venta" value={String(resumen?.total ?? 0)} icon={<ShoppingBag size={18} />} />
+          <StatCard
+            label="Notas de venta"
+            value={String(resumen?.total ?? 0)}
+            icon={<ShoppingBag size={18} />}
+            progreso={(resumen?.total ?? 0) > 0 ? 1 : 0}
+            accion={{ label: 'Ver todas', onClick: () => verEstado('') }}
+          />
           <StatCard
             label="Confirmadas"
             value={String(resumen?.confirmadas ?? 0)}
             icon={<ShoppingBag size={18} />}
             tono="success"
+            progreso={(resumen?.total ?? 0) > 0 ? (resumen?.confirmadas ?? 0) / (resumen?.total ?? 0) : 0}
+            accion={{
+              label: (resumen?.confirmadas ?? 0) > 0 ? `Ver las ${resumen?.confirmadas}` : 'Ver',
+              onClick: () => verEstado('CONFIRMADA'),
+            }}
           />
           <StatCard
             label="Total vendido"

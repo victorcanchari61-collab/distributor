@@ -60,6 +60,10 @@ export function MetodosPagoPage() {
   const [form, setForm] = useState(VACIO)
   const [guardando, setGuardando] = useState(false)
 
+  // La tarjeta de activos lleva a lo que cuenta: "Ver los 4" pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
+
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
@@ -208,6 +212,10 @@ export function MetodosPagoPage() {
   const activos = metodos.filter((m) => m.activo)
   // Yape o transferencia sin cuenta: el backend rechaza cobrar con ellos.
   const sinCuenta = activos.filter((m) => m.tipo !== 'EFECTIVO' && m.cuentaFinancieraId === null).length
+  const billeteras = activos.filter((m) => m.tipo === 'BILLETERA_DIGITAL').length
+  const transferencias = activos.filter((m) => m.tipo === 'TRANSFERENCIA').length
+  // Las tres de la derecha son una parte de los activos.
+  const deActivos = (n: number) => (activos.length > 0 ? n / activos.length : 0)
 
   return (
     <ListPage
@@ -220,6 +228,7 @@ export function MetodosPagoPage() {
         </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard
@@ -228,20 +237,24 @@ export function MetodosPagoPage() {
             icon={<Coins size={18} />}
             tono="sys"
             hint={`De ${metodos.length} registrados`}
+            progreso={metodos.length > 0 ? activos.length / metodos.length : 0}
+            accion={{ label: activos.length > 0 ? `Ver los ${activos.length}` : 'Ver', onClick: () => verEstado('Activo') }}
           />
           <StatCard
             label="Billeteras digitales"
-            value={String(activos.filter((m) => m.tipo === 'BILLETERA_DIGITAL').length)}
+            value={String(billeteras)}
             icon={<Smartphone size={18} />}
             tono="success"
             hint="Yape, Plin..."
+            progreso={deActivos(billeteras)}
           />
           <StatCard
             label="Transferencias"
-            value={String(activos.filter((m) => m.tipo === 'TRANSFERENCIA').length)}
+            value={String(transferencias)}
             icon={<ArrowLeftRight size={18} />}
             tono="success"
             hint="A una cuenta bancaria"
+            progreso={deActivos(transferencias)}
           />
           <StatCard
             label="Sin cuenta"
@@ -249,6 +262,7 @@ export function MetodosPagoPage() {
             icon={<AlertTriangle size={18} />}
             tono={sinCuenta > 0 ? 'danger' : 'neutral'}
             hint="No sirven para cobrar hasta asignarles una cuenta"
+            progreso={deActivos(sinCuenta)}
           />
         </>
       }

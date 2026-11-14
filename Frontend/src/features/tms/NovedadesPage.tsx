@@ -76,6 +76,10 @@ export function NovedadesPage() {
   const [revisando, setRevisando] = useState<NovedadResponse | null>(null)
   const [reporteAbierto, setReporteAbierto] = useState(false)
 
+  // Las tarjetas llevan a lo que cuentan: "Ver las 7" pone ese filtro en "Estado" (lo aplica el servidor).
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
   // Los recojos van en la misma tabla: al verificarlos se elige el almacén.
   const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([])
   const [verificandoRecojo, setVerificandoRecojo] = useState<RecojoPendiente | null>(null)
@@ -258,6 +262,7 @@ export function NovedadesPage() {
         </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard
@@ -265,18 +270,33 @@ export function NovedadesPage() {
             value={String(resumen?.porRevisar ?? 0)}
             icon={<ClipboardCheck size={18} />}
             tono="warning"
+            progreso={resumen?.total ? resumen.porRevisar / resumen.total : 0}
+            accion={{
+              label: resumen?.porRevisar ? `Ver las ${resumen.porRevisar}` : 'Ver',
+              onClick: () => verEstado('PENDIENTE'),
+            }}
           />
           <StatCard
             label="Recibidas"
             value={String(resumen?.recibidas ?? 0)}
             icon={<CheckCircle2 size={18} />}
             tono="success"
+            progreso={resumen?.total ? resumen.recibidas / resumen.total : 0}
+            accion={{
+              label: resumen?.recibidas ? `Ver las ${resumen.recibidas}` : 'Ver',
+              onClick: () => verEstado('RECIBIDA'),
+            }}
           />
           <StatCard
             label="Faltantes"
             value={String(resumen?.faltantes ?? 0)}
             icon={<AlertTriangle size={18} />}
             tono="danger"
+            progreso={resumen?.total ? resumen.faltantes / resumen.total : 0}
+            accion={{
+              label: resumen?.faltantes ? `Ver las ${resumen.faltantes}` : 'Ver',
+              onClick: () => verEstado('FALTANTE'),
+            }}
           />
           <StatCard label="No entregado" value={`S/ ${(resumen?.importe ?? 0).toFixed(2)}`} icon={<Wallet size={18} />} />
         </>

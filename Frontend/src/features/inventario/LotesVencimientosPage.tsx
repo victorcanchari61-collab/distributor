@@ -124,18 +124,25 @@ export function LotesVencimientosPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Con vencimiento" value={String(lotes.length)} icon={<CalendarClock size={18} />} />
+          <StatCard
+            label="Con vencimiento"
+            value={String(lotes.length)}
+            icon={<CalendarClock size={18} />}
+            progreso={lotes.length > 0 ? 1 : 0}
+          />
           <StatCard
             label="Por vencer"
             value={String(porVencer.length)}
             icon={<AlertTriangle size={18} />}
             tono="warning"
+            progreso={lotes.length > 0 ? porVencer.length / lotes.length : 0}
           />
           <StatCard
             label="Vencidos"
             value={String(vencidos.length)}
             icon={<PackageX size={18} />}
             tono="danger"
+            progreso={lotes.length > 0 ? vencidos.length / lotes.length : 0}
           />
         </>
       }

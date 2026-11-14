@@ -110,6 +110,11 @@ export function TransferenciasPage() {
   const [totalRegistros, setTotalRegistros] = useState(0)
   const [resumen, setResumen] = useState<ResumenDocumentos | null>(null)
 
+  // Las tarjetas llevan a lo que cuentan: "Ver las 5" pone ese filtro en la columna Estado.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) =>
+    setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
@@ -452,6 +457,10 @@ export function TransferenciasPage() {
     )
   }
 
+  const total = resumen?.total ?? 0
+  const confirmadas = resumen?.confirmados ?? 0
+  const anuladas = resumen?.anulados ?? 0
+
   return (
     <ListPage
       icon={<Truck size={20} />}
@@ -478,23 +487,33 @@ export function TransferenciasPage() {
         <>
           <StatCard
             label="Transferencias"
-            value={String(resumen?.total ?? 0)}
+            value={String(total)}
             icon={<Truck size={18} />}
+            progreso={total > 0 ? 1 : 0}
+            accion={{ label: 'Ver todas', onClick: () => verEstado('') }}
           />
           <StatCard
             label="Confirmadas"
-            value={String(resumen?.confirmados ?? 0)}
+            value={String(confirmadas)}
             icon={<Truck size={18} />}
             tono="success"
+            progreso={total > 0 ? confirmadas / total : 0}
+            accion={{
+              label: confirmadas > 0 ? `Ver las ${confirmadas}` : 'Ver',
+              onClick: () => verEstado('CONFIRMADO'),
+            }}
           />
           <StatCard
             label="Anuladas"
-            value={String(resumen?.anulados ?? 0)}
+            value={String(anuladas)}
             icon={<Undo2 size={18} />}
             tono="neutral"
+            progreso={total > 0 ? anuladas / total : 0}
+            accion={{ label: anuladas > 0 ? `Ver las ${anuladas}` : 'Ver', onClick: () => verEstado('ANULADO') }}
           />
         </>
       }
+      filtroPedido={filtroPedido}
       columns={columns}
       rows={documentos}
       servidor={{

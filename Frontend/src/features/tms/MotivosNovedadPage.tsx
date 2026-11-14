@@ -48,6 +48,11 @@ export function MotivosNovedadPage() {
   // Motivos: por qué no se entregó. Resultados: qué se encontró al contar lo que volvió.
   const [pestana, setPestana] = useState<'motivos' | 'resultados'>('motivos')
 
+  // Las tarjetas llevan a lo que cuentan: "Ver los 5" pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
+  const motivosActivos = motivos.filter((m) => m.activo).length
+
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
@@ -192,14 +197,26 @@ export function MotivosNovedadPage() {
           </Button>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
+        filtroPedido={filtroPedido}
         stats={
           <>
-            <StatCard label="Motivos" value={String(motivos.length)} icon={<Tags size={18} />} />
+            <StatCard
+              label="Motivos"
+              value={String(motivos.length)}
+              icon={<Tags size={18} />}
+              progreso={motivos.length > 0 ? 1 : 0}
+              accion={{ label: 'Ver todos', onClick: () => verEstado('') }}
+            />
             <StatCard
               label="Activos"
-              value={String(motivos.filter((m) => m.activo).length)}
+              value={String(motivosActivos)}
               icon={<ShieldCheck size={18} />}
               tono="success"
+              progreso={motivos.length > 0 ? motivosActivos / motivos.length : 0}
+              accion={{
+                label: motivosActivos > 0 ? `Ver los ${motivosActivos}` : 'Ver',
+                onClick: () => verEstado('Activo'),
+              }}
             />
           </>
         }

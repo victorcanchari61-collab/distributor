@@ -91,6 +91,11 @@ export function FlotaPage() {
   const [conductores, setConductores] = useState<ConductorResponse[]>([])
   const [resumen, setResumen] = useState<ResumenFlotaResponse | null>(null)
 
+  // Las tarjetas de documentos llevan a lo que cuentan: "Ver los 2" pone ese filtro en "Documentos".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verDocumentos = (value: string) =>
+    setFiltroPedido((f) => ({ column: 'estadoDocumentos', value, vez: (f?.vez ?? 0) + 1 }))
+
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -399,18 +404,22 @@ export function FlotaPage() {
           </Button>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
+        filtroPedido={filtroPedido}
         stats={
           <>
             <StatCard
               label="Vehículos"
               value={String(resumen?.vehiculos ?? 0)}
               icon={<Truck size={18} />}
+              progreso={(resumen?.vehiculos ?? 0) > 0 ? 1 : 0}
+              accion={{ label: 'Ver todos', onClick: () => verDocumentos('') }}
             />
             <StatCard
               label="Activos"
               value={String(resumen?.activos ?? 0)}
               icon={<ShieldCheck size={18} />}
               tono="success"
+              progreso={resumen?.vehiculos ? resumen.activos / resumen.vehiculos : 0}
             />
             <StatCard
               label="Con documento vencido"
@@ -418,12 +427,22 @@ export function FlotaPage() {
               icon={<AlertTriangle size={18} />}
               tono={resumen?.conDocumentoVencido ? 'danger' : 'neutral'}
               hint="no deberían salir a repartir"
+              progreso={resumen?.vehiculos ? resumen.conDocumentoVencido / resumen.vehiculos : 0}
+              accion={{
+                label: resumen?.conDocumentoVencido ? `Ver los ${resumen.conDocumentoVencido}` : 'Ver',
+                onClick: () => verDocumentos('Vencido'),
+              }}
             />
             <StatCard
               label="Por vencer"
               value={String(resumen?.porVencer ?? 0)}
               icon={<CalendarClock size={18} />}
               tono={resumen?.porVencer ? 'warning' : 'neutral'}
+              progreso={resumen?.vehiculos ? resumen.porVencer / resumen.vehiculos : 0}
+              accion={{
+                label: resumen?.porVencer ? `Ver los ${resumen.porVencer}` : 'Ver',
+                onClick: () => verDocumentos('Por vencer'),
+              }}
             />
           </>
         }

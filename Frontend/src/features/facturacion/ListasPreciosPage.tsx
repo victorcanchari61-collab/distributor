@@ -771,6 +771,7 @@ export function ListasPreciosPage() {
                 label="Precios en la lista"
                 value={String(precios.length)}
                 icon={<Banknote size={18} />}
+                progreso={precios.length > 0 ? 1 : 0}
               />
               <StatCard
                 label="Productos con precio"
@@ -778,6 +779,7 @@ export function ListasPreciosPage() {
                 icon={<Tag size={18} />}
                 tono="success"
                 hint={`de ${productos.length} activos`}
+                progreso={productos.length > 0 ? new Set(precios.map((p) => p.productoId)).size / productos.length : 0}
               />
               <StatCard
                 label="Escalones por volumen"
@@ -785,6 +787,7 @@ export function ListasPreciosPage() {
                 icon={<Check size={18} />}
                 tono="warning"
                 hint="precios por cantidad"
+                progreso={precios.length > 0 ? precios.filter((p) => p.cantidadMinima > 1).length / precios.length : 0}
               />
               <StatCard
                 label="Listas"

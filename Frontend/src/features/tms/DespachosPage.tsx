@@ -722,12 +722,18 @@ export function DespachosPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Despachos" value={String(resumen?.total ?? 0)} icon={<Truck size={18} />} />
+          <StatCard
+            label="Despachos"
+            value={String(resumen?.total ?? 0)}
+            icon={<Truck size={18} />}
+            progreso={(resumen?.total ?? 0) > 0 ? 1 : 0}
+          />
           <StatCard
             label="Armados"
             value={String(resumen?.armados ?? 0)}
             icon={<Package size={18} />}
             tono="success"
+            progreso={resumen?.total ? resumen.armados / resumen.total : 0}
           />
           <StatCard
             label="Pedidos en ruta"

@@ -28,6 +28,10 @@ export function BancosPage() {
   const [form, setForm] = useState(VACIO)
   const [guardando, setGuardando] = useState(false)
 
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver los 3" pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
+
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
@@ -117,6 +121,7 @@ export function BancosPage() {
   const activos = bancos.filter((b) => b.activo)
   const totalCuentas = bancos.reduce((n, b) => n + b.cantidadCuentas, 0)
   const sinCuentas = activos.filter((b) => b.cantidadCuentas === 0).length
+  const inactivos = bancos.length - activos.length
 
   return (
     <ListPage
@@ -129,6 +134,7 @@ export function BancosPage() {
         </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard
@@ -137,6 +143,8 @@ export function BancosPage() {
             icon={<Landmark size={18} />}
             tono="sys"
             hint={`De ${bancos.length} en el catálogo`}
+            progreso={bancos.length > 0 ? activos.length / bancos.length : 0}
+            accion={{ label: activos.length > 0 ? `Ver los ${activos.length}` : 'Ver', onClick: () => verEstado('Activo') }}
           />
           <StatCard
             label="Cuentas bancarias"
@@ -151,13 +159,16 @@ export function BancosPage() {
             icon={<AlertTriangle size={18} />}
             tono="warning"
             hint="Bancos activos sin ninguna cuenta registrada"
+            progreso={activos.length > 0 ? sinCuentas / activos.length : 0}
           />
           <StatCard
             label="Inactivos"
-            value={String(bancos.length - activos.length)}
+            value={String(inactivos)}
             icon={<ShieldOff size={18} />}
             tono="neutral"
             hint="No se pueden elegir en una cuenta nueva"
+            progreso={bancos.length > 0 ? inactivos / bancos.length : 0}
+            accion={{ label: inactivos > 0 ? `Ver los ${inactivos}` : 'Ver', onClick: () => verEstado('Inactivo') }}
           />
         </>
       }

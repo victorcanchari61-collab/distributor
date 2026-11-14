@@ -33,6 +33,16 @@ export interface StatCardProps {
   trend?: number
   /** Aclaracion corta bajo el numero. */
   hint?: string
+  /**
+   * Que parte del total es este numero, de 0 a 1: se dibuja una barra y el porcentaje al lado del numero. "29" solo
+   * no dice si es mucho o poco; "29 · 100%" si.
+   */
+  progreso?: number
+  /**
+   * El enlace al pie de la tarjeta: lo normal es que aplique su filtro en la tabla de abajo ("Ver los 29"), para
+   * que la tarjeta lleve a lo que cuenta en vez de solo mostrarlo.
+   */
+  accion?: { label: string; onClick: () => void }
   className?: string
 }
 
@@ -43,15 +53,20 @@ export function StatCard({
   tono = 'sys',
   trend,
   hint,
+  progreso,
+  accion,
   className,
 }: StatCardProps) {
   const estilo = TONOS[tono]
   const sube = (trend ?? 0) >= 0
+  const pct = progreso === undefined ? undefined : Math.round(Math.min(1, Math.max(0, progreso)) * 100)
+  // Con accion, la aclaracion baja al pie junto a ella: asi la tarjeta no suma una linea mas de alto.
+  const hintArriba = accion ? undefined : hint
 
   return (
     <div
       className={cn(
-        'group relative flex items-start gap-3 overflow-hidden rounded-panel border border-line bg-white p-4',
+        'group relative flex flex-col overflow-hidden rounded-panel border border-line bg-white',
         'transition-shadow duration-200 hover:shadow-md',
         // En la fila desplazable de movil cada tarjeta conserva un ancho
         // legible; en la grilla de escritorio se reparte el espacio.
@@ -65,9 +80,10 @@ export function StatCard({
         className={cn('absolute inset-y-0 left-0 w-1', estilo.barra)}
       />
 
+      <div className="flex flex-1 items-center gap-3 px-4 py-3">
       <span
         className={cn(
-          'inline-flex size-10 shrink-0 items-center justify-center rounded-field',
+          'inline-flex size-9 shrink-0 items-center justify-center rounded-field',
           'transition-transform duration-200 group-hover:scale-105',
           estilo.chip,
         )}
@@ -78,11 +94,16 @@ export function StatCard({
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-medium text-ink-muted">{label}</p>
 
-        <p className="mt-0.5 text-2xl leading-none font-extrabold tracking-tight text-ink tabular-nums">
-          {value}
-        </p>
+        <div className="mt-0.5 flex items-center gap-2">
+          <p className="text-2xl leading-none font-extrabold tracking-tight text-ink tabular-nums">{value}</p>
+          {pct !== undefined && (
+            <span className={cn('rounded-full px-1.5 py-0.5 text-[11px] leading-none font-semibold', estilo.chip)}>
+              {pct}%
+            </span>
+          )}
+        </div>
 
-        {(trend !== undefined || hint) && (
+        {(trend !== undefined || hintArriba) && (
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
             {trend !== undefined && (
               <span
@@ -96,10 +117,47 @@ export function StatCard({
                 {trend}%
               </span>
             )}
-            {hint && <span className="truncate text-ink-soft">{hint}</span>}
+            {hintArriba && <span className="truncate text-ink-soft">{hintArriba}</span>}
           </div>
         )}
+
       </div>
+      </div>
+
+      {/* La barra va de borde a borde, fina, sin sumar una fila: dice qué parte del total es el número. */}
+      {pct !== undefined && (
+          <div
+            className="h-1 bg-slate-100"
+            role="progressbar"
+            aria-valuenow={pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`${label}: ${pct}%`}
+          >
+            <span
+              className={cn('block h-full transition-[width] duration-500', estilo.barra)}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+      )}
+
+      {accion && (
+        <div
+          className={cn(
+            'flex items-center justify-between gap-2 px-4 py-1.5 text-xs',
+            pct === undefined && 'border-t border-line',
+          )}
+        >
+          <span className="min-w-0 truncate text-ink-soft">{hint}</span>
+          <button
+            type="button"
+            onClick={accion.onClick}
+            className="shrink-0 cursor-pointer font-semibold whitespace-nowrap text-[rgb(var(--sys-ink-rgb))] hover:underline"
+          >
+            {accion.label} →
+          </button>
+        </div>
+      )}
     </div>
   )
 }

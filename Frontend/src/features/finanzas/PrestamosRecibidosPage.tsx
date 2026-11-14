@@ -55,6 +55,10 @@ export function PrestamosRecibidosPage() {
   const [viendoPagosId, setViendoPagosId] = useState<number | null>(null)
   const viendoPagos = prestamos.find((p) => p.id === viendoPagosId) ?? null
 
+  // La tarjeta de vigentes lleva a lo que cuenta: "Ver los 2" pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
@@ -142,10 +146,18 @@ export function PrestamosRecibidosPage() {
         </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard label="Deuda pendiente" value={soles(deuda)} icon={<PiggyBank size={18} />} tono="danger" />
-          <StatCard label="Préstamos vigentes" value={String(vigentes.length)} icon={<HandCoins size={18} />} tono="sys" />
+          <StatCard
+            label="Préstamos vigentes"
+            value={String(vigentes.length)}
+            icon={<HandCoins size={18} />}
+            tono="sys"
+            progreso={prestamos.length > 0 ? vigentes.length / prestamos.length : 0}
+            accion={{ label: vigentes.length > 0 ? `Ver los ${vigentes.length}` : 'Ver', onClick: () => verEstado('VIGENTE') }}
+          />
         </>
       }
       columns={columns}

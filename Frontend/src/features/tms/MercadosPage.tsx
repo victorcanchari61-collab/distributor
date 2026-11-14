@@ -40,6 +40,10 @@ export function MercadosPage() {
   const [form, setForm] = useState<MercadoRequest>(VACIO)
   const [guardando, setGuardando] = useState(false)
 
+  // Las tarjetas llevan a lo que cuentan: "Ver los 12" pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
+
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
@@ -172,14 +176,26 @@ export function MercadosPage() {
         </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
-          <StatCard label="Mercados" value={String(mercados.length)} icon={<Store size={18} />} />
+          <StatCard
+            label="Mercados"
+            value={String(mercados.length)}
+            icon={<Store size={18} />}
+            progreso={mercados.length > 0 ? 1 : 0}
+            accion={{ label: 'Ver todos', onClick: () => verEstado('') }}
+          />
           <StatCard
             label="Activos"
             value={String(activos.length)}
             icon={<ShieldCheck size={18} />}
             tono="success"
+            progreso={mercados.length > 0 ? activos.length / mercados.length : 0}
+            accion={{
+              label: activos.length > 0 ? `Ver los ${activos.length}` : 'Ver',
+              onClick: () => verEstado('Activo'),
+            }}
           />
         </>
       }

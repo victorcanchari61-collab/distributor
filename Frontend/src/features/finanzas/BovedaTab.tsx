@@ -50,6 +50,9 @@ export function BovedaTab({
   const [guardando, setGuardando] = useState(false)
   // Sacar: sale de la Bóveda (fija). Traer: entra a la Bóveda (fija). Solo se elige la otra cuenta.
   const [mover, setMover] = useState<'sacar' | 'traer' | null>(null)
+  // "Entró" y "Salió" llevan a sus movimientos: ponen ese filtro en "Tipo".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verTipo = (value: string) => setFiltroPedido((f) => ({ column: 'tipo', value, vez: (f?.vez ?? 0) + 1 }))
 
   const bovedaId = boveda?.id
   const saldo = boveda?.saldoActual
@@ -87,8 +90,10 @@ export function BovedaTab({
     }
   }
 
-  const ingresos = movimientos.filter((m) => m.tipo === 'INGRESO').reduce((s, m) => s + m.monto, 0)
-  const egresos = movimientos.filter((m) => m.tipo === 'EGRESO').reduce((s, m) => s + m.monto, 0)
+  const entradas = movimientos.filter((m) => m.tipo === 'INGRESO')
+  const salidas = movimientos.filter((m) => m.tipo === 'EGRESO')
+  const ingresos = entradas.reduce((s, m) => s + m.monto, 0)
+  const egresos = salidas.reduce((s, m) => s + m.monto, 0)
   const puedeMover = puede('finanzas.movimientos', 'transferir')
 
   const columns: DataTableColumn<MovimientoCuentaResponse>[] = [
@@ -164,11 +169,26 @@ export function BovedaTab({
               tono="sys"
               hint="Efectivo guardado ahora"
             />
-            <StatCard label="Entró" value={soles(ingresos)} icon={<TrendingUp size={18} />} tono="success" hint="En las fechas de la tabla" />
-            <StatCard label="Salió" value={soles(egresos)} icon={<TrendingDown size={18} />} tono="danger" hint="En las fechas de la tabla" />
+            <StatCard
+              label="Entró"
+              value={soles(ingresos)}
+              icon={<TrendingUp size={18} />}
+              tono="success"
+              hint="En las fechas de la tabla"
+              accion={{ label: entradas.length > 0 ? `Ver los ${entradas.length}` : 'Ver', onClick: () => verTipo('INGRESO') }}
+            />
+            <StatCard
+              label="Salió"
+              value={soles(egresos)}
+              icon={<TrendingDown size={18} />}
+              tono="danger"
+              hint="En las fechas de la tabla"
+              accion={{ label: salidas.length > 0 ? `Ver los ${salidas.length}` : 'Ver', onClick: () => verTipo('EGRESO') }}
+            />
           </>
         ) : undefined
       }
+      filtroPedido={filtroPedido}
       columns={columns}
       rows={boveda ? movimientos : []}
       onConsulta={(q) => {

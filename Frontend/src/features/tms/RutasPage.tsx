@@ -39,6 +39,10 @@ export function RutasPage() {
   const [form, setForm] = useState<RutaRequest>(VACIO)
   const [guardando, setGuardando] = useState(false)
 
+  // Las tarjetas llevan a lo que cuentan: "Ver las 8" pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
+
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
@@ -154,14 +158,26 @@ export function RutasPage() {
         </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
-          <StatCard label="Rutas" value={String(rutas.length)} icon={<Route size={18} />} />
+          <StatCard
+            label="Rutas"
+            value={String(rutas.length)}
+            icon={<Route size={18} />}
+            progreso={rutas.length > 0 ? 1 : 0}
+            accion={{ label: 'Ver todas', onClick: () => verEstado('') }}
+          />
           <StatCard
             label="Activas"
             value={String(activas.length)}
             icon={<ShieldCheck size={18} />}
             tono="success"
+            progreso={rutas.length > 0 ? activas.length / rutas.length : 0}
+            accion={{
+              label: activas.length > 0 ? `Ver las ${activas.length}` : 'Ver',
+              onClick: () => verEstado('Activo'),
+            }}
           />
         </>
       }

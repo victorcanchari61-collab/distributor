@@ -66,6 +66,9 @@ export function EmpleadosPage() {
   const { confirmar, dialogo } = useConfirmacion()
   // El reporte en PDF, en el visor antes de imprimir.
   const [reporte, setReporte] = useState(false)
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver los 3" pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verPor = (column: string, value: string) => setFiltroPedido((f) => ({ column, value, vez: (f?.vez ?? 0) + 1 }))
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -298,15 +301,23 @@ export function EmpleadosPage() {
         </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
-          <StatCard label="Empleados activos" value={String(activos.length)} icon={<Users size={18} />} />
+          <StatCard
+            label="Empleados activos"
+            value={String(activos.length)}
+            icon={<Users size={18} />}
+            progreso={empleados.length > 0 ? activos.length / empleados.length : 0}
+            accion={{ label: activos.length > 0 ? `Ver los ${activos.length}` : 'Ver', onClick: () => verPor('activo', 'Activo') }}
+          />
           <StatCard
             label="Con usuario"
             value={String(conUsuario)}
             icon={<BadgeCheck size={18} />}
             tono="success"
             hint={`${activos.length - conUsuario} sin cuenta en el sistema`}
+            progreso={activos.length > 0 ? conUsuario / activos.length : 0}
           />
           <StatCard
             label="Cesados"
@@ -314,6 +325,8 @@ export function EmpleadosPage() {
             icon={<ShieldOff size={18} />}
             tono={desactivados > 0 ? 'warning' : 'neutral'}
             hint={desactivados > 0 ? 'conservan su historial' : 'ninguno'}
+            progreso={empleados.length > 0 ? desactivados / empleados.length : 0}
+            accion={{ label: desactivados > 0 ? `Ver los ${desactivados}` : 'Ver', onClick: () => verPor('activo', 'Inactivo') }}
           />
         </>
       }

@@ -58,6 +58,9 @@ export function AdelantosPage() {
   const [nuevoAbierto, setNuevoAbierto] = useState(false)
   const [viendoId, setViendoId] = useState<number | null>(null)
   const [cambiandoPlan, setCambiandoPlan] = useState<AdelantoFila | null>(null)
+  // "Ver los 4" de la tarjeta de vigentes pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verPor = (column: string, value: string) => setFiltroPedido((f) => ({ column, value, vez: (f?.vez ?? 0) + 1 }))
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -162,10 +165,20 @@ export function AdelantosPage() {
         </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard label="Por descontar" value={soles(resumen?.saldoPendiente ?? 0)} icon={<HandCoins size={18} />} tono="warning" />
-          <StatCard label="Adelantos vigentes" value={String(resumen?.vigentes ?? 0)} icon={<CalendarClock size={18} />} tono="sys" />
+          <StatCard
+            label="Adelantos vigentes"
+            value={String(resumen?.vigentes ?? 0)}
+            icon={<CalendarClock size={18} />}
+            tono="sys"
+            accion={{
+              label: (resumen?.vigentes ?? 0) > 0 ? `Ver los ${resumen?.vigentes}` : 'Ver',
+              onClick: () => verPor('estado', 'PENDIENTE'),
+            }}
+          />
           <StatCard label="Trabajadores que deben" value={String(resumen?.empleados ?? 0)} icon={<Users size={18} />} tono="neutral" />
           <StatCard label="Entregado este mes" value={soles(resumen?.entregadoMes ?? 0)} icon={<Wallet size={18} />} tono="danger" />
         </>

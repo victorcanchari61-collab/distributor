@@ -53,6 +53,10 @@ export function CajasPage() {
 
   const [movimientosDe, setMovimientosDe] = useState<CuentaFinancieraResponse | null>(null)
 
+  // La tarjeta de activas lleva a lo que cuenta: "Ver las 5" pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
+
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
@@ -90,6 +94,7 @@ export function CajasPage() {
 
   // La Bóveda: la caja de la empresa, sin responsable. Una sola, en su pestaña.
   const boveda = todas.find((c) => c.esBoveda) ?? null
+  const cajasActivas = cajas.filter((c) => c.activo).length
 
   const guardar = async () => {
     if (!usuarioId) return toast.error('Elige a quién se le asigna la caja.')
@@ -190,9 +195,17 @@ export function CajasPage() {
           </Button>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
+        filtroPedido={filtroPedido}
         stats={
           <>
-            <StatCard label="Cajas activas" value={String(cajas.filter((c) => c.activo).length)} icon={<Users size={18} />} tono="sys" />
+            <StatCard
+              label="Cajas activas"
+              value={String(cajasActivas)}
+              icon={<Users size={18} />}
+              tono="sys"
+              progreso={cajas.length > 0 ? cajasActivas / cajas.length : 0}
+              accion={{ label: cajasActivas > 0 ? `Ver las ${cajasActivas}` : 'Ver', onClick: () => verEstado('Activo') }}
+            />
             <StatCard
               label="Saldo en cajas"
               value={soles(cajas.filter((c) => c.activo).reduce((s, c) => s + c.saldoActual, 0))}

@@ -193,6 +193,11 @@ export function MisComprasPage() {
   const [resumen, setResumen] = useState<ResumenCompras | null>(null)
   const [comprasParaRecibir, setComprasParaRecibir] = useState<CompraResponse[]>([])
 
+  // Las tarjetas llevan a lo que cuentan: "Ver las 8" pone ese filtro en la columna Estado.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) =>
+    setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
   const cargarPagina = useCallback(async (q: ConsultaTabla) => {
     setCargando(true)
     try {
@@ -1000,6 +1005,10 @@ export function MisComprasPage() {
     )
   }
 
+  const totalCompras = resumen?.total ?? 0
+  const porRecibir = resumen?.porRecibir ?? 0
+  const recibidas = resumen?.recibidas ?? 0
+
   return (
     <ListPage
       icon={<ShoppingBag size={20} />}
@@ -1013,21 +1022,35 @@ export function MisComprasPage() {
       alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
-          <StatCard label="Compras" value={String(resumen?.total ?? 0)} icon={<ShoppingBag size={18} />} />
+          <StatCard
+            label="Compras"
+            value={String(totalCompras)}
+            icon={<ShoppingBag size={18} />}
+            progreso={totalCompras > 0 ? 1 : 0}
+            accion={{ label: 'Ver todas', onClick: () => verEstado('') }}
+          />
+          {/* Sin enlace: junta dos estados (pendiente y recibida parcial) y el filtro de la tabla toma uno solo. */}
           <StatCard
             label="Por recibir"
-            value={String(resumen?.porRecibir ?? 0)}
+            value={String(porRecibir)}
             icon={<PackageCheck size={18} />}
             tono="warning"
+            progreso={totalCompras > 0 ? porRecibir / totalCompras : 0}
           />
           <StatCard
             label="Recibidas"
-            value={String(resumen?.recibidas ?? 0)}
+            value={String(recibidas)}
             icon={<PackageCheck size={18} />}
             tono="success"
+            progreso={totalCompras > 0 ? recibidas / totalCompras : 0}
+            accion={{
+              label: recibidas > 0 ? `Ver las ${recibidas}` : 'Ver',
+              onClick: () => verEstado('RECIBIDA_TOTAL'),
+            }}
           />
         </>
       }
+      filtroPedido={filtroPedido}
       columns={columns}
       rows={compras}
       servidor={{

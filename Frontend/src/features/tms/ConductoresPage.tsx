@@ -73,6 +73,11 @@ export function ConductoresPage() {
   const [guardando, setGuardando] = useState(false)
   const [subiendoFoto, setSubiendoFoto] = useState(false)
 
+  // Las tarjetas de licencia llevan a lo que cuentan: "Ver los 3" pone ese filtro en "Estado licencia".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verLicencia = (value: string) =>
+    setFiltroPedido((f) => ({ column: 'estadoDocumentos', value, vez: (f?.vez ?? 0) + 1 }))
+
   const { confirmar, dialogo } = useConfirmacion()
 
   const cargar = useCallback(async () => {
@@ -289,18 +294,22 @@ export function ConductoresPage() {
         </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard
             label="Conductores"
             value={String(resumen?.conductores ?? 0)}
             icon={<IdCard size={18} />}
+            progreso={(resumen?.conductores ?? 0) > 0 ? 1 : 0}
+            accion={{ label: 'Ver todos', onClick: () => verLicencia('') }}
           />
           <StatCard
             label="Activos"
             value={String(resumen?.activos ?? 0)}
             icon={<ShieldCheck size={18} />}
             tono="success"
+            progreso={resumen?.conductores ? resumen.activos / resumen.conductores : 0}
           />
           <StatCard
             label="Con licencia vencida"
@@ -308,12 +317,22 @@ export function ConductoresPage() {
             icon={<AlertTriangle size={18} />}
             tono={resumen?.conLicenciaVencida ? 'danger' : 'neutral'}
             hint="no deberían salir a repartir"
+            progreso={resumen?.conductores ? resumen.conLicenciaVencida / resumen.conductores : 0}
+            accion={{
+              label: resumen?.conLicenciaVencida ? `Ver los ${resumen.conLicenciaVencida}` : 'Ver',
+              onClick: () => verLicencia('Vencido'),
+            }}
           />
           <StatCard
             label="Por vencer"
             value={String(resumen?.porVencer ?? 0)}
             icon={<CalendarClock size={18} />}
             tono={resumen?.porVencer ? 'warning' : 'neutral'}
+            progreso={resumen?.conductores ? resumen.porVencer / resumen.conductores : 0}
+            accion={{
+              label: resumen?.porVencer ? `Ver los ${resumen.porVencer}` : 'Ver',
+              onClick: () => verLicencia('Por vencer'),
+            }}
           />
         </>
       }

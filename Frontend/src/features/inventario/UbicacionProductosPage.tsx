@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { navPath } from '../../components/layout'
 import { MapPin, MoveRight, PackageSearch, TriangleAlert, Warehouse, X } from 'lucide-react'
 import {
   Alert,
@@ -49,6 +51,11 @@ export function UbicacionProductosPage() {
   const [error, setError] = useState('')
 
   const [elegidos, setElegidos] = useState<Set<number>>(new Set())
+  const navigate = useNavigate()
+
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver los 29" pone ese filtro en "Dónde está".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verDonde = (value: string) => setFiltroPedido((f) => ({ column: 'lugar', value, vez: (f?.vez ?? 0) + 1 }))
 
   // El modal de poner o mover.
   const [poniendo, setPoniendo] = useState(false)
@@ -234,6 +241,10 @@ export function UbicacionProductosPage() {
     },
   ]
 
+  const total = datos?.items.length ?? 0
+  const sinLugar = datos?.sinLugar ?? 0
+  const conLugar = total - sinLugar
+
   const tabs: TabItem[] = almacenes.map((a) => ({ id: String(a.id), label: a.nombre, icon: <Warehouse size={15} /> }))
   const ninguno = datos !== null && datos.lugares === 0
 
@@ -256,23 +267,46 @@ export function UbicacionProductosPage() {
           <Tabs active={String(almacenId)} onChange={(id) => setAlmacenId(Number(id))} items={tabs} />
         ) : undefined
       }
+      filtroPedido={filtroPedido}
       stats={
         <>
-          <StatCard label="Productos" value={String(datos?.items.length ?? 0)} hint="con stock o ya ubicados" icon={<PackageSearch size={18} />} />
+          <StatCard
+            label="Productos"
+            value={String(total)}
+            hint="con stock o ya ubicados"
+            icon={<PackageSearch size={18} />}
+            progreso={total > 0 ? 1 : 0}
+            accion={{ label: 'Ver todos', onClick: () => verDonde('') }}
+          />
           <StatCard
             label="Sin lugar"
-            value={String(datos?.sinLugar ?? 0)}
+            value={String(sinLugar)}
             hint="nadie sabe dónde están"
             icon={<TriangleAlert size={18} />}
-            tono={datos && datos.sinLugar > 0 ? 'warning' : 'success'}
+            tono={sinLugar > 0 ? 'warning' : 'success'}
+            progreso={total > 0 ? sinLugar / total : 0}
+            accion={{ label: sinLugar > 0 ? `Ver los ${sinLugar}` : 'Ver', onClick: () => verDonde(SIN_LUGAR) }}
           />
           <StatCard
             label="Con lugar"
-            value={String((datos?.items.length ?? 0) - (datos?.sinLugar ?? 0))}
+            value={String(conLugar)}
+            hint="ya ubicados"
             icon={<MapPin size={18} />}
             tono="success"
+            progreso={total > 0 ? conLugar / total : 0}
+            accion={{ label: conLugar > 0 ? `Ver los ${conLugar}` : 'Ver', onClick: () => verDonde(CON_LUGAR) }}
           />
-          <StatCard label="Lugares definidos" value={String(datos?.lugares ?? 0)} hint="pisos y cuartos" icon={<Warehouse size={18} />} tono="neutral" />
+          <StatCard
+            label="Lugares definidos"
+            value={String(datos?.lugares ?? 0)}
+            hint="pisos y cuartos"
+            icon={<Warehouse size={18} />}
+            tono="neutral"
+            accion={{
+              label: (datos?.lugares ?? 0) > 0 ? 'Ver lugares' : 'Crear lugares',
+              onClick: () => navigate(navPath('inv.almacenes')),
+            }}
+          />
         </>
       }
       actions={

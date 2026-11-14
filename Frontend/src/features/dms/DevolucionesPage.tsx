@@ -59,6 +59,10 @@ export function DevolucionesPage() {
   const [desde, setDesde] = useState(desplazarDias(-30))
   const [hasta, setHasta] = useState(hoyLocal())
 
+  // "Por aprobar" lleva a las que cuenta: las pendientes salen siempre en la lista, aunque sean viejas.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'estado', value, vez: (f?.vez ?? 0) + 1 }))
+
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -176,12 +180,14 @@ export function DevolucionesPage() {
       title="Devoluciones"
       description="Lo que el cliente devuelve; entra al stock al aprobarse."
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard
             label="Devoluciones"
             value={String(resumen?.total ?? 0)}
             icon={<Undo2 size={18} />}
+            progreso={(resumen?.total ?? 0) > 0 ? 1 : 0}
           />
           <StatCard
             label="Por aprobar"
@@ -189,12 +195,18 @@ export function DevolucionesPage() {
             hint="esperando decisión"
             icon={<Check size={18} />}
             tono="warning"
+            progreso={resumen?.total ? resumen.solicitadas / resumen.total : 0}
+            accion={{
+              label: resumen?.solicitadas ? `Ver las ${resumen.solicitadas}` : 'Ver',
+              onClick: () => verEstado('SOLICITADA'),
+            }}
           />
           <StatCard
             label="Aprobadas"
             value={String(resumen?.aprobadas ?? 0)}
             icon={<Check size={18} />}
             tono="success"
+            progreso={resumen?.total ? resumen.aprobadas / resumen.total : 0}
           />
           <StatCard
             label="Descontado a clientes"

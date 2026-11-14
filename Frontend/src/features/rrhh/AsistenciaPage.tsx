@@ -454,6 +454,9 @@ export function AsistenciaPage() {
   const hoy = hoyLocal()
   const esMesActual = cursor.getFullYear() === Number(hoy.slice(0, 4)) && cursor.getMonth() === Number(hoy.slice(5, 7)) - 1
   const empleadoElegido = empleadoFiltro ? empleados.find((e) => e.id === empleadoFiltro) : undefined
+  // Cada estado sobre todas las marcas activas del mes: las cuatro tarjetas suman el 100%.
+  const marcasDelMes = resumen ? resumen.presentes + resumen.tardanzas + resumen.faltas + resumen.permisos : 0
+  const parteDelMes = (n: number) => (marcasDelMes > 0 ? n / marcasDelMes : 0)
 
   return (
     <div className="space-y-5">
@@ -477,10 +480,10 @@ export function AsistenciaPage() {
 
       {resumen && (
         <FilaStats>
-          <StatCard label="Presentes" value={String(resumen.presentes)} icon={<UserCheck size={18} />} tono="sys" />
-          <StatCard label="Tardanzas" value={String(resumen.tardanzas)} icon={<Clock size={18} />} tono="warning" />
-          <StatCard label="Faltas" value={String(resumen.faltas)} icon={<UserX size={18} />} tono="danger" />
-          <StatCard label="Permisos" value={String(resumen.permisos)} icon={<CalendarDays size={18} />} tono="neutral" />
+          <StatCard label="Presentes" value={String(resumen.presentes)} icon={<UserCheck size={18} />} tono="sys" progreso={parteDelMes(resumen.presentes)} />
+          <StatCard label="Tardanzas" value={String(resumen.tardanzas)} icon={<Clock size={18} />} tono="warning" progreso={parteDelMes(resumen.tardanzas)} />
+          <StatCard label="Faltas" value={String(resumen.faltas)} icon={<UserX size={18} />} tono="danger" progreso={parteDelMes(resumen.faltas)} />
+          <StatCard label="Permisos" value={String(resumen.permisos)} icon={<CalendarDays size={18} />} tono="neutral" progreso={parteDelMes(resumen.permisos)} />
         </FilaStats>
       )}
 

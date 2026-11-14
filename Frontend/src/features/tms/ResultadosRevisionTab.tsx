@@ -27,6 +27,11 @@ export function ResultadosRevisionTab({ cabecera }: { cabecera: ReactNode }) {
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<ResultadoRevisionResponse | null>(null)
 
+  // Las tarjetas llevan a lo que cuentan: "Ver los 3" pone ese filtro en "Estado".
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
+  const activos = resultados.filter((r) => r.activo).length
+
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
@@ -127,14 +132,23 @@ export function ResultadosRevisionTab({ cabecera }: { cabecera: ReactNode }) {
           </Button>
         }
         alert={error ? <Alert>{error}</Alert> : undefined}
+        filtroPedido={filtroPedido}
         stats={
           <>
-            <StatCard label="Resultados" value={String(resultados.length)} icon={<ClipboardCheck size={18} />} />
+            <StatCard
+              label="Resultados"
+              value={String(resultados.length)}
+              icon={<ClipboardCheck size={18} />}
+              progreso={resultados.length > 0 ? 1 : 0}
+              accion={{ label: 'Ver todos', onClick: () => verEstado('') }}
+            />
             <StatCard
               label="Activos"
-              value={String(resultados.filter((r) => r.activo).length)}
+              value={String(activos)}
               icon={<ShieldCheck size={18} />}
               tono="success"
+              progreso={resultados.length > 0 ? activos / resultados.length : 0}
+              accion={{ label: activos > 0 ? `Ver los ${activos}` : 'Ver', onClick: () => verEstado('Activo') }}
             />
           </>
         }

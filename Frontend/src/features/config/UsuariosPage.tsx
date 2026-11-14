@@ -48,6 +48,10 @@ const VACIO = {
 export function UsuariosPage() {
   const { puede } = usePermisos()
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
+
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver los 5" pone ese filtro en Estado o en Rol.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verPor = (column: string, value: string) => setFiltroPedido((f) => ({ column, value, vez: (f?.vez ?? 0) + 1 }))
   const [cargando, setCargando] = useState(true)
   const [roles, setRoles] = useState<RolResponse[]>([])
   const [empleados, setEmpleados] = useState<EmpleadoOpcion[]>([])
@@ -371,12 +375,14 @@ export function UsuariosPage() {
         </Button>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard
             label="Usuarios registrados"
             value={String(usuarios.length)}
             icon={<UserCog size={18} />}
+            progreso={usuarios.length > 0 ? 1 : 0}
           />
           <StatCard
             label="Activos"
@@ -384,6 +390,8 @@ export function UsuariosPage() {
             icon={<UserCheck size={18} />}
             tono="success"
             hint={`${usuarios.length - activos} deshabilitados`}
+            progreso={usuarios.length > 0 ? activos / usuarios.length : 0}
+            accion={{ label: activos > 0 ? `Ver los ${activos}` : 'Ver', onClick: () => verPor('activo', 'Activo') }}
           />
           <StatCard
             label="Administradores"
@@ -391,6 +399,8 @@ export function UsuariosPage() {
             icon={<UserPlus size={18} />}
             tono="warning"
             hint="con acceso total"
+            progreso={usuarios.length > 0 ? admins / usuarios.length : 0}
+            accion={{ label: admins > 0 ? `Ver los ${admins}` : 'Ver', onClick: () => verPor('rol', 'Administrador') }}
           />
         </>
       }

@@ -47,6 +47,10 @@ export function ProveedoresPage() {
   const { puede } = usePermisos()
   const toast = useToast()
   const [proveedores, setProveedores] = useState<ProveedorResponse[]>([])
+
+  // Las tarjetas de arriba llevan a lo que cuentan: "Ver los 5" pone ese filtro en Estado.
+  const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
+  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -322,12 +326,15 @@ export function ProveedoresPage() {
         </>
       }
       alert={error ? <Alert>{error}</Alert> : undefined}
+      filtroPedido={filtroPedido}
       stats={
         <>
           <StatCard
             label="Proveedores activos"
             value={String(activos.length)}
             icon={<Building2 size={18} />}
+            progreso={proveedores.length > 0 ? activos.length / proveedores.length : 0}
+            accion={{ label: activos.length > 0 ? `Ver los ${activos.length}` : 'Ver', onClick: () => verEstado('Activo') }}
           />
           <StatCard
             label="Desactivados"
@@ -335,6 +342,8 @@ export function ProveedoresPage() {
             icon={<ShieldOff size={18} />}
             tono={desactivados > 0 ? 'warning' : 'neutral'}
             hint={desactivados > 0 ? 'no aparecen en nuevas operaciones' : 'ninguno'}
+            progreso={proveedores.length > 0 ? desactivados / proveedores.length : 0}
+            accion={{ label: desactivados > 0 ? `Ver los ${desactivados}` : 'Ver', onClick: () => verEstado('Inactivo') }}
           />
           <StatCard
             label="Con RUC"
@@ -342,6 +351,7 @@ export function ProveedoresPage() {
             icon={<FileCheck2 size={18} />}
             tono="success"
             hint={`${activos.length - conRuc} con DNI o código`}
+            progreso={activos.length > 0 ? conRuc / activos.length : 0}
           />
           <StatCard
             label="Rubros"
