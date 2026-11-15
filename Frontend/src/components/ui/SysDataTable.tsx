@@ -214,7 +214,7 @@ type Row = Record<string, unknown>
 const RESERVA_INFERIOR = 68
 
 /** Una tabla de alto fijo nunca baja de aquí, por chica que sea la ventana. */
-const ALTO_MINIMO_CUERPO = 288
+const ALTO_MINIMO_CUERPO = 180
 
 /**
  * Texto comparable de un valor: sin acentos y en minusculas, para que buscar
@@ -668,7 +668,20 @@ export function SysDataTable<T>({
         setAltoCuerpo(null)
         return
       }
-      const alto = Math.max(ALTO_MINIMO_CUERPO, Math.floor(window.innerHeight - caja.top - RESERVA_INFERIOR))
+      // Lo que va debajo del cuerpo (el pie de paginación, lo que la vista ponga después y el margen de la página) se
+      // MIDE: con una reserva fija, un pie más alto que ella dejaba la página unos píxeles más alta que la ventana y
+      // salía la barra de desplazamiento de la página. El fondo del contenido es el del último bloque de <main> (main
+      // se estira hasta el pie de la ventana; sus hijos no) más su margen inferior.
+      const main = el.closest('main')
+      const ultimo = main?.lastElementChild
+      const debajo =
+        main && ultimo
+          ? ultimo.getBoundingClientRect().bottom -
+            caja.bottom +
+            (parseFloat(getComputedStyle(ultimo).marginBottom) || 0) +
+            (parseFloat(getComputedStyle(main).paddingBottom) || 0)
+          : RESERVA_INFERIOR
+      const alto = Math.max(ALTO_MINIMO_CUERPO, Math.floor(window.innerHeight - caja.top - window.scrollY - debajo - 1))
       setAltoCuerpo((actual) => (actual === alto ? actual : alto))
     }
 
@@ -1129,7 +1142,7 @@ export function SysDataTable<T>({
           ref={bodyRef}
           onScroll={onBodyScroll}
           onWheel={onBodyWheel}
-          className={cn('overflow-auto', alturaFija ? 'min-h-72 bg-white' : 'max-h-[55vh]', alturaFija && altoCuerpo === null && 'h-[55vh]')}
+          className={cn('overflow-auto', alturaFija ? 'min-h-[180px] bg-white' : 'max-h-[55vh]', alturaFija && altoCuerpo === null && 'h-[55vh]')}
           style={alturaFija && altoCuerpo !== null ? { height: altoCuerpo } : undefined}
         >
           <table
