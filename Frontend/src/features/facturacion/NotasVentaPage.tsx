@@ -1261,7 +1261,7 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
             cerrarFilaPago()
             setPagosAbierto(false)
           }}
-          size="lg"
+          size="xl"
           title="Pagos"
           description={`Reparte S/ ${totalNeto.toFixed(2)} entre uno o varios métodos.`}
           footer={

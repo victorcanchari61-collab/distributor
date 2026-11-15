@@ -930,7 +930,7 @@ export function MisComprasPage() {
             cerrarFilaPago()
             setPagosAbierto(false)
           }}
-          size="lg"
+          size="xl"
           title="Pagos"
           description={`Reparte S/ ${total.toFixed(2)} entre uno o varios métodos.`}
           footer={

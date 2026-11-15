@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from './cn'
+import { DentroDeModal } from './contextoModal'
 
 export interface ModalProps {
   open: boolean
@@ -94,7 +95,9 @@ export function Modal({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <DentroDeModal.Provider value={true}>{children}</DentroDeModal.Provider>
+        </div>
 
         {footer && (
           <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3">

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { DentroDeModal } from './contextoModal'
 import { createPortal } from 'react-dom'
 import type { ComponentType, ReactNode } from 'react'
 import {
@@ -329,8 +330,12 @@ export function SysDataTable<T>({
   className,
   toolbar = true,
   paginacion = true,
-  alturaFija = toolbar && paginacion,
+  alturaFija: alturaFijaPedida,
 }: SysDataTableProps<T>) {
+  // Dentro de una ventana emergente la tabla crece con sus filas en vez de reservar un alto fijo (dejaba un hueco
+  // vacío), y el pie de paginación solo sale si de verdad hay más filas de las que caben en una página.
+  const enModal = useContext(DentroDeModal)
+  const alturaFija = alturaFijaPedida ?? (!enModal && toolbar && paginacion)
   // Las acciones son píldoras de color, más anchas que los íconos sueltos de antes: el ancho que pide cada pantalla se ensancha.
   const actionsWidth = Math.round(actionsWidthBase * 1.2)
 
@@ -1234,7 +1239,7 @@ export function SysDataTable<T>({
         />
       )}
 
-      {paginacion && (
+      {paginacion && (!enModal || total > pageSize) && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[12px] text-zinc-500">
           <div className="flex items-center gap-3">
             <span>
