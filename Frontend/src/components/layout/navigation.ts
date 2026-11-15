@@ -158,6 +158,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'inv.almacenes', label: 'Almacenes', icon: Warehouse },
       { id: 'inv.ubicaciones', label: 'Ubicación de productos', icon: MapPin },
+      { id: 'inv.plano', label: 'Plano del almacén', icon: LayoutGrid },
       { id: 'inv.stock', label: 'Stock por almacén', icon: PackageSearch },
       { id: 'inv.kardex', label: 'Kardex', icon: PackagePlus },
       { id: 'inv.ajustes', label: 'Ajustes de inventario', icon: ClipboardCheck },

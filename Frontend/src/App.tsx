@@ -58,6 +58,7 @@ const VIEWS: Record<string, ComponentType> = {
   'fact.precios': pantalla(() => import('./features/facturacion'), 'ListasPreciosPage'),
   'inv.almacenes': pantalla(() => import('./features/inventario'), 'AlmacenesPage'),
   'inv.ubicaciones': pantalla(() => import('./features/inventario'), 'UbicacionProductosPage'),
+  'inv.plano': pantalla(() => import('./features/inventario'), 'PlanoPage'),
   'inv.stock': pantalla(() => import('./features/inventario'), 'StockPage'),
   'inv.kardex': pantalla(() => import('./features/inventario'), 'KardexPage'),
   'inv.ajustes': pantalla(() => import('./features/inventario'), 'AjustesPage'),

@@ -38,6 +38,26 @@ public class ActualizarUbicacionRequestValidator : AbstractValidator<ActualizarU
     }
 }
 
+public class PosicionPlanoRequestValidator : AbstractValidator<PosicionPlanoRequest>
+{
+    public PosicionPlanoRequestValidator()
+    {
+        // O todo o nada: un lugar está dibujado entero o no está en el plano.
+        RuleFor(x => x).Must(p => (p.X, p.Y, p.Ancho, p.Alto) is (null, null, null, null)
+                                  || (p.X is not null && p.Y is not null && p.Ancho is not null && p.Alto is not null))
+            .WithMessage("Falta la posición o el tamaño en el plano");
+    }
+}
+
+public class ElementoPlanoRequestValidator : AbstractValidator<ElementoPlanoRequest>
+{
+    public ElementoPlanoRequestValidator()
+    {
+        RuleFor(x => x.Tipo).Must(t => TipoElementoPlano.Todos.Contains(t)).WithMessage("Elige si es pasillo o escalera");
+        RuleFor(x => x.Nombre).NotEmpty().WithMessage("Ponle un nombre").MaximumLength(80);
+    }
+}
+
 public class AsignarProductoUbicacionRequestValidator : AbstractValidator<AsignarProductoUbicacionRequest>
 {
     public AsignarProductoUbicacionRequestValidator()

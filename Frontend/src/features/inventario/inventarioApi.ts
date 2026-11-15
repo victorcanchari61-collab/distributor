@@ -106,6 +106,11 @@ export interface UbicacionResponse {
   hijos: number
   /** Cuántos productos están puestos aquí. */
   productos: number
+  /** Dónde está dibujado en el plano de su piso, en celdas. Nulo: todavía no se dibujó. */
+  planoX: number | null
+  planoY: number | null
+  planoAncho: number | null
+  planoAlto: number | null
 }
 
 export interface UbicacionProductoResponse {
@@ -173,6 +178,46 @@ export interface ProductosUbicados {
   lugares: number
   sinLugar: number
   items: ProductoUbicado[]
+}
+
+// --- Plano de cada piso ---
+
+/** Un rectángulo en la cuadrícula del plano, en celdas. */
+export interface RectPlano {
+  x: number
+  y: number
+  ancho: number
+  alto: number
+}
+
+/** Lo que se dibuja y no guarda mercadería: por dónde se camina o se sube. */
+export type TipoElementoPlano = 'PASILLO' | 'ESCALERA'
+
+export interface ElementoPlano extends RectPlano {
+  id: number
+  /** El piso en cuyo plano está. Nulo: el almacén no usa pisos. */
+  pisoId: number | null
+  tipo: TipoElementoPlano
+  nombre: string
+}
+
+export interface PlanoResponse {
+  almacenId: number
+  columnas: number
+  filas: number
+  elementos: ElementoPlano[]
+}
+
+export const planoApi = {
+  obtener: (almacenId: number) => api.get<PlanoResponse>(`/almacen/${almacenId}/plano`),
+  /** Dibuja un lugar, lo mueve o le cambia el tamaño; con null lo saca del plano (el lugar queda). */
+  posicionar: (ubicacionId: number, rect: RectPlano | null) =>
+    api.put<UbicacionResponse>(`/ubicacion/${ubicacionId}/plano`, rect ?? { x: null, y: null, ancho: null, alto: null }),
+  crearElemento: (almacenId: number, body: Omit<ElementoPlano, 'id'>) =>
+    api.post<ElementoPlano>(`/almacen/${almacenId}/plano/elementos`, body),
+  actualizarElemento: (id: number, body: Omit<ElementoPlano, 'id'>) =>
+    api.put<ElementoPlano>(`/plano/elementos/${id}`, body),
+  eliminarElemento: (id: number) => api.del<void>(`/plano/elementos/${id}`),
 }
 
 export const ubicacionProductoApi = {

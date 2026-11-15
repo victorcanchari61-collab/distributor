@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plano de TIENDA 3</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<style>
+:root{--bg:#f1f5f4;--card:#fff;--ink:#0f172a;--mute:#64748b;--line:#e6ecea;--g:#0f9d6b;--gs:#e6f6ef;--wall:#b8c5c0;--wd:#334155;--room:#fbfcfc;--h1:#eef2f1;--h2:#e1e9e6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1210;--card:#131c19;--ink:#e8f1ee;--mute:#8aa39b;--line:#1d2a26;--gs:#12372b;--wall:#3a4d46;--wd:#8aa39b;--room:#0f1815;--h1:#1a2622;--h2:#15201c}}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.card{background:var(--card);border:1px solid var(--line);border-radius:1rem}
+.mute{color:var(--mute)}
+#canvas{position:relative;background-color:var(--room);background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);border:3px solid var(--wd);border-radius:.5rem}
+.it{position:absolute;box-sizing:border-box;user-select:none;-webkit-user-select:none;touch-action:none;cursor:grab;overflow:hidden}
+.it.drag{cursor:grabbing;opacity:.85;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:9}
+.room{background:var(--card);border:3px solid var(--wd)}
+.hall{background:repeating-linear-gradient(45deg,var(--h1),var(--h1) 6px,var(--h2) 6px,var(--h2) 12px);border:2px dashed var(--wall)}
+.stairs{background:repeating-linear-gradient(0deg,var(--wall) 0 2px,var(--card) 2px 7px);border:3px solid var(--wd)}
+.stairs .nm{background:var(--card);display:inline-block;padding:0 4px;border-radius:3px}
+.it.sel{border-color:var(--g);box-shadow:0 0 0 3px color-mix(in srgb,var(--g) 30%,transparent);z-index:5}
+.room.sel{background:var(--gs)}
+.it.over{border-color:var(--g);border-style:dashed;background:var(--gs)}
+.cnt{position:absolute;right:6px;top:6px}
+.badge{background:var(--g);color:#fff;border-radius:999px;font-size:11px;min-width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px}
+.rh{position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;touch-action:none;background:linear-gradient(135deg,transparent 50%,var(--g) 50%)}
+.btn{background:var(--g);color:#fff;border-radius:.5rem;padding:.4rem .8rem;font-weight:600;font-size:.875rem}
+.btn-o{border:1px solid var(--wall);border-radius:.5rem;padding:.4rem .8rem;font-size:.875rem;background:var(--card)}
+.btn-o:hover{border-color:var(--g)}
+.tab{padding:.4rem .9rem;border-radius:.5rem .5rem 0 0;font-weight:600;font-size:.875rem;border:1px solid var(--line);border-bottom:none;background:var(--bg);color:var(--mute)}
+.tab.on{background:var(--g);color:#fff;border-color:var(--g)}
+.x{background:#e11d48;color:#fff;border-radius:.4rem;width:2rem;height:1.6rem}
+.prow{cursor:grab}
+select,input.f{background:var(--card);color:var(--ink);border:1px solid var(--wall);border-radius:.5rem;padding:.4rem .6rem;width:100%}
+</style>
+</head>
+<body class="min-h-screen p-3 sm:p-6">
+<div class="max-w-[1400px] mx-auto">
+  <header class="rounded-2xl px-6 py-4 text-white" style="background:var(--g)">
+    <h1 class="font-bold">Plano de TIENDA 3</h1>
+    <p class="text-xs opacity-90">Arrastra para mover. Usa la esquina verde para cambiar el tamaño. Arrastra un producto sobre un cuarto para moverlo.</p>
+  </header>
+
+  <div class="grid gap-4 mt-4 lg:grid-cols-[1fr_360px]">
+    <section class="card p-4 min-w-0">
+      <div class="flex flex-wrap items-end justify-between gap-2 mb-3">
+        <div id="tabs" class="flex gap-1 flex-wrap"></div>
+        <div class="flex flex-wrap gap-2 items-center">
+          <span id="msg" class="text-xs" style="color:#e11d48"></span>
+          <button class="btn-o" onclick="addItem('room')">+ Cuarto</button>
+          <button class="btn-o" onclick="addItem('hall')">+ Pasillo</button>
+          <button class="btn-o" onclick="addItem('stairs')">+ Escalera</button>
+          <button class="btn" onclick="addFloor()">Nuevo piso +</button>
+        </div>
+      </div>
+      <div id="wrap" class="overflow-x-auto"><div id="canvas"></div></div>
+    </section>
+    <aside class="card p-5 self-start lg:sticky lg:top-4" id="panel"></aside>
+  </div>
+</div>
+
+<script>
+const CATALOGO=[
+ {n:"ACEITE PATRONA 1/2 L",c:"7526",cat:"ABARROTES"},
+ {n:"ACEITE PATRONA 1/4",c:"7685",cat:"ABARROTES"},
+ {n:"ARROZ COSTEÑO 5 KG",c:"1021",cat:"ABARROTES"},
+ {n:"LECHE GLORIA 400 G",c:"3310",cat:"LÁCTEOS"},
+ {n:"DETERGENTE BOLÍVAR 1 KG",c:"5502",cat:"LIMPIEZA"},
+ {n:"GASEOSA INCA KOLA 2 L",c:"4410",cat:"BEBIDAS"}
+];
+const COLS=24,ROWS=14,MIN={room:[2,2],hall:[1,1],stairs:[2,2]};
+let uid=0,cell=30,dragProd=null;
+const it=(t,nombre,x,y,w,h,prod=[])=>({u:++uid,t,nombre,x,y,w,h,prod});
+let pisos=[
+ {id:"P1",items:[it("room","cocina",0,0,7,6),it("room","sala",7,0,9,6,[CATALOGO[0],CATALOGO[1]]),it("room","baño",16,0,5,6),it("stairs","escalera",21,0,3,4),it("hall","pasillo",0,6,24,2),it("room","bodega",0,8,10,6),it("room","sala de ventas",10,8,14,6)]},
+ {id:"P2",items:[it("room","depósito",0,0,10,6,[CATALOGO[2]]),it("room","almacén frío",10,0,10,6,[CATALOGO[3]]),it("stairs","escalera",21,0,3,4),it("hall","pasillo",0,6,24,2)]}
+];
+let fl="P1",sel=2;
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const pad=n=>String(n).padStart(2,"0");
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const curF=()=>pisos.find(p=>p.id===fl);
+const find=u=>curF().items.find(o=>o.u===u);
+function labelOf(u){let n=0;for(const o of curF().items){if(o.t==="room")n++;if(o.u===u)return o.t==="room"?fl+"-"+pad(n):""}return""}
+function free(p,self,x,y,w,h){return p.items.every(o=>o===self||x>=o.x+o.w||x+w<=o.x||y>=o.y+o.h||y+h<=o.y)}
+function msg(t){const m=document.getElementById("msg");m.textContent=t;setTimeout(()=>m.textContent="",2500)}
+
+function renderTabs(){
+  document.getElementById("tabs").innerHTML=pisos.map(p=>`<button class="tab ${p.id===fl?"on":""}" onclick="goFloor('${p.id}')">${p.id}</button>`).join("");
+}
+function renderCanvas(){
+  const wrap=document.getElementById("wrap"),cv=document.getElementById("canvas"),p=curF();
+  cell=Math.max(26,Math.floor((wrap.clientWidth-8)/COLS));
+  cv.style.cssText=`width:${cell*COLS}px;height:${cell*ROWS}px;background-size:${cell}px ${cell}px`;
+  let n=0;
+  cv.innerHTML=p.items.map(o=>{
+    const lab=o.t==="room"?fl+"-"+pad(++n):"";
+    const dnd=o.t==="room"?`ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="dropProd(event,${o.u})"`:"";
+    return `<div class="it ${o.t} ${sel===o.u?"sel":""}" data-u="${o.u}" style="left:${o.x*cell}px;top:${o.y*cell}px;width:${o.w*cell}px;height:${o.h*cell}px" onpointerdown="startDrag(event,${o.u})" ${dnd}>
+      <div class="p-1.5 leading-tight pointer-events-none">
+        ${lab?`<div class="text-[10px] mute font-bold">${lab}</div>`:""}
+        <div class="nm text-xs font-semibold ${o.t==="hall"?"mute":""}">${esc(o.nombre)}</div>
+      </div>
+      ${o.t==="room"&&o.prod.length?`<span class="badge cnt">${o.prod.length}</span>`:""}
+      <div class="rh" onpointerdown="startResize(event,${o.u})"></div>
+    </div>`}).join("");
+}
+function renderPanel(){
+  const el=document.getElementById("panel"),o=sel&&find(sel);
+  if(!o){el.innerHTML=`<p class="mute text-sm">Toca un cuarto, pasillo o escalera del plano para ver sus detalles.</p>`;return}
+  const tipo={room:"Cuarto",hall:"Pasillo",stairs:"Escalera"}[o.t];
+  let h=`<div class="text-xs mute">${tipo}</div>
+   <div class="text-xl font-bold mb-2">${o.t==="room"?esc(labelOf(o.u)):esc(o.nombre)}</div>
+   <label class="text-xs mute">Nombre</label>
+   <input class="f mb-1" value="${esc(o.nombre)}" oninput="rename(this.value)">
+   <div class="text-xs mute mb-4">Tamaño: ${o.w} × ${o.h} · Posición: ${o.x}, ${o.y}</div>`;
+  if(o.t==="room"){
+    const libres=CATALOGO.filter(x=>!o.prod.some(y=>y.c===x.c));
+    h+=`<div class="text-sm font-semibold mb-2">Productos aquí (${o.prod.length})</div>
+     <div class="flex gap-2 mb-3">
+       <select id="addSel" ${libres.length?"":"disabled"}>${libres.length?libres.map(x=>`<option value="${x.c}">${esc(x.n)}</option>`).join(""):"<option>Sin más productos</option>"}</select>
+       <button class="btn-o whitespace-nowrap" onclick="addProd()" ${libres.length?"":"disabled"}>Poner +</button>
+     </div>
+     ${o.prod.length?o.prod.map(x=>`
+       <div class="prow flex items-center justify-between py-3 border-t" style="border-color:var(--line)" draggable="true" ondragstart="dragProd={c:'${x.c}',from:${o.u}}" ondragend="dragProd=null">
+         <div><div class="text-sm font-semibold"><span class="mute">⠿</span> ${esc(x.n)}</div><div class="text-xs mute">${esc(x.c)} · ${esc(x.cat)}</div></div>
+         <button class="x" title="Quitar" onclick="rmProd('${x.c}')">✕</button>
+       </div>`).join(""):`<p class="mute text-sm py-3 border-t" style="border-color:var(--line)">Este cuarto está vacío.</p>`}`;
+  }
+  h+=`<button class="btn-o w-full mt-4" style="color:#e11d48" onclick="delItem()">Eliminar ${tipo.toLowerCase()}</button>`;
+  el.innerHTML=h;
+}
+function render(){renderTabs();renderCanvas();renderPanel()}
+
+function goFloor(id){fl=id;sel=null;render()}
+function select(u){sel=u;document.querySelectorAll(".it").forEach(e=>e.classList.toggle("sel",+e.dataset.u===u));renderPanel()}
+function rename(v){const o=find(sel);o.nombre=v;const n=document.querySelector(`.it[data-u="${sel}"] .nm`);if(n)n.textContent=v}
+function delItem(){const p=curF();p.items=p.items.filter(o=>o.u!==sel);sel=null;render()}
+
+function startDrag(e,u){
+  if(e.button>0)return;
+  select(u);
+  const o=find(u),p=curF(),el=e.currentTarget,x0=e.clientX,y0=e.clientY,ox=o.x,oy=o.y;
+  el.classList.add("drag");
+  const mv=ev=>{
+    const nx=clamp(ox+Math.round((ev.clientX-x0)/cell),0,COLS-o.w),ny=clamp(oy+Math.round((ev.clientY-y0)/cell),0,ROWS-o.h);
+    if((nx!==o.x||ny!==o.y)&&free(p,o,nx,ny,o.w,o.h)){o.x=nx;o.y=ny;el.style.left=nx*cell+"px";el.style.top=ny*cell+"px"}
+  };
+  const up=()=>{removeEventListener("pointermove",mv);removeEventListener("pointerup",up);removeEventListener("pointercancel",up);el.classList.remove("drag");renderPanel()};
+  addEventListener("pointermove",mv);addEventListener("pointerup",up);addEventListener("pointercancel",up);
+}
+function startResize(e,u){
+  e.preventDefault();e.stopPropagation();
+  select(u);
+  const o=find(u),p=curF(),el=e.currentTarget.parentElement,x0=e.clientX,y0=e.clientY,w0=o.w,h0=o.h,[mw,mh]=MIN[o.t];
+  const mv=ev=>{
+    const nw=clamp(w0+Math.round((ev.clientX-x0)/cell),mw,COLS-o.x),nh=clamp(h0+Math.round((ev.clientY-y0)/cell),mh,ROWS-o.y);
+    if((nw!==o.w||nh!==o.h)&&free(p,o,o.x,o.y,nw,nh)){o.w=nw;o.h=nh;el.style.width=nw*cell+"px";el.style.height=nh*cell+"px"}
+  };
+  const up=()=>{removeEventListener("pointermove",mv);removeEventListener("pointerup",up);removeEventListener("pointercancel",up);renderPanel()};
+  addEventListener("pointermove",mv);addEventListener("pointerup",up);addEventListener("pointercancel",up);
+}
+
+function addItem(t){
+  const d={room:["nuevo cuarto",5,4],hall:["pasillo",8,2],stairs:["escalera",3,3]}[t],p=curF();
+  for(let y=0;y<=ROWS-d[2];y++)for(let x=0;x<=COLS-d[1];x++)if(free(p,null,x,y,d[1],d[2])){const o=it(t,d[0],x,y,d[1],d[2]);p.items.push(o);sel=o.u;render();return}
+  msg("No hay espacio libre en este piso");
+}
+function addFloor(){const id="P"+(pisos.length+1);pisos.push({id,items:[]});fl=id;sel=null;render()}
+function addProd(){const s=document.getElementById("addSel"),x=CATALOGO.find(i=>i.c===s.value),o=find(sel);if(x&&o){o.prod.push(x);render()}}
+function rmProd(c){const o=find(sel);o.prod=o.prod.filter(x=>x.c!==c);render()}
+function dropProd(e,to){
+  e.preventDefault();
+  const d=dragProd;dragProd=null;
+  if(!d||d.from===to){renderCanvas();return}
+  const a=find(d.from),b=find(to),x=a&&a.prod.find(y=>y.c===d.c);
+  if(x&&b&&!b.prod.some(y=>y.c===x.c)){a.prod=a.prod.filter(y=>y.c!==x.c);b.prod.push(x)}
+  sel=to;render();
+}
+let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(renderCanvas,100)});
+render();
+</script>
+</body>
+</html>

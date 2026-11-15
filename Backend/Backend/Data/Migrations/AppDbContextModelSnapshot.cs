@@ -1664,6 +1664,54 @@ namespace Backend.Data.Migrations
                     b.ToTable("DocumentosInventario", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Models.ElementoPlano", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AlmacenId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Alto")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Ancho")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<int?>("PisoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int>("X")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Y")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PisoId");
+
+                    b.HasIndex("AlmacenId", "PisoId");
+
+                    b.ToTable("ElementosPlano", (string)null);
+                });
+
             modelBuilder.Entity("Backend.Models.Empleado", b =>
                 {
                     b.Property<int>("Id")
@@ -4726,6 +4774,18 @@ namespace Backend.Data.Migrations
                     b.Property<int?>("PadreId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("PlanoAlto")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PlanoAncho")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PlanoX")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PlanoY")
+                        .HasColumnType("int");
+
                     b.Property<string>("Tipo")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -5758,6 +5818,24 @@ namespace Backend.Data.Migrations
                     b.Navigation("RecojoVenta");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Backend.Models.ElementoPlano", b =>
+                {
+                    b.HasOne("Backend.Models.Almacen", "Almacen")
+                        .WithMany()
+                        .HasForeignKey("AlmacenId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.UbicacionAlmacen", "Piso")
+                        .WithMany()
+                        .HasForeignKey("PisoId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Almacen");
+
+                    b.Navigation("Piso");
                 });
 
             modelBuilder.Entity("Backend.Models.Financiamiento", b =>

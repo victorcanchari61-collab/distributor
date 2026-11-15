@@ -1,5 +1,8 @@
 export { AlmacenesPage } from './AlmacenesPage'
 export { UbicacionProductosPage } from './UbicacionProductosPage'
+export { PlanoPage } from './plano/PlanoPage'
+export { ElegirLugarPlanoModal } from './plano/ElegirLugarPlanoModal'
+export { tienePlano } from './plano/datosPlano'
 export { SelectorLugar, SIN_LUGAR, lugarFinal, useLugares } from './SelectorLugar'
 export type { LugarElegido } from './SelectorLugar'
 export { StockPage } from './StockPage'

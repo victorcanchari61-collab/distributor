@@ -58,6 +58,11 @@ class InventarioApi {
     ];
   }
 
+  /// GET /api/almacen/{id}/plano - la cuadricula y los pasillos y escaleras.
+  Future<PlanoAlmacen> plano(int almacenId) async => PlanoAlmacen.desdeJson(
+    await _api.get('/almacen/$almacenId/plano') as Map<String, dynamic>,
+  );
+
   /// GET /api/ubicacion/{id}/productos - lo que esta puesto en ese lugar.
   Future<List<UbicacionProducto>> productosDeUbicacion(int id) async {
     final datos = await _api.get('/ubicacion/$id/productos') as List;

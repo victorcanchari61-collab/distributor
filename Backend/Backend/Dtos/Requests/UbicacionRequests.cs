@@ -30,6 +30,31 @@ public class ActualizarUbicacionRequest
     public bool Activo { get; set; } = true;
 }
 
+/// <summary>Dónde dibujar un lugar en el plano de su piso, en celdas. Todo nulo: se saca del plano (el lugar queda).</summary>
+public class PosicionPlanoRequest
+{
+    public int? X { get; set; }
+    public int? Y { get; set; }
+    public int? Ancho { get; set; }
+    public int? Alto { get; set; }
+}
+
+/// <summary>Un pasillo o una escalera del plano: dónde, de qué tamaño y cómo se llama.</summary>
+public class ElementoPlanoRequest
+{
+    /// <summary>El piso en cuyo plano va. Nulo: el almacén no usa pisos. Al cambiarlo de lugar no se usa.</summary>
+    public int? PisoId { get; set; }
+
+    /// <summary>PASILLO o ESCALERA. Al cambiarlo de lugar no se usa: no cambia de tipo.</summary>
+    public string Tipo { get; set; } = string.Empty;
+
+    public string Nombre { get; set; } = string.Empty;
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int Ancho { get; set; }
+    public int Alto { get; set; }
+}
+
 /// <summary>Poner un producto en un lugar del almacén.</summary>
 public class AsignarProductoUbicacionRequest
 {

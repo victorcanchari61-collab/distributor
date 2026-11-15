@@ -91,6 +91,10 @@ public class UbicacionService : IUbicacionService
                     Activo = u.Activo,
                     Hijos = porPadre[u.Id].Count(),
                     Productos = productos.GetValueOrDefault(u.Id),
+                    PlanoX = u.PlanoX,
+                    PlanoY = u.PlanoY,
+                    PlanoAncho = u.PlanoAncho,
+                    PlanoAlto = u.PlanoAlto,
                 });
                 Recorrer(u.Id, ruta, nivel + 1);
             }

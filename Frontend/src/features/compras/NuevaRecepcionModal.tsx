@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ClipboardList, PackageCheck } from 'lucide-react'
+import { ClipboardList, LayoutGrid, PackageCheck } from 'lucide-react'
 import {
   Badge,
   BuscadorCampo,
@@ -18,7 +18,7 @@ import { ApiError } from '../../lib/apiClient'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
 import type { AlmacenOpcion, CrearRecepcionRequest, LugarElegido } from '../inventario'
-import { SIN_LUGAR, SelectorLugar, lugarFinal, recepcionApi, useLugares } from '../inventario'
+import { ElegirLugarPlanoModal, SIN_LUGAR, SelectorLugar, lugarFinal, recepcionApi, tienePlano, useLugares } from '../inventario'
 import type { CompraDetalleResponse, CompraResponse } from './comprasApi'
 
 export interface NuevaRecepcionModalProps {
@@ -79,6 +79,7 @@ export function NuevaRecepcionModal({
    */
   const [lugar, setLugar] = useState<LugarElegido>(SIN_LUGAR)
   const { lugares, cargando: cargandoLugares } = useLugares(almacenId, open)
+  const [enPlano, setEnPlano] = useState(false)
 
   // Otro almacén tiene otros pisos y cuartos: lo elegido antes ya no sirve.
   useEffect(() => {
@@ -424,8 +425,15 @@ export function NuevaRecepcionModal({
                   onChange={(e) => setObservacion(e.target.value)}
                 />
 
-                {/* Dónde se recibe: piso y cuarto del almacén elegido. */}
+                {/* Dónde se recibe: piso y lugar del almacén elegido, de la lista o tocándolo en el plano. */}
                 <SelectorLugar lugares={lugares} cargando={cargandoLugares} valor={lugar} onChange={setLugar} />
+                {tienePlano(lugares) && (
+                  <div className="sm:col-span-2">
+                    <Button size="sm" variant="secondary" onClick={() => setEnPlano(true)} iconRight={<LayoutGrid size={14} />}>
+                      Elegir en el plano
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           ) : !compra ? (
@@ -460,6 +468,8 @@ export function NuevaRecepcionModal({
           )}
         </div>
       </Modal>
+
+      <ElegirLugarPlanoModal open={enPlano} almacenId={almacenId} onClose={() => setEnPlano(false)} onElegir={setLugar} />
 
       {!compraFija && (
         <BuscadorModal

@@ -142,6 +142,8 @@ public static class CatalogoPermisos
             ["inv.almacenes"] = Catalogo,
             // Dónde está puesto cada producto dentro del almacén: verlo y ponerlo o moverlo (también en lote).
             ["inv.ubicaciones"] = [Accion.Ver, Accion.Editar],
+            // El plano de cada piso: verlo (y buscar dónde está un producto) o dibujarlo y mover mercadería en él.
+            ["inv.plano"] = [Accion.Ver, Accion.Editar],
             ["inv.stock"] = Consulta,
             ["inv.kardex"] = Consulta,
             ["inv.ajustes"] = Documento,

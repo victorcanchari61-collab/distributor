@@ -29,17 +29,18 @@ public class UbicacionController : ControllerBase
     /// </summary>
     [HttpGet("almacen/{almacenId:int}/ubicaciones")]
     [PermisoAlguno(
-        "inv.almacenes:ver", "inv.ubicaciones:ver", "inv.stock:ver",
+        "inv.almacenes:ver", "inv.ubicaciones:ver", "inv.plano:ver", "inv.stock:ver",
         "compras.recepciones:crear", "inv.transferencias:crear")]
     public async Task<IActionResult> Listar(int almacenId) => Ok(await _ubicaciones.ListarAsync(almacenId));
 
+    // También desde el plano: quien lo dibuja crea los lugares del piso ahí mismo.
     [HttpPost("almacen/{almacenId:int}/ubicaciones")]
-    [Permiso("inv.almacenes", Accion.Crear)]
+    [PermisoAlguno("inv.almacenes:crear", "inv.plano:editar")]
     public async Task<IActionResult> Crear(int almacenId, [FromBody] CrearUbicacionRequest request) =>
         Ok(await _ubicaciones.CrearAsync(almacenId, request));
 
     [HttpPut("ubicacion/{id:int}")]
-    [Permiso("inv.almacenes", Accion.Editar)]
+    [PermisoAlguno("inv.almacenes:editar", "inv.plano:editar")]
     public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarUbicacionRequest request) =>
         Ok(await _ubicaciones.ActualizarAsync(id, request));
 
@@ -66,18 +67,18 @@ public class UbicacionController : ControllerBase
     /// También la lee quien recibe o transfiere, para sugerir el lugar habitual de cada producto.
     /// </summary>
     [HttpGet("ubicacion-producto")]
-    [PermisoAlguno("inv.ubicaciones:ver", "compras.recepciones:crear", "inv.transferencias:crear")]
+    [PermisoAlguno("inv.ubicaciones:ver", "inv.plano:ver", "compras.recepciones:crear", "inv.transferencias:crear")]
     public async Task<IActionResult> ProductosDelAlmacen([FromQuery] int almacenId) =>
         Ok(await _ubicaciones.ProductosDelAlmacenAsync(almacenId));
 
     /// <summary>Pone varios productos en un lugar, o los mueve con <c>reemplazar</c>.</summary>
     [HttpPost("ubicacion-producto/asignar")]
-    [Permiso("inv.ubicaciones", Accion.Editar)]
+    [PermisoAlguno("inv.ubicaciones:editar", "inv.plano:editar")]
     public async Task<IActionResult> AsignarVarios([FromBody] AsignarProductosUbicacionRequest request) =>
         Ok(await _ubicaciones.AsignarVariosAsync(request));
 
     [HttpPost("ubicacion-producto/quitar")]
-    [Permiso("inv.ubicaciones", Accion.Editar)]
+    [PermisoAlguno("inv.ubicaciones:editar", "inv.plano:editar")]
     public async Task<IActionResult> QuitarVarios([FromBody] QuitarProductosUbicacionRequest request) =>
         Ok(await _ubicaciones.QuitarVariosAsync(request));
 

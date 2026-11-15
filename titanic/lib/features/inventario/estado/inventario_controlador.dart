@@ -99,6 +99,22 @@ final ubicacionesProvider = FutureProvider.autoDispose
           ref.watch(inventarioApiProvider).ubicaciones(almacenId),
     );
 
+// --- Plano del almacen ---
+
+/// Almacen elegido en el plano. Null: el principal.
+final almacenPlanoProvider = StateProvider.autoDispose<int?>((ref) => null);
+
+/// Piso que se mira en el plano: su id, o 0 para los lugares que no cuelgan de
+/// ningun piso. Null (o uno que no es de este almacen): el primero que haya.
+final pisoPlanoProvider = StateProvider.autoDispose<int?>((ref) => null);
+
+final busquedaPlanoProvider = StateProvider.autoDispose((ref) => '');
+
+final planoAlmacenProvider = FutureProvider.autoDispose
+    .family<PlanoAlmacen, int>(
+      (ref, almacenId) => ref.watch(inventarioApiProvider).plano(almacenId),
+    );
+
 /// Los productos puestos en un lugar.
 final productosUbicacionProvider = FutureProvider.autoDispose
     .family<List<UbicacionProducto>, int>(

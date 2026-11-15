@@ -127,6 +127,10 @@ class Ubicacion {
     required this.activo,
     required this.hijos,
     required this.productos,
+    this.planoX,
+    this.planoY,
+    this.planoAncho,
+    this.planoAlto,
   });
 
   final int id;
@@ -154,6 +158,22 @@ class Ubicacion {
   /// Cuantos productos estan puestos aqui.
   final int productos;
 
+  /// Donde esta dibujado en el plano de su piso, en celdas de la cuadricula.
+  /// Null: todavia no lo dibujaron.
+  final int? planoX;
+  final int? planoY;
+  final int? planoAncho;
+  final int? planoAlto;
+
+  bool get esPiso => tipo == 'PISO';
+
+  /// Tiene su rectangulo completo en el plano.
+  bool get dibujado =>
+      planoX != null &&
+      planoY != null &&
+      planoAncho != null &&
+      planoAlto != null;
+
   factory Ubicacion.desdeJson(Map<String, dynamic> json) => Ubicacion(
     id: json['id'] as int,
     almacenId: json['almacenId'] as int? ?? 0,
@@ -167,6 +187,80 @@ class Ubicacion {
     activo: json['activo'] as bool? ?? true,
     hijos: json['hijos'] as int? ?? 0,
     productos: json['productos'] as int? ?? 0,
+    planoX: (json['planoX'] as num?)?.toInt(),
+    planoY: (json['planoY'] as num?)?.toInt(),
+    planoAncho: (json['planoAncho'] as num?)?.toInt(),
+    planoAlto: (json['planoAlto'] as num?)?.toInt(),
+  );
+}
+
+/// Lo que se dibuja en el plano sin guardar mercaderia: un pasillo o una escalera.
+class ElementoPlano {
+  const ElementoPlano({
+    required this.id,
+    required this.pisoId,
+    required this.tipo,
+    required this.nombre,
+    required this.x,
+    required this.y,
+    required this.ancho,
+    required this.alto,
+  });
+
+  final int id;
+
+  /// El piso donde esta. Null en un almacen sin pisos.
+  final int? pisoId;
+
+  /// PASILLO o ESCALERA.
+  final String tipo;
+  final String nombre;
+
+  /// Posicion y tamaño en celdas de la cuadricula.
+  final int x;
+  final int y;
+  final int ancho;
+  final int alto;
+
+  bool get esEscalera => tipo == 'ESCALERA';
+
+  factory ElementoPlano.desdeJson(Map<String, dynamic> json) => ElementoPlano(
+    id: json['id'] as int,
+    pisoId: (json['pisoId'] as num?)?.toInt(),
+    tipo: json['tipo'] as String? ?? 'PASILLO',
+    nombre: json['nombre'] as String? ?? '',
+    x: (json['x'] as num?)?.toInt() ?? 0,
+    y: (json['y'] as num?)?.toInt() ?? 0,
+    ancho: (json['ancho'] as num?)?.toInt() ?? 1,
+    alto: (json['alto'] as num?)?.toInt() ?? 1,
+  );
+}
+
+/// La cuadricula del plano de un almacen y lo que no son lugares (pasillos y
+/// escaleras). Los lugares vienen con su rectangulo en [Ubicacion].
+class PlanoAlmacen {
+  const PlanoAlmacen({
+    required this.almacenId,
+    required this.columnas,
+    required this.filas,
+    required this.elementos,
+  });
+
+  final int almacenId;
+
+  /// Celdas a lo ancho y a lo alto: el mismo tamaño para todos los pisos.
+  final int columnas;
+  final int filas;
+  final List<ElementoPlano> elementos;
+
+  factory PlanoAlmacen.desdeJson(Map<String, dynamic> json) => PlanoAlmacen(
+    almacenId: json['almacenId'] as int? ?? 0,
+    columnas: (json['columnas'] as num?)?.toInt() ?? 24,
+    filas: (json['filas'] as num?)?.toInt() ?? 14,
+    elementos: [
+      for (final e in (json['elementos'] as List? ?? const []))
+        ElementoPlano.desdeJson(e as Map<String, dynamic>),
+    ],
   );
 }
 

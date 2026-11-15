@@ -85,6 +85,7 @@ public class AppDbContext : DbContext
     public DbSet<PlanillaDescuento> PlanillaDescuentos => Set<PlanillaDescuento>();
     public DbSet<UbicacionAlmacen> UbicacionesAlmacen => Set<UbicacionAlmacen>();
     public DbSet<ProductoUbicacion> ProductosUbicacion => Set<ProductoUbicacion>();
+    public DbSet<ElementoPlano> ElementosPlano => Set<ElementoPlano>();
     public DbSet<GestionCliente> GestionesCliente => Set<GestionCliente>();
     public DbSet<SerieCpe> SeriesCpe => Set<SerieCpe>();
     public DbSet<ComprobanteElectronico> ComprobantesElectronicos => Set<ComprobanteElectronico>();
@@ -983,6 +984,20 @@ public class AppDbContext : DbContext
                 .HasForeignKey(u => u.AlmacenId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(u => u.Padre).WithMany()
                 .HasForeignKey(u => u.PadreId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ElementoPlano>(entity =>
+        {
+            entity.ToTable("ElementosPlano");
+            entity.Property(e => e.Tipo).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Nombre).HasMaxLength(80).IsRequired();
+            entity.HasIndex(e => new { e.AlmacenId, e.PisoId });
+
+            entity.HasOne(e => e.Almacen).WithMany()
+                .HasForeignKey(e => e.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            // Al borrar un piso se van con él los pasillos y escaleras de su plano.
+            entity.HasOne(e => e.Piso).WithMany()
+                .HasForeignKey(e => e.PisoId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ProductoUbicacion>(entity =>

@@ -191,6 +191,12 @@ const menuGrupos = <MenuGrupo>[
         icono: Icons.place_outlined,
       ),
       MenuItem(
+        id: 'inv.plano',
+        pendiente: false,
+        titulo: 'Plano del almacén',
+        icono: Icons.grid_on_outlined,
+      ),
+      MenuItem(
         id: 'inv.stock',
         pendiente: false,
         titulo: 'Stock por almacén',

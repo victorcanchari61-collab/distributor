@@ -25,6 +25,34 @@ public class UbicacionResponse
 
     /// <summary>Cuántos productos están puestos aquí (no cuenta los de los lugares de adentro).</summary>
     public int Productos { get; set; }
+
+    /// <summary>Dónde está dibujado en el plano de su piso, en celdas. Nulo: todavía no se dibujó.</summary>
+    public int? PlanoX { get; set; }
+    public int? PlanoY { get; set; }
+    public int? PlanoAncho { get; set; }
+    public int? PlanoAlto { get; set; }
+}
+
+/// <summary>Un pasillo o una escalera del plano.</summary>
+public class ElementoPlanoResponse
+{
+    public int Id { get; set; }
+    public int? PisoId { get; set; }
+    public string Tipo { get; set; } = string.Empty;
+    public string Nombre { get; set; } = string.Empty;
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int Ancho { get; set; }
+    public int Alto { get; set; }
+}
+
+/// <summary>Lo que hace falta para dibujar los planos de un almacén, además de sus lugares.</summary>
+public class PlanoResponse
+{
+    public int AlmacenId { get; set; }
+    public int Columnas { get; set; }
+    public int Filas { get; set; }
+    public List<ElementoPlanoResponse> Elementos { get; set; } = [];
 }
 
 /// <summary>Un producto puesto en un lugar.</summary>
