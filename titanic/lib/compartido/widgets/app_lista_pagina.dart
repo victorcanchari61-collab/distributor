@@ -182,10 +182,11 @@ class AppListaPagina<T> extends StatelessWidget {
                         itemCount: visibles.length,
                         separatorBuilder: (context, i) =>
                             const SizedBox(height: Dimen.espacio2),
-                        // El número de fila lo lee la tarjeta para su esquina: así
-                        // todas las listas lo muestran sin que cada pantalla lo pase.
+                        // El número de la esquina de la tarjeta: el Id del registro,
+                        // el mismo de la base de datos (CP-0001 es el 1). Lo pone la
+                        // lista para que ninguna pantalla tenga que pasarlo.
                         itemBuilder: (context, i) => NumeroFila(
-                          numero: i + 1,
+                          numero: _idDe(visibles[i]) ?? i + 1,
                           child: fila(context, visibles[i]),
                         ),
                       ),
@@ -195,5 +196,16 @@ class AppListaPagina<T> extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// El Id de un registro, si tiene uno: todos los modelos de la app lo llaman
+/// `id`. Sin él (una fila armada a mano), la tarjeta numera por posición.
+int? _idDe(Object? item) {
+  try {
+    final id = (item as dynamic).id;
+    return id is int ? id : null;
+  } on NoSuchMethodError {
+    return null;
   }
 }

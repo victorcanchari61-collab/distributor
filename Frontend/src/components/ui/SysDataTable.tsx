@@ -200,8 +200,8 @@ export interface SysDataTableProps<T> {
    */
   alturaFija?: boolean
   /**
-   * Numera las filas: una columna "#" al inicio de la tabla y, en el celular, el número en la esquina de cada
-   * tarjeta (en el color del módulo). Sigue de una página a otra: la página 2 empieza en 21. Por defecto sí.
+   * Muestra el Id de cada registro: una columna "#" al inicio de la tabla y, en el celular, en la esquina de cada
+   * tarjeta (en el color del módulo). Es el mismo Id de la base de datos, no la posición en la lista. Por defecto sí.
    */
   numerar?: boolean
   className?: string
@@ -599,6 +599,15 @@ export function SysDataTable<T>({
   const total = enServidor ? servidor.total : data.length
   const pageCount = Math.max(1, Math.ceil(total / perPage))
   const from = (page - 1) * perPage
+  /*
+   * El número de la columna "#" y de la esquina de la tarjeta: el Id del registro en la base (CP-0001 es el 1, CP-0014
+   * el 14), igual que en la tabla de la base de datos. No la posición en la lista: esa cambiaba al ordenar o filtrar,
+   * y CP-0014 salía como "1" por ser el más nuevo. Solo si la fila no tiene un Id numérico se cae a la posición.
+   */
+  const numeroDe = (row: T, i: number) => {
+    const id = (row as Row)[rowKey]
+    return typeof id === 'number' ? id : from + i + 1
+  }
   const pageRows = useMemo(
     // Sin pie de paginación no hay como pasar de página: recortar dejaria
     // filas invisibles sin aviso, asi que sin `paginacion` se muestran todas.
@@ -1158,7 +1167,7 @@ export function SysDataTable<T>({
                   >
                     {numerar && (
                       <td className="px-2 py-1 text-center text-xs font-semibold text-[rgb(var(--sys-ink-rgb))] tabular-nums">
-                        {from + i + 1}
+                        {numeroDe(row, i)}
                       </td>
                     )}
                     {visible.map((col) => (
@@ -1206,7 +1215,7 @@ export function SysDataTable<T>({
         ) : (
           pageRows.map((row, i) => {
             const [head, ...rest] = visible
-            const numero = from + i + 1
+            const numero = numeroDe(row, i)
             return (
               <div
                 key={String((row as Row)[rowKey])}
