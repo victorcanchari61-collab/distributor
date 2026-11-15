@@ -9,38 +9,36 @@ public class CrearUbicacionRequest
     /// <summary>PISO o CUARTO.</summary>
     public string Tipo { get; set; } = string.Empty;
 
-    /// <summary>El código corto de este punto: "P1", "C1". No se repite entre hermanos.</summary>
-    public string Codigo { get; set; } = string.Empty;
+    /// <summary>
+    /// El código corto de este punto ("P1", "C1"). Vacío: se pone solo, el siguiente número del nivel (P3 si ya hay
+    /// P1 y P2). No se repite entre hermanos.
+    /// </summary>
+    public string? Codigo { get; set; }
 
-    public string? Nombre { get; set; }
+    /// <summary>Cómo se le dice: "Azotea", "Cocina".</summary>
+    public string Nombre { get; set; } = string.Empty;
 }
 
-/// <summary>Cambiar un lugar. No se mueve de padre: para eso se crea de nuevo donde corresponde.</summary>
+/// <summary>
+/// Cambiar un lugar. No se mueve de padre ni cambia de nivel (un piso no pasa a cuarto): eso rompería lo que tiene
+/// adentro. Para eso se crea de nuevo donde corresponde.
+/// </summary>
 public class ActualizarUbicacionRequest
 {
-    public string Tipo { get; set; } = string.Empty;
     public string Codigo { get; set; } = string.Empty;
     public string? Nombre { get; set; }
     public bool Activo { get; set; } = true;
 }
 
 /// <summary>
-/// Crear varios lugares seguidos de una vez: los cuartos C1 a C8 de un piso, los pisos P1 a P3.
-/// El código de cada uno es el prefijo y el número con ceros a la izquierda.
+/// Crear varios lugares del mismo nivel de una vez, por sus nombres: "Cocina", "Sala", "Baño". Cada uno recibe el
+/// siguiente código del nivel (C1, C2, C3...), en el orden en que vienen.
 /// </summary>
 public class GenerarUbicacionesRequest
 {
     public int? PadreId { get; set; }
     public string Tipo { get; set; } = string.Empty;
-
-    /// <summary>La parte fija del código ("E"). Puede ir vacío para códigos solo numéricos.</summary>
-    public string? Prefijo { get; set; }
-
-    public int Desde { get; set; } = 1;
-    public int Hasta { get; set; }
-
-    /// <summary>Cuántos dígitos lleva el número: con 2, "01", "02"... Sin valor, 2.</summary>
-    public int Digitos { get; set; } = 2;
+    public List<string> Nombres { get; set; } = [];
 }
 
 /// <summary>Poner un producto en un lugar del almacén.</summary>

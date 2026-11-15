@@ -20,10 +20,10 @@ public class CrearUbicacionRequestValidator : AbstractValidator<CrearUbicacionRe
     {
         RuleFor(x => x.Tipo).Must(t => TipoUbicacion.Todos.Contains(t))
             .WithMessage("Elige qué es: piso o cuarto");
-        RuleFor(x => x.Codigo).NotEmpty().WithMessage("Ponle un código")
-            .MaximumLength(20)
-            .Matches(ReglasUbicacion.PatronCodigo).WithMessage(ReglasUbicacion.MensajeCodigo);
-        RuleFor(x => x.Nombre).MaximumLength(80);
+        RuleFor(x => x.Codigo).MaximumLength(20)
+            .Matches(ReglasUbicacion.PatronCodigo).When(x => !string.IsNullOrWhiteSpace(x.Codigo))
+            .WithMessage(ReglasUbicacion.MensajeCodigo);
+        RuleFor(x => x.Nombre).NotEmpty().WithMessage("Ponle un nombre").MaximumLength(80);
     }
 }
 
@@ -31,8 +31,6 @@ public class ActualizarUbicacionRequestValidator : AbstractValidator<ActualizarU
 {
     public ActualizarUbicacionRequestValidator()
     {
-        RuleFor(x => x.Tipo).Must(t => TipoUbicacion.Todos.Contains(t))
-            .WithMessage("Elige qué es: piso o cuarto");
         RuleFor(x => x.Codigo).NotEmpty().WithMessage("Ponle un código")
             .MaximumLength(20)
             .Matches(ReglasUbicacion.PatronCodigo).WithMessage(ReglasUbicacion.MensajeCodigo);
@@ -49,13 +47,10 @@ public class GenerarUbicacionesRequestValidator : AbstractValidator<GenerarUbica
     {
         RuleFor(x => x.Tipo).Must(t => TipoUbicacion.Todos.Contains(t))
             .WithMessage("Elige qué son: pisos o cuartos");
-        RuleFor(x => x.Prefijo).MaximumLength(10)
-            .Matches(ReglasUbicacion.PatronCodigo).When(x => !string.IsNullOrEmpty(x.Prefijo))
-            .WithMessage(ReglasUbicacion.MensajeCodigo);
-        RuleFor(x => x.Desde).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.Hasta).GreaterThanOrEqualTo(x => x.Desde).WithMessage("El \"hasta\" no puede ser menor que el \"desde\"")
-            .Must((x, hasta) => hasta - x.Desde + 1 <= Maximo).WithMessage($"Crea hasta {Maximo} lugares por vez");
-        RuleFor(x => x.Digitos).InclusiveBetween(1, 4);
+        RuleFor(x => x.Nombres)
+            .Must(n => n.Any(x => !string.IsNullOrWhiteSpace(x))).WithMessage("Escribe al menos un nombre")
+            .Must(n => n.Count(x => !string.IsNullOrWhiteSpace(x)) <= Maximo).WithMessage($"Crea hasta {Maximo} lugares por vez");
+        RuleForEach(x => x.Nombres).MaximumLength(80).WithMessage("Cada nombre va hasta 80 letras");
     }
 }
 

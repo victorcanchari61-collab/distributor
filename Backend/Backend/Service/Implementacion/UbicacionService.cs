@@ -111,10 +111,18 @@ public class UbicacionService : IUbicacionService
         await ExigirAlmacenAsync(almacenId);
         await ExigirPadreAsync(almacenId, request.PadreId, request.Tipo);
 
-        var codigo = Normalizar(request.Codigo);
-        if (await _context.UbicacionesAlmacen.AnyAsync(
-                u => u.AlmacenId == almacenId && u.PadreId == request.PadreId && u.Codigo == codigo))
-            throw new ConflictException($"Ya hay un lugar con el código {codigo} en ese mismo nivel");
+        string codigo;
+        if (string.IsNullOrWhiteSpace(request.Codigo))
+        {
+            codigo = (await SiguientesCodigosAsync(almacenId, request.PadreId, request.Tipo, 1))[0];
+        }
+        else
+        {
+            codigo = Normalizar(request.Codigo);
+            if (await _context.UbicacionesAlmacen.AnyAsync(
+                    u => u.AlmacenId == almacenId && u.PadreId == request.PadreId && u.Codigo == codigo))
+                throw new ConflictException($"Ya hay un lugar con el código {codigo} en ese mismo nivel");
+        }
 
         var ubicacion = new UbicacionAlmacen
         {
@@ -138,29 +146,19 @@ public class UbicacionService : IUbicacionService
         await ExigirAlmacenAsync(almacenId);
         await ExigirPadreAsync(almacenId, request.PadreId, request.Tipo);
 
-        var prefijo = Normalizar(request.Prefijo ?? string.Empty);
-        var codigos = Enumerable.Range(request.Desde, request.Hasta - request.Desde + 1)
-            .Select(n => prefijo + n.ToString().PadLeft(request.Digitos, '0'))
+        var nombres = request.Nombres
+            .Select(n => n.Trim())
+            .Where(n => n.Length > 0)
             .ToList();
+        var codigos = await SiguientesCodigosAsync(almacenId, request.PadreId, request.Tipo, nombres.Count);
 
-        // Un código más largo que el máximo (prefijo largo con muchos dígitos) no cabe en la columna.
-        if (codigos.Any(c => c.Length > 20))
-            throw new BadRequestException("Los códigos quedan demasiado largos: acorta el prefijo");
-
-        var existentes = await _context.UbicacionesAlmacen.AsNoTracking()
-            .Where(u => u.AlmacenId == almacenId && u.PadreId == request.PadreId && codigos.Contains(u.Codigo))
-            .Select(u => u.Codigo)
-            .ToListAsync();
-        if (existentes.Count > 0)
-            throw new ConflictException(
-                $"Ya existen en ese nivel: {string.Join(", ", existentes.Take(5))}{(existentes.Count > 5 ? "…" : "")}. No se creó ninguno");
-
-        _context.UbicacionesAlmacen.AddRange(codigos.Select(c => new UbicacionAlmacen
+        _context.UbicacionesAlmacen.AddRange(nombres.Select((nombre, i) => new UbicacionAlmacen
         {
             AlmacenId = almacenId,
             PadreId = request.PadreId,
             Tipo = request.Tipo,
-            Codigo = c,
+            Codigo = codigos[i],
+            Nombre = nombre,
         }));
         await _context.SaveChangesAsync();
 
@@ -189,7 +187,6 @@ public class UbicacionService : IUbicacionService
             && await _context.UbicacionesAlmacen.AnyAsync(u => u.PadreId == id && u.Activo))
             throw new BadRequestException("Desactiva primero los lugares que tiene adentro");
 
-        ubicacion.Tipo = request.Tipo;
         ubicacion.Codigo = codigo;
         ubicacion.Nombre = Limpiar(request.Nombre);
         ubicacion.Activo = request.Activo;
@@ -407,12 +404,25 @@ public class UbicacionService : IUbicacionService
     /// <summary>
     /// Dónde puede ir cada tipo: un PISO va directo en el almacén; un CUARTO va adentro de un piso (o directo en el
     /// almacén, si no se usan pisos). Nada va adentro de un cuarto. Así la estructura nunca pasa de dos niveles.
+    ///
+    /// En la raíz no se mezclan: un almacén o tiene pisos (y los cuartos van adentro), o es un solo ambiente con sus
+    /// cuartos sueltos. Lo decide el primer lugar que se crea.
     /// </summary>
     private async Task ExigirPadreAsync(int almacenId, int? padreId, string tipo)
     {
         if (padreId is not int id)
         {
-            // Sin lugar de arriba: queda directo en el almacén. Sirve a un piso y a un cuarto.
+            var enRaiz = await _context.UbicacionesAlmacen.AsNoTracking()
+                .Where(u => u.AlmacenId == almacenId && u.PadreId == null)
+                .Select(u => u.Tipo)
+                .Distinct()
+                .ToListAsync();
+            // Si ya hay pisos, manda el piso (aunque quede algún cuarto suelto de antes).
+            if (tipo == TipoUbicacion.Cuarto && enRaiz.Contains(TipoUbicacion.Piso))
+                throw new BadRequestException("Este almacén usa pisos: el cuarto va adentro de un piso.");
+            if (tipo == TipoUbicacion.Piso && enRaiz.Contains(TipoUbicacion.Cuarto) && !enRaiz.Contains(TipoUbicacion.Piso))
+                throw new BadRequestException(
+                    "Este almacén no usa pisos: sus cuartos están sueltos. Para usar pisos, primero quita esos cuartos.");
             return;
         }
 
@@ -427,6 +437,36 @@ public class UbicacionService : IUbicacionService
             throw new BadRequestException("Ese lugar de arriba está desactivado");
         if (padre.Tipo != TipoUbicacion.Piso)
             throw new BadRequestException("Un cuarto va adentro de un piso, no adentro de otro cuarto.");
+    }
+
+    /// <summary>
+    /// Los próximos códigos libres de un nivel: P para pisos y C para cuartos, siguiendo el número más alto que ya
+    /// haya entre los hermanos (con P1 y P2 tomados, sale P3). Uno escrito a mano que no siga la serie ("AZ") no
+    /// cuenta para el número, pero tampoco se pisa.
+    /// </summary>
+    private async Task<List<string>> SiguientesCodigosAsync(int almacenId, int? padreId, string tipo, int cuantos)
+    {
+        var prefijo = tipo == TipoUbicacion.Piso ? "P" : "C";
+        var usados = await _context.UbicacionesAlmacen.AsNoTracking()
+            .Where(u => u.AlmacenId == almacenId && u.PadreId == padreId)
+            .Select(u => u.Codigo)
+            .ToListAsync();
+        var ocupados = usados.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var ultimo = usados
+            .Select(c => c.Length > prefijo.Length
+                         && c.StartsWith(prefijo, StringComparison.OrdinalIgnoreCase)
+                         && int.TryParse(c[prefijo.Length..], out var n) ? n : 0)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        var codigos = new List<string>(cuantos);
+        for (var n = ultimo + 1; codigos.Count < cuantos; n++)
+        {
+            var codigo = prefijo + n;
+            if (!ocupados.Contains(codigo)) codigos.Add(codigo);
+        }
+        return codigos;
     }
 
     private async Task<UbicacionResponse> UnaAsync(int almacenId, int id) =>

@@ -88,29 +88,6 @@ export const almacenApi = {
 
 export type TipoUbicacion = 'PISO' | 'CUARTO'
 
-/**
- * El nivel de un lugar dentro del almacén. No es su nombre: el nombre es libre ("Azotea", "Cocina") y va aparte. El
- * nivel dice qué va dentro de qué: un piso va directo en el almacén y un cuarto, adentro de un piso (o suelto).
- */
-export const TIPOS_UBICACION: { value: TipoUbicacion; label: string; nota: string; ejemploCodigo: string; ejemploNombre: string }[] = [
-  {
-    value: 'PISO',
-    label: 'Piso',
-    nota: 'Va directo en el almacén. Ej.: primer piso, azotea, sótano.',
-    ejemploCodigo: 'P1, P2, AZ',
-    ejemploNombre: 'Primer piso, Azotea, Sótano...',
-  },
-  {
-    value: 'CUARTO',
-    label: 'Cuarto o zona',
-    nota: 'Va adentro de un piso (o suelto en el almacén si no tiene pisos). Ej.: cocina, sala, abarrotes.',
-    ejemploCodigo: 'C1, C2, COC',
-    ejemploNombre: 'Cocina, Sala, Abarrotes...',
-  },
-]
-
-export const tipoUbicacion = (tipo: TipoUbicacion) => TIPOS_UBICACION.find((t) => t.value === tipo) ?? TIPOS_UBICACION[1]
-
 export interface UbicacionResponse {
   id: number
   almacenId: number
@@ -139,28 +116,34 @@ export interface UbicacionProductoResponse {
   unidadBase: string
 }
 
-export interface UbicacionRequest {
+/** Un lugar nuevo. El código se pone solo (P3, C2...): no se manda. */
+export interface CrearUbicacionRequest {
+  padreId: number | null
   tipo: TipoUbicacion
-  codigo: string
-  nombre?: string | null
+  nombre: string
 }
 
+/** Cambiar un lugar: su nivel (piso o cuarto) no cambia. */
+export interface ActualizarUbicacionRequest {
+  codigo: string
+  nombre: string | null
+  activo: boolean
+}
+
+/** Varios lugares del mismo nivel, por sus nombres: cada uno recibe el siguiente código. */
 export interface GenerarUbicacionesRequest {
-  padreId?: number | null
+  padreId: number | null
   tipo: TipoUbicacion
-  prefijo?: string
-  desde: number
-  hasta: number
-  digitos: number
+  nombres: string[]
 }
 
 export const ubicacionApi = {
   listar: (almacenId: number) => api.get<UbicacionResponse[]>(`/almacen/${almacenId}/ubicaciones`),
-  crear: (almacenId: number, body: UbicacionRequest & { padreId?: number | null }) =>
+  crear: (almacenId: number, body: CrearUbicacionRequest) =>
     api.post<UbicacionResponse>(`/almacen/${almacenId}/ubicaciones`, body),
   generar: (almacenId: number, body: GenerarUbicacionesRequest) =>
     api.post<UbicacionResponse[]>(`/almacen/${almacenId}/ubicaciones/lote`, body),
-  actualizar: (id: number, body: UbicacionRequest & { activo: boolean }) =>
+  actualizar: (id: number, body: ActualizarUbicacionRequest) =>
     api.put<UbicacionResponse>(`/ubicacion/${id}`, body),
   eliminar: (id: number) => api.del<void>(`/ubicacion/${id}`),
   productos: (id: number) => api.get<UbicacionProductoResponse[]>(`/ubicacion/${id}/productos`),
