@@ -26,6 +26,7 @@ export function figurasDe(lugares: UbicacionResponse[], plano: PlanoResponse | n
       y: l.planoY ?? 0,
       ancho: l.planoAncho ?? 2,
       alto: l.planoAlto ?? 2,
+      partes: l.planoPartes ?? [],
     }))
   const deElementos: FiguraPlano[] = (plano?.elementos ?? [])
     .filter((e) => e.pisoId === pisoId)

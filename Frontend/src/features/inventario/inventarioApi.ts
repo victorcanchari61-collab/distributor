@@ -111,6 +111,8 @@ export interface UbicacionResponse {
   planoY: number | null
   planoAncho: number | null
   planoAlto: number | null
+  /** Las partes extra (un lugar en forma de L, que rodea una escalera). Vacío: es solo su rectángulo principal. */
+  planoPartes: RectPlano[]
 }
 
 export interface UbicacionProductoResponse {
@@ -210,9 +212,15 @@ export interface PlanoResponse {
 
 export const planoApi = {
   obtener: (almacenId: number) => api.get<PlanoResponse>(`/almacen/${almacenId}/plano`),
-  /** Dibuja un lugar, lo mueve o le cambia el tamaño; con null lo saca del plano (el lugar queda). */
-  posicionar: (ubicacionId: number, rect: RectPlano | null) =>
-    api.put<UbicacionResponse>(`/ubicacion/${ubicacionId}/plano`, rect ?? { x: null, y: null, ancho: null, alto: null }),
+  /**
+   * Dibuja un lugar, lo mueve o le cambia el tamaño; con null lo saca del plano (el lugar queda). `partes` son TODAS
+   * sus partes extra: reemplazan a las que tenía (sin ellas, el lugar queda solo con el rectángulo principal).
+   */
+  posicionar: (ubicacionId: number, rect: RectPlano | null, partes: RectPlano[] = []) =>
+    api.put<UbicacionResponse>(
+      `/ubicacion/${ubicacionId}/plano`,
+      rect ? { ...rect, partes } : { x: null, y: null, ancho: null, alto: null },
+    ),
   crearElemento: (almacenId: number, body: Omit<ElementoPlano, 'id'>) =>
     api.post<ElementoPlano>(`/almacen/${almacenId}/plano/elementos`, body),
   actualizarElemento: (id: number, body: Omit<ElementoPlano, 'id'>) =>

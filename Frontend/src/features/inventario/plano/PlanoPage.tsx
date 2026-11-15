@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
-import { ArrowLeftRight, ArrowUpDown, Copy, DoorOpen, Footprints, LayoutGrid, Plus, RotateCw, Search, Trash2, X } from 'lucide-react'
+import { ArrowLeftRight, ArrowUpDown, Copy, DoorOpen, Footprints, LayoutGrid, Maximize2, PaintBucket, Plus, RotateCw, Search, Trash2, Undo2, X } from 'lucide-react'
 import { FaXmark } from 'react-icons/fa6'
 import { Alert, Badge, BuscadorModal, Button, Input, PageHeader, RowAction, Tabs, useToast } from '../../../components/ui'
 import type { DataTableColumn } from '../../../components/ui'
@@ -17,7 +17,19 @@ import type {
   TipoElementoPlano,
 } from '../inventarioApi'
 import { PlanoLienzo } from './PlanoLienzo'
-import { estaLibre, girado, huecoLibre, MIME_PRODUCTO } from './geometria'
+import type { FiguraPlano } from './PlanoLienzo'
+import {
+  celdasLibresPegadas,
+  enRectangulos,
+  estaLibre,
+  girado,
+  huecoLibre,
+  MAXIMO_PARTES,
+  MIME_PRODUCTO,
+  rectanguloLibreMasGrande,
+  rectsDe,
+  tocan,
+} from './geometria'
 import { figurasDe, idDeClave, normalizar, pisosDe, usePlanoAlmacen } from './datosPlano'
 
 const SUBMODULO = 'inv.plano'
@@ -55,6 +67,9 @@ export function PlanoPage() {
   const [busqueda, setBusqueda] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [poniendo, setPoniendo] = useState(false)
+  // "Ampliar": el lugar al que se le está dibujando una parte nueva. Se cancela al cambiar de piso o de almacén.
+  const [ampliando, setAmpliando] = useState<string | null>(null)
+  useEffect(() => setAmpliando(null), [almacenId, pisoElegido])
   const [nombre, setNombre] = useState('')
 
   useEffect(() => {
@@ -141,15 +156,21 @@ export function PlanoPage() {
   // ------------------------------------------------------------- Dibujar
 
   /** Mover o agrandar: se ve al instante y se guarda; si el servidor no lo acepta, vuelve a donde estaba. */
-  const cambiar = async (clave: string, rect: RectPlano) => {
+  const cambiar = async (clave: string, rect: RectPlano, partes?: RectPlano[]) => {
     const id = idDeClave(clave)
     if (clave.startsWith('L')) {
       const antes = lugares
+      // Sin partes nuevas, el lugar conserva las que tenía (moverlo no se las quita).
+      const nuevasPartes = partes ?? lugares.find((l) => l.id === id)?.planoPartes ?? []
       setLugares((ls) =>
-        ls.map((l) => (l.id === id ? { ...l, planoX: rect.x, planoY: rect.y, planoAncho: rect.ancho, planoAlto: rect.alto } : l)),
+        ls.map((l) =>
+          l.id === id
+            ? { ...l, planoX: rect.x, planoY: rect.y, planoAncho: rect.ancho, planoAlto: rect.alto, planoPartes: nuevasPartes }
+            : l,
+        ),
       )
       try {
-        await planoApi.posicionar(id, rect)
+        await planoApi.posicionar(id, rect, nuevasPartes)
       } catch (e) {
         setLugares(antes)
         toast.error(mensaje(e, 'No pudimos mover el lugar.'))
@@ -237,6 +258,7 @@ export function PlanoPage() {
   const girar = (clave: string) => {
     const f = figuras.find((x) => x.clave === clave)
     if (!f) return
+    if (f.partes?.length) return toast.error('Un lugar con partes extra no se gira: quítaselas antes.')
     const r = girado(f, columnas, filas)
     if (!r || !estaLibre(figuras, clave, r)) return toast.error('No hay espacio libre para girarlo.')
     void cambiar(clave, r)
@@ -260,6 +282,63 @@ export function PlanoPage() {
         setSeleccion(`E${nuevo.id}`)
       }
     }, 'No pudimos duplicarlo.')
+  }
+
+  // ------------------------------------------------------------- Lugares con partes (forma de L)
+
+  /** Guarda las partes nuevas de un lugar: el servidor revisa que toquen al lugar y que no se encimen con nada. */
+  const guardarPartes = (ubicacionId: number, partes: RectPlano[], error: string) => {
+    const l = lugares.find((x) => x.id === ubicacionId)
+    if (!l || l.planoX === null) return
+    if (partes.length > MAXIMO_PARTES) return toast.error(`Un lugar puede tener hasta ${MAXIMO_PARTES} partes.`)
+    const principal = { x: l.planoX, y: l.planoY ?? 0, ancho: l.planoAncho ?? 2, alto: l.planoAlto ?? 2 }
+    void conOcupado(async () => {
+      await planoApi.posicionar(ubicacionId, principal, partes)
+      await recargar()
+    }, error)
+  }
+
+  /**
+   * Un lugar que ocupa todo lo que queda: el rectángulo libre más grande y, pegados a él, los pedazos sobrantes de
+   * alrededor (el hueco debajo de la escalera), como una sola figura.
+   */
+  const lugarCompleto = () => {
+    const principal = rectanguloLibreMasGrande(figuras, columnas, filas)
+    if (!principal || principal.ancho < 2 || principal.alto < 2) return toast.error('No hay espacio libre en este plano.')
+    const provisoria: FiguraPlano = { clave: 'nuevo', tipo: 'LUGAR', nombre: '', ...principal }
+    const partes = enRectangulos(celdasLibresPegadas([...figuras, provisoria], provisoria, columnas, filas)).slice(0, MAXIMO_PARTES)
+    void conOcupado(async () => {
+      const nuevo = await ubicacionApi.crear(almacenId, { padreId: pisoId, tipo: 'CUARTO', nombre: 'Nuevo lugar' })
+      await planoApi.posicionar(nuevo.id, principal, partes)
+      await recargar()
+      setSeleccion(`L${nuevo.id}`)
+    }, 'No pudimos crear el lugar.')
+  }
+
+  /** "Ampliar": el recuadro que se dibujó se suma al lugar si está libre y lo toca por un lado. */
+  const ampliar = (clave: string, rect: RectPlano) => {
+    setAmpliando(null)
+    const f = figuras.find((x) => x.clave === clave)
+    if (!f) return
+    if (!estaLibre(figuras, null, rect)) return toast.error('Ese espacio está ocupado: dibuja sobre el espacio vacío.')
+    if (!rectsDe(f).some((r) => tocan(r, rect))) return toast.error('La parte nueva tiene que tocar al lugar por un lado.')
+    guardarPartes(idDeClave(clave), [...(f.partes ?? []), rect], 'No pudimos ampliar el lugar.')
+  }
+
+  /** "Rellenar espacio": suma al lugar todo el espacio libre pegado a él. */
+  const rellenar = (clave: string) => {
+    const f = figuras.find((x) => x.clave === clave)
+    if (!f) return
+    const nuevas = enRectangulos(celdasLibresPegadas(figuras, f, columnas, filas))
+    if (nuevas.length === 0) return toast.error('No hay espacio libre pegado a este lugar.')
+    guardarPartes(idDeClave(clave), [...(f.partes ?? []), ...nuevas], 'No pudimos rellenar el espacio.')
+  }
+
+  /** Deshace la última parte que se le sumó. */
+  const quitarUltimaParte = (clave: string) => {
+    const f = figuras.find((x) => x.clave === clave)
+    if (!f?.partes?.length) return
+    guardarPartes(idDeClave(clave), f.partes.slice(0, -1), 'No pudimos quitar la parte.')
   }
 
   const agregarPiso = () =>
@@ -418,8 +497,38 @@ export function PlanoPage() {
           ) : (
             <ul className="max-h-80 divide-y divide-line overflow-y-auto">{aqui.map((p) => filaProducto(p, lugarElegido.id))}</ul>
           )}
-          {puedeEditar && (
+          {puedeEditar && lugarElegido.planoX !== null && (
             <div className="grid grid-cols-2 gap-2">
+              {/* Darle forma: sumarle partes (una L que rodea la escalera) o quitarle la última. */}
+              <Button
+                size="sm"
+                variant={ampliando === `L${lugarElegido.id}` ? 'primary' : 'secondary'}
+                onClick={() => setAmpliando((a) => (a === `L${lugarElegido.id}` ? null : `L${lugarElegido.id}`))}
+                disabled={ocupado}
+                iconRight={<Maximize2 size={14} />}
+              >
+                {ampliando === `L${lugarElegido.id}` ? 'Cancelar' : 'Ampliar'}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => rellenar(`L${lugarElegido.id}`)} disabled={ocupado} iconRight={<PaintBucket size={14} />}>
+                Rellenar espacio
+              </Button>
+              {ampliando === `L${lugarElegido.id}` && (
+                <p className="col-span-2 rounded-field bg-[rgb(var(--sys-rgb)/0.08)] px-2 py-1.5 text-xs text-[rgb(var(--sys-ink-rgb))]">
+                  Arrastra sobre el espacio vacío pegado al lugar: esa parte se le suma.
+                </p>
+              )}
+              {lugarElegido.planoPartes.length > 0 && (
+                <Button
+                  className="col-span-2"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => quitarUltimaParte(`L${lugarElegido.id}`)}
+                  disabled={ocupado}
+                  iconRight={<Undo2 size={14} />}
+                >
+                  Quitar última parte
+                </Button>
+              )}
               <Button size="sm" variant="secondary" onClick={() => girar(`L${lugarElegido.id}`)} disabled={ocupado} iconRight={<RotateCw size={14} />}>
                 Girar
               </Button>
@@ -576,6 +685,9 @@ export function PlanoPage() {
                 <Button size="sm" variant="secondary" disabled={ocupado} onClick={agregarLugar} iconRight={<DoorOpen size={14} />}>
                   Lugar
                 </Button>
+                <Button size="sm" variant="secondary" disabled={ocupado} onClick={lugarCompleto} iconRight={<PaintBucket size={14} />}>
+                  Lugar completo
+                </Button>
                 <Button size="sm" variant="secondary" disabled={ocupado} onClick={() => agregarElemento('PASILLO')} iconRight={<ArrowLeftRight size={14} />}>
                   Pasillo
                 </Button>
@@ -672,7 +784,9 @@ export function PlanoPage() {
               resaltadas={resaltadas}
               editable={puedeEditar}
               onSeleccionar={setSeleccion}
-              onCambiar={(clave, rect) => void cambiar(clave, rect)}
+              onCambiar={(clave, rect, partes) => void cambiar(clave, rect, partes)}
+              ampliando={ampliando}
+              onAmpliar={ampliar}
               onGirar={girar}
               onSoltarProducto={soltarProducto}
             />

@@ -95,6 +95,7 @@ public class UbicacionService : IUbicacionService
                     PlanoY = u.PlanoY,
                     PlanoAncho = u.PlanoAncho,
                     PlanoAlto = u.PlanoAlto,
+                    PlanoPartes = Plano.LeerPartes(u.PlanoPartes),
                 });
                 Recorrer(u.Id, ruta, nivel + 1);
             }

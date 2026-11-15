@@ -778,17 +778,20 @@ class _PlanoState extends State<_Plano> {
                             _CajaElemento(elemento: e),
                           ),
                         for (final l in widget.lugares)
-                          rectangulo(
-                            l.planoX!,
-                            l.planoY!,
-                            l.planoAncho!,
-                            l.planoAlto!,
-                            _CajaLugar(
-                              lugar: l,
-                              resaltado: widget.resaltados.contains(l.id),
-                              onTap: () => widget.onTocar(l),
-                            ),
-                          ),
+                          if (l.planoPartes.isEmpty)
+                            rectangulo(
+                              l.planoX!,
+                              l.planoY!,
+                              l.planoAncho!,
+                              l.planoAlto!,
+                              _CajaLugar(
+                                lugar: l,
+                                resaltado: widget.resaltados.contains(l.id),
+                                onTap: () => widget.onTocar(l),
+                              ),
+                            )
+                          else
+                            _figura(l, celda),
                       ],
                     ),
                   ),
@@ -808,6 +811,215 @@ class _PlanoState extends State<_Plano> {
           ),
         );
       },
+    );
+  }
+
+  /// Un lugar con partes de mas (en forma de L): una sola figura del tamaño
+  /// de la caja que lo encierra, que solo pinta y responde en sus celdas.
+  Widget _figura(Ubicacion l, double celda) {
+    final forma = _FormaLugar.de(l);
+    final caja = forma.caja;
+    return Positioned(
+      left: caja.left * celda,
+      top: caja.top * celda,
+      width: caja.width * celda,
+      height: caja.height * celda,
+      child: _FiguraLugar(
+        lugar: l,
+        forma: forma,
+        celda: celda,
+        resaltado: widget.resaltados.contains(l.id),
+        onTap: () => widget.onTocar(l),
+      ),
+    );
+  }
+}
+
+/// Las celdas que ocupa un lugar con partes: la union de su rectangulo
+/// principal y sus partes, en celdas de la cuadricula.
+class _FormaLugar {
+  _FormaLugar._(this.celdas, this.caja, this.principal);
+
+  factory _FormaLugar.de(Ubicacion l) {
+    Rect rect(int x, int y, int ancho, int alto) => Rect.fromLTWH(
+      x.toDouble(),
+      y.toDouble(),
+      math.max(1, ancho).toDouble(),
+      math.max(1, alto).toDouble(),
+    );
+    final principal = rect(l.planoX!, l.planoY!, l.planoAncho!, l.planoAlto!);
+    final rects = [
+      principal,
+      for (final p in l.planoPartes) rect(p.x, p.y, p.ancho, p.alto),
+    ];
+    final celdas = <(int, int)>{
+      for (final r in rects)
+        for (var x = r.left.toInt(); x < r.right.toInt(); x++)
+          for (var y = r.top.toInt(); y < r.bottom.toInt(); y++) (x, y),
+    };
+    return _FormaLugar._(
+      celdas,
+      rects.reduce((a, b) => a.expandToInclude(b)),
+      principal,
+    );
+  }
+
+  final Set<(int, int)> celdas;
+
+  /// El rectangulo que encierra toda la figura.
+  final Rect caja;
+
+  /// El rectangulo principal: ahi van el codigo, el nombre y el contador.
+  final Rect principal;
+
+  /// El contorno de la figura en pixeles, relativo a [caja]. Se arma celda
+  /// por celda: el borde de cada una queda solo donde no sigue el lugar.
+  Path contorno(double celda) {
+    var camino = Path();
+    for (final (x, y) in celdas) {
+      camino = Path.combine(
+        PathOperation.union,
+        camino,
+        Path()..addRect(
+          Rect.fromLTWH(
+            (x - caja.left) * celda,
+            (y - caja.top) * celda,
+            celda,
+            celda,
+          ),
+        ),
+      );
+    }
+    return camino;
+  }
+}
+
+/// Recorta la figura, y lo que se puede tocar, a las celdas del lugar.
+class _RecorteForma extends CustomClipper<Path> {
+  const _RecorteForma(this.forma, this.celda);
+
+  final _FormaLugar forma;
+  final double celda;
+
+  @override
+  Path getClip(Size size) => forma.contorno(celda);
+
+  @override
+  bool shouldReclip(_RecorteForma anterior) =>
+      anterior.forma != forma || anterior.celda != celda;
+}
+
+/// El relleno y el borde de una figura de varias partes. El borde va solo por
+/// fuera: no hay linea donde se tocan sus rectangulos.
+class _PintorForma extends CustomPainter {
+  const _PintorForma({
+    required this.forma,
+    required this.celda,
+    required this.relleno,
+    required this.borde,
+    required this.grosor,
+  });
+
+  final _FormaLugar forma;
+  final double celda;
+  final Color relleno;
+  final Color borde;
+  final double grosor;
+
+  /// El hueco con lo de al lado: el mismo que deja cada caja suelta.
+  static const _hueco = 1.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final contorno = forma.contorno(celda);
+    canvas.save();
+    canvas.clipPath(contorno);
+    canvas.saveLayer(Offset.zero & size, Paint());
+    canvas.drawPath(contorno, Paint()..color = relleno);
+    // El recorte se come la mitad de afuera del trazo: lo que queda es el
+    // hueco mas el borde, por dentro.
+    canvas.drawPath(
+      contorno,
+      Paint()
+        ..color = borde
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = (_hueco + grosor) * 2,
+    );
+    // El hueco se borra para que se vea la cuadricula de abajo.
+    canvas.drawPath(
+      contorno,
+      Paint()
+        ..blendMode = BlendMode.clear
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _hueco * 2,
+    );
+    canvas.restore();
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_PintorForma anterior) =>
+      anterior.forma != forma ||
+      anterior.celda != celda ||
+      anterior.relleno != relleno ||
+      anterior.borde != borde ||
+      anterior.grosor != grosor;
+}
+
+/// Un lugar con partes de mas, dibujado como una sola figura. El codigo, el
+/// nombre y el contador van una vez, en el rectangulo principal; tocar
+/// cualquier parte abre el lugar.
+class _FiguraLugar extends StatelessWidget {
+  const _FiguraLugar({
+    required this.lugar,
+    required this.forma,
+    required this.celda,
+    required this.resaltado,
+    required this.onTap,
+  });
+
+  final Ubicacion lugar;
+  final _FormaLugar forma;
+  final double celda;
+  final bool resaltado;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final principal = forma.principal;
+    final caja = forma.caja;
+    return Opacity(
+      opacity: lugar.activo ? 1 : 0.45,
+      child: ClipPath(
+        clipper: _RecorteForma(forma, celda),
+        child: CustomPaint(
+          painter: _PintorForma(
+            forma: forma,
+            celda: celda,
+            relleno: resaltado ? _ambarFondo : Colores.superficie,
+            borde: resaltado ? _ambarBorde : Colores.tinta,
+            grosor: resaltado ? 2 : 1.2,
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: onTap,
+              child: Stack(
+                children: [
+                  // Como en una caja suelta: el hueco de 1 y el rotulo adentro.
+                  Positioned(
+                    left: (principal.left - caja.left) * celda + 1,
+                    top: (principal.top - caja.top) * celda + 1,
+                    width: math.max(1, principal.width * celda - 2),
+                    height: math.max(1, principal.height * celda - 2),
+                    child: _RotuloLugar(lugar: lugar, resaltado: resaltado),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -842,83 +1054,99 @@ class _CajaLugar extends StatelessWidget {
         child: InkWell(
           customBorder: forma,
           onTap: onTap,
-          child: LayoutBuilder(
-            builder: (context, caja) {
-              // La letra crece con la caja: en un lugar chico no se desborda,
-              // y al acercar el plano se lee igual de nitida.
-              final letra = (math.min(caja.maxWidth, caja.maxHeight) / 3.2)
-                  .clamp(5.0, 12.0);
-              return Stack(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(2),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.topLeft,
-                      child: SizedBox(
-                        width: math.max(1, caja.maxWidth - 4),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              lugar.codigo,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: letra,
-                                height: 1.1,
-                                fontWeight: FontWeight.w800,
-                                color: resaltado ? _ambarTinta : Colores.tinta,
-                              ),
-                            ),
-                            if (lugar.nombre != null &&
-                                lugar.nombre!.trim().isNotEmpty)
-                              Text(
-                                lugar.nombre!,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: letra * 0.85,
-                                  height: 1.1,
-                                  color: Colores.tintaSuave,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (lugar.productos > 0)
-                    Positioned(
-                      right: 2,
-                      bottom: 2,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: letra * 0.4,
-                          vertical: letra * 0.1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: resaltado ? _ambarBorde : Acento.de(context),
-                          borderRadius: BorderRadius.circular(letra),
-                        ),
-                        child: Text(
-                          '${lugar.productos}',
-                          style: TextStyle(
-                            fontSize: letra * 0.8,
-                            height: 1.1,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
+          child: _RotuloLugar(lugar: lugar, resaltado: resaltado),
         ),
       ),
+    );
+  }
+}
+
+/// Lo que se lee dentro de un lugar: codigo y nombre arriba a la izquierda y,
+/// si tiene, cuantos productos abajo a la derecha.
+class _RotuloLugar extends StatelessWidget {
+  const _RotuloLugar({required this.lugar, required this.resaltado});
+
+  final Ubicacion lugar;
+  final bool resaltado;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, caja) {
+        // La letra crece con la caja: en un lugar chico no se desborda,
+        // y al acercar el plano se lee igual de nitida.
+        final letra = (math.min(caja.maxWidth, caja.maxHeight) / 3.2).clamp(
+          5.0,
+          12.0,
+        );
+        return Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(2),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: math.max(1, caja.maxWidth - 4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        lugar.codigo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: letra,
+                          height: 1.1,
+                          fontWeight: FontWeight.w800,
+                          color: resaltado ? _ambarTinta : Colores.tinta,
+                        ),
+                      ),
+                      if (lugar.nombre != null &&
+                          lugar.nombre!.trim().isNotEmpty)
+                        Text(
+                          lugar.nombre!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: letra * 0.85,
+                            height: 1.1,
+                            color: Colores.tintaSuave,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (lugar.productos > 0)
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: letra * 0.4,
+                    vertical: letra * 0.1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: resaltado ? _ambarBorde : Acento.de(context),
+                    borderRadius: BorderRadius.circular(letra),
+                  ),
+                  child: Text(
+                    '${lugar.productos}',
+                    style: TextStyle(
+                      fontSize: letra * 0.8,
+                      height: 1.1,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

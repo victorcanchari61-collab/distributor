@@ -213,6 +213,89 @@ void main() {
     },
   );
 
+  test(
+    'la ubicacion lee sus partes del plano, y sin ellas queda sin partes',
+    () {
+      final enL = Ubicacion.desdeJson({
+        'id': 1,
+        'planoX': 0,
+        'planoY': 0,
+        'planoAncho': 4,
+        'planoAlto': 2,
+        'planoPartes': [
+          {'x': 0, 'y': 2.0, 'ancho': 2, 'alto': 3.0},
+        ],
+      });
+      expect(enL.planoPartes, hasLength(1));
+      final parte = enL.planoPartes.single;
+      expect([parte.x, parte.y, parte.ancho, parte.alto], [0, 2, 2, 3]);
+
+      expect(Ubicacion.desdeJson({'id': 2}).planoPartes, isEmpty);
+      expect(
+        Ubicacion.desdeJson({'id': 3, 'planoPartes': null}).planoPartes,
+        isEmpty,
+      );
+    },
+  );
+
+  testWidgets('un lugar en L es una sola figura: tocar su parte lo abre', (
+    tester,
+  ) async {
+    await _montar(
+      tester,
+      _ApiFalsa(
+        lugares: [
+          {
+            ..._lugar(
+              1,
+              'L1',
+              nombre: 'Rodea la escalera',
+              productos: 1,
+              rect: [0, 0, 4, 2],
+            ),
+            'planoPartes': [
+              {'x': 0, 'y': 2, 'ancho': 2, 'alto': 3},
+            ],
+          },
+        ],
+        productos: [
+          {
+            'productoId': 300,
+            'codigo': 'HAR-01',
+            'producto': 'Harina',
+            'unidadBase': 'KG',
+            'stock': 7,
+            'lugares': [
+              {'ubicacionId': 1, 'ruta': 'L1', 'nombre': 'Rodea la escalera'},
+            ],
+          },
+        ],
+      ),
+    );
+
+    // El rotulo y el contador van una sola vez.
+    expect(find.text('L1'), findsOneWidget);
+    expect(find.text('Rodea la escalera'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+
+    final plano = tester.getRect(find.byType(InteractiveViewer));
+    final celda = plano.width / 24;
+    Offset centroDe(double x, double y) =>
+        plano.topLeft + Offset((x + 0.5) * celda, (y + 0.5) * celda);
+
+    // La esquina que no es del lugar (dentro de la caja que lo encierra) no
+    // abre nada.
+    await tester.tapAt(centroDe(3, 4));
+    await tester.pumpAndSettle();
+    expect(find.text('Harina'), findsNothing);
+
+    // La parte de abajo es el mismo lugar.
+    await tester.tapAt(centroDe(1, 4));
+    await tester.pumpAndSettle();
+    expect(find.text('Harina'), findsOneWidget);
+    expect(find.text('7 KG'), findsOneWidget);
+  });
+
   testWidgets('pinta el piso con sus pestañas y lista lo que falta dibujar', (
     tester,
   ) async {

@@ -79,12 +79,26 @@ public class PlanoService : IPlanoService
 
         if (request.X is int x && request.Y is int y && request.Ancho is int ancho && request.Alto is int alto)
         {
-            await ExigirLibreAsync(lugar.AlmacenId, lugar.PadreId, x, y, ancho, alto, lugarId: lugar.Id, elementoId: null);
+            var partes = (request.Partes ?? []).Select(p => new RectPlano(p.X, p.Y, p.Ancho, p.Alto)).ToList();
+            if (partes.Count > Plano.MaximoPartes)
+                throw new BadRequestException($"Un lugar puede tener hasta {Plano.MaximoPartes} partes.");
+
+            List<RectPlano> todas = [new RectPlano(x, y, ancho, alto), .. partes];
+            for (var i = 0; i < todas.Count; i++)
+                for (var j = i + 1; j < todas.Count; j++)
+                    if (todas[i].Choca(todas[j]))
+                        throw new BadRequestException("Dos partes del lugar se enciman.");
+            if (!Plano.Conectadas(todas))
+                throw new BadRequestException("Cada parte tiene que tocar al resto del lugar, por un lado.");
+
+            await ExigirLibreAsync(lugar.AlmacenId, lugar.PadreId, todas, lugarId: lugar.Id, elementoId: null);
             (lugar.PlanoX, lugar.PlanoY, lugar.PlanoAncho, lugar.PlanoAlto) = (x, y, ancho, alto);
+            lugar.PlanoPartes = Plano.EscribirPartes(partes);
         }
         else
         {
             (lugar.PlanoX, lugar.PlanoY, lugar.PlanoAncho, lugar.PlanoAlto) = (null, null, null, null);
+            lugar.PlanoPartes = null;
         }
 
         await _context.SaveChangesAsync();
@@ -112,7 +126,7 @@ public class PlanoService : IPlanoService
             throw new BadRequestException("Este almacén usa pisos: elige en qué piso va.");
         }
 
-        await ExigirLibreAsync(almacenId, request.PisoId, request.X, request.Y, request.Ancho, request.Alto, null, null);
+        await ExigirLibreAsync(almacenId, request.PisoId, [new RectPlano(request.X, request.Y, request.Ancho, request.Alto)], null, null);
 
         var elemento = new ElementoPlano
         {
@@ -139,7 +153,7 @@ public class PlanoService : IPlanoService
         var elemento = await _context.ElementosPlano.FirstOrDefaultAsync(e => e.Id == id)
             ?? throw new NotFoundException("Ese pasillo o escalera ya no existe");
 
-        await ExigirLibreAsync(elemento.AlmacenId, elemento.PisoId, request.X, request.Y, request.Ancho, request.Alto, null, id);
+        await ExigirLibreAsync(elemento.AlmacenId, elemento.PisoId, [new RectPlano(request.X, request.Y, request.Ancho, request.Alto)], null, id);
 
         elemento.Nombre = request.Nombre.Trim();
         (elemento.X, elemento.Y, elemento.Ancho, elemento.Alto) = (request.X, request.Y, request.Ancho, request.Alto);
@@ -161,30 +175,32 @@ public class PlanoService : IPlanoService
     }
 
     /// <summary>
-    /// Que el rectángulo quepa en la cuadrícula y no se encime con nada de su plano: los lugares de ese piso (o los
-    /// sueltos, si no hay pisos) y sus pasillos y escaleras. Lo que se está moviendo no choca consigo mismo.
+    /// Que lo que se dibuja (un rectángulo, o las partes de un lugar) quepa en la cuadrícula y no se encime con nada de
+    /// su plano: los lugares de ese piso (o los sueltos, si no hay pisos) con todas sus partes, y sus pasillos y
+    /// escaleras. Lo que se está moviendo no choca consigo mismo.
     /// </summary>
-    private async Task ExigirLibreAsync(int almacenId, int? pisoId, int x, int y, int ancho, int alto, int? lugarId, int? elementoId)
+    private async Task ExigirLibreAsync(int almacenId, int? pisoId, IReadOnlyList<RectPlano> rects, int? lugarId, int? elementoId)
     {
-        if (ancho < 1 || alto < 1 || x < 0 || y < 0 || x + ancho > Plano.Columnas || y + alto > Plano.Filas)
+        if (rects.Any(r => !r.Cabe))
             throw new BadRequestException("No cabe en el plano: queda fuera de la cuadrícula.");
 
-        var lugares = await _context.UbicacionesAlmacen.AsNoTracking()
-            .Where(u => u.AlmacenId == almacenId && u.PadreId == pisoId && u.Tipo != TipoUbicacion.Piso
-                        && u.PlanoX != null && u.Id != lugarId)
-            .Select(u => new { u.Codigo, u.Nombre, X = u.PlanoX!.Value, Y = u.PlanoY!.Value, Ancho = u.PlanoAncho!.Value, Alto = u.PlanoAlto!.Value })
-            .ToListAsync();
-        var elementos = await _context.ElementosPlano.AsNoTracking()
-            .Where(e => e.AlmacenId == almacenId && e.PisoId == pisoId && e.Id != elementoId)
-            .Select(e => new { e.Nombre, e.X, e.Y, e.Ancho, e.Alto })
-            .ToListAsync();
+        var lugares = (await _context.UbicacionesAlmacen.AsNoTracking()
+                .Where(u => u.AlmacenId == almacenId && u.PadreId == pisoId && u.Tipo != TipoUbicacion.Piso
+                            && u.PlanoX != null && u.Id != lugarId)
+                .Select(u => new { u.Codigo, u.Nombre, X = u.PlanoX!.Value, Y = u.PlanoY!.Value, Ancho = u.PlanoAncho!.Value, Alto = u.PlanoAlto!.Value, u.PlanoPartes })
+                .ToListAsync())
+            .Select(u => new
+            {
+                Nombre = u.Nombre is null ? u.Codigo : $"{u.Codigo} · {u.Nombre}",
+                Rects = (List<RectPlano>)[new RectPlano(u.X, u.Y, u.Ancho, u.Alto), .. Plano.LeerPartes(u.PlanoPartes)],
+            });
+        var elementos = (await _context.ElementosPlano.AsNoTracking()
+                .Where(e => e.AlmacenId == almacenId && e.PisoId == pisoId && e.Id != elementoId)
+                .Select(e => new { e.Nombre, e.X, e.Y, e.Ancho, e.Alto })
+                .ToListAsync())
+            .Select(e => new { e.Nombre, Rects = (List<RectPlano>)[new RectPlano(e.X, e.Y, e.Ancho, e.Alto)] });
 
-        bool Choca(int ox, int oy, int oa, int oh) => x < ox + oa && ox < x + ancho && y < oy + oh && oy < y + alto;
-
-        var lugar = lugares.FirstOrDefault(o => Choca(o.X, o.Y, o.Ancho, o.Alto));
-        if (lugar is not null)
-            throw new ConflictException($"Se encima con {lugar.Codigo}{(lugar.Nombre is null ? "" : $" · {lugar.Nombre}")}.");
-        var otro = elementos.FirstOrDefault(o => Choca(o.X, o.Y, o.Ancho, o.Alto));
+        var otro = lugares.Concat(elementos).FirstOrDefault(o => o.Rects.Any(a => rects.Any(r => r.Choca(a))));
         if (otro is not null)
             throw new ConflictException($"Se encima con {otro.Nombre}.");
     }

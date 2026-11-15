@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace Backend.Models;
 
 /// <summary>
@@ -55,6 +58,12 @@ public class UbicacionAlmacen
     public int? PlanoY { get; set; }
     public int? PlanoAncho { get; set; }
     public int? PlanoAlto { get; set; }
+
+    /// <summary>
+    /// Las partes extra del lugar, en JSON (una lista de rectángulos como el principal). Así un cuarto toma forma de L
+    /// y rodea una escalera. Nulo: el lugar es solo su rectángulo principal. Se lee con <see cref="Plano.LeerPartes"/>.
+    /// </summary>
+    public string? PlanoPartes { get; set; }
 }
 
 /// <summary>El tamaño de la cuadrícula del plano de cada piso, en celdas.</summary>
@@ -62,6 +71,64 @@ public static class Plano
 {
     public const int Columnas = 24;
     public const int Filas = 14;
+
+    /// <summary>Cuántas partes extra puede tener un lugar: más que esto es dibujar celda por celda.</summary>
+    public const int MaximoPartes = 30;
+
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    /// <summary>Las partes extra guardadas en <see cref="UbicacionAlmacen.PlanoPartes"/>; vacío si no tiene o no se leen.</summary>
+    public static List<RectPlano> LeerPartes(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return [];
+        try
+        {
+            return JsonSerializer.Deserialize<List<RectPlano>>(json, Json) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    public static string? EscribirPartes(IReadOnlyCollection<RectPlano> partes) =>
+        partes.Count == 0 ? null : JsonSerializer.Serialize(partes, Json);
+
+    /// <summary>Si todas las partes forman una sola figura: desde la primera se llega a cada una tocándose por un lado.</summary>
+    public static bool Conectadas(IReadOnlyList<RectPlano> partes)
+    {
+        if (partes.Count <= 1) return true;
+        var visto = new bool[partes.Count];
+        var pila = new Stack<int>([0]);
+        visto[0] = true;
+        while (pila.Count > 0)
+        {
+            var i = pila.Pop();
+            for (var j = 0; j < partes.Count; j++)
+                if (!visto[j] && partes[i].Toca(partes[j]))
+                {
+                    visto[j] = true;
+                    pila.Push(j);
+                }
+        }
+        return visto.All(v => v);
+    }
+}
+
+/// <summary>Un rectángulo de la cuadrícula del plano, en celdas.</summary>
+public record RectPlano(int X, int Y, int Ancho, int Alto)
+{
+    /// <summary>Se enciman: comparten al menos una celda.</summary>
+    public bool Choca(RectPlano o) => X < o.X + o.Ancho && o.X < X + Ancho && Y < o.Y + o.Alto && o.Y < Y + Alto;
+
+    /// <summary>Se tocan por un lado (comparten un tramo de borde); tocarse solo por una esquina no cuenta.</summary>
+    public bool Toca(RectPlano o) =>
+        ((X + Ancho == o.X || o.X + o.Ancho == X) && Y < o.Y + o.Alto && o.Y < Y + Alto)
+        || ((Y + Alto == o.Y || o.Y + o.Alto == Y) && X < o.X + o.Ancho && o.X < X + Ancho);
+
+    /// <summary>Entra entero en la cuadrícula y mide al menos una celda. No se guarda: se calcula.</summary>
+    [JsonIgnore]
+    public bool Cabe => X >= 0 && Y >= 0 && Ancho >= 1 && Alto >= 1 && X + Ancho <= Plano.Columnas && Y + Alto <= Plano.Filas;
 }
 
 /// <summary>Lo que se dibuja en un plano y no guarda mercadería: por dónde se camina o se sube.</summary>

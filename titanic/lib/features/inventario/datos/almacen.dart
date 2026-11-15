@@ -131,6 +131,7 @@ class Ubicacion {
     this.planoY,
     this.planoAncho,
     this.planoAlto,
+    this.planoPartes = const [],
   });
 
   final int id;
@@ -165,6 +166,11 @@ class Ubicacion {
   final int? planoAncho;
   final int? planoAlto;
 
+  /// Rectangulos de mas del mismo lugar, para que tome forma de L (por ejemplo,
+  /// rodeando una escalera). Vacio: el lugar es solo su rectangulo principal.
+  /// No se pisan entre si y cada uno toca al resto del lugar por un lado.
+  final List<RectPlano> planoPartes;
+
   bool get esPiso => tipo == 'PISO';
 
   /// Tiene su rectangulo completo en el plano.
@@ -191,6 +197,32 @@ class Ubicacion {
     planoY: (json['planoY'] as num?)?.toInt(),
     planoAncho: (json['planoAncho'] as num?)?.toInt(),
     planoAlto: (json['planoAlto'] as num?)?.toInt(),
+    planoPartes: [
+      for (final p in (json['planoPartes'] as List? ?? const []))
+        if (p is Map) RectPlano.desdeJson(p.cast<String, dynamic>()),
+    ],
+  );
+}
+
+/// Un rectangulo en celdas de la cuadricula del plano.
+class RectPlano {
+  const RectPlano({
+    required this.x,
+    required this.y,
+    required this.ancho,
+    required this.alto,
+  });
+
+  final int x;
+  final int y;
+  final int ancho;
+  final int alto;
+
+  factory RectPlano.desdeJson(Map<String, dynamic> json) => RectPlano(
+    x: (json['x'] as num?)?.toInt() ?? 0,
+    y: (json['y'] as num?)?.toInt() ?? 0,
+    ancho: (json['ancho'] as num?)?.toInt() ?? 1,
+    alto: (json['alto'] as num?)?.toInt() ?? 1,
   );
 }
 

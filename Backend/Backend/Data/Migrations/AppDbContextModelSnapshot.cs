@@ -4780,6 +4780,9 @@ namespace Backend.Data.Migrations
                     b.Property<int?>("PlanoAncho")
                         .HasColumnType("int");
 
+                    b.Property<string>("PlanoPartes")
+                        .HasColumnType("longtext");
+
                     b.Property<int?>("PlanoX")
                         .HasColumnType("int");
 

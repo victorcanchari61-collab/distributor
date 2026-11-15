@@ -37,6 +37,21 @@ public class PosicionPlanoRequest
     public int? Y { get; set; }
     public int? Ancho { get; set; }
     public int? Alto { get; set; }
+
+    /// <summary>
+    /// Las partes extra del lugar (forma de L), todas: reemplazan a las que tenía. Nulo o vacío: solo el rectángulo
+    /// principal. Cada parte tiene que tocar al resto del lugar.
+    /// </summary>
+    public List<RectPlanoRequest>? Partes { get; set; }
+}
+
+/// <summary>Un rectángulo de la cuadrícula, en celdas.</summary>
+public class RectPlanoRequest
+{
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int Ancho { get; set; }
+    public int Alto { get; set; }
 }
 
 /// <summary>Un pasillo o una escalera del plano: dónde, de qué tamaño y cómo se llama.</summary>

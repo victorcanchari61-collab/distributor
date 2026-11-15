@@ -1,3 +1,5 @@
+using Backend.Models;
+
 namespace Backend.Dtos.Responses;
 
 /// <summary>Un lugar dentro de un almacén, con lo que hace falta para dibujar el árbol.</summary>
@@ -31,6 +33,9 @@ public class UbicacionResponse
     public int? PlanoY { get; set; }
     public int? PlanoAncho { get; set; }
     public int? PlanoAlto { get; set; }
+
+    /// <summary>Las partes extra (un cuarto en forma de L). Vacío: el lugar es solo su rectángulo principal.</summary>
+    public List<RectPlano> PlanoPartes { get; set; } = [];
 }
 
 /// <summary>Un pasillo o una escalera del plano.</summary>
