@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaCorta } from '../../lib/fechas'
-import { PackageCheck, Plus, Undo2 } from 'lucide-react'
+import { PackageCheck, Plus, ShoppingBag, Undo2 } from 'lucide-react'
 import { FaEye, FaRotateLeft } from 'react-icons/fa6'
 import {
   AccionPdf,
@@ -236,6 +236,19 @@ export function RecepcionesPage() {
             tono="neutral"
             progreso={total > 0 ? anuladas / total : 0}
             accion={{ label: anuladas > 0 ? `Ver las ${anuladas}` : 'Ver', onClick: () => verEstado('ANULADO') }}
+          />
+          {/* Lo que todavía falta llegar: compras pendientes o recibidas en parte. Su enlace abre la recepción. */}
+          <StatCard
+            label="Compras por recibir"
+            value={String(comprasParaRecibir.length)}
+            icon={<ShoppingBag size={18} />}
+            tono="warning"
+            progreso={comprasParaRecibir.length > 0 ? 1 : 0}
+            accion={
+              comprasParaRecibir.length > 0 && puede('compras.recepciones', 'crear')
+                ? { label: 'Recibir', onClick: () => setNuevaAbierta(true) }
+                : undefined
+            }
           />
         </>
       }

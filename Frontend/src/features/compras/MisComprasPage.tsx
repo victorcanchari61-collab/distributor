@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, Building2, PackageCheck, Plus, ShoppingBag } from 'lucide-react'
+import { ArrowLeft, Ban, Building2, PackageCheck, Plus, ShoppingBag } from 'lucide-react'
 import { FaBoxOpen, FaCheck, FaEye, FaPencil, FaRotateLeft, FaTrash, FaXmark } from 'react-icons/fa6'
 import {
   AccionPdf,
@@ -1004,6 +1004,8 @@ export function MisComprasPage() {
   const totalCompras = resumen?.total ?? 0
   const porRecibir = resumen?.porRecibir ?? 0
   const recibidas = resumen?.recibidas ?? 0
+  // Una compra está por recibir (pendiente o parcial), recibida o anulada: el resto del total son las anuladas.
+  const anuladas = Math.max(0, totalCompras - porRecibir - recibidas)
 
   return (
     <ListPage
@@ -1043,6 +1045,14 @@ export function MisComprasPage() {
               label: recibidas > 0 ? `Ver las ${recibidas}` : 'Ver',
               onClick: () => verEstado('RECIBIDA_TOTAL'),
             }}
+          />
+          <StatCard
+            label="Anuladas"
+            value={String(anuladas)}
+            icon={<Ban size={18} />}
+            tono="neutral"
+            progreso={totalCompras > 0 ? anuladas / totalCompras : 0}
+            accion={{ label: anuladas > 0 ? `Ver las ${anuladas}` : 'Ver', onClick: () => verEstado('ANULADA') }}
           />
         </>
       }

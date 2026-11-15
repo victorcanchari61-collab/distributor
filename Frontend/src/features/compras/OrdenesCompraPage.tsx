@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, Building2, CheckCircle2, ClipboardList, Plus } from 'lucide-react'
+import { ArrowLeft, Ban, Building2, CheckCircle2, ClipboardList, Plus } from 'lucide-react'
 import { FaBagShopping, FaEye, FaPencil, FaRotateLeft, FaTrash } from 'react-icons/fa6'
 import {
   AccionPdf,
@@ -568,6 +568,8 @@ export function OrdenesCompraPage() {
   const totalOrdenes = resumen?.total ?? 0
   const pendientes = resumen?.pendientes ?? 0
   const confirmadas = resumen?.confirmadas ?? 0
+  // Una orden está pendiente, confirmada o anulada: lo que no es lo uno ni lo otro, está anulado.
+  const anuladas = Math.max(0, totalOrdenes - pendientes - confirmadas)
 
   return (
     <ListPage
@@ -607,6 +609,14 @@ export function OrdenesCompraPage() {
               label: confirmadas > 0 ? `Ver las ${confirmadas}` : 'Ver',
               onClick: () => verEstado('CONFIRMADA'),
             }}
+          />
+          <StatCard
+            label="Anuladas"
+            value={String(anuladas)}
+            icon={<Ban size={18} />}
+            tono="neutral"
+            progreso={totalOrdenes > 0 ? anuladas / totalOrdenes : 0}
+            accion={{ label: anuladas > 0 ? `Ver las ${anuladas}` : 'Ver', onClick: () => verEstado('ANULADA') }}
           />
         </>
       }
