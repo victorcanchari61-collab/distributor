@@ -1254,23 +1254,30 @@ export function SysDataTable<T>({
       )}
 
       {paginacion && (!enModal || total > pageSize) && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[12px] text-zinc-500">
-          <div className="flex items-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[13px] text-ink-muted">
+          <div className="flex flex-wrap items-center gap-3">
             <span>
-              {total === 0
-                ? 'Sin registros'
-                : `${from + 1}–${Math.min(from + perPage, total)} de ${total}`}
+              {total === 0 ? (
+                'Sin registros'
+              ) : (
+                <>
+                  Mostrando{' '}
+                  <b className="font-semibold text-ink">
+                    {from + 1}–{Math.min(from + perPage, total)}
+                  </b>{' '}
+                  de <b className="font-semibold text-ink">{total}</b>
+                </>
+              )}
               {/* En modo cliente se aclara sobre cuantas filas se filtro; contra
                   el servidor no aplica: `rows` es solo la pagina que llego. */}
               {!enServidor && data.length !== rows.length && ` (${rows.length} en total)`}
             </span>
 
             <label className="flex items-center gap-1.5">
-              <span className="hidden sm:inline">Por pagina</span>
               <select
                 value={perPage}
                 onChange={(e) => setPerPage(Number(e.target.value))}
-                className="rounded-md border border-zinc-200 bg-white py-1 pr-6 pl-2 text-[12px] text-zinc-700 outline-none focus:border-[rgb(var(--sys-rgb)/0.6)]"
+                className="h-8 cursor-pointer rounded-lg border border-line bg-white pr-6 pl-2.5 text-[13px] font-medium text-ink outline-none hover:border-line-strong focus:border-[rgb(var(--sys-rgb)/0.6)]"
               >
                 {/* El tamaño que declara la vista entra en la lista: si no, el
                     select mostraria un valor que no es ninguna de sus opciones. */}
@@ -1282,11 +1289,16 @@ export function SysDataTable<T>({
                     </option>
                   ))}
               </select>
+              <span>por página</span>
             </label>
           </div>
 
+          {/* Los números van en una caja, igual que las pestañas: la página actual se rellena con el color del módulo. */}
           {pageCount > 1 && (
-            <div className="flex items-center gap-1">
+            <nav
+              aria-label="Paginación"
+              className="flex items-center gap-1 rounded-xl border border-line bg-slate-200/70 p-1"
+            >
               <PageButton onClick={() => irAPagina(1)} disabled={page === 1} label="Primera">
                 <ChevronsLeft size={15} />
               </PageButton>
@@ -1300,8 +1312,8 @@ export function SysDataTable<T>({
 
               {pageNumbers(page, pageCount).map((n, i) =>
                 n === '...' ? (
-                  <span key={`gap${i}`} className="px-1 text-zinc-400">
-                    ...
+                  <span key={`gap${i}`} className="inline-flex h-8 min-w-6 items-end justify-center pb-1.5 text-ink-soft">
+                    …
                   </span>
                 ) : (
                   <button
@@ -1310,10 +1322,10 @@ export function SysDataTable<T>({
                     onClick={() => irAPagina(n as number)}
                     aria-current={n === page ? 'page' : undefined}
                     className={cn(
-                      'min-w-[28px] rounded-md px-2 py-1 font-medium transition-colors',
+                      'inline-flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-lg border px-2 text-[13px] tabular-nums transition-colors',
                       n === page
-                        ? 'bg-[rgb(var(--sys-rgb))] text-[var(--sys-on)]'
-                        : 'text-zinc-600 hover:bg-[rgb(var(--sys-rgb)/0.12)]',
+                        ? 'border-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.12)] font-semibold text-[rgb(var(--sys-ink-rgb))] ring-1 ring-[rgb(var(--sys-rgb))]'
+                        : 'border-line bg-white font-medium text-ink-muted hover:border-line-strong hover:text-ink',
                     )}
                   >
                     {n}
@@ -1335,7 +1347,7 @@ export function SysDataTable<T>({
               >
                 <ChevronsRight size={15} />
               </PageButton>
-            </div>
+            </nav>
           )}
         </div>
       )}
@@ -1386,7 +1398,11 @@ function PageButton({
       disabled={disabled}
       aria-label={label}
       title={label}
-      className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+      className={cn(
+        'inline-flex size-8 cursor-pointer items-center justify-center rounded-lg border border-line bg-white text-ink-muted transition-colors',
+        'hover:border-line-strong hover:text-ink',
+        'disabled:cursor-not-allowed disabled:bg-transparent disabled:opacity-40 disabled:hover:border-line disabled:hover:text-ink-muted',
+      )}
     >
       {children}
     </button>
