@@ -43,7 +43,7 @@ String textoLegible(String texto) {
 ///
 /// Van en el hueco `pestanas` de `AppListaPagina`, arriba de todo, en el mismo
 /// lugar que en la web.
-class AppPestanas<T> extends StatelessWidget {
+class AppPestanas<T> extends StatefulWidget {
   const AppPestanas({
     super.key,
     required this.pestanas,
@@ -56,8 +56,53 @@ class AppPestanas<T> extends StatelessWidget {
   final ValueChanged<T> onCambio;
 
   @override
+  State<AppPestanas<T>> createState() => _AppPestanasState<T>();
+}
+
+class _AppPestanasState<T> extends State<AppPestanas<T>> {
+  /// La pestaña activa, para traerla a la vista.
+  final _llaveActiva = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    // Al cambiar de pestaña la vista suele armarse de nuevo, y con ella esta
+    // fila, que arrancaba desplazada al inicio: elegir "Unidades" dejaba la
+    // activa fuera de la pantalla. Aquí aparece ya en su sitio, sin animar.
+    _mostrarActiva(animado: false);
+  }
+
+  @override
+  void didUpdateWidget(covariant AppPestanas<T> anterior) {
+    super.didUpdateWidget(anterior);
+    if (anterior.activa != widget.activa) _mostrarActiva(animado: true);
+  }
+
+  /// Desliza la fila lo justo para que la pestaña activa se vea entera.
+  void _mostrarActiva({required bool animado}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final contexto = _llaveActiva.currentContext;
+      if (!mounted || contexto == null) return;
+      // Solo esta fila: `Scrollable.ensureVisible` movería también la lista
+      // vertical de la página para centrar la pestaña.
+      final fila = Scrollable.maybeOf(contexto);
+      final caja = contexto.findRenderObject();
+      if (fila == null || caja == null) return;
+      fila.position.ensureVisible(
+        caja,
+        // 0.5: centrada cuando se puede, así se ven también sus vecinas.
+        alignment: 0.5,
+        duration: animado ? const Duration(milliseconds: 250) : Duration.zero,
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final acento = Acento.de(context);
+    final pestanas = widget.pestanas;
+    final activa = widget.activa;
 
     // Lo que se desliza es el envoltorio, no el rectángulo: así el borde
     // redondo no se recorta y el rectángulo mide lo que sus pestañas.
@@ -80,11 +125,14 @@ class AppPestanas<T> extends StatelessWidget {
             for (var i = 0; i < pestanas.length; i++) ...[
               if (i > 0) const SizedBox(width: 6),
               _Pestana(
+                key: pestanas[i].valor == activa ? _llaveActiva : null,
                 pestana: pestanas[i],
                 activa: pestanas[i].valor == activa,
                 acento: acento,
                 onTap: () {
-                  if (pestanas[i].valor != activa) onCambio(pestanas[i].valor);
+                  if (pestanas[i].valor != activa) {
+                    widget.onCambio(pestanas[i].valor);
+                  }
                 },
               ),
             ],
@@ -97,6 +145,7 @@ class AppPestanas<T> extends StatelessWidget {
 
 class _Pestana<T> extends StatelessWidget {
   const _Pestana({
+    super.key,
     required this.pestana,
     required this.activa,
     required this.acento,
