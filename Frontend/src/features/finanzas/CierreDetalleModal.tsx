@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Banknote, CheckCircle2, Smartphone, UserX, Wallet, XCircle } from 'lucide-react'
+import { Banknote, Smartphone, UserX, Wallet } from 'lucide-react'
 import { FaCircleCheck, FaCircleXmark, FaRotateLeft } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
   Button,
-  FilaStats,
+  CifrasPago,
   Input,
   Modal,
   RowAction,
-  StatCard,
   SysDataTable,
   Tabs,
   useConfirmacion,
@@ -307,46 +306,36 @@ export function CierreDetalleModal({
             </Alert>
           )}
 
-          <FilaStats>
-            <StatCard
-              label="Debía tener"
-              value={soles(c.saldoSistema)}
-              icon={<Wallet size={18} />}
-              tono="sys"
-              hint={
-                detalle.saldoAnterior !== 0
-                  ? `Venía ${soles(detalle.saldoAnterior)} de antes`
-                  : `Entró ${soles(ingresos)} · salió ${soles(egresos)}`
-              }
-            />
-            <StatCard
-              label="Contado"
-              value={soles(c.contado)}
-              icon={<Banknote size={18} />}
-              tono="sys"
-              hint={`Entregado a ${c.cuentaDestino}`}
-            />
-            <StatCard
-              label={resultado ?? 'Diferencia'}
-              value={c.diferencia === 0 ? soles(0) : `${c.diferencia > 0 ? '+' : '-'}${soles(Math.abs(c.diferencia))}`}
-              icon={c.diferencia < 0 ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
-              tono={c.diferencia < 0 ? 'danger' : c.diferencia > 0 ? 'warning' : 'success'}
-              hint={c.descuento ? `${DESCUENTO[c.descuento.estado]}` : c.observacion ?? undefined}
-            />
-            <StatCard
-              label="Cobrado digital"
-              value={soles(c.digital)}
-              icon={<Smartphone size={18} />}
-              tono={c.digitalPorVerificar > 0 ? 'warning' : 'success'}
-              hint={
-                c.digitalPorVerificar > 0
-                  ? `${c.digitalPorVerificar} por verificar en el banco`
-                  : detalle.digitales.length > 0
-                    ? 'Todo revisado en el banco'
-                    : 'Sin cobros digitales'
-              }
-            />
-          </FilaStats>
+          <CifrasPago
+            cifras={[
+              {
+                label: 'Debía tener',
+                valor: soles(c.saldoSistema),
+                nota:
+                  detalle.saldoAnterior !== 0
+                    ? `Venía ${soles(detalle.saldoAnterior)} de antes`
+                    : `Entró ${soles(ingresos)} · salió ${soles(egresos)}`,
+              },
+              { label: 'Contado', valor: soles(c.contado), nota: `Entregado a ${c.cuentaDestino}` },
+              {
+                label: resultado ?? 'Diferencia',
+                valor: c.diferencia === 0 ? soles(0) : `${c.diferencia > 0 ? '+' : '-'}${soles(Math.abs(c.diferencia))}`,
+                tono: c.diferencia < 0 ? 'peligro' : c.diferencia > 0 ? 'pendiente' : 'exito',
+                nota: c.descuento ? DESCUENTO[c.descuento.estado] : c.observacion ?? undefined,
+              },
+              {
+                label: 'Cobrado digital',
+                valor: soles(c.digital),
+                tono: c.digitalPorVerificar > 0 ? 'pendiente' : 'exito',
+                nota:
+                  c.digitalPorVerificar > 0
+                    ? `${c.digitalPorVerificar} por verificar en el banco`
+                    : detalle.digitales.length > 0
+                      ? 'Todo revisado en el banco'
+                      : 'Sin cobros digitales',
+              },
+            ]}
+          />
 
           <Tabs
             active={pestana}

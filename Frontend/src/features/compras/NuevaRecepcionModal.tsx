@@ -5,6 +5,7 @@ import {
   BuscadorCampo,
   BuscadorModal,
   Button,
+  CifrasPago,
   Desplegable,
   Input,
   Modal,
@@ -269,37 +270,6 @@ export function NuevaRecepcionModal({
       render: (d) => <span className="text-sm font-medium text-ink">{d.producto}</span>,
     },
     {
-      key: 'cantidadRecibida',
-      label: 'Ya recibido',
-      align: 'right',
-      width: 110,
-      value: (d) => enPresentacionCompra(d, d.cantidadRecibida),
-      render: (d) =>
-        d.cantidadRecibida > 0 ? (
-          <span className="text-sm text-ink-soft">{enPresentacionCompra(d, d.cantidadRecibida)}</span>
-        ) : (
-          <span className="text-ink-soft">—</span>
-        ),
-    },
-    {
-      key: 'cantidadPendiente',
-      label: 'Pendiente',
-      align: 'right',
-      width: 110,
-      value: (d) => enPresentacionCompra(d, d.cantidadPendiente),
-      render: (d) => (
-        <span className="text-sm font-medium text-ink">{enPresentacionCompra(d, d.cantidadPendiente)}</span>
-      ),
-    },
-    {
-      // La unidad en que están expresados «Ya recibido» y «Pendiente».
-      key: 'unidadCompra',
-      label: 'Unidad',
-      width: 100,
-      value: (d) => d.presentacion ?? d.unidadBase,
-      render: (d) => <span className="text-sm text-ink-soft">{d.presentacion ?? d.unidadBase}</span>,
-    },
-    {
       /*
        * Se escribe en lo que llego, que no siempre es lo que se compro: dos
        * sacos enteros y el resto suelto se registra eligiendo la unidad de
@@ -340,13 +310,13 @@ export function NuevaRecepcionModal({
                 <span className="text-xs whitespace-nowrap text-ink-soft">{unidadDe(d)}</span>
               )}
             </div>
-            {/* La equivalencia solo cuando hace falta comprobarla: al recibir
-                en otra unidad que la de la compra. */}
-            {distintaALaCompra && enBase > 0 && (
-              <span className="text-xs text-ink-soft">
-                = {Number(enBase.toFixed(4))} {d.unidadBase}
-              </span>
-            )}
+            {/* Lo que falta de esta línea (antes eran las columnas Ya recibido, Pendiente y Unidad), y la
+                equivalencia solo cuando hace falta comprobarla: al recibir en otra unidad que la de la compra. */}
+            <span className="text-xs text-ink-soft">
+              de {enPresentacionCompra(d, d.cantidadPendiente)} {d.presentacion ?? d.unidadBase} pendiente
+              {d.cantidadRecibida > 0 && ` · ya llegó ${enPresentacionCompra(d, d.cantidadRecibida)}`}
+              {distintaALaCompra && enBase > 0 && ` · = ${Number(enBase.toFixed(4))} ${d.unidadBase}`}
+            </span>
           </div>
         )
       },
@@ -463,15 +433,30 @@ export function NuevaRecepcionModal({
               Elige primero la compra en la pestaña Datos.
             </p>
           ) : (
-            <SysDataTable<CompraDetalleResponse>
-              columns={columnasLineas}
-              rows={pendientes}
-              rowKey="id"
-              toolbar={false}
-              // Son pocas líneas, las de una compra: el pie de "1–1 de 1" no informa nada.
-              paginacion={false}
-              empty="Esta compra ya llegó completa: no queda nada por recibir."
-            />
+            <div className="flex flex-col gap-3">
+              {/* En productos (líneas), no en cantidades: cada línea va en su propia unidad y no se pueden sumar. */}
+              <CifrasPago
+                cifras={[
+                  { label: 'Productos', valor: compra.detalle.length },
+                  { label: 'Ya recibido', valor: compra.detalle.filter((d) => d.cantidadPendiente <= 0).length, tono: 'exito' },
+                  { label: 'Pendiente', valor: pendientes.length, tono: pendientes.length > 0 ? 'pendiente' : 'normal' },
+                  {
+                    label: 'Llega ahora',
+                    valor: pendientes.filter((d) => (Number(cantidades[d.id]) || 0) > 0).length,
+                    tono: 'exito',
+                  },
+                ]}
+              />
+              <SysDataTable<CompraDetalleResponse>
+                columns={columnasLineas}
+                rows={pendientes}
+                rowKey="id"
+                toolbar={false}
+                // Son pocas líneas, las de una compra: el pie de "1–1 de 1" no informa nada.
+                paginacion={false}
+                empty="Esta compra ya llegó completa: no queda nada por recibir."
+              />
+            </div>
           )}
         </div>
       </Modal>

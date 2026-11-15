@@ -58,7 +58,7 @@ export function SelectorLugar({
   valor,
   onChange,
   etiquetaPiso = 'Piso',
-  etiquetaCuarto = 'Cuarto',
+  etiquetaCuarto = 'Lugar',
 }: {
   lugares: UbicacionResponse[]
   cargando?: boolean
@@ -98,13 +98,13 @@ export function SelectorLugar({
         value={valor.cuartoId}
         onChange={(v) => onChange({ ...valor, cuartoId: Number(v) })}
         options={[
-          { value: 0, label: cuartos.length === 0 ? 'Sin cuartos' : 'Sin cuarto' },
+          { value: 0, label: cuartos.length === 0 ? 'Sin lugares' : 'Sin lugar' },
           ...cuartos.map((c) => ({ value: c.id, label: c.nombre ? `${c.codigo} · ${c.nombre}` : c.codigo })),
         ]}
       />
       {sinLugares && !cargando && (
         <p className="text-xs text-ink-soft sm:col-span-2">
-          Este almacén todavía no tiene pisos ni cuartos. Créalos en Almacenes → Ubicaciones para poder elegir dónde se
+          Este almacén todavía no tiene pisos ni lugares. Créalos en Almacenes → Ubicaciones para poder elegir dónde se
           guarda.
         </p>
       )}

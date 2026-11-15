@@ -6,6 +6,7 @@ import {
   Alert,
   Badge,
   Button,
+  CifrasPago,
   Desplegable,
   Input,
   ListPage,
@@ -563,11 +564,13 @@ function DetalleModal({ id, onClose }: { id: number; onClose: () => void }) {
       {!a && !error && <p className="text-sm text-ink-soft">Cargando...</p>}
       {a && (
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-3 gap-3">
-            <StatCard label="Monto" value={soles(a.monto)} icon={<HandCoins size={18} />} tono="sys" />
-            <StatCard label="Descontado" value={soles(a.descontado)} icon={<Wallet size={18} />} tono="success" />
-            <StatCard label="Falta" value={soles(a.saldo)} icon={<CalendarClock size={18} />} tono="warning" />
-          </div>
+          <CifrasPago
+            cifras={[
+              { label: 'Monto', valor: soles(a.monto) },
+              { label: 'Descontado', valor: soles(a.descontado), tono: 'exito' },
+              { label: 'Falta', valor: soles(a.saldo), tono: a.saldo > 0 ? 'pendiente' : 'normal' },
+            ]}
+          />
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <Dato etiqueta="Estado" valor={<Badge tone={ESTADOS[a.estado].tono}>{ESTADOS[a.estado].label}</Badge>} />
             <Dato etiqueta="Se le dio el" valor={fechaCorta(a.fecha)} />
