@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using MySqlConnector;
 using Backend.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -1929,7 +1931,96 @@ public class AppDbContext : DbContext
     /// hasta después de guardarse: primero se guardan los cambios reales, y
     /// con los Ids ya asignados se escriben los registros de auditoría.
     /// </summary>
+    /// <summary>Cuántas veces se intenta guardar si el correlativo choca con otro guardado al mismo tiempo.</summary>
+    private const int IntentosCorrelativo = 3;
+
+    /// <summary>Un correlativo de documento: "PD-0042", "NV-0007", "AJ-0013".</summary>
+    private static readonly Regex Correlativo = new(@"^([A-Z]+)-(\d+)$", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Guarda; y si el número de un documento nuevo choca con otro, toma el siguiente libre y vuelve a intentar.
+    ///
+    /// Cada servicio calcula el correlativo como "el último + 1" ANTES de guardar. Si dos personas crean un pedido al
+    /// mismo tiempo, las dos calculan el mismo PD-0050: el índice único impide el repetido, pero a la segunda le salía
+    /// "Ocurrió un error interno" y perdía lo que había llenado. Aquí, en el único lugar por donde pasa todo guardado,
+    /// esa segunda pasa a ser PD-0051 sin que nadie lo note. Así sirve para todas las series a la vez.
+    /// </summary>
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        for (var intento = 1; ; intento++)
+        {
+            try
+            {
+                return await GuardarConAuditoriaAsync(cancellationToken);
+            }
+            catch (DbUpdateException error) when (intento < IntentosCorrelativo && EsCorrelativoRepetido(error))
+            {
+                // Sin nada que renumerar (el repetido era otra cosa), el error sigue su curso.
+                if (!await RenumerarNuevosAsync(cancellationToken)) throw;
+                // Si no, reintenta con los números corregidos.
+            }
+        }
+    }
+
+    /// <summary>Si el error es un número de documento repetido (índice único "IX_&lt;tabla&gt;_Numero").</summary>
+    private static bool EsCorrelativoRepetido(DbUpdateException error) =>
+        error.InnerException is MySqlException { ErrorCode: MySqlErrorCode.DuplicateKeyEntry } mysql
+        && mysql.Message.Contains("_Numero'", StringComparison.Ordinal);
+
+    /// <summary>
+    /// A cada documento nuevo con correlativo le da el siguiente libre de su serie, mirando lo que ya está guardado.
+    /// Devuelve false si no había nada que renumerar (el repetido era otra cosa): entonces el error sigue su curso.
+    /// </summary>
+    private async Task<bool> RenumerarNuevosAsync(CancellationToken cancellationToken)
+    {
+        // Por tabla y serie, el próximo número a dar: dos documentos nuevos de la misma serie en un mismo guardado
+        // reciben números distintos.
+        var siguientes = new Dictionary<(string Tabla, string Serie), int>();
+        var cambiados = 0;
+
+        foreach (var entrada in ChangeTracker.Entries().Where(e => e.State == EntityState.Added).ToList())
+        {
+            var propiedad = entrada.Metadata.FindProperty("Numero");
+            var tabla = entrada.Metadata.GetTableName();
+            if (propiedad is null || propiedad.ClrType != typeof(string) || tabla is null) continue;
+            if (entrada.Property("Numero").CurrentValue is not string actual) continue;
+
+            var partes = Correlativo.Match(actual);
+            if (!partes.Success) continue;
+
+            var serie = partes.Groups[1].Value;
+            var digitos = partes.Groups[2].Value.Length;
+            var clave = (tabla, serie);
+
+            if (!siguientes.TryGetValue(clave, out var siguiente))
+            {
+                // El mayor guardado de esa serie. Por largo y luego por texto: "PD-10000" va después de "PD-9999".
+                var ultimo = await Database
+                    .SqlQueryRaw<string>(
+                        $"SELECT Numero AS Value FROM `{tabla}` WHERE Numero LIKE {{0}} " +
+                        "ORDER BY CHAR_LENGTH(Numero) DESC, Numero DESC LIMIT 1",
+                        serie + "-%")
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                var mayor = ultimo is not null && Correlativo.Match(ultimo) is { Success: true } m
+                    ? int.Parse(m.Groups[2].Value)
+                    : 0;
+                siguiente = mayor + 1;
+            }
+
+            var nuevo = $"{serie}-{siguiente.ToString().PadLeft(digitos, '0')}";
+            if (nuevo != actual)
+            {
+                entrada.Property("Numero").CurrentValue = nuevo;
+                cambiados++;
+            }
+            siguientes[clave] = siguiente + 1;
+        }
+
+        return cambiados > 0;
+    }
+
+    private async Task<int> GuardarConAuditoriaAsync(CancellationToken cancellationToken)
     {
         var entradas = ChangeTracker.Entries()
             // ClienteCategoria queda fuera: cada cálculo escribe una fila por cliente (miles), y es un dato
