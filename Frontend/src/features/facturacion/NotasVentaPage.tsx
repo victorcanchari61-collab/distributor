@@ -23,6 +23,7 @@ import {
   ResumenDocumento,
   RowAction,
   Select,
+  ResumenPagos,
   StatCard,
   SysDataTable,
   TablaProductosDetalle,
@@ -1284,6 +1285,7 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
           }
         >
           <div className="flex flex-col gap-3">
+            <ResumenPagos total={totalNeto} pagado={totalPagado} />
 
             <SysDataTable<FilaPagoVenta>
               columns={columnasPagos}
@@ -1324,12 +1326,6 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
               }
             />
 
-            <div className="flex items-center justify-between border-t border-line pt-3 text-sm font-semibold">
-              <span>Pagado</span>
-              <span className={totalPagado > totalNeto + 0.001 ? 'text-red-600' : 'text-ink'}>
-                S/ {totalPagado.toFixed(2)} de S/ {totalNeto.toFixed(2)}
-              </span>
-            </div>
           </div>
         </Modal>
       </div>

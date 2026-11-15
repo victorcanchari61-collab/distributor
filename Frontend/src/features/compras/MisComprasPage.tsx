@@ -20,6 +20,7 @@ import {
   PageSection,
   ResumenDocumento,
   RowAction,
+  ResumenPagos,
   StatCard,
   SysDataTable,
   TablaProductosDetalle,
@@ -953,6 +954,7 @@ export function MisComprasPage() {
           }
         >
           <div className="flex flex-col gap-3">
+            <ResumenPagos total={total} pagado={totalPagado} />
 
             <SysDataTable<FilaPagoCompra>
               columns={columnasPagos}
@@ -993,12 +995,6 @@ export function MisComprasPage() {
               }
             />
 
-            <div className="flex items-center justify-between border-t border-line pt-3 text-sm font-semibold">
-              <span>Pagado</span>
-              <span className={totalPagado > total + 0.001 ? 'text-red-600' : 'text-ink'}>
-                S/ {totalPagado.toFixed(2)} de S/ {total.toFixed(2)}
-              </span>
-            </div>
           </div>
         </Modal>
       </div>
