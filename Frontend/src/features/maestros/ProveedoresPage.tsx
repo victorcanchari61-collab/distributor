@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Building2, FileCheck2, Plus, ShieldOff, Tags, Upload } from 'lucide-react'
 import { FaBan, FaCircleCheck, FaPencil, FaTrash } from 'react-icons/fa6'
 import {
@@ -268,7 +268,6 @@ export function ProveedoresPage() {
       key: 'codigo',
       label: 'Código',
       filterable: false,
-      sortable: false,
       width: 110,
       render: (row) => <span className="font-semibold text-[rgb(var(--sys-ink-rgb))] tabular-nums">{row.codigo}</span>,
     },
@@ -317,6 +316,10 @@ export function ProveedoresPage() {
       ),
     },
   ]
+
+  // Por código (PRV00001, PRV00002, ...), igual que en la base. El servidor los manda por nombre porque esa misma
+  // lista alimenta los selectores de Compras y Cuentas por pagar.
+  const porCodigo = useMemo(() => [...proveedores].sort((a, b) => a.id - b.id), [proveedores])
 
   return (
     <ListPage
@@ -371,7 +374,7 @@ export function ProveedoresPage() {
         </>
       }
       columns={columns}
-      rows={proveedores}
+      rows={porCodigo}
       cardIcon={Building2}
       searchPlaceholder="Buscar por código, razón social, documento o rubro..."
       empty={cargando ? 'Cargando proveedores...' : 'Todavía no hay proveedores registrados.'}

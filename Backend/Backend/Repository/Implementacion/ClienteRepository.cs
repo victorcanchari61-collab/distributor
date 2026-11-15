@@ -271,6 +271,8 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
 
         var ordenada = orden switch
         {
+            // El código (CLI01468) sale del Id: ordenar por él es ordenar por Id.
+            "codigo" => desc ? query.OrderByDescending(c => c.Id) : query.OrderBy(c => c.Id),
             "documento" => desc ? query.OrderByDescending(c => c.Documento) : query.OrderBy(c => c.Documento),
             "tipoDoc" => desc ? query.OrderByDescending(c => c.TipoDoc) : query.OrderBy(c => c.TipoDoc),
             "nombre" => desc ? query.OrderByDescending(c => c.Nombre) : query.OrderBy(c => c.Nombre),
@@ -293,7 +295,8 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
                 ? query.OrderByDescending(c => categorias.Where(x => x.ClienteId == c.Id).Select(x => x.Codigo).FirstOrDefault())
                 : query.OrderBy(c => categorias.Where(x => x.ClienteId == c.Id).Select(x => x.Codigo).FirstOrDefault() == null)
                     .ThenBy(c => categorias.Where(x => x.ClienteId == c.Id).Select(x => x.Codigo).FirstOrDefault()),
-            _ => query.OrderByDescending(c => c.Activo).ThenBy(c => c.Nombre)
+            // Sin orden elegido, por código: CLI00001, CLI00002, ... igual que en la base.
+            _ => query.OrderBy(c => c.Id)
         };
 
         // Desempate por Id: dos clientes con el mismo nombre podrían cambiar de

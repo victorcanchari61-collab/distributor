@@ -393,7 +393,6 @@ export function ClientesPage() {
       key: 'codigo',
       label: 'Código',
       filterable: false,
-      sortable: false,
       width: 110,
       render: (row) => <span className="font-semibold text-[rgb(var(--sys-ink-rgb))] tabular-nums">{row.codigo}</span>,
     },

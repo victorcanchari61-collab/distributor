@@ -152,7 +152,11 @@ final clientesFiltradosProvider = Provider.autoDispose<List<Cliente>>((ref) {
       .where((c) => mercado == null || c.mercado == mercado)
       .where((c) => vendedor == null || c.vendedor == vendedor)
       .where((c) => texto.isEmpty || c.buscable.contains(texto))
-      .toList();
+      .toList()
+    // Por código (CLI00001, CLI00002, ...), igual que en la base y en la web.
+    // El servidor los manda por nombre porque esa lista es también la de los
+    // selectores.
+    ..sort((a, b) => a.id.compareTo(b.id));
 });
 
 /// Rutas que existen en los datos, para armar el filtro sin listas fijas.
@@ -282,7 +286,9 @@ final proveedoresFiltradosProvider = Provider.autoDispose<List<Proveedor>>((
       .where((p) => direccion == null || p.direccion == direccion)
       .where((p) => distrito == null || p.distrito == distrito)
       .where((p) => texto.isEmpty || p.buscable.contains(texto))
-      .toList();
+      .toList()
+    // Por código (PRV00001, PRV00002, ...), igual que en la base y en la web.
+    ..sort((a, b) => a.id.compareTo(b.id));
 });
 
 /// Rubros que existen en los datos.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Filter, RotateCcw } from 'lucide-react'
-import { cn } from './cn'
+import { RotateCcw } from 'lucide-react'
+import { FaFilter } from 'react-icons/fa6'
+import { BotonHerramienta } from './BotonHerramienta'
 import { Modal } from './Modal'
 import { Button } from './Button'
 import { FilterField } from './FilterField'
@@ -48,25 +49,9 @@ export function FiltersButton<T>({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        aria-label="Filtros"
-        title="Filtros"
-        className={cn(
-          'relative flex h-[38px] w-[38px] items-center justify-center rounded-lg transition-colors',
-          'text-[rgb(var(--sys-ink-rgb))] hover:bg-[rgb(var(--sys-rgb)/0.12)]',
-          open && 'bg-[rgb(var(--sys-rgb)/0.12)]',
-        )}
-      >
-        <Filter size={17} />
-        {filters.length > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[rgb(var(--sys-rgb))] px-1 text-[10px] leading-none font-semibold text-[var(--sys-on)] ring-2 ring-white">
-            {filters.length}
-          </span>
-        )}
-      </button>
+      <BotonHerramienta etiqueta="Filtros" onClick={onToggle} activo={open} contador={filters.length}>
+        <FaFilter />
+      </BotonHerramienta>
 
       {/* centrado en movil (hoja inferior), pegado a la derecha y centrado
           verticalmente en escritorio — nunca colgando de donde haya quedado

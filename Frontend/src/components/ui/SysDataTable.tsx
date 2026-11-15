@@ -10,15 +10,16 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
-  Eye,
   GripVertical,
   Search,
   X,
 } from 'lucide-react'
+import { FaTableColumns } from 'react-icons/fa6'
 import { cn } from './cn'
 import { useDismiss } from './useDismiss'
 import { instanteMs } from '../../lib/fechas'
 import { FiltersButton } from './FiltersButton'
+import { BotonHerramienta } from './BotonHerramienta'
 import { describeFilter } from './dataTableFilters'
 import type { DataTableFilter, FilterType, OperatorId } from './dataTableFilters'
 
@@ -916,7 +917,7 @@ export function SysDataTable<T>({
             </div>
 
             {/* iconos junto al buscador, en el extremo derecho */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <FiltersButton
                 columns={columns}
                 filters={filters}
@@ -1571,25 +1572,9 @@ function ColumnsButton<T>({
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={onOpen}
-        aria-expanded={open}
-        aria-label="Mostrar u ocultar columnas"
-        title="Columnas"
-        className={cn(
-          'relative flex h-[38px] w-[38px] items-center justify-center rounded-lg transition-colors',
-          'text-[rgb(var(--sys-ink-rgb))] hover:bg-[rgb(var(--sys-rgb)/0.12)]',
-          open && 'bg-[rgb(var(--sys-rgb)/0.12)]',
-        )}
-      >
-        <Eye size={17} />
-        {hidden.length > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[rgb(var(--sys-rgb))] px-1 text-[10px] leading-none font-semibold text-[var(--sys-on)] ring-2 ring-white">
-            {hidden.length}
-          </span>
-        )}
-      </button>
+      <BotonHerramienta etiqueta="Ver columnas" onClick={onOpen} activo={open} contador={hidden.length}>
+        <FaTableColumns />
+      </BotonHerramienta>
 
       <div
         className={cn(
