@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/permisos/sin_permiso.dart';
@@ -226,18 +227,10 @@ class _Dia extends StatelessWidget {
 /// Los feriados: los dias que no se trabajan y no se descuentan. Quien
 /// trabaja uno cobra ese dia doble en la planilla.
 Future<void> abrirFeriados(BuildContext context) {
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    // La hoja cuelga del Navigator y no hereda el acento del modulo.
-    builder: (context) => Acento.modulo('rrhh', (_) => const _HojaFeriados()),
+  return abrirHoja<void>(
+    context,
+    // Siempre con el acento de RRHH, se abra desde donde se abra.
+    (context) => Acento.modulo('rrhh', (_) => const _HojaFeriados()),
   );
 }
 
@@ -349,163 +342,174 @@ class _HojaFeriadosState extends ConsumerState<_HojaFeriados> {
     final puedeEliminar = puede(ref, 'rrhh.asistencia', Accion.eliminar);
     final acento = Acento.de(context);
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        Dimen.espacio4,
-        0,
-        Dimen.espacio4,
-        MediaQuery.viewInsetsOf(context).bottom + Dimen.espacio5,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Feriados',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const EncabezadoHoja('Feriados'),
+        Flexible(
+          child: SingleChildScrollView(
+            // El lugar del teclado ya lo deja abrirHoja.
+            padding: const EdgeInsets.fromLTRB(
+              Dimen.espacio4,
+              Dimen.espacio4,
+              Dimen.espacio4,
+              Dimen.espacio5,
             ),
-            const SizedBox(height: Dimen.espacio1),
-            const Text(
-              'No se trabajan y no se descuentan. Quien trabaja uno cobra ese día doble.',
-              style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
-            ),
-            const SizedBox(height: Dimen.espacio4),
-            if (_formulario) ...[
-              if (_error != null) ...[
-                AppAlerta(_error!),
-                const SizedBox(height: Dimen.espacio3),
-              ],
-              InkWell(
-                onTap: _guardando ? null : _elegirFecha,
-                borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Fecha',
-                    prefixIcon: Icon(
-                      Icons.event_outlined,
-                      size: 19,
-                      color: Colores.tintaTenue,
-                    ),
-                  ),
-                  child: Text(_fecha == null ? 'Elegir' : _dmy(_fecha!)),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'No se trabajan y no se descuentan. Quien trabaja uno cobra ese día doble.',
+                  style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
                 ),
-              ),
-              const SizedBox(height: Dimen.espacio4),
-              AppCampo(
-                controlador: _nombre,
-                etiqueta: 'Nombre',
-                icono: Icons.flag_outlined,
-                pista: 'Fiestas Patrias',
-                maxLargo: 100,
-                habilitado: !_guardando,
-              ),
-              const SizedBox(height: Dimen.espacio4),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppBoton(
-                      texto: 'Cancelar',
-                      variante: BotonVariante.secundario,
-                      onPressed: _guardando
-                          ? null
-                          : () => setState(() => _formulario = false),
-                    ),
-                  ),
-                  const SizedBox(width: Dimen.espacio2),
-                  Expanded(
-                    child: AppBoton(
-                      texto: _editando == null ? 'Agregar' : 'Guardar',
-                      cargando: _guardando,
-                      onPressed: _guardar,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: Dimen.espacio4),
-            ] else ...[
-              AppBoton(
-                texto: 'Agregar feriado',
-                icono: Icons.add,
-                variante: BotonVariante.secundario,
-                onPressed: permitir(puedeCrear, () => _abrir()),
-              ),
-              const SizedBox(height: Dimen.espacio3),
-            ],
-            feriados.when(
-              loading: () => const LinearProgressIndicator(),
-              error: (e, _) => AppAlerta(
-                e is ApiExcepcion ? e.texto : 'No pudimos cargar los feriados.',
-              ),
-              data: (lista) {
-                if (lista.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: Dimen.espacio3),
-                    child: Text(
-                      'Todavía no hay feriados registrados.',
-                      style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
-                    ),
-                  );
-                }
-                // Los que vienen primero, y los pasados al final.
-                final hoy = DateUtils.dateOnly(DateTime.now());
-                final ordenados = [...lista]
-                  ..sort((a, b) {
-                    final pa = a.fecha.isBefore(hoy);
-                    final pb = b.fecha.isBefore(hoy);
-                    if (pa != pb) return pa ? 1 : -1;
-                    return pa
-                        ? b.fecha.compareTo(a.fecha)
-                        : a.fecha.compareTo(b.fecha);
-                  });
-                return Column(
-                  children: [
-                    for (final f in ordenados)
-                      ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(
-                          Icons.flag_outlined,
-                          color: f.fecha.isBefore(hoy)
-                              ? Colores.tintaTenue
-                              : acento,
-                        ),
-                        title: Text(
-                          f.nombre,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        subtitle: Text(_dmy(f.fecha)),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AppIconoAccion(
-                              icono: Icons.edit_outlined,
-                              tooltip: 'Editar',
-                              color: acento,
-                              onPressed: permitir(puedeEditar, () => _abrir(f)),
-                            ),
-                            AppIconoAccion(
-                              icono: Icons.delete_outline,
-                              tooltip: 'Eliminar',
-                              color: Colores.advertencia,
-                              onPressed: permitir(
-                                puedeEliminar,
-                                () => _eliminar(f),
-                              ),
-                            ),
-                          ],
+                const SizedBox(height: Dimen.espacio4),
+                if (_formulario) ...[
+                  if (_error != null) ...[
+                    AppAlerta(_error!),
+                    const SizedBox(height: Dimen.espacio3),
+                  ],
+                  InkWell(
+                    onTap: _guardando ? null : _elegirFecha,
+                    borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Fecha',
+                        prefixIcon: Icon(
+                          Icons.event_outlined,
+                          size: 19,
+                          color: Colores.tintaTenue,
                         ),
                       ),
-                  ],
-                );
-              },
+                      child: Text(_fecha == null ? 'Elegir' : _dmy(_fecha!)),
+                    ),
+                  ),
+                  const SizedBox(height: Dimen.espacio4),
+                  AppCampo(
+                    controlador: _nombre,
+                    etiqueta: 'Nombre',
+                    icono: Icons.flag_outlined,
+                    pista: 'Fiestas Patrias',
+                    maxLargo: 100,
+                    habilitado: !_guardando,
+                  ),
+                  const SizedBox(height: Dimen.espacio4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AppBoton(
+                          texto: 'Cancelar',
+                          variante: BotonVariante.secundario,
+                          onPressed: _guardando
+                              ? null
+                              : () => setState(() => _formulario = false),
+                        ),
+                      ),
+                      const SizedBox(width: Dimen.espacio2),
+                      Expanded(
+                        child: AppBoton(
+                          texto: _editando == null ? 'Agregar' : 'Guardar',
+                          cargando: _guardando,
+                          onPressed: _guardar,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: Dimen.espacio4),
+                ] else ...[
+                  AppBoton(
+                    texto: 'Agregar feriado',
+                    icono: Icons.add,
+                    variante: BotonVariante.secundario,
+                    onPressed: permitir(puedeCrear, () => _abrir()),
+                  ),
+                  const SizedBox(height: Dimen.espacio3),
+                ],
+                feriados.when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, _) => AppAlerta(
+                    e is ApiExcepcion
+                        ? e.texto
+                        : 'No pudimos cargar los feriados.',
+                  ),
+                  data: (lista) {
+                    if (lista.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: Dimen.espacio3),
+                        child: Text(
+                          'Todavía no hay feriados registrados.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colores.tintaSuave,
+                          ),
+                        ),
+                      );
+                    }
+                    // Los que vienen primero, y los pasados al final.
+                    final hoy = DateUtils.dateOnly(DateTime.now());
+                    final ordenados = [...lista]
+                      ..sort((a, b) {
+                        final pa = a.fecha.isBefore(hoy);
+                        final pb = b.fecha.isBefore(hoy);
+                        if (pa != pb) return pa ? 1 : -1;
+                        return pa
+                            ? b.fecha.compareTo(a.fecha)
+                            : a.fecha.compareTo(b.fecha);
+                      });
+                    return Column(
+                      children: [
+                        for (final f in ordenados)
+                          ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              Icons.flag_outlined,
+                              color: f.fecha.isBefore(hoy)
+                                  ? Colores.tintaTenue
+                                  : acento,
+                            ),
+                            title: Text(
+                              f.nombre,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Text(_dmy(f.fecha)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AppIconoAccion(
+                                  icono: Icons.edit_outlined,
+                                  tooltip: 'Editar',
+                                  color: acento,
+                                  onPressed: permitir(
+                                    puedeEditar,
+                                    () => _abrir(f),
+                                  ),
+                                ),
+                                AppIconoAccion(
+                                  icono: Icons.delete_outline,
+                                  tooltip: 'Eliminar',
+                                  color: Colores.advertencia,
+                                  onPressed: permitir(
+                                    puedeEliminar,
+                                    () => _eliminar(f),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

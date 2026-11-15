@@ -9,6 +9,7 @@ import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
@@ -177,18 +178,10 @@ class UnidadesPestana extends ConsumerWidget {
     Color color, [
     UnidadMedida? editando,
   ]) {
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      // La hoja cuelga del Navigator y no hereda el acento de la vista.
-      builder: (_) => Acento(
+    return abrirHoja<void>(
+      context,
+      // El color de la vista, el mismo de las tarjetas: también pinta la franja.
+      (_) => Acento(
         color: color,
         child: _HojaUnidad(editando: editando),
       ),
@@ -368,109 +361,110 @@ class _HojaUnidadState extends ConsumerState<_HojaUnidad> {
   Widget build(BuildContext context) {
     final editando = widget.editando;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        Dimen.espacio4,
-        0,
-        Dimen.espacio4,
-        MediaQuery.viewInsetsOf(context).bottom + Dimen.espacio5,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              editando == null ? 'Nueva unidad' : 'Editar ${editando.nombre}',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              'El código es el que sale impreso en los documentos.',
-              style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
-            ),
-            const SizedBox(height: Dimen.espacio4),
-            if (_error != null) ...[
-              AppAlerta(_error!),
-              const SizedBox(height: Dimen.espacio3),
-            ],
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 130,
-                  child: AppCampo(
-                    controlador: _codigo,
-                    etiqueta: 'Código',
-                    pista: 'SAC',
-                    maxLargo: 10,
-                    formateadores: [_mayusculas],
-                    habilitado: !_guardando,
-                  ),
-                ),
-                const SizedBox(width: Dimen.espacio3),
-                Expanded(
-                  child: AppCampo(
-                    controlador: _nombre,
-                    etiqueta: 'Nombre',
-                    pista: 'Saco',
-                    maxLargo: 60,
-                    habilitado: !_guardando,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: Dimen.espacio4),
-            AppSelector<String>(
-              valor: _tipo,
-              etiqueta: 'Tipo',
-              icono: Icons.straighten_outlined,
-              habilitado: !_guardando,
-              opciones: [
-                for (final t in TipoUnidad.todos)
-                  Opcion(t, TipoUnidad.etiqueta(t)),
-              ],
-              onCambio: (v) {
-                if (v != null) setState(() => _tipo = v);
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 4, top: 4),
-              child: Text(
-                TipoUnidad.nota(_tipo),
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: Colores.tintaSuave,
-                ),
-              ),
-            ),
-            const SizedBox(height: Dimen.espacio2),
-            CheckboxListTile(
-              value: _fraccionable,
-              dense: true,
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'Admite decimales',
-                style: TextStyle(fontSize: 13.5),
-              ),
-              subtitle: const Text(
-                '2.5 kilos sí, 2.5 sacos no.',
-                style: TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
-              ),
-              onChanged: _guardando
-                  ? null
-                  : (v) => setState(() => _fraccionable = v ?? false),
-            ),
-            const SizedBox(height: Dimen.espacio4),
-            AppBoton(
-              texto: editando == null ? 'Crear unidad' : 'Guardar cambios',
-              cargando: _guardando,
-              onPressed: _guardar,
-            ),
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja(
+          editando == null ? 'Nueva unidad' : 'Editar ${editando.nombre}',
+          subtitulo: 'El código es el que sale impreso en los documentos.',
         ),
-      ),
+        Flexible(
+          // El lugar del teclado ya lo deja abrirHoja.
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              Dimen.espacio4,
+              Dimen.espacio4,
+              Dimen.espacio4,
+              Dimen.espacio5,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_error != null) ...[
+                  AppAlerta(_error!),
+                  const SizedBox(height: Dimen.espacio3),
+                ],
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 130,
+                      child: AppCampo(
+                        controlador: _codigo,
+                        etiqueta: 'Código',
+                        pista: 'SAC',
+                        maxLargo: 10,
+                        formateadores: [_mayusculas],
+                        habilitado: !_guardando,
+                      ),
+                    ),
+                    const SizedBox(width: Dimen.espacio3),
+                    Expanded(
+                      child: AppCampo(
+                        controlador: _nombre,
+                        etiqueta: 'Nombre',
+                        pista: 'Saco',
+                        maxLargo: 60,
+                        habilitado: !_guardando,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Dimen.espacio4),
+                AppSelector<String>(
+                  valor: _tipo,
+                  etiqueta: 'Tipo',
+                  icono: Icons.straighten_outlined,
+                  habilitado: !_guardando,
+                  opciones: [
+                    for (final t in TipoUnidad.todos)
+                      Opcion(t, TipoUnidad.etiqueta(t)),
+                  ],
+                  onCambio: (v) {
+                    if (v != null) setState(() => _tipo = v);
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, top: 4),
+                  child: Text(
+                    TipoUnidad.nota(_tipo),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Colores.tintaSuave,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: Dimen.espacio2),
+                CheckboxListTile(
+                  value: _fraccionable,
+                  dense: true,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text(
+                    'Admite decimales',
+                    style: TextStyle(fontSize: 13.5),
+                  ),
+                  subtitle: const Text(
+                    '2.5 kilos sí, 2.5 sacos no.',
+                    style: TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
+                  ),
+                  onChanged: _guardando
+                      ? null
+                      : (v) => setState(() => _fraccionable = v ?? false),
+                ),
+                const SizedBox(height: Dimen.espacio4),
+                AppBoton(
+                  texto: editando == null ? 'Crear unidad' : 'Guardar cambios',
+                  cargando: _guardando,
+                  onPressed: _guardar,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

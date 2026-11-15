@@ -74,9 +74,7 @@ class _HojaConFranjaState extends State<_HojaConFranja> {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.92,
-      ),
+      constraints: BoxConstraints(maxHeight: altoMaximoHoja(context)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

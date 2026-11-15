@@ -6,11 +6,11 @@ import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_vacio.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/permiso_modelos.dart';
@@ -264,23 +264,7 @@ Future<void> _mostrarAprobacion(
   WidgetRef ref,
   SolicitudPermiso solicitud,
 ) {
-  final acento = Acento.de(context);
-
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (_) => Acento(
-      color: acento,
-      child: _HojaAprobar(solicitud: solicitud),
-    ),
-  );
+  return abrirHoja<void>(context, (_) => _HojaAprobar(solicitud: solicitud));
 }
 
 class _HojaAprobar extends ConsumerStatefulWidget {
@@ -346,116 +330,110 @@ class _HojaAprobarState extends ConsumerState<_HojaAprobar> {
   Widget build(BuildContext context) {
     final s = widget.solicitud;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: Dimen.espacio4,
-        right: Dimen.espacio4,
-        bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Dar ${_accionPedida[s.accion] ?? s.accion} en '
-            '${_pantalla(s.submodulo)}',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Colores.tinta,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'a ${s.usuario}',
-            style: const TextStyle(fontSize: 13, color: Colores.tintaSuave),
-          ),
-          const SizedBox(height: Dimen.espacio4),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja(
+          'Dar ${_accionPedida[s.accion] ?? s.accion} en '
+          '${_pantalla(s.submodulo)}',
+          subtitulo: 'a ${s.usuario}',
+        ),
+        Padding(
+          // El lugar del teclado ya lo deja abrirHoja.
+          padding: const EdgeInsets.all(Dimen.espacio4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                AppAlerta(_error!),
+                const SizedBox(height: Dimen.espacio3),
+              ],
 
-          if (_error != null) ...[
-            AppAlerta(_error!),
-            const SizedBox(height: Dimen.espacio3),
-          ],
+              AppSelector<int>(
+                valor: _alcance,
+                etiqueta: 'Hasta cuándo vale',
+                icono: Icons.timelapse_outlined,
+                habilitado: !_guardando,
+                opciones: [
+                  for (final a in Alcance.todos) Opcion(a, Alcance.etiqueta(a)),
+                ],
+                onCambio: (v) => setState(() => _alcance = v ?? Alcance.unaVez),
+              ),
+              const SizedBox(height: Dimen.espacio2),
+              Text(
+                Alcance.explicacion(_alcance),
+                style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+              ),
 
-          AppSelector<int>(
-            valor: _alcance,
-            etiqueta: 'Hasta cuándo vale',
-            icono: Icons.timelapse_outlined,
-            habilitado: !_guardando,
-            opciones: [
-              for (final a in Alcance.todos) Opcion(a, Alcance.etiqueta(a)),
-            ],
-            onCambio: (v) => setState(() => _alcance = v ?? Alcance.unaVez),
-          ),
-          const SizedBox(height: Dimen.espacio2),
-          Text(
-            Alcance.explicacion(_alcance),
-            style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-          ),
-
-          if (_alcance == Alcance.temporal) ...[
-            const SizedBox(height: Dimen.espacio3),
-            InkWell(
-              onTap: _guardando
-                  ? null
-                  : () async {
-                      final hoy = DateTime.now();
-                      final elegida = await showDatePicker(
-                        context: context,
-                        initialDate:
-                            _expira ?? hoy.add(const Duration(days: 7)),
-                        firstDate: hoy,
-                        lastDate: hoy.add(const Duration(days: 365)),
-                      );
-                      if (elegida != null) {
-                        // Hasta el final de ese día: elegir "el 20" y que
-                        // caduque a las 00:00 del 20 no deja ningún día útil.
-                        setState(
-                          () => _expira = DateTime(
-                            elegida.year,
-                            elegida.month,
-                            elegida.day,
-                            23,
-                            59,
-                          ),
-                        );
-                      }
-                    },
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Vence',
-                  constraints: BoxConstraints(minHeight: Dimen.campoLg),
-                ),
-                child: Text(
-                  _expira == null ? 'Elige la fecha' : _dia(_expira!),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: _expira == null ? Colores.tintaSuave : Colores.tinta,
+              if (_alcance == Alcance.temporal) ...[
+                const SizedBox(height: Dimen.espacio3),
+                InkWell(
+                  onTap: _guardando
+                      ? null
+                      : () async {
+                          final hoy = DateTime.now();
+                          final elegida = await showDatePicker(
+                            context: context,
+                            initialDate:
+                                _expira ?? hoy.add(const Duration(days: 7)),
+                            firstDate: hoy,
+                            lastDate: hoy.add(const Duration(days: 365)),
+                          );
+                          if (elegida != null) {
+                            // Hasta el final de ese día: elegir "el 20" y que
+                            // caduque a las 00:00 del 20 no deja ningún día útil.
+                            setState(
+                              () => _expira = DateTime(
+                                elegida.year,
+                                elegida.month,
+                                elegida.day,
+                                23,
+                                59,
+                              ),
+                            );
+                          }
+                        },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Vence',
+                      constraints: BoxConstraints(minHeight: Dimen.campoLg),
+                    ),
+                    child: Text(
+                      _expira == null ? 'Elige la fecha' : _dia(_expira!),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _expira == null
+                            ? Colores.tintaSuave
+                            : Colores.tinta,
+                      ),
+                    ),
                   ),
                 ),
+              ],
+
+              const SizedBox(height: Dimen.espacio3),
+              AppCampo(
+                controlador: _respuesta,
+                etiqueta: 'Respuesta',
+                pista: 'Opcional: queda en el historial de la solicitud',
+                opcional: true,
+                habilitado: !_guardando,
+                maxLargo: 250,
               ),
-            ),
-          ],
+              const SizedBox(height: Dimen.espacio4),
 
-          const SizedBox(height: Dimen.espacio3),
-          AppCampo(
-            controlador: _respuesta,
-            etiqueta: 'Respuesta',
-            pista: 'Opcional: queda en el historial de la solicitud',
-            opcional: true,
-            habilitado: !_guardando,
-            maxLargo: 250,
+              AppBoton(
+                texto: 'Conceder',
+                cargando: _guardando,
+                onPressed: _aprobar,
+              ),
+              const SizedBox(height: Dimen.espacio2),
+            ],
           ),
-          const SizedBox(height: Dimen.espacio4),
-
-          AppBoton(
-            texto: 'Conceder',
-            cargando: _guardando,
-            onPressed: _aprobar,
-          ),
-          const SizedBox(height: Dimen.espacio2),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

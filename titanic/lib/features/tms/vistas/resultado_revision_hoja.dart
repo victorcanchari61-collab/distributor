@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
@@ -19,18 +20,10 @@ Future<ResultadoRevision?> abrirHojaResultado(
   BuildContext context, {
   ResultadoRevision? editando,
 }) {
-  return showModalBottomSheet<ResultadoRevision>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    // La hoja cuelga del Navigator y no hereda el acento del modulo.
-    builder: (context) =>
+  return abrirHoja<ResultadoRevision>(
+    context,
+    // Siempre con el acento de TMS, se abra desde donde se abra.
+    (context) =>
         Acento.modulo('tms', (_) => _HojaResultado(editando: editando)),
   );
 }
@@ -103,71 +96,76 @@ class _HojaResultadoState extends ConsumerState<_HojaResultado> {
     // que ya no corresponde a su resultado.
     final bloqueado = (widget.editando?.usos ?? 0) > 0;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        Dimen.espacio4,
-        0,
-        Dimen.espacio4,
-        MediaQuery.viewInsetsOf(context).bottom + Dimen.espacio5,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.editando == null
-                ? 'Nuevo resultado'
-                : 'Editar ${widget.editando!.nombre}',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja(
+          widget.editando == null
+              ? 'Nuevo resultado'
+              : 'Editar ${widget.editando!.nombre}',
+        ),
+        Padding(
+          // El lugar del teclado ya lo deja abrirHoja.
+          padding: const EdgeInsets.fromLTRB(
+            Dimen.espacio4,
+            Dimen.espacio4,
+            Dimen.espacio4,
+            Dimen.espacio5,
           ),
-          const SizedBox(height: Dimen.espacio4),
-          if (_error != null) ...[
-            AppAlerta(_error!),
-            const SizedBox(height: Dimen.espacio3),
-          ],
-          AppCampo(
-            controlador: _nombre,
-            etiqueta: 'Nombre',
-            pista: 'Pesaron mal el producto',
-            icono: Icons.fact_check_outlined,
-            maxLargo: 60,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio3),
-          AppCampo(
-            controlador: _descripcion,
-            etiqueta: 'Descripción',
-            icono: Icons.notes_outlined,
-            opcional: true,
-            maxLargo: 250,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio2),
-          CheckboxListTile(
-            value: _volvioTodo,
-            onChanged: _guardando || bloqueado
-                ? null
-                : (v) => setState(() => _volvioTodo = v ?? false),
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: const Text(
-              'Volvió todo lo que no se entregó',
-              style: TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w600,
-                color: Colores.tinta,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                AppAlerta(_error!),
+                const SizedBox(height: Dimen.espacio3),
+              ],
+              AppCampo(
+                controlador: _nombre,
+                etiqueta: 'Nombre',
+                pista: 'Pesaron mal el producto',
+                icono: Icons.fact_check_outlined,
+                maxLargo: 60,
+                habilitado: !_guardando,
               ),
-            ),
+              const SizedBox(height: Dimen.espacio3),
+              AppCampo(
+                controlador: _descripcion,
+                etiqueta: 'Descripción',
+                icono: Icons.notes_outlined,
+                opcional: true,
+                maxLargo: 250,
+                habilitado: !_guardando,
+              ),
+              const SizedBox(height: Dimen.espacio2),
+              CheckboxListTile(
+                value: _volvioTodo,
+                onChanged: _guardando || bloqueado
+                    ? null
+                    : (v) => setState(() => _volvioTodo = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text(
+                  'Volvió todo lo que no se entregó',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: Colores.tinta,
+                  ),
+                ),
+              ),
+              const SizedBox(height: Dimen.espacio4),
+              AppBoton(
+                texto: widget.editando == null ? 'Crear' : 'Guardar',
+                cargando: _guardando,
+                onPressed: _guardar,
+              ),
+            ],
           ),
-          const SizedBox(height: Dimen.espacio4),
-          AppBoton(
-            texto: widget.editando == null ? 'Crear' : 'Guardar',
-            cargando: _guardando,
-            onPressed: _guardar,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

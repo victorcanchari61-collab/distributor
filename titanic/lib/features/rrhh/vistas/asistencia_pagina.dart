@@ -13,6 +13,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
@@ -346,18 +347,9 @@ class AsistenciaPagina extends ConsumerWidget {
   }
 
   Future<void> _editar(BuildContext context, WidgetRef ref, Asistencia a) {
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      builder: (context) =>
-          Acento.modulo('rrhh', (_) => _HojaEditar(asistencia: a)),
+    return abrirHoja<void>(
+      context,
+      (context) => Acento.modulo('rrhh', (_) => _HojaEditar(asistencia: a)),
     );
   }
 
@@ -662,54 +654,60 @@ class _HojaEditarState extends ConsumerState<_HojaEditar> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        Dimen.espacio4,
-        0,
-        Dimen.espacio4,
-        MediaQuery.viewInsetsOf(context).bottom + Dimen.espacio5,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Corregir marca',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja(
+          'Corregir marca',
+          subtitulo:
+              '${widget.asistencia.empleado} · ${_fecha(widget.asistencia.fecha)}',
+        ),
+        Padding(
+          // El lugar del teclado ya lo deja abrirHoja.
+          padding: const EdgeInsets.fromLTRB(
+            Dimen.espacio4,
+            Dimen.espacio4,
+            Dimen.espacio4,
+            Dimen.espacio5,
           ),
-          const SizedBox(height: Dimen.espacio1),
-          Text(
-            '${widget.asistencia.empleado} · ${_fecha(widget.asistencia.fecha)}',
-            style: const TextStyle(fontSize: 13, color: Colores.tintaSuave),
-          ),
-          const SizedBox(height: Dimen.espacio4),
-          if (_error != null) ...[
-            AppAlerta(_error!),
-            const SizedBox(height: Dimen.espacio3),
-          ],
-          AppSelector<String>(
-            valor: _estado,
-            etiqueta: 'Estado',
-            icono: Icons.fact_check_outlined,
-            habilitado: !_guardando,
-            opciones: [
-              for (final e in EstadoAsistencia.todos)
-                Opcion(e, EstadoAsistencia.etiqueta(e)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                AppAlerta(_error!),
+                const SizedBox(height: Dimen.espacio3),
+              ],
+              AppSelector<String>(
+                valor: _estado,
+                etiqueta: 'Estado',
+                icono: Icons.fact_check_outlined,
+                habilitado: !_guardando,
+                opciones: [
+                  for (final e in EstadoAsistencia.todos)
+                    Opcion(e, EstadoAsistencia.etiqueta(e)),
+                ],
+                onCambio: (v) => setState(() => _estado = v ?? _estado),
+              ),
+              const SizedBox(height: Dimen.espacio4),
+              AppCampo(
+                controlador: _observacion,
+                etiqueta: 'Observación',
+                icono: Icons.notes_outlined,
+                opcional: true,
+                habilitado: !_guardando,
+              ),
+              const SizedBox(height: Dimen.espacio5),
+              AppBoton(
+                texto: 'Guardar',
+                cargando: _guardando,
+                onPressed: _guardar,
+              ),
             ],
-            onCambio: (v) => setState(() => _estado = v ?? _estado),
           ),
-          const SizedBox(height: Dimen.espacio4),
-          AppCampo(
-            controlador: _observacion,
-            etiqueta: 'Observación',
-            icono: Icons.notes_outlined,
-            opcional: true,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio5),
-          AppBoton(texto: 'Guardar', cargando: _guardando, onPressed: _guardar),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

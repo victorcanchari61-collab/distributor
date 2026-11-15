@@ -5,6 +5,7 @@ import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import 'app_filtros_en_linea.dart';
+import 'app_hoja.dart';
 
 /// Un filtro del buscador, descrito por de dónde sale su valor.
 ///
@@ -284,33 +285,26 @@ class _AppCampoBusquedaState<T> extends State<AppCampoBusqueda<T>> {
       return;
     }
 
-    // Igual que el buscador de productos: la hoja cuelga del Navigator y hay
-    // que llevarle el acento de la pantalla que la abrio.
-    final acento = Acento.de(context);
-
-    final elegido = await showModalBottomSheet<T>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Acento(
-        color: acento,
-        child: _HojaBusqueda<T>(
-          titulo: widget.etiqueta,
-          pista: widget.pista,
-          // La hoja escucha la fuente en vez de quedarse con la foto del
-          // momento en que se abrió: si se abre mientras el catálogo viene en
-          // camino, se rellena sola al llegar en vez de quedarse vacía.
-          fuente: _fuente,
-          titulos: widget.titulo,
-          subtitulos: widget.subtitulo,
-          avisos: widget.aviso,
-          buscable: widget.buscable,
-          filtros: widget.filtros,
-          // Se abre con lo que ya se había escrito y filtrado: pasar a la lista
-          // completa no debe obligar a repetir la búsqueda.
-          textoInicial: _texto,
-          filtrosIniciales: const {},
-        ),
+    // Igual que el buscador de productos: la hoja cuelga del Navigator y
+    // abrirHoja le lleva el acento de la pantalla que la abrio.
+    final elegido = await abrirHoja<T>(
+      context,
+      (_) => _HojaBusqueda<T>(
+        titulo: widget.etiqueta,
+        pista: widget.pista,
+        // La hoja escucha la fuente en vez de quedarse con la foto del
+        // momento en que se abrió: si se abre mientras el catálogo viene en
+        // camino, se rellena sola al llegar en vez de quedarse vacía.
+        fuente: _fuente,
+        titulos: widget.titulo,
+        subtitulos: widget.subtitulo,
+        avisos: widget.aviso,
+        buscable: widget.buscable,
+        filtros: widget.filtros,
+        // Se abre con lo que ya se había escrito y filtrado: pasar a la lista
+        // completa no debe obligar a repetir la búsqueda.
+        textoInicial: _texto,
+        filtrosIniciales: const {},
       ),
     );
 
@@ -550,7 +544,18 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
           ),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            EncabezadoHoja(
+              widget.titulo,
+              acciones: [
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  tooltip: 'Cerrar',
+                ),
+              ],
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 Dimen.espacio4,
@@ -561,40 +566,6 @@ class _HojaBusquedaState<T> extends State<_HojaBusqueda<T>> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colores.linea,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: Dimen.espacio3),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.titulo,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Colores.tinta,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(
-                          Icons.close,
-                          color: Colores.tintaSuave,
-                        ),
-                        tooltip: 'Cerrar',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: Dimen.espacio2),
                   Row(
                     children: [
                       Expanded(

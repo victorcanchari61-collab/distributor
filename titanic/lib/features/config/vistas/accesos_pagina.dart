@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_hoja.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_shell.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -252,53 +254,20 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
       rutaActual: AccesosPagina.ruta,
       child: Column(
         children: [
-          TabBar(
-            controller: _tabs,
-            // Se desliza de lado: en un teléfono angosto "Solicitudes" con su contador no cabía en un tercio del ancho.
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            labelColor: color,
-            indicatorColor: color,
-            unselectedLabelColor: Colores.tintaSuave,
-            labelStyle: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-            tabs: [
-              const Tab(text: 'Por rol'),
-              const Tab(text: 'Por persona'),
-              Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Solicitudes'),
-                    if (pendientes > 0) ...[
-                      const SizedBox(width: Dimen.espacio2),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          '$pendientes',
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+          // Las mismas pestañas del resto de la app: en el rectángulo gris, la
+          // activa con el color del módulo. Se deslizan de lado si no caben.
+          PestanasHoja(
+            controlador: _tabs,
+            pestanas: [
+              const Pestana(0, 'Por rol'),
+              const Pestana(1, 'Por persona'),
+              Pestana(
+                2,
+                'Solicitudes',
+                contador: pendientes > 0 ? pendientes : null,
               ),
             ],
           ),
-          const Divider(height: 1),
 
           Expanded(
             child: TabBarView(

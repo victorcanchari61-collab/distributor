@@ -6,6 +6,7 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
@@ -415,45 +416,28 @@ class _TarjetaVisita extends StatelessWidget {
   }
 
   void _copiarTelefono(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      showDragHandle: true,
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            Dimen.espacio4,
-            0,
-            Dimen.espacio4,
-            Dimen.espacio4,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                visita.cliente,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colores.tinta,
-                ),
+    mostrarHoja<void>(
+      context,
+      titulo: visita.cliente,
+      cuerpo: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SelectableText(
+              visita.telefono!,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Colores.tinta,
               ),
-              const SizedBox(height: Dimen.espacio2),
-              SelectableText(
-                visita.telefono!,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: Colores.tinta,
-                ),
-              ),
-              const SizedBox(height: Dimen.espacio2),
-              const Text(
-                'Mantén presionado para copiarlo.',
-                style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: Dimen.espacio2),
+            const Text(
+              'Mantén presionado para copiarlo.',
+              style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+            ),
+          ],
         ),
       ),
     );

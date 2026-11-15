@@ -405,14 +405,10 @@ class _HojaQueDejo extends ConsumerWidget {
 
     return HojaBase(
       titulo: 'Qué dejó de comprar',
+      subtitulo: cliente,
       cuerpo: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            cliente,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: Dimen.espacio3),
           datos.when(
             loading: () => const Padding(
               padding: EdgeInsets.all(Dimen.espacio6),

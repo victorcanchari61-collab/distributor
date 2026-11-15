@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
@@ -137,17 +138,9 @@ class CuentasPorCobrarPagina extends ConsumerWidget {
     WidgetRef ref,
     NotaVenta nota,
   ) {
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      builder: (context) => _HojaPagosCobrar(notaVentaId: nota.id),
+    return abrirHoja<void>(
+      context,
+      (context) => _HojaPagosCobrar(notaVentaId: nota.id),
     );
   }
 }
@@ -269,172 +262,170 @@ class _HojaPagosCobrarState extends ConsumerState<_HojaPagosCobrar> {
     final metodos = ref.watch(metodosPagoActivosProvider);
     final saldo = nota.total - nota.totalPagado;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: Dimen.espacio4,
-        right: Dimen.espacio4,
-        top: Dimen.espacio2,
-        bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Pagos de ${nota.numero}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Colores.tinta,
-              ),
-            ),
-            const SizedBox(height: Dimen.espacio1),
-            Text(
-              'Saldo pendiente: S/ ${saldo.toStringAsFixed(2)}',
-              style: const TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
-            ),
-            const SizedBox(height: Dimen.espacio4),
-
-            if (_error != null) ...[
-              AppAlerta(_error!),
-              const SizedBox(height: Dimen.espacio3),
-            ],
-
-            for (final pago in nota.pagos) ...[
-              _FilaPago(
-                pago: pago,
-                enEdicion: _editando?.id == pago.id,
-                // Un cobro rechazado en el banco no se edita: si el cliente no
-                // pagó, se anula.
-                onEditar: pago.anulado || pago.rechazado
-                    ? null
-                    : () => setState(() {
-                        _editando = pago;
-                        _tipoEditar = null;
-                        _metodoEditarId = pago.metodoPagoId;
-                        _montoEditarCtrl.text = pago.monto.toStringAsFixed(2);
-                        _numeroEditarCtrl.text = pago.numeroOperacion ?? '';
-                        _error = null;
-                      }),
-                onAnular: pago.anulado
-                    ? null
-                    : () => _anular(context, nota!, pago),
-              ),
-              if (_editando?.id == pago.id)
-                _FormularioEdicion(
-                  metodos: metodos,
-                  tipo: _tipoEditar,
-                  metodoId: _metodoEditarId,
-                  montoCtrl: _montoEditarCtrl,
-                  numeroCtrl: _numeroEditarCtrl,
-                  pideNumero: _pideNumero(_tipoEditar, _metodoEditarId),
-                  onTipo: (v) => setState(() {
-                    _tipoEditar = v;
-                    _metodoEditarId = null;
-                    if (v == TipoMetodoPago.efectivo) _numeroEditarCtrl.clear();
-                  }),
-                  onMetodo: (v) => setState(() => _metodoEditarId = v),
-                  onCancelar: () => setState(() => _editando = null),
-                  onGuardar: () => _guardarEdicion(context, nota!, pago),
-                ),
-              const SizedBox(height: Dimen.espacio2),
-            ],
-            if (nota.pagos.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: Dimen.espacio3),
-                child: Text(
-                  'Todavía no hay pagos registrados.',
-                  style: TextStyle(fontSize: 12.5, color: Colores.tintaSuave),
-                ),
-              ),
-
-            const SizedBox(height: Dimen.espacio3),
-            const Divider(height: 1),
-            const SizedBox(height: Dimen.espacio3),
-
-            const Text(
-              'Agregar pago',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: Colores.tinta,
-              ),
-            ),
-            const SizedBox(height: Dimen.espacio3),
-
-            AppSelector<String>(
-              valor: _tipoNuevo,
-              etiqueta: 'Tipo',
-              icono: Icons.category_outlined,
-              opciones: [
-                for (final t in TipoMetodoPago.todos)
-                  Opcion(t, TipoMetodoPago.etiqueta(t)),
-              ],
-              onCambio: (v) => setState(() {
-                _tipoNuevo = v;
-                _metodoNuevoId = null;
-                // El efectivo no tiene operación que buscar.
-                if (v == TipoMetodoPago.efectivo) _numeroCtrl.clear();
-              }),
-            ),
-            const SizedBox(height: Dimen.espacio3),
-
-            AppSelector<int>(
-              valor: _metodoNuevoId,
-              etiqueta: 'Método',
-              icono: Icons.payments_outlined,
-              lineasOpcion: 2,
-              habilitado: _tipoNuevo != null,
-              opciones: [
-                for (final m in metodos.where((m) => m.tipo == _tipoNuevo))
-                  Opcion(m.id, m.etiqueta),
-              ],
-              onCambio: (v) => setState(() => _metodoNuevoId = v),
-            ),
-            const SizedBox(height: Dimen.espacio3),
-
-            if (_pideNumero(_tipoNuevo, _metodoNuevoId)) ...[
-              AppCampo(
-                controlador: _numeroCtrl,
-                etiqueta: 'N° de operación',
-                icono: Icons.tag,
-                pista: 'Del voucher del Yape o la transferencia',
-                maxLargo: 30,
-              ),
-              const SizedBox(height: Dimen.espacio3),
-            ],
-
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja(
+          'Pagos de ${nota.numero}',
+          subtitulo: 'Saldo pendiente: S/ ${saldo.toStringAsFixed(2)}',
+        ),
+        Flexible(
+          child: SingleChildScrollView(
+            // El lugar del teclado ya lo deja abrirHoja.
+            padding: const EdgeInsets.all(Dimen.espacio4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: AppCampo(
-                    controlador: _montoCtrl,
-                    etiqueta: 'Monto',
-                    icono: Icons.attach_money,
-                    tipoTeclado: const TextInputType.numberWithOptions(
-                      decimal: true,
+                if (_error != null) ...[
+                  AppAlerta(_error!),
+                  const SizedBox(height: Dimen.espacio3),
+                ],
+
+                for (final pago in nota.pagos) ...[
+                  _FilaPago(
+                    pago: pago,
+                    enEdicion: _editando?.id == pago.id,
+                    // Un cobro rechazado en el banco no se edita: si el cliente no
+                    // pagó, se anula.
+                    onEditar: pago.anulado || pago.rechazado
+                        ? null
+                        : () => setState(() {
+                            _editando = pago;
+                            _tipoEditar = null;
+                            _metodoEditarId = pago.metodoPagoId;
+                            _montoEditarCtrl.text = pago.monto.toStringAsFixed(
+                              2,
+                            );
+                            _numeroEditarCtrl.text = pago.numeroOperacion ?? '';
+                            _error = null;
+                          }),
+                    onAnular: pago.anulado
+                        ? null
+                        : () => _anular(context, nota!, pago),
+                  ),
+                  if (_editando?.id == pago.id)
+                    _FormularioEdicion(
+                      metodos: metodos,
+                      tipo: _tipoEditar,
+                      metodoId: _metodoEditarId,
+                      montoCtrl: _montoEditarCtrl,
+                      numeroCtrl: _numeroEditarCtrl,
+                      pideNumero: _pideNumero(_tipoEditar, _metodoEditarId),
+                      onTipo: (v) => setState(() {
+                        _tipoEditar = v;
+                        _metodoEditarId = null;
+                        if (v == TipoMetodoPago.efectivo) {
+                          _numeroEditarCtrl.clear();
+                        }
+                      }),
+                      onMetodo: (v) => setState(() => _metodoEditarId = v),
+                      onCancelar: () => setState(() => _editando = null),
+                      onGuardar: () => _guardarEdicion(context, nota!, pago),
+                    ),
+                  const SizedBox(height: Dimen.espacio2),
+                ],
+                if (nota.pagos.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: Dimen.espacio3),
+                    child: Text(
+                      'Todavía no hay pagos registrados.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: Colores.tintaSuave,
+                      ),
                     ),
                   ),
+
+                const SizedBox(height: Dimen.espacio3),
+                const Divider(height: 1),
+                const SizedBox(height: Dimen.espacio3),
+
+                const Text(
+                  'Agregar pago',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colores.tinta,
+                  ),
                 ),
-                const SizedBox(width: Dimen.espacio3),
+                const SizedBox(height: Dimen.espacio3),
+
+                AppSelector<String>(
+                  valor: _tipoNuevo,
+                  etiqueta: 'Tipo',
+                  icono: Icons.category_outlined,
+                  opciones: [
+                    for (final t in TipoMetodoPago.todos)
+                      Opcion(t, TipoMetodoPago.etiqueta(t)),
+                  ],
+                  onCambio: (v) => setState(() {
+                    _tipoNuevo = v;
+                    _metodoNuevoId = null;
+                    // El efectivo no tiene operación que buscar.
+                    if (v == TipoMetodoPago.efectivo) _numeroCtrl.clear();
+                  }),
+                ),
+                const SizedBox(height: Dimen.espacio3),
+
+                AppSelector<int>(
+                  valor: _metodoNuevoId,
+                  etiqueta: 'Método',
+                  icono: Icons.payments_outlined,
+                  lineasOpcion: 2,
+                  habilitado: _tipoNuevo != null,
+                  opciones: [
+                    for (final m in metodos.where((m) => m.tipo == _tipoNuevo))
+                      Opcion(m.id, m.etiqueta),
+                  ],
+                  onCambio: (v) => setState(() => _metodoNuevoId = v),
+                ),
+                const SizedBox(height: Dimen.espacio3),
+
+                if (_pideNumero(_tipoNuevo, _metodoNuevoId)) ...[
+                  AppCampo(
+                    controlador: _numeroCtrl,
+                    etiqueta: 'N° de operación',
+                    icono: Icons.tag,
+                    pista: 'Del voucher del Yape o la transferencia',
+                    maxLargo: 30,
+                  ),
+                  const SizedBox(height: Dimen.espacio3),
+                ],
+
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: AppCampo(
+                        controlador: _montoCtrl,
+                        etiqueta: 'Monto',
+                        icono: Icons.attach_money,
+                        tipoTeclado: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: Dimen.espacio3),
+                    AppBoton(
+                      texto: 'Agregar',
+                      expandido: false,
+                      onPressed: () => _registrar(context, nota!),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Dimen.espacio3),
+
                 AppBoton(
-                  texto: 'Agregar',
-                  expandido: false,
-                  onPressed: () => _registrar(context, nota!),
+                  texto: 'Listo',
+                  variante: BotonVariante.secundario,
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
-            const SizedBox(height: Dimen.espacio3),
-
-            AppBoton(
-              texto: 'Listo',
-              variante: BotonVariante.secundario,
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 

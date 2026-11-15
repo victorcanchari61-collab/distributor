@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
@@ -250,12 +251,9 @@ class UbicacionProductosPagina extends ConsumerWidget {
       return;
     }
 
-    final lugar = await showModalBottomSheet<Ubicacion>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: Colores.superficie,
-      builder: (_) => _HojaLugares(producto: producto, lugares: activos),
+    final lugar = await abrirHoja<Ubicacion>(
+      context,
+      (_) => _HojaLugares(producto: producto, lugares: activos),
     );
     if (lugar == null) return;
 
@@ -374,25 +372,9 @@ class _HojaLugares extends StatelessWidget {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Dimen.espacio4,
-                0,
-                Dimen.espacio4,
-                Dimen.espacio2,
-              ),
-              child: Text(
-                'Elegir lugar para ${producto.producto}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colores.tinta,
-                ),
-              ),
-            ),
-            const Divider(height: 1),
+            EncabezadoHoja('Elegir lugar para ${producto.producto}'),
             Flexible(
               child: ListView.builder(
                 shrinkWrap: true,

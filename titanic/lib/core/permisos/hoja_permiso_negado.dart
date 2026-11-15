@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../compartido/widgets/app_alerta.dart';
 import '../../compartido/widgets/app_boton.dart';
 import '../../compartido/widgets/app_campo.dart';
+import '../../compartido/widgets/app_hoja.dart';
 import '../navegacion/menu.dart';
 import '../red/cliente_api.dart';
 import '../red/excepciones.dart';
@@ -67,17 +68,9 @@ class _VigilantePermisosState extends ConsumerState<VigilantePermisos> {
     if (_abierta || !mounted) return;
     _abierta = true;
 
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      builder: (_) => _Hoja(submodulo: e.submodulo!, accion: e.accion!),
+    abrirHoja<void>(
+      context,
+      (_) => _Hoja(submodulo: e.submodulo!, accion: e.accion!),
     ).whenComplete(() => _abierta = false);
   }
 
@@ -138,90 +131,76 @@ class _HojaState extends ConsumerState<_Hoja> {
     final pantalla = vistaPorId(widget.submodulo)?.titulo ?? widget.submodulo;
     final accion = _accionNegada[widget.accion] ?? widget.accion;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: Dimen.espacio4,
-        right: Dimen.espacio4,
-        bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja(
+          _enviado ? 'Pedido enviado' : 'No puedes $accion $pantalla',
+        ),
+        Padding(
+          // El lugar del teclado ya lo deja abrirHoja.
+          padding: const EdgeInsets.all(Dimen.espacio4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.lock_person_outlined,
-                size: 20,
-                color: Colores.advertencia,
-              ),
-              const SizedBox(width: Dimen.espacio2),
-              Expanded(
-                child: Text(
-                  _enviado ? 'Pedido enviado' : 'No puedes $accion $pantalla',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colores.tinta,
-                  ),
+              if (_enviado) ...[
+                const Text(
+                  'Un administrador lo verá en su bandeja. Cuando te lo conceda '
+                  'podrás seguir sin volver a entrar.',
+                  style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
                 ),
-              ),
+                const SizedBox(height: Dimen.espacio4),
+                AppBoton(
+                  texto: 'Entendido',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ] else ...[
+                const Text(
+                  'Tu rol no lo incluye. Puedes pedírselo a un administrador desde '
+                  'aquí mismo.',
+                  style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
+                ),
+                const SizedBox(height: Dimen.espacio3),
+
+                if (_error != null) ...[
+                  AppAlerta(_error!),
+                  const SizedBox(height: Dimen.espacio3),
+                ],
+
+                // El motivo es lo único que explica para qué hace falta. Va aquí y
+                // no en la bandeja porque aquí es donde se sabe: quien aprueba no
+                // tiene por qué adivinar qué documento había delante.
+                AppCampo(
+                  controlador: _motivo,
+                  etiqueta: 'Para qué lo necesitas',
+                  pista: 'Ej.: la NV-000002 salió con el cliente equivocado',
+                  opcional: true,
+                  maxLargo: 250,
+                  habilitado: !_enviando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
+
+                AppBoton(
+                  texto: 'Pedir permiso',
+                  cargando: _enviando,
+                  onPressed: _pedir,
+                ),
+                const SizedBox(height: Dimen.espacio2),
+                AppBoton(
+                  texto: 'Ahora no',
+                  variante: BotonVariante.secundario,
+                  onPressed: _enviando
+                      ? null
+                      : () => Navigator.of(context).pop(),
+                ),
+              ],
+              const SizedBox(height: Dimen.espacio2),
             ],
           ),
-          const SizedBox(height: Dimen.espacio3),
-
-          if (_enviado) ...[
-            const Text(
-              'Un administrador lo verá en su bandeja. Cuando te lo conceda '
-              'podrás seguir sin volver a entrar.',
-              style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
-            ),
-            const SizedBox(height: Dimen.espacio4),
-            AppBoton(
-              texto: 'Entendido',
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ] else ...[
-            const Text(
-              'Tu rol no lo incluye. Puedes pedírselo a un administrador desde '
-              'aquí mismo.',
-              style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
-            ),
-            const SizedBox(height: Dimen.espacio3),
-
-            if (_error != null) ...[
-              AppAlerta(_error!),
-              const SizedBox(height: Dimen.espacio3),
-            ],
-
-            // El motivo es lo único que explica para qué hace falta. Va aquí y
-            // no en la bandeja porque aquí es donde se sabe: quien aprueba no
-            // tiene por qué adivinar qué documento había delante.
-            AppCampo(
-              controlador: _motivo,
-              etiqueta: 'Para qué lo necesitas',
-              pista: 'Ej.: la NV-000002 salió con el cliente equivocado',
-              opcional: true,
-              maxLargo: 250,
-              habilitado: !_enviando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
-
-            AppBoton(
-              texto: 'Pedir permiso',
-              cargando: _enviando,
-              onPressed: _pedir,
-            ),
-            const SizedBox(height: Dimen.espacio2),
-            AppBoton(
-              texto: 'Ahora no',
-              variante: BotonVariante.secundario,
-              onPressed: _enviando ? null : () => Navigator.of(context).pop(),
-            ),
-          ],
-          const SizedBox(height: Dimen.espacio2),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

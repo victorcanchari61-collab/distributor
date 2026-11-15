@@ -10,6 +10,7 @@ import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import 'app_acciones_flotantes.dart';
 import 'app_aviso.dart';
+import 'app_hoja.dart';
 import '../../core/tema/dimensiones.dart';
 
 /// Los documentos que se pueden imprimir, con la ruta que los sirve.
@@ -82,16 +83,9 @@ Future<void> mostrarOpcionesPdf(
 }) {
   final acento = Acento.de(context);
 
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (hoja) => _HojaPdf(
+  return abrirHoja<void>(
+    context,
+    (hoja) => _HojaPdf(
       documento: documento,
       id: id,
       numero: numero,
@@ -159,67 +153,70 @@ class _HojaPdfState extends State<_HojaPdf> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Dimen.espacio4,
-        0,
-        Dimen.espacio4,
-        Dimen.espacio5,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Imprimir ${widget.numero}',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja(
+          'Imprimir ${widget.numero}',
+          subtitulo: 'Elige el papel en el que se va a imprimir.',
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Dimen.espacio4,
+            0,
+            Dimen.espacio4,
+            Dimen.espacio5,
           ),
-          const SizedBox(height: 2),
-          const Text(
-            'Elige el papel en el que se va a imprimir.',
-            style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
-          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_error != null) ...[
+                const SizedBox(height: Dimen.espacio3),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(Dimen.espacio3),
+                  decoration: BoxDecoration(
+                    color: Colores.peligro.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                  ),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colores.peligro,
+                    ),
+                  ),
+                ),
+              ],
 
-          if (_error != null) ...[
-            const SizedBox(height: Dimen.espacio3),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(Dimen.espacio3),
-              decoration: BoxDecoration(
-                color: Colores.peligro.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(Dimen.radioCampo),
+              const SizedBox(height: Dimen.espacio4),
+              _Opcion(
+                icono: Icons.print_outlined,
+                titulo: 'Hoja A4',
+                nota:
+                    'Impresora de oficina. Lleva el detalle completo y espacio '
+                    'para firmar.',
+                acento: widget.acento,
+                cargando: _bajando == 'a4',
+                onTap: _bajando == null ? () => _bajar('a4') : null,
               ),
-              child: Text(
-                _error!,
-                style: const TextStyle(fontSize: 13, color: Colores.peligro),
+              const SizedBox(height: Dimen.espacio3),
+              _Opcion(
+                icono: Icons.receipt_long_outlined,
+                titulo: 'Ticket 80 mm',
+                nota:
+                    'Rollo termico del reparto. Mas corto, pensado para entregar '
+                    'en mano.',
+                acento: widget.acento,
+                cargando: _bajando == 'ticket',
+                onTap: _bajando == null ? () => _bajar('ticket') : null,
               ),
-            ),
-          ],
-
-          const SizedBox(height: Dimen.espacio4),
-          _Opcion(
-            icono: Icons.print_outlined,
-            titulo: 'Hoja A4',
-            nota:
-                'Impresora de oficina. Lleva el detalle completo y espacio '
-                'para firmar.',
-            acento: widget.acento,
-            cargando: _bajando == 'a4',
-            onTap: _bajando == null ? () => _bajar('a4') : null,
+            ],
           ),
-          const SizedBox(height: Dimen.espacio3),
-          _Opcion(
-            icono: Icons.receipt_long_outlined,
-            titulo: 'Ticket 80 mm',
-            nota:
-                'Rollo termico del reparto. Mas corto, pensado para entregar '
-                'en mano.',
-            acento: widget.acento,
-            cargando: _bajando == 'ticket',
-            onTap: _bajando == null ? () => _bajar('ticket') : null,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

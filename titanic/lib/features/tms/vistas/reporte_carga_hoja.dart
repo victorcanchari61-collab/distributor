@@ -6,9 +6,9 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/despacho.dart';
@@ -28,21 +28,9 @@ Future<void> mostrarReporteCarga(
   required int despachoId,
   required String numero,
 }) {
-  final acento = Acento.de(context);
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (hoja) => Acento(
-      color: acento,
-      child: _HojaReporteCarga(despachoId: despachoId, numero: numero),
-    ),
+  return abrirHoja<void>(
+    context,
+    (hoja) => _HojaReporteCarga(despachoId: despachoId, numero: numero),
   );
 }
 
@@ -115,199 +103,212 @@ class _HojaReporteCargaState extends ConsumerState<_HojaReporteCarga> {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          Dimen.espacio4,
-          0,
-          Dimen.espacio4,
-          Dimen.espacio4 + MediaQuery.of(context).padding.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Reporte de carga',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              'Elige qué entra. Sin marcar nada sale todo el camión.',
-              style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
-            ),
-            const SizedBox(height: Dimen.espacio4),
-
-            if (_error != null) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(Dimen.espacio3),
-                decoration: BoxDecoration(
-                  color: Colores.peligroSuave,
-                  borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                ),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(fontSize: 13, color: Colores.peligro),
-                ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const EncabezadoHoja('Reporte de carga'),
+          Flexible(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                Dimen.espacio4,
+                Dimen.espacio4,
+                Dimen.espacio4,
+                Dimen.espacio4 + MediaQuery.of(context).padding.bottom,
               ),
-              const SizedBox(height: Dimen.espacio3),
-            ],
-
-            Flexible(
-              child: opcionesAsync.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: Dimen.espacio5),
-                  child: Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Elige qué entra. Sin marcar nada sale todo el camión.',
+                    style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
                   ),
-                ),
-                error: (e, _) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Dimen.espacio5),
-                  child: Text(
-                    e is ApiExcepcion
-                        ? e.texto
-                        : 'No pudimos cargar los filtros.',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colores.peligro,
+                  const SizedBox(height: Dimen.espacio4),
+
+                  if (_error != null) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(Dimen.espacio3),
+                      decoration: BoxDecoration(
+                        color: Colores.peligroSuave,
+                        borderRadius: BorderRadius.circular(Dimen.radioCampo),
+                      ),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colores.peligro,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: Dimen.espacio3),
+                  ],
+
+                  Flexible(
+                    child: opcionesAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.symmetric(vertical: Dimen.espacio5),
+                        child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                      error: (e, _) => Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: Dimen.espacio5,
+                        ),
+                        child: Text(
+                          e is ApiExcepcion
+                              ? e.texto
+                              : 'No pudimos cargar los filtros.',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colores.peligro,
+                          ),
+                        ),
+                      ),
+                      data: (opciones) => SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Solo si el servidor ofrece cortes: uno más antiguo no
+                            // los conoce y el reporte sale del camión completo.
+                            if (opciones.cortes.isNotEmpty) ...[
+                              AppSelector<int>(
+                                valor: _corte,
+                                etiqueta: 'Corte de horario',
+                                icono: Icons.schedule_outlined,
+                                // Los nombres traen las horas al final: en una sola
+                                // línea se cortaban justo ahí.
+                                lineasOpcion: 2,
+                                opciones: [
+                                  for (final c in opciones.cortes)
+                                    Opcion(c.codigo, c.nombre),
+                                ],
+                                onCambio: (v) =>
+                                    setState(() => _corte = v ?? 0),
+                              ),
+                              const SizedBox(height: Dimen.espacio4),
+                            ],
+                            if (opciones.mercados.isNotEmpty) ...[
+                              const Text(
+                                'Mercados',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              for (final m in opciones.mercados)
+                                CheckboxListTile(
+                                  value: _mercados.contains(m.id),
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    'Mercado ${m.nombre} (${m.pedidos} ${m.pedidos == 1 ? 'pedido' : 'pedidos'})',
+                                    style: const TextStyle(fontSize: 13.5),
+                                  ),
+                                  onChanged: (v) => setState(() {
+                                    if (v ?? false) {
+                                      _mercados.add(m.id);
+                                    } else {
+                                      _mercados.remove(m.id);
+                                    }
+                                  }),
+                                ),
+                              const SizedBox(height: Dimen.espacio3),
+                            ],
+                            if (opciones.categorias.isNotEmpty) ...[
+                              const Text(
+                                'Categorías',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              for (final c in opciones.categorias)
+                                CheckboxListTile(
+                                  value: _categorias.contains(c.id),
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    '${c.nombre} (${c.productos} ${c.productos == 1 ? 'producto' : 'productos'})',
+                                    style: const TextStyle(fontSize: 13.5),
+                                  ),
+                                  onChanged: (v) => setState(() {
+                                    if (v ?? false) {
+                                      _categorias.add(c.id);
+                                    } else {
+                                      _categorias.remove(c.id);
+                                    }
+                                  }),
+                                ),
+                              const SizedBox(height: Dimen.espacio3),
+                            ],
+                            if (opciones.unidades.isNotEmpty) ...[
+                              const Text(
+                                'Unidades de medida',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              for (final u in opciones.unidades)
+                                CheckboxListTile(
+                                  value: _unidades.contains(u.codigo),
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    '${u.nombre} (${u.productos} ${u.productos == 1 ? 'producto' : 'productos'})',
+                                    style: const TextStyle(fontSize: 13.5),
+                                  ),
+                                  onChanged: (v) => setState(() {
+                                    if (v ?? false) {
+                                      _unidades.add(u.codigo);
+                                    } else {
+                                      _unidades.remove(u.codigo);
+                                    }
+                                  }),
+                                ),
+                              const SizedBox(height: Dimen.espacio3),
+                            ],
+                            CheckboxListTile(
+                              value: _porMercado,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text(
+                                'Separar por mercado (un bloque por cada uno)',
+                                style: TextStyle(fontSize: 13.5),
+                              ),
+                              onChanged: (v) =>
+                                  setState(() => _porMercado = v ?? false),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                data: (opciones) => SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Solo si el servidor ofrece cortes: uno más antiguo no
-                      // los conoce y el reporte sale del camión completo.
-                      if (opciones.cortes.isNotEmpty) ...[
-                        AppSelector<int>(
-                          valor: _corte,
-                          etiqueta: 'Corte de horario',
-                          icono: Icons.schedule_outlined,
-                          // Los nombres traen las horas al final: en una sola
-                          // línea se cortaban justo ahí.
-                          lineasOpcion: 2,
-                          opciones: [
-                            for (final c in opciones.cortes)
-                              Opcion(c.codigo, c.nombre),
-                          ],
-                          onCambio: (v) => setState(() => _corte = v ?? 0),
-                        ),
-                        const SizedBox(height: Dimen.espacio4),
-                      ],
-                      if (opciones.mercados.isNotEmpty) ...[
-                        const Text(
-                          'Mercados',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        for (final m in opciones.mercados)
-                          CheckboxListTile(
-                            value: _mercados.contains(m.id),
-                            controlAffinity: ListTileControlAffinity.leading,
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              'Mercado ${m.nombre} (${m.pedidos} ${m.pedidos == 1 ? 'pedido' : 'pedidos'})',
-                              style: const TextStyle(fontSize: 13.5),
-                            ),
-                            onChanged: (v) => setState(() {
-                              if (v ?? false) {
-                                _mercados.add(m.id);
-                              } else {
-                                _mercados.remove(m.id);
-                              }
-                            }),
-                          ),
-                        const SizedBox(height: Dimen.espacio3),
-                      ],
-                      if (opciones.categorias.isNotEmpty) ...[
-                        const Text(
-                          'Categorías',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        for (final c in opciones.categorias)
-                          CheckboxListTile(
-                            value: _categorias.contains(c.id),
-                            controlAffinity: ListTileControlAffinity.leading,
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              '${c.nombre} (${c.productos} ${c.productos == 1 ? 'producto' : 'productos'})',
-                              style: const TextStyle(fontSize: 13.5),
-                            ),
-                            onChanged: (v) => setState(() {
-                              if (v ?? false) {
-                                _categorias.add(c.id);
-                              } else {
-                                _categorias.remove(c.id);
-                              }
-                            }),
-                          ),
-                        const SizedBox(height: Dimen.espacio3),
-                      ],
-                      if (opciones.unidades.isNotEmpty) ...[
-                        const Text(
-                          'Unidades de medida',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        for (final u in opciones.unidades)
-                          CheckboxListTile(
-                            value: _unidades.contains(u.codigo),
-                            controlAffinity: ListTileControlAffinity.leading,
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              '${u.nombre} (${u.productos} ${u.productos == 1 ? 'producto' : 'productos'})',
-                              style: const TextStyle(fontSize: 13.5),
-                            ),
-                            onChanged: (v) => setState(() {
-                              if (v ?? false) {
-                                _unidades.add(u.codigo);
-                              } else {
-                                _unidades.remove(u.codigo);
-                              }
-                            }),
-                          ),
-                        const SizedBox(height: Dimen.espacio3),
-                      ],
-                      CheckboxListTile(
-                        value: _porMercado,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text(
-                          'Separar por mercado (un bloque por cada uno)',
-                          style: TextStyle(fontSize: 13.5),
-                        ),
-                        onChanged: (v) =>
-                            setState(() => _porMercado = v ?? false),
-                      ),
-                    ],
+                  const SizedBox(height: Dimen.espacio4),
+
+                  AppBoton(
+                    texto: 'Generar',
+                    expandido: true,
+                    cargando: _generando,
+                    onPressed: opcionesAsync.valueOrNull == null
+                        ? null
+                        : () => _generar(opcionesAsync.value!),
                   ),
-                ),
+                ],
               ),
             ),
-            const SizedBox(height: Dimen.espacio4),
-
-            AppBoton(
-              texto: 'Generar',
-              expandido: true,
-              cargando: _generando,
-              onPressed: opcionesAsync.valueOrNull == null
-                  ? null
-                  : () => _generar(opcionesAsync.value!),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

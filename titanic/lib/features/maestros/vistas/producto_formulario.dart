@@ -5,6 +5,8 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_hoja.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -349,17 +351,22 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
             _esNuevo ? 'Nuevo producto' : 'Editar producto',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: [
-              const Tab(text: 'Datos'),
-              Tab(text: 'Presentaciones (${_filas.length})'),
-            ],
-          ),
         ),
         body: SafeArea(
           child: Column(
             children: [
+              // Las mismas pestañas de las pantallas: en el rectángulo gris, la
+              // activa con el color del módulo y cuántas presentaciones hay.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+                child: PestanasHoja(
+                  controlador: _tabController,
+                  pestanas: [
+                    const Pestana(0, 'Datos'),
+                    Pestana(1, 'Presentaciones', contador: _filas.length),
+                  ],
+                ),
+              ),
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
@@ -693,87 +700,79 @@ class _ProductoFormularioState extends ConsumerState<ProductoFormulario>
     var guardando = false;
     String? error;
 
-    final creadoId = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colores.superficie,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      builder: (contexto) => StatefulBuilder(
-        builder: (contexto, setHoja) => Padding(
-          padding: EdgeInsets.only(
-            left: Dimen.espacio4,
-            right: Dimen.espacio4,
-            top: Dimen.espacio4,
-            bottom: MediaQuery.of(contexto).viewInsets.bottom + Dimen.espacio4,
-          ),
-          child: Column(
+    // El acento se vuelve a declarar: el context de este State queda por
+    // encima del Acento.modulo de su build.
+    final creadoId = await abrirHoja<int>(
+      context,
+      (_) => Acento.modulo(
+        'maestros',
+        (contexto) => StatefulBuilder(
+          builder: (contexto, setHoja) => Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                titulo,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+              EncabezadoHoja(titulo),
+              Padding(
+                padding: const EdgeInsets.all(Dimen.espacio4),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (error != null) ...[
+                      AppAlerta(error!),
+                      const SizedBox(height: Dimen.espacio3),
+                    ],
+                    AppCampo(
+                      controlador: nombre,
+                      etiqueta: etiqueta,
+                      habilitado: !guardando,
+                    ),
+                    if (conCodigo) ...[
+                      const SizedBox(height: Dimen.espacio3),
+                      AppCampo(
+                        controlador: codigo,
+                        etiqueta: 'Código',
+                        pista: 'KG, UND, SAC',
+                        habilitado: !guardando,
+                      ),
+                    ],
+                    const SizedBox(height: Dimen.espacio4),
+                    AppBoton(
+                      texto: 'Crear',
+                      cargando: guardando,
+                      onPressed: () async {
+                        if (nombre.text.trim().isEmpty) {
+                          setHoja(() => error = 'Ingresa el nombre.');
+                          return;
+                        }
+                        if (conCodigo && codigo.text.trim().isEmpty) {
+                          setHoja(() => error = 'Ingresa el código.');
+                          return;
+                        }
+
+                        setHoja(() {
+                          guardando = true;
+                          error = null;
+                        });
+
+                        try {
+                          final id = await crear(
+                            nombre.text.trim(),
+                            codigo.text.trim(),
+                          );
+                          if (contexto.mounted) Navigator.pop(contexto, id);
+                        } on ApiExcepcion catch (e) {
+                          setHoja(() {
+                            guardando = false;
+                            error = e.mensaje;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: Dimen.espacio2),
+                  ],
                 ),
               ),
-              const SizedBox(height: Dimen.espacio4),
-              if (error != null) ...[
-                AppAlerta(error!),
-                const SizedBox(height: Dimen.espacio3),
-              ],
-              AppCampo(
-                controlador: nombre,
-                etiqueta: etiqueta,
-                habilitado: !guardando,
-              ),
-              if (conCodigo) ...[
-                const SizedBox(height: Dimen.espacio3),
-                AppCampo(
-                  controlador: codigo,
-                  etiqueta: 'Código',
-                  pista: 'KG, UND, SAC',
-                  habilitado: !guardando,
-                ),
-              ],
-              const SizedBox(height: Dimen.espacio4),
-              AppBoton(
-                texto: 'Crear',
-                cargando: guardando,
-                onPressed: () async {
-                  if (nombre.text.trim().isEmpty) {
-                    setHoja(() => error = 'Ingresa el nombre.');
-                    return;
-                  }
-                  if (conCodigo && codigo.text.trim().isEmpty) {
-                    setHoja(() => error = 'Ingresa el código.');
-                    return;
-                  }
-
-                  setHoja(() {
-                    guardando = true;
-                    error = null;
-                  });
-
-                  try {
-                    final id = await crear(
-                      nombre.text.trim(),
-                      codigo.text.trim(),
-                    );
-                    if (contexto.mounted) Navigator.pop(contexto, id);
-                  } on ApiExcepcion catch (e) {
-                    setHoja(() {
-                      guardando = false;
-                      error = e.mensaje;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: Dimen.espacio2),
             ],
           ),
         ),
@@ -983,17 +982,11 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
   String? errorUnidad;
   String? errorFactor;
 
-  return showModalBottomSheet<_FilaPresentacion>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (context) {
+  // El acento se vuelve a declarar: el context que llega es el del State del
+  // formulario, que queda por encima de su Acento.modulo.
+  return abrirHoja<_FilaPresentacion>(
+    context,
+    (_) => Acento.modulo('maestros', (context) {
       return StatefulBuilder(
         builder: (context, setSheetState) {
           void guardar() {
@@ -1032,130 +1025,128 @@ Future<_FilaPresentacion?> _mostrarHojaPresentacion(
             );
           }
 
-          return Padding(
-            padding: EdgeInsets.only(
-              left: Dimen.espacio4,
-              right: Dimen.espacio4,
-              top: Dimen.espacio2,
-              bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-            ),
-            // Con scroll: con el teclado abierto sobre el factor y la linea de
-            // "Por presentación (PDF)" de mas, la hoja ya no entra en pantallas
-            // chicas y el boton de guardar quedaria tapado.
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    existente == null
-                        ? 'Nueva presentación'
-                        : 'Editar presentación',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colores.tinta,
-                    ),
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  AppCampo(
-                    controlador: nombreCtrl,
-                    etiqueta: 'Nombre',
-                    pista: 'Saco de 50, Caja x12...',
-                    icono: Icons.label_outline,
-                    error: errorNombre,
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  AppSelector<int>(
-                    valor: unidadId,
-                    etiqueta: 'Unidad',
-                    icono: Icons.straighten_outlined,
-                    error: errorUnidad,
-                    opciones: [
-                      for (final u in unidades)
-                        Opcion(u.id, '${u.nombre} (${u.codigo})'),
-                    ],
-                    onCambio: (v) => setSheetState(() => unidadId = v),
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  AppCampo(
-                    controlador: factorCtrl,
-                    etiqueta: 'Factor',
-                    pista: 'Cuántas unidades base equivale',
-                    icono: Icons.calculate_outlined,
-                    tipoTeclado: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    error: errorFactor,
-                  ),
-                  const SizedBox(height: Dimen.espacio2),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CheckboxListTile(
-                          value: esCompra,
-                          onChanged: (v) =>
-                              setSheetState(() => esCompra = v ?? true),
-                          title: const Text(
-                            'Compra',
-                            style: TextStyle(fontSize: 13),
-                          ),
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                        ),
-                      ),
-                      Expanded(
-                        child: CheckboxListTile(
-                          value: esVenta,
-                          onChanged: (v) =>
-                              setSheetState(() => esVenta = v ?? true),
-                          title: const Text(
-                            'Venta',
-                            style: TextStyle(fontSize: 13),
-                          ),
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Solo en las presentaciones extra: esta hoja nunca edita la
-                  // base, donde "por presentacion" y "por unidad base" son lo mismo.
-                  CheckboxListTile(
-                    value: precioPorPresentacion,
-                    onChanged: (v) =>
-                        setSheetState(() => precioPorPresentacion = v ?? false),
-                    title: const Text(
-                      'Por presentación (PDF)',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                    subtitle: const Text(
-                      'En los PDF (pedidos, ventas, compras, ajustes, transferencias y '
-                      'préstamos) la línea sale en esta presentación. Sin marcar, '
-                      'sale en unidad base.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: Colores.tintaSuave,
-                      ),
-                    ),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  AppBoton(
-                    texto: existente == null ? 'Agregar' : 'Guardar cambios',
-                    onPressed: guardar,
-                  ),
-                ],
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              EncabezadoHoja(
+                existente == null
+                    ? 'Nueva presentación'
+                    : 'Editar presentación',
               ),
-            ),
+              // Con scroll: con el teclado abierto sobre el factor y la linea de
+              // "Por presentación (PDF)" de mas, la hoja ya no entra en pantallas
+              // chicas y el boton de guardar quedaria tapado.
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(Dimen.espacio4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AppCampo(
+                        controlador: nombreCtrl,
+                        etiqueta: 'Nombre',
+                        pista: 'Saco de 50, Caja x12...',
+                        icono: Icons.label_outline,
+                        error: errorNombre,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+                      AppSelector<int>(
+                        valor: unidadId,
+                        etiqueta: 'Unidad',
+                        icono: Icons.straighten_outlined,
+                        error: errorUnidad,
+                        opciones: [
+                          for (final u in unidades)
+                            Opcion(u.id, '${u.nombre} (${u.codigo})'),
+                        ],
+                        onCambio: (v) => setSheetState(() => unidadId = v),
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+                      AppCampo(
+                        controlador: factorCtrl,
+                        etiqueta: 'Factor',
+                        pista: 'Cuántas unidades base equivale',
+                        icono: Icons.calculate_outlined,
+                        tipoTeclado: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        error: errorFactor,
+                      ),
+                      const SizedBox(height: Dimen.espacio2),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CheckboxListTile(
+                              value: esCompra,
+                              onChanged: (v) =>
+                                  setSheetState(() => esCompra = v ?? true),
+                              title: const Text(
+                                'Compra',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                            ),
+                          ),
+                          Expanded(
+                            child: CheckboxListTile(
+                              value: esVenta,
+                              onChanged: (v) =>
+                                  setSheetState(() => esVenta = v ?? true),
+                              title: const Text(
+                                'Venta',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Solo en las presentaciones extra: esta hoja nunca edita la
+                      // base, donde "por presentacion" y "por unidad base" son lo mismo.
+                      CheckboxListTile(
+                        value: precioPorPresentacion,
+                        onChanged: (v) => setSheetState(
+                          () => precioPorPresentacion = v ?? false,
+                        ),
+                        title: const Text(
+                          'Por presentación (PDF)',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                        subtitle: const Text(
+                          'En los PDF (pedidos, ventas, compras, ajustes, transferencias y '
+                          'préstamos) la línea sale en esta presentación. Sin marcar, '
+                          'sale en unidad base.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Colores.tintaSuave,
+                          ),
+                        ),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+                      AppBoton(
+                        texto: existente == null
+                            ? 'Agregar'
+                            : 'Guardar cambios',
+                        onPressed: guardar,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           );
         },
       );
-    },
+    }),
   );
 }
 

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_hoja.dart';
+import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -200,210 +202,221 @@ class _VehiculoFormularioState extends ConsumerState<VehiculoFormulario>
             _esNuevo ? 'Nuevo vehículo' : 'Editar vehículo',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          bottom: TabBar(
-            controller: _tabs,
-            tabs: const [
-              Tab(text: 'Datos'),
-              Tab(text: 'Recorrido'),
-            ],
-          ),
         ),
-        body: TabBarView(
-          controller: _tabs,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ListView(
-              padding: const EdgeInsets.all(Dimen.espacio4),
-              children: [
-                if (_error != null) ...[
-                  AppAlerta(_error!),
-                  const SizedBox(height: Dimen.espacio4),
-                ],
-
-                AppCampo(
-                  controlador: _placa,
-                  etiqueta: 'Placa',
-                  pista: 'ABC-123',
-                  icono: Icons.confirmation_number_outlined,
-                  maxLargo: 15,
-                  error: _errorPlaca,
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                AppSelector<int>(
-                  valor: _tipoVehiculoId,
-                  etiqueta: 'Tipo de vehículo',
-                  icono: Icons.category_outlined,
-                  error: _errorTipo,
-                  habilitado: !_guardando,
-                  opciones: [for (final t in tipos) Opcion(t.id, t.nombre)],
-                  onCambio: (v) => setState(() {
-                    _tipoVehiculoId = v;
-                    _errorTipo = null;
-                  }),
-                ),
-                if (sinTipos) ...[
-                  const SizedBox(height: Dimen.espacio2),
-                  const AppAlerta(
-                    'No hay tipos de vehículo activos. Crea uno en "Tipos de vehículo", '
-                    'en la pantalla de Flota, antes de dar de alta un vehículo.',
-                  ),
-                ],
-                const SizedBox(height: Dimen.espacio4),
-
-                AppSelector<int?>(
-                  valor: _conductorId,
-                  etiqueta: 'Conductor habitual',
-                  icono: Icons.person_outline,
-                  habilitado: !_guardando,
-                  opciones: [
-                    const Opcion(null, 'Sin asignar'),
-                    for (final c in conductores) Opcion(c.id, c.nombre),
-                  ],
-                  onCambio: (v) => setState(() => _conductorId = v),
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                AppCampo(
-                  controlador: _marca,
-                  etiqueta: 'Marca',
-                  icono: Icons.badge_outlined,
-                  opcional: true,
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                AppCampo(
-                  controlador: _modelo,
-                  etiqueta: 'Modelo',
-                  icono: Icons.directions_car_outlined,
-                  opcional: true,
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                AppCampo(
-                  controlador: _anio,
-                  etiqueta: 'Año',
-                  icono: Icons.calendar_today_outlined,
-                  opcional: true,
-                  tipoTeclado: TextInputType.number,
-                  formateadores: [FilteringTextInputFormatter.digitsOnly],
-                  maxLargo: 4,
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                AppCampo(
-                  controlador: _color,
-                  etiqueta: 'Color',
-                  icono: Icons.palette_outlined,
-                  opcional: true,
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                AppCampo(
-                  controlador: _capacidad,
-                  etiqueta: 'Capacidad en kg',
-                  icono: Icons.scale_outlined,
-                  opcional: true,
-                  tipoTeclado: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                AppCampo(
-                  controlador: _soatNumero,
-                  etiqueta: 'Número de SOAT',
-                  icono: Icons.description_outlined,
-                  opcional: true,
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                CampoFecha(
-                  etiqueta: 'Vence el SOAT',
-                  valor: _soatVence,
-                  onCambio: (v) => setState(() => _soatVence = v),
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                CampoFecha(
-                  etiqueta: 'Vence la revisión técnica',
-                  valor: _revisionVence,
-                  onCambio: (v) => setState(() => _revisionVence = v),
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                CampoFecha(
-                  etiqueta: 'Vence el permiso de circulación',
-                  valor: _permisoVence,
-                  onCambio: (v) => setState(() => _permisoVence = v),
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                CampoFoto(
-                  ruta: _foto,
-                  carpeta: 'vehiculos',
-                  onCambio: (r) => setState(() => _foto = r),
-                  onSubiendo: (s) => setState(() => _subiendoFoto = s),
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio4),
-
-                AppCampo(
-                  controlador: _observacion,
-                  etiqueta: 'Observación',
-                  icono: Icons.notes_outlined,
-                  opcional: true,
-                  maxLargo: 300,
-                  habilitado: !_guardando,
-                ),
-                const SizedBox(height: Dimen.espacio3),
-
-                CheckboxListTile(
-                  value: _activo,
-                  onChanged: _guardando
-                      ? null
-                      : (v) => setState(() => _activo = v ?? true),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  title: const Text(
-                    'Activo',
-                    style: TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
-                      color: Colores.tinta,
-                    ),
-                  ),
-                  subtitle: const Text(
-                    'Un vehículo inactivo deja de ofrecerse para repartos, pero conserva su '
-                    'historial.',
-                    style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
-                  ),
-                ),
-                const SizedBox(height: Dimen.espacio6),
-
-                AppBotonesFormulario(
-                  onCancelar: () => Navigator.of(context).pop(),
-                  onGuardar: _subiendoFoto || sinTipos ? null : _guardar,
-                  textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
-                  cargando: _guardando,
-                ),
-                const SizedBox(height: Dimen.espacio5),
-              ],
+            // Las mismas pestañas de las pantallas y las hojas: en el
+            // rectángulo gris, la activa con el color del módulo.
+            PestanasHoja(
+              controlador: _tabs,
+              pestanas: const [Pestana(0, 'Datos'), Pestana(1, 'Recorrido')],
             ),
-            _RecorridoTab(
-              cargando: _cargandoRecorrido,
-              dias: _recorrido,
-              onChange: (dias) => setState(() => _recorrido = dias),
+            Expanded(
+              child: TabBarView(
+                controller: _tabs,
+                children: [
+                  ListView(
+                    padding: const EdgeInsets.all(Dimen.espacio4),
+                    children: [
+                      if (_error != null) ...[
+                        AppAlerta(_error!),
+                        const SizedBox(height: Dimen.espacio4),
+                      ],
+
+                      AppCampo(
+                        controlador: _placa,
+                        etiqueta: 'Placa',
+                        pista: 'ABC-123',
+                        icono: Icons.confirmation_number_outlined,
+                        maxLargo: 15,
+                        error: _errorPlaca,
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      AppSelector<int>(
+                        valor: _tipoVehiculoId,
+                        etiqueta: 'Tipo de vehículo',
+                        icono: Icons.category_outlined,
+                        error: _errorTipo,
+                        habilitado: !_guardando,
+                        opciones: [
+                          for (final t in tipos) Opcion(t.id, t.nombre),
+                        ],
+                        onCambio: (v) => setState(() {
+                          _tipoVehiculoId = v;
+                          _errorTipo = null;
+                        }),
+                      ),
+                      if (sinTipos) ...[
+                        const SizedBox(height: Dimen.espacio2),
+                        const AppAlerta(
+                          'No hay tipos de vehículo activos. Crea uno en "Tipos de vehículo", '
+                          'en la pantalla de Flota, antes de dar de alta un vehículo.',
+                        ),
+                      ],
+                      const SizedBox(height: Dimen.espacio4),
+
+                      AppSelector<int?>(
+                        valor: _conductorId,
+                        etiqueta: 'Conductor habitual',
+                        icono: Icons.person_outline,
+                        habilitado: !_guardando,
+                        opciones: [
+                          const Opcion(null, 'Sin asignar'),
+                          for (final c in conductores) Opcion(c.id, c.nombre),
+                        ],
+                        onCambio: (v) => setState(() => _conductorId = v),
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      AppCampo(
+                        controlador: _marca,
+                        etiqueta: 'Marca',
+                        icono: Icons.badge_outlined,
+                        opcional: true,
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      AppCampo(
+                        controlador: _modelo,
+                        etiqueta: 'Modelo',
+                        icono: Icons.directions_car_outlined,
+                        opcional: true,
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      AppCampo(
+                        controlador: _anio,
+                        etiqueta: 'Año',
+                        icono: Icons.calendar_today_outlined,
+                        opcional: true,
+                        tipoTeclado: TextInputType.number,
+                        formateadores: [FilteringTextInputFormatter.digitsOnly],
+                        maxLargo: 4,
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      AppCampo(
+                        controlador: _color,
+                        etiqueta: 'Color',
+                        icono: Icons.palette_outlined,
+                        opcional: true,
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      AppCampo(
+                        controlador: _capacidad,
+                        etiqueta: 'Capacidad en kg',
+                        icono: Icons.scale_outlined,
+                        opcional: true,
+                        tipoTeclado: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      AppCampo(
+                        controlador: _soatNumero,
+                        etiqueta: 'Número de SOAT',
+                        icono: Icons.description_outlined,
+                        opcional: true,
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      CampoFecha(
+                        etiqueta: 'Vence el SOAT',
+                        valor: _soatVence,
+                        onCambio: (v) => setState(() => _soatVence = v),
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      CampoFecha(
+                        etiqueta: 'Vence la revisión técnica',
+                        valor: _revisionVence,
+                        onCambio: (v) => setState(() => _revisionVence = v),
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      CampoFecha(
+                        etiqueta: 'Vence el permiso de circulación',
+                        valor: _permisoVence,
+                        onCambio: (v) => setState(() => _permisoVence = v),
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      CampoFoto(
+                        ruta: _foto,
+                        carpeta: 'vehiculos',
+                        onCambio: (r) => setState(() => _foto = r),
+                        onSubiendo: (s) => setState(() => _subiendoFoto = s),
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      AppCampo(
+                        controlador: _observacion,
+                        etiqueta: 'Observación',
+                        icono: Icons.notes_outlined,
+                        opcional: true,
+                        maxLargo: 300,
+                        habilitado: !_guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio3),
+
+                      CheckboxListTile(
+                        value: _activo,
+                        onChanged: _guardando
+                            ? null
+                            : (v) => setState(() => _activo = v ?? true),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        title: const Text(
+                          'Activo',
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w600,
+                            color: Colores.tinta,
+                          ),
+                        ),
+                        subtitle: const Text(
+                          'Un vehículo inactivo deja de ofrecerse para repartos, pero conserva su '
+                          'historial.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colores.tintaSuave,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: Dimen.espacio6),
+
+                      AppBotonesFormulario(
+                        onCancelar: () => Navigator.of(context).pop(),
+                        onGuardar: _subiendoFoto || sinTipos ? null : _guardar,
+                        textoGuardar: _esNuevo ? 'Registrar' : 'Guardar',
+                        cargando: _guardando,
+                      ),
+                      const SizedBox(height: Dimen.espacio5),
+                    ],
+                  ),
+                  _RecorridoTab(
+                    cargando: _cargandoRecorrido,
+                    dias: _recorrido,
+                    onChange: (dias) => setState(() => _recorrido = dias),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

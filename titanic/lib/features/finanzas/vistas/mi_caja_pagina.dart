@@ -24,6 +24,7 @@ import '../../../core/tema/dimensiones.dart';
 import '../../ventas/datos/nota_venta.dart' show EstadoVerificacionPago;
 import '../datos/mi_caja.dart';
 import '../estado/mi_caja_controlador.dart';
+import 'hojas_finanzas.dart';
 
 /// La caja de quien esta logueado: su propio dinero en la ruta, y lo que
 /// cobro o pago por Yape o transferencia.
@@ -238,28 +239,12 @@ class MiCajaPagina extends ConsumerWidget {
     );
   }
 
+  // Con la franja de color de Finanzas arriba: el título lo pone [TituloHoja].
   Future<void> _abrirMovimiento(BuildContext context, String tipo) =>
-      _abrirHoja(context, (_) => _HojaMovimiento(tipo: tipo));
+      abrirHojaFinanzas(context, (_) => _HojaMovimiento(tipo: tipo));
 
   Future<void> _abrirCierre(BuildContext context) =>
-      _abrirHoja(context, (_) => const _HojaCierre());
-
-  Future<void> _abrirHoja(BuildContext context, WidgetBuilder hoja) {
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      // La hoja cuelga del Navigator y no hereda el acento del modulo: se
-      // vuelve a declarar, igual que en los formularios.
-      builder: (context) => Acento.modulo('finanzas', hoja),
-    );
-  }
+      abrirHojaFinanzas(context, (_) => const _HojaCierre());
 }
 
 class _TarjetaMovimiento extends StatelessWidget {
@@ -372,14 +357,6 @@ String _fechaHora(DateTime f) =>
 /// Dinero: como mucho dos decimales.
 final _soloMonto = FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'));
 
-/// El margen de una hoja, con lugar para el teclado cuando se abre.
-EdgeInsets _margenHoja(BuildContext context) => EdgeInsets.fromLTRB(
-  Dimen.espacio4,
-  0,
-  Dimen.espacio4,
-  MediaQuery.viewInsetsOf(context).bottom + Dimen.espacio5,
-);
-
 /// Un ingreso o egreso libre: no hace falta que sea una venta ni un gasto de ruta.
 class _HojaMovimiento extends ConsumerStatefulWidget {
   const _HojaMovimiento({required this.tipo});
@@ -459,17 +436,13 @@ class _HojaMovimientoState extends ConsumerState<_HojaMovimiento> {
         .opcional(const []);
 
     return Padding(
-      padding: _margenHoja(context),
+      padding: margenHoja(context),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              _esIngreso ? 'Registrar ingreso' : 'Registrar egreso',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: Dimen.espacio4),
+            TituloHoja(_esIngreso ? 'Registrar ingreso' : 'Registrar egreso'),
             if (_error != null) ...[
               AppAlerta(_error!),
               const SizedBox(height: Dimen.espacio3),
@@ -619,22 +592,17 @@ class _HojaCierreState extends ConsumerState<_HojaCierre> {
         : ((total - esperado) * 100).round() / 100;
 
     return Padding(
-      padding: _margenHoja(context),
+      padding: margenHoja(context),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            const TituloHoja(
               'Cerrar caja',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              apoyo:
+                  'Cuenta billete por billete y moneda por moneda. Lo contado pasa a la Bóveda.',
             ),
-            const SizedBox(height: Dimen.espacio1),
-            const Text(
-              'Cuenta billete por billete y moneda por moneda. Lo contado pasa a la Bóveda.',
-              style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
-            ),
-            const SizedBox(height: Dimen.espacio4),
             if (_error != null) ...[
               AppAlerta(_error!),
               const SizedBox(height: Dimen.espacio3),

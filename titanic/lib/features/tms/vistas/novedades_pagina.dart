@@ -13,6 +13,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
@@ -264,140 +265,122 @@ class NovedadesPagina extends ConsumerWidget {
       return false;
     }
 
-    final guardar = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: Dimen.espacio4,
-                right: Dimen.espacio4,
-                top: Dimen.espacio2,
-                bottom:
-                    Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Revisar ${novedad.producto}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Colores.tinta,
-                      ),
-                    ),
-                    const SizedBox(height: Dimen.espacio2),
-                    Text(
-                      'No se entregó ${novedad.cantidad(novedad.cantidadNoEntregada)} (${novedad.motivo}). '
-                      '¿Qué encontraste al contar lo que volvió?',
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: Colores.tintaSuave,
-                      ),
-                    ),
-                    const SizedBox(height: Dimen.espacio4),
-                    if (error != null) ...[
+    final guardar = await abrirHoja<bool>(context, (context) {
+      return StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              EncabezadoHoja('Revisar ${novedad.producto}'),
+              Flexible(
+                child: SingleChildScrollView(
+                  // El lugar del teclado ya lo deja abrirHoja.
+                  padding: const EdgeInsets.all(Dimen.espacio4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                       Text(
-                        error!,
+                        'No se entregó ${novedad.cantidad(novedad.cantidadNoEntregada)} (${novedad.motivo}). '
+                        '¿Qué encontraste al contar lo que volvió?',
                         style: const TextStyle(
-                          fontSize: 12,
-                          color: Colores.peligro,
+                          fontSize: 12.5,
+                          color: Colores.tintaSuave,
                         ),
                       ),
-                      const SizedBox(height: Dimen.espacio2),
-                    ],
-                    AppSelector<int>(
-                      valor: resultadoId,
-                      etiqueta: 'Resultado',
-                      icono: Icons.fact_check_outlined,
-                      opciones: [
-                        for (final r in resultados) Opcion(r.id, r.nombre),
+                      const SizedBox(height: Dimen.espacio4),
+                      if (error != null) ...[
+                        Text(
+                          error!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colores.peligro,
+                          ),
+                        ),
+                        const SizedBox(height: Dimen.espacio2),
                       ],
-                      onCambio: (v) => setSheetState(() {
-                        resultadoId = v;
-                        error = null;
-                      }),
-                      // El + crea un resultado sin salir de la revisión, y
-                      // lo deja elegido.
-                      onCrear: puedeCrear
-                          ? () async {
-                              final nuevo = await abrirHojaResultado(context);
-                              if (nuevo == null) return;
-                              setSheetState(() {
-                                resultados = [...resultados, nuevo];
-                                resultadoId = nuevo.id;
-                                error = null;
-                              });
-                            }
-                          : null,
-                      etiquetaCrear: 'Nuevo resultado',
-                    ),
-                    if (pideCantidad()) ...[
+                      AppSelector<int>(
+                        valor: resultadoId,
+                        etiqueta: 'Resultado',
+                        icono: Icons.fact_check_outlined,
+                        opciones: [
+                          for (final r in resultados) Opcion(r.id, r.nombre),
+                        ],
+                        onCambio: (v) => setSheetState(() {
+                          resultadoId = v;
+                          error = null;
+                        }),
+                        // El + crea un resultado sin salir de la revisión, y
+                        // lo deja elegido.
+                        onCrear: puedeCrear
+                            ? () async {
+                                final nuevo = await abrirHojaResultado(context);
+                                if (nuevo == null) return;
+                                setSheetState(() {
+                                  resultados = [...resultados, nuevo];
+                                  resultadoId = nuevo.id;
+                                  error = null;
+                                });
+                              }
+                            : null,
+                        etiquetaCrear: 'Nuevo resultado',
+                      ),
+                      if (pideCantidad()) ...[
+                        const SizedBox(height: Dimen.espacio4),
+                        AppCampo(
+                          controlador: regresada,
+                          etiqueta: 'Cuánto volvió (${novedad.unidadBase})',
+                          icono: Icons.inventory_2_outlined,
+                          tipoTeclado: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: Dimen.espacio4),
                       AppCampo(
-                        controlador: regresada,
-                        etiqueta: 'Cuánto volvió (${novedad.unidadBase})',
-                        icono: Icons.inventory_2_outlined,
-                        tipoTeclado: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
+                        controlador: observacion,
+                        etiqueta: 'Observación',
+                        icono: Icons.notes_outlined,
+                        opcional: true,
+                        maxLargo: 250,
                       ),
-                    ],
-                    const SizedBox(height: Dimen.espacio4),
-                    AppCampo(
-                      controlador: observacion,
-                      etiqueta: 'Observación',
-                      icono: Icons.notes_outlined,
-                      opcional: true,
-                      maxLargo: 250,
-                    ),
-                    const SizedBox(height: Dimen.espacio3),
-                    AppBoton(
-                      texto: 'Guardar revisión',
-                      onPressed: () {
-                        if (resultadoId == null) {
-                          setSheetState(() => error = 'Elige el resultado.');
-                          return;
-                        }
-                        if (pideCantidad()) {
-                          final volvio =
-                              double.tryParse(
-                                regresada.text.replaceAll(',', '.'),
-                              ) ??
-                              -1;
-                          if (volvio < 0 ||
-                              volvio >= novedad.cantidadNoEntregada) {
-                            setSheetState(
-                              () => error =
-                                  'Lo que volvió tiene que ser menos de '
-                                  '${novedad.cantidadNoEntregada} ${novedad.unidadBase}.',
-                            );
+                      const SizedBox(height: Dimen.espacio3),
+                      AppBoton(
+                        texto: 'Guardar revisión',
+                        onPressed: () {
+                          if (resultadoId == null) {
+                            setSheetState(() => error = 'Elige el resultado.');
                             return;
                           }
-                        }
-                        Navigator.of(context).pop(true);
-                      },
-                    ),
-                  ],
+                          if (pideCantidad()) {
+                            final volvio =
+                                double.tryParse(
+                                  regresada.text.replaceAll(',', '.'),
+                                ) ??
+                                -1;
+                            if (volvio < 0 ||
+                                volvio >= novedad.cantidadNoEntregada) {
+                              setSheetState(
+                                () => error =
+                                    'Lo que volvió tiene que ser menos de '
+                                    '${novedad.cantidadNoEntregada} ${novedad.unidadBase}.',
+                              );
+                              return;
+                            }
+                          }
+                          Navigator.of(context).pop(true);
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            );
-          },
-        );
-      },
-    );
+            ],
+          );
+        },
+      );
+    });
 
     final cuerpo = <String, dynamic>{
       'resultadoId': resultadoId,
@@ -565,87 +548,65 @@ Future<void> _verificarRecojo(
             .id;
   String? error;
 
-  final confirmar = await showModalBottomSheet<bool>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setSheetState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              left: Dimen.espacio4,
-              right: Dimen.espacio4,
-              top: Dimen.espacio2,
-              bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
+  final confirmar = await abrirHoja<bool>(context, (context) {
+    return StatefulBuilder(
+      builder: (context, setSheetState) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            EncabezadoHoja(
+              'Verificar recojo de ${recojo.producto}',
+              subtitulo: '${recojo.notaVenta} · ${recojo.cliente}',
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Verificar recojo de ${recojo.producto}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colores.tinta,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${recojo.notaVenta} · ${recojo.cliente}',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: Colores.tintaSuave,
-                  ),
-                ),
-                const SizedBox(height: Dimen.espacio4),
-                if (error != null) ...[
-                  Text(
-                    error!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colores.peligro,
+            Padding(
+              // El lugar del teclado ya lo deja abrirHoja.
+              padding: const EdgeInsets.all(Dimen.espacio4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (error != null) ...[
+                    Text(
+                      error!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colores.peligro,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: Dimen.espacio2),
-                ],
-                AppSelector<int>(
-                  valor: almacenId,
-                  etiqueta: 'Almacén',
-                  icono: Icons.warehouse_outlined,
-                  opciones: [
-                    for (final a in almacenes) Opcion<int>(a.id, a.nombre),
+                    const SizedBox(height: Dimen.espacio2),
                   ],
-                  onCambio: (v) => setSheetState(() {
-                    almacenId = v;
-                    error = null;
-                  }),
-                ),
-                const SizedBox(height: Dimen.espacio3),
-                AppBoton(
-                  texto: 'Verificar',
-                  onPressed: () {
-                    if (almacenId == null) {
-                      setSheetState(() => error = 'Elige el almacén.');
-                      return;
-                    }
-                    Navigator.of(context).pop(true);
-                  },
-                ),
-              ],
+                  AppSelector<int>(
+                    valor: almacenId,
+                    etiqueta: 'Almacén',
+                    icono: Icons.warehouse_outlined,
+                    opciones: [
+                      for (final a in almacenes) Opcion<int>(a.id, a.nombre),
+                    ],
+                    onCambio: (v) => setSheetState(() {
+                      almacenId = v;
+                      error = null;
+                    }),
+                  ),
+                  const SizedBox(height: Dimen.espacio3),
+                  AppBoton(
+                    texto: 'Verificar',
+                    onPressed: () {
+                      if (almacenId == null) {
+                        setSheetState(() => error = 'Elige el almacén.');
+                        return;
+                      }
+                      Navigator.of(context).pop(true);
+                    },
+                  ),
+                ],
+              ),
             ),
-          );
-        },
-      );
-    },
-  );
+          ],
+        );
+      },
+    );
+  });
 
   if (confirmar != true || almacenId == null || !context.mounted) return;
 

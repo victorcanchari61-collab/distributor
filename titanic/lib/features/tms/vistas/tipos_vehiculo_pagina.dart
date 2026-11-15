@@ -9,6 +9,7 @@ import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
@@ -110,18 +111,10 @@ class TiposVehiculoPestana extends ConsumerWidget {
   }
 
   Future<void> _abrirHoja(BuildContext context, TipoVehiculo? tipo) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colores.superficie,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      // La hoja cuelga del Navigator y no hereda el acento del modulo.
-      builder: (_) => Acento.modulo('tms', (_) => _HojaTipo(tipo: tipo)),
+    return abrirHoja<void>(
+      context,
+      // Siempre con el acento de TMS, se abra desde donde se abra.
+      (_) => Acento.modulo('tms', (_) => _HojaTipo(tipo: tipo)),
     );
   }
 
@@ -345,82 +338,83 @@ class _HojaTipoState extends ConsumerState<_HojaTipo> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: Dimen.espacio4,
-        right: Dimen.espacio4,
-        top: Dimen.espacio2,
-        bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.tipo == null
-                ? 'Nuevo tipo de vehículo'
-                : 'Editar ${widget.tipo!.nombre}',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Colores.tinta,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja(
+          widget.tipo == null
+              ? 'Nuevo tipo de vehículo'
+              : 'Editar ${widget.tipo!.nombre}',
+        ),
+        Padding(
+          // El lugar del teclado ya lo deja abrirHoja.
+          padding: const EdgeInsets.all(Dimen.espacio4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                AppAlerta(_error!),
+                const SizedBox(height: Dimen.espacio3),
+              ],
+
+              AppCampo(
+                controlador: _nombre,
+                etiqueta: 'Nombre',
+                pista: 'Camión, furgoneta, moto...',
+                icono: Icons.category_outlined,
+                habilitado: !_guardando,
+              ),
+              const SizedBox(height: Dimen.espacio3),
+
+              AppCampo(
+                controlador: _descripcion,
+                etiqueta: 'Descripción',
+                icono: Icons.notes_outlined,
+                opcional: true,
+                maxLargo: 250,
+                habilitado: !_guardando,
+              ),
+              const SizedBox(height: Dimen.espacio3),
+
+              AppCampo(
+                controlador: _capacidad,
+                etiqueta: 'Capacidad de referencia (kg)',
+                pista: 'Se propone al dar de alta un vehículo de este tipo',
+                icono: Icons.scale_outlined,
+                opcional: true,
+                tipoTeclado: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                habilitado: !_guardando,
+              ),
+              const SizedBox(height: Dimen.espacio2),
+
+              CheckboxListTile(
+                value: _activo,
+                onChanged: _guardando
+                    ? null
+                    : (v) => setState(() => _activo = v ?? true),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Activo', style: TextStyle(fontSize: 14)),
+                subtitle: const Text(
+                  'Si se desactiva, deja de ofrecerse al dar de alta vehículos.',
+                  style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                ),
+              ),
+              const SizedBox(height: Dimen.espacio3),
+
+              AppBoton(
+                texto: 'Guardar',
+                cargando: _guardando,
+                onPressed: _guardar,
+              ),
+            ],
           ),
-          const SizedBox(height: Dimen.espacio4),
-
-          if (_error != null) ...[
-            AppAlerta(_error!),
-            const SizedBox(height: Dimen.espacio3),
-          ],
-
-          AppCampo(
-            controlador: _nombre,
-            etiqueta: 'Nombre',
-            pista: 'Camión, furgoneta, moto...',
-            icono: Icons.category_outlined,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio3),
-
-          AppCampo(
-            controlador: _descripcion,
-            etiqueta: 'Descripción',
-            icono: Icons.notes_outlined,
-            opcional: true,
-            maxLargo: 250,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio3),
-
-          AppCampo(
-            controlador: _capacidad,
-            etiqueta: 'Capacidad de referencia (kg)',
-            pista: 'Se propone al dar de alta un vehículo de este tipo',
-            icono: Icons.scale_outlined,
-            opcional: true,
-            tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio2),
-
-          CheckboxListTile(
-            value: _activo,
-            onChanged: _guardando
-                ? null
-                : (v) => setState(() => _activo = v ?? true),
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Activo', style: TextStyle(fontSize: 14)),
-            subtitle: const Text(
-              'Si se desactiva, deja de ofrecerse al dar de alta vehículos.',
-              style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
-            ),
-          ),
-          const SizedBox(height: Dimen.espacio3),
-
-          AppBoton(texto: 'Guardar', cargando: _guardando, onPressed: _guardar),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

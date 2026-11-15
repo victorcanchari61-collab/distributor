@@ -7,6 +7,7 @@ import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/red/excepciones.dart';
@@ -23,243 +24,230 @@ Future<void> mostrarHojaDevolucion(
   WidgetRef ref, {
   required Prestamo prestamo,
 }) {
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (context) {
-      // Vive fuera del StatefulBuilder para sobrevivir entre setSheetState:
-      // se reemplaza tras registrar o anular una devolucion, para que la hoja
-      // muestre el historial al dia sin tener que cerrarla y reabrirla.
-      var prestamoActual = prestamo;
-      var guardando = false;
-      String? error;
-      String? errorAlmacen;
-      int? almacenId;
-      Map<int, TextEditingController> controladores = {
-        for (final d in prestamoActual.detalle.where(
-          (d) => d.cantidadPendiente > 0,
-        ))
-          d.id: TextEditingController(text: formatoNumero(d.cantidadPendiente)),
-      };
+  // Vive fuera del StatefulBuilder para sobrevivir entre setSheetState:
+  // se reemplaza tras registrar o anular una devolucion, para que la hoja
+  // muestre el historial al dia sin tener que cerrarla y reabrirla. Y fuera
+  // del builder de la hoja, que abrirHoja vuelve a llamar al subir el teclado.
+  var prestamoActual = prestamo;
+  var guardando = false;
+  String? error;
+  String? errorAlmacen;
+  int? almacenId;
+  Map<int, TextEditingController> controladores = {
+    for (final d in prestamoActual.detalle.where(
+      (d) => d.cantidadPendiente > 0,
+    ))
+      d.id: TextEditingController(text: formatoNumero(d.cantidadPendiente)),
+  };
 
-      return StatefulBuilder(
-        builder: (context, setSheetState) {
-          final pendientes = prestamoActual.detalle
-              .where((d) => d.cantidadPendiente > 0)
-              .toList();
+  // abrirHoja ya pasa el acento de la vista a la hoja y deja lugar al teclado.
+  return abrirHoja<void>(context, (context) {
+    return StatefulBuilder(
+      builder: (context, setSheetState) {
+        final pendientes = prestamoActual.detalle
+            .where((d) => d.cantidadPendiente > 0)
+            .toList();
 
-          final almacenes = ref.watch(almacenesActivosProvider);
-          // Por defecto el principal, pero se puede cambiar: si ahí no hay
-          // stock (o simplemente conviene guardarlo en otro), se elige
-          // cualquier otro. Solo se sugiere una vez, al abrir la hoja.
-          almacenId ??=
-              almacenes.where((a) => a.esPrincipal).firstOrNull?.id ??
-              almacenes.firstOrNull?.id;
+        final almacenes = ref.watch(almacenesActivosProvider);
+        // Por defecto el principal, pero se puede cambiar: si ahí no hay
+        // stock (o simplemente conviene guardarlo en otro), se elige
+        // cualquier otro. Solo se sugiere una vez, al abrir la hoja.
+        almacenId ??=
+            almacenes.where((a) => a.esPrincipal).firstOrNull?.id ??
+            almacenes.firstOrNull?.id;
 
-          Future<void> refrescar() async {
-            final fresco = await ref
-                .read(prestamosProvider.notifier)
-                .refrescarUno(prestamoActual.id);
-            setSheetState(() {
-              prestamoActual = fresco;
-              controladores = {
-                for (final d in fresco.detalle.where(
-                  (d) => d.cantidadPendiente > 0,
-                ))
-                  d.id: TextEditingController(
-                    text: formatoNumero(d.cantidadPendiente),
-                  ),
-              };
-            });
+        Future<void> refrescar() async {
+          final fresco = await ref
+              .read(prestamosProvider.notifier)
+              .refrescarUno(prestamoActual.id);
+          setSheetState(() {
+            prestamoActual = fresco;
+            controladores = {
+              for (final d in fresco.detalle.where(
+                (d) => d.cantidadPendiente > 0,
+              ))
+                d.id: TextEditingController(
+                  text: formatoNumero(d.cantidadPendiente),
+                ),
+            };
+          });
+        }
+
+        Future<void> guardar() async {
+          if (almacenId == null) {
+            setSheetState(() => errorAlmacen = 'Elige el almacén.');
+            return;
           }
 
-          Future<void> guardar() async {
-            if (almacenId == null) {
-              setSheetState(() => errorAlmacen = 'Elige el almacén.');
-              return;
-            }
-
-            final lineas = <Map<String, dynamic>>[];
-            for (final d in pendientes) {
-              final cantidad = double.tryParse(
-                controladores[d.id]!.text.trim().replaceAll(',', '.'),
-              );
-              if (cantidad != null && cantidad > 0) {
-                lineas.add({'prestamoDetalleId': d.id, 'cantidad': cantidad});
-              }
-            }
-            if (lineas.isEmpty) {
-              setSheetState(
-                () => error =
-                    'Ingresa cuánto se devuelve de al menos un producto.',
-              );
-              return;
-            }
-
-            setSheetState(() {
-              guardando = true;
-              error = null;
-              errorAlmacen = null;
-            });
-
-            final mensajero = Aviso.de(context);
-            try {
-              await ref
-                  .read(prestamosProvider.notifier)
-                  .devolver(prestamoActual.id, {
-                    'almacenId': almacenId,
-                    'detalle': lineas,
-                  });
-              await refrescar();
-              setSheetState(() => guardando = false);
-              mensajero.mostrar('Devolución registrada');
-            } on ApiExcepcion catch (e) {
-              setSheetState(() {
-                guardando = false;
-                error = e.texto;
-              });
-            }
-          }
-
-          Future<void> anular(PrestamoDevolucion d) async {
-            final ok = await confirmarAccion(
-              context,
-              titulo: 'Anular devolución ${d.numero}',
-              mensaje:
-                  'Revierte el stock que movió esta devolución y la línea del '
-                  'préstamo vuelve a quedar pendiente por esa cantidad. No se '
-                  'puede deshacer.',
-              textoConfirmar: 'Anular',
-              tono: ConfirmTono.peligro,
+          final lineas = <Map<String, dynamic>>[];
+          for (final d in pendientes) {
+            final cantidad = double.tryParse(
+              controladores[d.id]!.text.trim().replaceAll(',', '.'),
             );
-            if (!ok || !context.mounted) return;
-
-            final mensajero = Aviso.de(context);
-            try {
-              await ref
-                  .read(prestamosProvider.notifier)
-                  .anularDevolucion(d.id);
-              await refrescar();
-              mensajero.mostrar('Devolución anulada');
-            } on ApiExcepcion catch (e) {
-              mensajero.error(e.texto);
+            if (cantidad != null && cantidad > 0) {
+              lineas.add({'prestamoDetalleId': d.id, 'cantidad': cantidad});
             }
           }
+          if (lineas.isEmpty) {
+            setSheetState(
+              () =>
+                  error = 'Ingresa cuánto se devuelve de al menos un producto.',
+            );
+            return;
+          }
 
-          return Padding(
-            padding: EdgeInsets.only(
-              left: Dimen.espacio4,
-              right: Dimen.espacio4,
-              top: Dimen.espacio2,
-              bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Devolución de ${prestamoActual.numero}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colores.tinta,
-                    ),
-                  ),
-                  if (prestamoActual.devoluciones.isNotEmpty) ...[
-                    const SizedBox(height: Dimen.espacio4),
-                    const Text(
-                      'Devoluciones registradas',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: Colores.tinta,
-                      ),
-                    ),
-                    const SizedBox(height: Dimen.espacio2),
-                    for (final d in prestamoActual.devoluciones) ...[
-                      _FilaDevolucion(devolucion: d, onAnular: () => anular(d)),
-                      const SizedBox(height: Dimen.espacio2),
-                    ],
-                  ],
+          setSheetState(() {
+            guardando = true;
+            error = null;
+            errorAlmacen = null;
+          });
 
-                  const SizedBox(height: Dimen.espacio2),
-                  if (error != null) ...[
-                    AppAlerta(error!),
-                    const SizedBox(height: Dimen.espacio3),
-                  ],
+          final mensajero = Aviso.de(context);
+          try {
+            await ref.read(prestamosProvider.notifier).devolver(
+              prestamoActual.id,
+              {'almacenId': almacenId, 'detalle': lineas},
+            );
+            await refrescar();
+            setSheetState(() => guardando = false);
+            mensajero.mostrar('Devolución registrada');
+          } on ApiExcepcion catch (e) {
+            setSheetState(() {
+              guardando = false;
+              error = e.texto;
+            });
+          }
+        }
 
-                  if (pendientes.isNotEmpty) ...[
-                    const Text(
-                      'Registrar nueva devolución',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: Colores.tinta,
-                      ),
-                    ),
-                    const SizedBox(height: Dimen.espacio2),
-                    AppSelector<int>(
-                      valor: almacenId,
-                      etiqueta: prestamoActual.esDado ? 'Entra a' : 'Sale de',
-                      icono: Icons.warehouse_outlined,
-                      error: errorAlmacen,
-                      opciones: [
-                        for (final a in almacenes) Opcion<int>(a.id, a.nombre),
-                      ],
-                      onCambio: (v) => setSheetState(() {
-                        almacenId = v;
-                        errorAlmacen = null;
-                      }),
-                    ),
-                    const SizedBox(height: Dimen.espacio3),
-                    for (final d in pendientes) ...[
-                      Text(
-                        d.producto,
-                        style: const TextStyle(
+        Future<void> anular(PrestamoDevolucion d) async {
+          final ok = await confirmarAccion(
+            context,
+            titulo: 'Anular devolución ${d.numero}',
+            mensaje:
+                'Revierte el stock que movió esta devolución y la línea del '
+                'préstamo vuelve a quedar pendiente por esa cantidad. No se '
+                'puede deshacer.',
+            textoConfirmar: 'Anular',
+            tono: ConfirmTono.peligro,
+          );
+          if (!ok || !context.mounted) return;
+
+          final mensajero = Aviso.de(context);
+          try {
+            await ref.read(prestamosProvider.notifier).anularDevolucion(d.id);
+            await refrescar();
+            mensajero.mostrar('Devolución anulada');
+          } on ApiExcepcion catch (e) {
+            mensajero.error(e.texto);
+          }
+        }
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            EncabezadoHoja('Devolución de ${prestamoActual.numero}'),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(Dimen.espacio4),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (prestamoActual.devoluciones.isNotEmpty) ...[
+                      const Text(
+                        'Devoluciones registradas',
+                        style: TextStyle(
                           fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: Colores.tinta,
                         ),
                       ),
-                      const SizedBox(height: Dimen.espacio1),
-                      AppCampo(
-                        controlador: controladores[d.id]!,
-                        etiqueta:
-                            'Devuelve (${d.unidadBase}) · pendiente ${formatoNumero(d.cantidadPendiente)}',
-                        tipoTeclado: const TextInputType.numberWithOptions(
-                          decimal: true,
+                      const SizedBox(height: Dimen.espacio2),
+                      for (final d in prestamoActual.devoluciones) ...[
+                        _FilaDevolucion(
+                          devolucion: d,
+                          onAnular: () => anular(d),
                         ),
-                        habilitado: !guardando,
-                      ),
+                        const SizedBox(height: Dimen.espacio2),
+                      ],
+                    ],
+
+                    const SizedBox(height: Dimen.espacio2),
+                    if (error != null) ...[
+                      AppAlerta(error!),
                       const SizedBox(height: Dimen.espacio3),
                     ],
-                    AppBoton(
-                      texto: 'Registrar devolución',
-                      cargando: guardando,
-                      onPressed: guardar,
-                    ),
-                  ] else
-                    const Text(
-                      'Ya se devolvió todo. Anula una devolución si hace '
-                      'falta corregir algo.',
-                      style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
-                    ),
-                ],
+
+                    if (pendientes.isNotEmpty) ...[
+                      const Text(
+                        'Registrar nueva devolución',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: Colores.tinta,
+                        ),
+                      ),
+                      const SizedBox(height: Dimen.espacio2),
+                      AppSelector<int>(
+                        valor: almacenId,
+                        etiqueta: prestamoActual.esDado ? 'Entra a' : 'Sale de',
+                        icono: Icons.warehouse_outlined,
+                        error: errorAlmacen,
+                        opciones: [
+                          for (final a in almacenes)
+                            Opcion<int>(a.id, a.nombre),
+                        ],
+                        onCambio: (v) => setSheetState(() {
+                          almacenId = v;
+                          errorAlmacen = null;
+                        }),
+                      ),
+                      const SizedBox(height: Dimen.espacio3),
+                      for (final d in pendientes) ...[
+                        Text(
+                          d.producto,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: Colores.tinta,
+                          ),
+                        ),
+                        const SizedBox(height: Dimen.espacio1),
+                        AppCampo(
+                          controlador: controladores[d.id]!,
+                          etiqueta:
+                              'Devuelve (${d.unidadBase}) · pendiente ${formatoNumero(d.cantidadPendiente)}',
+                          tipoTeclado: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          habilitado: !guardando,
+                        ),
+                        const SizedBox(height: Dimen.espacio3),
+                      ],
+                      AppBoton(
+                        texto: 'Registrar devolución',
+                        cargando: guardando,
+                        onPressed: guardar,
+                      ),
+                    ] else
+                      const Text(
+                        'Ya se devolvió todo. Anula una devolución si hace '
+                        'falta corregir algo.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colores.tintaSuave,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-          );
-        },
-      );
-    },
-  );
+          ],
+        );
+      },
+    );
+  });
 }
 
 String _fecha(DateTime f) =>
@@ -315,7 +303,10 @@ class _FilaDevolucion extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '$resumen · ${devolucion.almacen} · ${_fecha(devolucion.fecha)}',
-                  style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colores.tintaSuave,
+                  ),
                 ),
               ],
             ),

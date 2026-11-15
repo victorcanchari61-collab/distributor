@@ -10,6 +10,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
@@ -19,7 +20,6 @@ import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/dms_modelos.dart';
@@ -87,8 +87,9 @@ class DevolucionesPagina extends ConsumerWidget {
             etiqueta: (resumen?.solicitadas ?? 0) > 0
                 ? 'Ver las ${resumen!.solicitadas}'
                 : 'Ver',
-            onTap: () => ref.read(filtroDevolucionEstadoProvider.notifier).state =
-                FiltroEstadoDevolucion.solicitadas,
+            onTap: () =>
+                ref.read(filtroDevolucionEstadoProvider.notifier).state =
+                    FiltroEstadoDevolucion.solicitadas,
           ),
         ),
         AppTarjetaDato(
@@ -217,22 +218,9 @@ class DevolucionesPagina extends ConsumerWidget {
     WidgetRef ref,
     Devolucion devolucion,
   ) {
-    final acento = Acento.de(context);
-
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      builder: (_) => Acento(
-        color: acento,
-        child: _HojaRechazo(devolucion: devolucion),
-      ),
+    return abrirHoja<void>(
+      context,
+      (_) => _HojaRechazo(devolucion: devolucion),
     );
   }
 }
@@ -290,51 +278,46 @@ class _HojaRechazoState extends ConsumerState<_HojaRechazo> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: Dimen.espacio4,
-        right: Dimen.espacio4,
-        bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Rechazar ${widget.devolucion.numero}',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Colores.tinta,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja('Rechazar ${widget.devolucion.numero}'),
+        Padding(
+          // El lugar del teclado ya lo deja abrirHoja.
+          padding: const EdgeInsets.all(Dimen.espacio4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'No entra mercadería ni se le descuenta nada al cliente.',
+                style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
+              ),
+              const SizedBox(height: Dimen.espacio4),
+              if (_error != null) ...[
+                AppAlerta(_error!),
+                const SizedBox(height: Dimen.espacio3),
+              ],
+              AppCampo(
+                controlador: _motivo,
+                etiqueta: 'Motivo del rechazo',
+                pista: 'El cliente no trajo la mercadería',
+                maxLargo: 250,
+                habilitado: !_guardando,
+              ),
+              const SizedBox(height: Dimen.espacio4),
+              AppBoton(
+                texto: 'Rechazar',
+                color: Colores.peligro,
+                cargando: _guardando,
+                onPressed: _confirmar,
+              ),
+              const SizedBox(height: Dimen.espacio2),
+            ],
           ),
-          const SizedBox(height: 2),
-          const Text(
-            'No entra mercadería ni se le descuenta nada al cliente.',
-            style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
-          ),
-          const SizedBox(height: Dimen.espacio4),
-          if (_error != null) ...[
-            AppAlerta(_error!),
-            const SizedBox(height: Dimen.espacio3),
-          ],
-          AppCampo(
-            controlador: _motivo,
-            etiqueta: 'Motivo del rechazo',
-            pista: 'El cliente no trajo la mercadería',
-            maxLargo: 250,
-            habilitado: !_guardando,
-          ),
-          const SizedBox(height: Dimen.espacio4),
-          AppBoton(
-            texto: 'Rechazar',
-            color: Colores.peligro,
-            cargando: _guardando,
-            onPressed: _confirmar,
-          ),
-          const SizedBox(height: Dimen.espacio2),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

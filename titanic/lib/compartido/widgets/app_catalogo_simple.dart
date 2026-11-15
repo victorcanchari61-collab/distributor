@@ -13,6 +13,7 @@ import 'app_boton.dart';
 import 'app_campo.dart';
 import 'app_confirmacion.dart';
 import 'app_etiqueta.dart';
+import 'app_hoja.dart';
 import 'app_lista_pagina.dart';
 import 'app_sin_permiso.dart';
 import 'app_tarjeta_dato.dart';
@@ -113,11 +114,14 @@ class _AppCatalogoSimpleState extends State<AppCatalogoSimple> {
     // El color del módulo sale de la ruta: este widget está por encima del
     // AppShell que declara el acento, así que Acento.de daría el azul de marca.
     final acento = resolverRuta(widget.ruta).grupo?.color ?? Colores.marca;
+    // No va por abrirHoja: ese lee el acento del contexto, y aquí sale de la
+    // ruta. Lo demás es igual: sin manija, la franja de color ocupa su lugar.
     return showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colores.superficie,
       isScrollControlled: true,
-      showDragHandle: true,
+      useSafeArea: true,
+      clipBehavior: Clip.antiAlias,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(Dimen.radioPanel),
@@ -348,54 +352,58 @@ class _HojaCatalogoState extends State<_HojaCatalogo> {
   @override
   Widget build(BuildContext context) {
     final singular = widget.singular;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        Dimen.espacio4,
-        0,
-        Dimen.espacio4,
-        MediaQuery.viewInsetsOf(context).bottom + Dimen.espacio5,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.editando == null
-                ? '${widget.femenino ? 'Nueva' : 'Nuevo'} $singular'
-                : 'Editar ${widget.editando!.nombre}',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja(
+          widget.editando == null
+              ? '${widget.femenino ? 'Nueva' : 'Nuevo'} $singular'
+              : 'Editar ${widget.editando!.nombre}',
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            Dimen.espacio4,
+            Dimen.espacio4,
+            Dimen.espacio4,
+            MediaQuery.viewInsetsOf(context).bottom + Dimen.espacio5,
           ),
-          const SizedBox(height: Dimen.espacio4),
-          if (_error != null) ...[
-            AppAlerta(_error!),
-            const SizedBox(height: Dimen.espacio3),
-          ],
-          AppCampo(
-            controlador: _nombre,
-            etiqueta: 'Nombre',
-            icono: Icons.label_outline,
-            maxLargo: 100,
-            habilitado: !_guardando,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                AppAlerta(_error!),
+                const SizedBox(height: Dimen.espacio3),
+              ],
+              AppCampo(
+                controlador: _nombre,
+                etiqueta: 'Nombre',
+                icono: Icons.label_outline,
+                maxLargo: 100,
+                habilitado: !_guardando,
+              ),
+              if (widget.conDescripcion) ...[
+                const SizedBox(height: Dimen.espacio3),
+                AppCampo(
+                  controlador: _descripcion,
+                  etiqueta: 'Descripción',
+                  icono: Icons.notes_outlined,
+                  opcional: true,
+                  maxLargo: 250,
+                  habilitado: !_guardando,
+                ),
+              ],
+              const SizedBox(height: Dimen.espacio5),
+              AppBoton(
+                texto: widget.editando == null ? 'Crear' : 'Guardar',
+                cargando: _guardando,
+                onPressed: _guardar,
+              ),
+            ],
           ),
-          if (widget.conDescripcion) ...[
-            const SizedBox(height: Dimen.espacio3),
-            AppCampo(
-              controlador: _descripcion,
-              etiqueta: 'Descripción',
-              icono: Icons.notes_outlined,
-              opcional: true,
-              maxLargo: 250,
-              habilitado: !_guardando,
-            ),
-          ],
-          const SizedBox(height: Dimen.espacio5),
-          AppBoton(
-            texto: widget.editando == null ? 'Crear' : 'Guardar',
-            cargando: _guardando,
-            onPressed: _guardar,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

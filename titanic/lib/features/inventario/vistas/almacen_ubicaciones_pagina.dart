@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_vacio.dart';
 import '../../../core/red/excepciones.dart';
 import '../../../core/tema/acento.dart';
@@ -51,7 +52,8 @@ class AlmacenUbicacionesPagina extends ConsumerWidget {
           ),
         ),
         body: RefreshIndicator(
-          onRefresh: () async => ref.refresh(ubicacionesProvider(almacen.id).future),
+          onRefresh: () async =>
+              ref.refresh(ubicacionesProvider(almacen.id).future),
           child: lugares.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => AppVacio(
@@ -159,13 +161,7 @@ class _FilaLugar extends StatelessWidget {
   }
 
   void _verProductos(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: Colores.superficie,
-      builder: (_) => _HojaProductos(lugar: lugar),
-    );
+    abrirHoja<void>(context, (_) => _HojaProductos(lugar: lugar));
   }
 }
 
@@ -184,78 +180,84 @@ class _HojaProductos extends ConsumerWidget {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.7,
         ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            Dimen.espacio4,
-            0,
-            Dimen.espacio4,
-            Dimen.espacio4,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // La franja de color: el lugar y, debajo, qué es y cómo se llama.
+            EncabezadoHoja(
+              lugar.ruta,
+              subtitulo: [
                 lugar.tipoEtiqueta,
-                style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-              ),
-              Text(
-                lugar.ruta,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Colores.tinta,
+                if (lugar.nombre != null) lugar.nombre!,
+              ].join(' · '),
+            ),
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Dimen.espacio4,
+                  Dimen.espacio3,
+                  Dimen.espacio4,
+                  Dimen.espacio4,
                 ),
-              ),
-              if (lugar.nombre != null)
-                Text(
-                  lugar.nombre!,
-                  style: const TextStyle(color: Colores.tintaSuave),
-                ),
-              const SizedBox(height: Dimen.espacio3),
-              Flexible(
-                child: productos.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(Dimen.espacio5),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (e, _) => Padding(
-                    padding: const EdgeInsets.all(Dimen.espacio4),
-                    child: Text(e is ApiExcepcion ? e.texto : 'No se pudo cargar.'),
-                  ),
-                  data: (lista) => lista.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: Dimen.espacio5),
-                          child: Center(
-                            child: Text(
-                              'No hay productos puestos en este lugar.',
-                              style: TextStyle(color: Colores.tintaSuave),
-                            ),
-                          ),
-                        )
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          itemCount: lista.length,
-                          separatorBuilder: (_, _) => const Divider(height: 1),
-                          itemBuilder: (_, i) => ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              lista[i].producto,
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: Text(
-                              [
-                                lista[i].codigo,
-                                if (lista[i].categoria != null) lista[i].categoria!,
-                              ].join(' · '),
-                            ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Flexible(
+                      child: productos.when(
+                        loading: () => const Padding(
+                          padding: EdgeInsets.all(Dimen.espacio5),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                        error: (e, _) => Padding(
+                          padding: const EdgeInsets.all(Dimen.espacio4),
+                          child: Text(
+                            e is ApiExcepcion ? e.texto : 'No se pudo cargar.',
                           ),
                         ),
+                        data: (lista) => lista.isEmpty
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: Dimen.espacio5,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'No hay productos puestos en este lugar.',
+                                    style: TextStyle(color: Colores.tintaSuave),
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                shrinkWrap: true,
+                                itemCount: lista.length,
+                                separatorBuilder: (_, _) =>
+                                    const Divider(height: 1),
+                                itemBuilder: (_, i) => ListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    lista[i].producto,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    [
+                                      lista[i].codigo,
+                                      if (lista[i].categoria != null)
+                                        lista[i].categoria!,
+                                    ].join(' · '),
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

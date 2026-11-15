@@ -10,6 +10,7 @@ import 'app_boton.dart';
 import 'app_buscador.dart';
 import 'app_selector.dart';
 import 'app_filtros_en_linea.dart';
+import 'app_hoja.dart';
 import 'app_vacio.dart';
 
 /// Un producto marcado en el buscador, con como se va a cargar la linea.
@@ -75,30 +76,16 @@ Future<List<SeleccionProducto>?> mostrarBuscadorProductos({
   /// Lo que ya apartan pedidos pendientes, por producto — solo informativo.
   Map<int, double>? reservado,
 }) {
-  // El acento se captura ANTES de abrir: la hoja cuelga del Navigator, no de
-  // la pantalla, asi que ahi dentro ya no hay de quien heredarlo y saldria
-  // azul aunque se haya abierto desde Compras.
-  final acento = Acento.de(context);
-
-  return showModalBottomSheet<List<SeleccionProducto>>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (context) => Acento(
-      color: acento,
-      child: _HojaBuscadorProductos(
-        productos: productos,
-        paraVenta: paraVenta,
-        uso: uso,
-        stock: stock,
-        reservado: reservado,
-      ),
+  // abrirHoja captura el acento ANTES de abrir: la hoja cuelga del Navigator,
+  // no de la pantalla, y sin eso saldria azul aunque se abriera desde Compras.
+  return abrirHoja<List<SeleccionProducto>>(
+    context,
+    (context) => _HojaBuscadorProductos(
+      productos: productos,
+      paraVenta: paraVenta,
+      uso: uso,
+      stock: stock,
+      reservado: reservado,
     ),
   );
 }
@@ -244,36 +231,26 @@ class _HojaBuscadorProductosState extends State<_HojaBuscadorProductos> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          EncabezadoHoja(
+            'Buscar productos',
+            acciones: [
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close, color: Colors.white),
+                tooltip: 'Cerrar',
+              ),
+            ],
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               Dimen.espacio4,
-              Dimen.espacio2,
+              Dimen.espacio3,
               Dimen.espacio4,
               Dimen.espacio3,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Buscar productos',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Colores.tinta,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close, color: Colores.tintaSuave),
-                      tooltip: 'Cerrar',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: Dimen.espacio2),
                 Row(
                   children: [
                     Expanded(

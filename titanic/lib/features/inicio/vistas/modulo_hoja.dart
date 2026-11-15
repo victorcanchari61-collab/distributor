@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../compartido/widgets/app_aviso.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/permisos/solicitud_api.dart';
@@ -50,14 +51,16 @@ Future<void> mostrarModulo(BuildContext context, MenuGrupo grupo) {
     context: context,
     backgroundColor: Colores.superficie,
     isScrollControlled: true,
-    showDragHandle: true,
+    useSafeArea: true,
+    clipBehavior: Clip.antiAlias,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(
         top: Radius.circular(Dimen.radioPanel),
       ),
     ),
     // La hoja cuelga del Navigator y no ve el acento de la pantalla que la
-    // abrió: aquí lleva el del módulo, que es de lo que trata.
+    // abrió: aquí lleva el del módulo, que es de lo que trata. Por eso no va
+    // por abrirHoja, que toma el de la pantalla; sin manija igual que esa.
     builder: (_) => Acento(
       color: grupo.color,
       child: _HojaModulo(grupo: grupo),
@@ -91,43 +94,10 @@ class _HojaModulo extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Dimen.espacio4,
-              0,
-              Dimen.espacio4,
-              Dimen.espacio3,
-            ),
-            child: Row(
-              children: [
-                Icon(grupo.icono, size: 20, color: grupo.color),
-                const SizedBox(width: Dimen.espacio2),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        grupo.titulo,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Colores.tinta,
-                        ),
-                      ),
-                      const Text(
-                        'Lo que puedes hacer aquí. Lo que no, se pide.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colores.tintaSuave,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          EncabezadoHoja(
+            grupo.titulo,
+            subtitulo: 'Lo que puedes hacer aquí. Lo que no, se pide.',
           ),
-          const Divider(height: 1),
 
           Flexible(
             child: ListView.separated(

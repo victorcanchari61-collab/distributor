@@ -6,6 +6,7 @@ import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lineas_producto.dart';
 import '../../../compartido/widgets/app_panel_producto.dart';
 import '../../../compartido/widgets/app_campo_cliente.dart';
@@ -282,259 +283,245 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
 
   Future<void> _gestionarPagos() async {
     final metodos = ref.read(metodosPagoActivosProvider);
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      builder: (context) {
-        String? tipo;
-        int? metodoId;
-        final montoCtrl = TextEditingController();
-        final numeroCtrl = TextEditingController();
-        String? errorAgregar;
+    await abrirHoja<void>(context, (context) {
+      String? tipo;
+      int? metodoId;
+      final montoCtrl = TextEditingController();
+      final numeroCtrl = TextEditingController();
+      String? errorAgregar;
 
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final metodosDelTipo = metodos
-                .where((m) => m.tipo == tipo)
-                .toList();
-            final totalPagado = _pagos.fold<double>(0, (n, p) => n + p.monto);
+      return StatefulBuilder(
+        builder: (context, setSheetState) {
+          final metodosDelTipo = metodos.where((m) => m.tipo == tipo).toList();
+          final totalPagado = _pagos.fold<double>(0, (n, p) => n + p.monto);
 
-            void agregar() {
-              final monto = double.tryParse(
-                montoCtrl.text.trim().replaceAll(',', '.'),
-              );
-              if (metodoId == null) {
-                setSheetState(() => errorAgregar = 'Elige el método de pago.');
-                return;
-              }
-              if (monto == null || monto <= 0) {
-                setSheetState(() => errorAgregar = 'Ingresa un monto válido.');
-                return;
-              }
-
-              // Sin el número no hay cómo buscarlo en el banco.
-              final efectivo = tipo == TipoMetodoPago.efectivo;
-              final numero = efectivo ? '' : numeroCtrl.text.trim();
-              if (!efectivo && numero.isEmpty) {
-                setSheetState(
-                  () => errorAgregar =
-                      'Pon el número de operación del Yape o la transferencia: '
-                      'con él se comprueba en el banco.',
-                );
-                return;
-              }
-              if (numero.isNotEmpty &&
-                  _pagos.any((p) => p.numeroOperacion == numero)) {
-                setSheetState(
-                  () => errorAgregar =
-                      'La operación $numero ya está en otro pago.',
-                );
-                return;
-              }
-              if (totalPagado + monto > _total + 0.001) {
-                setSheetState(
-                  () => errorAgregar =
-                      'Ese pago deja lo pagado en S/ ${(totalPagado + monto).toStringAsFixed(2)}, '
-                      'más que el total de la venta (S/ ${_total.toStringAsFixed(2)}).',
-                );
-                return;
-              }
-
-              String metodoNombre = '';
-              for (final m in metodos) {
-                if (m.id == metodoId) metodoNombre = m.nombre;
-              }
-              setSheetState(() {
-                _pagos.add(
-                  _FilaPago(
-                    metodoPagoId: metodoId!,
-                    metodoPago: metodoNombre,
-                    monto: monto,
-                    numeroOperacion: numero.isEmpty ? null : numero,
-                  ),
-                );
-                tipo = null;
-                metodoId = null;
-                montoCtrl.clear();
-                numeroCtrl.clear();
-                errorAgregar = null;
-              });
+          void agregar() {
+            final monto = double.tryParse(
+              montoCtrl.text.trim().replaceAll(',', '.'),
+            );
+            if (metodoId == null) {
+              setSheetState(() => errorAgregar = 'Elige el método de pago.');
+              return;
+            }
+            if (monto == null || monto <= 0) {
+              setSheetState(() => errorAgregar = 'Ingresa un monto válido.');
+              return;
             }
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: Dimen.espacio4,
-                right: Dimen.espacio4,
-                top: Dimen.espacio2,
-                bottom:
-                    Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Pagos',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colores.tinta,
-                    ),
-                  ),
-                  const SizedBox(height: Dimen.espacio4),
-                  AppResumenPagos(total: _total, pagado: totalPagado),
-                  const SizedBox(height: Dimen.espacio4),
+            // Sin el número no hay cómo buscarlo en el banco.
+            final efectivo = tipo == TipoMetodoPago.efectivo;
+            final numero = efectivo ? '' : numeroCtrl.text.trim();
+            if (!efectivo && numero.isEmpty) {
+              setSheetState(
+                () => errorAgregar =
+                    'Pon el número de operación del Yape o la transferencia: '
+                    'con él se comprueba en el banco.',
+              );
+              return;
+            }
+            if (numero.isNotEmpty &&
+                _pagos.any((p) => p.numeroOperacion == numero)) {
+              setSheetState(
+                () =>
+                    errorAgregar = 'La operación $numero ya está en otro pago.',
+              );
+              return;
+            }
+            if (totalPagado + monto > _total + 0.001) {
+              setSheetState(
+                () => errorAgregar =
+                    'Ese pago deja lo pagado en S/ ${(totalPagado + monto).toStringAsFixed(2)}, '
+                    'más que el total de la venta (S/ ${_total.toStringAsFixed(2)}).',
+              );
+              return;
+            }
 
-                  for (final pago in _pagos) ...[
-                    Container(
-                      padding: const EdgeInsets.all(Dimen.espacio3),
-                      decoration: BoxDecoration(
-                        color: Colores.fondo,
-                        borderRadius: BorderRadius.circular(Dimen.radioCampo),
+            String metodoNombre = '';
+            for (final m in metodos) {
+              if (m.id == metodoId) metodoNombre = m.nombre;
+            }
+            setSheetState(() {
+              _pagos.add(
+                _FilaPago(
+                  metodoPagoId: metodoId!,
+                  metodoPago: metodoNombre,
+                  monto: monto,
+                  numeroOperacion: numero.isEmpty ? null : numero,
+                ),
+              );
+              tipo = null;
+              metodoId = null;
+              montoCtrl.clear();
+              numeroCtrl.clear();
+              errorAgregar = null;
+            });
+          }
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const EncabezadoHoja('Pagos'),
+              Flexible(
+                child: SingleChildScrollView(
+                  // El lugar del teclado ya lo deja abrirHoja.
+                  padding: const EdgeInsets.all(Dimen.espacio4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AppResumenPagos(total: _total, pagado: totalPagado),
+                      const SizedBox(height: Dimen.espacio4),
+
+                      for (final pago in _pagos) ...[
+                        Container(
+                          padding: const EdgeInsets.all(Dimen.espacio3),
+                          decoration: BoxDecoration(
+                            color: Colores.fondo,
+                            borderRadius: BorderRadius.circular(
+                              Dimen.radioCampo,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      pago.metodoPago,
+                                      style: const TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (pago.numeroOperacion != null)
+                                      Text(
+                                        'Op. ${pago.numeroOperacion}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colores.tintaSuave,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                'S/ ${pago.monto.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () =>
+                                    setSheetState(() => _pagos.remove(pago)),
+                                icon: const Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: Colores.peligro,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: Dimen.espacio2),
+                      ],
+
+                      if (errorAgregar != null) ...[
+                        AppAlerta(errorAgregar!),
+                        const SizedBox(height: Dimen.espacio3),
+                      ],
+
+                      AppSelector<String>(
+                        valor: tipo,
+                        etiqueta: 'Tipo',
+                        icono: Icons.category_outlined,
+                        opciones: [
+                          for (final t in TipoMetodoPago.todos)
+                            Opcion(t, TipoMetodoPago.etiqueta(t)),
+                        ],
+                        onCambio: (v) => setSheetState(() {
+                          tipo = v;
+                          metodoId = null;
+                          // El efectivo no tiene operación que buscar.
+                          if (v == TipoMetodoPago.efectivo) numeroCtrl.clear();
+                        }),
                       ),
-                      child: Row(
+                      const SizedBox(height: Dimen.espacio3),
+
+                      AppSelector<int>(
+                        valor: metodoId,
+                        etiqueta: 'Método',
+                        icono: Icons.payments_outlined,
+                        lineasOpcion: 2,
+                        habilitado: tipo != null,
+                        opciones: [
+                          for (final m in metodosDelTipo)
+                            Opcion(m.id, m.etiqueta),
+                        ],
+                        onCambio: (v) => setSheetState(() => metodoId = v),
+                      ),
+                      const SizedBox(height: Dimen.espacio3),
+
+                      if (tipo != null && tipo != TipoMetodoPago.efectivo) ...[
+                        AppCampo(
+                          controlador: numeroCtrl,
+                          etiqueta: 'N° de operación',
+                          icono: Icons.tag,
+                          pista: 'Del voucher del Yape o la transferencia',
+                          maxLargo: 30,
+                        ),
+                        const SizedBox(height: Dimen.espacio3),
+                      ],
+
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  pago.metodoPago,
-                                  style: const TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w600,
+                            child: AppCampo(
+                              controlador: montoCtrl,
+                              etiqueta: 'Monto',
+                              icono: Icons.attach_money,
+                              tipoTeclado:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
                                   ),
-                                ),
-                                if (pago.numeroOperacion != null)
-                                  Text(
-                                    'Op. ${pago.numeroOperacion}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colores.tintaSuave,
-                                    ),
-                                  ),
-                              ],
                             ),
                           ),
-                          Text(
-                            'S/ ${pago.monto.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            onPressed: () =>
-                                setSheetState(() => _pagos.remove(pago)),
-                            icon: const Icon(
-                              Icons.close,
-                              size: 16,
-                              color: Colores.peligro,
-                            ),
+                          const SizedBox(width: Dimen.espacio3),
+                          AppBoton(
+                            texto: 'Agregar',
+                            expandido: false,
+                            onPressed: agregar,
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: Dimen.espacio2),
-                  ],
+                      const SizedBox(height: Dimen.espacio4),
+                      const Divider(height: 1),
+                      const SizedBox(height: Dimen.espacio3),
 
-                  if (errorAgregar != null) ...[
-                    AppAlerta(errorAgregar!),
-                    const SizedBox(height: Dimen.espacio3),
-                  ],
-
-                  AppSelector<String>(
-                    valor: tipo,
-                    etiqueta: 'Tipo',
-                    icono: Icons.category_outlined,
-                    opciones: [
-                      for (final t in TipoMetodoPago.todos)
-                        Opcion(t, TipoMetodoPago.etiqueta(t)),
-                    ],
-                    onCambio: (v) => setSheetState(() {
-                      tipo = v;
-                      metodoId = null;
-                      // El efectivo no tiene operación que buscar.
-                      if (v == TipoMetodoPago.efectivo) numeroCtrl.clear();
-                    }),
-                  ),
-                  const SizedBox(height: Dimen.espacio3),
-
-                  AppSelector<int>(
-                    valor: metodoId,
-                    etiqueta: 'Método',
-                    icono: Icons.payments_outlined,
-                    lineasOpcion: 2,
-                    habilitado: tipo != null,
-                    opciones: [
-                      for (final m in metodosDelTipo) Opcion(m.id, m.etiqueta),
-                    ],
-                    onCambio: (v) => setSheetState(() => metodoId = v),
-                  ),
-                  const SizedBox(height: Dimen.espacio3),
-
-                  if (tipo != null && tipo != TipoMetodoPago.efectivo) ...[
-                    AppCampo(
-                      controlador: numeroCtrl,
-                      etiqueta: 'N° de operación',
-                      icono: Icons.tag,
-                      pista: 'Del voucher del Yape o la transferencia',
-                      maxLargo: 30,
-                    ),
-                    const SizedBox(height: Dimen.espacio3),
-                  ],
-
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: AppCampo(
-                          controlador: montoCtrl,
-                          etiqueta: 'Monto',
-                          icono: Icons.attach_money,
-                          tipoTeclado: const TextInputType.numberWithOptions(
-                            decimal: true,
+                      Row(
+                        children: [
+                          const Spacer(),
+                          AppBoton(
+                            texto: 'Listo',
+                            variante: BotonVariante.secundario,
+                            expandido: false,
+                            onPressed: () => Navigator.of(context).pop(),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: Dimen.espacio3),
-                      AppBoton(
-                        texto: 'Agregar',
-                        expandido: false,
-                        onPressed: agregar,
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: Dimen.espacio4),
-                  const Divider(height: 1),
-                  const SizedBox(height: Dimen.espacio3),
-
-                  Row(
-                    children: [
-                      const Spacer(),
-                      AppBoton(
-                        texto: 'Listo',
-                        variante: BotonVariante.secundario,
-                        expandido: false,
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            );
-          },
-        );
-      },
-    );
+            ],
+          );
+        },
+      );
+    });
     if (mounted) setState(() {});
   }
 

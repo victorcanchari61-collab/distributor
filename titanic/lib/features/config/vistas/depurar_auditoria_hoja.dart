@@ -7,9 +7,9 @@ import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_selector_rango.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/auditoria.dart';
@@ -32,24 +32,12 @@ Future<void> mostrarDepuracion(
   String? usuario,
   String? entidad,
 }) {
-  // Se lee ANTES de abrir y se vuelve a declarar dentro: la hoja cuelga del
-  // Navigator y no ve el acento de la pantalla que la abrió.
-  final acento = Acento.de(context);
-
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colores.superficie,
-    isScrollControlled: true,
-    showDragHandle: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(Dimen.radioPanel),
-      ),
-    ),
-    builder: (context) => Acento(
-      color: acento,
-      child: _HojaDepurar(accion: accion, usuario: usuario, entidad: entidad),
-    ),
+  // abrirHoja lee el acento ANTES de abrir y lo vuelve a declarar dentro: la
+  // hoja cuelga del Navigator y no ve el de la pantalla que la abrió.
+  return abrirHoja<void>(
+    context,
+    (context) =>
+        _HojaDepurar(accion: accion, usuario: usuario, entidad: entidad),
   );
 }
 
@@ -160,158 +148,144 @@ class _HojaDepurarState extends ConsumerState<_HojaDepurar> {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.9,
       ),
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: Dimen.espacio4,
-          right: Dimen.espacio4,
-          bottom: Dimen.espacio4 + MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colores.peligro.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(Dimen.radioCampo),
-                  ),
-                  child: const Icon(
-                    Icons.delete_sweep_outlined,
-                    size: 20,
-                    color: Colores.peligro,
-                  ),
-                ),
-                const SizedBox(width: Dimen.espacio3),
-                const Expanded(
-                  child: Text(
-                    'Depurar auditoría',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colores.tinta,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _Conteo(total: _total),
-                    const SizedBox(height: Dimen.espacio4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const EncabezadoHoja('Depurar auditoría'),
+          Flexible(
+            child: Padding(
+              // El lugar del teclado ya lo deja abrirHoja.
+              padding: const EdgeInsets.all(Dimen.espacio4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _Conteo(total: _total),
+                          const SizedBox(height: Dimen.espacio4),
 
-                    GrupoFiltro<String?>(
-                      titulo: 'Usuario',
-                      icono: Icons.person_outline,
-                      valor: _usuario,
-                      opciones: _opciones(resumen?.usuarios, _usuario, 'Todos'),
-                      onCambio: (v) => _cambiar(() => _usuario = v),
-                    ),
-                    const SizedBox(height: Dimen.espacio3),
-                    GrupoFiltro<String?>(
-                      titulo: 'Entidad',
-                      icono: Icons.category_outlined,
-                      valor: _entidad,
-                      opciones: _opciones(
-                        resumen?.entidades,
-                        _entidad,
-                        'Todas',
-                      ),
-                      onCambio: (v) => _cambiar(() => _entidad = v),
-                    ),
-                    const SizedBox(height: Dimen.espacio3),
-                    GrupoFiltro<String?>(
-                      titulo: 'Acción',
-                      icono: Icons.bolt_outlined,
-                      valor: _accion,
-                      opciones: const [
-                        OpcionFiltro<String?>(null, 'Todas'),
-                        OpcionFiltro<String?>(
-                          AccionAuditoria.creado,
-                          'Creados',
-                        ),
-                        OpcionFiltro<String?>(
-                          AccionAuditoria.actualizado,
-                          'Actualizados',
-                        ),
-                        OpcionFiltro<String?>(
-                          AccionAuditoria.eliminado,
-                          'Eliminados',
-                        ),
-                      ],
-                      onCambio: (v) => _cambiar(() => _accion = v),
-                    ),
-                    const SizedBox(height: Dimen.espacio3),
-                    AppSelectorRango(
-                      rango: _rango,
-                      primerDia: DateTime(2020),
-                      onCambio: (r) => _cambiar(() => _rango = r),
-                    ),
-                    const SizedBox(height: Dimen.espacio4),
+                          GrupoFiltro<String?>(
+                            titulo: 'Usuario',
+                            icono: Icons.person_outline,
+                            valor: _usuario,
+                            opciones: _opciones(
+                              resumen?.usuarios,
+                              _usuario,
+                              'Todos',
+                            ),
+                            onCambio: (v) => _cambiar(() => _usuario = v),
+                          ),
+                          const SizedBox(height: Dimen.espacio3),
+                          GrupoFiltro<String?>(
+                            titulo: 'Entidad',
+                            icono: Icons.category_outlined,
+                            valor: _entidad,
+                            opciones: _opciones(
+                              resumen?.entidades,
+                              _entidad,
+                              'Todas',
+                            ),
+                            onCambio: (v) => _cambiar(() => _entidad = v),
+                          ),
+                          const SizedBox(height: Dimen.espacio3),
+                          GrupoFiltro<String?>(
+                            titulo: 'Acción',
+                            icono: Icons.bolt_outlined,
+                            valor: _accion,
+                            opciones: const [
+                              OpcionFiltro<String?>(null, 'Todas'),
+                              OpcionFiltro<String?>(
+                                AccionAuditoria.creado,
+                                'Creados',
+                              ),
+                              OpcionFiltro<String?>(
+                                AccionAuditoria.actualizado,
+                                'Actualizados',
+                              ),
+                              OpcionFiltro<String?>(
+                                AccionAuditoria.eliminado,
+                                'Eliminados',
+                              ),
+                            ],
+                            onCambio: (v) => _cambiar(() => _accion = v),
+                          ),
+                          const SizedBox(height: Dimen.espacio3),
+                          AppSelectorRango(
+                            rango: _rango,
+                            primerDia: DateTime(2020),
+                            onCambio: (r) => _cambiar(() => _rango = r),
+                          ),
+                          const SizedBox(height: Dimen.espacio4),
 
-                    if (_sinFiltros) ...[
-                      const AppAlerta(
-                        'No hay ningún filtro: se borrará toda la bitácora.',
-                        tono: AlertaTono.aviso,
+                          if (_sinFiltros) ...[
+                            const AppAlerta(
+                              'No hay ningún filtro: se borrará toda la bitácora.',
+                              tono: AlertaTono.aviso,
+                            ),
+                            const SizedBox(height: Dimen.espacio3),
+                            AppCampo(
+                              controlador: _confirmacion,
+                              etiqueta:
+                                  'Escribe $_palabraConfirmacion para confirmar',
+                              habilitado: !_eliminando,
+                            ),
+                            const SizedBox(height: Dimen.espacio2),
+                          ],
+                          const Text(
+                            'Queda un registro con quién depuró, cuántos y con qué filtros.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colores.tintaSuave,
+                            ),
+                          ),
+                          if (_error != null) ...[
+                            const SizedBox(height: Dimen.espacio3),
+                            AppAlerta(_error!),
+                          ],
+                          const SizedBox(height: Dimen.espacio4),
+                        ],
                       ),
-                      const SizedBox(height: Dimen.espacio3),
-                      AppCampo(
-                        controlador: _confirmacion,
-                        etiqueta:
-                            'Escribe $_palabraConfirmacion para confirmar',
-                        habilitado: !_eliminando,
-                      ),
-                      const SizedBox(height: Dimen.espacio2),
-                    ],
-                    const Text(
-                      'Queda un registro con quién depuró, cuántos y con qué filtros.',
-                      style: TextStyle(fontSize: 12, color: Colores.tintaSuave),
                     ),
-                    if (_error != null) ...[
-                      const SizedBox(height: Dimen.espacio3),
-                      AppAlerta(_error!),
-                    ],
-                    const SizedBox(height: Dimen.espacio4),
-                  ],
-                ),
+                  ),
+
+                  FutureBuilder<int>(
+                    future: _total,
+                    builder: (context, instantanea) {
+                      final total = instantanea.data;
+
+                      return AppBoton(
+                        texto: total == null
+                            ? 'Eliminar'
+                            : 'Eliminar ${_miles(total)} ${total == 1 ? 'registro' : 'registros'}',
+                        icono: Icons.delete_outline,
+                        color: Colores.peligro,
+                        cargando: _eliminando,
+                        // Sin saber cuántos son —cargando o con error— no se borra:
+                        // la persona tiene que ver el número antes de aceptar.
+                        onPressed: total != null && total > 0 && confirmado
+                            ? _eliminar
+                            : null,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: Dimen.espacio3),
+                  AppBoton(
+                    texto: 'Cancelar',
+                    variante: BotonVariante.secundario,
+                    onPressed: _eliminando
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                  ),
+                ],
               ),
             ),
-
-            FutureBuilder<int>(
-              future: _total,
-              builder: (context, instantanea) {
-                final total = instantanea.data;
-
-                return AppBoton(
-                  texto: total == null
-                      ? 'Eliminar'
-                      : 'Eliminar ${_miles(total)} ${total == 1 ? 'registro' : 'registros'}',
-                  icono: Icons.delete_outline,
-                  color: Colores.peligro,
-                  cargando: _eliminando,
-                  // Sin saber cuántos son —cargando o con error— no se borra:
-                  // la persona tiene que ver el número antes de aceptar.
-                  onPressed: total != null && total > 0 && confirmado
-                      ? _eliminar
-                      : null,
-                );
-              },
-            ),
-            const SizedBox(height: Dimen.espacio3),
-            AppBoton(
-              texto: 'Cancelar',
-              variante: BotonVariante.secundario,
-              onPressed: _eliminando ? null : () => Navigator.of(context).pop(),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

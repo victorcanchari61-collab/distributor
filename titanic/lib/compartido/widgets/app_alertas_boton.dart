@@ -7,6 +7,7 @@ import '../../core/tema/colores.dart';
 import '../../core/tema/dimensiones.dart';
 import '../../features/alertas/datos/alerta.dart';
 import '../../features/alertas/estado/alertas_controlador.dart';
+import 'app_hoja.dart';
 
 /// Como se lee la accion pedida, sin la pantalla al lado.
 const _accionPedida = {
@@ -84,18 +85,7 @@ class AppAlertasBoton extends ConsumerWidget {
   }
 
   Future<void> _abrirHoja(BuildContext context, WidgetRef ref) {
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      builder: (context) => const _HojaAlertas(),
-    );
+    return abrirHoja<void>(context, (context) => const _HojaAlertas());
   }
 }
 
@@ -124,115 +114,111 @@ class _HojaAlertasState extends ConsumerState<_HojaAlertas> {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.75,
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Alertas',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colores.tinta,
-                          ),
-                        ),
-                        const SizedBox(height: Dimen.espacio1),
-                        Text(
-                          alertas.isEmpty
-                              ? 'Todo en orden'
-                              : sinLeer.isEmpty
-                              ? 'Ya revisaste todo'
-                              : '${sinLeer.length} para revisar',
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: Colores.tintaSuave,
-                          ),
-                        ),
-                      ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            EncabezadoHoja(
+              'Alertas',
+              subtitulo: alertas.isEmpty
+                  ? 'Todo en orden'
+                  : sinLeer.isEmpty
+                  ? 'Ya revisaste todo'
+                  : '${sinLeer.length} para revisar',
+              acciones: [
+                if (sinLeer.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: () => ref
+                        .read(alertasLeidasProvider.notifier)
+                        .marcarTodas([for (final a in sinLeer) a.id]),
+                    icon: const Icon(Icons.done_all, size: 15),
+                    label: const Text(
+                      'Marcar todas',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Dimen.espacio2,
+                      ),
+                      foregroundColor: Colors.white,
                     ),
                   ),
-                  if (sinLeer.isNotEmpty)
-                    TextButton.icon(
-                      onPressed: () => ref
-                          .read(alertasLeidasProvider.notifier)
-                          .marcarTodas([for (final a in sinLeer) a.id]),
-                      icon: const Icon(Icons.done_all, size: 15),
-                      label: const Text(
-                        'Marcar todas',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: Dimen.espacio2,
-                        ),
-                        foregroundColor: Colores.tintaSuave,
-                      ),
+              ],
+            ),
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Dimen.espacio4,
+                  Dimen.espacio2,
+                  Dimen.espacio4,
+                  0,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Flexible(
+                      child: estado.isLoading && alertas.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(
+                                vertical: Dimen.espacio6,
+                              ),
+                              child: Center(child: CircularProgressIndicator()),
+                            )
+                          : visibles.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: Dimen.espacio6,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  alertas.isEmpty
+                                      ? 'No hay nada pendiente.'
+                                      : 'No queda nada sin leer.',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colores.tintaSuave,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: visibles.length,
+                              separatorBuilder: (_, _) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (context, i) => _FilaAlerta(
+                                alerta: visibles[i],
+                                leida: leidas.containsKey(visibles[i].id),
+                              ),
+                            ),
                     ),
-                ],
-              ),
-              const SizedBox(height: Dimen.espacio2),
 
-              Flexible(
-                child: estado.isLoading && alertas.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: Dimen.espacio6),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    : visibles.isEmpty
-                    ? Padding(
+                    if (alertas.isNotEmpty && alertas.length != sinLeer.length)
+                      Padding(
                         padding: const EdgeInsets.symmetric(
-                          vertical: Dimen.espacio6,
+                          vertical: Dimen.espacio2,
                         ),
                         child: Center(
-                          child: Text(
-                            alertas.isEmpty
-                                ? 'No hay nada pendiente.'
-                                : 'No queda nada sin leer.',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Colores.tintaSuave,
+                          child: TextButton(
+                            onPressed: () =>
+                                setState(() => _verLeidas = !_verLeidas),
+                            child: Text(
+                              _verLeidas
+                                  ? 'Ocultar las leídas'
+                                  : 'Ver también las leídas (${alertas.length - sinLeer.length})',
+                              style: const TextStyle(fontSize: 12.5),
                             ),
                           ),
                         ),
                       )
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: visibles.length,
-                        separatorBuilder: (_, _) => const Divider(height: 1),
-                        itemBuilder: (context, i) => _FilaAlerta(
-                          alerta: visibles[i],
-                          leida: leidas.containsKey(visibles[i].id),
-                        ),
-                      ),
+                    else
+                      const SizedBox(height: Dimen.espacio3),
+                  ],
+                ),
               ),
-
-              if (alertas.isNotEmpty && alertas.length != sinLeer.length)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Dimen.espacio2),
-                  child: Center(
-                    child: TextButton(
-                      onPressed: () => setState(() => _verLeidas = !_verLeidas),
-                      child: Text(
-                        _verLeidas
-                            ? 'Ocultar las leídas'
-                            : 'Ver también las leídas (${alertas.length - sinLeer.length})',
-                        style: const TextStyle(fontSize: 12.5),
-                      ),
-                    ),
-                  ),
-                )
-              else
-                const SizedBox(height: Dimen.espacio3),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

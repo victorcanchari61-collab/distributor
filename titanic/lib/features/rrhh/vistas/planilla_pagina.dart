@@ -11,6 +11,7 @@ import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
@@ -111,18 +112,10 @@ class _PlanillaPaginaState extends ConsumerState<PlanillaPagina> {
   }
 
   Future<void> _hoja(WidgetBuilder contenido) {
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colores.superficie,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Dimen.radioPanel),
-        ),
-      ),
-      // La hoja cuelga del Navigator y no hereda el acento del modulo.
-      builder: (context) => Acento.modulo('rrhh', contenido),
+    // Siempre con el acento de RRHH, se abra desde donde se abra.
+    return abrirHoja<void>(
+      context,
+      (context) => Acento.modulo('rrhh', contenido),
     );
   }
 
@@ -550,11 +543,13 @@ class _TarjetaDetalle extends StatelessWidget {
 /// Dinero: como mucho dos decimales.
 final _soloMonto = FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'));
 
-EdgeInsets _margenHoja(BuildContext context) => EdgeInsets.fromLTRB(
+/// El margen del contenido, bajo la franja de color. El lugar del teclado ya
+/// lo deja abrirHoja.
+const _margenHoja = EdgeInsets.fromLTRB(
   Dimen.espacio4,
-  0,
   Dimen.espacio4,
-  MediaQuery.viewInsetsOf(context).bottom + Dimen.espacio5,
+  Dimen.espacio4,
+  Dimen.espacio5,
 );
 
 /// Bonos y otros descuentos de un empleado, con su nota. Solo en borrador.
@@ -642,88 +637,97 @@ class _HojaAjusteState extends ConsumerState<_HojaAjuste> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: _margenHoja(context),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Ajustar a ${widget.detalle.empleado}',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: Dimen.espacio1),
-            const Text(
-              'Se conservan aunque se recalcule la planilla.',
-              style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
-            ),
-            const SizedBox(height: Dimen.espacio4),
-            if (_error != null) ...[
-              AppAlerta(_error!),
-              const SizedBox(height: Dimen.espacio3),
-            ],
-            AppCampo(
-              controlador: _bonos,
-              etiqueta: 'Bonos',
-              icono: Icons.add_circle_outline,
-              pista: '0.00',
-              opcional: true,
-              tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-              formateadores: [_soloMonto],
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
-            AppCampo(
-              controlador: _descuentos,
-              etiqueta: 'Otros descuentos',
-              icono: Icons.remove_circle_outline,
-              pista: '0.00',
-              opcional: true,
-              tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
-              formateadores: [_soloMonto],
-              habilitado: !_guardando,
-            ),
-            const SizedBox(height: Dimen.espacio4),
-            AppCampo(
-              controlador: _nota,
-              etiqueta: 'Nota',
-              icono: Icons.notes_outlined,
-              pista: 'Por qué el bono o el descuento',
-              opcional: true,
-              habilitado: !_guardando,
-            ),
-            if (widget.detalle.adelantosSaldo > 0) ...[
-              const SizedBox(height: Dimen.espacio4),
-              AppCampo(
-                controlador: _adelantos,
-                etiqueta: 'Adelantos a descontar esta semana',
-                icono: Icons.payments_outlined,
-                pista: widget.detalle.adelantosSugerido.toStringAsFixed(2),
-                opcional: true,
-                tipoTeclado: const TextInputType.numberWithOptions(
-                  decimal: true,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja('Ajustar a ${widget.detalle.empleado}'),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: _margenHoja,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Se conservan aunque se recalcule la planilla.',
+                  style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
                 ),
-                formateadores: [_soloMonto],
-                habilitado: !_guardando,
-              ),
-              const SizedBox(height: Dimen.espacio1),
-              Text(
-                'Debe ${formatoSoles(widget.detalle.adelantosSaldo)}; esta semana le toca '
-                '${formatoSoles(widget.detalle.adelantosSugerido)}. Vacío es lo que le toca, '
-                '0 es nada. Lo que no se descuente queda para la semana siguiente.',
-                style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-              ),
-            ],
-            const SizedBox(height: Dimen.espacio5),
-            AppBoton(
-              texto: 'Guardar',
-              cargando: _guardando,
-              onPressed: _guardar,
+                const SizedBox(height: Dimen.espacio4),
+                if (_error != null) ...[
+                  AppAlerta(_error!),
+                  const SizedBox(height: Dimen.espacio3),
+                ],
+                AppCampo(
+                  controlador: _bonos,
+                  etiqueta: 'Bonos',
+                  icono: Icons.add_circle_outline,
+                  pista: '0.00',
+                  opcional: true,
+                  tipoTeclado: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  formateadores: [_soloMonto],
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
+                AppCampo(
+                  controlador: _descuentos,
+                  etiqueta: 'Otros descuentos',
+                  icono: Icons.remove_circle_outline,
+                  pista: '0.00',
+                  opcional: true,
+                  tipoTeclado: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  formateadores: [_soloMonto],
+                  habilitado: !_guardando,
+                ),
+                const SizedBox(height: Dimen.espacio4),
+                AppCampo(
+                  controlador: _nota,
+                  etiqueta: 'Nota',
+                  icono: Icons.notes_outlined,
+                  pista: 'Por qué el bono o el descuento',
+                  opcional: true,
+                  habilitado: !_guardando,
+                ),
+                if (widget.detalle.adelantosSaldo > 0) ...[
+                  const SizedBox(height: Dimen.espacio4),
+                  AppCampo(
+                    controlador: _adelantos,
+                    etiqueta: 'Adelantos a descontar esta semana',
+                    icono: Icons.payments_outlined,
+                    pista: widget.detalle.adelantosSugerido.toStringAsFixed(2),
+                    opcional: true,
+                    tipoTeclado: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    formateadores: [_soloMonto],
+                    habilitado: !_guardando,
+                  ),
+                  const SizedBox(height: Dimen.espacio1),
+                  Text(
+                    'Debe ${formatoSoles(widget.detalle.adelantosSaldo)}; esta semana le toca '
+                    '${formatoSoles(widget.detalle.adelantosSugerido)}. Vacío es lo que le toca, '
+                    '0 es nada. Lo que no se descuente queda para la semana siguiente.',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colores.tintaSuave,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: Dimen.espacio5),
+                AppBoton(
+                  texto: 'Guardar',
+                  cargando: _guardando,
+                  onPressed: _guardar,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -795,92 +799,98 @@ class _HojaPagarState extends ConsumerState<_HojaPagar> {
     final p = _planilla;
     final sinMarcar = p.fechasSinMarcar;
 
-    return Padding(
-      padding: _margenHoja(context),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Pagar la planilla',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: Dimen.espacio1),
-          Text(
-            'Semana del ${_dia(p.desde)} al ${_dia(p.hasta)} · ${p.detalle.length} empleados',
-            style: const TextStyle(fontSize: 13, color: Colores.tintaSuave),
-          ),
-          const SizedBox(height: Dimen.espacio4),
-          if (_error != null) ...[
-            AppAlerta(_error!),
-            const SizedBox(height: Dimen.espacio3),
-          ],
-          Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EncabezadoHoja(
+          'Pagar la planilla',
+          subtitulo:
+              'Semana del ${_dia(p.desde)} al ${_dia(p.hasta)} · ${p.detalle.length} empleados',
+        ),
+        Padding(
+          padding: _margenHoja,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Sale de la cuenta',
-                style: TextStyle(fontSize: 14, color: Colores.tintaSuave),
+              if (_error != null) ...[
+                AppAlerta(_error!),
+                const SizedBox(height: Dimen.espacio3),
+              ],
+              Row(
+                children: [
+                  const Text(
+                    'Sale de la cuenta',
+                    style: TextStyle(fontSize: 14, color: Colores.tintaSuave),
+                  ),
+                  const Spacer(),
+                  Text(
+                    formatoSoles(p.totalNeto),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Acento.de(context),
+                    ),
+                  ),
+                ],
               ),
-              const Spacer(),
-              Text(
-                formatoSoles(p.totalNeto),
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Acento.de(context),
+              if (p.totalFaltantes > 0)
+                Text(
+                  'Ya descontados ${formatoSoles(p.totalFaltantes)} de faltantes de caja.',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colores.tintaSuave,
+                  ),
                 ),
+              const SizedBox(height: Dimen.espacio4),
+              cuentas.when(
+                loading: () => const LinearProgressIndicator(),
+                error: (e, _) => AppAlerta(
+                  e is ApiExcepcion
+                      ? e.texto
+                      : 'No pudimos cargar las cuentas.',
+                ),
+                data: (lista) => AppSelector<int>(
+                  valor: _cuentaId,
+                  etiqueta: 'Cuenta de la que sale',
+                  icono: Icons.account_balance_outlined,
+                  habilitado: !_pagando,
+                  opciones: [for (final c in lista) Opcion(c.id, c.etiqueta)],
+                  onCambio: (v) => setState(() => _cuentaId = v),
+                ),
+              ),
+              if (sinMarcar.isNotEmpty) ...[
+                const SizedBox(height: Dimen.espacio3),
+                AppAlerta(
+                  'Falta pasar lista el ${sinMarcar.map(_diaSemana).join(', ')}. '
+                  'Si pagas ahora, esos días se pagan como trabajados.',
+                  tono: AlertaTono.aviso,
+                ),
+                CheckboxListTile(
+                  value: _pagarIgual,
+                  onChanged: _pagando
+                      ? null
+                      : (v) => setState(() => _pagarIgual = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text(
+                    'Pagar igual, sin esas marcas',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+              const SizedBox(height: Dimen.espacio5),
+              AppBoton(
+                texto: 'Pagar ${formatoSoles(p.totalNeto)}',
+                cargando: _pagando,
+                onPressed: sinMarcar.isNotEmpty && !_pagarIgual ? null : _pagar,
               ),
             ],
           ),
-          if (p.totalFaltantes > 0)
-            Text(
-              'Ya descontados ${formatoSoles(p.totalFaltantes)} de faltantes de caja.',
-              style: const TextStyle(fontSize: 12, color: Colores.tintaSuave),
-            ),
-          const SizedBox(height: Dimen.espacio4),
-          cuentas.when(
-            loading: () => const LinearProgressIndicator(),
-            error: (e, _) => AppAlerta(
-              e is ApiExcepcion ? e.texto : 'No pudimos cargar las cuentas.',
-            ),
-            data: (lista) => AppSelector<int>(
-              valor: _cuentaId,
-              etiqueta: 'Cuenta de la que sale',
-              icono: Icons.account_balance_outlined,
-              habilitado: !_pagando,
-              opciones: [for (final c in lista) Opcion(c.id, c.etiqueta)],
-              onCambio: (v) => setState(() => _cuentaId = v),
-            ),
-          ),
-          if (sinMarcar.isNotEmpty) ...[
-            const SizedBox(height: Dimen.espacio3),
-            AppAlerta(
-              'Falta pasar lista el ${sinMarcar.map(_diaSemana).join(', ')}. '
-              'Si pagas ahora, esos días se pagan como trabajados.',
-              tono: AlertaTono.aviso,
-            ),
-            CheckboxListTile(
-              value: _pagarIgual,
-              onChanged: _pagando
-                  ? null
-                  : (v) => setState(() => _pagarIgual = v ?? false),
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: const Text(
-                'Pagar igual, sin esas marcas',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-          const SizedBox(height: Dimen.espacio5),
-          AppBoton(
-            texto: 'Pagar ${formatoSoles(p.totalNeto)}',
-            cargando: _pagando,
-            onPressed: sinMarcar.isNotEmpty && !_pagarIgual ? null : _pagar,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

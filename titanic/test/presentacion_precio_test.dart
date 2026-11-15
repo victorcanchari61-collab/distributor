@@ -168,7 +168,15 @@ Finder get _casillaPdf =>
     find.widgetWithText(CheckboxListTile, 'Por presentación (PDF)');
 
 Future<void> _irAPresentaciones(WidgetTester tester, int cuantas) async {
-  await tester.tap(find.text('Presentaciones ($cuantas)'));
+  // La pestaña dice "Presentaciones" y, al lado, cuántas hay.
+  final pestana = find
+      .ancestor(of: find.text('Presentaciones'), matching: find.byType(InkWell))
+      .first;
+  expect(
+    find.descendant(of: pestana, matching: find.text('$cuantas')),
+    findsOneWidget,
+  );
+  await tester.tap(find.text('Presentaciones'));
   await tester.pumpAndSettle();
 }
 
