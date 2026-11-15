@@ -10,8 +10,15 @@ import 'app_pestanas.dart';
 /// (para todas las hojas) y [HojaBase].
 double altoMaximoHoja(BuildContext context) {
   final pantalla = MediaQuery.sizeOf(context).height;
+  // Al arrancar, en Android el primer cuadro llega con la pantalla midiendo 0:
+  // restarle la barra daba -56, una altura imposible, y como esto va en el
+  // tema de toda la app salía la pantalla roja. Sin medida todavía, sin tope.
+  if (pantalla <= 0) return double.infinity;
   final arriba = MediaQuery.paddingOf(context).top;
-  return pantalla - arriba - kToolbarHeight;
+  // Nunca menos de la mitad de la pantalla: en un teléfono acostado (muy bajo)
+  // restar la barra dejaba la hoja demasiado chica para usarla.
+  final alto = pantalla - arriba - kToolbarHeight;
+  return alto < pantalla / 2 ? pantalla / 2 : alto;
 }
 
 /// La franja de color de arriba de una hoja: solo el título, en blanco, sobre el
