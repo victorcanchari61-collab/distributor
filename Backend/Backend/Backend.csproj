@@ -12,6 +12,8 @@
          tráfico que va a tener. -->
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <!-- Las fotos subidas no son parte del proyecto (ver el ItemGroup de wwwroot\uploads más abajo). -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);wwwroot\uploads\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -37,6 +39,17 @@
          licencia libre: ver Recursos/Pdf/DejaVu-LICENCIA.txt). Incrustada
          para que el PDF salga igual aunque el servidor no la tenga. -->
     <EmbeddedResource Include="Recursos\Pdf\DejaVuSerif-Bold.ttf" LogicalName="Pdf.DejaVuSerif-Bold.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Las fotos que se suben desde el sistema (productos, usuarios, flota) son datos, no código.
+         Fuera del proyecto: `dotnet watch` vigilaba la carpeta y, al subir una foto, veía un archivo
+         nuevo, intentaba recargar y el backend se caía (502 en el login). Y tampoco deben viajar en el
+         `dotnet publish`: las de producción viven en el servidor, no salen de la PC de quien programa.
+         Se siguen sirviendo igual: UseStaticFiles lee wwwroot del disco, no la lista del proyecto. -->
+    <Content Remove="wwwroot\uploads\**" />
+    <None Remove="wwwroot\uploads\**" />
+    <Watch Remove="wwwroot\uploads\**" />
   </ItemGroup>
 
 </Project>
