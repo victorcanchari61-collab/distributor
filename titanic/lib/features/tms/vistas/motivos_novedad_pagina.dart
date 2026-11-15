@@ -65,6 +65,7 @@ class MotivosNovedadPagina extends ConsumerWidget {
     final todos =
         ref.watch(motivosNovedadProvider).valueOrNull ??
         const <MotivoNovedad>[];
+    final activos = todos.where((m) => m.activo).length;
 
     return AppListaPagina<MotivoNovedad>(
       titulo: 'Motivos de novedad',
@@ -89,11 +90,24 @@ class MotivosNovedadPagina extends ConsumerWidget {
           valor: '${todos.length}',
           icono: Icons.label_outline,
           color: color,
+          progreso: todos.isNotEmpty ? 1 : 0,
+          accion: AccionDato(
+            etiqueta: 'Ver todos',
+            onTap: () => ref.read(estadoFiltroProvider.notifier).state =
+                FiltroEstado.todos,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Activos',
-          valor: '${todos.where((m) => m.activo).length}',
+          valor: '$activos',
           icono: Icons.check_circle_outline,
+          tono: DatoTono.exito,
+          progreso: todos.isNotEmpty ? activos / todos.length : 0,
+          accion: AccionDato(
+            etiqueta: activos > 0 ? 'Ver los $activos' : 'Ver',
+            onTap: () => ref.read(estadoFiltroProvider.notifier).state =
+                FiltroEstado.activos,
+          ),
         ),
       ],
       pestanas: pestanas,
@@ -156,11 +170,17 @@ class MotivosNovedadPagina extends ConsumerWidget {
           valor: '${todos.length}',
           icono: Icons.fact_check_outlined,
           color: color,
+          progreso: todos.isNotEmpty ? 1 : 0,
         ),
+        // Sin enlace: esta pestaña de la app no filtra por estado.
         AppTarjetaDato(
           etiqueta: 'Activos',
           valor: '${todos.where((r) => r.activo).length}',
           icono: Icons.check_circle_outline,
+          tono: DatoTono.exito,
+          progreso: todos.isNotEmpty
+              ? todos.where((r) => r.activo).length / todos.length
+              : 0,
         ),
       ],
       pestanas: pestanas,

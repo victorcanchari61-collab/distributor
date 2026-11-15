@@ -96,12 +96,24 @@ class RecepcionesPagina extends ConsumerWidget {
           valor: '${todas.length}',
           icono: Icons.move_to_inbox_outlined,
           color: color,
+          progreso: todas.isNotEmpty ? 1 : 0,
+          accion: AccionDato(
+            etiqueta: 'Ver todas',
+            onTap: () => ref.read(filtroDocumentoProvider.notifier).state =
+                FiltroDocumento.todos,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Confirmadas',
           valor: '$confirmadas',
           icono: Icons.check_circle_outline,
           tono: DatoTono.exito,
+          progreso: todas.isNotEmpty ? confirmadas / todas.length : 0,
+          accion: AccionDato(
+            etiqueta: confirmadas > 0 ? 'Ver las $confirmadas' : 'Ver',
+            onTap: () => ref.read(filtroDocumentoProvider.notifier).state =
+                FiltroDocumento.vigentes,
+          ),
         ),
       ],
       filtro: BotonFiltros(

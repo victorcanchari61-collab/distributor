@@ -40,6 +40,7 @@ class CuentasPorPagarPagina extends ConsumerWidget {
       0,
       (n, v) => n + (v.total - v.totalPagado),
     );
+    final totalFacturado = todas.fold<double>(0, (n, v) => n + v.total);
 
     return AppListaPagina<Compra>(
       titulo: 'Cuentas por pagar',
@@ -66,6 +67,7 @@ class CuentasPorPagarPagina extends ConsumerWidget {
           valor: 'S/ ${totalSaldo.toStringAsFixed(2)}',
           icono: Icons.pending_actions_outlined,
           tono: totalSaldo > 0 ? DatoTono.aviso : DatoTono.exito,
+          progreso: totalFacturado > 0 ? totalSaldo / totalFacturado : 0,
         ),
       ],
       filtro: BotonFiltros(

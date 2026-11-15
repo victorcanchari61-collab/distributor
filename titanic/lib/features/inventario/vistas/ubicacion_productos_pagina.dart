@@ -6,6 +6,7 @@ import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
+import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
@@ -66,17 +67,27 @@ class UbicacionProductosPagina extends ConsumerWidget {
     }
 
     final datos = ref.watch(productosUbicadosProvider(almacenId));
-    final soloSin = ref.watch(soloSinLugarProvider);
+    final lugar = ref.watch(lugarUbicacionFiltroProvider);
     final texto = ref.watch(busquedaUbicacionProvider).trim().toLowerCase();
 
     final items = datos.valueOrNull?.items ?? const <ProductoUbicado>[];
+    // Acierta si CUALQUIERA de sus lugares coincide: un producto puede estar en varios.
+    bool pasaLugar(ProductoUbicado p) => switch (lugar) {
+      null => true,
+      LugarFiltro.sin => p.sinLugar,
+      LugarFiltro.con => !p.sinLugar,
+      final ruta => p.lugares.any((l) => l.ruta == ruta),
+    };
     final visibles = [
       for (final p in items)
-        if ((!soloSin || p.sinLugar) &&
-            (texto.isEmpty || p.buscable.contains(texto)))
-          p,
+        if (pasaLugar(p) && (texto.isEmpty || p.buscable.contains(texto))) p,
     ];
     final sinLugar = datos.valueOrNull?.sinLugar ?? 0;
+    final conLugar = items.length - sinLugar;
+    // Las tarjetas aplican su "Dónde está" en la lista, igual que en el panel web.
+    void verDonde(String? valor) =>
+        ref.read(lugarUbicacionFiltroProvider.notifier).state = valor;
+    double parte(int n) => items.isEmpty ? 0 : n / items.length;
 
     return AppListaPagina<ProductoUbicado>(
       titulo: 'Ubicación de productos',
@@ -94,13 +105,22 @@ class UbicacionProductosPagina extends ConsumerWidget {
       iconoVacio: Icons.place_outlined,
       singular: 'producto',
       plural: 'productos',
-      detalleVacio: soloSin ? 'Todos los productos tienen lugar.' : null,
+      detalleVacio: lugar == LugarFiltro.sin
+          ? 'Todos los productos tienen lugar.'
+          : lugar != null
+          ? 'Ninguno coincide con los filtros puestos.'
+          : null,
       pestanas: almacenes.length < 2
           ? null
           : AppPestanas<int>(
               activa: almacenId,
-              onCambio: (v) =>
-                  ref.read(almacenUbicacionProvider.notifier).state = v,
+              onCambio: (v) {
+                ref.read(almacenUbicacionProvider.notifier).state = v;
+                // Un lugar es de un almacén: en otro ese filtro no tiene sentido.
+                if (lugar != LugarFiltro.sin && lugar != LugarFiltro.con) {
+                  verDonde(null);
+                }
+              },
               pestanas: [
                 for (final a in almacenes)
                   Pestana<int>(a.id, a.nombre, icono: Icons.warehouse_outlined),
@@ -113,6 +133,11 @@ class UbicacionProductosPagina extends ConsumerWidget {
           icono: Icons.inventory_2_outlined,
           color: color,
           nota: 'con stock o ya ubicados',
+          progreso: items.isEmpty ? 0 : 1,
+          accion: AccionDato(
+            etiqueta: 'Ver todos',
+            onTap: () => verDonde(null),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Sin lugar',
@@ -120,6 +145,23 @@ class UbicacionProductosPagina extends ConsumerWidget {
           icono: Icons.report_problem_outlined,
           tono: sinLugar > 0 ? DatoTono.aviso : DatoTono.exito,
           nota: 'nadie sabe dónde están',
+          progreso: parte(sinLugar),
+          accion: AccionDato(
+            etiqueta: sinLugar > 0 ? 'Ver los $sinLugar' : 'Ver',
+            onTap: () => verDonde(LugarFiltro.sin),
+          ),
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Con lugar',
+          valor: '$conLugar',
+          icono: Icons.place_outlined,
+          tono: DatoTono.exito,
+          nota: 'ya ubicados',
+          progreso: parte(conLugar),
+          accion: AccionDato(
+            etiqueta: conLugar > 0 ? 'Ver los $conLugar' : 'Ver',
+            onTap: () => verDonde(LugarFiltro.con),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Lugares definidos',
@@ -128,10 +170,10 @@ class UbicacionProductosPagina extends ConsumerWidget {
           tono: DatoTono.neutral,
         ),
       ],
-      filtro: FilterChip(
-        label: const Text('Solo sin lugar'),
-        selected: soloSin,
-        onSelected: (v) => ref.read(soloSinLugarProvider.notifier).state = v,
+      filtro: BotonFiltros(
+        activos: lugar == null ? 0 : 1,
+        color: color,
+        onAbrir: () => _abrirFiltros(context, ref, items),
       ),
       fila: (context, producto) => _TarjetaProducto(
         producto: producto,
@@ -141,6 +183,44 @@ class UbicacionProductosPagina extends ConsumerWidget {
           () => _poner(context, ref, almacenId, producto),
         ),
       ),
+    );
+  }
+
+  /// "Dónde está", como en el web: arriba "Sin lugar" y "Con algún lugar", y
+  /// después los lugares donde hay algo puesto en este almacén.
+  Future<void> _abrirFiltros(
+    BuildContext context,
+    WidgetRef ref,
+    List<ProductoUbicado> items,
+  ) {
+    final lugares = <String, String>{
+      for (final p in items)
+        for (final l in p.lugares)
+          l.ruta: l.nombre == null ? l.ruta : '${l.ruta} · ${l.nombre}',
+    };
+    final rutas = lugares.keys.toList()..sort();
+
+    return mostrarFiltros(
+      context,
+      activos: ref.read(lugarUbicacionFiltroProvider) == null ? 0 : 1,
+      onLimpiar: () =>
+          ref.read(lugarUbicacionFiltroProvider.notifier).state = null,
+      grupos: [
+        Consumer(
+          builder: (context, ref, _) => GrupoFiltro<String?>(
+            titulo: 'Dónde está',
+            valor: ref.watch(lugarUbicacionFiltroProvider),
+            opciones: [
+              const OpcionFiltro(null, 'Todos'),
+              const OpcionFiltro(LugarFiltro.sin, 'Sin lugar'),
+              const OpcionFiltro(LugarFiltro.con, 'Con algún lugar'),
+              for (final r in rutas) OpcionFiltro(r, lugares[r]!),
+            ],
+            onCambio: (v) =>
+                ref.read(lugarUbicacionFiltroProvider.notifier).state = v,
+          ),
+        ),
+      ],
     );
   }
 

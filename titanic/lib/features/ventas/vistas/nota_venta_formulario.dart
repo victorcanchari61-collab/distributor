@@ -9,6 +9,7 @@ import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_lineas_producto.dart';
 import '../../../compartido/widgets/app_panel_producto.dart';
 import '../../../compartido/widgets/app_campo_cliente.dart';
+import '../../../compartido/widgets/app_resumen_pagos.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
@@ -304,7 +305,6 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                 .where((m) => m.tipo == tipo)
                 .toList();
             final totalPagado = _pagos.fold<double>(0, (n, p) => n + p.monto);
-            final excedido = totalPagado > _total + 0.001;
 
             void agregar() {
               final monto = double.tryParse(
@@ -388,6 +388,8 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
                       color: Colores.tinta,
                     ),
                   ),
+                  const SizedBox(height: Dimen.espacio4),
+                  AppResumenPagos(total: _total, pagado: totalPagado),
                   const SizedBox(height: Dimen.espacio4),
 
                   for (final pago in _pagos) ...[
@@ -517,14 +519,6 @@ class _NotaVentaFormularioState extends ConsumerState<NotaVentaFormulario> {
 
                   Row(
                     children: [
-                      Text(
-                        'Pagado: S/ ${totalPagado.toStringAsFixed(2)} de S/ ${_total.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: excedido ? Colores.peligro : Colores.tinta,
-                        ),
-                      ),
                       const Spacer(),
                       AppBoton(
                         texto: 'Listo',

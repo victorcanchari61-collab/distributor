@@ -24,6 +24,17 @@ final catalogoPermisosProvider = FutureProvider<List<SubmoduloCatalogo>>(
   (ref) => ref.watch(configApiProvider).catalogoPermisos(),
 );
 
+/// Las pantallas donde se puede limitar qué filas ve alguien (columna "Qué ve"
+/// de la matriz). Si no llega, la matriz sale sin esa columna: los permisos se
+/// siguen pudiendo configurar.
+final pantallasAlcanceProvider = FutureProvider<List<String>>((ref) async {
+  try {
+    return await ref.watch(configApiProvider).pantallasConAlcance();
+  } catch (_) {
+    return const [];
+  }
+});
+
 /// La bandeja del admin: lo pedido, resuelto o no.
 ///
 /// `autoDispose` no: la campanita y esta pantalla miran lo mismo, y el puente

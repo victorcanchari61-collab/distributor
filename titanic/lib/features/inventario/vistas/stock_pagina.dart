@@ -71,6 +71,12 @@ class StockPagina extends ConsumerWidget {
           icono: Icons.warning_amber_outlined,
           tono: bajoMinimo > 0 ? DatoTono.aviso : DatoTono.neutral,
           nota: bajoMinimo > 0 ? 'reponer pronto' : 'todo en orden',
+          // Como en el web: aplica la situación "Bajo el mínimo" en la lista.
+          accion: AccionDato(
+            etiqueta: bajoMinimo > 0 ? 'Ver los $bajoMinimo' : 'Ver',
+            onTap: () => ref.read(filtroStockProvider.notifier).state =
+                FiltroStock.bajoMinimo,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Valor del inventario',

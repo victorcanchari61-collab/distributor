@@ -105,18 +105,31 @@ class MisComprasPagina extends ConsumerWidget {
           valor: '${todas.length}',
           icono: Icons.shopping_bag_outlined,
           color: color,
+          progreso: todas.isNotEmpty ? 1 : 0,
+          accion: AccionDato(
+            etiqueta: 'Ver todas',
+            onTap: () =>
+                ref.read(estadoCompraFiltroProvider.notifier).state = null,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Por recibir',
           valor: '$porRecibir',
           icono: Icons.local_shipping_outlined,
           tono: porRecibir > 0 ? DatoTono.aviso : DatoTono.neutral,
+          progreso: todas.isNotEmpty ? porRecibir / todas.length : 0,
         ),
         AppTarjetaDato(
           etiqueta: 'Recibidas',
           valor: '$recibidas',
           icono: Icons.check_circle_outline,
           tono: DatoTono.exito,
+          progreso: todas.isNotEmpty ? recibidas / todas.length : 0,
+          accion: AccionDato(
+            etiqueta: recibidas > 0 ? 'Ver las $recibidas' : 'Ver',
+            onTap: () => ref.read(estadoCompraFiltroProvider.notifier).state =
+                EstadoCompra.recibidaTotal,
+          ),
         ),
       ],
       filtro: BotonFiltros(

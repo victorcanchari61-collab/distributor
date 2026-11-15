@@ -48,6 +48,9 @@ class EmpleadosPagina extends ConsumerWidget {
     final conUsuario = activos.where((e) => e.usuarioId != null).length;
     final cesados = todos.length - activos.length;
     final puestos = ref.watch(filtrosEmpleadosActivosProvider);
+    // Las tarjetas aplican su estado en la lista, igual que en el panel web.
+    void verEstado(FiltroEstado estado) =>
+        ref.read(estadoFiltroProvider.notifier).state = estado;
 
     return AppListaPagina<Empleado>(
       titulo: 'Empleados',
@@ -110,6 +113,11 @@ class EmpleadosPagina extends ConsumerWidget {
           valor: '${activos.length}',
           icono: Icons.groups_outlined,
           color: color,
+          progreso: todos.isEmpty ? 0 : activos.length / todos.length,
+          accion: AccionDato(
+            etiqueta: activos.isNotEmpty ? 'Ver los ${activos.length}' : 'Ver',
+            onTap: () => verEstado(FiltroEstado.activos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Con usuario',
@@ -117,6 +125,7 @@ class EmpleadosPagina extends ConsumerWidget {
           icono: Icons.verified_user_outlined,
           tono: DatoTono.exito,
           nota: '${activos.length - conUsuario} no entran al sistema',
+          progreso: activos.isEmpty ? 0 : conUsuario / activos.length,
         ),
         AppTarjetaDato(
           etiqueta: 'Cesados',
@@ -124,6 +133,11 @@ class EmpleadosPagina extends ConsumerWidget {
           icono: Icons.block,
           tono: cesados > 0 ? DatoTono.aviso : DatoTono.neutral,
           nota: cesados > 0 ? 'conservan su historial' : 'ninguno',
+          progreso: todos.isEmpty ? 0 : cesados / todos.length,
+          accion: AccionDato(
+            etiqueta: cesados > 0 ? 'Ver los $cesados' : 'Ver',
+            onTap: () => verEstado(FiltroEstado.inactivos),
+          ),
         ),
       ],
       filtro: BotonFiltros(

@@ -142,12 +142,16 @@ class IngresosEgresosPagina extends ConsumerWidget {
           nota: formatoSoles(
             vencidos.fold<double>(0, (s, p) => s + p.montoEstimado),
           ),
+          progreso: todos.isNotEmpty ? vencidos.length / todos.length : 0,
         ),
         AppTarjetaDato(
           etiqueta: 'Por vencer este mes',
           valor: '${todos.length - vencidos.length}',
           icono: Icons.event_outlined,
           tono: DatoTono.aviso,
+          progreso: todos.isNotEmpty
+              ? (todos.length - vencidos.length) / todos.length
+              : 0,
         ),
       ],
       pestanas: pestanas,

@@ -40,6 +40,12 @@ class VisitasPagina extends ConsumerWidget {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final resumen = ref.watch(resumenVisitasProvider).valueOrNull;
     final dia = ref.watch(diaVisitasProvider);
+    final programadas = resumen?.programadas ?? 0;
+    final atendidas = resumen?.atendidas ?? 0;
+    final pendientes = resumen?.pendientes ?? 0;
+    // Las tarjetas llevan a lo que cuentan: "Ver las 5" pone ese filtro.
+    void verFiltro(FiltroVisita f) =>
+        ref.read(filtroVisitaProvider.notifier).state = f;
 
     return AppListaPagina<Visita>(
       titulo: 'Visitas',
@@ -66,22 +72,36 @@ class VisitasPagina extends ConsumerWidget {
           valor: '${resumen?.programadas ?? 0}',
           icono: Icons.storefront_outlined,
           color: color,
+          progreso: programadas > 0 ? 1 : 0,
+          accion: AccionDato(
+            etiqueta: 'Ver todas',
+            onTap: () => verFiltro(FiltroVisita.todas),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Con pedido',
-          valor: '${resumen?.atendidas ?? 0}',
+          valor: '$atendidas',
           icono: Icons.check_circle_outline,
           tono: DatoTono.exito,
-          nota: '${resumen?.cobertura ?? 0}% de cobertura',
+          // El % de cobertura ya lo dice la barra con su porcentaje.
+          nota: 'ya se les tomó pedido',
+          progreso: programadas > 0 ? atendidas / programadas : 0,
+          accion: AccionDato(
+            etiqueta: atendidas > 0 ? 'Ver las $atendidas' : 'Ver',
+            onTap: () => verFiltro(FiltroVisita.atendidas),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Pendientes',
-          valor: '${resumen?.pendientes ?? 0}',
+          valor: '$pendientes',
           icono: Icons.place_outlined,
-          tono: (resumen?.pendientes ?? 0) > 0
-              ? DatoTono.aviso
-              : DatoTono.neutral,
+          tono: pendientes > 0 ? DatoTono.aviso : DatoTono.neutral,
           nota: 'todavía sin pasar',
+          progreso: programadas > 0 ? pendientes / programadas : 0,
+          accion: AccionDato(
+            etiqueta: pendientes > 0 ? 'Ver las $pendientes' : 'Ver',
+            onTap: () => verFiltro(FiltroVisita.pendientes),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Pedido del día',

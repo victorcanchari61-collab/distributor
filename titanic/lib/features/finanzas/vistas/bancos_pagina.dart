@@ -193,6 +193,12 @@ class BancosPagina extends ConsumerWidget {
           icono: Icons.credit_card_outlined,
           tono: DatoTono.exito,
           nota: 'En $bancos ${bancos == 1 ? 'banco' : 'bancos'}',
+          progreso: todas.isNotEmpty ? activas.length / todas.length : 0,
+          accion: AccionDato(
+            etiqueta: activas.isNotEmpty ? 'Ver las ${activas.length}' : 'Ver',
+            onTap: () =>
+                ref.read(verInactivasBancosProvider.notifier).state = false,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Mayor saldo',
@@ -209,6 +215,9 @@ class BancosPagina extends ConsumerWidget {
           icono: Icons.block,
           tono: DatoTono.neutral,
           nota: 'No reciben cobros ni pagos',
+          progreso: todas.isNotEmpty
+              ? (todas.length - activas.length) / todas.length
+              : 0,
         ),
       ],
       filtro: BotonFiltros(

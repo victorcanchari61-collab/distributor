@@ -123,6 +123,65 @@ class ConfigApi {
   /// PATCH /api/permiso/{id}/revocar
   Future<void> revocarPermiso(int id) => _api.patch('/permiso/$id/revocar');
 
+  /// POST /api/permiso/conceder — un permiso suelto a una persona, sin que lo
+  /// haya pedido. La fecha solo viaja si el alcance es temporal.
+  Future<void> concederPermiso({
+    required int usuarioId,
+    required String submodulo,
+    required String accion,
+    required int alcance,
+    DateTime? expiraEn,
+    String? motivo,
+  }) => _api.post(
+    '/permiso/conceder',
+    cuerpo: {
+      'usuarioId': usuarioId,
+      'submodulo': submodulo,
+      'accion': accion,
+      'alcance': alcance,
+      // El backend guarda en UTC.
+      'expiraEn': expiraEn?.toUtc().toIso8601String(),
+      'motivo': motivo,
+    },
+  );
+
+  // --- Alcance de datos: qué filas ve (todos, solo sus rutas, solo lo suyo) ---
+
+  /// GET /api/permiso/alcances/catalogo — las pantallas donde se puede limitar.
+  Future<List<String>> pantallasConAlcance() async {
+    final datos =
+        await _api.get('/permiso/alcances/catalogo') as Map<String, dynamic>;
+    return [
+      for (final s in datos['submodulos'] as List? ?? const []) s as String,
+    ];
+  }
+
+  /// GET /api/permiso/alcances/rol/{id}. Lo que falta es "todos": el backend
+  /// no guarda lo que no limita.
+  Future<Map<String, String>> alcancesDeRol(int rolId) async =>
+      _mapa(await _api.get('/permiso/alcances/rol/$rolId'));
+
+  /// PUT /api/permiso/alcances/rol/{id} — reemplaza los del rol.
+  Future<void> guardarAlcancesRol(int rolId, Map<String, String> alcances) =>
+      _api.put('/permiso/alcances/rol/$rolId', cuerpo: alcances);
+
+  /// GET /api/permiso/alcances/usuario/{id}. Lo que falta es "igual que su
+  /// rol".
+  Future<Map<String, String>> alcancesDeUsuario(int usuarioId) async =>
+      _mapa(await _api.get('/permiso/alcances/usuario/$usuarioId'));
+
+  /// PUT /api/permiso/alcances/usuario/{id} — reemplaza los de la persona; los
+  /// que no viajan siguen a su rol.
+  Future<void> guardarAlcancesUsuario(
+    int usuarioId,
+    Map<String, String> alcances,
+  ) => _api.put('/permiso/alcances/usuario/$usuarioId', cuerpo: alcances);
+
+  static Map<String, String> _mapa(dynamic datos) => {
+    for (final e in (datos as Map? ?? const {}).entries)
+      '${e.key}': '${e.value}',
+  };
+
   // --- Consultas a SUNAT ---
 
   /// GET /api/consulta/ruc/{ruc}
@@ -212,11 +271,13 @@ class ConfigApi {
   }
 
   /// POST /api/empresa/{id}/series
-  Future<SerieCpe> crearSerie(int empresaId, Map<String, dynamic> cuerpo) async =>
-      SerieCpe.desdeJson(
-        await _api.post('/empresa/$empresaId/series', cuerpo: cuerpo)
-            as Map<String, dynamic>,
-      );
+  Future<SerieCpe> crearSerie(
+    int empresaId,
+    Map<String, dynamic> cuerpo,
+  ) async => SerieCpe.desdeJson(
+    await _api.post('/empresa/$empresaId/series', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
 
   /// PUT /api/empresa/{id}/series/{serieId}
   Future<SerieCpe> actualizarSerie(
@@ -234,7 +295,8 @@ class ConfigApi {
 
   /// POST /api/empresa/{id}/series/estandar. F001, B001 y las de notas que falten.
   Future<List<SerieCpe>> crearSeriesEstandar(int empresaId) async {
-    final datos = await _api.post('/empresa/$empresaId/series/estandar') as List;
+    final datos =
+        await _api.post('/empresa/$empresaId/series/estandar') as List;
     return datos
         .map((e) => SerieCpe.desdeJson(e as Map<String, dynamic>))
         .toList();

@@ -281,6 +281,10 @@ class ProductosPagina extends ConsumerWidget {
         ref.watch(categoriasProvider).valueOrNull ?? const <Categoria>[];
     final marcas = ref.watch(marcasProvider).valueOrNull ?? const <Marca>[];
     final puestos = ref.watch(filtrosProductosActivosProvider);
+    final desactivados = todos.length - activos.length;
+    // Las tarjetas aplican su estado en la lista, igual que en el panel web.
+    void verEstado(FiltroEstado estado) =>
+        ref.read(estadoFiltroProvider.notifier).state = estado;
     final totalPresentaciones = activos.fold<int>(
       0,
       (n, p) => n + p.presentaciones.length,
@@ -347,21 +351,36 @@ class ProductosPagina extends ConsumerWidget {
           valor: '${activos.length}',
           icono: Icons.inventory_2_outlined,
           color: color,
+          progreso: todos.isEmpty ? 0 : activos.length / todos.length,
+          accion: AccionDato(
+            etiqueta: activos.isNotEmpty ? 'Ver los ${activos.length}' : 'Ver',
+            onTap: () => verEstado(FiltroEstado.activos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Desactivados',
-          valor: '${todos.length - activos.length}',
+          valor: '$desactivados',
           icono: Icons.block,
           tono: todos.length == activos.length
               ? DatoTono.neutral
               : DatoTono.aviso,
           nota: 'no salen en operaciones',
+          progreso: todos.isEmpty ? 0 : desactivados / todos.length,
+          accion: AccionDato(
+            etiqueta: desactivados > 0 ? 'Ver los $desactivados' : 'Ver',
+            onTap: () => verEstado(FiltroEstado.inactivos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Categorías',
           valor: '${categorias.length}',
           icono: Icons.category_outlined,
           tono: DatoTono.neutral,
+          accion: AccionDato(
+            etiqueta: 'Ver categorías',
+            onTap: () => ref.read(pestanaProductosProvider.notifier).state =
+                PestanaProductos.categorias,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Presentaciones',

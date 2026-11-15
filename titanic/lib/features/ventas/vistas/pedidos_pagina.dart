@@ -44,6 +44,10 @@ class PedidosPagina extends ConsumerWidget {
         .where((p) => p.estado == EstadoPedido.confirmado)
         .length;
     final filtrosActivos = ref.watch(filtrosPedidosActivosProvider);
+    // Las tarjetas aplican su estado en la lista, igual que en el panel web.
+    void verEstado(String? estado) =>
+        ref.read(estadoPedidoFiltroProvider.notifier).state = estado;
+    double parte(int n) => todos.isEmpty ? 0 : n / todos.length;
 
     return AppListaPagina<Pedido>(
       titulo: 'Pedidos',
@@ -95,18 +99,33 @@ class PedidosPagina extends ConsumerWidget {
           valor: '${todos.length}',
           icono: Icons.list_alt_outlined,
           color: color,
+          progreso: todos.isEmpty ? 0 : 1,
+          accion: AccionDato(
+            etiqueta: 'Ver todos',
+            onTap: () => verEstado(null),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Pendientes',
           valor: '$pendientes',
           icono: Icons.hourglass_empty,
           tono: pendientes > 0 ? DatoTono.aviso : DatoTono.neutral,
+          progreso: parte(pendientes),
+          accion: AccionDato(
+            etiqueta: pendientes > 0 ? 'Ver los $pendientes' : 'Ver',
+            onTap: () => verEstado(EstadoPedido.pendiente),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Confirmados',
           valor: '$confirmados',
           icono: Icons.check_circle_outline,
           tono: DatoTono.exito,
+          progreso: parte(confirmados),
+          accion: AccionDato(
+            etiqueta: confirmados > 0 ? 'Ver los $confirmados' : 'Ver',
+            onTap: () => verEstado(EstadoPedido.confirmado),
+          ),
         ),
       ],
       filtro: BotonFiltros(

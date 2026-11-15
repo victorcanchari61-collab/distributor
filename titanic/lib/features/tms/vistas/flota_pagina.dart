@@ -86,6 +86,12 @@ class FlotaPagina extends ConsumerWidget {
     }
 
     final resumen = ref.watch(resumenFlotaProvider).valueOrNull;
+    final total = resumen?.vehiculos ?? 0;
+    final vencidos = resumen?.conDocumentoVencido ?? 0;
+    final porVencer = resumen?.porVencer ?? 0;
+    // Las tarjetas llevan a lo que cuentan: "Ver los 3" filtra por los papeles.
+    void verPapeles(FiltroPapeles f) =>
+        ref.read(filtroPapelesProvider.notifier).state = f;
 
     return AppListaPagina<Vehiculo>(
       titulo: 'Flota',
@@ -111,27 +117,41 @@ class FlotaPagina extends ConsumerWidget {
           valor: '${resumen?.vehiculos ?? 0}',
           icono: Icons.local_shipping_outlined,
           color: color,
+          progreso: total > 0 ? 1 : 0,
+          accion: AccionDato(
+            etiqueta: 'Ver todos',
+            onTap: () => verPapeles(FiltroPapeles.todos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Activos',
           valor: '${resumen?.activos ?? 0}',
           icono: Icons.check_circle_outline,
+          tono: DatoTono.exito,
+          progreso: total > 0 ? (resumen?.activos ?? 0) / total : 0,
         ),
         AppTarjetaDato(
-          etiqueta: 'Documentos vencidos',
-          valor: '${resumen?.conDocumentoVencido ?? 0}',
+          etiqueta: 'Con documento vencido',
+          valor: '$vencidos',
+          nota: 'no deberían salir a repartir',
           icono: Icons.gpp_bad_outlined,
-          tono: (resumen?.conDocumentoVencido ?? 0) > 0
-              ? DatoTono.peligro
-              : DatoTono.neutral,
+          tono: vencidos > 0 ? DatoTono.peligro : DatoTono.neutral,
+          progreso: total > 0 ? vencidos / total : 0,
+          accion: AccionDato(
+            etiqueta: vencidos > 0 ? 'Ver los $vencidos' : 'Ver',
+            onTap: () => verPapeles(FiltroPapeles.vencidos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Por vencer',
-          valor: '${resumen?.porVencer ?? 0}',
+          valor: '$porVencer',
           icono: Icons.schedule_outlined,
-          tono: (resumen?.porVencer ?? 0) > 0
-              ? DatoTono.aviso
-              : DatoTono.neutral,
+          tono: porVencer > 0 ? DatoTono.aviso : DatoTono.neutral,
+          progreso: total > 0 ? porVencer / total : 0,
+          accion: AccionDato(
+            etiqueta: porVencer > 0 ? 'Ver los $porVencer' : 'Ver',
+            onTap: () => verPapeles(FiltroPapeles.porVencer),
+          ),
         ),
       ],
       filtro: BotonFiltros(

@@ -39,6 +39,9 @@ class TransferenciasPagina extends ConsumerWidget {
         const <DocumentoInventario>[];
     final confirmadas = todas.where((d) => !d.anulado).length;
     final almacenesActivos = ref.watch(almacenesActivosProvider).length;
+    // Las tarjetas aplican su estado en la lista, igual que en el panel web.
+    void verEstado(FiltroDocumento filtro) =>
+        ref.read(filtroDocumentoProvider.notifier).state = filtro;
 
     return AppListaPagina<DocumentoInventario>(
       titulo: 'Transferencias',
@@ -96,12 +99,22 @@ class TransferenciasPagina extends ConsumerWidget {
           valor: '${todas.length}',
           icono: Icons.local_shipping_outlined,
           color: color,
+          progreso: todas.isEmpty ? 0 : 1,
+          accion: AccionDato(
+            etiqueta: 'Ver todas',
+            onTap: () => verEstado(FiltroDocumento.todos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Confirmadas',
           valor: '$confirmadas',
           icono: Icons.check_circle_outline,
           tono: DatoTono.exito,
+          progreso: todas.isEmpty ? 0 : confirmadas / todas.length,
+          accion: AccionDato(
+            etiqueta: confirmadas > 0 ? 'Ver las $confirmadas' : 'Ver',
+            onTap: () => verEstado(FiltroDocumento.vigentes),
+          ),
         ),
       ],
       filtro: BotonFiltros(

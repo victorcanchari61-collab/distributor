@@ -96,18 +96,38 @@ class OrdenesCompraPagina extends ConsumerWidget {
           valor: '${todas.length}',
           icono: Icons.list_alt_outlined,
           color: color,
+          progreso: todas.isNotEmpty ? 1 : 0,
+          accion: AccionDato(
+            etiqueta: 'Ver todas',
+            onTap: () =>
+                ref.read(estadoOrdenCompraFiltroProvider.notifier).state = null,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Pendientes',
           valor: '$pendientes',
           icono: Icons.hourglass_empty,
           tono: pendientes > 0 ? DatoTono.aviso : DatoTono.neutral,
+          progreso: todas.isNotEmpty ? pendientes / todas.length : 0,
+          accion: AccionDato(
+            etiqueta: pendientes > 0 ? 'Ver las $pendientes' : 'Ver',
+            onTap: () =>
+                ref.read(estadoOrdenCompraFiltroProvider.notifier).state =
+                    EstadoOrdenCompra.pendiente,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Confirmadas',
           valor: '$confirmadas',
           icono: Icons.check_circle_outline,
           tono: DatoTono.exito,
+          progreso: todas.isNotEmpty ? confirmadas / todas.length : 0,
+          accion: AccionDato(
+            etiqueta: confirmadas > 0 ? 'Ver las $confirmadas' : 'Ver',
+            onTap: () =>
+                ref.read(estadoOrdenCompraFiltroProvider.notifier).state =
+                    EstadoOrdenCompra.confirmada,
+          ),
         ),
       ],
       filtro: BotonFiltros(

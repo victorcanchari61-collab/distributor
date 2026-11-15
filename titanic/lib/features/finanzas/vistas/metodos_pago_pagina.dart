@@ -42,6 +42,7 @@ class MetodosPagoPagina extends ConsumerWidget {
         ref.watch(metodosPagoProvider).valueOrNull ?? const <MetodoPago>[];
     final activos = todos.where((m) => m.activo).toList();
     int deTipo(String tipo) => activos.where((m) => m.tipo == tipo).length;
+    double deActivos(int n) => activos.isNotEmpty ? n / activos.length : 0;
     // Yape o transferencia sin cuenta: el servidor rechaza cobrar con ellos.
     final sinCuenta = activos
         .where(
@@ -75,6 +76,12 @@ class MetodosPagoPagina extends ConsumerWidget {
           icono: Icons.payments_outlined,
           color: color,
           nota: 'De ${todos.length} registrados',
+          progreso: todos.isNotEmpty ? activos.length / todos.length : 0,
+          accion: AccionDato(
+            etiqueta: activos.isNotEmpty ? 'Ver los ${activos.length}' : 'Ver',
+            onTap: () => ref.read(estadoFiltroProvider.notifier).state =
+                FiltroEstado.activos,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Billeteras digitales',
@@ -82,6 +89,7 @@ class MetodosPagoPagina extends ConsumerWidget {
           icono: Icons.smartphone_outlined,
           tono: DatoTono.exito,
           nota: 'Yape, Plin...',
+          progreso: deActivos(deTipo(TipoMetodoPago.billeteraDigital)),
         ),
         AppTarjetaDato(
           etiqueta: 'Transferencias',
@@ -89,6 +97,7 @@ class MetodosPagoPagina extends ConsumerWidget {
           icono: Icons.swap_horiz,
           tono: DatoTono.exito,
           nota: 'A una cuenta bancaria',
+          progreso: deActivos(deTipo(TipoMetodoPago.transferencia)),
         ),
         AppTarjetaDato(
           etiqueta: 'Sin cuenta',
@@ -96,6 +105,7 @@ class MetodosPagoPagina extends ConsumerWidget {
           icono: Icons.warning_amber_outlined,
           tono: sinCuenta > 0 ? DatoTono.peligro : DatoTono.neutral,
           nota: 'No sirven para cobrar hasta asignarles una cuenta',
+          progreso: deActivos(sinCuenta),
         ),
       ],
       filtro: BotonFiltros(

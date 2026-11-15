@@ -38,6 +38,9 @@ class PrestamosPagina extends ConsumerWidget {
     final pendientes = todos
         .where((p) => p.estado == EstadoPrestamo.pendiente)
         .length;
+    // Las tarjetas aplican su estado en la lista, igual que en el panel web.
+    void verDevolucion(FiltroDevolucion filtro) =>
+        ref.read(filtroDevolucionProvider.notifier).state = filtro;
 
     return AppListaPagina<Prestamo>(
       titulo: 'Préstamos',
@@ -89,12 +92,22 @@ class PrestamosPagina extends ConsumerWidget {
           valor: '${todos.length}',
           icono: Icons.handshake_outlined,
           color: color,
+          progreso: todos.isEmpty ? 0 : 1,
+          accion: AccionDato(
+            etiqueta: 'Ver todos',
+            onTap: () => verDevolucion(FiltroDevolucion.todos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Pendientes',
           valor: '$pendientes',
           icono: Icons.hourglass_empty,
           tono: pendientes > 0 ? DatoTono.aviso : DatoTono.neutral,
+          progreso: todos.isEmpty ? 0 : pendientes / todos.length,
+          accion: AccionDato(
+            etiqueta: pendientes > 0 ? 'Ver los $pendientes' : 'Ver',
+            onTap: () => verDevolucion(FiltroDevolucion.pendientes),
+          ),
         ),
       ],
       filtro: BotonFiltros(

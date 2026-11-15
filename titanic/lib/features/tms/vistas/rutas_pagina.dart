@@ -5,6 +5,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/estado/filtro_estado.dart';
+import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
@@ -18,6 +19,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/ruta.dart';
 import '../estado/tms_controlador.dart';
+import 'chips_nombres.dart';
 import 'ruta_formulario.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
@@ -32,6 +34,16 @@ class RutasPagina extends ConsumerWidget {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final todas = ref.watch(rutasProvider).valueOrNull ?? const <Ruta>[];
     final activas = todas.where((r) => r.activo).length;
+    final sinVendedor = todas
+        .where((r) => r.activo && r.vendedores.isEmpty)
+        .length;
+    final ventasMes = todas.fold<double>(0, (n, r) => n + r.ventasMes);
+    final compraron = todas.fold<int>(0, (n, r) => n + r.clientesConCompraMes);
+    final porCobrar = todas.fold<double>(0, (n, r) => n + r.porCobrar);
+    final deben = todas.fold<int>(0, (n, r) => n + r.clientesConDeuda);
+    // Las tarjetas llevan a lo que cuentan: "Ver las 8" pone ese estado en el filtro.
+    void verEstado(FiltroEstado e) =>
+        ref.read(estadoFiltroProvider.notifier).state = e;
 
     return AppListaPagina<Ruta>(
       titulo: 'Rutas',
@@ -56,11 +68,47 @@ class RutasPagina extends ConsumerWidget {
           valor: '${todas.length}',
           icono: Icons.route_outlined,
           color: color,
+          progreso: todas.isNotEmpty ? 1 : 0,
+          accion: AccionDato(
+            etiqueta: 'Ver todas',
+            onTap: () => verEstado(FiltroEstado.todos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Activas',
           valor: '$activas',
           icono: Icons.check_circle_outline,
+          tono: DatoTono.exito,
+          progreso: todas.isNotEmpty ? activas / todas.length : 0,
+          accion: AccionDato(
+            etiqueta: activas > 0 ? 'Ver las $activas' : 'Ver',
+            onTap: () => verEstado(FiltroEstado.activos),
+          ),
+        ),
+        // Sin enlace: la app no filtra por quién tiene la ruta a cargo.
+        AppTarjetaDato(
+          etiqueta: 'Sin vendedor',
+          valor: '$sinVendedor',
+          nota: 'activas sin nadie a cargo',
+          icono: Icons.person_off_outlined,
+          tono: sinVendedor > 0 ? DatoTono.aviso : DatoTono.exito,
+          progreso: activas > 0 ? sinVendedor / activas : 0,
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Ventas del mes',
+          valor: formatoSoles(ventasMes),
+          nota: compraron == 1
+              ? '1 cliente compró'
+              : '$compraron clientes compraron',
+          icono: Icons.trending_up,
+          tono: DatoTono.exito,
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Por cobrar',
+          valor: formatoSoles(porCobrar),
+          nota: deben == 1 ? '1 cliente debe' : '$deben clientes deben',
+          icono: Icons.request_quote_outlined,
+          tono: porCobrar > 0 ? DatoTono.aviso : DatoTono.neutral,
         ),
       ],
       filtro: BotonFiltros(
@@ -156,6 +204,20 @@ class RutasPagina extends ConsumerWidget {
         CampoDetalle('Nombre', ruta.nombre),
         CampoDetalle('Clientes', '${ruta.clientes}'),
         CampoDetalle(
+          'A cargo de',
+          ruta.vendedores.isEmpty ? 'Sin vendedor' : ruta.vendedores.join(', '),
+        ),
+        CampoDetalle('Mercados', ordenarNombres(ruta.mercados).join(', ')),
+        ..._camposReparto(ruta),
+        CampoDetalle(
+          'Compraron',
+          ruta.clientesConCompraMes > 0 ? '${ruta.clientesConCompraMes}' : null,
+        ),
+        CampoDetalle(
+          'Deben',
+          ruta.clientesConDeuda > 0 ? '${ruta.clientesConDeuda}' : null,
+        ),
+        CampoDetalle(
           'Estado',
           ruta.activo ? 'Activo' : 'Inactivo',
           widget: _insigniaEstado(ruta.activo),
@@ -168,6 +230,35 @@ class RutasPagina extends ConsumerWidget {
 AppEtiqueta _insigniaEstado(bool activo) => AppEtiqueta(
   activo ? 'Activo' : 'Inactivo',
   tono: activo ? EtiquetaTono.exito : EtiquetaTono.aviso,
+);
+
+/// Qué días sale, en qué camión, lo vendido y lo que deben: lo que comparten
+/// la tarjeta y la ficha. Sin dato va la raya, como en el web.
+List<CampoDetalle> _camposReparto(Ruta ruta) => [
+  CampoDetalle(
+    'Días',
+    ruta.dias.map((d) => SalidaRuta.corto[d] ?? d).join(', '),
+  ),
+  CampoDetalle('Camión', ruta.placas.join(', ')),
+  CampoDetalle(
+    'Ventas del mes',
+    ruta.ventasMes > 0 ? formatoSoles(ruta.ventasMes) : null,
+  ),
+  CampoDetalle(
+    'Por cobrar',
+    ruta.porCobrar > 0 ? formatoSoles(ruta.porCobrar) : null,
+    widget: ruta.porCobrar > 0 ? _textoDeuda(ruta.porCobrar) : null,
+  ),
+];
+
+/// Lo que deben, en ámbar como en el web.
+Widget _textoDeuda(double monto) => Text(
+  formatoSoles(monto),
+  style: const TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    color: Colores.advertencia,
+  ),
 );
 
 class _TarjetaRuta extends StatelessWidget {
@@ -187,6 +278,12 @@ class _TarjetaRuta extends StatelessWidget {
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Clientes', '${ruta.clientes}'),
+    CampoDetalle(
+      'Mercados',
+      null,
+      widget: ruta.mercados.isEmpty ? null : ChipsNombres(ruta.mercados),
+    ),
+    ..._camposReparto(ruta),
     CampoDetalle(
       'Estado',
       ruta.activo ? 'Activo' : 'Inactivo',

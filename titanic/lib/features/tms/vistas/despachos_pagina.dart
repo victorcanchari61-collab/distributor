@@ -126,12 +126,16 @@ class DespachosPagina extends ConsumerWidget {
           valor: '${resumen?.total ?? 0}',
           icono: Icons.local_shipping_outlined,
           color: color,
+          progreso: (resumen?.total ?? 0) > 0 ? 1 : 0,
         ),
         AppTarjetaDato(
           etiqueta: 'Armados',
           valor: '${resumen?.armados ?? 0}',
           icono: Icons.inventory_2_outlined,
           tono: DatoTono.exito,
+          progreso: resumen != null && resumen.total > 0
+              ? resumen.armados / resumen.total
+              : 0,
         ),
         AppTarjetaDato(
           etiqueta: 'Pedidos en ruta',

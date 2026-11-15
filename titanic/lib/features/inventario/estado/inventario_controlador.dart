@@ -69,8 +69,19 @@ class AlmacenesControlador extends AsyncNotifier<List<Almacen>> {
 /// El almacen que se esta mirando en "Ubicacion de productos". Null: el principal.
 final almacenUbicacionProvider = StateProvider.autoDispose<int?>((ref) => null);
 
-/// Mostrar solo los que no tienen lugar.
-final soloSinLugarProvider = StateProvider.autoDispose<bool>((ref) => false);
+/// Las dos primeras opciones de "Dónde está", antes de los lugares: la lista
+/// de trabajo de ordenar el almacén, igual que en el panel web.
+class LugarFiltro {
+  const LugarFiltro._();
+  static const sin = '__sin';
+  static const con = '__con';
+}
+
+/// "Dónde está": null es todos; [LugarFiltro.sin], [LugarFiltro.con] o la ruta
+/// de un lugar ("P1-A-E03").
+final lugarUbicacionFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
 final busquedaUbicacionProvider = StateProvider.autoDispose((ref) => '');
 

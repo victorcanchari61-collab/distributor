@@ -17,12 +17,29 @@ class Pestana<T> {
   final int? contador;
 }
 
+/// Un nombre que llega TODO EN MAYÚSCULAS desde los datos ("TIENDA 1",
+/// "SEGUNDO PISO") se muestra como "Tienda 1": en mayúsculas una fila de
+/// pestañas se lee como un grito y cuesta distinguir una de otra. Solo se toca
+/// lo que viene entero en mayúsculas; un nombre escrito a mano ("Por rol")
+/// queda como está. Es el mismo `legible` del `Tabs` del panel web.
+String textoLegible(String texto) {
+  final letras = texto.replaceAll(RegExp(r'[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]'), '');
+  if (letras.length < 2 || letras != letras.toUpperCase()) return texto;
+  final bajo = texto.toLowerCase();
+  return bajo.substring(0, 1).toUpperCase() + bajo.substring(1);
+}
+
 /// Las pestañas de una vista, iguales a las del panel web (`Tabs`).
 ///
 /// Se usan cuando varias tablas pequeñas pertenecen al mismo tema y no merecen
 /// entrada propia en el menú: las categorías, marcas y unidades viven dentro de
 /// Productos; la Bóveda, dentro de Cajas. Se deslizan de lado cuando no entran
 /// todas en el ancho del teléfono.
+///
+/// Van juntas dentro de un rectángulo con fondo gris y borde fino, que las
+/// separa de lo que hay arriba y abajo. Cada pestaña es una tarjetita blanca
+/// con borde; la activa se rellena con el color del módulo, igual que su
+/// contador.
 ///
 /// Van en el hueco `pestanas` de `AppListaPagina`, arriba de todo, en el mismo
 /// lugar que en la web.
@@ -42,24 +59,35 @@ class AppPestanas<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final acento = Acento.de(context);
 
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colores.linea)),
+    // Lo que se desliza es el envoltorio, no el rectángulo: así el borde
+    // redondo no se recorta y el rectángulo mide lo que sus pestañas.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(
+        horizontal: Dimen.espacio3,
+        vertical: 6,
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio3),
+      child: Container(
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: const Color(0xB3E2E8F0),
+          border: Border.all(color: Colores.linea),
+          borderRadius: BorderRadius.circular(Dimen.radioCampo),
+        ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            for (final p in pestanas)
+            for (var i = 0; i < pestanas.length; i++) ...[
+              if (i > 0) const SizedBox(width: 6),
               _Pestana(
-                pestana: p,
-                activa: p.valor == activa,
+                pestana: pestanas[i],
+                activa: pestanas[i].valor == activa,
                 acento: acento,
                 onTap: () {
-                  if (p.valor != activa) onCambio(p.valor);
+                  if (pestanas[i].valor != activa) onCambio(pestanas[i].valor);
                 },
               ),
+            ],
           ],
         ),
       ),
@@ -82,60 +110,71 @@ class _Pestana<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = activa ? acento : Colores.tintaSuave;
+    // El texto de la activa va un poco más oscuro que el acento, para que se
+    // lea sobre su propio tinte.
+    final tinta = Color.lerp(acento, Colores.tinta, 0.25)!;
+    final radio = BorderRadius.circular(9);
 
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Dimen.espacio3,
-          vertical: 11,
+    return Material(
+      color: activa
+          ? Color.alphaBlend(acento.withValues(alpha: 0.12), Colores.superficie)
+          : Colores.superficie,
+      shape: RoundedRectangleBorder(
+        borderRadius: radio,
+        // El borde más grueso hace de "anillo" de la activa.
+        side: BorderSide(
+          color: activa ? acento : Colores.linea,
+          width: activa ? 1.5 : 1,
         ),
-        // La línea inferior marca la activa sin mover el texto.
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: activa ? acento : Colors.transparent,
-              width: 2,
-            ),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (pestana.icono != null) ...[
-              Icon(pestana.icono, size: 17, color: color),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              pestana.texto,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: activa ? FontWeight.w700 : FontWeight.w500,
-                color: activa ? acento : Colores.tintaSuave,
-              ),
-            ),
-            if (pestana.contador != null) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: activa
-                      ? acento.withValues(alpha: 0.12)
-                      : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(999),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: radio,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (pestana.icono != null) ...[
+                Icon(
+                  pestana.icono,
+                  size: 16,
+                  color: activa ? acento : Colores.tintaTenue,
                 ),
-                child: Text(
-                  '${pestana.contador}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: activa ? acento : const Color(0xFF64748B),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                textoLegible(pestana.texto),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: activa ? FontWeight.w700 : FontWeight.w500,
+                  color: activa ? tinta : Colores.tintaSuave,
+                ),
+              ),
+              if (pestana.contador != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: activa ? acento : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '${pestana.contador}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.1,
+                      fontWeight: FontWeight.w600,
+                      color: activa ? Colors.white : const Color(0xFF64748B),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

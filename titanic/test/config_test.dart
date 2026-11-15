@@ -9,6 +9,7 @@ import 'package:titanic/core/tema/tema.dart';
 import 'package:titanic/features/auth/estado/auth_controlador.dart';
 import 'package:titanic/features/config/datos/config_api.dart';
 import 'package:titanic/features/config/datos/config_modelos.dart';
+import 'package:titanic/features/config/datos/permiso_modelos.dart';
 import 'package:titanic/features/config/estado/config_controlador.dart';
 import 'package:titanic/features/config/vistas/accesos_pagina.dart';
 import 'package:titanic/features/config/vistas/empresas_pagina.dart';
@@ -67,6 +68,40 @@ class _ApiFalso extends ConfigApi {
       'acciones': ['ver', 'exportar'],
     }),
   ];
+
+  /// Qué ve el rol, tal como se mandó al guardar la matriz.
+  Map<String, String>? ultimosAlcancesRol;
+
+  /// Lo dado suelto desde "Dar permisos", como "submodulo:accion".
+  final concedidos = <String>[];
+
+  @override
+  Future<List<String>> pantallasConAlcance() async => ['maestros.clientes'];
+
+  @override
+  Future<Map<String, String>> alcancesDeRol(int rolId) async => {};
+
+  @override
+  Future<void> guardarAlcancesRol(
+    int rolId,
+    Map<String, String> alcances,
+  ) async => ultimosAlcancesRol = alcances;
+
+  @override
+  Future<Map<String, String>> alcancesDeUsuario(int usuarioId) async => {};
+
+  @override
+  Future<List<UsuarioPermiso>> permisosDe(int usuarioId) async => [];
+
+  @override
+  Future<void> concederPermiso({
+    required int usuarioId,
+    required String submodulo,
+    required String accion,
+    required int alcance,
+    DateTime? expiraEn,
+    String? motivo,
+  }) async => concedidos.add('$submodulo:$accion');
 
   @override
   Future<Rol> actualizarPermisos(
@@ -366,6 +401,75 @@ void main() {
     expect(api.ultimosPermisos, isEmpty);
 
     // El aviso se cierra solo a los 3 segundos: se deja correr para no terminar con su temporizador pendiente.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('qué ve el rol se elige en la fila y se guarda con Guardar', (
+    tester,
+  ) async {
+    final api = await _montar(tester, const AccesosPagina());
+
+    await tester.tap(find.text('Vendedor'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Maestros'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clientes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Qué ve: Todos'), findsOneWidget);
+
+    await tester.tap(find.text('Todos'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Solo mis rutas').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(api.ultimosAlcancesRol, {'maestros.clientes': 'misclientes'});
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('dar permisos deja fijo lo del rol y da solo lo nuevo', (
+    tester,
+  ) async {
+    final api = await _montar(tester, const AccesosPagina());
+
+    await tester.tap(find.text('Por persona'));
+    await tester.pumpAndSettle();
+
+    // Luis es Vendedor: su rol ya le da ver y crear clientes.
+    await tester.tap(find.text('Ana Torres · Administrador'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Luis Retirado · Vendedor').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Dar permisos'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Maestros'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clientes'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Ver, Crear: ya lo tiene por su rol (Vendedor)'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Clientes: editar'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Conceder'));
+    await tester.tap(find.text('Conceder'));
+    await tester.pumpAndSettle();
+
+    // Ver ya lo tenía por su rol: no se vuelve a dar.
+    expect(api.concedidos, ['maestros.clientes:editar']);
+
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
   });

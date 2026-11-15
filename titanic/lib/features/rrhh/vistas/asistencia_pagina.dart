@@ -93,28 +93,41 @@ class AsistenciaPagina extends ConsumerWidget {
       ],
     );
 
+    // Cada estado sobre todas las marcas activas del mes: las cuatro tarjetas suman el 100%.
+    final marcasDelMes = resumen == null
+        ? 0
+        : resumen.presentes +
+              resumen.tardanzas +
+              resumen.faltas +
+              resumen.permisos;
+    double parteDelMes(int n) => marcasDelMes > 0 ? n / marcasDelMes : 0;
+
     final indicadores = [
       AppTarjetaDato(
         etiqueta: 'Presentes',
         valor: '${resumen?.presentes ?? 0}',
+        progreso: parteDelMes(resumen?.presentes ?? 0),
         icono: Icons.how_to_reg_outlined,
         color: color,
       ),
       AppTarjetaDato(
         etiqueta: 'Tardanzas',
         valor: '${resumen?.tardanzas ?? 0}',
+        progreso: parteDelMes(resumen?.tardanzas ?? 0),
         icono: Icons.schedule,
         tono: DatoTono.aviso,
       ),
       AppTarjetaDato(
         etiqueta: 'Faltas',
         valor: '${resumen?.faltas ?? 0}',
+        progreso: parteDelMes(resumen?.faltas ?? 0),
         icono: Icons.person_off_outlined,
         tono: DatoTono.peligro,
       ),
       AppTarjetaDato(
         etiqueta: 'Permisos',
         valor: '${resumen?.permisos ?? 0}',
+        progreso: parteDelMes(resumen?.permisos ?? 0),
         icono: Icons.event_note_outlined,
         tono: DatoTono.neutral,
       ),

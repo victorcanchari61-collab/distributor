@@ -51,6 +51,11 @@ class NovedadesPagina extends ConsumerWidget {
         const ResumenNovedades();
     final puedeRevisar = puede(ref, 'tms.novedades', Accion.confirmar);
     final puedeExportar = puede(ref, 'tms.novedades', Accion.exportar);
+    double parte(int n) => resumen.total > 0 ? n / resumen.total : 0;
+    String verLas(int n) => n > 0 ? 'Ver las $n' : 'Ver';
+    // Las tarjetas llevan a lo que cuentan: "Ver las 3" pone ese estado en el filtro.
+    void verEstado(String e) =>
+        ref.read(estadoNovedadFiltroProvider.notifier).state = e;
 
     return AppListaPagina<Novedad>(
       titulo: 'Novedades',
@@ -70,18 +75,33 @@ class NovedadesPagina extends ConsumerWidget {
           valor: '${resumen.porRevisar}',
           icono: Icons.fact_check_outlined,
           tono: resumen.porRevisar > 0 ? DatoTono.aviso : DatoTono.neutral,
+          progreso: parte(resumen.porRevisar),
+          accion: AccionDato(
+            etiqueta: verLas(resumen.porRevisar),
+            onTap: () => verEstado(EstadoNovedad.pendiente),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Recibidas',
           valor: '${resumen.recibidas}',
           icono: Icons.check_circle_outline,
           tono: DatoTono.exito,
+          progreso: parte(resumen.recibidas),
+          accion: AccionDato(
+            etiqueta: verLas(resumen.recibidas),
+            onTap: () => verEstado(EstadoNovedad.recibida),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Faltantes',
           valor: '${resumen.faltantes}',
           icono: Icons.warning_amber_rounded,
           tono: resumen.faltantes > 0 ? DatoTono.peligro : DatoTono.neutral,
+          progreso: parte(resumen.faltantes),
+          accion: AccionDato(
+            etiqueta: verLas(resumen.faltantes),
+            onTap: () => verEstado(EstadoNovedad.faltante),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'No entregado',

@@ -56,6 +56,9 @@ class CierresCajaPagina extends ConsumerWidget {
     final pendientes = vigentes
         .where((c) => c.estadoDescuento == 'PENDIENTE')
         .fold<double>(0, (s, c) => s + (c.saldoDescuento ?? -c.diferencia));
+    final conFaltante = vigentes
+        .where((c) => c.estadoDescuento == 'PENDIENTE')
+        .length;
     final faltantes = vigentes
         .where((c) => c.resultado == ResultadoCierre.faltante)
         .length;
@@ -91,6 +94,12 @@ class CierresCajaPagina extends ConsumerWidget {
           icono: Icons.money_off_outlined,
           tono: pendientes > 0 ? DatoTono.peligro : DatoTono.neutral,
           nota: 'Entran en la próxima planilla',
+          accion: AccionDato(
+            etiqueta: conFaltante > 0 ? 'Ver los $conFaltante' : 'Ver',
+            onTap: () =>
+                ref.read(descuentoCierresFiltroProvider.notifier).state =
+                    'PENDIENTE',
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Cierres',

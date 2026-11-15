@@ -44,6 +44,10 @@ class NotasVentaPagina extends ConsumerWidget {
     final totalVendido = todas
         .where((n) => n.estado == EstadoNotaVenta.confirmada)
         .fold<double>(0, (n, x) => n + x.total);
+    // Las tarjetas aplican su estado en la lista, igual que en el panel web:
+    // aquí "vigentes" son justamente las confirmadas.
+    void verEstado(FiltroDocumento filtro) =>
+        ref.read(filtroDocumentoProvider.notifier).state = filtro;
 
     return AppListaPagina<NotaVenta>(
       titulo: 'Notas de venta',
@@ -99,12 +103,22 @@ class NotasVentaPagina extends ConsumerWidget {
           valor: '${todas.length}',
           icono: Icons.shopping_bag_outlined,
           color: color,
+          progreso: todas.isEmpty ? 0 : 1,
+          accion: AccionDato(
+            etiqueta: 'Ver todas',
+            onTap: () => verEstado(FiltroDocumento.todos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Confirmadas',
           valor: '$confirmadas',
           icono: Icons.check_circle_outline,
           tono: DatoTono.exito,
+          progreso: todas.isEmpty ? 0 : confirmadas / todas.length,
+          accion: AccionDato(
+            etiqueta: confirmadas > 0 ? 'Ver las $confirmadas' : 'Ver',
+            onTap: () => verEstado(FiltroDocumento.vigentes),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Total vendido',

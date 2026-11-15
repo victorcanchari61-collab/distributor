@@ -167,24 +167,28 @@ class ComprobantesLista extends ConsumerWidget {
           valor: '${todos.length}',
           icono: _icono(tipo),
           color: color,
+          progreso: todos.isEmpty ? 0 : 1,
         ),
         AppTarjetaDato(
           etiqueta: 'Aceptados',
           valor: '$aceptados',
           icono: Icons.check_circle_outline,
           tono: DatoTono.exito,
+          progreso: todos.isEmpty ? 0 : aceptados / todos.length,
         ),
         AppTarjetaDato(
           etiqueta: 'Sin respuesta',
           valor: '$pendientes',
           icono: Icons.schedule,
           tono: pendientes > 0 ? DatoTono.aviso : DatoTono.neutral,
+          progreso: todos.isEmpty ? 0 : pendientes / todos.length,
         ),
         AppTarjetaDato(
           etiqueta: 'Rechazados',
           valor: '$rechazados',
           icono: Icons.cancel_outlined,
           tono: rechazados > 0 ? DatoTono.peligro : DatoTono.neutral,
+          progreso: todos.isEmpty ? 0 : rechazados / todos.length,
         ),
       ],
       fila: (context, c) => _TarjetaComprobante(

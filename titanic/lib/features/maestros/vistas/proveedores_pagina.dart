@@ -38,6 +38,11 @@ class ProveedoresPagina extends ConsumerWidget {
     final activos = todos.where((p) => p.activo).toList();
     final rubros = ref.watch(rubrosProvider);
     final puestos = ref.watch(filtrosProveedoresActivosProvider);
+    final conRubro = activos.where((p) => p.rubro != null).length;
+    final desactivados = todos.length - activos.length;
+    // Las tarjetas aplican su estado en la lista, igual que en el panel web.
+    void verEstado(FiltroEstado estado) =>
+        ref.read(estadoFiltroProvider.notifier).state = estado;
 
     return AppListaPagina<Proveedor>(
       titulo: 'Proveedores',
@@ -112,21 +117,32 @@ class ProveedoresPagina extends ConsumerWidget {
           valor: '${activos.length}',
           icono: Icons.business_outlined,
           color: color,
+          progreso: todos.isEmpty ? 0 : activos.length / todos.length,
+          accion: AccionDato(
+            etiqueta: activos.isNotEmpty ? 'Ver los ${activos.length}' : 'Ver',
+            onTap: () => verEstado(FiltroEstado.activos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Desactivados',
-          valor: '${todos.length - activos.length}',
+          valor: '$desactivados',
           icono: Icons.block,
           tono: todos.length == activos.length
               ? DatoTono.neutral
               : DatoTono.aviso,
           nota: 'no salen en compras',
+          progreso: todos.isEmpty ? 0 : desactivados / todos.length,
+          accion: AccionDato(
+            etiqueta: desactivados > 0 ? 'Ver los $desactivados' : 'Ver',
+            onTap: () => verEstado(FiltroEstado.inactivos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Con rubro',
-          valor: '${activos.where((p) => p.rubro != null).length}',
+          valor: '$conRubro',
           icono: Icons.category_outlined,
           tono: DatoTono.exito,
+          progreso: activos.isEmpty ? 0 : conRubro / activos.length,
         ),
         AppTarjetaDato(
           etiqueta: 'Rubros',

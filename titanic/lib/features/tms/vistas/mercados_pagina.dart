@@ -5,6 +5,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/estado/filtro_estado.dart';
+import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
@@ -18,6 +19,7 @@ import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/mercado.dart';
 import '../estado/tms_controlador.dart';
+import 'chips_nombres.dart';
 import 'mercado_formulario.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
@@ -33,6 +35,13 @@ class MercadosPagina extends ConsumerWidget {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final todos = ref.watch(mercadosProvider).valueOrNull ?? const <Mercado>[];
     final activos = todos.where((m) => m.activo).length;
+    final ventasMes = todos.fold<double>(0, (n, m) => n + m.ventasMes);
+    final conVentas = todos.where((m) => m.ventasMes > 0).length;
+    final porCobrar = todos.fold<double>(0, (n, m) => n + m.porCobrar);
+    final conDeuda = todos.where((m) => m.porCobrar > 0).length;
+    // Las tarjetas llevan a lo que cuentan: "Ver los 12" pone ese estado en el filtro.
+    void verEstado(FiltroEstado e) =>
+        ref.read(estadoFiltroProvider.notifier).state = e;
 
     return AppListaPagina<Mercado>(
       titulo: 'Mercados',
@@ -57,11 +66,38 @@ class MercadosPagina extends ConsumerWidget {
           valor: '${todos.length}',
           icono: Icons.storefront_outlined,
           color: color,
+          progreso: todos.isNotEmpty ? 1 : 0,
+          accion: AccionDato(
+            etiqueta: 'Ver todos',
+            onTap: () => verEstado(FiltroEstado.todos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Activos',
           valor: '$activos',
           icono: Icons.check_circle_outline,
+          tono: DatoTono.exito,
+          progreso: todos.isNotEmpty ? activos / todos.length : 0,
+          accion: AccionDato(
+            etiqueta: activos > 0 ? 'Ver los $activos' : 'Ver',
+            onTap: () => verEstado(FiltroEstado.activos),
+          ),
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Ventas del mes',
+          valor: formatoSoles(ventasMes),
+          nota: conVentas == 1 ? 'en 1 mercado' : 'en $conVentas mercados',
+          icono: Icons.trending_up,
+          tono: DatoTono.exito,
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Por cobrar',
+          valor: formatoSoles(porCobrar),
+          nota: conDeuda == 1
+              ? '1 mercado con deuda'
+              : '$conDeuda mercados con deuda',
+          icono: Icons.request_quote_outlined,
+          tono: porCobrar > 0 ? DatoTono.aviso : DatoTono.neutral,
         ),
       ],
       filtro: BotonFiltros(
@@ -193,6 +229,8 @@ class MercadosPagina extends ConsumerWidget {
         CampoDetalle('Dirección', mercado.direccion),
         CampoDetalle('Distrito', mercado.distrito),
         CampoDetalle('Clientes', '${mercado.clientes}'),
+        CampoDetalle('Rutas', ordenarNombres(mercado.rutas).join(', ')),
+        ..._camposVenta(mercado),
         CampoDetalle(
           'Estado',
           mercado.activo ? 'Activo' : 'Inactivo',
@@ -202,6 +240,30 @@ class MercadosPagina extends ConsumerWidget {
     );
   }
 }
+
+/// Lo vendido y lo que deben, igual en la tarjeta y en la ficha. Sin dato va
+/// la raya, como en el web.
+List<CampoDetalle> _camposVenta(Mercado mercado) => [
+  CampoDetalle(
+    'Ventas del mes',
+    mercado.ventasMes > 0 ? formatoSoles(mercado.ventasMes) : null,
+  ),
+  CampoDetalle(
+    'Por cobrar',
+    mercado.porCobrar > 0 ? formatoSoles(mercado.porCobrar) : null,
+    // En ámbar, como en el web.
+    widget: mercado.porCobrar > 0
+        ? Text(
+            formatoSoles(mercado.porCobrar),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colores.advertencia,
+            ),
+          )
+        : null,
+  ),
+];
 
 AppEtiqueta _insigniaEstado(bool activo) => AppEtiqueta(
   activo ? 'Activo' : 'Inactivo',
@@ -227,6 +289,12 @@ class _TarjetaMercado extends StatelessWidget {
     CampoDetalle('Dirección', mercado.direccion),
     CampoDetalle('Distrito', mercado.distrito),
     CampoDetalle('Clientes', '${mercado.clientes}'),
+    CampoDetalle(
+      'Rutas',
+      null,
+      widget: mercado.rutas.isEmpty ? null : ChipsNombres(mercado.rutas),
+    ),
+    ..._camposVenta(mercado),
     CampoDetalle(
       'Estado',
       mercado.activo ? 'Activo' : 'Inactivo',

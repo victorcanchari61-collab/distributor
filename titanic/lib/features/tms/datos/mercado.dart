@@ -9,6 +9,9 @@ class Mercado {
     this.distrito,
     required this.activo,
     this.clientes = 0,
+    this.rutas = const [],
+    this.ventasMes = 0,
+    this.porCobrar = 0,
   });
 
   final int id;
@@ -20,6 +23,15 @@ class Mercado {
   /// Cuántos clientes ya lo usan. Si hay alguno, no se elimina.
   final int clientes;
 
+  /// Las rutas que llegan a él: las de sus clientes activos, por nombre.
+  final List<String> rutas;
+
+  /// Lo vendido este mes a sus clientes.
+  final double ventasMes;
+
+  /// Lo que deben sus clientes en ventas al crédito.
+  final double porCobrar;
+
   String get buscable =>
       '$nombre ${direccion ?? ''} ${distrito ?? ''}'.toLowerCase();
 
@@ -30,5 +42,9 @@ class Mercado {
     distrito: json['distrito'] as String?,
     activo: json['activo'] as bool? ?? true,
     clientes: json['clientes'] as int? ?? 0,
+    // Con un backend anterior estos faltan y quedan vacíos o en cero.
+    rutas: [for (final r in (json['rutas'] as List? ?? const [])) r as String],
+    ventasMes: (json['ventasMes'] as num?)?.toDouble() ?? 0,
+    porCobrar: (json['porCobrar'] as num?)?.toDouble() ?? 0,
   );
 }

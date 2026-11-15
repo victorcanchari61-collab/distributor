@@ -141,7 +141,20 @@ class AdelantosPagina extends ConsumerWidget {
           valor: formatoSoles(resumen.saldoPendiente),
           icono: Icons.payments_outlined,
           tono: DatoTono.aviso,
-          nota: '${resumen.vigentes} vigentes',
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Adelantos vigentes',
+          valor: '${resumen.vigentes}',
+          icono: Icons.schedule_outlined,
+          color: color,
+          accion: AccionDato(
+            etiqueta: resumen.vigentes > 0
+                ? 'Ver los ${resumen.vigentes}'
+                : 'Ver',
+            onTap: () =>
+                ref.read(estadoAdelantosFiltroProvider.notifier).state =
+                    EstadoAdelanto.pendiente,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Trabajadores que deben',

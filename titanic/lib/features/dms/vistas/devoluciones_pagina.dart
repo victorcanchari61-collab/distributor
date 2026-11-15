@@ -44,6 +44,7 @@ class DevolucionesPagina extends ConsumerWidget {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
     final resumen = ref.watch(resumenDevolucionesProvider).valueOrNull;
     final resuelve = puede(ref, 'dms.devoluciones', Accion.confirmar);
+    final total = resumen?.total ?? 0;
 
     return AppListaPagina<Devolucion>(
       titulo: 'Devoluciones',
@@ -67,6 +68,13 @@ class DevolucionesPagina extends ConsumerWidget {
           : 'Ninguna coincide con los filtros puestos.',
       indicadores: [
         AppTarjetaDato(
+          etiqueta: 'Devoluciones',
+          valor: '$total',
+          icono: Icons.undo_outlined,
+          color: color,
+          progreso: total > 0 ? 1 : 0,
+        ),
+        AppTarjetaDato(
           etiqueta: 'Por aprobar',
           valor: '${resumen?.solicitadas ?? 0}',
           icono: Icons.pending_actions_outlined,
@@ -74,12 +82,21 @@ class DevolucionesPagina extends ConsumerWidget {
               ? DatoTono.aviso
               : DatoTono.neutral,
           nota: 'esperando decisión',
+          progreso: total > 0 ? (resumen?.solicitadas ?? 0) / total : 0,
+          accion: AccionDato(
+            etiqueta: (resumen?.solicitadas ?? 0) > 0
+                ? 'Ver las ${resumen!.solicitadas}'
+                : 'Ver',
+            onTap: () => ref.read(filtroDevolucionEstadoProvider.notifier).state =
+                FiltroEstadoDevolucion.solicitadas,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Aprobadas',
           valor: '${resumen?.aprobadas ?? 0}',
           icono: Icons.check_circle_outline,
           tono: DatoTono.exito,
+          progreso: total > 0 ? (resumen?.aprobadas ?? 0) / total : 0,
         ),
         AppTarjetaDato(
           etiqueta: 'Descontado a clientes',

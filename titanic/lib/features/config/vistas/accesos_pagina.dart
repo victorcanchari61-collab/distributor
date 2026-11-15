@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
-import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_shell.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
@@ -12,42 +11,9 @@ import '../../../core/tema/dimensiones.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
 import 'excepciones_tab.dart';
+import 'matriz_permisos.dart';
 import 'solicitudes_tab.dart';
 import '../../../compartido/widgets/app_aviso.dart';
-
-/// Como se nombra cada accion en pantalla, y en que orden se lee.
-///
-/// Es solo la presentacion: que acciones existen de verdad en cada pantalla lo
-/// dice el catalogo del backend. Este mapa fija el orden para que la misma
-/// accion caiga siempre en el mismo sitio de submodulo a submodulo.
-const _acciones = <String, String>{
-  'ver': 'Ver',
-  'crear': 'Crear',
-  'editar': 'Editar',
-  'confirmar': 'Confirmar',
-  'cobrar': 'Cobrar',
-  'anular': 'Anular',
-  'eliminar': 'Eliminar',
-  'exportar': 'Exportar',
-  'importar': 'Importar',
-  'ingreso': 'Ingreso',
-  'egreso': 'Egreso',
-  'transferir': 'Mover plata',
-};
-
-String _clave(String submodulo, String accion) => '$submodulo:$accion';
-
-/// Nombre de la pantalla en el menu. Hay submodulos que el menu del telefono no
-/// muestra (series, parametros) y ahi se cae a la clave: siguen siendo
-/// configurables aunque no tengan vista propia.
-({String titulo, IconData? icono}) _vista(String submodulo) {
-  for (final grupo in menuGrupos) {
-    for (final item in grupo.items) {
-      if (item.id == submodulo) return (titulo: item.titulo, icono: item.icono);
-    }
-  }
-  return (titulo: submodulo, icono: null);
-}
 
 /// Quien puede hacer que, por pantalla y accion.
 ///
@@ -57,11 +23,10 @@ String _clave(String submodulo, String accion) => '$submodulo:$accion';
 /// duplicada, un submodulo nuevo quedaria invisible en esta pantalla aunque el
 /// servidor ya lo estuviera exigiendo.
 ///
-/// En el telefono no cabe la tabla del panel web (41 pantallas x 9 acciones),
-/// asi que se recorre en dos niveles: un bloque plegable por modulo y, dentro,
-/// una fila por pantalla que se abre para mostrar sus acciones. Solo hay
-/// abierto lo que se esta tocando, y cada casilla lleva su texto completo en
-/// vez de depender de una cabecera de columna que quedaria fuera de la vista.
+/// La matriz es [MatrizPermisos], la misma de "Por persona": un bloque
+/// plegable por modulo y, dentro, una fila por pantalla con sus acciones y,
+/// en las que lo admiten, "Qué ve" (todos, solo sus rutas, solo lo suyo). Todo
+/// se guarda con el mismo Guardar.
 class AccesosPagina extends ConsumerStatefulWidget {
   const AccesosPagina({super.key});
 
@@ -94,12 +59,12 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
   /// backend.
   Set<String> _marcas = {};
 
-  /// Modulos desplegados. Varios a la vez: comparar dos modulos es justo lo
-  /// que se viene a hacer aqui.
-  final Set<String> _abiertos = {};
+  /// Qué filas ve el rol en cada pantalla que lo admite. Sin fila = todos: el
+  /// backend no guarda lo que no limita.
+  Map<String, String> _alcances = {};
 
-  /// Pantallas desplegadas, por clave de submodulo.
-  final Set<String> _detalles = {};
+  /// Lo guardado, para Restablecer y para no reenviarlo si no cambió.
+  Map<String, String> _alcancesBase = {};
 
   bool _sucio = false;
   bool _guardando = false;
@@ -111,32 +76,67 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
     setState(() {
       _rolId = id;
       _rolCargado = null;
-      _detalles.clear();
     });
   }
+
+  /// Los alcances viven aparte de la matriz: se leen al elegir el rol. Si no
+  /// llegan, se queda en "todos", que es lo que no restringe nada.
+  Future<void> _cargarAlcances(int rolId) async {
+    Map<String, String> leidos;
+    try {
+      leidos = await ref.read(configApiProvider).alcancesDeRol(rolId);
+    } catch (_) {
+      leidos = {};
+    }
+    // Una respuesta que llega tarde, de un rol que ya no se mira, no pisa nada.
+    if (!mounted || _rolCargado != rolId) return;
+    setState(() {
+      _alcances = Map.of(leidos);
+      _alcancesBase = leidos;
+    });
+  }
+
+  void _cambiarAlcance(String submodulo, String nivel) {
+    setState(() {
+      _sucio = true;
+      _alcances = {..._alcances, submodulo: nivel};
+    });
+  }
+
+  /// Solo lo que limita algo: "todos" es no restringir y el backend ni lo
+  /// guarda.
+  static Map<String, String> _restringidos(Map<String, String> alcances) => {
+    for (final e in alcances.entries)
+      if (e.value.isNotEmpty && e.value != 'todos') e.key: e.value,
+  };
+
+  static bool _iguales(Map<String, String> a, Map<String, String> b) =>
+      a.length == b.length && a.entries.every((e) => b[e.key] == e.value);
 
   void _alternar(String submodulo, String accion, List<String> acciones) {
     setState(() {
       _sucio = true;
-      final puesta = _marcas.contains(_clave(submodulo, accion));
+      final puesta = _marcas.contains(clavePermiso(submodulo, accion));
 
       if (accion == 'ver') {
         // Quitar Ver retira la pantalla entera: sin ella el resto de permisos
         // quedarian concedidos pero inalcanzables.
         if (puesta) {
-          _marcas.removeAll([for (final a in acciones) _clave(submodulo, a)]);
+          _marcas.removeAll([
+            for (final a in acciones) clavePermiso(submodulo, a),
+          ]);
         } else {
-          _marcas.add(_clave(submodulo, 'ver'));
+          _marcas.add(clavePermiso(submodulo, 'ver'));
         }
         return;
       }
 
       if (puesta) {
-        _marcas.remove(_clave(submodulo, accion));
+        _marcas.remove(clavePermiso(submodulo, accion));
       } else {
-        _marcas.add(_clave(submodulo, accion));
+        _marcas.add(clavePermiso(submodulo, accion));
         // Cualquier accion implica poder entrar a la pantalla.
-        _marcas.add(_clave(submodulo, 'ver'));
+        _marcas.add(clavePermiso(submodulo, 'ver'));
       }
     });
   }
@@ -144,7 +144,7 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
   void _marcarSubmodulo(String submodulo, List<String> acciones, bool marcar) {
     setState(() {
       _sucio = true;
-      final claves = [for (final a in acciones) _clave(submodulo, a)];
+      final claves = [for (final a in acciones) clavePermiso(submodulo, a)];
       if (marcar) {
         _marcas.addAll(claves);
       } else {
@@ -157,7 +157,9 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
     setState(() {
       _sucio = true;
       for (final s in submodulos) {
-        final claves = [for (final a in s.acciones) _clave(s.submodulo, a)];
+        final claves = [
+          for (final a in s.acciones) clavePermiso(s.submodulo, a),
+        ];
         if (marcar) {
           _marcas.addAll(claves);
         } else {
@@ -182,6 +184,12 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
             accion: clave.substring(clave.lastIndexOf(':') + 1),
           ),
       ]);
+      final restringidos = _restringidos(_alcances);
+      if (!_iguales(restringidos, _restringidos(_alcancesBase))) {
+        await ref
+            .read(configApiProvider)
+            .guardarAlcancesRol(rol.id, restringidos);
+      }
       if (!mounted) return;
       setState(() {
         _guardando = false;
@@ -223,7 +231,13 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
       _rolId = rol.id;
       _marcas = _marcasDe(rol);
       _sucio = false;
+      _alcances = {};
+      _alcancesBase = {};
+      final id = rol.id;
+      Future.microtask(() => _cargarAlcances(id));
     }
+    final pantallasAlcance =
+        ref.watch(pantallasAlcanceProvider).valueOrNull ?? const <String>[];
 
     // Cuántas esperan respuesta, para el número de la pestaña: sin él, quien
     // no entra a la bandeja no se entera de que alguien está esperando.
@@ -305,6 +319,7 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
                     value,
                     color,
                     roles,
+                    pantallasAlcance,
                   ),
                   _ => const Center(child: CircularProgressIndicator()),
                 },
@@ -323,19 +338,10 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
     List<SubmoduloCatalogo> catalogo,
     Color color,
     List<Rol> roles,
+    List<String> pantallasAlcance,
   ) {
-    // Los modulos en el orden del menu, y solo los que el catalogo declara.
-    final modulos = <({MenuGrupo grupo, List<SubmoduloCatalogo> submodulos})>[];
-    for (final grupo in menuGrupos) {
-      final suyos = [
-        for (final s in catalogo)
-          if (s.modulo == grupo.id) s,
-      ];
-      if (suyos.isNotEmpty) modulos.add((grupo: grupo, submodulos: suyos));
-    }
-
     final habilitadas = catalogo
-        .where((s) => _marcas.contains(_clave(s.submodulo, 'ver')))
+        .where((s) => _marcas.contains(clavePermiso(s.submodulo, 'ver')))
         .length;
 
     return Column(
@@ -401,35 +407,32 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
               ),
               const SizedBox(height: Dimen.espacio3),
 
-              for (final m in modulos) ...[
-                _BloqueModulo(
-                  grupo: m.grupo,
-                  submodulos: m.submodulos,
-                  marcas: _marcas,
-                  abierto: _abiertos.contains(m.grupo.id),
-                  detalles: _detalles,
-                  onAbrir: () => setState(() {
-                    if (!_abiertos.remove(m.grupo.id)) {
-                      _abiertos.add(m.grupo.id);
-                    }
-                  }),
-                  onAbrirDetalle: (submodulo) => setState(() {
-                    if (!_detalles.remove(submodulo)) _detalles.add(submodulo);
-                  }),
-                  onMarcarModulo: (marcar) =>
-                      _marcarModulo(m.submodulos, marcar),
-                  onMarcarSubmodulo: _marcarSubmodulo,
-                  onAlternar: _alternar,
+              MatrizPermisos(
+                catalogo: catalogo,
+                marcadas: _marcas,
+                onAlternar: _alternar,
+                onMarcarSubmodulo: _marcarSubmodulo,
+                onMarcarModulo: _marcarModulo,
+                // Qué FILAS ve, no qué botones tiene: el permiso dice si entra
+                // a Pedidos; esto dice de qué clientes. "Solo mis rutas" limita
+                // a los clientes de las rutas que la persona tiene a cargo (se
+                // asigna en Usuarios); sin ruta no ve ninguno.
+                alcance: AlcanceEnMatriz(
+                  pantallas: pantallasAlcance,
+                  valores: _alcances,
+                  onCambio: _cambiarAlcance,
+                  // El Administrador ve siempre todo.
+                  deshabilitado: rol.protegido,
                 ),
-                const SizedBox(height: Dimen.espacio2),
-              ],
+              ),
 
               const SizedBox(height: Dimen.espacio1),
               const Text(
                 'Quitar Ver retira la pantalla por completo. Conceder cualquier '
                 'otra acción activa Ver automáticamente. Cada pantalla ofrece '
                 'solo las acciones que admite: el kardex no se anula, la '
-                'auditoría no se crea.',
+                'auditoría no se crea. Qué ve dice de qué clientes y ventas: '
+                'todos, solo los de sus rutas o solo lo que registró.',
                 style: TextStyle(fontSize: 11.5, color: Colores.tintaSuave),
               ),
             ],
@@ -447,6 +450,7 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
                       ? null
                       : () => setState(() {
                           _marcas = _marcasDe(rol);
+                          _alcances = Map.of(_alcancesBase);
                           _sucio = false;
                         }),
                 ),
@@ -462,271 +466,6 @@ class _AccesosPaginaState extends ConsumerState<AccesosPagina>
             ],
           ),
         ),
-      ],
-    );
-  }
-}
-
-/// Un modulo plegado, con sus pantallas dentro.
-class _BloqueModulo extends StatelessWidget {
-  const _BloqueModulo({
-    required this.grupo,
-    required this.submodulos,
-    required this.marcas,
-    required this.abierto,
-    required this.detalles,
-    required this.onAbrir,
-    required this.onAbrirDetalle,
-    required this.onMarcarModulo,
-    required this.onMarcarSubmodulo,
-    required this.onAlternar,
-  });
-
-  final MenuGrupo grupo;
-  final List<SubmoduloCatalogo> submodulos;
-  final Set<String> marcas;
-  final bool abierto;
-  final Set<String> detalles;
-  final VoidCallback onAbrir;
-  final ValueChanged<String> onAbrirDetalle;
-  final ValueChanged<bool> onMarcarModulo;
-  final void Function(String submodulo, List<String> acciones, bool marcar)
-  onMarcarSubmodulo;
-  final void Function(String submodulo, String accion, List<String> acciones)
-  onAlternar;
-
-  @override
-  Widget build(BuildContext context) {
-    final visibles = submodulos
-        .where((s) => marcas.contains(_clave(s.submodulo, 'ver')))
-        .length;
-    final completo = submodulos.every(
-      (s) => s.acciones.every((a) => marcas.contains(_clave(s.submodulo, a))),
-    );
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colores.superficie,
-        border: Border.all(color: Colores.linea),
-        borderRadius: BorderRadius.circular(Dimen.radioCampo),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: onAbrir,
-            borderRadius: BorderRadius.circular(Dimen.radioCampo),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Dimen.espacio3,
-                Dimen.espacio2,
-                Dimen.espacio2,
-                Dimen.espacio2,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    abierto ? Icons.expand_less : Icons.expand_more,
-                    size: 20,
-                    color: Colores.tintaSuave,
-                  ),
-                  const SizedBox(width: Dimen.espacio2),
-                  Icon(grupo.icono, size: 17, color: grupo.color),
-                  const SizedBox(width: Dimen.espacio2),
-                  Expanded(
-                    child: Text(
-                      grupo.titulo,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Colores.tinta,
-                      ),
-                    ),
-                  ),
-                  if (visibles == 0)
-                    const AppEtiqueta('sin acceso')
-                  else
-                    Text(
-                      '$visibles de ${submodulos.length}',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Colores.tintaSuave,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-
-          if (abierto) ...[
-            const Divider(height: 1, color: Colores.linea),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => onMarcarModulo(!completo),
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                ),
-                child: Text(
-                  completo ? 'Quitar todo el módulo' : 'Marcar todo el módulo',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ),
-            ),
-            for (final s in submodulos)
-              _FilaPantalla(
-                submodulo: s,
-                marcas: marcas,
-                color: grupo.color,
-                abierta: detalles.contains(s.submodulo),
-                onAbrir: () => onAbrirDetalle(s.submodulo),
-                onMarcar: (marcar) =>
-                    onMarcarSubmodulo(s.submodulo, s.acciones, marcar),
-                onAlternar: (accion) =>
-                    onAlternar(s.submodulo, accion, s.acciones),
-              ),
-            const SizedBox(height: Dimen.espacio2),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Una pantalla del modulo: se abre para ver sus acciones.
-class _FilaPantalla extends StatelessWidget {
-  const _FilaPantalla({
-    required this.submodulo,
-    required this.marcas,
-    required this.color,
-    required this.abierta,
-    required this.onAbrir,
-    required this.onMarcar,
-    required this.onAlternar,
-  });
-
-  final SubmoduloCatalogo submodulo;
-  final Set<String> marcas;
-  final Color color;
-  final bool abierta;
-  final VoidCallback onAbrir;
-  final ValueChanged<bool> onMarcar;
-  final ValueChanged<String> onAlternar;
-
-  @override
-  Widget build(BuildContext context) {
-    final vista = _vista(submodulo.submodulo);
-    final concedidas = submodulo.acciones
-        .where((a) => marcas.contains(_clave(submodulo.submodulo, a)))
-        .toList();
-    final lleno = concedidas.length == submodulo.acciones.length;
-
-    // Las acciones en el orden fijo de la pantalla, pero solo las que este
-    // submodulo admite: las demas no se pintan apagadas porque no estan
-    // prohibidas, es que no existen aqui.
-    final acciones = [
-      for (final a in _acciones.keys)
-        if (submodulo.acciones.contains(a)) a,
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: onAbrir,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Dimen.espacio3,
-              vertical: Dimen.espacio2,
-            ),
-            child: Row(
-              children: [
-                if (vista.icono != null) ...[
-                  Icon(vista.icono, size: 15, color: Colores.tintaSuave),
-                  const SizedBox(width: Dimen.espacio2),
-                ],
-                Expanded(
-                  child: Text(
-                    vista.titulo,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      color: Colores.tinta,
-                    ),
-                  ),
-                ),
-                // El resumen evita tener que abrir cada pantalla para saber si
-                // tiene algo concedido.
-                if (concedidas.isEmpty)
-                  const Text(
-                    'sin acceso',
-                    style: TextStyle(fontSize: 11, color: Colores.tintaSuave),
-                  )
-                else
-                  AppEtiqueta(
-                    '${concedidas.length} de ${submodulo.acciones.length}',
-                    tono: EtiquetaTono.modulo,
-                    color: color,
-                  ),
-                Icon(
-                  abierta ? Icons.expand_less : Icons.expand_more,
-                  size: 18,
-                  color: Colores.tintaSuave,
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        if (abierta)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Dimen.espacio3,
-              0,
-              Dimen.espacio3,
-              Dimen.espacio2,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: Dimen.espacio2,
-                  runSpacing: Dimen.espacio1,
-                  children: [
-                    for (final a in acciones)
-                      FilterChip(
-                        label: Text(_acciones[a]!),
-                        selected: marcas.contains(
-                          _clave(submodulo.submodulo, a),
-                        ),
-                        onSelected: (_) => onAlternar(a),
-                        showCheckmark: true,
-                        visualDensity: VisualDensity.compact,
-                        labelStyle: const TextStyle(fontSize: 12.5),
-                        backgroundColor: Colores.superficie,
-                        selectedColor: color.withValues(alpha: 0.12),
-                        checkmarkColor: color,
-                        side: BorderSide(color: Colores.linea),
-                      ),
-                  ],
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => onMarcar(!lleno),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    child: Text(
-                      lleno ? 'Quitar todo' : 'Marcar todo',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        const Divider(height: 1, indent: Dimen.espacio3, color: Colores.linea),
       ],
     );
   }

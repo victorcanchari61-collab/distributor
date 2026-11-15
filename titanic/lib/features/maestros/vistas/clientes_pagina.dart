@@ -38,6 +38,11 @@ class ClientesPagina extends ConsumerWidget {
     final activos = todos.where((c) => c.activo).toList();
     final rutas = ref.watch(rutasProvider);
     final puestos = ref.watch(filtrosClientesActivosProvider);
+    final desactivados = todos.length - activos.length;
+    final conRuta = activos.where((c) => c.ruta != null).length;
+    // Las tarjetas aplican su estado en la lista, igual que en el panel web.
+    void verEstado(FiltroEstado estado) =>
+        ref.read(estadoFiltroProvider.notifier).state = estado;
 
     return AppListaPagina<Cliente>(
       titulo: 'Clientes',
@@ -125,21 +130,32 @@ class ClientesPagina extends ConsumerWidget {
           valor: '${activos.length}',
           icono: Icons.contacts_outlined,
           color: color,
+          progreso: todos.isEmpty ? 0 : activos.length / todos.length,
+          accion: AccionDato(
+            etiqueta: activos.isNotEmpty ? 'Ver los ${activos.length}' : 'Ver',
+            onTap: () => verEstado(FiltroEstado.activos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Desactivados',
-          valor: '${todos.length - activos.length}',
+          valor: '$desactivados',
           icono: Icons.block,
           tono: todos.length == activos.length
               ? DatoTono.neutral
               : DatoTono.aviso,
           nota: 'no salen en ventas',
+          progreso: todos.isEmpty ? 0 : desactivados / todos.length,
+          accion: AccionDato(
+            etiqueta: desactivados > 0 ? 'Ver los $desactivados' : 'Ver',
+            onTap: () => verEstado(FiltroEstado.inactivos),
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Con ruta',
-          valor: '${activos.where((c) => c.ruta != null).length}',
+          valor: '$conRuta',
           icono: Icons.route_outlined,
           tono: DatoTono.exito,
+          progreso: activos.isEmpty ? 0 : conRuta / activos.length,
         ),
         AppTarjetaDato(
           etiqueta: 'Rutas',

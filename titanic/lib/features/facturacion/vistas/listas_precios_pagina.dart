@@ -58,6 +58,11 @@ class ListasPreciosPagina extends ConsumerWidget {
     final precios = ref.watch(preciosFiltradosProvider);
     final productosConPrecio = precios.map((p) => p.productoId).toSet().length;
     final escalones = precios.where((p) => p.cantidadMinima > 1).length;
+    // Contra los productos activos, como en el web: qué parte del catálogo ya tiene precio en esta lista.
+    final productosActivos =
+        (ref.watch(productosProvider).valueOrNull ?? const [])
+            .where((p) => p.activo)
+            .length;
 
     final puedeCrear = puede(ref, 'fact.precios', Accion.crear);
     final puedeEditar = puede(ref, 'fact.precios', Accion.editar);
@@ -177,16 +182,21 @@ class ListasPreciosPagina extends ConsumerWidget {
           valor: '${precios.length}',
           icono: Icons.payments_outlined,
           color: color,
+          progreso: precios.isEmpty ? 0 : 1,
         ),
         AppTarjetaDato(
           etiqueta: 'Productos con precio',
           valor: '$productosConPrecio',
           icono: Icons.inventory_2_outlined,
+          progreso: productosActivos > 0
+              ? productosConPrecio / productosActivos
+              : 0,
         ),
         AppTarjetaDato(
           etiqueta: 'Escalones por volumen',
           valor: '$escalones',
           icono: Icons.stacked_line_chart,
+          progreso: precios.isEmpty ? 0 : escalones / precios.length,
         ),
         AppTarjetaDato(
           etiqueta: 'Listas',

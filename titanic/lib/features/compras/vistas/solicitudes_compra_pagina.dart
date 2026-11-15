@@ -67,24 +67,43 @@ class SolicitudesCompraPagina extends ConsumerWidget {
           etiqueta: 'Borradores',
           valor: '$borradores',
           icono: Icons.edit_outlined,
+          progreso: todas.isNotEmpty ? borradores / todas.length : 0,
+          accion: AccionDato(
+            etiqueta: borradores > 0 ? 'Ver los $borradores' : 'Ver',
+            onTap: () => ref.read(estadoSolicitudFiltroProvider.notifier).state =
+                EstadoSolicitudCompra.borrador,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Pendientes',
           valor: '$pendientes',
           icono: Icons.hourglass_empty,
           tono: pendientes > 0 ? DatoTono.aviso : DatoTono.neutral,
+          progreso: todas.isNotEmpty ? pendientes / todas.length : 0,
+          accion: AccionDato(
+            etiqueta: pendientes > 0 ? 'Ver las $pendientes' : 'Ver',
+            onTap: () => ref.read(estadoSolicitudFiltroProvider.notifier).state =
+                EstadoSolicitudCompra.pendiente,
+          ),
         ),
         AppTarjetaDato(
           etiqueta: 'Urgentes',
           valor: '$urgentes',
           icono: Icons.priority_high,
           tono: urgentes > 0 ? DatoTono.peligro : DatoTono.neutral,
+          progreso: todas.isNotEmpty ? urgentes / todas.length : 0,
         ),
         AppTarjetaDato(
           etiqueta: 'Atendidas',
           valor: '$atendidas',
           icono: Icons.check_circle_outline,
           tono: DatoTono.exito,
+          progreso: todas.isNotEmpty ? atendidas / todas.length : 0,
+          accion: AccionDato(
+            etiqueta: atendidas > 0 ? 'Ver las $atendidas' : 'Ver',
+            onTap: () => ref.read(estadoSolicitudFiltroProvider.notifier).state =
+                EstadoSolicitudCompra.atendida,
+          ),
         ),
       ],
       filtro: BotonFiltros(

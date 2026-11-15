@@ -52,18 +52,21 @@ class LotesPagina extends ConsumerWidget {
           valor: '${todos.length}',
           icono: Icons.event_outlined,
           color: color,
+          progreso: todos.isEmpty ? 0 : 1,
         ),
         AppTarjetaDato(
           etiqueta: 'Por vencer',
           valor: '$porVencer',
           icono: Icons.warning_amber_outlined,
           tono: porVencer > 0 ? DatoTono.aviso : DatoTono.neutral,
+          progreso: todos.isEmpty ? 0 : porVencer / todos.length,
         ),
         AppTarjetaDato(
           etiqueta: 'Vencidos',
           valor: '$vencidos',
           icono: Icons.error_outline,
           tono: vencidos > 0 ? DatoTono.peligro : DatoTono.neutral,
+          progreso: todos.isEmpty ? 0 : vencidos / todos.length,
         ),
       ],
       filtro: BotonFiltros(
