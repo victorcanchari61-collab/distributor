@@ -149,7 +149,9 @@ function DiaCalendario({
       title={titulo}
       aria-label={titulo}
       className={cn(
-        'flex h-16 min-w-0 flex-col justify-between rounded-field border p-1 text-left sm:h-24 sm:p-2',
+        // Alto según la ventana (entre 64 y 96 px): el mes entero (hasta seis semanas) entra en la pantalla sin que la
+        // página tenga que desplazarse.
+        'flex h-16 min-w-0 flex-col justify-between rounded-field border p-1 text-left sm:h-[clamp(64px,calc((100dvh-520px)/6),96px)] sm:p-2',
         'transition-[border-color,box-shadow] duration-150 ease-out',
         'focus-visible:ring-2 focus-visible:ring-[rgb(var(--sys-rgb)/0.45)] focus-visible:outline-none',
         feriado
