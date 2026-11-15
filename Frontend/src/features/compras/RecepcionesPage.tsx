@@ -208,13 +208,7 @@ export function RecepcionesPage() {
           Nueva recepción
         </Button>
       }
-      alert={
-        error ? (
-          <Alert>{error}</Alert>
-        ) : !cargando && comprasParaRecibir.length === 0 ? (
-          <Alert>No hay compras pendientes de recibir por ahora.</Alert>
-        ) : undefined
-      }
+      alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
           <StatCard

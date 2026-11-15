@@ -476,13 +476,7 @@ export function TransferenciasPage() {
           Nueva transferencia
         </Button>
       }
-      alert={
-        error ? (
-          <Alert>{error}</Alert>
-        ) : !cargando && activos.length < 2 ? (
-          <Alert>Necesitas al menos dos almacenes activos para transferir.</Alert>
-        ) : undefined
-      }
+      alert={error ? <Alert>{error}</Alert> : undefined}
       stats={
         <>
           <StatCard

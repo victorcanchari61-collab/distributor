@@ -252,13 +252,13 @@ export function UbicacionProductosPage() {
     <ListPage
       icon={<MapPin size={20} />}
       title="Ubicación de productos"
-      description="Dónde está puesto cada producto dentro del almacén: piso y cuarto."
+      description="Dónde está puesto cada producto dentro del almacén: piso y lugar."
       alert={
         error ? (
           <Alert>{error}</Alert>
         ) : ninguno ? (
           <Alert tone="info">
-            Este almacén todavía no tiene lugares definidos. Créalos en Almacenes → Ubicaciones (pisos y cuartos) y vuelve aquí para poner los productos.
+            Este almacén todavía no tiene lugares definidos. Créalos en Almacenes → Ubicaciones (pisos y lugares) y vuelve aquí para poner los productos.
           </Alert>
         ) : undefined
       }
