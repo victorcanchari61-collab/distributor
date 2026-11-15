@@ -8,6 +8,7 @@ import '../../core/tema/dimensiones.dart';
 import 'app_acciones_flotantes.dart';
 import 'app_buscador.dart';
 import 'app_shell.dart';
+import 'app_tarjeta_registro.dart' show NumeroFila;
 import 'app_tarjeta_dato.dart';
 import 'app_vacio.dart';
 
@@ -181,7 +182,12 @@ class AppListaPagina<T> extends StatelessWidget {
                         itemCount: visibles.length,
                         separatorBuilder: (context, i) =>
                             const SizedBox(height: Dimen.espacio2),
-                        itemBuilder: (context, i) => fila(context, visibles[i]),
+                        // El número de fila lo lee la tarjeta para su esquina: así
+                        // todas las listas lo muestran sin que cada pantalla lo pase.
+                        itemBuilder: (context, i) => NumeroFila(
+                          numero: i + 1,
+                          child: fila(context, visibles[i]),
+                        ),
                       ),
                     ),
             ),

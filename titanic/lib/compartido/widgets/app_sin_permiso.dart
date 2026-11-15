@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/permisos/sin_permiso.dart';
+import '../../core/tema/acento.dart';
 import '../../core/tema/colores.dart';
 import 'app_aviso.dart';
+import 'app_tarjeta_registro.dart' show AccionesDeTarjeta;
 
 /// Avisa que la acción tocada no está permitida.
 void avisarSinPermiso(BuildContext context) =>
@@ -34,6 +36,43 @@ class AppIconoAccion extends StatelessWidget {
     if (onPressed == null) return const SizedBox.shrink();
 
     final sinPermiso = esSinPermiso(onPressed);
+
+    // En la fila de acciones de una tarjeta: botón de color con su base más
+    // oscura debajo, igual que las píldoras del panel web. Sin permiso, en gris.
+    if (AccionesDeTarjeta.dentro(context)) {
+      final fondo = sinPermiso
+          ? const Color(0xFFE2E8F0)
+          : (color ?? Acento.de(context));
+      final base = Color.lerp(fondo, Colors.black, 0.28)!;
+      return Tooltip(
+        message: sinPermiso ? avisoSinPermiso : tooltip,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: sinPermiso
+                ? null
+                : [BoxShadow(color: base, offset: const Offset(0, 2.5))],
+          ),
+          child: Material(
+            color: fondo,
+            borderRadius: BorderRadius.circular(8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: sinPermiso ? () => avisarSinPermiso(context) : onPressed,
+              child: SizedBox(
+                width: 38,
+                height: 30,
+                child: Icon(
+                  icono,
+                  size: tam - 1,
+                  color: sinPermiso ? Colores.tintaTenue : Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return IconButton(
       onPressed: sinPermiso ? () => avisarSinPermiso(context) : onPressed,

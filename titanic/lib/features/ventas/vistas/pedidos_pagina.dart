@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -450,54 +451,61 @@ class _TarjetaPedido extends StatelessWidget {
       estado: _estado,
       campos: _campos,
       onTap: () => _abrirDetalle(context),
+      // Los mismos botones, en el mismo orden y color que la fila del panel
+      // web; los que no aplican al pedido se ven en gris con su motivo.
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver ${pedido.numero}',
+          tono: TonoAccion.ver,
+          onPressed: () => _abrirDetalle(context),
+        ),
+        AppBotonFila(
+          icono: Icons.picture_as_pdf,
+          etiqueta: 'PDF de ${pedido.numero}',
+          tono: TonoAccion.documento,
           onPressed: () => mostrarOpcionesPdf(
             context,
             documento: DocumentoPdf.pedido,
             id: pedido.id,
             numero: pedido.numero,
           ),
-          tooltip: 'PDF',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
-        if (onConfirmar != null)
-          AppIconoAccion(
-            icono: Icons.check_circle_outline,
-            tooltip: 'Confirmar',
-            color: Colores.exito,
-            onPressed: onConfirmar,
-          ),
-        if (onNoEntregado != null)
-          IconButton(
-            onPressed: onNoEntregado,
-            tooltip: pedido.noEntregadoMotivo != null
-                ? 'Quitar la marca de no entregado'
-                : 'No entregado',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              pedido.noEntregadoMotivo != null
-                  ? Icons.undo
-                  : Icons.report_gmailerrorred_outlined,
-              size: 18,
-              color: Colores.advertencia,
-            ),
-          ),
-        if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
-            onPressed: onEditar,
-          ),
-        if (onAnular != null)
-          AppIconoAccion(
-            icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.peligro,
-            onPressed: onAnular,
-          ),
+        AppBotonFila(
+          icono: Icons.edit,
+          etiqueta: 'Editar ${pedido.numero}',
+          tono: TonoAccion.editar,
+          onPressed: onEditar,
+          motivo: 'Solo se edita un pedido pendiente',
+        ),
+        AppBotonFila(
+          icono: Icons.shopping_bag,
+          etiqueta: 'Convertir ${pedido.numero} en venta',
+          tono: TonoAccion.exito,
+          onPressed: onConfirmar,
+          // El motivo nombra la venta: "ya fue convertido" deja buscándola.
+          motivo: pedido.notaVentaNumero != null
+              ? 'Ya es la venta ${pedido.notaVentaNumero}. Anúlala para rehacerla.'
+              : 'Está anulado',
+        ),
+        AppBotonFila(
+          icono: Icons.inventory_2,
+          etiqueta: pedido.noEntregadoMotivo != null
+              ? 'Quitar la marca de no entregado de ${pedido.numero}'
+              : 'Marcar ${pedido.numero} como no entregado',
+          tono: TonoAccion.aviso,
+          onPressed: onNoEntregado,
+          motivo: 'Solo un pedido pendiente puede marcarse como no entregado',
+        ),
+        AppBotonFila(
+          icono: Icons.undo,
+          etiqueta: 'Anular ${pedido.numero}',
+          tono: TonoAccion.peligro,
+          onPressed: onAnular,
+          motivo: pedido.estado == EstadoPedido.confirmado
+              ? 'Ya generó su venta: anula esa'
+              : 'Ya está anulado',
+        ),
       ],
     );
   }

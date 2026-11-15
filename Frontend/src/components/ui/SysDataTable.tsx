@@ -38,6 +38,8 @@ import type { DataTableFilter, FilterType, OperatorId } from './dataTableFilters
 
 /** Ancho fijo de la columna de acciones: no se redimensiona ni se reparte. */
 const ACTIONS_WIDTH = 140
+/** Ancho de la columna "#" con el número de fila. */
+const NUMERO_WIDTH = 46
 
 /**
  * Filas por pagina en TODO el sistema. Es una regla, no un default suelto:
@@ -197,6 +199,11 @@ export interface SysDataTableProps<T> {
    * chico por igual. Dentro de una ventana emergente cae a un 55% de la altura.
    */
   alturaFija?: boolean
+  /**
+   * Numera las filas: una columna "#" al inicio de la tabla y, en el celular, el número en la esquina de cada
+   * tarjeta (en el color del módulo). Sigue de una página a otra: la página 2 empieza en 21. Por defecto sí.
+   */
+  numerar?: boolean
   className?: string
 }
 
@@ -331,6 +338,7 @@ export function SysDataTable<T>({
   toolbar = true,
   paginacion = true,
   alturaFija: alturaFijaPedida,
+  numerar = true,
 }: SysDataTableProps<T>) {
   // Dentro de una ventana emergente la tabla crece con sus filas en vez de reservar un alto fijo (dejaba un hueco
   // vacío), y el pie de paginación solo sale si de verdad hay más filas de las que caben en una página.
@@ -705,8 +713,8 @@ export function SysDataTable<T>({
       (total, col) => total + (widths[col.key] ?? col.width ?? MIN_COLUMNA),
       0,
     )
-    return suma + (actions ? actionsWidth : 0)
-  }, [visible, widths, actions, actionsWidth])
+    return suma + (actions ? actionsWidth : 0) + (numerar ? NUMERO_WIDTH : 0)
+  }, [visible, widths, actions, actionsWidth, numerar])
 
   const colTemplate = useMemo(() => {
     // Las que tienen ancho propio —fijado en la columna o arrastrado por el
@@ -716,12 +724,13 @@ export function SysDataTable<T>({
     const px = fijas.reduce<number>((suma, ancho) => suma + (ancho ?? 0), 0)
     const sueltas = fijas.filter((ancho) => ancho === null).length
 
-    const reservado = `${px + (actions ? actionsWidth : 0)}px`
+    const reservado = `${px + (actions ? actionsWidth : 0) + (numerar ? NUMERO_WIDTH : 0)}px`
     const auto = `calc((100% - ${reservado}) / ${Math.max(1, sueltas)})`
     const cols: (string | number)[] = fijas.map((ancho) => ancho ?? auto)
+    if (numerar) cols.unshift(NUMERO_WIDTH)
     if (actions) cols.push(actionsWidth)
     return cols
-  }, [visible, widths, actions, actionsWidth])
+  }, [visible, widths, actions, actionsWidth, numerar])
 
   /*
    * Paginacion con la rueda: al fondo se avanza, al tope se retrocede.
@@ -945,6 +954,14 @@ export function SysDataTable<T>({
 
             <thead>
               <tr className="text-[var(--sys-on)]">
+                {numerar && (
+                  <th
+                    scope="col"
+                    className="px-2 py-1.5 text-center text-[11px] font-semibold tracking-wider uppercase"
+                  >
+                    #
+                  </th>
+                )}
                 {visible.map((col) => {
                   const isSorted = sort.key === col.key
                   const isDragged = dragging === col.key
@@ -1123,14 +1140,14 @@ export function SysDataTable<T>({
               {pageRows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={(visible.length || 1) + (actions ? 1 : 0)}
+                    colSpan={(visible.length || 1) + (actions ? 1 : 0) + (numerar ? 1 : 0)}
                     className="px-4 py-12 text-center text-sm text-zinc-500"
                   >
                     {empty}
                   </td>
                 </tr>
               ) : (
-                pageRows.map((row) => (
+                pageRows.map((row, i) => (
                   <tr
                     key={String((row as Row)[rowKey])}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -1139,6 +1156,11 @@ export function SysDataTable<T>({
                       onRowClick && 'cursor-pointer',
                     )}
                   >
+                    {numerar && (
+                      <td className="px-2 py-1 text-center text-xs font-semibold text-[rgb(var(--sys-ink-rgb))] tabular-nums">
+                        {from + i + 1}
+                      </td>
+                    )}
                     {visible.map((col) => (
                       <td
                         key={col.key}
@@ -1182,19 +1204,29 @@ export function SysDataTable<T>({
             {empty}
           </p>
         ) : (
-          pageRows.map((row) => {
+          pageRows.map((row, i) => {
             const [head, ...rest] = visible
+            const numero = from + i + 1
             return (
               <div
                 key={String((row as Row)[rowKey])}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={cn(
-                  'rounded-xl bg-white p-3 shadow-sm ring-1 ring-zinc-200 transition-colors',
+                  'relative overflow-hidden rounded-xl bg-white p-3 shadow-sm ring-1 ring-zinc-200 transition-colors',
                   onRowClick && 'cursor-pointer active:bg-[rgb(var(--sys-rgb)/0.05)]',
                 )}
               >
+                {/* El número de fila en la esquina, en el color del módulo (igual que en la app). */}
+                {numerar && (
+                  <span
+                    aria-label={`Fila ${numero}`}
+                    className="absolute top-0 left-0 grid h-6 min-w-6 place-items-center rounded-br-lg bg-[rgb(var(--sys-rgb))] px-1.5 text-[11px] font-bold text-[var(--sys-on)] tabular-nums"
+                  >
+                    {numero}
+                  </span>
+                )}
                 {head && (
-                  <div className="mb-2.5 flex items-start justify-between gap-2">
+                  <div className={cn('mb-2.5 flex items-start justify-between gap-2', numerar && 'pl-6')}>
                     {/* La etiqueta al costado y no encima: en la tarjeta cada
                         dato es una fila de "nombre — valor", y la cabecera no
                         tiene por que leerse distinto del resto. */}
@@ -1203,7 +1235,7 @@ export function SysDataTable<T>({
                         <span className="shrink-0 text-[12px] text-zinc-500">{head.label}</span>
                       )}
                       <div className="flex min-w-0 items-center gap-2">
-                        {CardIcon && (
+                        {CardIcon && !numerar && (
                           <CardIcon
                             size={16}
                             className="shrink-0 text-[rgb(var(--sys-rgb))]"
@@ -1217,10 +1249,13 @@ export function SysDataTable<T>({
                         </p>
                       </div>
                     </div>
-                    {actions && (
-                      <div className="flex shrink-0 items-center gap-1">{actions(row)}</div>
-                    )}
                   </div>
+                )}
+
+                {/* Las acciones en su propia fila: en la misma que el número del documento le quitaban lugar y
+                    "PD-0039" se cortaba en "PD-". */}
+                {actions && (
+                  <div className="mb-2.5 flex flex-wrap items-center gap-1.5">{actions(row)}</div>
                 )}
 
                 <dl className="space-y-1.5">
