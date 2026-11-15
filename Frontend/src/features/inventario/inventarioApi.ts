@@ -116,10 +116,11 @@ export interface UbicacionProductoResponse {
   unidadBase: string
 }
 
-/** Un lugar nuevo. El código se pone solo (P3, C2...): no se manda. */
+/** Un lugar nuevo. Sin código, el servidor pone el siguiente del nivel (P3, C2...). */
 export interface CrearUbicacionRequest {
   padreId: number | null
   tipo: TipoUbicacion
+  codigo?: string
   nombre: string
 }
 
@@ -130,19 +131,10 @@ export interface ActualizarUbicacionRequest {
   activo: boolean
 }
 
-/** Varios lugares del mismo nivel, por sus nombres: cada uno recibe el siguiente código. */
-export interface GenerarUbicacionesRequest {
-  padreId: number | null
-  tipo: TipoUbicacion
-  nombres: string[]
-}
-
 export const ubicacionApi = {
   listar: (almacenId: number) => api.get<UbicacionResponse[]>(`/almacen/${almacenId}/ubicaciones`),
   crear: (almacenId: number, body: CrearUbicacionRequest) =>
     api.post<UbicacionResponse>(`/almacen/${almacenId}/ubicaciones`, body),
-  generar: (almacenId: number, body: GenerarUbicacionesRequest) =>
-    api.post<UbicacionResponse[]>(`/almacen/${almacenId}/ubicaciones/lote`, body),
   actualizar: (id: number, body: ActualizarUbicacionRequest) =>
     api.put<UbicacionResponse>(`/ubicacion/${id}`, body),
   eliminar: (id: number) => api.del<void>(`/ubicacion/${id}`),

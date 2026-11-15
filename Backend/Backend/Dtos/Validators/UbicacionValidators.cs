@@ -38,22 +38,6 @@ public class ActualizarUbicacionRequestValidator : AbstractValidator<ActualizarU
     }
 }
 
-public class GenerarUbicacionesRequestValidator : AbstractValidator<GenerarUbicacionesRequest>
-{
-    /// <summary>Tope de una tanda: más que esto es casi seguro un error de tipeo (1 a 10000).</summary>
-    public const int Maximo = 100;
-
-    public GenerarUbicacionesRequestValidator()
-    {
-        RuleFor(x => x.Tipo).Must(t => TipoUbicacion.Todos.Contains(t))
-            .WithMessage("Elige qué son: pisos o cuartos");
-        RuleFor(x => x.Nombres)
-            .Must(n => n.Any(x => !string.IsNullOrWhiteSpace(x))).WithMessage("Escribe al menos un nombre")
-            .Must(n => n.Count(x => !string.IsNullOrWhiteSpace(x)) <= Maximo).WithMessage($"Crea hasta {Maximo} lugares por vez");
-        RuleForEach(x => x.Nombres).MaximumLength(80).WithMessage("Cada nombre va hasta 80 letras");
-    }
-}
-
 public class AsignarProductoUbicacionRequestValidator : AbstractValidator<AsignarProductoUbicacionRequest>
 {
     public AsignarProductoUbicacionRequestValidator()

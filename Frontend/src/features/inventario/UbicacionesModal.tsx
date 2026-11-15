@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Building2, DoorOpen, ListPlus, Plus } from 'lucide-react'
+import { Building2, DoorOpen, Plus } from 'lucide-react'
 import { FaPencil, FaPlus, FaTrash, FaXmark } from 'react-icons/fa6'
 import type { LucideIcon } from 'lucide-react'
 import { Alert, Badge, BuscadorModal, Button, Checkbox, Input, Modal, RowAction, useConfirmacion, useToast } from '../../components/ui'
@@ -18,28 +18,24 @@ const ICONOS: Record<TipoUbicacion, LucideIcon> = {
 }
 
 /** Cómo se dice cada nivel en pantalla, y con qué letra empieza su código. */
-const NIVEL: Record<TipoUbicacion, { uno: string; varios: string; ejemplos: string; letra: string }> = {
-  PISO: { uno: 'piso', varios: 'pisos', ejemplos: 'Primer piso, Azotea, Sótano...', letra: 'P' },
-  CUARTO: { uno: 'cuarto', varios: 'cuartos', ejemplos: 'Cocina, Sala, Abarrotes...', letra: 'C' },
+const NIVEL: Record<TipoUbicacion, { uno: string; ejemplos: string; letra: string }> = {
+  PISO: { uno: 'piso', ejemplos: 'Primer piso, Azotea, Sótano...', letra: 'P' },
+  CUARTO: { uno: 'cuarto', ejemplos: 'Cocina, Sala, Abarrotes...', letra: 'C' },
 }
 
 /**
- * Los códigos que va a recibir lo próximo que se cree en un nivel, para mostrarlos antes de crear: la letra del nivel
- * y el número que sigue al más alto entre los hermanos (con P1 y P2, sale P3). Es la misma regla del servidor, que es
- * el que decide al final.
+ * El código que le toca al próximo lugar de un nivel: la letra del nivel y el número que sigue al más alto entre los
+ * hermanos (con P1 y P2, sale P3). Es la misma regla del servidor. Sale puesto en el formulario y se puede cambiar.
  */
-function siguientesCodigos(hermanos: UbicacionResponse[], tipo: TipoUbicacion, cuantos: number): string[] {
+function siguienteCodigo(hermanos: UbicacionResponse[], tipo: TipoUbicacion): string {
   const letra = NIVEL[tipo].letra
   const ocupados = new Set(hermanos.map((h) => h.codigo.toUpperCase()))
-  const ultimo = Math.max(0, ...hermanos.map((h) => {
+  let n = Math.max(0, ...hermanos.map((h) => {
     const m = new RegExp(`^${letra}(\\d+)$`, 'i').exec(h.codigo)
     return m ? Number(m[1]) : 0
-  }))
-  const codigos: string[] = []
-  for (let n = ultimo + 1; codigos.length < cuantos; n++) {
-    if (!ocupados.has(`${letra}${n}`)) codigos.push(`${letra}${n}`)
-  }
-  return codigos
+  })) + 1
+  while (ocupados.has(`${letra}${n}`)) n++
+  return `${letra}${n}`
 }
 
 interface FormLugar {
@@ -50,31 +46,18 @@ interface FormLugar {
   dentroDe: string | null
   /** Lo decide dónde se crea: en la raíz, lo que use el almacén; adentro de un piso, un cuarto. No se cambia. */
   tipo: TipoUbicacion
-  /** Solo al editar: al crear se pone solo. */
+  /** Al crear sale puesto el siguiente del nivel (P3, C2...); se puede cambiar. */
   codigo: string
   nombre: string
   activo: boolean
 }
-
-interface FormLote {
-  padreId: number | null
-  dentroDe: string | null
-  tipo: TipoUbicacion
-  /** Un nombre por línea. */
-  nombres: string
-}
-
-const MAX_LOTE = 100
-
-/** Las líneas con algo escrito, sin espacios de sobra. */
-const lineas = (texto: string) => texto.split('\n').map((l) => l.trim()).filter(Boolean)
 
 /**
  * Los lugares de un almacén: pisos y cuartos.
  *
  * Son dos niveles: el almacén tiene pisos y cada piso sus cuartos (P1-C2). Un almacén de un solo ambiente no usa
  * pisos: tiene sus cuartos sueltos. Lo decide el primer lugar que se crea, y desde ahí la pantalla solo ofrece eso.
- * El nivel sale de dónde se hace clic y el código se pone solo: la persona solo escribe el nombre. Hoy sirve para
+ * El nivel sale de dónde se hace clic y el código sale puesto: la persona solo escribe el nombre. Hoy sirve para
  * decir DÓNDE está cada producto; el stock se sigue contando por almacén.
  */
 export function UbicacionesModal({
@@ -101,7 +84,6 @@ export function UbicacionesModal({
   const [buscando, setBuscando] = useState(false)
 
   const [form, setForm] = useState<FormLugar | null>(null)
-  const [lote, setLote] = useState<FormLote | null>(null)
   const [guardando, setGuardando] = useState(false)
 
   const puedeCrear = puede('inv.almacenes', 'crear')
@@ -134,8 +116,6 @@ export function UbicacionesModal({
     return raiz.length > 0 ? 'CUARTO' : null
   }, [lugares])
 
-  const hermanosDe = (padreId: number | null) => lugares.filter((l) => l.padreId === padreId)
-
   // Los productos del lugar elegido, cada vez que se elige otro o cambia algo.
   useEffect(() => {
     if (elegido === null) {
@@ -159,16 +139,19 @@ export function UbicacionesModal({
 
   // ------------------------------------------------------------- Crear y editar un lugar
 
-  const nuevo = (padre: UbicacionResponse | null, tipo: TipoUbicacion) =>
+  const nuevo = (padre: UbicacionResponse | null, tipo: TipoUbicacion) => {
+    const nivel: TipoUbicacion = padre ? 'CUARTO' : tipo
+    const padreId = padre?.id ?? null
     setForm({
       id: null,
-      padreId: padre?.id ?? null,
+      padreId,
       dentroDe: padre ? `${padre.ruta}${padre.nombre ? ` · ${padre.nombre}` : ''}` : null,
-      tipo: padre ? 'CUARTO' : tipo,
-      codigo: '',
+      tipo: nivel,
+      codigo: siguienteCodigo(lugares.filter((l) => l.padreId === padreId), nivel),
       nombre: '',
       activo: true,
     })
+  }
 
   const editar = (l: UbicacionResponse) =>
     setForm({
@@ -184,12 +167,17 @@ export function UbicacionesModal({
   const guardar = async () => {
     if (!form) return
     if (form.id === null && !form.nombre.trim()) return toast.error(`Ponle un nombre al ${NIVEL[form.tipo].uno}.`)
-    if (form.id !== null && !form.codigo.trim()) return toast.error('Ponle un código al lugar.')
+    if (!form.codigo.trim()) return toast.error('Ponle un código al lugar.')
 
     setGuardando(true)
     try {
       if (form.id === null) {
-        const creado = await ubicacionApi.crear(almacen.id, { padreId: form.padreId, tipo: form.tipo, nombre: form.nombre.trim() })
+        const creado = await ubicacionApi.crear(almacen.id, {
+          padreId: form.padreId,
+          tipo: form.tipo,
+          codigo: form.codigo.trim(),
+          nombre: form.nombre.trim(),
+        })
         setElegido(creado.id)
       } else {
         await ubicacionApi.actualizar(form.id, { codigo: form.codigo.trim(), nombre: form.nombre.trim() || null, activo: form.activo })
@@ -221,46 +209,6 @@ export function UbicacionesModal({
         }
       },
     })
-
-  // ------------------------------------------------------------- Crear varios
-
-  const abrirLote = (padre: UbicacionResponse | null, tipo: TipoUbicacion) =>
-    setLote({
-      padreId: padre?.id ?? null,
-      dentroDe: padre ? `${padre.ruta}${padre.nombre ? ` · ${padre.nombre}` : ''}` : null,
-      tipo: padre ? 'CUARTO' : tipo,
-      nombres: '',
-    })
-
-  // Lo que se va a crear: cada nombre con el código que le toca.
-  const vistaLote = useMemo(() => {
-    if (!lote) return []
-    const nombres = lineas(lote.nombres)
-    const hermanos = lugares.filter((l) => l.padreId === lote.padreId)
-    const codigos = siguientesCodigos(hermanos, lote.tipo, nombres.length)
-    return nombres.map((nombre, i) => ({ codigo: codigos[i], nombre }))
-  }, [lote, lugares])
-
-  const generar = async () => {
-    if (!lote || vistaLote.length === 0) return toast.error('Escribe al menos un nombre.')
-    if (vistaLote.length > MAX_LOTE) return toast.error(`Crea hasta ${MAX_LOTE} lugares por vez.`)
-
-    setGuardando(true)
-    try {
-      const creados = await ubicacionApi.generar(almacen.id, {
-        padreId: lote.padreId,
-        tipo: lote.tipo,
-        nombres: vistaLote.map((v) => v.nombre),
-      })
-      setLote(null)
-      await avisarCambio()
-      toast.exito(`${creados.length} lugares creados`)
-    } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : 'No pudimos crear los lugares.')
-    } finally {
-      setGuardando(false)
-    }
-  }
 
   // ------------------------------------------------------------- Productos del lugar
 
@@ -328,9 +276,6 @@ export function UbicacionesModal({
               <Button size="sm" onClick={() => nuevo(null, tipoRaiz)} iconRight={<Plus size={14} />}>
                 Nuevo {NIVEL[tipoRaiz].uno}
               </Button>
-              <Button size="sm" variant="secondary" onClick={() => abrirLote(null, tipoRaiz)} iconRight={<ListPlus size={14} />}>
-                Varios {NIVEL[tipoRaiz].varios}
-              </Button>
             </div>
           )}
 
@@ -345,7 +290,7 @@ export function UbicacionesModal({
                   <div className="mx-auto mt-4 grid max-w-md gap-2 sm:grid-cols-2">
                     <button
                       type="button"
-                      onClick={() => abrirLote(null, 'PISO')}
+                      onClick={() => nuevo(null, 'PISO')}
                       className="cursor-pointer rounded-panel border border-line p-3 text-left hover:border-[rgb(var(--sys-rgb))] hover:bg-[rgb(var(--sys-rgb)/0.05)]"
                     >
                       <Building2 size={18} className="text-[rgb(var(--sys-rgb))]" />
@@ -354,7 +299,7 @@ export function UbicacionesModal({
                     </button>
                     <button
                       type="button"
-                      onClick={() => abrirLote(null, 'CUARTO')}
+                      onClick={() => nuevo(null, 'CUARTO')}
                       className="cursor-pointer rounded-panel border border-line p-3 text-left hover:border-[rgb(var(--sys-rgb))] hover:bg-[rgb(var(--sys-rgb)/0.05)]"
                     >
                       <DoorOpen size={18} className="text-[rgb(var(--sys-rgb))]" />
@@ -392,11 +337,6 @@ export function UbicacionesModal({
                           {puedeCrear && l.activo && l.tipo === 'PISO' && (
                             <RowAction label={`Agregar un cuarto en ${l.ruta}`} tone="success" onClick={() => nuevo(l, 'CUARTO')}>
                               <FaPlus size={14} />
-                            </RowAction>
-                          )}
-                          {puedeCrear && l.activo && l.tipo === 'PISO' && (
-                            <RowAction label={`Varios cuartos en ${l.ruta}`} tone="view" onClick={() => abrirLote(l, 'CUARTO')}>
-                              <ListPlus size={14} />
                             </RowAction>
                           )}
                           {puedeEditar && (
@@ -491,27 +431,23 @@ export function UbicacionesModal({
       >
         {form && (
           <div className="flex flex-col gap-4">
-            <Input
-              label="Nombre"
-              autoFocus
-              placeholder={NIVEL[form.tipo].ejemplos}
-              value={form.nombre}
-              maxLength={80}
-              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-              onKeyDown={(e) => e.key === 'Enter' && void guardar()}
-            />
-            {form.id === null ? (
-              <p className="text-xs text-ink-muted">
-                Código: <b className="text-ink">{siguientesCodigos(hermanosDe(form.padreId), form.tipo, 1)[0]}</b>. Se pone solo.
-              </p>
-            ) : (
+            <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3">
               <Input
                 label="Código"
                 value={form.codigo}
                 maxLength={20}
                 onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase().replace(/[^A-Z0-9._]/g, '') })}
               />
-            )}
+              <Input
+                label="Nombre"
+                autoFocus
+                placeholder={NIVEL[form.tipo].ejemplos}
+                value={form.nombre}
+                maxLength={80}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && void guardar()}
+              />
+            </div>
             {form.id !== null && (
               <Checkbox
                 label="Activo"
@@ -519,59 +455,6 @@ export function UbicacionesModal({
                 onChange={(e) => setForm({ ...form, activo: e.target.checked })}
               />
             )}
-          </div>
-        )}
-      </Modal>
-
-      {/* Crear varios de una vez */}
-      <Modal
-        open={lote !== null}
-        size="sm"
-        title={lote ? `Varios ${NIVEL[lote.tipo].varios}` : ''}
-        description={lote?.dentroDe ? `Adentro de ${lote.dentroDe}` : `En ${almacen.nombre}`}
-        onClose={() => setLote(null)}
-        footer={
-          <>
-            <Button variant="secondary" size="sm" onClick={() => setLote(null)}>
-              Cancelar
-            </Button>
-            <Button size="sm" loading={guardando} disabled={vistaLote.length === 0} onClick={() => void generar()}>
-              {vistaLote.length > 0 ? `Crear ${vistaLote.length}` : 'Crear'}
-            </Button>
-          </>
-        }
-      >
-        {lote && (
-          <div className="flex flex-col gap-4">
-            <label className="block">
-              <span className="ui-label mb-1.5">Nombres, uno por línea</span>
-              <textarea
-                autoFocus
-                rows={6}
-                placeholder={NIVEL[lote.tipo].ejemplos.replace('...', '').split(', ').join('\n')}
-                value={lote.nombres}
-                onChange={(e) => setLote({ ...lote, nombres: e.target.value })}
-                className="w-full rounded-field border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-soft focus:border-ink-soft"
-              />
-            </label>
-            <div className="rounded-field bg-surface-alt px-3 py-2 text-sm text-ink-muted">
-              {vistaLote.length === 0 ? (
-                `Cada línea es un ${NIVEL[lote.tipo].uno}. El código se pone solo.`
-              ) : vistaLote.length > MAX_LOTE ? (
-                `Son ${vistaLote.length}: crea hasta ${MAX_LOTE} por vez.`
-              ) : (
-                <>
-                  <p className="mb-1">Se crearán {vistaLote.length}:</p>
-                  <ul className="max-h-32 space-y-0.5 overflow-y-auto">
-                    {vistaLote.map((v) => (
-                      <li key={v.codigo}>
-                        <b className="text-ink">{v.codigo}</b> {v.nombre}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
           </div>
         )}
       </Modal>

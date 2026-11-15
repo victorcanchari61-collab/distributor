@@ -38,12 +38,6 @@ public class UbicacionController : ControllerBase
     public async Task<IActionResult> Crear(int almacenId, [FromBody] CrearUbicacionRequest request) =>
         Ok(await _ubicaciones.CrearAsync(almacenId, request));
 
-    /// <summary>Crea varios lugares seguidos: los cuartos C1 a C8 de un piso.</summary>
-    [HttpPost("almacen/{almacenId:int}/ubicaciones/lote")]
-    [Permiso("inv.almacenes", Accion.Crear)]
-    public async Task<IActionResult> Generar(int almacenId, [FromBody] GenerarUbicacionesRequest request) =>
-        Ok(await _ubicaciones.GenerarAsync(almacenId, request));
-
     [HttpPut("ubicacion/{id:int}")]
     [Permiso("inv.almacenes", Accion.Editar)]
     public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarUbicacionRequest request) =>

@@ -20,7 +20,6 @@ public class UbicacionService : IUbicacionService
     private readonly AppDbContext _context;
     private readonly IValidator<CrearUbicacionRequest> _crear;
     private readonly IValidator<ActualizarUbicacionRequest> _actualizar;
-    private readonly IValidator<GenerarUbicacionesRequest> _generar;
     private readonly IValidator<AsignarProductoUbicacionRequest> _asignar;
     private readonly IValidator<AsignarProductosUbicacionRequest> _asignarVarios;
     private readonly IValidator<QuitarProductosUbicacionRequest> _quitarVarios;
@@ -30,7 +29,6 @@ public class UbicacionService : IUbicacionService
         AppDbContext context,
         IValidator<CrearUbicacionRequest> crear,
         IValidator<ActualizarUbicacionRequest> actualizar,
-        IValidator<GenerarUbicacionesRequest> generar,
         IValidator<AsignarProductoUbicacionRequest> asignar,
         IValidator<AsignarProductosUbicacionRequest> asignarVarios,
         IValidator<QuitarProductosUbicacionRequest> quitarVarios,
@@ -39,7 +37,6 @@ public class UbicacionService : IUbicacionService
         _context = context;
         _crear = crear;
         _actualizar = actualizar;
-        _generar = generar;
         _asignar = asignar;
         _asignarVarios = asignarVarios;
         _quitarVarios = quitarVarios;
@@ -114,7 +111,7 @@ public class UbicacionService : IUbicacionService
         string codigo;
         if (string.IsNullOrWhiteSpace(request.Codigo))
         {
-            codigo = (await SiguientesCodigosAsync(almacenId, request.PadreId, request.Tipo, 1))[0];
+            codigo = await SiguienteCodigoAsync(almacenId, request.PadreId, request.Tipo);
         }
         else
         {
@@ -138,36 +135,6 @@ public class UbicacionService : IUbicacionService
 
         await _notificador.AvisarAsync("ubicaciones", "creada", new { almacenId });
         return await UnaAsync(almacenId, ubicacion.Id);
-    }
-
-    public async Task<List<UbicacionResponse>> GenerarAsync(int almacenId, GenerarUbicacionesRequest request)
-    {
-        await _generar.ValidateAndThrowAsync(request);
-        await ExigirAlmacenAsync(almacenId);
-        await ExigirPadreAsync(almacenId, request.PadreId, request.Tipo);
-
-        var nombres = request.Nombres
-            .Select(n => n.Trim())
-            .Where(n => n.Length > 0)
-            .ToList();
-        var codigos = await SiguientesCodigosAsync(almacenId, request.PadreId, request.Tipo, nombres.Count);
-
-        _context.UbicacionesAlmacen.AddRange(nombres.Select((nombre, i) => new UbicacionAlmacen
-        {
-            AlmacenId = almacenId,
-            PadreId = request.PadreId,
-            Tipo = request.Tipo,
-            Codigo = codigos[i],
-            Nombre = nombre,
-        }));
-        await _context.SaveChangesAsync();
-
-        await _notificador.AvisarAsync("ubicaciones", "creada", new { almacenId });
-
-        var creados = codigos.ToHashSet();
-        return (await ListarAsync(almacenId))
-            .Where(u => u.PadreId == request.PadreId && creados.Contains(u.Codigo))
-            .ToList();
     }
 
     public async Task<UbicacionResponse> ActualizarAsync(int id, ActualizarUbicacionRequest request)
@@ -440,11 +407,11 @@ public class UbicacionService : IUbicacionService
     }
 
     /// <summary>
-    /// Los próximos códigos libres de un nivel: P para pisos y C para cuartos, siguiendo el número más alto que ya
-    /// haya entre los hermanos (con P1 y P2 tomados, sale P3). Uno escrito a mano que no siga la serie ("AZ") no
-    /// cuenta para el número, pero tampoco se pisa.
+    /// El próximo código libre de un nivel: P para pisos y C para cuartos, siguiendo el número más alto que ya haya
+    /// entre los hermanos (con P1 y P2 tomados, sale P3). Uno escrito a mano que no siga la serie ("AZ") no cuenta
+    /// para el número, pero tampoco se pisa.
     /// </summary>
-    private async Task<List<string>> SiguientesCodigosAsync(int almacenId, int? padreId, string tipo, int cuantos)
+    private async Task<string> SiguienteCodigoAsync(int almacenId, int? padreId, string tipo)
     {
         var prefijo = tipo == TipoUbicacion.Piso ? "P" : "C";
         var usados = await _context.UbicacionesAlmacen.AsNoTracking()
@@ -460,13 +427,9 @@ public class UbicacionService : IUbicacionService
             .DefaultIfEmpty(0)
             .Max();
 
-        var codigos = new List<string>(cuantos);
-        for (var n = ultimo + 1; codigos.Count < cuantos; n++)
-        {
-            var codigo = prefijo + n;
-            if (!ocupados.Contains(codigo)) codigos.Add(codigo);
-        }
-        return codigos;
+        var n = ultimo + 1;
+        while (ocupados.Contains(prefijo + n)) n++;
+        return prefijo + n;
     }
 
     private async Task<UbicacionResponse> UnaAsync(int almacenId, int id) =>

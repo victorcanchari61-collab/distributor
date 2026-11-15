@@ -15,9 +15,6 @@ public interface IUbicacionService
 
     Task<UbicacionResponse> CrearAsync(int almacenId, CrearUbicacionRequest request);
 
-    /// <summary>Crea varios lugares seguidos (E01 a E20). Si alguno ya existe no crea ninguno.</summary>
-    Task<List<UbicacionResponse>> GenerarAsync(int almacenId, GenerarUbicacionesRequest request);
-
     Task<UbicacionResponse> ActualizarAsync(int id, ActualizarUbicacionRequest request);
 
     /// <summary>Solo se borra un lugar vacío: sin lugares adentro y sin productos puestos.</summary>

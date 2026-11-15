@@ -30,17 +30,6 @@ public class ActualizarUbicacionRequest
     public bool Activo { get; set; } = true;
 }
 
-/// <summary>
-/// Crear varios lugares del mismo nivel de una vez, por sus nombres: "Cocina", "Sala", "Baño". Cada uno recibe el
-/// siguiente código del nivel (C1, C2, C3...), en el orden en que vienen.
-/// </summary>
-public class GenerarUbicacionesRequest
-{
-    public int? PadreId { get; set; }
-    public string Tipo { get; set; } = string.Empty;
-    public List<string> Nombres { get; set; } = [];
-}
-
 /// <summary>Poner un producto en un lugar del almacén.</summary>
 public class AsignarProductoUbicacionRequest
 {
