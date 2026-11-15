@@ -153,10 +153,10 @@ final clientesFiltradosProvider = Provider.autoDispose<List<Cliente>>((ref) {
       .where((c) => vendedor == null || c.vendedor == vendedor)
       .where((c) => texto.isEmpty || c.buscable.contains(texto))
       .toList()
-    // Por código (CLI00001, CLI00002, ...), igual que en la base y en la web.
-    // El servidor los manda por nombre porque esa lista es también la de los
-    // selectores.
-    ..sort((a, b) => a.id.compareTo(b.id));
+    // Por código, del más nuevo al más antiguo (igual que en la web): el
+    // último registrado sale primero. El servidor los manda por nombre porque
+    // esa lista es también la de los selectores.
+    ..sort((a, b) => b.id.compareTo(a.id));
 });
 
 /// Rutas que existen en los datos, para armar el filtro sin listas fijas.
@@ -287,8 +287,8 @@ final proveedoresFiltradosProvider = Provider.autoDispose<List<Proveedor>>((
       .where((p) => distrito == null || p.distrito == distrito)
       .where((p) => texto.isEmpty || p.buscable.contains(texto))
       .toList()
-    // Por código (PRV00001, PRV00002, ...), igual que en la base y en la web.
-    ..sort((a, b) => a.id.compareTo(b.id));
+    // Por código, del más nuevo al más antiguo (igual que en la web).
+    ..sort((a, b) => b.id.compareTo(a.id));
 });
 
 /// Rubros que existen en los datos.

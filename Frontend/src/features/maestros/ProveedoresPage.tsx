@@ -317,9 +317,9 @@ export function ProveedoresPage() {
     },
   ]
 
-  // Por código (PRV00001, PRV00002, ...), igual que en la base. El servidor los manda por nombre porque esa misma
-  // lista alimenta los selectores de Compras y Cuentas por pagar.
-  const porCodigo = useMemo(() => [...proveedores].sort((a, b) => a.id - b.id), [proveedores])
+  // Por código, del más nuevo al más antiguo: el último registrado sale primero. El servidor los manda por nombre
+  // porque esa misma lista alimenta los selectores de Compras y Cuentas por pagar.
+  const porCodigo = useMemo(() => [...proveedores].sort((a, b) => b.id - a.id), [proveedores])
 
   return (
     <ListPage

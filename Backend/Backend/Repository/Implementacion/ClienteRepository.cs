@@ -295,8 +295,8 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
                 ? query.OrderByDescending(c => categorias.Where(x => x.ClienteId == c.Id).Select(x => x.Codigo).FirstOrDefault())
                 : query.OrderBy(c => categorias.Where(x => x.ClienteId == c.Id).Select(x => x.Codigo).FirstOrDefault() == null)
                     .ThenBy(c => categorias.Where(x => x.ClienteId == c.Id).Select(x => x.Codigo).FirstOrDefault()),
-            // Sin orden elegido, por código: CLI00001, CLI00002, ... igual que en la base.
-            _ => query.OrderBy(c => c.Id)
+            // Sin orden elegido, por código del más nuevo al más antiguo: el último registrado sale primero.
+            _ => query.OrderByDescending(c => c.Id)
         };
 
         // Desempate por Id: dos clientes con el mismo nombre podrían cambiar de
