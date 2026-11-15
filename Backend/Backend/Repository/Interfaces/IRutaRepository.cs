@@ -11,6 +11,12 @@ public interface IRutaRepository
     Task<Dictionary<int, List<string>>> VendedoresPorRutaAsync();
 
     Task<IEnumerable<Ruta>> GetAllAsync();
+
+    /// <summary>
+    /// Mercados, salidas, ventas del mes y deuda de cada ruta (o de una sola, con <paramref name="rutaId"/>), en pocas
+    /// consultas para todas a la vez.
+    /// </summary>
+    Task<Dictionary<int, ResumenRuta>> ResumenPorRutaAsync(DateTime inicioMesUtc, int? rutaId = null);
     Task<Ruta?> GetByIdAsync(int id);
     Task<bool> ExisteNombreAsync(string nombre, int? excepto = null);
 

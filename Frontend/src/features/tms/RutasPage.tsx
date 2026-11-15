@@ -20,6 +20,39 @@ import { useRealtime } from '../../lib/realtime'
 import { rutaApi } from './rutaApi'
 import type { RutaRequest, RutaResponse } from './rutaApi'
 
+const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO']
+const DIA_CORTO: Record<string, string> = {
+  LUNES: 'Lun',
+  MARTES: 'Mar',
+  MIERCOLES: 'Mié',
+  JUEVES: 'Jue',
+  VIERNES: 'Vie',
+  SABADO: 'Sáb',
+  DOMINGO: 'Dom',
+}
+const DIA_LARGO: Record<string, string> = {
+  LUNES: 'Lunes',
+  MARTES: 'Martes',
+  MIERCOLES: 'Miércoles',
+  JUEVES: 'Jueves',
+  VIERNES: 'Viernes',
+  SABADO: 'Sábado',
+  DOMINGO: 'Domingo',
+}
+
+const soles = (n: number) => `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const sinDato = <span className="text-ink-soft">—</span>
+
+/** Los días en que sale, sin repetir: dos camiones el mismo lunes siguen siendo un lunes. */
+const diasDe = (r: RutaResponse) => DIAS.filter((d) => r.salidas.some((x) => x.dia === d))
+const placasDe = (r: RutaResponse) => [...new Set(r.salidas.map((x) => x.placa))]
+
+/** Cuántos mercados se ven en la celda antes del "+N". */
+const MERCADOS_A_LA_VISTA = 4
+/** Por número cuando lo son ("2" antes que "10"), y por nombre si no. */
+const ordenarMercados = (mercados: string[]) =>
+  [...mercados].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
+
 const VACIO: RutaRequest = { nombre: '' }
 
 /**
@@ -129,6 +162,98 @@ export function RutasPage() {
       value: (row) => (row.vendedores.length ? 'Con vendedor' : 'Sin vendedor'),
       render: (row) =>
         row.vendedores.length ? row.vendedores.join(', ') : <span className="text-ink-soft">Sin vendedor</span>,
+    },
+    {
+      // Dónde están sus clientes: se deduce de los mercados de los clientes activos de la ruta.
+      key: 'mercados',
+      label: 'Mercados',
+      filterType: 'select',
+      filterOptions: ordenarMercados([...new Set(rutas.flatMap((r) => r.mercados))]).map((m) => ({
+        value: m,
+        label: m,
+      })),
+      valores: (row) => row.mercados,
+      value: (row) => row.mercados.join(', '),
+      width: 240,
+      // Una ruta puede tener veinte mercados: se ven los primeros y un "+N" con la lista entera al pasar el mouse,
+      // para que la fila no se haga altísima.
+      render: (row) => {
+        if (!row.mercados.length) return sinDato
+        const todos = ordenarMercados(row.mercados)
+        const vistos = todos.slice(0, MERCADOS_A_LA_VISTA)
+        const resto = todos.length - vistos.length
+        return (
+          <span className="flex flex-wrap gap-1" title={todos.join(', ')}>
+            {vistos.map((m) => (
+              <span key={m} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-ink">
+                {m}
+              </span>
+            ))}
+            {resto > 0 && (
+              <span className="rounded-full bg-[rgb(var(--sys-rgb)/0.12)] px-2 py-0.5 text-xs font-semibold text-[rgb(var(--sys-ink-rgb))]">
+                +{resto}
+              </span>
+            )}
+          </span>
+        )
+      },
+    },
+    {
+      // Qué días sale, según los recorridos de Flota (se editan allá).
+      key: 'dias',
+      label: 'Días',
+      filterType: 'select',
+      width: 190,
+      filterOptions: DIAS.map((d) => ({ value: d, label: DIA_LARGO[d] })),
+      valores: (row) => diasDe(row),
+      value: (row) => diasDe(row).map((d) => DIA_CORTO[d]).join(', '),
+      render: (row) => (diasDe(row).length ? diasDe(row).map((d) => DIA_CORTO[d]).join(', ') : sinDato),
+    },
+    {
+      key: 'vehiculo',
+      label: 'Camión',
+      filterType: 'select',
+      filterOptions: [...new Set(rutas.flatMap((r) => placasDe(r)))]
+        .sort()
+        .map((p) => ({ value: p, label: p })),
+      valores: (row) => placasDe(row),
+      value: (row) => placasDe(row).join(', '),
+      render: (row) => (placasDe(row).length ? placasDe(row).join(', ') : sinDato),
+    },
+    {
+      key: 'ventasMes',
+      label: 'Ventas del mes',
+      align: 'right',
+      filterable: false,
+      value: (row) => row.ventasMes,
+      render: (row) => (row.ventasMes > 0 ? <span className="tabular-nums">{soles(row.ventasMes)}</span> : sinDato),
+    },
+    {
+      key: 'clientesConCompraMes',
+      label: 'Compraron',
+      align: 'right',
+      filterable: false,
+      render: (row) => (row.clientesConCompraMes > 0 ? row.clientesConCompraMes : sinDato),
+    },
+    {
+      key: 'porCobrar',
+      label: 'Por cobrar',
+      align: 'right',
+      filterable: false,
+      value: (row) => row.porCobrar,
+      render: (row) =>
+        row.porCobrar > 0 ? (
+          <span className="font-semibold text-amber-700 tabular-nums">{soles(row.porCobrar)}</span>
+        ) : (
+          sinDato
+        ),
+    },
+    {
+      key: 'clientesConDeuda',
+      label: 'Deben',
+      align: 'right',
+      filterable: false,
+      render: (row) => (row.clientesConDeuda > 0 ? row.clientesConDeuda : sinDato),
     },
     {
       key: 'activo',

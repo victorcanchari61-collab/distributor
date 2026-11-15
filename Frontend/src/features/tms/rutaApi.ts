@@ -8,6 +8,18 @@ export interface RutaResponse {
   clientes: number
   /** Quiénes la tienen a cargo. Puede ser más de uno (el titular y su reemplazo). */
   vendedores: string[]
+  /** Los mercados donde están sus clientes activos. */
+  mercados: string[]
+  /** Qué días sale y en qué camión, según los recorridos de Flota, en orden de semana. */
+  salidas: { dia: string; placa: string }[]
+  /** Lo vendido este mes a sus clientes (S/). */
+  ventasMes: number
+  /** Cuántos de sus clientes compraron este mes. */
+  clientesConCompraMes: number
+  /** Lo que deben sus clientes en ventas al crédito (S/). */
+  porCobrar: number
+  /** Cuántos de sus clientes deben algo. */
+  clientesConDeuda: number
 }
 
 export interface RutaRequest {

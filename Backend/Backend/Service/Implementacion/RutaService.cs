@@ -37,7 +37,9 @@ public class RutaService : IRutaService
         var rutas = await _repository.GetAllAsync();
         var clientes = await _repository.ContarClientesPorRutaAsync();
         var vendedores = await _repository.VendedoresPorRutaAsync();
-        return rutas.Select(r => MapToResponse(r, clientes.GetValueOrDefault(r.Id), vendedores.GetValueOrDefault(r.Id))).ToList();
+        var resumen = await _repository.ResumenPorRutaAsync(InicioDelMesUtc());
+        return rutas.Select(r => MapToResponse(
+            r, clientes.GetValueOrDefault(r.Id), vendedores.GetValueOrDefault(r.Id), resumen.GetValueOrDefault(r.Id))).ToList();
     }
 
     public async Task<RutaResponse> GetByIdAsync(int id)
@@ -117,14 +119,32 @@ public class RutaService : IRutaService
         ?? throw new NotFoundException($"No existe la ruta {id}");
 
     private async Task<RutaResponse> MapAsync(Ruta ruta) =>
-        MapToResponse(ruta, await _repository.ContarClientesAsync(ruta.Id), await _repository.VendedoresAsync(ruta.Id));
+        MapToResponse(
+            ruta,
+            await _repository.ContarClientesAsync(ruta.Id),
+            await _repository.VendedoresAsync(ruta.Id),
+            (await _repository.ResumenPorRutaAsync(InicioDelMesUtc(), ruta.Id)).GetValueOrDefault(ruta.Id));
 
-    private static RutaResponse MapToResponse(Ruta r, int clientes, List<string>? vendedores = null) => new()
+    /// <summary>El primer día de este mes en Perú, como instante UTC.</summary>
+    private static DateTime InicioDelMesUtc()
+    {
+        var hoy = Zona.Hoy;
+        return Zona.AUtc(new DateTime(hoy.Year, hoy.Month, 1));
+    }
+
+    private static RutaResponse MapToResponse(
+        Ruta r, int clientes, List<string>? vendedores = null, ResumenRuta? resumen = null) => new()
     {
         Id = r.Id,
         Nombre = r.Nombre,
         Activo = r.Activo,
         Clientes = clientes,
-        Vendedores = vendedores ?? []
+        Vendedores = vendedores ?? [],
+        Mercados = resumen?.Mercados ?? [],
+        Salidas = resumen?.Salidas.Select(x => new SalidaRutaResponse { Dia = x.Dia, Placa = x.Placa }).ToList() ?? [],
+        VentasMes = resumen?.VentasMes ?? 0,
+        ClientesConCompraMes = resumen?.ClientesConCompraMes ?? 0,
+        PorCobrar = resumen?.PorCobrar ?? 0,
+        ClientesConDeuda = resumen?.ClientesConDeuda ?? 0,
     };
 }
