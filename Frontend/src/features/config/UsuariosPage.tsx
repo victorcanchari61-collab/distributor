@@ -259,7 +259,6 @@ export function UsuariosPage() {
   }
 
   const alternarEstado = async (usuario: Usuario) => {
-    setError('')
     try {
       await usuarioApi.update(usuario.id, {
         nombre: usuario.nombre,
@@ -275,7 +274,7 @@ export function UsuariosPage() {
       })
       await cargarUsuarios()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
     }
   }
 

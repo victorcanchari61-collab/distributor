@@ -3,7 +3,6 @@ import type { ReactNode } from 'react'
 import { Plus } from 'lucide-react'
 import { FaPencil, FaTrash } from 'react-icons/fa6'
 import {
-  Alert,
   Badge,
   Button,
   Input,
@@ -71,7 +70,6 @@ export function CatalogoSimple({
   const [form, setForm] = useState({ nombre: '', descripcion: '' })
   const [guardando, setGuardando] = useState(false)
   const toast = useToast()
-  const [error, setError] = useState('')
   const { confirmar, dialogo } = useConfirmacion()
 
   const abrirNuevo = () => {
@@ -120,7 +118,6 @@ export function CatalogoSimple({
       confirmar: fila.activo ? 'Desactivar' : 'Activar',
       tono: fila.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await onActualizar(fila.id, {
             nombre: fila.nombre,
@@ -129,7 +126,7 @@ export function CatalogoSimple({
           })
           await onRecargar()
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })
@@ -144,12 +141,11 @@ export function CatalogoSimple({
       confirmar: 'Eliminar',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await onEliminar(fila.id)
           await onRecargar()
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos eliminar.')
         }
       },
     })
@@ -195,7 +191,6 @@ export function CatalogoSimple({
           Nuevo
         </Button>
       }
-      alert={error ? <Alert>{error}</Alert> : undefined}
       columns={columns}
       rows={filas}
       searchPlaceholder="Buscar..."

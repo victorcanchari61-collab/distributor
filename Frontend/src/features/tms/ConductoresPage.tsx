@@ -183,7 +183,6 @@ export function ConductoresPage() {
       confirmar: c.activo ? 'Desactivar' : 'Activar',
       tono: c.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await conductorApi.update(c.id, {
             nombre: c.nombre,
@@ -201,7 +200,7 @@ export function ConductoresPage() {
           await cargar()
           toast.exito(`${c.nombre} ${c.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })

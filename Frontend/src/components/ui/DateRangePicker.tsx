@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { cn } from './cn'
+import { claseCampo } from './Input'
 import { useDismiss } from './useDismiss'
 
 /**
@@ -156,7 +157,7 @@ export function DateRangePicker({ from, to, onChange, placeholder = 'Selecciona 
         ref={triggerRef}
         type="button"
         onClick={() => (open ? setOpen(false) : abrir())}
-        className="flex w-full items-center gap-2 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[13px] outline-none focus:border-zinc-400"
+        className={cn('flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] outline-none', claseCampo(false, 'propio'))}
       >
         <span className={cn('flex-1 truncate text-left', !from && !to && 'text-zinc-400')}>
           {from || to ? (
@@ -167,7 +168,7 @@ export function DateRangePicker({ from, to, onChange, placeholder = 'Selecciona 
             placeholder
           )}
         </span>
-        <Calendar size={14} className="shrink-0 text-zinc-400" />
+        <Calendar size={14} className="shrink-0 text-[rgb(var(--sys-rgb))]" />
       </button>
 
       {open &&

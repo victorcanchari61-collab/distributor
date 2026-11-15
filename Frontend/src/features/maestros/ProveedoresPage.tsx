@@ -219,13 +219,12 @@ export function ProveedoresPage() {
       confirmar: 'Eliminar',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await proveedorApi.remove(proveedor.id)
           await cargar()
           toast.exito(`${proveedor.nombre} eliminado`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el proveedor.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos eliminar el proveedor.')
         }
       },
     })
@@ -239,13 +238,12 @@ export function ProveedoresPage() {
       confirmar: proveedor.activo ? 'Desactivar' : 'Activar',
       tono: proveedor.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await (proveedor.activo ? proveedorApi.desactivar(proveedor.id) : proveedorApi.activar(proveedor.id))
           await cargar()
           toast.exito(`${proveedor.nombre} ${proveedor.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })

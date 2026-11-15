@@ -569,13 +569,12 @@ export function MisComprasPage() {
       confirmar: 'Anular',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await compraApi.anular(compra.id)
           await cargar()
           toast.exito(`${compra.numero} anulada`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos anular la compra.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos anular la compra.')
         }
       },
     })

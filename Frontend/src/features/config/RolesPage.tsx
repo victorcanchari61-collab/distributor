@@ -95,7 +95,6 @@ export function RolesPage() {
   }
 
   const alternarEstado = async (rol: RolResponse) => {
-    setError('')
     try {
       await rolApi.update(rol.id, {
         nombre: rol.nombre,
@@ -105,18 +104,17 @@ export function RolesPage() {
       await cargar()
       toast.exito(`${rol.nombre} ${rol.activo ? 'desactivado' : 'activado'}`)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado del rol.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado del rol.')
     }
   }
 
   const eliminar = async (rol: RolResponse) => {
-    setError('')
     try {
       await rolApi.remove(rol.id)
       await cargar()
       toast.exito(`${rol.nombre} eliminado`)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el rol.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos eliminar el rol.')
     }
   }
 
@@ -272,7 +270,7 @@ export function RolesPage() {
               placeholder="Describe en una línea el alcance de este perfil."
               value={form.descripcion}
               onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-              className="w-full rounded-field border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-soft focus:border-ink-soft"
+              className="w-full rounded-field border border-transparent bg-field [&:not(:focus)]:hover:bg-field-hover focus:bg-surface focus:border-[rgb(var(--sys-rgb)/0.5)] px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-soft"
             />
           </label>
 

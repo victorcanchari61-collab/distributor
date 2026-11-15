@@ -150,7 +150,7 @@ export function ExcepcionesPermisos() {
           await cargar()
           toast.exito('Permiso retirado')
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos retirar el permiso.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos retirar el permiso.')
         }
       },
     })

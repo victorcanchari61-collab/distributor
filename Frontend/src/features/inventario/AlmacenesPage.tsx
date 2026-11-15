@@ -183,7 +183,6 @@ export function AlmacenesPage() {
       confirmar: a.activo ? 'Desactivar' : 'Activar',
       tono: a.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await almacenApi.update(a.id, {
             codigo: a.codigo,
@@ -200,7 +199,7 @@ export function AlmacenesPage() {
           await cargar()
           toast.exito(`${a.nombre} ${a.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })

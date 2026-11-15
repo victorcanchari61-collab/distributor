@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import type { ReactNode, SelectHTMLAttributes } from 'react'
-import { FIELD_HEIGHT } from './Input'
+import { FIELD_HEIGHT, claseCampo } from './Input'
 import type { FieldSize } from './Input'
 import { cn } from './cn'
 
@@ -53,11 +53,10 @@ export function Select({
         id={id}
         aria-invalid={Boolean(error)}
         className={cn(
-          'w-full cursor-pointer rounded-field border bg-surface px-3 text-ink outline-none',
-          'focus:border-ink-soft',
+          'w-full cursor-pointer rounded-field px-3 text-ink outline-none',
+          claseCampo(Boolean(error), 'propio'),
           FIELD_HEIGHT[size],
           size === 'sm' ? 'text-[13px]' : 'text-sm',
-          error ? 'border-red-600' : 'border-line',
         )}
         {...rest}
       >

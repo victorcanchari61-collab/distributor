@@ -262,7 +262,6 @@ export function FlotaPage() {
       confirmar: v.activo ? 'Desactivar' : 'Activar',
       tono: v.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await vehiculoApi.update(v.id, {
             placa: v.placa,
@@ -284,7 +283,7 @@ export function FlotaPage() {
           await cargar()
           toast.exito(`${v.placa} ${v.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })
@@ -779,7 +778,6 @@ function TiposVehiculoTabla({
   })
   const [guardando, setGuardando] = useState(false)
   const toast = useToast()
-  const [error, setError] = useState('')
   const { confirmar, dialogo } = useConfirmacion()
 
   const abrirNuevo = () => {
@@ -831,7 +829,6 @@ function TiposVehiculoTabla({
       confirmar: t.activo ? 'Desactivar' : 'Activar',
       tono: t.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await tipoVehiculoApi.update(t.id, {
             nombre: t.nombre,
@@ -841,7 +838,7 @@ function TiposVehiculoTabla({
           })
           await onRecargar()
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })
@@ -894,7 +891,6 @@ function TiposVehiculoTabla({
           Nuevo tipo
         </Button>
       }
-      alert={error ? <Alert>{error}</Alert> : undefined}
       columns={columns}
       rows={tipos}
       cardIcon={Wrench}

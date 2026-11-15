@@ -722,13 +722,12 @@ export function NotasVentaPage({ directo, onCerrar }: { directo?: '01' | '03'; o
       confirmar: 'Anular',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await notaVentaApi.anular(nota.id)
           await cargar()
           toast.exito(`${nota.numero} anulada`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos anular la venta.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos anular la venta.')
         }
       },
     })

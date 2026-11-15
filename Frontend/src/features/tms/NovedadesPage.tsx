@@ -153,13 +153,12 @@ export function NovedadesPage() {
       confirmar: 'Reabrir',
       tono: 'warning',
       accion: async () => {
-        setError('')
         try {
           await novedadApi.reabrir(n.id)
           await cargar()
           toast.exito('La novedad volvió a quedar por revisar')
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos reabrir la novedad.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos reabrir la novedad.')
         }
       },
     })

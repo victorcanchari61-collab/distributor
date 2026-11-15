@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { FaTableColumns } from 'react-icons/fa6'
 import { cn } from './cn'
+import { claseCampo } from './Input'
 import { useDismiss } from './useDismiss'
 import { instanteMs } from '../../lib/fechas'
 import { FiltersButton } from './FiltersButton'
@@ -909,13 +910,16 @@ export function SysDataTable<T>({
             <div className="relative min-w-0 flex-1 sm:max-w-xs sm:flex-none sm:basis-80">
               <Search
                 size={15}
-                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-zinc-400"
+                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[rgb(var(--sys-rgb))]"
               />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full rounded-lg border border-zinc-200 bg-white py-2 pr-8 pl-9 text-sm text-zinc-900 transition outline-none placeholder:text-zinc-400 focus:border-zinc-400"
+                className={cn(
+                  'w-full rounded-lg py-2 pr-8 pl-9 text-sm text-zinc-900 outline-none placeholder:text-zinc-400',
+                  claseCampo(false, 'propio'),
+                )}
               />
               {search && (
                 <button
@@ -1338,7 +1342,7 @@ export function SysDataTable<T>({
               <select
                 value={perPage}
                 onChange={(e) => setPerPage(Number(e.target.value))}
-                className="h-8 cursor-pointer rounded-lg border border-line bg-white pr-6 pl-2.5 text-[13px] font-medium text-ink outline-none hover:border-line-strong focus:border-[rgb(var(--sys-rgb)/0.6)]"
+                className={cn('h-8 cursor-pointer rounded-lg pr-6 pl-2.5 text-[13px] font-medium text-ink outline-none', claseCampo(false, 'propio'))}
               >
                 {/* El tamaño que declara la vista entra en la lista: si no, el
                     select mostraria un valor que no es ninguna de sus opciones. */}
@@ -1542,7 +1546,10 @@ function ColumnSearchPopover<T>({
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && onClose()}
           placeholder={`Buscar ${column.label.toLowerCase()}`}
-          className="w-full rounded-md border border-zinc-200 py-1.5 pr-6 pl-7 text-[12px] font-normal tracking-normal normal-case text-zinc-900 outline-none focus:border-zinc-400"
+          className={cn(
+            'w-full rounded-md py-1.5 pr-6 pl-7 text-[12px] font-normal tracking-normal normal-case text-zinc-900 outline-none',
+            claseCampo(false, 'propio'),
+          )}
         />
         {value && (
           <button

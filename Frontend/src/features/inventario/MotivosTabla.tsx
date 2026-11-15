@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { FaPencil, FaTrash } from 'react-icons/fa6'
 import {
-  Alert,
   Badge,
   Button,
   Desplegable,
@@ -51,7 +50,6 @@ export function MotivosTabla({
   const [form, setForm] = useState(VACIO)
   const [guardando, setGuardando] = useState(false)
   const toast = useToast()
-  const [error, setError] = useState('')
   const { confirmar, dialogo } = useConfirmacion()
 
   const abrirNuevo = () => {
@@ -96,7 +94,6 @@ export function MotivosTabla({
       confirmar: m.activo ? 'Desactivar' : 'Activar',
       tono: m.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await motivoApi.update(m.id, {
             codigo: m.codigo,
@@ -106,7 +103,7 @@ export function MotivosTabla({
           })
           await onRecargar()
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })
@@ -121,12 +118,11 @@ export function MotivosTabla({
       confirmar: 'Eliminar',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await motivoApi.remove(m.id)
           await onRecargar()
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el motivo.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos eliminar el motivo.')
         }
       },
     })
@@ -213,7 +209,6 @@ export function MotivosTabla({
           Nuevo motivo
         </Button>
       }
-      alert={error ? <Alert>{error}</Alert> : undefined}
       columns={columns}
       rows={ordenados}
       searchPlaceholder="Buscar motivo..."

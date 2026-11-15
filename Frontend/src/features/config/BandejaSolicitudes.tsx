@@ -77,7 +77,7 @@ export function BandejaSolicitudes() {
       await cargar()
       toast.exito('Solicitud rechazada')
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos rechazar la solicitud.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos rechazar la solicitud.')
     }
   }
 

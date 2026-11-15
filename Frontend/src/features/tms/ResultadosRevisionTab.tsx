@@ -59,7 +59,6 @@ export function ResultadosRevisionTab({ cabecera }: { cabecera: ReactNode }) {
       confirmar: r.activo ? 'Desactivar' : 'Activar',
       tono: r.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await resultadoRevisionApi.update(r.id, {
             nombre: r.nombre,
@@ -70,7 +69,7 @@ export function ResultadosRevisionTab({ cabecera }: { cabecera: ReactNode }) {
           await cargar()
           toast.exito(`${r.nombre} ${r.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })

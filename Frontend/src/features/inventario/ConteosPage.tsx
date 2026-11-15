@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ClipboardCheck, Save } from 'lucide-react'
-import { Alert, Badge, Button, Input, ListPage, StatCard } from '../../components/ui'
+import { Alert, Badge, Button, Input, ListPage, StatCard, useToast } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
@@ -19,6 +19,7 @@ import { opcional } from '../../lib/apoyo'
  */
 export function ConteosPage() {
   const { puede } = usePermisos()
+  const toast = useToast()
   const [almacenes, setAlmacenes] = useState<AlmacenResponse[]>([])
   const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [motivos, setMotivos] = useState<MotivoResponse[]>([])
@@ -77,7 +78,7 @@ export function ConteosPage() {
   const contadosActivos = stock.filter((s) => (contados[s.productoId] ?? '').trim() !== '')
 
   const registrarConteo = async () => {
-    if (!almacenId) return setError('Elige el almacén.')
+    if (!almacenId) return toast.error('Elige el almacén.')
 
     const lineas = contadosActivos
       .map((s) => ({
@@ -90,17 +91,16 @@ export function ConteosPage() {
     const faltantes = lineas.filter((l) => l.diferencia < 0)
 
     if (sobrantes.length === 0 && faltantes.length === 0) {
-      return setError('No hay diferencias que registrar: lo contado coincide con lo teórico.')
+      return toast.error('No hay diferencias que registrar: lo contado coincide con lo teórico.')
     }
     if (sobrantes.length > 0 && !motivoSobrante) {
-      return setError('No se encontró el motivo "Sobrante de conteo". Revisa Ajustes → Motivos.')
+      return toast.error('No se encontró el motivo "Sobrante de conteo". Revisa Ajustes → Motivos.')
     }
     if (faltantes.length > 0 && !motivoFaltante) {
-      return setError('No se encontró el motivo "Faltante de conteo". Revisa Ajustes → Motivos.')
+      return toast.error('No se encontró el motivo "Faltante de conteo". Revisa Ajustes → Motivos.')
     }
 
     setGuardando(true)
-    setError('')
     setResultado('')
     try {
       if (sobrantes.length > 0 && motivoSobrante) {
@@ -134,7 +134,7 @@ export function ConteosPage() {
       setContados({})
       await cargarStock(almacenId)
     } catch (e) {
-      setError(
+      toast.error(
         e instanceof ApiError ? (e.errors.length ? e.errors.join(' ') : e.message) : 'No pudimos registrar el conteo.',
       )
     } finally {

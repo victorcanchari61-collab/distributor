@@ -341,13 +341,12 @@ export function ClientesPage() {
       confirmar: 'Eliminar',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await clienteApi.remove(cliente.id)
           await cargar()
           toast.exito(`${cliente.nombre} eliminado`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el cliente.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos eliminar el cliente.')
         }
       },
     })
@@ -361,13 +360,12 @@ export function ClientesPage() {
       confirmar: cliente.activo ? 'Desactivar' : 'Activar',
       tono: cliente.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await (cliente.activo ? clienteApi.desactivar(cliente.id) : clienteApi.activar(cliente.id))
           await cargar()
           toast.exito(`${cliente.nombre} ${cliente.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })

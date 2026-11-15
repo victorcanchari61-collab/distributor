@@ -350,13 +350,12 @@ export function DespachosPage() {
       confirmar: 'Anular',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await despachoApi.anular(d.id)
           await cargar()
           toast.exito(`${d.numero} anulado`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos anular el despacho.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos anular el despacho.')
         }
       },
     })
@@ -687,7 +686,7 @@ export function DespachosPage() {
                   rows={2}
                   value={observacion}
                   onChange={(e) => setObservacion(e.target.value)}
-                  className="w-full rounded-field border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-soft focus:border-ink-soft"
+                  className="w-full rounded-field border border-transparent bg-field [&:not(:focus)]:hover:bg-field-hover focus:bg-surface focus:border-[rgb(var(--sys-rgb)/0.5)] px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-soft"
                 />
               </label>
 

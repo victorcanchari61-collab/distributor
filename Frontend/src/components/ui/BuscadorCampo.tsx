@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ListFilter, Search } from 'lucide-react'
 import { cn } from './cn'
+import { claseCampo } from './Input'
 
 export interface OpcionBuscador<T> {
   item: T
@@ -192,14 +193,13 @@ export function BuscadorCampo<T>({
 
       <div
         className={cn(
-          'flex h-[var(--height-field-md)] items-center gap-2 rounded-field border px-3',
+          'flex h-[var(--height-field-md)] items-center gap-2 rounded-field px-3',
           destacado
-            ? 'bg-amber-50 pr-1 focus-within:border-amber-500'
-            : 'bg-surface focus-within:border-ink-soft',
-          error ? 'border-red-600' : destacado ? 'border-amber-300' : 'border-line',
+            ? cn('border bg-amber-50 pr-1 focus-within:border-amber-500', error ? 'border-red-600' : 'border-amber-300')
+            : claseCampo(Boolean(error)),
         )}
       >
-        <Search size={15} className={cn('shrink-0', destacado ? 'text-amber-600' : 'text-ink-soft')} />
+        <Search size={15} className={cn('shrink-0', destacado ? 'text-amber-600' : 'text-[rgb(var(--sys-rgb))]')} />
         <input
           ref={inputRef}
           type="text"

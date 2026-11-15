@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown, Search, X } from 'lucide-react'
 import { cn } from './cn'
-import { FIELD_HEIGHT } from './Input'
+import { FIELD_HEIGHT, claseCampo } from './Input'
 import type { FieldSize } from './Input'
 
 export interface ItemLista {
@@ -211,12 +211,14 @@ export function ListaDesplegable({
         }}
         className={cn(
           'flex items-center transition-colors duration-150 disabled:opacity-50',
-          variante === 'campo' &&
-            'w-full justify-between gap-2 rounded-field border bg-surface px-3 text-left text-ink',
+          variante === 'campo' && 'w-full justify-between gap-2 rounded-field px-3 text-left text-ink',
           variante === 'campo' && FIELD_HEIGHT[size],
           variante === 'campo' && (size === 'sm' ? 'text-[13px]' : 'text-sm'),
+          // Abierta se ve como un campo con foco: blanca y con el borde del módulo.
           variante === 'campo' &&
-            (error ? 'border-red-600' : abierto ? 'border-ink-soft' : 'border-line'),
+            (abierto && !error
+              ? 'border border-[rgb(var(--sys-rgb)/0.5)] bg-surface'
+              : claseCampo(Boolean(error), 'propio')),
 
           variante === 'pastilla' &&
             'inline-flex max-w-full gap-1.5 rounded-full border px-2.5 py-1 text-[12px]',
@@ -283,7 +285,7 @@ export function ListaDesplegable({
                     }
                   }}
                   placeholder="Buscar..."
-                  className="w-full rounded-field border border-line py-1.5 pr-7 pl-7 text-[13px] text-ink outline-none focus:border-ink-soft"
+                  className={cn('w-full rounded-field py-1.5 pr-7 pl-7 text-[13px] text-ink outline-none', claseCampo(false, 'propio'))}
                 />
                 {filtro && (
                   <button

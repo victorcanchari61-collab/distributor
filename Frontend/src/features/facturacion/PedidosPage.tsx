@@ -351,13 +351,12 @@ export function PedidosPage() {
       confirmar: 'Anular',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await pedidoApi.anular(pedido.id)
           await cargar()
           toast.exito(`${pedido.numero} anulado`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos anular el pedido.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos anular el pedido.')
         }
       },
     })
@@ -369,13 +368,12 @@ export function PedidosPage() {
       confirmar: 'Quitar marca',
       tono: 'warning',
       accion: async () => {
-        setError('')
         try {
           await pedidoApi.quitarNoEntregado(pedido.id)
           await cargar()
           toast.exito(`${pedido.numero} ya no figura como no entregado`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos quitar la marca.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos quitar la marca.')
         }
       },
     })

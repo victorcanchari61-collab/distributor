@@ -117,7 +117,6 @@ export function MotivosNovedadPage() {
       confirmar: m.activo ? 'Desactivar' : 'Activar',
       tono: m.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await motivoNovedadApi.update(m.id, {
             nombre: m.nombre,
@@ -128,7 +127,7 @@ export function MotivosNovedadPage() {
           await cargar()
           toast.exito(`${m.nombre} ${m.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })

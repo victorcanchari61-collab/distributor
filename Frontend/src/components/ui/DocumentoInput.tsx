@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { cn } from './cn'
-import { FIELD_HEIGHT, Input } from './Input'
+import { FIELD_HEIGHT, Input, claseCampo } from './Input'
 import type { FieldSize, InputProps } from './Input'
 
 /** Tipos de documento que maneja el sistema. */
@@ -96,7 +96,8 @@ export function DocumentoInput({
                 if (recortado !== value) onChange(recortado)
               }}
               className={cn(
-                'w-24 cursor-pointer rounded-field border border-line bg-surface px-2 text-sm text-ink outline-none focus:border-ink-soft',
+                'w-24 cursor-pointer rounded-field px-2 text-sm text-ink outline-none',
+                claseCampo(false, 'propio'),
                 FIELD_HEIGHT[size],
               )}
             >

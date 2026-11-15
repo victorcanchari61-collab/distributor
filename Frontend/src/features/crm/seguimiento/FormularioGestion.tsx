@@ -140,7 +140,7 @@ export function FormularioGestion({
           value={valores.comentario}
           onChange={(e) => onChange({ comentario: e.target.value })}
           placeholder="Escribe un breve comentario..."
-          className="w-full rounded-field border border-line px-3 py-2 text-sm"
+          className="w-full rounded-field border border-transparent bg-field [&:not(:focus)]:hover:bg-field-hover focus:bg-surface focus:border-[rgb(var(--sys-rgb)/0.5)] px-3 py-2 text-sm outline-none"
         />
         <p className="text-right text-[11px] text-ink-soft">{valores.comentario.length} / 500</p>
       </div>

@@ -558,7 +558,6 @@ export function ProductosPage() {
       confirmar: producto.activo ? 'Desactivar' : 'Activar',
       tono: producto.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await (producto.activo
             ? productoApi.desactivar(producto.id)
@@ -566,7 +565,7 @@ export function ProductosPage() {
           await cargar()
           toast.exito(`${producto.nombre} ${producto.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })
@@ -595,13 +594,12 @@ export function ProductosPage() {
       confirmar: 'Eliminar',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await productoApi.remove(producto.id)
           await cargar()
           toast.exito(`${producto.nombre} eliminado`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar el producto.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos eliminar el producto.')
         }
       },
     })
@@ -1286,7 +1284,6 @@ function UnidadesTabla({
   })
   const [guardando, setGuardando] = useState(false)
   const toast = useToast()
-  const [error, setError] = useState('')
   const { confirmar, dialogo } = useConfirmacion()
 
   const abrirNuevo = () => {
@@ -1380,7 +1377,6 @@ function UnidadesTabla({
           Nueva unidad
         </Button>
       }
-      alert={error ? <Alert>{error}</Alert> : undefined}
       columns={columns}
       rows={unidades}
       cardIcon={Ruler}
@@ -1401,12 +1397,11 @@ function UnidadesTabla({
               confirmar: 'Eliminar',
               tono: 'danger',
               accion: async () => {
-                setError('')
                 try {
                   await unidadApi.remove(row.id)
                   await onRecargar()
                 } catch (e) {
-                  setError(e instanceof ApiError ? e.message : 'No pudimos eliminarla.')
+                  toast.error(e instanceof ApiError ? e.message : 'No pudimos eliminarla.')
                 }
               },
             })

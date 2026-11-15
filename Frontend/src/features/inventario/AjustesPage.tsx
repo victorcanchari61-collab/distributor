@@ -360,13 +360,12 @@ export function AjustesPage() {
       confirmar: 'Anular',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await ajusteApi.anular(doc.id)
           await cargar()
           toast.exito(`${doc.numero} anulado`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos anular el documento.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos anular el documento.')
         }
       },
     })

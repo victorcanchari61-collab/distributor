@@ -271,13 +271,12 @@ export function SolicitudesCompraPage() {
       confirmar: 'Enviar',
       tono: 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await solicitudCompraApi.enviar(s.id)
           await cargar()
           toast.exito(`${s.numero} enviada al administrador`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos enviar la solicitud.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos enviar la solicitud.')
         }
       },
     })
@@ -289,13 +288,12 @@ export function SolicitudesCompraPage() {
       confirmar: 'Anular',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await solicitudCompraApi.anular(s.id)
           await cargar()
           toast.exito(`${s.numero} anulada`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos anular la solicitud.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos anular la solicitud.')
         }
       },
     })

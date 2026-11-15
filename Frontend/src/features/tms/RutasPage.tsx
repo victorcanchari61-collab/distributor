@@ -137,13 +137,12 @@ export function RutasPage() {
       confirmar: r.activo ? 'Desactivar' : 'Activar',
       tono: r.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await rutaApi.update(r.id, { nombre: r.nombre, activo: !r.activo })
           await cargar()
           toast.exito(`${r.nombre} ${r.activo ? 'desactivada' : 'activada'}`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })

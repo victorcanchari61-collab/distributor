@@ -219,7 +219,6 @@ export function AccesosPage() {
   const guardar = async () => {
     if (!rol) return
     setGuardando(true)
-    setError('')
     try {
       const permisos = [...marcas].map((k) => {
         const corte = k.lastIndexOf(':')
@@ -237,7 +236,7 @@ export function AccesosPage() {
       setSucio(false)
       setOk('Accesos guardados.')
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos guardar los accesos.')
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos guardar los accesos.')
     } finally {
       setGuardando(false)
     }

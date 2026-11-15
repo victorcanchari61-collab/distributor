@@ -37,6 +37,9 @@
   --color-ink-soft: #94a3b8;
   --color-line: #e2e8f0;
   --color-line-strong: #cbd5e1;
+  /* El fondo de los campos (inputs, desplegables, buscadores): gris azulado, sin borde. */
+  --color-field: #eef2f7;
+  --color-field-hover: #e4e9f1;
 
   /* --- Tipografía --- */
   --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;

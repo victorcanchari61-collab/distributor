@@ -21,3 +21,14 @@ export function huecoLibre(figuras: FiguraPlano[], columnas: number, filas: numb
   return null
 }
 
+
+/**
+ * El mismo rectángulo girado: el ancho pasa a ser el alto. Gira sobre su esquina de arriba a la izquierda y, si así
+ * se sale de la cuadrícula, se corre lo justo para que entre. Null si ni corriéndolo cabe (más alto que el plano).
+ */
+export function girado(r: RectPlano, columnas: number, filas: number): RectPlano | null {
+  const ancho = r.alto
+  const alto = r.ancho
+  if (ancho > columnas || alto > filas) return null
+  return { x: Math.min(r.x, columnas - ancho), y: Math.min(r.y, filas - alto), ancho, alto }
+}

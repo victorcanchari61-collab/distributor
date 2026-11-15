@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
-import { DoorOpen, Footprints, LayoutGrid, Plus, Search, Trash2, X } from 'lucide-react'
+import { ArrowLeftRight, ArrowUpDown, Copy, DoorOpen, Footprints, LayoutGrid, Plus, RotateCw, Search, Trash2, X } from 'lucide-react'
 import { FaXmark } from 'react-icons/fa6'
 import { Alert, Badge, BuscadorModal, Button, Input, PageHeader, RowAction, Tabs, useToast } from '../../../components/ui'
 import type { DataTableColumn } from '../../../components/ui'
@@ -17,7 +17,7 @@ import type {
   TipoElementoPlano,
 } from '../inventarioApi'
 import { PlanoLienzo } from './PlanoLienzo'
-import { MIME_PRODUCTO, huecoLibre } from './geometria'
+import { estaLibre, girado, huecoLibre, MIME_PRODUCTO } from './geometria'
 import { figurasDe, idDeClave, normalizar, pisosDe, usePlanoAlmacen } from './datosPlano'
 
 const SUBMODULO = 'inv.plano'
@@ -168,8 +168,20 @@ export function PlanoPage() {
     }
   }
 
-  const hueco = (ancho: number, alto: number, minAncho: number, minAlto: number) =>
-    huecoLibre(figuras, columnas, filas, ancho, alto) ?? huecoLibre(figuras, columnas, filas, minAncho, minAlto)
+  /**
+   * El primer hueco libre, probando del tamaño pedido hacia el mínimo (achicando el lado largo de a poco): un
+   * pasillo de 2×8 que no entra sale de 2×6 o 2×4 antes que de 1×2.
+   */
+  const hueco = (ancho: number, alto: number, minAncho: number, minAlto: number) => {
+    for (let a = ancho, h = alto; a >= minAncho && h >= minAlto; ) {
+      const r = huecoLibre(figuras, columnas, filas, a, h)
+      if (r) return r
+      if (a === minAncho && h === minAlto) break
+      if (a >= h && a > minAncho) a = Math.max(minAncho, a - 2)
+      else h = Math.max(minAlto, h - 2)
+    }
+    return huecoLibre(figuras, columnas, filas, minAncho, minAlto)
+  }
 
   const conOcupado = async (accion: () => Promise<void>, error: string) => {
     setOcupado(true)
@@ -204,8 +216,10 @@ export function PlanoPage() {
     }, 'No pudimos dibujar el lugar.')
   }
 
-  const agregarElemento = (tipo: TipoElementoPlano) => {
-    const r = tipo === 'PASILLO' ? hueco(8, 2, 2, 1) : hueco(3, 3, 2, 2)
+  /** Un pasillo (a lo ancho o a lo alto) o una escalera, en el primer hueco libre. */
+  const agregarElemento = (tipo: TipoElementoPlano, vertical = false) => {
+    const r =
+      tipo === 'ESCALERA' ? hueco(3, 3, 2, 2) : vertical ? hueco(2, 8, 1, 2) : hueco(8, 2, 2, 1)
     if (!r) return toast.error('No hay espacio libre en este plano.')
     void conOcupado(async () => {
       const nuevo = await planoApi.crearElemento(almacenId, {
@@ -217,6 +231,35 @@ export function PlanoPage() {
       await recargar()
       setSeleccion(`E${nuevo.id}`)
     }, 'No pudimos agregarlo.')
+  }
+
+  /** Girar: el ancho pasa a ser el alto. Si girado se encima con algo, se avisa y no se mueve. */
+  const girar = (clave: string) => {
+    const f = figuras.find((x) => x.clave === clave)
+    if (!f) return
+    const r = girado(f, columnas, filas)
+    if (!r || !estaLibre(figuras, clave, r)) return toast.error('No hay espacio libre para girarlo.')
+    void cambiar(clave, r)
+  }
+
+  /** Una copia del mismo tamaño en el primer hueco libre: para hacer varios pasillos o lugares iguales. */
+  const duplicar = (clave: string) => {
+    const f = figuras.find((x) => x.clave === clave)
+    if (!f) return
+    const r = huecoLibre(figuras, columnas, filas, f.ancho, f.alto)
+    if (!r) return toast.error('No hay espacio libre del mismo tamaño en este plano.')
+    void conOcupado(async () => {
+      if (f.tipo === 'LUGAR') {
+        const nuevo = await ubicacionApi.crear(almacenId, { padreId: pisoId, tipo: 'CUARTO', nombre: f.nombre })
+        await planoApi.posicionar(nuevo.id, r)
+        await recargar()
+        setSeleccion(`L${nuevo.id}`)
+      } else {
+        const nuevo = await planoApi.crearElemento(almacenId, { pisoId, tipo: f.tipo, nombre: f.nombre, ...r })
+        await recargar()
+        setSeleccion(`E${nuevo.id}`)
+      }
+    }, 'No pudimos duplicarlo.')
   }
 
   const agregarPiso = () =>
@@ -376,9 +419,17 @@ export function PlanoPage() {
             <ul className="max-h-80 divide-y divide-line overflow-y-auto">{aqui.map((p) => filaProducto(p, lugarElegido.id))}</ul>
           )}
           {puedeEditar && (
-            <Button size="sm" variant="secondary" onClick={() => quitarDelPlano(lugarElegido.id)} disabled={ocupado}>
-              Sacar del plano
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="sm" variant="secondary" onClick={() => girar(`L${lugarElegido.id}`)} disabled={ocupado} iconRight={<RotateCw size={14} />}>
+                Girar
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => duplicar(`L${lugarElegido.id}`)} disabled={ocupado} iconRight={<Copy size={14} />}>
+                Duplicar
+              </Button>
+              <Button className="col-span-2" size="sm" variant="secondary" onClick={() => quitarDelPlano(lugarElegido.id)} disabled={ocupado}>
+                Sacar del plano
+              </Button>
+            </div>
           )}
         </>
       )
@@ -402,9 +453,24 @@ export function PlanoPage() {
           />
           <p className="text-xs text-ink-soft">No guarda mercadería: ayuda a ubicarse en el plano.</p>
           {puedeEditar && (
-            <Button size="sm" variant="secondary" onClick={() => eliminarElemento(elementoElegido.id)} disabled={ocupado} iconRight={<Trash2 size={14} />}>
-              Eliminar {elementoElegido.tipo === 'PASILLO' ? 'pasillo' : 'escalera'}
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="sm" variant="secondary" onClick={() => girar(`E${elementoElegido.id}`)} disabled={ocupado} iconRight={<RotateCw size={14} />}>
+                Girar
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => duplicar(`E${elementoElegido.id}`)} disabled={ocupado} iconRight={<Copy size={14} />}>
+                Duplicar
+              </Button>
+              <Button
+                className="col-span-2"
+                size="sm"
+                variant="secondary"
+                onClick={() => eliminarElemento(elementoElegido.id)}
+                disabled={ocupado}
+                iconRight={<Trash2 size={14} />}
+              >
+                Eliminar {elementoElegido.tipo === 'PASILLO' ? 'pasillo' : 'escalera'}
+              </Button>
+            </div>
           )}
         </>
       )
@@ -510,10 +576,13 @@ export function PlanoPage() {
                 <Button size="sm" variant="secondary" disabled={ocupado} onClick={agregarLugar} iconRight={<DoorOpen size={14} />}>
                   Lugar
                 </Button>
-                <Button size="sm" variant="secondary" disabled={ocupado} onClick={() => agregarElemento('PASILLO')} iconRight={<Footprints size={14} />}>
+                <Button size="sm" variant="secondary" disabled={ocupado} onClick={() => agregarElemento('PASILLO')} iconRight={<ArrowLeftRight size={14} />}>
                   Pasillo
                 </Button>
-                <Button size="sm" variant="secondary" disabled={ocupado} onClick={() => agregarElemento('ESCALERA')}>
+                <Button size="sm" variant="secondary" disabled={ocupado} onClick={() => agregarElemento('PASILLO', true)} iconRight={<ArrowUpDown size={14} />}>
+                  Pasillo
+                </Button>
+                <Button size="sm" variant="secondary" disabled={ocupado} onClick={() => agregarElemento('ESCALERA')} iconRight={<Footprints size={14} />}>
                   Escalera
                 </Button>
                 {!tieneSueltos && (
@@ -604,6 +673,7 @@ export function PlanoPage() {
               editable={puedeEditar}
               onSeleccionar={setSeleccion}
               onCambiar={(clave, rect) => void cambiar(clave, rect)}
+              onGirar={girar}
               onSoltarProducto={soltarProducto}
             />
           )}

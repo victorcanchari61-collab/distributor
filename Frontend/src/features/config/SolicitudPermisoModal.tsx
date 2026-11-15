@@ -125,7 +125,7 @@ export function SolicitudPermisoModal() {
               maxLength={300}
               rows={3}
               placeholder="Anular la NV-0042: la emití con el cliente equivocado"
-              className="w-full rounded-field border border-line px-3 py-2 text-sm"
+              className="w-full rounded-field border border-transparent bg-field [&:not(:focus)]:hover:bg-field-hover focus:bg-surface focus:border-[rgb(var(--sys-rgb)/0.5)] px-3 py-2 text-sm outline-none"
             />
             <span className="mt-1 block text-xs text-ink-soft">
               Escribirlo ayuda: quien aprueba decide si te lo da por una vez o para siempre.

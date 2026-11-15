@@ -25,6 +25,25 @@ const FIELD_TEXT: Record<FieldSize, string> = {
   lg: 'text-base',
 }
 
+/**
+ * El aspecto de TODO campo del sistema: fondo gris azulado y sin borde visible; al pasar el mouse, un poco más
+ * oscuro; al escribir, blanco con el borde del color del módulo. Lo usan Input, Select, Desplegable, los buscadores
+ * y las fechas, así cambian todos juntos. `foco` dice si el foco lo recibe un hijo (un div con el input adentro) o
+ * el mismo elemento (un select, un input suelto).
+ */
+export const claseCampo = (error = false, foco: 'hijo' | 'propio' = 'hijo') =>
+  cn(
+    'border bg-field',
+    foco === 'hijo'
+      ? '[&:not(:focus-within)]:hover:bg-field-hover focus-within:bg-surface'
+      : '[&:not(:focus)]:hover:bg-field-hover focus:bg-surface',
+    error
+      ? 'border-red-600'
+      : foco === 'hijo'
+        ? 'border-transparent focus-within:border-[rgb(var(--sys-rgb)/0.5)]'
+        : 'border-transparent focus:border-[rgb(var(--sys-rgb)/0.5)]',
+  )
+
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string
   /** Contenido a la derecha de la etiqueta (por ejemplo un enlace de ayuda). */
@@ -73,19 +92,11 @@ export function Input({
       )}
 
       {/*
-        Foco sobrio: solo se oscurece el borde. Sin anillo de color ni
-        transicion, que llamaban la atencion mas que el propio dato. La altura
-        es fija y el borde mantiene 1px, asi que el campo no cambia de tamano.
+        Fondo de campo (ver claseCampo). Sin anillo ni transicion, que llamaban la atencion mas que el propio dato.
+        El borde siempre ocupa 1px (transparente si no hay foco), asi que el campo no cambia de tamano.
       */}
-      <div
-        className={cn(
-          'flex items-center gap-2 rounded-field border bg-surface px-3',
-          FIELD_HEIGHT[size],
-          'focus-within:border-ink-soft',
-          error ? 'border-red-600' : 'border-line',
-        )}
-      >
-        {icon && <span className="shrink-0 text-ink-soft">{icon}</span>}
+      <div className={cn('flex items-center gap-2 rounded-field px-3', FIELD_HEIGHT[size], claseCampo(Boolean(error)))}>
+        {icon && <span className="shrink-0 text-[rgb(var(--sys-rgb))]">{icon}</span>}
         <input
           id={inputId}
           type={resolvedType}

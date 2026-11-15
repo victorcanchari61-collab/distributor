@@ -292,13 +292,12 @@ export function OrdenesCompraPage() {
       confirmar: 'Anular',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await ordenCompraApi.anular(orden.id)
           await cargar()
           toast.exito(`${orden.numero} anulada`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos anular la orden.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos anular la orden.')
         }
       },
     })

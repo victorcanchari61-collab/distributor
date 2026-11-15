@@ -169,7 +169,6 @@ export function ListasPreciosPage() {
       confirmar: 'Eliminar',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await listaPrecioApi.remove(l.id)
           // Al desaparecer la pestaña abierta hay que mover el foco, o la
@@ -178,7 +177,7 @@ export function ListasPreciosPage() {
           await cargar()
           toast.exito(`${l.nombre} eliminada`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar la lista.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos eliminar la lista.')
         }
       },
     })

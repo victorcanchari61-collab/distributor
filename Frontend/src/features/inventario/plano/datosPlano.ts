@@ -18,7 +18,7 @@ export function figurasDe(lugares: UbicacionResponse[], plano: PlanoResponse | n
     .map((l) => ({
       clave: `L${l.id}`,
       tipo: 'LUGAR',
-      codigo: l.codigo,
+      codigo: l.ruta,
       nombre: l.nombre ?? 'Lugar',
       productos: l.productos,
       inactivo: !l.activo,

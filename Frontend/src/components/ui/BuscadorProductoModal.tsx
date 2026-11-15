@@ -4,7 +4,7 @@ import { Package, RotateCcw, Search, SlidersHorizontal } from 'lucide-react'
 import { cn } from './cn'
 import { Button } from './Button'
 import { Desplegable } from './Desplegable'
-import { Input } from './Input'
+import { Input, claseCampo } from './Input'
 import { Modal } from './Modal'
 import { opcionesPresentacion, presentacionInicial } from '../../lib/presentaciones'
 import type { UsoPresentacion } from '../../lib/presentaciones'
@@ -227,14 +227,17 @@ export function BuscadorProductoModal({
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search size={15} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-soft" />
+              <Search size={15} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[rgb(var(--sys-rgb))]" />
               <input
                 autoFocus
                 type="text"
                 value={filtros.texto}
                 onChange={(e) => setFiltro({ texto: e.target.value })}
                 placeholder="Nombre, código, marca..."
-                className="h-[var(--height-field-md)] w-full rounded-field border border-line bg-surface pr-3 pl-9 text-sm text-ink outline-none placeholder:text-ink-soft focus:border-ink-soft"
+                className={cn(
+                  'h-[var(--height-field-md)] w-full rounded-field pr-3 pl-9 text-sm text-ink outline-none placeholder:text-ink-soft',
+                  claseCampo(false, 'propio'),
+                )}
               />
             </div>
 

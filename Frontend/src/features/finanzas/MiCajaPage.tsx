@@ -559,7 +559,7 @@ function CerrarCajaModal({
                           aria-label={`Cantidad de ${d.tipo.toLowerCase()}s de S/ ${d.valor.toFixed(2)}`}
                           value={cantidades[d.valor] ?? ''}
                           onChange={(e) => poner({ ...cantidades, [d.valor]: e.target.value })}
-                          className="mx-auto block h-7 w-24 rounded-field border border-line bg-surface px-2 text-center text-xs text-ink outline-none placeholder:text-ink-soft focus:border-ink-soft"
+                          className="mx-auto block h-7 w-24 rounded-field border border-transparent bg-field [&:not(:focus)]:hover:bg-field-hover focus:bg-surface focus:border-[rgb(var(--sys-rgb)/0.5)] px-2 text-center text-xs text-ink outline-none placeholder:text-ink-soft"
                         />
                       </td>
                       <td className="px-3 py-1 text-right font-medium tabular-nums text-ink">

@@ -187,13 +187,12 @@ export function EmpleadosPage() {
       confirmar: 'Eliminar',
       tono: 'danger',
       accion: async () => {
-        setError('')
         try {
           await empleadoApi.remove(empleado.id)
           await cargar()
           toast.exito(`${empleado.nombreCompleto} eliminado`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos eliminar al empleado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos eliminar al empleado.')
         }
       },
     })
@@ -207,13 +206,12 @@ export function EmpleadosPage() {
       confirmar: empleado.activo ? 'Desactivar' : 'Activar',
       tono: empleado.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await (empleado.activo ? empleadoApi.desactivar(empleado.id) : empleadoApi.activar(empleado.id))
           await cargar()
           toast.exito(`${empleado.nombreCompleto} ${empleado.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })

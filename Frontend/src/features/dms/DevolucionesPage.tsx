@@ -93,13 +93,12 @@ export function DevolucionesPage() {
         'Entra la mercadería que vuelve al stock y la venta baja de importe, así que el cliente deja de deberla. No se puede deshacer.',
       confirmar: 'Aprobar',
       accion: async () => {
-        setError('')
         try {
           await devolucionApi.aprobar(d.id)
           await cargar()
           toast.exito(`${d.numero} aprobada`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos aprobar la devolución.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos aprobar la devolución.')
         }
       },
     })

@@ -148,7 +148,6 @@ export function MetodosPagoPage() {
       confirmar: m.activo ? 'Desactivar' : 'Activar',
       tono: m.activo ? 'warning' : 'pregunta',
       accion: async () => {
-        setError('')
         try {
           await metodoPagoApi.update(m.id, {
             nombre: m.nombre,
@@ -160,7 +159,7 @@ export function MetodosPagoPage() {
           await cargar()
           toast.exito(`${m.nombre} ${m.activo ? 'desactivado' : 'activado'}`)
         } catch (e) {
-          setError(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
+          toast.error(e instanceof ApiError ? e.message : 'No pudimos cambiar el estado.')
         }
       },
     })
